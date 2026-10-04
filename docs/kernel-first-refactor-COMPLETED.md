@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 > [!WARNING]
 > **Superseded.** This page describes the authorization design *before* the authorization overhaul and is kept for history only.
-> The current, maintained documentation is **[Authorization System — Start Here](./authorization-system/overview.md)**.
+> The current, maintained documentation is **[Authorization System — Start Here](./technical/authorization/overview.md)**.
 
 # Kernel-First Refactor - COMPLETED PHASES
 

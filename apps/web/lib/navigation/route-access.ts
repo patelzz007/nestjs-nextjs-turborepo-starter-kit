@@ -1,6 +1,6 @@
 import { evaluateSidebarAuthorization } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import type { SidebarAuthorization, SidebarMenuData, SidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilitySlug } from "@workspace/shared";
+import { assertNever, type CapabilitySlug } from "@workspace/shared";
 import type { SidebarTrailPage } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 import { findMostSpecificRoute } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 
@@ -86,12 +86,8 @@ function isAudienceAllowed(audience: WebRouteAudience, isAuthenticated: boolean)
 		case "signed-in":
 			return isAuthenticated;
 		default:
-			return assertNeverAudience(audience);
+			return assertNever(audience, "route audience");
 	}
-}
-
-function assertNeverAudience(audience: never): never {
-	throw new Error(`Unhandled route audience: ${String(audience)}`);
 }
 
 /** True when `session` may open a page governed by `rule` (audience AND capabilities). */

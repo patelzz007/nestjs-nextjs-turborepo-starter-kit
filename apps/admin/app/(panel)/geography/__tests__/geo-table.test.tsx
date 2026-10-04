@@ -1,10 +1,22 @@
 // @vitest-environment jsdom
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import type { PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
-import type { CityListItem, CountryListItem, DataValue, Envelope, SerializableInput, StateListItem } from "@workspace/shared";
+import {
+	epochMs,
+	nowEpochMs,
+	type ApiPaginatedMeta,
+	type EpochMs,
+	type CityListItem,
+	type CountryListItem,
+	type DataValue,
+	type Envelope,
+	type GeoStats,
+	type SerializableInput,
+	type StateListItem,
+} from "@workspace/shared";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +27,25 @@ import GeoView from "../geo-table";
 
 type GeoListEnvelope = Envelope<DataValue[]>;
 
+/** Longer than the query cache's stale time (one minute), so an answer this old must be refetched. */
+const STALE_ANSWER_AGE_MS = 2 * 60 * 1000;
+
+/** A one-page list envelope as the API returns it (real pagination meta, no placeholders), answered at `timestamp` (default: just now). */
+function pageEnvelope<TItem extends DataValue>(items: TItem[], timestamp: EpochMs = nowEpochMs()): Envelope<TItem[]> {
+	const meta: ApiPaginatedMeta = {
+		correlationId: "fixture",
+		timestamp,
+		limit: 20,
+		total: items.length,
+		page: 1,
+		totalPages: 1,
+		nextCursor: null,
+		hasNext: false,
+		hasPrevious: false,
+	};
+	return { success: true, data: items, meta };
+}
+
 /** The `useQuery` options the view passes that the cached stub below forwards. */
 interface GeoListQueryOptions {
 	readonly enabled: boolean;
@@ -23,7 +54,8 @@ interface GeoListQueryOptions {
 
 type GeoListHook = (input: SerializableInput, options: GeoListQueryOptions) => UseQueryResult<GeoListEnvelope>;
 
-const { countriesQuery, statesQuery, citiesQuery, transport } = vi.hoisted(() => ({
+const { statsQuery, countriesQuery, statesQuery, citiesQuery, transport } = vi.hoisted(() => ({
+	statsQuery: vi.fn(),
 	countriesQuery: vi.fn(),
 	statesQuery: vi.fn(),
 	citiesQuery: vi.fn(),
@@ -40,7 +72,7 @@ vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
 		api: {
 			geo: {
-				stats: { useQuery: (): object => ({ data: undefined }) },
+				stats: { useQuery: statsQuery },
 				countries: { useQuery: countriesQuery },
 				states: { useQuery: statesQuery },
 				cities: { useQuery: citiesQuery },
@@ -121,8 +153,8 @@ const KUALA_LUMPUR: CityListItem = {
 	createdAt: 1_786_300_000_000,
 	updatedAt: 1_786_300_000_000,
 };
-const COUNTRIES_ENVELOPE: Envelope<CountryListItem[]> = successEnvelope([MALAYSIA], stubApiMeta());
-const STATES_ENVELOPE: Envelope<StateListItem[]> = successEnvelope([], stubApiMeta());
+const COUNTRIES_ENVELOPE: Envelope<CountryListItem[]> = pageEnvelope([MALAYSIA]);
+const STATES_ENVELOPE: Envelope<StateListItem[]> = pageEnvelope([]);
 
 /** The state key the server page computes from its `searchParams` for this URL query. */
 function serverStateKey(query: string): string {
@@ -164,18 +196,35 @@ function cachedView(initialPage: PrefetchedQuery<GeoTabPage>): React.JSX.Element
 
 beforeEach((): void => {
 	window.history.replaceState(null, "", PATH);
+	statsQuery.mockReturnValue({ data: undefined });
 	for (const query of [countriesQuery, statesQuery, citiesQuery]) {
 		query.mockReturnValue(EMPTY_RESULT);
 	}
-	transport.mockResolvedValue(successEnvelope([], stubApiMeta()));
+	transport.mockResolvedValue(pageEnvelope([]));
 });
 
 afterEach((): void => {
 	cleanup();
-	for (const query of [countriesQuery, statesQuery, citiesQuery, transport]) {
+	for (const query of [statsQuery, countriesQuery, statesQuery, citiesQuery, transport]) {
 		query.mockReset();
 	}
 	vi.restoreAllMocks();
+});
+
+describe("GeoView stats", () => {
+	it("seeds the stats query with the server's envelope and its answer time, so the client does not fetch them again", () => {
+		const statsEnvelope: Envelope<GeoStats> = {
+			success: true,
+			data: { regions: 6, subregions: 22, countries: 250, states: 5_000, cities: 150_000 },
+			meta: { correlationId: "fixture", timestamp: nowEpochMs() },
+		};
+		statsQuery.mockReturnValue({ data: statsEnvelope });
+
+		render(<GeoView initialStats={statsEnvelope} />);
+
+		expect(statsQuery).toHaveBeenCalledWith({}, { initialData: statsEnvelope, initialDataUpdatedAt: statsEnvelope.meta.timestamp });
+		expect(screen.getByText("Subregions")).toBeDefined();
+	});
 });
 
 describe("GeoView URL state", () => {
@@ -270,6 +319,21 @@ describe("GeoView server-prefetched page", () => {
 		expect(transport).not.toHaveBeenCalledWith("countries", expect.anything());
 	});
 
+	it("refetches a server page whose answer is older than the stale time (the server's timestamp, not the hydration time, counts)", async () => {
+		withRealQueryCache();
+		const stalePrefetch: PrefetchedQuery<GeoTabPage> = {
+			stateKey: serverStateKey(""),
+			data: { tab: "countries", envelope: pageEnvelope([MALAYSIA], epochMs(Date.now() - STALE_ANSWER_AGE_MS)) },
+		};
+
+		render(cachedView(stalePrefetch));
+
+		expect(screen.getByText(MALAYSIA.name)).toBeDefined();
+		await waitFor((): void => {
+			expect(transport).toHaveBeenCalledWith("countries", { page: 1, limit: 20 });
+		});
+	});
+
 	it("restores the server's page from the cache on Back, without refetching it", async () => {
 		withRealQueryCache();
 		const view = render(cachedView(COUNTRIES_PREFETCH));
@@ -305,7 +369,7 @@ describe("GeoView rows", () => {
 
 	it("shows a state's own iso2 as its state code and a missing coordinate as a dash", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=states`);
-		statesQuery.mockReturnValue(listResult(successEnvelope([SELANGOR], stubApiMeta())));
+		statesQuery.mockReturnValue(listResult(pageEnvelope([SELANGOR])));
 		render(<GeoView />);
 
 		const row = screen.getByRole("row", { name: /Selangor/ });
@@ -315,7 +379,7 @@ describe("GeoView rows", () => {
 
 	it("shows a city's state code and its coordinates to four decimals", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=cities`);
-		citiesQuery.mockReturnValue(listResult(successEnvelope([KUALA_LUMPUR], stubApiMeta())));
+		citiesQuery.mockReturnValue(listResult(pageEnvelope([KUALA_LUMPUR])));
 		render(<GeoView />);
 
 		const row = screen.getByRole("row", { name: /Kuala Lumpur/ });

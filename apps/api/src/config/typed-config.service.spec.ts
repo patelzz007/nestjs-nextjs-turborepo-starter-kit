@@ -51,7 +51,20 @@ describe("TypedConfigService", () => {
 
 	it("marks auth cookies Secure only in production", () => {
 		expect(createTestTypedConfig().secureCookies).toBe(false);
-		expect(createTestTypedConfig({ NODE_ENV: "production", REDIS_URL: "redis://cache:6379" }).secureCookies).toBe(true);
+		expect(
+			createTestTypedConfig({ NODE_ENV: "production", REDIS_URL: "redis://cache:6379", LOGIN_VERIFICATION_MODE: "new-device", TENANT_KMS_PROVIDER: "local" }).secureCookies,
+		).toBe(true);
+	});
+
+	it("exposes the tenant KEK ring as decoded buffers and the KMS provider", () => {
+		const retired = Buffer.alloc(32, 8);
+		const config = createTestTypedConfig({
+			TENANT_ENCRYPTION_MASTER_KEY_VERSION: "3",
+			TENANT_ENCRYPTION_PREVIOUS_MASTER_KEYS: JSON.stringify({ 1: retired.toString("base64") }),
+		});
+		expect(config.tenantEncryptionMasterKeyVersion).toBe(3);
+		expect(config.tenantEncryptionPreviousMasterKeys.get(1)?.equals(retired)).toBe(true);
+		expect(config.tenantKmsProvider).toBe("local");
 	});
 
 	it("turns Prisma debug logging on for LOG_LEVEL debug/trace only", () => {
@@ -61,7 +74,13 @@ describe("TypedConfigService", () => {
 	});
 
 	it("reports the storage provider switches consistently", () => {
-		const s3 = createTestTypedConfig({ STORAGE_PROVIDER: "s3", STORAGE_S3_BUCKET: "bucket" });
+		const s3 = createTestTypedConfig({
+			STORAGE_PROVIDER: "s3",
+			STORAGE_S3_BUCKET: "bucket",
+			STORAGE_S3_PUBLIC_BUCKET: "public-origin-bucket",
+			STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net",
+			STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "E2QWRUHAPOMQZL",
+		});
 
 		expect([s3.useS3Storage, s3.useFirebaseStorage, s3.useLocalStorage]).toEqual([true, false, false]);
 		expect(s3.storageBucket).toBe("bucket");

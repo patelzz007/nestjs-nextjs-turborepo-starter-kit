@@ -1,14 +1,15 @@
 import js from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
-// eslint-plugin-import v2 is CJS — handle default export interop for ESM
 import eslintPluginImportDef from "eslint-plugin-import";
-const eslintPluginImport = eslintPluginImportDef.default ?? eslintPluginImportDef;
 import eslintPluginPrettier from "eslint-plugin-prettier";
 import turboPlugin from "eslint-plugin-turbo";
 import tseslint from "typescript-eslint";
 import globals from "globals";
 
 import { universalImportBoundaryConfig } from "./import-boundaries.js";
+
+// eslint-plugin-import v2 is CJS — handle default export interop for ESM
+const eslintPluginImport = eslintPluginImportDef.default ?? eslintPluginImportDef;
 
 /**
  * A shared ESLint configuration for the repository.
@@ -91,7 +92,7 @@ export const config = [
 	// No app → app imports, no reaching into a package's src/ or dist/, no
 	// relative climbs into another workspace, no deep @workspace/shared paths.
 	// Frontend configs (next.js, react-internal) extend this list with
-	// browser-safety patterns. See import-boundaries.js and docs/eslint.md.
+	// browser-safety patterns. See import-boundaries.js and docs/technical/tooling/eslint.md.
 	universalImportBoundaryConfig,
 
 	// ── 7. Naming conventions (TypeScript strict) ──────────────────
@@ -163,7 +164,7 @@ export const config = [
 		rules: {
 			// Require === and !== over == and !=, but allow `== null` / `!= null`
 			// null-checks (idiomatic way to check for both null and undefined).
-			"eqeqeq": ["error", "always", { "null": "ignore" }],
+			eqeqeq: ["error", "always", { null: "ignore" }],
 
 			// No unused variables (prefix with _ to ignore)
 			"@typescript-eslint/no-unused-vars": [
@@ -176,8 +177,8 @@ export const config = [
 				},
 			],
 
-			// Warn on console.log (use a proper logger instead)
-			"no-console": ["warn", { allow: ["warn", "error"] }],
+			// No console.log / console.info / console.debug (use a proper logger instead)
+			"no-console": ["error", { allow: ["warn", "error"] }],
 
 			// No debugger statements
 			"no-debugger": "error",
@@ -192,7 +193,7 @@ export const config = [
 			"@typescript-eslint/return-await": ["error", "in-try-catch"],
 
 			// Prefer readonly for arrays that are never modified
-			"@typescript-eslint/prefer-readonly": "warn",
+			"@typescript-eslint/prefer-readonly": "error",
 
 			// No unnecessary conditions
 			"@typescript-eslint/no-unnecessary-condition": "error",
@@ -206,7 +207,8 @@ export const config = [
 	},
 
 	// ── 9. Non-negotiable: explicit type casting ban (Rule #4) ────
-	//    Bans `as Type` / `<Type>value` assertions AND `as const` / `<const>`.
+	//    Bans `as Type` / `<Type>value` assertions AND `as const` / `<const>`,
+	//    plus the `unknown` / `never` type keywords (narrow exemptions below).
 	//    `as const` is banned too (AGENTS.md, rules/00, platform spec §2.1):
 	//    declare the literal type explicitly instead — a typed tuple
 	//    (`const SIZES: readonly ["sm", "md"] = ["sm", "md"]`), an explicit
@@ -227,6 +229,44 @@ export const config = [
 				{
 					selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='z'][callee.property.name=/^(any|unknown|never)$/]",
 					message: "`z.any()` / `z.unknown()` / `z.never()` are banned (rules/00-non-negotiables.md). Describe the real shape with a precise schema.",
+				},
+				// An argumentless `z.custom<T>()` accepts EVERYTHING and only claims type T:
+				// a hidden cast. Give it a real predicate, or use a real schema.
+				{
+					selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='z'][callee.property.name='custom'][arguments.length=0]",
+					message:
+						"`z.custom<T>()` without a predicate is an unchecked cast (rules/00-non-negotiables.md). Pass a type-guard predicate, `z.instanceof(Class)`, or a real schema (e.g. `DataValueSchema`).",
+				},
+				// React-query cache keys come from the endpoint registry (`apiRouter.…scopeKey()` / `.queryKey()`),
+				// never from a hand-typed array: a literal key silently stops matching when the real key changes.
+				{
+					selector:
+						"CallExpression[callee.property.name=/^(invalidateQueries|removeQueries|refetchQueries|cancelQueries|resetQueries|setQueryData|getQueryData|getQueriesData|setQueriesData|isFetching)$/] > ObjectExpression > Property[key.name='queryKey'] > ArrayExpression",
+					message: "Do not hand-type a query key. Use the endpoint registry: `apiRouter.<group>.<leaf>.scopeKey(scope)` to invalidate, `.queryKey(input)` for one entry.",
+				},
+				{
+					selector: "CallExpression[callee.property.name=/^(setQueryData|getQueryData)$/] > ArrayExpression:first-child",
+					message: "Do not hand-type a query key. Use the endpoint registry: `apiRouter.<group>.<leaf>.queryKey(input)`.",
+				},
+				// `unknown` type keyword. Two positions are exempt because the language
+				// gives the value no other type: a `catch (error: unknown)` clause
+				// parameter and the first parameter of a `.catch((error: unknown) => …)`
+				// callback. Everywhere else, describe the real type (or parse with zod).
+				{
+					selector:
+						"TSUnknownKeyword:not(CatchClause > Identifier.param > TSTypeAnnotation > TSUnknownKeyword):not(CallExpression[callee.property.name='catch'] > :function > Identifier:first-child > TSTypeAnnotation > TSUnknownKeyword)",
+					message:
+						"The `unknown` type is banned (rules/00-non-negotiables.md) outside a catch-clause / `.catch()` error parameter. Use the real type, or parse the value with a zod schema at the boundary.",
+				},
+				// `never` type keyword. Allowed only in exhaustiveness checks:
+				//   - the parameter and return type of `function assertNever…(value: never): never`;
+				//   - the key-exhaustiveness guard `Record<Exclude<keyof X, keyof Y>, never>`
+				//     (rejects keys outside a set — the signature zod's own `.pick()` requires).
+				{
+					selector:
+						"TSNeverKeyword:not(FunctionDeclaration[id.name=/^assertNever/] > Identifier > TSTypeAnnotation > TSNeverKeyword):not(FunctionDeclaration[id.name=/^assertNever/] > TSTypeAnnotation.returnType > TSNeverKeyword):not(TSTypeReference[typeName.name='Record'][typeArguments.params.length=2][typeArguments.params.0.typeName.name='Exclude'] > TSTypeParameterInstantiation > TSNeverKeyword:last-child)",
+					message:
+						"The `never` type is banned (rules/00-non-negotiables.md) outside an exhaustiveness check: `function assertNever…(value: never): never` or a `Record<Exclude<…>, never>` key guard.",
 				},
 			],
 			// No type assertions — use Zod inference or proper types.
@@ -256,7 +296,7 @@ export const config = [
 			turbo: turboPlugin,
 		},
 		rules: {
-			"turbo/no-undeclared-env-vars": "warn",
+			"turbo/no-undeclared-env-vars": "error",
 		},
 	},
 
@@ -278,15 +318,6 @@ export const config = [
 
 	// ── 13. Ignore patterns ────────────────────────────────────────
 	{
-		ignores: [
-			"dist/**",
-			".next/**",
-			"**/.turbo/**",
-			"**/coverage/**",
-			"**/node_modules/**",
-			"*.config.*",
-			"**/*.d.ts",
-			"**/prisma/**",
-		],
+		ignores: ["dist/**", ".next/**", "**/.turbo/**", "**/coverage/**", "**/node_modules/**", "*.config.*", "**/*.d.ts", "**/prisma/**"],
 	},
 ];

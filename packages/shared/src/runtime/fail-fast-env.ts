@@ -10,7 +10,7 @@
 // Framework-agnostic and side-effect free: the caller injects the loader, the
 // exit function and the error sink, so this file never touches `process`
 // (and is safe to sit in the shared, browser-importable package). See
-// docs/configuration.md → "How validation fails".
+// docs/technical/configuration/frontend.md → "How validation fails".
 
 import { EnvValidationError } from "./app-env";
 

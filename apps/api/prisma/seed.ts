@@ -3,6 +3,7 @@ import "dotenv/config";
 import { prisma } from "./seed/client";
 import { SEED_SCENARIO_RUNNERS } from "./seed/scenarios";
 import { formatSeedUsage, parseSeedArguments, SeedArgumentError, type SeedCommand } from "./seed/seed-options";
+import { assertSeedAllowed } from "./seed/seed-guard";
 import { seedLog } from "./seed/seed-log";
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,7 @@ async function run(): Promise<void> {
 	}
 
 	try {
+		assertSeedAllowed(process.env, command.allowDestructive);
 		seedLog(`🌱 Starting seed (scenario: ${command.scenario}, seed: ${String(command.seed)})...\n`);
 		await SEED_SCENARIO_RUNNERS[command.scenario](command);
 	} catch (error) {

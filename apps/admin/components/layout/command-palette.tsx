@@ -6,7 +6,7 @@ import { useAuthorizedSearchableItems, useCanAccessRoute } from "@/components/la
 import { ROUTES } from "@/lib/routes";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
-import { CircleUserRound, CreditCard, LayoutDashboard, Settings, SunMoon } from "lucide-react";
+import { CircleUserRound, LayoutDashboard, Settings, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -59,8 +59,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 					title: "Toggle Theme",
 					description: "Switch between light and dark mode",
 					icon: SunMoon,
-					color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
-					shortcut: "⌘T",
+					color: "text-warning bg-warning-soft",
 					keywords: ["dark", "light", "mode", "theme"],
 					run: (): void => {
 						closePalette();
@@ -75,8 +74,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 					title: "Open Settings",
 					description: "Platform configuration — billing and access control",
 					icon: Settings,
-					color: "text-indigo-600 bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-900/40",
-					shortcut: "⌘,",
+					color: "text-primary bg-primary/10",
 					keywords: ["configuration", "config", "platform"],
 					run: (): void => {
 						navigateTo(ROUTES.settings.index);
@@ -88,10 +86,10 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 				action: {
 					id: "open-account",
 					title: "Open Account",
-					description: "Your profile, password, and two-factor authentication",
+					description: "Your profile, password and two-factor authentication",
 					icon: CircleUserRound,
-					color: "text-sky-600 bg-sky-100 dark:text-sky-300 dark:bg-sky-900/40",
-					keywords: ["profile", "account", "preferences", "password", "2fa", "mfa"],
+					color: "text-info bg-info-soft",
+					keywords: ["account", "profile", "name", "avatar", "security", "password", "2fa", "mfa"],
 					run: (): void => {
 						navigateTo(ROUTES.account.index);
 					},
@@ -104,25 +102,10 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 					title: "Go to Dashboard",
 					description: "Return to the main dashboard",
 					icon: LayoutDashboard,
-					color: "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40",
-					shortcut: "⌘D",
+					color: "text-success bg-success-soft",
 					keywords: ["home", "main", "overview"],
 					run: (): void => {
 						navigateTo(ROUTES.home);
-					},
-				},
-			},
-			{
-				href: ROUTES.settings.billing,
-				action: {
-					id: "open-billing",
-					title: "Open Billing",
-					description: "View your plan and invoices",
-					icon: CreditCard,
-					color: "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
-					keywords: ["plan", "invoice", "payment", "subscription"],
-					run: (): void => {
-						navigateTo(ROUTES.settings.billing);
 					},
 				},
 			},

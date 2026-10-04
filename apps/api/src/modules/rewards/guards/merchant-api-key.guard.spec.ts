@@ -5,6 +5,8 @@ import { createHttpContext, testRequest, type TestHttpRequest } from "../../../.
 import { createTestPrisma } from "../../../../test/support/test-service-graph";
 import { MerchantApiKeyVerificationService } from "../../api-keys/services/merchant-api-key-verification.service";
 import { MerchantApiKeyRepository } from "../repositories/merchant-api-key.repository";
+import { MerchantTerminalRepository } from "../repositories/merchant-terminal.repository";
+import { RequestContextService } from "../../../common/context/request-context";
 import { MERCHANT_POS_CONTEXT_KEY, type MerchantPosContext } from "../types/merchant-pos-context";
 import { MerchantApiKeyGuard } from "./merchant-api-key.guard";
 
@@ -34,9 +36,10 @@ function keyContext(locationId: string | null, { terminal = null, requireRegiste
 
 function guard(): MerchantApiKeyGuard {
 	const prisma = createTestPrisma();
-	vi.spyOn(prisma.organizationTerminal, "findFirst").mockImplementation(mocks.findTerminal);
-	vi.spyOn(prisma.organizationTerminal, "update").mockImplementation(mocks.touchTerminal);
-	return new MerchantApiKeyGuard(new MerchantApiKeyVerificationService(new MerchantApiKeyRepository(prisma)), prisma);
+	const terminals = new MerchantTerminalRepository(prisma);
+	vi.spyOn(terminals, "findLiveByTerminalId").mockImplementation(mocks.findTerminal);
+	vi.spyOn(terminals, "touchLastSeen").mockImplementation(mocks.touchTerminal);
+	return new MerchantApiKeyGuard(new MerchantApiKeyVerificationService(new MerchantApiKeyRepository(prisma)), terminals, new RequestContextService());
 }
 
 /** The test request, plus the POS context the guard attaches to it. */
@@ -64,6 +67,20 @@ describe("MerchantApiKeyGuard", () => {
 
 		await expect(guard().canActivate(createHttpContext(request(undefined)))).rejects.toBeInstanceOf(UnauthorizedException);
 		await expect(guard().canActivate(createHttpContext(request("till 1!")))).rejects.toBeInstanceOf(BadRequestException);
+	});
+
+	it("binds the key (and its terminal) as the request's principal in the request context", async () => {
+		mocks.verify.mockResolvedValue(keyContext(STORE_A));
+		mocks.findTerminal.mockResolvedValue(null);
+		const requestContext = new RequestContextService();
+
+		const bound = await requestContext.run({ correlationId: "corr-pos", ip: undefined, userAgent: undefined }, async () => {
+			await guard().canActivate(createHttpContext(request("NEW-TILL")));
+			return requestContext.current()?.apiKey;
+		});
+
+		// The key's own store (not the till's) is the request's database store scope.
+		expect(bound).toEqual({ apiKeyId: "key-1", organizationId: "org-1", terminalId: "NEW-TILL", locationId: STORE_A });
 	});
 
 	it("rejects an unknown key", async () => {
@@ -101,7 +118,7 @@ describe("MerchantApiKeyGuard", () => {
 
 		await expect(storeOf(req)).resolves.toBe(STORE_B);
 		expect(req[MERCHANT_POS_CONTEXT_KEY]?.terminalId).toBe(PAIRED_TERMINAL.terminalId);
-		expect(mocks.touchTerminal).toHaveBeenCalledWith(expect.objectContaining({ where: { id: PAIRED_TERMINAL.id } }));
+		expect(mocks.touchTerminal).toHaveBeenCalledWith(PAIRED_TERMINAL.id, expect.any(Number));
 		expect(mocks.findTerminal).not.toHaveBeenCalled();
 	});
 
@@ -119,6 +136,6 @@ describe("MerchantApiKeyGuard", () => {
 
 		mocks.findTerminal.mockResolvedValue({ id: "terminal-row-2", locationId: STORE_A });
 		await expect(storeOf(request("KL-REGISTER-01"))).resolves.toBe(STORE_A);
-		expect(mocks.touchTerminal).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "terminal-row-2" } }));
+		expect(mocks.touchTerminal).toHaveBeenCalledWith("terminal-row-2", expect.any(Number));
 	});
 });

@@ -2,9 +2,8 @@ import { z } from "zod";
 
 import { JsonValueSchema } from "../runtime/json";
 import { ApiResponseMetaSchema } from "./api-response";
-import { EpochMsSchema } from "./common";
 
-// ── Error envelope (docs/error-model.md, ADR 015) ─────────────────────────
+// ── Error envelope (docs/technical/api/errors.md, ADR 015) ─────────────────────────
 //
 // Every non-2xx JSON response from the API has exactly this shape:
 //
@@ -110,17 +109,6 @@ export const ApiErrorResponseSchema = z
 export type ApiErrorResponse = z.output<typeof ApiErrorResponseSchema>;
 
 /**
- * Lockout details carried in `error.details` on `ACCOUNT_LOCKED` responses.
- * Non-strict on purpose: it is read out of the open `details` record.
- */
-export const ApiLockoutDetailsSchema = z.object({
-	lockedUntil: EpochMsSchema.optional(),
-	remainingSeconds: z.number().int().min(0).optional(),
-});
-
-export type ApiLockoutDetails = z.output<typeof ApiLockoutDetailsSchema>;
-
-/**
  * The flattened error body exposed by the client's `ApiError` class.
  *
  * `error` holds the machine code (the envelope's `error.code`) and
@@ -143,8 +131,6 @@ export const ApiErrorBodySchema = z
 			description: "Error type / code (e.g. ACCESS_TOKEN_MISSING)",
 			example: "INVALID_CREDENTIALS",
 		}),
-		lockedUntil: EpochMsSchema.optional(),
-		remainingSeconds: z.number().optional(),
 	})
 	.strict();
 

@@ -1,14 +1,13 @@
 import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
 import {
-	bestSharedSegmentPrefix,
-	flattenNavTree,
-	isPathAncestor,
+	findDeepestNavMatch,
+	longestSharedSegmentPrefix,
 	normalizePath,
 	segmentsOfPath,
 	sharesPathSegmentRoot,
-	type NavTreeAdapter,
 	updateLastTrailItem,
-	walkNavTreeForPath,
+	type NavTreeMatch,
+	type NavTreeShape,
 } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
 import { identitySidebarResolveHref, type SidebarResolveHref } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { FileText, type LucideIcon } from "lucide-react";
@@ -76,58 +75,30 @@ function getSidebarChildren(item: SidebarMenuTrailNode): readonly SidebarMenuTra
 	return item.children ?? [];
 }
 
-function createNavAdapter(resolveIcon: (iconName: string | undefined) => LucideIcon, resolveHref: SidebarResolveHref): NavTreeAdapter<SidebarMenuTrailNode> {
-	return {
-		getUrl: (node: SidebarMenuTrailNode): string => resolveHref(node.url),
-		getChildren: getSidebarChildren,
-		toLinkedCrumb: (node: SidebarMenuTrailNode): BreadcrumbItem => ({
-			label: node.title,
-			href: resolveHref(node.url),
-			icon: resolveIcon(node.icon),
-		}),
-		toCurrentCrumb: (node: SidebarMenuTrailNode): BreadcrumbItem => ({
-			label: node.title,
-			icon: resolveIcon(node.icon),
-		}),
-	};
-}
-
-interface SidebarMenuSnapshot {
+/** Every top-level menu item, sections first, with the section it sits in (`null` for bottom items). */
+interface SidebarMenuRoots {
 	readonly roots: readonly SidebarMenuTrailNode[];
-	readonly flatNodes: readonly SidebarMenuTrailNode[];
+	readonly sectionOf: ReadonlyMap<SidebarMenuTrailNode, SidebarMenuTrailSection>;
 }
 
-function createSidebarMenuSnapshot(menu: SidebarMenuTrailData): SidebarMenuSnapshot {
+function collectMenuRoots(menu: SidebarMenuTrailData): SidebarMenuRoots {
 	const roots: SidebarMenuTrailNode[] = [];
+	const sectionOf = new Map<SidebarMenuTrailNode, SidebarMenuTrailSection>();
 	for (const section of menu.sections) {
 		for (const item of section.items) {
 			roots.push(item);
+			if (!sectionOf.has(item)) {
+				sectionOf.set(item, section);
+			}
 		}
 	}
-	for (const item of menu.bottomItems) {
-		roots.push(item);
-	}
-	return {
-		roots,
-		flatNodes: flattenNavTree(roots, getSidebarChildren),
-	};
+	roots.push(...menu.bottomItems);
+	return { roots, sectionOf };
 }
 
+/** `Section ›` context crumb in front of an item of a multi-item section (never the `Main` catch-all). */
 function shouldPrependSectionTitle(section: SidebarMenuTrailSection, item: SidebarMenuTrailNode): boolean {
 	return section.items.length > 1 && item.title !== section.title && section.title !== "Main";
-}
-
-function withSectionContext(
-	section: SidebarMenuTrailSection,
-	item: SidebarMenuTrailNode,
-	trail: readonly BreadcrumbItem[],
-	resolveIcon: (iconName: string | undefined) => LucideIcon,
-	includeSectionContext: boolean,
-): readonly BreadcrumbItem[] {
-	if (!includeSectionContext || !shouldPrependSectionTitle(section, item)) {
-		return trail;
-	}
-	return [{ label: section.title, icon: resolveIcon(item.icon) }, ...trail];
 }
 
 /**
@@ -158,22 +129,6 @@ function segmentCrumbs(pathname: string, startIndex: number, resolvePage: Sideba
 	return crumbs;
 }
 
-function appendUnresolvedSegments(
-	pathname: string,
-	trail: readonly BreadcrumbItem[],
-	flatNodes: readonly SidebarMenuTrailNode[],
-	adapter: NavTreeAdapter<SidebarMenuTrailNode>,
-	resolvePage: SidebarTrailPageResolver | undefined,
-): readonly BreadcrumbItem[] {
-	const prefixLength = bestSharedSegmentPrefix(pathname, flatNodes, adapter.getUrl);
-	return [...trail, ...segmentCrumbs(pathname, prefixLength, resolvePage)];
-}
-
-/** True when some menu item's URL is `pathname` or one of its ancestors. O(n · d). */
-function hasMenuAncestor(pathname: string, flatNodes: readonly SidebarMenuTrailNode[], adapter: NavTreeAdapter<SidebarMenuTrailNode>): boolean {
-	return flatNodes.some((node) => isPathAncestor(adapter.getUrl(node), pathname));
-}
-
 /**
  * Replaces the label on the final crumb — for data-driven pages whose entity
  * name is only known at runtime.
@@ -185,9 +140,55 @@ export function withTrailTailLabel(trail: readonly BreadcrumbItem[], label: stri
 	return updateLastTrailItem(trail, (last) => ({ label, icon: last.icon }));
 }
 
+interface TrailContext {
+	readonly pathname: string;
+	readonly resolveIcon: (iconName: string | undefined) => LucideIcon;
+	readonly resolveHref: SidebarResolveHref;
+	readonly includeSectionContext: boolean;
+	readonly resolvePage: SidebarTrailPageResolver | undefined;
+	readonly sectionOf: ReadonlyMap<SidebarMenuTrailNode, SidebarMenuTrailSection>;
+}
+
+/** The section crumb for `root`, when this app shows section context and `root` sits in a multi-item section. */
+function sectionCrumbs(root: SidebarMenuTrailNode, context: TrailContext): readonly BreadcrumbItem[] {
+	const section = context.sectionOf.get(root);
+	if (!context.includeSectionContext || section === undefined || !shouldPrependSectionTitle(section, root)) {
+		return [];
+	}
+	return [{ label: section.title, icon: context.resolveIcon(root.icon) }];
+}
+
+/**
+ * The trail for a menu match: section context, then every node of the chain
+ * as a linked crumb, then the segments below an ancestor match. An exact match
+ * ends on an unlinked current-page crumb — except a top-level item shown
+ * under its section crumb, which stays a link to its page.
+ */
+function trailForMatch(root: SidebarMenuTrailNode, match: NavTreeMatch<SidebarMenuTrailNode>, context: TrailContext): readonly BreadcrumbItem[] {
+	const section = sectionCrumbs(root, context);
+	const crumbs: BreadcrumbItem[] = match.chain.map((node): BreadcrumbItem => ({
+		label: node.title,
+		href: context.resolveHref(node.url),
+		icon: context.resolveIcon(node.icon),
+	}));
+	if (match.kind === "ancestor") {
+		return [...section, ...crumbs, ...segmentCrumbs(context.pathname, segmentsOfPath(match.url).length, context.resolvePage)];
+	}
+	const keepsSelfLink = section.length > 0 && match.chain.length === 1;
+	const trail = keepsSelfLink ? crumbs : updateLastTrailItem(crumbs, (last): BreadcrumbItem => ({ label: last.label, icon: last.icon }));
+	return [...section, ...trail];
+}
+
 /**
  * Builds a breadcrumb trail for a pathname by walking a compiled sidebar menu.
  * Returns crumbs with mandatory icons; the final crumb has no `href`.
+ *
+ * 1. The deepest menu item that is the page or one of its ancestors anchors
+ *    the trail (`findDeepestNavMatch`) — leaf or branch, at any depth.
+ * 2. Only when no menu URL covers the page, a top-level branch sharing its
+ *    first URL segment does (last resort: a page of an app whose menu entry
+ *    points at a sub-page, like `/reports/overview` for `/reports/archive`).
+ * 3. Otherwise the root crumb (`/`) or the unknown-page fallback.
  */
 export function resolveSidebarMenuTrail(config: ResolveSidebarMenuTrailConfig): readonly BreadcrumbItem[] {
 	const {
@@ -202,64 +203,24 @@ export function resolveSidebarMenuTrail(config: ResolveSidebarMenuTrailConfig): 
 		resolvePage,
 	} = config;
 	const normalizedPath = normalizePath(pathname);
-	const snapshot = createSidebarMenuSnapshot(menu);
-	const adapter = createNavAdapter(resolveIcon, resolveHref);
-	const trail: BreadcrumbItem[] = [];
-	// Matching a section on its first URL segment alone is a last resort: when
-	// a real ancestor exists in the menu (e.g. every page of an app sits under
-	// one base segment), an unrelated parent sharing that segment must not
-	// capture the trail.
-	const allowSegmentRootMatch = !hasMenuAncestor(normalizedPath, snapshot.flatNodes, adapter);
+	const { roots, sectionOf } = collectMenuRoots(menu);
+	const shape: NavTreeShape<SidebarMenuTrailNode> = { getUrl: (node: SidebarMenuTrailNode): string => resolveHref(node.url), getChildren: getSidebarChildren };
+	const context: TrailContext = { pathname: normalizedPath, resolveIcon, resolveHref, includeSectionContext, resolvePage, sectionOf };
 
-	for (const section of menu.sections) {
-		for (const item of section.items) {
-			const icon = resolveIcon(item.icon);
-			const itemHref = adapter.getUrl(item);
-			if (itemHref === normalizedPath) {
-				if (includeSectionContext && shouldPrependSectionTitle(section, item)) {
-					return [
-						{ label: section.title, icon },
-						{ label: item.title, href: itemHref, icon },
-					];
-				}
-				return [{ label: item.title, icon }];
-			}
-			const children = item.children;
-			if (children !== undefined && (isPathAncestor(itemHref, normalizedPath) || (allowSegmentRootMatch && sharesPathSegmentRoot(itemHref, normalizedPath)))) {
-				const sectionTrail: BreadcrumbItem[] = [adapter.toLinkedCrumb(item)];
-				if (walkNavTreeForPath(children, normalizedPath, sectionTrail, adapter)) {
-					return appendUnresolvedSegments(
-						normalizedPath,
-						withSectionContext(section, item, sectionTrail, resolveIcon, includeSectionContext),
-						snapshot.flatNodes,
-						adapter,
-						resolvePage,
-					);
-				}
-				if (sharesPathSegmentRoot(itemHref, normalizedPath)) {
-					return appendUnresolvedSegments(
-						normalizedPath,
-						withSectionContext(section, item, sectionTrail, resolveIcon, includeSectionContext),
-						snapshot.flatNodes,
-						adapter,
-						resolvePage,
-					);
-				}
-			}
-		}
+	const match = findDeepestNavMatch(roots, normalizedPath, shape);
+	const matchedRoot = match?.chain.at(0);
+	if (match !== null && matchedRoot !== undefined) {
+		return trailForMatch(matchedRoot, match, context);
 	}
 
-	if (walkNavTreeForPath(menu.bottomItems, normalizedPath, trail, adapter)) {
-		return appendUnresolvedSegments(normalizedPath, trail, snapshot.flatNodes, adapter, resolvePage);
-	}
-
-	const segments = segmentsOfPath(normalizedPath);
-	for (let keep = segments.length - 1; keep >= 1; keep -= 1) {
-		const prefix = `/${segments.slice(0, keep).join("/")}`;
-		const prefixTrail: BreadcrumbItem[] = [];
-		if (walkNavTreeForPath(snapshot.roots, prefix, prefixTrail, adapter, { asParent: true })) {
-			return [...prefixTrail, ...segmentCrumbs(normalizedPath, keep, resolvePage)];
-		}
+	const segmentRoot = roots.find((root) => sectionOf.has(root) && getSidebarChildren(root).length > 0 && sharesPathSegmentRoot(shape.getUrl(root), normalizedPath));
+	if (segmentRoot !== undefined) {
+		const rootUrl = shape.getUrl(segmentRoot);
+		return [
+			...sectionCrumbs(segmentRoot, context),
+			{ label: segmentRoot.title, href: rootUrl, icon: resolveIcon(segmentRoot.icon) },
+			...segmentCrumbs(normalizedPath, longestSharedSegmentPrefix(normalizedPath, rootUrl), resolvePage),
+		];
 	}
 
 	if (normalizedPath === "/") {

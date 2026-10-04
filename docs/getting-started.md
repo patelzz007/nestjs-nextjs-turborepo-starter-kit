@@ -75,7 +75,7 @@ three apps and six shared packages:
 > [!NOTE] The key idea: `@workspace/shared` is the **single source of truth**. The API's
 > request/response shapes are Zod schemas in `shared`, and both the backend (DTOs)
 > and the frontends (typed hooks) derive their types from those schemas. See
-> [architecture.md](./architecture.md) for the full mental model.
+> [architecture.md](./technical/architecture.md) for the full mental model.
 
 ---
 
@@ -142,10 +142,12 @@ pnpm docker:up
 # Mailpit:  SMTP localhost:1025 — inbox at http://localhost:8025
 # MinIO:    S3 API http://localhost:9000 — console at http://localhost:9001 (minioadmin/minioadmin)
 # Redis:    localhost:6379
-# Kafka:    localhost:9092
+# Kafka:    127.0.0.1:9092 (IPv4 literal — `localhost` may resolve to ::1 first)
 # RabbitMQ: localhost:5672 — management UI at http://localhost:15672 (rabbit/rabbit)
 # BullMQ:   uses Redis; queue dashboard at http://localhost:3030
-# Analytics consumer (optional): pnpm dev:analytics-consumer
+# Analytics consumer (optional): set apps/analytics-consumer/.env, then
+#   pnpm --filter @workspace/analytics-consumer db:provision-login && \
+#   pnpm --filter @workspace/analytics-consumer kafka:provision-topics && pnpm dev:analytics-consumer
 # Messaging architecture: docs/infrastructure/messaging.md
 # Ports, credentials, overrides (e.g. a native Postgres already on 5432):
 #   docs/operations/local-infrastructure.md
@@ -240,7 +242,7 @@ Open `apps/api/.env` and fill in the blanks. The API validates **every** variabl
 once at startup with one zod schema and refuses to boot — listing every missing
 or invalid variable **by name, never printing a value** — until they are right.
 Secrets have **no defaults** in any environment. The full reference (every
-variable, default and rule) is [API Configuration](./api-configuration.md); the
+variable, default and rule) is [API Configuration](./technical/configuration/api.md); the
 ones you must set are:
 
 | Variable                       | Example                                                                | What it's for |
@@ -263,12 +265,12 @@ ones you must set are:
 | `RESEND_API_KEY`               | `re_...`                                                               | **Required when `EMAIL_MODE=send`.** Sends transactional emails |
 | `COOKIE_DOMAIN`                | `localhost`                                                            | Share auth cookies across localhost ports (API + apps) |
 | `REDIS_URL`                    | `redis://localhost:6379`                                               | Optional locally, **required in production** (queues, distributed caches) |
-| `SWAGGER_ENABLED`              | unset                                                                  | `0`/`false` hides the public `/v1/docs` (on by default in every environment) — see [API Routes](./api-routes.md#13-api-docs-swagger) |
+| `SWAGGER_ENABLED`              | unset                                                                  | `0`/`false` hides the public `/v1/docs` (on by default in every environment) — see [API Routes](./technical/api/routes.md#9-api-docs-swagger) |
 | `TENANCY_ENABLED`              | `false`                                                                | Multi-tenant RLS mode — see [ADR 007](./adr/007-tenancy-and-rls-bypass.md) |
 
 Everything else (`PORT`, `HOST`, JWT expiries, bcrypt rounds, throttles, cache
 sizes, storage, Kafka, Observe, …) has a documented default in
-`apps/api/.env.example` and [API Configuration](./api-configuration.md).
+`apps/api/.env.example` and [API Configuration](./technical/configuration/api.md).
 
 > [!NOTE] **CORS** (Cross-Origin Resource Sharing): the browser blocks a page on one
 > origin (say `localhost:3000`) from calling an API on another origin unless
@@ -276,7 +278,7 @@ sizes, storage, Kafka, Observe, …) has a documented default in
 > value above is for — add any frontend origin that should be allowed to call
 > the API.
 
-**Generate strong secrets** (writes all app-owned signing secrets, a 32-byte MFA key and — only if missing — the tenant master key into `apps/api/.env`):
+**Generate strong secrets** (rotates the app-owned signing secrets, **adds** a new 32-byte MFA key version — existing versions are kept so stored MFA secrets stay decryptable — and adds the tenant master key only if it is missing, in `apps/api/.env`):
 
 ```bash
 pnpm secrets:generate apps/api/.env
@@ -292,7 +294,8 @@ openssl rand -base64 128
 
 Tracked example files must contain **placeholders only**. If you ever pasted real JWT signing secrets or a Resend webhook secret into `apps/api/.env.example` (or copied that file into a deployed environment), rotate them immediately:
 
-1. Generate new values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EMAIL_VERIFICATION_SECRET`, `TWO_FACTOR_PENDING_SECRET`, and `MFA_ENCRYPTION_KEYS` (`pnpm secrets:generate apps/api/.env`). Rotate `RESEND_WEBHOOK_SECRET` in the Resend dashboard separately.
+1. Generate new values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EMAIL_VERIFICATION_SECRET`, and `TWO_FACTOR_PENDING_SECRET`, and a new `MFA_ENCRYPTION_KEYS` version (`pnpm secrets:generate apps/api/.env`). Rotate `RESEND_WEBHOOK_SECRET` in the Resend dashboard separately.
+   The generator never removes an MFA key version: secrets stored under the leaked version still need it to decrypt. New MFA secrets use the new (highest) version; the leaked version can only be deleted once no stored MFA secret uses it (every affected user has re-enrolled). There is no automated re-encryption job yet.
 2. Update the live environment variables (never commit the real values).
 3. Restart the API so the new secrets load.
 4. Expect every existing session to become invalid — users must sign in again.
@@ -319,8 +322,8 @@ cp apps/web/.env.example apps/web/.env
 | -------------------------------- | ----------------------- | -------------------------------------------------------------- |
 | `NEXT_PUBLIC_API_URL`            | `http://localhost:8080` | **Required.** Base URL of the API the browser calls            |
 | `NEXT_PUBLIC_APP_URL`            | `http://localhost:3000` | **Required.** The web app's own origin (session-refresh Origin) |
-| `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` | `true` (optional)       | One-click demo logins; `true`/`false`, default `false`         |
 | `COOKIE_DOMAIN`                  | `localhost` (optional)  | Server-only; must match the API's `COOKIE_DOMAIN`              |
+| `SHOW_DEMO_ACCOUNTS`             | `true` (optional)       | Server-only. One-click demo logins; `true`/`false`, default `false` |
 
 ### The admin app (`apps/admin/.env`)
 
@@ -343,7 +346,7 @@ The merchant app (`apps/merchant/.env`) needs `NEXT_PUBLIC_API_URL` and
 > deploy, set them to your production URLs (e.g. `https://api.example.com` and
 > `https://app.example.com`). Every app validates its env with zod: a missing or
 > malformed **required** value fails `next build` / server start with an error that
-> names the variable (never its value). See [Configuration](./configuration.md).
+> names the variable (never its value). See [Configuration](./technical/configuration/frontend.md).
 
 ---
 
@@ -389,13 +392,14 @@ pnpm db:seed                                        # development (default)
 pnpm db:seed -- --scenario empty                    # reference data only
 pnpm db:seed -- --scenario enterprise --seed 123    # large deterministic tenant
 pnpm db:seed -- --help                              # list scenarios and options
+pnpm db:seed -- --allow-destructive                 # only to seed a non-local / non-dev database on purpose
 pnpm db:all -- --scenario enterprise                # generate → deploy → seed, with a scenario
 ```
 
 | Scenario | What it creates | Typical use |
 | --- | --- | --- |
 | `empty` | Reference data only: permissions, roles and role grants, the MERCHANT capability catalog, the ABAC demo condition. **No users or tenants.** It never deletes anything — run `pnpm db:reset` first for a truly empty database. | Starting a real project on the template; testing first-run flows |
-| `development` | Reference data plus the full demo dataset: the test accounts below, URLs/clicks/API keys, geo data (downloaded from GitHub, ~1–3 min), categories, products, the two demo organizations with rewards, stores. **Resets all organization/reward rows** before re-creating the demo tenants. | Day-to-day development (default) |
+| `development` | Reference data plus the full demo dataset: the test accounts below, URLs/clicks/API keys, geo data (downloaded from GitHub, ~1–3 min), categories, products, the two demo organizations with rewards, POS terminals/keys/sales (including paired, removed, revoked, locked and soft-deleted rows), stores. Idempotent: the two demo tenants are upserted and only **their** re-creatable rows (and the seed accounts' tokens/keys/clicks) are replaced; other tenants and every audit table are never touched. | Day-to-day development (default) |
 | `enterprise` | Reference data, the test accounts below, 70 categories, and one large tenant — **Northwind Retail Group** (`/orgs/northwind-enterprise/dashboard`) with 25 locations/stores, 250 members, 500 products. Additive: other tenants are left alone. Runs in seconds. | Pagination, performance, and scale testing |
 
 **Deterministic by design.** `--seed <n>` (0–4294967295, default `1`) drives a small seeded
@@ -404,7 +408,9 @@ produces byte-identical names, prices, stock levels, and dates on every machine.
 emails, location codes, SKUs, who holds which role at which location — depends only on the dataset
 size, never on the seed, so re-running with a different seed **updates the same rows in place**
 instead of adding a second tenant. Timestamps are offsets from a fixed epoch (2026-01-01 UTC), not
-the wall clock. Only `enterprise` uses `--seed`; `development` keeps its existing data.
+the wall clock. `development` draws its generated demo values (devices, IPs, click counts…) from the same `--seed` stream; secrets (token and key material) always come from `crypto`, and seeded refresh tokens are stored as bcrypt hashes exactly like real sessions.
+
+**Safety guard.** The seed refuses to run unless `NODE_ENV` is `development` or `test` **and** `DATABASE_URL` points at a local host (`localhost`, `127.0.0.1`, `::1`, or the compose service `postgres`). Seeding anything else needs the explicit `--allow-destructive` flag (`apps/api/prisma/seed/seed-guard.ts`).
 
 Enterprise accounts (in addition to the test accounts below):
 
@@ -582,7 +588,7 @@ Run these from the **repo root**:
 | `pnpm deps:check`                                  | Verify shared deps (React/Zod/TS) are the same everywhere |
 | `pnpm deps:fix`                                    | Auto-align dependency versions                            |
 | `pnpm turbo run db:<task>`                         | Run any db task through turbo explicitly                  |
-| `pnpm docker:up`                                   | Start local infra (Postgres, Redis, Kafka, RabbitMQ, Bull Board, Mailpit, MinIO) — [details](./operations/local-infrastructure.md) |
+| `pnpm docker:up`                                   | Start local infra (Postgres, Redis, Kafka, RabbitMQ, Bull Board, Mailpit, MinIO) — [details](./technical/operations/local-infrastructure.md) |
 | `pnpm docker:down`                                 | Stop and remove infra containers                          |
 | `pnpm docker:ps`                                   | Show infra container status                               |
 | `pnpm docker:logs`                                 | Tail infra container logs                                 |
@@ -627,7 +633,7 @@ These are enforced by ESLint **and** code review. Violations fail CI:
   an app or a NestJS module. Both FE and BE import from there.
 - **Declare inputs with `@ZodBody` / `@ZodQuery` / `@ZodParams` and the response with
   `@ZodResponse` / `@ZodPaginatedResponse`** — validation, Swagger and response enforcement all
-  come from the shared schema ([Response contracts](./response-contracts.md)).
+  come from the shared schema ([Response contracts](./technical/api/response-contracts.md)).
 - **Call the API through the `useApi` hook** (`@workspace/client`) — never raw
   `fetch` in a page. New endpoints get a typed entry in
   `packages/client/src/lib/endpoints.ts`.
@@ -869,7 +875,7 @@ follows:
   card: avatar with online-status dot, name + email, a **plan badge** (with an
   Upgrade button), and menu actions (Billing, Settings, Terms & Policies) followed
   by Logout. Every action navigates to a **real route** (`/account/profile`,
-  `/account/security`, `/settings/billing`) — see [Routing](./routing.md).
+  `/account/security`, `/settings/billing`) — see [Routing](./technical/frontend/routing.md).
 - **Notifications** — split into a smart + dumb pair (rules 9–11):
   `components/notifications/notifications-dropdown.tsx` (smart) owns the state —
   it loads the data, tracks read/dismissed items, and hands **props + callbacks**
@@ -1258,7 +1264,7 @@ follows:
   `data-table-columns.tsx` (column defs + cell renderers), and
   `data-table-constants.ts` (schema + option lists).
 
-Not sure? Read [architecture.md](./architecture.md) first.
+Not sure? Read [architecture.md](./technical/architecture.md) first.
 
 ---
 
@@ -1277,7 +1283,7 @@ Not sure? Read [architecture.md](./architecture.md) first.
 | Port 3000/3001/8080 already in use                                      | Another process is on the port. Find it (`lsof -i :3000`) and stop it, or change `PORT` in `apps/api/.env`.                                                         |
 | Web says "not authenticated" but I logged in on Admin                   | Cookie isolation by design. Web uses `accessToken`/`refreshToken`; admin uses `adminAccessToken`/`adminRefreshToken`. Log in on each app separately.                |
 | `user@example.com` can't log into the admin panel                       | Expected — non-admin users are blocked from admin **by design**. Admins (`admin@example.com`/`Admin@123`) can log into **both** web and admin; non-admins only web. |
-| `ESLint couldn't find an eslint.config.js file`                         | You ran `npx eslint` from the repo root (no root config). Run it inside a workspace: `cd apps/web && npx eslint .` — see [eslint.md](./eslint.md).                  |
+| `ESLint couldn't find an eslint.config.js file`                         | You ran `npx eslint` from the repo root (no root config). Run it inside a workspace: `cd apps/web && npx eslint .` — see [eslint.md](./technical/tooling/eslint.md).                  |
 | Prisma client doesn't know a new field                                  | Run `pnpm db:generate` (or `pnpm db:migrate`, which regenerates) and restart your TS server.                                                                        |
 | Email verification link fails                                           | `RESEND_API_KEY` missing or `APP_URL` wrong. Emails are optional in dev.                                                                                            |
 | I broke the DB and want a clean slate                                   | `pnpm db:reset` (drops everything, re-migrates, re-seeds). 🔴 All data is wiped.                                                                                    |
@@ -1308,7 +1314,7 @@ Without `STORAGE_S3_PRIVATE_BUCKET` or `STORAGE_S3_BUCKET`, files land under
 
 A **single S3 bucket** (e.g. `STORAGE_S3_BUCKET=rewardhub`) is enough — you do not
 need separate public and private buckets. See
-[Storage — One bucket vs two buckets](./infrastructure/storage.md#5-one-bucket-vs-two-buckets-s3).
+[Storage — One bucket vs two buckets](./technical/storage/aws-s3.md).
 
 | Mode | When to use |
 |------|-------------|
@@ -1316,7 +1322,7 @@ need separate public and private buckets. See
 | **Local + real S3** | Existing bucket (`STORAGE_S3_BUCKET=…`) or CDK `development` stack |
 | **Production** | CDK `production` stack + env vars from stack outputs |
 
-Full CDK walkthrough: [Storage §8 — A to Z](./infrastructure/storage.md#8-cdk-deploy-guide--a-to-z-beginner-friendly).
+Full CDK walkthrough: [Storage §8 — A to Z](./technical/storage/aws-s3.md).
 
 **Q: I changed `schema.prisma` — what now?**
 A: Prisma first, then generate, then Zod, then the pipe. 1) Edit `apps/api/prisma/schema.prisma`.
@@ -1324,7 +1330,7 @@ A: Prisma first, then generate, then Zod, then the pipe. 1) Edit `apps/api/prism
 `packages/shared` so BE and FE share one shape (response schemas map `bigint`/`Date` columns to
 epoch-ms numbers). 4) Nest: `@ZodBody(apiContract.*.input)` for the request and
 `@ZodResponse(...)` / `@ZodPaginatedResponse(...)` for the response. 5) Client leaf in
-`endpoints.ts`. 6) `pnpm typecheck`, then `pnpm openapi:export`. See [prisma.md](./prisma.md) §4.
+`endpoints.ts`. 6) `pnpm typecheck`, then `pnpm openapi:export`. See [prisma.md](./technical/database.md) §4.
 
 **Q: Where does the `:8080` / `3000` / `3001` come from?**
 A: Defaults in `main.ts` (API) and the Next.js apps. Override with `PORT` (API) and
@@ -1336,18 +1342,18 @@ A: If it needs a new column, Prisma migrate + generate **before** Zod. Then:
 2) Nest service + controller with `@ZodBody(apiContract.<leaf>.input)` (and friends) and one
 `@ZodResponse` / `@ZodPaginatedResponse` with the leaf's response schema. 3) Typed leaf in
 `packages/client/src/lib/api/endpoints.ts` (and `use-api.ts` / `server-api.ts`).
-4) Wire the UI via `useApi`. 5) `pnpm openapi:export` — see [Response contracts](./response-contracts.md).
+4) Wire the UI via `useApi`. 5) `pnpm openapi:export` — see [Response contracts](./technical/api/response-contracts.md).
 
 ---
 
 ## 15. Further reading
 
-- **[Architecture](./architecture.md)** — the full mental model and data flow.
-- **[TypeScript configs](./typescript.md)** — how tsconfig inheritance works.
-- **[ESLint setup](./eslint.md)** — the rules, per-repo configs, and how to run it.
-- **[Prisma & database](./prisma.md)** — every `db:*` command in detail, seeding, migrations.
-- **[Storage platform](./infrastructure/storage.md)** — S3 file uploads, local vs production setup, KYB documents, CDK deploy.
-- **[Dependency hygiene](./dependencies.md)** — how syncpack pins shared deps.
+- **[Architecture](./technical/architecture.md)** — the full mental model and data flow.
+- **[TypeScript configs](./technical/tooling/typescript.md)** — how tsconfig inheritance works.
+- **[ESLint setup](./technical/tooling/eslint.md)** — the rules, per-repo configs, and how to run it.
+- **[Prisma & database](./technical/database.md)** — every `db:*` command in detail, seeding, migrations.
+- **[Storage platform](./technical/storage/overview.md)** — S3 file uploads, local vs production setup, KYB documents, CDK deploy.
+- **[Dependency hygiene](./technical/tooling/dependencies.md)** — how syncpack pins shared deps.
 - **[Auth roadmap](./auth-roadmap.md)** — auth/RBAC/multi-tenancy design decisions.
 - **[Boilerplate roadmap](./boilerplate-roadmap.md)** — 15 improvements + 15 features for the template itself.
 

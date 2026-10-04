@@ -34,7 +34,7 @@ export type Reward = z.infer<typeof RewardSchema>;
 export const CreateRewardSchema = RewardSchema.pick({ name: true, pointsCost: true }).strict();
 export type CreateRewardDto = z.infer<typeof CreateRewardSchema>;
 
-// The ONE list grammar (docs/list-queries.md): page/limit/cursor, sort=-createdAt,name,
+// The ONE list grammar (docs/technical/api/list-queries.md): page/limit/cursor, sort=-createdAt,name,
 // filter[field][op]=value, search — whitelists declared once, here.
 export const rewardListQuery = defineListQuery({
   sortable: ['createdAt', 'pointsCost', 'name'],

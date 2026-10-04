@@ -140,30 +140,54 @@ pnpm db:generate
 2. **`pnpm db:migrate`** (from `apps/api`) — writes `migrations/<timestamp>_*/migration.sql`, applies it, runs `prisma generate`.
 3. **`npx prisma generate`** is already part of `db:migrate`. Run `pnpm db:generate` only if you pulled migrations and need the client without creating a new one.
 4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins). Runtime helpers live under `schemas/runtime/`; internal events under `schemas/domain/platform/events.ts`.
-5. **Nest HTTP boundary** — `@ZodBody` / `@ZodQuery` / `@ZodParams` with `apiContract.<domain>.<leaf>.input` (or the same shared schema) and one `@ZodResponse` / `@ZodPaginatedResponse` with the leaf's response schema. Never return a Prisma model from a controller: map `bigint` / `Date` columns to the response DTO in the repository or service — the response decorator does not compile otherwise ([Response contracts](./response-contracts.md)).
+5. **Nest HTTP boundary** — `@ZodBody` / `@ZodQuery` / `@ZodParams` with `apiContract.<domain>.<leaf>.input` (or the same shared schema) and one `@ZodResponse` / `@ZodPaginatedResponse` with the leaf's response schema. Never return a Prisma model from a controller: map `bigint` / `Date` columns to the response DTO in the repository or service — the response decorator does not compile otherwise ([Response contracts](./technical/api/response-contracts.md)).
 6. **Application types** — services, templates, and adapters import `X` (type) from `@workspace/shared`; `XSchema` only where `.parse()` / `safeParse()` runs. See `docs/typescript.md` §8.
 7. **RLS** — if the table is tenant-scoped, add `ENABLE`/`FORCE ROW LEVEL SECURITY` + policies in SQL (Prisma PSL cannot emit them). See §10.
 
-Things Prisma cannot represent (REVOKE, FORCE RLS, `SET ROLE`) stay in SQL **after**
-the schema change they belong to — never as a substitute for a column. In this repo
-that SQL is the **tail of the single `20260818235200_init` migration**, not a
-separate folder. If you regenerate init from `migrate diff --from-empty --to-schema`,
-append that tail again or `app_runtime` will get `42501 permission denied for schema public`.
+Things Prisma cannot represent (REVOKE, FORCE RLS, `SET ROLE`, grants to
+`app_runtime`) do **not** live in a migration. They live in
+`apps/api/prisma/rls.sql` and `apps/api/prisma/rls/NN-*.sql` (ordered by
+`RLS_APPLY_ORDER` in `apps/api/scripts/rls-apply-plan.ts`) and are applied by
+`pnpm db:apply-security` after every `db:migrate`, `db:deploy`, `db:push` and
+`db:reset`. See §10.
 
-### Squashing to one `init`
+### Migration history is append-only
 
-This tree keeps **one** folder under `prisma/migrations/`. Do not delete it and
-run a schema-only migrate — Prisma will not emit GRANT/RLS.
+Migrations under `prisma/migrations/` are **generated, never hand-written**: edit `schema.prisma`, then `pnpm db:migrate:create --name <change>` (review) or `pnpm db:migrate`. Express every rule Prisma can model in the schema (required columns, relations, partial unique indexes via the `partialIndexes` preview feature, canonical `dbgenerated` defaults). Rules Prisma cannot model (CHECK constraints, data backfills) are not hidden in hand-edited SQL: they are enforced in the service layer (with tests) or raised as an explicit, reviewed data step. They are also **forward-only**. Once a migration
+folder has been pushed to a shared branch, never edit, rename, delete or
+re-squash it — every database that applied it records its name and checksum in
+`_prisma_migrations`, and a rewritten history makes `prisma migrate deploy`
+fail (or silently skip work) on those databases. Every schema change is a new
+`pnpm db:migrate` folder on top of the existing ones; a change that has to be
+undone is undone by another forward migration.
 
-To rebuild init after a schema change (dev only, wipes the DB):
+The history was baselined once, before the first deploy, as
+`20261002055618_init`. That squash was a one-off, pre-first-deploy action.
+
+#### Squashing — pre-first-deploy forks only
+
+Squashing is allowed **only** in a fork of this kit that has never been
+deployed anywhere (no staging, no production, no teammate database you
+cannot wipe). After the first deploy, the rule above applies without exception.
 
 ```bash
 cd apps/api
-pnpm exec dotenv -e .env -- prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script
-# Merge that SQL with the existing RLS tail in 20260818235200_init/migration.sql
+# 1. Move every folder under prisma/migrations/ out of the tree (keep migration_lock.toml).
+# 2. Generate the baseline from the schema:
+mkdir -p prisma/migrations/<timestamp>_init
+pnpm exec prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script \
+  > prisma/migrations/<timestamp>_init/migration.sql
+# 3. Rebuild the local database (migrations + client + RLS + seed):
 pnpm db:reset
-pnpm db:generate
 ```
+
+#### Drift check
+
+`pnpm db:check-drift` (`apps/api/scripts/check-migration-drift.ts`) replays
+`prisma/migrations` into the throwaway `SHADOW_DATABASE_URL` database and
+compares the result with `schema.prisma`; it fails when they disagree. A
+`dbgenerated(...)` default that is not written in Postgres's canonical form
+(see the timestamp convention in §9) shows up here as drift.
 
 ### Command reference
 
@@ -173,9 +197,11 @@ pnpm db:generate
 | `pnpm db:migrate:create` | `dotenv -e .env -- prisma migrate dev --create-only`  | Creates the migration file **without applying** it (so you can review/edit the SQL first)          | ❌ No                 |
 | `pnpm db:deploy`         | `dotenv -e .env -- prisma migrate deploy`             | Applies **pending** migrations (used in CI/production — never generates)                           | ❌ No                 |
 | `pnpm db:migrate:status` | `dotenv -e .env -- prisma migrate status`             | Shows which migrations are applied / pending                                                       | ❌ No                 |
+| `pnpm db:check-drift`    | `dotenv -e .env -- tsx scripts/check-migration-drift.ts` | Replays `prisma/migrations` into `SHADOW_DATABASE_URL` and fails (exit 2) if the result differs from `schema.prisma` | ❌ No (wipes only the shadow DB) |
+| `pnpm db:check-seed-coverage` | `dotenv -e .env -- tsx scripts/check-seed-coverage.ts` | Read-only audit of the seeded DB: fails if a table has no rows or a nullable column is NULL in every row — see [Seed coverage](#seed-coverage--every-table-every-column) | ❌ No (read-only transaction) |
 | `pnpm db:generate`       | `dotenv -e .env -- prisma generate`                   | Regenerates the Prisma client types in `node_modules/.prisma`                                      | ❌ No                 |
 | `pnpm db:push`           | `dotenv -e .env -- prisma db push --accept-data-loss` | Pushes schema straight to the DB **without a migration file** (dev-only)                           | ⚠️ Can drop data      |
-| `pnpm db:seed`           | `dotenv -e .env -- tsx prisma/seed.ts`               | Runs the seeder (idempotent — safe to re-run). Default scenario `development`; pick another with `pnpm db:seed -- --scenario empty\|enterprise [--seed <n>]` — see [Seed scenarios](./getting-started.md#seed-scenarios) | ⚠️ Rewrites seed rows |
+| `pnpm db:seed`           | `dotenv -e .env -- tsx prisma/seed.ts`               | Runs the seeder (idempotent — safe to re-run). Default scenario `development`; pick another with `pnpm db:seed -- --scenario empty\|enterprise [--seed <n>]` — see [Seed scenarios](./technical/database.md#seed-data) | ⚠️ Rewrites seed rows |
 
 > [!NOTE] **Note:** the seeder runs through `tsx`, which resolves `@workspace/shared` via
 > default (non-`development`) export conditions → it imports the **built**
@@ -237,7 +263,7 @@ pnpm turbo run db:migrate:status   # show applied / pending migrations
 pnpm turbo run db:generate         # regenerate the Prisma client
 pnpm turbo run db:push             # push schema without a migration file
 pnpm turbo run db:seed             # seed (auto-runs db:generate + db:deploy first)
-pnpm turbo run db:reset            # wipe + re-migrate (auto-runs db:generate)
+pnpm turbo run db:reset            # wipe + re-migrate + generate + RLS + seed
 pnpm turbo run db:studio           # open Prisma Studio (persistent server)
 
 # scope to a single workspace if you ever need to
@@ -248,7 +274,7 @@ Two tasks have **dependency chains** declared in `turbo.json`:
 
 - **`db:seed`** `dependsOn` **`db:generate` + `db:deploy`** — the Prisma client and
   schema are guaranteed up to date before seeding runs.
-- **`db:reset`** `dependsOn` **`db:generate`**.
+- **`db:reset`** `dependsOn` **`^build` + `db:generate`** (its script then chains `db:generate`, `db:apply-security` and `db:seed` after the reset; the seed imports the built `@workspace/shared`).
 
 Task flags:
 
@@ -295,6 +321,40 @@ duplicating rows or throwing:
 > [!WARNING] Because volatile tables are wiped, any API keys / refresh tokens you created
 > manually during development will be removed when you re-run `db:seed`.
 
+### Seed coverage — every table, every column
+
+After `pnpm db:seed`, **every table holds at least one row and every nullable column holds a
+real value in at least one row** — soft-delete fields (seed at least one soft-deleted row),
+optional columns, audit/context columns (IP, user agent, correlation id, impersonator) and
+short-lived tables (a live 2FA challenge, a pending setup, …). A model or column that only
+ever holds NULL in the demo data is untested by every screen and query that reads it.
+
+`pnpm --filter @workspace/api db:check-seed-coverage` enforces it. It runs in CI right after the
+development seed (and in `pnpm ci:local`), and you should run it after changing the schema or a seeder:
+
+```bash
+pnpm --filter @workspace/api db:seed
+pnpm --filter @workspace/api db:check-seed-coverage
+```
+
+How it works (`apps/api/scripts/seed-coverage.ts`, `seed-coverage-catalog.ts`, `check-seed-coverage.ts`):
+
+- The table/column list comes from **both** sides: the generated client's DMMF (`Prisma.dmmf`,
+  cross-checked against the `model` declarations in `schema.prisma`, so a stale client fails) and the
+  live Postgres catalog. A table or column present on only one side fails the check — a new model can
+  never be skipped. `_prisma_migrations` is ignored.
+- It connects with `DATABASE_URL` (the owner/migration login the seed and `db:apply-security` use) in a
+  `READ ONLY` transaction with `row_security = off`: it never writes, and if RLS would filter a table
+  Postgres raises an error instead of returning a partial view.
+- One `count(*)` + `count(column)` scan per table; NOT NULL columns are guaranteed by the database and
+  are not counted.
+
+**Exemptions** live in one typed allowlist, `apps/api/prisma/seed/coverage-exemptions.ts`. Each entry
+names an `empty-table` or a `null-column` and carries a written `reason` (at least
+40 characters) that a reviewer can judge — a structural reason such as "no correct database holds this
+value". "We did not seed it" is never a reason: seed it. An entry that no longer matches a gap (unknown
+table/column, or the seed now covers it) fails the check, so the list only shrinks.
+
 ### Seeded login accounts
 
 | Email                    | Password         | Role       |
@@ -316,9 +376,9 @@ Migrations are versioned SQL files under `apps/api/prisma/migrations/`:
 ```
 migrations/
 ├── migration_lock.toml                              ← locks the provider (postgresql)
-├── 20260728220040_init/                             ← first migration
+├── 20261002055618_init/                             ← baseline (the one-off pre-deploy squash)
 │   └── migration.sql
-└── 20260729192341_add_brute_force_protection/       ← second migration
+└── 20261002123150_organization_terminal_live_unique/ ← every later change: a new forward folder
     └── migration.sql
 ```
 
@@ -377,17 +437,16 @@ The API pool runs `SET ROLE app_runtime`. That role is **cluster-wide** (it surv
 A `prisma migrate reset` that re-baselines without the RLS migration leaves
 `app_runtime` in the cluster and a new `public` schema with no grants (Postgres 15+).
 
-Fix: the squashed `20260818235200_init` migration **must** include the RLS
-tail (`GRANT USAGE ON SCHEMA public TO app_runtime`, policies). A Prisma
-schema-only init will boot into `42501`. Prefer `pnpm db:reset` from the repo
-root so that single file is replayed in full.
+Fix: re-apply the grants and policies, which live outside the migrations
+(`apps/api/prisma/rls.sql` + `apps/api/prisma/rls/*.sql`):
 
 ```bash
-cd apps/api && pnpm db:deploy
+cd apps/api && pnpm db:apply-security
 ```
 
-Prefer `pnpm db:reset` from the repo root over a bare `npx prisma migrate reset`,
-so the RLS SQL is replayed together with the schema.
+Prefer `pnpm db:reset` from the repo root over a bare `npx prisma migrate reset`:
+it chains `db:generate`, `db:apply-security` and `db:seed` after the reset, so the
+RLS SQL is replayed together with the schema.
 
 Prisma 7 takes the URL from `apps/api/prisma.config.ts` (`process.env.DATABASE_URL`),
 not from `schema.prisma`. That file loads `apps/api/.env`. If the error still appears:
@@ -440,11 +499,31 @@ This drops all data, replays all migrations, and re-seeds. 🔴 Everything is wi
 
 > [!IMPORTANT] **Timestamp convention — epoch milliseconds everywhere.**
 > Every date column is `BigInt` storing epoch ms (never `DateTime`). Use
-> `@default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))` for
-> `createdAt`-style defaults so the DB computes the value on insert. In the
+> `@default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))`
+> for `createdAt`-style defaults so the DB computes the value on insert.
+> Write the expression **exactly** in that form: it is the text Postgres stores
+> after normalising the default (`pg_get_expr`), and Prisma compares the
+> `dbgenerated` string literally. Any other spelling — e.g.
+> `(EXTRACT(EPOCH FROM now()) * 1000)::bigint` — is semantically identical but
+> makes every `prisma migrate dev` / `migrate diff` emit a spurious
+> `ALTER COLUMN … SET DEFAULT` for every such column. The same applies to any
+> new `dbgenerated` default: apply it once, read
+> `information_schema.columns.column_default`, and copy that text back. In the
 > shared Zod schemas use `EpochMsSchema` (branded `EpochMs`), stamp `now` with
 > `nowEpochMs()`, and render dates on the FE exclusively via date-fns helpers
 > in `apps/admin/lib/dates.ts` — never raw `Intl`/`toLocale*`/ISO slicing.
+>
+> **One documented exception:** the vendored geography tables (`Region`,
+> `Subregion`, `Country`, `State`, `City`, seeded from
+> dr5hn/countries-states-cities-database) keep the dataset's
+> `DateTime @db.Timestamp(0)` columns and its fixed `createdAt` default
+> `dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")`. Never
+> copy that shape into a new table (`rules/08-database-prisma.md`, Migrations).
+
+> [!NOTE] **Unique constraints on soft-deletable models.** Decide whether a
+> soft-deleted row should still hold its unique value. Usually it should not:
+> use a partial unique index, `@@unique([organizationId, terminalId], where: { isDeleted: false })`
+> (the `partialIndexes` preview feature is enabled in the generator block).
 
 Follow the [column / field change order](#column--field-change-order) in §4. Short version:
 
@@ -455,7 +534,7 @@ Follow the [column / field change order](#column--field-change-order) in §4. Sh
 5. **Then** Zod in `packages/shared`, Nest `ZodValidationPipe` + Swagger wrappers, client contract leaf.
 6. `pnpm typecheck` and `pnpm lint`.
 7. Tenant tables: add RLS in `apps/api/prisma/rls.sql` (or `prisma/rls/NN-*.sql`, registered in `RLS_APPLY_ORDER` — `apps/api/scripts/rls-apply-plan.ts`);
-   see [RBAC, ACL, and RLS](./rbac-acl-rls-architecture.md). **Do not** patch
+   see [RBAC, ACL, and RLS](./technical/security/database-security.md). **Do not** patch
    `migrations/*/migration.sql` for policies.
 
 ---
@@ -483,7 +562,7 @@ RLS even with `FORCE ROW LEVEL SECURITY`**. The API therefore sets `ROLE app_run
 | **Single-tenant** (default) | `TENANCY_ENABLED=false` | `@RlsBypass()`, no `request.user`, `isSuperAdmin`, or **`hasAdminAccess`** |
 | **Multi-tenant** | `TENANCY_ENABLED=true` | `@RlsBypass()`, no `request.user`, or **`isSuperAdmin` only** — staff with admin access operate within org scope |
 
-`DEFAULT_ORGANIZATION_ID` sets the org when tenancy is disabled or when `x-organization-id` is absent (default: `default`). SQL helper: `app_current_organization_id()`. See [ADR 007: Tenancy and RLS bypass](./adr/007-tenancy-and-rls-bypass.md).
+`DEFAULT_ORGANIZATION_ID` names the real organization a single-tenant deployment (tenancy disabled) serves; the API verifies at boot that it is a live row and refuses to start otherwise. In multi-tenant mode only the guard-verified organization is used — there is no fallback. SQL helper: `app_current_organization_id()`. See [ADR 007: Tenancy and RLS bypass](./adr/007-tenancy-and-rls-bypass.md).
 
 **Who sets ALS:** `RlsInterceptor` (`apps/api/src/common/interceptors/rls.interceptor.ts`,
 outermost `APP_INTERCEPTOR`) wraps `next.handle()` in `rlsStorage.run(...)`. Guards run
@@ -513,7 +592,7 @@ first, so `request.user` is already set on the JWT path.
 | `POST /api/v1/auth/impersonate/:userId` | no | no | yes | Super-admin; sets impersonation access cookie |
 | `POST /api/v1/auth/stop-impersonation` | no | no | yes | Ends impersonation; restores admin access cookie |
 | `GET /notifications/email-webhook` | yes | no | no | Info endpoint for operators |
-| `POST /notifications/email-webhook` | yes | yes | yes | Updates `email_logs` by Resend id (signature-verified) |
+| `POST /notifications/email-webhook` | yes | yes | yes | Signature-verified; records `email_delivery_events` and moves `email_logs` forward (writes run under the `email.log.write` system operation) |
 
 Add new public routes in this table when you ship them. If a route needs cross-tenant
 DB work, add `@RlsBypass()`; if it only touches the caller's rows, keep scoped RLS.
@@ -544,7 +623,7 @@ pnpm db:reset
 # or: cd apps/api && pnpm db:deploy   # applies migrations + RLS
 ```
 
-See [RBAC, ACL, and RLS](./rbac-acl-rls-architecture.md) for the full template model.
+See [RBAC, ACL, and RLS](./technical/security/database-security.md) for the full template model.
 
 ---
 

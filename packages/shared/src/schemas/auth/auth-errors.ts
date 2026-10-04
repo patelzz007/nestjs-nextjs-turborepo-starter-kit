@@ -9,13 +9,13 @@ import { z } from "zod";
  * agree on the exact set of codes — the client maps each code to a friendly,
  * i18n-ready message instead of surfacing raw server strings.
  *
- * `ACCOUNT_LOCKED` and `INVALID_CREDENTIALS` are emitted by the login path
- * (auth.service) with structured lockout fields — see `ErrorResponseSchema`.
+ * A locked account is deliberately NOT a distinct code: the login path answers
+ * `INVALID_CREDENTIALS` (account-lockout.service), so a lockout cannot be used
+ * to discover that an account exists. The lockout is announced by email.
  */
 export const AuthErrorCodeSchema = z.enum([
 	// ── Login / signup ────────────────────────────────────────────────────
 	"INVALID_CREDENTIALS",
-	"ACCOUNT_LOCKED",
 	"ADMIN_ACCESS_REQUIRED",
 	"EMAIL_NOT_VERIFIED",
 	// ── Access token ──────────────────────────────────────────────────────
@@ -36,11 +36,3 @@ export const AuthErrorCodeSchema = z.enum([
 ]);
 
 export type AuthErrorCode = z.output<typeof AuthErrorCodeSchema>;
-
-/**
- * The subset of auth error codes that carry a structured lockout payload.
- * `ACCOUNT_LOCKED` responses include `lockedUntil` and `remainingSeconds` so
- * the client can render a live "retry in MM:SS" countdown.
- */
-export const LockedErrorCodeSchema = z.literal("ACCOUNT_LOCKED");
-export type LockedErrorCode = z.output<typeof LockedErrorCodeSchema>;

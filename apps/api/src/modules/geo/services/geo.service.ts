@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { nowEpochMs } from "@workspace/shared";
 
 import type {
 	CascadePreviewResult,
@@ -40,11 +41,46 @@ import type {
 	UpdateSubregionInput,
 } from "@workspace/shared";
 
-import { GeoRepository } from "../repositories/geo.repository";
+import { AuditTrailService } from "../../../common/audit/audit-trail.service";
+import { RequestContextService } from "../../../common/context/request-context";
+import { AuthenticationError } from "../../../common/errors/app-error";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { GeoRepository, type GeoDeletionStamp, type GeoWriteTransaction } from "../repositories/geo.repository";
 
+/** The one system operation geo writes run under — the only session the geo `*_write` RLS policies accept. */
+export const GEO_WRITE_OPERATION = "geo.reference_data.write";
+
+/**
+ * Geo reference data. Reads are public-to-authenticated (`GEO:READ`); every
+ * write is SuperAdmin-only (controller) and runs in ONE transaction under the
+ * `geo.reference_data.write` system operation, with the request's audit row
+ * appended in that same transaction (it commits or rolls back with the change).
+ */
 @Injectable()
 export class GeoService {
-	public constructor(private readonly repository: GeoRepository) {}
+	public constructor(
+		private readonly repository: GeoRepository,
+		private readonly tenantTx: TenantTransactionService,
+		private readonly requestContext: RequestContextService,
+		private readonly auditTrail: AuditTrailService,
+	) {}
+
+	/** Run one geo write as the verified actor, audited in the same transaction. */
+	private async write<T extends object>(reason: string, work: (tx: GeoWriteTransaction, actorUserId: string) => Promise<T>): Promise<T> {
+		const actorUserId: string | undefined = this.requestContext.current()?.principal?.userId;
+		if (actorUserId === undefined) {
+			throw new AuthenticationError({ message: "Geo writes require an authenticated SuperAdmin." });
+		}
+		return this.tenantTx.withSystemOperation({ operation: GEO_WRITE_OPERATION, reason, actorUserId }, async (tx): Promise<T> => {
+			const result: T = await work(tx, actorUserId);
+			await this.auditTrail.recordInTransaction(tx, result);
+			return result;
+		});
+	}
+
+	private static deletionStamp(actorUserId: string): GeoDeletionStamp {
+		return { deletedBy: actorUserId, deletedAt: nowEpochMs() };
+	}
 
 	public getStats(): Promise<GeoStats> {
 		return this.repository.getStats();
@@ -55,7 +91,7 @@ export class GeoService {
 	}
 
 	public importData(input: GeoImportInput): Promise<GeoImportResult> {
-		return this.repository.importData(input);
+		return this.write("Import geo reference data", async (tx) => this.repository.importData(tx, input));
 	}
 
 	public validateImport(input: GeoImportValidateInput): GeoImportValidationResult {
@@ -79,15 +115,15 @@ export class GeoService {
 	}
 
 	public createRegion(input: CreateRegionInput): Promise<Region> {
-		return this.repository.createRegion(input);
+		return this.write("Create region", async (tx) => this.repository.createRegion(tx, input));
 	}
 
 	public updateRegion(id: number, input: UpdateRegionInput): Promise<Region> {
-		return this.repository.updateRegion(id, input);
+		return this.write("Update region", async (tx) => this.repository.updateRegion(tx, id, input));
 	}
 
 	public deleteRegion(id: number): Promise<MessageResponse> {
-		return this.repository.deleteRegion(id);
+		return this.write("Soft-delete region", async (tx, actorUserId) => this.repository.deleteRegion(tx, id, GeoService.deletionStamp(actorUserId)));
 	}
 
 	public listSubregions(query: SubregionListQuery): Promise<PaginatedServiceResult<SubregionListItem>> {
@@ -99,15 +135,15 @@ export class GeoService {
 	}
 
 	public createSubregion(input: CreateSubregionInput): Promise<Subregion> {
-		return this.repository.createSubregion(input);
+		return this.write("Create subregion", async (tx) => this.repository.createSubregion(tx, input));
 	}
 
 	public updateSubregion(id: number, input: UpdateSubregionInput): Promise<Subregion> {
-		return this.repository.updateSubregion(id, input);
+		return this.write("Update subregion", async (tx) => this.repository.updateSubregion(tx, id, input));
 	}
 
 	public deleteSubregion(id: number): Promise<MessageResponse> {
-		return this.repository.deleteSubregion(id);
+		return this.write("Soft-delete subregion", async (tx, actorUserId) => this.repository.deleteSubregion(tx, id, GeoService.deletionStamp(actorUserId)));
 	}
 
 	public listCountries(query: CountryListQuery): Promise<PaginatedServiceResult<CountryListItem>> {
@@ -119,15 +155,15 @@ export class GeoService {
 	}
 
 	public createCountry(input: CreateCountryInput): Promise<Country> {
-		return this.repository.createCountry(input);
+		return this.write("Create country", async (tx) => this.repository.createCountry(tx, input));
 	}
 
 	public updateCountry(id: number, input: UpdateCountryInput): Promise<Country> {
-		return this.repository.updateCountry(id, input);
+		return this.write("Update country", async (tx) => this.repository.updateCountry(tx, id, input));
 	}
 
 	public deleteCountry(id: number): Promise<MessageResponse> {
-		return this.repository.deleteCountry(id);
+		return this.write("Soft-delete country", async (tx, actorUserId) => this.repository.deleteCountry(tx, id, GeoService.deletionStamp(actorUserId)));
 	}
 
 	public listStates(query: StateListQuery): Promise<PaginatedServiceResult<StateListItem>> {
@@ -139,15 +175,15 @@ export class GeoService {
 	}
 
 	public createState(input: CreateStateInput): Promise<State> {
-		return this.repository.createState(input);
+		return this.write("Create state", async (tx) => this.repository.createState(tx, input));
 	}
 
 	public updateState(id: number, input: UpdateStateInput): Promise<State> {
-		return this.repository.updateState(id, input);
+		return this.write("Update state", async (tx) => this.repository.updateState(tx, id, input));
 	}
 
 	public deleteState(id: number): Promise<MessageResponse> {
-		return this.repository.deleteState(id);
+		return this.write("Soft-delete state", async (tx, actorUserId) => this.repository.deleteState(tx, id, GeoService.deletionStamp(actorUserId)));
 	}
 
 	public listCities(query: CityListQuery): Promise<PaginatedServiceResult<CityListItem>> {
@@ -159,14 +195,14 @@ export class GeoService {
 	}
 
 	public createCity(input: CreateCityInput): Promise<City> {
-		return this.repository.createCity(input);
+		return this.write("Create city", async (tx) => this.repository.createCity(tx, input));
 	}
 
 	public updateCity(id: number, input: UpdateCityInput): Promise<City> {
-		return this.repository.updateCity(id, input);
+		return this.write("Update city", async (tx) => this.repository.updateCity(tx, id, input));
 	}
 
 	public deleteCity(id: number): Promise<MessageResponse> {
-		return this.repository.deleteCity(id);
+		return this.write("Soft-delete city", async (tx, actorUserId) => this.repository.deleteCity(tx, id, GeoService.deletionStamp(actorUserId)));
 	}
 }

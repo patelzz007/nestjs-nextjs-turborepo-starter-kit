@@ -1,3 +1,4 @@
+import { epochMs, type ApiPaginatedMeta, type ApiResponseMeta, type Envelope } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,44 +9,30 @@ import {
 	readPaginatedPage,
 	readPaginatedTotal,
 	readPaginatedTotalPages,
-	stubApiMeta,
-	stubPaginatedMetaFromHydration,
-	successEnvelope,
 } from "./envelope";
 
+const ANSWERED_AT = epochMs(1_790_812_800_000);
+const META: ApiResponseMeta = { correlationId: "corr-1", timestamp: ANSWERED_AT };
+const PAGINATED_META: ApiPaginatedMeta = { ...META, limit: 10, total: 25, page: 2, totalPages: 3, nextCursor: "cursor-3", hasNext: true, hasPrevious: true };
+
 describe("initialDataOption", () => {
-	it("omits the initialData key entirely when nothing was prefetched", () => {
-		const option = initialDataOption<string>(undefined);
+	it("omits every key when nothing was prefetched", () => {
+		const option = initialDataOption<Envelope<string>>(undefined);
 
 		expect(option).toEqual({});
 		expect(Object.hasOwn(option, "initialData")).toBe(false);
+		expect(Object.hasOwn(option, "initialDataUpdatedAt")).toBe(false);
 	});
 
-	it("carries prefetched data under initialData", () => {
-		const envelope = successEnvelope({ id: "a" }, stubApiMeta());
+	it("seeds the real envelope, dated by the server's answer time (not 'now')", () => {
+		const envelope: Envelope<{ readonly id: string }> = { success: true, data: { id: "a" }, meta: META };
 
-		expect(initialDataOption(envelope)).toEqual({ initialData: envelope });
-	});
-
-	it("keeps falsy-but-defined data such as an empty list or zero", () => {
-		const envelope = successEnvelope([], stubApiMeta());
-
-		expect(initialDataOption(envelope)).toEqual({ initialData: envelope });
-		expect(initialDataOption(0)).toEqual({ initialData: 0 });
+		expect(initialDataOption(envelope)).toEqual({ initialData: envelope, initialDataUpdatedAt: ANSWERED_AT });
 	});
 });
 
-describe("successEnvelope / stubApiMeta", () => {
-	it("wraps data and meta in a success envelope", () => {
-		const meta = stubApiMeta();
-
-		expect(successEnvelope({ id: "a" }, meta)).toEqual({ success: true, data: { id: "a" }, meta });
-		expect(meta.correlationId).toBe("");
-	});
-});
-
-describe("pagination readers", () => {
-	it("fall back when meta is absent", () => {
+describe("paginated meta readers", () => {
+	it("use the fallback only while there is no answer yet", () => {
 		expect(readPaginatedTotal(undefined, 7)).toBe(7);
 		expect(readPaginatedPage(undefined)).toBe(1);
 		expect(readPaginatedTotalPages(undefined)).toBe(1);
@@ -54,20 +41,17 @@ describe("pagination readers", () => {
 		expect(readPaginatedNextCursor(undefined)).toBeNull();
 	});
 
-	it("fall back when meta is not paginated", () => {
-		const meta = stubApiMeta();
-
-		expect(readPaginatedTotal(meta)).toBe(0);
-		expect(readPaginatedHasNext(meta)).toBe(false);
-		expect(readPaginatedNextCursor(meta)).toBeNull();
+	it("read the server's pagination", () => {
+		expect(readPaginatedTotal(PAGINATED_META)).toBe(25);
+		expect(readPaginatedPage(PAGINATED_META)).toBe(2);
+		expect(readPaginatedTotalPages(PAGINATED_META)).toBe(3);
+		expect(readPaginatedHasNext(PAGINATED_META)).toBe(true);
+		expect(readPaginatedHasPrevious(PAGINATED_META)).toBe(true);
+		expect(readPaginatedNextCursor(PAGINATED_META)).toBe("cursor-3");
 	});
 
-	it("read values from paginated meta", () => {
-		const meta = stubPaginatedMetaFromHydration(10, 10, true, "cursor-2");
-
-		expect(readPaginatedHasNext(meta)).toBe(true);
-		expect(readPaginatedNextCursor(meta)).toBe("cursor-2");
-		expect(readPaginatedTotal(meta)).toBe(meta.total);
-		expect(readPaginatedPage(meta)).toBe(meta.page);
+	it("throw on a meta without pagination instead of hiding the drift behind a default", () => {
+		expect(() => readPaginatedTotal(META)).toThrow();
+		expect(() => readPaginatedNextCursor(META)).toThrow();
 	});
 });

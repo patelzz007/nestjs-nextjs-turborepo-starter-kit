@@ -1,9 +1,19 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // `@@unique(..., where: ...)` — uniqueness that ignores soft-deleted rows.
+  // `postgresqlExtensions` — the datasource `extensions` list (citext below);
+  // Prisma 7.10 rejects `extensions` without this preview feature.
+  previewFeatures = ["partialIndexes", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  /// citext: case-insensitive text for email addresses (users, invitations) —
+  /// uniqueness and lookups ignore case at the database, not only at the API.
+  /// pg_trgm: trigram similarity (`similarity()`, `%`) behind the geo `?search=`
+  /// filters (GeoRepository.fuzzySearchIds), served by the `*_name_trgm_idx`
+  /// GIN indexes on the five geo tables.
+  extensions = [citext, pg_trgm]
 }
 
 // ---------------------------------------------------------------------------
@@ -23,7 +33,7 @@ datasource db {
 //   - Session: app.current_user_id, app.current_organization_id, app.rls_bypass
 //   - RBAC: roles/permissions (data) — guards, not per-role RLS policies
 //   - ACL: organization_memberships + location scopes — generic SQL helpers
-// See docs/rbac-acl-rls-architecture.md and docs/prisma.md §10.
+// See docs/technical/security/database-security.md.
 // ---------------------------------------------------------------------------
 
 enum Plan {
@@ -125,10 +135,17 @@ enum AuthorizationDecision {
 model User {
   id           String  @id @default(uuid())
   fullName     String  @db.VarChar(100)
-  email        String  @unique @db.VarChar(100)
+  /// Case-insensitive (citext): `Alice@x.com` and `alice@x.com` are one account. The API stores the
+  /// lower-cased canonical form (CanonicalEmailSchema, max 100 chars).
+  email        String  @unique @db.Citext
   passwordHash String  @db.Text
   isActive     Boolean @default(true)
   isSuperAdmin Boolean @default(false)
+
+  /// Optimistic-lock token of the self-service profile fields (`full_name`): every write of those
+  /// fields increments it, and `PATCH /auth/profile` applies only while it still equals the
+  /// `version` the client read (409 otherwise). Unrelated to `token_version`.
+  profileVersion Int @default(0) @map("profile_version")
 
   // Incremented on every role/permission mutation. The JWT carries this
   // value; the AuthorizationGuard rejects tokens with a stale version,
@@ -140,8 +157,6 @@ model User {
   lockedUntil         BigInt? @map("locked_until")
 
   twoFactorEnabled          Boolean @default(false) @map("two_factor_enabled")
-  /// DEPRECATED: plaintext TOTP secret — migrate to encrypted columns in service layer.
-  twoFactorSecret           String? @map("two_factor_secret") @db.Text
   twoFactorSecretCiphertext String? @map("two_factor_secret_ciphertext") @db.Text
   twoFactorSecretIv         String? @map("two_factor_secret_iv") @db.VarChar(32)
   twoFactorSecretKeyVersion Int?    @map("two_factor_secret_key_version")
@@ -150,11 +165,9 @@ model User {
   mfaEnrollmentDeadline     BigInt? @map("mfa_enrollment_deadline")
   mfaAssuredAt              BigInt? @map("mfa_assured_at")
 
-  provider          String? // "google" | "github" | null
-  providerId        String? @map("provider_id")
-  plan              Plan    @default(FREE)
-  monthlyUrlLimit   Int     @default(50) @map("monthly_url_limit")
-  monthlyClickLimit Int     @default(10000) @map("monthly_click_limit")
+  plan              Plan @default(FREE)
+  monthlyUrlLimit   Int  @default(50) @map("monthly_url_limit")
+  monthlyClickLimit Int  @default(10000) @map("monthly_click_limit")
 
   // Relations
   refreshTokens   RefreshToken[]
@@ -169,8 +182,8 @@ model User {
   pendingAttributionExpiresAt BigInt?                   @map("pending_attribution_expires_at")
   isDeleted                   Boolean                   @default(false) @map("is_deleted")
   deletedAt                   BigInt?                   @map("deleted_at")
-  createdAt                   BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt                   BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt                   BigInt                    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt                   BigInt                    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   urls                        Url[]
   tags                        Tag[]
   apiKeys                     ApiKey[]
@@ -182,35 +195,37 @@ model User {
   mfaRecoveryRequests         MfaRecoveryRequest[]
   impersonatedBy              ImpersonationAuditLog[]   @relation("Impersonator")
   impersonatedUser            ImpersonationAuditLog[]   @relation("ImpersonationTarget")
+  impersonationSessionsRun    ImpersonationSession[]    @relation("ImpersonationSessionImpersonator")
+  impersonationSessionsOf     ImpersonationSession[]    @relation("ImpersonationSessionTarget")
 
-  organizationMemberships              OrganizationMembership[]        @relation("OrganizationMemberships")
-  organizationInvitationsCreated       OrganizationInvitation[]        @relation("OrganizationInvitationCreator")
-  organizationInvitationsAccepted      OrganizationInvitation[]        @relation("OrganizationInvitationAcceptor")
-  organizationAccessRequests           OrganizationAccessRequest[]     @relation("OrganizationAccessRequests")
-  organizationAccessRequestsReviewed   OrganizationAccessRequest[]     @relation("OrganizationAccessRequestReviewer")
-  authorizationPolicyDraftsCreated     AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftCreator")
-  authorizationPolicyDraftsApproved    AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftApprover")
-  authorizationPolicyVersionsPublished AuthorizationPolicyVersion[]    @relation("AuthorizationPolicyPublisher")
-  authorizationPolicySimulations       AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
-  supportAccessGrants                  SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
-  organizationApiKeysCreated           OrganizationApiKey[]            @relation("OrganizationApiKeyCreator")
-  organizationTerminalsCreated         OrganizationTerminal[]          @relation("OrganizationTerminalCreator")
-  organizationLocationsRequested       OrganizationLocation[]          @relation("OrganizationLocationRequestedBy")
-  organizationLocationsReviewed        OrganizationLocation[]          @relation("OrganizationLocationReviewedBy")
-  storeMemberships                     StoreMembership[]               @relation("StoreMemberships")
-  rewardClaims                         RewardClaim[]
-  rewardRedemptions                    RewardRedemption[]
-  rewardSales                          RewardSale[]
-  rewardReferralsAsReferrer            RewardReferral[]                @relation("ReferrerUser")
-  rewardReferralsAsReferee             RewardReferral[]                @relation("RefereeUser")
-  rewardOtpChallenges                  RewardOtpChallenge[]
-  rewardLegalAcceptances               RewardLegalAcceptance[]
-  rewardNotifications                  RewardNotification[]
-  rewardAuditLogs                      RewardAuditLog[]
-  avatar                               UserAvatar?
-  storedFilesUploaded                  StoredFile[]                    @relation("StoredFileUploader")
+  organizationMemberships                OrganizationMembership[]        @relation("OrganizationMemberships")
+  organizationInvitationsCreated         OrganizationInvitation[]        @relation("OrganizationInvitationCreator")
+  organizationInvitationsAccepted        OrganizationInvitation[]        @relation("OrganizationInvitationAcceptor")
+  organizationAccessRequests             OrganizationAccessRequest[]     @relation("OrganizationAccessRequests")
+  organizationAccessRequestsReviewed     OrganizationAccessRequest[]     @relation("OrganizationAccessRequestReviewer")
+  authorizationPolicyDraftsCreated       AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftCreator")
+  authorizationPolicyDraftsApproved      AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftApprover")
+  authorizationPolicyVersionsPublished   AuthorizationPolicyVersion[]    @relation("AuthorizationPolicyPublisher")
+  authorizationPolicySimulations         AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
+  supportAccessGrants                    SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
+  organizationApiKeysCreated             OrganizationApiKey[]            @relation("OrganizationApiKeyCreator")
+  organizationTerminalsCreated           OrganizationTerminal[]          @relation("OrganizationTerminalCreator")
+  organizationTerminalPairingCodesIssued OrganizationTerminal[]          @relation("OrganizationTerminalPairingCodeIssuer")
+  organizationLocationsRequested         OrganizationLocation[]          @relation("OrganizationLocationRequestedBy")
+  organizationLocationsReviewed          OrganizationLocation[]          @relation("OrganizationLocationReviewedBy")
+  storeMemberships                       StoreMembership[]               @relation("StoreMemberships")
+  rewardClaims                           RewardClaim[]
+  rewardRedemptions                      RewardRedemption[]
+  rewardSales                            RewardSale[]
+  rewardReferralsAsReferrer              RewardReferral[]                @relation("ReferrerUser")
+  rewardReferralsAsReferee               RewardReferral[]                @relation("RefereeUser")
+  rewardOtpChallenges                    RewardOtpChallenge[]
+  rewardLegalAcceptances                 RewardLegalAcceptance[]
+  rewardNotifications                    RewardNotification[]
+  rewardAuditLogs                        RewardAuditLog[]
+  avatar                                 UserAvatar?
+  storedFilesUploaded                    StoredFile[]                    @relation("StoredFileUploader")
 
-  @@unique([provider, providerId])
   @@index([pendingAttributionToken])
   @@map("users")
 }
@@ -221,6 +236,9 @@ model Role {
   name        String  @unique @db.VarChar(100)
   description String? @db.Text
   isActive    Boolean @default(true)
+  /// Server-controlled: platform roles the code depends on by name (seeded). API callers can never
+  /// set this flag, and a system role cannot be renamed, deactivated, re-parented, re-permissioned or deleted.
+  isSystem    Boolean @default(false)
 
   // Self-referential hierarchy — a role can inherit permissions from a parent role.
   parentId String? @map("parent_id")
@@ -234,8 +252,8 @@ model Role {
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@index([parentId])
   @@map("roles")
@@ -260,8 +278,8 @@ model Permission {
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@unique([action, resource, scope])
   @@map("permissions")
@@ -288,14 +306,11 @@ model CapabilityDefinition {
   sortOrder    Int             @default(0) @map("sort_order")
   isSystem     Boolean         @default(false) @map("is_system")
   permissionId String?         @unique @map("permission_id")
-  metadata     Json?
 
   permission Permission? @relation(fields: [permissionId], references: [id], onDelete: SetNull)
 
-  isDeleted Boolean @default(false) @map("is_deleted")
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   @@index([scope])
   @@map("capability_definitions")
@@ -305,24 +320,39 @@ model CapabilityDefinition {
 // Permission Audit Trail
 // ---------------------------------------------------------------------------
 
+/// Who performed an RBAC change recorded in `permission_audit_logs`.
+enum PermissionAuditActorKind {
+  /// An authenticated user — `actorId` is a `users.id`.
+  USER
+  /// An allowlisted system operation (scheduled job) — `actorId` is the operation name from
+  /// `src/prisma/system-operation.registry.ts`, e.g. `maintenance.permission_expiry`.
+  SYSTEM_OPERATION
+}
+
 /// RLS: bypass only (`app_rls_bypass()`).
 model PermissionAuditLog {
-  id           String  @id @default(uuid())
-  actorId      String  @map("actor_id")
-  targetUserId String? @map("target_user_id")
-  targetRoleId String? @map("target_role_id")
-  permissionId String? @map("permission_id")
-  action       String
-  detail       String? @db.Text
-  isDeleted    Boolean @default(false) @map("is_deleted")
-  deletedAt    BigInt? @map("deleted_at")
-  createdAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id             String                   @id @default(uuid())
+  actorKind      PermissionAuditActorKind @default(USER) @map("actor_kind")
+  actorId        String                   @map("actor_id")
+  targetUserId   String?                  @map("target_user_id")
+  targetRoleId   String?                  @map("target_role_id")
+  permissionId   String?                  @map("permission_id")
+  action         String
+  detail         String?                  @db.Text
+  /// Request correlation id — joins this domain entry to the global HTTP audit entry and logs.
+  correlationId  String?                  @map("correlation_id") @db.VarChar(64)
+  /// The real (super-admin) user behind an impersonation session, when the actor was impersonated.
+  impersonatorId String?                  @map("impersonator_id")
+  isDeleted      Boolean                  @default(false) @map("is_deleted")
+  deletedAt      BigInt?                  @map("deleted_at")
+  createdAt      BigInt                   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   @@index([actorId])
   @@index([targetUserId])
   @@index([targetRoleId])
   @@index([createdAt])
+  @@index([correlationId])
   @@map("permission_audit_logs")
 }
 
@@ -340,8 +370,8 @@ model PasswordResetToken {
   usedAt      BigInt? @map("used_at")
   isDeleted   Boolean @default(false) @map("is_deleted")
   deletedAt   BigInt? @map("deleted_at")
-  createdAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt   BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt   BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -356,7 +386,7 @@ model PasswordHistory {
   id           String @id @default(uuid())
   userId       String @map("user_id")
   passwordHash String @map("password_hash") @db.Text
-  createdAt    BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt    BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -364,13 +394,19 @@ model PasswordHistory {
   @@map("password_history")
 }
 
+/// Soft-deleted (never DELETEd) when MFA is reset or recovered: a revoked set
+/// keeps `isDeleted = true` + `deletedAt` + `deletedBy` (the user who reset
+/// MFA, or the SuperAdmin who approved the recovery). Readers filter `isDeleted = false`.
 /// RLS: own row — `app_owns(user_id)`.
 model BackupCode {
   id        String  @id @default(uuid())
   userId    String  @map("user_id")
   codeHash  String  @map("code_hash") @db.Text
   usedAt    BigInt? @map("used_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt BigInt? @map("deleted_at")
+  deletedBy String? @map("deleted_by")
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -388,7 +424,7 @@ model TwoFactorPendingSetup {
   secretKeyVersion  Int    @map("secret_key_version")
   backupCodesHashes Json   @map("backup_codes_hashes")
   expiresAt         BigInt @map("expires_at")
-  createdAt         BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt         BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -409,7 +445,7 @@ model TwoFactorLoginChallenge {
   maxAttempts  Int                            @default(5) @map("max_attempts")
   consumedAt   BigInt?                        @map("consumed_at")
   expiresAt    BigInt                         @map("expires_at")
-  createdAt    BigInt                         @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt    BigInt                         @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -419,6 +455,9 @@ model TwoFactorLoginChallenge {
 }
 
 /// Admin-reviewed MFA recovery / account unlock request.
+/// Status transitions are compare-and-set on `status`; the reviewer must be a
+/// SuperAdmin other than the requester. At most one open (PENDING or APPROVED)
+/// request per user: creation runs under a per-user transaction advisory lock.
 /// RLS: own row — `app_owns(user_id)`.
 model MfaRecoveryRequest {
   id                String                   @id @default(uuid())
@@ -430,14 +469,42 @@ model MfaRecoveryRequest {
   scheduledUnlockAt BigInt?                  @map("scheduled_unlock_at")
   completedAt       BigInt?                  @map("completed_at")
   notes             String?                  @db.Text
-  createdAt         BigInt                   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt         BigInt                   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt         BigInt                   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt         BigInt                   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
   @@map("mfa_recovery_requests")
+}
+
+/// Append-only domain audit of the MFA recovery lifecycle: one row per status
+/// transition (requested / approved / denied / completed), written in the SAME
+/// transaction as the transition. `actorUserId` is the real actor — the
+/// requester, the reviewing SuperAdmin, or (for the scheduled unlock) the
+/// SuperAdmin whose approval it executes. Correlates with `audit_logs` through
+/// `correlationId`. No foreign keys: an audit row outlives what it describes.
+/// Not a business entity: never updated or deleted.
+/// RLS: bypass-only (`app_rls_bypass()`); UPDATE/DELETE revoked from app_runtime.
+model MfaRecoveryAuditLog {
+  id             String                    @id @default(uuid())
+  requestId      String                    @map("request_id")
+  subjectUserId  String                    @map("subject_user_id")
+  actorUserId    String                    @map("actor_user_id")
+  action         String                    @db.VarChar(64)
+  fromStatus     MfaRecoveryRequestStatus? @map("from_status")
+  toStatus       MfaRecoveryRequestStatus  @map("to_status")
+  /// The real SuperAdmin when the actor acted through an impersonation session.
+  impersonatorId String?                   @map("impersonator_id")
+  correlationId  String?                   @map("correlation_id") @db.VarChar(64)
+  ipAddress      String?                   @map("ip_address") @db.VarChar(64)
+  userAgent      String?                   @map("user_agent") @db.VarChar(512)
+  createdAt      BigInt                    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+
+  @@index([requestId, createdAt])
+  @@index([subjectUserId])
+  @@map("mfa_recovery_audit_logs")
 }
 
 /// RLS: own row — `app_owns("userId")`.
@@ -449,13 +516,13 @@ model UserRole {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  assignedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   assignedBy String?
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@unique([userId, roleId])
   @@map("user_roles")
@@ -473,14 +540,14 @@ model UserPermission {
   /// Per-user override: ALLOW grants the permission; DENY revokes it even when a role grants it.
   effect AclEffect @default(ALLOW)
 
-  assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  assignedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   assignedBy String?
   expiresAt  BigInt?
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@unique([userId, permissionId])
   @@map("user_permissions")
@@ -495,13 +562,13 @@ model RolePermission {
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  assignedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   assignedBy String?
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
@@ -530,8 +597,8 @@ model ResourceAcl {
   reason         String?          @db.Text
   isDeleted      Boolean          @default(false) @map("is_deleted")
   deletedAt      BigInt?          @map("deleted_at")
-  createdAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt      BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt      BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@index([subjectType, subjectId])
   @@index([resourceType, resourceId])
@@ -559,8 +626,8 @@ model PolicyDefinition {
   supersededBy   String?         @map("superseded_by")
   isDeleted      Boolean         @default(false) @map("is_deleted")
   deletedAt      BigInt?         @map("deleted_at")
-  createdAt      BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt      BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt      BigInt          @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt      BigInt          @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@index([organizationId])
   @@index([locationId])
@@ -587,7 +654,7 @@ model AuthorizationAudit {
   userAgent      String?               @map("user_agent") @db.Text
   requestId      String?               @map("request_id") @db.VarChar(64)
   durationMs     Int?                  @map("duration_ms")
-  createdAt      BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt      BigInt                @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@index([actorId])
   @@index([organizationId])
@@ -613,8 +680,8 @@ model RefreshToken {
   expiresAt BigInt
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@index([userId])
   @@index([token])
@@ -637,8 +704,8 @@ model Url {
   expiresAt    BigInt?      @map("expires_at")
   isDeleted    Boolean      @default(false) @map("is_deleted")
   deletedAt    BigInt?      @map("deleted_at")
-  createdAt    BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt    BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt    BigInt       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt    BigInt       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user   User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   clicks Click[]
@@ -659,8 +726,8 @@ model Tag {
   color     String  @default("#6366f1")
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   urls UrlTag[]
@@ -679,9 +746,8 @@ model UrlTag {
   tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   isDeleted Boolean @default(false) @map("is_deleted")
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@unique([urlId, tagId])
   @@map("url_tags")
@@ -701,11 +767,11 @@ model Click {
   utmSource   String?    @map("utm_source")
   utmMedium   String?    @map("utm_medium")
   utmCampaign String?    @map("utm_campaign")
-  clickedAt   BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("clicked_at")
+  clickedAt   BigInt     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("clicked_at")
   isDeleted   Boolean    @default(false) @map("is_deleted")
   deletedAt   BigInt?    @map("deleted_at")
-  createdAt   BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt   BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt   BigInt     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedAt   BigInt     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   url         Url        @relation(fields: [urlId], references: [id], onDelete: Cascade)
 
   @@index([urlId])
@@ -729,8 +795,8 @@ model ApiKey {
   isActive      Boolean  @default(true) @map("is_active")
   isDeleted     Boolean  @default(false) @map("is_deleted")
   deletedAt     BigInt?  @map("deleted_at")
-  createdAt     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt     BigInt   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt     BigInt   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   usageLogs ApiKeyUsageLog[]
@@ -753,15 +819,57 @@ model ImpersonationAuditLog {
   action         String // "START" | "STOP"
   ipAddress      String? @map("ip_address") @db.VarChar(45)
   userAgent      String? @map("user_agent") @db.Text
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  /// The server-side impersonation session this START/STOP row belongs to.
+  sessionId      String? @map("session_id")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
-  impersonator User @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
-  targetUser   User @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  impersonator User                  @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
+  targetUser   User                  @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  session      ImpersonationSession? @relation(fields: [sessionId], references: [id], onDelete: Restrict)
 
   @@index([impersonatorId])
   @@index([targetUserId])
+  @@index([sessionId])
   @@index([createdAt])
   @@map("impersonation_audit_logs")
+}
+
+/// Why an impersonation session ended before its `expiresAt`.
+enum ImpersonationSessionEndReason {
+  /// The super-admin stopped impersonating (`POST /auth/stop-impersonation`).
+  STOPPED
+}
+
+/// Server-side record of one SuperAdmin impersonation session. The
+/// impersonation access token carries this row's `id` as its
+/// `impersonationSessionId` claim; `AuthGuard` rejects the token unless the
+/// row exists, matches the token's impersonator + target, has not ended, has
+/// not expired, and the impersonator is still an active, non-deleted
+/// SuperAdmin. Stopping ends the row with a compare-and-set on `endedAt IS NULL`.
+/// Rows are never deleted — an ended session is part of the forensic record.
+/// RLS: bypass-only (`app_rls_bypass()`): written under `platform.superadmin` /
+/// `route.rls_bypass`, read by `AuthGuard` under `request.pre_handler`.
+model ImpersonationSession {
+  id             String                         @id @default(uuid())
+  impersonatorId String                         @map("impersonator_id")
+  targetUserId   String                         @map("target_user_id")
+  startedAt      BigInt                         @map("started_at")
+  expiresAt      BigInt                         @map("expires_at")
+  endedAt        BigInt?                        @map("ended_at")
+  endedBy        String?                        @map("ended_by")
+  endReason      ImpersonationSessionEndReason? @map("end_reason")
+  ipAddress      String?                        @map("ip_address") @db.VarChar(45)
+  userAgent      String?                        @map("user_agent") @db.Text
+  createdAt      BigInt                         @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                         @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  impersonator User                    @relation("ImpersonationSessionImpersonator", fields: [impersonatorId], references: [id], onDelete: Restrict)
+  targetUser   User                    @relation("ImpersonationSessionTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  auditLogs    ImpersonationAuditLog[]
+
+  @@index([impersonatorId, endedAt])
+  @@index([targetUserId])
+  @@map("impersonation_sessions")
 }
 
 /// RLS: INSERT open (request capture); SELECT/UPDATE/DELETE need bypass.
@@ -776,8 +884,8 @@ model Log {
   durationMs    Int?     @map("duration_ms")
   errorGroup    String?  @map("error_group")
   tags          String[] @default([])
-  timestamp     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  createdAt     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  timestamp     BigInt   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdAt     BigInt   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
   @@index([level])
   @@index([timestamp])
@@ -801,8 +909,8 @@ model ApiKeyUsageLog {
   responseTimeMs Int?    @map("response_time_ms")
   isDeleted      Boolean @default(false) @map("is_deleted")
   deletedAt      BigInt? @map("deleted_at")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
 
@@ -822,12 +930,17 @@ model EmailLog {
   templateKey String  @map("template_key")
   to          String  @db.VarChar(255)
   subject     String  @db.VarChar(255)
-  status      String // "sent" | "delivered" | "bounced" | "complained" | "failed"
+  status      String // EmailLogStatus: "pending" | "sent" | "delivered" | "bounced" | "complained" | "failed"
   resendId    String? @map("resend_id")
   error       String? @db.Text
   metadata    Json?
-  createdAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  /// Epoch ms (provider clock) of the newest delivery webhook event applied to this row — the
+  /// ordering guard: an older event that arrives late never overrides a newer outcome.
+  lastEventAt BigInt? @map("last_event_at")
+  createdAt   BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt   BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  deliveryEvents EmailDeliveryEvent[]
 
   @@index([status])
   @@index([templateKey])
@@ -837,9 +950,60 @@ model EmailLog {
   @@map("email_logs")
 }
 
+/// Every Resend delivery webhook event received, verified and recorded once (history of an
+/// email's lifecycle; `email_logs.status` is only the latest outcome). `webhook_id` (the signed
+/// `webhook-id` / `svix-id` header) is UNIQUE, so a redelivered webhook is a no-op.
+/// Infrastructure log, not a business entity: no soft delete. RLS: insert/select/update bypass-only.
+model EmailDeliveryEvent {
+  id         String               @id @default(uuid())
+  webhookId  String               @unique @map("webhook_id") @db.VarChar(255)
+  eventType  String               @map("event_type") @db.VarChar(64)
+  resendId   String               @map("resend_id") @db.VarChar(255)
+  emailLogId String?              @map("email_log_id")
+  emailLog   EmailLog?            @relation(fields: [emailLogId], references: [id], onDelete: Restrict)
+  /// The EmailLogStatus the event maps to; null for tracking events the log ignores.
+  status     EmailLogStatus?
+  detail     String?              @db.VarChar(300)
+  /// Epoch ms when the provider observed the event (its `created_at`).
+  occurredAt BigInt               @map("occurred_at")
+  /// What this event did to `email_logs`.
+  outcome    EmailDeliveryOutcome
+  createdAt  BigInt               @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+
+  @@index([resendId])
+  @@index([emailLogId, occurredAt])
+  @@index([createdAt])
+  @@map("email_delivery_events")
+}
+
+/// Lifecycle of one outbound email — mirrors `EmailLogStatusSchema` in @workspace/shared
+/// (apps/api/src/modules/notifications/email/email-status.enums.spec.ts asserts they are identical).
+/// Used by `email_delivery_events.status`. `email_logs.status` is still TEXT: converting an
+/// existing populated column to an enum needs a data-preserving cast Prisma does not generate.
+enum EmailLogStatus {
+  pending
+  sent
+  delivered
+  bounced
+  complained
+  failed
+}
+
+/// What a verified delivery-webhook event did to its `email_logs` row — mirrors
+/// `DeliveryEventOutcomeSchema` in @workspace/shared.
+enum EmailDeliveryOutcome {
+  applied /// moved the row forward
+  stale /// older than (or a regression of) the row's newest applied outcome
+  unmatched /// no row: an email this system never sent
+  ignored /// tracking event (opened / clicked / …) — never changes the row
+}
+
 // ---------------------------------------------------------------------------
 // Geographical data (Country / State / City)
 // Source: dr5hn/countries-states-cities-database
+// Reference data: world-readable; written only by SuperAdmins through the
+// `geo.reference_data.write` system operation (prisma/rls.sql). Soft-deleted,
+// never hard-deleted (a delete cascades the soft delete to the children).
 // ---------------------------------------------------------------------------
 
 model Region {
@@ -848,12 +1012,19 @@ model Region {
   translations Json?
   wikiDataId   String?  @db.VarChar(255)
   flag         Boolean  @default(true)
-  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'")) @map("created_at") @db.Timestamp(0)
+  /// Soft delete (rules/08): reference rows are never hard-deleted; reads filter `isDeleted: false`.
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  deletedAt    BigInt?  @map("deleted_at")
+  /// User id of the SuperAdmin who soft-deleted the row.
+  deletedBy    String?  @map("deleted_by") @db.VarChar(64)
+  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")) @map("created_at") @db.Timestamp(0)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
   countries  Country[]
   subregions Subregion[]
 
+  /// Trigram index for the geo `?search=` similarity filter (`name % $1`).
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "regions_name_trgm_idx", type: Gin)
   @@map("regions")
 }
 
@@ -863,7 +1034,12 @@ model Subregion {
   translations Json?
   wikiDataId   String?  @db.VarChar(255)
   flag         Boolean  @default(true)
-  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'")) @map("created_at") @db.Timestamp(0)
+  /// Soft delete (rules/08): reference rows are never hard-deleted; reads filter `isDeleted: false`.
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  deletedAt    BigInt?  @map("deleted_at")
+  /// User id of the SuperAdmin who soft-deleted the row.
+  deletedBy    String?  @map("deleted_by") @db.VarChar(64)
+  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")) @map("created_at") @db.Timestamp(0)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
   region    Region    @relation(fields: [regionId], references: [id])
@@ -871,6 +1047,8 @@ model Subregion {
   countries Country[]
 
   @@index([regionId])
+  /// Trigram index for the geo `?search=` similarity filter (`name % $1`).
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "subregions_name_trgm_idx", type: Gin)
   @@map("subregions")
 }
 
@@ -900,7 +1078,12 @@ model Country {
   emojiU         String?  @db.VarChar(191)
   wikiDataId     String?  @db.VarChar(255)
   flag           Boolean  @default(true)
-  createdAt      DateTime @default(dbgenerated("'2014-01-01 12:01:01'")) @map("created_at") @db.Timestamp(0)
+  /// Soft delete (rules/08): reference rows are never hard-deleted; reads filter `isDeleted: false`.
+  isDeleted      Boolean  @default(false) @map("is_deleted")
+  deletedAt      BigInt?  @map("deleted_at")
+  /// User id of the SuperAdmin who soft-deleted the row.
+  deletedBy      String?  @map("deleted_by") @db.VarChar(64)
+  createdAt      DateTime @default(dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")) @map("created_at") @db.Timestamp(0)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
   regionRelation    Region?    @relation(fields: [regionId], references: [id])
@@ -913,6 +1096,8 @@ model Country {
 
   @@index([regionId])
   @@index([subregionId])
+  /// Trigram index for the geo `?search=` similarity filter (`name % $1`).
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "countries_name_trgm_idx", type: Gin)
   @@map("countries")
 }
 
@@ -933,7 +1118,12 @@ model State {
   translations Json?
   wikiDataId   String?  @db.VarChar(255)
   flag         Boolean  @default(true)
-  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'")) @map("created_at") @db.Timestamp(0)
+  /// Soft delete (rules/08): reference rows are never hard-deleted; reads filter `isDeleted: false`.
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  deletedAt    BigInt?  @map("deleted_at")
+  /// User id of the SuperAdmin who soft-deleted the row.
+  deletedBy    String?  @map("deleted_by") @db.VarChar(64)
+  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")) @map("created_at") @db.Timestamp(0)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
   country   Country @relation(fields: [countryId], references: [id])
@@ -941,6 +1131,8 @@ model State {
   cities    City[]
 
   @@index([countryId])
+  /// Trigram index for the geo `?search=` similarity filter (`name % $1`).
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "states_name_trgm_idx", type: Gin)
   @@map("states")
 }
 
@@ -956,7 +1148,12 @@ model City {
   translations Json?
   wikiDataId   String?  @db.VarChar(255)
   flag         Boolean  @default(true)
-  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'")) @map("created_at") @db.Timestamp(0)
+  /// Soft delete (rules/08): reference rows are never hard-deleted; reads filter `isDeleted: false`.
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  deletedAt    BigInt?  @map("deleted_at")
+  /// User id of the SuperAdmin who soft-deleted the row.
+  deletedBy    String?  @map("deleted_by") @db.VarChar(64)
+  createdAt    DateTime @default(dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")) @map("created_at") @db.Timestamp(0)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
   state     State   @relation(fields: [stateId], references: [id])
@@ -966,11 +1163,13 @@ model City {
 
   @@index([stateId])
   @@index([countryId])
+  /// Trigram index for the geo `?search=` similarity filter (`name % $1`).
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "cities_name_trgm_idx", type: Gin)
   @@map("cities")
 }
 
 // ---------------------------------------------------------------------------
-// Organization multi-tenancy (see docs/multi-tenancy.md, ADRs 008–013)
+// Organization multi-tenancy (see docs/technical/authorization/tenancy-and-rls.md, ADRs 008–013)
 // ---------------------------------------------------------------------------
 
 enum PilotCity {
@@ -1045,6 +1244,15 @@ enum AuthorizationPolicyScope {
   TENANT
 }
 
+/// How a published policy draft was approved.
+enum AuthorizationPolicyApprovalKind {
+  /// Approved and published by a SuperAdmin other than its author (policy control plane).
+  FOUR_EYES
+  /// The fixed, code-reviewed default tenant template published at organization provisioning;
+  /// no human approver exists (`approvedById` is NULL) and the publish is audited with this reason.
+  PLATFORM_DEFAULT_TEMPLATE
+}
+
 enum AuthorizationPolicyStatus {
   DRAFT
   PENDING_APPROVAL
@@ -1085,11 +1293,15 @@ model Organization {
   slug                String                     @unique @db.VarChar(64)
   displayName         String                     @map("display_name") @db.VarChar(200)
   lifecycleState      OrganizationLifecycleState @default(PROVISIONING) @map("lifecycle_state")
+  /// IANA time zone the merchant operates in (e.g. Asia/Kuala_Lumpur): merchant analytics bucket weeks
+  /// at Monday 00:00 in this zone. Validated by `IanaTimeZoneSchema`; the default is
+  /// `PLATFORM_DISPLAY_REGION.timeZone` (packages/shared) and must stay equal to it.
+  timeZone            String                     @default("Asia/Kuala_Lumpur") @map("time_zone") @db.VarChar(64)
   deletionGraceEndsAt BigInt?                    @map("deletion_grace_ends_at")
   isDeleted           Boolean                    @default(false) @map("is_deleted")
   deletedAt           BigInt?                    @map("deleted_at")
-  createdAt           BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt           BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt           BigInt                     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt           BigInt                     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   slugHistory              OrganizationSlugHistory[]
   locations                OrganizationLocation[]
@@ -1111,7 +1323,6 @@ model Organization {
   rewardSales              RewardSale[]
   rewardAuditLogs          RewardAuditLog[]
   apiKeys                  OrganizationApiKey[]
-  kybDocuments             OrganizationKybDocument[]
   kybFiles                 OrganizationKybFile[]
   assets                   OrganizationAsset[]
   terminals                OrganizationTerminal[]
@@ -1132,7 +1343,7 @@ model OrganizationSlugHistory {
   organizationId String  @map("organization_id")
   slug           String  @db.VarChar(64)
   reservedUntil  BigInt? @map("reserved_until")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1156,10 +1367,13 @@ model OrganizationLocation {
   reviewedByUserId  String?                    @map("reviewed_by_user_id")
   reviewedAt        BigInt?                    @map("reviewed_at")
   isPrimary         Boolean                    @default(false) @map("is_primary")
+  /// Why the store was closed (bankruptcy, lease ended, ...); set together with the soft-delete fields when it is closed.
+  closureReason     String?                    @map("closure_reason") @db.Text
   isDeleted         Boolean                    @default(false) @map("is_deleted")
   deletedAt         BigInt?                    @map("deleted_at")
-  createdAt         BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt         BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy         String?                    @map("deleted_by")
+  createdAt         BigInt                     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt         BigInt                     @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization             Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   requestedBy              User?                                 @relation("OrganizationLocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
@@ -1174,6 +1388,8 @@ model OrganizationLocation {
   store                    Store?
 
   @@unique([organizationId, code])
+  /// At most one live primary location per organization (partial unique — soft-deleted rows ignored).
+  @@unique([organizationId], map: "organization_locations_one_live_primary_key", where: { isPrimary: true, isDeleted: false })
   @@index([organizationId])
   @@index([organizationId, status])
   @@map("organization_locations")
@@ -1186,18 +1402,21 @@ model OrganizationMembership {
   userId         String                       @map("user_id")
   role           OrganizationMembershipRole
   status         OrganizationMembershipStatus @default(ACTIVE)
+  /// The member's own name for this organization (`PATCH /orgs/:orgSlug/members/me`); trimmed, at most
+  /// `ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH` (100) characters; NULL = show the account's full name.
   displayName    String?                      @map("display_name") @db.VarChar(100)
-  attributes     Json?
   isDeleted      Boolean                      @default(false) @map("is_deleted")
   deletedAt      BigInt?                      @map("deleted_at")
-  createdAt      BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt                       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization   Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User                                  @relation("OrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
   locationScopes OrganizationMembershipLocationScope[]
 
-  @@unique([organizationId, userId])
+  /// One LIVE membership per (organization, user): soft-deleted rows are ignored so a removed member can be re-invited.
+  /// Partial unique — not usable with `findUnique`; query it with `findFirst` + `isDeleted: false`.
+  @@unique([organizationId, userId], where: { isDeleted: false })
   @@index([userId])
   @@index([organizationId, status])
   @@map("organization_memberships")
@@ -1210,7 +1429,7 @@ model OrganizationMembershipLocationScope {
   membershipId   String                        @map("membership_id")
   scopeType      OrganizationLocationScopeType @map("scope_type")
   locationId     String?                       @map("location_id")
-  createdAt      BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt                        @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
@@ -1239,8 +1458,9 @@ model Store {
   status         StoreStatus @default(INACTIVE)
   isDeleted      Boolean     @default(false) @map("is_deleted")
   deletedAt      BigInt?     @map("deleted_at")
-  createdAt      BigInt      @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt      @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy      String?     @map("deleted_by")
+  createdAt      BigInt      @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt      @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   location     OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -1262,8 +1482,9 @@ model StoreMembership {
   status         OrganizationMembershipStatus @default(ACTIVE)
   isDeleted      Boolean                      @default(false) @map("is_deleted")
   deletedAt      BigInt?                      @map("deleted_at")
-  createdAt      BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy      String?                      @map("deleted_by")
+  createdAt      BigInt                       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   store        Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -1282,7 +1503,8 @@ model OrganizationMerchantProfile {
   id                         String    @id @default(uuid())
   organizationId             String    @unique @map("organization_id")
   legalName                  String?   @map("legal_name") @db.VarChar(200)
-  category                   String    @db.VarChar(100)
+  /// Null until the merchant submits it during onboarding (an admin invite does not know it).
+  category                   String?   @db.VarChar(100)
   addressText                String?   @map("address_text") @db.Text
   city                       PilotCity
   kybStatus                  KybStatus @default(PENDING) @map("kyb_status")
@@ -1291,8 +1513,8 @@ model OrganizationMerchantProfile {
   contactPhone               String?   @map("contact_phone") @db.VarChar(20)
   /// When on, POS calls with a manually created API key must come from a registered terminal id.
   requireRegisteredTerminals Boolean   @default(false) @map("require_registered_terminals")
-  createdAt                  BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt                  BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt                  BigInt    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt                  BigInt    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1302,26 +1524,31 @@ model OrganizationMerchantProfile {
 
 /// RLS: TENANT — platform onboarding or team-member invite.
 model OrganizationInvitation {
-  id                String                        @id @default(uuid())
-  organizationId    String?                       @map("organization_id")
-  email             String                        @db.VarChar(100)
-  tokenHash         String                        @unique @map("token_hash") @db.Text
-  kind              OrganizationInvitationKind    @default(PLATFORM_ONBOARDING) @map("kind")
-  intendedRole      OrganizationMembershipRole    @map("intended_role")
-  locationScopeType OrganizationLocationScopeType @default(ALL_LOCATIONS) @map("location_scope_type")
-  status            OrganizationInvitationStatus  @default(PENDING)
-  createdByAdminId  String                        @map("created_by_admin_id")
-  acceptedByUserId  String?                       @map("accepted_by_user_id")
-  expiresAt         BigInt                        @map("expires_at")
-  acceptedAt        BigInt?                       @map("accepted_at")
-  createdAt         BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt         BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                   String                        @id @default(uuid())
+  organizationId       String?                       @map("organization_id")
+  /// Case-insensitive (citext), so the one-PENDING-per-(organization, email, kind) unique ignores case.
+  email                String                        @db.Citext
+  tokenHash            String                        @unique @map("token_hash") @db.Text
+  kind                 OrganizationInvitationKind    @default(PLATFORM_ONBOARDING) @map("kind")
+  intendedRole         OrganizationMembershipRole    @map("intended_role")
+  locationScopeType    OrganizationLocationScopeType @default(ALL_LOCATIONS) @map("location_scope_type")
+  status               OrganizationInvitationStatus  @default(PENDING)
+  createdByAdminId     String                        @map("created_by_admin_id")
+  acceptedByUserId     String?                       @map("accepted_by_user_id")
+  expiresAt            BigInt                        @map("expires_at")
+  acceptedAt           BigInt?                       @map("accepted_at")
+  /// When the post-acceptance KYB document submission consumed this token (onboarding tokens are single-use).
+  documentsSubmittedAt BigInt?                       @map("documents_submitted_at")
+  createdAt            BigInt                        @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt            BigInt                        @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization   Organization?                         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   createdByAdmin User                                  @relation("OrganizationInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
   acceptedByUser User?                                 @relation("OrganizationInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
   locationScopes OrganizationInvitationLocationScope[]
 
+  /// At most one PENDING invitation per (organization, email, kind) — concurrent duplicate invites fail with a unique violation (409).
+  @@unique([organizationId, email, kind], map: "organization_invitations_one_pending_key", where: { status: "PENDING" })
   @@index([email])
   @@index([organizationId])
   @@index([organizationId, kind, status])
@@ -1334,7 +1561,7 @@ model OrganizationInvitationLocationScope {
   organizationId String @map("organization_id")
   invitationId   String @map("invitation_id")
   locationId     String @map("location_id")
-  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   invitation   OrganizationInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
@@ -1354,13 +1581,15 @@ model OrganizationAccessRequest {
   message        String?                         @db.Text
   reviewedById   String?                         @map("reviewed_by_id")
   reviewedAt     BigInt?                         @map("reviewed_at")
-  createdAt      BigInt                          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt                          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt                          @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                          @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation("OrganizationAccessRequests", fields: [userId], references: [id], onDelete: Cascade)
   reviewedBy   User?        @relation("OrganizationAccessRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
+  /// At most one PENDING access request per (organization, user) — concurrent duplicates fail with a unique violation (409).
+  @@unique([organizationId, userId], map: "organization_access_requests_one_pending_key", where: { status: "PENDING" })
   @@index([organizationId, userId, status])
   @@index([organizationId, status])
   @@map("organization_access_requests")
@@ -1374,8 +1603,10 @@ model OrganizationLifecycleEvent {
   toState        OrganizationLifecycleState  @map("to_state")
   actorUserId    String?                     @map("actor_user_id")
   reason         String?                     @db.Text
-  correlationId  String?                     @map("correlation_id") @db.VarChar(64)
-  createdAt      BigInt                      @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  /// The request's correlation id (or the system operation's, for background work) the transition ran under.
+  /// Written only by `OrganizationLifecycleEventRecorder`, which reads it from the transaction (`app.correlation_id`).
+  correlationId  String                      @map("correlation_id") @db.VarChar(64)
+  createdAt      BigInt                      @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1389,9 +1620,8 @@ model TenantPlacement {
   organizationId String              @unique @map("organization_id")
   kind           TenantPlacementKind @default(SHARED)
   regionCode     String              @default("default") @map("region_code") @db.VarChar(32)
-  shardKey       String?             @map("shard_key") @db.VarChar(64)
-  createdAt      BigInt              @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt              @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt              @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt              @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1400,14 +1630,13 @@ model TenantPlacement {
 
 /// RLS: TENANT — plan entitlements (billing deferred).
 model OrganizationEntitlement {
-  id             String  @id @default(uuid())
-  organizationId String  @map("organization_id")
-  planCode       String  @map("plan_code") @db.VarChar(64)
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+  planCode       String @map("plan_code") @db.VarChar(64)
   features       Json
-  version        Int     @default(1)
-  effectiveFrom  BigInt  @map("effective_from")
-  effectiveUntil BigInt? @map("effective_until")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  version        Int    @default(1)
+  effectiveFrom  BigInt @map("effective_from")
+  createdAt      BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1424,8 +1653,8 @@ model OrganizationQuota {
   usedValue      BigInt @default(0) @map("used_value")
   windowStart    BigInt @map("window_start")
   windowEnd      BigInt @map("window_end")
-  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1435,19 +1664,22 @@ model OrganizationQuota {
 
 /// RLS: TENANT + GLOBAL — Cedar policy drafts.
 model AuthorizationPolicyDraft {
-  id             String                    @id @default(uuid())
-  organizationId String?                   @map("organization_id")
+  id             String                           @id @default(uuid())
+  organizationId String?                          @map("organization_id")
   scope          AuthorizationPolicyScope
-  name           String                    @db.VarChar(120)
-  description    String?                   @db.Text
-  builderPayload Json                      @map("builder_payload")
-  cedarSource    String                    @map("cedar_source") @db.Text
-  sqlPredicate   String?                   @map("sql_predicate") @db.Text
-  status         AuthorizationPolicyStatus @default(DRAFT)
-  createdById    String                    @map("created_by_id")
-  approvedById   String?                   @map("approved_by_id")
-  createdAt      BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  name           String                           @db.VarChar(120)
+  description    String?                          @db.Text
+  builderPayload Json                             @map("builder_payload")
+  cedarSource    String                           @map("cedar_source") @db.Text
+  sqlPredicate   String?                          @map("sql_predicate") @db.Text
+  status         AuthorizationPolicyStatus        @default(DRAFT)
+  createdById    String                           @map("created_by_id")
+  /// The second SuperAdmin who approved a FOUR_EYES publish; NULL for PLATFORM_DEFAULT_TEMPLATE.
+  approvedById   String?                          @map("approved_by_id")
+  /// NULL until the draft is published.
+  approvalKind   AuthorizationPolicyApprovalKind? @map("approval_kind")
+  createdAt      BigInt                           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization?                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User                            @relation("AuthorizationPolicyDraftCreator", fields: [createdById], references: [id], onDelete: Restrict)
@@ -1477,19 +1709,29 @@ model AuthorizationPolicyVersion {
   draft        AuthorizationPolicyDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
   publishedBy  User                     @relation("AuthorizationPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
 
+  /// Version numbers are unique per (organization, scope) slot and at most one version per slot is
+  /// active. Platform-scope rows have a NULL organizationId, which a plain unique index treats as
+  /// distinct — so the platform slots get their own partial unique indexes (organizationId IS NULL).
   @@unique([organizationId, scope, version])
+  @@unique([scope, version], map: "authorization_policy_versions_platform_scope_version_key", where: { organizationId: null })
+  @@unique([organizationId, scope], map: "authorization_policy_versions_one_active_per_scope_key", where: { supersededAt: null })
+  @@unique([scope], map: "authorization_policy_versions_platform_one_active_per_scope_key", where: { organizationId: null, supersededAt: null })
   @@index([organizationId, publishedAt])
   @@map("authorization_policy_versions")
 }
 
 /// RLS: OPERATIONAL — policy simulation runs.
 model AuthorizationPolicySimulation {
-  id          String  @id @default(uuid())
-  draftId     String  @map("draft_id")
-  actorUserId String  @map("actor_user_id")
-  result      Json
-  passed      Boolean
-  createdAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  id                  String  @id @default(uuid())
+  draftId             String  @map("draft_id")
+  actorUserId         String  @map("actor_user_id")
+  result              Json
+  passed              Boolean
+  /// sha256 of the published policy versions the draft was simulated against.
+  /// Publishing requires it to equal the current baseline (NULL = recorded before
+  /// baseline tracking existed; never accepted for publish).
+  baselineFingerprint String? @map("baseline_fingerprint") @db.VarChar(64)
+  createdAt           BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   draft AuthorizationPolicyDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
   actor User                     @relation("AuthorizationPolicySimulator", fields: [actorUserId], references: [id], onDelete: Restrict)
@@ -1500,19 +1742,17 @@ model AuthorizationPolicySimulation {
 
 /// RLS: OPERATIONAL — JIT support access grants.
 model SupportAccessGrant {
-  id                  String                   @id @default(uuid())
-  organizationId      String                   @map("organization_id")
-  supportUserId       String                   @map("support_user_id")
-  targetMembershipId  String?                  @map("target_membership_id")
-  mode                SupportAccessGrantMode   @default(READ_ONLY)
-  status              SupportAccessGrantStatus @default(PENDING_TENANT_APPROVAL)
-  reason              String                   @db.Text
-  ticketRef           String?                  @map("ticket_ref") @db.VarChar(120)
-  tenantApprovedById  String?                  @map("tenant_approved_by_id")
-  emergencyApprovedBy String?                  @map("emergency_approved_by") @db.VarChar(120)
-  expiresAt           BigInt                   @map("expires_at")
-  revokedAt           BigInt?                  @map("revoked_at")
-  createdAt           BigInt                   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  id                 String                   @id @default(uuid())
+  organizationId     String                   @map("organization_id")
+  supportUserId      String                   @map("support_user_id")
+  mode               SupportAccessGrantMode   @default(READ_ONLY)
+  status             SupportAccessGrantStatus @default(PENDING_TENANT_APPROVAL)
+  reason             String                   @db.Text
+  ticketRef          String?                  @map("ticket_ref") @db.VarChar(120)
+  tenantApprovedById String?                  @map("tenant_approved_by_id")
+  expiresAt          BigInt                   @map("expires_at")
+  revokedAt          BigInt?                  @map("revoked_at")
+  createdAt          BigInt                   @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   supportUser  User         @relation("SupportAccessGrantSupportUser", fields: [supportUserId], references: [id], onDelete: Restrict)
@@ -1527,15 +1767,22 @@ model TenantEncryptionKey {
   id             String                    @id @default(uuid())
   organizationId String                    @map("organization_id")
   keyVersion     Int                       @map("key_version")
+  /// Provider-serialized ciphertext of the data key (local provider: base64 `iv:tag:ciphertext`, AES-256-GCM).
   wrappedKey     String                    @map("wrapped_key") @db.Text
+  /// Key id of the KEK that wrapped `wrappedKey` (e.g. `local-dev-kek/v2`; legacy `local:pilot`).
+  /// `pnpm db:rewrap-tenant-keys` moves every row to the provider's current KEK.
   kmsKeyId       String                    @map("kms_key_id") @db.VarChar(255)
   status         TenantEncryptionKeyStatus @default(ACTIVE)
+  /// Last time the data key was re-wrapped under a new KEK.
   rotatedAt      BigInt?                   @map("rotated_at")
-  createdAt      BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt                    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, keyVersion])
+  /// At most one ACTIVE data key per organization — concurrent first-key creation cannot create two.
+  @@unique([organizationId], map: "tenant_encryption_keys_one_active_per_organization_key", where: { status: "ACTIVE" })
+  @@index([kmsKeyId])
   @@map("tenant_encryption_keys")
 }
 
@@ -1551,7 +1798,7 @@ model OrganizationAuditLog {
   policyVersion  Int?    @map("policy_version")
   correlationId  String? @map("correlation_id") @db.VarChar(64)
   metadata       Json?
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1561,13 +1808,16 @@ model OrganizationAuditLog {
 }
 
 // ---------------------------------------------------------------------------
-// Rewards Platform (Phase 1 — see docs/rewards-platform-prd.md)
+// Rewards Platform (Phase 1 — see docs/user-guide/README.md)
 // ---------------------------------------------------------------------------
 
+/// Malware-scan state of a stored file (`StoredObjectScanStatusSchema` in packages/shared).
+/// NOT_SCANNED = no scanner configured (MALWARE_SCANNER=none); never presented as CLEAN.
 enum KybDocumentScanStatus {
   SCANNING
   CLEAN
   INFECTED
+  NOT_SCANNED
 }
 
 enum FileStatus {
@@ -1677,13 +1927,17 @@ model StoredFile {
   scanResult       String?                @map("scan_result") @db.VarChar(500)
   uploadedById     String                 @map("uploaded_by_id")
   organizationId   String?                @map("organization_id")
+  /// Product a PRODUCT_IMAGE upload is bound to (set at upload-url time, never parsed from the object path).
+  productId        String?                @map("product_id")
   isDeleted        Boolean                @default(false) @map("is_deleted")
   deletedAt        BigInt?                @map("deleted_at")
-  createdAt        BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt        BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy        String?                @map("deleted_by")
+  createdAt        BigInt                 @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt        BigInt                 @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   uploadedBy         User                  @relation("StoredFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
   organization       Organization?         @relation("StoredFileOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
+  product            Product?              @relation("StoredFileProduct", fields: [productId], references: [id], onDelete: SetNull)
   variants           FileVariant[]
   productImages      ProductImage[]
   organizationAssets OrganizationAsset[]
@@ -1692,6 +1946,7 @@ model StoredFile {
 
   @@index([uploadedById])
   @@index([organizationId])
+  @@index([productId])
   @@index([status])
   @@index([category])
   @@map("stored_files")
@@ -1713,8 +1968,9 @@ model FileVariant {
   objectGeneration String?          @map("object_generation") @db.VarChar(64)
   isDeleted        Boolean          @default(false) @map("is_deleted")
   deletedAt        BigInt?          @map("deleted_at")
-  createdAt        BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt        BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy        String?          @map("deleted_by")
+  createdAt        BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt        BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   file StoredFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
@@ -1732,12 +1988,15 @@ model ProductImage {
   isPrimary Boolean @default(false) @map("is_primary")
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy String? @map("deleted_by")
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   product Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   file    StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
 
+  /// At most one live primary image per product (concurrent uploads cannot both become primary).
+  @@unique([productId], map: "product_images_one_live_primary_key", where: { isPrimary: true, isDeleted: false })
   @@index([productId])
   @@index([fileId])
   @@map("product_images")
@@ -1751,8 +2010,9 @@ model OrganizationAsset {
   fileId         String                @map("file_id")
   isDeleted      Boolean               @default(false) @map("is_deleted")
   deletedAt      BigInt?               @map("deleted_at")
-  createdAt      BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy      String?               @map("deleted_by")
+  createdAt      BigInt                @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   file         StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
@@ -1769,8 +2029,9 @@ model UserAvatar {
   fileId    String  @unique @map("file_id")
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy String? @map("deleted_by")
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   file StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
@@ -1787,8 +2048,9 @@ model OrganizationKybFile {
   isActive       Boolean @default(true) @map("is_active")
   isDeleted      Boolean @default(false) @map("is_deleted")
   deletedAt      BigInt? @map("deleted_at")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedBy      String? @map("deleted_by")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   file         StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
@@ -1800,50 +2062,37 @@ model OrganizationKybFile {
   @@map("organization_kyb_files")
 }
 
-/// RLS: via organization_id membership — legacy KYB document metadata (migrated to stored_files).
-model OrganizationKybDocument {
-  id               String                @id @default(uuid())
-  organizationId   String                @map("organization_id")
-  submissionId     String                @map("submission_id")
-  fileName         String                @map("file_name") @db.VarChar(255)
-  mimeType         String                @map("mime_type") @db.VarChar(100)
-  sizeBytes        Int                   @map("size_bytes")
-  checksumSha256   String                @map("checksum_sha256") @db.VarChar(64)
-  storageBucket    String                @map("storage_bucket") @db.VarChar(255)
-  storagePath      String                @map("storage_path") @db.VarChar(500)
-  objectGeneration String?               @map("object_generation") @db.VarChar(64)
-  scanStatus       KybDocumentScanStatus @default(SCANNING) @map("scan_status")
-  scannedAt        BigInt?               @map("scanned_at")
-  scanResult       String?               @map("scan_result") @db.VarChar(500)
-  isActive         Boolean               @default(true) @map("is_active")
-  isDeleted        Boolean               @default(false) @map("is_deleted")
-  deletedAt        BigInt?               @map("deleted_at")
-  createdAt        BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt        BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([organizationId, isActive])
-  @@index([submissionId])
-  @@map("organization_kyb_documents")
+/// What a merchant API key may call. Mirrors `OrganizationApiKeyScopeSchema` (packages/shared).
+enum OrganizationApiKeyScope {
+  /// A till: only the POS redemption routes. Every key a terminal receives by pairing is POS.
+  POS
+  /// A back-office integration: the POS routes plus the organization reward / redemption / analytics API.
+  INTEGRATION
 }
 
 /// RLS: org members write; POS auth uses key hash lookup with bypass.
 model OrganizationApiKey {
-  id              String  @id @default(uuid())
-  organizationId  String  @map("organization_id")
-  locationId      String? @map("location_id")
-  name            String  @db.VarChar(100)
-  keyHash         String  @unique @map("key_hash") @db.Text
-  keyPrefix       String  @map("key_prefix") @db.VarChar(16)
-  createdByUserId String  @map("created_by_user_id")
-  revokedAt       BigInt? @map("revoked_at")
-  lastUsedAt      BigInt? @map("last_used_at")
-  isDeleted       Boolean @default(false) @map("is_deleted")
-  deletedAt       BigInt? @map("deleted_at")
-  createdAt       BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt       BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                         String                  @id @default(uuid())
+  organizationId             String                  @map("organization_id")
+  locationId                 String?                 @map("location_id")
+  name                       String                  @db.VarChar(100)
+  keyHash                    String                  @unique @map("key_hash") @db.Text
+  keyPrefix                  String                  @map("key_prefix") @db.VarChar(16)
+  /// What the key may call (POS routes only, or also the organization API). Paired terminal keys are always POS.
+  scope                      OrganizationApiKeyScope
+  createdByUserId            String                  @map("created_by_user_id")
+  revokedAt                  BigInt?                 @map("revoked_at")
+  lastUsedAt                 BigInt?                 @map("last_used_at")
+  /// POS code-guess lockout (see `PosCodeLockoutService`): unknown QR tokens / backup codes presented with this key in the current window.
+  codeFailureCount           Int                     @default(0) @map("code_failure_count")
+  /// Start of the current failure-counting window; null before the first failure.
+  codeFailureWindowStartedAt BigInt?                 @map("code_failure_window_started_at")
+  /// While in the future, every redemption call with this key is refused (429 POS_CODE_LOCKED).
+  codeLockedUntil            BigInt?                 @map("code_locked_until")
+  isDeleted                  Boolean                 @default(false) @map("is_deleted")
+  deletedAt                  BigInt?                 @map("deleted_at")
+  createdAt                  BigInt                  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt                  BigInt                  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
@@ -1858,32 +2107,38 @@ model OrganizationApiKey {
 
 /// RLS: via organization_id and location_id.
 model OrganizationTerminal {
-  id                   String  @id @default(uuid())
-  organizationId       String  @map("organization_id")
-  locationId           String  @map("location_id")
-  terminalId           String  @map("terminal_id") @db.VarChar(100)
-  label                String? @db.VarChar(100)
-  /// The member who registered the till (null for seeded rows).
-  createdByUserId      String? @map("created_by_user_id")
+  id                        String  @id @default(uuid())
+  organizationId            String  @map("organization_id")
+  locationId                String  @map("location_id")
+  terminalId                String  @map("terminal_id") @db.VarChar(100)
+  label                     String? @db.VarChar(100)
+  /// The member who registered the till. Required, and never changes after creation (a pairing-code
+  /// issuer is recorded separately in `pairingCodeIssuedByUserId`).
+  createdByUserId           String  @map("created_by_user_id")
+  /// The member who issued the current/last pairing code; becomes the creator of the API key minted when a till pairs with it.
+  pairingCodeIssuedByUserId String? @map("pairing_code_issued_by_user_id")
+  pairingCodeIssuedAt       BigInt? @map("pairing_code_issued_at")
   /// The API key issued when the till paired (one key per terminal; re-pairing rotates it).
-  apiKeyId             String? @unique @map("api_key_id")
-  /// sha256 of the live one-time pairing code; cleared once used.
-  pairingCodeHash      String? @unique @map("pairing_code_hash") @db.VarChar(64)
-  pairingCodeExpiresAt BigInt? @map("pairing_code_expires_at")
-  pairedAt             BigInt? @map("paired_at")
-  lastSeenAt           BigInt? @map("last_seen_at")
-  isDeleted            Boolean @default(false) @map("is_deleted")
-  deletedAt            BigInt? @map("deleted_at")
-  deletedBy            String? @map("deleted_by")
-  createdAt            BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt            BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  apiKeyId                  String? @unique @map("api_key_id")
+  /// Keyed hash (`v<version>:<HMAC-SHA256 hex>`, `REWARD_CODE_HASH_KEYS`) of the live one-time pairing code; cleared once used.
+  pairingCodeHash           String? @unique @map("pairing_code_hash") @db.VarChar(80)
+  pairingCodeExpiresAt      BigInt? @map("pairing_code_expires_at")
+  pairedAt                  BigInt? @map("paired_at")
+  lastSeenAt                BigInt? @map("last_seen_at")
+  isDeleted                 Boolean @default(false) @map("is_deleted")
+  deletedAt                 BigInt? @map("deleted_at")
+  deletedBy                 String? @map("deleted_by")
+  createdAt                 BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt                 BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
-  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  location     OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  createdBy    User?                @relation("OrganizationTerminalCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  apiKey       OrganizationApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location            OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdBy           User                 @relation("OrganizationTerminalCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  pairingCodeIssuedBy User?                @relation("OrganizationTerminalPairingCodeIssuer", fields: [pairingCodeIssuedByUserId], references: [id], onDelete: SetNull)
+  apiKey              OrganizationApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
 
-  @@unique([organizationId, terminalId])
+  /// Live tills only: a soft-deleted till must not block re-registering its id.
+  @@unique([organizationId, terminalId], where: { isDeleted: false })
   @@index([locationId])
   @@map("organization_terminals")
 }
@@ -1900,7 +2155,12 @@ model Reward {
   rewardKind             RewardKind                    @default(CONSUMER) @map("reward_kind")
   category               String                        @db.VarChar(100)
   placeholderImageKey    String                        @map("placeholder_image_key") @db.VarChar(100)
+  /// Reward rules other than the minimum spend (e.g. `maxUsePerUser`); validated by `RewardRulesSchema`.
   rules                  Json?
+  /// Minimum bill, in integer minor units (sen), for redeeming this reward; null = no minimum.
+  /// The single source of truth (API `rules.minSpendMyr` is converted on write and derived on read);
+  /// Never negative: validated by `RewardRulesSchema` (`minSpendMyr` nonnegative) before every write.
+  minSpendMinor          Int?                          @map("min_spend_minor")
   quantityTotal          Int                           @map("quantity_total")
   quantityRemaining      Int                           @map("quantity_remaining")
   quantityReserved       Int                           @default(0) @map("quantity_reserved")
@@ -1923,8 +2183,8 @@ model Reward {
   rejectionReason        String?                       @map("rejection_reason") @db.Text
   isDeleted              Boolean                       @default(false) @map("is_deleted")
   deletedAt              BigInt?                       @map("deleted_at")
-  createdAt              BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt              BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt              BigInt                        @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt              BigInt                        @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   referrerReward       Reward?               @relation("ConsumerReferrerReward", fields: [referrerRewardId], references: [id], onDelete: SetNull)
@@ -1950,7 +2210,7 @@ model RewardLocationScope {
   organizationId String @map("organization_id")
   rewardId       String @map("reward_id")
   locationId     String @map("location_id")
-  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   reward       Reward               @relation(fields: [rewardId], references: [id], onDelete: Cascade)
@@ -1964,26 +2224,24 @@ model RewardLocationScope {
 
 /// RLS: app_owns(user_id).
 model RewardClaim {
-  id                   String            @id @default(uuid())
-  userId               String            @map("user_id")
-  rewardId             String            @map("reward_id")
-  referralId           String?           @map("referral_id")
-  redemptionTokenHash  String            @unique @map("redemption_token_hash") @db.Text
-  backupCodeHash       String            @unique @map("backup_code_hash") @db.Text
-  status               RewardClaimStatus @default(PENDING)
-  isReferrerCredit     Boolean           @default(false) @map("is_referrer_credit")
-  claimedAt            BigInt            @map("claimed_at")
-  claimExpiresAt       BigInt            @map("claim_expires_at")
-  redeemedAt           BigInt?           @map("redeemed_at")
-  backupFailedAttempts Int               @default(0) @map("backup_failed_attempts")
-  backupLockedUntil    BigInt?           @map("backup_locked_until")
-  isDeleted            Boolean           @default(false) @map("is_deleted")
-  deletedAt            BigInt?           @map("deleted_at")
-  createdAt            BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt            BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                  String            @id @default(uuid())
+  userId              String            @map("user_id")
+  rewardId            String            @map("reward_id")
+  referralId          String?           @map("referral_id")
+  redemptionTokenHash String            @unique @map("redemption_token_hash") @db.Text
+  backupCodeHash      String            @unique @map("backup_code_hash") @db.Text
+  status              RewardClaimStatus @default(PENDING)
+  isReferrerCredit    Boolean           @default(false) @map("is_referrer_credit")
+  claimedAt           BigInt            @map("claimed_at")
+  claimExpiresAt      BigInt            @map("claim_expires_at")
+  redeemedAt          BigInt?           @map("redeemed_at")
+  isDeleted           Boolean           @default(false) @map("is_deleted")
+  deletedAt           BigInt?           @map("deleted_at")
+  createdAt           BigInt            @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt           BigInt            @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
-  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reward     Reward            @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reward     Reward            @relation(fields: [rewardId], references: [id], onDelete: Restrict)
   referral   RewardReferral?   @relation(fields: [referralId], references: [id], onDelete: SetNull)
   redemption RewardRedemption?
 
@@ -2003,22 +2261,21 @@ model RewardRedemption {
   userId           String                 @map("user_id")
   terminalId       String                 @map("terminal_id") @db.VarChar(100)
   redemptionMethod RewardRedemptionMethod @map("redemption_method")
-  idempotencyKey   String                 @map("idempotency_key") @db.VarChar(64)
-  /// The POS checkout (paid bill) this redemption belongs to; null for single `/redemptions/confirm` redemptions.
-  saleId           String?                @map("sale_id")
+  /// The POS checkout (paid bill) this redemption belongs to. Idempotency lives on the sale
+  /// (`reward_sales.idempotency_key`); a claim is redeemed at most once (`claim_id` is unique).
+  saleId           String                 @map("sale_id")
   redeemedAt       BigInt                 @map("redeemed_at")
   isDeleted        Boolean                @default(false) @map("is_deleted")
   deletedAt        BigInt?                @map("deleted_at")
-  createdAt        BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt        BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt        BigInt                 @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt        BigInt                 @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
-  claim        RewardClaim           @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  claim        RewardClaim           @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sale         RewardSale?           @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sale         RewardSale            @relation(fields: [saleId], references: [id], onDelete: Restrict)
 
-  @@unique([organizationId, idempotencyKey])
   @@index([organizationId])
   @@index([locationId])
   @@index([userId])
@@ -2040,7 +2297,9 @@ model RewardSale {
   userId         String  @map("user_id")
   terminalId     String  @map("terminal_id") @db.VarChar(100)
   apiKeyId       String? @map("api_key_id")
-  billTotalMinor Int     @map("bill_total_minor")
+  /// Bill total in minor units (sen). 64-bit so platform-wide sums never overflow; the API carries
+  /// amounts as JSON safe integers (≤ Number.MAX_SAFE_INTEGER) and refuses anything larger.
+  billTotalMinor BigInt  @map("bill_total_minor")
   currency       String  @db.VarChar(3)
   idempotencyKey String  @map("idempotency_key") @db.VarChar(64)
   /// sha256 of the canonical request — a retried key with a different payload is rejected, never replayed.
@@ -2049,12 +2308,12 @@ model RewardSale {
   isDeleted      Boolean @default(false) @map("is_deleted")
   deletedAt      BigInt? @map("deleted_at")
   deletedBy      String? @map("deleted_by")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
   apiKey       OrganizationApiKey?   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
   redemptions  RewardRedemption[]
 
@@ -2077,11 +2336,14 @@ model RewardReferral {
   refereeDeviceHash String?              @map("referee_device_hash") @db.VarChar(128)
   refereeIp         String?              @map("referee_ip") @db.VarChar(45)
   creditedAt        BigInt?              @map("credited_at")
+  /// When the referrer's "reward credited" email was handed to the mailer. A CREDITED referral with
+  /// null here is a pending delivery, retried by the `rewards.referral-credit-notify` job.
+  creditNotifiedAt  BigInt?              @map("credit_notified_at")
   blockedReason     String?              @map("blocked_reason") @db.Text
   isDeleted         Boolean              @default(false) @map("is_deleted")
   deletedAt         BigInt?              @map("deleted_at")
-  createdAt         BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt         BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt         BigInt               @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt         BigInt               @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   referrerUser User          @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
   refereeUser  User?         @relation("RefereeUser", fields: [refereeUserId], references: [id], onDelete: SetNull)
@@ -2092,6 +2354,7 @@ model RewardReferral {
   @@index([refereeUserId])
   @@index([rewardId])
   @@index([status])
+  @@index([status, creditNotifiedAt])
   @@map("reward_referrals")
 }
 
@@ -2109,8 +2372,8 @@ model RewardOtpChallenge {
   consumedAt     BigInt?          @map("consumed_at")
   isDeleted      Boolean          @default(false) @map("is_deleted")
   deletedAt      BigInt?          @map("deleted_at")
-  createdAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2129,8 +2392,8 @@ model RewardLegalAcceptance {
   acceptedAt     BigInt  @map("accepted_at")
   isDeleted      Boolean @default(false) @map("is_deleted")
   deletedAt      BigInt? @map("deleted_at")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2149,8 +2412,8 @@ model RewardNotification {
   readAt    BigInt? @map("read_at")
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2167,7 +2430,7 @@ model RewardAuditLog {
   organizationId String? @map("organization_id")
   action         String  @db.VarChar(64)
   metadata       Json?
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   actorUser    User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -2178,21 +2441,8 @@ model RewardAuditLog {
   @@map("reward_audit_logs")
 }
 
-/// RLS: bypass — tracks confirm idempotency conflicts (token reused with different key).
-model RewardRedemptionIdempotencyRecord {
-  id                  String  @id @default(uuid())
-  redemptionTokenHash String  @map("redemption_token_hash") @db.Text
-  idempotencyKey      String  @map("idempotency_key") @db.VarChar(64)
-  redemptionId        String? @map("redemption_id")
-  createdAt           BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-
-  @@unique([redemptionTokenHash, idempotencyKey])
-  @@index([redemptionTokenHash])
-  @@map("reward_redemption_idempotency_records")
-}
-
 /// Outbox row lifecycle. FAILED is the dead-letter state (malformed envelope or retries exhausted) —
-/// an operator re-queues a row by setting it back to PENDING (docs/infrastructure/messaging.md).
+/// an operator re-queues a row by setting it back to PENDING (docs/technical/messaging.md).
 enum OutboxEventStatus {
   PENDING
   PUBLISHED
@@ -2216,10 +2466,10 @@ model OutboxEvent {
   lastError     String?           @map("last_error") @db.Text
   /// Epoch ms before which the dispatcher must not claim the row: set to a lease on claim and to the
   /// exponential-backoff deadline after a failed publish.
-  availableAt   BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("available_at")
+  availableAt   BigInt            @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("available_at")
   publishedAt   BigInt?           @map("published_at")
-  createdAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt     BigInt            @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt     BigInt            @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   @@index([status, createdAt])
   @@index([status, availableAt])
@@ -2236,7 +2486,7 @@ model InboxProcessedEvent {
   eventId     String @map("event_id") @db.Uuid
   topic       String @db.VarChar(100)
   eventType   String @map("event_type") @db.VarChar(100)
-  processedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("processed_at")
+  processedAt BigInt @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("processed_at")
 
   @@id([consumer, eventId])
   @@index([processedAt])
@@ -2249,26 +2499,40 @@ enum InboxDeadLetterReason {
   MALFORMED_JSON
   SCHEMA_VIOLATION
   PERMANENT_PROCESSING_ERROR
+  /// A transient failure (connection loss, timeout, deadlock, …) outlasted the bounded retry budget.
+  RETRIES_EXHAUSTED
 }
 
 /// Poison messages a Kafka consumer could not apply. Parking (instead of throwing) keeps the
 /// partition flowing; the unique Kafka coordinates make re-parking the same record a no-op.
-/// Operators inspect `raw_value` / `error`, fix the cause, and replay (docs/infrastructure/messaging.md).
-/// RLS: bypass-only infrastructure table. Seed: intentionally empty (runtime ledger).
+/// Operators inspect `raw_value` / `error`, fix the cause, and replay (docs/technical/messaging.md);
+/// the consumer purges rows older than ANALYTICS_DEAD_LETTER_RETENTION_DAYS.
+/// RLS: app_runtime bypass + the least-privilege analytics_consumer role (prisma/rls/90-analytics-consumer.sql).
+/// Seed: the development scenario parks one sample record (prisma/seed).
 model InboxDeadLetter {
-  id         String                @id @default(uuid())
-  consumer   String                @db.VarChar(100)
-  topic      String                @db.VarChar(255)
-  partition  Int
+  id                String                @id @default(uuid())
+  consumer          String                @db.VarChar(100)
+  topic             String                @db.VarChar(255)
+  partition         Int
   /// Kafka offsets are int64 — stored as their decimal string form.
-  offset     String                @db.VarChar(32)
+  offset            String                @db.VarChar(32)
   /// Stable event id when the message parsed far enough to carry one.
-  eventId    String?               @map("event_id") @db.Uuid
-  reason     InboxDeadLetterReason
-  error      String                @db.Text
-  /// Raw message value (truncated) for diagnosis and replay.
-  rawValue   String?               @map("raw_value") @db.Text
-  receivedAt BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("received_at")
+  eventId           String?               @map("event_id") @db.Uuid
+  reason            InboxDeadLetterReason
+  /// Why it was parked (bounded; a cut is marked with the original length).
+  error             String                @db.Text
+  /// Processing attempts made before parking (1 when the record could not be decoded).
+  attempts          Int                   @default(1)
+  /// Raw message value as bytes (binary-safe) for diagnosis and replay — whole unless
+  /// `raw_value_truncated`; null for a tombstone.
+  rawValue          Bytes?                @map("raw_value")
+  /// Size of the ORIGINAL value in bytes (also when the stored copy is truncated).
+  rawValueSizeBytes Int?                  @map("raw_value_size_bytes")
+  /// SHA-256 (hex) of the ORIGINAL value — verifies a replay / identifies a truncated copy.
+  rawValueSha256    String?               @map("raw_value_sha256") @db.Char(64)
+  /// True when `raw_value` holds only the first ANALYTICS_DEAD_LETTER_MAX_PAYLOAD_BYTES bytes.
+  rawValueTruncated Boolean               @default(false) @map("raw_value_truncated")
+  receivedAt        BigInt                @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("received_at")
 
   @@unique([consumer, topic, partition, offset])
   @@index([consumer, receivedAt])
@@ -2284,28 +2548,77 @@ model AnalyticsEvent {
   partitionKey  String? @map("partition_key") @db.VarChar(255)
   payload       Json
   occurredAt    BigInt  @map("occurred_at")
-  ingestedAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("ingested_at")
+  ingestedAt    BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("ingested_at")
 
   @@index([topic, occurredAt])
   @@index([eventType, occurredAt])
   @@map("analytics_events")
 }
 
-/// Generic audit log for platform resources.
-model PlatformResourceAuditLog {
-  id           String  @id @default(uuid())
-  resourceType String  @map("resource_type") @db.VarChar(120)
-  resourceId   String  @map("resource_id") @db.Uuid
-  action       String  @db.VarChar(120)
-  actorUserId  String? @map("actor_user_id") @db.Uuid
-  changes      Json?
-  createdAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-
-  @@index([resourceType, resourceId, createdAt])
-  @@map("platform_resource_audit_logs")
+/// Outcome of one audited HTTP request.
+enum AuditOutcome {
+  /// The handler completed and the response was sent with a 2xx/3xx status.
+  SUCCEEDED
+  /// The request failed (guard, validation, handler or server error) — `errorCode` says why.
+  FAILED
 }
 
-/// Lifecycle of an idempotency record (platform/idempotency, docs/api-routes.md → Idempotency).
+/// Global HTTP audit trail (rules/10 → "Audit logging", docs/adr/025-global-http-audit-log.md):
+/// exactly one append-only row per state-changing request (POST/PUT/PATCH/DELETE), successful
+/// or failed, written by `AuditLogInterceptor` (success) / `GlobalExceptionFilter` (failure) under
+/// the `audit.http_request.record` system operation — or inside the handler's own transaction
+/// when the handler opts in (`AuditTrailService.recordInTransaction`). Bodies are redacted
+/// (common/logging/redaction.ts) and size-capped before they are stored.
+/// Domain audit tables (organization_audit_logs, reward_audit_logs, permission_audit_logs,
+/// impersonation_audit_logs, authorization_audits) keep their domain events; they correlate with
+/// this table through `correlation_id`. No foreign keys: an audit row outlives what it describes.
+/// The organization is the tenant in this platform, so there is no separate tenant column.
+/// RLS: INSERT only under a named system operation (or by the acting user inside their own
+/// transaction); SELECT bypass-only; UPDATE/DELETE revoked from app_runtime (append-only).
+/// Not a business entity: never soft-deleted, never updated. Seed: intentionally empty.
+model AuditLog {
+  id                 String       @id @default(uuid())
+  correlationId      String       @map("correlation_id") @db.VarChar(64)
+  /// Request start (epoch ms).
+  occurredAt         BigInt       @map("occurred_at")
+  /// When the outcome was known (epoch ms).
+  completedAt        BigInt       @map("completed_at")
+  method             String       @db.VarChar(10)
+  /// Route template (`/api/v1/geo/regions/:id`) — groups requests by endpoint.
+  endpoint           String       @db.VarChar(512)
+  /// Concrete request URL with sensitive query parameters redacted.
+  path               String       @db.VarChar(2048)
+  outcome            AuditOutcome
+  responseStatus     Int          @map("response_status")
+  /// Machine error code (`errorCode` of the error envelope) for FAILED rows.
+  errorCode          String?      @map("error_code") @db.VarChar(64)
+  actorUserId        String?      @map("actor_user_id") @db.VarChar(64)
+  /// The real (super-admin) user behind an impersonation session.
+  impersonatorUserId String?      @map("impersonator_user_id") @db.VarChar(64)
+  apiKeyId           String?      @map("api_key_id") @db.VarChar(64)
+  terminalId         String?      @map("terminal_id") @db.VarChar(64)
+  organizationId     String?      @map("organization_id") @db.VarChar(64)
+  storeId            String?      @map("store_id") @db.VarChar(64)
+  locationId         String?      @map("location_id") @db.VarChar(64)
+  ipAddress          String?      @map("ip_address") @db.VarChar(64)
+  /// The calling device (User-Agent, bounded).
+  userAgent          String?      @map("user_agent") @db.VarChar(512)
+  /// Route params + query string (redacted).
+  requestParams      Json?        @map("request_params")
+  requestBody        Json?        @map("request_body")
+  responseBody       Json?        @map("response_body")
+  /// Allowlisted system operations (RLS bypasses) the request ran, in first-use order.
+  systemOperations   String[]     @map("system_operations")
+  createdAt          BigInt       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+
+  @@index([organizationId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([correlationId])
+  @@index([occurredAt])
+  @@map("audit_logs")
+}
+
+/// Lifecycle of an idempotency record (platform/idempotency, docs/technical/api/routes.md → Idempotency).
 enum IdempotencyRecordStatus {
   /// A request holding this key is executing; duplicates get 409 IDEMPOTENCY_REQUEST_IN_PROGRESS until `expiresAt` (the lease).
   IN_PROGRESS
@@ -2313,7 +2626,7 @@ enum IdempotencyRecordStatus {
   COMPLETED
 }
 
-/// Idempotency records for platform resource mutations and `@Idempotent()` HTTP endpoints.
+/// Idempotency records for `@Idempotent()` HTTP endpoints.
 /// Ephemeral infrastructure state (not a business entity): an expired row is
 /// taken over in place by the next request with the same key — never deleted.
 model PlatformResourceIdempotencyRecord {
@@ -2321,14 +2634,17 @@ model PlatformResourceIdempotencyRecord {
   scope          String                  @db.VarChar(200)
   idempotencyKey String                  @map("idempotency_key") @db.VarChar(128)
   requestHash    String                  @map("request_hash") @db.VarChar(128)
-  status         IdempotencyRecordStatus @default(COMPLETED)
+  status         IdempotencyRecordStatus
+  /// Fencing token of the request that holds (or last held) the lease: complete/release only
+  /// succeed for the holder, so a request whose lease expired can never overwrite its successor.
+  leaseToken     String                  @map("lease_token") @db.Uuid
   /// Null while IN_PROGRESS.
   responseBody   Json?                   @map("response_body")
   /// IN_PROGRESS: lease end (a crashed request frees the key). COMPLETED: end of the replay window.
-  /// The app always sets it explicitly; the DB default (created + 24h) only backfills pre-existing rows.
-  expiresAt      BigInt                  @default(dbgenerated("((EXTRACT(EPOCH FROM now()) * 1000)::bigint + 86400000)")) @map("expires_at")
-  createdAt      BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  /// Always set explicitly by the app (no default).
+  expiresAt      BigInt                  @map("expires_at")
+  createdAt      BigInt                  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt                  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
 
   @@unique([scope, idempotencyKey], map: "platform_resource_idempotency_scope_key")
   @@index([expiresAt], map: "platform_resource_idempotency_expires_at_idx")
@@ -2340,12 +2656,14 @@ model SampleCategory {
   id          String    @id @default(uuid())
   description String?   @db.Text
   isActive    Boolean?  @map("is_active")
-  name        String
-  slug        String
+  name        String    @db.VarChar(200)
+  slug        String    @db.VarChar(200)
   sortOrder   Int?      @map("sort_order")
+  /// Optimistic-lock token: PATCH must send the version it read; every update increments it.
+  version     Int       @default(0)
   deletedAt   BigInt?   @map("deleted_at")
-  createdAt   BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt   BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt   BigInt    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt   BigInt    @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
   products    Product[]
 
   @@map("sample_category")
@@ -2354,26 +2672,27 @@ model SampleCategory {
 /// Platform resource model (Product).
 model Product {
   id               String          @id @default(uuid())
-  brand            String?
+  brand            String?         @db.VarChar(120)
   categoryId       String          @map("category_id")
   compareAtPrice   Decimal?        @map("compare_at_price") @db.Decimal(18, 2)
   description      String?         @db.Text
-  imageUrl         String?         @map("image_url")
+  imageUrl         String?         @map("image_url") @db.VarChar(2048)
   isActive         Boolean?        @map("is_active")
   isFeatured       Boolean?        @map("is_featured")
-  name             String
+  name             String          @db.VarChar(200)
   price            Decimal         @db.Decimal(18, 2)
-  shortDescription String?         @map("short_description")
-  sku              String
-  slug             String
+  shortDescription String?         @map("short_description") @db.VarChar(500)
+  sku              String          @db.VarChar(64)
+  slug             String          @db.VarChar(200)
   stockQuantity    Int?            @map("stock_quantity")
   weightGrams      Int?            @map("weight_grams")
   version          Int             @default(0)
   deletedAt        BigInt?         @map("deleted_at")
-  createdAt        BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt        BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt        BigInt          @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt        BigInt          @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
   category         SampleCategory? @relation(fields: [categoryId], references: [id])
   images           ProductImage[]
+  storedFiles      StoredFile[]    @relation("StoredFileProduct")
 
   @@map("product")
 }

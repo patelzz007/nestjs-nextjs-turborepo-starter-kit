@@ -269,10 +269,14 @@ export class AuthorizationGuard implements CanActivate {
 	}
 
 	private async auditSuperAdminBypass(userId: string, context: ExecutionContext, request: FastifyRequest): Promise<void> {
-		await this.audit.log({
-			action: "SUPER_ADMIN_BYPASS",
-			actorId: userId,
-			detail: `Bypassed authorization for ${context.getHandler().name} at ${request.method} ${request.url}`,
-		});
+		// Guards run inside the `request.pre_handler` bypass scope, so the pool connection may append to the bypass-only audit table.
+		await this.audit.record(
+			{
+				action: "SUPER_ADMIN_BYPASS",
+				actor: { kind: "USER", userId },
+				detail: `Bypassed authorization for ${context.getHandler().name} at ${request.method} ${request.url}`,
+			},
+			this.prisma,
+		);
 	}
 }

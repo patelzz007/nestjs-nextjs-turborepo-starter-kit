@@ -5,7 +5,21 @@
 // below are the exceptions: another process builds URLs to them — the API
 // puts them in emails and invite links — so they live here, once, and the
 // apps' route modules use these same constants for them. Rename a page in an
-// app and its `lib/routes.ts` + this file change together (docs/routing.md).
+// app and its `lib/routes.ts` + this file change together (docs/technical/frontend/routing.md).
+
+import { listFilterKey } from "./schemas/api/list-query";
+import { MfaRecoveryRecordStatusSchema } from "./schemas/auth/mfa-recovery";
+
+/** The admin MFA-recovery queue page (all statuses). */
+const ADMIN_MFA_RECOVERY_QUEUE_PATH = "/users/mfa-recovery";
+
+/**
+ * `path?query` with the query built by `URLSearchParams` from list-grammar
+ * keys ({@link listFilterKey}) — never a hand-written query string.
+ */
+function withListQuery(path: string, params: Readonly<Record<string, string>>): string {
+	return `${path}?${new URLSearchParams(params).toString()}`;
+}
 
 /** Auth pages every app with that flow serves at the same path. */
 export interface AuthAppLinks {
@@ -40,8 +54,10 @@ export interface MerchantAppLinks {
 /** Admin app pages the API links to. */
 export interface AdminAppLinks {
 	readonly home: string;
-	/** The MFA-recovery request queue (super-admin). */
+	/** The MFA-recovery request queue (super-admin), every status. */
 	readonly mfaRecoveryQueue: string;
+	/** The same queue filtered to requests awaiting review (`filter[status]=PENDING`) — what review-request emails link to. */
+	readonly mfaRecoveryPendingQueue: string;
 }
 
 export interface AppLinks {
@@ -73,6 +89,7 @@ export const APP_LINKS: AppLinks = {
 	},
 	admin: {
 		home: "/",
-		mfaRecoveryQueue: "/users/mfa-recovery",
+		mfaRecoveryQueue: ADMIN_MFA_RECOVERY_QUEUE_PATH,
+		mfaRecoveryPendingQueue: withListQuery(ADMIN_MFA_RECOVERY_QUEUE_PATH, { [listFilterKey("status")]: MfaRecoveryRecordStatusSchema.enum.PENDING }),
 	},
 };

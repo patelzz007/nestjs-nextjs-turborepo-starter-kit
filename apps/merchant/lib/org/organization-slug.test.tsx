@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearOrganizationLocationCookie, ORGANIZATION_LOCATION_ID_COOKIE_NAME, writeOrganizationLocationCookie } from "@/lib/org/location";
+import { clearOrganizationLocationCookie, organizationLocationCookieName, writeOrganizationLocationCookie } from "@/lib/org/location";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
 import { useSwitchOrganization } from "@/lib/org/use-switch-organization";
@@ -31,7 +31,7 @@ beforeEach((): void => {
 afterEach((): void => {
 	cleanup();
 	vi.clearAllMocks();
-	clearOrganizationLocationCookie();
+	clearOrganizationLocationCookie(TEST_ORG_SLUG);
 });
 
 describe("useOrganizationSlug", () => {
@@ -65,8 +65,8 @@ describe("useOrganizationPath", () => {
 });
 
 describe("useSwitchOrganization", () => {
-	it("navigates to the other organization's dashboard and drops the store choice", () => {
-		writeOrganizationLocationCookie(STORE_A.id);
+	it("navigates to the other organization's dashboard and keeps this organization's store choice for the way back", () => {
+		writeOrganizationLocationCookie(TEST_ORG_SLUG, STORE_A.id);
 		const { result } = renderHook(useSwitchOrganization);
 
 		act(() => {
@@ -74,11 +74,12 @@ describe("useSwitchOrganization", () => {
 		});
 
 		expect(push).toHaveBeenCalledWith(orgRoutes(OTHER_ORG_SLUG).dashboard);
-		expect(document.cookie).not.toContain(`${ORGANIZATION_LOCATION_ID_COOKIE_NAME}=`);
+		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
+		expect(document.cookie).not.toContain(`${organizationLocationCookieName(OTHER_ORG_SLUG)}=`);
 	});
 
 	it("does nothing when the member re-selects the organization they are in", () => {
-		writeOrganizationLocationCookie(STORE_A.id);
+		writeOrganizationLocationCookie(TEST_ORG_SLUG, STORE_A.id);
 		const { result } = renderHook(useSwitchOrganization);
 
 		act(() => {
@@ -86,6 +87,6 @@ describe("useSwitchOrganization", () => {
 		});
 
 		expect(push).not.toHaveBeenCalled();
-		expect(document.cookie).toContain(`${ORGANIZATION_LOCATION_ID_COOKIE_NAME}=${STORE_A.id}`);
+		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
 	});
 });

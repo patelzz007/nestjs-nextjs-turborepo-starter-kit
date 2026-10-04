@@ -77,7 +77,6 @@ describe("admin sidebar authorization", () => {
 		}
 		expect(visibleTitles([])).not.toContain("Review");
 		expect(visibleTitles([PERMISSION.REWARD.MANAGE])).toContain("Review");
-		expect(urls).toContain("/settings/billing");
 		expect(urls).toContain("/account/profile");
 		expect(urls).toContain("/account/security");
 	});

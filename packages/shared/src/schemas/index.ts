@@ -56,12 +56,12 @@ export {
 	JwtPayloadSchema,
 	LoginClientResponseSchema,
 	AuthClientTypeQuerySchema,
+	AuthClientTypeSchema,
 } from "./auth/auth";
 export type {
 	ForgotPasswordInput,
 	AuthClientType,
 	AuthClientTypeQuery,
-	AuthClientTypeSchema,
 	ForgotPasswordResponse,
 	ImpersonateResponse,
 	ImpersonateServiceResponse,
@@ -92,6 +92,19 @@ export type {
 	VerifyEmailResponse,
 } from "./auth/auth";
 export { ChangePasswordResponseSchema, ChangePasswordSchema } from "./auth/change-password";
+export {
+	OWN_PROFILE_EDITABLE_FIELDS,
+	OWN_PROFILE_ERROR_CODES,
+	OwnProfileAvatarSchema,
+	OwnProfileEditableFieldsSchema,
+	OwnProfileErrorCodeSchema,
+	OwnProfileSchema,
+	UpdateOwnProfileSchema,
+	USER_FULL_NAME_MAX_LENGTH,
+	USER_FULL_NAME_MIN_LENGTH,
+	UserFullNameSchema,
+} from "./auth/profile";
+export type { OwnProfile, OwnProfileAvatar, OwnProfileEditableFields, OwnProfileErrorCode, UpdateOwnProfileInput } from "./auth/profile";
 export type { ChangePasswordInput, ChangePasswordResponse } from "./auth/change-password";
 export {
 	AdminMfaRecoveryListQuerySchema,
@@ -144,8 +157,15 @@ export {
 	VerifyBackupCodeLoginSchema,
 	VerifyBackupCodeResponseSchema,
 	VerifyBackupCodeSchema,
+	BACKUP_CODE_CHARSET,
+	BACKUP_CODE_COUNT,
+	BACKUP_CODE_LENGTH,
+	normalizeBackupCodeInput,
+	StartTwoFactorSetupSchema,
+	TOTP_CODE_LENGTH,
 } from "./auth/two-factor";
 export type {
+	StartTwoFactorSetupInput,
 	BackupCode,
 	BackupCodesRemainingResponse,
 	EnableTwoFactorInput,
@@ -174,20 +194,10 @@ export {
 	ApiErrorDetailsSchema,
 	ApiErrorObjectSchema,
 	ApiErrorResponseSchema,
-	ApiLockoutDetailsSchema,
 	ApiValidationIssueSchema,
 	StandardApiErrorCodeSchema,
 } from "./api/api-error";
-export type {
-	ApiErrorBody,
-	ApiErrorCode,
-	ApiErrorDetails,
-	ApiErrorObject,
-	ApiErrorResponse,
-	ApiLockoutDetails,
-	ApiValidationIssue,
-	StandardApiErrorCode,
-} from "./api/api-error";
+export type { ApiErrorBody, ApiErrorCode, ApiErrorDetails, ApiErrorObject, ApiErrorResponse, ApiValidationIssue, StandardApiErrorCode } from "./api/api-error";
 export {
 	ApiPaginatedMetaSchema,
 	ApiResponseMetaSchema,
@@ -202,8 +212,8 @@ export {
 export type { ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse, DeleteSuccessData, Envelope, PaginatedServiceResult } from "./api/api-response";
 export { BULK_MUTATION_MAX_ITEMS, BulkDeleteIdsSchema, BulkDeleteResultSchema } from "./api/bulk-mutation";
 export type { BulkDeleteIdsInput, BulkDeleteResult } from "./api/bulk-mutation";
-export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth/auth-errors";
-export type { AuthErrorCode, LockedErrorCode } from "./auth/auth-errors";
+export { AuthErrorCodeSchema } from "./auth/auth-errors";
+export type { AuthErrorCode } from "./auth/auth-errors";
 export {
 	AccountAnalyticsResponseSchema,
 	AdminOverviewResponseSchema,
@@ -286,6 +296,8 @@ export type {
 } from "./domain/platform/storage";
 export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs, DataValueSchema } from "./api/common";
 export type { BaseResponse, EpochMs, DataPrimitive, DataValue } from "./api/common";
+export { CanonicalEmailSchema, canonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "./api/email-address";
+export type { CanonicalEmail } from "./api/email-address";
 export { SessionStatusSchema } from "./auth/session-status";
 export type { SessionStatus } from "./auth/session-status";
 export { ApiVersionManifestSchema } from "./api/version";
@@ -296,6 +308,7 @@ export {
 	EmailLogListQuerySchema,
 	emailLogListQuery,
 	EmailLogStatusSchema,
+	DeliveryEventOutcomeSchema,
 	EmailPreviewListResponseSchema,
 	EmailPreviewPropValueSchema,
 	EmailPreviewSchema,
@@ -338,6 +351,7 @@ export type {
 	EmailLogListQuery,
 	EmailLogListSortField,
 	EmailLogStatus,
+	DeliveryEventOutcome,
 	EmailPreview,
 	EmailPreviewListResponse,
 	EmailPreviewPropValue,
@@ -463,6 +477,7 @@ export {
 	LIST_MAX_SORT_TERMS,
 	LIST_VALUE_SEPARATOR,
 	listFilter,
+	listFilterKey,
 	ListSearchSchema,
 	nestBracketQueryParams,
 	parseSortParam,
@@ -496,8 +511,8 @@ export {
 	AssignPermissionToRoleSchema,
 	AssignPermissionToUserSchema,
 	AssignRoleToUserSchema,
-	AdminPermissionDetailResponseSchema,
 	AdminPermissionResponseSchema,
+	AuditLogActorSchema,
 	AuditLogEntrySchema,
 	AuditLogQuerySchema,
 	auditLogListQuery,
@@ -531,7 +546,6 @@ export {
 	RoleAssignmentPreviewSchema,
 	RoleAssignmentValidationResponseSchema,
 	RoleCreatedResponseSchema,
-	RoleDetailResponseSchema,
 	RoleFilterSchema,
 	RoleListItemSchema,
 	RoleListResponseSchema,
@@ -547,8 +561,8 @@ export type {
 	AssignPermissionToRoleInput,
 	AssignPermissionToUserInput,
 	AssignRoleToUserInput,
-	AdminPermissionDetailResponse,
 	AdminPermissionResponse,
+	AuditLogActor,
 	AuditLogEntry,
 	AuditLogQueryInput,
 	AuditLogListSortField,
@@ -583,7 +597,6 @@ export type {
 	RoleAssignmentPreview,
 	RoleAssignmentValidationResponse,
 	RoleCreatedResponse,
-	RoleDetailResponse,
 	RoleFilterInput,
 	RoleListItem,
 	RoleListResponse,
@@ -708,7 +721,6 @@ export {
 	AdminUserStatusSchema,
 	PermissionDetailsSchema,
 	SlimRoleSchema,
-	UpdateProfileSchema,
 	UpdateUserSchema,
 	UserMessageResponseSchema,
 	UserResponseSchema,
@@ -724,7 +736,6 @@ export type {
 	SessionPermissionsResponse,
 	SlimRoleResponse,
 	UserPermissions,
-	UpdateProfileInput,
 	UpdateUserInput,
 	UserMessageResponse,
 	UserResponse,
@@ -764,11 +775,15 @@ export {
 	AdminCreateMerchantInviteSchema,
 	AdminKybUpdatePathInputSchema,
 	AdminKybUpdateSchema,
+	KybFieldsSchema,
+	KYB_STATUSES_REQUIRING_REASON,
 	AdminMerchantDetailResponseSchema,
 	AdminMerchantIdParamSchema,
 	AdminMerchantInviteCreatedResponseSchema,
 	AdminMerchantListQuerySchema,
 	adminMerchantListQuery,
+	AdminPendingRewardListQuerySchema,
+	adminPendingRewardListQuery,
 	AdminRejectRewardPathInputSchema,
 	AdminRejectRewardSchema,
 	CreateRewardClaimSchema,
@@ -780,6 +795,8 @@ export {
 	MERCHANT_API_KEYS_PAGE_SIZE,
 	MerchantApiKeySummarySchema,
 	MerchantCreateApiKeySchema,
+	OrganizationApiKeyScopeSchema,
+	DEFAULT_MERCHANT_API_KEY_SCOPE,
 	MERCHANT_TERMINALS_PAGE_SIZE,
 	MerchantCreateTerminalSchema,
 	MerchantTerminalListQuerySchema,
@@ -787,6 +804,9 @@ export {
 	MerchantTerminalSettingsSchema,
 	MerchantTerminalSettingsResponseSchema,
 	MerchantTerminalSummarySchema,
+	MerchantTerminalStatusSummaryQuerySchema,
+	MerchantTerminalStatusCountsSchema,
+	MerchantTerminalStatusSummarySchema,
 	merchantTerminalListQuery,
 	POS_PAIRING_CODE_TTL_MS,
 	POS_TERMINAL_NAME_MAX_LENGTH,
@@ -801,7 +821,6 @@ export {
 	MerchantCreateRewardFormSchema,
 	MerchantMemberCreatedResponseSchema,
 	KybDocumentScanStatusSchema,
-	KybScanResultSchema,
 	MerchantKybDocumentDownloadResponseSchema,
 	MerchantKybDocumentRecordSchema,
 	MerchantKybProfileResponseSchema,
@@ -815,6 +834,8 @@ export {
 	MerchantOnboardingCompleteFieldsSchema,
 	MerchantOnboardingCompleteResponseSchema,
 	MerchantOnboardingDocumentsSubmitSchema,
+	MerchantOnboardingDocumentStatusSchema,
+	MerchantOnboardingDocumentStatusResponseSchema,
 	MerchantOnboardingDocumentUploadCompleteSchema,
 	MerchantOnboardingDocumentBatchUploadCompleteItemSchema,
 	MerchantOnboardingDocumentBatchUploadCompleteResponseSchema,
@@ -845,7 +866,11 @@ export {
 	MerchantUpdateRewardSchema,
 	MerchantUpdateRewardPathInputSchema,
 	PilotCitySchema,
+	PILOT_CITY_LABELS,
+	PILOT_CITY_TIME_ZONES,
+	PLATFORM_DISPLAY_REGION,
 	DEFAULT_SALE_CURRENCY,
+	SALE_CURRENCY_MINOR_UNIT_EXPONENTS,
 	MAX_BILL_TOTAL_MINOR,
 	MAX_CHECKOUT_REWARDS,
 	MINOR_UNITS_PER_MAJOR,
@@ -855,8 +880,6 @@ export {
 	RedemptionCheckoutResponseSchema,
 	RedemptionCheckoutSchema,
 	RedemptionCodeSchema,
-	RedemptionConfirmSchema,
-	RedemptionConfirmedResponseSchema,
 	RedemptionInvalidReasonSchema,
 	RedemptionPreviewResponseSchema,
 	RedemptionValidateSchema,
@@ -906,10 +929,20 @@ export {
 export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug, CapabilityCatalogResponse } from "./domain/rbac/capabilities";
 export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/rewards/claim-availability";
 export {
+	ANALYTICS_BUCKET_DISPLAY_REGION,
 	AdminSalesAnalyticsQuerySchema,
 	AdminSalesAnalyticsResponseSchema,
 	AdminSalesTopMerchantSchema,
 	AnalyticsMetricSchema,
+	analyticsQueryForWeeks,
+	analyticsBucketRegion,
+	AnalyticsPeriodSchema,
+	DAY_MS,
+	DEFAULT_ANALYTICS_WEEKS,
+	MAX_ANALYTICS_WEEKS,
+	resolveAnalyticsPeriodRange,
+	startOfUtcWeekMs,
+	WEEK_MS,
 	MerchantAnalyticsResponseSchema,
 	MerchantAnalyticsTimePointSchema,
 	MerchantAnalyticsTopRewardSchema,
@@ -927,6 +960,8 @@ export type {
 	AdminSalesAnalyticsResponse,
 	AdminSalesTopMerchant,
 	AnalyticsMetric,
+	AnalyticsPeriod,
+	AnalyticsPeriodRange,
 	MerchantAnalyticsResponse,
 	MerchantAnalyticsTimePoint,
 	MerchantAnalyticsTopReward,
@@ -939,16 +974,20 @@ export type {
 	UserSpendByMerchant,
 	UserSpendingSummary,
 } from "./domain/rewards/analytics";
+export { IanaTimeZoneSchema, nextWeekStartInTimeZone, startOfWeekInTimeZone, UTC_TIME_ZONE } from "./domain/rewards/analytics-time-zone";
 export type {
 	AcceptRewardLegalInput,
 	AdminCreateMerchantInviteInput,
 	AdminKybUpdateInput,
+	KybFields,
 	AdminKybUpdatePathInput,
 	AdminMerchantDetailResponse,
 	AdminMerchantIdParam,
 	AdminMerchantInviteCreatedResponse,
 	AdminMerchantListQuery,
 	AdminMerchantListSortField,
+	AdminPendingRewardListQuery,
+	AdminPendingRewardListSortField,
 	AdminRejectRewardInput,
 	AdminRejectRewardPathInput,
 	CreateRewardClaimInput,
@@ -962,6 +1001,9 @@ export type {
 	MerchantTerminalPairing,
 	MerchantTerminalSettings,
 	MerchantTerminalSummary,
+	MerchantTerminalStatusSummaryQuery,
+	MerchantTerminalStatusCounts,
+	MerchantTerminalStatusSummary,
 	PosPairedTerminal,
 	PosPairingCode,
 	PosPairTerminalInput,
@@ -971,12 +1013,12 @@ export type {
 	MerchantApiKeySummary,
 	MerchantRewardListQuery,
 	MerchantCreateApiKeyInput,
+	OrganizationApiKeyScope,
 	MerchantCreateMemberInput,
 	MerchantCreateRewardInput,
 	MerchantCreateRewardFormValues,
 	MerchantMemberCreatedResponse,
 	KybDocumentScanStatus,
-	KybScanResult,
 	MerchantKybDocumentDownloadResponse,
 	MerchantKybDocumentRecord,
 	MerchantKybProfileResponse,
@@ -988,6 +1030,8 @@ export type {
 	MerchantOnboardingCompleteFieldsInput,
 	MerchantOnboardingCompleteResponse,
 	MerchantOnboardingDocumentsSubmitInput,
+	MerchantOnboardingDocumentStatusInput,
+	MerchantOnboardingDocumentStatusResponse,
 	MerchantOnboardingDocumentUploadCompleteInput,
 	MerchantOnboardingDocumentBatchUploadCompleteInput,
 	MerchantOnboardingDocumentBatchUploadCompleteItem,
@@ -1011,12 +1055,11 @@ export type {
 	MerchantUpdateRewardInput,
 	MerchantUpdateRewardPathInput,
 	PilotCity,
+	DisplayRegion,
 	RedemptionCheckoutInput,
 	RedemptionCheckoutItem,
 	RedemptionCheckoutResponse,
 	RedemptionCode,
-	RedemptionConfirmInput,
-	RedemptionConfirmedResponse,
 	RedemptionInvalidReason,
 	RedemptionPreviewResponse,
 	SaleCurrency,
@@ -1046,6 +1089,7 @@ export type {
 	RewardType,
 	RewardNotificationListResponse,
 } from "./domain/rewards/rewards";
+export { MerchantErrorCodeSchema, MerchantErrorCodes, type MerchantErrorCode } from "./domain/rewards/merchant-error-codes";
 export {
 	AdminCreateOrganizationInviteSchema,
 	AuthorizationPolicyDraftResponseSchema,
@@ -1080,6 +1124,12 @@ export {
 	OrganizationPrimaryLocationDraftSchema,
 	OrganizationLocationFilterSchema,
 	OrganizationLocationIdParamSchema,
+	OrganizationLocationCloseSchema,
+	OrganizationLocationCloseResponseSchema,
+	OrganizationMemberStoreParamSchema,
+	OrganizationMemberStoreRemoveSchema,
+	OrganizationMemberStoreRemoveResponseSchema,
+	ORGANIZATION_LOCATION_CLOSURE_REASON_MAX_LENGTH,
 	OrganizationLocationResponseSchema,
 	OrganizationLocationScopeTypeSchema,
 	OrganizationLocationStatusSchema,
@@ -1087,6 +1137,9 @@ export {
 	OrganizationMemberInviteFieldsSchema,
 	OrganizationMemberInviteSchema,
 	OrganizationMembershipResponseSchema,
+	ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH,
+	OrganizationMemberDisplayNameSchema,
+	OrganizationOwnMembershipUpdateSchema,
 	OrganizationMembershipRoleSchema,
 	OrganizationMembershipStatusSchema,
 	OrganizationMerchantProfileResponseSchema,
@@ -1098,9 +1151,10 @@ export {
 	OrganizationSummaryResponseSchema,
 	PolicyBuilderPayloadSchema,
 	ReviewOrganizationAccessRequestSchema,
+	OrganizationTeamGrantableRoleSchema,
+	ORGANIZATION_SCOPE_MAX_LOCATION_IDS,
 	SupportAccessGrantModeSchema,
 	SupportAccessGrantRequestSchema,
-	SupportAccessGrantApproveSchema,
 	SupportAccessGrantResponseSchema,
 	SupportAccessGrantStatusSchema,
 	TenantPlacementKindSchema,
@@ -1141,6 +1195,11 @@ export type {
 	OrganizationPrimaryLocationDraft,
 	OrganizationLocationFilter,
 	OrganizationLocationIdParam,
+	OrganizationLocationCloseInput,
+	OrganizationLocationCloseResponse,
+	OrganizationMemberStoreParam,
+	OrganizationMemberStoreRemoveInput,
+	OrganizationMemberStoreRemoveResponse,
 	OrganizationLocationResponse,
 	OrganizationLocationScopeType,
 	OrganizationLocationStatus,
@@ -1148,6 +1207,7 @@ export type {
 	OrganizationMemberInviteFields,
 	OrganizationMemberInviteInput,
 	OrganizationMembershipResponse,
+	OrganizationOwnMembershipUpdateInput,
 	OrganizationMembershipRole,
 	OrganizationMembershipStatus,
 	OrganizationMerchantProfileResponse,
@@ -1160,9 +1220,9 @@ export type {
 	AdminOrganizationInviteCreatedResponse,
 	PolicyBuilderPayload,
 	ReviewOrganizationAccessRequestInput,
+	OrganizationTeamGrantableRole,
 	SupportAccessGrantMode,
 	SupportAccessGrantRequestInput,
-	SupportAccessGrantApproveInput,
 	SupportAccessGrantResponse,
 	SupportAccessGrantStatus,
 	TenantPlacementKind,
@@ -1170,7 +1230,9 @@ export type {
 export {
 	CedarAuthorizationDecisionSchema,
 	CedarAuthorizationRequestSchema,
+	CedarDecisionSchema,
 	CreatePolicyDraftSchema,
+	PolicyDecisionChangeSchema,
 	PolicyDraftCreatedResponseSchema,
 	PolicyPublishRequestSchema,
 	PolicyPublishResponseSchema,
@@ -1180,7 +1242,9 @@ export {
 export type {
 	CedarAuthorizationDecision,
 	CedarAuthorizationRequest,
+	CedarDecision,
 	CreatePolicyDraftInput,
+	PolicyDecisionChange,
 	PolicyDraftCreatedResponse,
 	PolicyPublishRequestInput,
 	PolicyPublishResponse,
@@ -1210,8 +1274,28 @@ export type {
 	PlatformEventPayload,
 	PlatformEventType,
 } from "./infrastructure/kafka";
-export { EmailSendJobSchema, QUEUE_NAMES, QueueNameSchema, RewardsMaintenanceJobSchema, StorageCleanupJobSchema, StorageDeleteJobSchema } from "./infrastructure/queue";
-export type { EmailSendJob, QueueName, RewardsMaintenanceJob, StorageCleanupJob, StorageDeleteJob } from "./infrastructure/queue";
+export {
+	EmailJobPropValueSchema,
+	EmailSendJobSchema,
+	ALL_QUEUE_NAMES,
+	QUEUE_NAMES,
+	QueueNameSchema,
+	RewardsMaintenanceJobSchema,
+	StorageCdnInvalidationJobSchema,
+	StorageCleanupJobSchema,
+	StorageDeleteJobSchema,
+	StorageScanJobSchema,
+} from "./infrastructure/queue";
+export type {
+	EmailJobPropValue,
+	EmailSendJob,
+	QueueName,
+	RewardsMaintenanceJob,
+	StorageCdnInvalidationJob,
+	StorageCleanupJob,
+	StorageDeleteJob,
+	StorageScanJob,
+} from "./infrastructure/queue";
 export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
 export { OutboxEnqueueInputSchema, OutboxEventRecordSchema, OutboxEventStatusSchema, OUTBOX_EVENT_STATUSES } from "./infrastructure/outbox";
 export type { OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";
@@ -1256,14 +1340,16 @@ export type {
 	UpdateProductInput,
 } from "./domain/catalog/product";
 export {
-	PlatformResourceAuditInputSchema,
-	PlatformResourceAuditRecordSchema,
-	PlatformResourceIdempotencyInputSchema,
-	PlatformResourceIdempotencyRecordSchema,
-} from "./platform/resource-platform";
-export type {
-	PlatformResourceAuditInput,
-	PlatformResourceAuditRecord,
-	PlatformResourceIdempotencyInput,
-	PlatformResourceIdempotencyRecord,
-} from "./platform/resource-platform";
+	CATALOG_DESCRIPTION_MAX_LENGTH,
+	CATALOG_MAX_PRICE,
+	CATALOG_NAME_MAX_LENGTH,
+	CATALOG_SLUG_MAX_LENGTH,
+	CatalogNameSchema,
+	CatalogSlugSchema,
+	OptimisticVersionSchema,
+	PRODUCT_BRAND_MAX_LENGTH,
+	PRODUCT_IMAGE_URL_MAX_LENGTH,
+	PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
+	PRODUCT_SKU_MAX_LENGTH,
+} from "./domain/catalog/catalog-fields";
+export { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "./auth/email-link-lifetimes";

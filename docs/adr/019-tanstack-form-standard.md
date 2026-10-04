@@ -12,7 +12,7 @@ order: 19
 
 ## Status
 
-Accepted (2026-10-01) — implementation scheduled for roadmap Phase G.
+Accepted (2026-10-01). Migration incomplete as of 2026-10-04: `react-hook-form` is still a dependency of `apps/admin`, `apps/merchant` and `packages/ui`. (The "roadmap" this ADR originally referenced was retired; open work is tracked in [known gaps](../technical/README.md#known-gaps) and the issue tracker.)
 
 ## Context
 

@@ -6,6 +6,7 @@ import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-ta
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
@@ -33,6 +34,8 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
+import { formatCatalogAmount } from "@/lib/format/numbers";
+import { formatDateTime } from "@/lib/format/dates";
 
 const labels = createDataTableLabels({
 	actionsMenuTitle: "Product actions",
@@ -117,11 +120,13 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
 	});
 	const rows: Product[] = resourceListQuery.data?.data ?? [];
+	// The server's count of every matching row — not just the rows on this page.
+	const matchingTotal: number = readPaginatedTotal(resourceListQuery.data?.meta);
 	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
 		sortSpec: productListQuery,
-		totalCount: readPaginatedTotal(resourceListQuery.data?.meta),
+		totalCount: matchingTotal,
 		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
 		resetKey: PRODUCTS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
 		getRowId: getProductRowId,
@@ -148,7 +153,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 	const deleteMutation = api.product.delete.useMutation({
 		onSuccess: async () => {
 			toastMessage.success({ title: "Product deleted", description: "The product was removed." });
-			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
+			await queryClient.invalidateQueries({ queryKey: apiRouter.product.list.scopeKey(undefined) });
 		},
 		onError: (error) => {
 			toastMessage.error({ title: "Delete failed", description: error.message });
@@ -162,7 +167,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				title: `${String(deletedCount)} product${deletedCount === 1 ? "" : "s"} deleted`,
 				description: "The selected products were removed.",
 			});
-			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
+			await queryClient.invalidateQueries({ queryKey: apiRouter.product.list.scopeKey(undefined) });
 		},
 		onError: (error) => {
 			toastMessage.error({ title: "Bulk delete failed", description: error.message });
@@ -233,7 +238,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				icon: <Trash2 className="size-4" />,
 				onClick: handleDelete,
 				isDestructive: true,
-				iconBgColor: "bg-red-100 dark:bg-red-900/40",
+				iconBgColor: "bg-destructive-soft",
 			});
 		}
 		return base;
@@ -258,11 +263,11 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				subtitle={item.name}
 				badge={item.isActive ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
 				fields={[
-					{ label: "Price", value: Number.isFinite(item.price) ? item.price.toFixed(2) : "—" },
+					{ label: "Price", value: formatCatalogAmount(item.price) },
 					{ label: "Stock Quantity", value: String(item.stockQuantity) },
 					{ label: "Category Id", value: item.categoryId },
 					{ label: "Is Featured", value: item.isFeatured ? "Yes" : "No" },
-					{ label: "Created At", value: Number.isFinite(item.createdAt) ? new Date(item.createdAt).toLocaleString() : "—" },
+					{ label: "Created At", value: formatDateTime(item.createdAt) },
 				]}
 				actions={cardActions}
 			/>
@@ -292,8 +297,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				header: "Price",
 				enableSorting: true,
 				cell: ({ row }): React.JSX.Element => {
-					const value = row.original.price;
-					return <span>{Number.isFinite(value) ? value.toFixed(2) : "—"}</span>;
+					return <span>{formatCatalogAmount(row.original.price)}</span>;
 				},
 			},
 			{
@@ -320,8 +324,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 				header: "Created At",
 				enableSorting: true,
 				cell: ({ row }): React.JSX.Element => {
-					const value = row.original.createdAt;
-					return <span>{Number.isFinite(value) ? new Date(value).toLocaleString() : "—"}</span>;
+					return <span>{formatDateTime(row.original.createdAt)}</span>;
 				},
 			},
 		],
@@ -429,11 +432,11 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} products on this page` : "Products"}</CardTitle>
+					<CardTitle className="text-base">{matchingTotal > 0 ? `${String(matchingTotal)} products` : "Products"}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable
-						data={[...rows]}
+						data={rows}
 						columns={columns}
 						labels={labels}
 						actions={actions}

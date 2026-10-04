@@ -45,7 +45,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | Store JavaScript / SQL snippets as policies, or `eval` anything | Remote code execution risk (spec §43). |
 | Create an RLS policy per role | Roles are dynamic; RLS protects stable tenant concepts (spec §50). |
 | Inject `SystemPrismaService` into feature code | It ignores RLS entirely. Use a named system operation. |
-| Hardcode `actorId: "system"` in audits | Audits must name the real actor. |
+| Hardcode `actorId: "system"` in audits | Audits must name the real actor: `{ kind: "USER", userId }` for a person, `{ kind: "SYSTEM_OPERATION", operation }` (an allowlisted operation such as `maintenance.permission_expiry`) for a scheduled job. `GET /admin/audit` returns the same union as `actor`. |
 | Let an admin grant permissions they do not hold, or edit their own roles | Privilege escalation (spec §68, §69). `PrivilegeEscalationService` enforces this — do not bypass it. |
 | Put permissions into the JWT | Tokens get huge and stale (spec §60). |
 | Add Redis caching for decisions "just in case" | Measure first (spec §59). |

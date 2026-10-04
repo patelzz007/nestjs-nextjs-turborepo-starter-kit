@@ -67,10 +67,17 @@ Think of it like dropping a package at a security desk:
 1. Browser asks API:  "I want to upload invoice.pdf"
 2. API creates a DB row (status: PENDING) and returns an upload ticket
 3. Browser uploads the file directly to storage (multipart POST for local/S3, signed PUT for Firebase)
-4. Browser tells API: "I'm done"
-5. API checks the file arrived (size + checksum)
-6. API promotes it to the final folder, status READY
-7. Later, download uses a short-lived signed link
+4. Browser tells API: "I'm done"            (POST /files/:id/complete)
+5. API checks the bytes: size, SHA-256 (streamed) and magic bytes vs. the declared type
+6. API claims the file PENDING → SCANNING exactly once (a second "done" gets 409)
+7. The configured malware scanner (MALWARE_SCANNER) is asked about the object
+8. CLEAN       → promoted to its final key, bound (product image / avatar / store logo), READY
+   NOT_SCANNED → (MALWARE_SCANNER=none) same as CLEAN, but recorded NOT_SCANNED — never CLEAN
+   INFECTED    → bytes removed, QUARANTINED
+   PENDING_EXTERNAL → an asynchronous scanner owns it; stays SCANNING until its
+                 verdict is posted to POST /files/processing-callback
+   no verdict after every retry → FAILED (never treated as clean)
+9. Later, download uses a short-lived signed link (only READY files get one)
 ```
 
 **File statuses you'll see:**
@@ -78,12 +85,54 @@ Think of it like dropping a package at a security desk:
 | Status | Meaning |
 |--------|---------|
 | `PENDING` | Upload ticket issued, file not confirmed yet |
-| `SCANNING` | Upload done, scan running |
-| `READY` | Safe to view / download |
-| `QUARANTINED` | Rejected by external processing callback |
-| `DELETED` | Soft-deleted; physical delete happens later |
+| `SCANNING` | Bytes verified; waiting for the malware verdict. Not downloadable, not bound to anything |
+| `READY` | Promoted and bound to its resource; downloadable. Its `scanStatus` says how it was cleared: `CLEAN` (a scanner verdict) or `NOT_SCANNED` (no scanner configured) |
+| `QUARANTINED` | The scanner flagged it; the bytes were deleted |
+| `FAILED` | No verdict could be obtained (object missing, scanner down past every retry) |
+| `DELETED` | Soft-deleted (with `deleted_by`); physical delete happens later |
 
-Scanning runs **inside** `POST /files/:id/complete` — there is no separate “wait for a queue” step in normal use.
+**Only a scanner verdict marks a file CLEAN.** The file record's `scanStatus`
+(`SCANNING`, `CLEAN`, `INFECTED`, `NOT_SCANNED`) is part of the API contract
+(`GET /files/:id`, KYB document lists). Every transition is a conditional
+update on the expected current state, so a redelivered job, a replayed callback
+or a delete racing the scan can never move a DELETED/QUARANTINED file back to READY.
+
+Where the scan runs:
+
+- **With Redis (always in production):** `POST /files/:id/complete` returns
+  `SCANNING`; a `storage.scan` BullMQ job scans and finalizes. Scanner outages
+  retry with backoff; the hourly `storage.cleanup` sweep re-dispatches scans
+  with no verdict after 30 minutes.
+- **Without Redis (local dev):** the scan runs inside the completion request,
+  which returns the verdict (`READY` / `QUARANTINED` / `FAILED`). Physical
+  deletes happen immediately (no scheduler to honour the retention delay).
+
+Scanners (`MALWARE_SCANNER`, required, no default):
+
+| Value | What it is |
+|-------|------------|
+| `none` | No malware scanner is configured. Uploads still pass the size, SHA-256 and file-type checks, then become READY with scan status `NOT_SCANNED`. The API logs a warning at boot. |
+
+Adding a scanner (planned: AWS GuardDuty Malware Protection for S3) is one
+adapter implementing the `MalwareScanner` port
+(`modules/storage/domain/malware-scanner.port.ts`) plus one `MALWARE_SCANNER`
+value. A synchronous scanner returns `CLEAN` / `INFECTED`; an asynchronous one
+(GuardDuty) returns `PENDING_EXTERNAL` and its verdict arrives later through
+`POST /files/processing-callback` — the same state machine applies either way.
+
+**Reacting to verdicts (other modules).** A feature that owns files of a
+category registers a provider extending `FileLifecycleListener`
+(`modules/files/lifecycle/`). The files module discovers it (it never imports
+the feature) and calls it inside the verdict transaction (system operation
+`files.scan_verdict.apply`), so the verdict and the reaction commit or roll back
+together. Example: `KybFileVerdictListener` re-derives the KYB review status
+(infected or failed evidence → `ACTION_REQUIRED`, all usable again → `PENDING`;
+APPROVED/REJECTED reviews are never changed).
+
+Deleting a file soft-deletes it **and** every row that points at it (product
+image, store asset, avatar, KYB link, variants) in one transaction. KYB evidence
+that was submitted for review is retained: `DELETE /files/:id` answers 409
+`KYB_EVIDENCE_RETAINED`.
 
 ---
 
@@ -161,7 +210,7 @@ The ticket tells the client **how** to upload:
 
 | Provider | Ticket `method` | What the browser does |
 |----------|-----------------|------------------------|
-| Local | `POST_MULTIPART` | POST form to API shim (`/files/:id/local-upload`) |
+| Local | `POST_MULTIPART` | POST form (fields `key`, `token`, then the file) to `/files/:id/local-upload` |
 | S3 | `POST_MULTIPART` | POST form straight to S3 presigned URL |
 | Firebase | `PUT` | PUT file bytes to a signed GCS URL with `Content-Type` header |
 
@@ -210,11 +259,11 @@ Which STORAGE_PROVIDER do you need?
 
 | | Local | S3 | Firebase |
 |--|-------|-----|----------|
-| `STORAGE_PROVIDER` | `local` (or unset) | `s3` | `firebase` |
+| `STORAGE_PROVIDER` | `local` (or unset) — **rejected on a deployed production environment** | `s3` | `firebase` |
 | Container env | optional | `STORAGE_S3_BUCKET` (legacy), `STORAGE_S3_PRIVATE_BUCKET`, or `STORAGE_PRIVATE_CONTAINER` | `FIREBASE_STORAGE_BUCKET` |
 | Cloud keys | Not needed | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | `GOOGLE_APPLICATION_CREDENTIALS` (local) or GCP ADC |
 | Browser upload | multipart POST to API shim | multipart POST to S3 | signed PUT to GCS |
-| Public URLs | API `local-download` shim | CloudFront domain | per-object Firebase download token |
+| Public URLs | API `/files/:id/local-public` (READY public files only) | CloudFront domain | per-object Firebase download token |
 | CORS | Not needed | S3 bucket CORS | Firebase Storage CORS |
 
 ---
@@ -381,10 +430,11 @@ Plain English: you run one command, AWS creates the buckets and permissions for 
 | Public S3 bucket | Origin for CDN-backed public images (logos, product photos) |
 | CloudFront distribution | CDN in front of the public bucket |
 | IAM upload user | Dedicated identity for the API (create access keys for `.env`) |
-| SQS queues + Lambdas | Background image processing hooks (placeholder scanners) |
 | CORS on private bucket | Browser can POST uploads directly to S3 |
 
 Both buckets block public internet access. CloudFront reaches the public bucket via Origin Access Control (OAC).
+
+The stack creates **no** queues, Lambdas or malware-scanning resources. Uploads are scanned by the API itself (`MALWARE_SCANNER`, see [What happens when someone uploads a file](#2-what-happens-when-someone-uploads-a-file)). Earlier versions shipped placeholder SQS queues, an image-processor Lambda and an EICAR-only "ClamAV" Lambda; nothing invoked them, so they were removed. Managed scanning (GuardDuty Malware Protection for S3) is planned and is not provisioned yet.
 
 ### Prerequisites checklist
 
@@ -831,7 +881,8 @@ Public assets use per-object Firebase download tokens — never enable anonymous
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | S3 mode | IAM upload user keys |
 | `STORAGE_DOWNLOAD_TTL_SECONDS` | Optional | Signed download link lifetime (default 300) |
 | `STORAGE_PHYSICAL_DELETE_DELAY_MS` | Optional | Default 1h dev, 30d production |
-| `STORAGE_PROCESSING_CALLBACK_SECRET` | Rare | Only if external workers call `/files/processing-callback` |
+| `STORAGE_PROCESSING_CALLBACK_SECRET` | Rare | Only if external workers call `/files/processing-callback` (compared in constant time) |
+| `MALWARE_SCANNER` | Always | `none` (no default). Files are recorded `NOT_SCANNED` until a scanner adapter exists |
 
 **How the API chooses a provider** (`storage.module.ts`):
 
@@ -1147,5 +1198,31 @@ aws cloudformation describe-stacks \
 
 ### Related docs
 
-- [Getting started](../getting-started.md)
+- [Getting started](../technical/getting-started.md)
 - [apps/aws-infrastructure/README.md](../../apps/aws-infrastructure/README.md)
+
+---
+
+## Local driver security model
+
+The local driver is a development backend (the config rejects it on a deployed
+production environment), but it is still built like a presigned-URL provider:
+
+- **Downloads:** `GET /files/local-download?token=…`, served with the file's own
+  `Content-Type`, `X-Content-Type-Options: nosniff` and a sanitized
+  `Content-Disposition` (ASCII fallback + RFC 5987 `filename*`). The token is an HMAC-SHA256
+  capability bound to the operation (`download`), file id, container and object
+  key, with an expiry (`STORAGE_DOWNLOAD_TTL_SECONDS`). Forged, expired or
+  upload tokens → 403. The file must still be READY at that key → otherwise 404.
+  There is no way to name a path: the old `?container=&path=` form is rejected (400).
+- **Uploads:** `POST /files/:id/local-upload`, multipart with `key` and `token`
+  before the file part. The token (operation `upload`, 5 minutes) binds file id,
+  key, max bytes, MIME type and SHA-256. The file must be PENDING (409 after
+  completion); size, checksum and magic bytes must match (400); over the limit → 413.
+- **Public assets:** `GET /files/:id/local-public` serves READY public files by id.
+- Every path is resolved inside `apps/api/.object-storage`: segments are
+  validated (`..`, `.`, empty, backslash, NUL, absolute keys are refused) and
+  the resolved path is re-checked against the root.
+- The signing key is generated per API process: restarting the API invalidates
+  outstanding (short-lived) links.
+

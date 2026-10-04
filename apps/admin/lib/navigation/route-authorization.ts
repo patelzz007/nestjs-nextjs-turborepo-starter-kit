@@ -119,15 +119,26 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	{ prefix: ROUTES.users.list, superAdminOnly: true },
 	// GET /auth/admin/mfa/recovery/requests — @SuperAdminOnly
 	{ prefix: ROUTES.users.mfaRecovery, superAdminOnly: true },
-	// POST /product, POST /sample-category (CREATE)
-	{ prefix: ROUTES.catalog.products.create, authorization: { permissions: [PERMISSION.PRODUCT.CREATE] } },
+	// The product form searches categories (GET /sample-category, LIST) and labels the
+	// selected one (GET /sample-category/:id, READ) — so every product form page needs
+	// those besides its own write permission ("all": each call must be allowed).
+	// POST /product
+	{
+		prefix: ROUTES.catalog.products.create,
+		authorization: { permissions: [PERMISSION.PRODUCT.CREATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ], mode: "all" },
+	},
+	// POST /sample-category (CREATE)
 	{ prefix: ROUTES.catalog.categories.create, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.CREATE] } },
 	// GET /product/:id, GET /sample-category/:id (READ)
 	{ prefix: ROUTE_PATTERNS.catalog.products.detail, authorization: { permissions: [PERMISSION.PRODUCT.READ] } },
 	{ prefix: ROUTE_PATTERNS.catalog.categories.detail, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ] } },
-	// PATCH /product/:id, PATCH /sample-category/:id (UPDATE)
-	{ prefix: ROUTE_PATTERNS.catalog.products.edit, authorization: { permissions: [PERMISSION.PRODUCT.UPDATE] } },
-	{ prefix: ROUTE_PATTERNS.catalog.categories.edit, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.UPDATE] } },
+	// GET + PATCH /product/:id (READ + UPDATE) and the category picker
+	{
+		prefix: ROUTE_PATTERNS.catalog.products.edit,
+		authorization: { permissions: [PERMISSION.PRODUCT.READ, PERMISSION.PRODUCT.UPDATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ], mode: "all" },
+	},
+	// GET + PATCH /sample-category/:id (READ + UPDATE)
+	{ prefix: ROUTE_PATTERNS.catalog.categories.edit, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE], mode: "all" } },
 ];
 
 /** Admin route → requirement map. UX only — the API remains authoritative. */

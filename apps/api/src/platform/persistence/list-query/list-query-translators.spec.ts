@@ -2,7 +2,9 @@ import type { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { defineKeyset, timestampIdKeyset } from "./keyset-cursor";
+import { InvalidListCursorError } from "../persistence.errors";
+
+import { defineKeyset, MALFORMED_CURSOR_MESSAGE, timestampIdKeyset } from "./keyset-cursor";
 import { buildListOrder, type SortColumns } from "./list-order";
 import {
 	fieldWhere,
@@ -124,11 +126,18 @@ describe("keysets", () => {
 		expect(keyset.decode(cursor)).toEqual({ OR: [{ createdAt: { lt: EPOCH } }, { createdAt: EPOCH, id: { lt: "row-1" } }] });
 	});
 
-	it("rejects malformed, non-JSON and tampered cursors", () => {
-		expect(keyset.decode("%%%")).toBeNull();
-		expect(keyset.decode(Buffer.from("not json", "utf-8").toString("base64url"))).toBeNull();
-		expect(keyset.decode(Buffer.from(JSON.stringify({ at: -1, id: "x" }), "utf-8").toString("base64url"))).toBeNull();
-		expect(keyset.decode(Buffer.from(JSON.stringify({ at: EPOCH, id: "x", extra: true }), "utf-8").toString("base64url"))).toBeNull();
+	it("throws a typed 400 InvalidListCursorError for malformed, non-JSON and tampered cursors", () => {
+		const malformed: readonly string[] = [
+			"%%%",
+			"",
+			Buffer.from("not json", "utf-8").toString("base64url"),
+			Buffer.from(JSON.stringify({ at: -1, id: "x" }), "utf-8").toString("base64url"),
+			Buffer.from(JSON.stringify({ at: EPOCH, id: "x", extra: true }), "utf-8").toString("base64url"),
+		];
+		for (const cursor of malformed) {
+			expect(() => keyset.decode(cursor)).toThrow(InvalidListCursorError);
+			expect(() => keyset.decode(cursor)).toThrow(MALFORMED_CURSOR_MESSAGE);
+		}
 	});
 
 	it("defineKeyset validates the decoded position with the resource's own schema", () => {
@@ -138,6 +147,6 @@ describe("keysets", () => {
 			after: (position) => ({ id: { gt: position.id } }),
 		});
 		expect(numericKeyset.decode(numericKeyset.encode({ id: 41 }))).toEqual({ id: { gt: 41 } });
-		expect(numericKeyset.decode(Buffer.from(JSON.stringify({ id: "41" }), "utf-8").toString("base64url"))).toBeNull();
+		expect(() => numericKeyset.decode(Buffer.from(JSON.stringify({ id: "41" }), "utf-8").toString("base64url"))).toThrow(InvalidListCursorError);
 	});
 });

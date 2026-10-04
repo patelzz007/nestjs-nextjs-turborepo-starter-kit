@@ -5,7 +5,7 @@
 	"private": true,
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json && node ../../packages/tooling/scripts/fix-dist-extensions.mjs dist",
-		"lint": "eslint",
+		"lint": "eslint --max-warnings=0",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",

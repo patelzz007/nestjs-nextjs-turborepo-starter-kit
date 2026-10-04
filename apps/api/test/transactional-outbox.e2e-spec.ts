@@ -10,7 +10,7 @@ import { OutboxDispatchRepository } from "../src/infrastructure/outbox/outbox-di
 import { OUTBOX_PUBLISH_OPERATION } from "../src/infrastructure/outbox/outbox-queue.processors";
 import { OUTBOX_ENQUEUE_OPERATION, PlatformOutboxService } from "../src/infrastructure/outbox/platform-outbox.service";
 import { PrismaService } from "../src/prisma/prisma.service";
-import { rlsStorage, runWithSystemRlsContext, type RlsContext } from "../src/prisma/rls-context";
+import { rlsStorage, runWithSystemRlsContext, userRlsContext, type RlsContext } from "../src/prisma/rls-context";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
@@ -28,12 +28,12 @@ const ANCIENT_CREATED_AT_MS = 1;
 
 class DomainRuleViolation extends Error {}
 
-const USER_SCOPE: RlsContext = { userId: randomUUID(), bypass: false, organizationId: "", requireExplicitContext: false, systemOperation: "" };
+const USER_SCOPE: RlsContext = userRlsContext(randomUUID(), null, false);
 
 function emailEvent(templateKey: string): PlatformEventInput {
 	return {
 		type: "email.log.updated",
-		payload: { templateKey, status: "sent", to: "outbox-e2e@example.com", resendId: null, error: null, durationMs: null },
+		payload: { templateKey, status: "sent", resendId: null, error: null, durationMs: null },
 	};
 }
 
@@ -58,9 +58,9 @@ describe("Transactional outbox (integration)", () => {
 	beforeAll(async () => {
 		// The REAL environment (apps/api/.env + test/setup-env.ts), not the unit fixture.
 		prisma = new PrismaService(new TypedConfigService(getApiConfig()));
-		await prisma.onModuleInit();
+		prisma.onModuleInit();
 		await prisma.ensureConnected();
-		transactions = new TenantTransactionService(prisma);
+		transactions = new TenantTransactionService(prisma, new RequestContextService());
 		outbox = new PlatformOutboxService(transactions, new RequestContextService());
 		// Superuser pool — verification reads/cleanup only (bypasses RLS).
 		verifier = new Pool({ connectionString: DATABASE_URL });
@@ -81,13 +81,10 @@ describe("Transactional outbox (integration)", () => {
 		const templateKey = `outbox-e2e-${randomUUID()}`;
 		createdTemplateKeys.push(templateKey);
 
-		const eventId = await transactions.withSystemOperation(
-			{ operation: OUTBOX_ENQUEUE_OPERATION, reason: "e2e", correlationId: "outbox-e2e", actorUserId: null },
-			async (tx): Promise<string> => {
-				await tx.emailLog.create({ data: { templateKey, to: "outbox-e2e@example.com", subject: "Outbox e2e", status: "sent" } });
-				return outbox.enqueueInTransaction(tx, emailEvent(templateKey));
-			},
-		);
+		const eventId = await transactions.withSystemOperation({ operation: OUTBOX_ENQUEUE_OPERATION, reason: "e2e", actorUserId: null }, async (tx): Promise<string> => {
+			await tx.emailLog.create({ data: { templateKey, to: "outbox-e2e@example.com", subject: "Outbox e2e", status: "sent" } });
+			return outbox.enqueueInTransaction(tx, emailEvent(templateKey));
+		});
 		createdEventIds.push(eventId);
 
 		expect(await countEmailLogs(templateKey)).toBe(1);
@@ -105,7 +102,7 @@ describe("Transactional outbox (integration)", () => {
 		const staged: string[] = [];
 
 		await expect(
-			transactions.withSystemOperation({ operation: OUTBOX_ENQUEUE_OPERATION, reason: "e2e", correlationId: "outbox-e2e", actorUserId: null }, async (tx): Promise<void> => {
+			transactions.withSystemOperation({ operation: OUTBOX_ENQUEUE_OPERATION, reason: "e2e", actorUserId: null }, async (tx): Promise<void> => {
 				await tx.emailLog.create({ data: { templateKey, to: "outbox-e2e@example.com", subject: "Outbox e2e", status: "sent" } });
 				staged.push(await outbox.enqueueInTransaction(tx, emailEvent(templateKey)));
 				throw new DomainRuleViolation("business rule failed after the event was staged");

@@ -1,19 +1,20 @@
 "use client";
 
 import type { AdminUserDetail } from "@workspace/shared";
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
+/** Shown before the user search answers (a stable reference, so callbacks keep their identity). */
+const NO_USERS: readonly AdminUserDetail[] = [];
+
 /** Super-admin panel to impersonate users from the merchant portal. */
 export function ImpersonateUserPanel(): React.JSX.Element | null {
 	const { api } = useAuth();
-	const queryClient = useQueryClient();
 	const router = useRouter();
 
 	const meQuery = api.auth.me.useQuery(undefined);
@@ -28,12 +29,13 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 
 	const usersQuery = api.auth.adminUsers.useQuery({ page: 1, limit: 10, ...(search.length > 0 ? { search } : {}) }, { enabled: canLoadUsers });
 
-	const impersonateMutation = api.auth.impersonate.useMutation({
-		onSuccess: async (): Promise<void> => {
-			await invalidateSessionAuth(queryClient);
-			router.refresh();
-		},
-	});
+	const handleIdentityChanged = React.useCallback((): void => {
+		router.refresh();
+	}, [router]);
+	const impersonation = useImpersonation({ onIdentityChanged: handleIdentityChanged });
+	const { requestStart } = impersonation;
+	const loadedUsers = usersQuery.data?.data;
+	const listedUsers = React.useMemo((): readonly AdminUserDetail[] => loadedUsers ?? NO_USERS, [loadedUsers]);
 
 	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setSearch(event.target.value);
@@ -41,9 +43,12 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 
 	const handleImpersonate = React.useCallback(
 		(userId: string): void => {
-			void impersonateMutation.mutateAsync({ userId });
+			const target = listedUsers.find((candidate: AdminUserDetail): boolean => candidate.id === userId);
+			if (target !== undefined) {
+				requestStart({ userId: target.id, label: target.email });
+			}
 		},
-		[impersonateMutation],
+		[listedUsers, requestStart],
 	);
 
 	const handleImpersonateClick = React.useCallback(
@@ -60,10 +65,11 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 		return null;
 	}
 
-	const users: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
+	const users: readonly AdminUserDetail[] = listedUsers;
 
 	return (
 		<div className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs">
+			{impersonation.confirmDialog}
 			<div className="flex items-center gap-2 text-sm font-semibold">
 				<UserRoundSearch className="size-4" aria-hidden="true" />
 				Impersonate merchant user
@@ -80,7 +86,7 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 									<p className="truncate text-xs text-muted-foreground">{user.email}</p>
 								</div>
 								{canImpersonate ? (
-									<Button size="sm" variant="outline" disabled={impersonateMutation.isPending} data-user-id={user.id} onClick={handleImpersonateClick}>
+									<Button size="sm" variant="outline" disabled={impersonation.isPending} data-user-id={user.id} onClick={handleImpersonateClick}>
 										Impersonate
 									</Button>
 								) : null}

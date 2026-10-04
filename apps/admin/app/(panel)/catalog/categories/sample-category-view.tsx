@@ -6,6 +6,7 @@ import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-ta
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
@@ -32,10 +33,11 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
+import { formatDateTime } from "@/lib/format/dates";
 
 const labels = createDataTableLabels({
-	actionsMenuTitle: "SampleCategory actions",
-	openRowMenu: "Open samplecategory row menu",
+	actionsMenuTitle: "Category actions",
+	openRowMenu: "Open category row menu",
 	searchPlaceholder: "Search categories...",
 	searchAriaLabel: "Search Categories",
 });
@@ -72,7 +74,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		updateUrlState({ search: undefined, isActive: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
 	}, [updateUrlState]);
 
-	const fetchAllMatchingSampleCategorys = useCallback(async (): Promise<SampleCategory[]> => {
+	const fetchAllMatchingCategories = useCallback(async (): Promise<SampleCategory[]> => {
 		const rows = await fetchAllListPages(async (listPage, limit) => {
 			const response = await api.sampleCategory.list.fetchOrThrow(toCategoriesListQuery({ ...urlState, page: listPage, limit, cursor: undefined }));
 			return {
@@ -89,17 +91,19 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
 	});
 	const rows: SampleCategory[] = resourceListQuery.data?.data ?? [];
+	// The server's count of every matching row — not just the rows on this page.
+	const matchingTotal: number = readPaginatedTotal(resourceListQuery.data?.meta);
 	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
 		sortSpec: sampleCategoryListQuery,
-		totalCount: readPaginatedTotal(resourceListQuery.data?.meta),
+		totalCount: matchingTotal,
 		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
 		resetKey: CATEGORIES_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
 		getRowId: getCategoryRowId,
 		onClearFilters: handleClearFilters,
 		isFiltered,
-		onFetchAllMatching: fetchAllMatchingSampleCategorys,
+		onFetchAllMatching: fetchAllMatchingCategories,
 	});
 	const tableError: string | null = resourceListQuery.isError ? "Could not load categories. Clear search or filters and try again." : null;
 
@@ -119,9 +123,9 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 
 	const deleteMutation = api.sampleCategory.delete.useMutation({
 		onSuccess: async () => {
-			toastMessage.success({ title: "SampleCategory deleted", description: "The samplecategory was removed." });
-			await queryClient.invalidateQueries({ queryKey: ["sample-category", "list"] });
-			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
+			toastMessage.success({ title: "Category deleted", description: "The category was removed." });
+			await queryClient.invalidateQueries({ queryKey: apiRouter.sampleCategory.list.scopeKey(undefined) });
+			await queryClient.invalidateQueries({ queryKey: apiRouter.product.list.scopeKey(undefined) });
 		},
 		onError: (error) => {
 			toastMessage.error({ title: "Delete failed", description: error.message });
@@ -132,11 +136,11 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		onSuccess: async (result) => {
 			const deletedCount = result.data.deletedCount;
 			toastMessage.success({
-				title: `${String(deletedCount)} samplecategory${deletedCount === 1 ? "" : "s"} deleted`,
-				description: "The selected samplecategories were removed.",
+				title: `${String(deletedCount)} ${deletedCount === 1 ? "category" : "categories"} deleted`,
+				description: "The selected categories were removed.",
 			});
-			await queryClient.invalidateQueries({ queryKey: ["sample-category", "list"] });
-			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
+			await queryClient.invalidateQueries({ queryKey: apiRouter.sampleCategory.list.scopeKey(undefined) });
+			await queryClient.invalidateQueries({ queryKey: apiRouter.product.list.scopeKey(undefined) });
 		},
 		onError: (error) => {
 			toastMessage.error({ title: "Bulk delete failed", description: error.message });
@@ -147,7 +151,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		(item: SampleCategory): void => {
 			void requestDelete({
 				title: `Delete "${item.name}"?`,
-				description: "This action soft-deletes the samplecategory.",
+				description: "This action soft-deletes the category.",
 				onConfirm: async (): Promise<void> => {
 					await deleteMutation.mutateAsync({ id: item.id });
 				},
@@ -160,11 +164,11 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 		async (selected: SampleCategory[], context: DataTableBulkSelectionContext): Promise<void> => {
 			const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
 			await requestDelete({
-				title: `Delete ${String(count)} samplecategory${count === 1 ? "" : "s"}?`,
+				title: `Delete ${String(count)} ${count === 1 ? "category" : "categories"}?`,
 				description: "This action soft-deletes them.",
 				count,
 				onConfirm: async (): Promise<void> => {
-					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingSampleCategorys);
+					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingCategories);
 					if (rowsToDelete.length === 1) {
 						const onlyRow = rowsToDelete[0];
 						if (onlyRow !== undefined) {
@@ -176,7 +180,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				},
 			});
 		},
-		[bulkDeleteMutation, deleteMutation, fetchAllMatchingSampleCategorys, requestDelete],
+		[bulkDeleteMutation, deleteMutation, fetchAllMatchingCategories, requestDelete],
 	);
 
 	const actions = useMemo((): Action<SampleCategory>[] => {
@@ -185,7 +189,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 			base.push({
 				key: "view",
 				label: "View",
-				description: "View samplecategory details",
+				description: "View category details",
 				icon: <Eye className="size-4" />,
 				onClick: handleView,
 			});
@@ -194,7 +198,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 			base.push({
 				key: "edit",
 				label: "Edit",
-				description: "Edit samplecategory",
+				description: "Edit category",
 				icon: <Pencil className="size-4" />,
 				onClick: handleEdit,
 			});
@@ -203,11 +207,11 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 			base.push({
 				key: "delete",
 				label: "Delete",
-				description: "Remove this samplecategory",
+				description: "Remove this category",
 				icon: <Trash2 className="size-4" />,
 				onClick: handleDelete,
 				isDestructive: true,
-				iconBgColor: "bg-red-100 dark:bg-red-900/40",
+				iconBgColor: "bg-destructive-soft",
 			});
 		}
 		return base;
@@ -233,7 +237,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				badge={item.isActive ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
 				fields={[
 					{ label: "Sort Order", value: String(item.sortOrder) },
-					{ label: "Created At", value: Number.isFinite(item.createdAt) ? new Date(item.createdAt).toLocaleString() : "—" },
+					{ label: "Created At", value: formatDateTime(item.createdAt) },
 				]}
 				actions={cardActions}
 			/>
@@ -273,8 +277,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				header: "Created At",
 				enableSorting: true,
 				cell: ({ row }): React.JSX.Element => {
-					const value = row.original.createdAt;
-					return <span>{Number.isFinite(value) ? new Date(value).toLocaleString() : "—"}</span>;
+					return <span>{formatDateTime(row.original.createdAt)}</span>;
 				},
 			},
 		],
@@ -329,20 +332,20 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				</div>
 				{canCreate ? (
 					<Link href={ROUTES.catalog.categories.create} className={buttonVariants()}>
-						New SampleCategory
+						New category
 					</Link>
 				) : (
-					<DisabledActionButton reason="Creating a category requires the category create permission.">New SampleCategory</DisabledActionButton>
+					<DisabledActionButton reason="Creating a category requires the category create permission.">New category</DisabledActionButton>
 				)}
 			</header>
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} categories on this page` : "Categories"}</CardTitle>
+					<CardTitle className="text-base">{matchingTotal > 0 ? `${String(matchingTotal)} categories` : "Categories"}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable
-						data={[...rows]}
+						data={rows}
 						columns={columns}
 						labels={labels}
 						actions={actions}
@@ -364,7 +367,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 						toolbarContent={searchToolbar}
 						emptyState={{
 							title: isFiltered ? "No matching categories" : "No categories yet",
-							description: isFiltered ? "Clear search or filters to see more results." : "Create your first samplecategory to get started.",
+							description: isFiltered ? "Clear search or filters to see more results." : "Create your first category to get started.",
 						}}
 					/>
 				</CardContent>

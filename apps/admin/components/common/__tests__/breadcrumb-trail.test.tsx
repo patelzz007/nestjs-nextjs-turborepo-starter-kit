@@ -15,11 +15,11 @@ afterEach(() => {
 
 /**
  * A minimal, framework-free link renderer for tests (the apps pass Next.js
- * `Link`). The label is rendered by the trail itself, so this returns a bare
- * anchor — text here would duplicate the crumb label in the DOM.
+ * `Link`). The trail clones the element and sets the crumb label as its
+ * children, so the label given here is replaced, never duplicated.
  */
-function renderLink(): React.JSX.Element {
-	return <a href="#" />;
+function renderLink(item: BreadcrumbItem): React.JSX.Element {
+	return <a href={item.href}>{item.label}</a>;
 }
 
 function crumb(label: string, href?: string): BreadcrumbItem {

@@ -40,6 +40,7 @@ import {
 	VerifyEmailResponseSchema,
 } from "../schemas/auth/auth";
 import { ChangePasswordSchema, ChangePasswordResponseSchema } from "../schemas/auth/change-password";
+import { OwnProfileSchema, UpdateOwnProfileSchema } from "../schemas/auth/profile";
 import {
 	AdminMfaRecoveryListQuerySchema,
 	AdminReviewMfaRecoverySchema,
@@ -57,6 +58,7 @@ import {
 	BackupCodesRemainingResponseSchema,
 	TwoFactorMessageResponseSchema,
 	TwoFactorSetupResponseSchema,
+	StartTwoFactorSetupSchema,
 	VerifyBackupCodeResponseSchema,
 } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema, AdminUserDetailSchema, SessionPermissionsResponseSchema, UserResponseSchema } from "../schemas/auth/user";
@@ -95,6 +97,13 @@ import {
 	OrganizationAccessRequestCreateSchema,
 	OrganizationLocationCreateSchema,
 	OrganizationLocationIdParamSchema,
+	OrganizationLocationCloseSchema,
+	OrganizationLocationCloseResponseSchema,
+	OrganizationMemberStoreParamSchema,
+	OrganizationMemberStoreRemoveSchema,
+	OrganizationMemberStoreRemoveResponseSchema,
+	OrganizationMembershipResponseSchema,
+	OrganizationOwnMembershipUpdateSchema,
 	OrganizationLocationUpdateSchema,
 	OrganizationMemberInviteIdParamSchema,
 	OrganizationMemberInviteSchema,
@@ -118,6 +127,7 @@ import {
 	AdminKybUpdatePathInputSchema,
 	AdminMerchantIdParamSchema,
 	AdminMerchantListQuerySchema,
+	AdminPendingRewardListQuerySchema,
 	AdminRejectRewardPathInputSchema,
 	CreateRewardClaimSchema,
 	MerchantApiKeyListQuerySchema,
@@ -127,6 +137,8 @@ import {
 	MerchantKybSubmissionFieldsSchema,
 	MerchantOnboardingCompleteFieldsSchema,
 	MerchantOnboardingDocumentsSubmitSchema,
+	MerchantOnboardingDocumentStatusSchema,
+	MerchantOnboardingDocumentStatusResponseSchema,
 	MerchantOnboardingDocumentBatchUploadCompleteSchema,
 	MerchantOnboardingDocumentBatchUploadUrlSchema,
 	MerchantOnboardingDocumentUploadCompleteSchema,
@@ -135,7 +147,6 @@ import {
 	MerchantRedemptionListQuerySchema,
 	MerchantUpdateRewardPathInputSchema,
 	RedemptionCheckoutSchema,
-	RedemptionConfirmSchema,
 	RedemptionValidateSchema,
 	RequestClaimOtpSchema,
 	RewardClaimListQuerySchema,
@@ -210,13 +221,14 @@ import {
 	MerchantTerminalSettingsResponseSchema,
 	MerchantTerminalSettingsSchema,
 	MerchantTerminalSummarySchema,
+	MerchantTerminalStatusSummaryQuerySchema,
+	MerchantTerminalStatusSummarySchema,
 	PosPairedTerminalSchema,
 	PosPairTerminalSchema,
 	MerchantOrgResponseSchema,
 	MerchantRedemptionListItemSchema,
 	OrganizationRewardMembershipListResponseSchema,
 	RedemptionCheckoutResponseSchema,
-	RedemptionConfirmedResponseSchema,
 	RedemptionPreviewResponseSchema,
 	RewardClaimCheckoutStatusSchema,
 	RewardClaimCreatedResponseSchema,
@@ -257,6 +269,7 @@ export type SerializableInput = Readonly<Record<string, DataValue | undefined>> 
 // surface; anything that only needs the constants can import `./versioning`.
 export * from "./versioning";
 export * from "./mutation-intent";
+export * from "./client-session";
 export { contractPathParam } from "./path-param";
 export { paginatedResponse, singleResponse, type ApiResponseContract, type ApiResponseKind } from "./response";
 
@@ -327,7 +340,7 @@ const EmptyInputSchema = z.object({}).strict();
 // Groups mirror the client router (auth / email / geo).
 // Every leaf is the exact method + path + input the client sends on the wire.
 //
-// To add a new feature: see docs/ADDING-A-FEATURE.md
+// To add a new feature: see docs/technical/adding-a-feature.md
 //
 // NOTE: the version manifest (`GET /version`) is deliberately NOT a
 // contract leaf — it is UNVERSIONED (the thing clients use to FIND the
@@ -342,6 +355,10 @@ export const apiContract = {
 	auth: {
 		/** "Who am I?" — profile without permissions. */
 		me: defineContract({ method: "GET", path: apiRoutes.auth.me, input: z.undefined(), response: singleResponse(UserResponseSchema) }),
+		/** The signed-in user's own profile (name, avatar, optimistic-lock `version`). */
+		profile: defineContract({ method: "GET", path: apiRoutes.auth.profile, input: z.undefined(), response: singleResponse(OwnProfileSchema) }),
+		/** Edit the signed-in user's own profile — 409 CONFLICT when `version` is stale; refused during impersonation. */
+		updateProfile: defineContract({ method: "PATCH", path: apiRoutes.auth.profile, input: UpdateOwnProfileSchema, response: singleResponse(OwnProfileSchema) }),
 		/** Session roles + permissions (refetch after RBAC mutations). */
 		permissions: defineContract({ method: "GET", path: apiRoutes.auth.permissions, input: z.undefined(), response: singleResponse(SessionPermissionsResponseSchema) }),
 		/** Basic protected endpoint — proves the access token is valid. */
@@ -420,7 +437,13 @@ export const apiContract = {
 			input: VerifyLoginSchema,
 			response: singleResponse(LoginClientResponseSchema),
 		}),
-		twoFactorSetup: defineContract({ method: "GET", path: apiRoutes.auth.twoFactorSetup, input: z.undefined(), response: singleResponse(TwoFactorSetupResponseSchema) }),
+		// POST: starting an enrollment stores a new pending secret + backup codes server-side.
+		twoFactorSetup: defineContract({
+			method: "POST",
+			path: apiRoutes.auth.twoFactorSetup,
+			input: StartTwoFactorSetupSchema,
+			response: singleResponse(TwoFactorSetupResponseSchema),
+		}),
 		twoFactorEnable: defineContract({
 			method: "POST",
 			path: apiRoutes.auth.twoFactorEnable,
@@ -676,13 +699,6 @@ export const apiContract = {
 			input: RedemptionValidateSchema,
 			response: singleResponse(RedemptionPreviewResponseSchema),
 		}),
-		confirm: defineContract({
-			access: "public",
-			method: "POST",
-			path: apiRoutes.redemptions.confirm,
-			input: RedemptionConfirmSchema,
-			response: singleResponse(RedemptionConfirmedResponseSchema),
-		}),
 		checkout: defineContract({
 			access: "public",
 			method: "POST",
@@ -754,6 +770,12 @@ export const apiContract = {
 			input: OrganizationSlugParamSchema,
 			response: singleResponse(OrganizationMemberRosterListResponseSchema),
 		}),
+		updateOwnMembership: defineContract({
+			method: "PATCH",
+			path: apiRoutes.organizations.ownMembership.path,
+			input: z.intersection(OrganizationSlugParamSchema, OrganizationOwnMembershipUpdateSchema),
+			response: singleResponse(OrganizationMembershipResponseSchema),
+		}),
 		listMemberInvites: defineContract({
 			method: "GET",
 			path: apiRoutes.organizations.listMemberInvites.path,
@@ -765,6 +787,12 @@ export const apiContract = {
 			path: apiRoutes.organizations.revokeMemberInvite.path,
 			input: OrganizationMemberInviteIdParamSchema,
 			response: singleResponse(MessageResponseSchema),
+		}),
+		removeMemberFromStore: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.removeMemberFromStore.path,
+			input: z.intersection(OrganizationMemberStoreParamSchema, OrganizationMemberStoreRemoveSchema),
+			response: singleResponse(OrganizationMemberStoreRemoveResponseSchema),
 		}),
 		validateTeamInvite: defineContract({
 			access: "public",
@@ -825,6 +853,12 @@ export const apiContract = {
 				input: z.intersection(OrganizationSlugParamSchema, MerchantRewardListQuerySchema),
 				response: singleResponse(RewardResponseListSchema),
 			}),
+			get: defineContract({
+				method: "GET",
+				path: apiRoutes.organizations.rewards.get.path,
+				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict(),
+				response: singleResponse(RewardResponseSchema),
+			}),
 			create: defineContract({
 				method: "POST",
 				path: apiRoutes.organizations.rewards.create.path,
@@ -850,6 +884,18 @@ export const apiContract = {
 				path: apiRoutes.organizations.terminals.list.path,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalListQuerySchema),
 				response: paginatedResponse(MerchantTerminalSummarySchema),
+			}),
+			summary: defineContract({
+				method: "GET",
+				path: apiRoutes.organizations.terminals.summary.path,
+				input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalStatusSummaryQuerySchema),
+				response: singleResponse(MerchantTerminalStatusSummarySchema),
+			}),
+			get: defineContract({
+				method: "GET",
+				path: apiRoutes.organizations.terminals.get.path,
+				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
+				response: singleResponse(MerchantTerminalSummarySchema),
 			}),
 			create: defineContract({
 				method: "POST",
@@ -927,6 +973,12 @@ export const apiContract = {
 				input: z.intersection(OrganizationLocationIdParamSchema, OrganizationLocationUpdateSchema),
 				response: singleResponse(OrganizationLocationResponseSchema),
 			}),
+			close: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.locations.close.path,
+				input: z.intersection(OrganizationLocationIdParamSchema, OrganizationLocationCloseSchema),
+				response: singleResponse(OrganizationLocationCloseResponseSchema),
+			}),
 		},
 		onboarding: {
 			validate: defineContract({
@@ -978,6 +1030,13 @@ export const apiContract = {
 				input: MerchantOnboardingDocumentsSubmitSchema,
 				response: singleResponse(SuccessAckResponseSchema),
 			}),
+			documentStatus: defineContract({
+				access: "public",
+				method: "POST",
+				path: apiRoutes.organizations.onboarding.documentStatus,
+				input: MerchantOnboardingDocumentStatusSchema,
+				response: singleResponse(MerchantOnboardingDocumentStatusResponseSchema),
+			}),
 		},
 	},
 	adminOrganizations: {
@@ -1010,8 +1069,8 @@ export const apiContract = {
 		pendingRewards: defineContract({
 			method: "GET",
 			path: apiRoutes.rewardsAdmin.rewardsPending,
-			input: EmptyInputSchema,
-			response: singleResponse(RewardResponseListSchema),
+			input: AdminPendingRewardListQuerySchema,
+			response: paginatedResponse(RewardResponseSchema),
 		}),
 		listOrganizations: defineContract({
 			method: "GET",

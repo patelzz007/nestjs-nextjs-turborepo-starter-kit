@@ -95,7 +95,7 @@ export const nestjsConfig = [
 	{
 		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
-			"@darraghor/nestjs-typed/api-property-matches-property-optionality": "warn",
+			"@darraghor/nestjs-typed/api-property-matches-property-optionality": "error",
 			// The Zod response decorators (apps/api/src/common/decorators/
 			// zod-response.decorators.ts, ADR 022) document the success and error
 			// responses in Swagger from the shared contract, so they satisfy this
@@ -111,6 +111,6 @@ export const nestjsConfig = [
 	// Universal patterns (no app→app imports, no src/dist reach-ins) plus
 	// @workspace/client, @workspace/ui, next, react, react-dom. Re-states the
 	// universal list because `no-restricted-imports` options replace, not
-	// merge (see import-boundaries.js and docs/eslint.md).
+	// merge (see import-boundaries.js and docs/technical/tooling/eslint.md).
 	backendImportBoundaryConfig,
 ];

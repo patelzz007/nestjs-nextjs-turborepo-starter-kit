@@ -129,11 +129,6 @@ export const RoleResponseSchema = z.object({
 
 export type RoleResponse = z.output<typeof RoleResponseSchema>;
 
-/** `GET /admin/roles/:id` payload — `null` when no role has that id. */
-export const RoleDetailResponseSchema = RoleResponseSchema.nullable();
-
-export type RoleDetailResponse = z.output<typeof RoleDetailResponseSchema>;
-
 /** Minimal role created response. */
 export const RoleCreatedResponseSchema = z.object({
 	...BaseResponseSchema.shape,

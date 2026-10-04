@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, type RenderResult } from "@testing-library/react";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { successEnvelope } from "@workspace/client/lib/api/envelope";
+import { testEnvelope } from "@/test-support/envelope";
 import type { PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
-import { ApiPaginatedMetaSchema, type ApiPaginatedMeta, type Envelope, type RewardResponse } from "@workspace/shared";
+import {
+	ApiPaginatedMetaSchema,
+	PILOT_CITY_LABELS,
+	PilotCitySchema,
+	RewardCategorySchema,
+	type ApiPaginatedMeta,
+	type Envelope,
+	type RewardResponse,
+} from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -163,8 +171,62 @@ describe("RewardHubBrowseView URL state", () => {
 	});
 });
 
+describe("RewardHubBrowseView filters and states", () => {
+	it('models "All cities" as no filter: clicking it removes the city from the URL', () => {
+		renderAt("?filter[city]=MELAKA&filter[category]=cafe");
+
+		fireEvent.click(screen.getByRole("button", { name: "All cities" }));
+
+		expect(window.location.search).toBe("?filter[category]=cafe");
+	});
+
+	it('presses "All cities" exactly when the URL has no city filter', () => {
+		renderAt("?filter[category]=cafe");
+
+		expect(isPressed("All cities")).toBe(true);
+		expect(isPressed("Melaka")).toBe(false);
+	});
+
+	it("offers one chip per pilot city and category from the shared enums", () => {
+		renderAt("");
+
+		for (const city of PilotCitySchema.options) {
+			expect(screen.getByRole("button", { name: PILOT_CITY_LABELS[city] })).toBeTruthy();
+		}
+		for (const category of RewardCategorySchema.options) {
+			expect(screen.getByRole("button", { name: category })).toBeTruthy();
+		}
+	});
+
+	it("derives the Cities stat from the pilot cities instead of a hard-coded count", () => {
+		renderAt("");
+
+		expect(screen.getByText("Cities").nextElementSibling?.textContent).toBe(String(PilotCitySchema.options.length));
+		expect(screen.getByText("Categories").nextElementSibling?.textContent).toBe(String(RewardCategorySchema.options.length));
+	});
+
+	it('shows a distinct error state with a retry — not "sold out or expired" — when the catalog fails to load', () => {
+		const refetch = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+		rewardsListQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
+		renderAt("");
+
+		expect(screen.getByRole("heading", { name: "Couldn't load rewards" })).toBeTruthy();
+		expect(screen.queryByText(/sold out or expired/)).toBeNull();
+
+		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+		expect(refetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the empty state for a catalog that loaded with no matches", () => {
+		rewardsListQuery.mockReturnValue({ data: { data: [], meta: paginatedMeta(1, false) }, isLoading: false, isError: false });
+		renderAt("?filter[city]=MELAKA");
+
+		expect(screen.getByRole("heading", { name: "No claimable rewards" })).toBeTruthy();
+	});
+});
+
 describe("RewardHubBrowseView server prefetch", () => {
-	const PREFETCHED: Envelope<RewardResponse[]> = successEnvelope([LATTE], paginatedMeta(1, false));
+	const PREFETCHED: Envelope<RewardResponse[]> = testEnvelope([LATTE], paginatedMeta(1, false));
 
 	it("seeds the query with the page the server fetched for this URL", () => {
 		renderAt("?filter[city]=MELAKA", { stateKey: "filter[city]=MELAKA", data: PREFETCHED });

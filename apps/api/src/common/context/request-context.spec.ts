@@ -17,16 +17,60 @@ describe("RequestContextService", () => {
 	});
 
 	it("opens a context with the request-start fields; traceId mirrors the correlation id", () => {
-		const context = service.run(SEED, () => service.current());
+		const before: number = Date.now();
+		const opened = service.run(SEED, () => service.current());
+		if (opened === undefined) throw new Error("no context opened");
+		const { receivedAtEpochMs, ...context } = opened;
 
+		expect(receivedAtEpochMs).toBeGreaterThanOrEqual(before);
 		expect(context).toEqual({
 			correlationId: "corr-ctx-1",
 			traceId: "corr-ctx-1",
 			ip: "203.0.113.7",
 			userAgent: "vitest",
 			principal: undefined,
+			apiKey: undefined,
 			tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
+			systemOperations: [],
+			isAuditRecordedInTransaction: false,
 		});
+	});
+
+	it("marks the audit entry as written in the handler's transaction", () => {
+		const marked = service.run(SEED, () => {
+			service.markAuditRecordedInTransaction();
+			return service.current()?.isAuditRecordedInTransaction;
+		});
+
+		expect(marked).toBe(true);
+	});
+
+	it("records each system operation used by the request once, in first-use order", () => {
+		const operations = service.run(SEED, () => {
+			service.recordSystemOperation("http.idempotency");
+			service.recordSystemOperation("audit.http_request.record");
+			service.recordSystemOperation("http.idempotency");
+			return service.current()?.systemOperations;
+		});
+
+		expect(operations).toEqual(["http.idempotency", "audit.http_request.record"]);
+	});
+
+	it("binds the API key that authenticated the request without touching the user principal", () => {
+		const context = service.run(SEED, () => {
+			service.bindApiKey({ apiKeyId: "key-1", organizationId: "org-1", terminalId: "T-1", locationId: "store-1" });
+			return service.current();
+		});
+
+		expect(context?.apiKey).toEqual({ apiKeyId: "key-1", organizationId: "org-1", terminalId: "T-1", locationId: "store-1" });
+		expect(context?.principal).toBeUndefined();
+	});
+
+	it("ignores system-operation and API-key bindings outside a request", () => {
+		service.recordSystemOperation("queue.email.send");
+		service.bindApiKey({ apiKeyId: "key-1", organizationId: "org-1", terminalId: undefined, locationId: null });
+
+		expect(service.current()).toBeUndefined();
 	});
 
 	it("survives awaits and is visible to every instance (the store is process-wide)", async () => {

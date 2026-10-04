@@ -1,10 +1,11 @@
-import { Inject, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 import { SessionPermissionsResponseSchema, UserResponseSchema, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
 import { z } from "zod";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { REDIS_PUBLISHER } from "../../../infrastructure/redis/redis.tokens";
+import { RedisNamespace } from "../../../infrastructure/redis/redis-namespace";
 
 import { UserSessionCacheService } from "./user-session-cache.service";
 
@@ -15,33 +16,19 @@ const PERMISSIONS_KEY_PREFIX = "auth:permissions:";
  * Redis-backed user session cache — shared across web, admin, and merchant logins.
  *
  * All three apps hit the same API login endpoint; payloads are keyed by `userId`.
+ * The Redis client is the SHARED publisher: this cache never connects or
+ * closes it (ioredis connects lazily on the first command; the messaging
+ * RedisInfrastructureModule closes it, last, at shutdown).
  */
-export class RedisUserSessionCacheService extends UserSessionCacheService implements OnModuleInit, OnModuleDestroy {
-	private readonly redisLogger: Logger = new Logger(RedisUserSessionCacheService.name);
+export class RedisUserSessionCacheService extends UserSessionCacheService {
+	private readonly redisNamespace: RedisNamespace;
 
 	public constructor(
 		config: TypedConfigService,
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis,
 	) {
 		super(config);
-	}
-
-	public async onModuleInit(): Promise<void> {
-		try {
-			if (this.redis.status !== "ready") {
-				await this.redis.connect();
-			}
-			this.redisLogger.log("Redis user session cache connected");
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "unknown error";
-			this.redisLogger.error(`Redis user session cache init failed: ${message}`);
-		}
-	}
-
-	public async onModuleDestroy(): Promise<void> {
-		if (this.redis.status !== "end") {
-			await this.redis.quit();
-		}
+		this.redisNamespace = config.redisNamespace;
 	}
 
 	public override async getMe(userId: string): Promise<UserResponse | null> {
@@ -110,7 +97,7 @@ export class RedisUserSessionCacheService extends UserSessionCacheService implem
 	}
 
 	public override async clear(): Promise<void> {
-		const stream = this.redis.scanStream({ match: `${ME_KEY_PREFIX}*`, count: 100 });
+		const stream = this.redis.scanStream({ match: this.redisNamespace.scanPattern(ME_KEY_PREFIX), count: 100 });
 		const meKeys: string[] = [];
 		for await (const batch of stream) {
 			const keysParsed = z.array(z.string()).safeParse(batch);
@@ -118,7 +105,7 @@ export class RedisUserSessionCacheService extends UserSessionCacheService implem
 				meKeys.push(...keysParsed.data);
 			}
 		}
-		const permStream = this.redis.scanStream({ match: `${PERMISSIONS_KEY_PREFIX}*`, count: 100 });
+		const permStream = this.redis.scanStream({ match: this.redisNamespace.scanPattern(PERMISSIONS_KEY_PREFIX), count: 100 });
 		const permissionKeys: string[] = [];
 		for await (const batch of permStream) {
 			const keysParsed = z.array(z.string()).safeParse(batch);
@@ -134,11 +121,11 @@ export class RedisUserSessionCacheService extends UserSessionCacheService implem
 	}
 
 	private meKey(userId: string): string {
-		return `${ME_KEY_PREFIX}${userId}`;
+		return this.redisNamespace.key(`${ME_KEY_PREFIX}${userId}`);
 	}
 
 	private permissionsKey(userId: string): string {
-		return `${PERMISSIONS_KEY_PREFIX}${userId}`;
+		return this.redisNamespace.key(`${PERMISSIONS_KEY_PREFIX}${userId}`);
 	}
 
 	/** Pretty-printed JSON for human-readable inspection in Redis Insight / redis-cli. */

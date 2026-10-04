@@ -114,7 +114,7 @@ references so repeat typechecks only re-check changed projects.
 (`tsc -b`) understands the `references` graph and skips projects whose inputs didn't
 change — the same win as #1 but at the type-checker level. It also works with TS7's
 `tsgo` (the Go-native compiler used by web/admin and the packages; the API is pinned
-to TS 6.x so the Nest CLI keeps working — see [typescript.md](./typescript.md)).
+to TS 6.x so the Nest CLI keeps working — see [typescript.md](./technical/tooling/typescript.md)).
 
 **How:**
 
@@ -147,7 +147,7 @@ parsing free-text lines. It's also measurably faster than the default logger at 
   `pino-pretty` for local dev (`NODE_ENV !== "production"`), raw JSON in prod.
 - Swap `Logger` (Nest) for `Logger` from `nestjs-pino` in the services that log.
 - Keep the existing proxy refresh logs in `apps/*/proxy.ts` — those are Next-side and
-  stay separate (documented in [token-refresh.md](./token-refresh.md)).
+  stay separate (documented in [token-refresh.md](./technical/security/token-refresh.md)).
 
 **Acceptance criteria:**
 
@@ -275,7 +275,7 @@ An analyzer makes future bundle decisions data-driven instead of vibes-driven.
 **What:** committed env templates each developer copies to `.env`.
 
 **Why:** this one is **already done** — `apps/api/.env.example`, `apps/web/.env.example`,
-and `apps/admin/.env.example` all exist, and [getting-started.md](./getting-started.md)
+and `apps/admin/.env.example` all exist, and [getting-started.md](./technical/getting-started.md)
 walks through `cp`-ing them. A fresh clone boots on the first try instead of hitting a
 "failed to fetch" mystery.
 

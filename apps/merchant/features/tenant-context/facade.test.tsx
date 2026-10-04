@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { ApiError } from "@workspace/client/lib/api/use-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearOrganizationLocationCookie, ORGANIZATION_LOCATION_ID_COOKIE_NAME } from "@/lib/org/location";
+import { clearAllOrganizationLocationCookies, organizationLocationCookieName } from "@/lib/org/location";
 import { TEST_ORG_SLUG } from "@/test/authorization";
+import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
-import type { Envelope, OrganizationContextResponse } from "@workspace/shared";
+import { MerchantErrorCodes, type Envelope, type OrganizationContextResponse } from "@workspace/shared";
 
 import {
 	TenantContextProvider,
@@ -43,9 +47,24 @@ type ProviderInputs = Omit<TenantContextProviderProps, "children">;
 
 /** Props the wrapper renders the provider with — change them, then `rerender()`. */
 let providerInputs: ProviderInputs = { orgSlug: TEST_ORG_SLUG, initialLocationId: null };
+/** A fresh cache per test — the provider subscribes to it for the API's location refusals. */
+let queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 function wrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
-	return <TenantContextProvider {...providerInputs}>{children}</TenantContextProvider>;
+	return (
+		<QueryClientProvider client={queryClient}>
+			<TenantContextProvider {...providerInputs}>{children}</TenantContextProvider>
+		</QueryClientProvider>
+	);
+}
+
+/** One of this organization's queries for `locationId` fails the way the API refuses an out-of-scope store. */
+async function apiRefusesStore(locationId: string): Promise<void> {
+	const key = apiRouter.organizations.redemptions.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId });
+	const refusal = new ApiError({ message: "Location is outside your membership scope", error: MerchantErrorCodes.ORGANIZATION_LOCATION_FORBIDDEN, statusCode: 403 });
+	await act(async (): Promise<void> => {
+		await queryClient.query({ queryKey: key, queryFn: (): Promise<string> => Promise.reject(refusal) }).catch((): void => undefined);
+	});
 }
 
 interface TenantProbe {
@@ -60,7 +79,7 @@ function useTenantProbe(): TenantProbe {
 }
 
 function cookieValue(): string | undefined {
-	const prefix = `${ORGANIZATION_LOCATION_ID_COOKIE_NAME}=`;
+	const prefix = `${organizationLocationCookieName(TEST_ORG_SLUG)}=`;
 	return document.cookie
 		.split("; ")
 		.find((entry) => entry.startsWith(prefix))
@@ -68,14 +87,15 @@ function cookieValue(): string | undefined {
 }
 
 beforeEach((): void => {
-	providerInputs = { orgSlug: TEST_ORG_SLUG, initialLocationId: null, initialOrganizationContext: TWO_STORE_CONTEXT };
+	queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	providerInputs = { orgSlug: TEST_ORG_SLUG, initialLocationId: null, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) };
 	contextQuery.mockReturnValue(contextQueryState(TWO_STORE_CONTEXT));
 });
 
 afterEach((): void => {
 	cleanup();
 	contextQuery.mockReset();
-	clearOrganizationLocationCookie();
+	clearAllOrganizationLocationCookies();
 });
 
 describe("tenant-context facade", () => {
@@ -90,6 +110,7 @@ describe("tenant-context facade", () => {
 			activeLocation: STORE_B_LOCATION,
 			accessibleLocations: [STORE_A_LOCATION, STORE_B_LOCATION],
 			canSelectAllLocations: true,
+			hasOrganizationWideAccess: true,
 			isLoading: false,
 		});
 	});
@@ -113,6 +134,7 @@ describe("tenant-context facade", () => {
 			activeLocation: undefined,
 			accessibleLocations: [],
 			canSelectAllLocations: false,
+			hasOrganizationWideAccess: false,
 			isLoading: true,
 		});
 	});
@@ -124,6 +146,17 @@ describe("tenant-context facade", () => {
 
 		expect(result.current.activeLocationId).toBeNull();
 		expect(result.current.filter).toEqual({ locationId: undefined });
+	});
+
+	it("mirrors the choice to THIS organization's cookie only", () => {
+		const { result } = renderHook(useTenantProbe, { wrapper });
+
+		act(() => {
+			result.current.commands.selectLocation(STORE_A.id);
+		});
+
+		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
+		expect(document.cookie).not.toContain(`${organizationLocationCookieName(OTHER_ORG_SLUG)}=`);
 	});
 
 	it("changes the filter through commands and mirrors it to the cookie", () => {
@@ -178,6 +211,29 @@ describe("tenant-context facade", () => {
 
 		expect(result.current.activeLocationId).toBeNull();
 		expect(contextQuery).toHaveBeenLastCalledWith({ orgSlug: OTHER_ORG_SLUG }, {});
+	});
+
+	it("recovers from a refused (stale) store: resets the choice, rewrites the cookie, re-reads the context — and never picks it again", async () => {
+		providerInputs = { ...providerInputs, initialLocationId: STORE_B.id };
+		const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+		const { result } = renderHook(useTenantProbe, { wrapper });
+		act(() => {
+			result.current.commands.selectLocation(STORE_B.id);
+		});
+		expect(cookieValue()).toBe(STORE_B.id);
+
+		await apiRefusesStore(STORE_B.id);
+
+		expect(result.current.activeLocationId).not.toBe(STORE_B.id);
+		expect(result.current.location.accessibleLocations).toEqual([STORE_A_LOCATION]);
+		expect(cookieValue()).toBeUndefined();
+		expect(invalidate).toHaveBeenCalledWith({ queryKey: apiRouter.organizations.context.scopeKey({ orgSlug: TEST_ORG_SLUG }) });
+
+		// The same refusal again changes nothing — no loop.
+		invalidate.mockClear();
+		await apiRefusesStore(STORE_B.id);
+		expect(invalidate).toHaveBeenCalledTimes(1);
+		expect(result.current.activeLocationId).not.toBe(STORE_B.id);
 	});
 
 	it("fails loudly outside its provider", () => {

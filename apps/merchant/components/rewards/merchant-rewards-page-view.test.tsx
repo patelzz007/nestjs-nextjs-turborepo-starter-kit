@@ -8,11 +8,14 @@ import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A } from "@/test/terminals";
 import type { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { ApiError } from "@workspace/client/lib/api/use-api";
 
 type RewardsListInput = Parameters<typeof apiRouter.organizations.rewards.list.queryKey>[0];
 
 interface RewardsListOptions {
 	readonly enabled?: boolean;
+	readonly staleTime?: number;
+	readonly gcTime?: number;
 }
 
 const { rewardsListQuery, contextQuery } = vi.hoisted(() => ({
@@ -93,5 +96,32 @@ describe("MerchantRewardsPageView store filter", () => {
 
 		const [, options] = rewardsListQuery.mock.calls.at(0) ?? [];
 		expect(options?.enabled).toBe(false);
+	});
+});
+
+describe("MerchantRewardsPageView caching and errors", () => {
+	it("keeps the catalog cached between navigations instead of bypassing the cache", () => {
+		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
+
+		const [, options] = rewardsListQuery.mock.calls.at(0) ?? [];
+		expect(options?.staleTime).toBeGreaterThan(0);
+		expect(options?.gcTime).toBeUndefined();
+	});
+
+	it("shows a user-safe message, never the raw transport error", () => {
+		const rawMessage = "Request failed: GET http://api.internal/orgs/acme/rewards ECONNRESET";
+		rewardsListQuery.mockReturnValue({
+			isSuccess: false,
+			isPending: false,
+			isFetching: false,
+			isError: true,
+			error: new ApiError({ message: rawMessage, statusCode: 502 }),
+			data: undefined,
+			refetch: vi.fn(),
+		});
+		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
+
+		expect(screen.getByText("Could not load rewards")).toBeTruthy();
+		expect(screen.queryByText(rawMessage)).toBeNull();
 	});
 });

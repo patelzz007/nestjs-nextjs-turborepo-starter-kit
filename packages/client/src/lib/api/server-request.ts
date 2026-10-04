@@ -3,138 +3,140 @@
 // ============================================
 import "server-only";
 
-// Server twin of `api-request.ts`. Builds `.query()` / `.mutate()` leaves from
-// any procedure router — same `resolveRequest` serializer as the client so SSR
-// prefetch and client hydration share URLs and react-query keys.
+// Server twin of `api-request.ts`, READ-ONLY by design: it builds `.query()`
+// leaves from any procedure router — same `resolveRequest` serializer as the
+// client, so SSR prefetch and client hydration share URLs and react-query keys.
+//
+// What it deliberately does NOT do:
+// - Rotate the session. A Server Component cannot write cookies, so a refresh
+//   here would spend the refresh token (the API rotates it) without being able
+//   to hand the new pair to the browser — the next browser request then
+//   presents a superseded token and the session is revoked. Rotation happens
+//   only where cookies can be written: the route proxy (`proxy.ts`, document
+//   navigations) and the browser's single-flight refresh (`facade.tsx`). An
+//   SSR 401 simply means "no prefetched data"; the client query fetches (and
+//   refreshes) on mount.
+// - Mutate. Writes belong to Server Actions / Route Handlers or the browser
+//   client (mutation intent + Origin checks, audit, cookies). Mutation leaves
+//   are absent from the server caller's type and runtime tree.
 
-import { type QueryKey } from "@tanstack/react-query";
-import { apiVersionPrefix, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, type DataValue, type SerializableInput } from "@workspace/shared";
+import {
+	apiVersionPrefix,
+	AUTH_COOKIE_NAMES,
+	clientTypeHeader,
+	type AuthClientType,
+	type AuthCookieNamePair,
+	type DataValue,
+	type SerializableInput,
+} from "@workspace/shared";
 import { cookies, headers } from "next/headers";
-import { catchError, defer, from, map, mergeMap, Observable, of, retry, throwError, timer, timeout, firstValueFrom } from "rxjs";
+import { catchError, defer, from, mergeMap, Observable, of, retry, throwError, timer, firstValueFrom } from "rxjs";
 import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
-import { applyRotatedSetCookies, collectSetCookies, hasRotatedAuthCookies } from "../auth/edge/proxy-refresh";
-import { ApiResponseContractError, parseResponseContract, type ApiResponseContractIssue } from "./response-contract";
-import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
+import { ApiResponseContractError, parseResponseText, type ApiResponseContractIssue } from "./response-contract";
+import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type ErasedQueryDef, type MutationDef, type QueryDef, type RouterTree } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
-export type ServerApiLogLevel = "silent" | "warn" | "info";
+/** `warn` logs unexpected prefetch failures (see `isNoteworthyPrefetchFailure`); `silent` logs nothing. */
+export type ServerApiLogLevel = "silent" | "warn";
 
 export interface ServerApiConfig {
-	readonly accessTokenCookie: string;
-	readonly refreshTokenCookie: string;
-	readonly clientType: "web" | "admin" | "merchant";
-	readonly clientOrigin: string;
-	readonly staleTimeMs: number;
-	readonly gcTimeMs: number;
-	readonly timeoutMs: number;
+	/** Which frontend's isolated cookie set (and `X-Client-Type`) the caller forwards. */
+	readonly clientType: AuthClientType;
+	/** Budget for ONE fetch attempt. */
+	readonly attemptTimeoutMs: number;
+	/** Budget for the whole prefetch, retries and their backoff included. Must be ≥ `attemptTimeoutMs`. */
+	readonly deadlineMs: number;
+	/** Extra attempts after a network failure or an attempt timeout (never after an HTTP answer). */
 	readonly retries: number;
+	/** Backoff before the first retry; doubles per retry. */
 	readonly retryDelayMs: number;
-	readonly retryBackoffMs: number;
+	/** Random 0..this added to each backoff so concurrent renders do not retry in lockstep. */
+	readonly retryJitterMs: number;
 	readonly logger: (event: PrefetchLogEvent) => void;
-	readonly logLevel: ServerApiLogLevel;
 	readonly fetchImpl?: typeof fetch;
 }
 
-/**
- * Library defaults. `clientOrigin` is deliberately absent: it is the calling
- * app's own public origin, validated by that app's `lib/env/env.client.ts`,
- * so every caller must supply it (see `ServerApiConfigInput`) — there is no
- * hardcoded localhost fallback to silently ship to production.
- */
-export type ServerApiConfigDefaults = Omit<ServerApiConfig, "clientOrigin">;
+/** Overrides accepted by `resolveConfig`; `clientType` is always required — there is no default cookie set. */
+export type ServerApiConfigInput = Partial<Omit<ServerApiConfig, "clientType">> & Pick<ServerApiConfig, "clientType"> & { readonly logLevel?: ServerApiLogLevel | undefined };
 
-/** Overrides accepted by `resolveConfig`; `clientOrigin` is always required. */
-export type ServerApiConfigInput = Partial<ServerApiConfig> & Pick<ServerApiConfig, "clientOrigin">;
+const DEFAULT_ATTEMPT_TIMEOUT_MS = 5_000;
+const DEFAULT_DEADLINE_MS = 12_000;
+const DEFAULT_RETRIES = 2;
+const DEFAULT_RETRY_DELAY_MS = 250;
+const DEFAULT_RETRY_JITTER_MS = 250;
+const DEFAULT_LOG_LEVEL: ServerApiLogLevel = "warn";
+const HTTP_UNAUTHORIZED = 401;
 
-export const DEFAULT_SERVER_API_CONFIG: ServerApiConfigDefaults = {
-	accessTokenCookie: "adminAccessToken",
-	refreshTokenCookie: "adminRefreshToken",
-	clientType: "admin",
-	staleTimeMs: 60 * 1000,
-	gcTimeMs: 5 * 60 * 1000,
-	timeoutMs: 10_000,
-	retries: 3,
-	retryDelayMs: 500,
-	retryBackoffMs: 250,
-	logger: createDefaultLogger("warn"),
-	logLevel: "warn",
+/** Library defaults for everything but the frontend's identity. */
+export const DEFAULT_SERVER_API_CONFIG: Omit<ServerApiConfig, "clientType"> = {
+	attemptTimeoutMs: DEFAULT_ATTEMPT_TIMEOUT_MS,
+	deadlineMs: DEFAULT_DEADLINE_MS,
+	retries: DEFAULT_RETRIES,
+	retryDelayMs: DEFAULT_RETRY_DELAY_MS,
+	retryJitterMs: DEFAULT_RETRY_JITTER_MS,
+	logger: createDefaultLogger(DEFAULT_LOG_LEVEL),
 };
-
-export const DEFAULT_WEB_SERVER_API_CONFIG: ServerApiConfigDefaults = {
-	...DEFAULT_SERVER_API_CONFIG,
-	accessTokenCookie: "accessToken",
-	refreshTokenCookie: "refreshToken",
-	clientType: "web",
-};
-
-export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfigDefaults = {
-	...DEFAULT_SERVER_API_CONFIG,
-	accessTokenCookie: "merchantAccessToken",
-	refreshTokenCookie: "merchantRefreshToken",
-	clientType: "merchant",
-};
-
-/**
- * Minimal mutation metadata required by the 401 refresh pipeline.
- *
- * Deliberately does not use ErasedMutationDef because the refresh pipeline
- * only needs the endpoint path/version. Keeping the full generic mutation
- * definition here causes function-parameter variance issues with queryKey.
- */
-export interface RefreshMutationDef {
-	readonly path: string;
-	readonly version?: import("@workspace/shared").ApiVersion | undefined;
-}
 
 export interface ServerRequestContext {
 	readonly config: ServerApiConfig;
-
-	/** Procedure metadata used by the 401 refresh pipeline. */
-	readonly refreshDef: RefreshMutationDef;
 }
 
-export function createServerRequestContext(config: ServerApiConfig, refreshDef: RefreshMutationDef): ServerRequestContext {
-	return { config, refreshDef };
+export function createServerRequestContext(config: ServerApiConfig): ServerRequestContext {
+	return { config };
+}
+
+/**
+ * Whether a prefetch failure deserves a log line. A guest with no cookie, an
+ * access token that expired (the browser refreshes it) and an aborted render
+ * are part of normal operation; everything else (API down, 5xx, 403/404,
+ * contract drift, timeouts) is not.
+ */
+export function isNoteworthyPrefetchFailure(failure: PrefetchFailure): boolean {
+	switch (failure.kind) {
+		case "no-cookie":
+		case "aborted":
+			return false;
+		case "http":
+			return failure.status !== HTTP_UNAUTHORIZED;
+		case "unreachable":
+		case "schema":
+		case "timeout":
+			return true;
+	}
 }
 
 export function createDefaultLogger(logLevel: ServerApiLogLevel): (event: PrefetchLogEvent) => void {
 	return (event): void => {
-		if (logLevel === "silent") return;
-		if (event.outcome.ok) return;
-		console.warn(`[api-server] prefetch failed (${describeFailure(event.outcome.failure)}) for ${event.path}${event.page === undefined ? "" : ` (${event.page})`}`);
+		if (logLevel === "silent" || event.outcome.ok || !isNoteworthyPrefetchFailure(event.outcome.failure)) return;
+		console.warn(`[api-server] prefetch failed (${describeFailure(event.outcome.failure)}) for ${event.path} after ${String(event.durationMs)}ms`);
 	};
 }
 
-export function resolveConfig(overrides: ServerApiConfigInput): ServerApiConfig {
-	const merged: ServerApiConfig = { ...DEFAULT_SERVER_API_CONFIG, ...overrides };
-	if (overrides.logger === undefined && overrides.logLevel !== undefined && merged.logLevel !== DEFAULT_SERVER_API_CONFIG.logLevel) {
-		return { ...merged, logger: createDefaultLogger(merged.logLevel) };
+export function resolveConfig(input: ServerApiConfigInput): ServerApiConfig {
+	const { logLevel, ...overrides } = input;
+	const logger: (event: PrefetchLogEvent) => void = overrides.logger ?? (logLevel === undefined ? DEFAULT_SERVER_API_CONFIG.logger : createDefaultLogger(logLevel));
+	const config: ServerApiConfig = { ...DEFAULT_SERVER_API_CONFIG, ...overrides, logger };
+	if (config.deadlineMs < config.attemptTimeoutMs) {
+		throw new Error(`Server API config: deadlineMs (${String(config.deadlineMs)}) must be at least attemptTimeoutMs (${String(config.attemptTimeoutMs)}).`);
 	}
-	return merged;
+	return config;
 }
 
 // ── Public types ────────────────────────────────────────────────────────────
 
-export interface PrefetchCallOptions<Resp extends DataValue = DataValue> {
+export interface PrefetchCallOptions {
+	/** Aborts the prefetch (e.g. the render was cancelled). */
 	readonly signal?: AbortSignal | undefined;
-	readonly allowRefresh?: boolean | undefined;
-	readonly fallbackData?: Resp | undefined;
-	readonly captureHeaders?: readonly string[] | undefined;
-	readonly headers?: Readonly<Record<string, string>> | undefined;
-	readonly page?: string | undefined;
-	readonly traceId?: string | undefined;
 }
 
+/** One finished prefetch, handed to `ServerApiConfig.logger`. */
 export interface PrefetchLogEvent {
-	readonly queryKey: QueryKey;
 	readonly path: string;
 	readonly durationMs: number;
 	readonly outcome: PrefetchOutcome;
-	readonly page?: string;
-	readonly traceId?: string;
 }
 
 export type PrefetchFailure =
@@ -145,50 +147,37 @@ export type PrefetchFailure =
 	| { readonly kind: "timeout" }
 	| { readonly kind: "aborted" };
 
-export type PrefetchOutcome =
-	| { readonly queryKey: QueryKey; readonly ok: true; readonly headers?: Readonly<Record<string, string>> }
-	| { readonly queryKey: QueryKey; readonly ok: false; readonly failure: PrefetchFailure };
+export type PrefetchOutcome = { readonly ok: true } | { readonly ok: false; readonly failure: PrefetchFailure };
 
 export interface ServerQueryLeaf<Input extends SerializableInput, Resp extends DataValue> {
-	query(input: Input, call?: Omit<PrefetchCallOptions<Resp>, "fallbackData" | "captureHeaders" | "page" | "traceId">): Promise<Resp>;
+	query(input: Input, call?: PrefetchCallOptions): Promise<Resp>;
 }
 
-export interface ServerMutationLeaf<Input extends SerializableInput, Resp extends DataValue> {
-	mutate(input: Input): Promise<Resp>;
-}
+/** Router keys whose value is a mutation — excluded from the server caller. */
+type MutationKeys<R extends object> = { [K in keyof R]-?: R[K] extends MutationDef<infer _Input, infer _Resp> ? K : undefined }[keyof R];
 
-export type ServerCallerBranch<V> =
-	V extends QueryDef<infer Input, infer Resp>
-		? ServerQueryLeaf<Input, Resp>
-		: V extends MutationDef<infer Input, infer Resp>
-			? ServerMutationLeaf<Input, Resp>
-			: V extends object
-				? ServerCallerTree<V>
-				: V;
+export type ServerCallerBranch<V> = V extends QueryDef<infer Input, infer Resp> ? ServerQueryLeaf<Input, Resp> : V extends object ? ServerCallerTree<V> : V;
 
-export type ServerCallerTree<R extends object> = { [K in keyof R]: ServerCallerBranch<R[K]> };
+/** The router tree with every query bound to a server leaf; mutations are not part of it. */
+export type ServerCallerTree<R extends object> = { readonly [K in Exclude<keyof R, MutationKeys<R>>]: ServerCallerBranch<R[K]> };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function mergeSignals(callers: readonly (AbortSignal | undefined)[]): AbortSignal | undefined {
-	const present: AbortSignal[] = callers.filter((signal): signal is AbortSignal => signal !== undefined);
-	if (present.length === 0) return undefined;
-	if (present.length === 1) return present[0];
-	return AbortSignal.any(present);
-}
+/**
+ * Request headers forwarded from the incoming browser request: the client's
+ * user agent and language, and its address chain (`x-forwarded-for` — Next.js
+ * sets it from the socket when no ingress did) so the API's audit trail and
+ * rate limits see the member, not this server.
+ */
+const FORWARDED_REQUEST_HEADERS: readonly string[] = ["user-agent", "accept-language", "x-forwarded-for"];
 
-async function getForwardedHeaders(): Promise<Readonly<Record<string, string>>> {
-	try {
-		const requestHeaders = await headers();
-		const forwarded: Record<string, string> = {};
-		const userAgent: string | null = requestHeaders.get("user-agent");
-		const acceptLanguage: string | null = requestHeaders.get("accept-language");
-		if (userAgent !== null) forwarded["user-agent"] = userAgent;
-		if (acceptLanguage !== null) forwarded["accept-language"] = acceptLanguage;
-		return forwarded;
-	} catch {
-		return {};
+function readForwardedHeaders(requestHeaders: Headers): Readonly<Record<string, string>> {
+	const forwarded: Record<string, string> = {};
+	for (const name of FORWARDED_REQUEST_HEADERS) {
+		const value: string | null = requestHeaders.get(name);
+		if (value !== null) forwarded[name] = value;
 	}
+	return forwarded;
 }
 
 export function describeFailure(failure: PrefetchFailure): string {
@@ -208,9 +197,10 @@ export function describeFailure(failure: PrefetchFailure): string {
 	}
 }
 
+const PrefetchFailureKindSchema = z.enum(["no-cookie", "unreachable", "http", "schema", "timeout", "aborted"]);
+
 export function isPrefetchFailure(value: object): value is PrefetchFailure {
-	const kinds: ReadonlySet<string> = new Set(["no-cookie", "unreachable", "http", "schema", "timeout", "aborted"]);
-	return "kind" in value && typeof value.kind === "string" && kinds.has(value.kind);
+	return "kind" in value && PrefetchFailureKindSchema.safeParse(value.kind).success;
 }
 
 class PrefetchHttpError extends Error {
@@ -250,7 +240,15 @@ class PrefetchNetworkError extends Error {
 	}
 }
 
-export function classifyError(error: Error | string): PrefetchFailure {
+/** `AbortSignal.timeout()` rejects a fetch with a `TimeoutError`; an explicit abort with an `AbortError`. */
+const TIMEOUT_ERROR_NAME = "TimeoutError";
+const ABORT_ERROR_NAME = "AbortError";
+/** The cause reported for a rejection that carried no `Error`. */
+const UNCLASSIFIED_FAILURE_CAUSE = "non-Error rejection";
+
+/** Classifies what a prefetch rejected with; anything that is not an `Error` is an unclassifiable failure. */
+export function classifyError(error: Error | undefined): PrefetchFailure {
+	if (error instanceof PrefetchNoCookieError) return { kind: "no-cookie" };
 	if (error instanceof PrefetchHttpError) return { kind: "http", status: error.status };
 	if (error instanceof PrefetchTimeoutError) return { kind: "timeout" };
 	if (error instanceof PrefetchAbortError) return { kind: "aborted" };
@@ -259,49 +257,37 @@ export function classifyError(error: Error | string): PrefetchFailure {
 		return { kind: "schema", message: firstIssue === undefined ? error.message : `${firstIssue.path}: ${firstIssue.message}` };
 	}
 	if (error instanceof z.ZodError) {
-		const firstIssue: { readonly path: readonly (string | number | symbol)[] } | undefined = error.issues[0];
-		const path: string = firstIssue === undefined ? "" : firstIssue.path.join(".");
+		const firstIssue: { readonly path: readonly PropertyKey[] } | undefined = error.issues[0];
+		const path: string = firstIssue === undefined ? "" : firstIssue.path.map((segment: PropertyKey): string => String(segment)).join(".");
 		return { kind: "schema", message: path.length > 0 ? `${path}: ${error.message}` : error.message };
 	}
-	if (error instanceof Error && error.name === "AbortError") return { kind: "aborted" };
+	if (error instanceof Error && error.name === TIMEOUT_ERROR_NAME) return { kind: "timeout" };
+	if (error instanceof Error && error.name === ABORT_ERROR_NAME) return { kind: "aborted" };
 	if (error instanceof Error) return { kind: "unreachable", cause: error.message };
-	return { kind: "unreachable", cause: error };
+	return { kind: "unreachable", cause: UNCLASSIFIED_FAILURE_CAUSE };
 }
 
 // ── RxJS fetch pipeline ─────────────────────────────────────────────────────
 
-function createFetchObservable(
-	url: string,
-	extraHeaders: Readonly<Record<string, string>> | undefined,
-	config: ServerApiConfig,
-	token: () => string | undefined,
-	forwarded: Readonly<Record<string, string>>,
-	contextSignal?: AbortSignal,
-): Observable<Response> {
+interface PrefetchRequest {
+	readonly url: string;
+	readonly headers: Readonly<Record<string, string>>;
+	/** Fires when the whole prefetch's deadline passes or the caller aborts. */
+	readonly signal: AbortSignal;
+	readonly deadline: AbortSignal;
+	readonly config: ServerApiConfig;
+}
+
+/** One GET attempt, bounded by its own timeout AND the prefetch's signal. */
+function createAttemptObservable(request: PrefetchRequest): Observable<Response> {
 	return defer(() => {
-		const currentToken: string | undefined = token();
-		const requestHeaders: Record<string, string> = {
-			Accept: "application/json",
-			// A public route fetched for a visitor with no session carries no cookie.
-			...(currentToken === undefined ? {} : { Cookie: `${encodeURIComponent(config.accessTokenCookie)}=${encodeURIComponent(currentToken)}` }),
-			"X-Client-Type": config.clientType,
-			...forwarded,
-			...extraHeaders,
-		};
-		const signal: AbortSignal | undefined = mergeSignals([contextSignal, AbortSignal.timeout(config.timeoutMs)]);
-		const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
-		return from(
-			fetchImpl(url, {
-				method: "GET",
-				headers: requestHeaders,
-				...(signal === undefined ? {} : { signal }),
-				cache: "no-store",
-			}),
-		).pipe(
+		const fetchImpl: typeof fetch = request.config.fetchImpl ?? globalThis.fetch;
+		const signal: AbortSignal = AbortSignal.any([request.signal, AbortSignal.timeout(request.config.attemptTimeoutMs)]);
+		return from(fetchImpl(request.url, { method: "GET", headers: request.headers, signal, cache: "no-store" })).pipe(
 			catchError((error: Error | string) => {
-				if (error instanceof Error && error.name === "AbortError") {
-					return throwError(() => new PrefetchAbortError());
-				}
+				if (request.deadline.aborted) return throwError(() => new PrefetchTimeoutError());
+				if (error instanceof Error && error.name === TIMEOUT_ERROR_NAME) return throwError(() => new PrefetchTimeoutError());
+				if (error instanceof Error && error.name === ABORT_ERROR_NAME) return throwError(() => new PrefetchAbortError());
 				return throwError(() => new PrefetchNetworkError(error instanceof Error ? error.message : error));
 			}),
 			mergeMap((response: Response) => (response.ok ? of(response) : throwError(() => new PrefetchHttpError(response.status)))),
@@ -309,192 +295,89 @@ function createFetchObservable(
 	});
 }
 
-function captureResponseHeaders(response: Response, names: readonly string[]): Readonly<Record<string, string>> {
-	const captured: Record<string, string> = {};
-	for (const name of names) {
-		const value: string | null = response.headers.get(name);
-		if (value !== null) captured[name] = value;
-	}
-	return captured;
-}
-
 function backoffDelay(attempt: number, config: ServerApiConfig): number {
-	const base: number = config.retryDelayMs * Math.pow(2, Math.max(0, attempt - 1)) + config.retryBackoffMs * Math.random();
-	return Math.round(base);
+	return Math.round(config.retryDelayMs * Math.pow(2, Math.max(0, attempt - 1)) + config.retryJitterMs * Math.random());
 }
 
-const ssrRefreshInFlight = new Map<string, Promise<string | null>>();
-
-export async function refreshAccessToken(context: ServerRequestContext): Promise<string | null> {
-	const { config, refreshDef } = context;
-	const cookieStore = await cookies();
-	const refreshToken: string | undefined = cookieStore.get(config.refreshTokenCookie)?.value;
-	if (refreshToken === undefined) return null;
-
-	const existing = ssrRefreshInFlight.get(refreshToken);
-	if (existing !== undefined) {
-		return existing;
-	}
-
-	const refreshPromise = (async (): Promise<string | null> => {
-		const prefix: string = refreshDef.version === undefined ? API_URL_PREFIX : apiVersionPrefix(refreshDef.version);
-		const url: URL = new URL(`${prefix}${refreshDef.path}`, API_BASE_URL);
-		const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
-		try {
-			const response: Response = await fetchImpl(url, {
-				method: "POST",
-				headers: {
-					Accept: "application/json",
-					Cookie: `${config.refreshTokenCookie}=${refreshToken}`,
-					"X-Client-Type": config.clientType,
-					Origin: config.clientOrigin,
-					[MUTATION_INTENT_HEADER]: MUTATION_INTENT_VALUE,
-				},
-				cache: "no-store",
-			});
-			if (response.status === 401 || response.status === 403) return null;
-			if (!response.ok) return null;
-			const setCookies: readonly string[] = typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : collectSetCookies(response.headers);
-			if (!hasRotatedAuthCookies(setCookies, config.accessTokenCookie, config.refreshTokenCookie)) {
-				return null;
-			}
-			applyRotatedSetCookies(cookieStore, setCookies);
-			const accessCookie: string | undefined = setCookies.find((cookie) => cookie.startsWith(`${config.accessTokenCookie}=`));
-			if (accessCookie === undefined) return null;
-			const value: string = accessCookie.split(";")[0] ?? "";
-			return decodeURIComponent(value.slice(config.accessTokenCookie.length + 1));
-		} catch {
-			return null;
-		}
-	})();
-
-	ssrRefreshInFlight.set(refreshToken, refreshPromise);
-	try {
-		return await refreshPromise;
-	} finally {
-		ssrRefreshInFlight.delete(refreshToken);
-	}
+/** Network failures and attempt timeouts are retried while the deadline allows; an HTTP answer or an abort is final. */
+function isRetryable(error: Error | string, request: PrefetchRequest): boolean {
+	return !request.deadline.aborted && !request.signal.aborted && (error instanceof PrefetchNetworkError || error instanceof PrefetchTimeoutError);
 }
 
-function createPrefetchObservable<Input extends SerializableInput, Resp extends DataValue>(
-	context: ServerRequestContext,
-	def: QueryDef<Input, Resp>,
-	input: Input,
-	extraHeaders: Readonly<Record<string, string>> | undefined,
-	token: () => string | undefined,
-	applyToken: (fresh: string) => void,
-	forwarded: Readonly<Record<string, string>>,
-	contextSignal: AbortSignal | undefined,
-	allowRefresh: boolean,
-	captureHeaders: readonly string[],
-): Observable<{ readonly raw: Resp; readonly headers: Readonly<Record<string, string>> }> {
-	const { config } = context;
-	const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
-	const url: string = new URL(`${prefix}${resolveRequest(def.path, input).url}`, API_BASE_URL).toString();
-	const source: Observable<Response> = createFetchObservable(url, { ...def.baseOptions?.headers, ...extraHeaders }, config, token, forwarded, contextSignal);
-
-	return source.pipe(
+function createPrefetchObservable<Resp extends DataValue>(request: PrefetchRequest, responseSchema: z.ZodType<Resp>): Observable<Resp> {
+	return createAttemptObservable(request).pipe(
 		retry({
-			count: config.retries,
-			delay: (error: Error | string, attempt: number) => (error instanceof PrefetchNetworkError ? timer(backoffDelay(attempt, config)) : throwError(() => error)),
+			count: request.config.retries,
+			delay: (error: Error | string, attempt: number) => (isRetryable(error, request) ? timer(backoffDelay(attempt, request.config)) : throwError(() => error)),
 		}),
-		retry({
-			count: allowRefresh ? 1 : 0,
-			delay: (error: Error | string) => {
-				if (!(error instanceof PrefetchHttpError) || error.status !== 401) {
-					return throwError(() => error);
-				}
-				return from(refreshAccessToken(context)).pipe(
-					mergeMap((fresh: string | null) => {
-						if (fresh === null) return throwError(() => error);
-						applyToken(fresh);
-						return of(fresh);
-					}),
-					map(() => undefined),
-				);
-			},
-		}),
-		timeout({ each: config.timeoutMs, with: () => throwError(() => new PrefetchTimeoutError()) }),
 		mergeMap((response: Response) =>
-			from(response.json()).pipe(
-				map((raw: DataValue): { readonly raw: DataValue; readonly status: number; readonly headers: Readonly<Record<string, string>> } => ({
-					raw,
-					status: response.status,
-					headers: captureResponseHeaders(response, captureHeaders),
-				})),
+			from(response.text()).pipe(
+				// The one response-validation point of the SSR pipeline (ADR 022).
+				mergeMap((text: string) => of(parseResponseText(responseSchema, text, { method: "GET", url: request.url, status: response.status }))),
 			),
 		),
-		map(({ raw, status, headers: captured }): { readonly raw: Resp; readonly headers: Readonly<Record<string, string>> } => ({
-			// The one response-validation point of the SSR pipeline (ADR 022).
-			raw: parseResponseContract(def.responseSchema, raw, { method: "GET", url, status }),
-			headers: captured,
-		})),
 	);
 }
 
 // ── Procedure execution (tRPC-style) ───────────────────────────────────────
 
+function readSessionCookie(cookieStore: Awaited<ReturnType<typeof cookies>>, cookieNames: AuthCookieNamePair): string | undefined {
+	return cookieStore.get(cookieNames.accessToken)?.value;
+}
+
+/**
+ * Fetches one query on the server. Never refreshes the session (see the module
+ * header): a 401 rejects like any other failure and the page renders without
+ * the prefetched data. Every outcome is reported to `config.logger`, so a
+ * caller that degrades on failure (`catch { return undefined }`) never hides it.
+ */
 export async function fetchServerQuery<Input extends SerializableInput, Resp extends DataValue>(
 	context: ServerRequestContext,
 	def: QueryDef<Input, Resp>,
 	input: Input,
-	call?: PrefetchCallOptions<Resp>,
+	call?: PrefetchCallOptions,
 ): Promise<Resp> {
-	const parsed: Input = def.inputSchema.parse(input);
-	const cookieStore = await cookies();
-	const accessToken: string | undefined = cookieStore.get(context.config.accessTokenCookie)?.value;
-	// A route that needs a session is skipped without one (no pointless 401 round trip);
-	// a public route is fetched anonymously — guests get server-rendered public data.
-	if (accessToken === undefined && def.access !== "public") throw new PrefetchNoCookieError();
-
-	const forwarded: Readonly<Record<string, string>> = await getForwardedHeaders();
-	let currentToken: string | undefined = accessToken;
-	const { raw } = await firstValueFrom(
-		createPrefetchObservable(
-			context,
-			def,
-			parsed,
-			call?.headers,
-			() => currentToken,
-			(fresh: string): void => {
-				currentToken = fresh;
-			},
-			forwarded,
-			call?.signal,
-			// Nothing to refresh for an anonymous request.
-			accessToken !== undefined && (call?.allowRefresh ?? true),
-			call?.captureHeaders ?? [],
-		),
-	);
-	return raw;
-}
-
-export async function fetchServerMutation<Input extends SerializableInput, Resp extends DataValue>(
-	context: ServerRequestContext,
-	def: MutationDef<Input, Resp>,
-	input: Input,
-): Promise<Resp> {
-	const parsed: Input = def.inputSchema.parse(input);
-	const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
-	const finalBody: DataValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
-	const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
 	const { config } = context;
+	const startedAt: number = Date.now();
+	const report = (outcome: PrefetchOutcome): void => {
+		config.logger({ path: def.path, durationMs: Date.now() - startedAt, outcome });
+	};
 
-	const cookieStore = await cookies();
-	const accessToken: string | undefined = cookieStore.get(config.accessTokenCookie)?.value;
-	const requestHeaders: Record<string, string> = { Accept: "application/json", "X-Client-Type": config.clientType, ...def.baseOptions?.headers };
-	if (accessToken !== undefined) requestHeaders.Cookie = `${encodeURIComponent(config.accessTokenCookie)}=${encodeURIComponent(accessToken)}`;
+	try {
+		const parsed: Input = def.inputSchema.parse(input);
+		const cookieNames: AuthCookieNamePair = AUTH_COOKIE_NAMES[config.clientType];
+		const accessToken: string | undefined = readSessionCookie(await cookies(), cookieNames);
+		// A route that needs a session is skipped without one (no pointless 401 round trip);
+		// a public route is fetched anonymously — guests get server-rendered public data.
+		if (accessToken === undefined && def.access !== "public") throw new PrefetchNoCookieError();
 
-	const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
-	const response: Response = await fetchImpl(new URL(`${prefix}${url}`, API_BASE_URL), {
-		method: def.method,
-		headers: requestHeaders,
-		body: JSON.stringify(finalBody),
-		cache: "no-store",
-	});
-	if (!response.ok) throw new PrefetchHttpError(response.status);
-	const responseBody: DataValue = z.custom<DataValue>().parse(await response.json());
-	return parseResponseContract(def.responseSchema, responseBody, { method: def.method, url: response.url, status: response.status });
+		const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
+		const deadline: AbortSignal = AbortSignal.timeout(config.deadlineMs);
+		const resp: Resp = await firstValueFrom(
+			createPrefetchObservable(
+				{
+					url: new URL(`${prefix}${resolveRequest(def.path, parsed).url}`, API_BASE_URL).toString(),
+					headers: {
+						...def.baseOptions?.headers,
+						...readForwardedHeaders(await headers()),
+						Accept: "application/json",
+						...clientTypeHeader(config.clientType),
+						// A public route fetched for a visitor with no session carries no cookie.
+						...(accessToken === undefined ? {} : { Cookie: `${encodeURIComponent(cookieNames.accessToken)}=${encodeURIComponent(accessToken)}` }),
+					},
+					signal: call?.signal === undefined ? deadline : AbortSignal.any([call.signal, deadline]),
+					deadline,
+					config,
+				},
+				def.responseSchema,
+			),
+		);
+		report({ ok: true });
+		return resp;
+	} catch (error) {
+		report({ ok: false, failure: classifyError(error instanceof Error ? error : undefined) });
+		throw error;
+	}
 }
 
 export function createServerQueryLeaf<Input extends SerializableInput, Resp extends DataValue>(
@@ -506,63 +389,59 @@ export function createServerQueryLeaf<Input extends SerializableInput, Resp exte
 	};
 }
 
-export function createServerMutationLeaf<Input extends SerializableInput, Resp extends DataValue>(
-	context: ServerRequestContext,
-	def: MutationDef<Input, Resp>,
-): ServerMutationLeaf<Input, Resp> {
-	return {
-		mutate: (input): Promise<Resp> => fetchServerMutation(context, def, input),
-	};
-}
-
-export function createServerProcedureLeaf<Input extends SerializableInput, Resp extends DataValue>(
-	context: ServerRequestContext,
-	def: ProcedureDef<Input, Resp>,
-): ServerQueryLeaf<Input, Resp> | ServerMutationLeaf<Input, Resp> {
-	if (def.kind === "query") {
-		return createServerQueryLeaf(context, def);
-	}
-	return createServerMutationLeaf(context, def);
-}
-
 /** Erased build-time shape — widened so each router key can accept any branch variant. */
 type ServerCallerTreeBuild<R extends object> = {
-	[K in keyof R]?: ServerCallerBranch<RouterTreeValue>;
+	[K in keyof R]?: ServerQueryLeaf<SerializableInput, DataValue> | ServerCallerTree<RouterTree>;
 };
 
-function isCompleteServerCaller<R extends object>(router: R, candidate: ServerCallerTreeBuild<R> | ServerCallerTree<R>): candidate is ServerCallerTree<R> {
+type ServerCallerNode = { readonly kind: "query"; readonly def: ErasedQueryDef } | { readonly kind: "mutation" } | { readonly kind: "router"; readonly router: RouterTree };
+
+function classifyRouterNode(value: object): ServerCallerNode {
+	if (isErasedProcedureDef(value)) {
+		return value.kind === "query" ? { kind: "query", def: value } : { kind: "mutation" };
+	}
+	if (isRouterSubtree(value)) {
+		return { kind: "router", router: value };
+	}
+	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
+}
+
+/** Every non-mutation entry of `router` was bound (`boundKeys`) — narrows the build to the complete caller. */
+function isCompleteServerCaller<R extends object>(
+	router: R,
+	candidate: ServerCallerTreeBuild<R> | ServerCallerTree<R>,
+	boundKeys: ReadonlySet<string>,
+): candidate is ServerCallerTree<R> {
 	let complete = true;
-	eachRouterEntry(router, (key) => {
-		if (candidate[key] === undefined) {
+	eachRouterEntry(router, (key, value) => {
+		const isMutation: boolean = typeof value === "object" && value !== null && classifyRouterNode(value).kind === "mutation";
+		if (!isMutation && !boundKeys.has(key)) {
 			complete = false;
 		}
 	});
 	return complete;
 }
 
-function mapServerCallerBranch(context: ServerRequestContext, value: object): ServerCallerBranch<RouterTreeValue> {
-	if (isErasedProcedureDef(value)) {
-		return createServerProcedureLeaf(context, value);
-	}
-
-	if (isRouterSubtree(value)) {
-		return createServerCallerForRouter(value, context);
-	}
-
-	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
-}
-
 function buildServerCallerTree<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {
 	const out: ServerCallerTreeBuild<R> = {};
+	const boundKeys = new Set<string>();
 
 	eachRouterEntry(router, (key, value) => {
 		if (typeof value !== "object" || value === null) {
 			throw new Error("Invalid router node — expected a procedure leaf or nested router.");
 		}
-		out[key] = mapServerCallerBranch(context, value);
+		const node: ServerCallerNode = classifyRouterNode(value);
+		if (node.kind === "query") {
+			out[key] = createServerQueryLeaf(context, node.def);
+			boundKeys.add(key);
+		} else if (node.kind === "router") {
+			out[key] = buildServerCallerTree(node.router, context);
+			boundKeys.add(key);
+		}
+		// Mutations are not bound: the server caller is read-only.
 	});
 
-	if (!isCompleteServerCaller(router, out)) {
+	if (!isCompleteServerCaller(router, out, boundKeys)) {
 		throw new Error("Failed to build server caller — one or more router entries were not bound.");
 	}
 
@@ -570,7 +449,7 @@ function buildServerCallerTree<R extends object>(router: R, context: ServerReque
 }
 
 /**
- * Walks a router tree and binds every leaf to a tRPC-style SSR caller.
+ * Walks a router tree and binds every QUERY leaf to a tRPC-style SSR caller.
  * `server.auth.me.query(undefined)` — no manual path/method wiring.
  */
 export function createServerCallerForRouter<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {

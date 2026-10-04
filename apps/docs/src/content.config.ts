@@ -7,7 +7,7 @@ import { contentId } from "./lib/navigation";
 /**
  * Guides live in the repo-root `docs/` folder and articles in `blog/` — one
  * source of truth, rendered here. Ids keep the file path (and its case):
- * `authorization-system/overview.md` → `/docs/authorization-system/overview`.
+ * `technical/authorization/overview.md` → `/docs/technical/authorization/overview`.
  *
  * `author`, `lastUpdated` (epoch ms) and `coverImage` are required so no page
  * ships undated or without social preview art.

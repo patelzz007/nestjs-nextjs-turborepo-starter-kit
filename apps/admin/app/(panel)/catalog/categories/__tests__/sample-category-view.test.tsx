@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { PERMISSION, SampleCategorySchema, type CapabilitySlug, type SampleCategory } from "@workspace/shared";
 import * as React from "react";
@@ -9,8 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SampleCategoryDetailView from "../sample-category-detail-view";
 import SampleCategoryView from "../sample-category-view";
 
+/** The mutation options the view passes — captured so a test can complete a delete. */
+interface DeleteMutationOptionsStub {
+	readonly onSuccess?: () => Promise<void>;
+}
+
 interface MutationHookStub {
-	readonly useMutation: () => { readonly mutateAsync: () => Promise<void>; readonly isPending: boolean };
+	readonly useMutation: (options: DeleteMutationOptionsStub) => { readonly mutateAsync: () => Promise<void>; readonly isPending: boolean };
 }
 
 interface AuthStub {
@@ -32,7 +38,8 @@ interface AuthStub {
 	};
 }
 
-const { CATEGORY_INPUT, categoryListSpy } = vi.hoisted(() => ({
+const { CATEGORY_INPUT, categoryListSpy, deleteOptions } = vi.hoisted(() => ({
+	deleteOptions: vi.fn<(options: DeleteMutationOptionsStub) => void>(),
 	categoryListSpy: vi.fn(),
 	CATEGORY_INPUT: {
 		id: "2b3c4d5e-6f70-4a8b-9c0d-1e2f3a4b5c6d",
@@ -41,6 +48,7 @@ const { CATEGORY_INPUT, categoryListSpy } = vi.hoisted(() => ({
 		name: "Beverages",
 		slug: "beverages",
 		sortOrder: 1,
+		version: 0,
 		deletedAt: null,
 		createdAt: 1_786_300_000_000,
 		updatedAt: 1_786_300_000_000,
@@ -68,7 +76,12 @@ vi.mock("@workspace/client/lib/auth", () => {
 					fetchOrThrow: () => Promise.resolve(),
 				},
 				detail: { useQuery: () => ({ data: { data: category }, isLoading: false, isError: false }) },
-				delete: mutation,
+				delete: {
+					useMutation: (options: DeleteMutationOptionsStub) => {
+						deleteOptions(options);
+						return { mutateAsync: () => Promise.resolve(), isPending: false };
+					},
+				},
 				bulkDelete: mutation,
 			},
 		},
@@ -76,9 +89,9 @@ vi.mock("@workspace/client/lib/auth", () => {
 	return { useAuth: (): AuthStub => auth };
 });
 
-function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNode): void {
+function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNode, queryClient: QueryClient = new QueryClient()): void {
 	render(
-		<QueryClientProvider client={new QueryClient()}>
+		<QueryClientProvider client={queryClient}>
 			<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
 		</QueryClientProvider>,
 	);
@@ -93,6 +106,7 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	categoryListSpy.mockReset();
+	deleteOptions.mockReset();
 	vi.restoreAllMocks();
 });
 
@@ -100,13 +114,13 @@ describe("SampleCategoryView authorization", () => {
 	it("links the create button with SAMPLE_CATEGORY create (MANAGE implies it)", () => {
 		renderWith([PERMISSION.SAMPLE_CATEGORY.MANAGE], <SampleCategoryView />);
 		// A real link styled as a button — announced as a link, not a button.
-		expect(screen.getByRole("link", { name: "New SampleCategory" }).getAttribute("href")).toBe("/catalog/categories/new");
-		expect(screen.queryByRole("button", { name: "New SampleCategory" })).toBeNull();
+		expect(screen.getByRole("link", { name: "New category" }).getAttribute("href")).toBe("/catalog/categories/new");
+		expect(screen.queryByRole("button", { name: "New category" })).toBeNull();
 	});
 
 	it("shows the create button disabled with a reason without create", () => {
 		renderWith([PERMISSION.SAMPLE_CATEGORY.LIST], <SampleCategoryView />);
-		expect(screen.getByRole("button", { name: "New SampleCategory" }).hasAttribute("disabled")).toBe(true);
+		expect(screen.getByRole("button", { name: "New category" }).getAttribute("aria-disabled")).toBe("true");
 		expect(screen.getByText("Creating a category requires the category create permission.")).toBeDefined();
 	});
 });
@@ -138,5 +152,29 @@ describe("SampleCategoryView URL state", () => {
 
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?sort=name");
+	});
+});
+
+describe("SampleCategoryView delete invalidation", () => {
+	const LIST_QUERY = { page: 1, limit: 20 };
+	const UNRELATED_QUERY = { page: 1, limit: 20 };
+
+	function isInvalidated(queryClient: QueryClient, queryKey: QueryKey): boolean | undefined {
+		return queryClient.getQueryState(queryKey)?.isInvalidated;
+	}
+
+	it("refetches every cached category and product list page after a delete", async () => {
+		const queryClient = new QueryClient();
+		queryClient.setQueryData(apiRouter.sampleCategory.list.queryKey(LIST_QUERY), null);
+		queryClient.setQueryData(apiRouter.product.list.queryKey(LIST_QUERY), null);
+		queryClient.setQueryData(apiRouter.rewardsAdmin.pendingRewards.queryKey(UNRELATED_QUERY), null);
+		renderWith([PERMISSION.SAMPLE_CATEGORY.DELETE], <SampleCategoryView />, queryClient);
+
+		const options: DeleteMutationOptionsStub | undefined = deleteOptions.mock.lastCall?.at(0);
+		await options?.onSuccess?.();
+
+		expect(isInvalidated(queryClient, apiRouter.sampleCategory.list.queryKey(LIST_QUERY))).toBe(true);
+		expect(isInvalidated(queryClient, apiRouter.product.list.queryKey(LIST_QUERY))).toBe(true);
+		expect(isInvalidated(queryClient, apiRouter.rewardsAdmin.pendingRewards.queryKey(UNRELATED_QUERY))).toBe(false);
 	});
 });

@@ -1,5 +1,6 @@
+import { assertNever } from "@workspace/shared";
 import type { SectionMoveDirection, SidebarAction } from "./actions";
-import type { SidebarState } from "./state";
+import { MAX_MANUAL_EXPANDED_ITEMS, type SidebarManualExpansion, type SidebarState } from "./state";
 
 /** The order a move applies to: the custom order while it still matches the menu, else the menu's own. */
 function resolveOrder(sectionOrder: readonly string[] | null, allTitles: readonly string[]): readonly string[] {
@@ -20,9 +21,25 @@ function moveInOrder(order: readonly string[], title: string, direction: Section
 	return next;
 }
 
-function withItemExpansion(expandedItems: Readonly<Record<string, boolean>>, itemId: string, expanded: boolean): Readonly<Record<string, boolean>> {
-	const others = Object.entries(expandedItems).filter(([key]) => key !== itemId);
-	return Object.fromEntries(expanded ? [...others, [itemId, true]] : others);
+/** Keeps the `max` most recently toggled entries (insertion order = toggle order, newest last). */
+function keepNewest(items: Readonly<Record<string, boolean>>, max: number): Readonly<Record<string, boolean>> {
+	const entries = Object.entries(items);
+	return entries.length <= max ? items : Object.fromEntries(entries.slice(entries.length - max));
+}
+
+/**
+ * Records a manual expand/collapse on `pathname`. Choices made on another page
+ * are replaced, not merged — they only ever applied to that page. The toggled
+ * item moves to the newest position, then the oldest beyond the cap drop off.
+ */
+function withManualExpansion(current: SidebarManualExpansion | null, pathname: string, itemId: string, expanded: boolean): SidebarManualExpansion {
+	const samePage = current !== null && current.pathname === pathname ? current.items : {};
+	const others = Object.entries(samePage).filter(([key]) => key !== itemId);
+	return { pathname, items: keepNewest(Object.fromEntries([...others, [itemId, expanded]]), MAX_MANUAL_EXPANDED_ITEMS) };
+}
+
+function restoredManualExpansion(stored: SidebarManualExpansion | null): SidebarManualExpansion | null {
+	return stored === null ? null : { pathname: stored.pathname, items: keepNewest(stored.items, MAX_MANUAL_EXPANDED_ITEMS) };
 }
 
 /** Pure sidebar state transitions — no I/O, no browser APIs. */
@@ -37,21 +54,19 @@ export function sidebarReducer(state: SidebarState, action: SidebarAction): Side
 		case "[ Sidebar ] Section Moved":
 			return { ...state, sectionOrder: moveInOrder(resolveOrder(state.sectionOrder, action.allTitles), action.title, action.direction) };
 		case "[ Sidebar ] Item Expansion Changed":
-			return { ...state, expandedItems: withItemExpansion(state.expandedItems, action.itemId, action.expanded) };
-		case "[ Sidebar ] Expanded Items Reset":
-			return { ...state, expandedItems: {} };
+			return { ...state, manualExpansion: withManualExpansion(state.manualExpansion, action.pathname, action.itemId, action.expanded) };
 		case "[ Sidebar ] Search Changed":
 			return { ...state, searchQuery: action.query };
 		case "[ Sidebar ] Search Cleared":
 			return { ...state, searchQuery: "" };
 		case "[ Sidebar ] Preferences Restored":
-			return { ...state, ...action.preferences };
+			return {
+				...state,
+				isOpen: action.preferences.isOpen,
+				sectionOrder: action.preferences.sectionOrder,
+				manualExpansion: restoredManualExpansion(action.preferences.manualExpansion),
+			};
 		default:
-			return assertNever(action);
+			return assertNever(action, "sidebar action");
 	}
-}
-
-/** Exhaustiveness check: adding an action without handling it fails to compile. */
-function assertNever(action: never): never {
-	throw new Error(`Unhandled sidebar action: ${JSON.stringify(action)}`);
 }

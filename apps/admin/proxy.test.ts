@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 
-import { proxy, resetAdminProxyRefreshCooldownForTests } from "./proxy";
+import { PROXY_REFRESH_COOLDOWN_MS } from "@workspace/client/lib/auth/edge/proxy-refresh";
+
+import { createAdminProxy, createAdminRefreshAttempt, type AdminProxy } from "./proxy";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 // `next/server` is intentionally NOT mocked: real NextRequest/NextResponse
@@ -37,6 +39,9 @@ function makeRequest(options: RequestOptions): NextRequest {
 
 	return new NextRequest(url, { headers });
 }
+
+/** A fresh proxy per test, so no refresh cooldown leaks between tests. */
+let proxy: AdminProxy = createAdminProxy(createAdminRefreshAttempt());
 
 function runProxy(options: RequestOptions): Promise<NextResponse> {
 	return proxy(makeRequest(options));
@@ -105,7 +110,7 @@ const DOC_NAV: Pick<RequestOptions, "secFetchMode"> = { secFetchMode: "navigate"
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	resetAdminProxyRefreshCooldownForTests();
+	proxy = createAdminProxy(createAdminRefreshAttempt());
 });
 
 afterEach(() => {
@@ -185,6 +190,27 @@ describe("admin proxy route protection", () => {
 		expect(redirectLocation(loopResponse)).toBe("http://localhost:3001/");
 	});
 
+	// `searchParams.get` percent-decodes once, so each value below reaches the
+	// proxy as a backslash / tab form that a browser resolves to evil.com.
+	it.each(["/%5Cevil.com", "/%09/evil.com", "/\\/evil.com", "/%2F/evil.com", "/AUTH/login"])(
+		"never redirects off-origin or into the auth pages for %s",
+		async (redirect: string) => {
+			const live = adminToken(3600);
+			stubRefreshResponse(200, [`adminAccessToken=${live}; Path=/; HttpOnly`, "adminRefreshToken=live-rt; Path=/; HttpOnly"]);
+			const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect } });
+
+			expect(redirectLocation(response)).toBe("http://localhost:3001/");
+		},
+	);
+
+	it("follows a safe redirect with its query string, normalized", async () => {
+		const live = adminToken(3600);
+		stubRefreshResponse(200, [`adminAccessToken=${live}; Path=/; HttpOnly`, "adminRefreshToken=live-rt; Path=/; HttpOnly"]);
+		const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/users/./?page=2" } });
+
+		expect(redirectLocation(response)).toBe("http://localhost:3001/users/?page=2");
+	});
+
 	it("serves login when the access token is expired and no refresh token exists", async () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: expiredNonAdminToken() });
 
@@ -212,44 +238,36 @@ describe("admin proxy route protection", () => {
 
 describe("admin proxy server-side refresh", () => {
 	it("skips the refresh on a second navigation after a transient failure (cooldown)", async () => {
-		// MUST run FIRST in this describe block: the module-scope cooldown
-		// survives across tests, and a real-time failure elsewhere would arm it
-		// with a timestamp that clashes with this test's controlled fake clock.
-		// This test ends with a successful refresh, which clears the cooldown.
-		vi.useFakeTimers();
-		try {
-			vi.setSystemTime(1_700_000_000_000);
+		// The breaker's clock is injected, so time moves only when the test says so.
+		let nowMs = 1_700_000_000_000;
+		proxy = createAdminProxy(createAdminRefreshAttempt({ now: (): number => nowMs }));
 
-			// FIRST navigation: API down → transient failure, which arms the 60s cooldown.
-			const failingFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
-			vi.stubGlobal("fetch", failingFetch);
-			const firstResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
+		// FIRST navigation: API down → transient failure, which arms the cooldown.
+		const failingFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+		vi.stubGlobal("fetch", failingFetch);
+		const firstResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
 
-			expect(firstResponse.status).toBe(200);
-			expect(failingFetch).toHaveBeenCalledTimes(1);
+		expect(firstResponse.status).toBe(200);
+		expect(failingFetch).toHaveBeenCalledTimes(1);
 
-			// SECOND navigation (still inside the 60s window): refresh short-circuited
-			// by the cooldown — no network call, stale page served.
-			const secondResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
+		// SECOND navigation (still inside the window): refresh short-circuited by
+		// the cooldown — no network call, stale page served.
+		const secondResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
 
-			expect(secondResponse.status).toBe(200);
-			expect(secondResponse.cookies.getAll()).toHaveLength(0);
-			expect(failingFetch).toHaveBeenCalledTimes(1);
+		expect(secondResponse.status).toBe(200);
+		expect(secondResponse.cookies.getAll()).toHaveLength(0);
+		expect(failingFetch).toHaveBeenCalledTimes(1);
 
-			// Move past the cooldown and restore a healthy API: the refresh works
-			// again (success also clears the cooldown, so later tests are unaffected).
-			// The rotated token must be a real admin JWT — the proxy re-decodes it
-			// to re-evaluate hasAdminAccess, and a non-JWT would bounce to login.
-			await vi.advanceTimersByTimeAsync(60_001);
-			const rotated = adminToken(3600);
-			stubRefreshResponse(200, [`adminAccessToken=${rotated}; Path=/; HttpOnly`, `adminRefreshToken=rt-admin-cooldown-rotated; Path=/; HttpOnly`]);
-			const thirdResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
+		// Past the cooldown, with a healthy API, the refresh runs again. The
+		// rotated token must be a real admin JWT — the proxy re-decodes it to
+		// re-evaluate hasAdminAccess, and a non-JWT would bounce to login.
+		nowMs += PROXY_REFRESH_COOLDOWN_MS + 1;
+		const rotated = adminToken(3600);
+		stubRefreshResponse(200, [`adminAccessToken=${rotated}; Path=/; HttpOnly`, `adminRefreshToken=rt-admin-cooldown-rotated; Path=/; HttpOnly`]);
+		const thirdResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
 
-			expect(thirdResponse.status).toBe(200);
-			expect(thirdResponse.cookies.get("adminAccessToken")?.value).toBe(rotated);
-		} finally {
-			vi.useRealTimers();
-		}
+		expect(thirdResponse.status).toBe(200);
+		expect(thirdResponse.cookies.get("adminAccessToken")?.value).toBe(rotated);
 	});
 
 	it("re-evaluates hasAdminAccess from the rotated token after a refresh", async () => {

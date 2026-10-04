@@ -25,6 +25,8 @@ function storedFile(overrides: Partial<StoredFile>): StoredFile {
 		scannedAt: null,
 		scanResult: null,
 		uploadedById: "user-1",
+		productId: null,
+		deletedBy: null,
 		organizationId: null,
 		isDeleted: false,
 		deletedAt: null,

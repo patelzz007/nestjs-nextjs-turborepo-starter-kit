@@ -7,6 +7,18 @@ import { readFirstHeader } from "../../../common/utils/http-headers";
 import { TokenService, type RefreshTokenPayload } from "../services/token.service";
 
 /**
+ * The raw refresh-token JWT from the app-specific httpOnly cookie selected by
+ * `X-Client-Type` (`adminRefreshToken` / `merchantRefreshToken` / `refreshToken`),
+ * or `undefined` when that cookie is absent or empty.
+ */
+export function readRefreshTokenCookie(request: Pick<FastifyRequest, "headers" | "cookies">): string | undefined {
+	const clientType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
+	const token: string | undefined =
+		clientType === "admin" ? request.cookies.adminRefreshToken : clientType === "merchant" ? request.cookies.merchantRefreshToken : request.cookies.refreshToken;
+	return token === undefined || token.length === 0 ? undefined : token;
+}
+
+/**
  * Guard that validates the refresh token JWT from an httpOnly cookie.
  *
  * - Reads the refresh token from the app-specific httpOnly cookie
@@ -26,12 +38,9 @@ export class RefreshTokenGuard implements CanActivate {
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		const clientType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
-		const isAdmin: boolean = clientType === "admin";
-		const isMerchant: boolean = clientType === "merchant";
-		const token: string | undefined = isAdmin ? request.cookies.adminRefreshToken : isMerchant ? request.cookies.merchantRefreshToken : request.cookies.refreshToken;
+		const token: string | undefined = readRefreshTokenCookie(request);
 
-		if (!token) {
+		if (token === undefined) {
 			throw new UnauthorizedException({
 				message: "Refresh token not found",
 				error: "REFRESH_TOKEN_MISSING",

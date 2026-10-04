@@ -3,8 +3,8 @@ import type { ChangePasswordInput, ChangePasswordResponse } from "@workspace/sha
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
-import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
-import { AccessTokenStateService } from "./access-token-state.service";
+import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
+import { AuthorizationInvalidationService } from "../../authorization/cache/authorization-invalidation.service";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
@@ -22,13 +22,14 @@ export class ChangePasswordService {
 		private readonly passwordHistoryService: PasswordHistoryService,
 		private readonly emailService: EmailService,
 		private readonly logService: LogService,
-		private readonly accessTokenState: AccessTokenStateService,
+		private readonly authorizationInvalidation: AuthorizationInvalidationService,
 		/** Read by `@TrackAuthFlow` to record the change-password outcome. */
 		private readonly authEvents: AuthEventsService,
 	) {}
 
 	@TrackAuthFlow({ flow: "change-password" })
 	public async changePassword(userId: string, dto: ChangePasswordInput, currentRefreshTokenId?: string): Promise<ChangePasswordResponse> {
+		identifyAuthFlowSubject(userId);
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: {
@@ -55,13 +56,15 @@ export class ChangePasswordService {
 
 		const newPasswordHash = await this.cryptoService.hash(dto.newPassword);
 
+		// Password, history and the revocation of every other session commit together.
+		const changedAt: number = Date.now();
 		await this.prisma.$transaction([
 			this.prisma.user.update({
 				where: { id: userId },
 				data: {
 					passwordHash: newPasswordHash,
 					tokenVersion: { increment: 1 },
-					updatedAt: Date.now(),
+					updatedAt: changedAt,
 				},
 			}),
 			this.prisma.passwordHistory.create({
@@ -70,25 +73,18 @@ export class ChangePasswordService {
 					passwordHash: newPasswordHash,
 				},
 			}),
-		]);
-
-		this.accessTokenState.invalidate(userId);
-
-		if (currentRefreshTokenId !== undefined) {
-			await this.prisma.refreshToken.updateMany({
+			this.prisma.refreshToken.updateMany({
 				where: {
 					userId,
-					id: { not: currentRefreshTokenId },
 					isDeleted: false,
+					...(currentRefreshTokenId === undefined ? {} : { id: { not: currentRefreshTokenId } }),
 				},
-				data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
-			});
-		} else {
-			await this.prisma.refreshToken.updateMany({
-				where: { userId, isDeleted: false },
-				data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
-			});
-		}
+				data: { isDeleted: true, deletedAt: changedAt, updatedAt: changedAt },
+			}),
+		]);
+
+		// After commit: drop the cached token/authorization state on EVERY API instance.
+		await this.authorizationInvalidation.invalidateUsers([userId], { accessTokenState: true, trigger: "password_changed" });
 
 		await this.emailService.sendPasswordChangedEmail(user.email);
 

@@ -4,55 +4,41 @@
 import "server-only";
 
 import { apiRouter, type ApiRouter } from "./endpoints";
-import {
-	createServerCallerForRouter,
-	createServerRequestContext,
-	resolveConfig,
-	type ServerApiConfig,
-	type ServerApiConfigInput,
-	type ServerCallerTree,
-} from "./server-request";
+import { createServerCallerForRouter, createServerRequestContext, resolveConfig, type ServerApiConfigInput, type ServerCallerTree } from "./server-request";
 
 export {
 	classifyError,
 	createDefaultLogger,
 	createServerCallerForRouter,
 	createServerRequestContext,
-	DEFAULT_MERCHANT_SERVER_API_CONFIG,
 	DEFAULT_SERVER_API_CONFIG,
-	DEFAULT_WEB_SERVER_API_CONFIG,
 	describeFailure,
-	fetchServerMutation,
 	fetchServerQuery,
+	isNoteworthyPrefetchFailure,
 	isPrefetchFailure,
-	refreshAccessToken,
 	resolveConfig,
 	type PrefetchCallOptions,
 	type PrefetchFailure,
 	type PrefetchLogEvent,
 	type PrefetchOutcome,
 	type ServerApiConfig,
-	type ServerApiConfigDefaults,
 	type ServerApiConfigInput,
 	type ServerApiLogLevel,
 	type ServerCallerBranch,
 	type ServerCallerTree,
-	type ServerMutationLeaf,
 	type ServerQueryLeaf,
 	type ServerRequestContext,
 } from "./server-request";
 
-/** Typed server caller for the default `apiRouter`. */
+/** Typed (read-only) server caller for the default `apiRouter`. */
 export type ServerCaller = ServerCallerTree<ApiRouter>;
 
 /**
- * Creates the SSR caller for `apiRouter` with the given config.
- * For custom routers, use `createServerCallerForRouter(router, context)` directly.
+ * Creates the SSR caller for `apiRouter` for one frontend (`clientType` picks
+ * the cookie set). For custom routers, use `createServerCallerForRouter`.
  */
 export function createServerCaller(config: ServerApiConfigInput): ServerCaller {
-	const resolved: ServerApiConfig = resolveConfig(config);
-	const context = createServerRequestContext(resolved, apiRouter.auth.refresh);
-	return createServerCallerForRouter(apiRouter, context);
+	return createServerCallerForRouter(apiRouter, createServerRequestContext(resolveConfig(config)));
 }
 
-export type { MutationDef, ProcedureDef, QueryDef } from "./endpoints";
+export type { QueryDef } from "./endpoints";

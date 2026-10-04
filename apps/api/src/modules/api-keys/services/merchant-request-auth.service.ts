@@ -17,10 +17,10 @@ export class MerchantRequestAuthService {
 			const organizationId = this.merchantContext.resolveOrgIdFromApiKey(apiKeyAuth, undefined);
 			return {
 				kind: "api_key",
-				userId: null,
 				organizationId,
-				orgSlug: orgSlug ?? null,
 				apiKeyId: apiKeyAuth.apiKeyId,
+				keyScope: apiKeyAuth.scope,
+				keyLocationId: apiKeyAuth.locationId,
 			};
 		}
 
@@ -46,7 +46,6 @@ export class MerchantRequestAuthService {
 			userId: user.sub,
 			organizationId,
 			orgSlug,
-			apiKeyId: null,
 		};
 	}
 }

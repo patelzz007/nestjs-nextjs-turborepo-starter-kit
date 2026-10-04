@@ -56,8 +56,8 @@ describe("findSuggestion", () => {
 	});
 
 	it("returns a close match for a typo", () => {
-		const suggestion = findSuggestion("bilng", SEARCHABLE_ITEMS);
-		expect(suggestion?.title).toBe("Billing");
+		const suggestion = findSuggestion("secrity", SEARCHABLE_ITEMS);
+		expect(suggestion?.title).toBe("Security");
 	});
 });
 
@@ -75,6 +75,6 @@ describe("buildSearchableItems (authorized menu)", () => {
 	});
 
 	it("still lists ungated pages", () => {
-		expect(titles([], [])).toContain("Billing");
+		expect(titles([], [])).toContain("Security");
 	});
 });

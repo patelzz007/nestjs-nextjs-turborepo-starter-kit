@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { PERMISSION } from "@workspace/shared";
 import * as React from "react";
@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RouteAuthorizationGuard } from "@/components/access/route-authorization-guard";
 import type { RouteAuthorizationRule } from "@/lib/navigation/route-authorization";
+import type { SessionPermissionsStatus } from "@/lib/session/capabilities";
 import type { SuperAdminStatus } from "@/lib/session/super-admin";
 
 const { pathnameMock } = vi.hoisted(() => ({
@@ -28,15 +29,22 @@ interface HarnessProps {
 	readonly pathname: string;
 	readonly capabilities: readonly string[];
 	readonly enabledFeatureFlags?: readonly string[];
-	readonly isResolved?: boolean;
+	readonly permissionsStatus?: SessionPermissionsStatus;
 	readonly superAdmin?: SuperAdminStatus;
 }
 
-function renderGuard({ pathname, capabilities, enabledFeatureFlags = [], isResolved = true, superAdmin }: HarnessProps): void {
+const retryPermissions = vi.fn<() => void>();
+
+function renderGuard({ pathname, capabilities, enabledFeatureFlags = [], permissionsStatus = "ready", superAdmin }: HarnessProps): void {
 	pathnameMock.mockReturnValue(pathname);
 	render(
 		<CapabilitiesProvider capabilities={capabilities}>
-			<RouteAuthorizationGuard rules={RULES} enabledFeatureFlags={enabledFeatureFlags} isResolved={isResolved} superAdmin={superAdmin}>
+			<RouteAuthorizationGuard
+				rules={RULES}
+				enabledFeatureFlags={enabledFeatureFlags}
+				permissionsStatus={permissionsStatus}
+				onRetryPermissions={retryPermissions}
+				superAdmin={superAdmin}>
 				<div>page-content</div>
 			</RouteAuthorizationGuard>
 		</CapabilitiesProvider>,
@@ -45,6 +53,7 @@ function renderGuard({ pathname, capabilities, enabledFeatureFlags = [], isResol
 
 afterEach(() => {
 	cleanup();
+	retryPermissions.mockReset();
 });
 
 describe("RouteAuthorizationGuard", () => {
@@ -75,9 +84,25 @@ describe("RouteAuthorizationGuard", () => {
 	});
 
 	it("renders nothing for a gated route until permissions are resolved", () => {
-		renderGuard({ pathname: "/orders", capabilities: [], isResolved: false });
+		renderGuard({ pathname: "/orders", capabilities: [], permissionsStatus: "loading" });
 		expect(screen.queryByText("page-content")).toBeNull();
 		expect(screen.queryByRole("heading")).toBeNull();
+	});
+
+	it("shows a retryable load failure — not access denied — when the permissions could not be fetched", () => {
+		renderGuard({ pathname: "/orders", capabilities: [], permissionsStatus: "failed" });
+
+		expect(screen.queryByText("page-content")).toBeNull();
+		expect(screen.queryByText("You don't have access to this page")).toBeNull();
+		expect(screen.getByRole("alert").textContent).toContain("Couldn't load your permissions");
+		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+		expect(retryPermissions).toHaveBeenCalledTimes(1);
+	});
+
+	it("still renders open routes while the permissions failed to load", () => {
+		renderGuard({ pathname: "/", capabilities: [], permissionsStatus: "failed" });
+
+		expect(screen.getByText("page-content")).toBeTruthy();
 	});
 
 	it("denies super-admin-only routes to other sessions, even with every capability", () => {

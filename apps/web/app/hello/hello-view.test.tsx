@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { TEST_RESPONSE_META, testEnvelope } from "@/test-support/envelope";
 import { epochMs, UserResponseSchema, type Envelope, type UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,7 +38,7 @@ vi.mock("@workspace/client/lib/auth", () => ({
 
 const SERVER_ANSWERED_AT = epochMs(1_790_000_000_000);
 
-const SERVER_PROFILE: Envelope<UserResponse> = successEnvelope(
+const SERVER_PROFILE: Envelope<UserResponse> = testEnvelope(
 	UserResponseSchema.parse({
 		id: "member-x",
 		email: "x@example.com",
@@ -55,7 +55,7 @@ const SERVER_PROFILE: Envelope<UserResponse> = successEnvelope(
 		isDeleted: false,
 		deletedAt: null,
 	}),
-	{ ...stubApiMeta(), timestamp: SERVER_ANSWERED_AT },
+	{ ...TEST_RESPONSE_META, timestamp: SERVER_ANSWERED_AT },
 );
 
 function lastMeOptions(): MeQueryOptions | undefined {

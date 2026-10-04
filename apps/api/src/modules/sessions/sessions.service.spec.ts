@@ -31,7 +31,7 @@ describe("SessionsService", () => {
 	const repository = {
 		findByIdIncludingDeleted: vi.fn(),
 		rotateTokenIfHashMatches: vi.fn<RefreshTokenRepository["rotateTokenIfHashMatches"]>(),
-		revokeById: vi.fn<RefreshTokenRepository["revokeById"]>(),
+		revokeLiveToken: vi.fn<RefreshTokenRepository["revokeLiveToken"]>(),
 	};
 	const outbox = {
 		enqueueInTransaction: vi.fn<PlatformOutboxService["enqueueInTransaction"]>(),
@@ -55,10 +55,11 @@ describe("SessionsService", () => {
 			await onRotated(DOMAIN_TX);
 			return "rotated";
 		});
-		repository.revokeById.mockImplementation(async (_id, withinTransaction): Promise<void> => {
+		repository.revokeLiveToken.mockImplementation(async (_id, _userId, withinTransaction): Promise<boolean> => {
 			await withinTransaction(DOMAIN_TX);
+			return true;
 		});
-		sessionRevocation.revokeAllSessionsForUser.mockImplementation(async (_userId, withinTransaction): Promise<void> => {
+		sessionRevocation.revokeAllSessionsForUser.mockImplementation(async (_userId, _trigger, withinTransaction): Promise<void> => {
 			await withinTransaction?.(DOMAIN_TX);
 		});
 
@@ -249,7 +250,7 @@ describe("SessionsService", () => {
 
 			await expect(service.refreshToken(userId, "stolen-refresh-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "TOKEN_THEFT_DETECTED" } });
 
-			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, expect.any(Function));
+			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, "refresh_token_reuse", expect.any(Function));
 			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
 			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { status: "failed", error: "TOKEN_THEFT_DETECTED" } });
 		});
@@ -265,23 +266,21 @@ describe("SessionsService", () => {
 			expect(outbox.enqueueInTransaction).not.toHaveBeenCalled();
 		});
 
-		it("writes the logout-device event inside the revocation transaction for the caller's own token", async () => {
-			repository.findByIdIncludingDeleted.mockResolvedValue(storedTokenRow());
-
+		it("writes the logout-device event inside the revocation transaction for the caller's own live token", async () => {
 			await service.logoutDevice(userId, refreshTokenJti);
 
-			expect(repository.revokeById).toHaveBeenCalledWith(refreshTokenJti, expect.any(Function));
+			expect(repository.revokeLiveToken).toHaveBeenCalledWith(refreshTokenJti, userId, expect.any(Function));
 			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
 			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { action: "logout-device", status: "succeeded" } });
 			expect(outbox.recordTelemetry).not.toHaveBeenCalled();
 		});
 
-		it("records telemetry without revoking anything when the token belongs to someone else", async () => {
-			repository.findByIdIncludingDeleted.mockResolvedValue({ ...storedTokenRow(), userId: "someone-else" });
+		it("records telemetry (no in-transaction event) when no live token of the caller was revoked", async () => {
+			repository.revokeLiveToken.mockResolvedValue(false);
 
 			await service.logoutDevice(userId, refreshTokenJti);
 
-			expect(repository.revokeById).not.toHaveBeenCalled();
+			expect(repository.revokeLiveToken).toHaveBeenCalledWith(refreshTokenJti, userId, expect.any(Function));
 			expect(outbox.enqueueInTransaction).not.toHaveBeenCalled();
 			expect(outbox.recordTelemetry.mock.lastCall?.[0]).toMatchObject({ payload: { action: "logout-device" } });
 		});
@@ -289,9 +288,64 @@ describe("SessionsService", () => {
 		it("writes the logout-all event inside the revoke-all transaction", async () => {
 			await service.logoutAllDevices(userId);
 
-			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, expect.any(Function));
+			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, "logout_all_devices", expect.any(Function));
 			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
 			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { action: "logout-all", status: "succeeded" } });
+		});
+	});
+
+	describe("refresh-token reuse grace window", () => {
+		const recentlyRotated: number = Date.now() - 1_000;
+
+		it("accepts ONLY the immediate predecessor inside the grace window as superseded (no revocation)", async () => {
+			users.findLoginById.mockResolvedValue(activeUser);
+			repository.findByIdIncludingDeleted.mockResolvedValue(storedTokenRow({ updatedAt: recentlyRotated, previousTokenHash: "previous-hash" }));
+			cryptoService.compare.mockImplementation((_raw: string, hash: string): Promise<boolean> => Promise.resolve(hash === "previous-hash"));
+
+			await expect(service.refreshToken(userId, "predecessor-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "REFRESH_TOKEN_SUPERSEDED" } });
+
+			expect(sessionRevocation.revokeAllSessionsForUser).not.toHaveBeenCalled();
+		});
+
+		it("treats an older token of the same session presented inside the grace window as reuse and revokes every session", async () => {
+			users.findLoginById.mockResolvedValue(activeUser);
+			repository.findByIdIncludingDeleted.mockResolvedValue(storedTokenRow({ updatedAt: recentlyRotated, previousTokenHash: "previous-hash" }));
+			cryptoService.compare.mockResolvedValue(false);
+
+			await expect(service.refreshToken(userId, "two-rotations-old-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "TOKEN_THEFT_DETECTED" } });
+
+			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, "refresh_token_reuse", expect.any(Function));
+		});
+
+		it("treats a non-current token inside the grace window as reuse when there is no recorded predecessor", async () => {
+			users.findLoginById.mockResolvedValue(activeUser);
+			repository.findByIdIncludingDeleted.mockResolvedValue(storedTokenRow({ updatedAt: recentlyRotated, previousTokenHash: null }));
+			cryptoService.compare.mockResolvedValue(false);
+
+			await expect(service.refreshToken(userId, "foreign-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "TOKEN_THEFT_DETECTED" } });
+
+			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledTimes(1);
+		});
+
+		it("treats the immediate predecessor presented AFTER the grace window as reuse", async () => {
+			users.findLoginById.mockResolvedValue(activeUser);
+			repository.findByIdIncludingDeleted.mockResolvedValue(storedTokenRow({ previousTokenHash: "previous-hash" }));
+			cryptoService.compare.mockImplementation((_raw: string, hash: string): Promise<boolean> => Promise.resolve(hash === "previous-hash"));
+
+			await expect(service.refreshToken(userId, "predecessor-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "TOKEN_THEFT_DETECTED" } });
+
+			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledTimes(1);
+		});
+
+		it("revokes every session when the conditional rotation reports reuse", async () => {
+			users.findLoginById.mockResolvedValue(activeUser);
+			repository.findByIdIncludingDeleted.mockResolvedValue(storedTokenRow());
+			cryptoService.compare.mockResolvedValue(true);
+			repository.rotateTokenIfHashMatches.mockResolvedValue("reused");
+
+			await expect(service.refreshToken(userId, "raw-refresh-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "TOKEN_THEFT_DETECTED" } });
+
+			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, "refresh_token_reuse", expect.any(Function));
 		});
 	});
 });

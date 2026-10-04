@@ -25,44 +25,32 @@ interface Envelope {
 	readonly [key: string]: DataValue;
 	readonly success: true;
 	readonly data: DataValue;
-	readonly meta: { readonly timestamp: number };
+	readonly meta: { readonly correlationId: string; readonly timestamp: number };
 }
 
 /** Fixture response contract: any JSON `data` inside the standard success envelope. */
 const fixtureResponse = singleResponse(DataValueSchema);
 
 function successEnvelope(data: DataValue): Envelope {
-	return { success: true, data, meta: { timestamp: 1786428000000 } };
+	return { success: true, data, meta: { correlationId: "corr-test", timestamp: 1786428000000 } };
 }
 
 /** Minimal tRPC-style GET def mirroring `apiRouter.auth.me` for the 401-pipeline tests. */
-const meDef = defineQuery(
-	{ method: "GET", path: "/auth/me", input: z.undefined(), response: fixtureResponse },
-	{
-		queryKey: () => ["auth", "me"],
-	},
-);
+const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: fixtureResponse }, { scope: () => ["auth", "me"] });
 
 const paginatedDef = defineQuery(
 	{ method: "GET", path: "/items", input: z.object({ page: z.number(), q: z.string().optional() }), response: fixtureResponse },
-	{
-		queryKey: (input) => ["items", input.page],
-	},
+	{ scope: () => ["items"] },
 );
 
-const loginDef = defineMutation(
-	{ method: "POST", path: "/auth/login", input: z.object({ email: z.string() }), response: fixtureResponse },
-	{
-		queryKey: () => ["auth", "login"],
-	},
-);
+const loginDef = defineMutation({ method: "POST", path: "/auth/login", input: z.object({ email: z.string() }), response: fixtureResponse });
 
 afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
 describe("fetchQuery / fetchMutation (tRPC-style caller)", () => {
-	const context = createApiRequestContext(BASE_URL);
+	const context = createApiRequestContext(BASE_URL, "web");
 
 	it("serializes input onto the URL and sends credentials", async () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, successEnvelope({})));
@@ -82,7 +70,7 @@ describe("fetchQuery / fetchMutation (tRPC-style caller)", () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, successEnvelope({})));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const unchecked = createUncheckedApiRequestContext(BASE_URL);
+		const unchecked = createUncheckedApiRequestContext(BASE_URL, "web");
 		await fetchMutationUnchecked(unchecked, loginDef, { email: "alex@example.com" });
 
 		const { init } = firstFetchCall(fetchMock);
@@ -130,12 +118,12 @@ describe("fetchQuery / fetchMutation (tRPC-style caller)", () => {
 			jsonResponse(200, {
 				success: true,
 				data: { message: "Tokens refreshed successfully" },
-				meta: { timestamp: 1786428000000 },
+				meta: { correlationId: "corr-test", timestamp: 1786428000000 },
 			}),
 		);
 		vi.stubGlobal("fetch", fetchMock);
 
-		const unchecked = createUncheckedApiRequestContext(BASE_URL, { clientType: "admin" });
+		const unchecked = createUncheckedApiRequestContext(BASE_URL, "admin");
 		const result = await fetchMutationUnchecked(unchecked, apiRouter.auth.refresh, {});
 
 		expect(result.ok).toBe(true);
@@ -156,7 +144,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", onUnauthorized, onRefresh));
 		const me = result.current.procedure(meDef);
 
 		const response = await me.fetch(undefined);
@@ -177,7 +165,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("expired");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", onUnauthorized, onRefresh));
 		const me = result.current.procedure(meDef);
 
 		const response = await me.fetch(undefined);
@@ -196,7 +184,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("transient");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", onUnauthorized, onRefresh));
 		const me = result.current.procedure(meDef);
 
 		const response = await me.fetch(undefined);
@@ -214,7 +202,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("transient");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", onUnauthorized, onRefresh));
 
 		await expect(result.current.procedure(meDef).fetchOrThrow(undefined)).rejects.toBeInstanceOf(SessionRefreshUnavailableError);
 		expect(onUnauthorized).not.toHaveBeenCalled();
@@ -229,7 +217,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", onUnauthorized, onRefresh));
 		const response = await result.current.procedure(meDef).fetch(undefined);
 
 		expect(onRefresh).toHaveBeenCalledTimes(1);
@@ -241,7 +229,7 @@ describe("useApi 401 pipeline", () => {
 	it("maps a 2xx body that is not JSON to a contract violation, not a transport failure", async () => {
 		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(new Response("<html>gateway</html>", { status: 200, headers: { "content-type": "application/json" } })));
 
-		const result = await fetchQuery(createApiRequestContext(BASE_URL), meDef, undefined);
+		const result = await fetchQuery(createApiRequestContext(BASE_URL, "web"), meDef, undefined);
 
 		expect(result.ok).toBe(false);
 		expect(result.status).toBe(200);
@@ -255,7 +243,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", onUnauthorized, onRefresh));
 		const me = result.current.procedure(meDef);
 
 		const response = await me.fetch(undefined);
@@ -275,7 +263,7 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh, { clientType: "admin" }));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "admin", onUnauthorized, onRefresh));
 		const session = result.current.auth.sessionStatus;
 
 		await session.fetch(undefined);
@@ -293,10 +281,35 @@ describe("useApi 401 pipeline", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
-		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh, { clientType: "merchant" }));
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "merchant", onUnauthorized, onRefresh));
 		await result.current.auth.sessionStatus.fetch(undefined);
 
 		const init = fetchMock.mock.calls[0]?.[1];
 		expect(init?.headers).toMatchObject({ "X-Client-Type": "merchant" });
+	});
+
+	it("sends X-Client-Type on web calls too — the API never has to guess the cookie set", async () => {
+		const fetchMock = vi
+			.fn<FetchImpl>()
+			.mockResolvedValue(jsonResponse(200, successEnvelope({ userId: "u_1", email: "a@b.com", fullName: "A", expiresAt: null, checkedAt: 0 })));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", vi.fn<OnUnauthorized>(), vi.fn<OnRefresh>().mockResolvedValue("ok")));
+		await result.current.auth.sessionStatus.fetch(undefined);
+
+		expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-Client-Type": "web" });
+	});
+
+	it("never lets a procedure's own headers drop the mutation-intent or client-type headers", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, successEnvelope({})));
+		vi.stubGlobal("fetch", fetchMock);
+		const spoofing = defineMutation(
+			{ method: "POST", path: "/auth/login", input: z.object({ email: z.string() }), response: fixtureResponse },
+			{ baseOptions: { headers: { "X-Client-Type": "admin", "X-Mutation-Intent": "none" } } },
+		);
+
+		await fetchMutationUnchecked(createUncheckedApiRequestContext(BASE_URL, "web"), spoofing, { email: "alex@example.com" });
+
+		expect(headersOf(firstFetchCall(fetchMock).init)).toMatchObject({ "X-Client-Type": "web", "X-Mutation-Intent": "same-origin" });
 	});
 });

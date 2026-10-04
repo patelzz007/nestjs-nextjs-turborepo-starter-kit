@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	MerchantCreateApiKeySchema,
 	MerchantCreateTerminalSchema,
 	MerchantTerminalListQuerySchema,
 	MerchantTerminalSettingsSchema,
@@ -19,7 +20,20 @@ describe("MerchantCreateTerminalSchema", () => {
 	it("rejects blank or over-long names and unknown fields", () => {
 		expect(MerchantCreateTerminalSchema.safeParse({ name: "   ", locationId: LOCATION_ID }).success).toBe(false);
 		expect(MerchantCreateTerminalSchema.safeParse({ name: "x".repeat(POS_TERMINAL_NAME_MAX_LENGTH + 1), locationId: LOCATION_ID }).success).toBe(false);
-		expect(MerchantCreateTerminalSchema.safeParse({ name: "Till", locationId: LOCATION_ID, terminalId: "MY-ID" }).success).toBe(false);
+		expect(MerchantCreateTerminalSchema.safeParse({ name: "Till", locationId: LOCATION_ID, label: "x" }).success).toBe(false);
+	});
+
+	it("accepts the merchant's own terminal id, in the X-Terminal-Id format only", () => {
+		expect(MerchantCreateTerminalSchema.parse({ name: "Till", locationId: LOCATION_ID, terminalId: "KL-REGISTER-07" }).terminalId).toBe("KL-REGISTER-07");
+		expect(MerchantCreateTerminalSchema.safeParse({ name: "Till", locationId: LOCATION_ID, terminalId: "bad id!" }).success).toBe(false);
+	});
+});
+
+describe("MerchantCreateApiKeySchema", () => {
+	it("defaults a new key to the least-privileged POS scope and accepts INTEGRATION only by name", () => {
+		expect(MerchantCreateApiKeySchema.parse({}).scope).toBe("POS");
+		expect(MerchantCreateApiKeySchema.parse({ scope: "INTEGRATION" }).scope).toBe("INTEGRATION");
+		expect(MerchantCreateApiKeySchema.safeParse({ scope: "ADMIN" }).success).toBe(false);
 	});
 });
 

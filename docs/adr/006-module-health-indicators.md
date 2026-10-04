@@ -48,7 +48,7 @@ export class AuthorizationHealthIndicator {
   a **critical** indicator fails. `/health` and `/health/deep` stay as deprecated aliases.
 - Each registered indicator now declares `critical`. The bundled messaging indicators (queue,
   Kafka, RabbitMQ) are non-critical: a shared broker failing would otherwise take every
-  instance out of rotation at once. Details: [API Routes → Health probes](../api-routes.md#12-health-probes).
+  instance out of rotation at once. Details: [API Routes → Health probes](../technical/api/routes.md#8-health-probes).
 
 ## Consequences
 

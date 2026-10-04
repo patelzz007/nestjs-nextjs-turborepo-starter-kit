@@ -27,18 +27,21 @@ KYB files are private and use the normal direct-upload pipeline. A `MerchantOrg`
 
 The browser therefore performs this sequence after the merchant presses **Submit for review**:
 
-1. `POST /merchant/onboarding/complete` creates or resumes the owner and organization while saving all text fields.
-2. `POST /merchant/onboarding/documents/upload-url` creates an invite-authorized upload ticket.
+1. `POST /orgs/onboarding/complete` — one transaction: claims the PENDING, unexpired invite (compare-and-set, so exactly one request wins), creates the owner membership, saves the merchant profile and stores, activates the organization and writes the audit row. Any failure rolls everything back and leaves the invite PENDING. The owner account itself is created (or the existing account's password verified) just before that transaction; that step is idempotent.
+2. `POST /orgs/onboarding/documents/upload-url(s)` creates upload tickets for the organization's KYB evidence.
 3. The browser sends the file directly to the configured object-storage provider.
-4. `POST /merchant/onboarding/documents/upload-complete` verifies the stored object and checksum.
-5. `POST /merchant/onboarding/documents/submit` attaches all completed files to the merchant application.
+4. `POST /orgs/onboarding/documents/upload-complete(-batch)` verifies size, SHA-256 and file type and starts the malware scan (the file is `SCANNING`).
+5. `POST /orgs/onboarding/documents/submit` attaches the files to the merchant application and **consumes the invite token**.
 
-This is still one user-facing submission. The invite token authorizes only the merchant organization created from that invite, and file IDs are checked for the correct category and tenant before attachment.
+After acceptance, the invite token is a narrow, short-lived credential: it only works for the document endpoints, only for `ONBOARDING_DOCUMENTS_WINDOW_MS` (24 hours) after acceptance, only until the submission consumed it, and only for this organization's KYB uploads. Outside that window the endpoints answer `410 MERCHANT_ONBOARDING_DOCUMENTS_CLOSED`; the merchant signs in and uses `/settings/verification` (`merchant:manage_verification`). A submission is also refused (`409 KYB_REVIEW_CLOSED`) once the review is `APPROVED` or `REJECTED`.
 
 ## Retry behavior
 
-The completion operation is resumable. If a network or storage failure occurs after the account is created, pressing submit again authenticates the same owner credentials, updates the same merchant application, and retries document upload instead of creating a duplicate organization.
+- `complete` is all-or-nothing. If it failed, pressing submit again retries it with the same credentials.
+- If `complete` already succeeded, a repeated `complete` answers `409 MERCHANT_INVITE_UNAVAILABLE` — the client continues with the document steps (still within the window) instead of calling `complete` again.
+- An expired invite answers `410 MERCHANT_INVITE_EXPIRED`.
+- A repeated `submit` answers `410` (the token was consumed by the first one).
 
 ## Admin review
 
-Admins continue reviewing merchants through the existing rewards-admin merchant detail and KYB controls. Uploaded documents may initially show `SCANNING`; infected or failed files move the application to `ACTION_REQUIRED`.
+Admins continue reviewing merchants through the existing rewards-admin merchant detail and KYB controls. Each document shows its scan status: `SCANNING`, `CLEAN`, `NOT_SCANNED` (no malware scanner configured — downloadable, but not malware-checked), `INFECTED` or `SCAN_FAILED`. When a verdict lands after submission, the review status follows it automatically: `INFECTED` or `SCAN_FAILED` evidence moves a pending review to `ACTION_REQUIRED`, and once every document is usable again it returns to `PENDING`. Approved or rejected reviews are never changed by a scan.

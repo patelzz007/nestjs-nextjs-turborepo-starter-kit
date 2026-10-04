@@ -15,7 +15,7 @@
 // render that happens between the commit and the router's update can never
 // throw away characters typed in the meantime.
 
-import { useCallback, useEffect, useState } from "react";
+import { useDebouncedDraft } from "@workspace/ui/hooks/use-debounced-draft";
 
 export interface UrlDraftOptions {
 	/** The committed value as the URL holds it (`""` when the param is absent). */
@@ -35,53 +35,13 @@ export interface UrlDraftOptions {
 /** `[draft, setDraft]` — bind them to the input's `value` / `onChange`. */
 export type UrlDraft = readonly [string, (draft: string) => void];
 
-interface DraftSync {
-	/** The URL value this draft last agreed with. */
-	readonly synced: string;
-	/** A committed value the URL has not echoed back yet. */
-	readonly pending: string | undefined;
-}
-
-function identity(value: string): string {
-	return value;
-}
-
 /** Trims a draft — the normalization of trimmed URL params (`listSearchParam`, `listTextFilterParam`). */
 export function trimUrlDraft(draft: string): string {
 	return draft.trim();
 }
 
-export function useUrlDraft({ value, onCommit, delayMs, normalize = identity }: UrlDraftOptions): UrlDraft {
-	const [draft, setDraftState] = useState<string>(value);
-	const [sync, setSync] = useState<DraftSync>({ synced: value, pending: undefined });
-
-	// The URL changed since the last render. Our own commit coming back keeps
-	// the draft (the user may have typed more since); any other change replaces it.
-	if (value !== sync.synced) {
-		const isOwnCommit: boolean = value === sync.pending;
-		setSync({ synced: value, pending: undefined });
-		if (!isOwnCommit) {
-			setDraftState(value);
-		}
-	}
-
-	useEffect((): (() => void) | undefined => {
-		const next: string = normalize(draft);
-		if (next === value) {
-			return undefined;
-		}
-		const timer = setTimeout((): void => {
-			setSync((current: DraftSync): DraftSync => ({ synced: current.synced, pending: next }));
-			onCommit(next);
-		}, delayMs);
-		return (): void => {
-			clearTimeout(timer);
-		};
-	}, [delayMs, draft, normalize, onCommit, value]);
-
-	const setDraft = useCallback((next: string): void => {
-		setDraftState(next);
-	}, []);
-
+/** The shared debounced-draft behaviour (`useDebouncedDraft`) with the URL as the committed value's owner. */
+export function useUrlDraft(options: UrlDraftOptions): UrlDraft {
+	const { draft, setDraft } = useDebouncedDraft(options);
 	return [draft, setDraft];
 }

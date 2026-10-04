@@ -28,14 +28,14 @@ const GUIDES: readonly GuideSummary[] = [
 ];
 
 const META = DocsMetaSchema.parse({
-	pages: ["--- Getting Started ---", "getting-started", "README", "--- Tooling & DX ---", "prisma", "missing-page", "prisma", "--- Empty ---"],
+	pages: ["--- Engineering Basics ---", "getting-started", "README", "--- Tooling & DX ---", "prisma", "missing-page", "prisma", "--- Empty ---"],
 });
 
 describe("buildNavSections", () => {
 	const sections = buildNavSections(META, GUIDES);
 
 	it("groups listed guides under their separators, in meta order", () => {
-		expect(sections.map((section) => section.title)).toEqual(["Getting Started", "Tooling & DX", MORE_GUIDES_SECTION]);
+		expect(sections.map((section) => section.title)).toEqual(["Engineering Basics", "Tooling & DX", MORE_GUIDES_SECTION]);
 		expect(sections[0]?.items.map((item) => item.id)).toEqual(["getting-started", "README"]);
 	});
 
@@ -81,8 +81,8 @@ describe("neighbours and sections", () => {
 
 describe("ids and hrefs", () => {
 	it("derives ids from paths, keeping case and folders", () => {
-		expect(contentId("authorization-system/overview.md")).toBe("authorization-system/overview");
-		expect(contentId("ADDING-A-FEATURE.md")).toBe("ADDING-A-FEATURE");
+		expect(contentId("technical/authorization/overview.md")).toBe("technical/authorization/overview");
+		expect(contentId("technical/README.md")).toBe("technical/README");
 		expect(docHref("README")).toBe("/docs/README");
 	});
 

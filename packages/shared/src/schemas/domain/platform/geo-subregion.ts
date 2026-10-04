@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
+import { JsonValueSchema } from "../../runtime/json";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
 import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
@@ -25,7 +26,7 @@ export const CreateSubregionSchema = z
 	.object({
 		name: z.string().min(1).max(255),
 		regionId: z.number().int().nonnegative(),
-		translations: DataValueSchema.optional(),
+		translations: JsonValueSchema.optional(),
 		wikiDataId: z.string().max(255).optional(),
 		flag: z.boolean().optional().default(true),
 	})
@@ -37,7 +38,7 @@ export const UpdateSubregionSchema = z
 	.object({
 		name: z.string().min(1).max(255).optional(),
 		regionId: z.number().int().nonnegative().optional(),
-		translations: DataValueSchema.optional(),
+		translations: JsonValueSchema.optional(),
 		wikiDataId: z.string().max(255).nullable().optional(),
 		flag: z.boolean().optional(),
 	})
@@ -46,7 +47,7 @@ export const UpdateSubregionSchema = z
 
 export type UpdateSubregionInput = z.output<typeof UpdateSubregionSchema>;
 
-/** `GET /geo/subregions` list query — see docs/list-queries.md. */
+/** `GET /geo/subregions` list query — see docs/technical/api/list-queries.md. */
 export const subregionListQuery = defineListQuery({
 	sortable: ["id", "name"],
 	defaultSort: [{ field: "id", direction: "asc" }],

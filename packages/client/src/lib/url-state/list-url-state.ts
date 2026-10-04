@@ -2,7 +2,7 @@
 // lib/url-state/list-url-state.ts - list-grammar params for URL state
 // ============================================
 // A server-side table's URL speaks the SAME grammar as the list endpoint it
-// reads (docs/list-queries.md, ADR 021): `page`, `limit`, `cursor`, `sort`,
+// reads (docs/technical/api/list-queries.md, ADR 021): `page`, `limit`, `cursor`, `sort`,
 // `search` and `filter[field]` mean in the address bar exactly what they mean
 // to the API, so a table URL maps 1:1 onto the list input and a bookmarked or
 // shared link reproduces the same request.
@@ -32,7 +32,6 @@ import {
 	LIST_MAX_SEARCH_LENGTH,
 	LIST_MAX_SORT_LENGTH,
 	parseSortParam,
-	type ListFilterOperator,
 	type SortParseResult,
 } from "@workspace/shared";
 import { z } from "zod";
@@ -89,11 +88,10 @@ export interface ListUrlParamsOptions {
 
 /**
  * `?filter[field]` (shorthand for `eq`) or `?filter[field][op]` — the URL key of
- * one list filter, identical to the API's query key.
+ * one list filter, identical to the API's query key. Defined once in
+ * `@workspace/shared` (the API builds deep links with the same function).
  */
-export function listFilterKey(field: string, operator?: ListFilterOperator): string {
-	return operator === undefined || operator === "eq" ? `filter[${field}]` : `filter[${field}][${operator}]`;
-}
+export { listFilterKey } from "@workspace/shared";
 
 /**
  * The resource's sort whitelist applied to a raw `sort` param: the normalized

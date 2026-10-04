@@ -41,9 +41,8 @@ export interface AuthRoutes {
 export interface AnalyticsRoutes {
 	/** Section prefix — redirects to `sales`. */
 	readonly index: string;
+	/** Platform sales; `?weeks=` picks the period (lib/url-state/analytics.ts builds those links). */
 	readonly sales: string;
-	/** Sales analytics over the last `weeks` weeks (`?weeks=`, a shareable filter). */
-	readonly salesForWeeks: RouteBuilder;
 }
 
 export interface UsersRoutes {
@@ -91,15 +90,15 @@ export interface CatalogRoutes {
 }
 
 export interface SettingsRoutes {
-	/** Section prefix — redirects to `billing`. */
+	/** Section prefix — redirects to `access`. */
 	readonly index: string;
-	readonly billing: string;
 	readonly access: string;
 }
 
 export interface AccountRoutes {
 	/** Section prefix — where restricted sessions land; redirects to `security`. */
 	readonly index: string;
+	/** The signed-in admin's own profile (`GET`/`PATCH /auth/profile`). */
 	readonly profile: string;
 	readonly security: string;
 }
@@ -140,6 +139,12 @@ function crudRoutes(list: string): CrudRoutes {
 	};
 }
 
+/** Query parameter of the login page holding the in-app path to return to after sign-in (`/auth/login?redirect=/users`). */
+export const LOGIN_REDIRECT_PARAM = "redirect";
+
+/** Query parameter carrying the single-use token of an emailed auth link (`/auth/verify-email?token=`). */
+export const AUTH_LINK_TOKEN_PARAM = "token";
+
 /** Query parameter of the sales analytics period preset (`/analytics/sales?weeks=8`). */
 export const SALES_PERIOD_WEEKS_PARAM = "weeks";
 
@@ -176,7 +181,6 @@ export const ROUTES: AdminRoutes = {
 	analytics: {
 		index: ANALYTICS,
 		sales: ANALYTICS_SALES,
-		salesForWeeks: (weeks: string): string => withQuery(ANALYTICS_SALES, SALES_PERIOD_WEEKS_PARAM, weeks),
 	},
 	users: {
 		list: USERS,
@@ -210,7 +214,6 @@ export const ROUTES: AdminRoutes = {
 	},
 	settings: {
 		index: SETTINGS,
-		billing: `${SETTINGS}/billing`,
 		access: `${SETTINGS}/access`,
 	},
 	account: {
@@ -261,13 +264,5 @@ export const ROUTE_PATTERNS: AdminRoutePatterns = {
  */
 export const AUTH_SECTION_PREFIX = "/auth";
 
-/**
- * Segment-aware prefix match: `/merchants` covers `/merchants` and
- * `/merchants/invites`, never `/merchantsx`. `/` covers only `/`.
- */
-export function isPathWithin(prefix: string, pathname: string): boolean {
-	if (prefix === "/") {
-		return pathname === "/";
-	}
-	return pathname === prefix || pathname.startsWith(`${prefix}/`);
-}
+/** Segment-aware prefix test, shared by every app (`isPathWithin(pathname, prefix)` — pathname FIRST). */
+export { isPathWithin } from "@workspace/ui/lib/core/path-match";

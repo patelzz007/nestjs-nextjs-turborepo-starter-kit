@@ -8,7 +8,7 @@ import { mapOrganizationLocationToResponse } from "../utils/organization-locatio
 import { mapMembershipToResponse } from "../utils/organization-membership-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 
-interface ResolvedOrganizationContext {
+export interface ResolvedOrganizationContext {
 	readonly organizationId: string;
 	readonly slug: string;
 	readonly userId: string;
@@ -28,9 +28,8 @@ export class OrganizationContextService {
 	public async resolveOrganizationIdBySlug(routeKey: string): Promise<string> {
 		const org = await this.tenantTx.withSystemOperation(
 			{
-				operation: "auth.pre_login",
+				operation: "organization.context.resolve_route_key",
 				reason: "Resolve organization route key",
-				correlationId: `org-id:${routeKey}`,
 				actorUserId: null,
 			},
 			async (tx) =>
@@ -45,52 +44,46 @@ export class OrganizationContextService {
 		return org.id;
 	}
 
-	/** Resolve slug or organization id → organization; uniform not-found for missing/unauthorized. */
+	/**
+	 * Resolve slug or organization id → organization; uniform not-found for a
+	 * missing organization AND for a non-member (no existence oracle). Any other
+	 * failure (database down, policy load error) propagates as itself — it is
+	 * never disguised as a 404.
+	 */
 	public async resolveBySlug(userId: string, routeKey: string): Promise<ResolvedOrganizationContext> {
-		try {
-			const row = await this.tenantTx.withSystemOperation(
-				{
-					operation: "auth.pre_login",
-					reason: "Resolve organization route key for URL context",
-					correlationId: `org-route:${routeKey}`,
-					actorUserId: userId,
-				},
-				async (tx) => {
-					const org = await tx.organization.findFirst({
-						where: this.buildActiveOrganizationWhere(routeKey),
-						include: {
-							memberships: {
-								where: { userId, status: "ACTIVE", isDeleted: false },
-								include: { locationScopes: true },
-							},
+		const row = await this.tenantTx.withSystemOperation(
+			{
+				operation: "organization.context.resolve_route_key",
+				reason: "Resolve organization route key for URL context",
+				actorUserId: userId,
+			},
+			async (tx) =>
+				tx.organization.findFirst({
+					where: this.buildActiveOrganizationWhere(routeKey),
+					include: {
+						memberships: {
+							where: { userId, status: "ACTIVE", isDeleted: false },
+							include: { locationScopes: true },
 						},
-					});
-					return org;
-				},
-			);
+					},
+				}),
+		);
 
-			const membership = row?.memberships[0];
-			if (row === null || membership === undefined) {
-				throw new NotFoundException();
-			}
-
-			const policyVersion = await this.cedar.getActivePolicyVersion(row.id);
-
-			const membershipResponse: OrganizationMembershipResponse = mapMembershipToResponse(membership);
-
-			return {
-				organizationId: row.id,
-				slug: row.slug,
-				userId,
-				membership: membershipResponse,
-				policyVersion,
-			};
-		} catch (error) {
-			if (error instanceof NotFoundException) {
-				throw error;
-			}
+		const membership = row?.memberships[0];
+		if (row === null || membership === undefined) {
 			throw new NotFoundException();
 		}
+
+		const policyVersion = await this.cedar.getActivePolicyVersion(row.id);
+		const membershipResponse: OrganizationMembershipResponse = mapMembershipToResponse(membership);
+
+		return {
+			organizationId: row.id,
+			slug: row.slug,
+			userId,
+			membership: membershipResponse,
+			policyVersion,
+		};
 	}
 
 	public async getContext(userId: string, orgSlug: string): Promise<OrganizationContextResponse> {
@@ -171,9 +164,8 @@ export class OrganizationContextService {
 
 		const location = await this.tenantTx.withSystemOperation(
 			{
-				operation: "auth.pre_login",
+				operation: "organization.context.location_access",
 				reason: "Validate organization location access",
-				correlationId: `org-location:${locationId}`,
 				actorUserId: userId,
 			},
 			async (tx) =>
@@ -198,23 +190,28 @@ export class OrganizationContextService {
 	public async assertActionAllowed(resolved: ResolvedOrganizationContext, action: string, resourceType: string, resourceId: string): Promise<void> {
 		const decision = await this.cedar.evaluate({
 			organizationId: resolved.organizationId,
-			principal: `User::"${resolved.userId}"`,
-			action: `Action::"${action}"`,
-			resource: `${resourceType}::"${resourceId}"`,
-			membershipRole: resolved.membership.role,
-			locationScopeType: resolved.membership.locationScopeType,
-			locationIds: resolved.membership.locationIds,
+			principal: {
+				userId: resolved.userId,
+				role: resolved.membership.role,
+				locationScope: resolved.membership.locationScopeType,
+				locationIds: resolved.membership.locationIds,
+			},
+			action,
 		});
 
-		await this.audit.record({
-			organizationId: resolved.organizationId,
-			actorUserId: resolved.userId,
-			action: `authorize.${action}`,
-			resourceType,
-			resourceId,
-			decision: decision.decision,
-			policyVersion: decision.policyVersion,
-		});
+		await this.tenantTx.withTenantTransaction(
+			{ userId: resolved.userId, organizationId: resolved.organizationId, purpose: `authorize.${action}`, policyVersion: decision.policyVersion },
+			async (tx) =>
+				this.audit.recordInTx(tx, {
+					organizationId: resolved.organizationId,
+					actorUserId: resolved.userId,
+					action: `authorize.${action}`,
+					resourceType,
+					resourceId,
+					decision: decision.decision,
+					policyVersion: decision.policyVersion,
+				}),
+		);
 
 		if (decision.decision !== "Allow") {
 			throw new NotFoundException();

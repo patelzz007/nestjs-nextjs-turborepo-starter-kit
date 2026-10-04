@@ -1,24 +1,21 @@
 "use client";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { PERMISSION, type SampleCategory } from "@workspace/shared";
+import { PERMISSION, type Envelope, type SampleCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
 import { ROUTES } from "@/lib/routes";
+import { formatDateTime } from "@/lib/format/dates";
 
 export interface SampleCategoryDetailViewProps {
 	readonly id: string;
-	readonly initialSampleCategory?: SampleCategory | undefined;
-}
-
-function formatEpoch(value: number): string {
-	return new Date(value).toLocaleString();
+	/** The API's own envelope from the server prefetch (real `meta`), seeded as the query's initial data. */
+	readonly initialSampleCategory?: Envelope<SampleCategory> | undefined;
 }
 
 function DetailField({ label, value }: { readonly label: string; readonly value: string }): React.JSX.Element {
@@ -37,12 +34,11 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 	// PATCH /sample-category/:id needs UPDATE — a finer-grained check for the Edit link.
 	const { can } = useAuthorization();
 	const canUpdate = can(PERMISSION.SAMPLE_CATEGORY.UPDATE);
-	const initialQueryData = useMemo(() => (initialSampleCategory !== undefined ? successEnvelope(initialSampleCategory, stubApiMeta()) : undefined), [initialSampleCategory]);
-	const detailQuery = api.sampleCategory.detail.useQuery({ id }, initialDataOption(initialQueryData));
+	const detailQuery = api.sampleCategory.detail.useQuery({ id }, initialDataOption(initialSampleCategory));
 	const entity: SampleCategory | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && entity === undefined) {
-		return <p className="text-muted-foreground">{"Loading samplecategory…"}</p>;
+		return <p className="text-muted-foreground">{"Loading category…"}</p>;
 	}
 
 	if (detailQuery.isError || entity === undefined) {
@@ -52,7 +48,7 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 					<ArrowLeft className="mr-2 size-4" />
 					{"Back to categories"}
 				</Link>
-				<p className="text-destructive">{"Could not load this samplecategory."}</p>
+				<p className="text-destructive">{"Could not load this category."}</p>
 			</div>
 		);
 	}
@@ -85,8 +81,8 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 					<DetailField label="Description" value={entity.description ?? "—"} />
 					<DetailField label="Is Active" value={entity.isActive ? "Yes" : "No"} />
 					<DetailField label="Sort Order" value={String(entity.sortOrder)} />
-					<DetailField label="Created" value={formatEpoch(entity.createdAt)} />
-					<DetailField label="Updated" value={formatEpoch(entity.updatedAt)} />
+					<DetailField label="Created" value={formatDateTime(entity.createdAt)} />
+					<DetailField label="Updated" value={formatDateTime(entity.updatedAt)} />
 				</CardContent>
 			</Card>
 		</div>

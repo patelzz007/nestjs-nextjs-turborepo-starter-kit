@@ -26,6 +26,7 @@ export function toRoleResponse(row: Role): RoleResponse {
 		name: row.name,
 		description: row.description,
 		isActive: row.isActive,
+		isSystem: row.isSystem,
 		parentId: row.parentId,
 		isDeleted: row.isDeleted,
 		deletedAt: row.deletedAt === null ? null : epochMs(Number(row.deletedAt)),

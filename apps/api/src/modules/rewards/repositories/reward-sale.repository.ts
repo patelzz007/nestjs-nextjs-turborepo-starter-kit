@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma, type RewardRedemptionMethod } from "@prisma/client";
+import { z } from "zod";
+
 import { DEFAULT_SALE_CURRENCY, MerchantBusinessCategorySchema, type MerchantBusinessCategory } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { minorUnitsToNumber } from "../utils/minor-units.util";
+import { isUniqueViolationOf } from "../utils/prisma-unique-violation.util";
+import { appendRewardAuditLog } from "./reward-audit-log.repository";
 
 /** System operation reading merchant names/categories for sales breakdowns (customers can't read `organizations` under RLS). */
 export const SALES_MERCHANT_SUMMARY_OPERATION = "rewards.sales.merchant_summary";
@@ -24,11 +29,8 @@ const SALE_WITH_REDEMPTIONS_INCLUDE = {
 
 export type RewardSaleWithRedemptions = Prisma.RewardSaleGetPayload<{ include: typeof SALE_WITH_REDEMPTIONS_INCLUDE }>;
 
-/** Prisma: unique constraint violated — another request inserted the same (organization, idempotency key) first. */
-const PRISMA_UNIQUE_CONSTRAINT_VIOLATION = "P2002";
-
-/** Prefix of the per-redemption idempotency key derived for checkout redemptions (one claim → one redemption, ever). */
-const CHECKOUT_REDEMPTION_KEY_PREFIX = "checkout:";
+/** The `(organization_id, idempotency_key)` unique index of `reward_sales` — a concurrent request with the same key inserted first. */
+const SALE_IDEMPOTENCY_KEY_INDEX = "reward_sales_organization_id_idempotency_key_key";
 
 /** One claim redeemed on a checkout bill. */
 export interface CheckoutLine {
@@ -65,10 +67,19 @@ export interface SalesAggregate {
 	readonly bills: number;
 }
 
-export interface SalesPoint {
-	readonly paidAt: number;
-	readonly billTotalMinor: number;
+/** Paid-bill totals of one UTC week (Monday 00:00 UTC start). */
+export interface SalesWeek {
+	readonly weekStartMs: number;
+	readonly totalMinor: number;
+	readonly bills: number;
 }
+
+/** One row of the weekly-totals query (Postgres `BIGINT` arrives as `bigint`, `INT` as `number`). */
+const SalesWeekRowSchema = z.object({
+	week_start_ms: z.bigint(),
+	total_minor: z.bigint(),
+	bills: z.number().int().nonnegative(),
+});
 
 /** Sales grouped by one dimension (organization), highest total first. */
 export interface SalesGroup {
@@ -82,21 +93,22 @@ export interface SalesRange {
 	readonly lte: number;
 }
 
-/** Narrows sales to one organization (and optionally a store) and/or one customer; empty = platform-wide. */
+/** Narrows sales to one organization (and optionally some of its stores) and/or one customer; empty = platform-wide. */
 export interface SalesScope {
 	readonly organizationId?: string | undefined;
-	readonly locationId?: string | undefined;
+	/** The stores to include (`undefined` = every store; an empty list matches nothing). */
+	readonly locationIds?: readonly string[] | undefined;
 	readonly userId?: string | undefined;
 }
 
-function salesWhere(scope: SalesScope, range: SalesRange): Prisma.RewardSaleWhereInput {
+function salesWhere(scope: SalesScope, range: SalesRange | null): Prisma.RewardSaleWhereInput {
 	return {
 		isDeleted: false,
 		// Totals are only meaningful within one currency; every sale is MYR today (see SaleCurrencySchema).
 		currency: DEFAULT_SALE_CURRENCY,
-		paidAt: { gte: range.gte, lte: range.lte },
+		...(range !== null ? { paidAt: { gte: range.gte, lte: range.lte } } : {}),
 		...(scope.organizationId !== undefined ? { organizationId: scope.organizationId } : {}),
-		...(scope.locationId !== undefined ? { locationId: scope.locationId } : {}),
+		...(scope.locationIds !== undefined ? { locationId: { in: [...scope.locationIds] } } : {}),
 		...(scope.userId !== undefined ? { userId: scope.userId } : {}),
 	};
 }
@@ -121,11 +133,14 @@ export class RewardSaleRepository {
 	 * update, so a concurrent redemption of the same claim makes this throw
 	 * {@link CheckoutClaimConflictError} and roll everything back. A concurrent
 	 * request with the same idempotency key fails on the sale's unique index.
+	 * `withinTransaction` (the caller's outbox event and referral credits) runs
+	 * in the same transaction, after the bill is written; its result is returned
+	 * alongside the sale.
 	 */
-	public async checkoutInTransaction(
+	public async checkoutInTransaction<TResult>(
 		input: CheckoutTransactionInput,
-		withinTransaction: (tx: Prisma.TransactionClient, sale: RewardSaleWithRedemptions) => Promise<void>,
-	): Promise<RewardSaleWithRedemptions> {
+		withinTransaction: (tx: Prisma.TransactionClient, sale: RewardSaleWithRedemptions) => Promise<TResult>,
+	): Promise<{ readonly sale: RewardSaleWithRedemptions; readonly result: TResult }> {
 		return this.prisma.$transaction(async (tx) => {
 			const created = await tx.rewardSale.create({
 				data: {
@@ -166,33 +181,36 @@ export class RewardSaleRepository {
 						userId: input.userId,
 						terminalId: input.terminalId,
 						redemptionMethod: line.redemptionMethod,
-						idempotencyKey: `${CHECKOUT_REDEMPTION_KEY_PREFIX}${line.claimId}`,
 						saleId: created.id,
 						redeemedAt: input.paidAt,
 					},
 				});
 			}
 
-			await tx.rewardAuditLog.create({
-				data: {
-					organizationId: input.organizationId,
-					action: "merchant.checkout",
-					metadata: {
-						saleId: created.id,
-						claimIds: lines.map((line) => line.claimId),
-						terminalId: input.terminalId,
-						apiKeyId: input.apiKeyId,
-						locationId: input.locationId,
-						billTotalMinor: input.billTotalMinor,
-						currency: input.currency,
-					},
+			await appendRewardAuditLog(tx, {
+				organizationId: input.organizationId,
+				action: "merchant.checkout",
+				metadata: {
+					saleId: created.id,
+					claimIds: lines.map((line) => line.claimId),
+					terminalId: input.terminalId,
+					apiKeyId: input.apiKeyId,
+					locationId: input.locationId,
+					billTotalMinor: input.billTotalMinor,
+					currency: input.currency,
 				},
 			});
 
 			const sale = await tx.rewardSale.findUniqueOrThrow({ where: { id: created.id }, include: SALE_WITH_REDEMPTIONS_INCLUDE });
-			await withinTransaction(tx, sale);
-			return sale;
+			const result = await withinTransaction(tx, sale);
+			return { sale, result };
 		});
+	}
+
+	/** When the first live bill in `scope` was paid (all time), or `null` before any. */
+	public async firstPaidAt(scope: SalesScope): Promise<number | null> {
+		const result = await this.prisma.rewardSale.aggregate({ where: salesWhere(scope, null), _min: { paidAt: true } });
+		return result._min.paidAt === null ? null : Number(result._min.paidAt);
 	}
 
 	public async aggregate(scope: SalesScope, range: SalesRange): Promise<SalesAggregate> {
@@ -201,16 +219,37 @@ export class RewardSaleRepository {
 			_sum: { billTotalMinor: true },
 			_count: { _all: true },
 		});
-		return { totalMinor: result._sum.billTotalMinor ?? 0, bills: result._count._all };
+		return { totalMinor: minorUnitsToNumber(result._sum.billTotalMinor ?? 0n), bills: result._count._all };
 	}
 
-	/** Every bill in the range (two columns) — for weekly buckets. */
-	public async listPoints(scope: SalesScope, range: SalesRange): Promise<SalesPoint[]> {
-		const rows = await this.prisma.rewardSale.findMany({
-			where: salesWhere(scope, range),
-			select: { paidAt: true, billTotalMinor: true },
-		});
-		return rows.map((row) => ({ paidAt: Number(row.paidAt), billTotalMinor: row.billTotalMinor }));
+	/**
+	 * Paid-bill totals per week, grouped in Postgres — one row per week that has
+	 * bills, never one row per bill. Weeks start on Monday 00:00 in `timeZone`
+	 * (an IANA name, validated by `IanaTimeZoneSchema` upstream and passed as a
+	 * bind parameter): the merchant's own zone, or UTC for platform views. Same
+	 * filters as {@link aggregate}.
+	 */
+	public async listWeeklyTotals(scope: SalesScope, range: SalesRange, timeZone: string): Promise<SalesWeek[]> {
+		const conditions: Prisma.Sql[] = [
+			Prisma.sql`is_deleted = false`,
+			Prisma.sql`currency = ${DEFAULT_SALE_CURRENCY}`,
+			Prisma.sql`paid_at >= ${range.gte}`,
+			Prisma.sql`paid_at <= ${range.lte}`,
+			...(scope.organizationId !== undefined ? [Prisma.sql`organization_id = ${scope.organizationId}`] : []),
+			...(scope.locationIds !== undefined ? [Prisma.sql`location_id = ANY(${[...scope.locationIds]}::text[])`] : []),
+			...(scope.userId !== undefined ? [Prisma.sql`user_id = ${scope.userId}`] : []),
+		];
+		const rows = await this.prisma.$queryRaw`
+			SELECT (EXTRACT(EPOCH FROM (date_trunc('week', to_timestamp(paid_at / 1000.0) AT TIME ZONE ${timeZone}) AT TIME ZONE ${timeZone})) * 1000)::bigint AS week_start_ms,
+			       SUM(bill_total_minor)::bigint AS total_minor,
+			       COUNT(*)::int AS bills
+			FROM reward_sales
+			WHERE ${Prisma.join(conditions, " AND ")}
+			GROUP BY 1
+			ORDER BY 1`;
+		return SalesWeekRowSchema.array()
+			.parse(rows)
+			.map((row) => ({ weekStartMs: Number(row.week_start_ms), totalMinor: minorUnitsToNumber(row.total_minor), bills: row.bills }));
 	}
 
 	/** Sales per organization, highest total first; `take` bounds the result (omit for every organization). */
@@ -223,7 +262,7 @@ export class RewardSaleRepository {
 			orderBy: { _sum: { billTotalMinor: "desc" } },
 			...(take !== undefined ? { take } : {}),
 		});
-		return rows.map((row) => ({ organizationId: row.organizationId, totalMinor: row._sum.billTotalMinor ?? 0, bills: row._count._all }));
+		return rows.map((row) => ({ organizationId: row.organizationId, totalMinor: minorUnitsToNumber(row._sum.billTotalMinor ?? 0n), bills: row._count._all }));
 	}
 
 	/**
@@ -236,7 +275,7 @@ export class RewardSaleRepository {
 			return new Map();
 		}
 		const rows = await this.tenantTx.withSystemOperation(
-			{ operation: SALES_MERCHANT_SUMMARY_OPERATION, reason: "Merchant names for a sales breakdown", correlationId: `sales-merchants:${actorUserId}`, actorUserId },
+			{ operation: SALES_MERCHANT_SUMMARY_OPERATION, reason: "Merchant names for a sales breakdown", actorUserId },
 			async (tx) =>
 				tx.organization.findMany({
 					where: { id: { in: [...organizationIds] } },
@@ -258,7 +297,7 @@ export class RewardSaleRepository {
 	}
 }
 
-/** Whether `error` is the sale's `(organizationId, idempotencyKey)` unique violation (a concurrent duplicate request). */
+/** Whether `error` is the sale's `(organizationId, idempotencyKey)` unique violation (a concurrent duplicate request) — and not any other unique index. */
 export function isDuplicateSaleKeyError(error: Error): boolean {
-	return error instanceof Prisma.PrismaClientKnownRequestError && error.code === PRISMA_UNIQUE_CONSTRAINT_VIOLATION;
+	return isUniqueViolationOf(error, SALE_IDEMPOTENCY_KEY_INDEX);
 }

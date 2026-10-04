@@ -1,106 +1,77 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { nowEpochMs, SecurityKeyStore } from "@workspace/shared";
+import { BoundedTtlCache, nowEpochMs } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 
+/** Sliding window length. */
+export const AUTH_CHECK_RATE_WINDOW_MS = 15 * 60 * 1000;
+
+/** Max authorization checks per user per window. */
+export const AUTH_CHECK_RATE_MAX_CHECKS = 1000;
+
 /**
- * In-memory rate limiter for authorization checks.
+ * In-memory sliding-window rate limiter for authorization checks.
  *
- * Prevents abuse by limiting how many permission checks a single user can
- * perform within a sliding window.
+ * Authorization checks are DB/cache work; a caller hammering them could
+ * exhaust connections. This limiter is defense in depth: at most
+ * {@link AUTH_CHECK_RATE_MAX_CHECKS} checks per user within any
+ * {@link AUTH_CHECK_RATE_WINDOW_MS} window.
  *
- * ## Why this matters
- *
- * Authorization checks are async DB/cache queries. A malicious user could
- * trigger thousands of permission checks via rapid API calls, exhausting
- * DB connections or cache bandwidth. This limiter provides defense in depth.
- *
- * ## Configuration
- *
- * - Default: 1000 checks per 15-minute window per user.
- * - Super-admins bypass the limit.
+ * Memory is bounded: one entry per tracked user in a {@link BoundedTtlCache}
+ * capped at `SECURITY_COUNTER_MAX_KEYS`, each entry expiring one window after
+ * its last check. At capacity, **new** users are rejected (fail closed) rather
+ * than evicting someone else's window — eviction would let an attacker reset
+ * limits by flooding keys.
  */
 @Injectable()
 export class AuthRateLimitService {
 	private readonly logger: Logger = new Logger(AuthRateLimitService.name);
 
-	/** Sliding window: 15 minutes. */
-	private readonly windowMs: number = 15 * 60 * 1000;
-
-	/** Max checks per window per user. */
-	private readonly maxChecks: number = 1000;
-
-	/** Per-user sliding windows. userId → array of timestamps. */
-	private readonly windows = new Map<string, number[]>();
-	private readonly keyStore: SecurityKeyStore<string>;
+	/** userId → timestamps (epoch ms) of checks inside the current window, oldest first. */
+	private readonly windows: BoundedTtlCache<string, readonly number[]>;
 
 	public constructor(config: TypedConfigService) {
-		this.keyStore = new SecurityKeyStore<string>({ maxKeys: config.securityCounterMaxKeys });
+		this.windows = new BoundedTtlCache<string, readonly number[]>({
+			maxEntries: config.securityCounterMaxKeys,
+			defaultTtlMs: AUTH_CHECK_RATE_WINDOW_MS,
+			capacityPolicy: "reject-new",
+		});
 	}
 
 	/**
-	 * Check if a user has exceeded the rate limit.
+	 * Record a check for `userId` if it is within the limit.
 	 *
-	 * @returns `true` if the check is allowed, `false` if rate-limited.
+	 * @returns `true` if the check is allowed, `false` if rate-limited (or the tracker is full).
 	 */
 	public isAllowed(userId: string): boolean {
-		const now = nowEpochMs();
-		const cutoff: number = now - this.windowMs;
-		const keyExpiresAt: number = now + this.windowMs;
+		const now: number = nowEpochMs();
+		const active: readonly number[] = this.activeTimestamps(userId, now);
 
-		if (!this.keyStore.has(userId, now) && !this.keyStore.reserveKey(userId, keyExpiresAt, now)) {
-			this.logger.warn(`Authorization rate-limit key store at capacity — rejecting new key ${userId}`);
+		if (active.length >= AUTH_CHECK_RATE_MAX_CHECKS) {
+			this.logger.warn(`Rate limit exceeded for user ${userId}: ${String(active.length)} checks in ${String(AUTH_CHECK_RATE_WINDOW_MS / 1000)}s window`);
 			return false;
 		}
 
-		let timestamps: number[] | undefined = this.windows.get(userId);
-		if (timestamps === undefined) {
-			timestamps = [];
-			this.windows.set(userId, timestamps);
-			this.keyStore.touchKey(userId, keyExpiresAt);
-		}
-
-		let oldest: number | undefined = timestamps[0];
-		while (oldest !== undefined && oldest < cutoff) {
-			timestamps.shift();
-			oldest = timestamps[0];
-		}
-
-		if (timestamps.length === 0) {
-			this.keyStore.delete(userId);
-			if (!this.keyStore.reserveKey(userId, keyExpiresAt, now)) {
-				this.logger.warn(`Authorization rate-limit key store at capacity — rejecting key ${userId}`);
-				return false;
-			}
-		}
-
-		if (timestamps.length >= this.maxChecks) {
-			this.logger.warn(`Rate limit exceeded for user ${userId}: ${String(timestamps.length)} checks in ${String(this.windowMs / 1000)}s window`);
+		if (!this.windows.set(userId, [...active, now], AUTH_CHECK_RATE_WINDOW_MS, now)) {
+			this.logger.warn(`Authorization rate-limit tracker at capacity — rejecting new key ${userId}`);
 			return false;
 		}
-
-		timestamps.push(now);
-		this.keyStore.touchKey(userId, keyExpiresAt);
 		return true;
 	}
 
-	/**
-	 * Get the remaining allowance for a user.
-	 */
+	/** Checks `userId` may still make in the current window. */
 	public remaining(userId: string): number {
-		const now = nowEpochMs();
-		const cutoff: number = now - this.windowMs;
-
-		const timestamps: number[] = this.windows.get(userId) ?? [];
-		const active: number = timestamps.filter((t) => t >= cutoff).length;
-		return Math.max(0, this.maxChecks - active);
+		return Math.max(0, AUTH_CHECK_RATE_MAX_CHECKS - this.activeTimestamps(userId, nowEpochMs()).length);
 	}
 
-	/**
-	 * Clear all rate limit data.
-	 */
+	/** Clear all rate limit data. */
 	public clear(): void {
 		this.windows.clear();
-		this.keyStore.clear();
+	}
+
+	/** Timestamps strictly inside the window ending at `now`. */
+	private activeTimestamps(userId: string, now: number): readonly number[] {
+		const cutoff: number = now - AUTH_CHECK_RATE_WINDOW_MS;
+		return (this.windows.get(userId, now) ?? []).filter((timestamp: number): boolean => timestamp > cutoff);
 	}
 }

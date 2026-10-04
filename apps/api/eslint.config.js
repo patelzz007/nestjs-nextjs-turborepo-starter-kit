@@ -105,7 +105,7 @@ export default [
 		},
 	},
 
-	// ── Env boundary (docs/api-configuration.md) ──────────────────
+	// ── Env boundary (docs/technical/configuration/api.md) ──────────────────
 	// `process.env` is read ONLY by src/config/api-config.ts, which parses it
 	// once through the zod schema in api-config.schema.ts (fail fast, value-free
 	// errors). Everything else injects TypedConfigService (or, for load-time
@@ -119,7 +119,7 @@ export default [
 				{
 					object: "process",
 					property: "env",
-					message: "Read configuration through TypedConfigService / getApiConfig() (src/config), never process.env directly. See docs/api-configuration.md.",
+					message: "Read configuration through TypedConfigService / getApiConfig() (src/config), never process.env directly. See docs/technical/configuration/api.md.",
 				},
 			],
 		},

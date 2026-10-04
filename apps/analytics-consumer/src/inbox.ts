@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Why a message was parked — mirrors the `InboxDeadLetterReason` Postgres enum (schema.prisma). */
-export const DeadLetterReasonSchema = z.enum(["EMPTY_MESSAGE", "MALFORMED_JSON", "SCHEMA_VIOLATION", "PERMANENT_PROCESSING_ERROR"]);
+export const DeadLetterReasonSchema = z.enum(["EMPTY_MESSAGE", "MALFORMED_JSON", "SCHEMA_VIOLATION", "PERMANENT_PROCESSING_ERROR", "RETRIES_EXHAUSTED"]);
 
 export type DeadLetterReason = z.output<typeof DeadLetterReasonSchema>;
 
@@ -12,12 +12,28 @@ export interface KafkaCoordinates {
 	readonly offset: string;
 }
 
+/**
+ * The stored copy of a parked record's value. `bytes` is the raw value
+ * (binary-safe), cut at the configured cap; `sizeBytes` and `sha256` always
+ * describe the WHOLE original value, so a truncated copy is never mistaken
+ * for the original and a replay can be verified.
+ */
+export interface DeadLetterPayload {
+	readonly bytes: Buffer;
+	readonly sizeBytes: number;
+	readonly sha256: string;
+	readonly truncated: boolean;
+}
+
 export interface DeadLetterInput extends KafkaCoordinates {
 	readonly consumer: string;
 	readonly eventId: string | null;
 	readonly reason: DeadLetterReason;
 	readonly error: string;
-	readonly rawValue: string | null;
+	/** Processing attempts made before parking (1 for a record that could not even be decoded). */
+	readonly attempts: number;
+	/** `null` for a tombstone (no value). */
+	readonly payload: DeadLetterPayload | null;
 }
 
 /** Metadata-only analytics row — tenant id tagged when present in the payload (no content). */

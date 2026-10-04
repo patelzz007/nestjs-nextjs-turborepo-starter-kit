@@ -194,7 +194,7 @@ describe("route coverage (guard)", () => {
 	it("every child URL sits under its parent's URL (segment-aware)", () => {
 		for (const { item, parent } of MENU_ENTRIES) {
 			if (parent !== null) {
-				expect(isPathWithin(parent.url, item.url), `${parent.title} (${parent.url}) → ${item.title} (${item.url})`).toBe(true);
+				expect(isPathWithin(item.url, parent.url), `${parent.title} (${parent.url}) → ${item.title} (${item.url})`).toBe(true);
 			}
 		}
 	});
@@ -249,7 +249,6 @@ const ACTIVE_CASES: readonly ActiveCase[] = [
 	{ pathname: "/catalog/products/new", expected: ["Catalog", "Products"] },
 	{ pathname: "/catalog/products/42/edit", expected: ["Catalog", "Products"] },
 	{ pathname: "/catalog/categories/7", expected: ["Catalog", "Categories"] },
-	{ pathname: "/settings/billing", expected: ["Settings", "Billing"] },
 	{ pathname: "/settings/access", expected: ["Settings", "Access control"] },
 	{ pathname: "/account/profile", expected: ["Account", "Profile"] },
 	{ pathname: "/account/security", expected: ["Account", "Security"] },

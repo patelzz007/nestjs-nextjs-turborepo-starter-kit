@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ApiErrorCodeSchema } from "../../api/api-error";
 import { EmailLogStatusSchema } from "../../email/email";
 
 /** Completed credential/identity flow (signup, login, password reset, …). */
@@ -11,7 +12,8 @@ export const AuthFlowEventSchema = z
 		/** Login origin ("web" | "admin") — null for flows without a client type. */
 		clientType: z.string().nullable(),
 		status: z.enum(["succeeded", "failed"]),
-		error: z.string().nullable(),
+		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */
+		error: ApiErrorCodeSchema.nullable(),
 		/** Wall-clock duration of the whole flow in ms. */
 		durationMs: z.number().int().nonnegative(),
 	})
@@ -25,7 +27,8 @@ export const SessionActionEventSchema = z
 		action: z.enum(["refresh", "logout-device", "logout-all"]),
 		userId: z.string(),
 		status: z.enum(["succeeded", "failed"]),
-		error: z.string().nullable(),
+		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */
+		error: ApiErrorCodeSchema.nullable(),
 		/** Wall-clock duration of the whole action in ms. */
 		durationMs: z.number().int().nonnegative(),
 	})
@@ -40,7 +43,8 @@ export const ImpersonationActionEventSchema = z
 		superAdminId: z.string(),
 		targetUserId: z.string(),
 		status: z.enum(["succeeded", "failed"]),
-		error: z.string().nullable(),
+		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */
+		error: ApiErrorCodeSchema.nullable(),
 		/** Wall-clock duration of the whole action in ms. */
 		durationMs: z.number().int().nonnegative(),
 	})
@@ -48,12 +52,20 @@ export const ImpersonationActionEventSchema = z
 
 export type ImpersonationActionEvent = z.output<typeof ImpersonationActionEventSchema>;
 
-/** Payload for an EmailLog row creation (send attempt). */
+/**
+ * Payload for an EmailLog row creation (send attempt).
+ *
+ * Deliberately carries NO recipient address: this event is stored in
+ * `outbox_events` and published to Kafka, where every consumer group and every
+ * broker replica would hold a copy of the PII for the topic's whole retention.
+ * The address stays in `email_logs` (access-controlled, retention-managed);
+ * downstream systems join on `resendId` when they genuinely need it. The
+ * schema is strict, so a producer that adds the address back fails validation.
+ */
 export const EmailLogUpdatedEventSchema = z
 	.object({
 		templateKey: z.string(),
 		status: EmailLogStatusSchema,
-		to: z.string(),
 		resendId: z.string().nullable(),
 		error: z.string().nullable(),
 		/** Send duration in ms (null for noop/log-only modes that never hit the network). */

@@ -2,11 +2,13 @@ import {
 	MERCHANT_BUSINESS_CATEGORY_LABELS,
 	UNCATEGORISED_MERCHANT_CATEGORY_LABEL,
 	type MerchantBusinessCategory,
+	type SaleCurrency,
 	type UserSpendByCategory,
 	type UserSpendByMerchant,
 	type UserSpendingSummary,
 } from "@workspace/shared";
 import { formatMinorUnits } from "@workspace/ui/lib/format/money";
+import { formatCount } from "@workspace/ui/lib/format/number";
 
 /** The chart palette tokens, in the fixed order slices take them. */
 export type SpendChartTone = "chart-1" | "chart-2" | "chart-3" | "chart-4" | "chart-5";
@@ -44,9 +46,9 @@ export function formatSharePercent(part: number, total: number): string {
 	return `${String(percent)}%`;
 }
 
-/** "1 visit" / "3 visits". */
-export function formatVisitCount(visits: number): string {
-	return `${visits.toLocaleString()} ${visits === 1 ? "visit" : "visits"}`;
+/** "1 visit" / "3 visits", the count grouped per `locale`. */
+export function formatVisitCount(visits: number, locale: string): string {
+	return `${formatCount(visits, locale)} ${visits === 1 ? "visit" : "visits"}`;
 }
 
 /** One merchant row of "Where you spent the most" — display data only. */
@@ -62,13 +64,13 @@ export interface MerchantSpendRow {
 }
 
 /** Ranked merchant rows (the API already orders them highest spend first). */
-export function toMerchantSpendRows(byMerchant: readonly UserSpendByMerchant[], totalSpentMinor: number, currency: string): readonly MerchantSpendRow[] {
+export function toMerchantSpendRows(byMerchant: readonly UserSpendByMerchant[], totalSpentMinor: number, currency: SaleCurrency, locale: string): readonly MerchantSpendRow[] {
 	return byMerchant.map((merchant: UserSpendByMerchant): MerchantSpendRow => ({
 		organizationId: merchant.organizationId,
 		merchantName: merchant.merchantName,
 		categoryLabel: getSpendCategoryLabel(merchant.category),
-		amountLabel: formatMinorUnits(merchant.totalMinor, currency),
-		visitsLabel: formatVisitCount(merchant.visits),
+		amountLabel: formatMinorUnits(merchant.totalMinor, currency, locale),
+		visitsLabel: formatVisitCount(merchant.visits, locale),
 		sharePercent: shareOfTotalPercent(merchant.totalMinor, totalSpentMinor),
 		shareLabel: formatSharePercent(merchant.totalMinor, totalSpentMinor),
 	}));
@@ -103,7 +105,12 @@ function toneAt(index: number): SpendChartTone {
  * slice each and the rest fold into one "N more categories" slice (its
  * `detail` names them), so nothing is dropped and no colour repeats.
  */
-export function toCategorySpendSlices(byCategory: readonly UserSpendByCategory[], totalSpentMinor: number, currency: string): readonly CategorySpendSlice[] {
+export function toCategorySpendSlices(
+	byCategory: readonly UserSpendByCategory[],
+	totalSpentMinor: number,
+	currency: SaleCurrency,
+	locale: string,
+): readonly CategorySpendSlice[] {
 	const spent = byCategory.filter((row: UserSpendByCategory): boolean => row.totalMinor > 0);
 	const needsTail = spent.length > MAX_CATEGORY_SLICES;
 	const headCount = needsTail ? MAX_CATEGORY_SLICES - 1 : spent.length;
@@ -113,8 +120,8 @@ export function toCategorySpendSlices(byCategory: readonly UserSpendByCategory[]
 		label,
 		detail,
 		totalMinor,
-		amountLabel: formatMinorUnits(totalMinor, currency),
-		visitsLabel: formatVisitCount(visits),
+		amountLabel: formatMinorUnits(totalMinor, currency, locale),
+		visitsLabel: formatVisitCount(visits, locale),
 		sharePercent: shareOfTotalPercent(totalMinor, totalSpentMinor),
 		shareLabel: formatSharePercent(totalMinor, totalSpentMinor),
 		tone: toneAt(index),
@@ -157,16 +164,16 @@ export type SpendingSectionState =
  * bills in the period (no merchant to rank), so the breakdowns are replaced by
  * guidance while the — zero — totals and their trend still show.
  */
-export function toSpendingSectionState(spending: UserSpendingSummary | undefined): SpendingSectionState {
+export function toSpendingSectionState(spending: UserSpendingSummary | undefined, locale: string): SpendingSectionState {
 	if (spending === undefined) {
 		return { status: "loading" };
 	}
 
 	const totalSpentMinor = spending.totalSpentMinor.value;
 	const totals: SpendingTotals = {
-		totalSpentLabel: formatMinorUnits(totalSpentMinor, spending.currency),
+		totalSpentLabel: formatMinorUnits(totalSpentMinor, spending.currency, locale),
 		totalSpentChangePercent: spending.totalSpentMinor.changePercent,
-		visitsLabel: spending.visits.value.toLocaleString(),
+		visitsLabel: formatCount(spending.visits.value, locale),
 		visitsChangePercent: spending.visits.changePercent,
 	};
 
@@ -177,7 +184,7 @@ export function toSpendingSectionState(spending: UserSpendingSummary | undefined
 	return {
 		status: "ready",
 		totals,
-		merchants: toMerchantSpendRows(spending.byMerchant, totalSpentMinor, spending.currency),
-		categories: toCategorySpendSlices(spending.byCategory, totalSpentMinor, spending.currency),
+		merchants: toMerchantSpendRows(spending.byMerchant, totalSpentMinor, spending.currency, locale),
+		categories: toCategorySpendSlices(spending.byCategory, totalSpentMinor, spending.currency, locale),
 	};
 }

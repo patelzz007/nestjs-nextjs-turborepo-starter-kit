@@ -3,7 +3,7 @@
 // ============================================
 // Shareable, bookmarkable, back/forward-aware state (a table's page, sort,
 // filters and search; an in-page selection such as `?key=`) belongs in the URL
-// — not in Zustand and not in `useState` (ADR 023, docs/list-queries.md §7).
+// — not in Zustand and not in `useState` (ADR 023, docs/technical/api/list-queries.md §7).
 //
 // `defineUrlState` declares that state ONCE as a zod shape, one schema per
 // param. The same definition is used:

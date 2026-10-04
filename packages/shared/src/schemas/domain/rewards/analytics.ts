@@ -5,9 +5,98 @@ import { OrganizationLocationFilterSchema } from "../organization/location-filte
 import { AnalyticsQuerySchema } from "../platform/clicks";
 import { RewardClaimStatusSchema } from "./rewards";
 import { SaleCurrencySchema } from "./rewards-entities";
-import { MerchantBusinessCategorySchema } from "./rewards-enums";
+import { MerchantBusinessCategorySchema, PLATFORM_DISPLAY_REGION, type DisplayRegion } from "./rewards-enums";
+import { IanaTimeZoneSchema, startOfWeekInTimeZone, UTC_TIME_ZONE } from "./analytics-time-zone";
 
-export const RewardsAnalyticsQuerySchema = AnalyticsQuerySchema.extend(OrganizationLocationFilterSchema.shape).strict();
+/** Milliseconds in one day. */
+export const DAY_MS = 86_400_000;
+
+/** Days in one analytics week (weekly buckets start on Monday 00:00 in the bucket time zone). */
+const DAYS_PER_WEEK = 7;
+
+/** Milliseconds in one week. */
+export const WEEK_MS = DAYS_PER_WEEK * DAY_MS;
+
+/** Weeks an analytics request covers when it sends no `from` (the current week plus the seven before it). */
+export const DEFAULT_ANALYTICS_WEEKS = 8;
+
+/** Longest period one analytics request may cover — keeps every aggregate bounded. */
+export const MAX_ANALYTICS_WEEKS = 53;
+
+/** Monday 00:00:00.000 UTC of the week containing `epochMs` (the platform-wide bucket start). */
+export function startOfUtcWeekMs(epochMs: number): number {
+	return startOfWeekInTimeZone(epochMs, UTC_TIME_ZONE);
+}
+
+/** An analytics period in epoch ms; `fromMs` is always a week start in `timeZone`. */
+export interface AnalyticsPeriodRange {
+	readonly fromMs: number;
+	readonly toMs: number;
+	/** IANA zone the weekly buckets are cut in: the merchant's own zone, or UTC for platform / customer views. */
+	readonly timeZone: string;
+}
+
+/**
+ * The period an analytics request actually covers. `to` defaults to `nowMs`;
+ * `from` defaults to {@link DEFAULT_ANALYTICS_WEEKS} weeks back. `from` is then
+ * aligned DOWN to its UTC week start, so every weekly bucket — including the
+ * first — is a whole week (the last one ends at `to`). The API echoes this
+ * aligned period in the response; clients pick a week count with
+ * {@link analyticsQueryForWeeks}.
+ */
+export function resolveAnalyticsPeriodRange(from: number | undefined, to: number | undefined, nowMs: number, timeZone: string = UTC_TIME_ZONE): AnalyticsPeriodRange {
+	const toMs = to ?? nowMs;
+	const requestedFromMs = from ?? startOfWeekInTimeZone(toMs, timeZone) - (DEFAULT_ANALYTICS_WEEKS - 1) * WEEK_MS;
+	return { fromMs: startOfWeekInTimeZone(requestedFromMs, timeZone), toMs, timeZone };
+}
+
+/** The query for "the last `weeks` weeks" ending now, already aligned to UTC week boundaries (the current week counts as one). */
+export function analyticsQueryForWeeks(weeks: number, nowMs: number): { readonly from: number; readonly to: number } {
+	return { from: startOfUtcWeekMs(nowMs) - (weeks - 1) * WEEK_MS, to: nowMs };
+}
+
+/** `from` must precede `to`, and the span is capped at {@link MAX_ANALYTICS_WEEKS} weeks. */
+function validateAnalyticsPeriod(value: { readonly from?: number | undefined; readonly to?: number | undefined }, context: z.RefinementCtx): void {
+	if (value.from !== undefined && value.to !== undefined && value.from >= value.to) {
+		context.addIssue({ code: "custom", message: "from must be earlier than to", path: ["from"] });
+		return;
+	}
+	if (value.from !== undefined) {
+		const toMs = value.to ?? Date.now();
+		if (toMs - startOfUtcWeekMs(value.from) > MAX_ANALYTICS_WEEKS * WEEK_MS) {
+			context.addIssue({ code: "custom", message: `The period may cover at most ${String(MAX_ANALYTICS_WEEKS)} weeks`, path: ["from"] });
+		}
+	}
+}
+
+/**
+ * The period an analytics response covers. `from` is a week start in
+ * `timeZone`, the zone every weekly point (`date`) was bucketed in: the
+ * merchant's own zone (`Organization.timeZone`) for merchant analytics, UTC
+ * for the admin platform view and the customer's cross-merchant view. Label a
+ * point in `timeZone` so "Mon 6 Oct" is the bucket's own Monday.
+ */
+export const AnalyticsPeriodSchema = z.object({ from: EpochMsSchema, to: EpochMsSchema, timeZone: IanaTimeZoneSchema });
+
+export type AnalyticsPeriod = z.output<typeof AnalyticsPeriodSchema>;
+
+/**
+ * Region a UTC-bucketed analytics series (admin platform view, customer view)
+ * is labelled in: a point is named by its UTC calendar day — in a zone west of
+ * UTC the same instant would read as the previous day. Merchant series are
+ * bucketed in the merchant's zone: label them with {@link analyticsBucketRegion}.
+ */
+export const ANALYTICS_BUCKET_DISPLAY_REGION: DisplayRegion = {
+	locale: PLATFORM_DISPLAY_REGION.locale,
+	timeZone: UTC_TIME_ZONE,
+};
+
+/** The region to label a response's weekly points in: the platform locale, the response's bucket zone. */
+export function analyticsBucketRegion(period: AnalyticsPeriod): DisplayRegion {
+	return { locale: PLATFORM_DISPLAY_REGION.locale, timeZone: period.timeZone };
+}
+
+export const RewardsAnalyticsQuerySchema = AnalyticsQuerySchema.extend(OrganizationLocationFilterSchema.shape).strict().superRefine(validateAnalyticsPeriod);
 
 export type RewardsAnalyticsQuery = z.output<typeof RewardsAnalyticsQuerySchema>;
 
@@ -51,12 +140,17 @@ export const SalesSummarySchema = z.object({
 	bills: AnalyticsMetricSchema,
 	averageBillMinor: AnalyticsMetricSchema,
 	overTime: z.array(SalesTimePointSchema),
+	/**
+	 * When the first bill in this scope was paid (all time, not just the period); `null` until the
+	 * POS has reported a bill. Distinguishes "no sales yet — integrate checkout" from "no sales this period".
+	 */
+	firstBillAt: EpochMsSchema.nullable(),
 });
 
 export type SalesSummary = z.output<typeof SalesSummarySchema>;
 
 export const MerchantAnalyticsResponseSchema = z.object({
-	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
+	period: AnalyticsPeriodSchema,
 	totalRewards: AnalyticsMetricSchema,
 	activeRewards: AnalyticsMetricSchema,
 	totalClaims: AnalyticsMetricSchema,
@@ -110,7 +204,7 @@ export const UserSpendingSummarySchema = z.object({
 export type UserSpendingSummary = z.output<typeof UserSpendingSummarySchema>;
 
 export const UserRewardsAnalyticsResponseSchema = z.object({
-	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
+	period: AnalyticsPeriodSchema,
 	totalClaims: AnalyticsMetricSchema,
 	pendingClaims: AnalyticsMetricSchema,
 	redeemedClaims: AnalyticsMetricSchema,
@@ -126,7 +220,7 @@ export const UserRewardsAnalyticsResponseSchema = z.object({
 export type UserRewardsAnalyticsResponse = z.output<typeof UserRewardsAnalyticsResponseSchema>;
 
 /** `GET /admin/analytics/sales` — platform-wide paid bills. */
-export const AdminSalesAnalyticsQuerySchema = AnalyticsQuerySchema;
+export const AdminSalesAnalyticsQuerySchema = AnalyticsQuerySchema.superRefine(validateAnalyticsPeriod);
 
 export type AdminSalesAnalyticsQuery = z.output<typeof AdminSalesAnalyticsQuerySchema>;
 
@@ -141,7 +235,7 @@ export const AdminSalesTopMerchantSchema = z.object({
 export type AdminSalesTopMerchant = z.output<typeof AdminSalesTopMerchantSchema>;
 
 export const AdminSalesAnalyticsResponseSchema = z.object({
-	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
+	period: AnalyticsPeriodSchema,
 	sales: SalesSummarySchema,
 	/** Merchants with at least one paid bill in the period. */
 	activeMerchants: AnalyticsMetricSchema,

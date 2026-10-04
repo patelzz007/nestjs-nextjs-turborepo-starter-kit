@@ -1,9 +1,19 @@
 "use client";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import {
+	initialDataOption,
+	readPaginatedHasNext,
+	readPaginatedHasPrevious,
+	readPaginatedPage,
+	readPaginatedTotal,
+	readPaginatedTotalPages,
+} from "@workspace/client/lib/api/envelope";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { RewardResponse } from "@workspace/shared";
+import type { Envelope, RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -14,26 +24,61 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import * as React from "react";
 
+import { toastMutationError } from "@/lib/api/mutation-error";
+import { formatDateTime } from "@/lib/format/dates";
+import { REWARDS_REVIEW_URL_STATE, toPendingRewardsListQuery } from "@/lib/url-state/rewards-review";
+
 export interface PendingRewardsPanelProps {
-	readonly initialRewards?: readonly RewardResponse[] | undefined;
+	/** The API's own envelope (real pagination meta) of the page the server rendered, bound to that URL state. */
+	readonly initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>> | undefined;
 }
 
-function formatEpochMs(value: number): string {
-	return new Date(value).toLocaleString();
+/** What the queue shows above (or instead of) its rows — one state at a time. */
+export type PendingRewardsQueueStatus = "loading" | "error" | "empty" | "ready";
+
+/** An error without rows is shown as an error (never as "no rewards"); rows keep showing while a refetch fails. */
+export function resolveQueueStatus(isError: boolean, isLoading: boolean, rowCount: number): PendingRewardsQueueStatus {
+	if (rowCount > 0) {
+		return "ready";
+	}
+	if (isError) {
+		return "error";
+	}
+	return isLoading ? "loading" : "empty";
 }
 
-export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPanelProps): React.JSX.Element {
+function PendingRewardsStatus({ status, onRetry }: { readonly status: PendingRewardsQueueStatus; readonly onRetry: () => void }): React.JSX.Element | null {
+	switch (status) {
+		case "loading":
+			return <p className="text-sm text-muted-foreground">Loading…</p>;
+		case "error":
+			return (
+				<div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+					<span>Couldn&apos;t load the moderation queue.</span>
+					<Button type="button" variant="outline" size="sm" onClick={onRetry}>
+						Try again
+					</Button>
+				</div>
+			);
+		case "empty":
+			return <p className="text-sm text-muted-foreground">No rewards waiting for review.</p>;
+		case "ready":
+			return null;
+	}
+}
+
+export default function PendingRewardsPanel({ initialPage }: PendingRewardsPanelProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const [rejectingId, setRejectingId] = React.useState<string | null>(null);
 	const [rejectReason, setRejectReason] = React.useState<string>("");
 
-	const initialQueryData = React.useMemo(() => (initialRewards !== undefined ? successEnvelope([...initialRewards], stubApiMeta()) : undefined), [initialRewards]);
-
-	const pendingQuery = api.rewardsAdmin.pendingRewards.useQuery({}, initialDataOption(initialQueryData));
+	const [urlState, updateUrlState] = useUrlState(REWARDS_REVIEW_URL_STATE);
+	const stateKey: string = REWARDS_REVIEW_URL_STATE.serialize(urlState);
+	const pendingQuery = api.rewardsAdmin.pendingRewards.useQuery(toPendingRewardsListQuery(urlState), initialDataOption(prefetchedDataFor(initialPage, stateKey)));
 
 	const invalidatePending = React.useCallback(async (): Promise<void> => {
-		await queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.pendingRewards.queryKey({}) });
+		await queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.pendingRewards.scopeKey(undefined) });
 	}, [queryClient]);
 
 	const approveMutation = api.rewardsAdmin.approveReward.useMutation({
@@ -44,7 +89,7 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 			await invalidatePending();
 		},
 		onError: (error) => {
-			toastMessage.error({ title: "Approval failed", description: error.message });
+			toastMutationError("Approval failed", error);
 		},
 	});
 
@@ -56,11 +101,29 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 			await invalidatePending();
 		},
 		onError: (error) => {
-			toastMessage.error({ title: "Rejection failed", description: error.message });
+			toastMutationError("Rejection failed", error);
 		},
 	});
 
 	const rewards = pendingQuery.data?.data ?? [];
+	const meta = pendingQuery.data?.meta;
+	// The queue's size is the server's count — a page only holds some of the rewards.
+	const pendingTotal: number = readPaginatedTotal(meta);
+	const currentPage: number = readPaginatedPage(meta, urlState.page);
+	const totalPages: number = readPaginatedTotalPages(meta);
+
+	const handlePreviousPage = React.useCallback((): void => {
+		updateUrlState({ page: Math.max(LIST_FIRST_PAGE, urlState.page - 1), cursor: undefined });
+	}, [updateUrlState, urlState.page]);
+
+	const handleNextPage = React.useCallback((): void => {
+		updateUrlState({ page: urlState.page + 1, cursor: undefined });
+	}, [updateUrlState, urlState.page]);
+
+	const { refetch } = pendingQuery;
+	const handleRetry = React.useCallback((): void => {
+		void refetch();
+	}, [refetch]);
 
 	const handleApprove = React.useCallback(
 		(rewardId: string): void => {
@@ -122,6 +185,7 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 	);
 
 	const isBusy = approveMutation.isPending || rejectMutation.isPending;
+	const queueStatus: PendingRewardsQueueStatus = resolveQueueStatus(pendingQuery.isError, pendingQuery.isLoading, rewards.length);
 
 	return (
 		<div className="space-y-6">
@@ -132,12 +196,11 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Moderation queue ({rewards.length})</CardTitle>
+					<CardTitle>Moderation queue ({pendingTotal})</CardTitle>
 					<CardDescription>Rewards in PENDING_REVIEW status. Referrer rewards publish together when the primary reward is approved.</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					{pendingQuery.isLoading && rewards.length === 0 ? <p className="text-sm text-muted-foreground">Loading…</p> : null}
-					{!pendingQuery.isLoading && rewards.length === 0 ? <p className="text-sm text-muted-foreground">No rewards waiting for review.</p> : null}
+					<PendingRewardsStatus status={queueStatus} onRetry={handleRetry} />
 					{rewards.map((reward) => (
 						<div key={reward.id} className="space-y-3 rounded-lg border p-4">
 							<div className="flex flex-wrap items-start justify-between gap-3">
@@ -171,7 +234,7 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 								</div>
 								<div>
 									<dt className="font-medium text-foreground">Expires</dt>
-									<dd>{formatEpochMs(reward.expiryDate)}</dd>
+									<dd>{formatDateTime(reward.expiryDate)}</dd>
 								</div>
 								<div>
 									<dt className="font-medium text-foreground">Category</dt>
@@ -198,6 +261,21 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 							) : null}
 						</div>
 					))}
+					{totalPages > LIST_FIRST_PAGE ? (
+						<nav aria-label="Moderation queue pages" className="flex items-center justify-between gap-3 pt-2 text-sm text-muted-foreground">
+							<span>
+								Page {currentPage} of {totalPages}
+							</span>
+							<div className="flex gap-2">
+								<Button type="button" size="sm" variant="outline" disabled={!readPaginatedHasPrevious(meta)} onClick={handlePreviousPage}>
+									Previous
+								</Button>
+								<Button type="button" size="sm" variant="outline" disabled={!readPaginatedHasNext(meta)} onClick={handleNextPage}>
+									Next
+								</Button>
+							</div>
+						</nav>
+					) : null}
 				</CardContent>
 			</Card>
 		</div>

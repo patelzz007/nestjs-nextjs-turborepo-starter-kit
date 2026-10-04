@@ -6,7 +6,8 @@ import { RewardClaimOtpEmailTemplate } from "../../notifications/email/templates
 import { RewardOtpChallengeRepository } from "../repositories/reward-otp-challenge.repository";
 import { RewardRepository } from "../repositories/reward.repository";
 import { RewardUserRepository } from "../repositories/reward-user.repository";
-import { generateOtpCode, sha256Hex } from "../utils/reward-crypto.util";
+import { sha256Hex } from "../../../common/crypto/sha256";
+import { generateOtpCode } from "../utils/reward-crypto.util";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;

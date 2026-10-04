@@ -24,14 +24,15 @@ export const CreatePermissionSchema = z
 
 export type CreatePermissionInput = z.output<typeof CreatePermissionSchema>;
 
-/** CreatePermission with optional group and isSystem */
+/**
+ * CreatePermission with an optional group. `isSystem` is server-controlled
+ * (only the code registry sync creates system permissions), so the strict
+ * schema rejects it.
+ */
 export const CreatePermissionExtendedSchema = CreatePermissionSchema.extend({
 	group: z.string().optional().meta({
 		description: "Permission group/category",
 		example: "User Management",
-	}),
-	isSystem: z.boolean().optional().meta({
-		description: "Whether this is a system permission",
 	}),
 }).strict();
 
@@ -50,9 +51,6 @@ export const PermissionUpdateSchema = z
 		}),
 		conditions: abacConditions.nullable().optional().meta({
 			description: "ABAC conditions as JSON object (null to clear)",
-		}),
-		isSystem: z.boolean().optional().meta({
-			description: "Whether this is a system permission",
 		}),
 	})
 	.strict();
@@ -169,11 +167,6 @@ export const AdminPermissionResponseSchema = PermissionCreatedResponseSchema.omi
 });
 
 export type AdminPermissionResponse = z.output<typeof AdminPermissionResponseSchema>;
-
-/** `GET /admin/permissions/:id` payload — `null` when no permission has that id. */
-export const AdminPermissionDetailResponseSchema = AdminPermissionResponseSchema.nullable();
-
-export type AdminPermissionDetailResponse = z.output<typeof AdminPermissionDetailResponseSchema>;
 
 /** `GET /admin/permissions/groups/list` payload — distinct permission group names. */
 export const PermissionGroupsResponseSchema = z.object({

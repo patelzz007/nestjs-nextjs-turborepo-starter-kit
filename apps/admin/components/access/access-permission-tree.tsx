@@ -209,7 +209,7 @@ function AccessPermissionTreeResource({
 	const selectedCount: number = resourceNode.permissions.filter((permission) => selectedPermissionIds?.has(permission.id) ?? false).length;
 
 	return (
-		<div role="treeitem" aria-expanded={open} className="overflow-hidden rounded-md border border-border/70 bg-background">
+		<div role="treeitem" aria-expanded={open} aria-selected={false} className="overflow-hidden rounded-md border border-border/70 bg-background">
 			<Collapsible open={open} onOpenChange={setOpen}>
 				<CollapsibleTrigger className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left hover:bg-muted/40 [&[data-panel-open]]:bg-muted/20">
 					<ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open ? "rotate-90" : "")} />
@@ -265,7 +265,7 @@ function AccessPermissionTreeGroup({
 	const selectedCount: number = countSelectedInGroup(groupNode, selectedPermissionIds);
 
 	return (
-		<div role="treeitem" aria-expanded={open} className="overflow-hidden rounded-lg border border-border/80 bg-card shadow-sm">
+		<div role="treeitem" aria-expanded={open} aria-selected={false} className="overflow-hidden rounded-lg border border-border/80 bg-card shadow-sm">
 			<Collapsible open={open} onOpenChange={setOpen}>
 				<CollapsibleTrigger className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/30 [&[data-panel-open]]:bg-muted/20">
 					<ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open ? "rotate-90" : "")} />

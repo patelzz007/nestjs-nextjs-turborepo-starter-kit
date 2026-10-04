@@ -182,7 +182,6 @@ export class FileAuthorizationService {
 			{
 				operation: FILE_AUTHORIZATION_OPERATION,
 				reason: "Resolve the caller's organization role for a file operation",
-				correlationId: `file-auth:${userId}`,
 				actorUserId: userId,
 			},
 			async (tx) =>

@@ -174,14 +174,16 @@ describe("ADMIN_ROUTE_AUTHORIZATION", () => {
 	});
 
 	it("gates catalog pages by the permission of the API route they call", () => {
-		// list → GET /product (LIST) · new → POST (CREATE) · detail → GET /:id (READ) · edit → PATCH /:id (UPDATE)
+		// list → GET /product (LIST) · new → POST (CREATE) + the category picker · detail → GET /:id (READ)
+		// · edit → GET + PATCH /:id (READ + UPDATE) + the category picker
+		const categoryPicker = [PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ];
 		expect(permissionsFor("/catalog/products")).toEqual([PERMISSION.PRODUCT.LIST]);
 		expect(permissionsFor("/catalog/products/42")).toEqual([PERMISSION.PRODUCT.READ]);
-		expect(permissionsFor("/catalog/products/42/edit")).toEqual([PERMISSION.PRODUCT.UPDATE]);
-		expect(permissionsFor("/catalog/products/new")).toEqual([PERMISSION.PRODUCT.CREATE]);
+		expect(permissionsFor("/catalog/products/42/edit")).toEqual([PERMISSION.PRODUCT.READ, PERMISSION.PRODUCT.UPDATE, ...categoryPicker]);
+		expect(permissionsFor("/catalog/products/new")).toEqual([PERMISSION.PRODUCT.CREATE, ...categoryPicker]);
 		expect(permissionsFor("/catalog/categories")).toEqual([PERMISSION.SAMPLE_CATEGORY.LIST]);
 		expect(permissionsFor("/catalog/categories/7")).toEqual([PERMISSION.SAMPLE_CATEGORY.READ]);
-		expect(permissionsFor("/catalog/categories/7/edit")).toEqual([PERMISSION.SAMPLE_CATEGORY.UPDATE]);
+		expect(permissionsFor("/catalog/categories/7/edit")).toEqual([PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE]);
 		expect(permissionsFor("/catalog/categories/new")).toEqual([PERMISSION.SAMPLE_CATEGORY.CREATE]);
 	});
 

@@ -5,6 +5,7 @@ import type {
 	AdminKybUpdateInput,
 	AdminMerchantDetailResponse,
 	AdminMerchantListQuery,
+	AdminPendingRewardListQuery,
 	AdminRejectRewardInput,
 	MerchantOrgResponse,
 	PaginatedServiceResult,
@@ -14,7 +15,7 @@ import { EmailPreview, EmailRenderContextSchema, EpochMsSchema, APP_LINKS } from
 
 import { parsePrismaInputJson } from "../../../common/utils/prisma-json";
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { toPaginatedServiceResult } from "../../../platform/persistence/list-page";
+import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
@@ -73,11 +74,8 @@ export class RewardsAdminService {
 			});
 		}
 
-		if (!this.config.isProduction) {
-			// Dev visibility when EMAIL_MODE=log-only.
-			process.stdout.write(`[merchant-invite] email=${input.email} url=${inviteUrl}\n`);
-		}
-
+		// The invite URL carries a live token: it leaves the process only inside the email. Locally,
+		// EMAIL_MODE=log-only renders the email (link included) to the email log — never a console line.
 		return {
 			inviteId: provisioned.inviteId,
 			inviteToken: provisioned.inviteToken,
@@ -127,9 +125,12 @@ export class RewardsAdminService {
 		return toPaginatedServiceResult({ ...result, items }, query);
 	}
 
-	public async listPendingRewards(): Promise<RewardResponse[]> {
-		const rows = await this.rewardRepository.listPendingReview();
-		return rows.map((row) => mapRewardToResponse(row, row.organization));
+	public async listPendingRewards(query: AdminPendingRewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
+		const result = await this.rewardRepository.listPendingReview(query);
+		return toPaginatedServiceResult(
+			mapListResult(result, (row) => mapRewardToResponse(row, row.organization)),
+			query,
+		);
 	}
 
 	public async approveReward(adminUserId: string, rewardId: string): Promise<RewardResponse> {

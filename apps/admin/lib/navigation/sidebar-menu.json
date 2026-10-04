@@ -22,74 +22,6 @@
 							"title": "Sales",
 							"url": "/analytics/sales",
 							"icon": "TrendingUp"
-						},
-						{
-							"title": "Realtime",
-							"url": "/analytics/realtime",
-							"icon": "Activity",
-							"disabled": true
-						},
-						{
-							"title": "Reports",
-							"url": "/analytics/reports",
-							"icon": "FileBarChart",
-							"disabled": true,
-							"children": [
-								{
-									"title": "Sales",
-									"url": "/analytics/reports/sales",
-									"icon": "TrendingUp",
-									"disabled": true
-								},
-								{
-									"title": "Marketing",
-									"url": "/analytics/reports/marketing",
-									"icon": "Megaphone",
-									"disabled": true,
-									"children": [
-										{
-											"title": "Campaigns",
-											"url": "/analytics/reports/marketing/campaigns",
-											"icon": "Send",
-											"disabled": true
-										},
-										{
-											"title": "Segments",
-											"url": "/analytics/reports/marketing/segments",
-											"icon": "Layers",
-											"disabled": true,
-											"children": [
-												{
-													"title": "Audiences",
-													"url": "/analytics/reports/marketing/segments/audiences",
-													"icon": "Users",
-													"disabled": true
-												},
-												{
-													"title": "Personas",
-													"url": "/analytics/reports/marketing/segments/personas",
-													"icon": "UserRound",
-													"disabled": true,
-													"children": [
-														{
-															"title": "Buyer Persona",
-															"url": "/analytics/reports/marketing/segments/personas/buyer-persona",
-															"icon": "UserCog",
-															"disabled": true
-														},
-														{
-															"title": "Power User",
-															"url": "/analytics/reports/marketing/segments/personas/power-user",
-															"icon": "Shield",
-															"disabled": true
-														}
-													]
-												}
-											]
-										}
-									]
-								}
-							]
 						}
 					]
 				},
@@ -107,38 +39,6 @@
 							"title": "MFA recovery",
 							"url": "/users/mfa-recovery",
 							"icon": "ShieldAlert"
-						},
-						{
-							"title": "Roles",
-							"url": "/users/roles",
-							"icon": "Shield",
-							"disabled": true,
-							"children": [
-								{
-									"title": "Admins",
-									"url": "/users/roles/admins",
-									"icon": "ShieldCheck",
-									"disabled": true
-								},
-								{
-									"title": "Managers",
-									"url": "/users/roles/managers",
-									"icon": "Briefcase",
-									"disabled": true
-								},
-								{
-									"title": "Members",
-									"url": "/users/roles/members",
-									"icon": "UsersRound",
-									"disabled": true
-								}
-							]
-						},
-						{
-							"title": "API Keys",
-							"url": "/users/api-keys",
-							"icon": "KeyRound",
-							"disabled": true
 						}
 					]
 				},
@@ -206,30 +106,6 @@
 			]
 		},
 		{
-			"title": "Documents",
-			"color": "amber",
-			"items": [
-				{
-					"title": "Project Alpha",
-					"url": "/documents/alpha",
-					"icon": "FileText",
-					"disabled": true
-				},
-				{
-					"title": "Project Beta",
-					"url": "/documents/beta",
-					"icon": "Folder",
-					"disabled": true
-				},
-				{
-					"title": "Project Gamma",
-					"url": "/documents/gamma",
-					"icon": "Table",
-					"disabled": true
-				}
-			]
-		},
-		{
 			"title": "Platform",
 			"color": "purple",
 			"items": [
@@ -256,20 +132,9 @@
 					"icon": "Settings",
 					"children": [
 						{
-							"title": "Billing",
-							"url": "/settings/billing",
-							"icon": "CreditCard"
-						},
-						{
 							"title": "Access control",
 							"url": "/settings/access",
 							"icon": "ShieldCheck"
-						},
-						{
-							"title": "Audit log",
-							"url": "/settings/audit-log",
-							"icon": "Database",
-							"disabled": true
 						}
 					]
 				}
@@ -291,26 +156,8 @@
 					"title": "Security",
 					"url": "/account/security",
 					"icon": "Shield"
-				},
-				{
-					"title": "Sessions",
-					"url": "/account/sessions",
-					"icon": "Activity",
-					"disabled": true
 				}
 			]
-		},
-		{
-			"title": "Support",
-			"url": "/support",
-			"icon": "LifeBuoy",
-			"disabled": true
-		},
-		{
-			"title": "Feedback",
-			"url": "/feedback",
-			"icon": "Send",
-			"disabled": true
 		}
 	]
 }

@@ -21,7 +21,6 @@ export const clientEnv: Readonly<WebClientEnv> = parseEnvOrThrow(
 	{
 		NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-		NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS: process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS,
 	} satisfies Record<keyof z.input<typeof WebClientEnvSchema>, string | undefined>,
 	WEB_ENV_SCOPE.client,
 );

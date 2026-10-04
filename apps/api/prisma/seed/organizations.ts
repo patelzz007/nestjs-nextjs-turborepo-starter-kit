@@ -1,26 +1,23 @@
-import { createHash } from "node:crypto";
+import type { Organization, Prisma, User } from "@prisma/client";
+import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
-import type { Organization, User } from "@prisma/client";
-
-import { seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { sha256Hex } from "../../src/common/crypto/sha256";
+import { POLICY_AUDIT_ACTIONS, POLICY_DRAFT_AUDIT_RESOURCE } from "../../src/modules/authorization-cedar/constants/policy-control-plane.constants";
+import { policyBaselineFingerprint } from "../../src/modules/authorization-cedar/services/policy-baseline";
+import { PolicyTemplateCompiler } from "../../src/modules/authorization-cedar/services/policy-template.compiler";
+import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../../src/modules/organization/services/organization-own-membership.service";
+import { findActivePolicyVersionInTx, seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
 
 import { prisma } from "./client";
+import { seedLifecycleCorrelationId } from "./lifecycle-correlation";
+import { upsertLiveSeedMembership } from "./memberships";
+import { deterministicUuid } from "./deterministic-uuid";
+import { defaultTenantPolicySeedIds, platformGuardrailSeedIds } from "./policy-seed-ids";
+import { seedTenantEncryptionKeys } from "./tenant-encryption";
+import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
 import { seedLog } from "./seed-log";
 
-/** Fixed seed UUIDs for canonical organizations (URL slugs are the merchant entry point). */
-export const ORGANIZATION_SEED_IDS = Object.freeze({
-	klOrganization: "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-	mlkOrganization: "b57401d5-536e-464f-9ae9-4756b6dd5f61",
-	klLocation: "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-	mlkLocationKatil: "d57401d5-536e-464f-9ae9-4756b6dd5f62",
-	mlkLocationBeruang: "257401d5-536e-464f-9ae9-4756b6dd5f65",
-	klOwnerMembership: "e178a4d1-6915-4eb3-bf84-6fb14e1feb6e",
-	mlkOwnerMembership: "f57401d5-536e-464f-9ae9-4756b6dd5f63",
-	klCashierMembership: "0178a4d1-6915-4eb3-bf84-6fb14e1feb6f",
-	mlkCashierMembership: "157401d5-536e-464f-9ae9-4756b6dd5f64",
-	pendingNyonyaInvitation: "2178a4d1-6915-4eb3-bf84-6fb14e1feb70",
-	pendingKlTeamInvitation: "3178a4d1-6915-4eb3-bf84-6fb14e1feb71",
-});
+export { ORGANIZATION_SEED_IDS, SINGLE_TENANT_SEED_ORGANIZATION_ID } from "./organization-seed-ids";
 
 /** Plaintext team invite token for Brew & Bean KL pending cashier invite (seed only). */
 export const SEED_TEAM_INVITE_TOKEN_KL_ALICE = "seed_team_invite_token_kl_alice";
@@ -30,40 +27,54 @@ export const ORGANIZATION_SEED_SLUGS = Object.freeze({
 	mlk: "jonker-street-kitchen",
 });
 
-const PLATFORM_GUARDRAIL_CEDAR = `forbid(principal, action, resource) when { action == "assignPolicyAdmin" && principal.role != "OWNER" };
-forbid(principal, action, resource) when { action == "removeLastOwner" };`;
-
-function sha256Hex(value: string): string {
-	return createHash("sha256").update(value).digest("hex");
-}
-
 function msFromNow(days: number): number {
 	return Date.now() + days * 24 * 60 * 60 * 1000;
 }
 
+/** The organizations the `development` scenario owns — the ONLY tenants its cleanup touches. */
+export const SEED_ORGANIZATION_IDS: readonly string[] = [ORGANIZATION_SEED_IDS.klOrganization, ORGANIZATION_SEED_IDS.mlkOrganization];
+
+/** Store the Jonker Street Kitchen owner asked for and the platform has not approved yet. */
+const MLK_PENDING_LOCATION_ID = deterministicUuid("organization-seed", "mlk-ayer-keroh-pending");
+
+/**
+ * Alice's earlier, since-removed Brew & Bean KL cashier membership (soft
+ * deleted). The one-live-membership unique index ignores it, so her pending
+ * re-invite can still be accepted — the re-hire path the index exists for.
+ */
+const KL_FORMER_CASHIER_MEMBERSHIP_ID = deterministicUuid("organization-seed", "kl-alice-former-cashier");
+const KL_FORMER_CASHIER_REMOVAL_AUDIT_ID = deterministicUuid("organization-seed-audit", "kl-alice-former-cashier-removed");
+/** Days before the seed run that Alice's former membership was removed. */
+const KL_FORMER_CASHIER_REMOVED_DAYS_AGO = 30;
+
+/**
+ * Removes the re-creatable child rows of the SEED organizations only, so the
+ * next run converges. Never touches another tenant, never deletes the
+ * organizations themselves (their audit trail — `organization_audit_logs`,
+ * `organization_lifecycle_events` — cascades from them and is kept), and keeps
+ * tenant policy history and tenant data keys (a data key is never destroyed: it
+ * would orphan what is encrypted with it; the seed creates it once).
+ */
 export async function cleanupOrganizationSeedData(): Promise<void> {
-	await prisma.organizationAuditLog.deleteMany();
-	await prisma.supportAccessGrant.deleteMany();
-	await prisma.tenantEncryptionKey.deleteMany();
-	await prisma.authorizationPolicySimulation.deleteMany();
-	await prisma.authorizationPolicyVersion.deleteMany();
-	await prisma.authorizationPolicyDraft.deleteMany();
-	await prisma.organizationQuota.deleteMany();
-	await prisma.organizationEntitlement.deleteMany();
-	await prisma.organizationLifecycleEvent.deleteMany();
-	await prisma.organizationAccessRequest.deleteMany();
-	await prisma.organizationInvitationLocationScope.deleteMany();
-	await prisma.organizationInvitation.deleteMany();
-	await prisma.organizationMembershipLocationScope.deleteMany();
-	await prisma.organizationMembership.deleteMany();
-	await prisma.organizationMerchantProfile.deleteMany();
-	await prisma.organizationSlugHistory.deleteMany();
-	await prisma.tenantPlacement.deleteMany();
-	await prisma.organizationLocation.deleteMany();
-	await prisma.organization.deleteMany();
+	const organizationId = { in: [...SEED_ORGANIZATION_IDS] };
+	await prisma.supportAccessGrant.deleteMany({ where: { organizationId } });
+	await prisma.organizationQuota.deleteMany({ where: { organizationId } });
+	await prisma.organizationAccessRequest.deleteMany({ where: { organizationId } });
+	await prisma.organizationInvitationLocationScope.deleteMany({ where: { organizationId } });
+	await prisma.organizationInvitation.deleteMany({ where: { organizationId } });
+	await prisma.organizationMembershipLocationScope.deleteMany({ where: { organizationId } });
 }
 
-export async function seedPlatformGuardrails(superAdmin: User): Promise<void> {
+/**
+ * Publishes the platform guardrail exactly as the policy control plane would:
+ * a draft by `author`, a passing simulation against the current baseline, and
+ * four-eyes approval + publish by a DIFFERENT SuperAdmin (`approver`), with
+ * the authorization audit rows the app writes — all in one transaction.
+ */
+export async function seedPlatformGuardrails(author: Pick<User, "id">, approver: Pick<User, "id">): Promise<void> {
+	if (author.id === approver.id) {
+		throw new Error("Seed guardrail approval needs two distinct users (four-eyes)");
+	}
 	const existing = await prisma.authorizationPolicyVersion.findFirst({
 		where: { organizationId: null, scope: "PLATFORM_GUARDRAIL", supersededAt: null },
 	});
@@ -72,38 +83,209 @@ export async function seedPlatformGuardrails(superAdmin: User): Promise<void> {
 		return;
 	}
 
-	const draft = await prisma.authorizationPolicyDraft.create({
-		data: {
-			organizationId: null,
-			scope: "PLATFORM_GUARDRAIL",
-			name: "Platform guardrails",
-			description: "Non-bypassable owner and policy-admin protections",
-			builderPayload: { templateId: "platform.guardrail.no_escalation", parameters: {} },
-			cedarSource: PLATFORM_GUARDRAIL_CEDAR,
-			status: "PUBLISHED",
-			createdById: superAdmin.id,
-			approvedById: superAdmin.id,
-		},
-	});
+	const builderPayload = { templateId: "platform.guardrail.no_escalation", parameters: {} };
+	const compiled = new PolicyTemplateCompiler().compile(builderPayload, null);
+	const now = Date.now();
+	const ids = platformGuardrailSeedIds();
 
-	const contentHash = sha256Hex(PLATFORM_GUARDRAIL_CEDAR);
-	await prisma.authorizationPolicyVersion.create({
-		data: {
+	await prisma.$transaction(async (tx) => {
+		const baselineIds = await tx.authorizationPolicyVersion.findMany({ where: { supersededAt: null }, select: { id: true } });
+		const memberCount = await tx.organizationMembership.count({ where: { status: "ACTIVE", isDeleted: false } });
+		const draft = await tx.authorizationPolicyDraft.create({
+			data: {
+				id: ids.draftId,
+				organizationId: null,
+				scope: "PLATFORM_GUARDRAIL",
+				name: "Platform guardrails",
+				description: "Non-bypassable owner and policy-admin protections",
+				builderPayload,
+				cedarSource: compiled.cedarSource,
+				sqlPredicate: compiled.sqlPredicate,
+				status: "PUBLISHED",
+				createdById: author.id,
+				approvedById: approver.id,
+				approvalKind: "FOUR_EYES",
+			},
+		});
+		const simulationId = ids.simulationId;
+		await tx.authorizationPolicySimulation.create({
+			data: {
+				id: simulationId,
+				draftId: draft.id,
+				actorUserId: approver.id,
+				passed: true,
+				baselineFingerprint: policyBaselineFingerprint(baselineIds.map((row) => row.id)),
+				result: {
+					simulationId,
+					passed: true,
+					warnings: [],
+					errors: [],
+					evaluatedPrincipalCount: memberCount,
+					affectedPrincipalCount: 0,
+					wouldLockOutOwners: false,
+					decisionChanges: [],
+					decisionChangesTruncated: false,
+				},
+			},
+		});
+		const version = await tx.authorizationPolicyVersion.create({
+			data: {
+				id: ids.versionId,
+				organizationId: null,
+				draftId: draft.id,
+				scope: "PLATFORM_GUARDRAIL",
+				version: 1,
+				cedarSource: compiled.cedarSource,
+				sqlPredicate: compiled.sqlPredicate,
+				contentHash: sha256Hex(compiled.cedarSource),
+				publishedAt: BigInt(now),
+				publishedById: approver.id,
+			},
+		});
+		const audit = (
+			id: string,
+			action: string,
+			actorId: string,
+			policyIds: string[],
+			evaluation: Record<string, string | number | null>,
+		): Prisma.AuthorizationAuditCreateInput & { readonly id: string } => ({
+			id,
+			actorId,
 			organizationId: null,
-			draftId: draft.id,
-			scope: "PLATFORM_GUARDRAIL",
-			version: 1,
-			cedarSource: PLATFORM_GUARDRAIL_CEDAR,
-			contentHash,
-			publishedAt: BigInt(Date.now()),
-			publishedById: superAdmin.id,
-		},
+			action,
+			resource: POLICY_DRAFT_AUDIT_RESOURCE,
+			resourceId: draft.id,
+			decision: "ALLOW",
+			policyIds,
+			evaluation: { ...evaluation, scope: "PLATFORM_GUARDRAIL" },
+			// Seeded outside any HTTP request: there is no correlation id.
+			requestId: null,
+		});
+		const rows: readonly (Prisma.AuthorizationAuditCreateInput & { readonly id: string })[] = [
+			audit(ids.auditIds.created, POLICY_AUDIT_ACTIONS.draftCreated, author.id, [], { name: draft.name }),
+			audit(ids.auditIds.simulated, POLICY_AUDIT_ACTIONS.draftSimulated, approver.id, [], { simulationId, evaluatedPrincipalCount: memberCount, affectedPrincipalCount: 0 }),
+			audit(ids.auditIds.published, POLICY_AUDIT_ACTIONS.draftPublished, approver.id, [version.id], {
+				version: 1,
+				authorUserId: author.id,
+				approverUserId: approver.id,
+				approvalNote: null,
+			}),
+		];
+		// Upsert on the deterministic ids: audit history is append-only and a re-run must not duplicate it.
+		for (const row of rows) {
+			await tx.authorizationAudit.upsert({ where: { id: row.id }, create: row, update: {} });
+		}
 	});
 }
 
 export interface SeededOrganizations {
 	readonly klOrganization: Organization;
 	readonly mlkOrganization: Organization;
+}
+
+interface SeedLocation {
+	readonly id: string;
+	readonly name: string;
+	readonly code: string;
+	readonly addressText: string;
+	readonly city: "KUALA_LUMPUR" | "MELAKA";
+	readonly contactPhone: string;
+	readonly isPrimary: boolean;
+	readonly status: "ACTIVE" | "PENDING_APPROVAL";
+}
+
+interface SeedOrganization {
+	readonly id: string;
+	readonly slug: string;
+	readonly displayName: string;
+	readonly owner: User;
+	readonly locations: readonly SeedLocation[];
+	readonly profile: Omit<Prisma.OrganizationMerchantProfileUncheckedCreateInput, "organizationId">;
+	readonly features: Prisma.InputJsonObject;
+	/** IANA zone the merchant's analytics weeks are cut in (its primary city's zone). */
+	readonly timeZone: string;
+}
+
+/**
+ * Creates the organization, or brings an existing one back to its seed state
+ * (upserts — the row and its audit trail are never deleted). The ONE
+ * PROVISIONING → ACTIVE lifecycle event is found by its natural key (the
+ * organization + transition + reason), created when missing and otherwise
+ * brought to its seed correlation id, so a re-run never duplicates it.
+ */
+async function upsertSeedOrganization(input: SeedOrganization, adminUser: User, now: bigint): Promise<Organization> {
+	const organization = await prisma.organization.upsert({
+		where: { id: input.id },
+		create: { id: input.id, slug: input.slug, displayName: input.displayName, lifecycleState: "ACTIVE", timeZone: input.timeZone },
+		update: { slug: input.slug, displayName: input.displayName, lifecycleState: "ACTIVE", timeZone: input.timeZone, isDeleted: false, deletedAt: null },
+	});
+	const activation = {
+		organizationId: input.id,
+		fromState: "PROVISIONING",
+		toState: "ACTIVE",
+		reason: "Seed: organization provisioned",
+	} satisfies Prisma.OrganizationLifecycleEventWhereInput;
+	const correlationId = seedLifecycleCorrelationId(`${input.id}:activated`);
+	const activationEvent = await prisma.organizationLifecycleEvent.findFirst({ where: activation, select: { id: true } });
+	if (activationEvent === null) {
+		await prisma.organizationLifecycleEvent.create({ data: { ...activation, actorUserId: adminUser.id, correlationId } });
+	} else {
+		await prisma.organizationLifecycleEvent.update({ where: { id: activationEvent.id }, data: { correlationId } });
+	}
+
+	for (const location of input.locations) {
+		const reviewed = location.status === "ACTIVE";
+		const data = {
+			name: location.name,
+			code: location.code,
+			addressText: location.addressText,
+			city: location.city,
+			contactPhone: location.contactPhone,
+			isPrimary: location.isPrimary,
+			status: location.status,
+			requestedByUserId: input.owner.id,
+			reviewedByUserId: reviewed ? input.owner.id : null,
+			reviewedAt: reviewed ? now : null,
+		};
+		// Keyed by (organization, code) — the natural key — so rows from runs that predate the fixed
+		// ids (same code, random id) are reconciled in place instead of colliding on the unique index.
+		await prisma.organizationLocation.upsert({
+			where: { organizationId_code: { organizationId: input.id, code: location.code } },
+			create: { id: location.id, organizationId: input.id, ...data },
+			update: { ...data, isDeleted: false, deletedAt: null },
+		});
+	}
+
+	await prisma.organizationMerchantProfile.upsert({
+		where: { organizationId: input.id },
+		create: { organizationId: input.id, ...input.profile },
+		update: input.profile,
+	});
+	await prisma.tenantPlacement.upsert({
+		where: { organizationId: input.id },
+		create: { organizationId: input.id, kind: "SHARED", regionCode: "default" },
+		update: { kind: "SHARED", regionCode: "default" },
+	});
+	const entitlementId = deterministicUuid("organization-seed-entitlement", input.id);
+	const entitlement = { planCode: "pilot", features: input.features, version: 1, effectiveFrom: now };
+	await prisma.organizationEntitlement.upsert({
+		where: { id: entitlementId },
+		create: { id: entitlementId, organizationId: input.id, ...entitlement },
+		update: entitlement,
+	});
+	return organization;
+}
+
+/** Display names the demo members chose for themselves (`null`: the member never set one — the roster shows the full name). */
+const SEED_MEMBER_DISPLAY_NAMES = {
+	klOwner: "Ahmad (Owner)",
+	klCashier: "Lee — Bukit Bintang counter",
+	mlkOwner: null,
+	mlkCashier: "Kak Mira",
+} satisfies Readonly<Record<string, string | null>>;
+
+async function upsertSeedMembership(id: string, organizationId: string, userId: string, role: "OWNER" | "CASHIER", displayName: string | null): Promise<void> {
+	await upsertLiveSeedMembership({ id, organizationId, userId, role, displayName });
 }
 
 export async function seedOrganizationsAndMerchants(
@@ -120,14 +302,14 @@ export async function seedOrganizationsAndMerchants(
 	const klPrimaryAddress = "12 Jalan Bukit Bintang, Kuala Lumpur";
 	const klPrimaryPhone = "+60321456789";
 
-	const klOrganization = await prisma.organization.create({
-		data: {
+	const klOrganization = await upsertSeedOrganization(
+		{
 			id: ORGANIZATION_SEED_IDS.klOrganization,
 			slug: ORGANIZATION_SEED_SLUGS.kl,
 			displayName: "Brew & Bean KL",
-			lifecycleState: "ACTIVE",
-			locations: {
-				create: {
+			owner: klOwner,
+			locations: [
+				{
 					id: ORGANIZATION_SEED_IDS.klLocation,
 					name: "Brew & Bean KL — Bukit Bintang",
 					code: "primary",
@@ -136,168 +318,87 @@ export async function seedOrganizationsAndMerchants(
 					contactPhone: klPrimaryPhone,
 					isPrimary: true,
 					status: "ACTIVE",
-					reviewedByUserId: klOwner.id,
-					reviewedAt: now,
 				},
+			],
+			profile: {
+				legalName: "Brew & Bean KL Sdn Bhd",
+				category: "cafe",
+				addressText: klPrimaryAddress,
+				city: "KUALA_LUMPUR",
+				kybStatus: "APPROVED",
+				kybFields: { registrationNo: "201901012345", taxId: "C12345678" },
+				contactEmail: klOwner.email,
+				contactPhone: klPrimaryPhone,
 			},
-			merchantProfile: {
-				create: {
-					legalName: "Brew & Bean KL Sdn Bhd",
-					category: "cafe",
-					addressText: klPrimaryAddress,
-					city: "KUALA_LUMPUR",
-					kybStatus: "APPROVED",
-					kybFields: {
-						registrationNo: "201901012345",
-						taxId: "C12345678",
-					},
-					contactEmail: klOwner.email,
-					contactPhone: klPrimaryPhone,
-				},
-			},
-			placement: {
-				create: {
-					kind: "SHARED",
-					regionCode: "default",
-				},
-			},
-			entitlements: {
-				create: {
-					planCode: "pilot",
-					features: { rewards: true, apiKeys: true, analytics: true },
-					version: 1,
-					effectiveFrom: now,
-				},
-			},
-			lifecycleEvents: {
-				create: {
-					fromState: "PROVISIONING",
-					toState: "ACTIVE",
-					actorUserId: adminUser.id,
-					reason: "Seed: organization provisioned",
-				},
-			},
+			features: { rewards: true, apiKeys: true, analytics: true },
+			timeZone: PILOT_CITY_TIME_ZONES.KUALA_LUMPUR,
 		},
-	});
+		adminUser,
+		now,
+	);
 
 	const mlkPrimaryAddress = "12 Jalan Bukit Katil, 75450 Melaka";
 	const mlkPrimaryPhone = "+6062812345";
 
-	const mlkOrganization = await prisma.organization.create({
-		data: {
+	const mlkOrganization = await upsertSeedOrganization(
+		{
 			id: ORGANIZATION_SEED_IDS.mlkOrganization,
 			slug: ORGANIZATION_SEED_SLUGS.mlk,
 			displayName: "Jonker Street Kitchen",
-			lifecycleState: "ACTIVE",
-			locations: {
-				create: [
-					{
-						id: ORGANIZATION_SEED_IDS.mlkLocationKatil,
-						name: "Jonker Street Kitchen — Bukit Katil",
-						code: "bukit-katil",
-						addressText: mlkPrimaryAddress,
-						city: "MELAKA",
-						contactPhone: mlkPrimaryPhone,
-						isPrimary: true,
-						status: "ACTIVE",
-						reviewedByUserId: mlkOwner.id,
-						reviewedAt: now,
-					},
-					{
-						id: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
-						name: "Jonker Street Kitchen — Bukit Beruang",
-						code: "bukit-beruang",
-						addressText: "88 Jalan Bukit Beruang, 75450 Melaka",
-						city: "MELAKA",
-						contactPhone: "+6062815678",
-						isPrimary: false,
-						status: "ACTIVE",
-						reviewedByUserId: mlkOwner.id,
-						reviewedAt: now,
-					},
-					{
-						name: "Jonker Street Kitchen — Ayer Keroh (Pending)",
-						code: "ayer-keroh-pending",
-						addressText: "5 Jalan Lagenda, 75450 Melaka",
-						city: "MELAKA",
-						contactPhone: "+6062830000",
-						isPrimary: false,
-						status: "PENDING_APPROVAL",
-						requestedByUserId: mlkOwner.id,
-					},
-				],
-			},
-			merchantProfile: {
-				create: {
-					legalName: "Jonker Kitchen Melaka",
-					category: "restaurant",
+			owner: mlkOwner,
+			locations: [
+				{
+					id: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+					name: "Jonker Street Kitchen — Bukit Katil",
+					code: "bukit-katil",
 					addressText: mlkPrimaryAddress,
 					city: "MELAKA",
-					kybStatus: "PENDING",
-					kybFields: {
-						registrationNo: "202002023456",
-					},
-					contactEmail: mlkOwner.email,
 					contactPhone: mlkPrimaryPhone,
+					isPrimary: true,
+					status: "ACTIVE",
 				},
-			},
-			placement: {
-				create: {
-					kind: "SHARED",
-					regionCode: "default",
+				{
+					id: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+					name: "Jonker Street Kitchen — Bukit Beruang",
+					code: "bukit-beruang",
+					addressText: "88 Jalan Bukit Beruang, 75450 Melaka",
+					city: "MELAKA",
+					contactPhone: "+6062815678",
+					isPrimary: false,
+					status: "ACTIVE",
 				},
-			},
-			entitlements: {
-				create: {
-					planCode: "pilot",
-					features: { rewards: true, apiKeys: true },
-					version: 1,
-					effectiveFrom: now,
+				{
+					id: MLK_PENDING_LOCATION_ID,
+					name: "Jonker Street Kitchen — Ayer Keroh (Pending)",
+					code: "ayer-keroh-pending",
+					addressText: "5 Jalan Lagenda, 75450 Melaka",
+					city: "MELAKA",
+					contactPhone: "+6062830000",
+					isPrimary: false,
+					status: "PENDING_APPROVAL",
 				},
+			],
+			profile: {
+				legalName: "Jonker Kitchen Melaka",
+				category: "restaurant",
+				addressText: mlkPrimaryAddress,
+				city: "MELAKA",
+				kybStatus: "PENDING",
+				kybFields: { registrationNo: "202002023456" },
+				contactEmail: mlkOwner.email,
+				contactPhone: mlkPrimaryPhone,
 			},
-			lifecycleEvents: {
-				create: {
-					fromState: "PROVISIONING",
-					toState: "ACTIVE",
-					actorUserId: adminUser.id,
-					reason: "Seed: organization provisioned",
-				},
-			},
+			features: { rewards: true, apiKeys: true },
+			timeZone: PILOT_CITY_TIME_ZONES.MELAKA,
 		},
-	});
+		adminUser,
+		now,
+	);
 
-	await prisma.organizationMembership.createMany({
-		data: [
-			{
-				id: ORGANIZATION_SEED_IDS.klOwnerMembership,
-				organizationId: klOrganization.id,
-				userId: klOwner.id,
-				role: "OWNER",
-				status: "ACTIVE",
-			},
-			{
-				id: ORGANIZATION_SEED_IDS.klCashierMembership,
-				organizationId: klOrganization.id,
-				userId: klCashier.id,
-				role: "CASHIER",
-				status: "ACTIVE",
-			},
-			{
-				id: ORGANIZATION_SEED_IDS.mlkOwnerMembership,
-				organizationId: mlkOrganization.id,
-				userId: mlkOwner.id,
-				role: "OWNER",
-				status: "ACTIVE",
-			},
-			{
-				id: ORGANIZATION_SEED_IDS.mlkCashierMembership,
-				organizationId: mlkOrganization.id,
-				userId: mlkCashier.id,
-				role: "CASHIER",
-				status: "ACTIVE",
-			},
-		],
-	});
+	await upsertSeedMembership(ORGANIZATION_SEED_IDS.klOwnerMembership, klOrganization.id, klOwner.id, "OWNER", SEED_MEMBER_DISPLAY_NAMES.klOwner);
+	await upsertSeedMembership(ORGANIZATION_SEED_IDS.klCashierMembership, klOrganization.id, klCashier.id, "CASHIER", SEED_MEMBER_DISPLAY_NAMES.klCashier);
+	await upsertSeedMembership(ORGANIZATION_SEED_IDS.mlkOwnerMembership, mlkOrganization.id, mlkOwner.id, "OWNER", SEED_MEMBER_DISPLAY_NAMES.mlkOwner);
+	await upsertSeedMembership(ORGANIZATION_SEED_IDS.mlkCashierMembership, mlkOrganization.id, mlkCashier.id, "CASHIER", SEED_MEMBER_DISPLAY_NAMES.mlkCashier);
 
 	await prisma.organizationMembershipLocationScope.createMany({
 		data: [
@@ -371,25 +472,6 @@ export async function seedOrganizationsAndMerchants(
 		},
 	});
 
-	await prisma.tenantEncryptionKey.createMany({
-		data: [
-			{
-				organizationId: klOrganization.id,
-				keyVersion: 1,
-				wrappedKey: "seed-wrapped-key-kl-v1",
-				kmsKeyId: "local:pilot",
-				status: "ACTIVE",
-			},
-			{
-				organizationId: mlkOrganization.id,
-				keyVersion: 1,
-				wrappedKey: "seed-wrapped-key-mlk-v1",
-				kmsKeyId: "local:pilot",
-				status: "ACTIVE",
-			},
-		],
-	});
-
 	const windowStart = BigInt(Math.floor(Date.now() / 86_400_000) * 86_400_000);
 	const windowEnd = windowStart + BigInt(86_400_000);
 
@@ -414,10 +496,84 @@ export async function seedOrganizationsAndMerchants(
 		],
 	});
 
-	await seedRewardHubTenantPolicies(prisma, klOrganization.id, adminUser.id);
-	await seedRewardHubTenantPolicies(prisma, mlkOrganization.id, adminUser.id);
+	await seedRewardHubTenantPolicies(prisma, klOrganization.id, adminUser.id, defaultTenantPolicySeedIds(klOrganization.id));
+	await seedRewardHubTenantPolicies(prisma, mlkOrganization.id, adminUser.id, defaultTenantPolicySeedIds(mlkOrganization.id));
+
+	await seedFormerKlCashierMembership(klOrganization.id, klOwner.id, klPendingCashier.id);
+	await seedMemberDisplayNameAudits([
+		{ organizationId: klOrganization.id, membershipId: ORGANIZATION_SEED_IDS.klOwnerMembership, userId: klOwner.id, displayName: SEED_MEMBER_DISPLAY_NAMES.klOwner },
+		{ organizationId: klOrganization.id, membershipId: ORGANIZATION_SEED_IDS.klCashierMembership, userId: klCashier.id, displayName: SEED_MEMBER_DISPLAY_NAMES.klCashier },
+		{ organizationId: mlkOrganization.id, membershipId: ORGANIZATION_SEED_IDS.mlkCashierMembership, userId: mlkCashier.id, displayName: SEED_MEMBER_DISPLAY_NAMES.mlkCashier },
+	]);
+
+	// Real wrapped data keys (after the tenant policies, so the audit rows carry the live policy version).
+	// The Melaka tenant's key has been through a KEK re-wrap (`db:rewrap-tenant-keys`, run by a SuperAdmin).
+	const superAdmin = await prisma.user.findFirstOrThrow({ where: { isSuperAdmin: true, isActive: true, isDeleted: false }, orderBy: { email: "asc" }, select: { id: true } });
+	await seedTenantEncryptionKeys([
+		{ organizationId: klOrganization.id, actorUserId: adminUser.id },
+		{ organizationId: mlkOrganization.id, actorUserId: adminUser.id, rewrappedByUserId: superAdmin.id },
+	]);
 
 	return { klOrganization, mlkOrganization };
+}
+
+/**
+ * Alice's removed membership: soft-deleted (never hard-deleted) with its
+ * store scope kept for history, plus the organization audit row the removal
+ * would have written (actor = the KL owner, live policy version).
+ */
+async function seedFormerKlCashierMembership(organizationId: string, removedByUserId: string, userId: string): Promise<void> {
+	const removedAt = BigInt(Date.now() - KL_FORMER_CASHIER_REMOVED_DAYS_AGO * 24 * 60 * 60 * 1000);
+	await prisma.organizationMembership.upsert({
+		where: { id: KL_FORMER_CASHIER_MEMBERSHIP_ID },
+		create: { id: KL_FORMER_CASHIER_MEMBERSHIP_ID, organizationId, userId, role: "CASHIER", status: "ACTIVE", isDeleted: true, deletedAt: removedAt },
+		update: { organizationId, userId, role: "CASHIER", isDeleted: true, deletedAt: removedAt },
+	});
+	await prisma.organizationMembershipLocationScope.create({
+		data: { organizationId, membershipId: KL_FORMER_CASHIER_MEMBERSHIP_ID, scopeType: "SELECTED", locationId: ORGANIZATION_SEED_IDS.klLocation },
+	});
+	await prisma.organizationAuditLog.upsert({
+		where: { id: KL_FORMER_CASHIER_REMOVAL_AUDIT_ID },
+		create: {
+			id: KL_FORMER_CASHIER_REMOVAL_AUDIT_ID,
+			organizationId,
+			actorUserId: removedByUserId,
+			action: "membership.removed",
+			resourceType: "OrganizationMembership",
+			resourceId: KL_FORMER_CASHIER_MEMBERSHIP_ID,
+			policyVersion: await findActivePolicyVersionInTx(prisma, organizationId),
+			createdAt: removedAt,
+		},
+		update: {},
+	});
+}
+
+interface SeedMemberDisplayName {
+	readonly organizationId: string;
+	readonly membershipId: string;
+	readonly userId: string;
+	readonly displayName: string;
+}
+
+/**
+ * The organization audit row `PATCH /orgs/:orgSlug/members/me` writes when a
+ * member sets their display name (actor = the member, live policy version),
+ * one per seeded display name. Keyed by the membership, so a re-run converges.
+ */
+async function seedMemberDisplayNameAudits(rows: readonly SeedMemberDisplayName[]): Promise<void> {
+	for (const row of rows) {
+		const auditId = deterministicUuid("organization-seed-audit", `${row.membershipId}:display-name`);
+		const audit = {
+			organizationId: row.organizationId,
+			actorUserId: row.userId,
+			action: OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION,
+			resourceType: "OrganizationMembership",
+			resourceId: row.membershipId,
+			policyVersion: await findActivePolicyVersionInTx(prisma, row.organizationId),
+			metadata: { previousDisplayName: null, displayName: row.displayName },
+		};
+		await prisma.organizationAuditLog.upsert({ where: { id: auditId }, create: { id: auditId, ...audit }, update: audit });
+	}
 }
 
 export function printOrganizationSeedCredentials(): void {

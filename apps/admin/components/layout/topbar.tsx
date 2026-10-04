@@ -12,7 +12,6 @@ import * as React from "react";
 
 import { NetworkStatusIndicator } from "@/components/common/network-status-bar";
 import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
-import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { Profile01 } from "@/components/settings/profile-01";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
@@ -50,8 +49,8 @@ export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 				className="admin-shell-topbar h-16 shrink-0"
 				brand={{
 					icon: (
-						<div className="mr-2 flex h-7 w-7 items-center justify-center rounded-full bg-green-500">
-							<Leaf className="size-4 text-white" aria-hidden="true" />
+						<div className="mr-2 flex h-7 w-7 items-center justify-center rounded-full bg-success-soft">
+							<Leaf className="size-4 text-success" aria-hidden="true" />
 						</div>
 					),
 					title: menuTitle,
@@ -60,9 +59,7 @@ export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 					placeholder: "Search...",
 					onOpen: handleOpenCommand,
 				}}>
-				<div className="mx-1 md:mx-2">
-					<NotificationsDropdown />
-				</div>
+				<div className="mx-1 md:mx-2"></div>
 
 				<div className="mx-1 hidden md:mx-2 md:block">
 					<NetworkStatusIndicator />

@@ -92,5 +92,5 @@ stack traces or provider secrets to clients" — nothing enforced it.
 
 ## References
 
-- [Error Model guide](../error-model.md)
+- [Error Model guide](../technical/api/errors.md)
 - `rules/02-backend-nestjs.md` → "API errors", "Global exception filter — reference"

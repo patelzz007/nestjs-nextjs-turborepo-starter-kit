@@ -428,7 +428,7 @@ To make the abstraction concrete across every layer this document covers, here's
 
 ```tsx
 // lib/url-state/orders.ts — ONE declaration of the URL state, shared by server and client
-// (`@workspace/client/lib/url-state`, docs/list-queries.md §7). Each param falls back to its
+// (`@workspace/client/lib/url-state`, docs/technical/api/list-queries.md §7). Each param falls back to its
 // default when missing or invalid, so a bad URL never throws.
 export const ORDERS_URL_STATE = defineUrlState({ status: optionalUrlParam(OrderStatusSchema) });
 export type OrderFilters = typeof ORDERS_URL_STATE.defaults;
@@ -465,7 +465,7 @@ function OrdersFilterBarClient(props: OrdersFilterBarProps): JSX.Element {
   // The rows are rendered by the server page here, so the server must re-run for the new URL:
   // navigate with the router to the codec's canonical href (defaults omitted, history entry pushed).
   // A table whose rows come from TanStack Query writes with `useUrlState` instead — a shallow
-  // History API update with no server round trip (docs/list-queries.md §7).
+  // History API update with no server round trip (docs/technical/api/list-queries.md §7).
   return <OrdersFilterBar {...props} onChange={(filters) => router.push(ORDERS_URL_STATE.href(pathname, filters), { scroll: false })} />;
 }
 ```

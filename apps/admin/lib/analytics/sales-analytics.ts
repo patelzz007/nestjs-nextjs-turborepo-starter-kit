@@ -5,12 +5,14 @@ import {
 	type MerchantBusinessCategory,
 	type SalesSummary,
 } from "@workspace/shared";
-import { formatMinorUnits, MONEY_DISPLAY_LOCALE } from "@workspace/ui/lib/format/money";
+import { DISPLAY_LOCALE } from "@/lib/format/dates";
+import { formatCount } from "@/lib/format/numbers";
+import { formatMinorUnits } from "@workspace/ui/lib/format/money";
 
 /** One decimal on shares ("42.5%"). */
 const SHARE_FRACTION_DIGITS = 1;
 
-const SHARE_FORMATTER = new Intl.NumberFormat(MONEY_DISPLAY_LOCALE, { style: "percent", maximumFractionDigits: SHARE_FRACTION_DIGITS });
+const SHARE_FORMATTER = new Intl.NumberFormat(DISPLAY_LOCALE, { style: "percent", maximumFractionDigits: SHARE_FRACTION_DIGITS });
 
 /** A top-merchants table row, ready to render. */
 export interface TopMerchantRow {
@@ -43,8 +45,8 @@ export function toTopMerchantRows(response: AdminSalesAnalyticsResponse): readon
 		organizationId: merchant.organizationId,
 		name: merchant.name,
 		categoryLabel: merchantCategoryLabel(merchant.category),
-		sales: formatMinorUnits(merchant.salesMinor, currency),
-		bills: merchant.bills.toLocaleString(MONEY_DISPLAY_LOCALE),
+		sales: formatMinorUnits(merchant.salesMinor, currency, DISPLAY_LOCALE),
+		bills: formatCount(merchant.bills),
 		share: formatShareOfTotal(merchant.salesMinor, totalSalesMinor.value),
 	}));
 }

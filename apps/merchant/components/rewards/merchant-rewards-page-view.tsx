@@ -9,12 +9,16 @@ import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { MERCHANT_CAPABILITY, type RewardResponse, type RewardStatus } from "@workspace/shared";
+import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
+import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type RewardResponse, type RewardStatus } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { formatCount } from "@workspace/ui/lib/format/number";
 import { AlertCircle, Gift, Plus, Sparkles, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+
+const REWARDS_LOAD_FAILED_MESSAGE = "The rewards catalog failed to load. Try again.";
 
 function countByStatus(rewards: readonly RewardResponse[], status: RewardStatus): number {
 	return rewards.filter((reward) => reward.status === status).length;
@@ -44,10 +48,9 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 		{ orgSlug, locationId },
 		{
 			enabled: orgSlug.length > 0 && !isLocationLoading,
-			staleTime: 0,
-			gcTime: 0,
-			refetchOnMount: "always",
-			retry: 1,
+			// Cached like every other list: mutations on the edit/create pages update or invalidate it.
+			staleTime: REWARDS_STALE_TIME_MS,
+			retry: retryTransientFailures,
 		},
 	);
 
@@ -55,7 +58,8 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 	const isLoading = isLocationLoading || rewardsQuery.isPending || (rewardsQuery.isFetching && !rewardsQuery.isSuccess);
 	const showError = rewardsQuery.isError;
 	const showEmpty = rewardsQuery.isSuccess && rewards.length === 0;
-	const loadErrorMessage = rewardsQuery.error instanceof Error ? rewardsQuery.error.message : "The rewards catalog failed to load. Try again.";
+	// A user-facing message for the failure (never the raw transport error text).
+	const loadErrorMessage = rewardsQuery.error === null ? "" : userSafeErrorMessage(rewardsQuery.error, REWARDS_LOAD_FAILED_MESSAGE);
 
 	const handleRetry = React.useCallback((): void => {
 		void rewardsQuery.refetch();
@@ -81,7 +85,7 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 			},
 			{
 				label: "Units left",
-				value: totalRemaining.toLocaleString(),
+				value: formatCount(totalRemaining, PLATFORM_DISPLAY_REGION.locale),
 				hint: "Across all rewards",
 				icon: <Gift className="size-4" aria-hidden="true" />,
 			},

@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { RequestContextService, type RequestContext } from "../context/request-context";
-import { MAX_USER_AGENT_LENGTH, readUserAgent, RequestContextMiddleware, resolveClientIp } from "./request-context.middleware";
+import { MAX_USER_AGENT_LENGTH, readUserAgent, RequestContextMiddleware } from "./request-context.middleware";
 
 const requestContext = new RequestContextService();
 
@@ -117,20 +117,6 @@ function rawRequest(headers: Record<string, string>, remoteAddress: string): Inc
 	raw.headers = headers;
 	return raw;
 }
-
-describe("resolveClientIp", () => {
-	it("uses the socket peer and ignores a client-supplied X-Forwarded-For when the proxy is not trusted", () => {
-		expect(resolveClientIp(rawRequest({ "x-forwarded-for": "1.2.3.4" }, "10.0.0.9"), false)).toBe("10.0.0.9");
-	});
-
-	it("uses the leftmost X-Forwarded-For hop behind a trusted proxy", () => {
-		expect(resolveClientIp(rawRequest({ "x-forwarded-for": "198.51.100.4, 10.0.0.1" }, "10.0.0.9"), true)).toBe("198.51.100.4");
-	});
-
-	it("falls back to the socket peer when a trusted proxy sent no X-Forwarded-For", () => {
-		expect(resolveClientIp(rawRequest({}, "10.0.0.9"), true)).toBe("10.0.0.9");
-	});
-});
 
 describe("readUserAgent", () => {
 	it("bounds the stored User-Agent", () => {

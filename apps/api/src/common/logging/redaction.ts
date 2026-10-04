@@ -1,6 +1,6 @@
 import type { DataValue } from "@workspace/shared";
 
-// ── Centralized secret redaction (docs/logging.md → "Redaction") ─────────
+// ── Centralized secret redaction (docs/technical/operations/observability.md → "Redaction") ─────────
 //
 // ONE list of sensitive field names, applied to:
 //   1. pino (Fastify's logger) via `PINO_REDACT_PATHS`
@@ -63,6 +63,8 @@ export const SENSITIVE_FIELD_NAMES: readonly string[] = [
 	"recoveryCodes",
 	"backupCode",
 	"backupCodes",
+	// Device pairing (POS terminal pairing codes are bearer credentials)
+	"pairingCode",
 	// Payment data
 	"card",
 	"cardNumber",
@@ -78,7 +80,7 @@ export const SENSITIVE_FIELD_NAMES: readonly string[] = [
  * `userPassword`, `emailOtp`). Kept to unambiguous words — a suffix such as
  * `code` would also swallow `countryCode` / `errorCode`.
  */
-const SENSITIVE_SUFFIXES: readonly string[] = ["password", "secret", "token", "apikey", "privatekey", "otp", "cvv", "cvc", "cardnumber", "accountnumber"];
+const SENSITIVE_SUFFIXES: readonly string[] = ["password", "secret", "token", "apikey", "privatekey", "otp", "cvv", "cvc", "cardnumber", "accountnumber", "pairingcode"];
 
 /** Lowercase and drop every non-alphanumeric character. */
 function normalizeFieldName(key: string): string {

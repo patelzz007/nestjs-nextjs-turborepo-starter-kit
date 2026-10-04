@@ -68,8 +68,10 @@ export class MerchantKybService {
 				const kybFields: JsonObject = JsonObjectSchema.parse(buildMerchantSubmittedKybFields(input));
 				const now = BigInt(Date.now());
 
-				await tx.organizationMerchantProfile.update({
-					where: { organizationId: resolved.organizationId },
+				// Conditional on the review still being open: an approval that lands between the read above
+				// and this write wins, instead of being silently overwritten with PENDING.
+				const reopened = await tx.organizationMerchantProfile.updateMany({
+					where: { organizationId: resolved.organizationId, kybStatus: { not: "APPROVED" } },
 					data: {
 						legalName: input.legalName.trim(),
 						addressText: input.addressText.trim(),
@@ -79,8 +81,12 @@ export class MerchantKybService {
 						updatedAt: now,
 					},
 				});
+				if (reopened.count !== 1) {
+					throw new BadRequestException("Business verification is already approved");
+				}
 
-				await this.kybDocumentService.attachSubmittedFileIds(resolved.organizationId, input.documentFileIds);
+				// Same transaction as the profile update: the submission commits or rolls back as one unit.
+				await this.kybDocumentService.attachSubmittedFileIdsInTx(tx, resolved.organizationId, input.documentFileIds, { closedKybStatuses: ["APPROVED"] });
 
 				await this.auditLogRepository.create({
 					organizationId: resolved.organizationId,

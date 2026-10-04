@@ -6,9 +6,10 @@ import { TypedConfigService } from "./typed-config.service";
  * Tenancy mode for RLS bypass and organization scoping.
  *
  * - **Single-tenant** (`TENANCY_ENABLED=false`): staff with admin-panel access
- *   bypass RLS (template default). Organization id is fixed via env.
+ *   bypass RLS (template default). The organization is fixed via env
+ *   (`DEFAULT_ORGANIZATION_ID`, a real organization verified at boot).
  * - **Multi-tenant** (`TENANCY_ENABLED=true`): only platform super-admins bypass
- *   RLS globally; staff operate within `x-organization-id` scope.
+ *   RLS globally; requests are scoped to the guard-verified organization only.
  */
 @Injectable()
 export class TenancyConfigService {
@@ -18,9 +19,14 @@ export class TenancyConfigService {
 		return this.config.tenancyEnabled;
 	}
 
-	/** Default organization id for single-tenant mode and fallback in multi-tenant. */
-	public get defaultOrganizationId(): string {
-		return this.config.defaultOrganizationId;
+	/**
+	 * The configured organization of a single-tenant deployment; `null` in
+	 * multi-tenant mode (requests are scoped to their guard-verified tenant
+	 * only — there is no fallback organization). Verified to exist at boot by
+	 * `DefaultOrganizationService`, which is what request code reads.
+	 */
+	public get singleTenantOrganizationId(): string | null {
+		return this.config.singleTenantOrganizationId;
 	}
 
 	/**

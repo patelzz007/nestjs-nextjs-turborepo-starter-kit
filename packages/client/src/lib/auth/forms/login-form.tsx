@@ -4,54 +4,60 @@
 //
 // The web and admin apps previously shipped near-identical copies (~140 lines
 // each) that differed only in the endpoint, an admin-access gate, and a couple
-// of defaults. `mode` collapses all of that into one component (point 5 of
-// the folder-structure pass — see docs/architecture.md §5).
+// of defaults. `mode` collapses all of that into one component (the shared auth
+// forms live in `@workspace/client` — see docs/technical/architecture.md §1).
 //
 // The heading/subtitle/logo now live on the shared `AuthLayout` (split-screen
 // shell); this component is the form itself — email + password fields, the
-// submit button, an "Or continue with" divider and the social-login buttons
-// (Google / Facebook / Twitter / GitHub — UI-only for now, no provider wiring).
+// submit button, the second-factor / email-verification steps and the
+// optional demo accounts. (No social-login buttons: there is no provider
+// integration, and a button that cannot sign anyone in is not shipped.)
 // ============================================
 "use client";
 
-import { APP_LINKS } from "@workspace/shared";
+import {
+	APP_LINKS,
+	BACKUP_CODE_LENGTH,
+	normalizeBackupCodeInput,
+	TOTP_CODE_LENGTH,
+	type ApiResponseMeta,
+	type LoginClientResponse,
+	type LoginRestrictedEnrollmentClientResponse,
+	type UserResponse,
+} from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
-import { LockoutCountdown } from "@workspace/ui/components/form/lockout-countdown";
 import { PasswordInput } from "@workspace/ui/components/form/password-input";
 import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-strength-meter";
 import { Separator } from "@workspace/ui/components/display/separator";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { EpochMs, LoginClientResponse, LoginRestrictedEnrollmentClientResponse, UserResponse } from "@workspace/shared";
-import { useCallback, useMemo, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 
-import { isAccountLockedError, resolveAuthErrorMessage } from "../errors";
+import { resolveAuthErrorMessage } from "../errors";
 import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginTwoFactorPending, isLoginVerificationPending } from "./login-response";
-import { getEnrollmentRedirectPath, markEnrollmentMessage } from "../edge/restricted-session";
+import { getEnrollmentRedirectPath } from "../edge/restricted-session";
+import { markEnrollmentMessage } from "../session/enrollment-message";
 import { useAuth } from "../index";
-import { DemoAccountButton, DemoInfoBox, SOCIAL_PROVIDERS, SocialButton } from "./login-form-social";
-import type { DemoAccount, LoginFormProps, SocialProvider } from "./login-form-types";
+import { DemoAccountButton, DemoInfoBox } from "./login-form-demo";
+import type { DemoAccount, LoginFormProps } from "./login-form-types";
 
 import { passwordStrength } from "../password";
 import { catchCaught } from "../../caught";
 
 export type { DemoAccount, LoginFormMode, LoginFormProps } from "./login-form-types";
 
-/** Allowed characters for MFA backup codes (matches server charset). */
-const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+/** The digits typed into a one-time-code field, at most one code long. */
+function sanitizeNumericCode(value: string): string {
+	return value.replace(/\D/g, "").slice(0, TOTP_CODE_LENGTH);
+}
 
-function sanitizeBackupCodeInput(value: string): string {
-	const upper = value.toUpperCase();
-	let sanitized = "";
-	for (const char of upper) {
-		if (BACKUP_CODE_CHARSET.includes(char)) {
-			sanitized += char;
-		}
-	}
-	return sanitized.slice(0, 16);
+/** A login step's answer: the response body plus the envelope `meta` it came with. */
+interface LoginStepAnswer {
+	readonly data: LoginClientResponse;
+	readonly meta: ApiResponseMeta;
 }
 
 export function LoginForm({
@@ -68,10 +74,6 @@ export function LoginForm({
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	// Set when the API answers ACCOUNT_LOCKED — drives the live countdown (#27).
-	const [lockout, setLockout] = useState<{ readonly remainingSeconds: number; readonly lockedUntil: EpochMs } | null>(null);
-	// Social login is UI-only for now — clicking a provider shows an honest hint.
-	const [socialHint, setSocialHint] = useState<string | null>(null);
 	const [twoFactorTempToken, setTwoFactorTempToken] = useState<string | null>(null);
 	const [twoFactorCode, setTwoFactorCode] = useState("");
 	const [twoFactorUseBackupCode, setTwoFactorUseBackupCode] = useState(false);
@@ -79,6 +81,17 @@ export function LoginForm({
 	const [verificationId, setVerificationId] = useState<string | null>(null);
 	const [verificationCode, setVerificationCode] = useState("");
 	const router = useRouter();
+	// The one-time-code field of the current step. When the form switches to a
+	// code step (email verification, authenticator, backup code) focus moves to
+	// it, so keyboard and screen-reader users land where the new step starts.
+	// The first step does not grab focus on page load.
+	const codeInputRef = useRef<HTMLInputElement>(null);
+	const isCodeStep: boolean = verificationId !== null || twoFactorTempToken !== null;
+	useEffect((): void => {
+		if (isCodeStep) {
+			codeInputRef.current?.focus();
+		}
+	}, [isCodeStep, twoFactorUseBackupCode]);
 	const { api, login: authLogin } = useAuth();
 
 	const resolvedPlaceholder: string = emailPlaceholder ?? (mode === "admin" ? "admin@example.com" : "m@example.com");
@@ -104,10 +117,6 @@ export function LoginForm({
 		setPassword(e.target.value);
 	}, []);
 
-	const handleSocialClick = useCallback((provider: SocialProvider): void => {
-		setSocialHint(`${provider.label} sign-in is coming soon.`);
-	}, []);
-
 	// Admin logins send `X-Client-Type: admin` (handled by the def's baseOptions) so the backend sets the isolated admin cookie set.
 	const loginProcedure = mode === "admin" ? api.auth.adminLogin : mode === "merchant" ? api.auth.merchantLogin : api.auth.login;
 	const loginMutation = loginProcedure.useMutation();
@@ -120,22 +129,22 @@ export function LoginForm({
 
 	// The actual login call — shared by the form submit and the demo buttons.
 	const completeAuthenticatedLogin = useCallback(
-		(data: { readonly user: UserResponse }): void => {
+		(data: { readonly user: UserResponse }, meta: ApiResponseMeta): void => {
 			if (requireAdminAccess && !data.user.hasAdminAccess) {
 				setError("Admin access required. This account does not have administrator privileges.");
 				return;
 			}
 
-			authLogin(data.user, { sessionScope: "full" });
+			authLogin(data.user, meta);
 			navigateAfterLogin(resolvedRedirect);
 		},
 		[authLogin, navigateAfterLogin, requireAdminAccess, resolvedRedirect],
 	);
 
 	const completeRestrictedEnrollment = useCallback(
-		(response: LoginRestrictedEnrollmentClientResponse): void => {
+		(response: LoginRestrictedEnrollmentClientResponse, meta: ApiResponseMeta): void => {
 			if (response.user !== undefined) {
-				authLogin(response.user, { sessionScope: "restricted", enrollmentReason: response.enrollmentReason });
+				authLogin(response.user, meta);
 			}
 
 			markEnrollmentMessage(response.message);
@@ -145,7 +154,7 @@ export function LoginForm({
 	);
 
 	const handleLoginResponse = useCallback(
-		(response: LoginClientResponse): void => {
+		({ data: response, meta }: LoginStepAnswer): void => {
 			if (isLoginTwoFactorPending(response)) {
 				setTwoFactorTempToken(response.tempToken);
 				setTwoFactorUseBackupCode(false);
@@ -163,7 +172,7 @@ export function LoginForm({
 			}
 
 			if (isLoginRestrictedEnrollment(response)) {
-				completeRestrictedEnrollment(response);
+				completeRestrictedEnrollment(response, meta);
 				return;
 			}
 
@@ -172,7 +181,7 @@ export function LoginForm({
 				return;
 			}
 
-			completeAuthenticatedLogin(response);
+			completeAuthenticatedLogin(response, meta);
 		},
 		[completeAuthenticatedLogin, completeRestrictedEnrollment],
 	);
@@ -181,19 +190,14 @@ export function LoginForm({
 		(emailValue: string, passwordValue: string): void => {
 			setIsLoading(true);
 			setError(null);
-			setLockout(null);
 
 			void catchCaught(
-				loginMutation.mutateAsync({ email: emailValue, password: passwordValue }).then((data): void => {
-					handleLoginResponse(data.data);
+				loginMutation.mutateAsync({ email: emailValue, password: passwordValue }).then((answer): void => {
+					handleLoginResponse(answer);
 				}),
 				(err): void => {
-					// Map the API's canonical error code to a friendly message;
-					// ACCOUNT_LOCKED carries a structured lockout payload used to
-					// render a live countdown (see lockout state below).
-					if (isAccountLockedError(err)) {
-						setLockout({ remainingSeconds: err.remainingSeconds, lockedUntil: err.lockedUntil });
-					}
+					// The API's canonical error code → a friendly message. A locked
+					// account answers INVALID_CREDENTIALS by design (no account probing).
 					setError(resolveAuthErrorMessage(err));
 				},
 			).finally((): void => {
@@ -214,14 +218,14 @@ export function LoginForm({
 			setError(null);
 
 			if (twoFactorUseBackupCode) {
-				if (backupCode.length !== 16) {
+				if (backupCode.length !== BACKUP_CODE_LENGTH) {
 					setIsLoading(false);
 					return;
 				}
 
 				void catchCaught(
-					backupCodeMutation.mutateAsync({ tempToken: twoFactorTempToken, backupCode }).then((data): void => {
-						handleLoginResponse(data.data);
+					backupCodeMutation.mutateAsync({ tempToken: twoFactorTempToken, backupCode }).then((answer): void => {
+						handleLoginResponse(answer);
 					}),
 					(err): void => {
 						setError(resolveAuthErrorMessage(err));
@@ -232,14 +236,14 @@ export function LoginForm({
 				return;
 			}
 
-			if (twoFactorCode.length !== 6) {
+			if (twoFactorCode.length !== TOTP_CODE_LENGTH) {
 				setIsLoading(false);
 				return;
 			}
 
 			void catchCaught(
-				twoFactorMutation.mutateAsync({ tempToken: twoFactorTempToken, token: twoFactorCode }).then((data): void => {
-					handleLoginResponse(data.data);
+				twoFactorMutation.mutateAsync({ tempToken: twoFactorTempToken, token: twoFactorCode }).then((answer): void => {
+					handleLoginResponse(answer);
 				}),
 				(err): void => {
 					setError(resolveAuthErrorMessage(err));
@@ -254,15 +258,15 @@ export function LoginForm({
 	const handleVerificationSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
-			if (verificationId === null || verificationCode.length !== 6) {
+			if (verificationId === null || verificationCode.length !== TOTP_CODE_LENGTH) {
 				return;
 			}
 
 			setIsLoading(true);
 			setError(null);
 			void catchCaught(
-				verifyLoginMutation.mutateAsync({ verificationId, code: verificationCode }).then((data): void => {
-					handleLoginResponse(data.data);
+				verifyLoginMutation.mutateAsync({ verificationId, code: verificationCode }).then((answer): void => {
+					handleLoginResponse(answer);
 				}),
 				(err): void => {
 					setError(resolveAuthErrorMessage(err));
@@ -275,15 +279,15 @@ export function LoginForm({
 	);
 
 	const handleVerificationCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+		setVerificationCode(sanitizeNumericCode(event.target.value));
 	}, []);
 
 	const handleTwoFactorCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+		setTwoFactorCode(sanitizeNumericCode(event.target.value));
 	}, []);
 
 	const handleBackupCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setBackupCode(sanitizeBackupCodeInput(event.target.value));
+		setBackupCode(normalizeBackupCodeInput(event.target.value));
 	}, []);
 
 	const handleUseAuthenticatorCode = useCallback((): void => {
@@ -330,13 +334,14 @@ export function LoginForm({
 						</Label>
 						<Input
 							id="verification-code"
+							ref={codeInputRef}
 							inputMode="numeric"
 							autoComplete="one-time-code"
 							placeholder="000000"
 							value={verificationCode}
 							onChange={handleVerificationCodeChange}
 							className="h-11 text-center text-lg tracking-[0.3em]"
-							maxLength={6}
+							maxLength={TOTP_CODE_LENGTH}
 						/>
 					</div>
 				</FormShell>
@@ -351,7 +356,7 @@ export function LoginForm({
 					<div className="space-y-2 text-center">
 						{twoFactorUseBackupCode ? (
 							<p className="text-sm text-muted-foreground">
-								Enter one of your <strong>16-character backup codes</strong> (letters A–Z and digits 2–9, excluding ambiguous characters).
+								Enter one of your <strong>{BACKUP_CODE_LENGTH}-character backup codes</strong> (letters A–Z and digits 2–9, excluding ambiguous characters).
 							</p>
 						) : (
 							<p className="text-sm text-muted-foreground">
@@ -365,12 +370,13 @@ export function LoginForm({
 								</Label>
 								<Input
 									id="backup-code"
+									ref={codeInputRef}
 									autoComplete="one-time-code"
 									placeholder="23456789ABCDEFGH"
 									value={backupCode}
 									onChange={handleBackupCodeChange}
 									className="h-11 text-center font-mono text-sm tracking-widest"
-									maxLength={16}
+									maxLength={BACKUP_CODE_LENGTH}
 								/>
 							</>
 						) : (
@@ -380,13 +386,14 @@ export function LoginForm({
 								</Label>
 								<Input
 									id="two-factor-code"
+									ref={codeInputRef}
 									inputMode="numeric"
 									autoComplete="one-time-code"
 									placeholder="000000"
 									value={twoFactorCode}
 									onChange={handleTwoFactorCodeChange}
 									className="h-11 text-center text-lg tracking-[0.3em]"
-									maxLength={6}
+									maxLength={TOTP_CODE_LENGTH}
 								/>
 							</>
 						)}
@@ -399,17 +406,7 @@ export function LoginForm({
 				<FormShell error={error} isLoading={isLoading} submitLabel="Sign in" loadingLabel="Signing in..." submitClassName="h-11" onSubmit={handleFormSubmit}>
 					<div className="space-y-2">
 						<Label htmlFor="email">Email</Label>
-						<Input
-							id="email"
-							type="email"
-							placeholder={resolvedPlaceholder}
-							value={email}
-							onChange={handleEmailChange}
-							required
-							autoComplete="email"
-							autoFocus
-							className="h-11"
-						/>
+						<Input id="email" type="email" placeholder={resolvedPlaceholder} value={email} onChange={handleEmailChange} required autoComplete="email" className="h-11" />
 					</div>
 					<div className="space-y-2">
 						<div className="flex items-center justify-between">
@@ -431,41 +428,8 @@ export function LoginForm({
 						/>
 						<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
 					</div>
-					{lockout !== null ? (
-						<LockoutCountdown
-							remainingSeconds={lockout.remainingSeconds}
-							labels={{
-								lockedPrefix: "Account locked — try again in",
-								lockedExpired: "Account locked — you can try again now",
-							}}
-						/>
-					) : null}
 				</FormShell>
 			)}
-
-			{twoFactorTempToken === null ? (
-				<div className="mt-6">
-					<div className="relative">
-						<div className="absolute inset-0 flex items-center">
-							<div className="w-full border-t" />
-						</div>
-						<div className="relative flex justify-center text-sm">
-							<span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-						</div>
-					</div>
-				</div>
-			) : null}
-
-			{twoFactorTempToken === null ? (
-				<>
-					<div className="mt-4 grid grid-cols-2 gap-3">
-						{SOCIAL_PROVIDERS.map((provider) => (
-							<SocialButton key={provider.id} provider={provider} disabled={isLoading} onSelect={handleSocialClick} />
-						))}
-					</div>
-					{socialHint ? <p className="mt-3 text-center text-xs text-muted-foreground">{socialHint}</p> : null}
-				</>
-			) : null}
 
 			{twoFactorTempToken === null && demoAccounts !== undefined && demoAccounts.length > 0 ? (
 				<div className="mt-4">

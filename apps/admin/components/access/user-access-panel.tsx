@@ -1,16 +1,7 @@
 "use client";
 
-import {
-	PERMISSION,
-	PermissionActionSchema,
-	PermissionResourceSchema,
-	type CheckPermissionResponse,
-	type AdminUserDetail,
-	type PermissionAction,
-	type PermissionListItem,
-	type PermissionResource,
-	type RoleListItem,
-} from "@workspace/shared";
+import { PERMISSION, type AdminUserDetail, type CheckPermissionInput, type CheckPermissionResponse, type PermissionListItem, type RoleListItem } from "@workspace/shared";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
@@ -23,15 +14,12 @@ import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectEmpty, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/navigation/tabs";
 import { useQueryClient } from "@tanstack/react-query";
-import { Shield, ShieldCheck, ShieldX } from "lucide-react";
+import { Shield } from "lucide-react";
 import * as React from "react";
 
 import { buildPermissionTree } from "@/lib/permissions/build-permission-tree";
-import { formatPermissionGrantVia } from "@/lib/permissions/format-permission-grant";
-
-const PERMISSION_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"];
-
-const PERMISSION_RESOURCES: readonly PermissionResource[] = PermissionResourceSchema.options;
+import { toastMutationError } from "@/lib/api/mutation-error";
+import { PermissionCheckForm, PermissionCheckResult } from "@/components/access/permission-check-form";
 
 export interface UserAccessPanelProps {
 	readonly userId: string;
@@ -66,13 +54,11 @@ export function UserAccessPanel({
 	const canCheckPermissions = can(PERMISSION.PERMISSION.READ);
 
 	const [assignRoleId, setAssignRoleId] = React.useState<string | null>(null);
-	const [checkAction, setCheckAction] = React.useState<PermissionAction>("READ");
-	const [checkResource, setCheckResource] = React.useState<PermissionResource>("USER");
 	const [checkResult, setCheckResult] = React.useState<CheckPermissionResponse | null>(null);
 
 	const invalidateUser = React.useCallback(async (): Promise<void> => {
 		await invalidateSessionAuth(queryClient);
-		await queryClient.invalidateQueries({ queryKey: ["auth", "admin-user", userId] });
+		await queryClient.invalidateQueries({ queryKey: apiRouter.auth.adminUserDetail.scopeKey({ userId }) });
 	}, [queryClient, userId]);
 
 	const assignRole = api.admin.roles.userAssign.useMutation({
@@ -80,23 +66,39 @@ export function UserAccessPanel({
 			await invalidateUser();
 			setAssignRoleId(null);
 		},
+		onError: (error) => {
+			toastMutationError("Could not assign the role", error);
+		},
 	});
 
 	const removeRole = api.admin.roles.userRemove.useMutation({
 		onSuccess: invalidateUser,
+		onError: (error) => {
+			toastMutationError("Could not remove the role", error);
+		},
 	});
 
 	const grantPermission = api.admin.permissions.userGrant.useMutation({
 		onSuccess: invalidateUser,
+		onError: (error) => {
+			toastMutationError("Could not grant the permission", error);
+		},
 	});
 
 	const revokePermission = api.admin.permissions.userRevoke.useMutation({
 		onSuccess: invalidateUser,
+		onError: (error) => {
+			toastMutationError("Could not revoke the permission", error);
+		},
 	});
 
 	const checkPermission = api.admin.permissions.check.useMutation({
 		onSuccess: (resp) => {
 			setCheckResult(resp.data);
+		},
+		onError: (error) => {
+			setCheckResult(null);
+			toastMutationError("Could not check the permission", error);
 		},
 	});
 
@@ -126,20 +128,6 @@ export function UserAccessPanel({
 		setAssignRoleId(value);
 	}, []);
 
-	const handleCheckActionChange = React.useCallback((value: string | null): void => {
-		const parsed = PermissionActionSchema.safeParse(value);
-		if (parsed.success) {
-			setCheckAction(parsed.data);
-		}
-	}, []);
-
-	const handleCheckResourceChange = React.useCallback((value: string | null): void => {
-		const parsed = PermissionResourceSchema.safeParse(value);
-		if (parsed.success) {
-			setCheckResource(parsed.data);
-		}
-	}, []);
-
 	const handleAssignRoleClick = React.useCallback((): void => {
 		if (assignRoleId !== null) {
 			assignRole.mutate({ userId, roleId: assignRoleId });
@@ -157,9 +145,12 @@ export function UserAccessPanel({
 		[grantPermission, revokePermission, userId],
 	);
 
-	const handleCheckPermissionClick = React.useCallback((): void => {
-		checkPermission.mutate({ userId, action: checkAction, resource: checkResource });
-	}, [checkAction, checkPermission, checkResource, userId]);
+	const handleCheck = React.useCallback(
+		(input: CheckPermissionInput): void => {
+			checkPermission.mutate(input);
+		},
+		[checkPermission],
+	);
 
 	const handleRemoveRole = React.useCallback(
 		(roleId: string): void => {
@@ -285,62 +276,8 @@ export function UserAccessPanel({
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="space-y-1">
-								<Label htmlFor="check-action">Action</Label>
-								<Select value={checkAction} onValueChange={handleCheckActionChange}>
-									<SelectTrigger id="check-action" className="w-full">
-										<SelectValue placeholder="Action" />
-									</SelectTrigger>
-									<SelectContent>
-										{PERMISSION_ACTIONS.map((action) => (
-											<SelectItem key={action} value={action}>
-												{action}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="space-y-1">
-								<Label htmlFor="check-resource">Resource</Label>
-								<Select value={checkResource} onValueChange={handleCheckResourceChange}>
-									<SelectTrigger id="check-resource" className="w-full">
-										<SelectValue placeholder="Resource" />
-									</SelectTrigger>
-									<SelectContent>
-										{PERMISSION_RESOURCES.map((resource) => (
-											<SelectItem key={resource} value={resource}>
-												{resource}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-						<UserDetailButton type="button" disabled={checkPermission.isPending} onClick={handleCheckPermissionClick}>
-							Run check
-						</UserDetailButton>
-
-						{checkResult !== null ? (
-							<div className="rounded-lg border bg-muted/30 p-4">
-								<div className="flex items-center gap-2 text-sm font-medium">
-									{checkResult.allowed ? <ShieldCheck className="size-4 text-green-600" /> : <ShieldX className="size-4 text-destructive" />}
-									{checkResult.allowed ? "Allowed" : "Denied"}
-								</div>
-								{checkResult.grants.length > 0 ? (
-									<ul className="mt-2 space-y-1 border-l border-border pl-3 text-sm text-muted-foreground">
-										{checkResult.grants.map((grant, index) => (
-											<li key={`${grant.via}-${grant.detail ?? ""}-${String(index)}`}>
-												<span className="font-medium text-foreground">{formatPermissionGrantVia(grant.via)}</span>
-												{grant.detail !== undefined ? ` — ${grant.detail}` : ""}
-											</li>
-										))}
-									</ul>
-								) : (
-									<p className="mt-2 text-sm text-muted-foreground">No matching grants.</p>
-								)}
-							</div>
-						) : null}
+						<PermissionCheckForm userId={userId} idPrefix="check" isPending={checkPermission.isPending} onCheck={handleCheck} submitLabel="Run check" />
+						{checkResult !== null ? <PermissionCheckResult result={checkResult} /> : null}
 					</CardContent>
 				</Card>
 			) : null}

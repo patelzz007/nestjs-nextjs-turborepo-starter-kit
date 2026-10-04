@@ -27,9 +27,7 @@ import { createE2eApp, login, parseSuccessEnvelope, type InjectResponse, type Lo
  * epoch milliseconds — and the response interceptor's parse succeeds for REAL rows.
  * Part 1 maps realistic Prisma rows (pure); part 2 calls the live READ
  * endpoints against the seeded geo reference data (dr5hn dataset). The write
- * endpoints are not exercised here: the `geo_reference` RLS policy only allows
- * writes under `app_rls_bypass()`, so an HTTP create/update/delete currently
- * fails at the database (tracked separately from the response contract).
+ * endpoints are covered by test/geo-writes.e2e-spec.ts.
  */
 
 const GEO_URL = `${API_VERSION_PREFIX}/geo`;
@@ -39,6 +37,11 @@ const UPDATED_AT = new Date("2026-09-30T08:15:00.000Z");
 /** A small country (few cities) so the export stays cheap. */
 const SMALL_COUNTRY_ISO2 = "AD";
 const AFGHANISTAN_POPULATION = 43_844_000;
+/** "Andorra" misspelled: no substring (ILIKE) match, only a trigram-similarity one. */
+const MISSPELLED_COUNTRY_SEARCH = "Andora";
+const CITY_SEARCH = "Kuala Lumpur";
+const STATE_SEARCH = "Malacca";
+const REGION_SEARCH = "Asia";
 
 const regionRow: RegionRow = {
 	id: 1,
@@ -46,6 +49,9 @@ const regionRow: RegionRow = {
 	translations: { de: "Asien" },
 	wikiDataId: "Q48",
 	flag: true,
+	isDeleted: false,
+	deletedAt: null,
+	deletedBy: null,
 	createdAt: IMPORTED_AT,
 	updatedAt: UPDATED_AT,
 };
@@ -76,6 +82,9 @@ const countryRow: CountryRow = {
 	emojiU: "U+1F1E6 U+1F1EB",
 	wikiDataId: "Q889",
 	flag: true,
+	isDeleted: false,
+	deletedAt: null,
+	deletedBy: null,
 	regionId: 1,
 	subregionId: null,
 	createdAt: IMPORTED_AT,
@@ -99,6 +108,9 @@ const stateRow: StateRow = {
 	translations: null,
 	wikiDataId: null,
 	flag: true,
+	isDeleted: false,
+	deletedAt: null,
+	deletedBy: null,
 	countryId: 251,
 	createdAt: IMPORTED_AT,
 	updatedAt: UPDATED_AT,
@@ -116,6 +128,9 @@ const cityRow: CityRow = {
 	translations: null,
 	wikiDataId: "Q5838",
 	flag: true,
+	isDeleted: false,
+	deletedAt: null,
+	deletedBy: null,
 	stateId: 3901,
 	countryId: 251,
 	createdAt: IMPORTED_AT,
@@ -240,6 +255,20 @@ describe("geo endpoints answer with their response contracts (e2e, real Postgres
 		const { data } = parseSuccessEnvelope(await get(`/export?countryCode=${SMALL_COUNTRY_ISO2}`), GeoExportResponseSchema);
 		expect(data.length).toBeGreaterThan(0);
 		expect(data.every((city) => city.countryCode === SMALL_COUNTRY_ISO2)).toBe(true);
+	});
+
+	it("GET /geo/<entity>?search= ranks by pg_trgm similarity, so a misspelling still finds the row", async () => {
+		const countries = PaginatedEnvelopeSchema(CountryListItemSchema).parse((await get(`/countries?search=${MISSPELLED_COUNTRY_SEARCH}`)).json());
+		expect(countries.data.map((country) => country.iso2)).toContain(SMALL_COUNTRY_ISO2);
+
+		const cities = PaginatedEnvelopeSchema(CityListItemSchema).parse((await get(`/cities?search=${encodeURIComponent(CITY_SEARCH)}`)).json());
+		expect(cities.data.some((city) => city.name === CITY_SEARCH)).toBe(true);
+
+		const states = PaginatedEnvelopeSchema(StateListItemSchema).parse((await get(`/states?search=${encodeURIComponent(STATE_SEARCH)}`)).json());
+		expect(states.data.some((state) => state.name === STATE_SEARCH)).toBe(true);
+
+		const regions = PaginatedEnvelopeSchema(RegionSchema).parse((await get(`/regions?search=${REGION_SEARCH}`)).json());
+		expect(regions.data.map((region) => region.name)).toContain(REGION_SEARCH);
 	});
 
 	it("GET /geo/autocomplete and /geo/cascade-preview", async () => {

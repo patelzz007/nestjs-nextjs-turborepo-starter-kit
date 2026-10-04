@@ -6,7 +6,7 @@ export interface QueueJobRetryOptions {
 	readonly removeOnFail: number;
 }
 
-type QueueJobFamily = "emailSend" | "maintenance" | "outboxPublish" | "storageDelete";
+type QueueJobFamily = "emailSend" | "maintenance" | "outboxPublish" | "storageDelete" | "storageScan" | "storageCdnInvalidate";
 
 /** Default BullMQ retry settings per queue family. */
 export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOptions>> = {
@@ -30,6 +30,20 @@ export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOpt
 	},
 	storageDelete: {
 		attempts: 5,
+		backoff: { type: "exponential", delay: 5_000 },
+		removeOnComplete: 100,
+		removeOnFail: 500,
+	},
+	/** Scanner outages retry with backoff; the file stays SCANNING (never downloadable) until a verdict lands. */
+	storageScan: {
+		attempts: 8,
+		backoff: { type: "exponential", delay: 5_000 },
+		removeOnComplete: 200,
+		removeOnFail: 1_000,
+	},
+	/** CDN purge of a withdrawn public asset: retried with backoff until CloudFront accepts it. */
+	storageCdnInvalidate: {
+		attempts: 8,
 		backoff: { type: "exponential", delay: 5_000 },
 		removeOnComplete: 100,
 		removeOnFail: 500,

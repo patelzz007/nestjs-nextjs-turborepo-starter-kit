@@ -5,7 +5,7 @@
 // terminate the process only in the Node.js runtime: the Edge sandbox's
 // `process.exit` throws. This module is the one place that asks which
 // runtime is running, so it sits with the other env modules (the only files
-// allowed to read `process.env`; see docs/configuration.md).
+// allowed to read `process.env`; see docs/technical/configuration/frontend.md).
 //
 // `NEXT_RUNTIME` is not operator configuration: Next.js itself inlines it
 // ("nodejs" / "edge") into each server bundle at build time and leaves it

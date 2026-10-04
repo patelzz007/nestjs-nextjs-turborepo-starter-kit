@@ -1,259 +1,237 @@
+import { Test } from "@nestjs/testing";
+import { UnrecoverableError } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
-import { TypedConfigService } from "../../../config/typed-config.service";
 import { RequestContextService } from "../../../common/context/request-context";
-import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
-import { PrismaService } from "../../../prisma/prisma.service";
-import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
-import { EmailLogEventsService } from "./email-log-events.service";
-import { EmailLogRepository } from "./email-log.repository";
 import { EmailLogService } from "./email-log.service";
-import { EmailSenderService } from "./email-sender.service";
+import { EmailQueueService } from "./email-queue.service";
+import { EmailRecipientRateLimiter } from "./email-recipient-rate-limiter";
+import { EMAIL_LOG_ID_TAG, EmailSenderService } from "./email-sender.service";
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
-import { createTestApiConfig, createTestTypedConfig } from "../../../../test/support/test-api-env";
+import { createTestTypedConfig, type TestEnv } from "../../../../test/support/test-api-env";
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
+const mocks = vi.hoisted(() => ({
+	steps: new Array<string>(),
+	resendSend: vi.fn(),
+	create: vi.fn(),
+	findStatus: vi.fn(),
+	finalizeSent: vi.fn(),
+	finalizeFailed: vi.fn(),
+	tryAcquire: vi.fn(),
+	enqueue: vi.fn(),
+	logError: vi.fn(),
+}));
 
-interface EmailConfigState {
-	resendApiKey: string | null;
-	emailFromAddress: string;
-	emailMode: "send" | "log-only" | "noop";
-	emailTestTo: string | undefined;
-	emailReplyTo: string | undefined;
-	emailMaxAttempts: number;
-	emailTimeoutMs: number;
-	emailRateLimitPerMinute: number;
-	appName: string;
-	appUrl: string;
-}
-
-const mocks = vi.hoisted(() => {
-	const baseConfig: EmailConfigState = {
-		resendApiKey: "re_dummy",
-		emailFromAddress: "noreply@example.com",
-		emailMode: "send",
-		emailTestTo: undefined,
-		emailReplyTo: undefined,
-		emailMaxAttempts: 3,
-		emailTimeoutMs: 5_000,
-		emailRateLimitPerMinute: 0,
-		appName: "Acme Inc",
-		appUrl: "https://app.example.com",
-	};
-	return {
-		baseConfig,
-		config: { current: baseConfig },
-		resendSend: vi.fn(),
-		logInfo: vi.fn(),
-		logWarn: vi.fn(),
-		logError: vi.fn(),
-		emailLogCreate: vi.fn(),
-		emailLogUpdateStatusByResendId: vi.fn(),
-	};
-});
-
-const resendSendMock = mocks.resendSend;
-
-vi.mock("resend", () => {
-	class MockResend {
+vi.mock("resend", () => ({
+	Resend: class {
 		public readonly emails = { send: mocks.resendSend };
-		public readonly webhooks = { verify: vi.fn() };
-	}
-	return { Resend: MockResend };
-});
-
-vi.mock("../../../config/typed-config.service", () => ({
-	TypedConfigService: class {
-		// Snapshot at construction so each service keeps the config it was built with.
-		public readonly resendApiKey = mocks.config.current.resendApiKey;
-		public readonly emailFromAddress = mocks.config.current.emailFromAddress;
-		public readonly emailMode = mocks.config.current.emailMode;
-		public readonly emailTestTo = mocks.config.current.emailTestTo;
-		public readonly emailReplyTo = mocks.config.current.emailReplyTo;
-		public readonly emailMaxAttempts = mocks.config.current.emailMaxAttempts;
-		public readonly emailTimeoutMs = mocks.config.current.emailTimeoutMs;
-		public readonly emailRateLimitPerMinute = mocks.config.current.emailRateLimitPerMinute;
-		public readonly appName = mocks.config.current.appName;
-		public readonly appUrl = mocks.config.current.appUrl;
 	},
 }));
 
-vi.mock("../../../prisma/prisma.service", () => ({
-	PrismaService: class {},
-}));
+const EMAIL_LOG_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+const RECIPIENT = "jamie@example.com";
+const SEND_ENV: TestEnv = { EMAIL_MODE: "send", RESEND_API_KEY: "re_test_only", EMAIL_MAX_ATTEMPTS: "3", EMAIL_TIMEOUT_MS: "100" };
 
-vi.mock("../../logs/logs.service", () => ({
-	LogService: class {
-		public readonly info = mocks.logInfo;
-		public readonly warn = mocks.logWarn;
-		public readonly error = mocks.logError;
-	},
-}));
-
-vi.mock("./email-log.service", () => ({
-	EmailLogService: class {
-		public readonly create = mocks.emailLogCreate;
-		public readonly updateStatusByResendId = mocks.emailLogUpdateStatusByResendId;
-	},
-}));
-
-function createConfig(overrides: Partial<EmailConfigState> = {}): TypedConfigService {
-	mocks.config.current = { ...mocks.baseConfig, ...overrides };
-	return new TypedConfigService(createTestApiConfig());
+function template(): VerificationEmailTemplate {
+	return new VerificationEmailTemplate({ to: RECIPIENT, verificationToken: "token-1", expiresInHours: 24 });
 }
 
-const logServiceMock = new LogService(createTestTypedConfig(), new RequestContextService());
-const emailLogServiceMock = new EmailLogService(
-	new EmailLogRepository(new PrismaService(createTestTypedConfig())),
-	new EmailLogEventsService(),
-	new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()),
-);
+/** A Resend reply carrying a provider id. */
+function delivered(id: string): { data: { id: string }; error: null } {
+	return { data: { id }, error: null };
+}
 
-function makeTemplate(): VerificationEmailTemplate {
-	return new VerificationEmailTemplate({ to: "jamie@example.com", verificationToken: "tok-123", expiresInHours: 24 });
+async function createSender(env: TestEnv, withQueue: boolean): Promise<EmailSenderService> {
+	const moduleRef = await Test.createTestingModule({
+		providers: [
+			{ provide: TypedConfigService, useValue: createTestTypedConfig(env) },
+			{ provide: LogService, useValue: { info: vi.fn(), warn: vi.fn(), error: mocks.logError } },
+			{
+				provide: EmailLogService,
+				useValue: { create: mocks.create, findStatus: mocks.findStatus, finalizeSent: mocks.finalizeSent, finalizeFailed: mocks.finalizeFailed },
+			},
+			{ provide: EmailRecipientRateLimiter, useValue: { tryAcquire: mocks.tryAcquire } },
+			{ provide: EmailQueueService, useValue: { isEnabled: (): boolean => withQueue, enqueue: mocks.enqueue } },
+			RequestContextService,
+		],
+	}).compile();
+	return new EmailSenderService(
+		moduleRef.get(TypedConfigService),
+		moduleRef.get(LogService),
+		moduleRef.get(EmailLogService),
+		moduleRef.get(EmailRecipientRateLimiter),
+		moduleRef.get(RequestContextService),
+		moduleRef.get(EmailQueueService),
+	);
 }
 
 describe("EmailSenderService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.emailLogCreate.mockResolvedValue({ id: "log-1" });
-		mocks.emailLogUpdateStatusByResendId.mockResolvedValue("updated");
+		mocks.steps.length = 0;
+		mocks.tryAcquire.mockResolvedValue(true);
+		mocks.create.mockImplementation(async (): Promise<{ id: string }> => {
+			mocks.steps.push("log-row");
+			return Promise.resolve({ id: EMAIL_LOG_ID });
+		});
+		mocks.resendSend.mockImplementation(async (): Promise<{ data: { id: string }; error: null }> => {
+			mocks.steps.push("provider");
+			return Promise.resolve(delivered("re_1"));
+		});
+		mocks.finalizeSent.mockResolvedValue(true);
+		mocks.finalizeFailed.mockResolvedValue(true);
+		mocks.findStatus.mockResolvedValue("pending");
+		mocks.enqueue.mockResolvedValue(EMAIL_LOG_ID);
 	});
 
-	it("returns invalid-props without calling Resend when props are malformed", async () => {
-		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
-		const template = new VerificationEmailTemplate({ to: "not-an-email", verificationToken: "tok", expiresInHours: 24 });
-		const result = await service.send(template);
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.reason).toBe("invalid-props");
-		}
-		expect(resendSendMock).not.toHaveBeenCalled();
+	describe("send (inline, no queue)", () => {
+		it("writes the pending log row BEFORE calling the provider, then finalizes it as sent", async () => {
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: "re_1", mode: "send" });
+
+			expect(mocks.steps).toEqual(["log-row", "provider"]);
+			expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ status: "pending", to: RECIPIENT, templateKey: "verification" }));
+			expect(mocks.finalizeSent).toHaveBeenCalledWith(EMAIL_LOG_ID, { templateKey: "verification", to: RECIPIENT }, "re_1", expect.any(Number));
+		});
+
+		it("sends nothing when the log row cannot be written", async () => {
+			mocks.create.mockRejectedValue(new Error("database unavailable"));
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: false, reason: "persistence", detail: "database unavailable" });
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+		});
+
+		it("makes every provider call idempotent by the log id and tags the email with it", async () => {
+			const sender = await createSender(SEND_ENV, false);
+
+			await sender.send(template());
+
+			expect(mocks.resendSend).toHaveBeenCalledWith(expect.objectContaining({ to: RECIPIENT, tags: [{ name: EMAIL_LOG_ID_TAG, value: EMAIL_LOG_ID }] }), {
+				idempotencyKey: `email-log/${EMAIL_LOG_ID}`,
+			});
+		});
+
+		it("retries a timed-out call with the SAME idempotency key, so the retry cannot send twice", async () => {
+			mocks.resendSend
+				.mockImplementationOnce(async (): Promise<ReturnType<typeof delivered>> => new Promise<ReturnType<typeof delivered>>(() => undefined))
+				.mockResolvedValueOnce(delivered("re_2"));
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: "re_2", mode: "send" });
+
+			const keys = mocks.resendSend.mock.calls.map((call) => JSON.stringify(call[1]));
+			expect(keys).toEqual([JSON.stringify({ idempotencyKey: `email-log/${EMAIL_LOG_ID}` }), JSON.stringify({ idempotencyKey: `email-log/${EMAIL_LOG_ID}` })]);
+			expect(mocks.finalizeSent).toHaveBeenCalledTimes(1);
+		});
+
+		it("does not retry a non-retryable provider error and finalizes the row as failed", async () => {
+			mocks.resendSend.mockResolvedValue({ data: null, error: { name: "validation_error", message: "Invalid `to` field", statusCode: 422 } });
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toMatchObject({ ok: false, reason: "api-error" });
+			expect(mocks.resendSend).toHaveBeenCalledTimes(1);
+			expect(mocks.finalizeFailed).toHaveBeenCalledWith(EMAIL_LOG_ID, { templateKey: "verification", to: RECIPIENT }, expect.any(String), expect.any(Number));
+		});
+
+		it("reports success when the email went out even if finalizing the row fails (no resend by the caller)", async () => {
+			mocks.finalizeSent.mockRejectedValue(new Error("database blip"));
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: "re_1", mode: "send" });
+			expect(mocks.logError).toHaveBeenCalledWith(expect.stringContaining("could not be finalized"), expect.anything());
+		});
+
+		it("refuses a rate-limited recipient before writing or sending anything", async () => {
+			mocks.tryAcquire.mockResolvedValue(false);
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: false, reason: "rate-limited" });
+			expect(mocks.create).not.toHaveBeenCalled();
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+		});
+
+		it("fails closed when the rate limiter itself is unavailable", async () => {
+			mocks.tryAcquire.mockRejectedValue(new Error("redis down"));
+			const sender = await createSender(SEND_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: false, reason: "rate-limited" });
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+		});
+
+		it("records who triggered an audited send on the log row", async () => {
+			const sender = await createSender(SEND_ENV, false);
+
+			await sender.send(template(), { audit: { trigger: "admin-test-send", actorUserId: "admin-1" } });
+
+			expect(mocks.create.mock.calls.at(0)?.at(0)).toMatchObject({ metadata: { trigger: "admin-test-send", actorUserId: "admin-1", mode: "send" } });
+		});
 	});
 
-	it("never constructs a Resend client without RESEND_API_KEY and fails the send instead of calling out", async () => {
-		const service = new EmailSenderService(createConfig({ resendApiKey: null }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(false);
-		expect(resendSendMock).not.toHaveBeenCalled();
-		expect(mocks.emailLogCreate).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+	describe("simulated modes", () => {
+		it("noop writes a row marked with its mode and never calls the provider", async () => {
+			const sender = await createSender({ EMAIL_MODE: "noop" }, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: EMAIL_LOG_ID, mode: "noop" });
+			expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ status: "sent", metadata: { mode: "noop" } }));
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+		});
 	});
 
-	it("noop mode never touches the network but persists a row", async () => {
-		const service = new EmailSenderService(createConfig({ emailMode: "noop" }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.mode).toBe("noop");
-		}
-		expect(resendSendMock).not.toHaveBeenCalled();
-		expect(mocks.emailLogCreate).toHaveBeenCalledTimes(1);
-	});
+	describe("queued delivery", () => {
+		it("enqueues the pending row id instead of sending", async () => {
+			const sender = await createSender(SEND_ENV, true);
 
-	it("log-only mode prints the rendered text and returns ok", async () => {
-		const service = new EmailSenderService(createConfig({ emailMode: "log-only" }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.mode).toBe("log-only");
-		}
-		expect(resendSendMock).not.toHaveBeenCalled();
-		expect(mocks.logInfo).toHaveBeenCalled();
-	});
+			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: EMAIL_LOG_ID, mode: "queued" });
+			expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({ emailLogId: EMAIL_LOG_ID, templateKey: "verification" }));
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+		});
 
-	it("applies the EMAIL_TEST_TO override in send mode", async () => {
-		resendSendMock.mockResolvedValueOnce({ data: { id: "re-1" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig({ emailTestTo: "qa@example.com" }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(true);
-		expect(resendSendMock.mock.calls[0]?.[0]).toMatchObject({ to: "qa@example.com" });
-	});
+		it("marks the row failed and reports `queue` when the job cannot be enqueued", async () => {
+			mocks.enqueue.mockRejectedValue(new Error("redis down"));
+			const sender = await createSender(SEND_ENV, true);
 
-	it("returns the resend id on success and persists a sent row", async () => {
-		resendSendMock.mockResolvedValueOnce({ data: { id: "re-42" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.id).toBe("re-42");
-			expect(result.mode).toBe("send");
-		}
-		expect(mocks.emailLogCreate).toHaveBeenCalledWith(
-			expect.objectContaining({
-				templateKey: "verification",
-				status: "sent",
-				resendId: "re-42",
-			}),
-		);
-		// The rendered HTML must NOT contain any tracking pixel (tracking removed).
-		const sentPayload = z.object({ html: z.string() }).parse(resendSendMock.mock.calls[0]?.[0]);
-		expect(sentPayload.html).not.toContain("/notifications/tracking/open");
-	});
+			await expect(sender.send(template())).resolves.toMatchObject({ ok: false, reason: "queue" });
+			expect(mocks.finalizeFailed).toHaveBeenCalledTimes(1);
+		});
 
-	it("retries transient failures and succeeds on a later attempt", async () => {
-		resendSendMock.mockRejectedValueOnce({ code: "internal_server_error", message: "boom" }).mockResolvedValueOnce({ data: { id: "re-7" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 3 }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(true);
-		expect(resendSendMock).toHaveBeenCalledTimes(2);
-	});
+		it("makes exactly ONE provider call per job execution and leaves retrying to BullMQ", async () => {
+			mocks.resendSend.mockRejectedValue(new Error("socket hang up"));
+			const sender = await createSender(SEND_ENV, true);
 
-	it("gives up after max attempts and reports api-error", async () => {
-		resendSendMock.mockRejectedValue({ code: "internal_server_error", message: "boom" });
-		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 2 }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.reason).toBe("api-error");
-		}
-		expect(resendSendMock).toHaveBeenCalledTimes(2);
-	});
+			const execution = sender.deliverQueued(EMAIL_LOG_ID, template(), { attemptNumber: 1, maxAttempts: 5 });
 
-	it("does not retry non-retryable errors (validation_error)", async () => {
-		resendSendMock.mockRejectedValue({ code: "validation_error", message: "bad" });
-		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 3 }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(false);
-		expect(resendSendMock).toHaveBeenCalledTimes(1);
-	});
+			await expect(execution).rejects.toThrow("socket hang up");
+			await expect(execution).rejects.not.toBeInstanceOf(UnrecoverableError);
+			expect(mocks.resendSend).toHaveBeenCalledTimes(1);
+			expect(mocks.finalizeFailed).not.toHaveBeenCalled();
+		});
 
-	it("reports rate-limited when Resend says so", async () => {
-		resendSendMock.mockResolvedValue({ data: null, error: { code: "rate_limit_exceeded", message: "slow down" }, headers: null });
-		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.reason).toBe("rate-limited");
-		}
-	});
+		it("stops BullMQ immediately on a non-retryable error", async () => {
+			mocks.resendSend.mockResolvedValue({ data: null, error: { name: "invalid_api_key", message: "API key is invalid", statusCode: 403 } });
+			const sender = await createSender(SEND_ENV, true);
 
-	it("enforces the per-recipient rate limit before the network", async () => {
-		resendSendMock.mockResolvedValue({ data: { id: "re-x" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig({ emailRateLimitPerMinute: 2 }), logServiceMock, emailLogServiceMock);
-		await service.send(makeTemplate());
-		await service.send(makeTemplate());
-		const third = await service.send(makeTemplate());
-		expect(third.ok).toBe(false);
-		if (!third.ok) {
-			expect(third.reason).toBe("rate-limited");
-		}
-		expect(resendSendMock).toHaveBeenCalledTimes(2);
-	});
+			await expect(sender.deliverQueued(EMAIL_LOG_ID, template(), { attemptNumber: 1, maxAttempts: 5 })).rejects.toBeInstanceOf(UnrecoverableError);
+			expect(mocks.finalizeFailed).toHaveBeenCalledTimes(1);
+		});
 
-	it("times out a hung send and reports timeout", async () => {
-		resendSendMock.mockImplementation(
-			(): Promise<void> =>
-				new Promise<void>(() => {
-					// Never resolves — the abort timer must fire.
-				}),
-		);
-		const service = new EmailSenderService(createConfig({ emailTimeoutMs: 50, emailMaxAttempts: 1 }), logServiceMock, emailLogServiceMock);
-		const result = await service.send(makeTemplate());
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.reason).toBe("timeout");
-		}
+		it("finalizes the row as failed on the last attempt", async () => {
+			mocks.resendSend.mockRejectedValue(new Error("socket hang up"));
+			const sender = await createSender(SEND_ENV, true);
+
+			await expect(sender.deliverQueued(EMAIL_LOG_ID, template(), { attemptNumber: 5, maxAttempts: 5 })).rejects.toBeInstanceOf(UnrecoverableError);
+			expect(mocks.finalizeFailed).toHaveBeenCalledTimes(1);
+		});
+
+		it("skips a redelivered job whose row was already finalized", async () => {
+			mocks.findStatus.mockResolvedValue("sent");
+			const sender = await createSender(SEND_ENV, true);
+
+			await expect(sender.deliverQueued(EMAIL_LOG_ID, template(), { attemptNumber: 2, maxAttempts: 5 })).resolves.toBeUndefined();
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+		});
 	});
 });

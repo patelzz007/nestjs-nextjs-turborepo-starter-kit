@@ -44,7 +44,7 @@ Implement **two-tier caching**:
 | `redis` | Requires `REDIS_URL`; local Map + Redis pub/sub |
 | `auto` (default) | `redis` when `REDIS_URL` is set and `NODE_ENV !== development` |
 
-Invalidation channel: `rbac:invalidate` — messages `{ type: "user" | "users" | "clear", ... }`.
+Invalidation channel: `authz:invalidate` (`AuthorizationInvalidationService`) — zod-validated messages `{ type: "users", origin, userIds (≤ 1,000), accessTokenState }` or `{ type: "clear", origin }`. Published **after commit** of the RBAC transaction; each instance drops the authorization cache entries and, after a session revocation, the cached access-token state (tokenVersion) of the listed users. At-most-once: a lost message is bounded by the cache TTLs.
 
 ## Consequences
 
@@ -76,5 +76,5 @@ Invalidation channel: `rbac:invalidate` — messages `{ type: "user" | "users" |
 
 ## References
 
-- [Authorization guide — Cache Layer](./../authorization.md#cache-layer)
+- [Authorization backend](../technical/authorization/backend.md) and the cache settings (`AUTHORIZATION_CACHE_*`, `USER_SESSION_CACHE_*`) in [API configuration](../technical/configuration/api.md)
 - Redis pub/sub: https://redis.io/docs/manual/pubsub/

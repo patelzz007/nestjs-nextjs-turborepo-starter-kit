@@ -24,6 +24,7 @@ function buildRewardRow(overrides: Partial<Reward> = {}): Reward {
 		category: "cafe",
 		placeholderImageKey: "cafe",
 		rules: null,
+		minSpendMinor: null,
 		quantityTotal: QUANTITY_TOTAL,
 		quantityRemaining: QUANTITY_TOTAL,
 		quantityReserved: 0,

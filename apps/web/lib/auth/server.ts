@@ -28,6 +28,21 @@ export async function hasServerSession(): Promise<boolean> {
 	return hasRouteSession(accessToken, refreshToken, accessToken);
 }
 
+/**
+ * True when the browser sent BOTH an access token and a refresh token — a
+ * session a server page can call the API with right now. An expired access
+ * token still counts: the SSR caller refreshes it on the API's 401. A
+ * refresh-only session (the access cookie is gone) does not: only the proxy
+ * can rotate cookies, and it does so on the login route, which then returns
+ * the user to the page.
+ */
+export async function hasServerAccessSession(): Promise<boolean> {
+	const cookieStore = await cookies();
+	const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+	const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
+	return accessToken !== undefined && hasRouteSession(accessToken, refreshToken, accessToken);
+}
+
 /** Reads the web access-token cookie and decodes sidebar identity for SSR. */
 export async function getServerUser(): Promise<ServerUser | null> {
 	const cookieStore = await cookies();

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError } from "../../api/use-api";
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession, isRestrictedSessionError } from "../edge/restricted-session";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "../edge/restricted-session";
 
 /** Build a JWT string from a payload (base64url header/payload, dummy signature). */
 function makeJwt(payload: Record<string, string | number | boolean | undefined>): string {
@@ -69,32 +68,5 @@ describe("isEnrollmentAllowedPath", () => {
 		expect(isEnrollmentAllowedPath("/settings/access")).toBe(false);
 		expect(isEnrollmentAllowedPath("/rewardhub")).toBe(false);
 		expect(isEnrollmentAllowedPath("/accounts")).toBe(false);
-	});
-});
-
-describe("isRestrictedSessionError", () => {
-	it("returns true for RESTRICTED_SESSION ApiError responses", () => {
-		const error = new ApiError({
-			message: "Complete email verification and MFA enrollment to access this resource.",
-			error: "RESTRICTED_SESSION",
-			statusCode: 403,
-		});
-
-		expect(isRestrictedSessionError(error)).toBe(true);
-	});
-
-	it("returns false for other API errors", () => {
-		const error = new ApiError({
-			message: "Invalid credentials",
-			error: "INVALID_CREDENTIALS",
-			statusCode: 401,
-		});
-
-		expect(isRestrictedSessionError(error)).toBe(false);
-	});
-
-	it("returns false for non-ApiError values", () => {
-		expect(isRestrictedSessionError(new Error("boom"))).toBe(false);
-		expect(isRestrictedSessionError("RESTRICTED_SESSION")).toBe(false);
 	});
 });

@@ -2,7 +2,7 @@
 
 import { RewardCard } from "@/components/rewardhub/browse/card";
 import { RewardListRow } from "@/components/rewardhub/browse/list-row";
-import { RewardHubViewToggle } from "@/components/rewardhub/browse/view-toggle";
+import { RewardsViewToggle, type RewardsViewToggleLabels } from "@workspace/client/lib/features/ui-preferences/rewards-view-toggle";
 import { useRewardsViewMode, useUiPreferencesCommands, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import type { RewardResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
@@ -10,6 +10,8 @@ import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
 import { ROUTE_PREFIXES } from "@/lib/routes";
+
+const VIEW_TOGGLE_LABELS: RewardsViewToggleLabels = { group: "Rewards layout", grid: "Grid view", list: "List view" };
 
 export interface RewardHubCatalogProps {
 	readonly rewards: readonly RewardResponse[];
@@ -63,7 +65,7 @@ export function RewardHubCatalog({
 					<p className="text-sm font-medium text-foreground">{resultLabel}</p>
 					<p className="text-xs text-muted-foreground">Switch layout to compare offers at a glance.</p>
 				</div>
-				<RewardHubViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} />
+				<RewardsViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} labels={VIEW_TOGGLE_LABELS} />
 			</div>
 
 			{isLoading ? (

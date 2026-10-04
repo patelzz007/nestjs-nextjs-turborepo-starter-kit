@@ -1,7 +1,7 @@
 // ============================================
 // e2e/env.e2e.ts - opt-in switch for the full-stack smoke suite
 // ============================================
-// The e2e harness's own env module (see docs/configuration.md): the only e2e
+// The e2e harness's own env module (see docs/technical/configuration/frontend.md): the only e2e
 // file that reads `process.env`. Unset → the smoke suite is skipped; set →
 // it must be an absolute http(s) URL of a running admin build.
 

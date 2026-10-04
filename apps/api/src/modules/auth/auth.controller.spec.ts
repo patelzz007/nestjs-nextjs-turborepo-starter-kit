@@ -247,7 +247,7 @@ describe("AuthController", () => {
 			expect(authService.forgotPassword).not.toHaveBeenCalled();
 		});
 
-		it("logs in with the client type, user agent and caller IP, through the auth-cookie interceptor", async () => {
+		it("logs in with the client type, user agent and the TCP peer's IP — a spoofed X-Forwarded-For from an untrusted client is ignored", async () => {
 			const pending: LoginTwoFactorPendingResponse = { requiresTwoFactor: true, tempToken: "temp-token", message: "Enter your 2FA code" };
 			authService.login.mockResolvedValue(pending);
 			const body = { email: "admin@example.com", password: STRONG_PASSWORD };
@@ -255,13 +255,14 @@ describe("AuthController", () => {
 			const response = await app.inject({
 				method: "POST",
 				url: `${AUTH_PREFIX}/login`,
+				remoteAddress: "198.51.100.23",
 				headers: { "x-client-type": "admin", "user-agent": USER_AGENT, "x-forwarded-for": "203.0.113.7, 10.0.0.1" },
 				payload: body,
 			});
 
 			expect(response.statusCode).toBe(HTTP_CREATED);
 			expect(response.json()).toEqual(pending);
-			expect(authService.login).toHaveBeenCalledWith(body, "admin", USER_AGENT, "203.0.113.7");
+			expect(authService.login).toHaveBeenCalledWith(body, "admin", USER_AGENT, "198.51.100.23");
 			expect(authCookies.calls).toBe(1);
 		});
 
@@ -283,7 +284,7 @@ describe("AuthController", () => {
 		});
 
 		it("verifies an email by passing only the token to the service", async () => {
-			authService.verifyEmail.mockResolvedValue({ message: "Email verified" });
+			authService.verifyEmail.mockResolvedValue({ message: "Email verified", alreadyVerified: false });
 
 			const response = await app.inject({ method: "POST", url: `${AUTH_PREFIX}/verify-email`, payload: { token: "verify-token" } });
 

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { ClaimsExpireReferrerProcessor } from "./services/claims-expire-referrer.processor";
+import { ReferralCreditNotifyProcessor, ReferralCreditNotifyScheduler } from "./services/referral-credit-notify.processor";
 import { ClaimsExpirePendingProcessor, RewardsAutoPublishProcessor, RewardsQueueScheduler } from "./services/rewards-queue.processors";
 import { RewardsCoreServicesModule } from "./rewards-core-services.module";
 
@@ -10,6 +11,13 @@ import { RewardsCoreServicesModule } from "./rewards-core-services.module";
  */
 @Module({
 	imports: [RewardsCoreServicesModule],
-	providers: [RewardsQueueScheduler, RewardsAutoPublishProcessor, ClaimsExpirePendingProcessor, ClaimsExpireReferrerProcessor],
+	providers: [
+		RewardsQueueScheduler,
+		RewardsAutoPublishProcessor,
+		ClaimsExpirePendingProcessor,
+		ClaimsExpireReferrerProcessor,
+		ReferralCreditNotifyScheduler,
+		ReferralCreditNotifyProcessor,
+	],
 })
 export class RewardsQueueModule {}

@@ -1,43 +1,36 @@
-"use client";
-
-import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/forms/login-form";
+import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
+import { EmailAddressSchema } from "@workspace/shared";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
-import { useSearchParams } from "next/navigation";
-import { Suspense, type JSX } from "react";
+import * as React from "react";
 
 import { MerchantAuthLogo } from "@/app/auth/merchant-auth-logo";
+import { loadMerchantDemoAccounts } from "@/lib/auth/demo-accounts";
 import { isAllowedMerchantPostLoginRedirect } from "@/lib/auth/routes";
-import { clientEnv } from "@/lib/env/env.client";
 import { ROUTES } from "@/lib/routes";
 
-const MERCHANT_DEMO_ACCOUNTS: readonly DemoAccount[] = [
-	{ label: "Super Admin", email: "superadmin@example.com", password: "SuperAdmin@123" },
-	{ label: "KL Owner", email: "brew.owner@kl-rewards.demo", password: "BrewOwner@123" },
-	{ label: "Melaka Owner", email: "jonker.owner@melaka-rewards.demo", password: "JonkerOwner@123" },
-	{ label: "KL Cashier", email: "brew.cashier@kl-rewards.demo", password: "BrewCashier@123" },
-];
-
-const SHOW_DEMO: boolean = clientEnv.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS;
-
-function MerchantLoginContent(): JSX.Element {
-	const searchParams = useSearchParams();
-	const redirect = searchParams.get("redirect");
-	const email = searchParams.get("email");
-	// Same allow-list the proxy applies — never follow an off-site or unknown `?redirect=`.
-	const redirectPath = redirect !== null && isAllowedMerchantPostLoginRedirect(redirect) ? redirect : ROUTES.home;
-
-	return (
-		<LoginForm
-			mode="merchant"
-			{...(SHOW_DEMO ? { demoAccounts: MERCHANT_DEMO_ACCOUNTS } : {})}
-			redirectPath={redirectPath}
-			{...(email !== null ? { defaultEmail: email } : {})}
-			forgotPasswordHref={ROUTES.auth.forgotPassword}
-		/>
-	);
+export interface MerchantLoginPageProps {
+	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function MerchantLoginPage(): JSX.Element {
+/** The single value of a query parameter (`undefined` when absent or repeated). */
+function singleParam(value: string | string[] | undefined): string | undefined {
+	return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * `/auth/login` — merchant sign-in. A server component: it resolves
+ * `?redirect=` against the same allow-list the proxy applies, prefills a valid
+ * `?email=` (from an invite link), and hands the seeded demo logins to the
+ * client form in development only — so demo
+ * credentials never ship in a production build or client bundle.
+ */
+export default async function MerchantLoginPage({ searchParams }: MerchantLoginPageProps): Promise<React.JSX.Element> {
+	const params = await searchParams;
+	const redirect = singleParam(params.redirect);
+	const redirectPath = redirect !== undefined && isAllowedMerchantPostLoginRedirect(redirect) ? redirect : ROUTES.home;
+	const email = EmailAddressSchema.safeParse(singleParam(params.email));
+	const demoAccounts = await loadMerchantDemoAccounts();
+
 	return (
 		<AuthLayout
 			logo={<MerchantAuthLogo />}
@@ -52,9 +45,13 @@ export default function MerchantLoginPage(): JSX.Element {
 				toggleThemeAria: "Toggle theme",
 				rightsReserved: "All rights reserved.",
 			}}>
-			<Suspense fallback={<p className="text-sm text-muted-foreground">Loading sign in…</p>}>
-				<MerchantLoginContent />
-			</Suspense>
+			<LoginForm
+				mode="merchant"
+				{...(demoAccounts.length > 0 ? { demoAccounts } : {})}
+				redirectPath={redirectPath}
+				{...(email.success ? { defaultEmail: email.data } : {})}
+				forgotPasswordHref={ROUTES.auth.forgotPassword}
+			/>
 		</AuthLayout>
 	);
 }

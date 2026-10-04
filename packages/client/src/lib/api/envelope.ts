@@ -1,78 +1,73 @@
-import {
-	ApiPaginatedMetaSchema,
-	ApiResponseMetaSchema,
-	nowEpochMs,
-	stubPaginatedMeta,
-	stubPaginatedMetaFromHydration,
-	type ApiPaginatedMeta,
-	type ApiResponseMeta,
-	type DataValue,
-	type Envelope,
-} from "@workspace/shared";
+import { ApiPaginatedMetaSchema, type ApiPaginatedMeta, type ApiResponseMeta, type EpochMs } from "@workspace/shared";
 
 /**
- * Helpers for SSR-prefetched data handed to TanStack Query as `initialData`,
- * and for reading pagination out of a response envelope's `meta`. One copy for
- * every app (web, admin, merchant) — they previously each kept their own.
+ * Helpers for SSR-prefetched envelopes handed to TanStack Query as
+ * `initialData`, and for reading pagination out of a response envelope's
+ * `meta`. One copy for every app (web, admin, merchant).
+ *
+ * There is deliberately no way to fabricate an envelope here: a server page
+ * passes the REAL envelope its prefetch returned (`server.x.y.query(…)`), so
+ * the cache holds the server's own `meta` (correlation id, pagination,
+ * timestamp) — never a placeholder.
  */
 
-export { stubPaginatedMeta, stubPaginatedMetaFromHydration };
-
-/** Placeholder envelope meta for react-query `initialData` (SSR prefetch hydration). */
-export function stubApiMeta(): ApiResponseMeta {
-	return ApiResponseMetaSchema.parse({ correlationId: "", timestamp: nowEpochMs() });
-}
-
-/** Build a success envelope (`{ success: true, data, meta }`) for SSR-hydrated react-query `initialData`. */
-export function successEnvelope<TData extends DataValue>(data: TData, meta: ApiResponseMeta): Envelope<TData> {
-	return { success: true, data, meta };
+/** What `initialDataOption` reads from a prefetched envelope. */
+export interface PrefetchedEnvelope {
+	readonly meta: ApiResponseMeta;
 }
 
 /**
- * React Query `initialData` option that exists only when SSR-prefetched data exists.
+ * React Query `initialData` options for a server-prefetched envelope: the data
+ * AND `initialDataUpdatedAt` = the server's answer time (`meta.timestamp`), so
+ * staleness is measured from when the server answered — data reseeded after a
+ * cache eviction or a Back navigation is not mistaken for fresh data.
  *
- * With `exactOptionalPropertyTypes`, `initialData: undefined` is not the same as omitting
- * the key, and TanStack Query types it as "absent". Spread the result into the options:
+ * Absent prefetch → no keys at all (with `exactOptionalPropertyTypes`,
+ * `initialData: undefined` differs from omitting it). Spread the result:
  * `useQuery(input, { enabled, ...initialDataOption(prefetched) })`.
  */
-export function initialDataOption<TData>(data: TData | undefined): { readonly initialData?: TData } {
-	return data !== undefined ? { initialData: data } : {};
+export function initialDataOption<TEnvelope extends PrefetchedEnvelope>(
+	envelope: TEnvelope | undefined,
+): { readonly initialData?: TEnvelope; readonly initialDataUpdatedAt?: EpochMs } {
+	return envelope === undefined ? {} : { initialData: envelope, initialDataUpdatedAt: envelope.meta.timestamp };
 }
 
-function parsePaginatedMeta(meta: ApiResponseMeta | undefined): ApiPaginatedMeta | null {
-	if (meta === undefined) {
-		return null;
-	}
-	const parsed = ApiPaginatedMetaSchema.safeParse(meta);
-	return parsed.success ? parsed.data : null;
+/**
+ * The pagination of a paginated envelope's meta, `undefined` while there is
+ * no answer yet. A meta WITHOUT pagination is a programming error (the reader
+ * was used on a non-paginated endpoint, or the contract drifted) and throws —
+ * it is never papered over with a default.
+ */
+function readPagination(meta: ApiResponseMeta | undefined): ApiPaginatedMeta | undefined {
+	return meta === undefined ? undefined : ApiPaginatedMetaSchema.parse(meta);
 }
 
-/** Read `total` from a paginated envelope meta object. */
+/** `total` of a paginated envelope meta; `fallback` only while there is no answer yet. */
 export function readPaginatedTotal(meta: ApiResponseMeta | undefined, fallback = 0): number {
-	return parsePaginatedMeta(meta)?.total ?? fallback;
+	return readPagination(meta)?.total ?? fallback;
 }
 
-/** Read `page` (1-indexed) from a paginated envelope meta object. */
+/** `page` (1-indexed) of a paginated envelope meta; `fallback` only while there is no answer yet. */
 export function readPaginatedPage(meta: ApiResponseMeta | undefined, fallback = 1): number {
-	return parsePaginatedMeta(meta)?.page ?? fallback;
+	return readPagination(meta)?.page ?? fallback;
 }
 
-/** Read `totalPages` from a paginated envelope meta object. */
+/** `totalPages` of a paginated envelope meta; `fallback` only while there is no answer yet. */
 export function readPaginatedTotalPages(meta: ApiResponseMeta | undefined, fallback = 1): number {
-	return parsePaginatedMeta(meta)?.totalPages ?? fallback;
+	return readPagination(meta)?.totalPages ?? fallback;
 }
 
-/** Read `hasNext` from a paginated envelope meta object. */
+/** `hasNext` of a paginated envelope meta; `fallback` only while there is no answer yet. */
 export function readPaginatedHasNext(meta: ApiResponseMeta | undefined, fallback = false): boolean {
-	return parsePaginatedMeta(meta)?.hasNext ?? fallback;
+	return readPagination(meta)?.hasNext ?? fallback;
 }
 
-/** Read `hasPrevious` from a paginated envelope meta object. */
+/** `hasPrevious` of a paginated envelope meta; `fallback` only while there is no answer yet. */
 export function readPaginatedHasPrevious(meta: ApiResponseMeta | undefined, fallback = false): boolean {
-	return parsePaginatedMeta(meta)?.hasPrevious ?? fallback;
+	return readPagination(meta)?.hasPrevious ?? fallback;
 }
 
-/** Read `nextCursor` from a paginated envelope meta object. */
+/** `nextCursor` of a paginated envelope meta; `null` while there is no answer yet. */
 export function readPaginatedNextCursor(meta: ApiResponseMeta | undefined): string | null {
-	return parsePaginatedMeta(meta)?.nextCursor ?? null;
+	return readPagination(meta)?.nextCursor ?? null;
 }

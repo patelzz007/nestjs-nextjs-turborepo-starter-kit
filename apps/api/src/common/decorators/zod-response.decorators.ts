@@ -2,7 +2,7 @@
 // common/decorators/zod-response.decorators.ts - document + ENFORCE a response from ONE zod schema
 // ============================================
 // The response half of the request decorators (`zod-request.decorators.ts`),
-// ADR 022 / docs/response-contracts.md. One decorator per handler:
+// ADR 022 / docs/technical/api/response-contracts.md. One decorator per handler:
 //
 //   @ZodResponse(ProductSchema)                                  // 200, { success, data: Product, meta }
 //   @ZodResponse(ProductSchema, { status: HttpStatus.CREATED })  // 201
@@ -120,7 +120,7 @@ export function getResponseContract(handler: ResponseContractTarget): RouteRespo
 }
 
 const DEFAULT_SUCCESS_DESCRIPTION = "Success";
-const CLIENT_ERROR_DESCRIPTION = "Client error — the standard error envelope (docs/error-model.md); branch on `error.code`.";
+const CLIENT_ERROR_DESCRIPTION = "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`.";
 const SERVER_ERROR_DESCRIPTION = "Server error — the standard error envelope with a generic message; quote `meta.correlationId`.";
 
 function responseDecorator<T>(contract: RouteResponseContract, documented: z.ZodType, description: string | undefined): TypedResponseDecorator<T> {
@@ -150,7 +150,7 @@ export function ZodResponse<TSchema extends z.ZodType<DataValue>>(schema: TSchem
 /**
  * The handler returns one page (`PaginatedServiceResult` — `items` plus the
  * pagination fields); the client receives `{ success: true, data: items, meta: { …pagination } }`.
- * Every item is parsed with `itemSchema`. For list-grammar endpoints (docs/list-queries.md).
+ * Every item is parsed with `itemSchema`. For list-grammar endpoints (docs/technical/api/list-queries.md).
  */
 export function ZodPaginatedResponse<TItemSchema extends z.ZodType<DataValue>>(
 	itemSchema: TItemSchema,

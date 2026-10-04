@@ -30,16 +30,20 @@ import { Body, Param, Query } from "@nestjs/common";
 import type { z } from "zod";
 
 import { BracketQueryPipe } from "../pipes/bracket-query.pipe";
-import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
+import { ZodValidationPipe, type ZodValidationPipeOptions } from "../pipes/zod-validation.pipe";
 
-/** Validate the JSON request body with `schema` and document it as the operation's `requestBody`. */
-export function ZodBody(schema: z.ZodType): ParameterDecorator {
-	return Body({ schema, pipes: [new ZodValidationPipe(schema)] });
+/**
+ * Validate the JSON request body with `schema` and document it as the operation's `requestBody`.
+ * The handler receives the schema's PARSED output (transforms, defaults and refinements applied);
+ * see {@link ZodValidationPipeOptions} for the engines.
+ */
+export function ZodBody(schema: z.ZodType, options?: ZodValidationPipeOptions): ParameterDecorator {
+	return Body({ schema, pipes: [new ZodValidationPipe(schema, options)] });
 }
 
-/** Validate the query string with an OBJECT `schema` and document each key as an `in: query` parameter. */
-export function ZodQuery(schema: z.ZodType): ParameterDecorator {
-	return Query({ schema, pipes: [new ZodValidationPipe(schema)] });
+/** Validate the query string with an OBJECT `schema` and document each key as an `in: query` parameter (see {@link ZodBody} for `options`). */
+export function ZodQuery(schema: z.ZodType, options?: ZodValidationPipeOptions): ParameterDecorator {
+	return Query({ schema, pipes: [new ZodValidationPipe(schema, options)] });
 }
 
 /**
@@ -47,7 +51,7 @@ export function ZodQuery(schema: z.ZodType): ParameterDecorator {
  * Flat `filter[field][op]` keys are nested first, then the schema is parsed with
  * zod (not Ajv) so filters are normalized into the typed filter AST and unknown
  * sort / filter fields are rejected with messages listing the allowed ones.
- * The handler receives the PARSED query. See docs/list-queries.md.
+ * The handler receives the PARSED query. See docs/technical/api/list-queries.md.
  */
 export function ZodListQuery(schema: z.ZodType): ParameterDecorator {
 	return Query({ schema, pipes: [new BracketQueryPipe(), new ZodValidationPipe(schema, { engine: "zod" })] });

@@ -36,7 +36,7 @@ export class EmailLogController {
 
 	/**
 	 * Paginated email-log rows (newest first by default) — sort, filter and
-	 * search follow the shared list grammar (docs/list-queries.md).
+	 * search follow the shared list grammar (docs/technical/api/list-queries.md).
 	 */
 	@RequirePermission("LIST", "EMAIL")
 	@Get()

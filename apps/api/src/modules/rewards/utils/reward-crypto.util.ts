@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomInt } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 
 import type { RewardBackupCode } from "@workspace/shared";
 import { RewardBackupCodeSchema } from "@workspace/shared";
@@ -6,10 +6,6 @@ import { RewardBackupCodeSchema } from "@workspace/shared";
 import { opensslRandBase64OneLine } from "../../../common/crypto/openssl-rand-base64";
 
 const BACKUP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-export function sha256Hex(value: string): string {
-	return createHash("sha256").update(value).digest("hex");
-}
 
 export function generateOpaqueToken(): string {
 	return randomBytes(32).toString("base64url");

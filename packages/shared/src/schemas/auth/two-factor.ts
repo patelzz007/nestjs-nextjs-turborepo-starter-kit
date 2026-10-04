@@ -1,28 +1,57 @@
 import { z } from "zod";
 
+/** Digits in a TOTP code from an authenticator app. */
+export const TOTP_CODE_LENGTH = 6;
+
 /** Six-digit TOTP code from an authenticator app. */
 export const TotpCodeSchema = z
 	.string()
-	.length(6, "Code must be 6 digits")
-	.regex(/^\d{6}$/, "Code must contain only digits");
+	.length(TOTP_CODE_LENGTH, "Code must be 6 digits")
+	.regex(new RegExp(`^\\d{${String(TOTP_CODE_LENGTH)}}$`), "Code must contain only digits");
 
 export type TotpCode = z.output<typeof TotpCodeSchema>;
 
-/** Alphanumeric backup code (16 chars, A–Z and 2–9, excluding ambiguous characters). */
-const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+/** Backup-code alphabet: A–Z and 2–9, excluding the ambiguous 0/O and 1/I/L. Shared by the API generator and the client inputs. */
+export const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+/** Characters in one backup code. */
+export const BACKUP_CODE_LENGTH = 16;
+
+/** Backup codes issued per enrollment / rotation. */
+export const BACKUP_CODE_COUNT = 10;
 
 export const BackupCodeSchema = z
 	.string()
-	.length(16, "Backup code must be 16 characters")
-	.regex(new RegExp(`^[${BACKUP_CODE_CHARSET}]{16}$`), "Backup code must use only unambiguous A–Z and 2–9 characters");
+	.length(BACKUP_CODE_LENGTH, "Backup code must be 16 characters")
+	.regex(new RegExp(`^[${BACKUP_CODE_CHARSET}]{${String(BACKUP_CODE_LENGTH)}}$`), "Backup code must use only unambiguous A–Z and 2–9 characters");
 
 export type BackupCode = z.output<typeof BackupCodeSchema>;
 
-/** Response from `GET /auth/2fa/setup`. */
+/**
+ * What a member typed into a backup-code field, reduced to the code itself:
+ * upper-cased, separators and characters outside the alphabet dropped, cut
+ * at `BACKUP_CODE_LENGTH`. Input normalization only — `BackupCodeSchema`
+ * still validates the result.
+ */
+export function normalizeBackupCodeInput(raw: string): string {
+	let normalized = "";
+	for (const char of raw.toUpperCase()) {
+		if (normalized.length === BACKUP_CODE_LENGTH) break;
+		if (BACKUP_CODE_CHARSET.includes(char)) normalized += char;
+	}
+	return normalized;
+}
+
+/** Starting a 2FA enrollment takes no input: the server generates the secret and the codes. */
+export const StartTwoFactorSetupSchema = z.object({}).strict();
+
+export type StartTwoFactorSetupInput = z.output<typeof StartTwoFactorSetupSchema>;
+
+/** Response from `POST /auth/2fa/setup` (and `POST /auth/2fa/rotate`). */
 export const TwoFactorSetupResponseSchema = z.object({
 	secret: z.string().min(1),
 	qrCodeDataUrl: z.string().min(1),
-	backupCodes: z.array(BackupCodeSchema).length(10),
+	backupCodes: z.array(BackupCodeSchema).length(BACKUP_CODE_COUNT),
 });
 
 export type TwoFactorSetupResponse = z.output<typeof TwoFactorSetupResponseSchema>;

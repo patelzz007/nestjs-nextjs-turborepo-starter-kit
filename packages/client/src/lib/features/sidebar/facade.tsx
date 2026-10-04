@@ -2,10 +2,11 @@
 
 import * as React from "react";
 
+import { browserStorage } from "../../state/browser-storage";
 import { connectFeaturePersistence } from "../../state/feature-persistence";
 import { createFeatureStoreContext } from "../../state/feature-store-context";
 import { sidebarActions, type SidebarAction } from "./actions";
-import { selectExpandedItems, selectIsOpen, selectSearchQuery, selectSectionOrder } from "./selectors";
+import { resolveExpandedItems, selectIsOpen, selectManualExpansionFor, selectSearchQuery, selectSectionOrder } from "./selectors";
 import type { SidebarState } from "./state";
 import { createSidebarStore, sidebarPersistence, type SidebarStore } from "./store";
 
@@ -30,7 +31,7 @@ export interface SidebarStoreProviderProps {
 export function SidebarStoreProvider({ storageKey, devtoolsName, children }: SidebarStoreProviderProps): React.JSX.Element {
 	const createStore = React.useCallback((): SidebarStore => createSidebarStore(devtoolsName), [devtoolsName]);
 	const connectStorage = React.useCallback(
-		(store: SidebarStore): (() => void) => connectFeaturePersistence(store, window.localStorage, sidebarPersistence(storageKey)),
+		(store: SidebarStore): (() => void) => connectFeaturePersistence(store, browserStorage("local"), sidebarPersistence(storageKey)),
 		[storageKey],
 	);
 	return (
@@ -48,8 +49,15 @@ export function useSidebarSectionOrder(): readonly string[] | null {
 	return sidebarContext.useFeatureSelector(selectSectionOrder);
 }
 
-export function useSidebarExpandedItems(): Readonly<Record<string, boolean>> {
-	return sidebarContext.useFeatureSelector(selectExpandedItems);
+/**
+ * The nav branches open on `pathname`: `autoExpandedItems` (the route's active
+ * ancestors, from `buildSidebarView`) overridden by the user's manual choices
+ * made on this same page. Derived on every render — nothing resets on navigation.
+ */
+export function useSidebarExpandedItems(pathname: string, autoExpandedItems: Readonly<Record<string, boolean>>): Readonly<Record<string, boolean>> {
+	const selectForPathname = React.useCallback((state: SidebarState): Readonly<Record<string, boolean>> => selectManualExpansionFor(state, pathname), [pathname]);
+	const manualExpansion = sidebarContext.useFeatureSelector(selectForPathname);
+	return React.useMemo(() => resolveExpandedItems(autoExpandedItems, manualExpansion), [autoExpandedItems, manualExpansion]);
 }
 
 export function useSidebarSearchQuery(): string {
@@ -62,8 +70,8 @@ export interface SidebarCommands {
 	readonly close: () => void;
 	readonly moveSectionUp: (title: string, allTitles: readonly string[]) => void;
 	readonly moveSectionDown: (title: string, allTitles: readonly string[]) => void;
-	readonly setItemExpanded: (itemId: string, expanded: boolean) => void;
-	readonly resetExpandedItems: () => void;
+	/** Records a manual expand/collapse of `itemId` on the page at `pathname`. */
+	readonly setItemExpanded: (pathname: string, itemId: string, expanded: boolean) => void;
 	readonly setSearchQuery: (query: string) => void;
 	readonly clearSearch: () => void;
 }
@@ -88,11 +96,8 @@ export function useSidebarCommands(): SidebarCommands {
 			moveSectionDown: (title: string, allTitles: readonly string[]): void => {
 				dispatch(sidebarActions.sectionMoved(title, 1, allTitles));
 			},
-			setItemExpanded: (itemId: string, expanded: boolean): void => {
-				dispatch(sidebarActions.itemExpansionChanged(itemId, expanded));
-			},
-			resetExpandedItems: (): void => {
-				dispatch(sidebarActions.expandedItemsReset());
+			setItemExpanded: (pathname: string, itemId: string, expanded: boolean): void => {
+				dispatch(sidebarActions.itemExpansionChanged(pathname, itemId, expanded));
 			},
 			setSearchQuery: (query: string): void => {
 				dispatch(sidebarActions.searchChanged(query));

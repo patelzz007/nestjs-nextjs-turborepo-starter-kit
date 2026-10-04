@@ -7,9 +7,10 @@ import { CapabilityCatalogResponseSchema } from "./capabilities";
 import { AuditLogEntrySchema } from "./rbac-audit";
 import { RbacMessageResponseSchema } from "./rbac-inspection";
 import {
-	AdminPermissionDetailResponseSchema,
 	AdminPermissionResponseSchema,
 	CheckPermissionResponseSchema,
+	CreatePermissionExtendedSchema,
+	PermissionUpdateSchema,
 	PermissionGroupsResponseSchema,
 	PermissionListResponseSchema,
 } from "./rbac-permissions";
@@ -17,7 +18,6 @@ import {
 	CreateRoleExtendedSchema,
 	RoleAssignmentPreviewSchema,
 	RoleAssignmentValidationResponseSchema,
-	RoleDetailResponseSchema,
 	RoleListResponseSchema,
 	RoleResponseSchema,
 	UpdateRoleSchema,
@@ -71,9 +71,9 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 		expect(parsed.rolePermissions?.[0]?.permission).toEqual({ id: PERMISSION_ID, action: "READ", resource: "USER", description: null, group: null });
 	});
 
-	it("answers a role detail with the role, or null when there is none", () => {
-		expect(RoleDetailResponseSchema.parse(role)).toEqual(role);
-		expect(RoleDetailResponseSchema.parse(null)).toBeNull();
+	it("answers a role detail with the role and never with null (a missing role is a 404)", () => {
+		expect(RoleResponseSchema.parse(role)).toEqual(role);
+		expect(RoleResponseSchema.safeParse(null).success).toBe(false);
 	});
 
 	it("parses the role list, assignment validation, preview and message payloads", () => {
@@ -92,13 +92,13 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 		expect(RbacMessageResponseSchema.parse({ message: "ok", extra: 1 })).toEqual({ message: "ok" });
 	});
 
-	it("keeps an admin permission's scope and nested policy-DSL conditions, and answers null for a missing one", () => {
+	it("keeps an admin permission's scope and nested policy-DSL conditions, and never answers a detail with null", () => {
 		const conditions = { and: [{ field: "ownerId", operator: "equals", value: "$subject.userId" }] };
 		const parsed = AdminPermissionResponseSchema.parse({ ...permission, conditions, legacyFlag: true });
 		expect(parsed.scope).toBe("GLOBAL");
 		expect(parsed.conditions).toEqual(conditions);
 		expect(parsed).not.toHaveProperty("legacyFlag");
-		expect(AdminPermissionDetailResponseSchema.parse(null)).toBeNull();
+		expect(AdminPermissionResponseSchema.safeParse(null).success).toBe(false);
 	});
 
 	it("parses the permission list, groups and check payloads", () => {
@@ -114,7 +114,7 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 	it("drops the soft-delete fields an audit log entry does not expose", () => {
 		const entry = {
 			id: "a1",
-			actorId: null,
+			actor: { kind: "USER", userId: "u1", impersonatorId: null },
 			targetUserId: null,
 			targetRoleId: ROLE_ID,
 			permissionId: null,
@@ -124,6 +124,27 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 			updatedAt: UPDATED_AT_MS,
 		};
 		expect(AuditLogEntrySchema.parse({ ...entry, isDeleted: false, deletedAt: null })).toEqual(entry);
+	});
+
+	it("models the audit actor as a user or an allowlisted system operation — never a bare id", () => {
+		const base = {
+			id: "a2",
+			targetUserId: "u2",
+			targetRoleId: null,
+			permissionId: "p1",
+			action: "PERMISSION_EXPIRED",
+			detail: null,
+			createdAt: CREATED_AT_MS,
+			updatedAt: UPDATED_AT_MS,
+		};
+		const system = { ...base, actor: { kind: "SYSTEM_OPERATION", operation: "maintenance.permission_expiry" } };
+		const impersonated = { ...base, actor: { kind: "USER", userId: "u1", impersonatorId: "root" } };
+
+		expect(AuditLogEntrySchema.parse(system)).toEqual(system);
+		expect(AuditLogEntrySchema.parse(impersonated)).toEqual(impersonated);
+		expect(AuditLogEntrySchema.safeParse({ ...base, actor: { kind: "SYSTEM_OPERATION", operation: "" } }).success).toBe(false);
+		expect(AuditLogEntrySchema.safeParse({ ...base, actor: { kind: "USER", operation: "maintenance.permission_expiry" } }).success).toBe(false);
+		expect(AuditLogEntrySchema.safeParse({ ...base, actorId: "u1" }).success).toBe(false);
 	});
 
 	it("parses the capability catalog", () => {
@@ -143,8 +164,20 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 	it("parses the policy control-plane payloads", () => {
 		expect(PolicyDraftCreatedResponseSchema.parse({ draftId: DRAFT_ID })).toEqual({ draftId: DRAFT_ID });
 		expect(PolicyPublishResponseSchema.parse({ version: PUBLISHED_VERSION })).toEqual({ version: PUBLISHED_VERSION });
-		const simulation = { passed: true, warnings: [], errors: [], affectedPrincipalCount: AFFECTED_PRINCIPALS, wouldLockOutOwners: false };
+		const change = { organizationId: ROLE_ID, userId: PERMISSION_ID, membershipRole: "CASHIER", action: "rewardhub:manage_team", before: "Allow", after: "Deny" };
+		const simulation = {
+			simulationId: DRAFT_ID,
+			passed: true,
+			warnings: [],
+			errors: [],
+			evaluatedPrincipalCount: AFFECTED_PRINCIPALS,
+			affectedPrincipalCount: AFFECTED_PRINCIPALS,
+			wouldLockOutOwners: false,
+			decisionChanges: [change],
+			decisionChangesTruncated: false,
+		};
 		expect(PolicySimulationResultSchema.parse(simulation)).toEqual(simulation);
+		expect(PolicySimulationResultSchema.safeParse({ ...simulation, decisionChanges: [{ ...change, after: "Maybe" }] }).success).toBe(false);
 	});
 
 	it("parses authorization decisions and an explanation, stripping unknown nested keys", () => {
@@ -163,6 +196,12 @@ describe("RBAC request schemas stay closed", () => {
 	it("rejects unknown keys on role create / update bodies", () => {
 		expect(CreateRoleExtendedSchema.safeParse({ name: "Editor", isSystem: true }).success).toBe(false);
 		expect(UpdateRoleSchema.safeParse({ name: "Editor", parentId: ROLE_ID }).success).toBe(false);
+	});
+
+	it("never lets a client set the server-controlled isSystem flag on a permission", () => {
+		expect(CreatePermissionExtendedSchema.safeParse({ action: "READ", resource: "USER", isSystem: true }).success).toBe(false);
+		expect(PermissionUpdateSchema.safeParse({ description: "x", isSystem: true }).success).toBe(false);
+		expect(CreatePermissionExtendedSchema.safeParse({ action: "READ", resource: "USER", group: "Users" }).success).toBe(true);
 	});
 
 	it("rejects unknown keys on a decision check while the answered check strips them", () => {

@@ -1,24 +1,22 @@
 "use client";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { PERMISSION, type Product } from "@workspace/shared";
+import { PERMISSION, type Envelope, type Product } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
 import { ROUTES } from "@/lib/routes";
+import { formatCatalogAmount } from "@/lib/format/numbers";
+import { formatDateTime } from "@/lib/format/dates";
 
 export interface ProductDetailViewProps {
 	readonly id: string;
-	readonly initialProduct?: Product | undefined;
-}
-
-function formatEpoch(value: number): string {
-	return new Date(value).toLocaleString();
+	/** The API's own envelope from the server prefetch (real `meta`), seeded as the query's initial data. */
+	readonly initialProduct?: Envelope<Product> | undefined;
 }
 
 function DetailField({ label, value }: { readonly label: string; readonly value: string }): React.JSX.Element {
@@ -37,8 +35,7 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 	// PATCH /product/:id needs UPDATE — a finer-grained check for the Edit link.
 	const { can } = useAuthorization();
 	const canUpdate = can(PERMISSION.PRODUCT.UPDATE);
-	const initialQueryData = useMemo(() => (initialProduct !== undefined ? successEnvelope(initialProduct, stubApiMeta()) : undefined), [initialProduct]);
-	const detailQuery = api.product.detail.useQuery({ id }, initialDataOption(initialQueryData));
+	const detailQuery = api.product.detail.useQuery({ id }, initialDataOption(initialProduct));
 	const entity: Product | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && entity === undefined) {
@@ -87,18 +84,18 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 					<DetailField label="ID" value={entity.id} />
 					<DetailField label="Brand" value={entity.brand ?? "—"} />
 					<DetailField label="Category Id" value={entity.categoryId} />
-					<DetailField label="Compare At Price" value={entity.compareAtPrice !== null && Number.isFinite(entity.compareAtPrice) ? entity.compareAtPrice.toFixed(2) : "—"} />
+					<DetailField label="Compare At Price" value={formatCatalogAmount(entity.compareAtPrice)} />
 					<DetailField label="Description" value={entity.description ?? "—"} />
 					<DetailField label="Image Url" value={entity.imageUrl ?? "—"} />
 					<DetailField label="Is Active" value={entity.isActive ? "Yes" : "No"} />
 					<DetailField label="Is Featured" value={entity.isFeatured ? "Yes" : "No"} />
-					<DetailField label="Price" value={Number.isFinite(entity.price) ? entity.price.toFixed(2) : "—"} />
+					<DetailField label="Price" value={formatCatalogAmount(entity.price)} />
 					<DetailField label="Short Description" value={entity.shortDescription ?? "—"} />
 					<DetailField label="Sku" value={entity.sku} />
 					<DetailField label="Stock Quantity" value={String(entity.stockQuantity)} />
 					<DetailField label="Weight Grams" value={entity.weightGrams !== null ? String(entity.weightGrams) : "—"} />
-					<DetailField label="Created" value={formatEpoch(entity.createdAt)} />
-					<DetailField label="Updated" value={formatEpoch(entity.updatedAt)} />
+					<DetailField label="Created" value={formatDateTime(entity.createdAt)} />
+					<DetailField label="Updated" value={formatDateTime(entity.updatedAt)} />
 				</CardContent>
 			</Card>
 		</div>

@@ -27,17 +27,22 @@ export const INITIAL_UI_PREFERENCES_STATE: UiPreferencesState = {
 	rewardsViewMode: "grid",
 };
 
+/** The current (version 1) persisted snapshot — validated on the way back in, never trusted. */
+export const UiPreferencesSchema = UiPreferencesStateSchema;
+
+export type UiPreferences = z.output<typeof UiPreferencesSchema>;
+
+/** Version of `UiPreferencesSchema`; bump it with a migration when the snapshot changes. */
+export const UI_PREFERENCES_VERSION = 1;
+
 /**
- * What builds before the feature store wrote: the rewards view mode on its own,
- * stored as a bare string (`list`, not JSON) under the same key — read once and
- * upgraded, so nobody loses their layout.
+ * The first feature store's bare snapshot (JSON, written before version 1).
+ * The view-mode helpers before it stored the mode as a bare, non-JSON string
+ * (`list`) — `LegacyRewardsViewModeSchema` reads that one.
  */
-const LegacyRewardsViewModeSchema = RewardsViewModeSchema.transform((rewardsViewMode: RewardsViewMode): UiPreferencesState => ({
+export const LegacyUiPreferencesSnapshotSchema = UiPreferencesStateSchema;
+
+export const LegacyRewardsViewModeSchema = RewardsViewModeSchema.transform((rewardsViewMode: RewardsViewMode): UiPreferencesState => ({
 	...INITIAL_UI_PREFERENCES_STATE,
 	rewardsViewMode,
 }));
-
-/** The persisted snapshot — validated on the way back in, never trusted. */
-export const UiPreferencesSchema = z.union([UiPreferencesStateSchema, LegacyRewardsViewModeSchema]);
-
-export type UiPreferences = z.output<typeof UiPreferencesSchema>;

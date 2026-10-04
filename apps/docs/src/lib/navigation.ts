@@ -121,7 +121,7 @@ export function findSection(sections: readonly NavSection[], id: string): NavSec
 	return sections.find((section) => section.items.some((item) => item.id === id)) ?? null;
 }
 
-/** Stable id for a content file path: `authorization-system/overview.md` → `authorization-system/overview`. */
+/** Stable id for a content file path: `technical/authorization/overview.md` → `technical/authorization/overview`. */
 export function contentId(entryPath: string): string {
 	return entryPath.replace(/\\/g, "/").replace(/\.mdx?$/, "");
 }

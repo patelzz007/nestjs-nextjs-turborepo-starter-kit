@@ -4,9 +4,11 @@ import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import type { LocationScopedPrefetch } from "@/lib/org/location-prefetch";
 import { guardOrgPage } from "@/lib/org/org-page-guard";
 import { loadServerLocationScope } from "@/lib/org/server-location-scope";
-import { REDEMPTIONS_URL_STATE, toRedemptionsQuery } from "@/lib/url-state/redemptions";
+import { dayWindowContaining } from "@/lib/redemptions/today-window";
+import { prefetchedDataOrUndefined, rethrowUnexpectedFailure } from "@/lib/server/server-query-outcome";
+import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/lib/url-state/redemptions";
 import { toPrefetchedQuery, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
-import type { Envelope, MerchantRedemptionListItem } from "@workspace/shared";
+import { nowEpochMs, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +35,26 @@ export default async function MerchantRedemptionsPage({ params, searchParams }: 
 	const locationId = toLocationQueryInput((await loadServerLocationScope(orgSlug)).effectiveLocationId);
 	const urlState = REDEMPTIONS_URL_STATE.parse(await searchParams);
 
-	const [result] = await Promise.allSettled([server.organizations.redemptions.query(toRedemptionsQuery(orgSlug, locationId, urlState))]);
-	const prefetchedPage = toPrefetchedQuery(REDEMPTIONS_URL_STATE.serialize(urlState), result);
+	// "Today" is decided here, once, so the server render and hydration count the same day.
+	const today = dayWindowContaining(nowEpochMs());
+
+	const [result, todayResult] = await Promise.allSettled([
+		server.organizations.redemptions.query(toRedemptionsQuery(orgSlug, locationId, urlState)),
+		server.organizations.redemptions.query(toRedemptionsDayCountQuery(orgSlug, locationId, today)),
+	]);
+	// An access answer leaves the page to the client query; an outage is logged and rethrown to `error.tsx`.
+	const prefetchedPage = toPrefetchedQuery(REDEMPTIONS_URL_STATE.serialize(urlState), rethrowUnexpectedFailure(result, "organizations.redemptions"));
 	const initialRedemptions: LocationScopedPrefetch<PrefetchedQuery<Envelope<MerchantRedemptionListItem[]>>> | undefined =
 		prefetchedPage === undefined ? undefined : { locationId, data: prefetchedPage };
 
-	return <MerchantRedemptionsPageView orgSlug={orgSlug} initialRedemptions={initialRedemptions} />;
+	const todayCount = prefetchedDataOrUndefined(todayResult, "organizations.redemptions (today count)");
+
+	return (
+		<MerchantRedemptionsPageView
+			orgSlug={orgSlug}
+			initialRedemptions={initialRedemptions}
+			today={today}
+			initialTodayCount={todayCount === undefined ? undefined : { locationId, data: todayCount }}
+		/>
+	);
 }

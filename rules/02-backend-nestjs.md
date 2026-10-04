@@ -73,7 +73,7 @@ export class OrdersController {
 }
 ```
 
-Every handler declares its response with exactly one `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` using the shared schema of its contract leaf: it documents the response, sets the status, and the global `ResponseInterceptor` strips + enforces the result (a mismatch is a logged 500). The decorator only compiles when the handler's return type fits the schema, so a controller can never return a Prisma model — map rows to DTOs in the service/repository. See `docs/response-contracts.md` (ADR 022).
+Every handler declares its response with exactly one `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` using the shared schema of its contract leaf: it documents the response, sets the status, and the global `ResponseInterceptor` strips + enforces the result (a mismatch is a logged 500). The decorator only compiles when the handler's return type fits the schema, so a controller can never return a Prisma model — map rows to DTOs in the service/repository. See `docs/technical/api/response-contracts.md` (ADR 022).
 
 Every endpoint's guards/permissions must be explicitly mapped, not assumed from context or copied from a neighboring endpoint without checking it's actually correct for this one — see `10-security-auth-authorization.md`'s per-endpoint mapping requirement.
 

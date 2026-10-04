@@ -1,3 +1,4 @@
+import { assertNever } from "@workspace/shared";
 import type { TenantContextAction } from "./actions";
 import type { TenantContextState } from "./state";
 
@@ -10,12 +11,15 @@ export function tenantContextReducer(state: TenantContextState, action: TenantCo
 			return { ...state, selectedLocationId: action.locationId };
 		case "[ Tenant Context ] All Locations Selected":
 			return { ...state, selectedLocationId: null };
+		case "[ Tenant Context ] Location Rejected":
+			// Remembered for the mount, so the selectors never fall back onto it again (no 403 loop),
+			// and dropped as the choice when it was the choice.
+			return {
+				...state,
+				selectedLocationId: state.selectedLocationId === action.locationId ? null : state.selectedLocationId,
+				rejectedLocationIds: state.rejectedLocationIds.includes(action.locationId) ? state.rejectedLocationIds : [...state.rejectedLocationIds, action.locationId],
+			};
 		default:
-			return assertNever(action);
+			return assertNever(action, "tenant context action");
 	}
-}
-
-/** Exhaustiveness check: adding an action without handling it fails to compile. */
-function assertNever(action: never): never {
-	throw new Error(`Unhandled tenant context action: ${JSON.stringify(action)}`);
 }

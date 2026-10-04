@@ -27,7 +27,10 @@ import { HealthModule } from "./modules/health/health.module";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
 import { LogsModule } from "./modules/logs/logs.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
-import { PlatformResourceModule } from "./platform/platform-resource.module";
+import { AuditLogInterceptor } from "./common/audit/audit-log.interceptor";
+import { AuditLogModule } from "./common/audit/audit-log.module";
+import { IdempotencyInterceptor } from "./platform/idempotency/idempotency.interceptor";
+import { IdempotencyModule } from "./platform/idempotency/idempotency.module";
 import { FilesModule } from "./modules/files/files.module";
 import { StorageModule } from "./modules/storage/storage.module";
 import { AuthorizationCedarModule } from "./modules/authorization-cedar/authorization-cedar.module";
@@ -41,6 +44,7 @@ import { SampleCategoryModule } from "./modules/sample-category/sample-category.
 import { SessionsModule } from "./modules/sessions/sessions.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RlsInterceptor } from "./common/interceptors/rls.interceptor";
+import { TenancyModule } from "./common/tenancy/tenancy.module";
 
 // ── Optional ObserveModule (ESM-compatible dynamic import) ──────────────────
 // Loaded only when the validated config enables it (OBSERVE_ENABLED=1, or
@@ -65,6 +69,7 @@ if (observeConfig !== null) {
 		RequestContextModule,
 		AppMessagingModule.register(),
 		PrismaModule,
+		TenancyModule,
 		JobsModule,
 		OutboxModule,
 		AuthorizationModule,
@@ -78,7 +83,8 @@ if (observeConfig !== null) {
 		ImpersonationModule,
 		NotificationsModule,
 		GeoModule,
-		PlatformResourceModule,
+		AuditLogModule,
+		IdempotencyModule.register(),
 		StorageModule,
 		FilesModule,
 		AuthorizationCedarModule,
@@ -92,14 +98,27 @@ if (observeConfig !== null) {
 		...observeImports,
 	],
 	providers: [
-		// One error envelope for every failure — docs/error-model.md, ADR 016.
+		// One error envelope for every failure — docs/technical/api/errors.md, ADR 016.
 		{
 			provide: APP_FILTER,
 			useClass: GlobalExceptionFilter,
 		},
+		// Global interceptors run in this order (outermost first):
+		//   RLS scope → audit trail → Idempotency-Key → response contract/envelope → timing.
+		// The audit and idempotency interceptors sit OUTSIDE the response
+		// interceptor so they see (and store) the exact wire body; an idempotent
+		// replay is audited like any other request.
 		{
 			provide: APP_INTERCEPTOR,
 			useClass: RlsInterceptor,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: AuditLogInterceptor,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: IdempotencyInterceptor,
 		},
 		{
 			provide: APP_INTERCEPTOR,

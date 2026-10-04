@@ -7,7 +7,8 @@ import { z } from "zod";
 
 import { ConfigModule } from "../../../config/config.module";
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { resolveClientIp, webhookThrottlerOptionsFactory } from "./webhook-throttler";
+import { throttleTrackerFor } from "../../../common/http/client-ip";
+import { webhookThrottlerOptionsFactory } from "./webhook-throttler";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 /**
@@ -48,30 +49,14 @@ decorateMethod(ProbeController.prototype, "forbidden", [UseGuards(ThrottlerGuard
 /** The part of the 429 body this suite asserts on (the throttler adds status fields around it). */
 const ThrottledBodySchema = z.object({ message: z.string() });
 
-describe("resolveClientIp", () => {
-	it("prefers cf-connecting-ip (set by Cloudflare's edge, forwarded by cloudflared)", () => {
-		expect(
-			resolveClientIp({
-				headers: { "cf-connecting-ip": "203.0.113.9", "x-forwarded-for": "198.51.100.1, 10.0.0.1" },
-				ip: "127.0.0.1",
-			}),
-		).toBe("203.0.113.9");
+describe("throttleTrackerFor", () => {
+	it("tracks by Fastify's request.ip — never by a forwarding header", () => {
+		expect(throttleTrackerFor({ ip: "203.0.113.9", headers: { "cf-connecting-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2" } })).toBe("203.0.113.9");
 	});
 
-	it("falls back to the first x-forwarded-for hop when cf-connecting-ip is absent", () => {
-		expect(resolveClientIp({ headers: { "x-forwarded-for": "198.51.100.1, 10.0.0.1" }, ip: "127.0.0.1" })).toBe("198.51.100.1");
-	});
-
-	it("falls back to req.ip for direct localhost traffic", () => {
-		expect(resolveClientIp({ headers: {}, ip: "127.0.0.1" })).toBe("127.0.0.1");
-	});
-
-	it("returns 'unknown' when no IP information exists", () => {
-		expect(resolveClientIp({ headers: {} })).toBe("unknown");
-	});
-
-	it("ignores empty/whitespace cf-connecting-ip values", () => {
-		expect(resolveClientIp({ headers: { "cf-connecting-ip": "   " }, ip: "10.0.0.5" })).toBe("10.0.0.5");
+	it("normalizes an IPv4-mapped address and falls back to 'unknown' without an ip", () => {
+		expect(throttleTrackerFor({ ip: "::ffff:127.0.0.1" })).toBe("127.0.0.1");
+		expect(throttleTrackerFor({ headers: {} })).toBe("unknown");
 	});
 });
 
@@ -80,7 +65,7 @@ function fakeConfig(limit: number): TypedConfigService {
 	return createTestTypedConfig({ WEBHOOK_RATE_LIMIT_PER_MINUTE: String(limit) });
 }
 
-async function buildApp(limit: number): Promise<NestFastifyApplication> {
+async function buildApp(limit: number, trustedProxies: false | string[] = false): Promise<NestFastifyApplication> {
 	const moduleFixture: TestingModule = await Test.createTestingModule({
 		imports: [
 			ThrottlerModule.forRootAsync({
@@ -90,7 +75,7 @@ async function buildApp(limit: number): Promise<NestFastifyApplication> {
 		],
 		controllers: [ProbeController],
 	}).compile();
-	const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+	const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter({ trustProxy: trustedProxies }));
 	await app.init();
 	return app;
 }
@@ -111,11 +96,11 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 		}
 	});
 
-	it("counts per cf-connecting-ip: different IPs do not share a bucket", async () => {
+	it("counts per client address: different IPs do not share a bucket", async () => {
 		const app: NestFastifyApplication = await buildApp(2);
 		try {
 			for (const ip of ["203.0.113.1", "203.0.113.2", "203.0.113.3", "203.0.113.4"]) {
-				const response = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": ip } });
+				const response = await app.inject({ method: "GET", url: "/probe", remoteAddress: ip });
 				expect(response.statusCode).toBe(200);
 			}
 		} finally {
@@ -123,15 +108,47 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 		}
 	});
 
-	it("shares a bucket when the SAME cf-connecting-ip sends repeatedly", async () => {
+	it("shares a bucket when the SAME client address sends repeatedly", async () => {
 		const app: NestFastifyApplication = await buildApp(2);
 		try {
-			const first = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": "203.0.113.9" } });
+			const first = await app.inject({ method: "GET", url: "/probe", remoteAddress: "203.0.113.9" });
 			expect(first.statusCode).toBe(200);
-			const second = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": "203.0.113.9" } });
+			const second = await app.inject({ method: "GET", url: "/probe", remoteAddress: "203.0.113.9" });
 			expect(second.statusCode).toBe(200);
-			const throttled = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": "203.0.113.9" } });
+			const throttled = await app.inject({ method: "GET", url: "/probe", remoteAddress: "203.0.113.9" });
 			expect(throttled.statusCode).toBe(429);
+		} finally {
+			await app.close();
+		}
+	});
+
+	it("cannot be bypassed by rotating spoofed cf-connecting-ip / x-forwarded-for headers from an untrusted peer", async () => {
+		const app: NestFastifyApplication = await buildApp(2);
+		try {
+			const statuses: number[] = [];
+			for (const spoofed of ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4"]) {
+				const response = await app.inject({
+					method: "GET",
+					url: "/probe",
+					remoteAddress: "203.0.113.77",
+					headers: { "cf-connecting-ip": spoofed, "x-forwarded-for": spoofed },
+				});
+				statuses.push(response.statusCode);
+			}
+			expect(statuses).toEqual([200, 200, 429, 429]);
+		} finally {
+			await app.close();
+		}
+	});
+
+	it("honours X-Forwarded-For only from a trusted proxy (real client behind it gets its own bucket)", async () => {
+		const app: NestFastifyApplication = await buildApp(1, ["10.0.0.0/8"]);
+		try {
+			const viaProxy = (client: string): ReturnType<NestFastifyApplication["inject"]> =>
+				app.inject({ method: "GET", url: "/probe", remoteAddress: "10.0.0.5", headers: { "x-forwarded-for": client } });
+			expect((await viaProxy("198.51.100.1")).statusCode).toBe(200);
+			expect((await viaProxy("198.51.100.2")).statusCode).toBe(200);
+			expect((await viaProxy("198.51.100.1")).statusCode).toBe(429);
 		} finally {
 			await app.close();
 		}
@@ -153,14 +170,14 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 		const app: NestFastifyApplication = await buildApp(2);
 		try {
 			// Two requests that 403 in the handler (like a bad webhook signature)…
-			const rejectedA = await app.inject({ method: "GET", url: "/probe/forbidden", headers: { "cf-connecting-ip": "203.0.113.50" } });
+			const rejectedA = await app.inject({ method: "GET", url: "/probe/forbidden", remoteAddress: "203.0.113.50" });
 			expect(rejectedA.statusCode).toBe(403);
-			const rejectedB = await app.inject({ method: "GET", url: "/probe/forbidden", headers: { "cf-connecting-ip": "203.0.113.50" } });
+			const rejectedB = await app.inject({ method: "GET", url: "/probe/forbidden", remoteAddress: "203.0.113.50" });
 			expect(rejectedB.statusCode).toBe(403);
 			// …exhaust the bucket, so the NEXT request to the same route is throttled.
 			// (Note: the throttler key is per-IP AND per-handler, so the third hit on
 			// THIS route is the one that trips the limiter.)
-			const throttled = await app.inject({ method: "GET", url: "/probe/forbidden", headers: { "cf-connecting-ip": "203.0.113.50" } });
+			const throttled = await app.inject({ method: "GET", url: "/probe/forbidden", remoteAddress: "203.0.113.50" });
 			expect(throttled.statusCode).toBe(429);
 		} finally {
 			await app.close();

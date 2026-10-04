@@ -1,5 +1,5 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
 import { toUsersListQuery, USERS_TABLE_URL_STATE } from "@/lib/url-state/users";
 
 import UsersAllTable from "./users-all-table";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function UsersPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
 	const urlState = USERS_TABLE_URL_STATE.parse(await searchParams);
 	const server = createAdminServerCaller();
-	const [result] = await Promise.allSettled([server.auth.adminUsers.query(toUsersListQuery(urlState))]);
+	const result = await prefetch({ page: "/users", resource: "admin users" }, () => server.auth.adminUsers.query(toUsersListQuery(urlState)));
 
-	return <UsersAllTable initialPage={toPrefetchedQuery(USERS_TABLE_URL_STATE.serialize(urlState), result)} />;
+	return <UsersAllTable initialPage={resolvePrefetchedQuery(USERS_TABLE_URL_STATE.serialize(urlState), result)} />;
 }

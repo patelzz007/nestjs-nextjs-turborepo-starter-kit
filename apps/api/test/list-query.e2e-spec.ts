@@ -9,7 +9,7 @@ import { z } from "zod";
 import { createE2eApp, login, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
- * Real-Postgres proof of the list-query grammar end to end (docs/list-queries.md):
+ * Real-Postgres proof of the list-query grammar end to end (docs/technical/api/list-queries.md):
  * Fastify query string → bracket nesting → strict shared schema → filter AST →
  * per-resource Prisma translator → SQL. Uses `GET /product` with a private set
  * of rows (unique search marker) that deliberately share sort values, so the

@@ -34,6 +34,10 @@ function mutationStub(): MutationStub {
 	return { isPending: false, mutateAsync: (): Promise<void> => Promise.resolve() };
 }
 
+// The panel and banner refresh the route after an identity change; the router is the boundary here.
+const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn<() => void>() }));
+vi.mock("next/navigation", () => ({ useRouter: (): { readonly refresh: typeof routerRefresh } => ({ refresh: routerRefresh }) }));
+
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): {
 		readonly user: AuthUserStub | null;

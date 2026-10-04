@@ -1,7 +1,8 @@
 import type { OrganizationMembershipRole, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { decideOrgPageAccess, resolveUrlOrganizationMembership } from "@/lib/org/org-page-access";
+import { decideOrgPageAccess } from "@/lib/org/org-page-access";
+import { resolveUrlOrganizationMembership } from "@/lib/org/resolve-slug";
 import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
 
 const OTHER_ORG: OrganizationRewardMembershipResponse = {

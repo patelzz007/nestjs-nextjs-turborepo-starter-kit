@@ -17,7 +17,7 @@ For the original plan checklist, see `.cursor/plans/harden_authentication_mfa_13
 For deeper operational detail, also read:
 
 - [`docs/auth-roadmap.md`](./auth-roadmap.md) — MFA Hardening section
-- [`docs/token-refresh.md`](./token-refresh.md) — refresh + `tokenVersion` behavior
+- [`docs/token-refresh.md`](./technical/security/token-refresh.md) — refresh + `tokenVersion` behavior
 
 ***
 
@@ -100,7 +100,7 @@ Admin changes role → server bumps tokenVersion + deletes refresh tokens
 → client clears cookies via /auth/logout → login page
 ```
 
-Full diagram and code references: [`docs/token-refresh.md` — Session revocation after role or permission change](./token-refresh.md#session-revocation-after-role-or-permission-change).
+Full diagram and code references: [`docs/token-refresh.md` — Session revocation after role or permission change](./technical/security/token-refresh.md#session-revocation-after-role-or-permission-change).
 
 ### Sensitive admin actions (e.g. impersonation)
 

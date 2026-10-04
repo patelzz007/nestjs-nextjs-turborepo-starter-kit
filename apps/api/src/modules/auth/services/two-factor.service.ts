@@ -20,6 +20,7 @@ import type {
 	VerifyBackupCodeResponse,
 } from "@workspace/shared";
 
+import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH } from "@workspace/shared";
 import { z } from "zod";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -34,11 +35,8 @@ import { MfaChallengeService } from "./mfa-challenge.service";
 import { SecretEncryptionService } from "./secret-encryption.service";
 
 const SETUP_TTL_MS = 15 * 60 * 1000;
-const BACKUP_CODE_COUNT = 10;
 /** Allow ±1 TOTP period for clock skew between server and authenticator app. */
 const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
-/** A–Z and 2–9, excluding ambiguous 0/O, 1/I/L. */
-const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 const TOTP_PERIOD_SECONDS = 30;
 
@@ -155,7 +153,6 @@ export class TwoFactorService {
 				where: { id: userId },
 				data: {
 					twoFactorEnabled: true,
-					twoFactorSecret: null,
 					twoFactorSecretCiphertext: encryptedSecret.ciphertext,
 					twoFactorSecretIv: encryptedSecret.iv,
 					twoFactorSecretKeyVersion: encryptedSecret.keyVersion,
@@ -165,7 +162,12 @@ export class TwoFactorService {
 					updatedAt: enrolledAt,
 				},
 			}),
-			this.prisma.backupCode.deleteMany({ where: { userId } }),
+			// Backup codes are soft-deleted (business entity): the previous set stays
+			// on record, attributed to the member who replaced it.
+			this.prisma.backupCode.updateMany({
+				where: { userId, isDeleted: false },
+				data: { isDeleted: true, deletedAt: enrolledAt, deletedBy: userId },
+			}),
 			this.prisma.backupCode.createMany({
 				data: backupHashes.map((codeHash) => ({
 					userId,
@@ -261,7 +263,7 @@ export class TwoFactorService {
 
 	public async getBackupCodesRemaining(userId: string): Promise<BackupCodesRemainingResponse> {
 		const remaining = await this.prisma.backupCode.count({
-			where: { userId, usedAt: null },
+			where: { userId, usedAt: null, isDeleted: false },
 		});
 
 		return { remaining };
@@ -390,23 +392,27 @@ export class TwoFactorService {
 		});
 	}
 
+	/** Clears the user's MFA; their backup codes are soft-deleted (the user is the actor), never DELETEd. */
 	private async clearTwoFactorState(userId: string): Promise<void> {
+		const clearedAt: number = Date.now();
 		await this.prisma.$transaction([
 			this.prisma.user.update({
 				where: { id: userId },
 				data: {
 					twoFactorEnabled: false,
-					twoFactorSecret: null,
 					twoFactorSecretCiphertext: null,
 					twoFactorSecretIv: null,
 					twoFactorSecretKeyVersion: null,
 					twoFactorLastTotpStep: null,
 					mfaAssuredAt: null,
 					mfaEnrolledAt: null,
-					updatedAt: Date.now(),
+					updatedAt: clearedAt,
 				},
 			}),
-			this.prisma.backupCode.deleteMany({ where: { userId } }),
+			this.prisma.backupCode.updateMany({
+				where: { userId, isDeleted: false },
+				data: { isDeleted: true, deletedAt: clearedAt, deletedBy: userId },
+			}),
 			this.prisma.twoFactorPendingSetup.deleteMany({ where: { userId } }),
 		]);
 	}
@@ -437,7 +443,7 @@ export class TwoFactorService {
 
 	private async matchesUnusedBackupCode(userId: string, backupCode: string): Promise<boolean> {
 		const records = await this.prisma.backupCode.findMany({
-			where: { userId, usedAt: null },
+			where: { userId, usedAt: null, isDeleted: false },
 			select: { codeHash: true },
 		});
 
@@ -453,7 +459,7 @@ export class TwoFactorService {
 
 	private async consumeBackupCode(userId: string, backupCode: string, usageContext: string): Promise<boolean> {
 		const records = await this.prisma.backupCode.findMany({
-			where: { userId, usedAt: null },
+			where: { userId, usedAt: null, isDeleted: false },
 			select: { id: true, codeHash: true },
 		});
 
@@ -463,7 +469,7 @@ export class TwoFactorService {
 				const consumedAt = Date.now();
 				const updatedCount = await this.prisma.$transaction(async (tx) => {
 					const result = await tx.backupCode.updateMany({
-						where: { id: record.id, usedAt: null },
+						where: { id: record.id, usedAt: null, isDeleted: false },
 						data: { usedAt: consumedAt },
 					});
 					return result.count;
@@ -494,7 +500,7 @@ export class TwoFactorService {
 
 	private generateBackupCode(): string {
 		const chars: string[] = [];
-		for (let index = 0; index < 16; index += 1) {
+		for (let index = 0; index < BACKUP_CODE_LENGTH; index += 1) {
 			const charIndex = crypto.randomInt(0, BACKUP_CODE_CHARSET.length);
 			chars.push(BACKUP_CODE_CHARSET.charAt(charIndex));
 		}

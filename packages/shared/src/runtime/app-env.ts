@@ -7,9 +7,9 @@
 // value-free error.
 //
 //   Next apps (web / admin / merchant) → lib/env/env.{client,server}.ts
-//                                        (docs/configuration.md)
+//                                        (docs/technical/configuration/frontend.md)
 //   apps/api                           → src/config/api-config.ts
-//                                        (docs/api-configuration.md)
+//                                        (docs/technical/configuration/api.md)
 //   apps/analytics-consumer            → src/env.ts
 //
 // This file is framework-agnostic: it never touches `process.env` itself —

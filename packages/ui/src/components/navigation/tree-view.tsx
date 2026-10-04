@@ -141,7 +141,7 @@ const TreeBranch = React.forwardRef<HTMLDivElement, TreeBranchProps>(function Tr
 	const FolderIcon = open ? FolderOpen : Folder;
 
 	return (
-		<div ref={ref} role="treeitem" aria-expanded={open} className={cn("min-w-0", className)} style={treeDepthStyle(depth)}>
+		<div ref={ref} role="treeitem" aria-expanded={open} aria-selected={false} className={cn("min-w-0", className)} style={treeDepthStyle(depth)}>
 			<Collapsible open={open} onOpenChange={handleOpenChange}>
 				<div className="flex min-w-0 items-center gap-0.5">
 					{checkbox !== undefined ? <TreeCheckboxSlot config={checkbox} /> : null}
@@ -211,6 +211,7 @@ const TreeLeaf = React.forwardRef<HTMLDivElement, TreeLeafProps>(function TreeLe
 		<div
 			ref={ref}
 			role="treeitem"
+			aria-selected={state === "selected"}
 			tabIndex={isInteractive ? 0 : undefined}
 			title={resolvedTitle}
 			className={cn(treeRowVariants({ state }), isInteractive ? "cursor-pointer" : undefined, className)}

@@ -6,15 +6,19 @@ import * as React from "react";
 
 import { AdminAccessDenied } from "@/components/access/admin-access-denied";
 import { isOpenRouteRule, isRouteRuleSatisfied, resolveRouteAuthorization, type RouteAuthorizationRule } from "@/lib/navigation/route-authorization";
+import type { SessionPermissionsStatus } from "@/lib/session/capabilities";
 import type { SuperAdminStatus } from "@/lib/session/super-admin";
+import { PermissionsLoadFailed } from "@/components/access/permissions-load-failed";
 
 const NOT_SUPER_ADMIN: SuperAdminStatus = { isSuperAdmin: false, isResolved: true };
 
 export interface RouteAuthorizationGuardProps {
 	readonly rules: readonly RouteAuthorizationRule[];
 	readonly enabledFeatureFlags: readonly string[];
-	/** False until the session permissions are known — avoids a denied-state flash. */
-	readonly isResolved: boolean;
+	/** Whether the session permissions are known — `loading` renders nothing (no denied-state flash), `failed` offers a retry. */
+	readonly permissionsStatus: SessionPermissionsStatus;
+	/** Refetches the session permissions after a failure. */
+	readonly onRetryPermissions: () => void;
 	/** Session super-admin flag for `superAdminOnly` rules; omitted → treated as not a super admin. */
 	readonly superAdmin?: SuperAdminStatus | undefined;
 	readonly children: React.ReactNode;
@@ -23,12 +27,15 @@ export interface RouteAuthorizationGuardProps {
 /**
  * Client-side route gate: renders `AdminAccessDenied` when the current
  * pathname requires permissions (or a feature, or the super-admin flag) the
- * session lacks. UX only — the API enforces authorization on every request.
+ * session lacks, and a retryable "couldn't load your permissions" state when
+ * they could not be fetched — a failed fetch is never shown as a denial. UX
+ * only — the API enforces authorization on every request.
  */
 export function RouteAuthorizationGuard({
 	rules,
 	enabledFeatureFlags,
-	isResolved,
+	permissionsStatus,
+	onRetryPermissions,
 	superAdmin = NOT_SUPER_ADMIN,
 	children,
 }: RouteAuthorizationGuardProps): React.JSX.Element | null {
@@ -39,7 +46,10 @@ export function RouteAuthorizationGuard({
 	if (rule === null || isOpenRouteRule(rule)) {
 		return <>{children}</>;
 	}
-	if (!isResolved || (rule.superAdminOnly === true && !superAdmin.isResolved)) {
+	if (permissionsStatus === "failed") {
+		return <PermissionsLoadFailed onRetry={onRetryPermissions} />;
+	}
+	if (permissionsStatus === "loading" || (rule.superAdminOnly === true && !superAdmin.isResolved)) {
 		return null;
 	}
 	if (!isRouteRuleSatisfied(rule, can, enabledFeatureFlags, superAdmin.isSuperAdmin)) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveAdminTrail } from "@/lib/navigation/breadcrumb";
+import { resolveAdminTrail, withAccessibleLinks } from "@/lib/navigation/breadcrumb";
 
 describe("resolveAdminTrail", () => {
 	it("resolves a top-level menu item to a single current-page crumb", () => {
@@ -22,11 +22,11 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("prepends the section title for multi-item content sections", () => {
-		// Documents is a multi-item section (not the Main catch-all) — its title
-		// becomes a context root, and the item itself stays a link to its page.
-		const trail = resolveAdminTrail("/documents/alpha");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Documents", "Project Alpha"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual([undefined, "/documents/alpha"]);
+		// Platform is a multi-item section (not the Main catch-all) — its title
+		// becomes an unlinked context root, and the section parent stays a link.
+		const trail = resolveAdminTrail("/catalog/products");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Catalog", "Products"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", undefined]);
 	});
 
 	it("does not prepend the Main section title (it would duplicate context)", () => {
@@ -36,15 +36,11 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("resolves a deep nested route through every ancestor", () => {
-		const trail = resolveAdminTrail("/users/roles/admins");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Users", "Roles", "Admins"]);
+		const trail = resolveAdminTrail("/catalog/products/42/edit");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Catalog", "Products", "42", "Edit"]);
 		expect(trail.at(-1)?.href).toBeUndefined();
-		// Every ancestor except the last is linked.
-		for (const [index, crumb] of trail.entries()) {
-			if (index < trail.length - 1) {
-				expect(crumb.href, crumb.label).toBeDefined();
-			}
-		}
+		// Every menu ancestor is linked; the section title and the dynamic tail are not.
+		expect(trail.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", "/catalog/products", undefined, undefined]);
 	});
 
 	it("treats the dashboard root as a current-page Overview crumb (no self link)", () => {
@@ -82,8 +78,8 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("handles a trailing slash on a known route", () => {
-		const trail = resolveAdminTrail("/settings/billing/");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Settings", "Billing"]);
+		const trail = resolveAdminTrail("/settings/access/");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Settings", "Access control"]);
 	});
 
 	it("does not let a prefix match a similar-but-different route (/users vs /users-x)", () => {
@@ -103,8 +99,7 @@ describe("resolveAdminTrail", () => {
 		const paths: readonly string[] = [
 			"/",
 			"/analytics",
-			"/settings/billing",
-			"/documents/alpha",
+			"/settings/access",
 			"/users/mfa-recovery",
 			"/users/123",
 			"/catalog/products/42/edit",
@@ -116,5 +111,15 @@ describe("resolveAdminTrail", () => {
 				expect(crumb.icon, `${pathname} → ${crumb.label}`).toBeDefined();
 			}
 		}
+	});
+});
+
+describe("withAccessibleLinks", () => {
+	it("keeps every crumb but unlinks the ones the session may not open", () => {
+		const trail = resolveAdminTrail("/catalog/products/42/edit");
+		const linked = withAccessibleLinks(trail, (href: string): boolean => href !== "/catalog/products");
+
+		expect(linked.map((crumb) => crumb.label)).toEqual(trail.map((crumb) => crumb.label));
+		expect(linked.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", undefined, undefined, undefined]);
 	});
 });

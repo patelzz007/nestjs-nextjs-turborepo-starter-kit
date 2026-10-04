@@ -1,13 +1,12 @@
-import { createAdminServerCaller } from "@/lib/admin-server-api";
-
 import MerchantInvitesPanel from "./merchant-invites-panel";
 
-export const dynamic = "force-dynamic";
-
-/** `/merchants/invites` — create merchant onboarding invites. */
-export default async function MerchantInvitesPage(): Promise<React.JSX.Element> {
-	const server = createAdminServerCaller();
-	const samplePreview = await server.email.previewDetail.query({ key: "merchant-invite" });
-
-	return <MerchantInvitesPanel initialSamplePreview={samplePreview.data} />;
+/**
+ * `/merchants/invites` — create merchant onboarding invites (MANAGE
+ * MERCHANT_ORG). Nothing is prefetched: the email preview is rendered by
+ * `POST /admin/invites/preview-email` from the admin's own form
+ * input (same permission as sending), so the page never depends on the
+ * email-template endpoints, which need EMAIL READ.
+ */
+export default function MerchantInvitesPage(): React.JSX.Element {
+	return <MerchantInvitesPanel />;
 }

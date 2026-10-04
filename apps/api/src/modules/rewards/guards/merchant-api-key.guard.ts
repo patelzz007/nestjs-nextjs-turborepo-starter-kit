@@ -5,8 +5,9 @@ import type { FastifyRequest } from "fastify";
 import { MerchantApiKeyVerificationService } from "../../api-keys/services/merchant-api-key-verification.service";
 import type { MerchantApiKeyAuthContext, PairedTerminal } from "../../api-keys/types/api-key-auth.types";
 import { extractApiKeyFromRequest } from "../../api-keys/utils/extract-api-key.util";
+import { RequestContextService } from "../../../common/context/request-context";
 import { readFirstHeader } from "../../../common/utils/http-headers";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantTerminalRepository } from "../repositories/merchant-terminal.repository";
 import { MERCHANT_POS_CONTEXT_KEY, type MerchantPosContext } from "../types/merchant-pos-context";
 
 /**
@@ -28,7 +29,8 @@ import { MERCHANT_POS_CONTEXT_KEY, type MerchantPosContext } from "../types/merc
 export class MerchantApiKeyGuard implements CanActivate {
 	public constructor(
 		private readonly merchantApiKeyVerification: MerchantApiKeyVerificationService,
-		private readonly prisma: PrismaService,
+		private readonly terminalRepository: MerchantTerminalRepository,
+		private readonly requestContext: RequestContextService,
 	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -52,6 +54,13 @@ export class MerchantApiKeyGuard implements CanActivate {
 				: await this.resolvePairedKey(keyContext, keyContext.terminal, requestedTerminalId);
 
 		Object.assign(request, { [MERCHANT_POS_CONTEXT_KEY]: posContext });
+		// The key (and its terminal) is the request's principal (ADR 017): idempotency scoping and the audit trail read it here.
+		this.requestContext.bindApiKey({
+			apiKeyId: posContext.apiKeyId,
+			organizationId: posContext.organizationId,
+			terminalId: posContext.terminalId,
+			locationId: keyContext.locationId,
+		});
 
 		return true;
 	}
@@ -82,10 +91,7 @@ export class MerchantApiKeyGuard implements CanActivate {
 			throw new UnauthorizedException({ message: "X-Terminal-Id header required", error: "TERMINAL_ID_REQUIRED" });
 		}
 
-		const terminal = await this.prisma.organizationTerminal.findFirst({
-			where: { organizationId: keyContext.organizationId, terminalId: requestedTerminalId, isDeleted: false },
-			select: { id: true, locationId: true },
-		});
+		const terminal = await this.terminalRepository.findLiveByTerminalId(keyContext.organizationId, requestedTerminalId);
 
 		if (terminal === null && keyContext.requireRegisteredTerminals) {
 			throw new UnauthorizedException({ message: "This terminal is not registered with the merchant", error: "TERMINAL_NOT_REGISTERED" });
@@ -106,6 +112,6 @@ export class MerchantApiKeyGuard implements CanActivate {
 	}
 
 	private async touchLastSeen(terminalRowId: string): Promise<void> {
-		await this.prisma.organizationTerminal.update({ where: { id: terminalRowId }, data: { lastSeenAt: Date.now() } });
+		await this.terminalRepository.touchLastSeen(terminalRowId, Date.now());
 	}
 }

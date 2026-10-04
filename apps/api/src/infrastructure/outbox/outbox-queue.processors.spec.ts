@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { MessageEnvelopeSchema } from "@workspace/messaging";
-import { KafkaProducerService } from "@workspace/messaging/nest";
+import { DEFAULT_KAFKA_CONNECT_BACKOFF, KAFKA_PLAINTEXT_SECURITY } from "@workspace/messaging/kafka";
+import { KafkaProducerNotConnectedError, KafkaProducerService } from "@workspace/messaging/nest";
 import { PlatformEventMessageSchema, type PlatformEventMessage } from "@workspace/shared";
 
+import { OutboxPublisherUnavailableError } from "./outbox-dispatcher";
 import { KafkaOutboxPublisher, toKafkaMessageEnvelope } from "./outbox-queue.processors";
+
+const KAFKA_DELIVERY_TIMEOUT_MS = 30_000;
 
 const EVENT_ID = "0b8f5a52-6a3c-4c3e-9d8e-5d8b5f0f4a11";
 
@@ -41,6 +45,9 @@ describe("KafkaOutboxPublisher", () => {
 			bullPrefix: "bull",
 			redisUrl: undefined,
 			kafkaBrokers: undefined,
+			kafkaSecurity: KAFKA_PLAINTEXT_SECURITY,
+			kafkaDeliveryTimeoutMs: KAFKA_DELIVERY_TIMEOUT_MS,
+			kafkaConnectBackoff: DEFAULT_KAFKA_CONNECT_BACKOFF,
 			rabbitmqUrl: undefined,
 			healthQueueName: undefined,
 		});
@@ -59,11 +66,37 @@ describe("KafkaOutboxPublisher", () => {
 			bullPrefix: "bull",
 			redisUrl: undefined,
 			kafkaBrokers: undefined,
+			kafkaSecurity: KAFKA_PLAINTEXT_SECURITY,
+			kafkaDeliveryTimeoutMs: KAFKA_DELIVERY_TIMEOUT_MS,
+			kafkaConnectBackoff: DEFAULT_KAFKA_CONNECT_BACKOFF,
 			rabbitmqUrl: undefined,
 			healthQueueName: undefined,
 		});
 		vi.spyOn(producer, "publish").mockRejectedValue(new Error("broker down"));
 
 		await expect(new KafkaOutboxPublisher(producer).publish("platform.sessions", buildMessage(), null)).rejects.toThrow("broker down");
+	});
+
+	it("reports a producer that is not connected as unavailable (nothing sent), keeping the cause", async () => {
+		const producer = new KafkaProducerService({
+			clientId: "test",
+			connectionName: "test",
+			queueNames: [],
+			bullPrefix: "bull",
+			redisUrl: undefined,
+			kafkaBrokers: ["127.0.0.1:9092"],
+			kafkaSecurity: KAFKA_PLAINTEXT_SECURITY,
+			kafkaDeliveryTimeoutMs: KAFKA_DELIVERY_TIMEOUT_MS,
+			kafkaConnectBackoff: DEFAULT_KAFKA_CONNECT_BACKOFF,
+			rabbitmqUrl: undefined,
+			healthQueueName: undefined,
+		});
+		const cause = new KafkaProducerNotConnectedError("platform.sessions", "connecting");
+		vi.spyOn(producer, "publish").mockRejectedValue(cause);
+
+		const failure = new KafkaOutboxPublisher(producer).publish("platform.sessions", buildMessage(), null);
+
+		await expect(failure).rejects.toBeInstanceOf(OutboxPublisherUnavailableError);
+		await expect(failure).rejects.toMatchObject({ cause });
 	});
 });

@@ -64,7 +64,7 @@ function pageFileForDocsUrl(url) {
 }
 
 const problems = [];
-// Recursive: guides live in sub-folders too (`docs/authorization-system/*.md`).
+// Recursive: guides live in sub-folders too (`docs/technical/authorization/*.md`).
 const files = readdirSync(DOCS_DIR, { recursive: true, encoding: "utf8" })
 	.filter((name) => name.endsWith(".md"))
 	.sort()

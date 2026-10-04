@@ -7,7 +7,7 @@ import * as React from "react";
 
 import { resolveAuthErrorMessage } from "../../auth/errors";
 import { useAuth } from "../../auth/index";
-import { MERCHANT_ME_QUERY_KEY } from "../../auth/session/invalidate-auth";
+import { apiRouter } from "../../api/endpoints";
 import { hasSubmittedMerchantKyb, openExternalDocument, readProfileKybDocuments, triggerBrowserDownload } from "./document-utils";
 import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "./document-preview-dialog";
 import { submitMerchantKyb } from "./multipart";
@@ -17,6 +17,8 @@ import { profileToFieldValues, readKybStringField } from "./verification-profile
 import { MerchantKybVerificationStatusBanners } from "./verification-status-banners";
 import { MerchantKybVerificationUpdateSection, type MerchantKybVerificationUpdateStep } from "./verification-update-section";
 import { catchCaught } from "../../caught";
+import { FileProcessingError } from "../../storage/direct-upload";
+import { describeDocumentProcessingFailure } from "../onboarding/onboarding-outcome";
 
 export interface MerchantKybVerificationViewProps {
 	readonly orgSlug: string;
@@ -66,6 +68,14 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 	const [error, setError] = React.useState<string | null>(null);
 	const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = React.useState(false);
+	// The in-flight upload's scan wait — cancelled when the view unmounts.
+	const uploadAbortRef = React.useRef<AbortController | null>(null);
+	React.useEffect(
+		(): (() => void) => (): void => {
+			uploadAbortRef.current?.abort();
+		},
+		[],
+	);
 	const [documentPreview, setDocumentPreview] = React.useState<MerchantKybDocumentPreviewState | null>(null);
 
 	const completedStepIds = React.useMemo((): ReadonlySet<string> => {
@@ -233,8 +243,10 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 			}
 
 			setIsSubmitting(true);
+			const uploadController = new AbortController();
+			uploadAbortRef.current = uploadController;
 			void catchCaught(
-				submitMerchantKyb(api, orgSlug, parsed.data, values.documents, profile.organizationId).then((response): void => {
+				submitMerchantKyb(api, orgSlug, parsed.data, values.documents, profile.organizationId, uploadController.signal).then((response): void => {
 					setValues(profileToFieldValues(response));
 					setStep("business");
 					setSuccessMessage(
@@ -242,11 +254,17 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 							? "Your submission has been updated. Documents are being scanned before review."
 							: "Business verification updated. Our team will review your details.",
 					);
-					void queryClient.invalidateQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
-					void queryClient.invalidateQueries({ queryKey: ["merchant", "kyb"] });
+					// This organization's KYB profile (restarts the SCANNING poll) and the
+					// views that carry its KYB status: the org context and the memberships.
+					void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.kyb.get.scopeKey({ orgSlug }) });
+					void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.context.scopeKey({ orgSlug }) });
+					void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.membershipsBootstrap.scopeKey(undefined) });
 				}),
 				(err): void => {
-					setError(resolveAuthErrorMessage(err));
+					if (uploadController.signal.aborted) {
+						return;
+					}
+					setError(err instanceof FileProcessingError ? describeDocumentProcessingFailure(err) : resolveAuthErrorMessage(err));
 				},
 			).finally((): void => {
 				setIsSubmitting(false);

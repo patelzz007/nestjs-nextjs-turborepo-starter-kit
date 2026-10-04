@@ -4,13 +4,14 @@ import { ChangePasswordForm } from "../forms/change-password-form";
 import { EmailVerificationPanel } from "../email/verification-panel";
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
-import { consumeEnrollmentMessage } from "../edge/restricted-session";
+import { consumeEnrollmentMessage } from "../session/enrollment-message";
 import { Button } from "@workspace/ui/components/form/button";
 import { Checkbox } from "@workspace/ui/components/form/checkbox";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { PasswordInput } from "@workspace/ui/components/form/password-input";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { BACKUP_CODE_LENGTH, normalizeBackupCodeInput, TOTP_CODE_LENGTH } from "@workspace/shared";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 
@@ -18,18 +19,9 @@ import { MfaRecoveryRequestPanel } from "./recovery-request-panel";
 import { useEmailVerifiedToast } from "../email/use-verified-toast";
 import { catchCaught } from "../../caught";
 
-/** Allowed characters for MFA backup codes (matches server charset). */
-const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-
-function sanitizeBackupCodeInput(value: string): string {
-	const upper = value.toUpperCase();
-	let sanitized = "";
-	for (const char of upper) {
-		if (BACKUP_CODE_CHARSET.includes(char)) {
-			sanitized += char;
-		}
-	}
-	return sanitized.slice(0, 16);
+/** Keeps only digits, at most one TOTP code long. */
+function sanitizeTotpInput(value: string): string {
+	return value.replace(/\D/g, "").slice(0, TOTP_CODE_LENGTH);
 }
 
 function downloadBackupCodes(codes: readonly string[]): void {
@@ -47,7 +39,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 	const { api } = useAuth();
 	const meQuery = api.auth.me.useQuery(undefined, { retry: 1 });
 	const twoFactorEnabled = meQuery.data?.data.twoFactorEnabled === true;
-	const [isLoadingSetup, setIsLoadingSetup] = useState(false);
+	const setupMutation = api.auth.twoFactorSetup.useMutation();
 	const enableMutation = api.auth.twoFactorEnable.useMutation();
 	const rotateMutation = api.auth.twoFactorRotate.useMutation();
 	const remainingQuery = api.auth.twoFactorBackupCodesRemaining.useQuery(undefined, { enabled: twoFactorEnabled, retry: 1 });
@@ -71,24 +63,22 @@ function TwoFactorSetupPanel(): JSX.Element {
 		setToken("");
 	}, []);
 
+	// Starting a setup stores a new pending secret server-side — a mutation, never a query refetch.
 	const handleStartSetup = useCallback((): void => {
 		setError(null);
 		setMessage(null);
-		setIsLoadingSetup(true);
 		void catchCaught(
-			api.auth.twoFactorSetup.fetchOrThrow(undefined).then((response): void => {
+			setupMutation.mutateAsync({}).then((response): void => {
 				applySetupResponse(response.data);
 			}),
 			(err): void => {
 				setError(resolveAuthErrorMessage(err));
 			},
-		).finally((): void => {
-			setIsLoadingSetup(false);
-		});
-	}, [api.auth.twoFactorSetup, applySetupResponse]);
+		);
+	}, [applySetupResponse, setupMutation]);
 
 	const handleTokenChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setToken(event.target.value.replace(/\D/g, "").slice(0, 6));
+		setToken(sanitizeTotpInput(event.target.value));
 	}, []);
 
 	const handleRotatePasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -96,11 +86,11 @@ function TwoFactorSetupPanel(): JSX.Element {
 	}, []);
 
 	const handleRotateTokenChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setRotateToken(event.target.value.replace(/\D/g, "").slice(0, 6));
+		setRotateToken(sanitizeTotpInput(event.target.value));
 	}, []);
 
 	const handleRotateBackupCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setRotateBackupCode(sanitizeBackupCodeInput(event.target.value));
+		setRotateBackupCode(normalizeBackupCodeInput(event.target.value));
 	}, []);
 
 	const handleSavedCodesChange = useCallback((checked: boolean | undefined): void => {
@@ -186,8 +176,9 @@ function TwoFactorSetupPanel(): JSX.Element {
 	}, []);
 
 	const remainingCount: number | null = remainingQuery.data?.data.remaining ?? null;
-	const canSubmitEnable: boolean = token.length === 6 && savedCodesConfirmed;
-	const canSubmitRotate: boolean = rotatePassword.length > 0 && (rotateUseBackupCode ? rotateBackupCode.length === 16 : rotateToken.length === 6);
+	const canSubmitEnable: boolean = token.length === TOTP_CODE_LENGTH && savedCodesConfirmed;
+	const canSubmitRotate: boolean =
+		rotatePassword.length > 0 && (rotateUseBackupCode ? rotateBackupCode.length === BACKUP_CODE_LENGTH : rotateToken.length === TOTP_CODE_LENGTH);
 
 	return (
 		<div className="space-y-6">
@@ -201,7 +192,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 			) : null}
 
 			{qrCodeDataUrl === null ? (
-				<Button type="button" onClick={handleStartSetup} loading={isLoadingSetup}>
+				<Button type="button" onClick={handleStartSetup} loading={setupMutation.isPending}>
 					Set up authenticator app
 				</Button>
 			) : (
@@ -244,7 +235,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 					<form className="space-y-3" onSubmit={handleEnable}>
 						<div className="space-y-2">
 							<Label htmlFor="two-factor-token">Verification code</Label>
-							<Input id="two-factor-token" inputMode="numeric" maxLength={6} value={token} onChange={handleTokenChange} />
+							<Input id="two-factor-token" inputMode="numeric" maxLength={TOTP_CODE_LENGTH} value={token} onChange={handleTokenChange} />
 						</div>
 						<Button type="submit" loading={enableMutation.isPending} disabled={!canSubmitEnable}>
 							Enable 2FA
@@ -268,8 +259,8 @@ function TwoFactorSetupPanel(): JSX.Element {
 						<Input
 							id="rotate-backup-code"
 							autoComplete="one-time-code"
-							placeholder="16-character backup code"
-							maxLength={16}
+							placeholder={`${String(BACKUP_CODE_LENGTH)}-character backup code`}
+							maxLength={BACKUP_CODE_LENGTH}
 							value={rotateBackupCode}
 							onChange={handleRotateBackupCodeChange}
 							className="font-mono tracking-widest"
@@ -281,7 +272,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 				) : (
 					<div className="space-y-2">
 						<Label htmlFor="rotate-token">Current authenticator code</Label>
-						<Input id="rotate-token" inputMode="numeric" maxLength={6} value={rotateToken} onChange={handleRotateTokenChange} />
+						<Input id="rotate-token" inputMode="numeric" maxLength={TOTP_CODE_LENGTH} value={rotateToken} onChange={handleRotateTokenChange} />
 						<Button type="button" variant="link" className="h-auto justify-start p-0 text-sm" onClick={handleRotateUseBackupCode}>
 							Use a backup code instead
 						</Button>

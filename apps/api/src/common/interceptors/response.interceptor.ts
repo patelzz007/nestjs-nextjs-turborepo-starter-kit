@@ -74,13 +74,7 @@ export class ResponseInterceptor implements NestInterceptor {
 		}
 		const correlationId: string = this.requestContext.resolveCorrelationId(request.raw);
 
-		return next.handle().pipe(
-			map((result: DataValue): ResponseBody => {
-				const body: ResponseBody = ResponseInterceptor.toBody(contract, result, route, correlationId);
-				request.responseData = body;
-				return body;
-			}),
-		);
+		return next.handle().pipe(map((result: DataValue): ResponseBody => ResponseInterceptor.toBody(contract, result, route, correlationId)));
 	}
 
 	/** Parse `result` with the contract (single pass) and wrap it in the declared envelope. */

@@ -6,9 +6,23 @@ import {
 	OrganizationAccessRequestResponseSchema,
 	OrganizationContextResponseSchema,
 	OrganizationLocationResponseSchema,
+	OrganizationLocationCloseResponseSchema,
+	OrganizationLocationCloseSchema,
+	OrganizationMemberStoreParamSchema,
+	OrganizationMemberStoreRemoveResponseSchema,
+	OrganizationMemberStoreRemoveSchema,
+	type OrganizationLocationCloseInput,
+	type OrganizationLocationCloseResponse,
+	type OrganizationMemberStoreParam,
+	type OrganizationMemberStoreRemoveInput,
+	type OrganizationMemberStoreRemoveResponse,
 	OrganizationMemberInviteCreatedResponseSchema,
 	OrganizationMemberInviteListResponseSchema,
 	OrganizationMemberRosterListResponseSchema,
+	OrganizationMembershipResponseSchema,
+	OrganizationOwnMembershipUpdateSchema,
+	type OrganizationMembershipResponse,
+	type OrganizationOwnMembershipUpdateInput,
 	type MessageResponse,
 	OrganizationAccessRequestCreateSchema,
 	OrganizationAccessRequestParamSchema,
@@ -36,10 +50,13 @@ import {
 import { ZodBody, ZodParams } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
+import { toProfileActor } from "../../auth/profile/profile-actor";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 import { OrganizationContextService } from "../services/organization-context.service";
 import { OrganizationLocationService } from "../services/organization-location.service";
-import { OrganizationMembershipService } from "../services/organization-membership.service";
+import { OrganizationMembershipService, teamActorFromContext } from "../services/organization-membership.service";
+import { OrganizationOwnMembershipService } from "../services/organization-own-membership.service";
+import { OrganizationStoreMemberService } from "../services/organization-store-member.service";
 
 @ApiTags("Organizations")
 @Controller(apiPath("/orgs"))
@@ -48,6 +65,8 @@ export class OrganizationController {
 		private readonly context: OrganizationContextService,
 		private readonly membership: OrganizationMembershipService,
 		private readonly locations: OrganizationLocationService,
+		private readonly storeMembers: OrganizationStoreMemberService,
+		private readonly ownMembership: OrganizationOwnMembershipService,
 	) {}
 
 	@Get(":orgSlug/context")
@@ -87,6 +106,30 @@ export class OrganizationController {
 		return this.locations.resubmitMerchantLocation(user.sub, params.orgSlug, params.locationId, body);
 	}
 
+	@Post(":orgSlug/locations/:locationId/close")
+	@ZodResponse(OrganizationLocationCloseResponseSchema, {
+		status: HttpStatus.CREATED,
+		description: "Store closed: soft-deleted with its memberships, terminals and keys revoked",
+	})
+	public async closeLocation(
+		@GetUser() user: AccessTokenPayload,
+		@ZodParams(OrganizationLocationIdParamSchema) params: { orgSlug: string; locationId: string },
+		@ZodBody(OrganizationLocationCloseSchema) body: OrganizationLocationCloseInput,
+	): Promise<OrganizationLocationCloseResponse> {
+		return this.locations.closeMerchantLocation(user.sub, params.orgSlug, params.locationId, body);
+	}
+
+	@Post(":orgSlug/members/:membershipId/stores/:locationId/remove")
+	@ZodResponse(OrganizationMemberStoreRemoveResponseSchema, { status: HttpStatus.CREATED, description: "Team member removed from one store" })
+	public async removeMemberFromStore(
+		@GetUser() user: AccessTokenPayload,
+		@ZodParams(OrganizationMemberStoreParamSchema) params: OrganizationMemberStoreParam,
+		@ZodBody(OrganizationMemberStoreRemoveSchema) body: OrganizationMemberStoreRemoveInput,
+	): Promise<OrganizationMemberStoreRemoveResponse> {
+		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
+		return this.storeMembers.removeFromStore(teamActorFromContext(resolved), params.membershipId, params.locationId, body);
+	}
+
 	@Get(":orgSlug/members")
 	@ZodResponse(OrganizationMemberRosterListResponseSchema, { description: "Organization member roster" })
 	public async listMembers(
@@ -94,7 +137,25 @@ export class OrganizationController {
 		@ZodParams(OrganizationSlugParamSchema) params: { orgSlug: string },
 	): Promise<OrganizationMemberRosterResponse[]> {
 		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
-		return this.membership.listMembers(user.sub, resolved.membership.role, resolved.organizationId);
+		return this.membership.listMembers(teamActorFromContext(resolved));
+	}
+
+	/**
+	 * Authorization: authenticated; the caller must be a live ACTIVE member of the organization (else 404, no
+	 * existence oracle) and only ever changes their OWN membership (selected by the token's user id). No team
+	 * capability needed. Refused (403 ORGANIZATION_MEMBERSHIP_UPDATE_DURING_IMPERSONATION) for an impersonation session.
+	 */
+	@Patch(":orgSlug/members/me")
+	@ZodResponse(OrganizationMembershipResponseSchema, {
+		description: "The signed-in member's own membership after setting (or, with null, clearing) their display name in this organization",
+	})
+	public async updateOwnMembership(
+		@GetUser() user: AccessTokenPayload,
+		@ZodParams(OrganizationSlugParamSchema) params: { orgSlug: string },
+		@ZodBody(OrganizationOwnMembershipUpdateSchema) body: OrganizationOwnMembershipUpdateInput,
+	): Promise<OrganizationMembershipResponse> {
+		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
+		return this.ownMembership.updateOwnMembership(toProfileActor(user).kind, teamActorFromContext(resolved), body);
 	}
 
 	@Get(":orgSlug/members/invites")
@@ -104,7 +165,7 @@ export class OrganizationController {
 		@ZodParams(OrganizationSlugParamSchema) params: { orgSlug: string },
 	): Promise<OrganizationMemberInviteResponse[]> {
 		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
-		return this.membership.listPendingInvites(user.sub, resolved.membership.role, resolved.organizationId);
+		return this.membership.listPendingInvites(teamActorFromContext(resolved));
 	}
 
 	@Post(":orgSlug/members/invite")
@@ -116,7 +177,7 @@ export class OrganizationController {
 	): Promise<OrganizationMemberInviteCreatedResponse> {
 		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
 		const orgContext = await this.context.getContext(user.sub, params.orgSlug);
-		return this.membership.inviteMember(user.sub, resolved.membership.role, resolved.organizationId, orgContext.organization.displayName, body);
+		return this.membership.inviteMember(teamActorFromContext(resolved), orgContext.organization.displayName, body);
 	}
 
 	@Post(":orgSlug/members/invites/:inviteId/revoke")
@@ -126,7 +187,7 @@ export class OrganizationController {
 		@ZodParams(OrganizationMemberInviteIdParamSchema) params: { orgSlug: string; inviteId: string },
 	): Promise<MessageResponse> {
 		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
-		await this.membership.revokeInvite(user.sub, resolved.membership.role, resolved.organizationId, params.inviteId);
+		await this.membership.revokeInvite(teamActorFromContext(resolved), params.inviteId);
 		return { message: "Invitation revoked" };
 	}
 
@@ -138,7 +199,7 @@ export class OrganizationController {
 		@ZodBody(ReviewOrganizationAccessRequestSchema) body: ReviewOrganizationAccessRequestInput,
 	): Promise<MessageResponse> {
 		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
-		await this.membership.reviewAccessRequest(user.sub, resolved.organizationId, params.requestId, body);
+		await this.membership.reviewAccessRequest(teamActorFromContext(resolved), params.requestId, body);
 		return { message: "Access request reviewed" };
 	}
 }

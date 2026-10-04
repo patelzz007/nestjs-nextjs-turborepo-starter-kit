@@ -3,14 +3,14 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { Job, Queue } from "bullmq";
 
 import { EmptyQueuePayloadSchema, MessageEnvelopeSchema, type MessageEnvelope } from "@workspace/messaging";
-import { KafkaProducerService } from "@workspace/messaging/nest";
+import { KafkaProducerNotConnectedError, KafkaProducerService } from "@workspace/messaging/nest";
 import { QUEUE_NAMES, nowEpochMs, type KafkaTopic, type PlatformEventMessage } from "@workspace/shared";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { runWithSystemRlsContext } from "../../prisma/rls-context";
 import { registerMaintenanceScheduler } from "../jobs/maintenance-scheduler";
 import { OutboxDispatchRepository } from "./outbox-dispatch.repository";
-import { OutboxDispatcher, type OutboxClock, type OutboxDispatchSummary, type OutboxPublisher } from "./outbox-dispatcher";
+import { OutboxDispatcher, OutboxPublisherUnavailableError, type OutboxClock, type OutboxDispatchSummary, type OutboxPublisher } from "./outbox-dispatcher";
 
 const OUTBOX_SCHEDULER_ID = "outbox-publish";
 const OUTBOX_SWEEP_INTERVAL_MS = 5_000;
@@ -31,12 +31,24 @@ export function toKafkaMessageEnvelope(message: PlatformEventMessage): MessageEn
 	});
 }
 
-/** Kafka adapter for the dispatcher's publisher port. */
+/**
+ * Kafka adapter for the dispatcher's publisher port. A producer that is not
+ * connected (still connecting in the background, or shutting down) sent
+ * nothing — reported as {@link OutboxPublisherUnavailableError} so the row
+ * keeps its attempts and stays PENDING.
+ */
 export class KafkaOutboxPublisher implements OutboxPublisher {
 	public constructor(private readonly producer: KafkaProducerService) {}
 
 	public async publish(topic: KafkaTopic, message: PlatformEventMessage, partitionKey: string | null): Promise<void> {
-		await this.producer.publish(topic, toKafkaMessageEnvelope(message), partitionKey);
+		try {
+			await this.producer.publish(topic, toKafkaMessageEnvelope(message), partitionKey);
+		} catch (error) {
+			if (error instanceof KafkaProducerNotConnectedError) {
+				throw new OutboxPublisherUnavailableError(error.message, { cause: error });
+			}
+			throw error;
+		}
 	}
 }
 
@@ -47,7 +59,7 @@ export class OutboxQueueScheduler implements OnModuleInit {
 
 	public constructor(
 		private readonly config: TypedConfigService,
-		@InjectQueue(QUEUE_NAMES[4]) private readonly outboxQueue: Queue,
+		@InjectQueue(QUEUE_NAMES.outboxPublish) private readonly outboxQueue: Queue,
 	) {}
 
 	public async onModuleInit(): Promise<void> {
@@ -57,14 +69,14 @@ export class OutboxQueueScheduler implements OnModuleInit {
 
 		await registerMaintenanceScheduler(
 			this.outboxQueue,
-			{ queueName: QUEUE_NAMES[4], schedulerId: OUTBOX_SCHEDULER_ID, everyMs: OUTBOX_SWEEP_INTERVAL_MS, jobName: "sweep", data: EmptyQueuePayloadSchema.parse({}) },
+			{ queueName: QUEUE_NAMES.outboxPublish, schedulerId: OUTBOX_SCHEDULER_ID, everyMs: OUTBOX_SWEEP_INTERVAL_MS, jobName: "sweep", data: EmptyQueuePayloadSchema.parse({}) },
 			this.logger,
 		);
 		this.logger.log("Registered BullMQ outbox publish scheduler");
 	}
 }
 
-@Processor(QUEUE_NAMES[4])
+@Processor(QUEUE_NAMES.outboxPublish)
 @Injectable()
 export class OutboxPublishProcessor extends WorkerHost {
 	private readonly logger: Logger = new Logger(OutboxPublishProcessor.name);

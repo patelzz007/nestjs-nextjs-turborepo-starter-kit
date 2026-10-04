@@ -5,7 +5,14 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import * as React from "react";
 
-import { formatKybDocumentSize, formatKybScanStatus } from "./document-utils";
+import { formatKybDocumentSize, isKybDocumentAccessible, KYB_SCAN_STATUS_PRESENTATION, type KybScanStatusPresentation } from "./document-utils";
+
+/** Badge style per presentation tone. */
+const TONE_BADGE_VARIANT: Readonly<Record<KybScanStatusPresentation["tone"], "outline" | "secondary" | "destructive">> = {
+	neutral: "outline",
+	warning: "secondary",
+	danger: "destructive",
+};
 
 interface MerchantKybStoredDocumentItemProps {
 	readonly document: MerchantKybDocumentRecord;
@@ -27,7 +34,8 @@ function MerchantKybStoredDocumentItem({ document, onView, onDownload, onViewSou
 		onViewSource?.(document);
 	}, [document, onViewSource]);
 
-	const canAccess = document.scanStatus === "CLEAN";
+	const presentation: KybScanStatusPresentation = KYB_SCAN_STATUS_PRESENTATION[document.scanStatus];
+	const canAccess: boolean = isKybDocumentAccessible(document.scanStatus);
 
 	return (
 		<li className="flex flex-col gap-3 rounded-lg border bg-card px-3 py-2 sm:flex-row sm:items-center">
@@ -36,7 +44,7 @@ function MerchantKybStoredDocumentItem({ document, onView, onDownload, onViewSou
 				<p className="text-xs text-muted-foreground">{formatKybDocumentSize(document.sizeBytes)}</p>
 			</div>
 			<div className="flex flex-wrap items-center gap-2">
-				<Badge variant="outline">{formatKybScanStatus(document.scanStatus)}</Badge>
+				<Badge variant={TONE_BADGE_VARIANT[presentation.tone]}>{presentation.label}</Badge>
 				{canAccess && onView !== undefined ? (
 					<Button type="button" variant="outline" size="sm" onClick={handleView}>
 						View

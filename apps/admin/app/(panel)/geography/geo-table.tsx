@@ -3,6 +3,7 @@
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { formatCoordinate, formatCoordinatePair, formatCount } from "@/lib/format/numbers";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -37,7 +38,7 @@ import { useCallback, useMemo, type ReactNode } from "react";
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { toListSearch } from "@workspace/client/lib/api/list-query";
-import { cityListQuery, countryListQuery, stateListQuery, type CityListItem, type CountryListItem, type GeoStats, type StateListItem } from "@workspace/shared";
+import { cityListQuery, countryListQuery, stateListQuery, type CityListItem, type CountryListItem, type Envelope, type GeoStats, type StateListItem } from "@workspace/shared";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,8 @@ interface GeoRow {
 }
 
 export interface GeoViewProps {
-	readonly initialStats?: GeoStats | undefined;
+	/** The stats envelope the server prefetched — seeds the stats query (with the server's answer time), so the client does not fetch them again. */
+	readonly initialStats?: Envelope<GeoStats> | undefined;
 	/** The active tab's page the server prefetched for the URL it rendered. */
 	readonly initialPage?: PrefetchedQuery<GeoTabPage> | undefined;
 }
@@ -100,7 +102,7 @@ function StatCard({ label, value, icon }: { readonly label: string; readonly val
 				{icon}
 			</CardHeader>
 			<CardContent>
-				<div className="text-2xl font-bold">{value.toLocaleString()}</div>
+				<div className="text-2xl font-bold">{formatCount(value)}</div>
 			</CardContent>
 		</Card>
 	);
@@ -155,7 +157,7 @@ function SegmentedTabs({
 						{count !== undefined ? (
 							<span
 								className={`rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/70"} `}>
-								{count.toLocaleString()}
+								{formatCount(count)}
 							</span>
 						) : null}
 					</Button>
@@ -202,12 +204,12 @@ function useStateColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
 			{
 				accessorKey: "latitude",
 				header: "Lat",
-				cell: ({ row }) => (row.getValue("latitude") != null ? Number(row.getValue("latitude")).toFixed(4) : "—"),
+				cell: ({ row }) => formatCoordinate(row.original.latitude),
 			},
 			{
 				accessorKey: "longitude",
 				header: "Lng",
-				cell: ({ row }) => (row.getValue("longitude") != null ? Number(row.getValue("longitude")).toFixed(4) : "—"),
+				cell: ({ row }) => formatCoordinate(row.original.longitude),
 			},
 		],
 		[],
@@ -224,12 +226,12 @@ function useCityColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
 			{
 				accessorKey: "latitude",
 				header: "Lat",
-				cell: ({ row }) => (row.getValue("latitude") != null ? Number(row.getValue("latitude")).toFixed(4) : "—"),
+				cell: ({ row }) => formatCoordinate(row.original.latitude),
 			},
 			{
 				accessorKey: "longitude",
 				header: "Lng",
-				cell: ({ row }) => (row.getValue("longitude") != null ? Number(row.getValue("longitude")).toFixed(4) : "—"),
+				cell: ({ row }) => formatCoordinate(row.original.longitude),
 			},
 		],
 		[],
@@ -247,8 +249,8 @@ function useCityColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
 export default function GeoView({ initialStats, initialPage }: GeoViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const statsQuery = api.geo.stats.useQuery({});
-	const stats = statsQuery.data?.data ?? initialStats;
+	const statsQuery = api.geo.stats.useQuery({}, initialDataOption(initialStats));
+	const stats = statsQuery.data?.data;
 
 	const [urlState, updateUrlState] = useUrlState(GEO_URL_STATE);
 	const activeTab: GeoTab = urlState.tab;
@@ -398,7 +400,7 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 							{ label: "State code", value: item.stateCode ?? "—" },
 							{
 								label: "Coordinates",
-								value: item.latitude !== undefined && item.longitude !== undefined ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}` : "—",
+								value: formatCoordinatePair(item.latitude, item.longitude),
 							},
 						]}
 					/>
@@ -413,7 +415,7 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 						{ label: "ID", value: item.id },
 						{
 							label: "Coordinates",
-							value: item.latitude !== undefined && item.longitude !== undefined ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}` : "—",
+							value: formatCoordinatePair(item.latitude, item.longitude),
 						},
 					]}
 				/>
@@ -464,7 +466,7 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 						exit={{ opacity: 0, y: -6 }}
 						transition={{ duration: 0.2, ease: "easeInOut" }}>
 						<DataTable
-							data={[...items]}
+							data={items}
 							columns={columns}
 							labels={labels}
 							checkbox={checkbox}

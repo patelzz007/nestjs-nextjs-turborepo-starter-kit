@@ -9,20 +9,21 @@ import { buildListOrder, type ListOrder, type SortColumns } from "../../../platf
 import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
-import { minSpendMinorFromRules } from "../utils/redemption-eligibility.util";
+import { appendRewardAuditLog } from "./reward-audit-log.repository";
 
 const CLAIM_WITH_REWARD_TITLE_INCLUDE = {
 	reward: { select: { title: true } },
 } satisfies Prisma.RewardClaimInclude;
 
 const CLAIM_WITH_REWARD_INCLUDE = {
-	reward: { include: { locationScopes: { select: { locationId: true } } } },
+	// Closed (soft-deleted) stores never count as a place the reward can be redeemed.
+	reward: { include: { locationScopes: { where: { location: { isDeleted: false } }, select: { locationId: true } } } },
 } satisfies Prisma.RewardClaimInclude;
 
 export type RewardClaimWithRewardTitle = Prisma.RewardClaimGetPayload<{ include: typeof CLAIM_WITH_REWARD_TITLE_INCLUDE }>;
 export type RewardClaimWithReward = Prisma.RewardClaimGetPayload<{ include: typeof CLAIM_WITH_REWARD_INCLUDE }>;
 
-// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 const REWARD_CLAIM_SORT_COLUMNS: SortColumns<RewardClaimListSortField, Prisma.RewardClaimOrderByWithRelationInput> = {
 	claimedAt: (direction) => ({ claimedAt: direction }),
@@ -57,8 +58,6 @@ export interface RewardClaimRedemptionLookup {
 		readonly status: "PENDING" | "REDEEMED" | "EXPIRED";
 		readonly claimExpiresAt: bigint;
 		readonly redemptionTokenHash: string;
-		readonly backupFailedAttempts: number;
-		readonly backupLockedUntil: bigint | null;
 	};
 	readonly reward: {
 		readonly id: string;
@@ -69,37 +68,120 @@ export interface RewardClaimRedemptionLookup {
 		readonly locationScopeType: OrganizationLocationScopeType;
 		/** The stores a `SELECTED`-scope reward is valid at (empty for `ALL_LOCATIONS`). */
 		readonly locationIds: readonly string[];
-		/** `rules.minSpendMyr` in minor units; `null` when the reward has no minimum. */
+		/** `rewards.min_spend_minor`; `null` when the reward has no minimum. */
 		readonly minSpendMinor: number | null;
 	};
+}
+
+/** Claim statuses that count toward a reward's per-customer limit (an expired claim returned its unit and does not). */
+const LIMIT_COUNTED_CLAIM_STATUSES: RewardClaim["status"][] = ["PENDING", "REDEEMED"];
+
+export interface ReservedClaimInput {
+	readonly userId: string;
+	readonly rewardId: string;
+	/** `rules.maxUsePerUser`; `null` = unlimited. */
+	readonly maxClaimsPerUser: number | null;
+	readonly redemptionTokenHash: string;
+	readonly backupCodeHash: string;
+	readonly claimedAt: number;
+	readonly claimExpiresAt: number;
+	/** The customer's pending referral attribution token (`null` = none / expired). */
+	readonly attributionToken: string | null;
+	/** The verified phone the claim was made with. */
+	readonly phone: string;
+}
+
+export type ReservedClaimOutcome =
+	{ readonly kind: "created"; readonly claim: RewardClaim } | { readonly kind: "out_of_stock" } | { readonly kind: "limit_reached"; readonly limit: number };
+
+/** Rolls the claim transaction back when the customer already holds `limit` claims of the reward. */
+class ClaimLimitReachedError extends Error {
+	public constructor(public readonly limit: number) {
+		super(`Claim limit of ${String(limit)} reached`);
+		this.name = "ClaimLimitReachedError";
+	}
 }
 
 @Injectable()
 export class RewardClaimRepository {
 	public constructor(private readonly prisma: PrismaService) {}
 
-	public async create(input: {
-		readonly userId: string;
-		readonly rewardId: string;
-		readonly referralId: string | null;
-		readonly redemptionTokenHash: string;
-		readonly backupCodeHash: string;
-		readonly status: "PENDING";
-		readonly claimedAt: number;
-		readonly claimExpiresAt: number;
-	}): Promise<RewardClaim> {
-		return this.prisma.rewardClaim.create({
-			data: {
-				userId: input.userId,
-				rewardId: input.rewardId,
-				referralId: input.referralId,
-				redemptionTokenHash: input.redemptionTokenHash,
-				backupCodeHash: input.backupCodeHash,
-				status: input.status,
-				claimedAt: input.claimedAt,
-				claimExpiresAt: input.claimExpiresAt,
-			},
-		});
+	/**
+	 * Claims a unit of a reward atomically, in ONE transaction:
+	 *
+	 * 1. Reserve stock with a conditional update (`quantityRemaining > 0`, still
+	 *    published). It row-locks the reward until commit, so every concurrent
+	 *    claim of this reward waits here — the steps below run one at a time.
+	 * 2. Enforce `maxClaimsPerUser` (live PENDING/REDEEMED claims); over the
+	 *    limit the transaction rolls back, returning the reserved unit.
+	 * 3. Attribute a pending referral, insert the claim, record the verified
+	 *    phone and clear the attribution — all or nothing.
+	 */
+	public async createReservedClaim(input: ReservedClaimInput): Promise<ReservedClaimOutcome> {
+		try {
+			return await this.prisma.$transaction(async (tx): Promise<ReservedClaimOutcome> => {
+				const reserved = await tx.reward.updateMany({
+					where: {
+						id: input.rewardId,
+						isDeleted: false,
+						status: "PUBLISHED",
+						rewardKind: "CONSUMER",
+						quantityRemaining: { gt: 0 },
+						// A reward offered only at closed stores can no longer be claimed.
+						OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { location: { isDeleted: false, status: "ACTIVE" } } } }],
+					},
+					data: { quantityRemaining: { decrement: 1 }, quantityReserved: { increment: 1 }, claimCount: { increment: 1 } },
+				});
+				if (reserved.count === 0) {
+					return { kind: "out_of_stock" };
+				}
+
+				if (input.maxClaimsPerUser !== null) {
+					const held = await tx.rewardClaim.count({
+						where: { userId: input.userId, rewardId: input.rewardId, isDeleted: false, status: { in: LIMIT_COUNTED_CLAIM_STATUSES } },
+					});
+					if (held >= input.maxClaimsPerUser) {
+						throw new ClaimLimitReachedError(input.maxClaimsPerUser);
+					}
+				}
+
+				const referral =
+					input.attributionToken === null
+						? null
+						: await tx.rewardReferral.findFirst({
+								where: { attributionToken: input.attributionToken, rewardId: input.rewardId, status: "PENDING", isDeleted: false },
+								select: { id: true },
+							});
+				if (referral !== null) {
+					await tx.rewardReferral.update({ where: { id: referral.id }, data: { refereeUserId: input.userId } });
+				}
+
+				const claim = await tx.rewardClaim.create({
+					data: {
+						userId: input.userId,
+						rewardId: input.rewardId,
+						referralId: referral?.id ?? null,
+						redemptionTokenHash: input.redemptionTokenHash,
+						backupCodeHash: input.backupCodeHash,
+						status: "PENDING",
+						claimedAt: input.claimedAt,
+						claimExpiresAt: input.claimExpiresAt,
+					},
+				});
+
+				await tx.user.update({
+					where: { id: input.userId },
+					data: { phone: input.phone, phoneVerifiedAt: input.claimedAt, pendingAttributionToken: null, pendingAttributionExpiresAt: null },
+				});
+
+				return { kind: "created", claim };
+			});
+		} catch (error) {
+			if (error instanceof ClaimLimitReachedError) {
+				return { kind: "limit_reached", limit: error.limit };
+			}
+			throw error;
+		}
 	}
 
 	public async listForUser(userId: string, query: RewardClaimListQuery): Promise<RepositoryListResult<RewardClaimWithRewardTitle>> {
@@ -126,31 +208,24 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async findByRedemptionTokenHash(tokenHash: string): Promise<RewardClaimWithReward | null> {
+	/**
+	 * The live claim behind a QR token (`tokenHashes`: its hash under every key version) — but only a claim on one of
+	 * `organizationId`'s rewards. Another merchant's code is "not found",
+	 * exactly like an unknown one, so a till learns nothing about codes that
+	 * are not its own.
+	 */
+	public async findMerchantClaimByTokenHash(tokenHashes: readonly string[], organizationId: string): Promise<RewardClaimWithReward | null> {
 		return this.prisma.rewardClaim.findFirst({
-			where: { redemptionTokenHash: tokenHash, isDeleted: false },
+			where: { redemptionTokenHash: { in: [...tokenHashes] }, isDeleted: false, reward: { organizationId } },
 			include: CLAIM_WITH_REWARD_INCLUDE,
 		});
 	}
 
-	public async findByBackupCodeHash(codeHash: string): Promise<RewardClaimWithReward | null> {
+	/** Same as {@link findMerchantClaimByTokenHash}, for the backup code read out instead of the QR. */
+	public async findMerchantClaimByBackupCodeHash(codeHashes: readonly string[], organizationId: string): Promise<RewardClaimWithReward | null> {
 		return this.prisma.rewardClaim.findFirst({
-			where: { backupCodeHash: codeHash, isDeleted: false },
+			where: { backupCodeHash: { in: [...codeHashes] }, isDeleted: false, reward: { organizationId } },
 			include: CLAIM_WITH_REWARD_INCLUDE,
-		});
-	}
-
-	public async findById(claimId: string): Promise<RewardClaim | null> {
-		return this.prisma.rewardClaim.findUnique({ where: { id: claimId } });
-	}
-
-	public async recordBackupFailure(claimId: string, attempts: number, backupLockedUntil: bigint | null): Promise<void> {
-		await this.prisma.rewardClaim.update({
-			where: { id: claimId },
-			data: {
-				backupFailedAttempts: attempts,
-				backupLockedUntil,
-			},
 		});
 	}
 
@@ -163,8 +238,6 @@ export class RewardClaimRepository {
 				status: claim.status,
 				claimExpiresAt: claim.claimExpiresAt,
 				redemptionTokenHash: claim.redemptionTokenHash,
-				backupFailedAttempts: claim.backupFailedAttempts,
-				backupLockedUntil: claim.backupLockedUntil,
 			},
 			reward: {
 				id: claim.reward.id,
@@ -174,7 +247,7 @@ export class RewardClaimRepository {
 				expiryDate: claim.reward.expiryDate,
 				locationScopeType: claim.reward.locationScopeType,
 				locationIds: claim.reward.locationScopes.map((scope) => scope.locationId),
-				minSpendMinor: minSpendMinorFromRules(claim.reward.rules),
+				minSpendMinor: claim.reward.minSpendMinor,
 			},
 		};
 	}
@@ -223,12 +296,10 @@ export class RewardClaimRepository {
 				},
 			});
 
-			await tx.rewardAuditLog.create({
-				data: {
-					organizationId,
-					action: "reward.claim_expired",
-					metadata: { claimId, isReferrerCredit },
-				},
+			await appendRewardAuditLog(tx, {
+				organizationId,
+				action: "reward.claim_expired",
+				metadata: { claimId, isReferrerCredit },
 			});
 
 			await withinTransaction(tx);
@@ -236,15 +307,17 @@ export class RewardClaimRepository {
 		});
 	}
 
+	/** `rewardScope` narrows to the rewards the caller's stores offer (`{}` = every reward of the organization). */
 	public async listForMerchantAnalytics(
 		organizationId: string,
 		claimedAtRange: { readonly gte: number; readonly lte: number },
+		rewardScope: Prisma.RewardWhereInput,
 	): Promise<Pick<RewardClaim, "claimedAt" | "status" | "rewardId">[]> {
 		return this.prisma.rewardClaim.findMany({
 			where: {
 				isDeleted: false,
 				claimedAt: claimedAtRange,
-				reward: { organizationId, isDeleted: false },
+				reward: { AND: [{ organizationId, isDeleted: false }, rewardScope] },
 			},
 			select: { claimedAt: true, status: true, rewardId: true },
 		});

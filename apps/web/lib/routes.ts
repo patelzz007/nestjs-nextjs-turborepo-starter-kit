@@ -170,16 +170,5 @@ export function landingSectionPath(sectionId: string): string {
 	return `${ROUTES.home}#${sectionId}`;
 }
 
-/** Characters that end a path segment: `/`, or the start of a query / fragment. */
-const SEGMENT_BOUNDARIES: ReadonlySet<string> = new Set<string>(["", "/", "?", "#"]);
-
-/**
- * Segment-aware prefix test: `/rewardhub` contains `/rewardhub`,
- * `/rewardhub/wallet` and `/rewardhub?tab=1`, but not `/rewardhubs`.
- */
-export function isPathWithin(pathname: string, prefix: string): boolean {
-	if (!pathname.startsWith(prefix)) {
-		return false;
-	}
-	return SEGMENT_BOUNDARIES.has(pathname.charAt(prefix.length));
-}
+/** Segment-aware prefix test, shared by every app (`isPathWithin(pathname, prefix)`). */
+export { isPathWithin } from "@workspace/ui/lib/core/path-match";

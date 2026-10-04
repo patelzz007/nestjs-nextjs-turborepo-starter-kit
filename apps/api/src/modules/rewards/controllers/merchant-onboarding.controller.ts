@@ -17,13 +17,20 @@ import {
 	CompleteFileUploadResponseSchema,
 	MerchantOnboardingDocumentBatchUploadCompleteResponseSchema,
 	SuccessAckResponseSchema,
+	MerchantOnboardingDocumentStatusResponseSchema,
+	type MerchantOnboardingDocumentStatusInput,
 } from "@workspace/shared";
+import { Throttle } from "@nestjs/throttler";
 import { ZodBody } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
 import { MerchantOnboardingService } from "../services/merchant-onboarding.service";
+
+/** Status polling: one request every 2 s for a minute is the expected client cadence. */
+const ONBOARDING_STATUS_THROTTLE_TTL_MS = 60_000;
+const ONBOARDING_STATUS_THROTTLE_LIMIT = 30;
 
 @ApiTags("Organization Onboarding")
 @Controller(apiPath("/orgs/onboarding"))
@@ -105,5 +112,21 @@ export class MerchantOnboardingController {
 		@ZodBody(apiContract.organizations.onboarding.documentsSubmit.input) body: MerchantOnboardingDocumentsSubmitInput,
 	): ReturnType<MerchantOnboardingService["submitDocuments"]> {
 		return this.merchantOnboarding.submitDocuments(body);
+	}
+
+	/**
+	 * Polled by the signed-out merchant while scans finish. A tighter per-IP limit
+	 * than the default: an invite token is a bearer credential, so guessing is throttled.
+	 */
+	@Public()
+	@RlsBypass()
+	@Throttle({ strict: { ttl: ONBOARDING_STATUS_THROTTLE_TTL_MS, limit: ONBOARDING_STATUS_THROTTLE_LIMIT } })
+	@Post("documents/status")
+	@ApiOperation({ summary: "Scan status of this onboarding's KYB uploads (same document window as the upload endpoints)" })
+	@ZodResponse(MerchantOnboardingDocumentStatusResponseSchema, { status: HttpStatus.CREATED, description: "This onboarding's requested KYB uploads with their scan status" })
+	public documentStatus(
+		@ZodBody(apiContract.organizations.onboarding.documentStatus.input) body: MerchantOnboardingDocumentStatusInput,
+	): ReturnType<MerchantOnboardingService["documentStatus"]> {
+		return this.merchantOnboarding.documentStatus(body);
 	}
 }

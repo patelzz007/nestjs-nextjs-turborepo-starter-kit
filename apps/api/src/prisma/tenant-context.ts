@@ -1,3 +1,5 @@
+import type { SystemOperation } from "./system-operation.registry";
+
 /** Tenant database session context — set transaction-locally in PostgreSQL. */
 export interface TenantDatabaseContext {
 	readonly userId: string;
@@ -6,12 +8,16 @@ export interface TenantDatabaseContext {
 	readonly policyVersion: number;
 }
 
-/** Allowlisted system operation bypassing tenant scope. */
+/**
+ * Allowlisted system operation bypassing tenant scope.
+ *
+ * There is deliberately no correlation id here: `TenantTransactionService`
+ * takes it from the request context (ADR 017) — or generates one for work
+ * outside a request — so a caller can never stamp a made-up id on the audit
+ * trail.
+ */
 export interface SystemDatabaseContext {
-	readonly operation: string;
+	readonly operation: SystemOperation;
 	readonly reason: string;
-	readonly correlationId: string;
 	readonly actorUserId: string | null;
 }
-
-export type DatabaseAccessMode = { readonly kind: "tenant"; readonly tenant: TenantDatabaseContext } | { readonly kind: "system"; readonly system: SystemDatabaseContext };

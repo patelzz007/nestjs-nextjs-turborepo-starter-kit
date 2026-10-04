@@ -7,7 +7,7 @@
 | Remote API data | TanStack Query |
 | Form values | TanStack Form |
 | Validation | Zod (`05-contracts-zod-api.md`) |
-| URL state (table page/sort/filter/search, in-page selection) | The URL, via `defineUrlState` + `useUrlState` (`@workspace/client/lib/url-state`, docs/list-queries.md §7) |
+| URL state (table page/sort/filter/search, in-page selection) | The URL, via `defineUrlState` + `useUrlState` (`@workspace/client/lib/url-state`, docs/technical/api/list-queries.md §7) |
 | Client UI state | Zustand |
 | Table engine | TanStack Table |
 | Persistence | API/database |
@@ -477,13 +477,13 @@ export function useCancelOrder(): UseMutationResult<Order, AppApiError, CancelOr
 ## Table state ownership — full picture
 
 ```text
-URL params        → page, limit, sort, filter, search                (shareable, refresh-safe, drives the server query — docs/list-queries.md)
+URL params        → page, limit, sort, filter, search                (shareable, refresh-safe, drives the server query — docs/technical/api/list-queries.md)
 TanStack Table    → column visibility, row selection, expansion      (controlled by the smart component when it matters outside the table)
 Zustand           → purely client UI (density toggle, panel open)    (if it should persist, deliberately persist it)
 TanStack Query    → the rows themselves                              (never copied elsewhere)
 ```
 
-URL state goes through `@workspace/client/lib/url-state` (docs/list-queries.md §7): one
+URL state goes through `@workspace/client/lib/url-state` (docs/technical/api/list-queries.md §7): one
 `defineUrlState` declaration per table, parsed by the server page (prefetch) and read with
 `useUrlState` in the table — never mirrored into `useState`/Zustand. The only local state is the
 search box's in-progress draft (`useUrlDraft`).

@@ -155,10 +155,73 @@ describe("resolveSidebarMenuTrail — page-aware segments (resolvePage)", () => 
 	});
 
 	it("keeps the legacy behaviour without a page resolver: every segment, unlinked", () => {
+		// Section context applies to every anchored trail, a top-level leaf anchor included.
 		expect(trailOf("/hub/offers/42")).toEqual([
+			{ label: "Rewards", href: undefined },
 			{ label: "Browse", href: "/hub" },
 			{ label: "Offers", href: undefined },
 			{ label: "42", href: undefined },
+		]);
+	});
+});
+
+/** A branch whose children are leaves with their own detail pages, like admin Platform → Catalog → Products. */
+const NESTED_LEAF_MENU: SidebarMenuTrailData = {
+	sections: [
+		{
+			title: "Platform",
+			items: [
+				{
+					title: "Catalog",
+					url: "/catalog",
+					children: [
+						{ title: "Products", url: "/catalog/products" },
+						{ title: "Categories", url: "/catalog/categories" },
+					],
+				},
+				{ title: "Settings", url: "/settings", children: [{ title: "Billing", url: "/settings/billing" }] },
+			],
+		},
+	],
+	bottomItems: [{ title: "Account", url: "/account" }],
+};
+
+describe("resolveSidebarMenuTrail — leaf ancestors", () => {
+	it("anchors a detail page on a nested LEAF entry instead of skipping it", () => {
+		expect(trailOf("/catalog/products/42", { menu: NESTED_LEAF_MENU })).toEqual([
+			{ label: "Platform", href: undefined },
+			{ label: "Catalog", href: "/catalog" },
+			{ label: "Products", href: "/catalog/products" },
+			{ label: "42", href: undefined },
+		]);
+		expect(trailOf("/catalog/products/42/edit", { menu: NESTED_LEAF_MENU })).toEqual([
+			{ label: "Platform", href: undefined },
+			{ label: "Catalog", href: "/catalog" },
+			{ label: "Products", href: "/catalog/products" },
+			{ label: "42", href: undefined },
+			{ label: "Edit", href: undefined },
+		]);
+	});
+
+	it("anchors on a top-level leaf (bottom item) and labels the segments below it", () => {
+		expect(trailOf("/account/security", { menu: NESTED_LEAF_MENU })).toEqual([
+			{ label: "Account", href: "/account" },
+			{ label: "Security", href: undefined },
+		]);
+	});
+
+	it("picks the deepest match across the whole menu", () => {
+		const menu: SidebarMenuTrailData = {
+			sections: [
+				{ title: "Main", items: [{ title: "Area", url: "/a", children: [{ title: "Deep", url: "/a/b/c" }] }] },
+				{ title: "Main", items: [{ title: "Shallow", url: "/a/b" }] },
+			],
+			bottomItems: [],
+		};
+		expect(trailOf("/a/b/c/d", { menu })).toEqual([
+			{ label: "Area", href: "/a" },
+			{ label: "Deep", href: "/a/b/c" },
+			{ label: "D", href: undefined },
 		]);
 	});
 });

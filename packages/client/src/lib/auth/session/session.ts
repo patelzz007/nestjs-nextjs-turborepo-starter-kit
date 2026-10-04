@@ -1,11 +1,11 @@
-import type { EnrollmentReason, SessionScope, UserResponse } from "@workspace/shared";
+import type { EnrollmentReason, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 
 import type { AuthSessionScope } from "../../features/auth/state";
 
 /**
  * The signed-in user as the client renders it: the `/auth/me` profile fields
- * the UI needs, plus the session's scope. Composed by the auth facade from the
- * `/auth/me` query and the auth feature store — never stored as a whole.
+ * the UI needs, plus the session's scope from `/auth/permissions`. Composed by
+ * the auth facade from those two queries — never stored as a whole.
  */
 export interface AuthUser {
 	readonly id: string;
@@ -14,27 +14,33 @@ export interface AuthUser {
 	readonly isSuperAdmin: boolean;
 	readonly hasAdminAccess: boolean;
 	readonly isEmailVerified: boolean;
-	/** Mirrors the current access token's `sessionScope` claim. */
-	readonly sessionScope: SessionScope;
+	/**
+	 * Mirrors the current access token's `sessionScope` claim; `pending` until
+	 * `/auth/permissions` answered for this session. Pending is treated as
+	 * restricted ({@link isRestrictedAuthUser}) — the UI fails closed.
+	 */
+	readonly sessionScope: AuthSessionScope["sessionScope"];
 	/** Present when `sessionScope` is `restricted`. */
 	readonly enrollmentReason: EnrollmentReason | null;
 	readonly roles: readonly { readonly id: string; readonly name: string }[];
 }
 
-export interface AuthSessionSource {
-	readonly sessionScope?: SessionScope | undefined;
-	readonly enrollmentReason?: EnrollmentReason | undefined;
-}
+/** The scope before `/auth/permissions` has answered for the current session. */
+export const PENDING_SESSION_SCOPE: AuthSessionScope = { sessionScope: "pending", enrollmentReason: null };
 
 /**
- * The session scope a server answer describes. No source (or no scope in it)
- * means a full session; a restricted one without a reason falls back to what
- * the email-verification flag implies.
+ * The session scope a `/auth/permissions` answer describes, or pending
+ * without one. A restricted answer without a reason falls back to what the
+ * email-verification flag implies.
  */
-export function resolveSessionScope(session: AuthSessionSource | null | undefined, isEmailVerified: boolean): AuthSessionScope {
-	const sessionScope = session?.sessionScope ?? "full";
-	const enrollmentReason = sessionScope === "restricted" ? (session?.enrollmentReason ?? resolveEnrollmentReasonFromFlags(isEmailVerified)) : null;
-	return { sessionScope, enrollmentReason };
+export function resolveSessionScope(permissions: SessionPermissionsResponse | undefined, isEmailVerified: boolean): AuthSessionScope {
+	if (permissions === undefined) {
+		return PENDING_SESSION_SCOPE;
+	}
+	if (permissions.sessionScope === "restricted") {
+		return { sessionScope: "restricted", enrollmentReason: permissions.enrollmentReason ?? resolveEnrollmentReasonFromFlags(isEmailVerified) };
+	}
+	return { sessionScope: "full", enrollmentReason: null };
 }
 
 /** The `AuthUser` view of a profile in a given session scope. */
@@ -52,30 +58,20 @@ export function composeAuthUser(user: UserResponse, scope: AuthSessionScope): Au
 	};
 }
 
-/** Maps an API user record (and the session answer, when known) into the client `AuthUser` shape. */
-export function toAuthUser(user: UserResponse, session?: AuthSessionSource | null): AuthUser {
-	return composeAuthUser(user, resolveSessionScope(session, user.isEmailVerified));
-}
-
-/** Merges JWT-aligned session fields into an existing auth user. */
-export function mergeAuthSessionFields(user: AuthUser, session: AuthSessionSource): AuthUser {
-	return {
-		...user,
-		...resolveSessionScope(session, user.isEmailVerified),
-	};
-}
-
-/** Whether the signed-in user is limited to enrollment routes. */
+/**
+ * Whether the signed-in user is limited to enrollment routes. A scope that is
+ * not known yet counts as restricted (fail closed); the server enforces the
+ * real scope on every request regardless.
+ */
 export function isRestrictedAuthUser(user: AuthUser | null): boolean {
-	return user?.sessionScope === "restricted";
+	return user !== null && user.sessionScope !== "full";
 }
 
-/** Resolves the active enrollment reason for a restricted session. */
+/** The active enrollment reason of a CONFIRMED restricted session; `null` for a full or still-pending one. */
 export function resolveAuthEnrollmentReason(user: AuthUser): EnrollmentReason | null {
 	if (user.sessionScope !== "restricted") {
 		return null;
 	}
-
 	return user.enrollmentReason ?? resolveEnrollmentReasonFromFlags(user.isEmailVerified);
 }
 

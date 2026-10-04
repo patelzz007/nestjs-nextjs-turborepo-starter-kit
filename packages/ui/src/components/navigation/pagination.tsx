@@ -47,7 +47,7 @@ type PaginationLinkProps = {
 	React.ComponentProps<"a">;
 
 const PaginationLink = React.forwardRef<HTMLAnchorElement, PaginationLinkProps>(function PaginationLink(
-	{ className, isActive, size = "icon", ...props },
+	{ className, isActive, size = "icon", children, ...props },
 	ref,
 ): React.JSX.Element {
 	// A real link styled as a button — `Button` rendering an `<a>` would add
@@ -59,8 +59,9 @@ const PaginationLink = React.forwardRef<HTMLAnchorElement, PaginationLinkProps>(
 			data-slot="pagination-link"
 			data-active={isActive}
 			className={cn(buttonVariants({ variant: isActive ? "outline" : "ghost", size }), className)}
-			{...props}
-		/>
+			{...props}>
+			{children}
+		</a>
 	);
 });
 

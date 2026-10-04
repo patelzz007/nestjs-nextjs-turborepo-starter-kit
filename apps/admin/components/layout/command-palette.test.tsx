@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import type { PaletteRecentSearch, PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
-import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
+import { CommandPaletteStoreProvider, commandPaletteStorageKey } from "@workspace/client/lib/features/command-palette/facade";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,9 @@ import { AuthorizedNavigationProvider } from "@/components/layout/authorized-nav
 import { CommandPalette } from "@/components/layout/command-palette";
 import { ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME, ADMIN_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { ROUTES } from "@/lib/routes";
+
+/** The signed-in admin whose palette the tests use. */
+const PALETTE_OWNER = "admin-test-user";
 
 interface StubPaletteProps {
 	readonly searchableItems: readonly PaletteSearchableItem[];
@@ -20,14 +23,14 @@ interface StubPaletteProps {
 	readonly onTogglePinned: (url: string) => void;
 }
 
-const STUB_RECENT: PaletteRecentSearch = { title: "Billing", url: "/settings/billing", section: "Main" };
+const STUB_RECENT: PaletteRecentSearch = { title: "Access control", url: "/settings/access", section: "Platform" };
 
 /** Renders what the palette receives, plus buttons that fire its recent/pin callbacks. */
 function StubAppCommandPalette({ searchableItems, quickActions, recentSearches, pinnedUrls, onAddRecent, onTogglePinned }: StubPaletteProps): React.JSX.Element {
-	const handleOpenBilling = React.useCallback((): void => {
+	const handleOpenAccess = React.useCallback((): void => {
 		onAddRecent(STUB_RECENT);
 	}, [onAddRecent]);
-	const handlePinBilling = React.useCallback((): void => {
+	const handlePinAccess = React.useCallback((): void => {
 		onTogglePinned(STUB_RECENT.url);
 	}, [onTogglePinned]);
 
@@ -53,11 +56,11 @@ function StubAppCommandPalette({ searchableItems, quickActions, recentSearches, 
 					<li key={url}>{url}</li>
 				))}
 			</ul>
-			<button type="button" onClick={handleOpenBilling}>
-				Open billing
+			<button type="button" onClick={handleOpenAccess}>
+				Open access control
 			</button>
-			<button type="button" onClick={handlePinBilling}>
-				Pin billing
+			<button type="button" onClick={handlePinAccess}>
+				Pin access control
 			</button>
 		</>
 	);
@@ -76,7 +79,7 @@ vi.mock("next-themes", () => ({
 }));
 
 const AUTHORIZED_ITEMS: readonly PaletteSearchableItem[] = [
-	{ id: "main-billing", title: "Billing", url: "/settings/billing", section: "Main", breadcrumb: ["Settings", "Billing"] },
+	{ id: "platform-access", title: "Access control", url: "/settings/access", section: "Platform", breadcrumb: ["Settings", "Access control"] },
 ];
 
 function allowAll(): boolean {
@@ -85,13 +88,13 @@ function allowAll(): boolean {
 
 /** Denies the settings pages (as the guard would for a session without them). */
 function denySettings(href: string): boolean {
-	return href !== ROUTES.settings.billing && href !== ROUTES.settings.index;
+	return href !== ROUTES.settings.access && href !== ROUTES.settings.index;
 }
 
 /** The palette's store as the admin shell mounts it — real store, real persistence key. */
 function PaletteStore({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 	return (
-		<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
+		<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} ownerId={PALETTE_OWNER} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
 			{children}
 		</CommandPaletteStoreProvider>
 	);
@@ -125,7 +128,7 @@ describe("CommandPalette", () => {
 			{ wrapper: PaletteStore },
 		);
 
-		expect(titlesIn("pages")).toEqual(["Billing"]);
+		expect(titlesIn("pages")).toEqual(["Access control"]);
 	});
 
 	it("offers every navigation quick action when each target page is allowed", () => {
@@ -136,7 +139,7 @@ describe("CommandPalette", () => {
 			{ wrapper: PaletteStore },
 		);
 
-		expect(actionTitles()).toEqual(["Toggle Theme", "Open Settings", "Open Account", "Go to Dashboard", "Open Billing"]);
+		expect(actionTitles()).toEqual(["Toggle Theme", "Open Settings", "Open Account", "Go to Dashboard"]);
 	});
 
 	it("hides a quick action whose target page the route guard would deny", () => {
@@ -157,26 +160,29 @@ describe("CommandPalette", () => {
 		expect(actionTitles()).toEqual(["Toggle Theme"]);
 	});
 
-	it("keeps the recents and pins an earlier build saved under the admin key", () => {
+	it("never shows the unowned recents an earlier build saved under the shared admin key (whose history it is cannot be known) and removes them", () => {
 		localStorage.setItem(ADMIN_COMMAND_PALETTE_STORAGE_KEY, JSON.stringify({ state: { recentSearches: [STUB_RECENT], pinnedUrls: ["/docs"] }, version: 0 }));
 
 		render(<CommandPalette open setOpen={vi.fn()} />, { wrapper: PaletteStore });
 
-		expect(titlesIn("recent")).toEqual([STUB_RECENT.url]);
-		expect(titlesIn("pinned")).toEqual(["/docs"]);
+		expect(titlesIn("recent")).toEqual([]);
+		expect(localStorage.getItem(ADMIN_COMMAND_PALETTE_STORAGE_KEY)).toBeNull();
 	});
 
 	it("records opened pages and toggled pins in the shared store and saves them", () => {
 		render(<CommandPalette open setOpen={vi.fn()} />, { wrapper: PaletteStore });
 
-		fireEvent.click(screen.getByRole("button", { name: "Open billing" }));
-		fireEvent.click(screen.getByRole("button", { name: "Pin billing" }));
+		fireEvent.click(screen.getByRole("button", { name: "Open access control" }));
+		fireEvent.click(screen.getByRole("button", { name: "Pin access control" }));
 
 		expect(titlesIn("recent")).toEqual([STUB_RECENT.url]);
 		expect(titlesIn("pinned")).toEqual([STUB_RECENT.url]);
-		expect(localStorage.getItem(ADMIN_COMMAND_PALETTE_STORAGE_KEY)).toBe(JSON.stringify({ recentSearches: [STUB_RECENT], pinnedUrls: [STUB_RECENT.url] }));
+		// Saved in the versioned persistence envelope of the shared palette store.
+		expect(localStorage.getItem(commandPaletteStorageKey(ADMIN_COMMAND_PALETTE_STORAGE_KEY, PALETTE_OWNER))).toBe(
+			JSON.stringify({ schemaVersion: 1, snapshot: { recentSearches: [STUB_RECENT], pinnedUrls: [STUB_RECENT.url] } }),
+		);
 
-		fireEvent.click(screen.getByRole("button", { name: "Pin billing" }));
+		fireEvent.click(screen.getByRole("button", { name: "Pin access control" }));
 		expect(titlesIn("pinned")).toEqual([]);
 	});
 });

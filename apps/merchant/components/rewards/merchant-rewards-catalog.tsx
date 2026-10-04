@@ -2,11 +2,13 @@
 
 import { MerchantRewardCard } from "@/components/rewards/merchant-reward-card";
 import { MerchantRewardListRow } from "@/components/rewards/merchant-reward-list-row";
-import { MerchantRewardsViewToggle } from "@/components/rewards/merchant-rewards-view-toggle";
+import { RewardsViewToggle, type RewardsViewToggleLabels } from "@workspace/client/lib/features/ui-preferences/rewards-view-toggle";
 import { useRewardsViewMode, useUiPreferencesCommands, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import type { RewardResponse } from "@workspace/shared";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import * as React from "react";
+
+const VIEW_TOGGLE_LABELS: RewardsViewToggleLabels = { group: "Rewards layout", grid: "Grid view", list: "List view" };
 
 export interface MerchantRewardsCatalogProps {
 	readonly rewards: readonly RewardResponse[];
@@ -46,7 +48,7 @@ export function MerchantRewardsCatalog({ rewards, isLoading, canManageRewards }:
 					<p className="text-sm font-medium text-foreground">{isLoading ? "Loading catalog…" : `${String(rewards.length)} reward${rewards.length === 1 ? "" : "s"}`}</p>
 					<p className="text-xs text-muted-foreground">Switch layout to compare inventory across offers.</p>
 				</div>
-				<MerchantRewardsViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} />
+				<RewardsViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} labels={VIEW_TOGGLE_LABELS} />
 			</div>
 
 			{isLoading ? (

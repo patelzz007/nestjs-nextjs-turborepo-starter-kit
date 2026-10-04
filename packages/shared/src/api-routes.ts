@@ -65,6 +65,8 @@ export const apiRoutes = {
 	// ── Auth ────────────────────────────────────────────────────────────
 	auth: {
 		me: "/auth/me",
+		/** The signed-in user's own profile — GET reads it, PATCH edits it. */
+		profile: "/auth/profile",
 		permissions: "/auth/permissions",
 		sessionStatus: "/session",
 		login: "/auth/login",
@@ -107,6 +109,8 @@ export const apiRoutes = {
 		previewDetail: { path: "/notifications/email-preview/:key", params: ["key"] },
 		previewSend: { path: "/notifications/email-preview/:key/send", params: ["key"] },
 		logList: "/notifications/email-log",
+		/** Server-Sent Events stream of email-log changes (`@Sse("events")` on the email-log controller). */
+		logEvents: "/notifications/email-log/events",
 	},
 
 	// ── Admin RBAC ─────────────────────────────────────────────────────
@@ -171,7 +175,6 @@ export const apiRoutes = {
 	},
 	redemptions: {
 		validate: "/redemptions/validate",
-		confirm: "/redemptions/confirm",
 		checkout: "/redemptions/checkout",
 	},
 	files: {
@@ -189,8 +192,10 @@ export const apiRoutes = {
 		reviewAccessRequest: { path: "/orgs/:orgSlug/access-requests/:requestId/review", params: ["orgSlug", "requestId"] },
 		inviteMember: { path: "/orgs/:orgSlug/members/invite", params: ["orgSlug"] },
 		listMembers: { path: "/orgs/:orgSlug/members", params: ["orgSlug"] },
+		ownMembership: { path: "/orgs/:orgSlug/members/me", params: ["orgSlug"] },
 		listMemberInvites: { path: "/orgs/:orgSlug/members/invites", params: ["orgSlug"] },
 		revokeMemberInvite: { path: "/orgs/:orgSlug/members/invites/:inviteId/revoke", params: ["orgSlug", "inviteId"] },
+		removeMemberFromStore: { path: "/orgs/:orgSlug/members/:membershipId/stores/:locationId/remove", params: ["orgSlug", "membershipId", "locationId"] },
 		teamInvites: {
 			validate: "/orgs/invites/validate",
 			accept: "/orgs/invites/accept",
@@ -202,12 +207,15 @@ export const apiRoutes = {
 		rewards: {
 			list: { path: "/orgs/:orgSlug/rewards", params: ["orgSlug"] },
 			create: { path: "/orgs/:orgSlug/rewards", params: ["orgSlug"] },
+			get: { path: "/orgs/:orgSlug/rewards/:rewardId", params: ["orgSlug", "rewardId"] },
 			update: { path: "/orgs/:orgSlug/rewards/:rewardId", params: ["orgSlug", "rewardId"] },
 			publish: { path: "/orgs/:orgSlug/rewards/:rewardId/publish", params: ["orgSlug", "rewardId"] },
 		},
 		terminals: {
 			list: { path: "/orgs/:orgSlug/terminals", params: ["orgSlug"] },
 			create: { path: "/orgs/:orgSlug/terminals", params: ["orgSlug"] },
+			summary: { path: "/orgs/:orgSlug/terminals/summary", params: ["orgSlug"] },
+			get: { path: "/orgs/:orgSlug/terminals/:id", params: ["orgSlug", "id"] },
 			pairingCode: { path: "/orgs/:orgSlug/terminals/:id/pairing-code", params: ["orgSlug", "id"] },
 			remove: { path: "/orgs/:orgSlug/terminals/:id", params: ["orgSlug", "id"] },
 			settings: { path: "/orgs/:orgSlug/terminals/settings", params: ["orgSlug"] },
@@ -222,6 +230,7 @@ export const apiRoutes = {
 		locations: {
 			create: { path: "/orgs/:orgSlug/locations", params: ["orgSlug"] },
 			update: { path: "/orgs/:orgSlug/locations/:locationId", params: ["orgSlug", "locationId"] },
+			close: { path: "/orgs/:orgSlug/locations/:locationId/close", params: ["orgSlug", "locationId"] },
 		},
 		onboarding: {
 			validate: "/orgs/onboarding/validate",
@@ -231,6 +240,7 @@ export const apiRoutes = {
 			documentUploadComplete: "/orgs/onboarding/documents/upload-complete",
 			documentBatchUploadComplete: "/orgs/onboarding/documents/upload-complete-batch",
 			documentsSubmit: "/orgs/onboarding/documents/submit",
+			documentStatus: "/orgs/onboarding/documents/status",
 		},
 	},
 	adminOrganizations: {
@@ -337,7 +347,7 @@ function validateRoutes(): void {
 
 // ⚠️ RUNTIME VALIDATION — runs once at module load.
 // If you see "apiRoutes: invalid route" in your logs, a route definition in this file is malformed.
-// See docs/api-routes.md for the route schema and how to fix it.
+// See docs/technical/api/routes.md for the route schema and how to fix it.
 validateRoutes();
 
 // ── buildRoute() — compile-time param enforcement ──────────────────────────
@@ -345,7 +355,7 @@ validateRoutes();
 // For static routes: just returns the path.
 // For parameterized routes: replaces :param placeholders with provided values.
 // Missing required params throw at runtime. Extra params are silently ignored.
-// See docs/api-routes.md §3 for the full API reference.
+// See docs/technical/api/routes.md §2 (`buildRoute` / `buildQuery`) for the full API reference.
 
 /**
  * Resolve a route definition to a concrete URL string.

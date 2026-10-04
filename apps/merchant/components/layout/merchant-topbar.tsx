@@ -6,11 +6,11 @@ import type { ServerUser } from "@/lib/auth/server";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
+import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth, isRestrictedAuthUser } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { isRestrictedAuthUser } from "@workspace/client/lib/auth/session/map-auth-user";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
 import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
@@ -29,7 +29,8 @@ export interface MerchantTopbarProps {
 }
 
 export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): React.JSX.Element {
-	const { logout, user } = useAuth();
+	const { user } = useAuth();
+	const logout = useMerchantLogout();
 	const isEnrollmentLocked = isRestrictedAuthUser(user);
 	const sessionProfile = useMerchantSessionProfile();
 	const { can } = useAuthorization();

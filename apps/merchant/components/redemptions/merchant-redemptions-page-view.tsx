@@ -7,18 +7,19 @@ import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { RedemptionsPager } from "@/components/redemptions/redemptions-pager";
-import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
+import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
 import { prefetchForLocation, type LocationScopedPrefetch } from "@/lib/org/location-prefetch";
-import { REDEMPTIONS_URL_STATE, toRedemptionsQuery } from "@/lib/url-state/redemptions";
+import type { DayWindow } from "@/lib/redemptions/today-window";
+import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/lib/url-state/redemptions";
 import { useAuth } from "@workspace/client/lib/auth";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import { MERCHANT_CAPABILITY, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
-import { format } from "date-fns";
+import { formatEpochMs, toIsoTimestamp } from "@workspace/ui/lib/format/date-time";
 import { CalendarClock, Receipt, ScanLine } from "lucide-react";
 import * as React from "react";
 
@@ -26,6 +27,10 @@ export interface MerchantRedemptionsPageViewProps {
 	readonly orgSlug: string;
 	/** The page the server prefetched, bound to the store filter AND the URL state it was fetched for. */
 	readonly initialRedemptions?: LocationScopedPrefetch<PrefetchedQuery<Envelope<MerchantRedemptionListItem[]>>> | undefined;
+	/** "Today" in the stores' time zone, decided by the server (so server render and hydration agree). */
+	readonly today: DayWindow;
+	/** The server's count of today's redemptions (its `meta.total`), with the store filter it was fetched for. */
+	readonly initialTodayCount?: LocationScopedPrefetch<Envelope<MerchantRedemptionListItem[]>> | undefined;
 }
 
 /** Redemptions route — requires `merchant:view_redemptions` (redemptions endpoint); the query mounts only when allowed. */
@@ -37,7 +42,7 @@ export function MerchantRedemptionsPageView(props: MerchantRedemptionsPageViewPr
 	);
 }
 
-function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions }: MerchantRedemptionsPageViewProps): React.JSX.Element {
+function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today, initialTodayCount }: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { locationId } = useActiveLocationFilter();
 
@@ -68,16 +73,18 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions }: Mer
 		updateUrlState(listPagePatch(urlState, LIST_FIRST_PAGE, null));
 	}, [updateUrlState, urlState]);
 
-	const todayCount = rows.filter((row) => {
-		const redeemed = new Date(row.redeemedAt);
-		const now = new Date();
-		return redeemed.getDate() === now.getDate() && redeemed.getMonth() === now.getMonth() && redeemed.getFullYear() === now.getFullYear();
-	}).length;
+	// Counted by the API over the whole day (every page), never from the rows on screen.
+	const todayQuery = api.organizations.redemptions.useQuery(
+		toRedemptionsDayCountQuery(orgSlug, locationId, today),
+		initialDataOption(prefetchForLocation(initialTodayCount, locationId)),
+	);
+	const todayData = todayQuery.data;
+	const todayValue = todayData === undefined ? "—" : String(readPaginatedTotal(todayData.meta, todayData.data.length));
 
 	return (
 		<div className="space-y-8">
 			<MerchantPageHeader title="Redemptions" description="Recent POS redemptions for the selected store — newest first." />
-			<MerchantLocationScopeBanner />
+			<MerchantLocationScopeBanner filteredNote="Redemptions at this store only." allStoresNote="Showing redemptions across every store you can access." />
 
 			<div className="grid gap-4 sm:grid-cols-2">
 				<MerchantStatCard
@@ -86,7 +93,12 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions }: Mer
 					hint={isFirstPage ? "Latest page of activity" : `Page ${String(urlState.page)} of activity`}
 					icon={<Receipt className="size-4" aria-hidden="true" />}
 				/>
-				<MerchantStatCard label="Today" value={String(todayCount)} hint="Redeemed since midnight" icon={<CalendarClock className="size-4" aria-hidden="true" />} />
+				<MerchantStatCard
+					label="Today"
+					value={todayValue}
+					hint={todayQuery.isError ? "Couldn't load today's count" : "Redeemed since midnight, store time"}
+					icon={<CalendarClock className="size-4" aria-hidden="true" />}
+				/>
 			</div>
 
 			{isLoading ? (
@@ -121,8 +133,8 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions }: Mer
 										<Badge variant="secondary">{row.redemptionMethod}</Badge>
 									</div>
 								</div>
-								<time className="shrink-0 text-sm text-muted-foreground tabular-nums" dateTime={new Date(row.redeemedAt).toISOString()}>
-									{format(new Date(row.redeemedAt), "d MMM yyyy · HH:mm")}
+								<time className="shrink-0 text-sm text-muted-foreground tabular-nums" dateTime={toIsoTimestamp(row.redeemedAt)}>
+									{formatEpochMs(row.redeemedAt, "dateTime", PLATFORM_DISPLAY_REGION)}
 								</time>
 							</div>
 						</MerchantSurfacePanel>

@@ -2,7 +2,7 @@
 // contracts/response.ts - the RESPONSE half of a route contract
 // ============================================
 // Every `apiContract` leaf declares what the endpoint answers with, next to
-// its method / path / input (ADR 022, docs/response-contracts.md):
+// its method / path / input (ADR 022, docs/technical/api/response-contracts.md):
 //
 //   response: singleResponse(ProductSchema)          // { success, data: Product, meta }
 //   response: paginatedResponse(ProductSchema)       // { success, data: Product[], meta: paginated }
@@ -39,7 +39,7 @@ export function singleResponse<Data extends DataValue>(schema: ZodType<Data>): A
 	return { kind: "single", schema, envelope: createApiSuccessEnvelopeSchema(schema) };
 }
 
-/** `{ success: true, data: <item>[], meta: { …pagination } }` — every list-grammar endpoint (docs/list-queries.md). */
+/** `{ success: true, data: <item>[], meta: { …pagination } }` — every list-grammar endpoint (docs/technical/api/list-queries.md). */
 export function paginatedResponse<Item extends DataValue>(itemSchema: ZodType<Item>): ApiResponseContract<Item[]> {
 	return { kind: "paginated", schema: itemSchema, envelope: createApiPaginatedEnvelopeSchema(itemSchema) };
 }

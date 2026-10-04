@@ -5,10 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PAIRING_STATUS_POLL_INTERVAL_MS, TerminalsPageView } from "@/components/terminals/terminals-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG, type TenantContextSeed } from "@/test/authorization";
+import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, organizationContextFixture, type ContextQueryState } from "@/test/tenant-context";
 import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
 import {
+	ApiPaginatedMetaSchema,
 	MERCHANT_TERMINALS_PAGE_SIZE,
+	MerchantErrorCodes,
 	MerchantTerminalSettingsSchema,
 	OrganizationLocationResponseSchema,
 	POS_PAIRING_CODE_TTL_MS,
@@ -20,6 +23,8 @@ import {
 	type Envelope,
 } from "@workspace/shared";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { ApiError } from "@workspace/client/lib/api/use-api";
+import { QueryClient } from "@tanstack/react-query";
 
 const {
 	terminalsListQuery,
@@ -98,7 +103,7 @@ const ONE_STORE: OrganizationContextResponse = organizationContextFixture({ loca
 let tenantSeed: TenantContextSeed = { initialLocationId: null };
 
 function seedTenant(context: OrganizationContextResponse, selectedLocationId: string | null): void {
-	tenantSeed = { initialLocationId: selectedLocationId, initialOrganizationContext: context };
+	tenantSeed = { initialLocationId: selectedLocationId, initialOrganizationContext: testEnvelope(context) };
 	contextQuery.mockReturnValue(contextQueryState(context));
 }
 
@@ -148,10 +153,25 @@ interface ListOptions extends PollOptions {
  * the pairing-status poll does — and, like TanStack Query, it is re-run every
  * `refetchInterval` until that returns `false`.
  */
+/** The API's pagination meta for a page that holds every one of `count` terminals. */
+function completePageMeta(count: number): object {
+	return ApiPaginatedMetaSchema.parse({
+		correlationId: "c-1",
+		timestamp: TERMINAL_FIXTURE_NOW,
+		limit: MERCHANT_TERMINALS_PAGE_SIZE,
+		total: count,
+		page: 1,
+		totalPages: 1,
+		nextCursor: null,
+		hasNext: false,
+		hasPrevious: false,
+	});
+}
+
 function useListQueryMock(_input: TerminalsListInput, options?: ListOptions): object {
 	const [, requery] = React.useReducer((count: number): number => count + 1, 0);
 	const isPoll = options?.enabled !== undefined;
-	const pollData = { data: polledTerminals, meta: {} };
+	const pollData = { data: polledTerminals, meta: completePageMeta(polledTerminals.length) };
 	const interval = isPoll && options.enabled ? (options.refetchInterval?.({ state: { data: pollData } }) ?? false) : false;
 
 	React.useEffect(() => {
@@ -166,7 +186,7 @@ function useListQueryMock(_input: TerminalsListInput, options?: ListOptions): ob
 
 	if (!isPoll) {
 		const { terminals = [UNPAIRED_TILL, ACTIVE_TILL], isPending = false, isError = false } = listState;
-		return { data: isPending || isError ? undefined : { data: terminals, meta: {} }, isPending, isError, refetch };
+		return { data: isPending || isError ? undefined : { data: terminals, meta: completePageMeta(terminals.length) }, isPending, isError, refetch };
 	}
 	return options.enabled ? { data: pollData, isPending: false, isError: false, refetch } : { data: undefined, isPending: true, isError: false, refetch };
 }
@@ -355,6 +375,32 @@ describe("TerminalsPageView add and pair", () => {
 		expect(within(pairingDialog).getByText(/"pairingCode":"ABCD2345"/u)).toBeTruthy();
 	});
 
+	it("sends the merchant's own terminal id when given", async () => {
+		renderAsAdmin();
+		const dialog = openAddDialog();
+		fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "Back office" } });
+		fireEvent.change(within(dialog).getByLabelText("Store"), { target: { value: STORE_A.id } });
+		fireEvent.change(within(dialog).getByLabelText("Terminal ID (optional)"), { target: { value: "KL-REGISTER-01" } });
+		fireEvent.click(within(dialog).getByRole("button", { name: "Add terminal" }));
+
+		await screen.findByRole("dialog", { name: "Pair “Back office”" });
+		expect(createMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_A.id, terminalId: "KL-REGISTER-01" });
+	});
+
+	it("shows a taken terminal id on the Terminal ID field", () => {
+		createMutation.mockImplementation(() => ({
+			mutate: createMutate,
+			reset: vi.fn(),
+			isPending: false,
+			error: new ApiError({ message: "Another terminal already uses this terminal id", error: MerchantErrorCodes.TERMINAL_ID_TAKEN, statusCode: 409 }),
+		}));
+		renderAsAdmin();
+
+		const field = within(openAddDialog()).getByLabelText("Terminal ID (optional)");
+		expect(field.getAttribute("aria-invalid")).toBe("true");
+		expect(screen.getByText(/choose a different one/u).id).toBe("terminal-id-error");
+	});
+
 	it("makes the merchant choose a store when several are available and none is active", () => {
 		renderAsAdmin();
 
@@ -385,6 +431,8 @@ describe("TerminalsPageView add and pair", () => {
 	});
 
 	it("polls the terminal's store while the code is shown and flips to the paired state when the till pairs", async () => {
+		const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+		polledTerminals = [nextPairing.terminal];
 		renderAsAdmin();
 
 		const pairingDialog = await addBackOffice();
@@ -395,7 +443,6 @@ describe("TerminalsPageView add and pair", () => {
 		expect(liveRegionText(pairingDialog)).toContain("Waiting for the till to pair…");
 
 		polledTerminals = [{ ...nextPairing.terminal, status: "ACTIVE", pairedAt: nextPairing.terminal.createdAt, pairingCodeExpiresAt: null }];
-		refetch.mockClear();
 		act((): void => {
 			vi.advanceTimersByTime(PAIRING_STATUS_POLL_INTERVAL_MS);
 		});
@@ -403,9 +450,25 @@ describe("TerminalsPageView add and pair", () => {
 		expect(liveRegionText(pairingDialog)).toContain("Paired — Back office is ready");
 		expect(screen.getByRole("dialog", { name: "Paired — Back office is ready" })).toBe(pairingDialog);
 		expect(within(pairingDialog).queryByText("ABCD 2345")).toBeNull();
-		expect(refetch).toHaveBeenCalled();
 		// Polling stops once the till has paired.
 		expect(pollOptions?.refetchInterval?.({ state: { data: { data: polledTerminals } } })).toBe(false);
+
+		// Closing the dialog refreshes every terminal list of the organization (prefix invalidation, no effect).
+		invalidate.mockClear();
+		fireEvent.keyDown(pairingDialog, { key: "Escape" });
+		expect(invalidate).toHaveBeenCalledWith({ queryKey: apiRouter.organizations.terminals.list.scopeKey({ orgSlug: TEST_ORG_SLUG }) });
+	});
+
+	it("stops polling once the code has expired, or when the terminal is not on the polled page", async () => {
+		polledTerminals = [nextPairing.terminal];
+		renderAsAdmin();
+
+		await addBackOffice();
+		const pollOptions: PollOptions | undefined = terminalsListQuery.mock.calls.find((call) => call[1]?.enabled === true)?.[1];
+
+		expect(pollOptions?.refetchInterval?.({ state: { data: { data: [] } } })).toBe(false);
+		vi.setSystemTime(nextPairing.pairingCodeExpiresAt);
+		expect(pollOptions?.refetchInterval?.({ state: { data: { data: [nextPairing.terminal] } } })).toBe(false);
 	});
 
 	it("offers a new code once the shown one expires", async () => {
@@ -447,9 +510,59 @@ describe("TerminalsPageView settings", () => {
 	});
 });
 
+describe("TerminalsPageView totals", () => {
+	it("does not present page-1 counts as totals when the store has more terminals than one page", () => {
+		terminalsListQuery.mockImplementation((input: TerminalsListInput, options?: ListOptions): object =>
+			options?.enabled === undefined
+				? {
+						data: {
+							data: [UNPAIRED_TILL, ACTIVE_TILL],
+							meta: {
+								correlationId: "c-1",
+								timestamp: TERMINAL_FIXTURE_NOW,
+								limit: input.limit,
+								total: 340,
+								page: 1,
+								totalPages: 4,
+								nextCursor: null,
+								hasNext: true,
+								hasPrevious: false,
+							},
+						},
+						isPending: false,
+						isError: false,
+						refetch,
+					}
+				: { data: undefined, isPending: true, isError: false, refetch },
+		);
+		renderAsAdmin();
+
+		expect(screen.getByText("Active", { selector: "p" }).parentElement?.textContent).toContain("—");
+		expect(screen.getByText("Stores covered").parentElement?.textContent).toContain("Too many terminals to count here");
+		expect(screen.getByText("Showing the newest 2 of 340 terminals.")).toBeTruthy();
+	});
+});
+
+/** The server's own envelope — the page passes it through instead of synthesizing pagination meta. */
+const SERVER_PAGE: Envelope<MerchantTerminalSummary[]> = {
+	success: true,
+	data: [UNPAIRED_TILL],
+	meta: ApiPaginatedMetaSchema.parse({
+		correlationId: "c-1",
+		timestamp: TERMINAL_FIXTURE_NOW,
+		limit: MERCHANT_TERMINALS_PAGE_SIZE,
+		total: 1,
+		page: 1,
+		totalPages: 1,
+		nextCursor: null,
+		hasNext: false,
+		hasPrevious: false,
+	}),
+};
+
 describe("TerminalsPageView server prefetch (no double fetch)", () => {
 	function renderWithPrefetch(prefetchedFor: string | undefined): ListOptions | undefined {
-		renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} initialTerminals={{ locationId: prefetchedFor, data: [UNPAIRED_TILL] }} />, {
+		renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} initialTerminals={{ locationId: prefetchedFor, data: SERVER_PAGE }} />, {
 			role: "ADMIN",
 			tenantContext: tenantSeed,
 		});
@@ -463,13 +576,13 @@ describe("TerminalsPageView server prefetch (no double fetch)", () => {
 	it("seeds the first render with the server's list when it was fetched for the store the client filters by", () => {
 		seedTenant(TWO_STORES, STORE_B.id);
 
-		expect(renderWithPrefetch(STORE_B.id)?.initialData?.data).toEqual([UNPAIRED_TILL]);
+		expect(renderWithPrefetch(STORE_B.id)?.initialData).toBe(SERVER_PAGE);
 	});
 
 	it("seeds the auto-selected store of a single-store member (the server prefetches that store too)", () => {
 		seedTenant(organizationContextFixture({ locations: [MONT_KIARA] }), null);
 
-		expect(renderWithPrefetch(STORE_B.id)?.initialData?.data).toEqual([UNPAIRED_TILL]);
+		expect(renderWithPrefetch(STORE_B.id)?.initialData).toBe(SERVER_PAGE);
 	});
 
 	it("never caches another store's list under the client's key — the query fetches instead", () => {

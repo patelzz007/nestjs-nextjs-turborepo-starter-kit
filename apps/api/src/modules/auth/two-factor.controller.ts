@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type {
@@ -9,6 +9,7 @@ import type {
 	LoginServiceResponse,
 	LoginVerificationPendingResponse,
 	RotateTwoFactorInput,
+	StartTwoFactorSetupInput,
 	TwoFactorMessageResponse,
 	TwoFactorSetupResponse,
 	VerifyBackupCodeInput,
@@ -39,12 +40,19 @@ import { TwoFactorService } from "./services/two-factor.service";
 export class TwoFactorController {
 	public constructor(private readonly twoFactorService: TwoFactorService) {}
 
+	/**
+	 * Starts (or restarts) a 2FA enrollment. A POST, not a GET: it stores a new
+	 * pending secret and backup-code hashes, replacing any earlier pending setup —
+	 * so it carries the mutation-intent check and the authorization audit entry
+	 * like every other state change.
+	 */
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@ApiBearerAuth()
-	@Get("/2fa/setup")
-	@ApiOperation({ summary: "Generate a TOTP secret and QR code for 2FA enrollment" })
-	@ZodResponse(TwoFactorSetupResponseSchema, { description: "TOTP secret, QR code and backup codes" })
-	public async getSetup(@GetUser("sub") userId: string): Promise<TwoFactorSetupResponse> {
+	@Post("/2fa/setup")
+	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can start their own 2FA enrollment" })
+	@ApiOperation({ summary: "Start 2FA enrollment: generate a pending TOTP secret, QR code and backup codes" })
+	@ZodResponse(TwoFactorSetupResponseSchema, { status: HttpStatus.CREATED, description: "TOTP secret, QR code and backup codes (pending until confirmed via /2fa/enable)" })
+	public async startSetup(@GetUser("sub") userId: string, @ZodBody(apiContract.auth.twoFactorSetup.input) _body: StartTwoFactorSetupInput): Promise<TwoFactorSetupResponse> {
 		return this.twoFactorService.generateSetup(userId);
 	}
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiErrorBodySchema, ApiErrorCodes, ApiErrorCodeSchema, ApiErrorResponseSchema, ApiLockoutDetailsSchema, StandardApiErrorCodeSchema } from "./api-error";
+import { ApiErrorBodySchema, ApiErrorCodes, ApiErrorCodeSchema, ApiErrorResponseSchema, StandardApiErrorCodeSchema } from "./api-error";
 
 const META = { correlationId: "corr-1", timestamp: 1790812800000 };
 
@@ -16,10 +16,11 @@ describe("ApiErrorResponseSchema", () => {
 		).toBe(true);
 	});
 
-	it("mirrors the success envelope's meta (correlationId defaults to empty)", () => {
-		const parsed = ApiErrorResponseSchema.parse({ success: false, error: { code: "INTERNAL_ERROR", message: "x" }, meta: { timestamp: 1 } });
+	it("mirrors the success envelope's meta: the correlation id is required, never defaulted", () => {
+		const parsed = ApiErrorResponseSchema.parse({ success: false, error: { code: "INTERNAL_ERROR", message: "x" }, meta: META });
 
-		expect(parsed.meta.correlationId).toBe("");
+		expect(parsed.meta.correlationId).toBe(META.correlationId);
+		expect(ApiErrorResponseSchema.safeParse({ success: false, error: { code: "INTERNAL_ERROR", message: "x" }, meta: { timestamp: 1 } }).success).toBe(false);
 	});
 
 	it("rejects success: true, unknown keys, empty messages and non-machine codes", () => {
@@ -54,17 +55,12 @@ describe("ApiErrorCodeSchema", () => {
 	});
 });
 
-describe("ApiLockoutDetailsSchema", () => {
-	it("reads lockout timing out of an open details record", () => {
-		expect(ApiLockoutDetailsSchema.parse({ lockedUntil: 1790812800000, remainingSeconds: 30, other: "x" })).toEqual({ lockedUntil: 1790812800000, remainingSeconds: 30 });
-		expect(ApiLockoutDetailsSchema.parse({})).toEqual({});
-	});
-});
-
 describe("ApiErrorBodySchema (flattened client body)", () => {
 	it("keeps the legacy flat shape the client ApiError exposes", () => {
 		expect(ApiErrorBodySchema.safeParse({ message: "Invalid", statusCode: 401, error: "INVALID_CREDENTIALS" }).success).toBe(true);
-		expect(ApiErrorBodySchema.safeParse({ message: "locked", error: "ACCOUNT_LOCKED", lockedUntil: 1790812800000, remainingSeconds: 5 }).success).toBe(true);
+		// The API never reports a lockout to the caller (it answers INVALID_CREDENTIALS, so
+		// a lockout cannot be used to probe accounts) — the body has no lockout fields.
+		expect(ApiErrorBodySchema.safeParse({ message: "locked", error: "INVALID_CREDENTIALS", lockedUntil: 1790812800000, remainingSeconds: 5 }).success).toBe(false);
 		expect(ApiErrorBodySchema.safeParse({ message: "x", unexpected: true }).success).toBe(false);
 	});
 });

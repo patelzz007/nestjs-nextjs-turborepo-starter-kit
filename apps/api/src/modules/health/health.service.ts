@@ -7,6 +7,7 @@ import {
 	ReadinessResponseSchema,
 	type DeepHealthResponse,
 	type HealthResponse,
+	type JsonObjectNode,
 	type LivenessResponse,
 	type ModuleHealth,
 	type ModuleHealthDetailValue,
@@ -84,6 +85,12 @@ async function probeWithTimeout(probe: () => Promise<boolean>, timeoutMs: number
 	}
 }
 
+/** A readiness check as error-envelope JSON (an absent `details` is omitted, never `undefined`). */
+function toJsonReadinessCheck(check: ReadinessCheck): JsonObjectNode {
+	const base = { name: check.name, status: check.status, critical: check.critical };
+	return check.details === undefined ? base : { ...base, details: check.details };
+}
+
 @Injectable()
 export class HealthService {
 	/** Set to true once the API has fully started (DB connected, Swagger built). */
@@ -136,7 +143,8 @@ export class HealthService {
 			Promise.all(
 				this.moduleIndicators.map(async ({ name, indicator, critical }: RegisteredModuleHealthIndicator): Promise<ReadinessCheck> => {
 					const healthy: boolean = await probeWithTimeout(() => indicator.isHealthy(), HEALTH_PROBE_TIMEOUT_MS);
-					return { name, status: healthy ? "up" : "down", critical };
+					const details = await this.readinessDetails(indicator);
+					return { name, status: healthy ? "up" : "down", critical, ...(details === null ? {} : { details }) };
 				}),
 			),
 		]);
@@ -153,7 +161,7 @@ export class HealthService {
 				message: "The API is not ready to serve traffic.",
 				details: {
 					status: "not_ready",
-					checks,
+					checks: checks.map(toJsonReadinessCheck),
 				},
 			});
 		}
@@ -207,6 +215,22 @@ export class HealthService {
 			checks: {},
 			modules: moduleHealthResults,
 		} satisfies DeepHealthResponse;
+	}
+
+	/**
+	 * The indicator's report (read AFTER its probe, so e.g. Kafka's
+	 * `lastFailure` is current); `null` when the indicator has none. A
+	 * failing report is shown as such (like `/health/deep`), never breaks the probe.
+	 */
+	private async readinessDetails(indicator: ModuleHealthIndicator): Promise<Record<string, ModuleHealthDetailValue> | null> {
+		if (indicator.getReport === undefined) {
+			return null;
+		}
+		try {
+			return toModuleHealthDetails(await indicator.getReport());
+		} catch {
+			return { error: "Health report failed" };
+		}
 	}
 
 	private async pingDatabase(): Promise<boolean> {

@@ -46,7 +46,7 @@ import { PasswordResetService } from "./services/password-reset.service";
  *
  * Session lifecycle (refresh, logout, active sessions) lives in
  * `modules/sessions` and impersonation in `modules/impersonation` — see
- * `docs/architecture.md` (module layout convention).
+ * `docs/technical/security/authentication.md` (module split).
  */
 @Injectable()
 export class AuthService {

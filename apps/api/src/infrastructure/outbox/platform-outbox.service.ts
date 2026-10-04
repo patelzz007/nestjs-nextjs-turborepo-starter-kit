@@ -102,7 +102,7 @@ export class PlatformOutboxService {
 		const correlationId = this.requestContext.correlationId() ?? randomUUID();
 		try {
 			const eventId = await this.transactions.withSystemOperation(
-				{ operation: OUTBOX_ENQUEUE_OPERATION, reason: `platform_event:${input.type}`, correlationId, actorUserId: null },
+				{ operation: OUTBOX_ENQUEUE_OPERATION, reason: `platform_event:${input.type}`, actorUserId: null },
 				async (tx): Promise<PlatformEventId> => this.enqueueInTransaction(tx, input),
 			);
 			return { recorded: true, eventId };
@@ -147,7 +147,10 @@ export function resolvePartitionKey(event: PlatformEventInput): string | null {
 		case "impersonation.action":
 			return event.payload.superAdminId;
 		case "email.log.updated":
-			return event.payload.to;
+			// Never the recipient address: the key is stored in outbox_events and
+			// travels to every Kafka replica in clear (PII). Null falls back to
+			// the correlation id, keeping one request's email events ordered.
+			return null;
 		case "reward.platform":
 			return event.payload.organizationId ?? event.payload.actorUserId;
 	}

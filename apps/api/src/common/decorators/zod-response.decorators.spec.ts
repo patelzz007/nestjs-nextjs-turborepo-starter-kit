@@ -8,6 +8,7 @@ import { ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, 
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { createAuditTrailDouble } from "../../../test/support/audit-trail-double";
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { LogService } from "../../modules/logs/logs.service";
 import { buildOpenApiDocument } from "../api-docs";
@@ -110,7 +111,7 @@ function jsonSchemaOf(response: ResponseObject): SchemaObject {
 describe("Zod response decorators", () => {
 	let app: NestFastifyApplication;
 	let document: OpenAPIObject;
-	const logService = new LogService(createTestTypedConfig(), new RequestContextService());
+	const logService = new LogService(new RequestContextService());
 	const errorLog = vi.spyOn(logService, "error");
 	vi.spyOn(Logger.prototype, "error").mockImplementation((): void => undefined);
 
@@ -118,7 +119,9 @@ describe("Zod response decorators", () => {
 		const moduleRef = await Test.createTestingModule({ imports: [ProbeModule] }).compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 		app.useGlobalInterceptors(new ResponseInterceptor(app.get(Reflector), new RequestContextService()));
-		app.useGlobalFilters(new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), createTestTypedConfig()));
+		app.useGlobalFilters(
+			new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), createAuditTrailDouble().auditTrail, createTestTypedConfig()),
+		);
 		await app.init();
 		await app.getHttpAdapter().getInstance().ready();
 		document = buildOpenApiDocument(app);

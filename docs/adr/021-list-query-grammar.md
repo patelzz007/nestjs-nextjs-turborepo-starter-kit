@@ -12,7 +12,7 @@ order: 21
 
 ## Status
 
-Accepted (2026-10-01) — implemented in roadmap Phase C1. Guide: [List queries](../list-queries.md).
+Accepted (2026-10-01) — implemented in roadmap Phase C1. Guide: [List queries](../technical/api/list-queries.md).
 
 ## Context
 

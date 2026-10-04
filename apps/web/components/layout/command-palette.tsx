@@ -36,7 +36,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			title: "Toggle theme",
 			description: "Switch between light and dark mode",
 			icon: SunMoon,
-			color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
+			color: "text-warning bg-warning-soft",
 			keywords: ["dark", "light", "mode", "theme"],
 			run: (): void => {
 				closePalette();
@@ -53,7 +53,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 				title: "Browse rewards",
 				description: "Open the Reward Hub marketplace",
 				icon: Gift,
-				color: "text-teal-600 bg-teal-100 dark:text-teal-300 dark:bg-teal-900/40",
+				color: "text-success bg-success-soft",
 				keywords: ["home", "discover", "deals", "marketplace"],
 				run: (): void => {
 					router.push(ROUTES.rewardHub.browse);

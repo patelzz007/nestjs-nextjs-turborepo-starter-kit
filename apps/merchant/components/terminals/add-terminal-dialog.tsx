@@ -1,6 +1,8 @@
 "use client";
 
-import { MerchantCreateTerminalSchema, POS_TERMINAL_NAME_MAX_LENGTH, type MerchantCreateTerminalInput } from "@workspace/shared";
+import { fieldErrorMessage, formErrorMessage, type FormSubmissionError } from "@/lib/forms/api-field-errors";
+import { parseCreateTerminalForm, type CreateTerminalField } from "@/lib/terminals/create-terminal-form";
+import { POS_TERMINAL_ID_MAX_LENGTH, POS_TERMINAL_NAME_MAX_LENGTH, type MerchantCreateTerminalInput } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
@@ -23,19 +25,19 @@ export interface AddTerminalDialogProps {
 	/** Preselected store (the active store, or the only one); `undefined` = the merchant picks. */
 	readonly defaultStoreId: string | undefined;
 	readonly isPending: boolean;
-	/** The last attempt's failure, shown inline so the input is kept. */
-	readonly errorMessage: string | null;
-	/** Receives the input already parsed by the shared create schema (trimmed name). */
+	/** The last attempt's failure — on the field it is about, or for the form — shown inline so the input is kept. */
+	readonly submissionError: FormSubmissionError<CreateTerminalField> | null;
+	/** Receives the input already parsed by the shared create schema (trimmed name; blank terminal id omitted). */
 	readonly onSubmit: (input: MerchantCreateTerminalInput) => void;
 }
 
 /** "Add terminal" dialog: name + store. Presentational — the parent owns the mutation. */
-export function AddTerminalDialog({ open, onOpenChange, stores, defaultStoreId, isPending, errorMessage, onSubmit }: AddTerminalDialogProps): React.JSX.Element {
+export function AddTerminalDialog({ open, onOpenChange, stores, defaultStoreId, isPending, submissionError, onSubmit }: AddTerminalDialogProps): React.JSX.Element {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-lg">
 				{/* Mounted only while open, so every opening starts from a fresh draft. */}
-				<AddTerminalForm stores={stores} defaultStoreId={defaultStoreId} isPending={isPending} errorMessage={errorMessage} onSubmit={onSubmit} />
+				<AddTerminalForm stores={stores} defaultStoreId={defaultStoreId} isPending={isPending} submissionError={submissionError} onSubmit={onSubmit} />
 			</DialogContent>
 		</Dialog>
 	);
@@ -43,12 +45,20 @@ export function AddTerminalDialog({ open, onOpenChange, stores, defaultStoreId, 
 
 type AddTerminalFormProps = Omit<AddTerminalDialogProps, "open" | "onOpenChange">;
 
-function AddTerminalForm({ stores, defaultStoreId, isPending, errorMessage, onSubmit }: AddTerminalFormProps): React.JSX.Element {
+function AddTerminalForm({ stores, defaultStoreId, isPending, submissionError, onSubmit }: AddTerminalFormProps): React.JSX.Element {
 	const [name, setName] = React.useState<string>("");
 	const [storeId, setStoreId] = React.useState<string>(defaultStoreId ?? "");
+	const [terminalId, setTerminalId] = React.useState<string>("");
 
 	// The same schema the API validates with — the client never keeps a second set of rules.
-	const parsed = MerchantCreateTerminalSchema.safeParse({ name, locationId: storeId });
+	const parsed = parseCreateTerminalForm({ name, storeId, terminalId });
+	const terminalIdError = fieldErrorMessage(submissionError, "terminalId");
+	const storeError = fieldErrorMessage(submissionError, "store");
+	const formError = formErrorMessage(submissionError);
+
+	const handleTerminalIdChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setTerminalId(event.target.value);
+	}, []);
 
 	const handleNameChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setName(event.target.value);
@@ -61,8 +71,8 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, errorMessage, onSu
 	const handleSubmit = React.useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
-			if (parsed.success) {
-				onSubmit(parsed.data);
+			if (parsed !== undefined) {
+				onSubmit(parsed);
 			}
 		},
 		[onSubmit, parsed],
@@ -94,7 +104,15 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, errorMessage, onSu
 				</div>
 				<div className="grid gap-2">
 					<Label htmlFor="terminal-store">Store</Label>
-					<NativeSelect id="terminal-store" className="w-full" value={storeId} onChange={handleStoreChange} required disabled={stores.length === 0}>
+					<NativeSelect
+						id="terminal-store"
+						className="w-full"
+						value={storeId}
+						onChange={handleStoreChange}
+						required
+						disabled={stores.length === 0}
+						aria-invalid={storeError !== undefined}
+						{...(storeError === undefined ? {} : { "aria-describedby": "terminal-store-error" })}>
 						<NativeSelectOption value="" disabled>
 							Choose a store
 						</NativeSelectOption>
@@ -105,16 +123,42 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, errorMessage, onSu
 						))}
 					</NativeSelect>
 					{stores.length === 0 ? <p className="text-xs text-muted-foreground">No active store yet — add one under Settings › Locations first.</p> : null}
+					{storeError === undefined ? null : (
+						<p id="terminal-store-error" role="alert" className="text-xs text-destructive">
+							{storeError}
+						</p>
+					)}
 				</div>
-				{errorMessage === null ? null : (
+				<div className="grid gap-2">
+					<Label htmlFor="terminal-id">Terminal ID (optional)</Label>
+					<Input
+						id="terminal-id"
+						value={terminalId}
+						onChange={handleTerminalIdChange}
+						placeholder="KL-REGISTER-01"
+						maxLength={POS_TERMINAL_ID_MAX_LENGTH}
+						autoComplete="off"
+						aria-invalid={terminalIdError !== undefined}
+						aria-describedby={terminalIdError === undefined ? "terminal-id-hint" : "terminal-id-hint terminal-id-error"}
+					/>
+					<p id="terminal-id-hint" className="text-xs text-muted-foreground">
+						What the till sends as X-Terminal-Id. Leave blank to get a generated one.
+					</p>
+					{terminalIdError === undefined ? null : (
+						<p id="terminal-id-error" role="alert" className="text-xs text-destructive">
+							{terminalIdError}
+						</p>
+					)}
+				</div>
+				{formError === undefined ? null : (
 					<p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-						{errorMessage}
+						{formError}
 					</p>
 				)}
 			</div>
 
 			<DialogFooter>
-				<Button type="submit" loading={isPending} disabled={isPending || !parsed.success}>
+				<Button type="submit" loading={isPending} disabled={isPending || parsed === undefined}>
 					<Plus className="size-4" aria-hidden="true" />
 					Add terminal
 				</Button>

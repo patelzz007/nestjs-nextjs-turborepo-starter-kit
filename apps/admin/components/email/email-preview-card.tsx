@@ -6,22 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { ROUTES } from "@/lib/routes";
 
 export interface EmailPreviewCardProps {
 	readonly preview?: EmailPreview | undefined;
 	readonly isLoading?: boolean;
 	readonly footerNote?: string;
-	readonly templatesHref?: string;
+	/** Link to the template browser — omit it when the viewer cannot open it (EMAIL READ). */
+	readonly templatesHref?: string | undefined;
 }
 
 /** Dumb email preview card — iframe render of API-provided HTML. */
-export default function EmailPreviewCard({
-	preview,
-	isLoading = false,
-	footerNote,
-	templatesHref = ROUTES.emails.template("merchant-invite"),
-}: EmailPreviewCardProps): React.JSX.Element {
+export default function EmailPreviewCard({ preview, isLoading = false, footerNote, templatesHref }: EmailPreviewCardProps): React.JSX.Element {
 	return (
 		<Card className="h-full">
 			<CardHeader className="pb-3">
@@ -34,10 +29,15 @@ export default function EmailPreviewCard({
 					) : null}
 				</div>
 				<CardDescription>
-					Review the message before sending.{" "}
-					<Link href={templatesHref} className="text-primary hover:underline">
-						Open in Email Templates
-					</Link>
+					Review the message before sending.
+					{templatesHref !== undefined ? (
+						<>
+							{" "}
+							<Link href={templatesHref} className="text-primary hover:underline">
+								Open in Email Templates
+							</Link>
+						</>
+					) : null}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-3">

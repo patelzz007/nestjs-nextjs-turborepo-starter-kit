@@ -10,7 +10,7 @@ import type {
 } from "@workspace/shared";
 
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
-import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
+import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AccountLockoutService } from "./account-lockout.service";
 import { AuthEventsService } from "./auth-events.service";
@@ -54,6 +54,9 @@ export class LoginService {
 		const { email, password } = loginDto;
 
 		const user = await this.userRepo.findLoginByEmail(email);
+		if (user) {
+			identifyAuthFlowSubject(user.id);
+		}
 
 		// ── Client-type check: admin-only login ─────────────────────────
 		// Uniform INVALID_CREDENTIALS for all failures — no admin-capability probing.

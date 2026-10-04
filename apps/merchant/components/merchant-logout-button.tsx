@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
+import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { Button } from "@workspace/ui/components/form/button";
 import { LogOut } from "lucide-react";
 import * as React from "react";
@@ -10,7 +10,7 @@ export interface MerchantLogoutButtonProps {
 }
 
 export function MerchantLogoutButton({ className }: MerchantLogoutButtonProps): React.JSX.Element {
-	const { logout } = useAuth();
+	const logout = useMerchantLogout();
 	const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
 	const handleClick = React.useCallback((): void => {

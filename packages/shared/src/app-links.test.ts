@@ -9,6 +9,13 @@ describe("APP_LINKS", () => {
 		expect(APP_LINKS.merchant.terminals("a b/c")).toBe("/orgs/a%20b%2Fc/terminals");
 	});
 
+	it("links review emails to the MFA-recovery queue filtered to PENDING, in the list-query grammar", () => {
+		const link = new URL(APP_LINKS.admin.mfaRecoveryPendingQueue, "https://admin.example.com");
+
+		expect(link.pathname).toBe(APP_LINKS.admin.mfaRecoveryQueue);
+		expect([...link.searchParams.entries()]).toEqual([["filter[status]", "PENDING"]]);
+	});
+
 	it("keeps every static link an absolute app path", () => {
 		const paths: readonly string[] = [
 			APP_LINKS.auth.login,

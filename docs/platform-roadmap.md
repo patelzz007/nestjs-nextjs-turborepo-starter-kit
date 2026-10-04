@@ -38,7 +38,7 @@ and the repo disagree, and the order in which the gaps are being closed.
 
 - **Authorization kernel** — roles, permissions, per-user allow/deny with documented precedence,
   ACLs, Cedar policies, `explain` ("why 403?") endpoint, frontend `<Can>` / `useCan`
-  ([Authorization System](./authorization-system/overview.md)).
+  ([Authorization System](./technical/authorization/overview.md)).
 - **Tenancy** — membership-verified tenant resolution and PostgreSQL row-level security.
 - **Password reset** — single-use hashed tokens, no user enumeration, session revocation.
 - **Object storage** — ports and S3 / Firebase / local adapters, direct uploads, magic-byte checks.
@@ -73,9 +73,9 @@ Each phase ends with `pnpm run lint` (zero warnings) and `pnpm run test` green.
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| **A — Correctness & security** | Gate Swagger in production; remove hard-coded encryption fallback; central log redaction; transactional outbox + inbox dedupe; global error filter + `AppError` envelope; `Idempotency-Key` with 409 on mismatch; liveness/readiness; controllers off Prisma; remove Telescope leftovers; create the `app_runtime` role before first use (fresh clusters) | **Done** — see [Error model](./error-model.md), [Messaging](./infrastructure/messaging.md), ADR 015/016 |
-| **B — Foundations** | Strict TS flags repo-wide; `as const` ban; import-boundary lint; one zod-validated config (server/client split, no raw `process.env`); unified request context; GitHub Actions CI; Postgres/Mailpit/MinIO in compose; seed scenarios | **Done** — see [Configuration](./configuration.md), [API configuration](./api-configuration.md), [CI](./operations/ci.md), [Local infrastructure](./operations/local-infrastructure.md), ADR 017/018 |
-| **C — Contracts & API** | **C1:** consistent list queries (pagination, sort whitelists, filter AST, search) end to end — [List queries](./list-queries.md), ADR 021. **C2:** a shared zod response contract on every endpoint — documented in Swagger (success + `4XX`/`5XX` error envelope), enforced by the API (strip unknown keys, 500 on mismatch, compile-time handler check, no Prisma types on the wire), parsed by the typed client in one place — [Response contracts](./response-contracts.md), ADR 022. **C3:** deterministic `docs/generated/openapi.json` + `pnpm openapi:export` + staleness e2e | **Done** |
+| **A — Correctness & security** | Gate Swagger in production; remove hard-coded encryption fallback; central log redaction; transactional outbox + inbox dedupe; global error filter + `AppError` envelope; `Idempotency-Key` with 409 on mismatch; liveness/readiness; controllers off Prisma; remove Telescope leftovers; create the `app_runtime` role before first use (fresh clusters) | **Done** — see [Error model](./technical/api/errors.md), [Messaging](./technical/messaging.md), ADR 015/016 |
+| **B — Foundations** | Strict TS flags repo-wide; `as const` ban; import-boundary lint; one zod-validated config (server/client split, no raw `process.env`); unified request context; GitHub Actions CI; Postgres/Mailpit/MinIO in compose; seed scenarios | **Done** — see [Configuration](./technical/configuration/frontend.md), [API configuration](./technical/configuration/api.md), [CI](./technical/operations/ci.md), [Local infrastructure](./technical/operations/local-infrastructure.md), ADR 017/018 |
+| **C — Contracts & API** | **C1:** consistent list queries (pagination, sort whitelists, filter AST, search) end to end — [List queries](./technical/api/list-queries.md), ADR 021. **C2:** a shared zod response contract on every endpoint — documented in Swagger (success + `4XX`/`5XX` error envelope), enforced by the API (strip unknown keys, 500 on mismatch, compile-time handler check, no Prisma types on the wire), parsed by the typed client in one place — [Response contracts](./technical/api/response-contracts.md), ADR 022. **C3:** deterministic `docs/generated/openapi.json` + `pnpm openapi:export` + staleness e2e | **Done** |
 | D — Identity | Session model with `sid`, revoke-one-device; `PasswordHasher` (argon2id, rehash); single-use verification tokens; cookie hardening; OAuth + `UserIdentity` | Planned |
 | E — Authorization | Reason codes; repository tenant scoping; impersonation sessions; unified audit log; multi-dimension rate limits; permission analyzer | Planned |
 | F — App infrastructure | Email provider port (SMTP/Console/Resend/SES); notification intents; outgoing webhooks; scheduler registry; cache port; feature flags; system settings; i18n; import/export; retention & account deletion; payments port | Planned |
@@ -88,9 +88,9 @@ Each phase ends with `pnpm run lint` (zero warnings) and `pnpm run test` green.
 Resolved on 2026-10-01: dependency advisories (`pnpm audit` clean; scoped overrides documented in
 `pnpm-workspace.yaml`), idempotency + inbox retention jobs, `auth.controller.spec.ts` now runs, Next
 apps exit on an invalid server env, Swagger documents every body/query/param from its zod schema
-([API routes §13](./api-routes.md)), `EMAIL_TEST_TO` allowed for localhost production builds;
+([API routes §13](./technical/api/routes.md)), `EMAIL_TEST_TO` allowed for localhost production builds;
 `geo.controller.ts` no longer returns Prisma row types and every endpoint has a response contract
-(C2, [Response contracts](./response-contracts.md)); `/health/deep` no longer echoes the Redis URL.
+(C2, [Response contracts](./technical/api/response-contracts.md)); `/health/deep` no longer echoes the Redis URL.
 
 Still open:
 
@@ -99,7 +99,7 @@ Still open:
 - C1 left deliberately whole (bounded catalogs): admin roles / permissions, an organization's
   reward catalog (the merchant edit page looks rewards up in the list — needs a detail endpoint
   first), member / invite rosters, pending rewards. Move any of them onto the list grammar if it
-  can grow unbounded ([List queries §5](./list-queries.md)).
+  can grow unbounded ([List queries §5](./technical/api/list-queries.md)).
 - **C2 (response contracts, ADR 022):**
   - The lint rule `@darraghor/nestjs-typed/api-method-should-specify-api-response` does not know
     `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse`; it needs

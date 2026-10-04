@@ -15,7 +15,7 @@ import { SalesOverTimeChart } from "@/components/analytics/sales-over-time-chart
 import { SalesStatCards } from "@/components/analytics/sales-stat-cards";
 import { TopMerchantsTable } from "@/components/analytics/top-merchants-table";
 import type { TopMerchantRow } from "@/lib/analytics/sales-analytics";
-import { parseSalesPeriodWeeks, SALES_PERIOD_PRESETS, salesPeriodLabel, type SalesPeriodWeeks } from "@/lib/analytics/sales-period";
+import { SALES_PERIOD_PRESETS, SalesPeriodWeeksParamSchema, salesPeriodLabel, type SalesPeriodWeeks } from "@/lib/analytics/sales-period";
 
 /** What the page has to show — one state at a time. */
 export type SalesAnalyticsState =
@@ -91,7 +91,10 @@ function SalesAnalyticsContent({ state, weeks, onRetry }: Pick<SalesAnalyticsVie
 export function SalesAnalyticsView({ state, weeks, onWeeksChange, onRetry, isRefreshing }: SalesAnalyticsViewProps): React.JSX.Element {
 	const handlePeriodChange = React.useCallback(
 		(event: React.ChangeEvent<HTMLSelectElement>): void => {
-			onWeeksChange(parseSalesPeriodWeeks(event.target.value));
+			const parsed = SalesPeriodWeeksParamSchema.safeParse(event.target.value);
+			if (parsed.success) {
+				onWeeksChange(parsed.data);
+			}
 		},
 		[onWeeksChange],
 	);

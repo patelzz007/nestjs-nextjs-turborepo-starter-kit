@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import type { AuthClientType } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,11 +26,16 @@ function neverRedirect(): boolean {
 	return false;
 }
 
-function renderProvider(sessionHint: boolean): void {
+/** The `X-Client-Type` header of every request, in order. */
+function clientTypeHeaders(): readonly (string | null)[] {
+	return fetchMock.mock.calls.map(([, init]): string | null => new Headers(init?.headers).get("X-Client-Type"));
+}
+
+function renderProvider(sessionHint: boolean, clientType: AuthClientType = "web"): void {
 	const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	render(
 		<QueryClientProvider client={queryClient}>
-			<AuthProvider sessionHint={sessionHint} shouldRedirectOnUnauthorized={neverRedirect}>
+			<AuthProvider clientType={clientType} sessionHint={sessionHint} shouldRedirectOnUnauthorized={neverRedirect}>
 				<LoadingProbe />
 			</AuthProvider>
 		</QueryClientProvider>,
@@ -64,5 +70,15 @@ describe("AuthProvider on-mount session revalidation", () => {
 		});
 		expect(requestedPaths().some((path: string): boolean => path.endsWith("/auth/me"))).toBe(true);
 		expect(requestedPaths().some((path: string): boolean => path.endsWith("/auth/permissions"))).toBe(true);
+	});
+
+	it.each<AuthClientType>(["web", "admin", "merchant"])("sends X-Client-Type: %s on every session request", async (clientType: AuthClientType) => {
+		renderProvider(true, clientType);
+
+		await waitFor(() => {
+			expect(screen.getByText("settled")).toBeDefined();
+		});
+		expect(fetchMock).toHaveBeenCalled();
+		expect(clientTypeHeaders().every((header: string | null): boolean => header === clientType)).toBe(true);
 	});
 });

@@ -19,9 +19,10 @@ import {
 	type RefreshTokenPayload,
 } from "@workspace/shared";
 
-import { CaughtValueSchema } from "@workspace/shared";
+import { CaughtValueSchema, EMAIL_VERIFICATION_LINK_TTL_HOURS } from "@workspace/shared";
 import { parseExpiryToSeconds } from "../../../common/utils/expiry";
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../constants/impersonation.constants";
 
 // `TokenExpiredError` is exposed at runtime on the CJS default export — see the
 // comment on the `jsonwebtoken` import above for why it can't be named-imported.
@@ -30,6 +31,9 @@ const { TokenExpiredError } = jwt;
 export type { AccessTokenPayload, RefreshTokenPayload } from "@workspace/shared";
 
 export type SessionScope = "full" | "restricted";
+
+/** Seconds per hour — converts the shared email-link lifetime (hours) to a JWT `expiresIn`. */
+const SECONDS_PER_HOUR = 3600;
 
 export interface AccessTokenGenerationOptions {
 	readonly sessionScope?: SessionScope | undefined;
@@ -196,7 +200,7 @@ export class TokenService {
 			{ sub: email, purpose: "email_verification" },
 			{
 				secret: this.config.emailVerificationSecret,
-				expiresIn: 86400, // 24 hours
+				expiresIn: EMAIL_VERIFICATION_LINK_TTL_HOURS * SECONDS_PER_HOUR,
 			},
 		);
 	}
@@ -223,10 +227,15 @@ export class TokenService {
 	 * Generate a short-lived impersonation access token.
 	 * Used when a SuperAdmin impersonates another user.
 	 * No refresh token is created — the SuperAdmin's original session remains intact.
+	 * The token is bound to its server-side impersonation session
+	 * (`impersonationSessionId`), which `AuthGuard` checks on every request, so
+	 * stopping the impersonation revokes the token before it expires.
 	 *
 	 * @param user - The impersonated user's FlatUserResponse
 	 * @param originalUserId - The SuperAdmin's actual user ID
-	 */ public async generateImpersonationToken(user: FlatUserResponse, originalUserId: string): Promise<string> {
+	 * @param impersonationSessionId - The `ImpersonationSession` row id
+	 */
+	public async generateImpersonationToken(user: FlatUserResponse, originalUserId: string, impersonationSessionId: string): Promise<string> {
 		// JWT carries identity + lightweight flags (same as generateTokens).
 		const payload: AccessTokenPayload = {
 			sub: user.id,
@@ -240,11 +249,12 @@ export class TokenService {
 			tokenVersion: user.tokenVersion,
 			isImpersonating: true,
 			originalUserId,
+			impersonationSessionId,
 		};
 
 		return this.jwtService.signAsync(payload, {
 			secret: this.config.jwtAccessSecret,
-			expiresIn: 900, // 15 minutes
+			expiresIn: IMPERSONATION_TOKEN_TTL_SECONDS,
 		});
 	}
 

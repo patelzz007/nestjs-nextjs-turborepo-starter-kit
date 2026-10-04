@@ -1,12 +1,13 @@
 "use client";
 
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
-import { API_KEY_FILTERS, filterApiKeys, isActiveApiKey, type ApiKeyFilter } from "@/lib/api-keys/api-key-summary";
-import type { MerchantApiKeySummary } from "@workspace/shared";
+import { API_KEY_FILTERS, isActiveApiKey, type ApiKeyFilter } from "@/lib/api-keys/api-key-summary";
+import { apiKeyScopeLabel } from "@/lib/api-keys/create-api-key-form";
+import { PLATFORM_DISPLAY_REGION, type MerchantApiKeySummary } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { AlertTriangle, Ban, CalendarDays, KeyRound, MapPin, RotateCw } from "lucide-react";
 import * as React from "react";
 
@@ -19,10 +20,11 @@ const ROW_GRID = "grid gap-3 px-5 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_mi
 const SKELETON_ROWS = 3;
 
 function formatDay(epochMs: number): string {
-	return format(new Date(epochMs), "d MMM yyyy");
+	return formatEpochMs(epochMs, "date", PLATFORM_DISPLAY_REGION);
 }
 
 export interface ApiKeyListProps {
+	/** The keys of the selected status view, as the API filtered them (newest first). */
 	readonly keys: readonly MerchantApiKeySummary[];
 	readonly filter: ApiKeyFilter;
 	readonly onFilterChange: (filter: ApiKeyFilter) => void;
@@ -39,8 +41,7 @@ export interface ApiKeyListProps {
 
 /** Filterable list of POS keys with loading, error and empty states. Presentational. */
 export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, onRetry, revokingKeyId, onRevokeRequest, truncationNote }: ApiKeyListProps): React.JSX.Element {
-	const visible = filterApiKeys(keys, filter);
-	const showColumnHeader = !isLoading && !isError && visible.length > 0;
+	const showColumnHeader = !isLoading && !isError && keys.length > 0;
 
 	return (
 		<section aria-labelledby="api-key-list-heading" className="rounded-xl border border-border bg-card shadow-xs">
@@ -93,7 +94,7 @@ export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, o
 							Try again
 						</Button>
 					</div>
-				) : visible.length === 0 ? (
+				) : keys.length === 0 ? (
 					<MerchantEmptyState
 						className="border-0 bg-transparent py-12"
 						icon={<KeyRound className="size-5" aria-hidden="true" />}
@@ -104,7 +105,7 @@ export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, o
 					/>
 				) : (
 					<ul className="divide-y divide-border" aria-label={`${FILTER_LABELS[filter]} keys`}>
-						{visible.map((apiKey: MerchantApiKeySummary): React.JSX.Element => (
+						{keys.map((apiKey: MerchantApiKeySummary): React.JSX.Element => (
 							<ApiKeyRow key={apiKey.id} apiKey={apiKey} isRevoking={revokingKeyId === apiKey.id} onRevokeRequest={onRevokeRequest} />
 						))}
 					</ul>
@@ -166,6 +167,10 @@ function ApiKeyRow({ apiKey, isRevoking, onRevokeRequest }: ApiKeyRowProps): Rea
 					<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs font-medium", isActive ? "text-success" : "text-muted-foreground")}>
 						<span aria-hidden="true" className={cn("size-1.5 rounded-full", isActive ? "bg-success" : "bg-muted-foreground")} />
 						{isActive ? "Active" : "Revoked"}
+					</span>
+					<span className="ms-2 mt-0.5 inline-flex items-center rounded-full border border-border px-2 text-xs text-muted-foreground">
+						<span className="sr-only">Access: </span>
+						{apiKeyScopeLabel(apiKey.scope)}
 					</span>
 				</div>
 			</div>

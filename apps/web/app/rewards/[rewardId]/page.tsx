@@ -1,27 +1,19 @@
 import { LandingShell } from "@/components/landing/landing-shell";
 import { RewardDetailView } from "@/components/rewardhub/detail/view";
 import { landingSectionPath, LANDING_SECTION_IDS } from "@/lib/routes";
-import { createWebServerCaller } from "@/lib/web-server-api";
+import { loadRewardDetail } from "@/lib/rewards/reward-detail-server";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import type { RewardResponse } from "@workspace/shared";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
 
+/** `/rewards/[rewardId]` — public (guest-browsable) reward detail; claiming asks the visitor to sign in. */
 export default async function PublicRewardDetailPage({ params }: { readonly params: Promise<{ rewardId: string }> }): Promise<React.JSX.Element> {
 	const { rewardId } = await params;
-	const server = createWebServerCaller();
-
-	let initialReward: RewardResponse | undefined;
-	try {
-		const response = await server.rewards.detail.query({ rewardId });
-		initialReward = response.data;
-	} catch {
-		initialReward = undefined;
-	}
+	const reward = await loadRewardDetail(rewardId);
 
 	return (
 		<LandingShell>
@@ -30,7 +22,7 @@ export default async function PublicRewardDetailPage({ params }: { readonly para
 					<ArrowLeft className="size-4" aria-hidden="true" />
 					Back to offers
 				</Link>
-				<RewardDetailView rewardId={rewardId} initialReward={initialReward} />
+				<RewardDetailView rewardId={reward.data.id} initialReward={reward} />
 			</div>
 		</LandingShell>
 	);

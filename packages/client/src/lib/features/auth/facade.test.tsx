@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import type { DataValue } from "@workspace/shared";
+import { epochMs, type ApiResponseMeta, type AuthClientType, type DataValue } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import { SessionRefreshUnavailableError } from "../../api/api-request";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
+import { SessionRefreshUnavailableError, type RefreshResult } from "../../api/api-request";
 import { apiRouter } from "../../api/endpoints";
-import { stubApiMeta, successEnvelope } from "../../api/envelope";
+import { isRestrictedAuthUser } from "../../auth/session/session";
 import { SESSION_CHECK_MAX_RETRIES, SESSION_CHECK_TIMEOUT_MS, sessionCheckRetryDelayMs } from "../../auth/session/session-check";
 import { createAuthChannel, type AuthChannel, type AuthSyncEvent } from "../../auth/session/sync";
 import {
@@ -65,7 +65,9 @@ class MockBroadcastChannel {
 	}
 }
 
-const CHANNEL_NAME = "freebuff:auth:accessToken";
+/** The frontend most tests render as; its cross-tab channel is `auth-sync:web`. */
+const CLIENT_TYPE: AuthClientType = "web";
+const CHANNEL_NAME = "auth-sync:web";
 
 // ── The API: a routed fetch stub ──────────────────────────────────────────
 
@@ -79,13 +81,27 @@ const ROUTE_SUFFIXES: Readonly<Record<RouteName, string>> = {
 };
 
 const UNAUTHORIZED_STATUS = 401;
+/** Some other feature's cached query — data of the session that must not outlive it. */
+const OTHER_DATA_KEY = apiRouter.geo.stats.queryKey({});
+const UNAVAILABLE_STATUS = 503;
+/** How long before "now" the login response was answered (latency / clock skew), so its time is distinguishable from the client's. */
+const LOGIN_ANSWER_AGE_MS = 1_500;
+/** Far longer than any delay the old exit used to wait before refreshing the route. */
+const LONG_WAIT_AFTER_EXIT_MS = 60_000;
+/** Longer than TanStack Query's first retry delay (1 s), so a retried query has answered. */
+const PERMISSIONS_RETRY_WAIT_MS = 3_000;
 
 function jsonResponse(body: DataValue, status = 200): Response {
 	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
-function envelopeResponse(data: DataValue): Response {
-	return jsonResponse(successEnvelope(data, stubApiMeta()));
+/** The meta the API stamps on an answer it gives now (fake time included). */
+function answeredNow(): ApiResponseMeta {
+	return { correlationId: "corr-test", timestamp: epochMs(Date.now()) };
+}
+
+function envelopeResponse(data: DataValue, meta: ApiResponseMeta = answeredNow()): Response {
+	return jsonResponse(envelopeFixture(data, meta));
 }
 
 function unauthorizedResponse(): Response {
@@ -153,16 +169,21 @@ function cachedData(queryClient: QueryClient): readonly string[] {
 		.flatMap((query): string[] => (query.state.data === undefined ? [] : [JSON.stringify(query.state.data)]));
 }
 
+/** The `X-Client-Type` header of every API request, in order (`null` when one was sent without it). */
+function clientTypeHeaders(): readonly (string | null)[] {
+	return fetchMock.mock.calls.map(([, init]): string | null => new Headers(init?.headers).get("X-Client-Type"));
+}
+
 function callCount(route: RouteName): number {
 	return timeline.filter((entry: string): boolean => entry === `api:${route}`).length;
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────
 
-const navigate = vi.fn<(url: string) => void>((url: string): void => {
-	timeline.push(`navigate:${url}`);
+/** The host's way out of the session's pages (the Next.js bridge navigates and refreshes). */
+const leaveSession = vi.fn<(url: string) => void>((url: string): void => {
+	timeline.push(`leave:${url}`);
 });
-const routerRefresh = vi.fn<() => void>();
 
 interface AuthProbe {
 	readonly auth: AuthContextType;
@@ -200,7 +221,7 @@ function renderAuth(options: ProviderOptions): Rendered {
 	function wrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 		return (
 			<QueryClientProvider client={queryClient}>
-				<AuthProvider navigate={navigate} refresh={routerRefresh} {...options}>
+				<AuthProvider leaveSession={leaveSession} {...options}>
 					{children}
 				</AuthProvider>
 			</QueryClientProvider>
@@ -211,16 +232,16 @@ function renderAuth(options: ProviderOptions): Rendered {
 }
 
 /** Another tab on the same cookie set: records what it hears, can post. */
-function openOtherTab(): AuthChannel {
-	const channel = createAuthChannel(CHANNEL_NAME);
+function openOtherTab(channelName: string = CHANNEL_NAME): AuthChannel {
+	const channel = createAuthChannel(channelName);
 	channel.subscribe((event: AuthSyncEvent): void => {
 		timeline.push(`other-tab:${event}`);
 	});
 	return channel;
 }
 
-const GUEST: ProviderOptions = { sessionHint: false };
-const RETURNING_MEMBER: ProviderOptions = { sessionHint: true };
+const GUEST: ProviderOptions = { clientType: CLIENT_TYPE, sessionHint: false };
+const RETURNING_MEMBER: ProviderOptions = { clientType: CLIENT_TYPE, sessionHint: true };
 
 beforeEach((): void => {
 	timeline = [];
@@ -242,8 +263,7 @@ afterEach((): void => {
 	cleanup();
 	vi.unstubAllGlobals();
 	fetchMock.mockClear();
-	navigate.mockClear();
-	routerRefresh.mockClear();
+	leaveSession.mockClear();
 });
 
 describe("auth facade — session check", () => {
@@ -265,6 +285,80 @@ describe("auth facade — session check", () => {
 		expect(callCount("permissions")).toBe(1);
 	});
 
+	it("seeds the session queries with the server's own envelopes, stamped with the time the server answered", async () => {
+		const meMeta: ApiResponseMeta = { correlationId: "corr-me", timestamp: epochMs(Date.now() - LOGIN_ANSWER_AGE_MS) };
+		const permissionsMeta: ApiResponseMeta = { correlationId: "corr-permissions", timestamp: epochMs(Date.now() - LOGIN_ANSWER_AGE_MS) };
+		routes.me = (): Response => envelopeResponse(userFixture(), meMeta);
+		routes.permissions = (): Response => envelopeResponse(sessionPermissionsFixture(), permissionsMeta);
+
+		const { result, queryClient } = renderAuth(RETURNING_MEMBER);
+		await waitFor((): void => {
+			expect(result.current.status).toBe("authenticated");
+		});
+
+		const meKey = apiRouter.auth.me.queryKey(undefined);
+		const permissionsKey = apiRouter.auth.permissions.queryKey(undefined);
+		expect(meKey).toEqual(["auth", "me"]);
+		expect(queryClient.getQueryData(meKey)).toEqual({ success: true, data: userFixture(), meta: meMeta });
+		expect(queryClient.getQueryState(meKey)?.dataUpdatedAt).toBe(meMeta.timestamp);
+		expect(queryClient.getQueryData(permissionsKey)).toEqual({ success: true, data: sessionPermissionsFixture(), meta: permissionsMeta });
+		expect(queryClient.getQueryState(permissionsKey)?.dataUpdatedAt).toBe(permissionsMeta.timestamp);
+	});
+
+	it("restores a session whose /auth/permissions read failed with a PENDING scope — treated as restricted — and takes the scope from the live query once it answers", async () => {
+		const permissionsAnswers: (() => Response | Promise<Response>)[] = [(): Response => statusResponse(UNAVAILABLE_STATUS)];
+		const liveAnswer = holdResponse();
+		routes.permissions = (): Response | Promise<Response> => (permissionsAnswers.shift() ?? ((): Promise<Response> => liveAnswer.promise))();
+
+		const { result } = renderAuth(RETURNING_MEMBER);
+		await waitFor((): void => {
+			expect(result.current.status).toBe("authenticated");
+		});
+
+		// The check's permissions read failed: never widened to "full".
+		expect(result.current.user).toMatchObject({ id: "user-1", sessionScope: "pending", enrollmentReason: null });
+		expect(isRestrictedAuthUser(result.current.user)).toBe(true);
+		await waitFor((): void => {
+			expect(callCount("permissions")).toBe(2);
+		});
+		expect(result.current.user?.sessionScope).toBe("pending");
+
+		await act(async (): Promise<void> => {
+			liveAnswer.release(envelopeResponse(sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" })));
+			await liveAnswer.promise;
+		});
+
+		await waitFor((): void => {
+			expect(result.current.user).toMatchObject({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
+		});
+		expect(isRestrictedAuthUser(result.current.user)).toBe(true);
+		expect(callCount("me")).toBe(1);
+	});
+
+	it("retries the live /auth/permissions query instead of giving up, and becomes full once it answers", async () => {
+		// The check's read and the live query's first read both fail; the query's retry answers.
+		const permissionsAnswers: Response[] = [statusResponse(UNAVAILABLE_STATUS), statusResponse(UNAVAILABLE_STATUS)];
+		routes.permissions = (): Response => permissionsAnswers.shift() ?? envelopeResponse(sessionPermissionsFixture({ sessionScope: "full" }));
+
+		const { result } = renderAuth(RETURNING_MEMBER);
+		await waitFor((): void => {
+			expect(callCount("permissions")).toBe(2);
+		});
+		expect(result.current.status).toBe("authenticated");
+		expect(result.current.user?.sessionScope).toBe("pending");
+		expect(isRestrictedAuthUser(result.current.user)).toBe(true);
+
+		await waitFor(
+			(): void => {
+				expect(result.current.user?.sessionScope).toBe("full");
+			},
+			{ timeout: PERMISSIONS_RETRY_WAIT_MS },
+		);
+		expect(callCount("permissions")).toBe(3);
+		expect(result.current.user?.enrollmentReason).toBeNull();
+		expect(isRestrictedAuthUser(result.current.user)).toBe(false);
+	});
+
 	it("reads a dead session on mount as signed out after one refresh attempt — no logout, no redirect", async () => {
 		routes.me = unauthorizedResponse;
 		routes.permissions = unauthorizedResponse;
@@ -279,7 +373,7 @@ describe("auth facade — session check", () => {
 		expect(callCount("refresh")).toBe(1);
 		expect(callCount("me")).toBe(2);
 		expect(callCount("logout")).toBe(0);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("reads a revoked session on mount as signed out without refreshing", async () => {
@@ -293,7 +387,7 @@ describe("auth facade — session check", () => {
 		});
 		expect(callCount("refresh")).toBe(0);
 		expect(callCount("me")).toBe(1);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("refreshes an expired access token once and restores the session", async () => {
@@ -307,7 +401,7 @@ describe("auth facade — session check", () => {
 		});
 		expect(callCount("refresh")).toBe(1);
 		expect(callCount("me")).toBe(2);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("makes no session request for a guest and settles signed out", () => {
@@ -330,49 +424,87 @@ describe("auth facade — session check", () => {
 });
 
 describe("auth facade — sign-in", () => {
-	it("establishes the session from the login response without re-fetching the profile, and tells the other tabs", async () => {
+	it("establishes the session from the login response without re-fetching the profile, tells the other tabs, and reads the scope from /auth/permissions", async () => {
 		routes.permissions = (): Response => envelopeResponse(sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" }));
 		const { result } = renderAuth(GUEST);
 		openOtherTab();
 
 		act((): void => {
-			result.current.commands.login(userFixture({ fullName: "Grace Member" }), { sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
+			result.current.commands.login(userFixture({ fullName: "Grace Member" }), answeredNow());
 		});
 
-		expect(result.current.user).toMatchObject({ fullName: "Grace Member", sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
+		// The login response says nothing about the scope: it is pending — restricted — until /auth/permissions answers.
+		expect(result.current.user).toMatchObject({ fullName: "Grace Member", sessionScope: "pending", enrollmentReason: null });
+		expect(isRestrictedAuthUser(result.current.user)).toBe(true);
 		expect(timeline).toContain("other-tab:logged-in");
 		await waitFor((): void => {
-			expect(callCount("permissions")).toBe(1);
+			expect(result.current.user).toMatchObject({ fullName: "Grace Member", sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
 		});
+		expect(callCount("permissions")).toBe(1);
 		expect(callCount("me")).toBe(0);
 	});
 
-	it("follows the live /auth/permissions answer when the session's scope moved on", async () => {
-		routes.permissions = (): Response => envelopeResponse(sessionPermissionsFixture({ sessionScope: "full" }));
+	it("never assumes a full session at sign-in: pending until /auth/permissions answers full", async () => {
+		const permissionsAnswer = holdResponse();
+		routes.permissions = (): Promise<Response> => permissionsAnswer.promise;
 		const { result } = renderAuth(GUEST);
 
 		act((): void => {
-			result.current.commands.login(userFixture({ isEmailVerified: false }), { sessionScope: "restricted", enrollmentReason: "email_verification" });
+			result.current.commands.login(userFixture({ isEmailVerified: false }), answeredNow());
 		});
-		expect(result.current.user?.sessionScope).toBe("restricted");
+		await waitFor((): void => {
+			expect(callCount("permissions")).toBe(1);
+		});
+		expect(result.current.user?.sessionScope).toBe("pending");
+		expect(isRestrictedAuthUser(result.current.user)).toBe(true);
+
+		await act(async (): Promise<void> => {
+			permissionsAnswer.release(envelopeResponse(sessionPermissionsFixture({ sessionScope: "full" })));
+			await permissionsAnswer.promise;
+		});
 
 		await waitFor((): void => {
 			expect(result.current.user?.sessionScope).toBe("full");
 		});
 		expect(result.current.user?.enrollmentReason).toBeNull();
+		expect(isRestrictedAuthUser(result.current.user)).toBe(false);
 	});
 
-	it("applies a verified email to the signed-in user", () => {
+	it("seeds /auth/me with the login response's own meta, stamped with the time the server answered", () => {
+		const { result, queryClient } = renderAuth(GUEST);
+		const answeredBy: ApiResponseMeta = { correlationId: "corr-login", timestamp: epochMs(Date.now() - LOGIN_ANSWER_AGE_MS) };
+		const profile = userFixture({ fullName: "Grace Member" });
+
+		act((): void => {
+			result.current.commands.login(profile, answeredBy);
+		});
+
+		expect(queryClient.getQueryData(apiRouter.auth.me.queryKey(undefined))).toEqual({ success: true, data: profile, meta: answeredBy });
+		expect(queryClient.getQueryState(apiRouter.auth.me.queryKey(undefined))?.dataUpdatedAt).toBe(answeredBy.timestamp);
+	});
+
+	it("re-reads the scope when the same member signs in again after verifying their email — restricted, then full", async () => {
+		routes.permissions = (): Response => envelopeResponse(sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "email_verification" }));
 		const { result } = renderAuth(GUEST);
 		act((): void => {
-			result.current.commands.login(userFixture({ isEmailVerified: false }), { sessionScope: "restricted", enrollmentReason: "email_verification" });
+			result.current.commands.login(userFixture({ isEmailVerified: false }), answeredNow());
 		});
+		await waitFor((): void => {
+			expect(result.current.user).toMatchObject({ isEmailVerified: false, sessionScope: "restricted", enrollmentReason: "email_verification" });
+		});
+		routes.permissions = (): Response => envelopeResponse(sessionPermissionsFixture({ sessionScope: "full" }));
 
 		act((): void => {
-			result.current.commands.markEmailVerified();
+			result.current.commands.login(userFixture({ isEmailVerified: true }), answeredNow());
 		});
 
-		expect(result.current.user).toMatchObject({ isEmailVerified: true, sessionScope: "full", enrollmentReason: null });
+		// The previous session's restricted answer is dropped, never carried over.
+		expect(result.current.user).toMatchObject({ isEmailVerified: true, sessionScope: "pending", enrollmentReason: null });
+		await waitFor((): void => {
+			expect(result.current.user).toMatchObject({ isEmailVerified: true, sessionScope: "full", enrollmentReason: null });
+		});
+		expect(callCount("permissions")).toBe(2);
+		expect(callCount("me")).toBe(0);
 	});
 });
 
@@ -398,10 +530,47 @@ describe("auth facade — sign-out", () => {
 		expect(result.current.user).toBeNull();
 		expect(cachedProfileAtLogout).toBeUndefined();
 		expect(cachedData(queryClient)).toEqual([]);
-		expect(timeline).toEqual(["api:logout", "other-tab:logged-out", "navigate:/auth/login"]);
-		await waitFor((): void => {
-			expect(routerRefresh).toHaveBeenCalledTimes(1);
+		expect(timeline).toEqual(["api:logout", "other-tab:logged-out", "leave:/auth/login"]);
+		expect(leaveSession).toHaveBeenCalledTimes(1);
+	});
+
+	it("leaves the session's pages exactly once, as soon as the server session is cleared — no timer involved", async () => {
+		vi.useFakeTimers();
+		try {
+			const { result } = renderAuth(GUEST);
+			act((): void => {
+				result.current.commands.login(userFixture(), answeredNow());
+			});
+
+			await act(async (): Promise<void> => {
+				await result.current.commands.logout();
+			});
+
+			// No fake time has passed: the exit did not wait for a timer.
+			expect(leaveSession).toHaveBeenCalledTimes(1);
+			expect(leaveSession).toHaveBeenCalledWith("/auth/login");
+
+			await act(async (): Promise<void> => {
+				await vi.advanceTimersByTimeAsync(LONG_WAIT_AFTER_EXIT_MS);
+			});
+			expect(leaveSession).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("leaves for the configured redirect target", async () => {
+		const { result } = renderAuth({ ...GUEST, onUnauthorizedRedirect: "/merchant/sign-in" });
+		act((): void => {
+			result.current.commands.login(userFixture(), answeredNow());
 		});
+
+		await act(async (): Promise<void> => {
+			await result.current.commands.logout();
+		});
+
+		expect(leaveSession).toHaveBeenCalledTimes(1);
+		expect(leaveSession).toHaveBeenCalledWith("/merchant/sign-in");
 	});
 
 	it("drops the session and its cache at once when another tab signs out — before its own logout call returns — then redirects", async () => {
@@ -422,16 +591,16 @@ describe("auth facade — sign-out", () => {
 		expect(result.current.status).toBe("signed-out");
 		expect(result.current.user).toBeNull();
 		expect(cachedData(queryClient)).toEqual([]);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 
 		await act(async (): Promise<void> => {
 			logoutAnswer.release(envelopeResponse({ message: "Logged out" }));
 			await logoutAnswer.promise;
 		});
 		await waitFor((): void => {
-			expect(navigate).toHaveBeenCalledTimes(1);
+			expect(leaveSession).toHaveBeenCalledTimes(1);
 		});
-		expect(navigate).toHaveBeenCalledWith("/auth/login");
+		expect(leaveSession).toHaveBeenCalledWith("/auth/login");
 	});
 
 	it("ignores a repeated sign-out message", async () => {
@@ -447,7 +616,7 @@ describe("auth facade — sign-out", () => {
 		});
 
 		await waitFor((): void => {
-			expect(navigate).toHaveBeenCalledTimes(1);
+			expect(leaveSession).toHaveBeenCalledTimes(1);
 		});
 		expect(callCount("logout")).toBe(1);
 	});
@@ -458,7 +627,7 @@ describe("auth facade — sign-out", () => {
 		await waitFor((): void => {
 			expect(result.current.user?.id).toBe("member-x");
 		});
-		queryClient.setQueryData(["orders", "list"], { owner: "member-x" });
+		queryClient.setQueryData(OTHER_DATA_KEY, { owner: "member-x" });
 		routes.me = (): Response => envelopeResponse(userFixture({ id: "member-y", email: "y@example.com" }));
 		const otherTab = openOtherTab();
 
@@ -469,7 +638,7 @@ describe("auth facade — sign-out", () => {
 		await waitFor((): void => {
 			expect(result.current.user?.id).toBe("member-y");
 		});
-		expect(queryClient.getQueryData(["orders", "list"])).toBeUndefined();
+		expect(queryClient.getQueryData(OTHER_DATA_KEY)).toBeUndefined();
 		expect(cachedData(queryClient).join()).not.toContain("x@example.com");
 	});
 
@@ -478,7 +647,7 @@ describe("auth facade — sign-out", () => {
 		await waitFor((): void => {
 			expect(result.current.isAuthenticated).toBe(true);
 		});
-		queryClient.setQueryData(["orders", "list"], { rows: 3 });
+		queryClient.setQueryData(OTHER_DATA_KEY, { rows: 3 });
 		routes.me = unauthorizedResponse;
 		const otherTab = openOtherTab();
 
@@ -490,7 +659,7 @@ describe("auth facade — sign-out", () => {
 			expect(result.current.status).toBe("signed-out");
 		});
 		expect(cachedData(queryClient)).toEqual([]);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("drops a session check that answers after the member signed out — a late 200 never restores the session", async () => {
@@ -531,7 +700,7 @@ describe("auth facade — 401 pipeline", () => {
 	it("expires the session once for concurrent 401s — one refresh, one logout, one broadcast, one redirect — and never again", async () => {
 		const { result } = renderAuth(GUEST);
 		act((): void => {
-			result.current.commands.login(userFixture(), null);
+			result.current.commands.login(userFixture(), answeredNow());
 		});
 		openOtherTab();
 		routes.me = unauthorizedResponse;
@@ -549,24 +718,111 @@ describe("auth facade — 401 pipeline", () => {
 		expect(callCount("refresh")).toBe(1);
 		expect(callCount("logout")).toBe(1);
 		expect(timeline.filter((entry: string): boolean => entry === "other-tab:logged-out")).toHaveLength(1);
-		expect(navigate).toHaveBeenCalledTimes(1);
-		expect(navigate).toHaveBeenCalledWith("/auth/login");
-		await waitFor((): void => {
-			expect(routerRefresh).toHaveBeenCalledTimes(1);
-		});
+		expect(leaveSession).toHaveBeenCalledTimes(1);
+		expect(leaveSession).toHaveBeenCalledWith("/auth/login");
 
 		await act(async (): Promise<void> => {
 			await result.current.auth.api.auth.me.fetch(undefined);
 		});
 		expect(callCount("refresh")).toBe(1);
 		expect(callCount("logout")).toBe(1);
-		expect(navigate).toHaveBeenCalledTimes(1);
+		expect(leaveSession).toHaveBeenCalledTimes(1);
+	});
+
+	it("shares ONE in-flight refresh between refreshSession() callers and a 401-triggered refresh — exactly one POST /auth/refresh", async () => {
+		const { result } = renderAuth(GUEST);
+		act((): void => {
+			result.current.commands.login(userFixture(), answeredNow());
+		});
+		const refreshAnswer = holdResponse();
+		routes.refresh = (): Promise<Response> => refreshAnswer.promise;
+		const meAnswers: Response[] = [unauthorizedResponse()];
+		routes.me = (): Response => meAnswers.shift() ?? envelopeResponse(userFixture());
+
+		let request: ReturnType<typeof result.current.auth.api.auth.me.fetch> | undefined;
+		act((): void => {
+			request = result.current.auth.api.auth.me.fetch(undefined);
+		});
+		// The 401 started the silent refresh, which is now in flight.
+		await waitFor((): void => {
+			expect(callCount("refresh")).toBe(1);
+		});
+
+		let refreshed: Promise<readonly RefreshResult[]> | undefined;
+		act((): void => {
+			refreshed = Promise.all([result.current.commands.refreshSession(), result.current.commands.refreshSession()]);
+		});
+		await act(async (): Promise<void> => {
+			refreshAnswer.release(envelopeResponse({ message: "Refreshed" }));
+			await refreshAnswer.promise;
+		});
+
+		await expect(refreshed).resolves.toEqual(["ok", "ok"]);
+		const retried = await request;
+		expect(retried?.ok).toBe(true);
+		expect(callCount("refresh")).toBe(1);
+		expect(result.current.status).toBe("authenticated");
+	});
+
+	it("starts a refresh from refreshSession() that a later 401 joins instead of rotating the token again", async () => {
+		const { result } = renderAuth(GUEST);
+		act((): void => {
+			result.current.commands.login(userFixture(), answeredNow());
+		});
+		const refreshAnswer = holdResponse();
+		routes.refresh = (): Promise<Response> => refreshAnswer.promise;
+		const meAnswer = holdResponse();
+		routes.me = (): Promise<Response> => meAnswer.promise;
+
+		let refreshed: Promise<RefreshResult> | undefined;
+		act((): void => {
+			refreshed = result.current.commands.refreshSession();
+		});
+		await waitFor((): void => {
+			expect(callCount("refresh")).toBe(1);
+		});
+		let request: ReturnType<typeof result.current.auth.api.auth.me.fetch> | undefined;
+		act((): void => {
+			request = result.current.auth.api.auth.me.fetch(undefined);
+		});
+		await waitFor((): void => {
+			expect(callCount("me")).toBe(1);
+		});
+		routes.me = (): Response => envelopeResponse(userFixture());
+		// The 401 arrives while the refresh is still in flight, and joins it.
+		await act(async (): Promise<void> => {
+			meAnswer.release(unauthorizedResponse());
+			await meAnswer.promise;
+		});
+		expect(callCount("refresh")).toBe(1);
+
+		await act(async (): Promise<void> => {
+			refreshAnswer.release(envelopeResponse({ message: "Refreshed" }));
+			await refreshAnswer.promise;
+		});
+
+		await expect(refreshed).resolves.toBe("ok");
+		expect((await request)?.ok).toBe(true);
+		expect(callCount("refresh")).toBe(1);
+	});
+
+	it("reports an expired session from refreshSession() without calling the API once the tab signed out", async () => {
+		const { result } = renderAuth(GUEST);
+		act((): void => {
+			result.current.commands.login(userFixture(), answeredNow());
+		});
+		await act(async (): Promise<void> => {
+			await result.current.commands.logout();
+		});
+
+		await expect(result.current.commands.refreshSession()).resolves.toBe("expired");
+		expect(callCount("refresh")).toBe(0);
 	});
 
 	it("keeps the session when a 401's refresh cannot reach the API — only the request fails", async () => {
 		const { result } = renderAuth(GUEST);
 		act((): void => {
-			result.current.commands.login(userFixture(), null);
+			result.current.commands.login(userFixture(), answeredNow());
 		});
 		openOtherTab();
 		routes.me = unauthorizedResponse;
@@ -585,7 +841,7 @@ describe("auth facade — 401 pipeline", () => {
 		expect(callCount("refresh")).toBe(1);
 		expect(callCount("logout")).toBe(0);
 		expect(timeline).not.toContain("other-tab:logged-out");
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 
 		// Inside the cooldown the next 401 does not re-hit the refresh — and still keeps the session.
 		await act(async (): Promise<void> => {
@@ -599,7 +855,7 @@ describe("auth facade — 401 pipeline", () => {
 	it("stays on a guest-browsable page and leaves the other tabs alone", async () => {
 		const { result } = renderAuth({ ...GUEST, shouldRedirectOnUnauthorized: (): boolean => false });
 		act((): void => {
-			result.current.commands.login(userFixture(), null);
+			result.current.commands.login(userFixture(), answeredNow());
 		});
 		openOtherTab();
 		routes.me = unauthorizedResponse;
@@ -611,7 +867,7 @@ describe("auth facade — 401 pipeline", () => {
 
 		expect(result.current.status).toBe("signed-out");
 		expect(callCount("logout")).toBe(1);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 		expect(timeline).not.toContain("other-tab:logged-out");
 	});
 });
@@ -628,12 +884,12 @@ describe("auth facade — provider", () => {
 	});
 
 	it("gives each provider mount its own session", async () => {
-		// Separate cookie sets, so the sign-in broadcast cannot reach the second mount.
-		const first = renderAuth({ ...GUEST, cookieNames: { accessToken: "firstAccessToken", refreshToken: "firstRefreshToken" } });
-		const second = renderAuth({ ...GUEST, cookieNames: { accessToken: "secondAccessToken", refreshToken: "secondRefreshToken" } });
+		// Separate frontends (cookie sets), so the sign-in broadcast cannot reach the second mount.
+		const first = renderAuth({ ...GUEST, clientType: "web" });
+		const second = renderAuth({ ...GUEST, clientType: "admin" });
 
 		act((): void => {
-			first.result.current.commands.login(userFixture(), null);
+			first.result.current.commands.login(userFixture(), answeredNow());
 		});
 		await act(async (): Promise<void> => {
 			await Promise.resolve();
@@ -642,6 +898,57 @@ describe("auth facade — provider", () => {
 		expect(first.result.current.isAuthenticated).toBe(true);
 		expect(second.result.current.isAuthenticated).toBe(false);
 		expect(callCount("me")).toBe(0);
+	});
+
+	it("names the cross-tab channel after the frontend — auth-sync:<clientType> — and hears only that channel", async () => {
+		const { result } = renderAuth({ ...RETURNING_MEMBER, clientType: "merchant" });
+		await waitFor((): void => {
+			expect(result.current.isAuthenticated).toBe(true);
+		});
+		expect([...MockBroadcastChannel.channelsByName.keys()]).toEqual(["auth-sync:merchant"]);
+
+		const webTab = openOtherTab("auth-sync:web");
+		act((): void => {
+			webTab.post("logged-out");
+		});
+		expect(result.current.status).toBe("authenticated");
+
+		const merchantTab = openOtherTab("auth-sync:merchant");
+		act((): void => {
+			merchantTab.post("logged-out");
+		});
+		expect(result.current.status).toBe("signed-out");
+	});
+
+	it("sends X-Client-Type for its frontend on every request — session check, refresh, logout and typed calls", async () => {
+		const meAnswers: Response[] = [unauthorizedResponse()];
+		routes.me = (): Response => meAnswers.shift() ?? envelopeResponse(userFixture());
+		const { result } = renderAuth({ ...RETURNING_MEMBER, clientType: "admin" });
+		await waitFor((): void => {
+			expect(result.current.isAuthenticated).toBe(true);
+		});
+		await act(async (): Promise<void> => {
+			await result.current.auth.api.auth.permissions.fetch(undefined);
+			await result.current.commands.refreshSession();
+			await result.current.commands.logout();
+		});
+
+		expect(callCount("me")).toBeGreaterThanOrEqual(1);
+		expect(callCount("permissions")).toBeGreaterThanOrEqual(1);
+		expect(callCount("refresh")).toBe(2);
+		expect(callCount("logout")).toBe(1);
+		expect(clientTypeHeaders()).toHaveLength(fetchMock.mock.calls.length);
+		expect(new Set(clientTypeHeaders())).toEqual(new Set(["admin"]));
+	});
+
+	it("sends X-Client-Type: web for the web frontend too — the API never has to guess", async () => {
+		const { result } = renderAuth(RETURNING_MEMBER);
+		await waitFor((): void => {
+			expect(result.current.isAuthenticated).toBe(true);
+		});
+
+		expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
+		expect(new Set(clientTypeHeaders())).toEqual(new Set(["web"]));
 	});
 
 	it("leaves the server-rendered epoch at the first session boundary", async () => {
@@ -669,7 +976,7 @@ describe("auth facade — provider", () => {
 describe("auth facade — the API is unreachable", () => {
 	/** `Math.random` pinned low: every retry waits exactly half its backoff step, every trigger re-checks at once. */
 	const LOWEST_RANDOM = 0;
-	const RETRY_DELAYS_MS: readonly number[] = Array.from({ length: SESSION_CHECK_MAX_RETRIES }, (_: unknown, index: number): number =>
+	const RETRY_DELAYS_MS: readonly number[] = Array.from(Array(SESSION_CHECK_MAX_RETRIES).keys(), (index: number): number =>
 		sessionCheckRetryDelayMs(index + 1, (): number => LOWEST_RANDOM),
 	);
 	const FIRST_RETRY_MS = RETRY_DELAYS_MS[0] ?? 0;
@@ -724,7 +1031,7 @@ describe("auth facade — the API is unreachable", () => {
 
 	it("keeps an authenticated tab — and its cached data — through a 503 re-check, without signing out or redirecting", async () => {
 		const { result, queryClient } = await signedInTab();
-		queryClient.setQueryData(["orders", "list"], { rows: 3 });
+		queryClient.setQueryData(OTHER_DATA_KEY, { rows: 3 });
 		routes.me = serviceUnavailable;
 		const otherTab = openOtherTab();
 
@@ -735,11 +1042,11 @@ describe("auth facade — the API is unreachable", () => {
 
 		expect(result.current.status).toBe("authenticated");
 		expect(result.current.user?.id).toBe("user-1");
-		expect(queryClient.getQueryData(["orders", "list"])).toEqual({ rows: 3 });
+		expect(queryClient.getQueryData(OTHER_DATA_KEY)).toEqual({ rows: 3 });
 		expect(result.current.check).toEqual({ status: "retrying", reason: "server-error", failedAttempts: 1 });
 		expect(callCount("refresh")).toBe(0);
 		expect(callCount("logout")).toBe(0);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("keeps an unknown tab unknown — never signed out — reports the failure instead of checking forever, and restores it once the API is back", async () => {
@@ -809,7 +1116,7 @@ describe("auth facade — the API is unreachable", () => {
 		await settle();
 
 		act((): void => {
-			result.current.commands.login(userFixture(), null);
+			result.current.commands.login(userFixture(), answeredNow());
 		});
 		await settle(RETRY_DELAYS_MS.reduce((total: number, delay: number): number => total + delay, 0));
 
@@ -851,7 +1158,7 @@ describe("auth facade — the API is unreachable", () => {
 
 	it("still signs out on a revoked session: cache cleared, no refresh, no redirect", async () => {
 		const { result, queryClient } = await signedInTab();
-		queryClient.setQueryData(["orders", "list"], { rows: 3 });
+		queryClient.setQueryData(OTHER_DATA_KEY, { rows: 3 });
 		routes.me = revokedSessionResponse;
 		const otherTab = openOtherTab();
 
@@ -864,12 +1171,12 @@ describe("auth facade — the API is unreachable", () => {
 		expect(cachedData(queryClient)).toEqual([]);
 		expect(callCount("refresh")).toBe(0);
 		expect(callCount("logout")).toBe(0);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("keeps the session when the refresh an expired access token needs cannot reach the API", async () => {
 		const { result, queryClient } = await signedInTab();
-		queryClient.setQueryData(["orders", "list"], { rows: 3 });
+		queryClient.setQueryData(OTHER_DATA_KEY, { rows: 3 });
 		routes.me = unauthorizedResponse;
 		routes.refresh = serviceUnavailable;
 		const otherTab = openOtherTab();
@@ -881,10 +1188,10 @@ describe("auth facade — the API is unreachable", () => {
 
 		expect(result.current.status).toBe("authenticated");
 		expect(result.current.check).toEqual({ status: "retrying", reason: "refresh-unavailable", failedAttempts: 1 });
-		expect(queryClient.getQueryData(["orders", "list"])).toEqual({ rows: 3 });
+		expect(queryClient.getQueryData(OTHER_DATA_KEY)).toEqual({ rows: 3 });
 		expect(callCount("refresh")).toBe(1);
 		expect(callCount("logout")).toBe(0);
-		expect(navigate).not.toHaveBeenCalled();
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("reports a malformed /auth/me answer and never treats it as signed in", async () => {

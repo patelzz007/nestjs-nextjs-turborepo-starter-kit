@@ -9,7 +9,9 @@ import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import * as React from "react";
 
-import { Button } from "../form/button";
+import { cn } from "../../lib/core/utils";
+import { Button, buttonVariants } from "../form/button";
+import { useIsClient } from "../../hooks/use-is-client";
 
 export interface AuthLayoutLabels {
 	readonly mobileBack: string;
@@ -19,16 +21,9 @@ export interface AuthLayoutLabels {
 
 function AuthThemeToggle({ toggleThemeAria }: { readonly toggleThemeAria: string }): React.JSX.Element {
 	const { resolvedTheme, setTheme } = useTheme();
-	const [mounted, setMounted] = React.useState(false);
-
-	React.useEffect(() => {
-		const frame = window.requestAnimationFrame(() => {
-			setMounted(true);
-		});
-		return (): void => {
-			window.cancelAnimationFrame(frame);
-		};
-	}, []);
+	// The resolved theme is only known in the browser: render the placeholder icon
+	// on the server and during hydration, the real one after (no mount effect).
+	const mounted = useIsClient();
 
 	const handleToggle = React.useCallback((): void => {
 		setTheme(resolvedTheme === "dark" ? "light" : "dark");
@@ -125,10 +120,10 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 									{labels.mobileBack}
 								</Button>
 							) : (
-								<Button variant="ghost" size="sm" className="flex items-center gap-2" render={<a href={backHref} />}>
-									<ArrowLeft className="size-4" />
+								<a href={backHref} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "flex items-center gap-2")}>
+									<ArrowLeft className="size-4" aria-hidden="true" />
 									{labels.mobileBack}
-								</Button>
+								</a>
 							)}
 						</div>
 					) : null}
@@ -148,10 +143,10 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 										{backLabel}
 									</Button>
 								) : (
-									<Button variant="ghost" size="sm" className="-ml-2 flex items-center gap-2" render={<a href={backHref} />}>
-										<ArrowLeft className="size-4" />
+									<a href={backHref} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 flex items-center gap-2")}>
+										<ArrowLeft className="size-4" aria-hidden="true" />
 										{backLabel}
-									</Button>
+									</a>
 								)}
 							</div>
 						) : null}

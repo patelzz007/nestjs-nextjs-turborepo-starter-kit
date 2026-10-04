@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { LogService } from "../../modules/logs/logs.service";
+import { AuditTrailService } from "../audit/audit-trail.service";
 import { RequestContextService } from "../context/request-context";
 import { redactUrl } from "../logging/redaction";
 import { readCaughtErrorMessage } from "../utils/caught-error";
@@ -37,7 +38,12 @@ const LOG_CONTEXT = "GlobalExceptionFilter";
  * 5xx failures are logged server-side with the full error and stack plus the
  * correlation id; the client only ever sees the safe code/message.
  *
- * Registered globally via `APP_FILTER` in `AppModule`. See docs/error-model.md.
+ * A failed state-changing request (POST/PUT/PATCH/DELETE) is also written to
+ * the global audit trail BEFORE the response is sent — this is where guard
+ * rejections, validation errors and handler failures all get their
+ * `audit_logs` row (docs/adr/025-global-http-audit-log.md).
+ *
+ * Registered globally via `APP_FILTER` in `AppModule`. See docs/technical/api/errors.md.
  */
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
@@ -47,12 +53,18 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 		private readonly httpAdapterHost: HttpAdapterHost,
 		private readonly logService: LogService,
 		private readonly requestContext: RequestContextService,
+		private readonly auditTrail: AuditTrailService,
 		config: TypedConfigService,
 	) {
 		this.exposeInternalErrors = config.isDevelopment;
 	}
 
-	public catch(exception: CaughtValue, host: ArgumentsHost): void {
+	/**
+	 * Nest does not await a filter, but Fastify sends nothing until `reply` is
+	 * called, so the audit row is durably written before the client sees the
+	 * error. Never rejects: `recordFailure` logs its own write failures.
+	 */
+	public async catch(exception: CaughtValue, host: ArgumentsHost): Promise<void> {
 		const http = host.switchToHttp();
 		const request: FastifyRequest = http.getRequest<FastifyRequest>();
 		const reply: FastifyReply = http.getResponse<FastifyReply>();
@@ -66,7 +78,7 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 		}
 
 		const envelope: ApiErrorResponse = GlobalExceptionFilter.buildEnvelope(mapped, correlationId);
-		request.responseData = GlobalExceptionFilter.toJsonValue(envelope);
+		await this.auditTrail.recordFailure(request, { status: mapped.httpStatus, errorCode: envelope.error.code, responseBody: GlobalExceptionFilter.toJsonValue(envelope) });
 
 		const httpAdapter = this.httpAdapterHost.httpAdapter;
 		if (httpAdapter.isHeadersSent(reply)) {

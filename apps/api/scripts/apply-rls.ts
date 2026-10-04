@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { z } from "zod";
 
+import { APP_RUNTIME_ROLE, buildWithheldPrivilegeRevocationSql, listWithheldPrivileges, type WithheldPrivilegeEntry } from "../prisma/rls/withheld-privileges.js";
 import { buildRlsApplyPlan } from "./rls-apply-plan.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -74,9 +75,7 @@ async function delay(ms: number): Promise<void> {
  * lock wait; on a deadlock or lock timeout the whole transaction rolls back,
  * so retrying the (idempotent) file is safe.
  */
-async function runSqlFile(pool: Pool, sqlFile: string): Promise<void> {
-	const sql = readFileSync(sqlFile, "utf8");
-
+async function runSqlInTransaction(pool: Pool, sql: string): Promise<void> {
 	for (let attempt = 1; ; attempt += 1) {
 		const client = await pool.connect();
 		try {
@@ -102,30 +101,79 @@ async function runSqlFile(pool: Pool, sqlFile: string): Promise<void> {
 	}
 }
 
+/** The grants file the plan runs last; the withheld-privilege REVOKEs must follow its blanket grant. */
+const APP_RUNTIME_GRANTS_FILE = "99-app-runtime-grants.sql";
+
+/**
+ * The SQL of one plan file. The final file (the `app_runtime` grants) gets the
+ * generated withheld-privilege REVOKEs appended, so they commit in the SAME
+ * transaction as the blanket grant — there is never a committed state in which
+ * an append-only table is writable again.
+ */
+function sqlForPlanFile(sqlFile: string, isLast: boolean, withheld: readonly WithheldPrivilegeEntry[]): string {
+	const sql = readFileSync(sqlFile, "utf8");
+	if (!isLast) {
+		return sql;
+	}
+	if (!sqlFile.endsWith(APP_RUNTIME_GRANTS_FILE)) {
+		throw new Error(`The RLS plan must end with ${APP_RUNTIME_GRANTS_FILE} (withheld privileges are revoked after its blanket grant); it ends with ${sqlFile}`);
+	}
+	return `${sql}\n${buildWithheldPrivilegeRevocationSql(withheld)}\n`;
+}
+
+const PrivilegeRowSchema = z.object({ table: z.string(), privilege: z.string(), granted: z.boolean() });
+
+/** Fails when the live catalog still grants `app_runtime` a privilege the manifest withholds. */
+async function assertPrivilegesWithheld(pool: Pool, withheld: readonly WithheldPrivilegeEntry[]): Promise<void> {
+	const violations: string[] = [];
+	for (const entry of withheld) {
+		for (const privilege of entry.privileges) {
+			const result = await pool.query("SELECT $1::text AS table, $2::text AS privilege, has_table_privilege($3, $4, $2) AS granted", [
+				entry.table,
+				privilege,
+				APP_RUNTIME_ROLE,
+				`public.${entry.table}`,
+			]);
+			const row = PrivilegeRowSchema.parse(result.rows.at(0));
+			if (row.granted) {
+				violations.push(`${row.table}: ${row.privilege}`);
+			}
+		}
+	}
+	if (violations.length > 0) {
+		throw new Error(`${APP_RUNTIME_ROLE} still holds withheld privileges: ${violations.join(", ")}`);
+	}
+}
+
 /**
  * Apply the RLS SQL via the Node `pg` driver.
  *
  * The file list comes from `buildRlsApplyPlan` (`RLS_APPLY_ORDER` in
  * `scripts/rls-apply-plan.ts`), which validates disk drift and helper
  * use-before-definition BEFORE any SQL runs — so ordering bugs fail here
- * instead of against a fresh database.
+ * instead of against a fresh database. The privileges withheld from
+ * `app_runtime` (`prisma/rls/withheld-privileges.ts`) are revoked with the
+ * final grants file and then verified against the live catalog.
  *
  * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
  */
 export async function applyRowLevelSecurity(): Promise<void> {
 	const databaseUrl = stripPrismaQueryParams(getDatabaseUrl());
 	const sqlFiles = buildRlsApplyPlan(apiDir);
+	const withheld: WithheldPrivilegeEntry[] = listWithheldPrivileges();
 	const pool = new Pool({ connectionString: databaseUrl });
 
 	console.log("Applying Row-Level Security (idempotent) ...");
 
 	try {
-		for (const sqlFile of sqlFiles) {
+		for (const [index, sqlFile] of sqlFiles.entries()) {
 			const relative = sqlFile.startsWith(apiDir) ? sqlFile.slice(apiDir.length + 1) : sqlFile;
 			console.log(`  → ${relative}`);
-			await runSqlFile(pool, sqlFile);
+			await runSqlInTransaction(pool, sqlForPlanFile(sqlFile, index === sqlFiles.length - 1, withheld));
 		}
 
+		await assertPrivilegesWithheld(pool, withheld);
+		console.log(`  ✓ ${String(withheld.length)} tables keep their withheld ${APP_RUNTIME_ROLE} privileges`);
 		console.log("RLS applied successfully.");
 	} finally {
 		await pool.end();

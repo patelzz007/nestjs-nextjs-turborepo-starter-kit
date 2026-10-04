@@ -6,6 +6,7 @@ import {
 	OUTBOX_DISPATCH_LIMITS,
 	OUTBOX_RETRY_POLICY,
 	OutboxDispatcher,
+	OutboxPublisherUnavailableError,
 	computeOutboxRetryDelayMs,
 	prepareOutboxRow,
 	type ClaimedOutboxRow,
@@ -116,8 +117,13 @@ class InMemoryOutboxStore implements OutboxDispatchStore {
 class RecordingPublisher implements OutboxPublisher {
 	public readonly published: { readonly topic: KafkaTopic; readonly message: PlatformEventMessage; readonly partitionKey: string | null }[] = [];
 	public failuresRemaining = 0;
+	/** Broker not connected: nothing is sent (KafkaProducerNotConnectedError upstream). */
+	public isUnavailable = false;
 
 	public publish(topic: KafkaTopic, message: PlatformEventMessage, partitionKey: string | null): Promise<void> {
+		if (this.isUnavailable) {
+			return Promise.reject(new OutboxPublisherUnavailableError("Kafka producer is connecting, not connected"));
+		}
 		if (this.failuresRemaining > 0) {
 			this.failuresRemaining -= 1;
 			return Promise.reject(new Error("KafkaJSConnectionError: broker unavailable"));
@@ -290,6 +296,30 @@ describe("OutboxDispatcher", () => {
 		await dispatcher.dispatchDue();
 
 		expect(logger.entriesAt("warn")).toContainEqual(expect.objectContaining({ event: "outbox.backlog_stale", pendingCount: 1 }));
+	});
+
+	it("keeps rows PENDING without spending attempts while the publisher is unavailable — however long the outage", async () => {
+		store.add(EVENT_A);
+		store.add(EVENT_B);
+		publisher.isUnavailable = true;
+
+		for (let sweep = 0; sweep < OUTBOX_RETRY_POLICY.maxAttempts * 3; sweep += 1) {
+			clock.now = store.get(EVENT_A).availableAt;
+			const summary = await dispatcher.dispatchDue();
+			expect(summary).toEqual({ claimed: 2, published: 0, retried: 0, deadLettered: 0, released: 2 });
+		}
+
+		expect(store.get(EVENT_A)).toMatchObject({ status: "PENDING", attempts: 0, lastError: null });
+		expect(store.get(EVENT_B)).toMatchObject({ status: "PENDING", attempts: 0 });
+		expect(logger.entriesAt("warn")).toContainEqual(expect.objectContaining({ event: "outbox.publisher_unavailable", released: 2 }));
+		expect(logger.entriesAt("error")).toEqual([]);
+
+		publisher.isUnavailable = false;
+		clock.now = store.get(EVENT_A).availableAt;
+		const recovered = await dispatcher.dispatchDue();
+
+		expect(recovered.published).toBe(2);
+		expect(store.get(EVENT_A)).toMatchObject({ status: "PUBLISHED", attempts: 0 });
 	});
 
 	it("stays quiet when there is nothing to dispatch", async () => {

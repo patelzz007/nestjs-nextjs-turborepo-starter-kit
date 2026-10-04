@@ -247,6 +247,62 @@ describe("Authorization hardening (e2e)", () => {
 
 			expect(response.statusCode, response.body).toBe(201);
 		});
+
+		it("records the assignment in permission_audit_logs with the real actor, readable through the audit viewer", async () => {
+			const audited = await pool.query<{ actorId: string }>(
+				`SELECT actor_id AS "actorId" FROM public.permission_audit_logs WHERE action = 'ROLE_ASSIGNED' AND target_user_id = $1 AND target_role_id = $2 ORDER BY created_at DESC LIMIT 1`,
+				[targetUserId, managerRoleId],
+			);
+			expect(audited.rows.at(0)?.actorId).toBe(managerId);
+
+			const superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123");
+			const response = await app.inject({
+				method: "GET",
+				url: `${API_VERSION_PREFIX}/admin/audit?filter[action]=ROLE_ASSIGNED&filter[targetUserId]=${targetUserId}`,
+				headers: { cookie: cookieHeader(superAdmin) },
+			});
+			expect(response.statusCode, response.body).toBe(200);
+			expect(response.body).toContain(managerId);
+		});
+
+		it("blocks a lesser admin from removing a role beyond its own reach (and from touching a SuperAdmin account)", async () => {
+			const manager = await login(app, "manager@example.com", "Manager@123");
+			const superAdminUserId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "superadmin@example.com");
+
+			const response = await app.inject({
+				method: "POST",
+				url: `${API_VERSION_PREFIX}/admin/roles/user/remove`,
+				headers: mutationHeaders({ cookie: cookieHeader(manager) }),
+				payload: { userId: superAdminUserId, roleId: superAdminRoleId },
+			});
+
+			expect(response.statusCode, response.body).toBe(403);
+		});
+
+		it("refuses to delete a system role, even for a SuperAdmin", async () => {
+			const superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123");
+
+			const response = await app.inject({
+				method: "DELETE",
+				url: `${API_VERSION_PREFIX}/admin/roles/${managerRoleId}`,
+				headers: mutationHeaders({ cookie: cookieHeader(superAdmin) }),
+			});
+
+			expect(response.statusCode, response.body).toBe(403);
+		});
+
+		it("rejects a client-set isSystem flag on permission create", async () => {
+			const superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123");
+
+			const response = await app.inject({
+				method: "POST",
+				url: `${API_VERSION_PREFIX}/admin/permissions`,
+				headers: mutationHeaders({ cookie: cookieHeader(superAdmin) }),
+				payload: { action: "READ", resource: "REPORT", isSystem: true },
+			});
+
+			expect(response.statusCode, response.body).toBe(400);
+		});
 	});
 
 	describe("refresh-token routes run under a user-scoped RLS context", () => {

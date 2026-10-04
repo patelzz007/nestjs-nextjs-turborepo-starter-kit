@@ -3,7 +3,7 @@
 // ============================================
 // The auth facade asks the API "is this tab still signed in?" with
 // `GET /auth/me` + `GET /auth/permissions`, OUTSIDE the 401 → refresh →
-// redirect pipeline (docs/token-refresh.md, "Client session state"). This
+// redirect pipeline (docs/technical/security/token-refresh.md, "Client session state"). This
 // module turns those answers into a verdict:
 //
 //   valid                → the session is live (restore it)
@@ -14,7 +14,7 @@
 // Only `no-session` may end a session. An unreachable API never does — the
 // tab keeps what it knew and the facade retries with backoff (policy below).
 
-import type { SessionPermissionsResponse, UserResponse } from "@workspace/shared";
+import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 import { z } from "zod";
 
 import { isDeadSessionError, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR, type ApiFailure, type ApiResponse, type RefreshResult } from "../../api/api-request";
@@ -103,7 +103,7 @@ export type SessionCheckFailureReason = z.output<typeof SessionCheckFailureReaso
 
 /** What the session answers say, read once. */
 export type SessionResponseClass =
-	| { readonly kind: "valid"; readonly profile: UserResponse; readonly permissions: SessionPermissionsResponse | null }
+	| { readonly kind: "valid"; readonly profile: Envelope<UserResponse>; readonly permissions: Envelope<SessionPermissionsResponse> | null }
 	| { readonly kind: "no-session" }
 	| { readonly kind: "expired-access-token" }
 	| { readonly kind: "unavailable"; readonly reason: SessionCheckFailureReason };
@@ -113,8 +113,8 @@ export type SessionCheckResult = Exclude<SessionResponseClass, { readonly kind: 
 
 /** The two answers one session read gets, as the transport returned them. */
 export interface SessionCheckResponses {
-	readonly me: ApiResponse<{ readonly data: UserResponse }>;
-	readonly permissions: ApiResponse<{ readonly data: SessionPermissionsResponse }>;
+	readonly me: ApiResponse<Envelope<UserResponse>>;
+	readonly permissions: ApiResponse<Envelope<SessionPermissionsResponse>>;
 }
 
 const HTTP_UNAUTHORIZED = 401;
@@ -164,15 +164,16 @@ export function classifySessionFailure(failure: ApiFailure): SessionResponseClas
 
 /**
  * Classifies one session read. `/auth/me` decides whether there is a session;
- * `/auth/permissions` only refines its scope, so when it did not answer the
- * session is still restored (scope from the profile) and the live permissions
- * query fills the scope in later.
+ * `/auth/permissions` carries its scope. When it did not answer, the session
+ * is still restored but its scope stays PENDING — treated as restricted — and
+ * the live permissions query (with its retries) fills it in. A failed
+ * permissions read never widens the session to `full`.
  */
 export function classifySessionResponses({ me, permissions }: SessionCheckResponses): SessionResponseClass {
 	if (!me.ok) {
 		return classifySessionFailure(me);
 	}
-	return { kind: "valid", profile: me.data.data, permissions: permissions.ok ? permissions.data.data : null };
+	return { kind: "valid", profile: me.data, permissions: permissions.ok ? permissions.data : null };
 }
 
 // ── Reporting ───────────────────────────────────────────────────────────────
@@ -189,7 +190,7 @@ export type SessionCheckProblem =
 	| { readonly kind: "contract-violation"; readonly endpoint: SessionCheckEndpoint; readonly status: number; readonly issues: readonly ApiResponseContractIssue[] }
 	| { readonly kind: "unexpected-status"; readonly endpoint: SessionCheckEndpoint; readonly status: number };
 
-function problemOf(endpoint: SessionCheckEndpoint, response: ApiResponse<{ readonly data: UserResponse | SessionPermissionsResponse }>): SessionCheckProblem | null {
+function problemOf(endpoint: SessionCheckEndpoint, response: ApiResponse<Envelope<UserResponse> | Envelope<SessionPermissionsResponse>>): SessionCheckProblem | null {
 	if (response.ok) {
 		return null;
 	}

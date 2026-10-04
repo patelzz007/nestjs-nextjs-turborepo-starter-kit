@@ -40,9 +40,3 @@ export interface LoginFormProps {
 	 */
 	readonly forgotPasswordHref?: string | null;
 }
-
-export interface SocialProvider {
-	readonly id: "google" | "facebook" | "twitter" | "github";
-	readonly label: string;
-	readonly icon: ReactNode;
-}

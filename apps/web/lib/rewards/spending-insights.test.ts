@@ -1,4 +1,11 @@
-import { UNCATEGORISED_MERCHANT_CATEGORY_LABEL, type UserSpendByCategory, type UserSpendByMerchant, type UserSpendingSummary } from "@workspace/shared";
+import {
+	PLATFORM_DISPLAY_REGION,
+	UNCATEGORISED_MERCHANT_CATEGORY_LABEL,
+	type SaleCurrency,
+	type UserSpendByCategory,
+	type UserSpendByMerchant,
+	type UserSpendingSummary,
+} from "@workspace/shared";
 import { formatMinorUnits } from "@workspace/ui/lib/format/money";
 import { describe, expect, it } from "vitest";
 
@@ -13,7 +20,8 @@ import {
 	toSpendingSectionState,
 } from "@/lib/rewards/spending-insights";
 
-const CURRENCY = "MYR";
+const CURRENCY: SaleCurrency = "MYR";
+const LOCALE = PLATFORM_DISPLAY_REGION.locale;
 
 function buildMerchantSpend(overrides: Partial<UserSpendByMerchant> = {}): UserSpendByMerchant {
 	return {
@@ -85,12 +93,17 @@ describe("formatSharePercent", () => {
 
 describe("formatVisitCount", () => {
 	it("uses the singular for one visit", () => {
-		expect(formatVisitCount(1)).toBe("1 visit");
+		expect(formatVisitCount(1, LOCALE)).toBe("1 visit");
 	});
 
 	it("uses the plural otherwise", () => {
-		expect(formatVisitCount(0)).toBe("0 visits");
-		expect(formatVisitCount(4)).toBe("4 visits");
+		expect(formatVisitCount(0, LOCALE)).toBe("0 visits");
+		expect(formatVisitCount(4, LOCALE)).toBe("4 visits");
+	});
+
+	it("groups the count in the given locale", () => {
+		expect(formatVisitCount(1_234, LOCALE)).toBe("1,234 visits");
+		expect(formatVisitCount(1_234, "de-DE")).toBe("1.234 visits");
 	});
 });
 
@@ -100,13 +113,14 @@ describe("toMerchantSpendRows", () => {
 			[buildMerchantSpend({ totalMinor: 7_500, visits: 3 }), buildMerchantSpend({ merchantName: "Nasi Lemak Hub", category: null, totalMinor: 2_500, visits: 1 })],
 			10_000,
 			CURRENCY,
+			LOCALE,
 		);
 
 		expect(rows).toEqual([
 			expect.objectContaining({
 				merchantName: "Kopi Corner",
 				categoryLabel: "Café",
-				amountLabel: formatMinorUnits(7_500, CURRENCY),
+				amountLabel: formatMinorUnits(7_500, CURRENCY, LOCALE),
 				visitsLabel: "3 visits",
 				sharePercent: 75,
 				shareLabel: "75%",
@@ -114,7 +128,7 @@ describe("toMerchantSpendRows", () => {
 			expect.objectContaining({
 				merchantName: "Nasi Lemak Hub",
 				categoryLabel: "Other",
-				amountLabel: formatMinorUnits(2_500, CURRENCY),
+				amountLabel: formatMinorUnits(2_500, CURRENCY, LOCALE),
 				visitsLabel: "1 visit",
 				sharePercent: 25,
 				shareLabel: "25%",
@@ -127,13 +141,14 @@ describe("toMerchantSpendRows", () => {
 			[buildMerchantSpend({ merchantName: "First", totalMinor: 900 }), buildMerchantSpend({ merchantName: "Second", totalMinor: 100 })],
 			1_000,
 			CURRENCY,
+			LOCALE,
 		);
 
 		expect(rows.map((row) => row.merchantName)).toEqual(["First", "Second"]);
 	});
 
 	it("returns no rows when there is no spend", () => {
-		expect(toMerchantSpendRows([], 0, CURRENCY)).toEqual([]);
+		expect(toMerchantSpendRows([], 0, CURRENCY, LOCALE)).toEqual([]);
 	});
 });
 
@@ -143,6 +158,7 @@ describe("toCategorySpendSlices", () => {
 			[buildCategorySpend({ category: "restaurant", totalMinor: 6_000 }), buildCategorySpend({ category: null, totalMinor: 4_000, visits: 1 })],
 			10_000,
 			CURRENCY,
+			LOCALE,
 		);
 
 		expect(slices).toEqual([
@@ -153,14 +169,19 @@ describe("toCategorySpendSlices", () => {
 				tone: "chart-1",
 				sharePercent: 60,
 				shareLabel: "60%",
-				amountLabel: formatMinorUnits(6_000, CURRENCY),
+				amountLabel: formatMinorUnits(6_000, CURRENCY, LOCALE),
 			}),
 			expect.objectContaining({ key: "uncategorised", label: "Other", tone: "chart-2", sharePercent: 40, visitsLabel: "1 visit" }),
 		]);
 	});
 
 	it("leaves out categories with nothing spent", () => {
-		const slices = toCategorySpendSlices([buildCategorySpend({ totalMinor: 1_000 }), buildCategorySpend({ category: "retail", totalMinor: 0, visits: 0 })], 1_000, CURRENCY);
+		const slices = toCategorySpendSlices(
+			[buildCategorySpend({ totalMinor: 1_000 }), buildCategorySpend({ category: "retail", totalMinor: 0, visits: 0 })],
+			1_000,
+			CURRENCY,
+			LOCALE,
+		);
 
 		expect(slices.map((slice) => slice.label)).toEqual(["Café"]);
 	});
@@ -175,7 +196,7 @@ describe("toCategorySpendSlices", () => {
 			buildCategorySpend({ category: null, totalMinor: 400, visits: 1 }),
 		];
 
-		const slices = toCategorySpendSlices(rows, 10_000, CURRENCY);
+		const slices = toCategorySpendSlices(rows, 10_000, CURRENCY, LOCALE);
 
 		expect(slices).toHaveLength(MAX_CATEGORY_SLICES);
 		expect(slices.map((slice) => slice.tone)).toEqual(["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]);
@@ -193,7 +214,7 @@ describe("toCategorySpendSlices", () => {
 			buildCategorySpend({ category: "food" }),
 		];
 
-		const slices = toCategorySpendSlices(categories, 25_000, CURRENCY);
+		const slices = toCategorySpendSlices(categories, 25_000, CURRENCY, LOCALE);
 
 		expect(slices.map((slice) => slice.detail)).toEqual([undefined, undefined, undefined, undefined, undefined]);
 		expect(slices.at(-1)?.label).toBe("Food");
@@ -202,28 +223,29 @@ describe("toCategorySpendSlices", () => {
 
 describe("toSpendingSectionState", () => {
 	it("is loading until the analytics arrive", () => {
-		expect(toSpendingSectionState(undefined)).toEqual({ status: "loading" });
+		expect(toSpendingSectionState(undefined, LOCALE)).toEqual({ status: "loading" });
 	});
 
 	it("is empty when there were no paid bills, but still carries the zero totals and their trend", () => {
 		const state = toSpendingSectionState(
 			buildSpendingSummary({ totalSpentMinor: { value: 0, changePercent: -100 }, visits: { value: 0, changePercent: -100 }, byMerchant: [], byCategory: [] }),
+			LOCALE,
 		);
 
 		expect(state).toEqual({
 			status: "empty",
-			totals: { totalSpentLabel: formatMinorUnits(0, CURRENCY), totalSpentChangePercent: -100, visitsLabel: "0", visitsChangePercent: -100 },
+			totals: { totalSpentLabel: formatMinorUnits(0, CURRENCY, LOCALE), totalSpentChangePercent: -100, visitsLabel: "0", visitsChangePercent: -100 },
 		});
 	});
 
 	it("is ready with formatted totals, merchant rows and category slices when there was spend", () => {
-		const state = toSpendingSectionState(buildSpendingSummary());
+		const state = toSpendingSectionState(buildSpendingSummary(), LOCALE);
 
 		expect(state.status).toBe("ready");
 		if (state.status !== "ready") {
 			return;
 		}
-		expect(state.totals).toEqual({ totalSpentLabel: formatMinorUnits(5_000, CURRENCY), totalSpentChangePercent: 25, visitsLabel: "2", visitsChangePercent: null });
+		expect(state.totals).toEqual({ totalSpentLabel: formatMinorUnits(5_000, CURRENCY, LOCALE), totalSpentChangePercent: 25, visitsLabel: "2", visitsChangePercent: null });
 		expect(state.merchants.map((row) => row.shareLabel)).toEqual(["100%"]);
 		expect(state.categories.map((slice) => slice.label)).toEqual(["Café"]);
 	});

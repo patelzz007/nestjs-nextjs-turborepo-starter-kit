@@ -41,3 +41,14 @@ export interface AccessUnavailableNoticeProps {
 export function AccessUnavailableNotice({ title, description, className }: AccessUnavailableNoticeProps): React.JSX.Element {
 	return <WebEmptyState className={className} title={title} description={description} icon={<Lock className="size-5" aria-hidden="true" />} />;
 }
+
+export interface FeatureUnavailableNoticeProps {
+	/** Human label for the section ("your rewards"). */
+	readonly feature: string;
+	readonly className?: string | undefined;
+}
+
+/** The standard "your account can't see this" notice — rendered by `AccessGate` and by server pages whose API call answered 403. */
+export function FeatureUnavailableNotice({ feature, className }: FeatureUnavailableNoticeProps): React.JSX.Element {
+	return <AccessUnavailableNotice className={className} title="Not available for your account" description={`Your account doesn't have access to ${feature}.`} />;
+}

@@ -9,29 +9,16 @@ import { RewardHubTopbar } from "@/components/layout/reward-hub-topbar";
 import { useAuthUser } from "@workspace/client/lib/auth";
 import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
 import { AppPanelShell } from "@workspace/ui/components/navigation/app-panel-shell";
-import { useSidebar as useShellSidebar } from "@workspace/ui/components/navigation/sidebar";
-import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { WEB_COMMAND_PALETTE_DEVTOOLS_NAME, WEB_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { WEB_SIDEBAR_DEVTOOLS_NAME, WEB_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
 import { SidebarStoreProvider, useSidebarCommands, useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 export interface RewardHubLayoutProps {
 	readonly children: React.ReactNode;
 	readonly initialUser?: ServerUser | null | undefined;
-}
-
-function RewardHubSidebarContent({ userName }: { readonly userName: string | null }): React.JSX.Element {
-	const { setOpenMobile } = useShellSidebar();
-
-	const handleNavigate = React.useCallback((): void => {
-		if (isMobileViewport()) {
-			setOpenMobile(false);
-		}
-	}, [setOpenMobile]);
-
-	return <WebSidebarPanel userName={userName} onNavigate={handleNavigate} />;
 }
 
 /**
@@ -41,9 +28,10 @@ function RewardHubSidebarContent({ userName }: { readonly userName: string | nul
  * filters the sidebar and the command palette.
  */
 export function RewardHubLayout(props: RewardHubLayoutProps): React.JSX.Element {
+	const authUser = useAuthUser();
 	return (
 		<SidebarStoreProvider storageKey={WEB_SIDEBAR_STORAGE_KEY} devtoolsName={WEB_SIDEBAR_DEVTOOLS_NAME}>
-			<CommandPaletteStoreProvider storageKey={WEB_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={WEB_COMMAND_PALETTE_DEVTOOLS_NAME}>
+			<CommandPaletteStoreProvider storageKey={WEB_COMMAND_PALETTE_STORAGE_KEY} ownerId={authUser?.id ?? null} devtoolsName={WEB_COMMAND_PALETTE_DEVTOOLS_NAME}>
 				<RewardHubShell {...props} />
 			</CommandPaletteStoreProvider>
 		</SidebarStoreProvider>
@@ -69,10 +57,12 @@ function RewardHubShell({ children, initialUser = null }: RewardHubLayoutProps):
 	);
 
 	const sidebarUserName = user?.fullName ?? initialUser?.name ?? null;
+	const pathname = usePathname();
 
 	return (
 		<AppPanelShell
 			shellClassName="web-app"
+			scrollResetKey={pathname}
 			banner={
 				<>
 					<ImpersonationBanner />
@@ -81,7 +71,7 @@ function RewardHubShell({ children, initialUser = null }: RewardHubLayoutProps):
 			}
 			sidebarOpen={sidebarOpen}
 			onSidebarOpenChange={handleSidebarOpenChange}
-			sidebar={<RewardHubSidebarContent userName={sidebarUserName} />}
+			sidebar={<WebSidebarPanel userName={sidebarUserName} />}
 			topbar={<RewardHubTopbar />}>
 			<WebShellBreadcrumb />
 			<WebRouteAccessGuard>{children}</WebRouteAccessGuard>

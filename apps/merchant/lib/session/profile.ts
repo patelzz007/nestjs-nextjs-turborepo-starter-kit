@@ -3,30 +3,30 @@
 import { useAuth } from "@workspace/client/lib/auth";
 import * as React from "react";
 
+/** Shown for a signed-out shell (it renders only on auth routes' edges). */
+const GUEST_DISPLAY_NAME = "Guest";
+
 export interface MerchantSessionProfile {
 	readonly fullName: string;
 	readonly email: string;
 	readonly isLoading: boolean;
 }
 
-/** Name + email for the shell from the live `/auth/me` query, with a loading flag for the first fetch. */
+/**
+ * Name + email for the shell. Read from the auth feature's user — which is
+ * already the live `/auth/me` profile (TanStack Query owns it inside the auth
+ * provider) — so the shell adds no second `/auth/me` observer with its own
+ * freshness and retry rules.
+ */
 export function useMerchantSessionProfile(): MerchantSessionProfile {
-	const { user, api } = useAuth();
-
-	const meQuery = api.auth.me.useQuery(undefined, {
-		enabled: user !== null,
-		retry: false,
-		staleTime: 60_000,
-	});
-
-	const profile = meQuery.data?.data;
+	const { user, isLoading } = useAuth();
 
 	return React.useMemo(
 		(): MerchantSessionProfile => ({
-			fullName: profile?.fullName ?? user?.fullName ?? "Guest",
-			email: profile?.email ?? user?.email ?? "",
-			isLoading: user !== null && meQuery.isLoading && profile === undefined,
+			fullName: user?.fullName ?? GUEST_DISPLAY_NAME,
+			email: user?.email ?? "",
+			isLoading: isLoading && user === null,
 		}),
-		[meQuery.isLoading, profile, user],
+		[isLoading, user],
 	);
 }

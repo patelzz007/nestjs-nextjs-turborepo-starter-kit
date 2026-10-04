@@ -35,7 +35,7 @@ URL orgSlug → OrganizationContext → Cedar → withTenantTransaction → Post
 | Cedar control plane | `apps/api/src/modules/authorization-cedar/` |
 | Support access (JIT) | `apps/api/src/modules/support-access/` |
 | Shared schemas | `packages/shared/src/schemas/domain/organization/organization.ts` |
-| Merchant client tenant/store context | `apps/merchant/features/tenant-context/`, `apps/merchant/lib/org/` — see [Frontend routing](./routing.md#organization-and-store-context-merchant) |
+| Merchant client tenant/store context | `apps/merchant/features/tenant-context/`, `apps/merchant/lib/org/` — see [Frontend routing](./technical/frontend/routing.md#organization-and-store-context-merchant) |
 
 ## Local / fresh database
 
@@ -60,7 +60,7 @@ pnpm --filter @workspace/api db:reset
 
 ## Related docs
 
-- [Threat model](./security/multi-tenancy-threat-model.md)
-- [Data classification](./security/data-classification-inventory.md)
-- [Prisma RLS](./prisma.md#10-row-level-security)
-- [Operations runbook](./operations/multi-tenancy-runbook.md)
+- [Threat model](./technical/security/threat-model.md)
+- [Data classification](./technical/security/data-classification.md)
+- [Prisma RLS](./technical/security/database-security.md)
+- [Operations runbook](./technical/operations/multi-tenancy-runbook.md)

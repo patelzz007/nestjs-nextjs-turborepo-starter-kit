@@ -7,7 +7,7 @@ import { contentId } from "../navigation";
 
 /**
  * Cross-file links. Guides are written to read well on GitHub, so they link
- * to each other with relative paths (`./prisma.md#10-row-level-security`,
+ * to each other with relative paths (`./database.md#seed-data`,
  * `../apps/api/src/...`). On the site those become:
  *
  * - another guide under `docs/`     → `/docs/<id>#anchor`

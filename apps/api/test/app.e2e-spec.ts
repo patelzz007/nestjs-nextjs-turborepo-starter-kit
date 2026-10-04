@@ -97,12 +97,12 @@ describe("App (e2e)", () => {
 		const response = await app.inject({
 			method: "POST",
 			url: "/api/v1/auth/login",
-			headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp() }),
+			headers: mutationHeaders({ "x-forwarded-for": uniqueClientIp() }),
 			payload: { email: "no-such-user@example.com", password: "wrong-password" },
 		});
 
 		expect(response.statusCode).toBe(401);
-		// GlobalExceptionFilter: { success: false, error: { code, message, details? }, meta } (docs/error-model.md).
+		// GlobalExceptionFilter: { success: false, error: { code, message, details? }, meta } (docs/technical/api/errors.md).
 		const envelope = ApiErrorResponseSchema.parse(response.json());
 		expect(envelope.error.code).toBe("INVALID_CREDENTIALS");
 		expect(envelope.error.message).toContain("Invalid email or password");

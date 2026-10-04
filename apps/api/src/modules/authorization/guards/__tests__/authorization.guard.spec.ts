@@ -44,7 +44,7 @@ vi.mock("../../kernel/authorization-audit-kernel.service", () => ({
 
 vi.mock("../../audit/authorization-audit.service", () => ({
 	AuthorizationAuditService: class {
-		public readonly log = mocks.auditLog;
+		public readonly record = mocks.auditLog;
 	},
 }));
 
@@ -68,7 +68,7 @@ function createGuard(): AuthorizationGuard {
 		new Reflector(),
 		createTestAuthorizationKernel(prisma),
 		new AuthorizationAuditKernelService(createTestSystemPrisma()),
-		new AuthorizationAuditService(prisma),
+		new AuthorizationAuditService(requestContext),
 		new AuthorizationContextResolver(new TenantMembershipService(prisma)),
 		prisma,
 		requestContext,
@@ -259,7 +259,7 @@ describe("AuthorizationGuard", () => {
 
 		await expect(createGuard().canActivate(context)).resolves.toBe(true);
 		expect(mocks.authorize).not.toHaveBeenCalled();
-		expect(mocks.auditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "SUPER_ADMIN_BYPASS", actorId: "user-1" }));
+		expect(mocks.auditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "SUPER_ADMIN_BYPASS", actor: { kind: "USER", userId: "user-1" } }), expect.anything());
 		expect(superAdmin.hasAdminAccess).toBe(true);
 	});
 

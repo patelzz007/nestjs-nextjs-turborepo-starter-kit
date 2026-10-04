@@ -5,6 +5,7 @@ import { apiPath, AuditLogEntrySchema, AuditLogQuerySchema, type AuditLogEntry, 
 import { ZodListQuery } from "../../../common/decorators/zod-request.decorators";
 import { ZodPaginatedResponse } from "../../../common/decorators/zod-response.decorators";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../decorators/current-user.decorator";
 import { PermissionAuditLogQueryService } from "./services/permission-audit-log-query.service";
 
 /**
@@ -21,7 +22,7 @@ export class AuditController {
 	@Get()
 	@RequirePermission("READ", "AUDIT_LOG")
 	@ZodPaginatedResponse(AuditLogEntrySchema, { description: "Paginated audit log entries (newest first); pagination is in `meta`" })
-	public async list(@ZodListQuery(AuditLogQuerySchema) query: AuditLogQueryInput): Promise<PaginatedServiceResult<AuditLogEntry>> {
-		return this.auditLogs.list(query);
+	public async list(@CurrentUser() actor: AuthenticatedUser, @ZodListQuery(AuditLogQuerySchema) query: AuditLogQueryInput): Promise<PaginatedServiceResult<AuditLogEntry>> {
+		return this.auditLogs.list(actor.id, query);
 	}
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { AccessUnavailableNotice, SignInPrompt } from "@/components/auth/access-fallback";
+import { FeatureUnavailableNotice, SignInPrompt } from "@/components/auth/access-fallback";
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { useAuthorization, type CapabilityCheckMode } from "@workspace/client/lib/auth/can";
 import type { CapabilitySlug } from "@workspace/shared";
@@ -52,7 +52,7 @@ export function AccessGate({ feature, permission, permissions, mode = "any", ret
 	const allowed = permissions !== undefined ? (mode === "all" ? canAll(permissions) : canAny(permissions)) : permission !== undefined && can(permission);
 
 	if (!allowed) {
-		return <AccessUnavailableNotice className={className} title="Not available for your account" description={`Your account doesn't have access to ${feature}.`} />;
+		return <FeatureUnavailableNotice className={className} feature={feature} />;
 	}
 
 	return <>{children}</>;

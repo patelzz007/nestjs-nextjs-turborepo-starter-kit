@@ -1,6 +1,7 @@
 "use client";
 
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { useAuth } from "@workspace/client/lib/auth";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
@@ -37,8 +38,8 @@ export const MfaRecoveryReviewPanel = React.forwardRef<HTMLDivElement, MfaRecove
 	}, []);
 
 	const invalidateRecoveryQueries = React.useCallback(async (): Promise<void> => {
-		await queryClient.invalidateQueries({ queryKey: ["auth", "admin-mfa-recovery-requests"] });
-		await queryClient.invalidateQueries({ queryKey: ["auth", "admin-user", request.userId] });
+		await queryClient.invalidateQueries({ queryKey: apiRouter.auth.adminMfaRecoveryRequests.scopeKey(undefined) });
+		await queryClient.invalidateQueries({ queryKey: apiRouter.auth.adminUserDetail.scopeKey({ userId: request.userId }) });
 	}, [queryClient, request.userId]);
 
 	const handleReview = React.useCallback(

@@ -2,7 +2,7 @@
 // lib/auth-sync.ts - Cross-tab auth state sync
 // BroadcastChannel-based: a logout in one tab logs out every tab sharing the
 // same auth context (web vs admin cookie set), closing the rotation-race gap
-// documented in docs/token-refresh.md where a proxy rotation in one tab could
+// documented in docs/technical/security/token-refresh.md where a proxy rotation in one tab could
 // invalidate an in-flight refresh in another.
 // ============================================
 

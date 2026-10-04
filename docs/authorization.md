@@ -126,15 +126,21 @@ export class UserService {
 
 ### Assign a role to a user
 
-```ts
-await this.authorization.user(userId).assignRole("admin");
-```
-
-### Give a permission to a role (not a user)
+Every RBAC change needs the authenticated actor (there is no actor-less or
+`"system"` overload) and runs as one audited transaction:
 
 ```ts
-await this.authorization.role("admin").givePermissionTo("CREATE", "USER");
+// actor = the AuthenticatedUser from @CurrentUser() ({ id, isSuperAdmin })
+await this.authorization.roles.assignToUser(actor, userId, roleId);
 ```
+
+### Give permissions to a role (not a user)
+
+```ts
+await this.authorization.roles.syncPermissions(actor, roleId, permissionIds);
+```
+
+See [RBAC mutation contract](#rbac-mutation-contract) for what every mutation guarantees.
 
 ### Where things live
 
@@ -142,7 +148,7 @@ await this.authorization.role("admin").givePermissionTo("CREATE", "USER");
 |--------------|----------|
 | Block an HTTP route | Decorators (`@RequirePermission`, `@RequireAllPermissions`, etc.) |
 | Check access in service code | `authorization.user(id).can(...)` or `checker.hasPermissions(...)` |
-| Change who has what | `assignRole`, `givePermissionTo`, `syncRoles`, admin API |
+| Change who has what | `RoleService` / `PermissionService` with the actor, or the admin API |
 | See full effective permissions | `checker.getUserPermissionDetails(userId)` |
 
 ---
@@ -208,7 +214,7 @@ apps/api/src/modules/authorization/
 │   └── authorization-audit.service.ts       # Audit logging for all mutations
 ├── cache/
 │   ├── authorization-cache.service.ts       # In-memory Map (local dev default)
-│   └── redis-authorization-cache.service.ts # Redis pub/sub invalidation (deployed)
+│   └── authorization-invalidation.service.ts # post-commit invalidation, Redis pub/sub `authz:invalidate`
 ├── cleanup/
 │   └── permission-expiry.cleanup.ts         # Hourly cron: soft-delete expired grants
 ├── constants/
@@ -664,50 +670,51 @@ const hasRequiredRoles = await userAuth.hasRoles(["admin", "auditor"], "all");
 const hasAnyManagementRole = await userAuth.hasRoles(["admin", "manager"], "any");
 ```
 
-#### Role mutations
+The user proxy is **read-only**. Role and permission changes go through
+`RoleService` / `PermissionService` (exposed as `authorization.roles` /
+`authorization.permissions`), which require the authenticated actor:
 
 ```ts
-// Add one role (throws if role name not found)
-await userAuth.assignRole("editor");
-
-// Remove one role (no-op if role not found or not assigned)
-await userAuth.removeRole("editor");
-
-// Replace entire role set — roles not in the list are removed
-await userAuth.syncRoles(["admin", "editor"]);
+await this.authorization.roles.assignToUser(actor, userId, roleId);
+await this.authorization.roles.removeFromUser(actor, userId, roleId);
+await this.authorization.roles.syncUserRoles(actor, userId, roleIds);
+await this.authorization.permissions.giveToUser(actor, { userId, permissionId, effect: "ALLOW", expiresAt: undefined });
+await this.authorization.permissions.revokeFromUser(actor, userId, permissionId);
+await this.authorization.permissions.syncUserPermissions(actor, userId, permissionIds); // ALLOW grants only
 ```
 
-#### Direct permission mutations (user-level grants)
+Expired direct grants are excluded from resolution and cleaned up hourly.
 
-```ts
-// Grant a permission directly to the user (bypasses roles)
-await userAuth.givePermissionTo("READ", "REPORT");
+### RBAC mutation contract
 
-// Revoke a direct grant (no-op if not found)
-await userAuth.revokePermissionTo("READ", "REPORT");
-```
+Every role / permission / assignment mutation (`RoleService`, `PermissionService`):
 
-Direct grants support expiry via `PermissionService.giveToUser()` (admin API / low-level service). Expired grants are excluded from resolution and cleaned up hourly.
+1. **Actor required** — the controller passes `@CurrentUser()`; there is no default actor.
+2. **One transaction** (`RbacMutationRunner`, system operation `authorization.rbac.mutate`):
+   RBAC advisory lock → privilege-escalation checks → the write → post-write invariants
+   (separation of duties, last protected holder) → refresh-token revocation + `tokenVersion`
+   bump for every affected user → the `permission_audit_logs` row (actor, correlation id,
+   impersonator). Any failure — including the audit insert — rolls everything back.
+3. **After commit only** — cached authorization and cached access-token state are invalidated on
+   every API instance (`AuthorizationInvalidationService`, Redis channel `authz:invalidate` when
+   the Redis authorization backend is configured), and `users/me` invalidation events are emitted.
 
----
+Privilege-escalation rules (SuperAdmins exempt): no self-changes; only a SuperAdmin changes a
+SuperAdmin account; the actor must hold (GLOBAL) every permission it grants **or removes** — role
+assignment and removal, role sync (added and removed roles), direct ALLOW **and DENY** overrides,
+revokes, role permission sync (current lineage + new set), role delete / update / re-parent /
+restore, permission delete / restore. Role lineages are walked through deleted and inactive
+ancestors too, because a restore or re-activation brings them back.
 
-### Role proxy — `authorization.role(roleName)`
+Server-controlled flags: `roles.isSystem` and `permissions.isSystem` are never client-settable;
+system roles cannot be renamed, deactivated, re-parented, re-permissioned or deleted, and system
+permissions cannot be edited or deleted.
 
-Returns a `RoleAuthorizationProxy` for managing a role's permissions.
-
-```ts
-// Grant permission to the role
-await this.authorization.role("admin").givePermissionTo("CREATE", "USER");
-
-// Revoke permission from the role
-await this.authorization.role("admin").revokePermissionTo("DELETE", "USER");
-
-// Replace all permissions on the role
-await this.authorization.role("merchant").syncPermissions([
-  { action: "READ", resource: "REPORT" },
-  { action: "LIST", resource: "REPORT" },
-]);
-```
+Invariants: `SuperAdmin` and `Admin` (`LAST_HOLDER_PROTECTED_ROLE_NAMES`) always keep at least one
+active holder; separation-of-duty pairs (`ROLE_SEPARATION_OF_DUTY_RULES`) are enforced on a user's
+effective role set; a direct-permission sync replaces ALLOW grants only, never touches DENY
+overrides, and rejects listing a permission the user holds a DENY for (lift it with an explicit
+revoke first).
 
 ---
 
@@ -833,19 +840,10 @@ await authorization.user(userId).hasPermissions([
 | `hasAnyRole` | `(roleNames[])` | `Promise<boolean>` | OR semantics |
 | `hasAllRoles` | `(roleNames[])` | `Promise<boolean>` | AND semantics |
 | `hasRoles` | `(roleNames[], mode?)` | `Promise<boolean>` | Unified; mode defaults to `"all"` |
-| `assignRole` | `(roleName)` | `Promise<void>` | Throws if role not found |
-| `removeRole` | `(roleName)` | `Promise<void>` | No-op if missing |
-| `syncRoles` | `(roleNames[])` | `Promise<void>` | Replaces all user roles |
-| `givePermissionTo` | `(action, resource)` | `Promise<void>` | Direct user grant |
-| `revokePermissionTo` | `(action, resource)` | `Promise<void>` | Revokes direct grant |
 
-#### `RoleAuthorizationProxy` (`authorization.role(name)`)
-
-| Method | Description |
-|--------|-------------|
-| `givePermissionTo(action, resource)` | Grant a permission to the role |
-| `revokePermissionTo(action, resource)` | Revoke a permission from the role |
-| `syncPermissions(permissions[])` | Replace all permissions on the role |
+The proxy has no mutation methods (and there is no role proxy): mutations go through
+`RoleService` / `PermissionService` with the authenticated actor — see
+[RBAC mutation contract](#rbac-mutation-contract).
 
 #### `AuthorizationCheckerService`
 
@@ -893,7 +891,7 @@ async assignRoles(
     throw new ForbiddenException("Only admins can assign roles");
   }
 
-  await this.authorization.user(body.targetUserId).syncRoles(body.roleNames);
+  await this.authorization.roles.syncUserRoles(actor, body.targetUserId, body.roleIds);
 }
 ```
 
@@ -925,11 +923,12 @@ async getUserWithPermissions(requesterId: string, targetId: string) {
 
 #### After mutation: cache + token version
 
-Role and permission mutations automatically:
-1. Invalidate the authorization cache for affected users
-2. Bump `user.tokenVersion` in the database
+Role and permission mutations automatically, for every affected user (holders of a changed role
+and of every role inheriting from it, direct grantees, store-membership holders):
+1. Revoke refresh tokens and bump `user.tokenVersion` — in the same transaction as the change and its audit row
+2. After commit, invalidate cached authorization and cached access-token state on every API instance
 
-The next API request with an old JWT gets `401 TOKEN_VERSION_MISMATCH`. The client should refresh tokens or re-login. You do not need to manually invalidate after calling `assignRole` / `givePermissionTo`.
+The next API request with an old JWT gets `401 TOKEN_VERSION_MISMATCH`. The client should refresh tokens or re-login. You never invalidate manually.
 
 ---
 
@@ -957,7 +956,7 @@ Reads are synchronous on the hot path (`AuthorizationCheckerService` → `cache.
 
 ### Redis pub/sub (deployed environments)
 
-`RedisAuthorizationCacheService` delegates all reads/writes to the same in-memory `Map` on each API instance, but publishes invalidation events over Redis so **every instance** drops stale entries when one node mutates RBAC.
+Each API instance keeps its own in-memory `AuthorizationCacheService`. `AuthorizationInvalidationService` is the only place that invalidates after an RBAC change: it applies the invalidation locally (authorization cache **and** access-token state cache), then publishes it on the Redis channel `authz:invalidate` so **every instance** drops the same entries. Messages are zod-validated, bounded (≤ 1,000 user ids each) and tagged with the sender instance (which skips its own). The instance subscribes at boot and fails to start if it cannot. Delivery is at-most-once: a publish failure after commit is logged at error level and other instances converge within `ACCESS_TOKEN_STATE_CACHE_TTL_MS` / `AUTHORIZATION_CACHE_TTL_MS` (the revocation itself is already durable in the database).
 
 | Env var | Default | Meaning |
 | --- | --- | --- |
@@ -978,12 +977,9 @@ Reads are synchronous on the hot path (`AuthorizationCheckerService` → `cache.
 Module wiring (`authorization.module.ts`):
 
 ```ts
-{
-  provide: AuthorizationCacheService,
-  useFactory: (config, memory, redis) =>
-    config.useRedisAuthorizationCache ? redis : memory,
-  inject: [TypedConfigService, "IN_MEMORY_AUTH_CACHE", RedisAuthorizationCacheService],
-}
+{ provide: "IN_MEMORY_AUTH_CACHE", useClass: AuthorizationCacheService },
+{ provide: AuthorizationCacheService, useExisting: "IN_MEMORY_AUTH_CACHE" },
+AuthorizationInvalidationService, // broadcasts over Redis when config.useRedisAuthorizationCache
 ```
 
 ### Cache Invalidation
@@ -1055,8 +1051,10 @@ Super-admins can act as another user for support/debugging. The original admin r
 
 | Endpoint | Auth | Sets cookie? | Notes |
 | --- | --- | --- | --- |
-| `POST /auth/impersonate/:userId` | `@SuperAdminOnly()` + `@RequirePermission("CREATE", "USER")` | Yes (`SetAuthCookiesInterceptor`) | JWT `sub` = target user; claims `isImpersonating: true`, `originalUserId` = admin |
-| `POST /auth/stop-impersonation` | Authenticated only (no super-admin guard) | Yes | Must work while JWT `sub` is the impersonated user; returns `accessToken` for original admin |
+| `POST /auth/impersonate/:userId` | `@SuperAdminOnly()` + `@RequirePermission("CREATE", "USER")` + fresh MFA step-up | Yes (`SetAuthCookiesInterceptor`) | Creates a server-side `impersonation_sessions` row (15 min). JWT `sub` = target user; claims `isImpersonating: true`, `originalUserId` = admin, `impersonationSessionId` = the session |
+| `POST /auth/stop-impersonation` | Authenticated only (no super-admin guard) | Yes | Must work while JWT `sub` is the impersonated user. The original admin must still be an active, non-deleted SuperAdmin (else 403 `IMPERSONATOR_NOT_ELIGIBLE`, nothing restored). Ends the session with a compare-and-set (a replayed stop → 401 `IMPERSONATION_SESSION_INVALID`), writes the STOP audit row in the same transaction, then returns the admin `accessToken` |
+
+**Server-side revocation:** `AuthGuard` accepts an impersonation token only while its session exists for the same admin + target, has not ended, has not expired, and the admin is still an active SuperAdmin; otherwise 401 `IMPERSONATION_SESSION_INVALID`. Stopping impersonation therefore revokes the token immediately. If the session state cannot be read (database outage) the guard answers 503 `SERVICE_UNAVAILABLE`, not 401.
 
 **Stop flow:** client calls `stopImpersonation` → interceptor sets admin access cookie from response → `invalidateSessionAuth()` refetches `/me` and `/auth/permissions`.
 
@@ -1216,7 +1214,7 @@ Production: replace with real `https://` app URLs. Staging should mirror product
 2. **403 only from one app?** That app’s origin is probably missing from `CORS_ORIGINS`.
 3. **Webhook broken?** Add `@SkipMutationIntent()` only on verified server-to-server routes — never on user-facing auth.
 
-See also: [Token refresh — Security & trade-offs](./token-refresh.md#101-security-properties) and [Auth hardening audit](./auth-hardening-audit.md).
+See also: [Token refresh — Security & trade-offs](./technical/security/token-refresh.md#101-security-properties) and [Auth hardening audit](./technical/security/authentication.md).
 
 ---
 
@@ -1259,7 +1257,7 @@ On protected routes, `AuthorizationGuard` compares JWT `tokenVersion` to the DB 
 - But a user with an old JWT is **forced to refresh/re-login** before accessing protected routes again.
 - Unguarded routes (no authorization decorators) skip the version check.
 
-See the end-to-end flow diagram: [`docs/token-refresh.md` — Session revocation after role or permission change](./token-refresh.md#session-revocation-after-role-or-permission-change).
+See the end-to-end flow diagram: [`docs/token-refresh.md` — Session revocation after role or permission change](./technical/security/token-refresh.md#session-revocation-after-role-or-permission-change).
 
 ### Why `hasAdminAccess` is in the JWT
 
@@ -1392,7 +1390,7 @@ Platform RBAC, merchant portal grants, and sidebar gating share one **dynamic sl
 | Scope | Example slug | Source |
 |-------|--------------|--------|
 | `PLATFORM` | `platform:user.read` | Synced from `permissions` (`CapabilityDefinitionService.syncPlatformCapabilitiesFromPermissions`) |
-| `MERCHANT` | `merchant:manage_api_keys` | Seeded by `pnpm db:seed` (`prisma/seed/capabilities.ts`) + editable via admin (no redeploy) |
+| `MERCHANT` | `merchant:manage_api_keys` | Loaded by `db:sync-reference-data` / `pnpm db:seed` (`reference-data/merchant-capability-catalog.ts`) + editable via admin (no redeploy) |
 | `ADMIN` | (reserved) | Future admin-only slugs |
 
 **API**
@@ -1422,14 +1420,14 @@ Platform RBAC, merchant portal grants, and sidebar gating share one **dynamic sl
 
 Direct user permissions can have an `expiresAt` timestamp (epoch ms). An hourly background job (`PermissionExpiryCleanup`) soft-deletes expired grants and invalidates caches.
 
-Expiry is set via the low-level `PermissionService.giveToUser()` or the admin API — not through the fluent `givePermissionTo()` proxy (which grants without expiry):
+Expiry is set via `PermissionService.giveToUser()` or the admin API (`POST /admin/permissions/user/grant` with `expiresAt`):
 
 ```ts
 // Low-level — grant with 24-hour expiry
 const permission = await this.permissionService.findByActionResource("READ", "REPORT");
 if (permission !== null) {
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-  await this.permissionService.giveToUser(userId, permission.id, expiresAt);
+  await this.permissionService.giveToUser(actor, { userId, permissionId: permission.id, effect: "ALLOW", expiresAt });
 }
 ```
 
@@ -1437,23 +1435,18 @@ Expired grants are excluded during `AuthorizationCheckerService.resolve()`.
 
 ### Conflict Detection
 
-The `ConflictDetectionService` defines rules for incompatible roles:
+`ConflictDetectionService` enforces two invariants inside the mutation transaction (a violation is a `409 CONFLICT` and rolls the change back):
 
-```ts
-// Example: "admin" and "readonly" cannot be assigned together
-await this.authorization.user(userId).assignRole("admin");
-await this.authorization.user(userId).assignRole("readonly"); // throws ConflictException
-```
+1. **Separation of duties** — `ROLE_SEPARATION_OF_DUTY_RULES` (`constants/authorization.constants.ts`) lists role-name pairs no user may hold at once. Checked against the user's *effective* set (active direct roles + every active ancestor) after assign, user-role sync, role update / re-parent / restore, and provisioning. The kit ships `Store Manager` ↔ `Store Staff`; reference system roles (they cannot be renamed via the API). `POST /admin/roles/:id/validate-assignment` dry-runs `current roles ∪ roleIds`.
+2. **ALLOW + DENY** — a direct-permission sync may not list a permission the user holds a live DENY override for.
+
+A DENY override shadowing a permission a role grants is **not** a conflict — that is what DENY overrides are for.
 
 ### Permission Preview
 
 Preview the effect of a role change before applying it:
 
-```ts
-const preview = await this.authorization.roles.previewRoleChange(roleId, newPermissionIds);
-// preview.gained — permissions that would be added
-// preview.lost — permissions that would be removed
-```
+`POST /admin/roles/preview` with `{ userId, roleIds }` dry-runs "replace this user's roles with `roleIds`" (`RoleAssignmentPreviewService`). Both sides use the kernel's model: permissions inherited from active ancestors count, direct ALLOW grants survive the sync (never reported lost), and DENY overrides are subtracted (never reported gained). Response: `currentRoles`, `newRoles`, `roleAdded`, `roleRemoved`, `permissionsGained`, `permissionsLost` (`ACTION:RESOURCE` keys).
 
 ### Role Hierarchy
 
@@ -1461,13 +1454,13 @@ Roles support parent-child hierarchy. A child role inherits all permissions from
 
 ```ts
 // "editor" inherits all permissions from "viewer"
-await this.authorization.roles.create({
+await this.authorization.roles.create(actor, {
   name: "editor",
   parentId: viewerRole.id,
 });
 ```
 
-Circular references are detected via full DFS traversal.
+Circular references are detected by walking every ancestor (deleted and inactive ones included).
 
 ### Policy Registry
 
@@ -1572,7 +1565,7 @@ const result = await this.authorizationHealth.isHealthy("authz");
 | `tokenVersion` in JWT | Forces re-auth after role/permission mutations; prevents stale authorization |
 | Role hierarchy for permissions only | Ancestor roles contribute permissions; role-name checks use direct assignments only |
 | In-memory cache + Redis pub/sub invalidation | Local reads stay sync; deployed instances share invalidation via Redis |
-| Single-tenant vs multi-tenant RLS bypass | `TENANCY_ENABLED` controls whether staff `hasAdminAccess` bypasses RLS — see [ADR 007](./adr/007-tenancy-and-rls-bypass.md) and [Prisma §10](./prisma.md#10-row-level-security) |
+| Single-tenant vs multi-tenant RLS bypass | `TENANCY_ENABLED` controls whether staff `hasAdminAccess` bypasses RLS — see [ADR 007](./adr/007-tenancy-and-rls-bypass.md) and [Prisma §10](./technical/security/database-security.md) |
 | Soft-delete on all RBAC tables | Audit trail + safe rollback; `isDeleted` flag with `deletedAt` timestamp |
 | Explicit junction tables | Composite uniqueness, clear ownership, easier bulk ops, better indexes |
 | Super-admin bypass | Short-circuits all permission checks; logged for audit trail |

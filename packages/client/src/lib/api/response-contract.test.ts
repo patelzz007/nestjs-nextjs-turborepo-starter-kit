@@ -14,9 +14,12 @@ const META = { correlationId: "corr-7", timestamp: 1_790_812_800_000 };
 const ItemSchema = z.object({ id: z.string(), price: z.number() });
 const itemResponse = singleResponse(ItemSchema);
 
-const itemDef = defineQuery({ method: "GET", path: "/items/:id", input: z.object({ id: z.string() }), response: itemResponse }, { queryKey: ({ id }) => ["items", id] });
-const itemListDef = defineQuery({ method: "GET", path: "/items", input: z.undefined(), response: paginatedResponse(ItemSchema) }, { queryKey: () => ["items"] });
-const createDef = defineMutation({ method: "POST", path: "/items", input: z.object({ price: z.number() }), response: itemResponse }, { queryKey: () => ["items", "create"] });
+const itemDef = defineQuery(
+	{ method: "GET", path: "/items/:id", input: z.object({ id: z.string() }), response: itemResponse },
+	{ scope: ({ id }: { readonly id: string }) => ["items", id] },
+);
+const itemListDef = defineQuery({ method: "GET", path: "/items", input: z.undefined(), response: paginatedResponse(ItemSchema) }, { scope: () => ["items"] });
+const createDef = defineMutation({ method: "POST", path: "/items", input: z.object({ price: z.number() }), response: itemResponse });
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -68,7 +71,7 @@ describe("parseResponseContract", () => {
 });
 
 describe("the fetch layer validates every response with its contract", () => {
-	const context = createApiRequestContext(BASE_URL);
+	const context = createApiRequestContext(BASE_URL, "web");
 
 	it("returns the parsed single envelope on a matching body", async () => {
 		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { id: "a", price: 3 }, meta: META })));
@@ -96,7 +99,9 @@ describe("the fetch layer validates every response with its contract", () => {
 		if (!result.ok) {
 			expect(result.status).toBe(201);
 			expect(result.error).toBeInstanceOf(ApiResponseContractError);
-			expect(result.error instanceof ApiResponseContractError ? result.error.issues : []).toEqual([{ path: "data.price", message: expect.any(String) }]);
+			const issues = result.error instanceof ApiResponseContractError ? result.error.issues : [];
+			expect(issues.map((issue) => issue.path)).toEqual(["data.price"]);
+			expect(issues.every((issue) => issue.message.length > 0)).toBe(true);
 		}
 	});
 

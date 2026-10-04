@@ -2,8 +2,7 @@
 
 import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
 import { Button } from "@workspace/ui/components/form/button";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { CircleUserRound, CreditCard, FileText, LogOut, MoveUpRight, Settings, Shield, Sparkles } from "lucide-react";
+import { CircleUserRound, LogOut, Settings, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -15,53 +14,42 @@ import { ROUTES } from "@/lib/routes";
 export interface Profile01Props {
 	readonly user: SidebarUser;
 	readonly onLogout: () => void;
-	readonly subscription?: string;
 }
 
 interface ProfileMenuItem {
 	readonly label: string;
-	readonly href?: string;
-	readonly external?: boolean;
+	readonly href: string;
 	readonly icon: React.ReactNode;
 }
 
 /**
  * Profile dropdown content shown in the topbar: the signed-in user's card
- * (avatar + online status + plan badge) followed by account / settings /
- * terms actions and a logout button. Personal pages (profile, security) live
- * under `/account`; Billing and Settings are platform configuration.
+ * (avatar, name, email) followed by the profile, account-security and settings links
+ * the session may open, and a logout button. Personal pages live under
+ * `/account`; Settings is platform configuration.
  */
-export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profile01Props): React.JSX.Element {
+export function Profile01({ user, onLogout }: Profile01Props): React.JSX.Element {
 	const router = useRouter();
 	const initials = getUserInitials(user.name);
 	const canAccessRoute = useCanAccessRoute();
 
 	// Links go through the route guard's rules: a page the session cannot open is not offered.
 	const allMenuItems: readonly ProfileMenuItem[] = [
-		{ label: "Account", href: ROUTES.account.profile, icon: <CircleUserRound className="size-4" /> },
+		{ label: "Profile", href: ROUTES.account.profile, icon: <CircleUserRound className="size-4" /> },
 		{ label: "Security", href: ROUTES.account.security, icon: <Shield className="size-4" /> },
-		{ label: "Billing", href: ROUTES.settings.billing, icon: <CreditCard className="size-4" /> },
 		{ label: "Settings", href: ROUTES.settings.index, icon: <Settings className="size-4" /> },
-		{ label: "Terms & Policies", external: true, icon: <FileText className="size-4" /> },
 	];
-	const menuItems = allMenuItems.filter((item) => item.href === undefined || canAccessRoute(item.href));
-	const canUpgrade = canAccessRoute(ROUTES.settings.billing);
+	const menuItems = allMenuItems.filter((item) => canAccessRoute(item.href));
 
 	const handleMenuClick = React.useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>): void => {
 			const href = event.currentTarget.dataset.href;
-			if (href === undefined || href.length === 0) {
-				toastMessage.info({ title: "Coming soon", description: "This feature will be available soon." });
-				return;
+			if (href !== undefined) {
+				router.push(href);
 			}
-			router.push(href);
 		},
 		[router],
 	);
-
-	const handleUpgrade = React.useCallback((): void => {
-		router.push(ROUTES.settings.billing);
-	}, [router]);
 
 	const handleLogout = React.useCallback((): void => {
 		onLogout();
@@ -80,34 +68,12 @@ export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profi
 							<Avatar className="h-full w-full">
 								<AvatarFallback className="rounded-full text-base font-semibold">{initials}</AvatarFallback>
 							</Avatar>
-							{/* Online Status Indicator */}
-							<div className="absolute -right-0.5 -bottom-0.5 h-4 w-4 rounded-full bg-emerald-500 shadow-sm ring-2 ring-background" />
 						</div>
 					</div>
 
 					<div className="min-w-0 flex-1 pt-1">
 						<h3 className="truncate text-base font-semibold text-foreground">{user.name}</h3>
 						<p className="truncate text-sm text-muted-foreground">{user.email}</p>
-					</div>
-				</div>
-
-				{/* Subscription Badge */}
-				<div className="mb-4 rounded-xl border border-primary/20 bg-linear-to-r from-primary/10 to-primary/5 p-3">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<div className="rounded-lg bg-primary/10 p-1.5">
-								<Sparkles className="h-3.5 w-3.5 text-primary" />
-							</div>
-							<div>
-								<p className="text-xs font-medium text-muted-foreground">Current Plan</p>
-								<p className="text-sm font-semibold text-foreground">{subscription}</p>
-							</div>
-						</div>
-						{canUpgrade ? (
-							<Button type="button" variant="ghost" size="sm" onClick={handleUpgrade} className="text-xs font-medium text-primary hover:text-primary/80">
-								Upgrade
-							</Button>
-						) : null}
 					</div>
 				</div>
 
@@ -121,14 +87,13 @@ export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profi
 							key={item.label}
 							type="button"
 							variant="nav"
-							data-href={item.href ?? ""}
+							data-href={item.href}
 							onClick={handleMenuClick}
-							className="group h-auto justify-between rounded-lg px-3 py-2.5 transition-all duration-200 hover:translate-x-0.5 hover:bg-accent/50">
+							className="group h-auto justify-start rounded-lg px-3 py-2.5 transition-all duration-200 hover:translate-x-0.5 hover:bg-accent/50">
 							<div className="flex items-center gap-3">
 								<div className="text-muted-foreground transition-colors group-hover:text-foreground">{item.icon}</div>
 								<span className="text-sm font-medium text-foreground">{item.label}</span>
 							</div>
-							{item.external ? <MoveUpRight className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" /> : null}
 						</Button>
 					))}
 

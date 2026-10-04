@@ -28,9 +28,9 @@
 	backdrop-filter: blur(10px);
 }
 
-/* Sidebar search-match highlight — token-driven (sidebar audit #17) so theme
+/* Search-match highlight (sidebar and command palette) — token-driven so theme
    changes never require hunting hardcoded color literals in components. */
-.sidebar-mark {
-	background-color: var(--sidebar-search-mark-bg);
-	color: var(--sidebar-search-mark-fg);
+.search-mark {
+	background-color: var(--search-mark-bg);
+	color: var(--search-mark-fg);
 }

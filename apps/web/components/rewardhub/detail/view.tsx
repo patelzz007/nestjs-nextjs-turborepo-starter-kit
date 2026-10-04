@@ -1,25 +1,25 @@
 "use client";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { AccessGate } from "@/components/auth/access-gate";
 import { RewardClaimFlow } from "@/components/rewardhub/detail/claim-flow";
 import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { RewardResponse } from "@workspace/shared";
-import { getRewardClaimBlockReason, rewardClaimBlockMessage, epochMs } from "@workspace/shared";
+import type { Envelope, RewardResponse } from "@workspace/shared";
+import { getRewardClaimBlockReason, rewardClaimBlockMessage, epochMs, PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import Link from "next/link";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 
 export interface RewardDetailViewProps {
 	readonly rewardId: string;
-	readonly initialReward?: RewardResponse | undefined;
+	readonly initialReward?: Envelope<RewardResponse> | undefined;
 }
 
 /**
@@ -29,12 +29,10 @@ export interface RewardDetailViewProps {
 export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const initialQueryData = React.useMemo(() => (initialReward !== undefined ? successEnvelope(initialReward, stubApiMeta()) : undefined), [initialReward]);
-
 	const rewardQuery = api.rewards.detail.useQuery(
 		{ rewardId },
 		{
-			...initialDataOption(initialQueryData),
+			...initialDataOption(initialReward),
 			refetchInterval: 60_000,
 		},
 	);
@@ -103,7 +101,8 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 					{claimBlockReason === "expired" ? <Badge variant="destructive">Expired</Badge> : null}
 				</div>
 				<p className="mt-4 text-sm text-muted-foreground">
-					<span className="font-medium text-foreground">{reward.quantityRemaining}</span> remaining · Expires {format(new Date(reward.expiryDate), "d MMM yyyy")}
+					<span className="font-medium text-foreground">{reward.quantityRemaining}</span> remaining · Expires{" "}
+					{formatEpochMs(reward.expiryDate, "date", PLATFORM_DISPLAY_REGION)}
 				</p>
 			</WebSurfacePanel>
 

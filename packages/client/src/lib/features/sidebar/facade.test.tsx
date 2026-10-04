@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SidebarStoreProvider, useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery } from "./facade";
 
 const STORAGE_KEY = "test-sidebar-state";
+const PATHNAME = "/rewardhub/wallet";
+const AUTO_EXPANDED: Readonly<Record<string, boolean>> = { rewards: true };
 
 function wrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 	return (
@@ -23,7 +25,12 @@ interface SidebarProbe {
 }
 
 function useSidebarProbe(): SidebarProbe {
-	return { isOpen: useSidebarIsOpen(), expandedItems: useSidebarExpandedItems(), searchQuery: useSidebarSearchQuery(), commands: useSidebarCommands() };
+	return {
+		isOpen: useSidebarIsOpen(),
+		expandedItems: useSidebarExpandedItems(PATHNAME, AUTO_EXPANDED),
+		searchQuery: useSidebarSearchQuery(),
+		commands: useSidebarCommands(),
+	};
 }
 
 beforeEach((): void => {
@@ -41,11 +48,12 @@ describe("sidebar facade", () => {
 
 		act(() => {
 			result.current.commands.toggle();
-			result.current.commands.setItemExpanded("wallet", true);
+			result.current.commands.setItemExpanded(PATHNAME, "wallet", true);
+			result.current.commands.setItemExpanded(PATHNAME, "rewards", false);
 			result.current.commands.setSearchQuery("rew");
 		});
 
-		expect(result.current).toMatchObject({ isOpen: false, expandedItems: { wallet: true }, searchQuery: "rew" });
+		expect(result.current).toMatchObject({ isOpen: false, expandedItems: { rewards: false, wallet: true }, searchQuery: "rew" });
 	});
 
 	it("keeps command identities stable across renders", () => {
@@ -58,15 +66,37 @@ describe("sidebar facade", () => {
 	});
 
 	it("restores saved preferences after mount and saves changes back", () => {
-		window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ isOpen: false, sectionOrder: null, expandedItems: { wallet: true } }));
+		const saved = { isOpen: false, sectionOrder: null, manualExpansion: { pathname: PATHNAME, items: { wallet: true } } };
+		window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, snapshot: saved }));
 
 		const { result } = renderHook(useSidebarProbe, { wrapper });
-		expect(result.current).toMatchObject({ isOpen: false, expandedItems: { wallet: true } });
+		expect(result.current).toMatchObject({ isOpen: false, expandedItems: { rewards: true, wallet: true } });
 
 		act(() => {
 			result.current.commands.open();
 		});
-		expect(window.localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify({ isOpen: true, sectionOrder: null, expandedItems: { wallet: true } }));
+		expect(window.localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify({ schemaVersion: 1, snapshot: { ...saved, isOpen: true } }));
+	});
+
+	it("applies a page's manual choices on that page only — navigation needs no reset", () => {
+		function useNavigatingProbe(pathname: string): { readonly expandedItems: Readonly<Record<string, boolean>>; readonly commands: ReturnType<typeof useSidebarCommands> } {
+			return { expandedItems: useSidebarExpandedItems(pathname, AUTO_EXPANDED), commands: useSidebarCommands() };
+		}
+		const { result, rerender } = renderHook(({ pathname }: { readonly pathname: string }) => useNavigatingProbe(pathname), {
+			wrapper,
+			initialProps: { pathname: PATHNAME },
+		});
+
+		act(() => {
+			result.current.commands.setItemExpanded(PATHNAME, "rewards", false);
+		});
+		expect(result.current.expandedItems).toEqual({ rewards: false });
+
+		rerender({ pathname: "/rewardhub/other" });
+		expect(result.current.expandedItems).toEqual({ rewards: true });
+
+		rerender({ pathname: PATHNAME });
+		expect(result.current.expandedItems).toEqual({ rewards: false });
 	});
 
 	it("gives each provider its own store", () => {

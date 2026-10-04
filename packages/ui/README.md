@@ -180,6 +180,34 @@ Composes `Avatar`; data-agnostic (`name` + optional `src`, nothing domain-specif
 <EntityAvatar name={shop.name} src={shop.logoUrl} alt="" size="lg" />
 ```
 
+## Formatting dates, counts and money (`lib/format/`)
+
+The one sanctioned way to render a timestamp, count or money amount in every app. Never call
+`toLocaleString()`, `toLocaleDateString()` or date-fns `format()` at a call site: they follow the
+runtime's own locale and time zone, which differ between the Node server and the viewer's browser,
+so the server HTML and the first client render disagree (a hydration mismatch) and the same instant
+reads as different days.
+
+Every formatter takes the locale — and, for dates, the IANA time zone — explicitly. Apps pass
+`PLATFORM_DISPLAY_REGION` from `@workspace/shared` (`en-MY`, `Asia/Kuala_Lumpur`: every pilot city
+is in that zone, so it is the stores' wall-clock time), and `ANALYTICS_BUCKET_DISPLAY_REGION` for
+analytics series points, which the API buckets by UTC week.
+
+| Module | Exports |
+|---|---|
+| `lib/format/date-time` | `formatEpochMs(epochMs, "date" \| "dateTime" \| "dayMonth", region)`, `toIsoTimestamp`, `formatRelativeTime(epochMs, nowMs, locale)` |
+| `lib/format/number` | `formatCount(value, locale)` |
+| `lib/format/money` | `formatMinorUnits(minor, currency, locale)`, `formatMinorUnitsCompact`, `minorToMajorUnits`, `minorUnitExponent` — the minor-unit exponent comes from `SALE_CURRENCY_MINOR_UNIT_EXPONENTS` (ISO 4217) in `@workspace/shared`, never from ICU's display precision |
+
+**Relative times** ("5 minutes ago") depend on the current time, which the server and the browser
+never share. Render them with `RelativeTime` (`display/relative-time.tsx`): the server and the
+hydrating client both render the absolute time, and only after mount does it switch to the relative
+wording (refreshed every 30 s; the absolute time stays as the tooltip).
+
+```tsx
+<RelativeTime epochMs={terminal.lastSeenAt} region={PLATFORM_DISPLAY_REGION} />
+```
+
 ## React Hook Form
 
 `react-hook-form` is an **optional peer** — install it in the app that owns the form:
@@ -234,7 +262,7 @@ src/
     navigation/ — sidebar, tabs, pagination, …
     feedback/   — alert, toast, spinner, …
     display/    — table, card, chart, …
-  lib/          — utils, field-variants, field-state, sidebar-labels, sidebar-storage, sidebar-variants
+  lib/          — utils, format (dates, counts, money), field-variants, field-state, sidebar-labels, sidebar-storage, sidebar-variants
   styles/       — tokens, globals
   hooks/
 ```

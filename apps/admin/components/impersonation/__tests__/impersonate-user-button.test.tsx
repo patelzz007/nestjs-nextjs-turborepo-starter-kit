@@ -1,40 +1,64 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
-import { AdminUserDetailSchema, type AdminUserDetail } from "@workspace/shared";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { AdminUserDetailSchema, epochMs, type AdminUserDetail, type ApiResponseMeta, type ImpersonateResponse, type UserResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
 
-interface AuthStub {
-	readonly user: { readonly id: string; readonly isSuperAdmin: boolean } | null;
-	readonly isLoading: boolean;
-	readonly api: {
-		readonly auth: {
-			readonly impersonate: { readonly useMutation: () => { readonly mutateAsync: () => Promise<void>; readonly isPending: boolean } };
-			readonly permissions: { readonly useQuery: () => { readonly data: { readonly data: { readonly isImpersonating: boolean } } } };
-		};
-	};
+const META: ApiResponseMeta = { correlationId: "corr-impersonate", timestamp: epochMs(1_786_300_000_000) };
+
+interface ImpersonateEnvelope {
+	readonly success: true;
+	readonly data: ImpersonateResponse;
+	readonly meta: ApiResponseMeta;
 }
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn<() => AuthStub>() }));
-
-vi.mock("@workspace/client/lib/auth", () => ({
-	useAuth: (): AuthStub => authMock(),
+const mocks = vi.hoisted(() => ({
+	impersonate: vi.fn<(input: { readonly userId: string }) => Promise<ImpersonateEnvelope>>(),
+	login: vi.fn<(profile: UserResponse, answeredBy: ApiResponseMeta) => void>(),
+	routerRefresh: vi.fn<() => void>(),
+	session: { isSuperAdmin: true, isImpersonating: false },
 }));
 
-function stubSession(isSuperAdmin: boolean, isImpersonating = false): void {
-	authMock.mockReturnValue({
-		user: { id: "admin-1", isSuperAdmin },
-		isLoading: false,
-		api: {
-			auth: {
-				impersonate: { useMutation: () => ({ mutateAsync: (): Promise<void> => Promise.resolve(), isPending: false }) },
-				permissions: { useQuery: () => ({ data: { data: { isImpersonating } } }) },
+vi.mock("next/navigation", () => ({ useRouter: (): { readonly refresh: () => void } => ({ refresh: mocks.routerRefresh }) }));
+
+vi.mock("@workspace/client/lib/auth", () => {
+	const mutation =
+		(mutateAsync: (input: { readonly userId: string }) => Promise<ImpersonateEnvelope>) => (): { readonly mutateAsync: typeof mutateAsync; readonly isPending: boolean } => ({
+			mutateAsync,
+			isPending: false,
+		});
+	return {
+		useAuth: (): object => ({
+			user: { id: "admin-1", isSuperAdmin: mocks.session.isSuperAdmin },
+			login: mocks.login,
+			isLoading: false,
+			api: {
+				auth: {
+					impersonate: { useMutation: mutation(mocks.impersonate) },
+					stopImpersonation: {
+						useMutation: (): { readonly mutateAsync: () => Promise<void>; readonly isPending: boolean } => ({
+							mutateAsync: (): Promise<void> => Promise.resolve(),
+							isPending: false,
+						}),
+					},
+					me: { fetchOrThrow: (): Promise<void> => Promise.resolve() },
+					permissions: {
+						useQuery: (): { readonly data: { readonly data: { readonly isImpersonating: boolean } } } => ({
+							data: { data: { isImpersonating: mocks.session.isImpersonating } },
+						}),
+					},
+				},
 			},
-		},
-	});
+		}),
+	};
+});
+
+function stubSession(isSuperAdmin: boolean, isImpersonating = false): void {
+	mocks.session.isSuperAdmin = isSuperAdmin;
+	mocks.session.isImpersonating = isImpersonating;
 }
 
 function targetUser(overrides: { readonly isSuperAdmin?: boolean } = {}): AdminUserDetail {
@@ -96,5 +120,23 @@ describe("ImpersonateUserButton (@SuperAdminOnly)", () => {
 		stubSession(true);
 		renderButton(targetUser({ isSuperAdmin: true }));
 		expect(screen.queryByRole("button", { name: "Impersonate user" })).toBeNull();
+	});
+
+	it("asks for confirmation first, then switches identity through the auth commands (cache cleared) and refreshes the route", async () => {
+		stubSession(true);
+		const target = targetUser();
+		const impersonatedProfile: UserResponse = { ...target, isEmailVerified: true, roles: [] };
+		mocks.impersonate.mockResolvedValue({ success: true, data: { message: "ok", impersonating: true, originalUserId: "admin-1", user: impersonatedProfile }, meta: META });
+		renderButton(target);
+
+		fireEvent.click(screen.getByRole("button", { name: "Impersonate user" }));
+		expect(mocks.impersonate).not.toHaveBeenCalled();
+		fireEvent.click(await screen.findByRole("button", { name: "Impersonate" }));
+
+		await waitFor((): void => {
+			expect(mocks.login).toHaveBeenCalledWith(impersonatedProfile, META);
+		});
+		expect(mocks.impersonate).toHaveBeenCalledWith({ userId: target.id });
+		expect(mocks.routerRefresh).toHaveBeenCalledTimes(1);
 	});
 });

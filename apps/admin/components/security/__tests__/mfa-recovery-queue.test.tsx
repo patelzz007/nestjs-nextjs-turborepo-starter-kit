@@ -56,18 +56,26 @@ afterEach((): void => {
 });
 
 describe("MfaRecoveryQueue URL state", () => {
-	it("opens on pending requests and reviews the first one", () => {
-		render(<MfaRecoveryQueue />);
-
-		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20, filter: { status: { eq: "PENDING" } } }, expect.anything());
-		expect(screen.getByText("Reviewing jane@example.com")).toBeDefined();
-	});
-
-	it("sends no status filter for ?filter[status]=all", () => {
-		window.history.replaceState(null, "", `${PATH}?filter[status]=all`);
+	it("lists every status for a bare URL and reviews nothing until a request is chosen", () => {
 		render(<MfaRecoveryQueue />);
 
 		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.anything());
+		expect(screen.queryByText(/^Reviewing /)).toBeNull();
+	});
+
+	it("filters by the status the URL names", () => {
+		window.history.replaceState(null, "", `${PATH}?filter[status]=PENDING`);
+		render(<MfaRecoveryQueue />);
+
+		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20, filter: { status: { eq: "PENDING" } } }, expect.anything());
+	});
+
+	it("never substitutes another request when ?requestId= is not on this page", () => {
+		window.history.replaceState(null, "", `${PATH}?requestId=3f2a8c3e-7a53-4f5c-9d0a-0d6a6b8f2c99`);
+		render(<MfaRecoveryQueue />);
+
+		expect(screen.queryByText(/^Reviewing /)).toBeNull();
+		expect(screen.getByRole("status").textContent).toContain("The linked request is not in this view");
 	});
 
 	it("reviews the request named by ?requestId=", () => {

@@ -10,6 +10,7 @@ import { resolve } from "node:path";
  * 1. `00-app-helpers.sql`          — session primitives (`app_rls_bypass()`, `app_owns()`, …)
  * 2. `01-acl-location-access.sql`  — tenant/ACL helpers (call the primitives)
  * 3. `prisma/rls.sql`              — role, enable RLS, policies (call both helper layers)
+ *    `90-analytics-consumer.sql`   — the analytics consumer's least-privilege role + policies
  * 4. `99-app-runtime-grants.sql`   — grants over everything created above (must run last)
  *
  * The plan is validated before anything touches the database:
@@ -27,6 +28,8 @@ export const RLS_APPLY_ORDER: readonly string[] = [
 	"prisma/rls/00-app-helpers.sql",
 	"prisma/rls/01-acl-location-access.sql",
 	"prisma/rls.sql",
+	"prisma/rls/40-api-key-principal.sql",
+	"prisma/rls/90-analytics-consumer.sql",
 	"prisma/rls/99-app-runtime-grants.sql",
 ];
 

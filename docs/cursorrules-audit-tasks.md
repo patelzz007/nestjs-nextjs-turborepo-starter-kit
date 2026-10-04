@@ -14,7 +14,7 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 **Related docs**
 
 - [Improvement backlog](./improvement-backlog.md) — numbered backlog (100+ items), historical P0 “done” notes
-- [Prisma & RLS](./prisma.md) — migration workflow, `db:reset`, RLS
+- [Prisma & RLS](./technical/database.md) — migration workflow, `db:reset`, RLS
 - [`.cursorrules`](../.cursorrules) — source of truth for rules
 
 **How to use**

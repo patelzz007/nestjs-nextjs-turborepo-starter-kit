@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream";
+
 import type { DocumentMimeType, StorageObjectLocator } from "@workspace/shared";
 
 export interface StorageUploadInput {
@@ -14,6 +16,8 @@ export interface StorageUploadResult {
 
 export interface StorageSignedUrlInput {
 	readonly locator: StorageObjectLocator;
+	/** File the URL is issued for; providers that sign their own URLs bind the signature to it. */
+	readonly fileId: string;
 	readonly expiresInSeconds: number;
 	readonly disposition?: "inline" | "attachment";
 	readonly fileName?: string;
@@ -46,6 +50,11 @@ export interface StorageHeadObjectResult {
 export interface ObjectStorage {
 	upload(input: StorageUploadInput): Promise<StorageUploadResult>;
 	getObject(locator: StorageObjectLocator): Promise<Buffer | null>;
+	/**
+	 * Streams the object's bytes without buffering the whole object in memory.
+	 * `null` only when the object does not exist; every other provider failure is thrown.
+	 */
+	getObjectStream(locator: StorageObjectLocator): Promise<Readable | null>;
 	deleteObject(locator: StorageObjectLocator): Promise<void>;
 	copyObject(source: StorageObjectLocator, destination: StorageObjectLocator): Promise<StorageUploadResult>;
 	getSignedDownloadUrl(input: StorageSignedUrlInput): Promise<string>;

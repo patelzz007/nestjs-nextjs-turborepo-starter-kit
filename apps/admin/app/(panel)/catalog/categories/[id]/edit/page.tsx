@@ -1,15 +1,16 @@
-interface EditSampleCategoryPageProps {
-	readonly params: Promise<{ id: string }>;
-}
+import { createAdminServerCaller } from "@/lib/admin-server-api";
+import { readCategoryIdParam, type IdRouteParams } from "@/lib/catalog/route-params";
+import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-export default async function EditSampleCategoryPage({ params }: EditSampleCategoryPageProps): Promise<React.JSX.Element> {
-	const { id } = await params;
-	// PATCH /sample-category/:id requires SAMPLE_CATEGORY.UPDATE. Access is enforced by the
-	// route guard (lib/navigation/route-authorization.ts), so the page does not repeat it.
-	return (
-		<div className="space-y-4">
-			<h1 className="text-2xl font-semibold">Edit SampleCategory</h1>
-			<p className="text-muted-foreground">Editing resource {id}</p>
-		</div>
-	);
+import { EditCategoryView } from "../../category-editor";
+
+export const dynamic = "force-dynamic";
+
+/** `/catalog/categories/[id]/edit` — edit a category (UPDATE SAMPLE_CATEGORY, enforced by the route guard and the API). */
+export default async function EditCategoryPage(props: IdRouteParams): Promise<React.JSX.Element> {
+	const id = await readCategoryIdParam(props);
+	const server = createAdminServerCaller();
+	const result = await prefetch({ page: "/catalog/categories/[id]/edit", resource: "category" }, () => server.sampleCategory.detail.query({ id }));
+
+	return <EditCategoryView id={id} initialCategory={resolvePrefetchedData(result)} />;
 }

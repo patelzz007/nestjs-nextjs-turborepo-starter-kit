@@ -7,6 +7,7 @@ import { BaseRepository } from "../../../platform/persistence/base.repository";
 import type { ListOrder } from "../../../platform/persistence/list-query/list-order";
 import type { EmptyMutationInput } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { REFRESH_SUPERSEDED_GRACE_MS } from "../constants/refresh-token-rotation.constants";
 
 export interface RefreshTokenSession {
 	readonly id: string;
@@ -24,7 +25,7 @@ function toCreateInput(_input: EmptyMutationInput): Prisma.RefreshTokenCreateInp
 	throw new Error("RefreshTokenRepository.create is not supported");
 }
 
-function toUpdateInput(_input: EmptyMutationInput): Prisma.RefreshTokenUpdateInput {
+function toUpdateInput(_input: EmptyMutationInput): Prisma.RefreshTokenUpdateManyMutationInput {
 	throw new Error("RefreshTokenRepository.update via ports is not supported");
 }
 
@@ -40,13 +41,25 @@ const RefreshTokenRepositoryPorts = {
 	buildListOrder: (): ListOrder<Prisma.RefreshTokenOrderByWithRelationInput> => ({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], isDefault: true }),
 	andWhere: (left: Prisma.RefreshTokenWhereInput, right: Prisma.RefreshTokenWhereInput): Prisma.RefreshTokenWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
-	buildUpdateWhere: (id: string): Prisma.RefreshTokenWhereUniqueInput => ({ id }),
-	stampUpdate: (data: Prisma.RefreshTokenUpdateInput): Prisma.RefreshTokenUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.RefreshTokenUpdateInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.RefreshTokenUpdateInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
+	buildLiveWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
+	buildUniqueWhere: (id: string): Prisma.RefreshTokenWhereUniqueInput => ({ id }),
+	buildUpdateWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
+	stampUpdate: (data: Prisma.RefreshTokenUpdateManyMutationInput): Prisma.RefreshTokenUpdateManyMutationInput => ({ ...data, updatedAt: nowEpochMs() }),
+	stampSoftDelete: (): Prisma.RefreshTokenUpdateManyMutationInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
+	stampRestore: (): Prisma.RefreshTokenUpdateManyMutationInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
 };
 
-export type RotateTokenResult = "rotated" | "superseded" | "missing";
+/**
+ * Outcome of {@link RefreshTokenRepository.rotateTokenIfHashMatches}:
+ * - `rotated` — this call rotated the token.
+ * - `superseded` — a concurrent request rotated it first and the presented
+ *   token is the IMMEDIATE predecessor of the new one, within
+ *   {@link REFRESH_SUPERSEDED_GRACE_MS} (a benign race).
+ * - `reused` — the token moved on, and the presented token is not its immediate
+ *   predecessor inside the grace window: treat as token theft.
+ * - `missing` — the session is gone (revoked, expired, or deleted).
+ */
+export type RotateTokenResult = "rotated" | "superseded" | "reused" | "missing";
 
 @Injectable()
 export class RefreshTokenRepository extends BaseRepository<
@@ -58,11 +71,11 @@ export class RefreshTokenRepository extends BaseRepository<
 	Prisma.RefreshTokenWhereInput,
 	Prisma.RefreshTokenOrderByWithRelationInput,
 	Prisma.RefreshTokenCreateInput,
-	Prisma.RefreshTokenUpdateInput,
+	Prisma.RefreshTokenUpdateManyMutationInput,
 	Prisma.RefreshTokenWhereUniqueInput
 > {
 	public constructor(prisma: PrismaService) {
-		super(prisma, RefreshTokenRepositoryPorts, prisma.refreshToken, { softDelete: true, concurrency: false });
+		super(prisma, RefreshTokenRepositoryPorts, (db: Prisma.TransactionClient) => db.refreshToken, { softDelete: true });
 	}
 
 	public async findByIdIncludingDeleted(id: string): Promise<RefreshToken | null> {
@@ -95,25 +108,9 @@ export class RefreshTokenRepository extends BaseRepository<
 		}));
 	}
 
-	public async rotateToken(
-		id: string,
-		data: { readonly token: string; readonly deviceInfo: string | null; readonly ipAddress: string | null; readonly expiresAt: EpochMs },
-	): Promise<void> {
-		await this.prisma.refreshToken.update({
-			where: { id },
-			data: {
-				token: data.token,
-				deviceInfo: data.deviceInfo,
-				ipAddress: data.ipAddress,
-				expiresAt: data.expiresAt,
-				updatedAt: nowEpochMs(),
-			},
-		});
-	}
-
 	/**
-	 * Atomically rotate a refresh token only when the stored hash still matches.
-	 * Returns `superseded` when another request already rotated the token recently.
+	 * Atomically rotate a refresh token only when the stored hash still matches
+	 * (compare-and-set). See {@link RotateTokenResult} for the outcomes.
 	 * `onRotated` (the caller's outbox event) runs inside the same transaction,
 	 * only when this call performed the rotation.
 	 */
@@ -154,12 +151,14 @@ export class RefreshTokenRepository extends BaseRepository<
 				return "missing";
 			}
 
-			const supersededGraceMs = 30_000;
-			if (current.updatedAt >= now - supersededGraceMs && current.token !== expectedTokenHash) {
-				return "superseded";
+			if (current.token === expectedTokenHash) {
+				// Same hash, but the conditional update did not match: the token expired.
+				return "missing";
 			}
 
-			return "missing";
+			const isImmediatePredecessor: boolean = current.previousTokenHash === expectedTokenHash;
+			const isWithinGrace: boolean = current.updatedAt >= now - REFRESH_SUPERSEDED_GRACE_MS;
+			return isImmediatePredecessor && isWithinGrace ? "superseded" : "reused";
 		});
 	}
 
@@ -175,15 +174,24 @@ export class RefreshTokenRepository extends BaseRepository<
 		});
 	}
 
-	/** Soft-delete one refresh token; `withinTransaction` (the caller's outbox event) commits with it. */
-	public async revokeById(id: string, withinTransaction: (tx: Prisma.TransactionClient) => Promise<void>): Promise<void> {
+	/**
+	 * Soft-delete one LIVE refresh token owned by `userId`. Returns `true` only
+	 * when this call revoked it; an unknown, foreign, or already-revoked token
+	 * returns `false` and `withinTransaction` (the caller's outbox event) does
+	 * not run. When it does run, it commits atomically with the revocation.
+	 */
+	public async revokeLiveToken(id: string, userId: string, withinTransaction: (tx: Prisma.TransactionClient) => Promise<void>): Promise<boolean> {
 		const now: number = nowEpochMs();
-		await this.prisma.$transaction(async (tx): Promise<void> => {
-			await tx.refreshToken.update({
-				where: { id },
+		return this.prisma.$transaction(async (tx): Promise<boolean> => {
+			const revoked = await tx.refreshToken.updateMany({
+				where: { id, userId, isDeleted: false },
 				data: { isDeleted: true, deletedAt: now, updatedAt: now },
 			});
+			if (revoked.count !== 1) {
+				return false;
+			}
 			await withinTransaction(tx);
+			return true;
 		});
 	}
 }

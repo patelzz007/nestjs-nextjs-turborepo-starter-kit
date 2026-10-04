@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Readable } from "node:stream";
 
 import type { StorageObjectLocator } from "@workspace/shared";
 import { applicationDefault, getApps, initializeApp, type App } from "firebase-admin/app";
@@ -14,7 +15,13 @@ import type {
 	StorageUploadInput,
 	StorageUploadResult,
 } from "../../domain/object-storage.port";
-import type { PublicAssetPublicationInput, PublicAssetPublicationResult, PublicDelivery } from "../../domain/public-delivery.port";
+import type {
+	PublicAssetPublicationInput,
+	PublicAssetPublicationResult,
+	PublicAssetWithdrawalInput,
+	PublicAssetWithdrawalResult,
+	PublicDelivery,
+} from "../../domain/public-delivery.port";
 
 interface GcsObjectMetadata {
 	readonly size?: string | number;
@@ -26,6 +33,8 @@ interface GcsBucketFile {
 	save(data: Buffer, options: { contentType: string; metadata: { metadata: Record<string, string> } }): Promise<void>;
 	getMetadata(): Promise<[GcsObjectMetadata]>;
 	download(): Promise<[Buffer]>;
+	exists(): Promise<[boolean]>;
+	createReadStream(): Readable;
 	delete(options: { ignoreNotFound: boolean }): Promise<void>;
 	copyTo(destination: StorageObjectLocator): Promise<GcsBucketFile>;
 	getSignedUrl(config: {
@@ -35,7 +44,17 @@ interface GcsBucketFile {
 		responseDisposition?: string;
 		extensionHeaders?: Record<string, string>;
 	}): Promise<[string]>;
-	setMetadata(metadata: { metadata?: Record<string, string>; contentType?: string; contentDisposition?: string }): Promise<void>;
+	/** A `null` custom-metadata value removes that key. */
+	setMetadata(metadata: { metadata?: Record<string, string | null>; contentType?: string; contentDisposition?: string }): Promise<void>;
+}
+
+const HTTP_NOT_FOUND = 404;
+/** Custom metadata key whose token makes an object readable through the Firebase download URL. */
+const FIREBASE_DOWNLOAD_TOKENS_KEY = "firebaseStorageDownloadTokens";
+
+/** Google Cloud Storage reports a missing object as an ApiError with HTTP code 404. */
+function isMissingObjectError(error: Error): boolean {
+	return "code" in error && error.code === HTTP_NOT_FOUND;
 }
 
 export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelivery {
@@ -74,9 +93,21 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 		try {
 			const [buffer] = await this.bucketFile(locator).download();
 			return buffer;
-		} catch {
+		} catch (error) {
+			if (error instanceof Error && isMissingObjectError(error)) {
+				return null;
+			}
+			throw error;
+		}
+	}
+
+	public async getObjectStream(locator: StorageObjectLocator): Promise<Readable | null> {
+		const file = this.bucketFile(locator);
+		const [exists] = await file.exists();
+		if (!exists) {
 			return null;
 		}
+		return file.createReadStream();
 	}
 
 	public async deleteObject(locator: StorageObjectLocator): Promise<void> {
@@ -130,8 +161,11 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 				checksumSha256Hex: null,
 				revision: revisionFromMetadata(metadata),
 			};
-		} catch {
-			return null;
+		} catch (error) {
+			if (error instanceof Error && isMissingObjectError(error)) {
+				return null;
+			}
+			throw error;
 		}
 	}
 
@@ -140,7 +174,7 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 		const file = this.bucketFile(input.locator);
 		await file.setMetadata({
 			metadata: {
-				firebaseStorageDownloadTokens: downloadToken,
+				[FIREBASE_DOWNLOAD_TOKENS_KEY]: downloadToken,
 			},
 			contentType: input.mimeType,
 			contentDisposition: `inline; filename="${input.fileName.replaceAll('"', "_")}"`,
@@ -151,6 +185,18 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 			publicUrl: `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${downloadToken}`,
 			revision: input.locator.revision ?? null,
 		};
+	}
+
+	/** Revokes the download token, so the published Firebase URL stops working at once (no CDN cache to purge). */
+	public async unpublishAsset(input: PublicAssetWithdrawalInput): Promise<PublicAssetWithdrawalResult> {
+		try {
+			await this.bucketFile(input.locator).setMetadata({ metadata: { [FIREBASE_DOWNLOAD_TOKENS_KEY]: null } });
+		} catch (error) {
+			if (!(error instanceof Error && isMissingObjectError(error))) {
+				throw error;
+			}
+		}
+		return { cachedObjectKeys: [] };
 	}
 
 	private bucketFile(locator: StorageObjectLocator): GcsBucketFile {
@@ -169,6 +215,8 @@ function createBucketFileAdapter(app: App, locator: StorageObjectLocator): GcsBu
 			return [metadata];
 		},
 		download: (): Promise<[Buffer]> => nativeFile.download(),
+		exists: (): Promise<[boolean]> => nativeFile.exists(),
+		createReadStream: (): Readable => nativeFile.createReadStream(),
 		delete: async (options): Promise<void> => {
 			await nativeFile.delete(options);
 		},

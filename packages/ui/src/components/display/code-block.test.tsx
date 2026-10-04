@@ -547,7 +547,11 @@ describe("Selection", () => {
 	it("navigates with the keyboard and toggles in place", (): void => {
 		const onSelectedLinesChange = vi.fn<(lines: number[]) => void>();
 		const { container } = render(<CodeBlock labels={LABELS} code={FIVE_LINES} selectable onSelectedLinesChange={onSelectedLinesChange} />);
-		const region = viewport(container);
+		// The listbox (not the scroll region) is focusable and owns the active option.
+		const region = screen.getByRole("listbox");
+		expect(region.getAttribute("tabindex")).toBe("0");
+		expect(viewport(container).hasAttribute("tabindex")).toBe(false);
+		expect(viewport(container).hasAttribute("aria-activedescendant")).toBe(false);
 
 		fireEvent.keyDown(region, { key: "ArrowDown" });
 		expect(region.getAttribute("aria-activedescendant")).toBe(row(container, 1).id);

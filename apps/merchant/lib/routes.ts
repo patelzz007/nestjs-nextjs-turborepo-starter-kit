@@ -17,6 +17,7 @@
  */
 
 import { APP_LINKS } from "@workspace/shared";
+import { isPathWithin } from "@workspace/ui/lib/core/path-match";
 
 /** An absolute, app-relative path (always starts with `/`). */
 export type AppPath = `/${string}`;
@@ -140,13 +141,8 @@ export const APP_STATIC_ROUTES: readonly AppPath[] = [
 	ROUTES.auth.resetPassword,
 ];
 
-/** Segment-aware prefix match: `/settings` matches `/settings` and `/settings/team`, never `/settings-old`. */
-export function isPathWithin(pathname: string, prefix: string): boolean {
-	if (prefix === "/") {
-		return pathname === "/";
-	}
-	return pathname === prefix || pathname.startsWith(`${prefix}/`);
-}
+/** Segment-aware prefix test, shared by every app (`isPathWithin(pathname, prefix)`). */
+export { isPathWithin };
 
 /** Path portion of a URL-ish string (drops `?query` and `#hash`). */
 export function stripQueryAndHash(href: string): string {

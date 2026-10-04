@@ -32,6 +32,19 @@ const TEAM_INVITE_INCLUDE = {
 	},
 } satisfies Prisma.OrganizationInvitationInclude;
 
+const ONBOARDING_INVITE_INCLUDE = {
+	organization: {
+		select: {
+			id: true,
+			slug: true,
+			displayName: true,
+			merchantProfile: { select: { city: true, kybStatus: true } },
+		},
+	},
+} satisfies Prisma.OrganizationInvitationInclude;
+
+export type OnboardingInviteRow = Prisma.OrganizationInvitationGetPayload<{ include: typeof ONBOARDING_INVITE_INCLUDE }>;
+
 export type TeamInviteRow = Prisma.OrganizationInvitationGetPayload<{ include: typeof TEAM_INVITE_INCLUDE }>;
 
 @Injectable()
@@ -98,32 +111,10 @@ export class OrganizationInviteRepository {
 		});
 	}
 
-	public async findByTokenHash(
-		tokenHash: string,
-		statuses: readonly OrganizationInvitationStatus[] = ["PENDING"],
-	): Promise<
-		| (OrganizationInvitation & {
-				organization: {
-					id: string;
-					slug: string;
-					displayName: string;
-					merchantProfile: { city: string } | null;
-				} | null;
-		  })
-		| null
-	> {
+	public async findByTokenHash(tokenHash: string, statuses: readonly OrganizationInvitationStatus[] = ["PENDING"]): Promise<OnboardingInviteRow | null> {
 		return this.prisma.organizationInvitation.findFirst({
 			where: { tokenHash, status: { in: [...statuses] }, kind: "PLATFORM_ONBOARDING" },
-			include: {
-				organization: {
-					select: {
-						id: true,
-						slug: true,
-						displayName: true,
-						merchantProfile: { select: { city: true } },
-					},
-				},
-			},
+			include: ONBOARDING_INVITE_INCLUDE,
 		});
 	}
 
@@ -169,9 +160,20 @@ export class OrganizationInviteRepository {
 		});
 	}
 
-	public async markAcceptedInTx(tx: DbTx, inviteId: string, userId: string, acceptedAt: number): Promise<void> {
-		await tx.organizationInvitation.update({
-			where: { id: inviteId },
+	/**
+	 * Compare-and-set PENDING → ACCEPTED for a live merchant onboarding invite
+	 * (still PENDING, unexpired). Runs first inside the onboarding transaction:
+	 * the row lock serializes concurrent completions, so exactly one wins and a
+	 * replayed or expired token returns `false`.
+	 */
+	public async claimPendingOnboardingInviteInTx(tx: DbTx, inviteId: string, userId: string, acceptedAt: number): Promise<boolean> {
+		const result = await tx.organizationInvitation.updateMany({
+			where: {
+				id: inviteId,
+				kind: "PLATFORM_ONBOARDING",
+				status: "PENDING",
+				expiresAt: { gt: BigInt(acceptedAt) },
+			},
 			data: {
 				status: "ACCEPTED",
 				acceptedByUserId: userId,
@@ -179,15 +181,83 @@ export class OrganizationInviteRepository {
 				updatedAt: BigInt(acceptedAt),
 			},
 		});
+		return result.count === 1;
 	}
 
-	public async markRevokedInTx(tx: DbTx, inviteId: string, revokedAt: number): Promise<void> {
-		await tx.organizationInvitation.update({
-			where: { id: inviteId },
+	/**
+	 * An accepted onboarding invite whose single-use KYB document window is
+	 * still open: accepted at or after `acceptedSince` and not yet consumed by
+	 * a document submission. The window is enforced here, in the query.
+	 */
+	public async findOpenDocumentsWindowInvite(tokenHash: string, acceptedSince: number): Promise<OnboardingInviteRow | null> {
+		return this.prisma.organizationInvitation.findFirst({
+			where: {
+				tokenHash,
+				kind: "PLATFORM_ONBOARDING",
+				status: "ACCEPTED",
+				acceptedByUserId: { not: null },
+				acceptedAt: { gte: BigInt(acceptedSince) },
+				documentsSubmittedAt: null,
+			},
+			include: ONBOARDING_INVITE_INCLUDE,
+		});
+	}
+
+	/** Consumes the document window exactly once (compare-and-set); `false` when it was already used or has closed. */
+	public async consumeDocumentsWindowInTx(tx: DbTx, inviteId: string, acceptedSince: number, consumedAt: number): Promise<boolean> {
+		const result = await tx.organizationInvitation.updateMany({
+			where: {
+				id: inviteId,
+				kind: "PLATFORM_ONBOARDING",
+				status: "ACCEPTED",
+				acceptedAt: { gte: BigInt(acceptedSince) },
+				documentsSubmittedAt: null,
+			},
+			data: { documentsSubmittedAt: BigInt(consumedAt), updatedAt: BigInt(consumedAt) },
+		});
+		return result.count === 1;
+	}
+
+	/**
+	 * Compare-and-set PENDING → ACCEPTED for a live team invite: the row must
+	 * still be PENDING, unexpired, and its organization not deleted. Returns
+	 * whether THIS call won — a double accept, an accept after revoke and an
+	 * accept after expiry all return `false`.
+	 */
+	public async acceptPendingTeamInviteInTx(tx: DbTx, inviteId: string, userId: string, acceptedAt: number): Promise<boolean> {
+		const result = await tx.organizationInvitation.updateMany({
+			where: {
+				id: inviteId,
+				kind: "TEAM_MEMBER",
+				status: "PENDING",
+				expiresAt: { gt: BigInt(acceptedAt) },
+				organization: { is: { isDeleted: false } },
+			},
 			data: {
-				status: "REVOKED",
-				updatedAt: BigInt(revokedAt),
+				status: "ACCEPTED",
+				acceptedByUserId: userId,
+				acceptedAt: BigInt(acceptedAt),
+				updatedAt: BigInt(acceptedAt),
 			},
 		});
+		return result.count === 1;
+	}
+
+	/** Compare-and-set PENDING → REVOKED for a team invite of `organizationId`; `false` when it is no longer pending. */
+	public async revokePendingTeamInviteInTx(tx: DbTx, organizationId: string, inviteId: string, revokedAt: number): Promise<boolean> {
+		const result = await tx.organizationInvitation.updateMany({
+			where: { id: inviteId, organizationId, kind: "TEAM_MEMBER", status: "PENDING" },
+			data: { status: "REVOKED", updatedAt: BigInt(revokedAt) },
+		});
+		return result.count === 1;
+	}
+
+	/** Compare-and-set PENDING → EXPIRED for a team invite whose expiry has passed; `false` when another request changed it first. */
+	public async expirePendingTeamInviteInTx(tx: DbTx, inviteId: string, now: number): Promise<boolean> {
+		const result = await tx.organizationInvitation.updateMany({
+			where: { id: inviteId, kind: "TEAM_MEMBER", status: "PENDING", expiresAt: { lte: BigInt(now) } },
+			data: { status: "EXPIRED", updatedAt: BigInt(now) },
+		});
+		return result.count === 1;
 	}
 }

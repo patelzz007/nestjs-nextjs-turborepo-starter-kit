@@ -1,46 +1,49 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
-import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+/** The transaction delegate an organization audit row is written through (the caller's transaction). */
+export type OrganizationAuditTransaction = Pick<Prisma.TransactionClient, "organizationAuditLog">;
 
-export interface OrganizationAuditInput {
+/** Client-safe scalar metadata stored with an audit row. */
+export type OrganizationAuditMetadata = Readonly<Record<string, string | number | boolean | null>>;
+
+/**
+ * One organization audit row. Actor, organization and the policy version the
+ * decision ran under are REQUIRED — there is no "system" / 0 fallback; a caller
+ * that cannot name a real actor and policy version cannot write an audit row.
+ */
+export interface OrganizationAuditEntry {
 	readonly organizationId: string;
-	readonly actorUserId: string | null;
+	readonly actorUserId: string;
+	/** Active tenant Cedar policy version the action was authorized under. */
+	readonly policyVersion: number;
 	readonly action: string;
 	readonly resourceType: string;
-	readonly resourceId?: string | undefined;
-	readonly decision?: string | undefined;
-	readonly policyVersion?: number | undefined;
-	readonly correlationId?: string | undefined;
-	readonly metadata?: Record<string, string | number | boolean | null> | undefined;
+	readonly resourceId: string;
+	readonly decision?: string;
+	readonly correlationId?: string;
+	readonly metadata?: OrganizationAuditMetadata;
 }
 
 @Injectable()
 export class OrganizationAuditService {
-	public constructor(private readonly tenantTx: TenantTransactionService) {}
-
-	public async record(input: OrganizationAuditInput): Promise<void> {
-		await this.tenantTx.withTenantTransaction(
-			{
-				userId: input.actorUserId ?? "system",
-				organizationId: input.organizationId,
-				purpose: "audit.append",
-				policyVersion: input.policyVersion ?? 0,
+	/**
+	 * Append an audit row INSIDE the caller's transaction, so the row commits or
+	 * rolls back together with the state change it describes.
+	 */
+	public async recordInTx(tx: OrganizationAuditTransaction, entry: OrganizationAuditEntry): Promise<void> {
+		await tx.organizationAuditLog.create({
+			data: {
+				organizationId: entry.organizationId,
+				actorUserId: entry.actorUserId,
+				action: entry.action,
+				resourceType: entry.resourceType,
+				resourceId: entry.resourceId,
+				decision: entry.decision ?? null,
+				policyVersion: entry.policyVersion,
+				correlationId: entry.correlationId ?? null,
+				...(entry.metadata === undefined ? {} : { metadata: { ...entry.metadata } }),
 			},
-			async (tx) => {
-				await tx.organizationAuditLog.create({
-					data: {
-						organizationId: input.organizationId,
-						actorUserId: input.actorUserId,
-						action: input.action,
-						resourceType: input.resourceType,
-						resourceId: input.resourceId ?? null,
-						decision: input.decision ?? null,
-						policyVersion: input.policyVersion ?? null,
-						correlationId: input.correlationId ?? null,
-						...(input.metadata === undefined ? {} : { metadata: input.metadata }),
-					},
-				});
-			},
-		);
+		});
 	}
 }

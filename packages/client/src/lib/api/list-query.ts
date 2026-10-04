@@ -1,5 +1,5 @@
 // ============================================
-// lib/api/list-query.ts - table state → list query (docs/list-queries.md)
+// lib/api/list-query.ts - table state → list query (docs/technical/api/list-queries.md)
 // ============================================
 // Server-side tables keep TanStack Table state (sorting, page, column-filter
 // selections) and must turn it into the list grammar the API accepts. These

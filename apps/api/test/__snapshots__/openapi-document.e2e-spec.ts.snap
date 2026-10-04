@@ -8,6 +8,7 @@ exports[`OpenAPI document (e2e) > POST /api/v1/auth/login documents email + pass
       "description": "User email address",
       "example": "admin@example.com",
       "format": "email",
+      "maxLength": 100,
       "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
       "type": "string",
     },
@@ -40,6 +41,8 @@ exports[`OpenAPI document (e2e) > POST /api/v1/product documents the create body
       "type": "string",
     },
     "compareAtPrice": {
+      "maximum": 999999999999.99,
+      "minimum": 0,
       "nullable": true,
       "type": "number",
     },
@@ -48,6 +51,8 @@ exports[`OpenAPI document (e2e) > POST /api/v1/product documents the create body
       "type": "string",
     },
     "imageUrl": {
+      "format": "uri",
+      "maxLength": 2048,
       "nullable": true,
       "type": "string",
     },
@@ -61,6 +66,8 @@ exports[`OpenAPI document (e2e) > POST /api/v1/product documents the create body
       "type": "string",
     },
     "price": {
+      "maximum": 999999999999.99,
+      "minimum": 0,
       "type": "number",
     },
     "shortDescription": {
@@ -68,19 +75,25 @@ exports[`OpenAPI document (e2e) > POST /api/v1/product documents the create body
       "type": "string",
     },
     "sku": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
       "type": "string",
     },
     "slug": {
+      "maxLength": 200,
+      "minLength": 1,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "type": "string",
     },
     "stockQuantity": {
       "maximum": 9007199254740991,
-      "minimum": -9007199254740991,
+      "minimum": 0,
       "type": "integer",
     },
     "weightGrams": {
       "maximum": 9007199254740991,
-      "minimum": -9007199254740991,
+      "minimum": 0,
       "nullable": true,
       "type": "integer",
     },

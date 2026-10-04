@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { parse as parseDotenv } from "dotenv";
 import { describe, expect, it } from "vitest";
 
-import { TEST_API_SECRETS } from "../../test/support/test-api-env";
+import { TEST_API_DATA_KEYS, TEST_API_SECRETS } from "../../test/support/test-api-env";
 import { parseApiConfig } from "./api-config";
 import { ApiEnvInputSchema } from "./api-config.schema";
 
@@ -31,14 +31,21 @@ describe("apps/api/.env.example", () => {
 
 	it("ships every secret empty", () => {
 		const active: Record<string, string> = parseDotenv(exampleText);
-		for (const key of [...Object.keys(TEST_API_SECRETS), "TENANT_ENCRYPTION_MASTER_KEY", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "OBSERVE_APP_KEY", "OBSERVE_APP_SECRET"]) {
+		for (const key of [
+			...Object.keys(TEST_API_SECRETS),
+			...Object.keys(TEST_API_DATA_KEYS),
+			"RESEND_API_KEY",
+			"RESEND_WEBHOOK_SECRET",
+			"OBSERVE_APP_KEY",
+			"OBSERVE_APP_SECRET",
+		]) {
 			expect(active[key] ?? "", key).toBe("");
 		}
 	});
 
 	it("boots once the secrets are filled in (pnpm secrets:generate)", () => {
 		const active: Record<string, string> = parseDotenv(exampleText);
-		const withSecrets = { ...active, ...TEST_API_SECRETS, TENANT_ENCRYPTION_MASTER_KEY: Buffer.alloc(32, 5).toString("base64") };
+		const withSecrets = { ...active, ...TEST_API_SECRETS, ...TEST_API_DATA_KEYS };
 
 		expect(parseApiConfig(withSecrets).runtime.nodeEnv).toBe("development");
 	});

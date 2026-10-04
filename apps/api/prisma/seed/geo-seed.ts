@@ -2,8 +2,13 @@
 // seed/geo-seed.ts - Geographic data seeder
 // ============================================
 // Fetches regions, subregions, countries, states, and cities from the
-// dr5hn/countries-states-cities-database GitHub repo and inserts them
-// into PostgreSQL via Prisma.
+// dr5hn/countries-states-cities-database GitHub repo and CONVERGES the geo
+// tables to it: a row is matched on its natural key (name within its parent;
+// countries by ISO2) and only missing rows are inserted. Nothing is ever
+// deleted — geo reference data is soft-deleted only (DELETE is withheld from
+// app_runtime, and other tables reference geo rows), so re-running the seed
+// on an already-seeded database is a no-op, and rows a SuperAdmin
+// soft-deleted (or created) through the API are left exactly as they are.
 //
 // Source: https://github.com/dr5hn/countries-states-cities-database
 //   - regions.json                 → flat list
@@ -78,97 +83,119 @@ function toJson(val: GeoJsonValue | undefined): Prisma.NullableJsonNullValueInpu
 	return val;
 }
 
+// ── Natural keys (what makes two rows "the same" reference row) ───────────
+
+const regionKey = (name: string): string => name;
+const childKey = (parentId: number, name: string): string => `${String(parentId)}:${name}`;
+const countryKey = (iso2: string | null, name: string): string => (iso2 === null || iso2.length === 0 ? `name:${name}` : `iso2:${iso2}`);
+/** Cities can share a name within a state; their coordinates tell them apart. */
+const cityKey = (stateId: number, name: string, latitude: number, longitude: number): string => `${String(stateId)}:${name}:${String(latitude)}:${String(longitude)}`;
+
+/** Rows per INSERT statement. */
+const GEO_SEED_CHUNK_SIZE = 1_000;
+
+/**
+ * Insert the rows whose natural key is not present yet (chunked), and record
+ * the new keys so duplicates inside the dataset are inserted once. Returns how
+ * many rows were inserted.
+ */
+async function insertMissing<TRow>(
+	rows: readonly TRow[],
+	existingKeys: Set<string>,
+	keyOf: (row: TRow) => string,
+	insert: (chunk: TRow[]) => Promise<{ readonly count: number }>,
+): Promise<number> {
+	const missing: TRow[] = [];
+	for (const row of rows) {
+		const key: string = keyOf(row);
+		if (!existingKeys.has(key)) {
+			existingKeys.add(key);
+			missing.push(row);
+		}
+	}
+	let inserted = 0;
+	for (let start = 0; start < missing.length; start += GEO_SEED_CHUNK_SIZE) {
+		inserted += (await insert(missing.slice(start, start + GEO_SEED_CHUNK_SIZE))).count;
+	}
+	return inserted;
+}
+
+/** Upstream numeric id → our id, resolved through the natural key. */
+function mapUpstreamIds(rows: readonly GeoRow[], keyOf: (row: GeoRow) => string | null, idByKey: ReadonlyMap<string, number>): Map<number, number> {
+	const mapped = new Map<number, number>();
+	for (const row of rows) {
+		const upstreamId: number | null = num(row.id);
+		const key: string | null = keyOf(row);
+		const id: number | undefined = key === null ? undefined : idByKey.get(key);
+		if (upstreamId !== null && id !== undefined) {
+			mapped.set(upstreamId, id);
+		}
+	}
+	return mapped;
+}
+
 // ── Main seed ──────────────────────────────────────────────────────────────
 
 export async function seedGeo(): Promise<void> {
-	seedLog("Geo seeding started...");
-
-	// ── Cleanup (geo tables are not cleaned in the main seed's volatile wipe)
-	await prisma.city.deleteMany();
-	await prisma.state.deleteMany();
-	await prisma.country.deleteMany();
-	await prisma.subregion.deleteMany();
-	await prisma.region.deleteMany();
+	seedLog("Geo seeding started (converging to the upstream dataset; no deletes)...");
 
 	// ── Regions ────────────────────────────────────────────────────────
 	const regionRows = await fetchData("regions");
-	await prisma.region.createMany({
-		data: regionRows.map((row) => ({
-			name: str(row.name) ?? "",
-			translations: toJson(row.translations),
-			wikiDataId: str(row.wikiDataId),
-		})),
-		skipDuplicates: true,
+	const regionInputs: Prisma.RegionCreateManyInput[] = regionRows.flatMap((row): Prisma.RegionCreateManyInput[] => {
+		const name: string | null = str(row.name);
+		return name === null ? [] : [{ name, translations: toJson(row.translations), wikiDataId: str(row.wikiDataId) }];
 	});
-
-	// DB id → name
-	const allRegions = await prisma.region.findMany();
-	const dbRegionByName = new Map(allRegions.map((r) => [r.name, r.id]));
-
-	// API region_id → DB id (regions.json has numeric `id`, subregions/countries reference it)
-	const apiRegionById = new Map<number, number>();
-	for (const row of regionRows) {
-		const apiId = num(row.id);
-		const name = str(row.name);
-		if (apiId !== null && name !== null) {
-			const dbId = dbRegionByName.get(name);
-			if (dbId !== undefined) apiRegionById.set(apiId, dbId);
-		}
-	}
-	seedLog(`Seeded ${String(allRegions.length)} regions`);
+	const existingRegions = await prisma.region.findMany({ select: { id: true, name: true } });
+	const regionsInserted: number = await insertMissing(
+		regionInputs,
+		new Set(existingRegions.map((r) => regionKey(r.name))),
+		(r) => regionKey(r.name),
+		async (chunk) => prisma.region.createMany({ data: chunk }),
+	);
+	const regionIdByKey = new Map((await prisma.region.findMany({ select: { id: true, name: true } })).map((r): [string, number] => [regionKey(r.name), r.id]));
+	const apiRegionById = mapUpstreamIds(regionRows, (row) => str(row.name), regionIdByKey);
+	seedLog(`Regions: ${String(regionIdByKey.size)} (${String(regionsInserted)} inserted)`);
 
 	// ── Subregions ─────────────────────────────────────────────────────
 	const subregionRows = await fetchData("subregions");
-
-	// API subregion_id → DB id (subregions.json has numeric `id`, countries reference it)
-	const apiSubregionById = new Map<number, number>();
-	for (const row of subregionRows) {
-		const apiId = num(row.id);
-		const name = str(row.name);
-		if (apiId !== null && name !== null) {
-			// Will be resolved after insert
-			apiSubregionById.set(apiId, -1); // placeholder
-		}
-	}
-
-	await prisma.subregion.createMany({
-		data: subregionRows
-			.map((row) => {
-				const apiRegionId = num(row.region_id);
-				const regionId = apiRegionId !== null ? apiRegionById.get(apiRegionId) : undefined;
-				if (!regionId) return null;
-				return {
-					name: str(row.name) ?? "",
-					translations: toJson(row.translations),
-					wikiDataId: str(row.wikiDataId),
-					regionId,
-				};
-			})
-			.filter((r): r is NonNullable<typeof r> => r !== null),
-		skipDuplicates: true,
+	const subregionInputs: Prisma.SubregionCreateManyInput[] = subregionRows.flatMap((row): Prisma.SubregionCreateManyInput[] => {
+		const upstreamRegionId: number | null = num(row.region_id);
+		const regionId: number | undefined = upstreamRegionId === null ? undefined : apiRegionById.get(upstreamRegionId);
+		const name: string | null = str(row.name);
+		return regionId === undefined || name === null ? [] : [{ name, regionId, translations: toJson(row.translations), wikiDataId: str(row.wikiDataId) }];
 	});
-
-	// Resolve API subregion_id → DB id after insert
-	const allSubregions = await prisma.subregion.findMany();
-	const dbSubregionByName = new Map(allSubregions.map((sr) => [sr.name, sr.id]));
-	for (const row of subregionRows) {
-		const apiId = num(row.id);
-		const name = str(row.name);
-		if (apiId !== null && name !== null) {
-			const dbId = dbSubregionByName.get(name);
-			if (dbId !== undefined) apiSubregionById.set(apiId, dbId);
-		}
-	}
-	seedLog(`Seeded ${String(allSubregions.length)} subregions`);
+	const existingSubregions = await prisma.subregion.findMany({ select: { id: true, name: true, regionId: true } });
+	const subregionsInserted: number = await insertMissing(
+		subregionInputs,
+		new Set(existingSubregions.map((r) => childKey(r.regionId, r.name))),
+		(r) => childKey(r.regionId, r.name),
+		async (chunk) => prisma.subregion.createMany({ data: chunk }),
+	);
+	const subregionIdByKey = new Map(
+		(await prisma.subregion.findMany({ select: { id: true, name: true, regionId: true } })).map((r): [string, number] => [childKey(r.regionId, r.name), r.id]),
+	);
+	const apiSubregionById = mapUpstreamIds(
+		subregionRows,
+		(row) => {
+			const upstreamRegionId: number | null = num(row.region_id);
+			const regionId: number | undefined = upstreamRegionId === null ? undefined : apiRegionById.get(upstreamRegionId);
+			const name: string | null = str(row.name);
+			return regionId === undefined || name === null ? null : childKey(regionId, name);
+		},
+		subregionIdByKey,
+	);
+	seedLog(`Subregions: ${String(subregionIdByKey.size)} (${String(subregionsInserted)} inserted)`);
 
 	// ── Countries ──────────────────────────────────────────────────────
 	const countryRows = await fetchData("countries");
-	await prisma.country.createMany({
-		data: countryRows.map((row) => {
-			const apiRegionId = num(row.region_id);
-			const apiSubregionId = num(row.subregion_id);
-			return {
-				name: str(row.name) ?? "",
+	const countryInputs: Prisma.CountryCreateManyInput[] = countryRows.flatMap((row): Prisma.CountryCreateManyInput[] => {
+		const name: string | null = str(row.name);
+		if (name === null) return [];
+		const upstreamRegionId: number | null = num(row.region_id);
+		const upstreamSubregionId: number | null = num(row.subregion_id);
+		return [
+			{
+				name,
 				iso3: str(row.iso3),
 				iso2: str(row.iso2),
 				numericCode: str(row.numeric_code),
@@ -191,89 +218,99 @@ export async function seedGeo(): Promise<void> {
 				timezones: toJson(row.timezones),
 				translations: toJson(row.translations),
 				wikiDataId: str(row.wikiDataId),
-				regionId: apiRegionId !== null ? (apiRegionById.get(apiRegionId) ?? null) : null,
-				subregionId: apiSubregionId !== null ? (apiSubregionById.get(apiSubregionId) ?? null) : null,
-			};
-		}),
-		skipDuplicates: true,
+				regionId: upstreamRegionId === null ? null : (apiRegionById.get(upstreamRegionId) ?? null),
+				subregionId: upstreamSubregionId === null ? null : (apiSubregionById.get(upstreamSubregionId) ?? null),
+			},
+		];
 	});
-
-	const allCountries = await prisma.country.findMany();
-	const countryByIso2 = new Map(allCountries.map((c) => [c.iso2 ?? "", c.id]));
-	seedLog(`Seeded ${String(allCountries.length)} countries`);
+	const existingCountries = await prisma.country.findMany({ select: { id: true, name: true, iso2: true } });
+	const countriesInserted: number = await insertMissing(
+		countryInputs,
+		new Set(existingCountries.map((c) => countryKey(c.iso2, c.name))),
+		(c) => countryKey(c.iso2 ?? null, c.name),
+		async (chunk) => prisma.country.createMany({ data: chunk }),
+	);
+	const allCountries = await prisma.country.findMany({ select: { id: true, iso2: true } });
+	const countryIdByIso2 = new Map(allCountries.flatMap((c): [string, number][] => (c.iso2 === null ? [] : [[c.iso2, c.id]])));
+	seedLog(`Countries: ${String(allCountries.length)} (${String(countriesInserted)} inserted)`);
 
 	// ── States ─────────────────────────────────────────────────────────
 	const stateRows = await fetchData("states");
-	await prisma.state.createMany({
-		data: stateRows
-			.map((row) => {
-				const countryCode = str(row.country_code) ?? "";
-				const countryId = countryByIso2.get(countryCode);
-				if (!countryId) return null;
-				return {
-					name: str(row.name) ?? "",
-					countryCode,
-					fipsCode: str(row.fips_code),
-					iso2: str(row.iso2),
-					iso3166_2: str(row.iso3166_2),
-					type: str(row.type),
-					level: num(row.level),
-					parentId: num(row.parent_id),
-					native: str(row.native),
-					latitude: num(row.latitude),
-					longitude: num(row.longitude),
-					timezone: str(row.timezone),
-					translations: toJson(row.translations),
-					wikiDataId: str(row.wikiDataId),
-					countryId,
-				};
-			})
-			.filter((r): r is NonNullable<typeof r> => r !== null),
-		skipDuplicates: true,
+	const stateInputs: Prisma.StateCreateManyInput[] = stateRows.flatMap((row): Prisma.StateCreateManyInput[] => {
+		const countryCode: string = str(row.country_code) ?? "";
+		const countryId: number | undefined = countryIdByIso2.get(countryCode);
+		const name: string | null = str(row.name);
+		if (countryId === undefined || name === null) return [];
+		return [
+			{
+				name,
+				countryCode,
+				fipsCode: str(row.fips_code),
+				iso2: str(row.iso2),
+				iso3166_2: str(row.iso3166_2),
+				type: str(row.type),
+				level: num(row.level),
+				parentId: num(row.parent_id),
+				native: str(row.native),
+				latitude: num(row.latitude),
+				longitude: num(row.longitude),
+				timezone: str(row.timezone),
+				translations: toJson(row.translations),
+				wikiDataId: str(row.wikiDataId),
+				countryId,
+			},
+		];
 	});
-
-	const allStates = await prisma.state.findMany();
-	seedLog(`Seeded ${String(allStates.length)} states`);
+	const existingStates = await prisma.state.findMany({ select: { id: true, name: true, countryId: true } });
+	const statesInserted: number = await insertMissing(
+		stateInputs,
+		new Set(existingStates.map((s) => childKey(s.countryId, s.name))),
+		(s) => childKey(s.countryId, s.name),
+		async (chunk) => prisma.state.createMany({ data: chunk }),
+	);
+	const stateIdByKey = new Map(
+		(await prisma.state.findMany({ select: { id: true, name: true, countryId: true } })).map((s): [string, number] => [childKey(s.countryId, s.name), s.id]),
+	);
+	seedLog(`States: ${String(stateIdByKey.size)} (${String(statesInserted)} inserted)`);
 
 	// ── Cities (from countries+states+cities.json — nested) ────────────
 	const nestedRows = await fetchData("countries%2Bstates%2Bcities");
-	let cityCount = 0;
-
-	for (const country of nestedRows) {
-		const countryId = countryByIso2.get(str(country.iso2) ?? "");
-		if (!countryId) continue;
-
-		const stateList = rowList(country.states);
-		if (stateList === undefined) continue;
-
-		for (const state of stateList) {
-			// Match state by name + countryId
-			const stateName = str(state.name) ?? "";
-			const matchedState = allStates.find((s) => s.name === stateName && s.countryId === countryId);
-			if (!matchedState) continue;
-
-			const cityList = rowList(state.cities);
-			if (cityList === undefined || cityList.length === 0) continue;
-
-			await prisma.city.createMany({
-				data: cityList.map((city) => ({
-					name: str(city.name) ?? "",
-					stateCode: str(state.iso2) ?? "",
-					countryCode: str(country.iso2) ?? "",
-					latitude: num(city.latitude) ?? 0,
-					longitude: num(city.longitude) ?? 0,
-					native: str(city.native),
-					timezone: str(city.timezone),
-					wikiDataId: str(city.wikiDataId),
-					stateId: matchedState.id,
-					countryId,
-				})),
-				skipDuplicates: true,
+	const cityInputs: Prisma.CityCreateManyInput[] = nestedRows.flatMap((country): Prisma.CityCreateManyInput[] => {
+		const countryIso2: string = str(country.iso2) ?? "";
+		const countryId: number | undefined = countryIdByIso2.get(countryIso2);
+		if (countryId === undefined) return [];
+		return (rowList(country.states) ?? []).flatMap((state): Prisma.CityCreateManyInput[] => {
+			const stateId: number | undefined = stateIdByKey.get(childKey(countryId, str(state.name) ?? ""));
+			if (stateId === undefined) return [];
+			return (rowList(state.cities) ?? []).flatMap((city): Prisma.CityCreateManyInput[] => {
+				const name: string | null = str(city.name);
+				return name === null
+					? []
+					: [
+							{
+								name,
+								stateCode: str(state.iso2) ?? "",
+								countryCode: countryIso2,
+								latitude: num(city.latitude) ?? 0,
+								longitude: num(city.longitude) ?? 0,
+								native: str(city.native),
+								timezone: str(city.timezone),
+								wikiDataId: str(city.wikiDataId),
+								stateId,
+								countryId,
+							},
+						];
 			});
-			cityCount += cityList.length;
-		}
-	}
-	seedLog(`Seeded ${String(cityCount)} cities`);
+		});
+	});
+	const existingCities = await prisma.city.findMany({ select: { name: true, stateId: true, latitude: true, longitude: true } });
+	const citiesInserted: number = await insertMissing(
+		cityInputs,
+		new Set(existingCities.map((c) => cityKey(c.stateId, c.name, c.latitude.toNumber(), c.longitude.toNumber()))),
+		(c) => cityKey(c.stateId, c.name, Number(c.latitude), Number(c.longitude)),
+		async (chunk) => prisma.city.createMany({ data: chunk }),
+	);
+	seedLog(`Cities: ${String(existingCities.length + citiesInserted)} (${String(citiesInserted)} inserted)`);
 
 	seedLog("Geo seeding completed!");
 }

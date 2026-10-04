@@ -1,14 +1,13 @@
-import type { Prisma } from "@prisma/client";
-import { PolicyConditionsSchema, type PolicyConditions } from "@workspace/shared";
-
-import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
-
 import { prisma } from "./client";
+import { buildKernelSeedRows } from "./authorization-kernel-rows";
 
 /**
- * Seed Authorization Kernel components:
- * - Resource ACLs (ALLOW/DENY rules)
- * - Policy Definitions (ABAC policies with Zod-validated DSL)
+ * Seed Authorization Kernel components (rows built by `buildKernelSeedRows`):
+ * - Resource ACLs: global, role- and user-bound, a tenant/location/resource-bound
+ *   conditional DENY, and one retired (soft-deleted) entry
+ * - Policy Definitions: ABAC policies with Zod-validated DSL, a published tenant
+ *   policy, the revision it superseded, and one soft-deleted policy
+ * Every row has a deterministic id and is upserted, so re-seeding never duplicates.
  */
 export async function seedAuthorizationKernel(
 	users: readonly { id: string; email: string }[],
@@ -23,114 +22,17 @@ export async function seedAuthorizationKernel(
 		throw new Error("Required users or roles not found for kernel seed");
 	}
 
-	const acls: Prisma.ResourceAclCreateManyInput[] = [
-		{
-			subjectType: "USER",
-			subjectId: adminUser.id,
-			action: "DELETE",
-			resourceType: "USER",
-			resourceId: null,
-			scope: "GLOBAL",
-			effect: "ALLOW",
-			reason: "Admin explicitly allowed to delete users globally",
-			assignedBy: adminUser.id,
-			expiresAt: null,
-		},
-		{
-			subjectType: "USER",
-			subjectId: managerUser.id,
-			action: "CREATE",
-			resourceType: "ORGANIZATION",
-			resourceId: null,
-			scope: "ORGANIZATION",
-			effect: "DENY",
-			reason: "Manager explicitly denied from creating organizations",
-			assignedBy: adminUser.id,
-			expiresAt: null,
-		},
-		{
-			subjectType: "ROLE",
-			subjectId: userRole.id,
-			action: "READ",
-			resourceType: "LOCATION",
-			resourceId: null,
-			scope: "LOCATION",
-			effect: "ALLOW",
-			reason: "User role can read locations they belong to",
-			assignedBy: adminUser.id,
-			expiresAt: null,
-		},
-		{
-			subjectType: "ROLE",
-			subjectId: managerRole.id,
-			action: "UPDATE",
-			resourceType: "PAYMENT",
-			resourceId: null,
-			scope: "ORGANIZATION",
-			effect: "DENY",
-			reason: "Manager role explicitly denied from updating payments",
-			assignedBy: adminUser.id,
-			expiresAt: BigInt(Date.now() + 365 * 24 * 60 * 60 * 1000),
-		},
-	];
+	const { acls, policies } = buildKernelSeedRows(
+		{ adminUserId: adminUser.id, managerUserId: managerUser.id, userRoleId: userRole.id, managerRoleId: managerRole.id },
+		Date.now(),
+	);
 
-	await prisma.resourceAcl.createMany({ data: acls, skipDuplicates: true });
+	for (const { id, ...data } of acls) {
+		await prisma.resourceAcl.upsert({ where: { id }, create: { id, ...data }, update: data });
+	}
+	for (const { id, ...data } of policies) {
+		await prisma.policyDefinition.upsert({ where: { id }, create: { id, ...data }, update: data });
+	}
 
-	// Conditions use the Zod-validated policy DSL (`PolicyConditionsSchema`) —
-	// never executable code. The policy engine fails closed on malformed rules.
-	const completedOrderLock: PolicyConditions = {
-		condition: { field: "order.status", operator: "equals", value: "COMPLETED" },
-	};
-	const refundLimit: PolicyConditions = {
-		all: [
-			{ condition: { field: "payment.status", operator: "equals", value: "PAID" } },
-			{ condition: { field: "payment.amount", operator: "less_than_or_equals", value: 500 } },
-		],
-	};
-	const sameOrganizationInventory: PolicyConditions = {
-		condition: { field: "inventory.organizationId", operator: "equals", valueRef: "$user.organizationId" },
-	};
-
-	const policies: Prisma.PolicyDefinitionCreateManyInput[] = [
-		{
-			name: "completed-orders-are-immutable",
-			description: "Completed orders cannot be updated or deleted",
-			scope: "GLOBAL",
-			actions: ["UPDATE", "DELETE"],
-			resources: ["ORDER"],
-			effect: "DENY",
-			conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(completedOrderLock)),
-			isActive: true,
-			version: 1,
-		},
-		{
-			name: "payment-update-limit",
-			description: "Payments may only be updated while PAID and at most 500",
-			scope: "ORGANIZATION",
-			actions: ["UPDATE"],
-			resources: ["PAYMENT"],
-			effect: "ALLOW",
-			conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(refundLimit)),
-			isActive: true,
-			version: 1,
-		},
-		{
-			name: "inventory-same-organization",
-			description: "Inventory changes are limited to the caller's verified organization",
-			scope: "ORGANIZATION",
-			actions: ["UPDATE", "DELETE"],
-			resources: ["INVENTORY"],
-			effect: "ALLOW",
-			conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(sameOrganizationInventory)),
-			isActive: true,
-			version: 1,
-		},
-	];
-
-	await prisma.policyDefinition.createMany({ data: policies, skipDuplicates: true });
-
-	return {
-		acls: acls.length,
-		policies: policies.length,
-	};
+	return { acls: acls.length, policies: policies.length };
 }

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { EpochMsSchema } from "./common";
-
 /**
  * Standard message response schema.
  * Used by all endpoints that return a simple success/status message.
@@ -21,12 +19,10 @@ export type MessageResponse = z.output<typeof MessageResponseSchema>;
  * Legacy FLAT error body (`{ message, error?, statusCode?, … }`).
  *
  * LEGACY: the API no longer returns this shape — every failure is the
- * `ApiErrorResponseSchema` envelope (`./api-error.ts`, docs/error-model.md).
+ * `ApiErrorResponseSchema` envelope (`./api-error.ts`, docs/technical/api/errors.md).
  * Kept only so existing imports compile; do not use it for new code.
  *
- * `error` holds the canonical auth error code (see `AuthErrorCodeSchema`); the
- * lockout fields are present only on `ACCOUNT_LOCKED` responses so the client
- * can render a live countdown instead of a static message.
+ * `error` holds the canonical auth error code (see `AuthErrorCodeSchema`).
  */
 export const ErrorResponseSchema = z
 	.object({
@@ -41,16 +37,6 @@ export const ErrorResponseSchema = z
 		statusCode: z.number().int().optional().meta({
 			description: "HTTP status code",
 			example: 401,
-		}),
-		/** Epoch ms when the account lockout expires (ACCOUNT_LOCKED only). */
-		lockedUntil: EpochMsSchema.optional().meta({
-			description: "Epoch ms when the account lockout expires",
-			example: 1786300000000,
-		}),
-		/** Whole seconds until the lockout expires (ACCOUNT_LOCKED only). */
-		remainingSeconds: z.number().int().min(0).optional().meta({
-			description: "Whole seconds until the account lockout expires",
-			example: 899,
 		}),
 	})
 	.strict();

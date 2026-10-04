@@ -11,18 +11,21 @@ import {
 
 import { createTestPrisma } from "../../../../test/support/test-service-graph";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { CedarWasmPolicyEngine } from "../../authorization-cedar/engine/cedar-wasm-policy-engine";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
 import { MERCHANT_CAPABILITY_CEDAR_ACTIONS } from "../constants/merchant-capability-cedar-actions";
 import { REWARDHUB_DEFAULT_TENANT_CEDAR } from "../utils/rewardhub-policy-seed.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 import { OrganizationContextService } from "./organization-context.service";
 import { OrganizationRewardAuthService } from "./organization-reward-auth.service";
+import { RequestContextService } from "../../../common/context/request-context";
 
 const mocks = vi.hoisted(() => ({
 	policyFindMany: vi.fn(),
 	auditCreate: vi.fn(),
 	organizationFindUnique: vi.fn(),
 	resolveBySlug: vi.fn(),
+	membershipFindFirst: vi.fn(),
 }));
 
 // The real Cedar evaluator and audit service run on top of this fake transaction client.
@@ -31,7 +34,7 @@ vi.mock("../../../prisma/tenant-transaction.service", () => ({
 		public readonly withSystemOperation = async <T>(_context: object, work: (tx: object) => Promise<T>): Promise<T> =>
 			work({ authorizationPolicyVersion: { findMany: mocks.policyFindMany }, organization: { findUnique: mocks.organizationFindUnique } });
 		public readonly withTenantTransaction = async <T>(_context: object, work: (tx: object) => Promise<T>): Promise<T> =>
-			work({ organizationAuditLog: { create: mocks.auditCreate } });
+			work({ organizationAuditLog: { create: mocks.auditCreate }, organizationMembership: { findFirst: mocks.membershipFindFirst } });
 	},
 }));
 
@@ -48,10 +51,15 @@ const subjectFor = (role: OrganizationMembershipRole): { userId: string; organiz
 });
 
 function service(): OrganizationRewardAuthService {
-	const tenantTx = new TenantTransactionService(createTestPrisma());
-	const cedar = new CedarPolicyEvaluatorService(tenantTx);
-	const audit = new OrganizationAuditService(tenantTx);
+	const tenantTx = new TenantTransactionService(createTestPrisma(), new RequestContextService());
+	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
+	const audit = new OrganizationAuditService();
 	return new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit), cedar, audit);
+}
+
+/** The caller's live membership row as the tenant transaction reads it (scope rows included). */
+function memberWithScopes(locationScopes: readonly { scopeType: "ALL_LOCATIONS" | "SELECTED"; locationId: string | null }[]): void {
+	mocks.membershipFindFirst.mockResolvedValue({ id: "membership-1", organizationId: "org-1", userId: "user-1", role: "OWNER", locationScopes });
 }
 
 function publishTenantPolicy(cedarSource: string): void {
@@ -79,6 +87,7 @@ describe("OrganizationRewardAuthService.requireMembershipCapability", () => {
 		vi.clearAllMocks();
 		publishTenantPolicy(REWARDHUB_DEFAULT_TENANT_CEDAR);
 		mocks.auditCreate.mockResolvedValue({});
+		memberWithScopes([{ scopeType: "ALL_LOCATIONS", locationId: null }]);
 	});
 
 	it.each(ROLE_CAPABILITY_CASES)("%s for %s → allowed: %s (same roles as the pre-migration role checks)", async (capability, role, allowed) => {
@@ -142,6 +151,7 @@ describe("OrganizationRewardAuthService.requireCapabilityForSlug", () => {
 		publishTenantPolicy(REWARDHUB_DEFAULT_TENANT_CEDAR);
 		mocks.auditCreate.mockResolvedValue({});
 		mocks.organizationFindUnique.mockResolvedValue({ displayName: "Brew", lifecycleState: "ACTIVE", merchantProfile: { kybStatus: "APPROVED" } });
+		memberWithScopes([{ scopeType: "ALL_LOCATIONS", locationId: null }]);
 	});
 
 	function resolvedMemberAs(role: OrganizationMembershipRole): void {
@@ -164,5 +174,47 @@ describe("OrganizationRewardAuthService.requireCapabilityForSlug", () => {
 		resolvedMemberAs("ADMIN");
 
 		await expect(service().requireCapabilityForSlug("user-1", "brew", MERCHANT_CAPABILITY.manageVerification)).rejects.toBeInstanceOf(ForbiddenException);
+	});
+});
+
+/** A tenant policy that only permits members who reach at least one store. */
+const STORE_SCOPED_POLICY = 'permit(principal, action, resource) when { principal.locationScope == "ALL_LOCATIONS" || !principal.locationIds.isEmpty() };';
+
+describe("OrganizationRewardAuthService.requireCedarAction — the member's REAL location scope reaches Cedar", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		publishTenantPolicy(STORE_SCOPED_POLICY);
+		mocks.auditCreate.mockResolvedValue({});
+	});
+
+	it("allows an ALL_LOCATIONS member", async () => {
+		memberWithScopes([{ scopeType: "ALL_LOCATIONS", locationId: null }]);
+
+		await expect(service().requireCedarAction("user-1", "org-1", "rewardhub:manage_rewards", "RewardHub", "org-1", "OWNER")).resolves.toBeUndefined();
+	});
+
+	it("allows a SELECTED member with at least one store", async () => {
+		memberWithScopes([{ scopeType: "SELECTED", locationId: "loc-1" }]);
+
+		await expect(service().requireCedarAction("user-1", "org-1", "rewardhub:manage_rewards", "RewardHub", "org-1", "OWNER")).resolves.toBeUndefined();
+	});
+
+	it("denies (fail closed) a membership with NO scope rows — it is not treated as ALL_LOCATIONS", async () => {
+		memberWithScopes([]);
+
+		await expect(service().requireCedarAction("user-1", "org-1", "rewardhub:manage_rewards", "RewardHub", "org-1", "OWNER")).rejects.toMatchObject({
+			response: { error: "ORGANIZATION_ACTION_FORBIDDEN" },
+		});
+		expect(mocks.auditCreate.mock.lastCall).toMatchObject([
+			{ data: { action: "authorize.rewardhub:manage_rewards", decision: "Deny", actorUserId: "user-1", policyVersion: 1 } },
+		]);
+	});
+
+	it("denies and audits when the caller has no live membership", async () => {
+		mocks.membershipFindFirst.mockResolvedValue(null);
+		publishTenantPolicy(REWARDHUB_DEFAULT_TENANT_CEDAR);
+
+		await expect(service().requireCedarAction("user-1", "org-1", "rewardhub:manage_team", "RewardHub", "org-1", "OWNER")).rejects.toBeInstanceOf(ForbiddenException);
+		expect(mocks.auditCreate.mock.lastCall).toMatchObject([{ data: { decision: "Deny", organizationId: "org-1", actorUserId: "user-1" } }]);
 	});
 });

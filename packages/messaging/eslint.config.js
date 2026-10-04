@@ -1,4 +1,5 @@
 import { config as baseConfig } from "@workspace/eslint-config/base";
+import { backendImportBoundaryConfig } from "@workspace/eslint-config/import-boundaries";
 
 /**
  * Messaging package ESLint configuration.
@@ -43,6 +44,11 @@ const config = [
 			],
 		},
 	},
+
+	// ── Import boundaries: Node-only messaging code never imports frontend code ──
+	// (@workspace/client, @workspace/ui, next, react, react-dom) — same block as
+	// apps/api and apps/analytics-consumer (docs/technical/tooling/eslint.md §3.1).
+	backendImportBoundaryConfig,
 ];
 
 export default config;

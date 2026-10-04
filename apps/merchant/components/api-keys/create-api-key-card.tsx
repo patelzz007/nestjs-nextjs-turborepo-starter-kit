@@ -3,12 +3,21 @@
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
+import { NativeSelect, NativeSelectOption } from "@workspace/ui/components/form/native-select";
+import {
+	API_KEY_SCOPE_OPTIONS,
+	ORGANIZATION_WIDE_STORE_CHOICE,
+	type ApiKeyStoreChoices,
+	type ApiKeyStoreOption,
+	type CreateApiKeyField,
+} from "@/lib/api-keys/create-api-key-form";
+import { fieldErrorMessage, formErrorMessage, type FormSubmissionError } from "@/lib/forms/api-field-errors";
 import { MERCHANT_API_KEY_NAME_MAX_LENGTH } from "@workspace/shared";
 import { EyeOff, KeyRound, MapPin, Plus, ShieldOff } from "lucide-react";
 import * as React from "react";
 
 const KEY_FACTS: readonly { readonly icon: React.ReactNode; readonly text: string }[] = [
-	{ icon: <MapPin className="size-3.5" aria-hidden="true" />, text: "Scoped to a store or the whole organization" },
+	{ icon: <MapPin className="size-3.5" aria-hidden="true" />, text: "Limited to the store you choose" },
 	{ icon: <EyeOff className="size-3.5" aria-hidden="true" />, text: "Secret shown once" },
 	{ icon: <ShieldOff className="size-3.5" aria-hidden="true" />, text: "Revocable at any time" },
 ];
@@ -17,14 +26,47 @@ export interface CreateApiKeyCardProps {
 	readonly name: string;
 	readonly onNameChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 	readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
+	/** The select's value: a store id, {@link ORGANIZATION_WIDE_STORE_CHOICE}, or `""` until chosen. */
+	readonly storeChoice: string;
+	readonly onStoreChoiceChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+	/** The stores this member may create a key for (organization-wide only for an all-locations member). */
+	readonly storeChoices: ApiKeyStoreChoices;
+	/** The select's value: one of the shared API key scopes. */
+	readonly scope: string;
+	readonly onScopeChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+	/** Whether the form values pass the shared create schema and the member's store scope. */
+	readonly canSubmit: boolean;
 	readonly isPending: boolean;
-	/** The store the new key will be assigned to; `undefined` = organization-wide. */
-	readonly locationName: string | undefined;
+	/** The last create attempt's failure — on the field it is about, or for the form — shown inline so the input is kept. */
+	readonly submissionError: FormSubmissionError<CreateApiKeyField> | null;
+}
+
+function FieldError({ id, message }: { readonly id: string; readonly message: string | undefined }): React.JSX.Element | null {
+	return message === undefined ? null : (
+		<p id={id} role="alert" className="text-xs text-destructive">
+			{message}
+		</p>
+	);
 }
 
 /** Full-width "create a terminal key" panel. Presentational — the parent owns the mutation. */
-export function CreateApiKeyCard({ name, onNameChange, onSubmit, isPending, locationName }: CreateApiKeyCardProps): React.JSX.Element {
-	const isBlank = name.trim().length === 0;
+export function CreateApiKeyCard({
+	name,
+	onNameChange,
+	onSubmit,
+	storeChoice,
+	onStoreChoiceChange,
+	storeChoices,
+	scope,
+	onScopeChange,
+	canSubmit,
+	isPending,
+	submissionError,
+}: CreateApiKeyCardProps): React.JSX.Element {
+	const hasNoStore = storeChoices.stores.length === 0 && !storeChoices.allowOrganizationWide;
+	const storeError = fieldErrorMessage(submissionError, "store");
+	const formError = formErrorMessage(submissionError);
+	const scopeDescription = API_KEY_SCOPE_OPTIONS.find((option) => option.scope === scope)?.description;
 
 	return (
 		<section aria-labelledby="create-api-key-heading" className="relative overflow-hidden rounded-xl border border-border bg-card shadow-xs">
@@ -52,34 +94,60 @@ export function CreateApiKeyCard({ name, onNameChange, onSubmit, isPending, loca
 					</div>
 				</div>
 
-				<form className="space-y-3 rounded-lg border border-border bg-background/80 p-4" onSubmit={onSubmit}>
-					<Label htmlFor="key-name">Terminal name</Label>
-					<div className="flex flex-col gap-2 sm:flex-row">
-						<Input
-							id="key-name"
-							className="sm:flex-1"
-							value={name}
-							onChange={onNameChange}
-							placeholder="Front counter POS"
-							maxLength={MERCHANT_API_KEY_NAME_MAX_LENGTH}
-							aria-describedby="key-name-hint"
-							required
-						/>
-						<Button type="submit" loading={isPending} disabled={isPending || isBlank}>
-							<Plus className="size-4" aria-hidden="true" />
-							Create API key
-						</Button>
+				<form className="space-y-3 rounded-lg border border-border bg-background/80 p-4" onSubmit={onSubmit} noValidate>
+					<div className="grid gap-2">
+						<Label htmlFor="key-name">Terminal name</Label>
+						<Input id="key-name" value={name} onChange={onNameChange} placeholder="Front counter POS" maxLength={MERCHANT_API_KEY_NAME_MAX_LENGTH} required />
 					</div>
-					<p id="key-name-hint" className="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<MapPin className="size-3.5 shrink-0" aria-hidden="true" />
-						{locationName === undefined ? (
-							"Works at every store in this organization."
-						) : (
-							<span>
-								Assigned to <strong className="font-medium text-foreground">{locationName}</strong>.
-							</span>
-						)}
-					</p>
+					<div className="grid gap-2">
+						<Label htmlFor="key-store">Store</Label>
+						<NativeSelect
+							id="key-store"
+							className="w-full"
+							value={storeChoice}
+							onChange={onStoreChoiceChange}
+							required
+							disabled={hasNoStore}
+							aria-invalid={storeError !== undefined}
+							aria-describedby={storeError === undefined ? "key-store-hint" : "key-store-hint key-store-error"}>
+							<NativeSelectOption value="" disabled>
+								Choose a store
+							</NativeSelectOption>
+							{storeChoices.stores.map((store: ApiKeyStoreOption): React.JSX.Element => (
+								<NativeSelectOption key={store.id} value={store.id}>
+									{store.name}
+								</NativeSelectOption>
+							))}
+							{storeChoices.allowOrganizationWide ? <NativeSelectOption value={ORGANIZATION_WIDE_STORE_CHOICE}>Every store (organization-wide)</NativeSelectOption> : null}
+						</NativeSelect>
+						<p id="key-store-hint" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+							<MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+							{hasNoStore ? "No active store yet — add one under Settings › Locations first." : "The key only works at the store you choose."}
+						</p>
+						<FieldError id="key-store-error" message={storeError} />
+					</div>
+					<div className="grid gap-2">
+						<Label htmlFor="key-scope">Access</Label>
+						<NativeSelect id="key-scope" className="w-full" value={scope} onChange={onScopeChange} aria-describedby="key-scope-hint">
+							{API_KEY_SCOPE_OPTIONS.map((option): React.JSX.Element => (
+								<NativeSelectOption key={option.scope} value={option.scope}>
+									{option.label}
+								</NativeSelectOption>
+							))}
+						</NativeSelect>
+						<p id="key-scope-hint" className="text-xs text-muted-foreground">
+							{scopeDescription}
+						</p>
+					</div>
+					{formError === undefined ? null : (
+						<p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+							{formError}
+						</p>
+					)}
+					<Button type="submit" loading={isPending} disabled={isPending || !canSubmit}>
+						<Plus className="size-4" aria-hidden="true" />
+						Create API key
+					</Button>
 				</form>
 			</div>
 		</section>

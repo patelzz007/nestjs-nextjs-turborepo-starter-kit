@@ -23,9 +23,9 @@ describe("iconSvg", () => {
 
 describe("icon lookups", () => {
 	it("uses mapped icons and falls back for unknown ids", () => {
-		expect(docIcon("prisma")).toBe("database");
+		expect(docIcon("technical/database")).toBe("database");
 		expect(docIcon("not-a-guide")).toBe("fileText");
-		expect(sectionIcon("Roadmaps")).toBe("map");
+		expect(sectionIcon("Decisions")).toBe("archive");
 		expect(sectionIcon("Unknown")).toBe("layoutDashboard");
 	});
 

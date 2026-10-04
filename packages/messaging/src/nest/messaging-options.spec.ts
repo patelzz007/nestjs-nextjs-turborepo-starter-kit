@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_KAFKA_CONNECT_BACKOFF } from "../kafka/kafka-connect-backoff";
+import { KAFKA_PLAINTEXT_SECURITY } from "../kafka/kafka-security";
 import { resolveMessagingOptions, type MessagingModuleOptions } from "./messaging-options";
+
+const DELIVERY_TIMEOUT_MS = 30_000;
 
 const BASE_OPTIONS: MessagingModuleOptions = {
 	clientId: "test-api",
@@ -8,6 +12,8 @@ const BASE_OPTIONS: MessagingModuleOptions = {
 	queueNames: ["email.send", "reports.generate"],
 	redisUrl: "redis://localhost:6379",
 	kafkaBrokers: ["localhost:9092"],
+	kafkaSecurity: KAFKA_PLAINTEXT_SECURITY,
+	kafkaDeliveryTimeoutMs: DELIVERY_TIMEOUT_MS,
 	rabbitmqUrl: "amqp://localhost:5672",
 };
 
@@ -20,6 +26,9 @@ describe("resolveMessagingOptions", () => {
 			bullPrefix: "bull",
 			redisUrl: "redis://localhost:6379",
 			kafkaBrokers: ["localhost:9092"],
+			kafkaSecurity: KAFKA_PLAINTEXT_SECURITY,
+			kafkaDeliveryTimeoutMs: DELIVERY_TIMEOUT_MS,
+			kafkaConnectBackoff: DEFAULT_KAFKA_CONNECT_BACKOFF,
 			rabbitmqUrl: "amqp://localhost:5672",
 			healthQueueName: "email.send",
 		});
@@ -40,6 +49,12 @@ describe("resolveMessagingOptions", () => {
 				process.env.REDIS_URL = previous;
 			}
 		}
+	});
+
+	it("validates an explicit Kafka connect backoff instead of trusting it", () => {
+		const custom = { initialDelayMs: 500, maxDelayMs: 5_000, multiplier: 3, jitterRatio: 0.1 };
+		expect(resolveMessagingOptions({ ...BASE_OPTIONS, kafkaConnectBackoff: custom }).kafkaConnectBackoff).toEqual(custom);
+		expect(() => resolveMessagingOptions({ ...BASE_OPTIONS, kafkaConnectBackoff: { ...custom, maxDelayMs: 100 } })).toThrow();
 	});
 
 	it("honours an explicit bull prefix and health queue", () => {

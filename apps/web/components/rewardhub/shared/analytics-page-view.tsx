@@ -2,9 +2,16 @@
 
 import { SpendingSection } from "@/components/rewardhub/shared/spending-section";
 import { toSpendingSectionState, type SpendingSectionState } from "@/lib/rewards/spending-insights";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { AnalyticsMetric, RewardClaimStatus, UserRewardsAnalyticsResponse } from "@workspace/shared";
+import {
+	ANALYTICS_BUCKET_DISPLAY_REGION,
+	PLATFORM_DISPLAY_REGION,
+	type AnalyticsMetric,
+	type Envelope,
+	type RewardClaimStatus,
+	type UserRewardsAnalyticsResponse,
+} from "@workspace/shared";
 import { AnalyticsChartCard, AnalyticsChartLegendItem } from "@workspace/ui/components/display/analytics-chart-card";
 import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
 import { AnalyticsStatCard, type AnalyticsStatAccent } from "@workspace/ui/components/display/analytics-stat-card";
@@ -12,7 +19,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/display/chart";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import { formatCount } from "@workspace/ui/lib/format/number";
 import { Gift, Share2, Ticket, TrendingUp, type LucideIcon } from "lucide-react";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -74,32 +82,37 @@ const STATUS_LABELS: Record<RewardClaimStatus, string> = {
 	EXPIRED: "Expired",
 };
 
+function formatPlatformCount(value: number): string {
+	return formatCount(value, PLATFORM_DISPLAY_REGION.locale);
+}
+
 function formatMetricValue(metric: AnalyticsMetric, suffix?: string): string {
-	const formatted = metric.value.toLocaleString();
+	const formatted = formatPlatformCount(metric.value);
 	return suffix === undefined ? formatted : `${formatted}${suffix}`;
 }
 
 export interface RewardHubAnalyticsPageViewProps {
-	readonly initialAnalytics?: UserRewardsAnalyticsResponse | undefined;
+	readonly initialAnalytics?: Envelope<UserRewardsAnalyticsResponse> | undefined;
 }
 
 export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const initialQueryData = React.useMemo(() => (initialAnalytics !== undefined ? successEnvelope(initialAnalytics, stubApiMeta()) : undefined), [initialAnalytics]);
-
-	const analyticsQuery = api.claims.analytics.useQuery({}, initialDataOption(initialQueryData));
+	const analyticsQuery = api.claims.analytics.useQuery({}, initialDataOption(initialAnalytics));
 
 	const analytics = analyticsQuery.data?.data;
 	const isLoading = analyticsQuery.isLoading && initialAnalytics === undefined;
 
-	const spendingState = React.useMemo((): SpendingSectionState => toSpendingSectionState(isLoading ? undefined : analytics?.spending), [analytics?.spending, isLoading]);
+	const spendingState = React.useMemo(
+		(): SpendingSectionState => toSpendingSectionState(isLoading ? undefined : analytics?.spending, PLATFORM_DISPLAY_REGION.locale),
+		[analytics?.spending, isLoading],
+	);
 
 	const chartData = React.useMemo(
 		() =>
 			(analytics?.claimsOverTime ?? []).map((point) => ({
 				...point,
-				label: format(new Date(point.date), "MMM d"),
+				label: formatEpochMs(point.date, "dayMonth", ANALYTICS_BUCKET_DISPLAY_REGION),
 			})),
 		[analytics?.claimsOverTime],
 	);
@@ -152,7 +165,7 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 							<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/60" />
 							<XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
 							<YAxis tickLine={false} axisLine={false} width={36} className="text-xs" />
-							<ChartTooltip content={<ChartTooltipContent />} />
+							<ChartTooltip content={<ChartTooltipContent valueFormatter={formatPlatformCount} />} />
 							<Area dataKey="claims" type="monotone" fill="var(--color-claims)" fillOpacity={0.18} stroke="var(--color-claims)" strokeWidth={2} />
 							<Area dataKey="redemptions" type="monotone" fill="var(--color-redemptions)" fillOpacity={0.18} stroke="var(--color-redemptions)" strokeWidth={2} />
 						</AreaChart>
@@ -176,7 +189,7 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 										<div className="flex items-center justify-between text-sm">
 											<span className="font-medium text-foreground">{STATUS_LABELS[row.status]}</span>
 											<span className="text-muted-foreground tabular-nums">
-												{row.count.toLocaleString()}
+												{formatPlatformCount(row.count)}
 												<span className="ms-1.5 text-xs">({String(widthPercent)}%)</span>
 											</span>
 										</div>

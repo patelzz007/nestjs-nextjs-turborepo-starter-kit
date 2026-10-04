@@ -1,4 +1,4 @@
-import type { CapabilitySlug } from "@workspace/shared";
+import type { CapabilitySlug, OrganizationApiKeyScope } from "@workspace/shared";
 
 /** Supported API key providers — extend when adding user/platform keys. */
 export type ApiKeyProvider = "merchant";
@@ -21,6 +21,9 @@ export interface MerchantApiKeyAuthContext {
 	readonly terminal: PairedTerminal | null;
 	/** The organization's "only allow registered terminals" policy (applies to manually created keys). */
 	readonly requireRegisteredTerminals: boolean;
+	/** What the key may call: `POS` keys only the POS redemption routes, `INTEGRATION` keys also the organization API. */
+	readonly scope: OrganizationApiKeyScope;
+	/** Organization capabilities of {@link scope} (see `MERCHANT_API_KEY_SCOPE_CAPABILITIES`). */
 	readonly capabilities: readonly CapabilitySlug[];
 }
 

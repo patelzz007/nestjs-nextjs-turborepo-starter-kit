@@ -33,7 +33,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnModuleDestroy 
 	}
 
 	public async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string): Promise<ThrottlerStorageRecord> {
-		const storageKey = `throttle:${throttlerName}:${key}`;
+		const storageKey: string = this.config.redisNamespace.key(`throttle:${throttlerName}:${key}`);
 
 		if (this.redis !== null) {
 			try {

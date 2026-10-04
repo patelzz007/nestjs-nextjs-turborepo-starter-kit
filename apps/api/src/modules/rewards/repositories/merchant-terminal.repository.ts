@@ -8,8 +8,14 @@ import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistenc
 import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
+import type { MerchantLocationScope } from "../types/merchant-location-scope";
+import { locationIdInFilter } from "../utils/merchant-location-scope.util";
+import { terminalStatusWhere } from "../utils/pos-terminal.util";
 
 export type MerchantTerminalDbClient = Pick<PrismaClient, "organizationTerminal" | "organizationMerchantProfile">;
+
+/** A transaction client that can also take row locks. */
+export type MerchantTerminalLockingClient = MerchantTerminalDbClient & Pick<PrismaClient, "$queryRaw">;
 
 const TERMINAL_INCLUDE = {
 	location: { select: { name: true } },
@@ -20,13 +26,13 @@ export type OrganizationTerminalRow = Prisma.OrganizationTerminalGetPayload<{ in
 
 const PAIRING_INCLUDE = {
 	location: { select: { name: true } },
-	organization: { select: { slug: true, displayName: true } },
+	organization: { select: { slug: true, displayName: true, lifecycleState: true, isDeleted: true } },
 } satisfies Prisma.OrganizationTerminalInclude;
 
 /** A terminal whose pairing code was just consumed — everything the pairing response and the new key need. */
 export type PairingTerminalRow = Prisma.OrganizationTerminalGetPayload<{ include: typeof PAIRING_INCLUDE }>;
 
-// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 const TERMINAL_SORT_COLUMNS: SortColumns<MerchantTerminalListSortField, Prisma.OrganizationTerminalOrderByWithRelationInput> = {
 	createdAt: (direction) => ({ createdAt: direction }),
@@ -39,9 +45,10 @@ const TERMINAL_LIST_KEYSET: ListKeyset<OrganizationTerminalRow, Prisma.Organizat
 	({ at, id }): Prisma.OrganizationTerminalWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
 );
 
-/** The organization's (optionally one store's) live terminals. Both scopes come from the service, never raw input. */
-export function buildTerminalListWhere(organizationId: string, locationId: string | undefined): Prisma.OrganizationTerminalWhereInput {
-	return { AND: [{ organizationId, isDeleted: false }, ...(locationId !== undefined ? [{ locationId }] : [])] };
+/** The organization's live terminals within the caller's stores. Both scopes come from the service, never raw input. */
+export function buildTerminalListWhere(organizationId: string, scope: MerchantLocationScope): Prisma.OrganizationTerminalWhereInput {
+	const locationFilter = locationIdInFilter(scope);
+	return { AND: [{ organizationId, isDeleted: false }, ...(locationFilter !== undefined ? [{ locationId: locationFilter }] : [])] };
 }
 
 export function buildTerminalListOrder(query: MerchantTerminalListQuery): ListOrder<Prisma.OrganizationTerminalOrderByWithRelationInput> {
@@ -49,6 +56,14 @@ export function buildTerminalListOrder(query: MerchantTerminalListQuery): ListOr
 		columns: TERMINAL_SORT_COLUMNS,
 		tieBreaker: (direction) => ({ id: direction }),
 	});
+}
+
+/** Live terminal counts for the status summary; `UNPAIRED` = `total − awaitingPairing − active`. */
+export interface TerminalStatusCounts {
+	readonly total: number;
+	readonly awaitingPairing: number;
+	readonly active: number;
+	readonly storesWithTerminals: number;
 }
 
 export interface CreateTerminalInput {
@@ -59,26 +74,22 @@ export interface CreateTerminalInput {
 	readonly createdByUserId: string;
 	readonly pairingCodeHash: string;
 	readonly pairingCodeExpiresAt: number;
+	readonly pairingCodeIssuedAt: number;
 }
 
 @Injectable()
 export class MerchantTerminalRepository {
 	public constructor(private readonly prisma: PrismaService) {}
 
-	/** Runs `work` in one transaction (the pairing flow: consume code → mint key → bind). */
-	public async transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-		return this.prisma.$transaction(work);
-	}
-
-	/** One page of the organization's live terminals; `locationId` is the AUTHORIZED store scope, or `undefined` for every store. */
+	/** One page of the organization's live terminals within the AUTHORIZED store scope. */
 	public async listByOrgId(
 		organizationId: string,
-		locationId: string | undefined,
+		scope: MerchantLocationScope,
 		query: MerchantTerminalListQuery,
 		db: MerchantTerminalDbClient,
 	): Promise<RepositoryListResult<OrganizationTerminalRow>> {
 		return fetchListPage(query, {
-			where: buildTerminalListWhere(organizationId, locationId),
+			where: buildTerminalListWhere(organizationId, scope),
 			order: buildTerminalListOrder(query),
 			keyset: TERMINAL_LIST_KEYSET,
 			and: (left, right) => ({ AND: [left, right] }),
@@ -87,8 +98,24 @@ export class MerchantTerminalRepository {
 		});
 	}
 
+	/**
+	 * Live terminals within the AUTHORIZED store scope, counted per derived status by the database
+	 * (`terminalStatusWhere`), plus how many stores have at least one live terminal.
+	 */
+	public async countStatusSummary(organizationId: string, scope: MerchantLocationScope, now: number, db: MerchantTerminalDbClient): Promise<TerminalStatusCounts> {
+		const live = buildTerminalListWhere(organizationId, scope);
+		const [total, awaitingPairing, active, stores] = await Promise.all([
+			db.organizationTerminal.count({ where: live }),
+			db.organizationTerminal.count({ where: { AND: [live, terminalStatusWhere("AWAITING_PAIRING", now)] } }),
+			db.organizationTerminal.count({ where: { AND: [live, terminalStatusWhere("ACTIVE", now)] } }),
+			db.organizationTerminal.groupBy({ by: ["locationId"], where: live }),
+		]);
+		return { total, awaitingPairing, active, storesWithTerminals: stores.length };
+	}
+
 	public async terminalIdExists(organizationId: string, terminalId: string, db: MerchantTerminalDbClient): Promise<boolean> {
-		// Soft-deleted rows count too: the (organization, terminal id) unique index covers them.
+		// Soft-deleted rows count too, so a generated id never reuses a retired till's id (its sales keep
+		// pointing at one till). The (organization, terminal id) unique index itself covers live rows only.
 		const existing = await db.organizationTerminal.findFirst({ where: { organizationId, terminalId }, select: { id: true } });
 		return existing !== null;
 	}
@@ -103,6 +130,9 @@ export class MerchantTerminalRepository {
 				createdByUserId: input.createdByUserId,
 				pairingCodeHash: input.pairingCodeHash,
 				pairingCodeExpiresAt: input.pairingCodeExpiresAt,
+				// The registering member issues the first code.
+				pairingCodeIssuedByUserId: input.createdByUserId,
+				pairingCodeIssuedAt: input.pairingCodeIssuedAt,
 			},
 			include: TERMINAL_INCLUDE,
 		});
@@ -112,10 +142,25 @@ export class MerchantTerminalRepository {
 		return db.organizationTerminal.findFirst({ where: { id, organizationId, isDeleted: false }, include: TERMINAL_INCLUDE });
 	}
 
-	/** Issues a fresh code (replacing any live one). A seeded terminal with no creator is claimed by the member issuing the code. */
+	/**
+	 * The live terminal, read after taking its row lock (`SELECT … FOR UPDATE`) for the rest of the
+	 * caller's transaction. A concurrent pairing (which updates the same row) either finished first —
+	 * and the row read here already carries its new key — or waits until this transaction commits and
+	 * then finds the terminal deleted.
+	 */
+	public async findLiveByIdAndOrgForUpdate(id: string, organizationId: string, db: MerchantTerminalLockingClient): Promise<OrganizationTerminalRow | null> {
+		await db.$queryRaw`SELECT id FROM organization_terminals WHERE id = ${id} AND organization_id = ${organizationId} AND is_deleted = false FOR UPDATE`;
+		return this.findLiveByIdAndOrg(id, organizationId, db);
+	}
+
+	/**
+	 * Issues a fresh code (replacing any live one) and records who issued it and when. The terminal's
+	 * creator is immutable and never rewritten here: the issuer is a separate fact (it becomes the
+	 * creator of the API key minted when this code is used).
+	 */
 	public async setPairingCode(
 		id: string,
-		input: { readonly pairingCodeHash: string; readonly pairingCodeExpiresAt: number; readonly issuedByUserId: string; readonly createdByUserId: string | null },
+		input: { readonly pairingCodeHash: string; readonly pairingCodeExpiresAt: number; readonly issuedByUserId: string; readonly issuedAt: number },
 		db: MerchantTerminalDbClient,
 	): Promise<OrganizationTerminalRow> {
 		return db.organizationTerminal.update({
@@ -123,7 +168,8 @@ export class MerchantTerminalRepository {
 			data: {
 				pairingCodeHash: input.pairingCodeHash,
 				pairingCodeExpiresAt: input.pairingCodeExpiresAt,
-				createdByUserId: input.createdByUserId ?? input.issuedByUserId,
+				pairingCodeIssuedByUserId: input.issuedByUserId,
+				pairingCodeIssuedAt: input.issuedAt,
 			},
 			include: TERMINAL_INCLUDE,
 		});
@@ -141,16 +187,26 @@ export class MerchantTerminalRepository {
 	 * concurrent second use of the same code find nothing (`null`), so only one
 	 * till can ever pair with it.
 	 */
-	public async consumePairingCode(pairingCodeHash: string, now: number, db: MerchantTerminalDbClient): Promise<PairingTerminalRow | null> {
-		const terminal = await db.organizationTerminal.findUnique({ where: { pairingCodeHash }, include: PAIRING_INCLUDE });
+	public async consumePairingCode(pairingCodeHashes: readonly string[], now: number, db: MerchantTerminalDbClient): Promise<PairingTerminalRow | null> {
+		const terminal = await db.organizationTerminal.findFirst({ where: { pairingCodeHash: { in: [...pairingCodeHashes] } }, include: PAIRING_INCLUDE });
 		if (terminal === null || terminal.isDeleted || terminal.pairingCodeExpiresAt === null || Number(terminal.pairingCodeExpiresAt) < now) {
 			return null;
 		}
 		const consumed = await db.organizationTerminal.updateMany({
-			where: { id: terminal.id, pairingCodeHash, isDeleted: false },
+			where: { id: terminal.id, pairingCodeHash: terminal.pairingCodeHash, isDeleted: false },
 			data: { pairingCodeHash: null, pairingCodeExpiresAt: null },
 		});
 		return consumed.count === 1 ? terminal : null;
+	}
+
+	/** A live terminal of the organization by the id the till sends (`X-Terminal-Id`). */
+	public async findLiveByTerminalId(organizationId: string, terminalId: string): Promise<{ readonly id: string; readonly locationId: string } | null> {
+		return this.prisma.organizationTerminal.findFirst({ where: { organizationId, terminalId, isDeleted: false }, select: { id: true, locationId: true } });
+	}
+
+	/** Records that a registered till just called the POS API. */
+	public async touchLastSeen(id: string, lastSeenAt: number): Promise<void> {
+		await this.prisma.organizationTerminal.update({ where: { id }, data: { lastSeenAt } });
 	}
 
 	public async bindApiKey(id: string, apiKeyId: string, pairedAt: number, db: MerchantTerminalDbClient): Promise<void> {

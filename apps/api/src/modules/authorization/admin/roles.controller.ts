@@ -9,14 +9,12 @@ import {
 	RbacMessageResponseSchema,
 	RoleAssignmentPreviewSchema,
 	RoleAssignmentValidationResponseSchema,
-	RoleDetailResponseSchema,
 	RoleListResponseSchema,
 	RoleResponseSchema,
 	UuidParamSchema,
 	type RbacMessageResponse,
 	type RoleAssignmentPreview,
 	type RoleAssignmentValidationResponse,
-	type RoleDetailResponse,
 	type RoleListItem,
 	type RoleListResponse,
 	type RoleResponse,
@@ -25,9 +23,9 @@ import { ConflictDetectionService } from "../services/conflict-detection.service
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodBody, ZodParam } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
+import { ResourceNotFoundError } from "../../../platform/persistence/persistence.errors";
 import { Authorize } from "../decorators/authorize.decorator";
 import { CurrentUser, type AuthenticatedUser } from "../decorators/current-user.decorator";
-import { PrivilegeEscalationService } from "../services/privilege-escalation.service";
 import { CreateRoleDto, SetRoleParentDto, UpdateRoleDto, ValidateRoleAssignmentDto, AssignRoleToUserDto, SyncUserRolesDto } from "./dtos/role.dto";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
 import { toRoleResponse } from "./mappers/rbac-response.mappers";
@@ -41,7 +39,6 @@ export class RolesController {
 	public constructor(
 		private readonly authorization: AuthorizationService,
 		private readonly conflictDetection: ConflictDetectionService,
-		private readonly escalation: PrivilegeEscalationService,
 		private readonly assignmentPreview: RoleAssignmentPreviewService,
 	) {}
 
@@ -69,17 +66,11 @@ export class RolesController {
 	@Authorize({ action: "CREATE", resource: "ROLE", description: "Create new role" })
 	@ZodResponse(RoleResponseSchema, { status: HttpStatus.CREATED, description: "Created role" })
 	public async create(@CurrentUser() actor: AuthenticatedUser, @ZodBody(CreateRoleDto.schema) body: CreateRoleDto): Promise<RoleResponse> {
-		if (body.parentId !== undefined) {
-			await this.escalation.assertCanGrantRoles(actor, [body.parentId]);
-		}
-		const role = await this.authorization.roles.create(
-			{
-				name: body.name,
-				description: body.description,
-				parentId: body.parentId,
-			},
-			actor.id,
-		);
+		const role = await this.authorization.roles.create(actor, {
+			name: body.name,
+			description: body.description,
+			parentId: body.parentId,
+		});
 		return toRoleResponse(role);
 	}
 
@@ -95,9 +86,7 @@ export class RolesController {
 	})
 	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "Role assigned to user" })
 	public async assignRoleToUser(@CurrentUser() actor: AuthenticatedUser, @ZodBody(AssignRoleToUserDto.schema) body: AssignRoleToUserDto): Promise<RbacMessageResponse> {
-		this.escalation.assertNotSelf(actor, body.userId);
-		await this.escalation.assertCanGrantRoles(actor, [body.roleId]);
-		await this.authorization.roles.assignToUser(body.userId, body.roleId, actor.id);
+		await this.authorization.roles.assignToUser(actor, body.userId, body.roleId);
 		return { message: "Role assigned to user successfully" };
 	}
 
@@ -106,8 +95,7 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "Role removed from user" })
 	public async removeRoleFromUser(@CurrentUser() actor: AuthenticatedUser, @ZodBody(AssignRoleToUserDto.schema) body: AssignRoleToUserDto): Promise<RbacMessageResponse> {
-		this.escalation.assertNotSelf(actor, body.userId);
-		await this.authorization.roles.removeFromUser(body.userId, body.roleId, actor.id);
+		await this.authorization.roles.removeFromUser(actor, body.userId, body.roleId);
 		return { message: "Role removed from user successfully" };
 	}
 
@@ -116,18 +104,19 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "User roles synced" })
 	public async syncUserRoles(@CurrentUser() actor: AuthenticatedUser, @ZodBody(SyncUserRolesDto.schema) body: SyncUserRolesDto): Promise<RbacMessageResponse> {
-		this.escalation.assertNotSelf(actor, body.userId);
-		await this.escalation.assertCanGrantRoles(actor, body.roleIds);
-		await this.authorization.roles.syncUserRoles(body.userId, body.roleIds, actor.id);
+		await this.authorization.roles.syncUserRoles(actor, body.userId, body.roleIds);
 		return { message: "User roles synced successfully" };
 	}
 
 	@Get(":id")
 	@RequirePermission("READ", "ROLE")
-	@ZodResponse(RoleDetailResponseSchema, { description: "Role detail, or `null` when no role has that id" })
-	public async detail(@ZodParam("id", UuidParamSchema) id: string): Promise<RoleDetailResponse> {
+	@ZodResponse(RoleResponseSchema, { description: "Role detail (404 NOT_FOUND when no live role has that id)" })
+	public async detail(@ZodParam("id", UuidParamSchema) id: string): Promise<RoleResponse> {
 		const role = await this.authorization.roles.findById(id);
-		return role === null ? null : toRoleResponse(role);
+		if (role === null) {
+			throw new ResourceNotFoundError(id);
+		}
+		return toRoleResponse(role);
 	}
 
 	@Patch(":id")
@@ -139,19 +128,11 @@ export class RolesController {
 		@ZodParam("id", UuidParamSchema) id: string,
 		@ZodBody(UpdateRoleDto.schema) body: UpdateRoleDto,
 	): Promise<RoleResponse> {
-		await this.escalation.assertNotHoldingRole(actor, id);
-		if (body.isActive === true) {
-			await this.escalation.assertCanGrantRoles(actor, [id]);
-		}
-		const role = await this.authorization.roles.updateAs(
-			id,
-			{
-				...(body.name !== undefined ? { name: body.name } : {}),
-				...(body.description !== undefined ? { description: body.description } : {}),
-				...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
-			},
-			actor.id,
-		);
+		const role = await this.authorization.roles.update(actor, id, {
+			...(body.name !== undefined ? { name: body.name } : {}),
+			...(body.description !== undefined ? { description: body.description } : {}),
+			...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
+		});
 		return toRoleResponse(role);
 	}
 
@@ -160,7 +141,7 @@ export class RolesController {
 	@RequirePermission("DELETE", "ROLE")
 	@ZodResponse(RbacMessageResponseSchema, { description: "Role deleted" })
 	public async remove(@CurrentUser() actor: AuthenticatedUser, @ZodParam("id", UuidParamSchema) id: string): Promise<RbacMessageResponse> {
-		await this.authorization.roles.remove(id, actor.id);
+		await this.authorization.roles.remove(actor, id);
 		return { message: "Role deleted successfully" };
 	}
 
@@ -172,11 +153,7 @@ export class RolesController {
 		@ZodParam("id", UuidParamSchema) id: string,
 		@ZodBody(SetRoleParentDto.schema) body: SetRoleParentDto,
 	): Promise<RoleResponse> {
-		await this.escalation.assertNotHoldingRole(actor, id);
-		if (body.parentId !== null) {
-			await this.escalation.assertCanGrantRoles(actor, [body.parentId]);
-		}
-		return toRoleResponse(await this.authorization.roles.setParent(id, body.parentId, actor.id));
+		return toRoleResponse(await this.authorization.roles.setParent(actor, id, body.parentId));
 	}
 
 	@Post(":id/permissions")
@@ -187,9 +164,7 @@ export class RolesController {
 		@ZodParam("id", UuidParamSchema) id: string,
 		@ZodBody(SyncRolePermissionsDto.schema) body: SyncRolePermissionsDto,
 	): Promise<RbacMessageResponse> {
-		await this.escalation.assertNotHoldingRole(actor, id);
-		await this.escalation.assertCanGrantPermissions(actor, body.permissionIds);
-		await this.authorization.roles.syncPermissions(id, body.permissionIds, actor.id);
+		await this.authorization.roles.syncPermissions(actor, id, body.permissionIds);
 		return { message: "Role permissions synced successfully" };
 	}
 
@@ -197,8 +172,7 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ZodResponse(RoleResponseSchema, { status: HttpStatus.CREATED, description: "Restored role" })
 	public async restore(@CurrentUser() actor: AuthenticatedUser, @ZodParam("id", UuidParamSchema) id: string): Promise<RoleResponse> {
-		await this.escalation.assertCanGrantRoles(actor, [id]);
-		return toRoleResponse(await this.authorization.roles.restore(id));
+		return toRoleResponse(await this.authorization.roles.restore(actor, id));
 	}
 
 	// ── Conflict detection ────────────────────────────────────────────────
@@ -207,10 +181,11 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ZodResponse(RoleAssignmentValidationResponseSchema, { status: HttpStatus.CREATED, description: "Conflict validation result" })
 	public async validateAssignment(
+		@CurrentUser() actor: AuthenticatedUser,
 		@ZodParam("id", UuidParamSchema) _id: string,
 		@ZodBody(ValidateRoleAssignmentDto.schema) body: ValidateRoleAssignmentDto,
 	): Promise<RoleAssignmentValidationResponse> {
-		await this.conflictDetection.validate(body.userId, body.roleIds);
+		await this.conflictDetection.validateProposedAssignment(actor.id, body.userId, body.roleIds);
 		return { valid: true, message: "No conflicts detected" };
 	}
 
@@ -219,7 +194,7 @@ export class RolesController {
 	@Post("preview")
 	@RequirePermission("READ", "ROLE")
 	@ZodResponse(RoleAssignmentPreviewSchema, { status: HttpStatus.CREATED, description: "Preview of what permissions would change" })
-	public async preview(@ZodBody(ValidateRoleAssignmentDto.schema) body: ValidateRoleAssignmentDto): Promise<RoleAssignmentPreview> {
-		return this.assignmentPreview.preview(body.userId, body.roleIds);
+	public async preview(@CurrentUser() actor: AuthenticatedUser, @ZodBody(ValidateRoleAssignmentDto.schema) body: ValidateRoleAssignmentDto): Promise<RoleAssignmentPreview> {
+		return this.assignmentPreview.preview(actor.id, body.userId, body.roleIds);
 	}
 }

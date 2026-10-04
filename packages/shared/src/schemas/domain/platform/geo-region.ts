@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
+import { JsonValueSchema } from "../../runtime/json";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
 import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
@@ -23,7 +24,7 @@ export type Region = z.output<typeof RegionSchema>;
 export const CreateRegionSchema = z
 	.object({
 		name: z.string().min(1).max(255),
-		translations: DataValueSchema.optional(),
+		translations: JsonValueSchema.optional(),
 		wikiDataId: z.string().max(255).optional(),
 		flag: z.boolean().optional().default(true),
 	})
@@ -34,7 +35,7 @@ export type CreateRegionInput = z.output<typeof CreateRegionSchema>;
 export const UpdateRegionSchema = z
 	.object({
 		name: z.string().min(1).max(255).optional(),
-		translations: DataValueSchema.optional(),
+		translations: JsonValueSchema.optional(),
 		wikiDataId: z.string().max(255).nullable().optional(),
 		flag: z.boolean().optional(),
 	})
@@ -43,7 +44,7 @@ export const UpdateRegionSchema = z
 
 export type UpdateRegionInput = z.output<typeof UpdateRegionSchema>;
 
-/** `GET /geo/regions` list query — see docs/list-queries.md. */
+/** `GET /geo/regions` list query — see docs/technical/api/list-queries.md. */
 export const regionListQuery = defineListQuery({
 	sortable: ["id", "name"],
 	defaultSort: [{ field: "id", direction: "asc" }],

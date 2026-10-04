@@ -9,7 +9,7 @@
 //
 // Values are validated with the shared zod building blocks and the module
 // fails fast (at build / server start) with a named, value-free error rather
-// than silently falling back to a hardcoded URL. See docs/configuration.md.
+// than silently falling back to a hardcoded URL. See docs/technical/configuration/frontend.md.
 
 import { API_VERSION_PREFIX, HttpUrlEnvSchema, NodeEnvSchema, parseEnvOrThrow } from "@workspace/shared";
 import { z } from "zod";

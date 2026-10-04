@@ -7,22 +7,24 @@ const ROOTS: ContentRoots = { repoRoot: "/repo", githubBlobBase: "https://github
 
 describe("resolveContentLink", () => {
 	it("maps sibling guides to /docs routes and keeps the anchor", () => {
-		expect(resolveContentLink("./prisma.md#10-row-level-security", "/repo/docs/getting-started.md", ROOTS)).toBe("/docs/prisma#10-row-level-security");
-		expect(resolveContentLink("prisma.md", "/repo/docs/getting-started.md", ROOTS)).toBe("/docs/prisma");
+		expect(resolveContentLink("./database.md#seed-data", "/repo/docs/technical/getting-started.md", ROOTS)).toBe("/docs/technical/database#seed-data");
+		expect(resolveContentLink("database.md", "/repo/docs/technical/getting-started.md", ROOTS)).toBe("/docs/technical/database");
 	});
 
 	it("resolves guides in and out of sub-folders, keeping id case", () => {
-		expect(resolveContentLink("./overview.md", "/repo/docs/authorization-system/backend.md", ROOTS)).toBe("/docs/authorization-system/overview");
-		expect(resolveContentLink("../README.md", "/repo/docs/authorization-system/backend.md", ROOTS)).toBe("/docs/README");
+		expect(resolveContentLink("./overview.md", "/repo/docs/technical/authorization/backend.md", ROOTS)).toBe("/docs/technical/authorization/overview");
+		expect(resolveContentLink("../../README.md", "/repo/docs/technical/authorization/backend.md", ROOTS)).toBe("/docs/README");
 	});
 
 	it("maps blog posts and doc images", () => {
 		expect(resolveContentLink("../blog/telescope.md", "/repo/docs/telescope.md", ROOTS)).toBe("/blog/telescope");
-		expect(resolveContentLink("./images/email/a.png", "/repo/docs/email.md", ROOTS)).toBe("/images/email/a.png");
+		expect(resolveContentLink("../../images/email/a.png", "/repo/docs/technical/email/templates.md", ROOTS)).toBe("/images/email/a.png");
 	});
 
 	it("sends other repository files to GitHub", () => {
-		expect(resolveContentLink("../apps/api/prisma/rls/README.md", "/repo/docs/prisma.md", ROOTS)).toBe("https://github.com/acme/app/blob/main/apps/api/prisma/rls/README.md");
+		expect(resolveContentLink("../../apps/api/prisma/rls/README.md", "/repo/docs/technical/database.md", ROOTS)).toBe(
+			"https://github.com/acme/app/blob/main/apps/api/prisma/rls/README.md",
+		);
 		expect(resolveContentLink("../.cursorrules", "/repo/docs/eslint.md", ROOTS)).toBe("https://github.com/acme/app/blob/main/.cursorrules");
 	});
 
@@ -45,14 +47,14 @@ describe("remarkContentLinks", () => {
 	}
 
 	it("rewrites links relative to the source file", () => {
-		const { root, link } = tree("./prisma.md");
-		remarkContentLinks(ROOTS)(root, { path: "/repo/docs/getting-started.md" });
-		expect(link.url).toBe("/docs/prisma");
+		const { root, link } = tree("./database.md");
+		remarkContentLinks(ROOTS)(root, { path: "/repo/docs/technical/getting-started.md" });
+		expect(link.url).toBe("/docs/technical/database");
 	});
 
 	it("does nothing when the file path is unknown", () => {
-		const { root, link } = tree("./prisma.md");
+		const { root, link } = tree("./database.md");
 		remarkContentLinks(ROOTS)(root, {});
-		expect(link.url).toBe("./prisma.md");
+		expect(link.url).toBe("./database.md");
 	});
 });

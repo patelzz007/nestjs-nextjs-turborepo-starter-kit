@@ -1,7 +1,8 @@
 import type { NodeEnv } from "@workspace/shared";
 
-import type { ApiConfig, ApiDocsPolicy, ObserveConfig } from "./api-config.schema";
-import type { CacheBackend, EmailMode, LogLevel, StorageProviderSetting } from "./api-env.fields";
+import type { ApiConfig, ApiDocsPolicy, MalwareScannerConfig, MemoryLeakDetectionConfig, ObserveConfig } from "./api-config.schema";
+import type { CacheBackend, EmailMode, LoginVerificationMode, LogLevel, StorageProviderSetting, TenantKmsProvider } from "./api-env.fields";
+import { RedisNamespace } from "../infrastructure/redis/redis-namespace";
 
 /** Client apps an auth flow can originate from (`X-Client-Type`). */
 const ADMIN_CLIENT_TYPE = "admin";
@@ -52,9 +53,9 @@ export class TypedConfigService {
 		return this.config.http.port;
 	}
 
-	/** Trust `X-Forwarded-For` (behind cloudflared / a reverse proxy). */
-	public get trustProxy(): boolean {
-		return this.config.http.trustProxy;
+	/** Proxies whose `X-Forwarded-For` is trusted (`TRUST_PROXY`); empty = the client IP is the TCP peer. */
+	public get trustedProxies(): readonly string[] {
+		return this.config.http.trustedProxies;
 	}
 
 	/** Allowed browser origins for CORS and mutation-intent validation. */
@@ -170,9 +171,9 @@ export class TypedConfigService {
 		return this.config.auth.twoFactorPendingSecret;
 	}
 
-	/** When true, every login requires the email OTP step (ignores trusted-device cache). */
-	public get forceLoginVerification(): boolean {
-		return this.config.auth.forceLoginVerification;
+	/** When a password login also needs the emailed one-time code (`LOGIN_VERIFICATION_MODE`). */
+	public get loginVerificationMode(): LoginVerificationMode {
+		return this.config.auth.loginVerificationMode;
 	}
 
 	/** Issuer name shown in authenticator apps */
@@ -186,6 +187,11 @@ export class TypedConfigService {
 	}
 
 	// ── MFA hardening ──────────────────────────────────────────────────
+
+	/** Versioned HMAC key ring for reward QR-token / backup-code hashes (`REWARD_CODE_HASH_KEYS`). */
+	public get rewardCodeHashKeys(): Readonly<Record<number, string>> {
+		return this.config.encryption.rewardCodeHashKeys;
+	}
 
 	/** Versioned AES-256 key material for MFA secret encryption (`MFA_ENCRYPTION_KEYS`). */
 	public get mfaEncryptionKeys(): Readonly<Record<number, string>> {
@@ -212,6 +218,26 @@ export class TypedConfigService {
 	/** Decoded 32-byte tenant master key (a fresh copy per call — callers cannot mutate the config). */
 	public get tenantEncryptionMasterKey(): Buffer {
 		return Buffer.from(this.config.encryption.tenantMasterKey, "base64");
+	}
+
+	/** Version of the current tenant master key (`TENANT_ENCRYPTION_MASTER_KEY_VERSION`). */
+	public get tenantEncryptionMasterKeyVersion(): number {
+		return this.config.encryption.tenantMasterKeyVersion;
+	}
+
+	/** Decoded retired tenant master keys by version (fresh copies per call). */
+	public get tenantEncryptionPreviousMasterKeys(): ReadonlyMap<number, Buffer> {
+		return new Map(
+			Object.entries(this.config.encryption.tenantPreviousMasterKeys).map(([version, key]: [string, string]): [number, Buffer] => [
+				Number(version),
+				Buffer.from(key, "base64"),
+			]),
+		);
+	}
+
+	/** Provider wrapping tenant data keys (`TENANT_KMS_PROVIDER`). */
+	public get tenantKmsProvider(): TenantKmsProvider {
+		return this.config.encryption.tenantKmsProvider;
 	}
 
 	/** HMAC secret for tenant job contexts; `null` when job signing is not configured. */
@@ -353,6 +379,11 @@ export class TypedConfigService {
 		return this.config.messaging.redisUrl;
 	}
 
+	/** The namespace every raw Redis key and pub/sub channel is built with (`REDIS_NAMESPACE`). */
+	public get redisNamespace(): RedisNamespace {
+		return new RedisNamespace(this.config.messaging.redisNamespace);
+	}
+
 	/** Whether BullMQ workers and producers should be active. */
 	public get useBullMq(): boolean {
 		return this.redisUrl !== undefined;
@@ -413,21 +444,28 @@ export class TypedConfigService {
 		return this.config.storage.cloudfrontPublicDomain;
 	}
 
+	/** Distribution serving public S3 assets; withdrawn assets are invalidated in it. */
+	public get cloudfrontDistributionId(): string | null {
+		return this.config.storage.cloudfrontDistributionId;
+	}
+
 	/** Shared secret for `POST /files/processing-callback`; `null` = callbacks are rejected. */
 	public get storageProcessingCallbackSecret(): string | null {
 		return this.config.storage.processingCallbackSecret;
 	}
 
+	/** The malware scanner every upload passes through before it can become READY. */
+	public get malwareScanner(): MalwareScannerConfig {
+		return this.config.storage.malwareScanner;
+	}
+
+	/**
+	 * Region of the S3 buckets. There are deliberately no credential getters:
+	 * the S3 client resolves credentials through the AWS SDK default chain
+	 * (IAM role in deployments, an SSO profile or local keys in development).
+	 */
 	public get awsRegion(): string {
 		return this.config.storage.awsRegion;
-	}
-
-	public get awsAccessKeyId(): string | null {
-		return this.config.storage.awsAccessKeyId;
-	}
-
-	public get awsSecretAccessKey(): string | null {
-		return this.config.storage.awsSecretAccessKey;
 	}
 
 	public get useS3Storage(): boolean {
@@ -462,9 +500,14 @@ export class TypedConfigService {
 		return this.logLevel === "debug" || this.logLevel === "trace";
 	}
 
-	/** Heap sampling / leak detection in `LogService` (always on in production). */
+	/** Post-GC heap trend / leak detection in `MemoryMonitorService` (always on in production). */
 	public get memoryMonitoring(): boolean {
 		return this.config.observability.memoryMonitoring;
+	}
+
+	/** Warm-up, window and growth threshold of the leak check. */
+	public get memoryLeakDetection(): MemoryLeakDetectionConfig {
+		return this.config.observability.memoryLeakDetection;
 	}
 
 	/** NestJS Observe credentials; `null` when Observe is off. */
@@ -478,7 +521,8 @@ export class TypedConfigService {
 		return this.config.tenancy.enabled;
 	}
 
-	public get defaultOrganizationId(): string {
-		return this.config.tenancy.defaultOrganizationId;
+	/** The organization a single-tenant deployment serves; `null` in multi-tenant mode. */
+	public get singleTenantOrganizationId(): string | null {
+		return this.config.tenancy.enabled ? null : this.config.tenancy.singleTenantOrganizationId;
 	}
 }

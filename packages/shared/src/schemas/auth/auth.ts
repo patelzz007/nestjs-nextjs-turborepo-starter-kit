@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canonicalEmailSchema } from "../api/email-address";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { LoginVerificationPendingResponseSchema } from "./login-verification";
 import { LoginTwoFactorPendingResponseSchema } from "./two-factor";
@@ -14,7 +15,7 @@ export { strongPassword } from "./password";
 
 export const LoginSchema = z
 	.object({
-		email: z.email("Invalid email address").meta({
+		email: canonicalEmailSchema("Invalid email address").meta({
 			description: "User email address",
 			example: "admin@example.com",
 		}),
@@ -29,7 +30,7 @@ export type LoginInput = z.output<typeof LoginSchema>;
 
 export const SignupSchema = z
 	.object({
-		email: z.email("Invalid email address"),
+		email: canonicalEmailSchema("Invalid email address"),
 		password: strongPassword.meta({
 			description: "User password (must meet complexity requirements)",
 			example: "StrongP@ss1",
@@ -45,7 +46,7 @@ export type SignupInput = z.output<typeof SignupSchema>;
 
 export const ForgotPasswordSchema = z
 	.object({
-		email: z.email("Invalid email address").meta({
+		email: canonicalEmailSchema("Invalid email address").meta({
 			description: "The email address associated with the user account",
 			example: "user@example.com",
 		}),
@@ -87,7 +88,7 @@ export type ResetPasswordInput = z.output<typeof ResetPasswordSchema>;
 
 export const ResendVerificationSchema = z
 	.object({
-		email: z.email("Invalid email address").meta({
+		email: canonicalEmailSchema("Invalid email address").meta({
 			description: "The email address to resend verification to",
 			example: "user@example.com",
 		}),
@@ -263,6 +264,12 @@ export type VerifyEmailInput = z.output<typeof VerifyEmailSchema>;
 
 export const VerifyEmailResponseSchema = z.object({
 	message: z.string(),
+	/**
+	 * True when the address was already verified before this request (a
+	 * second click on the link, or a concurrent request won). Clients branch
+	 * on this flag — never on the human-readable `message`.
+	 */
+	alreadyVerified: z.boolean(),
 });
 
 export type VerifyEmailResponse = z.output<typeof VerifyEmailResponseSchema>;

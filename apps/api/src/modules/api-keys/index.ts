@@ -17,6 +17,6 @@ export {
 	type ApiKeyAuthRequest,
 } from "./types/api-key-auth-request";
 export { API_KEY_AUTH_CONTEXT_KEY, type ApiKeyAuthContext, type ApiKeyProvider, type MerchantApiKeyAuthContext } from "./types/api-key-auth.types";
-export { MERCHANT_ACTOR_KEY, type MerchantActor } from "./types/merchant-actor.types";
+export { MERCHANT_ACTOR_KEY, type MerchantActor, type MerchantApiKeyActor, type MerchantUserActor } from "./types/merchant-actor.types";
 export { extractApiKeyFromRequest } from "./utils/extract-api-key.util";
 export { isJwtShapedToken } from "./utils/is-jwt-shaped.util";

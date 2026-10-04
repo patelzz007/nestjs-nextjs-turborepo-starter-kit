@@ -1,11 +1,12 @@
 "use client";
 
 import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
-import { resolveActiveOrganizationMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
+import { resolveUrlOrganizationMembership } from "@/lib/org/resolve-slug";
+import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { CapabilitySlug, Envelope, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface MerchantCapabilitiesState {
@@ -16,29 +17,26 @@ export interface MerchantCapabilitiesState {
 }
 
 /**
- * Client hook — capabilities derived from the active organization membership
- * role (Cedar-backed on API). Feeds `MerchantAuthorizationProvider`; UI checks
+ * Client hook — capabilities derived from the role of the membership in the
+ * organization the URL names (Cedar-backed on the API). Fails closed: outside
+ * org routes, or for an organization the user does not belong to, there is no
+ * membership and no capability — another organization's role is never borrowed. Feeds `MerchantAuthorizationProvider`; UI checks
  * go through `useAuthorization().can(MERCHANT_CAPABILITY.x)` / `<Can>`.
  */
-export function useMerchantCapabilities(initialMemberships?: readonly OrganizationRewardMembershipResponse[]): MerchantCapabilitiesState {
+export function useMerchantCapabilities(initialMemberships?: Envelope<OrganizationRewardMembershipResponse[]>): MerchantCapabilitiesState {
 	const { api } = useAuth();
 	const organizationSlug = useOrganizationSlug();
-
-	const initialMeData = React.useMemo(
-		() => (initialMemberships !== undefined && initialMemberships.length > 0 ? successEnvelope([...initialMemberships], stubApiMeta()) : undefined),
-		[initialMemberships],
-	);
 
 	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
 		{},
 		{
-			...initialDataOption(initialMeData),
+			...initialDataOption(initialMemberships),
 			...MERCHANT_ME_QUERY_OPTIONS,
 		},
 	);
 
 	const membership = React.useMemo(
-		(): OrganizationRewardMembershipResponse | undefined => resolveActiveOrganizationMembership(membershipsQuery.data?.data ?? [], organizationSlug),
+		(): OrganizationRewardMembershipResponse | undefined => resolveUrlOrganizationMembership(membershipsQuery.data?.data ?? [], organizationSlug),
 		[membershipsQuery.data?.data, organizationSlug],
 	);
 

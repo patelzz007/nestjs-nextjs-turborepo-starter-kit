@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 import { keepPreviousData } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { successEnvelope } from "@workspace/client/lib/api/envelope";
-import { ApiPaginatedMetaSchema, type ApiPaginatedMeta } from "@workspace/shared";
+import { ApiPaginatedMetaSchema, type AdminUserDetail, type ApiPaginatedMeta, type Envelope } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -187,7 +186,7 @@ describe("UsersAllTable URL state", () => {
 
 	it("uses the server-prefetched page only for the URL state it was fetched for", () => {
 		setUrl(`${PATH}?page=2`);
-		const envelope = successEnvelope([], pageMeta({ page: 2 }));
+		const envelope: Envelope<AdminUserDetail[]> = { success: true, data: [], meta: pageMeta({ page: 2 }) };
 		const prefetchedFor = USERS_TABLE_URL_STATE.serialize(USERS_TABLE_URL_STATE.parse(new URLSearchParams("page=2")));
 		const view = render(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />);
 		expect(usersQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ initialData: envelope }));

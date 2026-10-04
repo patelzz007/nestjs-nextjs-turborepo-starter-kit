@@ -1,76 +1,68 @@
-import { QueryClient } from "@tanstack/react-query";
-import type { AuthSessionSource } from "../session/session";
-import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ApiResponseMeta, Envelope, UserResponse } from "@workspace/shared";
+import { describe, expect, it, vi } from "vitest";
 
-import { sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import { stubApiMeta, successEnvelope } from "../../api/envelope";
+import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
+import type { RefreshResult } from "../../api/api-request";
 import { syncSessionAfterEmailVerification, type EmailVerificationSessionApi, type EmailVerificationSessionCommands } from "./sync-after-verification";
 
 interface SessionCommandsFake extends EmailVerificationSessionCommands {
 	readonly calls: string[];
 }
 
-function sessionCommandsFake(): SessionCommandsFake {
+function sessionCommandsFake(refreshResult: RefreshResult): SessionCommandsFake {
 	const calls: string[] = [];
 	return {
 		calls,
-		login: (profile: UserResponse, session?: AuthSessionSource | null): void => {
-			calls.push(`login:${profile.email}:${session?.sessionScope ?? "none"}`);
+		login: (profile: UserResponse, answeredBy: ApiResponseMeta): void => {
+			calls.push(`login:${profile.email}:${answeredBy.correlationId}`);
 		},
-		markEmailVerified: (): void => {
-			calls.push("markEmailVerified");
-		},
-		refreshSession: (): Promise<boolean> => {
+		refreshSession: (): Promise<RefreshResult> => {
 			calls.push("refreshSession");
-			return Promise.resolve(true);
+			return Promise.resolve(refreshResult);
 		},
 	};
 }
 
-function sessionApi(me: () => Promise<Envelope<UserResponse>>, permissions: () => Promise<Envelope<SessionPermissionsResponse>>): EmailVerificationSessionApi {
-	return { auth: { me: { fetchOrThrow: me }, permissions: { fetchOrThrow: permissions } } };
+function sessionApi(me: () => Promise<Envelope<UserResponse>>): EmailVerificationSessionApi {
+	return { auth: { me: { fetchOrThrow: me } } };
 }
 
-const queryClient = new QueryClient();
-
-afterEach((): void => {
-	queryClient.clear();
-});
-
 describe("syncSessionAfterEmailVerification", () => {
-	it("rotates the session, then establishes it from the fresh /auth/me + /auth/permissions answers", async () => {
-		const commands = sessionCommandsFake();
-		const api = sessionApi(
-			(): Promise<Envelope<UserResponse>> => Promise.resolve(successEnvelope(userFixture({ email: "ada@example.com" }), stubApiMeta())),
-			(): Promise<Envelope<SessionPermissionsResponse>> => Promise.resolve(successEnvelope(sessionPermissionsFixture({ sessionScope: "full" }), stubApiMeta())),
-		);
+	it("rotates the session through the single-flight refresh, then establishes it from the fresh /auth/me answer (with its real meta)", async () => {
+		const commands = sessionCommandsFake("ok");
+		const api = sessionApi((): Promise<Envelope<UserResponse>> => Promise.resolve(envelopeFixture(userFixture({ email: "ada@example.com" }))));
 
-		await syncSessionAfterEmailVerification(api, commands, queryClient);
+		await expect(syncSessionAfterEmailVerification(api, commands)).resolves.toBe("synced");
 
-		expect(commands.calls).toEqual(["refreshSession", "login:ada@example.com:full"]);
+		expect(commands.calls).toEqual(["refreshSession", "login:ada@example.com:corr-fixture"]);
 	});
 
-	it("applies the known outcome when the session cannot be re-read", async () => {
-		const commands = sessionCommandsFake();
-		const api = sessionApi(
-			(): Promise<Envelope<UserResponse>> => Promise.reject(new Error("offline")),
-			(): Promise<Envelope<SessionPermissionsResponse>> => Promise.reject(new Error("offline")),
-		);
+	it("reports no-session for a guest (the refresh found no session) and reads nothing", async () => {
+		const commands = sessionCommandsFake("expired");
+		const me = vi.fn<() => Promise<Envelope<UserResponse>>>();
 
-		await syncSessionAfterEmailVerification(api, commands, queryClient);
+		await expect(syncSessionAfterEmailVerification(sessionApi(me), commands)).resolves.toBe("no-session");
 
-		expect(commands.calls).toEqual(["refreshSession", "markEmailVerified"]);
+		expect(me).not.toHaveBeenCalled();
+		expect(commands.calls).toEqual(["refreshSession"]);
 	});
 
-	it("still re-reads the session when the rotation fails (a guest opening the link)", async () => {
-		const commands: SessionCommandsFake = { ...sessionCommandsFake(), refreshSession: vi.fn<() => Promise<boolean>>(() => Promise.reject(new Error("no session"))) };
-		const me = vi.fn<() => Promise<Envelope<UserResponse>>>(() => Promise.reject(new Error("401")));
-		const api = sessionApi(me, (): Promise<Envelope<SessionPermissionsResponse>> => Promise.reject(new Error("401")));
+	it("reports unavailable — and assumes NOTHING about the session — when the refresh cannot reach the API", async () => {
+		const commands = sessionCommandsFake("transient");
+		const me = vi.fn<() => Promise<Envelope<UserResponse>>>();
 
-		await syncSessionAfterEmailVerification(api, commands, queryClient);
+		await expect(syncSessionAfterEmailVerification(sessionApi(me), commands)).resolves.toBe("unavailable");
 
-		expect(me).toHaveBeenCalledTimes(1);
-		expect(commands.calls).toEqual(["markEmailVerified"]);
+		expect(me).not.toHaveBeenCalled();
+		expect(commands.calls).toEqual(["refreshSession"]);
+	});
+
+	it("reports unavailable when the session cannot be re-read after the rotation (no verified flag is applied locally)", async () => {
+		const commands = sessionCommandsFake("ok");
+		const api = sessionApi((): Promise<Envelope<UserResponse>> => Promise.reject(new Error("offline")));
+
+		await expect(syncSessionAfterEmailVerification(api, commands)).resolves.toBe("unavailable");
+
+		expect(commands.calls).toEqual(["refreshSession"]);
 	});
 });

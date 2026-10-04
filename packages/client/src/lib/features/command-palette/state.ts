@@ -39,16 +39,10 @@ export const INITIAL_COMMAND_PALETTE_STATE: CommandPaletteState = {
 /** Most recent searches kept — the oldest entry drops off when a new one is recorded. */
 export const MAX_RECENT_SEARCHES = 6;
 
-/**
- * What builds before the feature store wrote (`zustand/persist`'s envelope with
- * optional fields) — read once and upgraded, so nobody loses their shortcuts.
- */
-const LegacyCommandPalettePreferencesSchema = z.object({ state: z.object(commandPaletteStateShape).partial() }).transform(({ state }): CommandPaletteState => ({
-	recentSearches: state.recentSearches ?? INITIAL_COMMAND_PALETTE_STATE.recentSearches,
-	pinnedUrls: state.pinnedUrls ?? INITIAL_COMMAND_PALETTE_STATE.pinnedUrls,
-}));
-
-/** The persisted snapshot — validated on the way back in, never trusted. */
-export const CommandPalettePreferencesSchema = z.union([CommandPaletteStateSchema, LegacyCommandPalettePreferencesSchema]);
+/** The current (version 1) persisted snapshot — validated on the way back in, never trusted. */
+export const CommandPalettePreferencesSchema = CommandPaletteStateSchema;
 
 export type CommandPalettePreferences = z.output<typeof CommandPalettePreferencesSchema>;
+
+/** Version of `CommandPalettePreferencesSchema`; bump it with a migration when the snapshot changes. */
+export const COMMAND_PALETTE_PREFERENCES_VERSION = 1;

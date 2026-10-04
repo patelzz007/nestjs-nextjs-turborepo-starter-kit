@@ -64,6 +64,12 @@ export const AccessTokenPayloadSchema = z.object({
 	mfaAssuredAt: z.number().int().nonnegative().optional(),
 	isImpersonating: z.boolean().optional(),
 	originalUserId: z.string().optional(),
+	/**
+	 * Id of the server-side impersonation session (set only on impersonation
+	 * tokens). The API rejects an impersonation token whose session is
+	 * unknown, ended, or expired — stopping impersonation revokes it.
+	 */
+	impersonationSessionId: z.string().optional(),
 	iat: z.number().optional(),
 	exp: z.number().optional(),
 });

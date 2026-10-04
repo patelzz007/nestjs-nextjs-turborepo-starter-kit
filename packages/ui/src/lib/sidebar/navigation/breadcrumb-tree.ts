@@ -1,18 +1,5 @@
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
-
 /** URL path split into segments (`/users/123` → `["users", "123"]`). */
 export type PathSegments = readonly string[];
-
-/**
- * Maps a nav-tree node type to breadcrumb fields. Keeps tree walking generic
- * while each app supplies its own node shape (`SidebarMenuItem`, etc.).
- */
-export interface NavTreeAdapter<TNode> {
-	getUrl: (node: TNode) => string;
-	getChildren: (node: TNode) => readonly TNode[];
-	toLinkedCrumb: (node: TNode) => BreadcrumbItem;
-	toCurrentCrumb: (node: TNode) => BreadcrumbItem;
-}
 
 /** Splits a pathname into non-empty segments. O(d) where d = path depth. */
 export function segmentsOfPath(pathname: string): PathSegments {
@@ -68,78 +55,61 @@ export function sharesPathSegmentRoot(menuUrl: string, pathname: string): boolea
 	return menuSegments[0] === pathSegments[0];
 }
 
-/**
- * Flattens a nav tree into a single list. O(n) nodes, O(n) total work.
- * Uses an explicit stack so deep menus do not recurse past the call stack.
- */
-export function flattenNavTree<TNode>(roots: readonly TNode[], getChildren: (node: TNode) => readonly TNode[]): TNode[] {
-	const flat: TNode[] = [];
-	const stack: TNode[] = [...roots];
-	while (stack.length > 0) {
-		const node = stack.pop();
-		if (node === undefined) {
-			continue;
-		}
-		flat.push(node);
-		const children = getChildren(node);
-		for (let index = children.length - 1; index >= 0; index -= 1) {
-			const child = children[index];
-			if (child !== undefined) {
-				stack.push(child);
-			}
-		}
-	}
-	return flat;
+/** How a nav tree's URL path and child nodes are read, whatever the node type. */
+export interface NavTreeShape<TNode> {
+	readonly getUrl: (node: TNode) => string;
+	readonly getChildren: (node: TNode) => readonly TNode[];
 }
 
 /**
- * Longest shared segment prefix between `pathname` and any node URL in `nodes`.
- * O(n · d) — n = node count, d = typical path depth (small for admin routes).
+ * The deepest menu match for `pathname`: the chain of nodes from a root down
+ * to the node whose URL is `pathname` (`kind: "exact"`) or its closest
+ * ancestor (`kind: "ancestor"` — the caller labels the segments below it).
  */
-export function bestSharedSegmentPrefix<TNode>(pathname: string, nodes: readonly TNode[], getUrl: (node: TNode) => string): number {
-	let best = 0;
-	for (const node of nodes) {
-		const shared = longestSharedSegmentPrefix(pathname, getUrl(node));
-		if (shared > best) {
-			best = shared;
+export interface NavTreeMatch<TNode> {
+	readonly kind: "exact" | "ancestor";
+	/** Root first, matched node last. Never empty. */
+	readonly chain: readonly TNode[];
+	/** The matched (last) node's URL. */
+	readonly url: string;
+}
+
+/** Deepest match below (and including) `node`, or `null` when `node` is neither `pathname` nor one of its ancestors. */
+function matchNode<TNode>(node: TNode, pathname: string, shape: NavTreeShape<TNode>): NavTreeMatch<TNode> | null {
+	const url = shape.getUrl(node);
+	if (url === pathname) {
+		return { kind: "exact", chain: [node], url };
+	}
+	if (!isPathAncestor(url, pathname)) {
+		return null;
+	}
+	const below = findDeepestNavMatch(shape.getChildren(node), pathname, shape);
+	if (below === null) {
+		return { kind: "ancestor", chain: [node], url };
+	}
+	// A child sharing its parent's URL ("Users" → "All users", both `/users`)
+	// is the same page: the parent stands for it, so it is not crumbed twice.
+	const [firstBelow, ...restBelow] = below.chain;
+	const descendants = firstBelow !== undefined && shape.getUrl(firstBelow) === url ? restBelow : below.chain;
+	return { kind: below.kind, chain: [node, ...descendants], url: below.url };
+}
+
+/**
+ * Finds the deepest node matching `pathname` across `roots`: an exact URL
+ * match, otherwise the closest ancestor — **leaf or branch**, so a leaf like
+ * Catalog → Products still anchors `/catalog/products/42`. The longest matched
+ * URL wins; the first in menu order wins a tie. Only branches whose URL is an
+ * ancestor of `pathname` are descended. O(n · d) for n nodes of depth d.
+ */
+export function findDeepestNavMatch<TNode>(roots: readonly TNode[], pathname: string, shape: NavTreeShape<TNode>): NavTreeMatch<TNode> | null {
+	let best: NavTreeMatch<TNode> | null = null;
+	for (const root of roots) {
+		const match = matchNode(root, pathname, shape);
+		if (match !== null && (best === null || match.url.length > best.url.length)) {
+			best = match;
 		}
 	}
 	return best;
-}
-
-export interface WalkNavTreeOptions {
-	/** Exact matches render as linked crumbs (dynamic-segment fallback). */
-	readonly asParent?: boolean;
-}
-
-/**
- * Walks a nav tree for `pathname`, appending crumbs to `trail`. O(n) nodes visited
- * along the matching branch (worst case O(n) for the whole tree).
- */
-export function walkNavTreeForPath<TNode>(
-	items: readonly TNode[],
-	pathname: string,
-	trail: BreadcrumbItem[],
-	adapter: NavTreeAdapter<TNode>,
-	options: WalkNavTreeOptions = {},
-): boolean {
-	const asParent = options.asParent ?? false;
-	for (const item of items) {
-		const url = adapter.getUrl(item);
-		if (url === pathname) {
-			trail.push(asParent ? adapter.toLinkedCrumb(item) : adapter.toCurrentCrumb(item));
-			return true;
-		}
-		const children = adapter.getChildren(item);
-		if (children.length > 0 && isPathAncestor(url, pathname)) {
-			trail.push(adapter.toLinkedCrumb(item));
-			if (walkNavTreeForPath(children, pathname, trail, adapter, options)) {
-				return true;
-			}
-			return true;
-		}
-	}
-	return false;
 }
 
 /** Replaces the final trail item. O(n) copy of prefix, n = trail length. */

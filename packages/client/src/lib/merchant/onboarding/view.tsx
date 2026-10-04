@@ -8,26 +8,28 @@ import {
 	MerchantOnboardingCompleteFieldsSchema,
 	OrganizationLocationDraftSchema,
 	OrganizationPrimaryLocationDraftSchema,
+	PLATFORM_DISPLAY_REGION,
 } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
 
-import { API_BASE_URL } from "../../api/config";
-import { resolveAuthErrorMessage } from "../../auth/errors";
 import { useAuth } from "../../auth/index";
 import { passwordStrength } from "../../auth/password";
 import type { MerchantKybFieldValues } from "../kyb/fields";
-import { submitMerchantOnboardingComplete, submitMerchantOnboardingDocuments } from "../kyb/multipart";
+import { submitMerchantOnboardingDocuments } from "../kyb/multipart";
 import { MerchantOnboardingAccountStep } from "./onboarding-account-step";
 import { MerchantOnboardingBusinessStep, type BusinessFieldName } from "./onboarding-business-step";
 import { MerchantOnboardingDocumentsStep } from "./onboarding-documents-step";
 import { MerchantOnboardingRegistrationStep } from "./onboarding-registration-step";
 import { MerchantOnboardingStoresStep, type OnboardingLocationDraftRow } from "./onboarding-stores-step";
 import { catchCaught } from "../../caught";
+import { classifyOnboardingFailure, type OnboardingFailure } from "./onboarding-outcome";
+import { runOnboardingSubmission } from "./onboarding-submission";
 
-type FlowStep = "loading" | "invalid" | "wizard" | "success";
+type FlowStep = "loading" | "invalid" | "expired" | "documents-closed" | "wizard" | "success";
 type WizardPanel = "business" | "stores" | "registration" | "documents" | "account";
 
 interface WizardStepDefinition {
@@ -60,7 +62,7 @@ function formatPilotCity(city: string): string {
 }
 
 function formatExpiry(value: number): string {
-	return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+	return formatEpochMs(value, "date", PLATFORM_DISPLAY_REGION);
 }
 
 function panelHeading(panel: WizardPanel): string {
@@ -84,6 +86,25 @@ export interface MerchantOnboardingViewProps {
 	readonly loginHref?: string;
 }
 
+/** The page a failure leads to; `undefined` = stay on the step (the message is shown there). */
+function flowStepForFailure(failure: OnboardingFailure): FlowStep | undefined {
+	switch (failure.kind) {
+		case "expired":
+			return "expired";
+		case "invalid":
+			return "invalid";
+		case "documents-closed":
+			return "documents-closed";
+		case "already-submitted":
+		case "retry":
+			return undefined;
+	}
+}
+
+function failureMessage(failure: OnboardingFailure): string | null {
+	return failure.kind === "retry" ? failure.message : null;
+}
+
 export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: MerchantOnboardingViewProps): JSX.Element {
 	const { api } = useAuth();
 	const [flowStep, setFlowStep] = useState<FlowStep>("loading");
@@ -96,19 +117,17 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	const [values, setValues] = useState<MerchantKybFieldValues>(INITIAL_KYB_VALUES);
 	const [businessName, setBusinessName] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	// `complete` succeeded in an earlier attempt: a retry only re-sends the documents (complete runs once).
+	const [isApplicationSubmitted, setIsApplicationSubmitted] = useState(false);
 	const [primaryLocation, setPrimaryLocation] = useState<OrganizationPrimaryLocationDraft>({ name: "", addressText: "", contactPhone: "" });
 	const [additionalLocations, setAdditionalLocations] = useState<readonly OnboardingLocationDraftRow[]>([]);
 
 	const strength = useMemo(() => passwordStrength(password), [password]);
 	const wizardIndex = WIZARD_STEPS.findIndex((step) => step.id === wizardPanel);
 
-	const loginUrl = useMemo((): string => {
-		if (invite === null) {
-			return loginHref;
-		}
-		const params = new URLSearchParams({ email: invite.email });
-		return `${loginHref}?${params.toString()}`;
-	}, [invite, loginHref]);
+	// The sign-in link never carries the email: a query string ends up in
+	// history, logs and Referer headers, and the address is personal data.
+	const loginUrl: string = loginHref;
 
 	useEffect((): (() => void) => {
 		let cancelled = false;
@@ -124,8 +143,9 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			}),
 			(reason): void => {
 				if (!cancelled) {
-					setFlowStep("invalid");
-					setError(resolveAuthErrorMessage(reason));
+					const failure = classifyOnboardingFailure(reason);
+					setFlowStep(failure.kind === "expired" ? "expired" : "invalid");
+					setError(failureMessage(failure));
 				}
 			},
 		);
@@ -274,20 +294,32 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			}
 
 			setIsSubmitting(true);
-			void catchCaught(
-				submitMerchantOnboardingComplete(API_BASE_URL, parsed.data).then(async (response): Promise<void> => {
-					await submitMerchantOnboardingDocuments(api, token, values.documents);
-					setBusinessName(response.businessName);
-					setFlowStep("success");
-				}),
-				(reason): void => {
-					setError(resolveAuthErrorMessage(reason));
+			void runOnboardingSubmission(
+				{
+					completeApplication: async (): Promise<string> => (await api.organizations.onboarding.complete.mutate(parsed.data)).data.businessName,
+					submitDocuments: (): Promise<void> => submitMerchantOnboardingDocuments(api, token, values.documents),
 				},
-			).finally((): void => {
-				setIsSubmitting(false);
-			});
+				isApplicationSubmitted,
+			)
+				.then((result): void => {
+					if (result.kind === "submitted") {
+						setBusinessName(result.businessName ?? invite?.businessName ?? "");
+						setFlowStep("success");
+						return;
+					}
+					setIsApplicationSubmitted(result.isApplicationSubmitted);
+					const nextStep = flowStepForFailure(result.failure);
+					if (nextStep !== undefined) {
+						setFlowStep(nextStep);
+						return;
+					}
+					setError(failureMessage(result.failure));
+				})
+				.finally((): void => {
+					setIsSubmitting(false);
+				});
 		},
-		[additionalLocations, api, category, fullName, password, primaryLocation, token, values],
+		[additionalLocations, api, category, fullName, invite?.businessName, isApplicationSubmitted, password, primaryLocation, token, values],
 	);
 
 	if (flowStep === "loading") {
@@ -306,6 +338,32 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				<p className="text-sm text-muted-foreground">{error ?? "This invite link is invalid or has expired."}</p>
 				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 					Back to sign in
+				</Link>
+			</div>
+		);
+	}
+
+	if (flowStep === "expired") {
+		return (
+			<div className="space-y-6 text-center">
+				<h2 className="text-xl font-semibold tracking-tight">This invite has expired</h2>
+				<p className="text-sm text-muted-foreground">Merchant invites are valid for a limited time. Ask the Reward Hub team to send you a new invite link.</p>
+				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
+					Back to sign in
+				</Link>
+			</div>
+		);
+	}
+
+	if (flowStep === "documents-closed") {
+		return (
+			<div className="space-y-6 text-center">
+				<h2 className="text-xl font-semibold tracking-tight">Upload your documents from your account</h2>
+				<p className="text-sm text-muted-foreground">
+					Your application was received, but this link can no longer take documents. Sign in and add them under Settings › Verification.
+				</p>
+				<Link href={loginHref} className={cn(buttonVariants(), "h-11 w-full sm:w-auto")}>
+					Sign in
 				</Link>
 			</div>
 		);

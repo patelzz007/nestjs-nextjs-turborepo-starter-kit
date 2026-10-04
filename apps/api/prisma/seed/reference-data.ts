@@ -1,9 +1,9 @@
 import type { Permission, Role } from "@prisma/client";
 
+import { createReferenceDataSyncService } from "../../src/modules/authorization/reference-data/reference-data.composition";
+import { formatReferenceDataReport } from "../../src/modules/authorization/reference-data/sync-reference-data.command";
 import { seedAbacConditions } from "./abac";
-import { seedMerchantCapabilities } from "./capabilities";
-import { createPermissions } from "./permissions";
-import { assignPermissionsToRoles, assignRoleHierarchy, createRoles } from "./roles";
+import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 
 export interface ReferenceData {
@@ -12,31 +12,17 @@ export interface ReferenceData {
 }
 
 /**
- * Reference data every scenario needs before the API can authorize anything:
- * the permission catalog, platform/store roles and their grants, the MERCHANT
- * capability catalog, and the ABAC demo condition. Everything here is upserted,
- * so it is safe to run on top of any existing dataset.
+ * Reference data every scenario needs before the API can authorize anything. The platform part —
+ * permission catalog, system roles and their grants, merchant capability catalog — is loaded by the
+ * SAME loader as the production command `db:sync-reference-data` (one source of truth, so the seed and
+ * a real deployment cannot drift). Only the ABAC DEMO condition is seed-only. Re-running writes nothing.
  */
 export async function seedReferenceData(): Promise<ReferenceData> {
-	seedLog("Creating permissions...");
-	const permissions = await createPermissions();
-	seedLog(`✅ ${String(permissions.length)} permissions`);
+	seedLog("Syncing reference data (same loader as db:sync-reference-data)...");
+	seedLog(formatReferenceDataReport(await createReferenceDataSyncService((handler) => prisma.$transaction(handler)).sync()));
 
-	seedLog("Creating roles...");
-	const roles = await createRoles();
-	seedLog(`✅ ${String(roles.length)} roles`);
-
-	seedLog("Configuring role hierarchy (flat — no parent links)...");
-	await assignRoleHierarchy(roles);
-	seedLog("✅ Role hierarchy configured");
-
-	seedLog("Assigning permissions to roles...");
-	await assignPermissionsToRoles(roles, permissions);
-	seedLog("✅ Role permissions assigned");
-
-	seedLog("Seeding merchant capability catalog...");
-	const merchantCapabilitySummary = await seedMerchantCapabilities();
-	seedLog(`✅ ${String(merchantCapabilitySummary.definitions)} MERCHANT capability definitions`);
+	const permissions: Permission[] = await prisma.permission.findMany();
+	const roles: Role[] = await prisma.role.findMany();
 
 	seedLog("Seeding ABAC demo conditions...");
 	await seedAbacConditions(permissions);

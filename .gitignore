@@ -13,6 +13,8 @@ node_modules
 
 # testing
 coverage
+# Vitest's local run cache / reporter output (e.g. .vitest/json/output.json)
+.vitest/
 
 # next.js
 .next/
@@ -51,3 +53,10 @@ next-env.d.ts
 .pnpm-store
 # Astro generated types (apps/docs)
 .astro
+
+# Playwright browser-suite output (apps/*/e2e/*.browser.ts)
+test-results/
+playwright-report/
+
+# Server logs written by the CI browser e2e job / pnpm ci:local
+.ci-logs/

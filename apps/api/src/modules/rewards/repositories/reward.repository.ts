@@ -1,7 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma, Reward } from "@prisma/client";
 
-import { nowEpochMs, rewardListQuery, type RewardListQuery, type RewardListSortField } from "@workspace/shared";
+import {
+	adminPendingRewardListQuery,
+	nowEpochMs,
+	rewardListQuery,
+	type AdminPendingRewardListQuery,
+	type AdminPendingRewardListSortField,
+	type RewardListQuery,
+	type RewardListSortField,
+} from "@workspace/shared";
 
 import { BaseRepository } from "../../../platform/persistence/base.repository";
 import { fetchListPage } from "../../../platform/persistence/list-page";
@@ -10,6 +18,9 @@ import { buildListOrder, type ListOrder, type SortColumns } from "../../../platf
 import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
 import type { EmptyMutationInput, RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
+import type { MerchantLocationScope } from "../types/merchant-location-scope";
+import { rewardAvailabilityWhere } from "../utils/merchant-location-scope.util";
+import { appendRewardAuditLog } from "./reward-audit-log.repository";
 
 /**
  * The merchant's logo, fetched in the same query as the reward (no N+1): the
@@ -43,26 +54,19 @@ const REWARD_WITH_ORGANIZATION_INCLUDE = {
 
 export type RewardWithOrganization = Prisma.RewardGetPayload<{ include: typeof REWARD_WITH_ORGANIZATION_INCLUDE }>;
 
-function buildOrganizationRewardWhere(organizationId: string, locationId?: string): Prisma.RewardWhereInput {
-	const baseWhere: Prisma.RewardWhereInput = {
-		organizationId,
-		isDeleted: false,
-		rewardKind: "CONSUMER",
-	};
-
-	if (locationId === undefined) {
-		return baseWhere;
-	}
-
+/** The organization's live consumer rewards available at a store of `scope` (the AUTHORIZED store scope). */
+function buildOrganizationRewardWhere(organizationId: string, scope: MerchantLocationScope): Prisma.RewardWhereInput {
 	return {
-		...baseWhere,
-		OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { locationId } } }],
+		AND: [{ organizationId, isDeleted: false, rewardKind: "CONSUMER" }, rewardAvailabilityWhere(scope)],
 	};
 }
 
-export type RewardClaimableSummary = Pick<Reward, "id" | "title" | "expiryDate" | "quantityRemaining">;
+export type RewardClaimableSummary = Pick<Reward, "id" | "title" | "expiryDate" | "quantityRemaining" | "rules" | "minSpendMinor">;
 
-export type RewardOrgConsumerSummary = Pick<Reward, "id" | "status" | "referrerRewardId" | "quantityTotal" | "quantityRemaining">;
+export type RewardOrgConsumerSummary = Pick<Reward, "id" | "status" | "referrerRewardId" | "quantityTotal" | "quantityRemaining" | "locationScopeType"> & {
+	/** The stores a `SELECTED` reward is available at (empty for `ALL_LOCATIONS`). */
+	readonly locationIds: readonly string[];
+};
 
 export type RewardPendingReviewSummary = Pick<Reward, "id" | "title" | "organizationId" | "referrerRewardId" | "status">;
 
@@ -76,11 +80,11 @@ function toCreateInput(_input: EmptyMutationInput): Prisma.RewardCreateInput {
 	throw new Error("RewardRepository.create via BaseRepository ports is not supported");
 }
 
-function toUpdateInput(_input: EmptyMutationInput): Prisma.RewardUpdateInput {
+function toUpdateInput(_input: EmptyMutationInput): Prisma.RewardUpdateManyMutationInput {
 	throw new Error("RewardRepository.update via BaseRepository ports is not supported");
 }
 
-// ── Marketplace list query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── Marketplace list query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 const REWARD_SORT_COLUMNS: SortColumns<RewardListSortField, Prisma.RewardOrderByWithRelationInput> = {
 	createdAt: (direction) => ({ createdAt: direction }),
@@ -115,6 +119,29 @@ export function buildMarketplaceWhere(query: RewardListQuery, now = BigInt(Date.
 	};
 }
 
+// ── Admin moderation queue (oldest first) ──
+
+const PENDING_REVIEW_SORT_COLUMNS: SortColumns<AdminPendingRewardListSortField, Prisma.RewardOrderByWithRelationInput> = {
+	createdAt: (direction) => ({ createdAt: direction }),
+};
+
+/** Keyset for the default order (`createdAt asc, id asc`). */
+const PENDING_REVIEW_LIST_KEYSET: ListKeyset<RewardWithOrganization, Prisma.RewardWhereInput> = timestampIdKeyset(
+	(row: RewardWithOrganization) => ({ at: Number(row.createdAt), id: row.id }),
+	({ at, id }): Prisma.RewardWhereInput => ({ OR: [{ createdAt: { gt: at } }, { createdAt: at, id: { gt: id } }] }),
+);
+
+export function buildPendingReviewWhere(): Prisma.RewardWhereInput {
+	return { status: "PENDING_REVIEW", isDeleted: false, rewardKind: "CONSUMER" };
+}
+
+export function buildPendingReviewOrder(query: AdminPendingRewardListQuery): ListOrder<Prisma.RewardOrderByWithRelationInput> {
+	return buildListOrder(adminPendingRewardListQuery.resolveSort(query.sort), {
+		columns: PENDING_REVIEW_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
+}
+
 export function buildMarketplaceOrder(query: RewardListQuery): ListOrder<Prisma.RewardOrderByWithRelationInput> {
 	return buildListOrder(rewardListQuery.resolveSort(query.sort), {
 		columns: REWARD_SORT_COLUMNS,
@@ -136,10 +163,12 @@ const RewardRepositoryPorts = {
 		status: "PUBLISHED",
 		rewardKind: "CONSUMER",
 	}),
-	buildUpdateWhere: (id: string): Prisma.RewardWhereUniqueInput => ({ id }),
-	stampUpdate: (data: Prisma.RewardUpdateInput): Prisma.RewardUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.RewardUpdateInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.RewardUpdateInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
+	buildLiveWhere: (id: string): Prisma.RewardWhereInput => ({ id, isDeleted: false }),
+	buildUniqueWhere: (id: string): Prisma.RewardWhereUniqueInput => ({ id }),
+	buildUpdateWhere: (id: string): Prisma.RewardWhereInput => ({ id, isDeleted: false }),
+	stampUpdate: (data: Prisma.RewardUpdateManyMutationInput): Prisma.RewardUpdateManyMutationInput => ({ ...data, updatedAt: nowEpochMs() }),
+	stampSoftDelete: (): Prisma.RewardUpdateManyMutationInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
+	stampRestore: (): Prisma.RewardUpdateManyMutationInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
 };
 
 @Injectable()
@@ -152,11 +181,11 @@ export class RewardRepository extends BaseRepository<
 	Prisma.RewardWhereInput,
 	Prisma.RewardOrderByWithRelationInput,
 	Prisma.RewardCreateInput,
-	Prisma.RewardUpdateInput,
+	Prisma.RewardUpdateManyMutationInput,
 	Prisma.RewardWhereUniqueInput
 > {
 	public constructor(prisma: PrismaService) {
-		super(prisma, RewardRepositoryPorts, prisma.reward, { softDelete: true, concurrency: false });
+		super(prisma, RewardRepositoryPorts, (db: Prisma.TransactionClient) => db.reward, { softDelete: true });
 	}
 
 	public async listMarketplace(query: RewardListQuery): Promise<RepositoryListResult<RewardWithOrganization>> {
@@ -190,7 +219,7 @@ export class RewardRepository extends BaseRepository<
 				status: "PUBLISHED",
 				rewardKind: "CONSUMER",
 			},
-			select: { id: true, title: true, expiryDate: true, quantityRemaining: true },
+			select: { id: true, title: true, expiryDate: true, quantityRemaining: true, rules: true, minSpendMinor: true },
 		});
 	}
 
@@ -201,21 +230,17 @@ export class RewardRepository extends BaseRepository<
 		});
 	}
 
-	public async reserveQuantity(rewardId: string): Promise<number> {
-		const result = await this.prisma.reward.updateMany({
-			where: { id: rewardId, quantityRemaining: { gt: 0 } },
-			data: {
-				quantityRemaining: { decrement: 1 },
-				quantityReserved: { increment: 1 },
-				claimCount: { increment: 1 },
-			},
+	/** One of the organization's live consumer rewards, if it is offered at a store of `scope` (else `null`). */
+	public async findConsumerByOrganization(organizationId: string, rewardId: string, scope: MerchantLocationScope): Promise<RewardWithOrganization | null> {
+		return this.prisma.reward.findFirst({
+			where: { AND: [buildOrganizationRewardWhere(organizationId, scope), { id: rewardId }] },
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 		});
-		return result.count;
 	}
 
-	public async listConsumerByOrganization(organizationId: string, locationId?: string): Promise<RewardWithOrganization[]> {
+	public async listConsumerByOrganization(organizationId: string, scope: MerchantLocationScope): Promise<RewardWithOrganization[]> {
 		return this.prisma.reward.findMany({
-			where: buildOrganizationRewardWhere(organizationId, locationId),
+			where: buildOrganizationRewardWhere(organizationId, scope),
 			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 			orderBy: { createdAt: "desc" },
 		});
@@ -296,17 +321,34 @@ export class RewardRepository extends BaseRepository<
 	}
 
 	public async findOrgConsumerReward(organizationId: string, rewardId: string): Promise<RewardOrgConsumerSummary | null> {
-		return this.prisma.reward.findFirst({
+		const row = await this.prisma.reward.findFirst({
 			where: { id: rewardId, organizationId, isDeleted: false, rewardKind: "CONSUMER" },
-			select: { id: true, status: true, referrerRewardId: true, quantityTotal: true, quantityRemaining: true },
+			select: {
+				id: true,
+				status: true,
+				referrerRewardId: true,
+				quantityTotal: true,
+				quantityRemaining: true,
+				locationScopeType: true,
+				locationScopes: { select: { locationId: true } },
+			},
 		});
+		if (row === null) {
+			return null;
+		}
+		const { locationScopes, ...summary } = row;
+		return { ...summary, locationIds: locationScopes.map((scope) => scope.locationId) };
 	}
 
-	public async listPendingReview(): Promise<RewardWithOrganization[]> {
-		return this.prisma.reward.findMany({
-			where: { status: "PENDING_REVIEW", isDeleted: false, rewardKind: "CONSUMER" },
-			include: REWARD_WITH_ORGANIZATION_INCLUDE,
-			orderBy: { submittedForReviewAt: "asc" },
+	/** One page of the moderation queue (bounded by the list query's limit). */
+	public async listPendingReview(query: AdminPendingRewardListQuery): Promise<RepositoryListResult<RewardWithOrganization>> {
+		return fetchListPage(query, {
+			where: buildPendingReviewWhere(),
+			order: buildPendingReviewOrder(query),
+			keyset: PENDING_REVIEW_LIST_KEYSET,
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.reward.count({ where }),
+			findMany: (args): Promise<RewardWithOrganization[]> => this.prisma.reward.findMany({ ...args, include: REWARD_WITH_ORGANIZATION_INCLUDE }),
 		});
 	}
 
@@ -358,12 +400,10 @@ export class RewardRepository extends BaseRepository<
 				});
 			}
 
-			await tx.rewardAuditLog.create({
-				data: {
-					organizationId,
-					action: "reward.auto_published",
-					metadata: { rewardId },
-				},
+			await appendRewardAuditLog(tx, {
+				organizationId,
+				action: "reward.auto_published",
+				metadata: { rewardId },
 			});
 
 			await withinTransaction(tx);

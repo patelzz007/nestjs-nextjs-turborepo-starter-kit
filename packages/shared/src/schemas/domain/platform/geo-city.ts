@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
+import { JsonValueSchema } from "../../runtime/json";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
 import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
@@ -39,7 +40,7 @@ export const CreateCitySchema = z
 		longitude: z.coerce.number().min(-180).max(180),
 		native: z.string().max(255).optional(),
 		timezone: z.string().max(255).optional(),
-		translations: DataValueSchema.optional(),
+		translations: JsonValueSchema.optional(),
 		wikiDataId: z.string().max(255).optional(),
 		flag: z.boolean().optional().default(true),
 	})
@@ -58,7 +59,7 @@ export const UpdateCitySchema = z
 		longitude: z.coerce.number().min(-180).max(180).optional(),
 		native: z.string().max(255).nullable().optional(),
 		timezone: z.string().max(255).nullable().optional(),
-		translations: DataValueSchema.nullable().optional(),
+		translations: JsonValueSchema.nullable().optional(),
 		wikiDataId: z.string().max(255).nullable().optional(),
 		flag: z.boolean().optional(),
 	})
@@ -67,7 +68,7 @@ export const UpdateCitySchema = z
 
 export type UpdateCityInput = z.output<typeof UpdateCitySchema>;
 
-/** `GET /geo/cities` list query — see docs/list-queries.md. */
+/** `GET /geo/cities` list query — see docs/technical/api/list-queries.md. */
 export const cityListQuery = defineListQuery({
 	sortable: ["id", "name", "countryCode", "stateCode"],
 	defaultSort: [{ field: "id", direction: "asc" }],

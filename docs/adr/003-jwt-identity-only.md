@@ -90,5 +90,5 @@ The Next.js proxy (`proxy.ts`) gates admin routes synchronously on every navigat
 
 ## References
 
-- [Authorization guide](./../authorization.md) — JWT design, `/me` vs `/auth/permissions`, impersonation
+- [Authorization guide](../technical/authorization/overview.md) — JWT design, `/me` vs `/auth/permissions`, impersonation
 - JWT Best Practices: https://datatracker.ietf.org/doc/html/rfc8725

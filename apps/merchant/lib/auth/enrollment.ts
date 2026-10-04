@@ -1,7 +1,6 @@
 "use client";
 
-import { isRestrictedAuthUser, resolveAuthEnrollmentReason } from "@workspace/client/lib/auth/session/map-auth-user";
-import { useAuth } from "@workspace/client/lib/auth";
+import { isRestrictedAuthUser, resolveAuthEnrollmentReason, useAuth } from "@workspace/client/lib/auth";
 import type { EnrollmentReason } from "@workspace/shared";
 import * as React from "react";
 

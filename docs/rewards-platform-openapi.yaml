@@ -307,47 +307,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/RedemptionPreview'
         '404':
-          description: Invalid token or backup code
+          description: Unknown token or backup code, or another merchant's code (indistinguishable)
         '409':
           description: Already redeemed
         '422':
-          description: Expired or wrong merchant
-
-  /v1/redemptions/confirm:
-    post:
-      tags: [Redemptions]
-      security:
-        - merchantApiKey: []
-      summary: Confirm redemption (idempotent)
-      operationId: confirmRedemption
-      parameters:
-        - $ref: '#/components/parameters/terminalId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              allOf:
-                - $ref: '#/components/schemas/RedemptionTokenInput'
-                - type: object
-                  required: [idempotencyKey]
-                  properties:
-                    idempotencyKey:
-                      type: string
-                      format: uuid
-                      description: Must be stable on retry; mismatch with same token → 409
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RedemptionConfirmed'
-        '409':
-          description: Already redeemed or token/idempotencyKey mismatch
-        '422':
-          description: Expired or wrong merchant
+          description: Expired, not valid at this store, or STORE_REQUIRED
         '429':
-          $ref: '#/components/responses/RateLimited'
+          description: POS_RATE_LIMITED (per API key) or POS_CODE_LOCKED (too many unknown backup codes)
 
   /v1/merchant/rewards:
     get:
@@ -854,19 +820,6 @@ components:
           format: date-time
         valid:
           type: boolean
-
-    RedemptionConfirmed:
-      type: object
-      properties:
-        redemptionId:
-          type: string
-        claimId:
-          type: string
-        redeemedAt:
-          type: string
-          format: date-time
-        idempotencyKey:
-          type: string
 
     MerchantCreateRewardRequest:
       type: object

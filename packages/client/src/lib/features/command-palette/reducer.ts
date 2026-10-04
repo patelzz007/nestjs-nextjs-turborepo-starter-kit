@@ -1,3 +1,4 @@
+import { assertNever } from "@workspace/shared";
 import type { CommandPaletteAction } from "./actions";
 import { MAX_RECENT_SEARCHES, type CommandPaletteRecentSearch, type CommandPaletteState } from "./state";
 
@@ -22,11 +23,6 @@ export function commandPaletteReducer(state: CommandPaletteState, action: Comman
 			// Storage is outside our control: hold a restored list to the same cap a recorded one gets.
 			return { ...state, recentSearches: action.preferences.recentSearches.slice(0, MAX_RECENT_SEARCHES), pinnedUrls: action.preferences.pinnedUrls };
 		default:
-			return assertNever(action);
+			return assertNever(action, "command palette action");
 	}
-}
-
-/** Exhaustiveness check: adding an action without handling it fails to compile. */
-function assertNever(action: never): never {
-	throw new Error(`Unhandled command palette action: ${JSON.stringify(action)}`);
 }

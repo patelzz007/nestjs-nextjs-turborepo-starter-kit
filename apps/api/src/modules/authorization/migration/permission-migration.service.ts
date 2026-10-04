@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { getPermissionDefinitions, type PermissionDefinition } from "@workspace/shared";
 
 import { SystemPrismaService } from "../../../prisma/system-prisma.service";
-import { AuthorizationCacheService } from "../cache/authorization-cache.service";
+import { AuthorizationInvalidationService } from "../cache/authorization-invalidation.service";
 
 /**
  * Result of a migration sync.
@@ -28,7 +28,7 @@ export class PermissionMigrationService {
 
 	public constructor(
 		private readonly systemDb: SystemPrismaService,
-		private readonly cache: AuthorizationCacheService,
+		private readonly invalidation: AuthorizationInvalidationService,
 	) {}
 
 	/** Sync `PERMISSION_DEFINITIONS` from `@workspace/shared` into the database. */
@@ -111,7 +111,7 @@ export class PermissionMigrationService {
 		}
 
 		if (created.length > 0 || updated.length > 0) {
-			this.cache.clear();
+			await this.invalidation.clearAll();
 		}
 
 		return { created, updated, orphaned };

@@ -23,10 +23,12 @@ describe("AdminClientEnvSchema", () => {
 		expect(keys.filter((key: string): boolean => !key.startsWith(PUBLIC_ENV_PREFIX))).toEqual([]);
 	});
 
-	it("defaults the demo flag to off and steady polling to disabled", () => {
-		const env = parsePublic({});
-		expect(env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS).toBe(false);
-		expect(env.NEXT_PUBLIC_SESSION_POLL_MS).toBeNull();
+	it("defaults steady polling to disabled", () => {
+		expect(parsePublic({}).NEXT_PUBLIC_SESSION_POLL_MS).toBeNull();
+	});
+
+	it("has no demo-account switch (demo accounts follow NODE_ENV only)", () => {
+		expect(Object.keys(AdminClientEnvSchema.shape)).not.toContain("NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS");
 	});
 
 	it("disables steady polling for empty, whitespace-only and 0 values", () => {
@@ -57,9 +59,13 @@ describe("AdminClientEnvSchema", () => {
 });
 
 describe("AdminServerEnvSchema", () => {
-	it("requires NODE_ENV and leaves COOKIE_DOMAIN optional", () => {
+	it("requires NODE_ENV, leaves COOKIE_DOMAIN optional", () => {
 		expect(AdminServerEnvSchema.parse({ NODE_ENV: "development" })).toEqual({ NODE_ENV: "development", COOKIE_DOMAIN: undefined });
 		expect(AdminServerEnvSchema.safeParse({ COOKIE_DOMAIN: "localhost" }).success).toBe(false);
+	});
+
+	it("has no demo-accounts switch, so demo accounts cannot be forced on by configuration", () => {
+		expect(AdminServerEnvSchema.safeParse({ NODE_ENV: "production", SHOW_DEMO_ACCOUNTS: "true" }).success).toBe(false);
 	});
 });
 

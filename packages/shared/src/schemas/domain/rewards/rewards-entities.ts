@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../../api/common";
+import { CanonicalEmailSchema } from "../../api/email-address";
 import { defineListQuery, LIST_MAX_LIMIT, listFilter, ListSearchSchema } from "../../api/list-query";
 import { OrganizationLocationFilterSchema } from "../organization/location-filter";
 import { OrganizationLocationResponseSchema, OrganizationLocationScopeTypeSchema, OrganizationSlugSchema } from "../organization/organization";
@@ -28,7 +29,7 @@ import { MerchantKybDocumentRecordSchema } from "./rewards-kyb";
 /** Page size the consumer / merchant reward lists have always used. */
 export const REWARD_LIST_DEFAULT_LIMIT = 10;
 
-/** `GET /rewards` (consumer marketplace) list query — see docs/list-queries.md. */
+/** `GET /rewards` (consumer marketplace) list query — see docs/technical/api/list-queries.md. */
 export const rewardListQuery = defineListQuery({
 	sortable: ["createdAt", "expiryDate", "title"],
 	defaultSort: [{ field: "createdAt", direction: "desc" }],
@@ -57,11 +58,17 @@ export const RewardClaimListQuerySchema = rewardClaimListQuery.schema;
 export type RewardClaimListQuery = z.output<typeof RewardClaimListQuerySchema>;
 export type RewardClaimListSortField = (typeof rewardClaimListQuery.sortable)[number];
 
-/** `GET /orgs/:orgSlug/redemptions` list query. `locationId` is an authorization SCOPE (checked against the member's stores), not a filter. */
+/**
+ * `GET /orgs/:orgSlug/redemptions` list query. `locationId` is an authorization SCOPE (checked against the member's stores), not a filter.
+ * `filter[redeemedAt][gte]` / `[lt]` narrow to a time window — e.g. "today" in the viewer's time zone; the response's
+ * `meta.total` is then the server-side count of that window (never a count of the rows on one page).
+ */
 export const merchantRedemptionListQuery = defineListQuery({
 	sortable: ["redeemedAt"],
 	defaultSort: [{ field: "redeemedAt", direction: "desc" }],
-	filter: {},
+	filter: {
+		redeemedAt: listFilter.epochMs({ gte: true, lt: true }),
+	},
 	params: OrganizationLocationFilterSchema.shape,
 	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
 });
@@ -84,6 +91,18 @@ export const adminMerchantListQuery = defineListQuery({
 export const AdminMerchantListQuerySchema = adminMerchantListQuery.schema;
 export type AdminMerchantListQuery = z.output<typeof AdminMerchantListQuerySchema>;
 export type AdminMerchantListSortField = (typeof adminMerchantListQuery.sortable)[number];
+
+/** `GET /admin/rewards/pending` list query — the moderation queue, oldest reward first. */
+export const adminPendingRewardListQuery = defineListQuery({
+	sortable: ["createdAt"],
+	defaultSort: [{ field: "createdAt", direction: "asc" }],
+	filter: {},
+	params: {},
+	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
+});
+export const AdminPendingRewardListQuerySchema = adminPendingRewardListQuery.schema;
+export type AdminPendingRewardListQuery = z.output<typeof AdminPendingRewardListQuerySchema>;
+export type AdminPendingRewardListSortField = (typeof adminPendingRewardListQuery.sortable)[number];
 
 /** `GET /rewards/notifications` list query — `filter[readAt][isNull]=true` lists unread notifications. */
 export const rewardNotificationListQuery = defineListQuery({
@@ -161,27 +180,21 @@ const redemptionCodeShape = {
 	backupCode: RewardBackupCodeSchema.optional(),
 };
 
-function hasRedemptionCode(value: { readonly token?: string | undefined; readonly backupCode?: string | undefined }): boolean {
-	return value.token !== undefined || value.backupCode !== undefined;
+/** Exactly one of the two: a code is either the scanned QR token or the backup code read out instead — never both, never neither. */
+function hasExactlyOneRedemptionCode(value: { readonly token?: string | undefined; readonly backupCode?: string | undefined }): boolean {
+	return (value.token !== undefined) !== (value.backupCode !== undefined);
 }
 
-const REDEMPTION_CODE_REQUIRED = { message: "token or backupCode is required" };
+const REDEMPTION_CODE_EXACTLY_ONE = { message: "Send exactly one of token or backupCode" };
 
 /** One customer code scanned at the till: the QR token, or the 8-character backup code read out instead. */
-export const RedemptionCodeSchema = z.object(redemptionCodeShape).strict().refine(hasRedemptionCode, REDEMPTION_CODE_REQUIRED);
+export const RedemptionCodeSchema = z.object(redemptionCodeShape).strict().refine(hasExactlyOneRedemptionCode, REDEMPTION_CODE_EXACTLY_ONE);
 
 export type RedemptionCode = z.output<typeof RedemptionCodeSchema>;
 
 export const RedemptionValidateSchema = RedemptionCodeSchema;
 
 export type RedemptionValidateInput = z.output<typeof RedemptionValidateSchema>;
-
-export const RedemptionConfirmSchema = z
-	.object({ ...redemptionCodeShape, idempotencyKey: z.uuid() })
-	.strict()
-	.refine(hasRedemptionCode, REDEMPTION_CODE_REQUIRED);
-
-export type RedemptionConfirmInput = z.output<typeof RedemptionConfirmSchema>;
 
 /** Longest `X-Terminal-Id` (the device label a POS sends with every call). */
 export const POS_TERMINAL_ID_MAX_LENGTH = 100;
@@ -197,6 +210,22 @@ export const PosTerminalIdSchema = z
 export const SaleCurrencySchema = z.enum(["MYR"]);
 
 export type SaleCurrency = z.output<typeof SaleCurrencySchema>;
+
+/**
+ * ISO 4217 minor-unit exponent of every sale currency: an amount of `n` minor
+ * units is `n / 10^exponent` major units (2 for MYR: 123450 sen = RM 1,234.50).
+ *
+ * This table — not ICU's display precision — is the source of truth for
+ * converting the integer minor units the API sends. ICU's default fraction
+ * digits are a display convention and differ from ISO 4217 for several
+ * currencies (IDR, HUF and COP display 0 decimals but have 2 minor digits;
+ * IQD displays 0 but has 3), so deriving the exponent from `Intl` silently
+ * mis-scales money. Adding a currency to {@link SaleCurrencySchema} fails to
+ * compile until its exponent is added here.
+ */
+export const SALE_CURRENCY_MINOR_UNIT_EXPONENTS: Readonly<Record<SaleCurrency, number>> = {
+	MYR: 2,
+};
 
 /** The currency every sale is recorded in until multi-currency merchants exist. */
 export const DEFAULT_SALE_CURRENCY: SaleCurrency = "MYR";
@@ -444,10 +473,30 @@ export type MerchantUpdateRewardPathInput = z.output<typeof MerchantUpdateReward
 /** Longest POS API key (terminal) name — shared by the create form and the API. */
 export const MERCHANT_API_KEY_NAME_MAX_LENGTH = 100;
 
+/**
+ * What a merchant API key may call (mirrors the Prisma `OrganizationApiKeyScope` enum):
+ * - `POS` — a till: only the POS redemption routes (`/redemptions/*`). Every key a
+ *   terminal receives by pairing is a POS key.
+ * - `INTEGRATION` — a back-office integration: the POS routes plus the organization
+ *   reward / redemption-history / analytics API.
+ */
+export const OrganizationApiKeyScopeSchema = z.enum(["POS", "INTEGRATION"]);
+
+export type OrganizationApiKeyScope = z.output<typeof OrganizationApiKeyScopeSchema>;
+
+/** The scope a manually created key gets when none is chosen — least privilege. */
+export const DEFAULT_MERCHANT_API_KEY_SCOPE: OrganizationApiKeyScope = "POS";
+
+/**
+ * `POST /orgs/:orgSlug/api-keys`. `locationId` limits the key to one store; a member
+ * limited to some stores must choose one of them (only an all-stores member may create
+ * an organization-wide key).
+ */
 export const MerchantCreateApiKeySchema = z
 	.object({
 		name: z.string().trim().min(1).max(MERCHANT_API_KEY_NAME_MAX_LENGTH).optional(),
 		locationId: z.uuid().optional(),
+		scope: OrganizationApiKeyScopeSchema.optional().default(DEFAULT_MERCHANT_API_KEY_SCOPE),
 	})
 	.strict();
 
@@ -494,11 +543,17 @@ export const PosTerminalStatusSchema = z.enum(["AWAITING_PAIRING", "ACTIVE", "UN
 
 export type PosTerminalStatus = z.output<typeof PosTerminalStatusSchema>;
 
-/** `POST /orgs/:orgSlug/terminals` — every till belongs to one store. */
+/**
+ * `POST /orgs/:orgSlug/terminals` — every till belongs to one store. `terminalId` is the
+ * merchant's own till label (what the till sends as `X-Terminal-Id`); omit it to get a
+ * generated `TERM-…` id. A label already used by a live terminal of the organization is
+ * refused (409 `TERMINAL_ID_TAKEN`); a removed terminal's label may be reused.
+ */
 export const MerchantCreateTerminalSchema = z
 	.object({
 		name: z.string().trim().min(1).max(POS_TERMINAL_NAME_MAX_LENGTH),
 		locationId: z.uuid(),
+		terminalId: PosTerminalIdSchema.optional(),
 	})
 	.strict();
 
@@ -547,7 +602,7 @@ export type MerchantCreateApiKeyInput = z.output<typeof MerchantCreateApiKeySche
 
 export const AdminCreateMerchantInviteSchema = z
 	.object({
-		email: z.email().max(100),
+		email: CanonicalEmailSchema,
 		businessName: z.string().min(1).max(200),
 		city: PilotCitySchema,
 	})
@@ -695,7 +750,6 @@ export const RewardClaimQrResponseSchema = z.object({
 	qrPayload: z.string(),
 	backupCode: RewardBackupCodeSchema,
 	claimExpiresAt: EpochMsSchema,
-	backupLockedUntil: EpochMsSchema.nullable(),
 });
 
 export type RewardClaimQrResponse = z.output<typeof RewardClaimQrResponseSchema>;
@@ -711,8 +765,13 @@ export const RewardNotificationResponseSchema = BaseResponseSchema.extend({
 
 export type RewardNotificationResponse = z.output<typeof RewardNotificationResponseSchema>;
 
-/** Why a scanned code cannot be redeemed right now (`null` when it can). */
-export const RedemptionInvalidReasonSchema = z.enum(["ALREADY_REDEEMED", "EXPIRED", "NOT_VALID_AT_STORE", "BACKUP_LOCKED"]);
+/**
+ * Why a scanned code cannot be redeemed right now (`null` when it can).
+ * `STORE_REQUIRED`: the reward is limited to selected stores, but the call
+ * carries no store (an organization-wide key with an unregistered terminal id),
+ * so the till must be registered to its store first.
+ */
+export const RedemptionInvalidReasonSchema = z.enum(["ALREADY_REDEEMED", "EXPIRED", "NOT_VALID_AT_STORE", "STORE_REQUIRED"]);
 
 export type RedemptionInvalidReason = z.output<typeof RedemptionInvalidReasonSchema>;
 
@@ -728,15 +787,6 @@ export const RedemptionPreviewResponseSchema = z.object({
 });
 
 export type RedemptionPreviewResponse = z.output<typeof RedemptionPreviewResponseSchema>;
-
-export const RedemptionConfirmedResponseSchema = z.object({
-	redemptionId: z.uuid(),
-	claimId: z.uuid(),
-	redeemedAt: EpochMsSchema,
-	idempotencyKey: z.uuid(),
-});
-
-export type RedemptionConfirmedResponse = z.output<typeof RedemptionConfirmedResponseSchema>;
 
 export const RedemptionCheckoutItemSchema = z.object({
 	redemptionId: z.uuid(),
@@ -763,6 +813,7 @@ export const MerchantApiKeySummarySchema = BaseResponseSchema.extend({
 	name: z.string(),
 	locationId: z.uuid().nullable(),
 	locationName: z.string().nullable(),
+	scope: OrganizationApiKeyScopeSchema,
 	revokedAt: EpochMsSchema.nullable(),
 });
 
@@ -772,13 +823,15 @@ export const MerchantApiKeyCreatedSchema = z.object({
 	id: z.uuid(),
 	apiKey: z.string(),
 	name: z.string(),
+	scope: OrganizationApiKeyScopeSchema,
+	locationId: z.uuid().nullable(),
 });
 
 export type MerchantApiKeyCreated = z.output<typeof MerchantApiKeyCreatedSchema>;
 
 export const MerchantTerminalSummarySchema = BaseResponseSchema.extend({
 	id: z.uuid(),
-	/** What the till sends as `X-Terminal-Id` (generated, e.g. `TERM-7F3K9QX2`). */
+	/** What the till sends as `X-Terminal-Id` (the merchant's label, or generated, e.g. `TERM-7F3K9QX2`). */
 	terminalId: PosTerminalIdSchema,
 	name: z.string(),
 	locationId: z.uuid(),
@@ -791,6 +844,34 @@ export const MerchantTerminalSummarySchema = BaseResponseSchema.extend({
 });
 
 export type MerchantTerminalSummary = z.output<typeof MerchantTerminalSummarySchema>;
+
+/** `GET /orgs/:orgSlug/terminals/summary` query — `locationId` narrows to one of the caller's stores (an authorization SCOPE). */
+export const MerchantTerminalStatusSummaryQuerySchema = OrganizationLocationFilterSchema;
+
+export type MerchantTerminalStatusSummaryQuery = z.output<typeof MerchantTerminalStatusSummaryQuerySchema>;
+
+/** Live terminals per derived status (see {@link PosTerminalStatusSchema}); every status is always present. */
+export const MerchantTerminalStatusCountsSchema = z.object({
+	AWAITING_PAIRING: z.number().int().nonnegative(),
+	ACTIVE: z.number().int().nonnegative(),
+	UNPAIRED: z.number().int().nonnegative(),
+});
+
+export type MerchantTerminalStatusCounts = z.output<typeof MerchantTerminalStatusCountsSchema>;
+
+/**
+ * `GET /orgs/:orgSlug/terminals/summary` — the caller's live terminals at a glance, within its
+ * store scope (a store-limited member never counts another store's tills).
+ */
+export const MerchantTerminalStatusSummarySchema = z.object({
+	/** Live terminals in scope. Equals the sum of `byStatus`. */
+	total: z.number().int().nonnegative(),
+	byStatus: MerchantTerminalStatusCountsSchema,
+	/** Stores in scope that have at least one live terminal. */
+	storesWithTerminals: z.number().int().nonnegative(),
+});
+
+export type MerchantTerminalStatusSummary = z.output<typeof MerchantTerminalStatusSummarySchema>;
 
 /** A terminal plus its one-time pairing code — the only time the code is ever returned. */
 export const MerchantTerminalPairingSchema = z.object({

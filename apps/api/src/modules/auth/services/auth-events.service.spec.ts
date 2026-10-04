@@ -26,7 +26,9 @@ vi.mock("../../../infrastructure/outbox/platform-outbox.service", () => ({
 const LOGIN_SUCCEEDED: AuthFlowEvent = { flow: "login", userId: "user-1", clientType: "web", status: "succeeded", error: null, durationMs: 12 };
 
 function createService(): AuthEventsService {
-	return new AuthEventsService(new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()));
+	return new AuthEventsService(
+		new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig()), new RequestContextService()), new RequestContextService()),
+	);
 }
 
 describe("AuthEventsService.recordFlow", () => {

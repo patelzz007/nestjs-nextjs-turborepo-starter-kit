@@ -3,39 +3,45 @@
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { useDebouncedDraft } from "@workspace/ui/hooks/use-debounced-draft";
 import { Search, X } from "lucide-react";
 import * as React from "react";
 
+/** Typing pauses this long before the sidebar filters (a filter per keystroke would re-render the whole tree). */
+export const PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS = 150;
+
 export interface PanelSidebarSearchProps {
+	/** The committed search text (the sidebar store's). */
 	readonly value: string;
 	readonly placeholder: string;
 	readonly ariaLabel: string;
 	readonly clearAriaLabel: string;
-	readonly onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-	readonly onClear: () => void;
-	readonly inputRef?: React.Ref<HTMLInputElement>;
+	/** Commits the text — debounced while typing, immediately on clear. Keep it stable (a store command). */
+	readonly onValueChange: (value: string) => void;
+	readonly inputRef?: React.RefObject<HTMLInputElement | null>;
 	readonly className?: string;
 }
 
-/** Inset sidebar search with `/` keyboard hint when empty. */
-export function PanelSidebarSearch({ value, placeholder, ariaLabel, clearAriaLabel, onChange, onClear, inputRef, className }: PanelSidebarSearchProps): React.JSX.Element {
-	const [localValue, setLocalValue] = React.useState(value);
-	const prevValueRef = React.useRef(value);
-
-	React.useEffect((): void => {
-		if (value !== prevValueRef.current && value !== localValue) {
-			setLocalValue(value);
-		}
-		prevValueRef.current = value;
-	}, [value, localValue]);
+/**
+ * Inset sidebar search with a `/` keyboard hint when empty. The input shows a
+ * local draft (so typing stays instant) committed after a pause; the draft
+ * follows the committed value whenever it changes elsewhere, and the clear
+ * button commits at once — cancelling any commit still pending.
+ */
+export function PanelSidebarSearch({ value, placeholder, ariaLabel, clearAriaLabel, onValueChange, inputRef, className }: PanelSidebarSearchProps): React.JSX.Element {
+	const { draft: localValue, setDraft, commitNow } = useDebouncedDraft({ value, onCommit: onValueChange, delayMs: PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS });
 
 	const handleChange = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
-			setLocalValue(event.target.value);
-			onChange(event);
+			setDraft(event.target.value);
 		},
-		[onChange],
+		[setDraft],
 	);
+
+	const handleClear = React.useCallback((): void => {
+		commitNow("");
+		inputRef?.current?.focus();
+	}, [commitNow, inputRef]);
 
 	const hasQuery = localValue.length > 0;
 
@@ -63,7 +69,7 @@ export function PanelSidebarSearch({ value, placeholder, ariaLabel, clearAriaLab
 						type="button"
 						variant="ghost"
 						size="icon-xs"
-						onClick={onClear}
+						onClick={handleClear}
 						className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
 						aria-label={clearAriaLabel}>
 						<X className="size-3.5" />

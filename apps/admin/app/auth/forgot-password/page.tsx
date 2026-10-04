@@ -1,28 +1,19 @@
-"use client";
-
 import { ForgotPasswordForm } from "@workspace/client/lib/auth/forms/forgot-password-form";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
-import { ROUTES } from "@/lib/routes";
+import { formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
 
+import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
+
+/** `/auth/forgot-password` — requests a password-reset email for an admin account. */
 export default function AdminForgotPasswordPage(): React.JSX.Element {
 	return (
-		<AuthLayout
-			logo={
-				<svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-					<path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-				</svg>
-			}
-			brandName="Admin Panel"
+		<AdminAuthLayout
+			icon="key"
 			tagline="Recover access to your administrator account."
-			features={["Secure password reset links", "Links expire after 1 hour", "All sessions are revoked after reset"]}
+			features={["Secure password reset links", `Links expire after ${formatLinkLifetimeHours(PASSWORD_RESET_LINK_TTL_HOURS)}`, "All sessions are revoked after reset"]}
 			title="Reset password"
 			subtitle="Enter your email and we'll send you a reset link"
-			copyright="Admin Panel"
-			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}
-			showBackButton
-			backHref={ROUTES.auth.login}
-			backLabel="Back to sign in">
+			showBackToLogin>
 			<ForgotPasswordForm />
-		</AuthLayout>
+		</AdminAuthLayout>
 	);
 }

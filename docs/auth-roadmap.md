@@ -22,6 +22,7 @@ The following end-to-end flows are implemented across the NestJS API, shared Zod
 | ---- | --- | -- |
 | Forgot password | `POST /auth/forgot-password` | `/auth/forgot-password` (web + admin) |
 | Reset password | `POST /auth/reset-password` | `/auth/reset-password?token=…` |
+| Self-service profile (read / edit own name; avatar via `/files` `USER_AVATAR`) | `GET /auth/profile`, `PATCH /auth/profile` — see [Self-service profile](#self-service-profile) | Admin `/account/profile`; client hooks `useOwnProfile` / `useUpdateOwnProfile` (`@workspace/client/lib/auth/profile/use-own-profile`) for every app |
 | Change password (authenticated) | `POST /auth/change-password` | Admin `/account/security`, web `/rewardhub/account`, merchant `/orgs/[orgSlug]/account` |
 | TOTP 2FA setup / enable / disable | `GET /auth/2fa/setup`, `POST /auth/2fa/enable`, `POST /auth/2fa/disable` | `SecuritySettingsPanel` (shared client component) |
 | Login with 2FA step | `POST /auth/login` → `POST /auth/login/2fa` or `POST /auth/login/backup-code` | `LoginForm` 2FA step |
@@ -29,7 +30,29 @@ The following end-to-end flows are implemented across the NestJS API, shared Zod
 | Validate reset token | `POST /auth/validate-reset-token` | `ResetPasswordForm` pre-check on mount |
 | Signup + email verification | `POST /auth/signup`, `POST /auth/verify-email/:token` | `/auth/signup`, `/auth/verify-email/[token]` |
 
-**Data model additions:** `PasswordHistory`, `BackupCode`, `TwoFactorPendingSetup`; `User.twoFactorEnabled` / `User.twoFactorSecret`.
+**Data model additions:** `PasswordHistory`, `BackupCode`, `TwoFactorPendingSetup`; `User.twoFactorEnabled` plus the AES-256-GCM-encrypted TOTP secret (`User.twoFactorSecretCiphertext` / `twoFactorSecretIv` / `twoFactorSecretKeyVersion`; no plaintext secret column).
+
+### Self-service profile
+
+| Endpoint | Authorization | Notes |
+|---|---|---|
+| `GET /api/v1/auth/profile` | Signed-in, full session; `READ PROFILE` on the caller's own record (`self()`, implicit self-grant). Allowed while impersonating. | Never cached. |
+| `PATCH /api/v1/auth/profile` | Signed-in, full session; `UPDATE PROFILE` on own record. **Refused while impersonating** (403 `PROFILE_UPDATE_DURING_IMPERSONATION`): the profile is the user's self-representation; staff corrections belong on a permission-gated admin endpoint. | Strict body: `version` + at least one editable field (`fullName`: trimmed, 2–100 chars, no control characters). 409 `CONFLICT` when `version` is stale (reload and retry). One transaction under the `auth.profile.update` system operation: conditional update (`users.profile_version`), re-read, audit row (actor, impersonator, correlation id, IP, user agent). Then the cached `/auth/me` + `/auth/permissions` are dropped. |
+
+The avatar is not part of the body: upload it with `POST /files/upload-url` (`category: "USER_AVATAR"`, `userId` = self) → `POST /files/:fileId/complete`; it appears in the profile once its scan passes. Remove it with `DELETE /files/:fileId`. The JWT `fullName` claim refreshes at the next token refresh (it is display-only).
+
+Sample (seed account `user@example.com` / `User@123`, `profile_version` 1 after the seeded edit):
+
+```http
+PATCH /api/v1/auth/profile
+{ "version": 1, "fullName": "  Regular User  " }
+
+200 { "success": true, "data": { "id": "<user id>", "email": "user@example.com", "fullName": "Regular User",
+       "avatar": null, "version": 2, "createdAt": 1788000000000, "updatedAt": 1788253260000 }, "meta": { … } }
+
+PATCH /api/v1/auth/profile   { "version": 1, "fullName": "Late Edit" }
+409 { "success": false, "error": { "code": "CONFLICT", "message": "The resource was changed by another request. Reload it and try again." } }
+```
 
 **Still pending from the reference spec:** trusted IP / device persistence tables, login verification resend endpoint, geo-IP suspicious location detection.
 
@@ -83,7 +106,7 @@ End-to-end MFA hardening is live across the API, shared contracts, and client he
 
 - Auth endpoints use `@nestjs/throttler` with `RedisThrottlerStorage` (Redis primary, in-memory fallback).
 - Named profiles: `strict` (10 req/min per IP on credential endpoints) and `default` (60 req/min on authenticated mutations).
-- Tracker resolves client IP from `cf-connecting-ip`, `x-forwarded-for`, then `req.ip`.
+- Tracker is Fastify's `request.ip` — the TCP peer, or the first untrusted `X-Forwarded-For` hop behind a proxy listed in `TRUST_PROXY` (`common/http/client-ip.ts`); forwarding headers from untrusted peers are ignored.
 
 ### Access-token revocation
 
@@ -1104,7 +1127,7 @@ The cooldown window and max-per-window are configurable via env vars.
 > implementation notes, the files involved, and the do's and don'ts that keep the machinery
 > from regressing.
 >
-> Deep-dive companion: [Token Refresh — How It Works](./token-refresh.md) covers the two
+> Deep-dive companion: [Token Refresh — How It Works](./technical/security/token-refresh.md) covers the two
 > refresh layers (proxy + client), the dead-session/transient-failure handling, and the
 > observability story these features plug into.
 

@@ -1,13 +1,16 @@
 "use client";
 
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
-import type { SalesSummary } from "@workspace/shared";
+import { ANALYTICS_CHART_HEIGHT_CLASS } from "@/lib/analytics/chart-layout";
+import { PLATFORM_DISPLAY_REGION, type DisplayRegion, type SalesSummary } from "@workspace/shared";
 import { AnalyticsChartCard } from "@workspace/ui/components/display/analytics-chart-card";
 import { AnalyticsStatCard, type AnalyticsStatAccent } from "@workspace/ui/components/display/analytics-stat-card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/display/chart";
 import { buttonVariants } from "@workspace/ui/components/form/button";
+import { cn } from "@workspace/ui/lib/core/utils";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { formatMinorUnits, formatMinorUnitsCompact } from "@workspace/ui/lib/format/money";
-import { format } from "date-fns";
+import { formatCount } from "@workspace/ui/lib/format/number";
 import { Receipt, ShoppingBag, Wallet, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -29,9 +32,15 @@ export interface MerchantSalesSectionProps {
 	readonly isLoading: boolean;
 	/** The API keys page when this member may create keys; without it the empty state points to the store owner. */
 	readonly apiKeysHref: string | undefined;
+	/** Region the weekly points are labelled in: the zone the API bucketed them in (`period.timeZone`, the merchant's own). */
+	readonly bucketRegion: DisplayRegion;
 }
 
-/** True when neither this period nor the previous one had a paid bill — the POS has not reported any yet. */
+/**
+ * True when neither this period nor the previous one had a paid bill — the POS has not reported any yet.
+ * Inferred: the analytics response has no explicit "has ever reported a sale" field, so a store whose
+ * last bill is older than the previous period also reads as "no sales yet" (an API field is needed).
+ */
 export function hasNoSalesHistory(sales: SalesSummary): boolean {
 	return sales.bills.value === 0 && sales.bills.changePercent === null;
 }
@@ -62,20 +71,20 @@ function SalesSkeleton(): React.JSX.Element {
 	);
 }
 
-function SalesOverview({ sales }: { readonly sales: SalesSummary }): React.JSX.Element {
+function SalesOverview({ sales, bucketRegion }: { readonly sales: SalesSummary; readonly bucketRegion: DisplayRegion }): React.JSX.Element {
 	const { currency } = sales;
 
 	const chartData = React.useMemo(
 		() =>
 			sales.overTime.map((point) => ({
 				...point,
-				label: format(new Date(point.date), "MMM d"),
+				label: formatEpochMs(point.date, "dayMonth", bucketRegion),
 			})),
-		[sales.overTime],
+		[sales.overTime, bucketRegion],
 	);
 
-	const formatMoney = React.useCallback((minor: number): string => formatMinorUnits(minor, currency), [currency]);
-	const formatMoneyTick = React.useCallback((minor: number): string => formatMinorUnitsCompact(minor, currency), [currency]);
+	const formatMoney = React.useCallback((minor: number): string => formatMinorUnits(minor, currency, PLATFORM_DISPLAY_REGION.locale), [currency]);
+	const formatMoneyTick = React.useCallback((minor: number): string => formatMinorUnitsCompact(minor, currency, PLATFORM_DISPLAY_REGION.locale), [currency]);
 
 	return (
 		<>
@@ -91,7 +100,7 @@ function SalesOverview({ sales }: { readonly sales: SalesSummary }): React.JSX.E
 					label={BILLS_CARD.label}
 					icon={BILLS_CARD.icon}
 					accent={BILLS_CARD.accent}
-					value={sales.bills.value.toLocaleString()}
+					value={formatCount(sales.bills.value, PLATFORM_DISPLAY_REGION.locale)}
 					changePercent={sales.bills.changePercent}
 				/>
 				<AnalyticsStatCard
@@ -104,7 +113,7 @@ function SalesOverview({ sales }: { readonly sales: SalesSummary }): React.JSX.E
 			</div>
 
 			<AnalyticsChartCard title={WEEKLY_SALES_TITLE} description={WEEKLY_SALES_DESCRIPTION}>
-				<ChartContainer config={SALES_CHART_CONFIG} className="aspect-auto h-[300px] w-full">
+				<ChartContainer config={SALES_CHART_CONFIG} className={cn("aspect-auto w-full", ANALYTICS_CHART_HEIGHT_CLASS)}>
 					<BarChart data={chartData}>
 						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/60" />
 						<XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
@@ -119,7 +128,7 @@ function SalesOverview({ sales }: { readonly sales: SalesSummary }): React.JSX.E
 }
 
 /** Paid POS bills: total, count and average bill, plus weekly sales. Money arrives in minor units. */
-export function MerchantSalesSection({ sales, isLoading, apiKeysHref }: MerchantSalesSectionProps): React.JSX.Element {
+export function MerchantSalesSection({ sales, isLoading, apiKeysHref, bucketRegion }: MerchantSalesSectionProps): React.JSX.Element {
 	return (
 		<section aria-labelledby="merchant-sales-heading" className="space-y-4">
 			<div className="space-y-1">
@@ -151,7 +160,7 @@ export function MerchantSalesSection({ sales, isLoading, apiKeysHref }: Merchant
 						: {})}
 				/>
 			) : (
-				<SalesOverview sales={sales} />
+				<SalesOverview sales={sales} bucketRegion={bucketRegion} />
 			)}
 		</section>
 	);

@@ -24,7 +24,11 @@ export function WebClientAuthWrapper({ sessionActive, children }: WebClientAuthW
 	// `sessionHint`: a guest (no session cookie on the server) skips the on-mount
 	// `/auth/me` + `/auth/permissions` round trip that could only answer 401.
 	return (
-		<ClientAuthWrapper shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled} sessionHint={sessionActive}>
+		<ClientAuthWrapper
+			clientType="web"
+			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
+			revalidateSessionEnabled={revalidateSessionEnabled}
+			sessionHint={sessionActive}>
 			{children}
 		</ClientAuthWrapper>
 	);

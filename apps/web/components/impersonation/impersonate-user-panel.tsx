@@ -3,12 +3,12 @@
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { PERMISSION, type AdminUserDetail, type CapabilitySlug } from "@workspace/shared";
 import { readPaginatedHasNext, readPaginatedNextCursor } from "@workspace/client/lib/api/envelope";
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
-import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
@@ -23,6 +23,9 @@ export const IMPERSONATION_PERMISSIONS: readonly CapabilitySlug[] = [PERMISSION.
  * user is a super-admin holding every capability the endpoints require and is
  * not already impersonating.
  */
+/** Shared empty list, so "no answer yet" keeps one identity across renders. */
+const NO_USERS: readonly AdminUserDetail[] = [];
+
 export function ImpersonateUserPanel(): React.JSX.Element | null {
 	const { user } = useAuth();
 	const { session } = useWebSession();
@@ -42,7 +45,7 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 /** Super-admin panel to impersonate a user from the web app (uses web session cookies). */
 function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string }): React.JSX.Element {
 	const { api } = useAuth();
-	const queryClient = useQueryClient();
+	const router = useRouter();
 
 	const [search, setSearch] = React.useState<string>("");
 	const [cursor, setCursor] = React.useState<string | null>(null);
@@ -55,11 +58,13 @@ function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string
 		...(search.length > 0 ? { search } : {}),
 	});
 
-	const impersonateMutation = api.auth.impersonate.useMutation({
-		onSuccess: async (): Promise<void> => {
-			await invalidateSessionAuth(queryClient);
-		},
-	});
+	const handleIdentityChanged = React.useCallback((): void => {
+		router.refresh();
+	}, [router]);
+	const impersonation = useImpersonation({ onIdentityChanged: handleIdentityChanged });
+	const { requestStart } = impersonation;
+	const listedUsers = usersQuery.data?.data;
+	const users = React.useMemo((): readonly AdminUserDetail[] => listedUsers ?? NO_USERS, [listedUsers]);
 
 	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setSearch(event.target.value);
@@ -69,9 +74,12 @@ function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string
 
 	const handleImpersonate = React.useCallback(
 		(userId: string): void => {
-			void impersonateMutation.mutateAsync({ userId });
+			const target = users.find((candidate: AdminUserDetail): boolean => candidate.id === userId);
+			if (target !== undefined) {
+				requestStart({ userId: target.id, label: target.email });
+			}
 		},
-		[impersonateMutation],
+		[requestStart, users],
 	);
 
 	const handleImpersonateClick = React.useCallback(
@@ -105,10 +113,9 @@ function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string
 		setCursor(nextCursor);
 	}, [nextCursor]);
 
-	const users: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
-
 	return (
 		<div className="rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
+			{impersonation.confirmDialog}
 			<div className="flex items-center gap-2 text-sm font-semibold">
 				<UserRoundSearch className="size-4" aria-hidden="true" />
 				Impersonate user
@@ -133,7 +140,7 @@ function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string
 										<p className="truncate text-xs text-muted-foreground">{user.email}</p>
 									</div>
 									{canImpersonate ? (
-										<Button size="sm" variant="outline" disabled={impersonateMutation.isPending} data-user-id={user.id} onClick={handleImpersonateClick}>
+										<Button size="sm" variant="outline" disabled={impersonation.isPending} data-user-id={user.id} onClick={handleImpersonateClick}>
 											Impersonate
 										</Button>
 									) : (

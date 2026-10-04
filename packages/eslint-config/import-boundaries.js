@@ -1,7 +1,7 @@
 /**
  * Import-boundary rules — the "architecture fitness checks" from
  * rules/01-repository-architecture.md, enforced by lint instead of memory.
- * Documented in docs/eslint.md ("Import boundaries").
+ * Documented in docs/technical/tooling/eslint.md ("Import boundaries").
  *
  * Built only from ESLint core (`no-restricted-imports` with `regex` patterns)
  * plus one small local rule, so no extra plugin dependency is needed.
@@ -19,7 +19,8 @@ const APP_WORKSPACES = ["admin", "analytics-consumer", "api", "aws-infrastructur
 const SERVER_ONLY_WORKSPACES = ["messaging"];
 
 /** Server/Node-only npm packages (database, queues, NestJS, native crypto). */
-const SERVER_ONLY_PACKAGE_PATTERN = "^(@prisma/|prisma$|\\.prisma/|@nestjs/|bullmq$|ioredis$|kafkajs$|amqplib$|amqp-connection-manager$|bcrypt$|pg$)";
+const SERVER_ONLY_PACKAGE_PATTERN =
+	"^(@prisma/|prisma$|\\.prisma/|@nestjs/|bullmq$|ioredis$|@confluentinc/kafka-javascript$|kafkajs$|amqplib$|amqp-connection-manager$|bcrypt$|pg$)";
 
 /** Patterns every workspace (frontend and backend) obeys. */
 export const UNIVERSAL_RESTRICTED_IMPORT_PATTERNS = [

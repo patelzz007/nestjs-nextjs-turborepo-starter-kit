@@ -2,6 +2,7 @@ import type { OrganizationMembershipRole, Role } from "@prisma/client";
 
 import { syncStoreForLocation } from "../../src/modules/organization/utils/store-sync.util";
 import { prisma } from "./client";
+import { seedStoreClosureAndRemoval } from "./store-closure";
 
 export interface StoreSeedSummary {
 	readonly stores: number;
@@ -14,7 +15,7 @@ const STORE_MANAGER_ORGANIZATION_ROLES: ReadonlySet<OrganizationMembershipRole> 
 function requireRole(roles: readonly Role[], name: string): Role {
 	const role = roles.find((candidate) => candidate.name === name);
 	if (role === undefined) {
-		throw new Error(`Seed role "${name}" is missing — run createRoles() first`);
+		throw new Error(`Seed role "${name}" is missing — the reference data was not synced (db:sync-reference-data)`);
 	}
 	return role;
 }
@@ -45,7 +46,7 @@ export async function seedStores(roles: readonly Role[]): Promise<StoreSeedSumma
 	for (const membership of memberships) {
 		const coversAll = membership.locationScopes.some((scope) => scope.scopeType === "ALL_LOCATIONS");
 		const coveredLocationIds = locations
-			.filter((location) => location.organizationId === membership.organizationId)
+			.filter((location) => location.organizationId === membership.organizationId && !location.isDeleted)
 			.filter((location) => coversAll || membership.locationScopes.some((scope) => scope.locationId === location.id))
 			.map((location) => location.id);
 		const roleId = STORE_MANAGER_ORGANIZATION_ROLES.has(membership.role) ? storeManagerRole.id : storeStaffRole.id;
@@ -58,11 +59,14 @@ export async function seedStores(roles: readonly Role[]): Promise<StoreSeedSumma
 			await prisma.storeMembership.upsert({
 				where: { storeId_userId: { storeId, userId: membership.userId } },
 				create: { organizationId: membership.organizationId, storeId, userId: membership.userId, roleId },
-				update: { roleId, status: "ACTIVE", isDeleted: false, deletedAt: null },
+				update: { roleId, status: "ACTIVE", isDeleted: false, deletedAt: null, deletedBy: null },
 			});
 			membershipCount += 1;
 		}
 	}
 
-	return { stores: locations.length, memberships: membershipCount };
+	// Last: the closed store and the removed store member must not be re-activated by the loops above.
+	const closure = await seedStoreClosureAndRemoval(storeManagerRole, storeStaffRole);
+
+	return { stores: locations.length + closure.closedStores, memberships: membershipCount };
 }

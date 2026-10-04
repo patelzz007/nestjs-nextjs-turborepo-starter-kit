@@ -12,7 +12,9 @@ describe("CookieConfigService", () => {
 	});
 
 	it("marks cookies Secure in production and leaves them host-only without COOKIE_DOMAIN", () => {
-		const cookies = new CookieConfigService(createTestTypedConfig({ NODE_ENV: "production", REDIS_URL: "redis://cache:6379" }));
+		const cookies = new CookieConfigService(
+			createTestTypedConfig({ NODE_ENV: "production", REDIS_URL: "redis://cache:6379", LOGIN_VERIFICATION_MODE: "new-device", TENANT_KMS_PROVIDER: "local" }),
+		);
 
 		expect(cookies.accessTokenOptions.secure).toBe(true);
 		expect(cookies.accessTokenOptions.domain).toBeUndefined();

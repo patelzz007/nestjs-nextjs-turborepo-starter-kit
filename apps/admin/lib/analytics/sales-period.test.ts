@@ -1,49 +1,49 @@
+import { AdminSalesAnalyticsQuerySchema, DEFAULT_ANALYTICS_WEEKS, startOfUtcWeekMs, WEEK_MS } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SALES_PERIOD_WEEKS, parseSalesPeriodWeeks, resolveSalesPeriodQuery, SALES_PERIOD_PRESETS, salesPeriodLabel, WEEK_MS } from "@/lib/analytics/sales-period";
+import { DEFAULT_SALES_PERIOD_WEEKS, resolveSalesPeriodQuery, SALES_PERIOD_PRESETS, salesPeriodLabel } from "@/lib/analytics/sales-period";
+import { SALES_ANALYTICS_URL_STATE } from "@/lib/url-state/analytics";
 
-const NOW_MS = 1_793_059_200_000;
+/** Thursday 2026-10-01 12:00 UTC — mid-week, so alignment is visible. */
+const NOW_MS = Date.UTC(2026, 9, 1, 12);
+/** Monday 2026-09-28 00:00 UTC — the start of NOW_MS's UTC week. */
+const CURRENT_WEEK_START_MS = Date.UTC(2026, 8, 28);
 
-describe("parseSalesPeriodWeeks", () => {
-	it("accepts every preset", () => {
-		expect(parseSalesPeriodWeeks("4")).toBe(4);
-		expect(parseSalesPeriodWeeks("8")).toBe(8);
-		expect(parseSalesPeriodWeeks("12")).toBe(12);
+describe("SALES_ANALYTICS_URL_STATE", () => {
+	it("reads every preset from ?weeks=", () => {
+		for (const preset of SALES_PERIOD_PRESETS) {
+			expect(SALES_ANALYTICS_URL_STATE.parse({ weeks: String(preset.weeks) }).weeks).toBe(preset.weeks);
+		}
 	});
 
-	it("falls back to the default when the param is absent", () => {
-		expect(parseSalesPeriodWeeks(undefined)).toBe(DEFAULT_SALES_PERIOD_WEEKS);
+	it("falls back to the API's default period for an absent, unknown or malformed value", () => {
+		for (const weeks of [undefined, "5", "abc", "-4", ""]) {
+			expect(SALES_ANALYTICS_URL_STATE.parse({ weeks }).weeks).toBe(DEFAULT_ANALYTICS_WEEKS);
+		}
 	});
 
-	it("falls back to the default for a value that is not a preset", () => {
-		expect(parseSalesPeriodWeeks("5")).toBe(DEFAULT_SALES_PERIOD_WEEKS);
-		expect(parseSalesPeriodWeeks("abc")).toBe(DEFAULT_SALES_PERIOD_WEEKS);
-		expect(parseSalesPeriodWeeks("-4")).toBe(DEFAULT_SALES_PERIOD_WEEKS);
-	});
-
-	it("falls back to the default when the param is repeated", () => {
-		expect(parseSalesPeriodWeeks(["4", "12"])).toBe(DEFAULT_SALES_PERIOD_WEEKS);
+	it("leaves the default out of links and keeps other presets", () => {
+		expect(SALES_ANALYTICS_URL_STATE.href("/analytics/sales", { weeks: DEFAULT_SALES_PERIOD_WEEKS })).toBe("/analytics/sales");
+		expect(SALES_ANALYTICS_URL_STATE.href("/analytics/sales", { weeks: 12 })).toBe("/analytics/sales?weeks=12");
 	});
 });
 
 describe("resolveSalesPeriodQuery", () => {
-	it("covers the given number of weeks ending now", () => {
-		expect(resolveSalesPeriodQuery(4, NOW_MS)).toEqual({ from: NOW_MS - 4 * WEEK_MS, to: NOW_MS });
-		expect(resolveSalesPeriodQuery(12, NOW_MS)).toEqual({ from: NOW_MS - 12 * WEEK_MS, to: NOW_MS });
+	it("starts on a UTC week boundary and counts the current week as one", () => {
+		expect(startOfUtcWeekMs(NOW_MS)).toBe(CURRENT_WEEK_START_MS);
+		expect(resolveSalesPeriodQuery(4, NOW_MS)).toEqual({ from: CURRENT_WEEK_START_MS - 3 * WEEK_MS, to: NOW_MS });
+		expect(resolveSalesPeriodQuery(12, NOW_MS)).toEqual({ from: CURRENT_WEEK_START_MS - 11 * WEEK_MS, to: NOW_MS });
 	});
 
-	it("uses a seven-day week", () => {
-		expect(WEEK_MS).toBe(7 * 24 * 60 * 60 * 1000);
+	it("produces a query the API accepts for every preset", () => {
+		for (const preset of SALES_PERIOD_PRESETS) {
+			expect(AdminSalesAnalyticsQuerySchema.safeParse(resolveSalesPeriodQuery(preset.weeks, NOW_MS)).success).toBe(true);
+		}
 	});
 });
 
-describe("presets", () => {
-	it("defaults to the API's eight-week period", () => {
-		expect(DEFAULT_SALES_PERIOD_WEEKS).toBe(8);
-	});
-
+describe("salesPeriodLabel", () => {
 	it("labels each preset", () => {
-		expect(SALES_PERIOD_PRESETS.map((preset) => preset.label)).toEqual(["Last 4 weeks", "Last 8 weeks", "Last 12 weeks"]);
-		expect(salesPeriodLabel(12)).toBe("Last 12 weeks");
+		expect(SALES_PERIOD_PRESETS.map((preset) => salesPeriodLabel(preset.weeks))).toEqual(["Last 4 weeks", "Last 8 weeks", "Last 12 weeks"]);
 	});
 });

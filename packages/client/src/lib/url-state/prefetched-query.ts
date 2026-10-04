@@ -7,7 +7,7 @@
 // filters, the prefetched page belongs to another query key. `stateKey` is
 // the URL state serialized by its codec (canonical: defaults omitted, fixed
 // key order), so "same state" is a string comparison
-// (docs/list-queries.md §7).
+// (docs/technical/api/list-queries.md §7).
 //
 // Server-safe (no "use client").
 

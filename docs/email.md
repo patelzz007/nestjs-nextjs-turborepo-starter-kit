@@ -27,9 +27,9 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 > casting, infer types from zod schemas, generic types first, explicit access modifiers + return
 > types on every method, and structured zod-schema-driven payloads.
 >
-> **Related docs:** the logging system has its own guide — [Logging System](./logging.md). For
+> **Related docs:** the logging system has its own guide — [Logging System](./technical/operations/observability.md). For
 > the **operational** half (setting up Resend, verifying a domain, and exposing the delivery
-> webhook locally with cloudflared), read **[Email + Webhook Setup](./email-setup.md)**.
+> webhook locally with cloudflared), read **[Email + Webhook Setup](./technical/email/resend-setup.md)**.
 
 ---
 
@@ -56,13 +56,13 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 | Abstract base template | `apps/api/src/modules/notifications/email/base/base-email-template.ts` | Shared responsive HTML shell (950px container), preheader, CTA button, `linkBlock`, footer, dark-mode overrides, HTML escaping, `buildUrl` query encoding, plain-text twin |
 | 7 concrete templates | `apps/api/src/modules/notifications/email/templates/*.template.ts` | `verification`, `password-reset`, `account-locked`, `welcome`, `security-alert`, `admin-alert`, `api-key-created` — each with zod props + `sampleProps` for previews |
 | Registry | `email-template.registry.ts` | Single source of truth `key → { meta, build }`; completeness-tested against the shared `EmailTemplateKeySchema` |
-| Delivery engine | `email-sender.service.ts` | Zod re-validation, `EMAIL_MODE` (send / log-only / noop), `EMAIL_TEST_TO` override, per-recipient sliding-window rate limit, retry-with-jittered-backoff, per-send timeout, PII-safe recipient masking, never throws |
-| Email log | `email-log.service.ts` + Prisma `EmailLog` model (`email_logs` table, migrations `20260809182240_add_email_log`, `20260811132303_add_email_engagement_tracking`, `20260811133228_add_email_log_resend_id_index`, `20260811160000_remove_email_tracking`) | One row per send; the webhook flips `sent → delivered / bounced / complained / failed`. `resend_id` is indexed (every webhook looks a row up by it). The tracking columns (`tracking_token` / `opened_at` / `clicked_at`) were dropped by the `remove_email_tracking` migration — open/click tracking is gone |
+| Delivery engine | `email-sender.service.ts` | Zod re-validation, `EMAIL_MODE` (send / log-only / noop — only `send` on a deployed production environment), `EMAIL_TEST_TO` override, per-recipient rate limit (`EmailRecipientRateLimiter`: one Redis fixed-window counter per SHA-256 of the address, bounded in-memory fallback without Redis, fails closed), per-call timeout, PII-safe recipient masking, never throws. **Delivery contract:** (1) the `email_logs` row is written `pending` FIRST — if that write fails nothing is sent (`reason: "persistence"`); (2) every Resend call carries `idempotencyKey: email-log/<row id>` and the tag `email_log_id=<row id>`, so a retry after a timeout cannot send twice; (3) retries have one owner — with Redis the BullMQ `email.send` job (one provider call per execution, `UnrecoverableError` for non-retryable Resend codes such as `validation_error` / `invalid_api_key`), without Redis a bounded inline loop (`EMAIL_MAX_ATTEMPTS`); (4) the outcome finalizes the row once (`pending → sent / failed`, conditional update) and writes one `email.log.updated` outbox event in the same transaction |
+| Email log | `email-log.service.ts` + Prisma `EmailLog` model (`email_logs` table, migrations `20260809182240_add_email_log`, `20260811132303_add_email_engagement_tracking`, `20260811133228_add_email_log_resend_id_index`, `20260811160000_remove_email_tracking`) | One row per send attempt, statuses `pending → sent / failed`, then the webhook moves it forward (`delivered / bounced / complained / failed`). Verified webhook events are kept in `email_delivery_events` (migration `20261002150000_email_delivery_events`; `webhook_id` UNIQUE = dedupe; `outcome` applied / stale / unmatched / ignored); `email_logs.last_event_at` is the ordering guard — an event the provider observed earlier than the newest applied one is recorded as `stale`, never applied. Simulated sends carry `metadata.mode`; the admin test-send carries `metadata.trigger=admin-test-send` + actor, correlation id, IP and user agent. `resend_id` is indexed (every webhook looks a row up by it). The tracking columns (`tracking_token` / `opened_at` / `clicked_at`) were dropped by the `remove_email_tracking` migration — open/click tracking is gone |
 | Admin preview API | `GET /notifications/email-preview`, `GET /notifications/email-preview/:key` | Sample props only — never sends mail |
-| Resend webhook | `POST /notifications/email-webhook` | `@Public()` + signature-verified via `resend.webhooks.verify` (booted with `rawBody: true`). Handles delivery events (status flips, bounce/complaint reasons captured into `error`); tracking events (`email.opened` / `email.clicked`) are acknowledged and ignored — open/click tracking was removed |
+| Resend webhook | `POST /notifications/email-webhook` | `@Public()` + signature-verified via `resend.webhooks.verify` (booted with `rawBody: true`). 200 = recorded (or a redelivered webhook id, no-op); 403 = missing/invalid/expired signature; 400 = correctly signed but not a Resend event shape; **503 = `RESEND_WEBHOOK_SECRET` / `RESEND_API_KEY` not configured** (Resend retries; nothing is silently dropped). Rows are matched by the `email_log_id` tag, else by `resend_id`. Tracking events (`email.opened` / `email.clicked`) are recorded as `ignored` and never change the row |
 | Admin preview page | `apps/admin/app/(panel)/emails/templates/page.tsx` (`/emails/templates`) + sidebar entry (Emails → Templates) | Template index + iframe preview + HTML/text tabs + copy |
 | Admin email log | `apps/admin/app/(panel)/emails/log/page.tsx` (`/emails/log`) + sidebar entry (Emails → Log) | `GET /api/v1/notifications/email-log` (JWT-guarded, `?limit=` 1–500) → shared `DataTable`. Delivery-only status badges (Sent / Delivered / Bounced / Complained / Failed) with bounce/complaint reasons in `error`. Search, export, mobile cards. **Live updates via SSE** — see "Live updates (SSE)" below |
-| Env vars | `EMAIL_MODE`, `EMAIL_TEST_TO`, `EMAIL_REPLY_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET` | Validated by the API env schema (`apps/api/src/config/api-config.schema.ts`, see [API Configuration](./api-configuration.md)) and read through `TypedConfigService` |
+| Env vars | `EMAIL_MODE`, `EMAIL_TEST_TO`, `EMAIL_REPLY_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET` | Validated by the API env schema (`apps/api/src/config/api-config.schema.ts`, see [API Configuration](./technical/configuration/api.md)) and read through `TypedConfigService` |
 
 ### Live wiring (verified 2026-08-10)
 
@@ -115,7 +115,7 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 > it holds the socket open without triggering refetches.
 > - **Tunnel caveat:** quick tunnels are ephemeral — the URL changes on restart. In dev,
 >   re-run `python3 apps/api/scripts/start-tunnel.py`: it auto-repoints the Resend webhook
->   to the fresh URL (see [Email + Webhook Setup → Auto-wiring](./email-setup.md)). For
+>   to the fresh URL (see [Email + Webhook Setup → Auto-wiring](./technical/email/resend-setup.md)). For
 >   production, point the webhook at the deployed API URL instead.
 
 ### Tracking removed (deliberately)

@@ -1,5 +1,5 @@
 import { createAdminServerCaller, type AdminServerCaller } from "@/lib/admin-server-api";
-import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { prefetch, resolvePrefetchedData, resolvePrefetchedQuery } from "@/lib/server/prefetch";
 import { GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery, type GeoTabPage, type GeoUrlState } from "@/lib/url-state/geography";
 
 import GeoView from "./geo-table";
@@ -23,18 +23,16 @@ async function fetchActiveTabPage(server: AdminServerCaller, urlState: GeoUrlSta
  * page size, cursor, sort, search, `filter[countryCode]`) lives in the URL
  * (lib/url-state/geography). The server parses it and prefetches the stats and
  * exactly the page the URL asks for on its active tab, so a shared or reloaded
- * link renders that page in the initial HTML. A failed prefetch leaves that
- * part to the client fetch.
+ * link renders that page in the initial HTML. A failed prefetch is logged and
+ * leaves that part to the client fetch.
  */
 export default async function GeoPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
 	const urlState = GEO_URL_STATE.parse(await searchParams);
 	const server = createAdminServerCaller();
-	const [statsResult, pageResult] = await Promise.allSettled([server.geo.stats.query({}), fetchActiveTabPage(server, urlState)]);
+	const [statsResult, pageResult] = await Promise.all([
+		prefetch({ page: "/geography", resource: "geo stats" }, () => server.geo.stats.query({})),
+		prefetch({ page: "/geography", resource: `${urlState.tab} page` }, () => fetchActiveTabPage(server, urlState)),
+	]);
 
-	return (
-		<GeoView
-			initialStats={statsResult.status === "fulfilled" ? statsResult.value.data : undefined}
-			initialPage={toPrefetchedQuery(GEO_URL_STATE.serialize(urlState), pageResult)}
-		/>
-	);
+	return <GeoView initialStats={resolvePrefetchedData(statsResult)} initialPage={resolvePrefetchedQuery(GEO_URL_STATE.serialize(urlState), pageResult)} />;
 }

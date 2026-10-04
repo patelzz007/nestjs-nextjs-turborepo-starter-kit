@@ -5,11 +5,14 @@ export type TenantContextAction =
 	/** The member picked one store in the location switcher. */
 	| { readonly type: "[ Tenant Context ] Location Selected"; readonly locationId: string }
 	/** The member picked "All locations" (org-wide rollups). */
-	| { readonly type: "[ Tenant Context ] All Locations Selected" };
+	| { readonly type: "[ Tenant Context ] All Locations Selected" }
+	/** The API refused a store as outside the member's scope (403 `ORGANIZATION_LOCATION_FORBIDDEN`) — e.g. a stale choice. */
+	| { readonly type: "[ Tenant Context ] Location Rejected"; readonly locationId: string };
 
 /** Action creators — the only way components (through the facade) describe what happened. */
 export const tenantContextActions = {
 	initialized: (selectedLocationId: string | null): TenantContextAction => ({ type: "[ Tenant Context ] Initialized", selectedLocationId }),
 	locationSelected: (locationId: string): TenantContextAction => ({ type: "[ Tenant Context ] Location Selected", locationId }),
 	allLocationsSelected: (): TenantContextAction => ({ type: "[ Tenant Context ] All Locations Selected" }),
+	locationRejected: (locationId: string): TenantContextAction => ({ type: "[ Tenant Context ] Location Rejected", locationId }),
 };

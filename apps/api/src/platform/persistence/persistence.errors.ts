@@ -1,10 +1,21 @@
-import { NotFoundError, ValidationError } from "../../common/errors/app-error";
+import { ConflictError, NotFoundError, ValidationError } from "../../common/errors/app-error";
 
 /** 404 — the repository could not find the (non-deleted) row it was asked to act on. */
 export class ResourceNotFoundError extends NotFoundError {
 	public constructor(public readonly resourceId: string) {
 		// The id is the caller's own input, so echoing it back is safe.
 		super({ message: "The requested resource was not found.", details: { resourceId } });
+	}
+}
+
+/**
+ * 409 — the row exists but the conditional update matched nothing: another
+ * request changed it after the caller read it (stale `version`). The client
+ * reloads the resource and retries with the current version.
+ */
+export class ConcurrentModificationError extends ConflictError {
+	public constructor(public readonly resourceId: string) {
+		super({ message: "The resource was changed by another request. Reload it and try again.", details: { resourceId } });
 	}
 }
 

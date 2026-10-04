@@ -5,11 +5,6 @@ import { ClientAuthWrapper } from "@workspace/client/lib/auth/session/client-aut
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
-const MERCHANT_COOKIE_NAMES = {
-	accessToken: "merchantAccessToken",
-	refreshToken: "merchantRefreshToken",
-};
-
 export interface MerchantRootProviderProps {
 	readonly children: React.ReactNode;
 }
@@ -30,11 +25,7 @@ export function MerchantRootProvider({ children }: MerchantRootProviderProps): R
 	const revalidateSessionEnabled = !isMerchantAuthPath(pathname);
 
 	return (
-		<ClientAuthWrapper
-			cookieNames={MERCHANT_COOKIE_NAMES}
-			clientType="merchant"
-			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
-			revalidateSessionEnabled={revalidateSessionEnabled}>
+		<ClientAuthWrapper clientType="merchant" shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled}>
 			{children}
 		</ClientAuthWrapper>
 	);

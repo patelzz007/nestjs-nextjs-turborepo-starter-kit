@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import type { GeoStats } from "@workspace/shared";
+import { epochMs, type ApiPaginatedMeta, type DataValue, type Envelope, type GeoStats } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GEO_URL_STATE } from "@/lib/url-state/geography";
@@ -34,7 +33,27 @@ vi.mock("@/lib/admin-server-api", () => ({
 vi.mock("../geo-table", () => ({ default: geoView }));
 
 const STATS: GeoStats = { regions: 6, subregions: 22, countries: 250, states: 5_000, cities: 150_000 };
-const PAGE_ENVELOPE = successEnvelope([], stubApiMeta());
+/** Fixed answer time of the fixture envelopes. */
+const FIXTURE_TIMESTAMP = epochMs(1_786_300_000_000);
+
+/** A one-page list envelope as the API returns it (real pagination meta, no placeholders). */
+function pageEnvelope<TItem extends DataValue>(items: TItem[]): Envelope<TItem[]> {
+	const meta: ApiPaginatedMeta = {
+		correlationId: "fixture",
+		timestamp: FIXTURE_TIMESTAMP,
+		limit: 20,
+		total: items.length,
+		page: 1,
+		totalPages: 1,
+		nextCursor: null,
+		hasNext: false,
+		hasPrevious: false,
+	};
+	return { success: true, data: items, meta };
+}
+
+const PAGE_ENVELOPE = pageEnvelope([]);
+const STATS_ENVELOPE: Envelope<GeoStats> = { success: true, data: STATS, meta: { correlationId: "fixture", timestamp: FIXTURE_TIMESTAMP } };
 
 /** Renders the server page for a URL query, as Next.js passes it (`searchParams` is a Promise). */
 async function renderPage(query: string): Promise<void> {
@@ -53,7 +72,7 @@ function clientStateKey(query: string): string {
 
 beforeEach((): void => {
 	geoView.mockReturnValue(null);
-	statsQuery.mockResolvedValue(successEnvelope(STATS, stubApiMeta()));
+	statsQuery.mockResolvedValue(STATS_ENVELOPE);
 	for (const query of [countriesQuery, statesQuery, citiesQuery]) {
 		query.mockResolvedValue(PAGE_ENVELOPE);
 	}
@@ -73,7 +92,7 @@ describe("GeoPage (server prefetch)", () => {
 		expect(countriesQuery).toHaveBeenCalledWith({ page: 3, limit: 50, sort: "-name", search: "ma" });
 		expect(statesQuery).not.toHaveBeenCalled();
 		expect(citiesQuery).not.toHaveBeenCalled();
-		expect(viewProps()).toEqual({ initialStats: STATS, initialPage: { stateKey: clientStateKey(query), data: { tab: "countries", envelope: PAGE_ENVELOPE } } });
+		expect(viewProps()).toEqual({ initialStats: STATS_ENVELOPE, initialPage: { stateKey: clientStateKey(query), data: { tab: "countries", envelope: PAGE_ENVELOPE } } });
 	});
 
 	it("prefetches the states page with the URL's search and country filter", async () => {
@@ -116,7 +135,7 @@ describe("GeoPage (server prefetch)", () => {
 		statesQuery.mockRejectedValue(new Error("API unavailable"));
 		await renderPage("tab=states");
 
-		expect(viewProps()).toEqual({ initialStats: STATS, initialPage: undefined });
+		expect(viewProps()).toEqual({ initialStats: STATS_ENVELOPE, initialPage: undefined });
 	});
 
 	it("still prefetches the page when the stats request fails", async () => {

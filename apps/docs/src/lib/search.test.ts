@@ -24,14 +24,14 @@ describe("toPlainText", () => {
 
 describe("searchIndex", () => {
 	const index: readonly SearchEntry[] = [
-		entry({ title: "Prisma", href: "/docs/prisma", text: "Row level security policies" }),
-		entry({ title: "Row-level security", href: "/docs/prisma#rls", kind: "heading", context: "Prisma" }),
-		entry({ title: "Email", href: "/docs/email", text: "Resend webhooks and templates" }),
+		entry({ title: "Prisma", href: "/docs/technical/database", text: "Row level security policies" }),
+		entry({ title: "Row-level security", href: "/docs/technical/database#rls", kind: "heading", context: "Prisma" }),
+		entry({ title: "Email", href: "/docs/technical/email/templates", text: "Resend webhooks and templates" }),
 	];
 
 	it("requires every term and ranks title matches first", () => {
 		const hits = searchIndex(index, "security", 10);
-		expect(hits.map((hit) => hit.entry.href)).toEqual(["/docs/prisma#rls", "/docs/prisma"]);
+		expect(hits.map((hit) => hit.entry.href)).toEqual(["/docs/technical/database#rls", "/docs/technical/database"]);
 	});
 
 	it("returns an excerpt around body-only matches", () => {

@@ -17,6 +17,9 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { Check, Copy, FileCode2, Loader2, Mail, Send } from "lucide-react";
 import * as React from "react";
 
+/** How long the "Copied" state stays on the copy button. */
+const COPIED_INDICATOR_MS = 1600;
+
 /** Active preview mode — HTML iframe or raw source. */
 type PreviewMode = "preview" | "html" | "text";
 
@@ -109,7 +112,7 @@ export default function EmailPreviewPage({
 	const copiedTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [copied, setCopied] = React.useState(false);
 
-	const listQuery = api.email.previewList.useQuery(undefined, { initialData: initialList });
+	const listQuery = api.email.previewList.useQuery(undefined, initialDataOption(initialList));
 
 	// `templates` is memoized on the query result so its identity is stable
 	// between renders (rule 16: avoid unnecessary re-renders).
@@ -175,14 +178,19 @@ export default function EmailPreviewPage({
 			return;
 		}
 		const content: string = mode === "text" ? preview.text : preview.html;
-		void navigator.clipboard.writeText(content).then((): void => {
-			setCopied(true);
-			toastMessage.success({ title: "Copied to clipboard" });
-			if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
-			copiedTimerRef.current = setTimeout((): void => {
-				setCopied(false);
-			}, 1600);
-		});
+		navigator.clipboard.writeText(content).then(
+			(): void => {
+				setCopied(true);
+				toastMessage.success({ title: "Copied to clipboard" });
+				if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+				copiedTimerRef.current = setTimeout((): void => {
+					setCopied(false);
+				}, COPIED_INDICATOR_MS);
+			},
+			(): void => {
+				toastMessage.error({ title: "Could not copy", description: "The browser blocked clipboard access. Select the text and copy it manually." });
+			},
+		);
 	}, [preview, mode]);
 
 	React.useEffect((): (() => void) => {

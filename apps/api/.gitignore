@@ -8,3 +8,6 @@ dist/
 
 # Database backups (pg_dump output — never commit)
 backups/
+
+# Local storage driver objects (STORAGE_PROVIDER=local; development/test only)
+.object-storage/

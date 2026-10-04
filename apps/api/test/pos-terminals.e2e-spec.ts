@@ -20,8 +20,11 @@ const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:
 
 /** Every terminal this file registers is named with this prefix, so cleanup finds exactly them. */
 const NAME_PREFIX = "E2E pairing";
-/** A well-formed backup code no claim has — a 404 from validate proves the POS call got past authentication. */
-const UNKNOWN_BACKUP_CODE = "ZZZZ2222";
+/**
+ * A QR token no claim has: an authenticated call answers 404, an unauthenticated one 401. A token —
+ * not a backup code — so these probes never count toward the shared demo key's code-guessing lockout.
+ */
+const UNKNOWN_QR_TOKEN = "e2e-unknown-qr-token-pos-terminals-0001";
 /** A seeded terminal registered to the KL store. */
 const REGISTERED_KL_TERMINAL = "KL-REGISTER-01";
 
@@ -62,7 +65,7 @@ describe("POS terminal pairing (e2e)", () => {
 		return app.inject({
 			method: "POST",
 			url: `${API_VERSION_PREFIX}/pos/terminals/pair`,
-			headers: { "content-type": "application/json", "cf-connecting-ip": uniqueClientIp() },
+			headers: { "content-type": "application/json", "x-forwarded-for": uniqueClientIp() },
 			payload: JSON.stringify({ pairingCode }),
 		});
 	}
@@ -72,7 +75,7 @@ describe("POS terminal pairing (e2e)", () => {
 			method: "POST",
 			url: `${API_VERSION_PREFIX}/redemptions/validate`,
 			headers: { "x-api-key": apiKey, "content-type": "application/json", ...(terminalId !== undefined ? { "x-terminal-id": terminalId } : {}) },
-			payload: JSON.stringify({ backupCode: UNKNOWN_BACKUP_CODE }),
+			payload: JSON.stringify({ token: UNKNOWN_QR_TOKEN }),
 		});
 	}
 
@@ -188,5 +191,40 @@ describe("POS terminal pairing (e2e)", () => {
 		expect((await validate(DEMO_MERCHANT_API_KEYS.kl, REGISTERED_KL_TERMINAL)).statusCode).toBe(404);
 
 		await setRequireRegistered(false);
+	});
+
+	it("gives a paired till a POS-only key that the organization API refuses", async () => {
+		const registered = await register("POS-only key");
+		const till = parseSuccessEnvelope(await pair(registered.pairingCode), PosPairedTerminalSchema).data;
+
+		const orgApi = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/rewards`, headers: { "x-api-key": till.apiKey } });
+		expect(orgApi.statusCode).toBe(403);
+		expect(errorCodeOf(orgApi)).toBe("API_KEY_SCOPE_FORBIDDEN");
+		// …while the POS routes still accept it (the unknown code is the only problem).
+		expect((await validate(till.apiKey)).statusCode).toBe(404);
+	});
+
+	it("registers a till under the merchant's own label, refuses a live duplicate, and frees the label once the till is removed", async () => {
+		const label = `E2E-LABEL-${String(Date.now())}`;
+		const registerWithLabel = (name: string): Promise<InjectResponse> =>
+			app.inject({
+				method: "POST",
+				url: terminalsPath,
+				headers: mutationHeaders(merchantCookies(owner)),
+				payload: { name: `${NAME_PREFIX} ${name}`, locationId: ORGANIZATION_SEED_IDS.klLocation, terminalId: label },
+			});
+
+		const first = await registerWithLabel("labelled");
+		expect(first.statusCode, first.body).toBe(201);
+		const registered = parseSuccessEnvelope(first, MerchantTerminalPairingSchema).data;
+		expect(registered.terminal.terminalId).toBe(label);
+
+		const duplicate = await registerWithLabel("labelled again");
+		expect(duplicate.statusCode).toBe(409);
+		expect(errorCodeOf(duplicate)).toBe("TERMINAL_ID_TAKEN");
+
+		const removed = await app.inject({ method: "DELETE", url: `${terminalsPath}/${registered.terminal.id}`, headers: mutationHeaders(merchantCookies(owner)) });
+		expect(removed.statusCode, removed.body).toBe(200);
+		expect((await registerWithLabel("label reused")).statusCode).toBe(201);
 	});
 });

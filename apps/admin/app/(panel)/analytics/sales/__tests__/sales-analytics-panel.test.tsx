@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { AdminSalesAnalyticsResponse } from "@workspace/shared";
+import { AdminSalesAnalyticsResponseSchema, createApiSuccessEnvelopeSchema, type AdminSalesAnalyticsResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -132,6 +132,34 @@ describe("SalesAnalyticsPanel", () => {
 		const period = screen.getByLabelText("Period");
 		expect(period).toHaveProperty("value", "8");
 		fireEvent.change(period, { target: { value: "12" } });
-		expect(push).toHaveBeenCalledWith(ROUTES.analytics.salesForWeeks("12"), { scroll: false });
+		expect(push).toHaveBeenCalledWith(`${ROUTES.analytics.sales}?weeks=12`, { scroll: false });
+	});
+
+	it("drops the default period from the URL", () => {
+		salesQuery.mockReturnValue(queryResult({ data: { data: buildAdminSalesAnalytics() } }));
+		render(<SalesAnalyticsPanel weeks={12} query={resolveSalesPeriodQuery(12, NOW_MS)} />);
+
+		fireEvent.change(screen.getByLabelText("Period"), { target: { value: "8" } });
+		expect(push).toHaveBeenCalledWith(ROUTES.analytics.sales, { scroll: false });
+	});
+
+	it("ignores a period value that is not a preset", () => {
+		salesQuery.mockReturnValue(queryResult({ data: { data: buildAdminSalesAnalytics() } }));
+		renderPanel();
+
+		fireEvent.change(screen.getByLabelText("Period"), { target: { value: "5" } });
+		expect(push).not.toHaveBeenCalled();
+	});
+
+	it("seeds the query with the server's own envelope, stamped with the server's answer time", () => {
+		const envelope = createApiSuccessEnvelopeSchema(AdminSalesAnalyticsResponseSchema).parse({
+			success: true,
+			data: buildAdminSalesAnalytics(),
+			meta: { correlationId: "corr-1", timestamp: NOW_MS },
+		});
+		salesQuery.mockReturnValue(queryResult({ data: envelope }));
+		render(<SalesAnalyticsPanel weeks={8} query={QUERY} initialAnalytics={envelope} />);
+
+		expect(salesQuery).toHaveBeenCalledWith(QUERY, { initialData: envelope, initialDataUpdatedAt: NOW_MS });
 	});
 });

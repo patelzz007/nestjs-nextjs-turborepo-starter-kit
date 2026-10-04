@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
+import { ADMIN_USER_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enum-filter-options";
 
 export interface UsersAllTableProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -66,11 +67,13 @@ export default function UsersAllTable({
 	});
 
 	const rows: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
+	// The server's count of every matching row — not just the rows on this page.
+	const matchingTotal: number = readPaginatedTotal(usersQuery.data?.meta);
 	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
 		sortSpec: adminUserListQuery,
-		totalCount: readPaginatedTotal(usersQuery.data?.meta),
+		totalCount: matchingTotal,
 		nextCursor: readPaginatedNextCursor(usersQuery.data?.meta),
 		resetKey: USERS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
 		getRowId: getUserRowId,
@@ -194,11 +197,7 @@ export default function UsersAllTable({
 			{
 				key: "status",
 				label: "Account status",
-				options: [
-					{ value: "active", label: "Active" },
-					{ value: "inactive", label: "Inactive" },
-					{ value: "locked", label: "Locked" },
-				],
+				options: enumFilterOptions(AdminUserStatusSchema.options, ADMIN_USER_STATUS_LABELS),
 			},
 		],
 		[],
@@ -220,12 +219,12 @@ export default function UsersAllTable({
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} users on this page` : "User directory"}</CardTitle>
+					<CardTitle className="text-base">{matchingTotal > 0 ? `${String(matchingTotal)} users` : "User directory"}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable
 						columns={columns}
-						data={[...rows]}
+						data={rows}
 						labels={tableLabels}
 						actions={actions}
 						checkbox={checkbox}

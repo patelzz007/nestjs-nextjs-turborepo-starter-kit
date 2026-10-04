@@ -9,7 +9,7 @@ describe("normalizePathname", () => {
 	it("drops the .html suffix and trailing slashes", () => {
 		expect(normalizePathname("/docs.html")).toBe("/docs");
 		expect(normalizePathname("/docs/")).toBe("/docs");
-		expect(normalizePathname("/docs/authorization-system/overview.html")).toBe("/docs/authorization-system/overview");
+		expect(normalizePathname("/docs/technical/authorization/overview.html")).toBe("/docs/technical/authorization/overview");
 	});
 
 	it("maps the root in every form to /", () => {
@@ -23,7 +23,7 @@ describe("isTabActive", () => {
 	it("matches the tab's own path and everything below it", () => {
 		expect(isTabActive(GUIDES, "/docs")).toBe(true);
 		expect(isTabActive(GUIDES, "/docs.html")).toBe(true);
-		expect(isTabActive(GUIDES, "/docs/prisma")).toBe(true);
+		expect(isTabActive(GUIDES, "/docs/technical/database")).toBe(true);
 	});
 
 	it("matches the home page exactly, never as a prefix", () => {
@@ -44,7 +44,7 @@ describe("isTabActive", () => {
 
 describe("githubEditUrl", () => {
 	it("points at the file on the default branch", () => {
-		expect(githubEditUrl("docs", "authorization-system/overview.md")).toBe(`${GITHUB_URL}/blob/main/docs/authorization-system/overview.md`);
+		expect(githubEditUrl("docs", "technical/authorization/overview.md")).toBe(`${GITHUB_URL}/blob/main/docs/technical/authorization/overview.md`);
 		expect(githubEditUrl("blog", "telescope.md")).toBe(`${GITHUB_URL}/blob/main/blog/telescope.md`);
 	});
 });

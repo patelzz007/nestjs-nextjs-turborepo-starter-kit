@@ -2,12 +2,14 @@ import { z } from "zod";
 
 import { OrganizationLocationDraftSchema, OrganizationPrimaryLocationDraftSchema } from "../organization/organization";
 import { EpochMsSchema } from "../../api/common";
+import { CanonicalEmailSchema } from "../../api/email-address";
 import { CreateFileUploadUrlResponseSchema, DocumentMimeTypeSchema, MERCHANT_KYB_UPLOAD_POLICY } from "../platform/storage";
 import { strongPassword } from "../../auth/password";
 import { JsonObjectSchema } from "../../runtime/json";
 import {
 	KybDocumentScanStatusSchema,
 	KybStatusSchema,
+	type KybStatus,
 	MerchantBusinessCategorySchema,
 	MerchantMemberRoleSchema,
 	MerchantOrgStatusSchema,
@@ -41,21 +43,6 @@ export const MerchantKybDocumentDownloadResponseSchema = z.object({
 });
 
 export type MerchantKybDocumentDownloadResponse = z.output<typeof MerchantKybDocumentDownloadResponseSchema>;
-
-/** Scanner callback payload (Google OIDC-authenticated). */
-export const KybScanResultSchema = z
-	.object({
-		documentId: z.uuid(),
-		organizationId: z.uuid(),
-		storagePath: z.string().min(1).max(500),
-		objectGeneration: z.string().min(1).max(64).optional(),
-		scanStatus: z.enum(["CLEAN", "INFECTED"]),
-		scanResult: z.string().max(500).optional(),
-		cleanStoragePath: z.string().min(1).max(500).optional(),
-	})
-	.strict();
-
-export type KybScanResult = z.output<typeof KybScanResultSchema>;
 
 /** Business verification fields merchants submit for KYB review (files uploaded via presigned POST). */
 export const MerchantKybSubmissionFieldsSchema = z
@@ -235,6 +222,26 @@ export const MerchantOnboardingDocumentsSubmitSchema = z
 
 export type MerchantOnboardingDocumentsSubmitInput = z.output<typeof MerchantOnboardingDocumentsSubmitSchema>;
 
+/**
+ * Scan status of the onboarding's own KYB uploads, polled while the merchant is
+ * still signed out. The token travels in the body (never a URL). Ids that are
+ * not this onboarding's KYB uploads are simply absent from the answer.
+ */
+export const MerchantOnboardingDocumentStatusSchema = z
+	.object({
+		token: z.string().min(1),
+		fileIds: z.array(z.uuid()).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentStatusInput = z.output<typeof MerchantOnboardingDocumentStatusSchema>;
+
+export const MerchantOnboardingDocumentStatusResponseSchema = z.object({
+	documents: z.array(MerchantKybDocumentRecordSchema),
+});
+
+export type MerchantOnboardingDocumentStatusResponse = z.output<typeof MerchantOnboardingDocumentStatusResponseSchema>;
+
 export const MerchantKybProfileResponseSchema = z.object({
 	organizationId: z.uuid(),
 	businessName: z.string(),
@@ -266,7 +273,7 @@ export type MerchantOnboardingCompleteResponse = z.output<typeof MerchantOnboard
 
 export const MerchantCreateMemberSchema = z
 	.object({
-		email: z.email().max(100),
+		email: CanonicalEmailSchema,
 		password: strongPassword,
 		fullName: z.string().min(2).max(200),
 		role: z.literal("CASHIER"),
@@ -285,17 +292,54 @@ export const MerchantMemberCreatedResponseSchema = z.object({
 
 export type MerchantMemberCreatedResponse = z.output<typeof MerchantMemberCreatedResponseSchema>;
 
-export const AdminKybUpdateSchema = z
+/** Longest identifier-style KYB field (registration number, tax id, document type). */
+const KYB_IDENTIFIER_MAX_LENGTH = 100;
+/** Longest free-text KYB field (review notes, the reason given to the merchant). */
+const KYB_TEXT_MAX_LENGTH = 2000;
+
+/**
+ * The KYB review payload stored on a merchant profile — a closed, typed shape
+ * (never free JSON): what the merchant submitted (`registrationNo`, `taxId`,
+ * `documentType`, `submittedAt`) and what the reviewer recorded.
+ */
+export const KybFieldsSchema = z
 	.object({
-		kybStatus: KybStatusSchema,
-		kybFields: JsonObjectSchema.optional(),
+		registrationNo: z.string().trim().min(1).max(KYB_IDENTIFIER_MAX_LENGTH).optional(),
+		taxId: z.string().trim().min(1).max(KYB_IDENTIFIER_MAX_LENGTH).optional(),
+		documentType: z.string().trim().min(1).max(KYB_IDENTIFIER_MAX_LENGTH).optional(),
+		submittedAt: EpochMsSchema.optional(),
+		reviewNotes: z.string().trim().min(1).max(KYB_TEXT_MAX_LENGTH).optional(),
+		/** Shown to the merchant: why the review was rejected or what they must fix. */
+		rejectionReason: z.string().trim().min(1).max(KYB_TEXT_MAX_LENGTH).optional(),
+		reviewedAt: EpochMsSchema.optional(),
 	})
 	.strict();
 
+export type KybFields = z.output<typeof KybFieldsSchema>;
+
+/** Decisions the merchant must be told the reason for (`kybFields.rejectionReason`). */
+export const KYB_STATUSES_REQUIRING_REASON: readonly KybStatus[] = [KybStatusSchema.enum.REJECTED, KybStatusSchema.enum.ACTION_REQUIRED];
+
+/**
+ * `PATCH /admin/merchants/:id/kyb`. Self-enforcing: a REJECTED or
+ * ACTION_REQUIRED decision without a reason is invalid HERE — the API and the
+ * admin form validate with this same schema, so the rule cannot live only in
+ * the UI.
+ */
+export const AdminKybUpdateSchema = z
+	.object({
+		kybStatus: KybStatusSchema,
+		kybFields: KybFieldsSchema.optional(),
+	})
+	.strict()
+	.superRefine((value, context) => {
+		if (KYB_STATUSES_REQUIRING_REASON.includes(value.kybStatus) && value.kybFields?.rejectionReason === undefined) {
+			context.addIssue({ code: "custom", message: "A reason is required when rejecting or requesting action", path: ["kybFields", "rejectionReason"] });
+		}
+	});
+
 export type AdminKybUpdateInput = z.output<typeof AdminKybUpdateSchema>;
 
-export const AdminKybUpdatePathInputSchema = AdminKybUpdateSchema.extend({
-	organizationId: z.uuid(),
-}).strict();
+export const AdminKybUpdatePathInputSchema = z.intersection(z.object({ organizationId: z.uuid() }).strict(), AdminKybUpdateSchema);
 
 export type AdminKybUpdatePathInput = z.output<typeof AdminKybUpdatePathInputSchema>;

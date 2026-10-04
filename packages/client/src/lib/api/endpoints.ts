@@ -17,7 +17,7 @@
 // The route contract (method + path + input schema + response envelope) lives
 // in `@workspace/shared` (`apiContract`) — this module derives every def from
 // it, so the client router and the API's boundary validation can never drift.
-// Only the client-side concerns stay here: the react-query key and the
+// Only the client-side concerns stay here: the react-query cache scope and the
 // serialization knobs (`toQuery` / `toBody`).
 //
 // The input/output type parameters are CONSTRAINED (`SerializableInput` /
@@ -28,6 +28,7 @@
 import type { QueryKey } from "@tanstack/react-query";
 import {
 	apiContract,
+	clientTypeHeader,
 	flattenQueryParams,
 	type ApiAccess,
 	type ApiContractDef,
@@ -37,7 +38,7 @@ import {
 	type RestMethod,
 	type SerializableInput,
 } from "@workspace/shared";
-import { z, type ZodType } from "zod";
+import { z, ZodType } from "zod";
 
 // Every endpoint answers with the ResponseInterceptor envelope
 // ({ success: true, data, meta }). Its exact schema comes from the shared
@@ -45,18 +46,34 @@ import { z, type ZodType } from "zod";
 // ADR 022) — the client never re-declares a response shape, and the fetch
 // layer parses every body with it (`parseResponseContract`).
 
+// ── Query keys ─────────────────────────────────────────────────────────────
+//
+// Every query key is `[...scope, input]`: a SCOPE (the resource the data
+// belongs to, e.g. `["organization", orgSlug, "kyb"]`) followed by the WHOLE
+// parsed input. Two consequences, both by construction:
+// - no input field can be left out of a key (no silently shared cache entries
+//   between, say, two stores or two date ranges);
+// - `def.scopeKey(scope)` is a prefix of every key the def produces for that
+//   scope, so invalidating with it always reaches the cached queries.
+// Code outside this module never writes a key by hand: it invalidates with
+// `apiRouter.<…>.scopeKey(…)` (or `queryKey(input)` for one exact entry). The
+// lint config rejects array literals as cache keys (docs/technical/tooling/eslint.md).
+
 /**
- * React-query key of a list endpoint: the resource prefix plus the WHOLE
- * parsed list query, so every page / limit / cursor / sort / filter / search
- * input is part of the key (no silently shared cache entries). Invalidate a
- * resource's lists with the prefix alone (`["product", "list"]`).
+ * A scope's fields. The index signature keeps every scope assignable to
+ * `SerializableInput` (a scope is a slice of a query's input).
  */
-export function listQueryKey(prefix: readonly string[], input: SerializableInput): QueryKey {
-	return [...prefix, input];
+type ScopeFields = Readonly<Record<string, DataValue | undefined>>;
+
+/** Scope of every organization-owned resource. */
+export interface OrganizationScope extends ScopeFields {
+	readonly orgSlug: string;
 }
 
-/** Query-key prefix of every email-log list page — invalidate it to refetch them all (the SSE live view does). */
-export const EMAIL_LOG_LIST_QUERY_KEY_PREFIX: readonly string[] = ["email", "log-list"];
+/** Scope of one admin-managed organization. */
+export interface AdminOrganizationScope extends ScopeFields {
+	readonly organizationId: string;
+}
 
 // ── Definition model (input-first, tRPC-style) ────────────────────────────
 
@@ -83,10 +100,27 @@ export interface QueryDef<Input extends SerializableInput, Resp extends DataValu
 	readonly responseSchema: ZodType<Resp>;
 	/** Derives the react-query key from the (parsed) input — server and client MUST agree. */
 	readonly queryKey: (input: Input) => QueryKey;
+	/**
+	 * The cache scope of an input: a prefix of `queryKey(input)` and of every
+	 * other key in the same scope — invalidate / read the cache with it.
+	 * `ScopedQueryDef` narrows the parameter to just the scope's fields.
+	 */
+	readonly scopeKey: (scope: Input) => QueryKey;
 	readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 }
 
-/** A POST/PUT/PATCH/DELETE procedure: input → path params + JSON body, response → typed payload. */
+/** A query def plus its invalidation prefix. */
+export interface ScopedQueryDef<Input extends SerializableInput & Scope, Resp extends DataValue, Scope extends SerializableInput> extends QueryDef<Input, Resp> {
+	/** Prefix of every key this def produces for `scope` — invalidate / read the cache with it. */
+	readonly scopeKey: (scope: Scope) => QueryKey;
+}
+
+/**
+ * A POST/PUT/PATCH/DELETE procedure: input → path params + JSON body, response → typed payload.
+ * Deliberately has no query key: a mutation is not cached, and a key built
+ * from its input would copy tokens and personal data into the cache and the
+ * DevTools.
+ */
 export interface MutationDef<Input extends SerializableInput, Resp extends DataValue> {
 	readonly kind: "mutation";
 	readonly method: Exclude<RestMethod, "GET">;
@@ -95,7 +129,6 @@ export interface MutationDef<Input extends SerializableInput, Resp extends DataV
 	readonly version?: ApiVersion | undefined;
 	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
-	readonly queryKey: (input: Input) => QueryKey;
 	readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 	/**
 	 * Maps the input to the request body. Default: every input key not consumed
@@ -122,20 +155,23 @@ export interface RouterTree {
 
 export type RouterTreeValue = ErasedProcedureDef | RouterTree;
 
+/** A def's schemas are real zod schemas — checked by class, never by an unchecked `z.custom()`. */
+const ZodSchemaInstanceSchema = z.instanceof(ZodType);
+
 const ProcedureLeafShapeSchema = z.discriminatedUnion("kind", [
 	z.looseObject({
 		kind: z.literal("query"),
 		method: z.literal("GET"),
 		path: z.string(),
-		inputSchema: z.custom<ZodType<SerializableInput>>(),
-		responseSchema: z.custom<ZodType<DataValue>>(),
+		inputSchema: ZodSchemaInstanceSchema,
+		responseSchema: ZodSchemaInstanceSchema,
 	}),
 	z.looseObject({
 		kind: z.literal("mutation"),
 		method: z.enum(["POST", "PUT", "PATCH", "DELETE"]),
 		path: z.string(),
-		inputSchema: z.custom<ZodType<SerializableInput>>(),
-		responseSchema: z.custom<ZodType<DataValue>>(),
+		inputSchema: ZodSchemaInstanceSchema,
+		responseSchema: ZodSchemaInstanceSchema,
 	}),
 ]);
 
@@ -169,15 +205,18 @@ function versionedKey(version: ApiVersion | undefined, base: QueryKey): QueryKey
 
 /**
  * Declares a GET procedure from its shared contract leaf. The contract owns
- * method + path + input + response envelope; this layer adds the query key.
+ * method + path + input + response envelope; this layer adds the cache scope.
+ * `scope` receives the parsed input (which must therefore carry every field
+ * the scope needs); its own parameter type is what `scopeKey` accepts.
  */
-export function defineQuery<Input extends SerializableInput, Data extends DataValue>(
+export function defineQuery<Input extends SerializableInput & Scope, Data extends DataValue, Scope extends SerializableInput>(
 	contract: ApiContractDef<Input, "GET", Data>,
 	opts: {
-		readonly queryKey: (input: Input) => QueryKey;
+		readonly scope: (scope: Scope) => QueryKey;
 		readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 	},
-): QueryDef<Input, Envelope<Data>> {
+): ScopedQueryDef<Input, Envelope<Data>, Scope> {
+	const scopeKey = (scope: Scope): QueryKey => versionedKey(contract.version, opts.scope(scope));
 	return {
 		kind: "query",
 		method: "GET",
@@ -186,7 +225,8 @@ export function defineQuery<Input extends SerializableInput, Data extends DataVa
 		access: contract.access ?? "authenticated",
 		inputSchema: contract.input,
 		responseSchema: contract.response.envelope,
-		queryKey: (input: Input): QueryKey => versionedKey(contract.version, opts.queryKey(input)),
+		queryKey: (input: Input): QueryKey => (input === undefined ? scopeKey(input) : [...scopeKey(input), input]),
+		scopeKey,
 		baseOptions: opts.baseOptions,
 	};
 }
@@ -199,11 +239,10 @@ export function defineQuery<Input extends SerializableInput, Data extends DataVa
 export function defineMutation<Input extends SerializableInput, Data extends DataValue, M extends Exclude<RestMethod, "GET">>(
 	contract: ApiContractDef<Input, M, Data>,
 	opts: {
-		readonly queryKey: (input: Input) => QueryKey;
 		readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 		readonly toBody?: ((input: Input) => DataValue) | undefined;
 		readonly toQuery?: readonly string[] | undefined;
-	},
+	} = {},
 ): MutationDef<Input, Envelope<Data>> {
 	return {
 		kind: "mutation",
@@ -212,7 +251,6 @@ export function defineMutation<Input extends SerializableInput, Data extends Dat
 		version: contract.version,
 		inputSchema: contract.input,
 		responseSchema: contract.response.envelope,
-		queryKey: (input: Input): QueryKey => versionedKey(contract.version, opts.queryKey(input)),
 		baseOptions: opts.baseOptions,
 		toBody: opts.toBody,
 		toQuery: opts.toQuery,
@@ -314,7 +352,7 @@ function stringifyQueryValue(value: DataValue | undefined): string {
 
 // ── The router ─────────────────────────────────────────────────────────────
 // Every leaf derives path/method/input/response from `apiContract` (shared)
-// and only adds the client-side query key. Adding a route = adding one
+// and only adds the client-side cache scope (queries). Adding a route = adding one
 // contract leaf in `@workspace/shared` + one def here + one pipe in the API
 // controller — a missing leaf is a compile error on the client and a 400 on
 // the API side.
@@ -322,454 +360,219 @@ function stringifyQueryValue(value: DataValue | undefined): string {
 export const apiRouter = {
 	auth: {
 		/** "Who am I?" — profile without permissions. */
-		me: defineQuery(apiContract.auth.me, {
-			queryKey: () => ["auth", "me"],
-		}),
+		me: defineQuery(apiContract.auth.me, { scope: (): QueryKey => ["auth", "me"] }),
+		/** The signed-in user's own editable profile (name, avatar, optimistic-lock `version`). */
+		profile: defineQuery(apiContract.auth.profile, { scope: (): QueryKey => ["auth", "profile"] }),
+		/** Edits the own profile — refresh `profile` and `me` after it (see `useUpdateOwnProfile`). */
+		updateProfile: defineMutation(apiContract.auth.updateProfile),
 		/** Session roles + permissions — refetch after RBAC mutations. */
-		permissions: defineQuery(apiContract.auth.permissions, {
-			queryKey: () => ["auth", "permissions"],
-		}),
+		permissions: defineQuery(apiContract.auth.permissions, { scope: (): QueryKey => ["auth", "permissions"] }),
 		/** Very basic protected endpoint — proves the access token is valid and answers "who am I + when does my token expire" with no DB work. */
-		sessionStatus: defineQuery(apiContract.auth.sessionStatus, {
-			queryKey: () => ["auth", "session-status"],
-		}),
-		login: defineMutation(apiContract.auth.login, {
-			queryKey: () => ["auth", "login"],
-		}),
+		sessionStatus: defineQuery(apiContract.auth.sessionStatus, { scope: (): QueryKey => ["auth", "session-status"] }),
+		login: defineMutation(apiContract.auth.login),
 		/** Admin login — sends `X-Client-Type: admin` for cookie isolation. */
-		adminLogin: defineMutation(apiContract.auth.adminLogin, {
-			queryKey: () => ["auth", "admin-login"],
-			baseOptions: { headers: { "X-Client-Type": "admin" } },
-		}),
+		adminLogin: defineMutation(apiContract.auth.adminLogin, { baseOptions: { headers: clientTypeHeader("admin") } }),
 		/** Merchant login — sends `X-Client-Type: merchant` for cookie isolation. */
-		merchantLogin: defineMutation(apiContract.auth.login, {
-			queryKey: () => ["auth", "merchant-login"],
-			baseOptions: { headers: { "X-Client-Type": "merchant" } },
-		}),
-		signup: defineMutation(apiContract.auth.signup, {
-			queryKey: () => ["auth", "signup"],
-		}),
-		refresh: defineMutation(apiContract.auth.refresh, {
-			queryKey: () => ["auth", "refresh"],
-		}),
-		logout: defineMutation(apiContract.auth.logout, {
-			queryKey: () => ["auth", "logout"],
-		}),
-		forgotPassword: defineMutation(apiContract.auth.forgotPassword, {
-			queryKey: () => ["auth", "forgot-password"],
-		}),
-		resetPassword: defineMutation(apiContract.auth.resetPassword, {
-			queryKey: () => ["auth", "reset-password"],
-		}),
-		validateResetToken: defineMutation(apiContract.auth.validateResetToken, {
-			queryKey: () => ["auth", "validate-reset-token"],
-		}),
-		resendVerification: defineMutation(apiContract.auth.resendVerification, {
-			queryKey: () => ["auth", "resend-verification"],
-		}),
-		verifyEmail: defineMutation(apiContract.auth.verifyEmail, {
-			queryKey: ({ token }) => ["auth", "verify-email", token],
-		}),
-		changePassword: defineMutation(apiContract.auth.changePassword, {
-			queryKey: () => ["auth", "change-password"],
-		}),
-		loginTwoFactor: defineMutation(apiContract.auth.loginTwoFactor, {
-			queryKey: () => ["auth", "login-2fa"],
-		}),
-		loginBackupCode: defineMutation(apiContract.auth.loginBackupCode, {
-			queryKey: () => ["auth", "login-backup-code"],
-		}),
-		verifyLogin: defineMutation(apiContract.auth.verifyLogin, {
-			queryKey: () => ["auth", "verify-login"],
-		}),
-		twoFactorSetup: defineQuery(apiContract.auth.twoFactorSetup, {
-			queryKey: () => ["auth", "2fa-setup"],
-		}),
-		twoFactorEnable: defineMutation(apiContract.auth.twoFactorEnable, {
-			queryKey: () => ["auth", "2fa-enable"],
-		}),
-		twoFactorRotate: defineMutation(apiContract.auth.twoFactorRotate, {
-			queryKey: () => ["auth", "2fa-rotate"],
-		}),
-		twoFactorBackupCodesRemaining: defineQuery(apiContract.auth.twoFactorBackupCodesRemaining, {
-			queryKey: () => ["auth", "2fa-backup-codes-remaining"],
-		}),
-		twoFactorVerifyBackupCode: defineMutation(apiContract.auth.twoFactorVerifyBackupCode, {
-			queryKey: () => ["auth", "2fa-verify-backup-code"],
-		}),
-		mfaRecoveryInitiate: defineMutation(apiContract.auth.mfaRecoveryInitiate, {
-			queryKey: () => ["auth", "mfa-recovery-initiate"],
-		}),
-		mfaRecoveryStatus: defineQuery(apiContract.auth.mfaRecoveryStatus, {
-			queryKey: () => ["auth", "mfa-recovery-status"],
-		}),
-		adminMfaRecoveryReview: defineMutation(apiContract.auth.adminMfaRecoveryReview, {
-			queryKey: ({ requestId, action }) => ["auth", "admin-mfa-recovery-review", requestId, action],
-		}),
-		adminMfaRecoveryRequests: defineQuery(apiContract.auth.adminMfaRecoveryRequests, {
-			queryKey: (input) => listQueryKey(["auth", "admin-mfa-recovery-requests"], input),
-		}),
-		adminUsers: defineQuery(apiContract.auth.adminUsers, {
-			queryKey: (input) => listQueryKey(["auth", "admin-users"], input),
-		}),
-		adminUserDetail: defineQuery(apiContract.auth.adminUserDetail, {
-			queryKey: ({ userId }) => ["auth", "admin-user", userId],
-		}),
-		impersonate: defineMutation(apiContract.auth.impersonate, {
-			queryKey: ({ userId }) => ["auth", "impersonate", userId],
-		}),
-		stopImpersonation: defineMutation(apiContract.auth.stopImpersonation, {
-			queryKey: () => ["auth", "stop-impersonation"],
-		}),
+		merchantLogin: defineMutation(apiContract.auth.login, { baseOptions: { headers: clientTypeHeader("merchant") } }),
+		signup: defineMutation(apiContract.auth.signup),
+		refresh: defineMutation(apiContract.auth.refresh),
+		logout: defineMutation(apiContract.auth.logout),
+		forgotPassword: defineMutation(apiContract.auth.forgotPassword),
+		resetPassword: defineMutation(apiContract.auth.resetPassword),
+		validateResetToken: defineMutation(apiContract.auth.validateResetToken),
+		resendVerification: defineMutation(apiContract.auth.resendVerification),
+		verifyEmail: defineMutation(apiContract.auth.verifyEmail),
+		changePassword: defineMutation(apiContract.auth.changePassword),
+		loginTwoFactor: defineMutation(apiContract.auth.loginTwoFactor),
+		loginBackupCode: defineMutation(apiContract.auth.loginBackupCode),
+		verifyLogin: defineMutation(apiContract.auth.verifyLogin),
+		/** Starts (or restarts) a 2FA enrollment: stores a pending secret server-side, so it is a mutation. */
+		twoFactorSetup: defineMutation(apiContract.auth.twoFactorSetup),
+		twoFactorEnable: defineMutation(apiContract.auth.twoFactorEnable),
+		twoFactorRotate: defineMutation(apiContract.auth.twoFactorRotate),
+		twoFactorBackupCodesRemaining: defineQuery(apiContract.auth.twoFactorBackupCodesRemaining, { scope: (): QueryKey => ["auth", "2fa-backup-codes-remaining"] }),
+		twoFactorVerifyBackupCode: defineMutation(apiContract.auth.twoFactorVerifyBackupCode),
+		mfaRecoveryInitiate: defineMutation(apiContract.auth.mfaRecoveryInitiate),
+		mfaRecoveryStatus: defineQuery(apiContract.auth.mfaRecoveryStatus, { scope: (): QueryKey => ["auth", "mfa-recovery-status"] }),
+		adminMfaRecoveryReview: defineMutation(apiContract.auth.adminMfaRecoveryReview),
+		adminMfaRecoveryRequests: defineQuery(apiContract.auth.adminMfaRecoveryRequests, { scope: (): QueryKey => ["auth", "admin-mfa-recovery-requests"] }),
+		adminUsers: defineQuery(apiContract.auth.adminUsers, { scope: (): QueryKey => ["auth", "admin-users"] }),
+		adminUserDetail: defineQuery(apiContract.auth.adminUserDetail, { scope: ({ userId }: { readonly userId: string }): QueryKey => ["auth", "admin-user", userId] }),
+		impersonate: defineMutation(apiContract.auth.impersonate),
+		stopImpersonation: defineMutation(apiContract.auth.stopImpersonation),
 	},
 
 	capabilities: {
-		catalog: defineQuery(apiContract.capabilities.catalog, {
-			queryKey: ({ scope }) => ["capabilities", "catalog", scope ?? "all"],
-		}),
+		catalog: defineQuery(apiContract.capabilities.catalog, { scope: (): QueryKey => ["capabilities", "catalog"] }),
 	},
 
 	admin: {
 		roles: {
-			list: defineQuery(apiContract.admin.roles.list, {
-				queryKey: () => ["admin", "roles", "list"],
-			}),
-			userAssign: defineMutation(apiContract.admin.roles.userAssign, {
-				queryKey: ({ userId }) => ["admin", "roles", "user-assign", userId],
-			}),
-			userRemove: defineMutation(apiContract.admin.roles.userRemove, {
-				queryKey: ({ userId }) => ["admin", "roles", "user-remove", userId],
-			}),
-			userSync: defineMutation(apiContract.admin.roles.userSync, {
-				queryKey: ({ userId }) => ["admin", "roles", "user-sync", userId],
-			}),
+			list: defineQuery(apiContract.admin.roles.list, { scope: (): QueryKey => ["admin", "roles", "list"] }),
+			userAssign: defineMutation(apiContract.admin.roles.userAssign),
+			userRemove: defineMutation(apiContract.admin.roles.userRemove),
+			userSync: defineMutation(apiContract.admin.roles.userSync),
 		},
 		permissions: {
-			list: defineQuery(apiContract.admin.permissions.list, {
-				queryKey: () => ["admin", "permissions", "list"],
-			}),
-			check: defineMutation(apiContract.admin.permissions.check, {
-				queryKey: ({ userId, action, resource }) => ["admin", "permissions", "check", userId, action, resource],
-			}),
-			userGrant: defineMutation(apiContract.admin.permissions.userGrant, {
-				queryKey: ({ userId }) => ["admin", "permissions", "user-grant", userId],
-			}),
-			userRevoke: defineMutation(apiContract.admin.permissions.userRevoke, {
-				queryKey: ({ userId }) => ["admin", "permissions", "user-revoke", userId],
-			}),
-			userSync: defineMutation(apiContract.admin.permissions.userSync, {
-				queryKey: ({ userId }) => ["admin", "permissions", "user-sync", userId],
-			}),
+			list: defineQuery(apiContract.admin.permissions.list, { scope: (): QueryKey => ["admin", "permissions", "list"] }),
+			check: defineMutation(apiContract.admin.permissions.check),
+			userGrant: defineMutation(apiContract.admin.permissions.userGrant),
+			userRevoke: defineMutation(apiContract.admin.permissions.userRevoke),
+			userSync: defineMutation(apiContract.admin.permissions.userSync),
 		},
 	},
 
 	// ── Email template preview procedures ─────────────────────────────────────
 	email: {
-		previewList: defineQuery(apiContract.email.previewList, {
-			queryKey: () => ["email", "preview-list"],
-		}),
+		previewList: defineQuery(apiContract.email.previewList, { scope: (): QueryKey => ["email", "preview-list"] }),
 		/** Preview detail for one template key. */
-		previewDetail: defineQuery(apiContract.email.previewDetail, {
-			queryKey: ({ key }) => ["email", "preview-detail", key],
-		}),
+		previewDetail: defineQuery(apiContract.email.previewDetail, { scope: (): QueryKey => ["email", "preview-detail"] }),
 		/** Sends one template to the configured test address. */
-		previewSend: defineMutation(apiContract.email.previewSend, {
-			queryKey: ({ key }) => ["email", "preview-send", key],
-		}),
-		logList: defineQuery(apiContract.email.logList, {
-			queryKey: (input) => listQueryKey(EMAIL_LOG_LIST_QUERY_KEY_PREFIX, input),
-		}),
+		previewSend: defineMutation(apiContract.email.previewSend),
+		/** Every email-log list page — `scopeKey(undefined)` refetches them all (the SSE live view does). */
+		logList: defineQuery(apiContract.email.logList, { scope: (): QueryKey => ["email", "log-list"] }),
 	},
 
 	geo: {
-		stats: defineQuery(apiContract.geo.stats, {
-			queryKey: () => ["geo", "stats"],
-		}),
-		countries: defineQuery(apiContract.geo.countries, {
-			queryKey: (input) => listQueryKey(["geo", "countries"], input),
-		}),
-		states: defineQuery(apiContract.geo.states, {
-			queryKey: (input) => listQueryKey(["geo", "states"], input),
-		}),
-		cities: defineQuery(apiContract.geo.cities, {
-			queryKey: (input) => listQueryKey(["geo", "cities"], input),
-		}),
+		stats: defineQuery(apiContract.geo.stats, { scope: (): QueryKey => ["geo", "stats"] }),
+		countries: defineQuery(apiContract.geo.countries, { scope: (): QueryKey => ["geo", "countries"] }),
+		states: defineQuery(apiContract.geo.states, { scope: (): QueryKey => ["geo", "states"] }),
+		cities: defineQuery(apiContract.geo.cities, { scope: (): QueryKey => ["geo", "cities"] }),
 	},
 
 	rewards: {
-		list: defineQuery(apiContract.rewards.list, {
-			queryKey: (input) => listQueryKey(["rewards", "list"], input),
-		}),
-		detail: defineQuery(apiContract.rewards.detail, {
-			queryKey: ({ rewardId }) => ["rewards", "detail", rewardId],
-		}),
+		list: defineQuery(apiContract.rewards.list, { scope: (): QueryKey => ["rewards", "list"] }),
+		detail: defineQuery(apiContract.rewards.detail, { scope: ({ rewardId }: { readonly rewardId: string }): QueryKey => ["rewards", "detail", rewardId] }),
 	},
 	legal: {
-		accept: defineMutation(apiContract.legal.accept, {
-			queryKey: ({ termsVersion, privacyVersion }) => ["legal", "accept", termsVersion, privacyVersion],
-		}),
-		status: defineQuery(apiContract.legal.status, {
-			queryKey: () => ["legal", "status"],
-		}),
+		accept: defineMutation(apiContract.legal.accept),
+		status: defineQuery(apiContract.legal.status, { scope: (): QueryKey => ["legal", "status"] }),
 	},
 	claims: {
-		otp: defineMutation(apiContract.claims.otp, {
-			queryKey: ({ rewardId, phone }) => ["claims", "otp", rewardId, phone],
-		}),
-		create: defineMutation(apiContract.claims.create, {
-			queryKey: ({ rewardId }) => ["claims", "create", rewardId],
-		}),
-		list: defineQuery(apiContract.claims.list, {
-			queryKey: (input) => listQueryKey(["claims", "list"], input),
-		}),
-		analytics: defineQuery(apiContract.claims.analytics, {
-			queryKey: ({ from, to }) => ["claims", "analytics", from, to],
-		}),
-		qr: defineQuery(apiContract.claims.qr, {
-			queryKey: ({ claimId }) => ["claims", "qr", claimId],
-		}),
+		otp: defineMutation(apiContract.claims.otp),
+		create: defineMutation(apiContract.claims.create),
+		list: defineQuery(apiContract.claims.list, { scope: (): QueryKey => ["claims", "list"] }),
+		analytics: defineQuery(apiContract.claims.analytics, { scope: (): QueryKey => ["claims", "analytics"] }),
+		qr: defineQuery(apiContract.claims.qr, { scope: ({ claimId }: { readonly claimId: string }): QueryKey => ["claims", "qr", claimId] }),
 	},
 	rewardNotifications: {
-		list: defineQuery(apiContract.rewardNotifications.list, {
-			queryKey: (input) => listQueryKey(["reward-notifications", "list"], input),
-		}),
-		read: defineMutation(apiContract.rewardNotifications.read, {
-			queryKey: () => ["reward-notifications", "read"],
-		}),
+		list: defineQuery(apiContract.rewardNotifications.list, { scope: (): QueryKey => ["reward-notifications", "list"] }),
+		read: defineMutation(apiContract.rewardNotifications.read),
 	},
 	files: {
-		uploadUrl: defineMutation(apiContract.files.uploadUrl, {
-			queryKey: ({ category, fileName }) => ["files", "upload-url", category, fileName],
-		}),
-		complete: defineMutation(apiContract.files.complete, {
-			queryKey: ({ fileId }) => ["files", "complete", fileId],
-		}),
-		detail: defineQuery(apiContract.files.detail, {
-			queryKey: ({ fileId }) => ["files", "detail", fileId],
-		}),
-		downloadUrl: defineQuery(apiContract.files.downloadUrl, {
-			queryKey: ({ fileId }) => ["files", "download-url", fileId],
-		}),
-		delete: defineMutation(apiContract.files.delete, {
-			queryKey: ({ fileId }) => ["files", "delete", fileId],
-		}),
+		uploadUrl: defineMutation(apiContract.files.uploadUrl),
+		complete: defineMutation(apiContract.files.complete),
+		detail: defineQuery(apiContract.files.detail, { scope: ({ fileId }: { readonly fileId: string }): QueryKey => ["files", "detail", fileId] }),
+		downloadUrl: defineQuery(apiContract.files.downloadUrl, { scope: ({ fileId }: { readonly fileId: string }): QueryKey => ["files", "download-url", fileId] }),
+		delete: defineMutation(apiContract.files.delete),
 	},
 	organizations: {
-		membershipsBootstrap: defineQuery(apiContract.organizations.membershipsBootstrap, {
-			queryKey: () => ["organizations", "memberships"],
-		}),
-		context: defineQuery(apiContract.organizations.context, {
-			queryKey: ({ orgSlug }) => ["organization", orgSlug, "context"],
-		}),
-		listMembers: defineQuery(apiContract.organizations.listMembers, {
-			queryKey: ({ orgSlug }) => ["organization", orgSlug, "members"],
-		}),
+		/** The member's organizations (membership + capabilities) — invalidate after any identity or membership change. */
+		membershipsBootstrap: defineQuery(apiContract.organizations.membershipsBootstrap, { scope: (): QueryKey => ["organizations", "memberships"] }),
+		context: defineQuery(apiContract.organizations.context, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "context"] }),
+		listMembers: defineQuery(apiContract.organizations.listMembers, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "members", "list"] }),
 		listMemberInvites: defineQuery(apiContract.organizations.listMemberInvites, {
-			queryKey: ({ orgSlug }) => ["organization", orgSlug, "members", "invites"],
+			scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "members", "invites"],
 		}),
-		inviteMember: defineMutation(apiContract.organizations.inviteMember, {
-			queryKey: ({ orgSlug, email }) => ["organization", orgSlug, "members", "invite", email],
-		}),
-		revokeMemberInvite: defineMutation(apiContract.organizations.revokeMemberInvite, {
-			queryKey: ({ orgSlug, inviteId }) => ["organization", orgSlug, "members", "invites", "revoke", inviteId],
-		}),
-		validateTeamInvite: defineMutation(apiContract.organizations.validateTeamInvite, {
-			queryKey: ({ token }) => ["organization", "team-invite", "validate", token],
-		}),
-		acceptTeamInvite: defineMutation(apiContract.organizations.acceptTeamInvite, {
-			queryKey: ({ token }) => ["organization", "team-invite", "accept", token],
-		}),
-		registerAndAcceptTeamInvite: defineMutation(apiContract.organizations.registerAndAcceptTeamInvite, {
-			queryKey: ({ token }) => ["organization", "team-invite", "register-and-accept", token],
-			baseOptions: { headers: { "X-Client-Type": "merchant" } },
-		}),
+		inviteMember: defineMutation(apiContract.organizations.inviteMember),
+		revokeMemberInvite: defineMutation(apiContract.organizations.revokeMemberInvite),
+		removeMemberFromStore: defineMutation(apiContract.organizations.removeMemberFromStore),
+		/** The signed-in member's own membership (display name). Invalidate `context` and `listMembers` of the organization after it. */
+		updateOwnMembership: defineMutation(apiContract.organizations.updateOwnMembership),
+		validateTeamInvite: defineMutation(apiContract.organizations.validateTeamInvite),
+		acceptTeamInvite: defineMutation(apiContract.organizations.acceptTeamInvite),
+		registerAndAcceptTeamInvite: defineMutation(apiContract.organizations.registerAndAcceptTeamInvite, { baseOptions: { headers: clientTypeHeader("merchant") } }),
 		kyb: {
-			get: defineQuery(apiContract.organizations.kyb.get, {
-				queryKey: ({ orgSlug }) => ["organization", orgSlug, "kyb"],
-			}),
-			submit: defineMutation(apiContract.organizations.kyb.submit, {
-				queryKey: ({ orgSlug }) => ["organization", orgSlug, "kyb", "submit"],
-			}),
+			get: defineQuery(apiContract.organizations.kyb.get, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "kyb"] }),
+			submit: defineMutation(apiContract.organizations.kyb.submit),
 			downloadDocument: defineQuery(apiContract.organizations.kyb.downloadDocument, {
-				queryKey: ({ orgSlug, documentId, disposition }) => ["organization", orgSlug, "kyb", "documents", "download", documentId, disposition],
+				scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "kyb", "documents", "download"],
 			}),
 		},
 		rewards: {
-			list: defineQuery(apiContract.organizations.rewards.list, {
-				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "rewards", "list", locationId],
-			}),
-			create: defineMutation(apiContract.organizations.rewards.create, {
-				queryKey: ({ orgSlug, title }) => ["organization", orgSlug, "rewards", "create", title],
-			}),
-			update: defineMutation(apiContract.organizations.rewards.update, {
-				queryKey: ({ orgSlug, rewardId }) => ["organization", orgSlug, "rewards", "update", rewardId],
-			}),
-			publish: defineMutation(apiContract.organizations.rewards.publish, {
-				queryKey: ({ orgSlug, rewardId }) => ["organization", orgSlug, "rewards", "publish", rewardId],
-			}),
+			list: defineQuery(apiContract.organizations.rewards.list, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "rewards", "list"] }),
+			get: defineQuery(apiContract.organizations.rewards.get, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "rewards", "detail"] }),
+			create: defineMutation(apiContract.organizations.rewards.create),
+			update: defineMutation(apiContract.organizations.rewards.update),
+			publish: defineMutation(apiContract.organizations.rewards.publish),
 		},
 		apiKeys: {
-			list: defineQuery(apiContract.organizations.apiKeys.list, {
-				queryKey: (input) => listQueryKey(["organization", input.orgSlug, "api-keys", "list"], input),
-			}),
-			create: defineMutation(apiContract.organizations.apiKeys.create, {
-				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "api-keys", "create", name],
-			}),
-			revoke: defineMutation(apiContract.organizations.apiKeys.revoke, {
-				queryKey: ({ orgSlug, keyId }) => ["organization", orgSlug, "api-keys", "revoke", keyId],
-			}),
+			list: defineQuery(apiContract.organizations.apiKeys.list, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "api-keys", "list"] }),
+			create: defineMutation(apiContract.organizations.apiKeys.create),
+			revoke: defineMutation(apiContract.organizations.apiKeys.revoke),
 		},
 		terminals: {
-			list: defineQuery(apiContract.organizations.terminals.list, {
-				queryKey: (input) => listQueryKey(["organization", input.orgSlug, "terminals", "list"], input),
+			list: defineQuery(apiContract.organizations.terminals.list, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "terminals", "list"] }),
+			summary: defineQuery(apiContract.organizations.terminals.summary, {
+				scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "terminals", "summary"],
 			}),
-			create: defineMutation(apiContract.organizations.terminals.create, {
-				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "terminals", "create", name],
-			}),
-			pairingCode: defineMutation(apiContract.organizations.terminals.pairingCode, {
-				queryKey: ({ orgSlug, id }) => ["organization", orgSlug, "terminals", "pairing-code", id],
-			}),
-			remove: defineMutation(apiContract.organizations.terminals.remove, {
-				queryKey: ({ orgSlug, id }) => ["organization", orgSlug, "terminals", "remove", id],
-			}),
+			get: defineQuery(apiContract.organizations.terminals.get, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "terminals", "detail"] }),
+			create: defineMutation(apiContract.organizations.terminals.create),
+			pairingCode: defineMutation(apiContract.organizations.terminals.pairingCode),
+			remove: defineMutation(apiContract.organizations.terminals.remove),
 			settings: defineQuery(apiContract.organizations.terminals.settings, {
-				queryKey: ({ orgSlug }) => ["organization", orgSlug, "terminals", "settings"],
+				scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "terminals", "settings"],
 			}),
-			updateSettings: defineMutation(apiContract.organizations.terminals.updateSettings, {
-				queryKey: ({ orgSlug }) => ["organization", orgSlug, "terminals", "settings", "update"],
-			}),
+			updateSettings: defineMutation(apiContract.organizations.terminals.updateSettings),
 		},
-		redemptions: defineQuery(apiContract.organizations.redemptions, {
-			queryKey: (input) => listQueryKey(["organization", input.orgSlug, "redemptions"], input),
-		}),
-		analytics: defineQuery(apiContract.organizations.analytics, {
-			queryKey: ({ orgSlug, from, to, locationId }) => ["organization", orgSlug, "analytics", locationId, from, to],
-		}),
+		redemptions: defineQuery(apiContract.organizations.redemptions, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "redemptions"] }),
+		analytics: defineQuery(apiContract.organizations.analytics, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "analytics"] }),
 		locations: {
-			create: defineMutation(apiContract.organizations.locations.create, {
-				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "locations", "create", name],
-			}),
-			update: defineMutation(apiContract.organizations.locations.update, {
-				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "locations", "update", locationId],
-			}),
+			create: defineMutation(apiContract.organizations.locations.create),
+			update: defineMutation(apiContract.organizations.locations.update),
+			close: defineMutation(apiContract.organizations.locations.close),
 		},
 		onboarding: {
-			validate: defineMutation(apiContract.organizations.onboarding.validate, {
-				queryKey: ({ token }) => ["organization", "onboarding", "validate", token],
-			}),
-			complete: defineMutation(apiContract.organizations.onboarding.complete, {
-				queryKey: ({ token }) => ["organization", "onboarding", "complete", token],
-			}),
-			documentUploadUrl: defineMutation(apiContract.organizations.onboarding.documentUploadUrl, {
-				queryKey: ({ token, fileName }) => ["organization", "onboarding", "document-upload-url", token, fileName],
-			}),
-			documentBatchUploadUrl: defineMutation(apiContract.organizations.onboarding.documentBatchUploadUrl, {
-				queryKey: ({ token }) => ["organization", "onboarding", "document-batch-upload-url", token],
-			}),
-			documentUploadComplete: defineMutation(apiContract.organizations.onboarding.documentUploadComplete, {
-				queryKey: ({ token, fileId }) => ["organization", "onboarding", "document-upload-complete", token, fileId],
-			}),
-			documentBatchUploadComplete: defineMutation(apiContract.organizations.onboarding.documentBatchUploadComplete, {
-				queryKey: ({ token }) => ["organization", "onboarding", "document-batch-upload-complete", token],
-			}),
-			documentsSubmit: defineMutation(apiContract.organizations.onboarding.documentsSubmit, {
-				queryKey: ({ token }) => ["organization", "onboarding", "documents-submit", token],
-			}),
+			validate: defineMutation(apiContract.organizations.onboarding.validate),
+			complete: defineMutation(apiContract.organizations.onboarding.complete),
+			documentUploadUrl: defineMutation(apiContract.organizations.onboarding.documentUploadUrl),
+			documentBatchUploadUrl: defineMutation(apiContract.organizations.onboarding.documentBatchUploadUrl),
+			documentUploadComplete: defineMutation(apiContract.organizations.onboarding.documentUploadComplete),
+			documentBatchUploadComplete: defineMutation(apiContract.organizations.onboarding.documentBatchUploadComplete),
+			documentsSubmit: defineMutation(apiContract.organizations.onboarding.documentsSubmit),
+			// POST (the invite token stays out of URLs): poll it from a query whose queryFn calls `.mutate`.
+			documentStatus: defineMutation(apiContract.organizations.onboarding.documentStatus),
 		},
 	},
 
 	rewardsAdmin: {
-		pendingRewards: defineQuery(apiContract.rewardsAdmin.pendingRewards, {
-			queryKey: () => ["rewards-admin", "pending"],
-		}),
-		listOrganizations: defineQuery(apiContract.rewardsAdmin.listOrganizations, {
-			queryKey: (input) => listQueryKey(["rewards-admin", "organizations"], input),
-		}),
+		pendingRewards: defineQuery(apiContract.rewardsAdmin.pendingRewards, { scope: (): QueryKey => ["rewards-admin", "pending"] }),
+		listOrganizations: defineQuery(apiContract.rewardsAdmin.listOrganizations, { scope: (): QueryKey => ["rewards-admin", "organizations"] }),
 		getOrganization: defineQuery(apiContract.rewardsAdmin.getOrganization, {
-			queryKey: ({ organizationId }) => ["rewards-admin", "organization", organizationId],
+			scope: ({ organizationId }: AdminOrganizationScope): QueryKey => ["rewards-admin", "organization", organizationId],
 		}),
 		downloadOrganizationDocument: defineQuery(apiContract.rewardsAdmin.downloadOrganizationDocument, {
-			queryKey: ({ organizationId, documentId, disposition }) => ["rewards-admin", "organization", organizationId, "documents", "download", documentId, disposition],
+			scope: ({ organizationId }: AdminOrganizationScope): QueryKey => ["rewards-admin", "organization", organizationId, "documents", "download"],
 		}),
-		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite, {
-			queryKey: ({ email }) => ["rewards-admin", "invite", email],
-		}),
-		previewInviteEmail: defineMutation(apiContract.rewardsAdmin.previewInviteEmail, {
-			queryKey: ({ email, businessName, city }) => ["rewards-admin", "invite-preview", email, businessName, city],
-		}),
-		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, {
-			queryKey: ({ from, to }) => ["rewards-admin", "analytics", "sales", from, to],
-		}),
-		approveReward: defineMutation(apiContract.rewardsAdmin.approveReward, {
-			queryKey: ({ rewardId }) => ["rewards-admin", "approve", rewardId],
-		}),
-		rejectReward: defineMutation(apiContract.rewardsAdmin.rejectReward, {
-			queryKey: ({ rewardId }) => ["rewards-admin", "reject", rewardId],
-		}),
-		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb, {
-			queryKey: ({ organizationId }) => ["rewards-admin", "kyb", organizationId],
-		}),
-		listLocationRequests: defineQuery(apiContract.rewardsAdmin.listLocationRequests, {
-			queryKey: (input) => listQueryKey(["rewards-admin", "location-requests"], input),
-		}),
-		createOrganizationLocation: defineMutation(apiContract.rewardsAdmin.createOrganizationLocation, {
-			queryKey: ({ organizationId, name }) => ["rewards-admin", "organization", organizationId, "locations", "create", name],
-		}),
-		reviewOrganizationLocation: defineMutation(apiContract.rewardsAdmin.reviewOrganizationLocation, {
-			queryKey: ({ organizationId, locationId, approve }) => ["rewards-admin", "organization", organizationId, "locations", locationId, "review", approve],
-		}),
+		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite),
+		previewInviteEmail: defineMutation(apiContract.rewardsAdmin.previewInviteEmail),
+		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, { scope: (): QueryKey => ["rewards-admin", "analytics", "sales"] }),
+		approveReward: defineMutation(apiContract.rewardsAdmin.approveReward),
+		rejectReward: defineMutation(apiContract.rewardsAdmin.rejectReward),
+		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb),
+		listLocationRequests: defineQuery(apiContract.rewardsAdmin.listLocationRequests, { scope: (): QueryKey => ["rewards-admin", "location-requests"] }),
+		createOrganizationLocation: defineMutation(apiContract.rewardsAdmin.createOrganizationLocation),
+		reviewOrganizationLocation: defineMutation(apiContract.rewardsAdmin.reviewOrganizationLocation),
 	},
 	sampleCategory: {
-		list: defineQuery(apiContract.sampleCategory.list, {
-			queryKey: (input) => listQueryKey(["sample-category", "list"], input),
-		}),
-		detail: defineQuery(apiContract.sampleCategory.detail, {
-			queryKey: ({ id }) => ["sample-category", "detail", id],
-		}),
-		create: defineMutation(apiContract.sampleCategory.create, {
-			queryKey: ({ name }) => ["sample-category", "create", name],
-		}),
-		bulkCreate: defineMutation(apiContract.sampleCategory.bulkCreate, {
-			queryKey: ({ items }) => ["sample-category", "bulk-create", String(items.length)],
-		}),
-		bulkDelete: defineMutation(apiContract.sampleCategory.bulkDelete, {
-			queryKey: ({ ids }) => ["sample-category", "bulk-delete", ...ids],
-		}),
-		update: defineMutation(apiContract.sampleCategory.update, {
-			queryKey: ({ id }) => ["sample-category", "update", id],
-		}),
-		delete: defineMutation(apiContract.sampleCategory.delete, {
-			queryKey: ({ id }) => ["sample-category", "delete", id],
-		}),
-		restore: defineMutation(apiContract.sampleCategory.restore, {
-			queryKey: ({ id }) => ["sample-category", "restore", id],
-		}),
+		list: defineQuery(apiContract.sampleCategory.list, { scope: (): QueryKey => ["sample-category", "list"] }),
+		detail: defineQuery(apiContract.sampleCategory.detail, { scope: ({ id }: { readonly id: string }): QueryKey => ["sample-category", "detail", id] }),
+		create: defineMutation(apiContract.sampleCategory.create),
+		bulkCreate: defineMutation(apiContract.sampleCategory.bulkCreate),
+		bulkDelete: defineMutation(apiContract.sampleCategory.bulkDelete),
+		update: defineMutation(apiContract.sampleCategory.update),
+		delete: defineMutation(apiContract.sampleCategory.delete),
+		restore: defineMutation(apiContract.sampleCategory.restore),
 	},
 	product: {
-		list: defineQuery(apiContract.product.list, {
-			queryKey: (input) => listQueryKey(["product", "list"], input),
-		}),
-		detail: defineQuery(apiContract.product.detail, {
-			queryKey: ({ id }) => ["product", "detail", id],
-		}),
-		create: defineMutation(apiContract.product.create, {
-			queryKey: ({ name }) => ["product", "create", name],
-		}),
-		bulkCreate: defineMutation(apiContract.product.bulkCreate, {
-			queryKey: ({ items }) => ["product", "bulk-create", String(items.length)],
-		}),
-		bulkDelete: defineMutation(apiContract.product.bulkDelete, {
-			queryKey: ({ ids }) => ["product", "bulk-delete", ...ids],
-		}),
-		update: defineMutation(apiContract.product.update, {
-			queryKey: ({ id }) => ["product", "update", id],
-		}),
-		delete: defineMutation(apiContract.product.delete, {
-			queryKey: ({ id }) => ["product", "delete", id],
-		}),
-		restore: defineMutation(apiContract.product.restore, {
-			queryKey: ({ id }) => ["product", "restore", id],
-		}),
+		list: defineQuery(apiContract.product.list, { scope: (): QueryKey => ["product", "list"] }),
+		detail: defineQuery(apiContract.product.detail, { scope: ({ id }: { readonly id: string }): QueryKey => ["product", "detail", id] }),
+		create: defineMutation(apiContract.product.create),
+		bulkCreate: defineMutation(apiContract.product.bulkCreate),
+		bulkDelete: defineMutation(apiContract.product.bulkDelete),
+		update: defineMutation(apiContract.product.update),
+		delete: defineMutation(apiContract.product.delete),
+		restore: defineMutation(apiContract.product.restore),
 	},
 };
 

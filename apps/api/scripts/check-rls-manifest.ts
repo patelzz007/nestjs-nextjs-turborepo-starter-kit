@@ -9,7 +9,8 @@ import {
 	parsePrismaSchemaModels,
 	type RlsManifestDriftReport,
 } from "../prisma/rls/manifest-index.js";
-import { buildRlsApplyPlan } from "./rls-apply-plan.js";
+import { findHandWrittenAppRuntimeRevokes, findUnknownWithheldPrivilegeTables, listWithheldPrivileges } from "../prisma/rls/withheld-privileges.js";
+import { buildRlsApplyPlan, stripSqlComments } from "./rls-apply-plan.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const prismaDir = resolve(apiDir, "prisma");
@@ -77,12 +78,16 @@ function run(): void {
 		manifestTables,
 		rlsEnabledTables,
 	});
+	const withheld = listWithheldPrivileges();
+	const unknownWithheldTables: string[] = findUnknownWithheldPrivilegeTables(withheld, new Set(prismaModels.map((model) => model.tableName)));
+	const handWrittenRevokes: string[] = findHandWrittenAppRuntimeRevokes(stripSqlComments(rlsSqlContent));
 
 	console.log("RLS manifest drift check");
 	console.log(`  Apply plan: ${String(applyPlan.length)} files in RLS_APPLY_ORDER (helper dependencies OK)`);
 	console.log(`  Prisma models: ${String(prismaModels.length)}`);
 	console.log(`  Manifest tables: ${String(manifestTables.length)}`);
 	console.log(`  RLS-enabled tables (sql scan): ${String(rlsEnabledTables.size)}`);
+	console.log(`  Tables with withheld app_runtime privileges: ${String(withheld.length)}`);
 	console.log("");
 
 	const body = [
@@ -91,6 +96,8 @@ function run(): void {
 		formatSection("Models with organization_id missing from manifest", report.orgModelsMissingManifest),
 		formatSection("Location profile mismatches", report.locationProfileMismatch),
 		formatSection("Manifest tables not found in RLS SQL enable list", report.manifestNotInRlsSql),
+		formatSection("Withheld-privilege entries with no Prisma model (prisma/rls/withheld-privileges.ts)", unknownWithheldTables),
+		formatSection("Hand-written REVOKE … FROM app_runtime (undone by the blanket grant — declare the table in withheld-privileges.ts)", handWrittenRevokes),
 	]
 		.filter((section) => section.length > 0)
 		.join("\n");
@@ -99,7 +106,7 @@ function run(): void {
 		console.log(body);
 	}
 
-	if (reportHasIssues(report)) {
+	if (reportHasIssues(report) || unknownWithheldTables.length > 0 || handWrittenRevokes.length > 0) {
 		throw new Error("RLS manifest drift detected — update manifest-index.ts and prisma/rls*.sql");
 	}
 

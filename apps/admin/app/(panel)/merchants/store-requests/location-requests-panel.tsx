@@ -1,35 +1,36 @@
 "use client";
 
-import { initialDataOption, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
-import { AdminLocationRequestResponseSchema, PERMISSION, type AdminLocationRequestResponse } from "@workspace/shared";
+import {
+	AdminLocationRequestResponseSchema,
+	PERMISSION,
+	type AdminLocationRequestResponse,
+	type AdminOrganizationLocationReviewInput,
+	type Envelope,
+} from "@workspace/shared";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Label } from "@workspace/ui/components/form/label";
-import { Textarea } from "@workspace/ui/components/form/textarea";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Building2, Check, MapPin, X } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { PENDING_LOCATION_REQUESTS_QUERY } from "@/lib/merchants/location-requests";
+import { toastMutationError } from "@/lib/api/mutation-error";
+import { pilotCityLabel } from "@/lib/format/pilot-city";
 import { ROUTES } from "@/lib/routes";
+
+import { StoreRequestReviewForm } from "./store-request-review-form";
 import { STORE_REQUESTS_URL_STATE } from "@/lib/url-state/selection";
 
-const CITY_LABELS: Record<string, string> = {
-	KUALA_LUMPUR: "Kuala Lumpur",
-	MELAKA: "Melaka",
-};
-
-function formatCity(city: string | null): string {
-	if (city === null) {
-		return "—";
-	}
-	return CITY_LABELS[city] ?? city.replaceAll("_", " ");
-}
+/** Shown when a request names no city. */
+const NO_CITY_LABEL = "Not set";
 
 interface LocationRequestRowProps {
 	readonly request: AdminLocationRequestResponse;
@@ -59,70 +60,60 @@ function LocationRequestRow({ request, isSelected, onSelect }: LocationRequestRo
 }
 
 export interface LocationRequestsPanelProps {
-	readonly initialPendingRequests?: readonly AdminLocationRequestResponse[] | undefined;
+	/** The API's own envelope (real pagination meta) of the pending queue, prefetched on the server. */
+	readonly initialPendingRequests?: Envelope<AdminLocationRequestResponse[]> | undefined;
 }
 
 /**
  * Store location request queue. The request open in the review panel is
- * `?requestId=` (lib/url-state/selection); without one — or once it has been
- * reviewed and left the queue — the first pending request is shown.
+ * exactly `?requestId=` (lib/url-state/selection) — never another request in
+ * its place: when it is not in the loaded queue (already reviewed, or beyond
+ * the first page) the panel says so. Reviewing clears the selection.
  */
 export default function LocationRequestsPanel({ initialPendingRequests }: LocationRequestsPanelProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const [selection, updateSelection] = useUrlState(STORE_REQUESTS_URL_STATE);
-	const [rejectionReason, setRejectionReason] = React.useState("");
 
-	const pendingInitialData = React.useMemo(
-		() => (initialPendingRequests !== undefined ? successEnvelope([...initialPendingRequests], stubPaginatedMeta(50, initialPendingRequests.length, 1, 1, false)) : undefined),
-		[initialPendingRequests],
-	);
-
-	const requestsQuery = api.rewardsAdmin.listLocationRequests.useQuery(
-		{ page: 1, limit: 50, filter: { status: { eq: "PENDING_APPROVAL" } } },
-		initialDataOption(pendingInitialData),
-	);
+	const requestsQuery = api.rewardsAdmin.listLocationRequests.useQuery(PENDING_LOCATION_REQUESTS_QUERY, initialDataOption(initialPendingRequests));
 
 	const reviewMutation = api.rewardsAdmin.reviewOrganizationLocation.useMutation({
-		onSuccess: async (): Promise<void> => {
+		onSuccess: async (_response, { organizationId }): Promise<void> => {
 			toastMessage.success({ title: "Store request updated" });
-			setRejectionReason("");
-			await queryClient.invalidateQueries();
+			// The reviewed request leaves the queue — nothing stays selected in its place.
+			updateSelection({ requestId: undefined });
+			// The review changes the queue, the reviewed organization (its stores) and the merchant list.
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.listLocationRequests.scopeKey(undefined) }),
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getOrganization.scopeKey({ organizationId }) }),
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.listOrganizations.scopeKey(undefined) }),
+			]);
 		},
-		onError: (): void => {
-			toastMessage.error({ title: "Could not update store request" });
+		onError: (error): void => {
+			toastMutationError("Could not update the store request", error);
 		},
 	});
 
 	const requests = requestsQuery.data?.data ?? [];
-	const selectedRequest = requests.find((request) => request.id === selection.requestId) ?? requests[0];
+	// The server's count of every pending request — the queue loads only its first page.
+	const pendingTotal: number = readPaginatedTotal(requestsQuery.data?.meta);
+	const selectedRequest: AdminLocationRequestResponse | undefined =
+		selection.requestId === undefined ? undefined : requests.find((request) => request.id === selection.requestId);
+	const isSelectionOutOfView: boolean = selection.requestId !== undefined && selectedRequest === undefined && !requestsQuery.isLoading;
 
-	const handleApprove = React.useCallback((): void => {
-		if (selectedRequest === undefined) {
-			return;
-		}
-		reviewMutation.mutate({
-			organizationId: selectedRequest.organizationId,
-			locationId: selectedRequest.id,
-			approve: true,
-		});
-	}, [reviewMutation, selectedRequest]);
+	const handleReview = React.useCallback(
+		(review: AdminOrganizationLocationReviewInput): void => {
+			if (selectedRequest === undefined) {
+				return;
+			}
+			reviewMutation.mutate({ organizationId: selectedRequest.organizationId, locationId: selectedRequest.id, ...review });
+		},
+		[reviewMutation, selectedRequest],
+	);
 
-	const handleReject = React.useCallback((): void => {
-		if (selectedRequest === undefined) {
-			return;
-		}
-		if (rejectionReason.trim().length === 0) {
-			toastMessage.error({ title: "Add a rejection reason" });
-			return;
-		}
-		reviewMutation.mutate({
-			organizationId: selectedRequest.organizationId,
-			locationId: selectedRequest.id,
-			approve: false,
-			rejectionReason: rejectionReason.trim(),
-		});
-	}, [rejectionReason, reviewMutation, selectedRequest]);
+	const handleClearSelection = React.useCallback((): void => {
+		updateSelection({ requestId: undefined });
+	}, [updateSelection]);
 
 	const handleSelectRequest = React.useCallback(
 		(requestId: string): void => {
@@ -133,10 +124,6 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 		},
 		[updateSelection],
 	);
-
-	const handleRejectionReasonChange = React.useCallback(function handleRejectionReasonChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
-		setRejectionReason(event.target.value);
-	}, []);
 
 	return (
 		<div className="space-y-6">
@@ -150,7 +137,8 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 					<CardHeader>
 						<CardTitle className="text-base">Pending queue</CardTitle>
 						<CardDescription>
-							{String(requests.length)} request{requests.length === 1 ? "" : "s"} awaiting review
+							{String(pendingTotal)} request{pendingTotal === 1 ? "" : "s"} awaiting review
+							{pendingTotal > requests.length ? ` — showing the oldest ${String(requests.length)}` : ""}
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2">
@@ -168,8 +156,18 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 						<CardDescription>Lightweight approval — no duplicate KYB required.</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-5">
+						{isSelectionOutOfView ? (
+							<div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+								<span>The linked request is not in the pending queue — it may already have been reviewed.</span>
+								<Button type="button" variant="outline" size="sm" onClick={handleClearSelection}>
+									Clear selection
+								</Button>
+							</div>
+						) : null}
 						{selectedRequest === undefined ? (
-							<p className="text-sm text-muted-foreground">Select a request from the queue.</p>
+							isSelectionOutOfView ? null : (
+								<p className="text-sm text-muted-foreground">Select a request from the queue.</p>
+							)
 						) : (
 							<>
 								<div className="space-y-3 text-sm">
@@ -183,7 +181,7 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 										<MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
 										<span>{selectedRequest.addressText ?? "No address provided"}</span>
 									</div>
-									<p className="text-muted-foreground">City: {formatCity(selectedRequest.city)}</p>
+									<p className="text-muted-foreground">City: {selectedRequest.city === null ? NO_CITY_LABEL : pilotCityLabel(selectedRequest.city)}</p>
 									{selectedRequest.contactPhone !== null ? <p className="text-muted-foreground">Phone: {selectedRequest.contactPhone}</p> : null}
 									<p className="font-mono text-xs text-muted-foreground">Code: {selectedRequest.code}</p>
 								</div>
@@ -192,21 +190,7 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 								<Can
 									permission={PERMISSION.MERCHANT_ORG.MANAGE}
 									fallback={<AccessRestrictedNotice description="Approving or rejecting store requests requires the merchant organization manage permission." />}>
-									<div className="space-y-2">
-										<Label htmlFor="rejection-reason">Rejection reason</Label>
-										<Textarea id="rejection-reason" value={rejectionReason} onChange={handleRejectionReasonChange} placeholder="Required only when rejecting" rows={3} />
-									</div>
-
-									<div className="flex flex-wrap gap-2">
-										<Button type="button" onClick={handleApprove} disabled={reviewMutation.isPending}>
-											<Check className="size-4" aria-hidden="true" />
-											Approve store
-										</Button>
-										<Button type="button" variant="destructive" onClick={handleReject} disabled={reviewMutation.isPending}>
-											<X className="size-4" aria-hidden="true" />
-											Reject
-										</Button>
-									</div>
+									<StoreRequestReviewForm key={selectedRequest.id} isPending={reviewMutation.isPending} onReview={handleReview} />
 								</Can>
 							</>
 						)}

@@ -3,10 +3,10 @@
 // ============================================
 "use client";
 
-import type { DataValue, SerializableInput } from "@workspace/shared";
+import type { AuthClientType, DataValue, SerializableInput } from "@workspace/shared";
 import { useMemo } from "react";
 
-import { createApiRequestContext, type ApiClientType, type ApiRequestContext, type OnRefresh, type OnUnauthorized, type UseApiOptions } from "./api-request";
+import { createApiRequestContext, type ApiRequestContext, type OnRefresh, type OnUnauthorized } from "./api-request";
 import { buildClientRouter, createProcedureForDef, type ClientMutationProcedure, type ClientQueryProcedure, type ClientRouterTree } from "./client-router";
 import type { MutationDef, ProcedureDef, QueryDef, RouterTree } from "./endpoints";
 
@@ -23,7 +23,6 @@ export {
 	ApiError,
 	ApiErrorSchema,
 	SessionRefreshUnavailableError,
-	type ApiClientType,
 	type ApiErrorBody,
 	type ApiErrorPayload,
 	type ApiRequestContext,
@@ -42,7 +41,6 @@ export {
 	type RefreshResult,
 	type RequestOptions,
 	type UncheckedApiRequestContext,
-	type UseApiOptions,
 } from "./api-request";
 
 export type { ClientMutationProcedure, ClientQueryProcedure, ClientRouterTree } from "./client-router";
@@ -61,15 +59,13 @@ export type ApiClient<R extends object = RouterTree> = ApiClientProcedureBinding
  *
  * @param router - Typed procedure tree (e.g. `apiRouter` from `./endpoints`)
  * @param baseUrl - Base URL of the API
+ * @param clientType - The frontend whose isolated cookie set every call uses
  * @param onUnauthorized - Called when a request is still 401 after refresh
  * @param onRefresh - Called on 401 to silently refresh the session
  */
-export function useApi<R extends object>(router: R, baseUrl: string, onUnauthorized: OnUnauthorized, onRefresh: OnRefresh, options?: UseApiOptions): ApiClient<R> {
-	const clientType: ApiClientType | undefined = options?.clientType;
-	const extraHeaders: Record<string, string> | undefined = options?.extraHeaders;
-
+export function useApi<R extends object>(router: R, baseUrl: string, clientType: AuthClientType, onUnauthorized: OnUnauthorized, onRefresh: OnRefresh): ApiClient<R> {
 	return useMemo(() => {
-		const routerContext: ApiRequestContext = createApiRequestContext(baseUrl, onUnauthorized, onRefresh, { clientType, extraHeaders });
+		const routerContext: ApiRequestContext = createApiRequestContext(baseUrl, clientType, onUnauthorized, onRefresh);
 
 		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
 		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
@@ -86,5 +82,5 @@ export function useApi<R extends object>(router: R, baseUrl: string, onUnauthori
 			procedure,
 			...buildClientRouter(router, routerContext),
 		};
-	}, [router, baseUrl, clientType, extraHeaders, onUnauthorized, onRefresh]);
+	}, [router, baseUrl, clientType, onUnauthorized, onRefresh]);
 }

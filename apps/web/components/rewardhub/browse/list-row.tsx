@@ -2,11 +2,11 @@
 
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
 import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
-import type { RewardResponse } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -33,7 +33,7 @@ function buildMetaLine(reward: RewardResponse, expiryLabel: string): string {
 
 /** Compact list row for browsing many consumer offers. */
 export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards }: RewardListRowProps): React.JSX.Element {
-	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
+	const expiryLabel = formatEpochMs(reward.expiryDate, "date", PLATFORM_DISPLAY_REGION);
 	const percentLeft = reward.quantityTotal > 0 ? Math.round((reward.quantityRemaining / reward.quantityTotal) * 100) : 0;
 	const isLowStock = percentLeft > 0 && percentLeft <= 20;
 	const isSoldOut = reward.quantityRemaining === 0;

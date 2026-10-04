@@ -32,7 +32,7 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 > casting, infer types from zod schemas, generic types first, explicit access modifiers + return
 > types on every method, and structured zod-schema-driven payloads.
 >
-> **Related docs:** the email system has its own guide — [Email Template System](./email.md).
+> **Related docs:** the email system has its own guide — [Email Template System](./technical/email/templates.md).
 
 ---
 
@@ -129,7 +129,7 @@ Centralize with an `ErrorLogSchema` zod type for error metadata.
 > at `error` with the full stack + `correlationId`, `errorCode`, `httpStatus`, `userId` and the
 > query-redacted URL; typed `AppError` 5xx at `warn` without a stack; 4xx are covered by the
 > access-log line. It also produces the client-facing error envelope — see
-> [Error Model](./error-model.md).
+> [Error Model](./technical/api/errors.md).
 
 **What:** a `catch-all` filter that logs 5xx with full details (and 4xx at warn/info).
 **Why:** today, errors that don't go through `LogService` manually are invisible.
@@ -223,9 +223,9 @@ Covered names: `password`, `newPassword`, `currentPassword`, `confirmPassword`, 
 `csrfToken`, `secret`, `clientSecret`, `apiKey`, `privateKey`, `authorization`,
 `proxy-authorization`, `cookie`, `set-cookie`, `x-api-key`, `otp`, `code`, `totp`, `totpCode`,
 `otpCode`, `mfaCode`, `twoFactorCode`, `verificationCode`, `recoveryCode(s)`, `backupCode(s)`,
-`card`, `cardNumber`, `cvc`, `cvv`, `iban`, `accountNumber` — plus any field whose normalized
+`pairingCode`, `card`, `cardNumber`, `cvc`, `cvv`, `iban`, `accountNumber` — plus any field whose normalized
 name **ends with** `password`, `secret`, `token`, `apikey`, `privatekey`, `otp`, `cvv`, `cvc`,
-`cardnumber` or `accountnumber` (`resetToken`, `jwtSecret`, `stripeApiKey`). Values are replaced
+`cardnumber`, `accountnumber` or `pairingcode` (`resetToken`, `jwtSecret`, `stripeApiKey`). Values are replaced
 with `"[REDACTED]"`.
 
 > [!WARNING]
@@ -401,7 +401,7 @@ page.
 threshold in 5 min).
 **Why:** Datadog alerts, self-hosted — the minimum viable alerting.
 **How:** `TaskScheduleService` job → aggregate `Log` by errorGroup over the window → if over
-threshold, use the email system (see [email.md](./email.md)) to send an `ErrorDigest` email.
+threshold, use the email system (see [email.md](./technical/email/templates.md)) to send an `ErrorDigest` email.
 
 ## 34. Log rotation for the `Log` table at write time too
 

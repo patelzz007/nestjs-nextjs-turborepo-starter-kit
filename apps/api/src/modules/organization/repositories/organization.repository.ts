@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import type { Organization, OrganizationLifecycleState, OrganizationMerchantProfile, Prisma } from "@prisma/client";
+import type { Organization, OrganizationLifecycleState, OrganizationMerchantProfile, Prisma, PrismaClient } from "@prisma/client";
 
-import { adminMerchantListQuery, type AdminMerchantListQuery, type AdminMerchantListSortField, type MerchantOrgStatus } from "@workspace/shared";
+import { assertNever, adminMerchantListQuery, type AdminMerchantListQuery, type AdminMerchantListSortField, type MerchantOrgStatus } from "@workspace/shared";
 
 import { fetchListPage } from "../../../platform/persistence/list-page";
 import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
@@ -9,6 +9,9 @@ import { buildListOrder, type ListOrder, type SortColumns } from "../../../platf
 import { fieldWhere, toPrismaEqualityFilter, type PrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
+
+/** A Prisma client or an interactive-transaction client. */
+export type OrganizationDbClient = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
 
 const ADMIN_ORG_LIST_INCLUDE = {
 	merchantProfile: true,
@@ -31,7 +34,7 @@ const ADMIN_ORG_DETAIL_INCLUDE = {
 export type OrganizationAdminListRow = Prisma.OrganizationGetPayload<{ include: typeof ADMIN_ORG_LIST_INCLUDE }>;
 export type OrganizationAdminDetailRow = Prisma.OrganizationGetPayload<{ include: typeof ADMIN_ORG_DETAIL_INCLUDE }>;
 
-// ── Admin merchant list query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── Admin merchant list query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 const ADMIN_MERCHANT_SORT_COLUMNS: SortColumns<AdminMerchantListSortField, Prisma.OrganizationOrderByWithRelationInput> = {
 	createdAt: (direction) => ({ createdAt: direction }),
@@ -54,12 +57,8 @@ function toLifecycleState(status: MerchantOrgStatus): OrganizationLifecycleState
 		case "SUSPENDED":
 			return "SUSPENDED";
 		default:
-			return assertNeverStatus(status);
+			return assertNever(status, "merchant status");
 	}
-}
-
-function assertNeverStatus(value: never): never {
-	throw new Error(`Unhandled merchant status: ${String(value)}`);
 }
 
 /** Maps a translated status filter onto lifecycle states, operator by operator. */
@@ -146,7 +145,9 @@ export class OrganizationRepository {
 		});
 	}
 
-	public async updateMerchantProfileSubmission(
+	/** Stores the merchant's onboarding/KYB submission, inside the caller's transaction. */
+	public async updateMerchantProfileSubmissionInTx(
+		tx: OrganizationDbClient,
 		organizationId: string,
 		data: {
 			readonly displayName?: string;
@@ -157,15 +158,15 @@ export class OrganizationRepository {
 			readonly kybFields: Prisma.InputJsonValue;
 			readonly kybStatus: OrganizationMerchantProfile["kybStatus"];
 		},
-	): Promise<Organization & { merchantProfile: OrganizationMerchantProfile | null }> {
+	): Promise<void> {
 		const now = BigInt(Date.now());
 		if (data.displayName !== undefined) {
-			await this.prisma.organization.update({
+			await tx.organization.update({
 				where: { id: organizationId },
 				data: { displayName: data.displayName, updatedAt: now },
 			});
 		}
-		await this.prisma.organizationMerchantProfile.update({
+		await tx.organizationMerchantProfile.update({
 			where: { organizationId },
 			data: {
 				...(data.category !== undefined ? { category: data.category } : {}),
@@ -177,11 +178,6 @@ export class OrganizationRepository {
 				updatedAt: now,
 			},
 		});
-		const updated = await this.findById(organizationId);
-		if (updated === null) {
-			throw new Error(`Organization ${organizationId} not found after merchant profile update`);
-		}
-		return updated;
 	}
 
 	public async listOwnerUserIds(organizationId: string): Promise<string[]> {

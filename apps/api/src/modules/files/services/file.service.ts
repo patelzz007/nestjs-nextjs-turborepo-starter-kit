@@ -1,12 +1,11 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { StoredFile } from "@prisma/client";
 import {
 	CreateFileUploadUrlSchema,
 	DocumentMimeTypeSchema,
 	EpochMsSchema,
-	FileProcessingResultSchema,
 	FileRecordSchema,
 	getFileCategoryPolicy,
 	type CompleteFileUploadInput,
@@ -20,26 +19,39 @@ import {
 } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { OBJECT_STORAGE, PUBLIC_DELIVERY } from "../../storage/domain/storage.tokens";
 import type { ObjectStorage } from "../../storage/domain/object-storage.port";
 import type { PublicDelivery } from "../../storage/domain/public-delivery.port";
-import { buildFinalStoragePath, buildStagingPath, isStagingPath, type BuildFileObjectPathInput } from "../../storage/utils/file-path.util";
+import { OBJECT_STORAGE, PUBLIC_DELIVERY } from "../../storage/domain/storage.tokens";
+import { buildStagingPath } from "../../storage/utils/file-path.util";
+import { assertAllowedUploadMime, MAGIC_BYTES_PREFIX_LENGTH, UploadContentRejectedError } from "../../storage/utils/magic-bytes.util";
+import { digestStream, readStreamPrefix } from "../../storage/utils/object-stream.util";
 import { legacyBucketFieldsFromLocator, locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
-import { StorageQueueService } from "./storage-queue.service";
+import { FileFinalizationService } from "./file-finalization.service";
+import { FileOwnerUnresolvedError, resolveUploadOwnerId } from "./file-ownership.util";
+import { isPublicFile } from "./file-visibility.util";
+import { StorageTaskDispatcher } from "./storage-task-dispatcher";
 
 const PRESIGNED_UPLOAD_TTL_SECONDS = 300;
+const MS_PER_SECOND = 1_000;
 
+/**
+ * File lifecycle entry points: upload tickets, upload completion, downloads and deletes.
+ *
+ * Lifecycle: PENDING (ticket issued) → SCANNING (bytes verified: size, SHA-256,
+ * magic bytes) → READY | QUARANTINED | FAILED (malware verdict, applied by
+ * {@link FileFinalizationService}) → DELETED (soft delete). Nothing is
+ * downloadable or bound to a product/avatar/store before READY.
+ */
 @Injectable()
 export class FileService {
-	private readonly logger: Logger = new Logger(FileService.name);
-
 	public constructor(
 		private readonly config: TypedConfigService,
 		private readonly repository: StoredFileRepository,
+		private readonly finalization: FileFinalizationService,
+		private readonly dispatcher: StorageTaskDispatcher,
 		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
 		@Inject(PUBLIC_DELIVERY) private readonly publicDelivery: PublicDelivery,
-		@Optional() private readonly storageQueue: StorageQueueService | null,
 	) {}
 
 	public async createUploadUrl(userId: string, input: CreateFileUploadUrlInput): Promise<CreateFileUploadUrlResponse> {
@@ -49,10 +61,9 @@ export class FileService {
 		this.assertUploadWithinPolicy(parsed, policy);
 
 		const fileId = randomUUID();
-		const ownerId = this.resolveOwnerId(parsed);
 		const storagePath = buildStagingPath({
 			category: parsed.category,
-			ownerId,
+			ownerId: this.resolveOwnerId(parsed),
 			fileId,
 			fileName: parsed.fileName,
 			mimeType: parsed.mimeType,
@@ -71,6 +82,7 @@ export class FileService {
 			storagePath,
 			uploadedById: userId,
 			organizationId: parsed.organizationId,
+			productId: parsed.category === "PRODUCT_IMAGE" ? parsed.productId : undefined,
 		});
 
 		const ticket = await this.storage.createBrowserUploadTicket({
@@ -97,16 +109,19 @@ export class FileService {
 		};
 	}
 
+	/**
+	 * Verifies the uploaded bytes (size, SHA-256, magic bytes against the
+	 * category allowlist), claims the file PENDING → SCANNING exactly once, and
+	 * dispatches the malware scan. The response reflects the state after
+	 * dispatch: SCANNING while a queued scan runs, or the verdict when it ran inline.
+	 */
 	public async completeUpload(userId: string, fileId: string, input: CompleteFileUploadInput): Promise<{ file: FileRecord }> {
-		const file = await this.repository.findById(fileId);
-		if (file === null) {
-			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
+		const file = await this.requireFile(fileId);
 		if (file.uploadedById !== userId) {
 			throw new ForbiddenException({ message: "Not allowed to complete this upload", error: "FILE_UPLOAD_FORBIDDEN" });
 		}
 		if (file.status !== "PENDING") {
-			throw new BadRequestException({ message: "Upload already completed", error: "FILE_UPLOAD_ALREADY_COMPLETED" });
+			throw new ConflictException({ message: "Upload already completed", error: "FILE_UPLOAD_ALREADY_COMPLETED" });
 		}
 		if (file.expectedChecksum !== input.checksumSha256) {
 			throw new BadRequestException({ message: "Checksum mismatch", error: "FILE_CHECKSUM_MISMATCH" });
@@ -120,41 +135,24 @@ export class FileService {
 		if (head.sizeBytes !== file.sizeBytes) {
 			throw new BadRequestException({ message: "Uploaded size mismatch", error: "FILE_SIZE_MISMATCH" });
 		}
-
-		const resolvedChecksum = head.checksumSha256Hex ?? (await this.resolveChecksumFromObject(locator));
+		const resolvedChecksum = head.checksumSha256Hex ?? (await this.streamChecksum(locator));
 		if (resolvedChecksum !== input.checksumSha256) {
 			throw new BadRequestException({ message: "Object checksum mismatch", error: "FILE_OBJECT_CHECKSUM_MISMATCH" });
 		}
+		await this.assertContentMatchesDeclaredType(file, locator);
 
-		const updated = await this.repository.updateStatus(fileId, "PROCESSING", {
-			actualChecksum: input.checksumSha256,
+		const claimed = await this.repository.claimPendingForScan(fileId, userId, {
+			actualChecksum: resolvedChecksum,
 			objectGeneration: head.revision,
 			objectRevision: head.revision,
 		});
-
-		await this.bindFileToResource(updated);
-
-		try {
-			await this.applyProcessingResult({
-				fileId,
-				status: "READY",
-				scanStatus: "CLEAN",
-				scanResult: "ready",
-			});
-		} catch (error) {
-			this.logger.error(`Finalize failed for file ${fileId}: ${String(error)}`);
-			await this.applyProcessingResult({
-				fileId,
-				status: "FAILED",
-				scanResult: error instanceof Error ? error.message : "finalize-failed",
-			});
+		if (!claimed) {
+			throw new ConflictException({ message: "Upload already completed", error: "FILE_UPLOAD_ALREADY_COMPLETED" });
 		}
 
-		const finalized = await this.repository.findById(fileId);
-		if (finalized === null) {
-			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-		return { file: this.mapFileRecord(finalized) };
+		await this.dispatcher.dispatchScan(fileId);
+		// After an inline scan the file may already be READY/QUARANTINED/FAILED; with a queue it is SCANNING.
+		return { file: this.mapFileRecord(await this.requireFile(fileId)) };
 	}
 
 	/** Loads a live file record (404 otherwise). Callers authorize the operation before acting on it. */
@@ -166,36 +164,47 @@ export class FileService {
 		return file;
 	}
 
-	/** Short-lived signed URL for an already-authorized file; `null` while it is not downloadable. */
+	/** Short-lived signed URL for an already-authorized file; `null` until it is READY. */
 	public async createDownloadUrl(file: StoredFile, disposition: FileDownloadDisposition = "inline"): Promise<FileDownloadResponse> {
-		const fileId = file.id;
-		if (file.status === "SCANNING" || file.status === "PROCESSING" || file.status === "PENDING" || file.status === "UPLOADED") {
-			return { fileId, status: file.status, downloadUrl: null, expiresAt: null };
-		}
-		if (file.status === "QUARANTINED" || file.status === "FAILED" || file.status === "DELETED") {
-			return { fileId, status: file.status, downloadUrl: null, expiresAt: null };
+		if (file.status !== "READY") {
+			return { fileId: file.id, status: file.status, downloadUrl: null, expiresAt: null };
 		}
 
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
 		const downloadUrl = await this.storage.getSignedDownloadUrl({
-			locator,
+			locator: locatorFromStoredFile(file, this.config.storageProvider),
+			fileId: file.id,
 			expiresInSeconds: this.config.storageDownloadTtlSeconds,
 			disposition,
 			fileName: file.originalName,
 		});
 		return {
-			fileId,
+			fileId: file.id,
 			status: file.status,
 			downloadUrl,
-			expiresAt: EpochMsSchema.parse(this.config.storageDownloadTtlSeconds * 1000 + Date.now()),
+			expiresAt: EpochMsSchema.parse(this.config.storageDownloadTtlSeconds * MS_PER_SECOND + Date.now()),
 		};
 	}
 
-	/** Soft-deletes an already-authorized file and queues the physical delete. */
-	public async deleteStoredFile(file: StoredFile): Promise<void> {
-		await this.repository.markDeleted(file.id);
+	/**
+	 * Soft-deletes an already-authorized file together with every record that
+	 * references it (product image, store asset, avatar, KYB link), withdraws a
+	 * published public asset at once (a deleted file is never served publicly,
+	 * on any provider), then dispatches the delayed physical delete of the
+	 * private original. Submitted KYB evidence is retained.
+	 */
+	public async deleteStoredFile(file: StoredFile, actorUserId: string): Promise<void> {
+		if (file.category === "MERCHANT_KYB" && (await this.repository.hasKybSubmissionReference(file.id))) {
+			throw new ConflictException({ message: "Submitted verification evidence is retained and cannot be deleted", error: "KYB_EVIDENCE_RETAINED" });
+		}
+		const deleted = await this.repository.softDeleteWithReferences(file.id, actorUserId);
+		if (!deleted) {
+			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
+		}
 		const locator = locatorFromStoredFile(file, this.config.storageProvider);
-		await this.storageQueue?.enqueuePhysicalDelete({
+		if (isPublicFile(file) && file.publicPath !== null) {
+			await this.withdrawPublicAsset(file, locator);
+		}
+		await this.dispatcher.dispatchPhysicalDelete({
 			fileId: file.id,
 			provider: locator.provider,
 			container: locator.container,
@@ -203,42 +212,21 @@ export class FileService {
 		});
 	}
 
+	/**
+	 * Stops public delivery now (the provider removes its public copy or
+	 * revokes the URL) and hands any CDN cache purge to the dispatcher, so the
+	 * request never waits on — or fails because of — the CDN.
+	 */
+	private async withdrawPublicAsset(file: StoredFile, locator: StorageObjectLocator): Promise<void> {
+		const withdrawal = await this.publicDelivery.unpublishAsset({ locator, fileId: file.id });
+		if (withdrawal.cachedObjectKeys.length > 0) {
+			await this.dispatcher.dispatchCdnInvalidation({ fileId: file.id, objectKeys: [...withdrawal.cachedObjectKeys] });
+		}
+	}
+
+	/** Result posted by an external processing worker (authenticated by the controller). */
 	public async applyProcessingResult(input: FileProcessingResult): Promise<void> {
-		const parsed = FileProcessingResultSchema.parse(input);
-		const file = await this.repository.findById(parsed.fileId);
-		if (file === null) {
-			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-
-		if (parsed.status === "QUARANTINED") {
-			await this.deleteStagingObjectIfPresent(file);
-			await this.repository.updateStatus(parsed.fileId, "QUARANTINED", {
-				scanStatus: parsed.scanStatus ?? "INFECTED",
-				scannedAt: BigInt(Date.now()),
-				scanResult: parsed.scanResult ?? "quarantined",
-			});
-			return;
-		}
-
-		if (parsed.status === "FAILED") {
-			await this.deleteStagingObjectIfPresent(file);
-			await this.repository.updateStatus(parsed.fileId, "FAILED", {
-				scanResult: parsed.scanResult ?? "processing-failed",
-			});
-			return;
-		}
-
-		const promoted = await this.promoteToFinalStorage(file, parsed.finalStoragePath);
-		const publicPath = file.visibility === "PUBLIC" ? await this.publishPublicAsset(file, promoted.locator) : null;
-		await this.repository.updateStatus(parsed.fileId, "READY", {
-			storagePath: promoted.locator.path,
-			objectGeneration: promoted.revision,
-			objectRevision: promoted.revision,
-			publicPath,
-			scanStatus: parsed.scanStatus ?? "CLEAN",
-			scannedAt: BigInt(Date.now()),
-			scanResult: parsed.scanResult ?? "ready",
-		});
+		await this.finalization.applyProcessingResult(input);
 	}
 
 	public mapFileRecord(file: StoredFile): FileRecord {
@@ -250,26 +238,35 @@ export class FileService {
 			mimeType: DocumentMimeTypeSchema.parse(file.mimeType),
 			sizeBytes: file.sizeBytes,
 			status: file.status,
+			scanStatus: file.scanStatus,
 			publicUrl: file.publicPath,
 			uploadedAt: EpochMsSchema.parse(Number(file.createdAt)),
 		});
 	}
 
-	private async resolveChecksumFromObject(locator: StorageObjectLocator): Promise<string> {
-		const buffer = await this.storage.getObject(locator);
-		if (buffer === null) {
+	private async streamChecksum(locator: StorageObjectLocator): Promise<string> {
+		const stream = await this.storage.getObjectStream(locator);
+		if (stream === null) {
 			throw new BadRequestException({ message: "Uploaded object not found", error: "FILE_OBJECT_MISSING" });
 		}
-		return createHash("sha256").update(buffer).digest("hex");
+		return (await digestStream(stream)).sha256Hex;
 	}
 
-	private async publishPublicAsset(file: StoredFile, locator: StorageObjectLocator): Promise<string> {
-		const published = await this.publicDelivery.publishAsset({
-			locator,
-			mimeType: DocumentMimeTypeSchema.parse(file.mimeType),
-			fileName: file.originalName,
-		});
-		return published.publicUrl;
+	/** The bytes must be what the upload declared, and that type must be allowed for the category. */
+	private async assertContentMatchesDeclaredType(file: StoredFile, locator: StorageObjectLocator): Promise<void> {
+		const stream = await this.storage.getObjectStream(locator);
+		if (stream === null) {
+			throw new BadRequestException({ message: "Uploaded object not found", error: "FILE_OBJECT_MISSING" });
+		}
+		const prefix = await readStreamPrefix(stream, MAGIC_BYTES_PREFIX_LENGTH);
+		try {
+			assertAllowedUploadMime(prefix, file.mimeType, getFileCategoryPolicy(file.category).allowedMimeTypes);
+		} catch (error) {
+			if (error instanceof UploadContentRejectedError) {
+				throw new BadRequestException({ message: error.message, error: "FILE_CONTENT_TYPE_MISMATCH" });
+			}
+			throw error;
+		}
 	}
 
 	private assertUploadAuthorized(userId: string, input: CreateFileUploadUrlInput): void {
@@ -288,97 +285,13 @@ export class FileService {
 	}
 
 	private resolveOwnerId(input: CreateFileUploadUrlInput): string {
-		if (input.category === "PRODUCT_IMAGE" && input.productId !== undefined) {
-			return input.productId;
-		}
-		if (input.organizationId !== undefined) {
-			return input.organizationId;
-		}
-		if (input.userId !== undefined) {
-			return input.userId;
-		}
-		throw new BadRequestException({ message: "Missing resource binding for upload", error: "FILE_RESOURCE_REQUIRED" });
-	}
-
-	private async bindFileToResource(file: StoredFile): Promise<void> {
-		if (file.category === "PRODUCT_IMAGE") {
-			const productId = this.extractProductIdFromPath(file.storagePath);
-			if (productId !== null) {
-				await this.repository.createProductImage(productId, file.id, 0, true);
+		try {
+			return resolveUploadOwnerId(input);
+		} catch (error) {
+			if (error instanceof FileOwnerUnresolvedError) {
+				throw new BadRequestException({ message: error.message, error: "FILE_RESOURCE_REQUIRED" });
 			}
-			return;
+			throw error;
 		}
-		if (file.category === "STORE_LOGO" && file.organizationId !== null) {
-			await this.repository.upsertMerchantAsset(file.organizationId, "LOGO", file.id);
-			return;
-		}
-		if (file.category === "STORE_BANNER" && file.organizationId !== null) {
-			await this.repository.upsertMerchantAsset(file.organizationId, "BANNER", file.id);
-			return;
-		}
-		if (file.category === "USER_AVATAR") {
-			await this.repository.upsertUserAvatar(file.uploadedById, file.id);
-		}
-	}
-
-	private extractProductIdFromPath(storagePath: string): string | null {
-		const match = /^(?:staging\/)?products\/([^/]+)\//.exec(storagePath);
-		return match?.[1] ?? null;
-	}
-
-	private buildPathInputFromFile(file: StoredFile): BuildFileObjectPathInput {
-		const ownerId = this.resolveOwnerIdFromFile(file);
-		return {
-			category: file.category,
-			ownerId,
-			fileId: file.id,
-			fileName: file.originalName,
-			mimeType: file.mimeType,
-		};
-	}
-
-	private resolveOwnerIdFromFile(file: StoredFile): string {
-		if (file.category === "USER_AVATAR") {
-			return file.uploadedById;
-		}
-		if (file.organizationId !== null) {
-			return file.organizationId;
-		}
-		const productId = this.extractProductIdFromPath(file.storagePath);
-		if (productId !== null) {
-			return productId;
-		}
-		throw new BadRequestException({ message: "Unable to resolve storage owner", error: "FILE_RESOURCE_REQUIRED" });
-	}
-
-	private async promoteToFinalStorage(file: StoredFile, finalStoragePath?: string): Promise<{ locator: StorageObjectLocator; revision: string | null }> {
-		const sourceLocator = locatorFromStoredFile(file, this.config.storageProvider);
-		const destinationPath = finalStoragePath ?? buildFinalStoragePath(this.buildPathInputFromFile(file));
-		const destinationLocator = toStorageObjectLocator(sourceLocator.provider, sourceLocator.container, destinationPath);
-
-		if (!isStagingPath(file.storagePath)) {
-			if (file.storagePath === destinationPath) {
-				return { locator: sourceLocator, revision: file.objectRevision ?? file.objectGeneration };
-			}
-			const copied = await this.storage.copyObject(sourceLocator, destinationLocator);
-			return { locator: copied.locator, revision: copied.revision };
-		}
-
-		if (finalStoragePath !== undefined && file.storagePath !== finalStoragePath) {
-			await this.deleteStagingObjectIfPresent(file);
-			return { locator: destinationLocator, revision: file.objectRevision ?? file.objectGeneration };
-		}
-
-		const copied = await this.storage.copyObject(sourceLocator, destinationLocator);
-		await this.storage.deleteObject(sourceLocator);
-		return { locator: copied.locator, revision: copied.revision };
-	}
-
-	private async deleteStagingObjectIfPresent(file: StoredFile): Promise<void> {
-		if (!isStagingPath(file.storagePath)) {
-			return;
-		}
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
-		await this.storage.deleteObject(locator);
 	}
 }

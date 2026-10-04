@@ -5,7 +5,7 @@
 // DERIVED from the shared version constant (`apiDocsPath()` → `/v1/docs`), so
 // a version bump touches exactly one place.
 //
-// Exposure policy (docs/api-routes.md → "API docs (Swagger)") is resolved from
+// Exposure policy (docs/technical/api/routes.md → "API docs (Swagger)") is resolved from
 // the validated config (`resolveApiDocsPolicy` in config/api-config.schema.ts):
 // ON in every environment unless `SWAGGER_ENABLED=0`, and always public. The
 // document describes the contract only; every endpoint enforces its own

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
+import { AUTH_COOKIE_NAMES } from "@workspace/shared";
 import { cookies } from "next/headers";
 import { z } from "zod";
 
@@ -20,7 +21,7 @@ import { z } from "zod";
  * flashes for a moment before `/auth/me` corrects it.
  */
 
-const ACCESS_TOKEN_COOKIE = "adminAccessToken";
+const ACCESS_TOKEN_COOKIE = AUTH_COOKIE_NAMES.admin.accessToken;
 
 /** The access-token claims the sidebar needs — validated via zod (no `typeof`). */
 const ServerUserPayloadSchema = z.object({

@@ -2,17 +2,24 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/commo
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+import { DependencyUnavailableError } from "../common/errors/app-error";
 import { TypedConfigService } from "../config/typed-config.service";
 import { RlsPool } from "./rls-pool";
+
+/** Result of one connection attempt — a value, never a rejection. */
+type ConnectionOutcome = { readonly connected: true } | { readonly connected: false; readonly error: Error };
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
 	private readonly logger: Logger = new Logger(PrismaService.name);
 	private readonly pool: RlsPool;
 
-	/** Resolves when the DB connection is ready. Requests before this settle will wait. */
-	private readonly connected: Promise<void>;
-	private resolveConnected: (() => void) | undefined;
+	/**
+	 * The latest connection attempt. It never rejects — it resolves to its
+	 * outcome — so a failed BACKGROUND attempt can never become an unhandled
+	 * rejection; {@link ensureConnected} turns a failure into a thrown 503.
+	 */
+	private connectionAttempt: Promise<ConnectionOutcome> | undefined;
 
 	public constructor(config: TypedConfigService) {
 		const pool = new RlsPool({
@@ -41,39 +48,57 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
 		super({ adapter, log: logConfig });
 		this.pool = pool;
-
-		// Background connect: resolve immediately so the app can boot,
-		// but the first request that needs DB will await this promise.
-		this.connected = new Promise<void>((resolve: () => void) => {
-			this.resolveConnected = resolve;
-		});
-	}
-
-	public async onModuleInit(): Promise<void> {
-		// Fire-and-forget: connect in background so NestFactory.create() returns fast.
-		// The first DB query will await `this.connected` if the pool isn't ready yet.
-		void this.connectInBackground();
-	}
-
-	private async connectInBackground(): Promise<void> {
-		try {
-			await this.$connect();
-			this.logger.log("Database connected");
-			this.resolveConnected?.();
-		} catch (err) {
-			this.logger.error(`Database connection failed: ${String(err)}`);
-			// Still resolve so the app can start and retry on first request
-			this.resolveConnected?.();
-		}
 	}
 
 	/**
-	 * Ensure the DB connection is ready before running a query.
-	 * Call this in services that must wait for the connection (e.g. seed, migrations).
-	 * Request handlers don't need this — Prisma retries internally.
+	 * Starts connecting in the background so `NestFactory.create()` returns
+	 * fast. A database that is down at boot does not crash the process: the
+	 * failure is logged, `/health/ready` reports the database probe `down`
+	 * (503) until it answers, and {@link ensureConnected} retries and throws.
+	 */
+	public onModuleInit(): void {
+		this.connectionAttempt = this.attemptConnection();
+	}
+
+	/**
+	 * Waits for a VERIFIED database connection. If the latest attempt failed it
+	 * retries once (concurrent callers share that retry) and, when the database
+	 * still does not answer, throws a 503 {@link DependencyUnavailableError} —
+	 * callers fail loudly instead of running against a dead connection.
 	 */
 	public async ensureConnected(): Promise<void> {
-		await this.connected;
+		const awaited: Promise<ConnectionOutcome> = this.connectionAttempt ?? this.startConnectionAttempt();
+		const outcome: ConnectionOutcome = await awaited;
+		if (outcome.connected) {
+			return;
+		}
+		// Single-flight retry: join one another caller already started, else start it.
+		const current: Promise<ConnectionOutcome> | undefined = this.connectionAttempt;
+		const retry: Promise<ConnectionOutcome> = current !== undefined && current !== awaited ? current : this.startConnectionAttempt();
+		const retried: ConnectionOutcome = await retry;
+		if (!retried.connected) {
+			throw new DependencyUnavailableError({ message: "The database is unavailable.", cause: retried.error });
+		}
+	}
+
+	private startConnectionAttempt(): Promise<ConnectionOutcome> {
+		const attempt: Promise<ConnectionOutcome> = this.attemptConnection();
+		this.connectionAttempt = attempt;
+		return attempt;
+	}
+
+	/** `$connect()` alone does not touch the pool with a driver adapter, so a `SELECT 1` proves the database answers. */
+	private async attemptConnection(): Promise<ConnectionOutcome> {
+		try {
+			await this.$connect();
+			await this.$queryRaw`SELECT 1`;
+			this.logger.log("Database connected");
+			return { connected: true };
+		} catch (error) {
+			const failure: Error = error instanceof Error ? error : new Error("Database connection failed.");
+			this.logger.error(`Database connection failed: ${failure.message}`);
+			return { connected: false, error: failure };
+		}
 	}
 
 	public async onModuleDestroy(): Promise<void> {

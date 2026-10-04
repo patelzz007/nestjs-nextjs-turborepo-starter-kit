@@ -19,7 +19,7 @@
 // the table update, and showing the route's `loading.tsx`). Table rows are
 // TanStack Query's job; the server page only renders the first request.
 //
-// History policy (docs/list-queries.md §7):
+// History policy (docs/technical/api/list-queries.md §7):
 //   - "push" (default) for discrete navigation — page, page size, sort,
 //     filter selects, an in-page selection. Back undoes it.
 //   - "replace" for continuous input committed while the user types (the

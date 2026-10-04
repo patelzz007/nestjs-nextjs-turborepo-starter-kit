@@ -4,7 +4,6 @@ import {
 	EpochMsSchema,
 	JsonObjectSchema,
 	RewardResponseSchema,
-	RewardRulesSchema,
 	type AdminMerchantDetailResponse,
 	type EpochMs,
 	type JsonObject,
@@ -12,9 +11,9 @@ import {
 	type MerchantOrgResponse,
 	type RewardClaimResponse,
 	type RewardResponse,
-	type RewardRules,
 } from "@workspace/shared";
 import type { OrganizationAdminDetailRow } from "../../organization/repositories/organization.repository";
+import { rewardRulesFromStorage } from "./reward-rules.util";
 
 function epochFromDb(value: bigint | number | null | undefined): EpochMs | null {
 	if (value === null || value === undefined) {
@@ -25,14 +24,6 @@ function epochFromDb(value: bigint | number | null | undefined): EpochMs | null 
 
 function epochRequired(value: bigint | number): EpochMs {
 	return EpochMsSchema.parse(Number(value));
-}
-
-function parseRewardRulesFromDb(value: Prisma.JsonValue | null): RewardRules | null {
-	if (value === null) {
-		return null;
-	}
-	const parsed = RewardRulesSchema.safeParse(value);
-	return parsed.success ? parsed.data : null;
 }
 
 export function mapLifecycleToMerchantStatus(lifecycleState: OrganizationLifecycleState): "ONBOARDING" | "ACTIVE" | "SUSPENDED" {
@@ -164,7 +155,7 @@ export function mapRewardToResponse(reward: RewardWithLocationScopes, organizati
 		referralPoolTotal: reward.referralPoolTotal,
 		referralPoolRemaining: reward.referralPoolRemaining,
 		referrerRewardId: reward.referrerRewardId,
-		rules: parseRewardRulesFromDb(reward.rules),
+		rules: rewardRulesFromStorage(reward.rules, reward.minSpendMinor),
 		locationScopeType: reward.locationScopeType,
 		locationIds,
 		locationNames: locationNames.length > 0 ? locationNames : undefined,

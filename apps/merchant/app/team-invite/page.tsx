@@ -1,14 +1,16 @@
 "use client";
 
 import { orgRoutes, ROUTES } from "@/lib/routes";
-import { ApiError } from "@workspace/client/lib/api/use-api";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
-import { getEnrollmentRedirectPath, markEnrollmentMessage } from "@workspace/client/lib/auth/edge/restricted-session";
+import { getEnrollmentRedirectPath } from "@workspace/client/lib/auth/edge/restricted-session";
+import { markEnrollmentMessage } from "@workspace/client/lib/auth/session/enrollment-message";
 import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginVerificationPending } from "@workspace/client/lib/auth/forms/login-response";
 import { passwordStrength } from "@workspace/client/lib/auth/password";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
 	OrganizationTeamInviteRegisterAcceptSchema,
+	PLATFORM_DISPLAY_REGION,
+	type ApiResponseMeta,
 	type LoginClientResponse,
 	type LoginResponse,
 	type OrganizationMembershipRole,
@@ -16,6 +18,7 @@ import {
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
@@ -25,7 +28,17 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { ArrowLeft, Loader2, Mail, MapPin, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Suspense, useCallback, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
+
+import { TEAM_INVITE_PREVIEW_STALE_TIME_MS, retryTransientFailures } from "@/lib/query/query-policy";
+import {
+	isCompleteVerificationCode,
+	resolveTeamInviteFormError,
+	sanitizeVerificationCode,
+	TEAM_INVITE_PREVIEW_QUERY_SCOPE,
+	VERIFICATION_CODE_LENGTH,
+} from "@/lib/team-invite/invite-form";
 
 const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
 	OWNER: "Owner",
@@ -47,20 +60,8 @@ function formatLocationSummary(preview: OrganizationTeamInvitePreview): string {
 	return "Selected locations";
 }
 
-function resolveTeamInviteFormError(error: Error): string {
-	if (error instanceof ApiError && error.statusCode === 404) {
-		return "This invitation could not be found. Restart the API dev server if you just deployed changes, or ask your admin to send a new invite link.";
-	}
-
-	return resolveAuthErrorMessage(error);
-}
-
 function formatExpiryDate(expiresAt: number): string {
-	return new Intl.DateTimeFormat(undefined, {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	}).format(new Date(expiresAt));
+	return formatEpochMs(expiresAt, "date", PLATFORM_DISPLAY_REGION);
 }
 
 function organizationInitials(displayName: string): string {
@@ -106,8 +107,8 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	const router = useRouter();
 	const { api, isAuthenticated, isLoading: authLoading, user, login: authLogin } = useAuth();
 
-	const [preview, setPreview] = useState<OrganizationTeamInvitePreview | null>(null);
-	const [loadError, setLoadError] = useState<string | null>(null);
+	// One id per page instance (the route remounts this component per token), so the key carries no token.
+	const [previewInstanceId] = useState<string>(() => crypto.randomUUID());
 	const [formError, setFormError] = useState<string | null>(null);
 	const [fullName, setFullName] = useState("");
 	const [password, setPassword] = useState("");
@@ -115,20 +116,20 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	const [loginVerificationMessage, setLoginVerificationMessage] = useState<string | null>(null);
 	const [verificationCode, setVerificationCode] = useState("");
 	const [joinedOrganizationSlug, setJoinedOrganizationSlug] = useState<string | null>(null);
-	const hasRequestedPreviewRef = useRef(false);
 
 	const strength = useMemo(() => passwordStrength(password), [password]);
 
-	const validateMutation = api.organizations.validateTeamInvite.useMutation({
-		onSuccess: (response): void => {
-			setPreview(response.data);
-			setLoadError(null);
-		},
-		onError: (error): void => {
-			setPreview(null);
-			setLoadError(resolveAuthErrorMessage(error));
-		},
+	// Reading the invitation is a READ, so it is a query (cached, deduplicated, retried only when transient) —
+	// sent as POST by the API so the token stays out of URLs and logs.
+	const previewQuery = useQuery({
+		queryKey: [...TEAM_INVITE_PREVIEW_QUERY_SCOPE, previewInstanceId],
+		queryFn: async (): Promise<OrganizationTeamInvitePreview> => (await api.organizations.validateTeamInvite.mutate({ token })).data,
+		staleTime: TEAM_INVITE_PREVIEW_STALE_TIME_MS,
+		gcTime: 0,
+		retry: retryTransientFailures,
 	});
+	const preview: OrganizationTeamInvitePreview | null = previewQuery.data ?? null;
+	const loadError: string | null = previewQuery.error === null ? null : resolveTeamInviteFormError(previewQuery.error);
 
 	const navigateAfterJoin = useCallback(
 		(organizationSlug: string): void => {
@@ -149,8 +150,8 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	});
 
 	const completeAuthenticatedLogin = useCallback(
-		(loginResponse: LoginResponse): void => {
-			authLogin(loginResponse.user, { sessionScope: "full" });
+		(loginResponse: LoginResponse, answeredBy: ApiResponseMeta): void => {
+			authLogin(loginResponse.user, answeredBy);
 
 			const organizationSlug = joinedOrganizationSlug ?? preview?.organizationSlug;
 			if (organizationSlug !== undefined && organizationSlug.length > 0) {
@@ -161,7 +162,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	);
 
 	const handleAuthLoginResponse = useCallback(
-		(loginResponse: LoginClientResponse): void => {
+		(loginResponse: LoginClientResponse, answeredBy: ApiResponseMeta): void => {
 			if (isLoginVerificationPending(loginResponse)) {
 				setLoginVerificationId(loginResponse.verificationId);
 				setLoginVerificationMessage(loginResponse.message);
@@ -175,7 +176,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 			if (isLoginRestrictedEnrollment(loginResponse)) {
 				if (loginResponse.user !== undefined) {
-					authLogin(loginResponse.user, { sessionScope: "restricted", enrollmentReason: loginResponse.enrollmentReason });
+					authLogin(loginResponse.user, answeredBy);
 				}
 				markEnrollmentMessage(loginResponse.message);
 				const organizationSlug = joinedOrganizationSlug ?? loginResponse.organizationSlug ?? preview?.organizationSlug;
@@ -189,14 +190,14 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 				return;
 			}
 
-			completeAuthenticatedLogin(loginResponse);
+			completeAuthenticatedLogin(loginResponse, answeredBy);
 		},
 		[authLogin, completeAuthenticatedLogin, joinedOrganizationSlug, preview, router],
 	);
 
 	const registerMutation = api.organizations.registerAndAcceptTeamInvite.useMutation({
 		onSuccess: (response): void => {
-			handleAuthLoginResponse(response.data);
+			handleAuthLoginResponse(response.data, response.meta);
 		},
 		onError: (error): void => {
 			setFormError(resolveTeamInviteFormError(error));
@@ -205,20 +206,12 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 	const verifyLoginMutation = api.auth.verifyLogin.useMutation({
 		onSuccess: (response): void => {
-			handleAuthLoginResponse(response.data);
+			handleAuthLoginResponse(response.data, response.meta);
 		},
 		onError: (error): void => {
 			setFormError(resolveAuthErrorMessage(error));
 		},
 	});
-
-	useEffect((): void => {
-		if (hasRequestedPreviewRef.current) {
-			return;
-		}
-		hasRequestedPreviewRef.current = true;
-		validateMutation.mutate({ token });
-	}, [token, validateMutation]);
 
 	const handleAccept = useCallback((): void => {
 		if (authLoading || !isAuthenticated) {
@@ -257,13 +250,13 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	}, []);
 
 	const handleVerificationCodeChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {
-		setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+		setVerificationCode(sanitizeVerificationCode(event.target.value));
 	}, []);
 
 	const handleVerificationSubmit = useCallback(
 		(event: SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
-			if (loginVerificationId === null || verificationCode.length !== 6) {
+			if (loginVerificationId === null || !isCompleteVerificationCode(verificationCode)) {
 				return;
 			}
 
@@ -283,7 +276,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 		return `${ROUTES.auth.login}?${params.toString()}`;
 	}, [preview, token]);
 
-	const isLoading = validateMutation.isPending;
+	const isLoading = previewQuery.isPending;
 	const isAccepting = acceptMutation.isPending;
 	const isRegistering = registerMutation.isPending;
 	const isVerifyingLogin = verifyLoginMutation.isPending;
@@ -362,7 +355,9 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 								<form className="space-y-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5" onSubmit={handleVerificationSubmit}>
 									<div className="space-y-1">
 										<p className="text-sm font-medium text-foreground">Verify your email</p>
-										<p className="text-xs text-muted-foreground">{loginVerificationMessage ?? "Enter the 6-digit code sent to your email to finish joining the team."}</p>
+										<p className="text-xs text-muted-foreground">
+											{loginVerificationMessage ?? `Enter the ${String(VERIFICATION_CODE_LENGTH)}-digit code sent to your email to finish joining the team.`}
+										</p>
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="team-invite-verification-code">Verification code</Label>
@@ -374,12 +369,16 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 											value={verificationCode}
 											onChange={handleVerificationCodeChange}
 											className="h-11 text-center text-lg tracking-[0.3em]"
-											maxLength={6}
+											maxLength={VERIFICATION_CODE_LENGTH}
 											required
 										/>
 									</div>
 									{formError !== null ? <p className="text-sm text-destructive">{formError}</p> : null}
-									<Button type="submit" className="h-11 w-full sm:w-auto" loading={isVerifyingLogin} disabled={isVerifyingLogin || verificationCode.length !== 6}>
+									<Button
+										type="submit"
+										className="h-11 w-full sm:w-auto"
+										loading={isVerifyingLogin}
+										disabled={isVerifyingLogin || !isCompleteVerificationCode(verificationCode)}>
 										{isVerifyingLogin ? "Verifying…" : "Verify and continue"}
 									</Button>
 								</form>
@@ -467,7 +466,8 @@ function TeamInviteRouteContent(): JSX.Element {
 		return <InvalidInviteCard />;
 	}
 
-	return <TeamInviteContent token={token} />;
+	// Keyed by token: another invitation link starts a fresh page instance (and preview query).
+	return <TeamInviteContent key={token} token={token} />;
 }
 
 export default function TeamInvitePage(): JSX.Element {

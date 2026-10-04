@@ -31,33 +31,32 @@ describe("ROUTES", () => {
 		expect(ROUTES.merchants.verificationFor("org_1")).toBe("/merchants/verification?organizationId=org_1");
 		expect(ROUTES.merchants.verificationFor("a&b=c")).toBe("/merchants/verification?organizationId=a%26b%3Dc");
 		expect(ROUTES.emails.template("merchant-invite")).toBe("/emails/templates?key=merchant-invite");
-		expect(ROUTES.analytics.salesForWeeks("12")).toBe("/analytics/sales?weeks=12");
 	});
 
 	it("nests every section's pages under the section prefix", () => {
-		expect(isPathWithin(ROUTES.analytics.index, ROUTES.analytics.sales)).toBe(true);
-		expect(isPathWithin(ROUTES.merchants.list, ROUTES.merchants.storeRequests)).toBe(true);
-		expect(isPathWithin(ROUTES.rewards.index, ROUTES.rewards.review)).toBe(true);
-		expect(isPathWithin(ROUTES.emails.index, ROUTES.emails.log)).toBe(true);
-		expect(isPathWithin(ROUTES.catalog.index, ROUTES.catalog.categories.list)).toBe(true);
-		expect(isPathWithin(ROUTES.account.index, ROUTES.account.security)).toBe(true);
-		expect(isPathWithin(ROUTES.users.list, ROUTES.users.mfaRecovery)).toBe(true);
+		expect(isPathWithin(ROUTES.analytics.sales, ROUTES.analytics.index)).toBe(true);
+		expect(isPathWithin(ROUTES.merchants.storeRequests, ROUTES.merchants.list)).toBe(true);
+		expect(isPathWithin(ROUTES.rewards.review, ROUTES.rewards.index)).toBe(true);
+		expect(isPathWithin(ROUTES.emails.log, ROUTES.emails.index)).toBe(true);
+		expect(isPathWithin(ROUTES.catalog.categories.list, ROUTES.catalog.index)).toBe(true);
+		expect(isPathWithin(ROUTES.account.security, ROUTES.account.index)).toBe(true);
+		expect(isPathWithin(ROUTES.users.mfaRecovery, ROUTES.users.list)).toBe(true);
 	});
 });
 
 describe("isPathWithin", () => {
 	it("matches the prefix itself and paths below it", () => {
 		expect(isPathWithin("/merchants", "/merchants")).toBe(true);
-		expect(isPathWithin("/merchants", "/merchants/invites")).toBe(true);
+		expect(isPathWithin("/merchants/invites", "/merchants")).toBe(true);
 	});
 
 	it("matches on segment boundaries only", () => {
-		expect(isPathWithin("/merchants", "/merchantsx")).toBe(false);
-		expect(isPathWithin("/auth/login", "/auth/login-help")).toBe(false);
+		expect(isPathWithin("/merchantsx", "/merchants")).toBe(false);
+		expect(isPathWithin("/auth/login-help", "/auth/login")).toBe(false);
 	});
 
 	it("treats the root as covering only itself", () => {
 		expect(isPathWithin("/", "/")).toBe(true);
-		expect(isPathWithin("/", "/users")).toBe(false);
+		expect(isPathWithin("/users", "/")).toBe(false);
 	});
 });

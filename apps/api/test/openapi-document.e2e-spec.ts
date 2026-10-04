@@ -395,8 +395,8 @@ describe("OpenAPI document (e2e)", () => {
 				.map((route: RouteHandler): string => route.handler);
 			const passThrough: string[] = [...routes.values()].filter((route: RouteHandler): boolean => route.isPassThrough).map((route: RouteHandler): string => route.handler);
 			expect(missing).toEqual([]);
-			// The deliberate exclusions — adding one is a reviewed decision (docs/response-contracts.md).
-			expect(passThrough.sort()).toEqual(["EmailLogController.stream", "FilesController.localDownload"]);
+			// The deliberate exclusions — adding one is a reviewed decision (docs/technical/api/response-contracts.md).
+			expect(passThrough.sort()).toEqual(["EmailLogController.stream", "LocalStorageTransferController.localDownload", "LocalStorageTransferController.localPublic"]);
 		});
 
 		it("sends exactly the status the contract documents (no stray @HttpCode overriding it)", () => {
@@ -485,7 +485,7 @@ describe("OpenAPI document (e2e)", () => {
 		expect(byName("filter")).toMatchObject({ required: false });
 		expect(byName("filter")?.description).toContain("Filterable: isActive, isFeatured, categoryId, brand, price, stockQuantity, createdAt");
 		expect(byName("search")).toMatchObject({ required: false });
-		// The pre-C1 parameter names are gone (docs/list-queries.md, ADR 021).
+		// The pre-C1 parameter names are gone (docs/technical/api/list-queries.md, ADR 021).
 		expect(byName("sortBy")).toBeUndefined();
 		expect(byName("sortDirection")).toBeUndefined();
 	});

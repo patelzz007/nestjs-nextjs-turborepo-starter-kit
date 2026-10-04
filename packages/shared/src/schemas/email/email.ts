@@ -100,7 +100,11 @@ export const EmailSendResultSchema = z.discriminatedUnion("ok", [
 	}),
 	z.object({
 		ok: z.literal(false),
-		reason: z.enum(["invalid-props", "config", "timeout", "rate-limited", "api-error"]),
+		/**
+		 * - `persistence` — the email log row could not be written, so nothing was sent;
+		 * - `queue`       — the send could not be handed to the email queue (the log row is marked failed).
+		 */
+		reason: z.enum(["invalid-props", "config", "timeout", "rate-limited", "api-error", "persistence", "queue"]),
 		detail: z.string().optional(),
 	}),
 ]);
@@ -110,9 +114,10 @@ export type EmailSendResult = z.output<typeof EmailSendResultSchema>;
 /** Resend SDK `emails.send()` response shape (parsed at the network boundary). */
 export const ResendSendErrorSchema = z
 	.object({
-		name: z.string().optional(),
-		message: z.string().optional(),
-		code: z.string().optional(),
+		/** Resend's machine-readable error code (`validation_error`, `rate_limit_exceeded`, …). */
+		name: z.string(),
+		message: z.string(),
+		statusCode: z.number().int().nullable(),
 	})
 	.strict();
 
@@ -133,10 +138,24 @@ export type ResendSendResponse = z.output<typeof ResendSendResponseSchema>;
 
 // ── Email log status (webhook updates) ────────────────────────────────────
 
-/** Lifecycle of one outbound email, fed by the Resend webhook. */
-export const EmailLogStatusSchema = z.enum(["sent", "delivered", "bounced", "complained", "failed"]);
+/**
+ * Lifecycle of one outbound email. `pending` is written BEFORE the provider is
+ * called (so no email is ever sent without a log row); the send outcome moves
+ * it to `sent` / `failed`, and the Resend webhook moves it forward from there.
+ */
+export const EmailLogStatusSchema = z.enum(["pending", "sent", "delivered", "bounced", "complained", "failed"]);
 
 export type EmailLogStatus = z.output<typeof EmailLogStatusSchema>;
+
+/**
+ * What a verified delivery-webhook event did to its email log row (`email_delivery_events.outcome`):
+ * `applied` moved the row forward; `stale` is older than (or a regression of) the row's newest
+ * applied outcome; `unmatched` names an email this system never sent; `ignored` is a tracking
+ * event that never changes the row. Mirrors the Prisma enum `EmailDeliveryOutcome`.
+ */
+export const DeliveryEventOutcomeSchema = z.enum(["applied", "stale", "unmatched", "ignored"]);
+
+export type DeliveryEventOutcome = z.output<typeof DeliveryEventOutcomeSchema>;
 
 // ── Resend webhook event (inbound delivery payload) ───────────────────────
 
@@ -200,10 +219,14 @@ export type ResendDeliveryDetail = z.output<typeof ResendDeliveryDetailSchema>;
 export const ResendWebhookEventSchema = z
 	.object({
 		type: ResendWebhookEventTypeSchema,
+		/** When Resend observed the event (ISO-8601) — orders events that arrive out of order. */
+		created_at: z.iso.datetime({ offset: true }),
 		data: z
 			.object({
 				/** The Resend id of the outbound email this event is about. */
 				email_id: z.string().min(1),
+				/** Tags set at send time — the API tags every email with its `email_log_id`. */
+				tags: z.record(z.string(), z.string()).optional(),
 				/** Present on `email.bounced` events. */
 				bounce: ResendDeliveryDetailSchema.optional(),
 				/** Present on `email.complained` events. */
@@ -253,7 +276,7 @@ export const EmailLogCreateSchema = z
 
 export type EmailLogCreate = z.output<typeof EmailLogCreateSchema>;
 
-/** `GET /notifications/email-log` list query (newest first) — see docs/list-queries.md. */
+/** `GET /notifications/email-log` list query (newest first) — see docs/technical/api/list-queries.md. */
 export const emailLogListQuery = defineListQuery({
 	sortable: ["createdAt", "subject", "to", "status"],
 	defaultSort: [{ field: "createdAt", direction: "desc" }],

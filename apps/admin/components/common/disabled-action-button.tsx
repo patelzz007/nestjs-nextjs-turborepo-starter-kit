@@ -2,7 +2,13 @@
 
 import { Button } from "@workspace/ui/components/form/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/overlay/tooltip";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
+
+/** Swallows the click of an unavailable action. */
+function preventAction(event: React.MouseEvent<HTMLButtonElement>): void {
+	event.preventDefault();
+}
 
 type ButtonProps = React.ComponentProps<typeof Button>;
 
@@ -24,14 +30,25 @@ export interface DisabledActionButtonProps {
 export function DisabledActionButton({ reason, children, variant, size, className }: DisabledActionButtonProps): React.JSX.Element {
 	const reasonId = React.useId();
 
+	// `aria-disabled` (not `disabled`): the button stays focusable, so keyboard and
+	// pointer users can both reach the tooltip that explains why it is unavailable;
+	// the click is swallowed so it never performs the action.
 	return (
 		<Tooltip>
-			{/* Disabled buttons swallow pointer events, so the focusable wrapper owns the tooltip. */}
-			<TooltipTrigger render={<span tabIndex={0} className="inline-flex cursor-not-allowed" aria-describedby={reasonId} />}>
-				<Button type="button" variant={variant} size={size} className={className} disabled aria-describedby={reasonId}>
-					{children}
-				</Button>
-			</TooltipTrigger>
+			<TooltipTrigger
+				render={
+					<Button
+						type="button"
+						variant={variant}
+						size={size}
+						className={cn("cursor-not-allowed opacity-50", className)}
+						aria-disabled="true"
+						aria-describedby={reasonId}
+						onClick={preventAction}>
+						{children}
+					</Button>
+				}
+			/>
 			<span id={reasonId} className="sr-only">
 				{reason}
 			</span>

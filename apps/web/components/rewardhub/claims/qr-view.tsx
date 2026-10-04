@@ -1,21 +1,21 @@
 "use client";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { RewardClaimQrResponse } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type Envelope, type RewardClaimQrResponse } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { QrCode } from "@workspace/ui/components/display/qr-code";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import Link from "next/link";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 
 export interface ClaimQrViewProps {
 	readonly claimId: string;
-	readonly initialQr?: RewardClaimQrResponse | undefined;
+	readonly initialQr?: Envelope<RewardClaimQrResponse> | undefined;
 }
 
 /**
@@ -26,9 +26,7 @@ export interface ClaimQrViewProps {
 export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const initialQueryData = React.useMemo(() => (initialQr !== undefined ? successEnvelope(initialQr, stubApiMeta()) : undefined), [initialQr]);
-
-	const qrQuery = api.claims.qr.useQuery({ claimId }, initialDataOption(initialQueryData));
+	const qrQuery = api.claims.qr.useQuery({ claimId }, initialDataOption(initialQr));
 	const qr = qrQuery.data?.data;
 
 	const handleRefresh = React.useCallback((): void => {
@@ -74,7 +72,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 						<summary className="cursor-pointer text-xs font-medium tracking-wide text-muted-foreground uppercase">Manual payload</summary>
 						<p className="mt-3 font-mono text-xs break-all text-foreground">{qr.qrPayload}</p>
 					</details>
-					<p className="text-sm text-muted-foreground">Valid until {format(new Date(qr.claimExpiresAt), "d MMM yyyy · HH:mm")}</p>
+					<p className="text-sm text-muted-foreground">Valid until {formatEpochMs(qr.claimExpiresAt, "dateTime", PLATFORM_DISPLAY_REGION)}</p>
 					<Button variant="outline" onClick={handleRefresh} disabled={qrQuery.isFetching} className="w-full sm:w-auto">
 						{qrQuery.isFetching ? "Refreshing…" : "Refresh code"}
 					</Button>

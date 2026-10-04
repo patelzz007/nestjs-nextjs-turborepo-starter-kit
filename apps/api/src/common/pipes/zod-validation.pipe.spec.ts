@@ -2,7 +2,7 @@ import { BadRequestException } from "@nestjs/common";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 
-import { AssignRoleToUserSchema, AdminUserListQuerySchema, apiContract, JsonValueSchema, type JsonValue } from "@workspace/shared";
+import { AdminKybUpdateSchema, AssignRoleToUserSchema, AdminUserListQuerySchema, apiContract, JsonValueSchema, type JsonValue } from "@workspace/shared";
 import { toJSONSchema } from "zod/v4";
 
 import { collectSchemas } from "../ajv-warmup";
@@ -109,5 +109,51 @@ describe("ZodValidationPipe (compiled ajv)", () => {
 
 		expect(emitted.size).toBeGreaterThan(0);
 		expect([...emitted].filter((format: string): boolean => !(format in AJV_STRING_FORMATS))).toEqual([]);
+	});
+});
+
+describe('ZodValidationPipe ("ajv+zod" engine) — refinements JSON Schema cannot express', () => {
+	it("the Ajv-only engine skips a refinement; ajv+zod enforces it", () => {
+		const rejectedNeedsReason = { kybStatus: "REJECTED" };
+
+		expect(new ZodValidationPipe(AdminKybUpdateSchema, { engine: "ajv" }).transform(rejectedNeedsReason)).toEqual(rejectedNeedsReason);
+		expect(() => new ZodValidationPipe(AdminKybUpdateSchema, { engine: "ajv+zod" }).transform(rejectedNeedsReason)).toThrow(BadRequestException);
+	});
+
+	it("the API refuses a REJECTED / ACTION_REQUIRED KYB decision without a reason, and accepts one with it", () => {
+		const pipe = new ZodValidationPipe(AdminKybUpdateSchema, { engine: "ajv+zod" });
+
+		for (const kybStatus of ["REJECTED", "ACTION_REQUIRED"]) {
+			expect(() => pipe.transform({ kybStatus })).toThrow(BadRequestException);
+			expect(pipe.transform({ kybStatus, kybFields: { rejectionReason: "Upload a readable SSM certificate." } })).toMatchObject({ kybStatus });
+		}
+	});
+
+	it("enforces exactly one of token / backupCode on POS redemption bodies", () => {
+		const pipe = new ZodValidationPipe(apiContract.redemptions.validate.input, { engine: "ajv+zod" });
+
+		expect(() => pipe.transform({ token: "t".repeat(32), backupCode: "ABCD2345" })).toThrow(BadRequestException);
+		expect(pipe.transform({ backupCode: "ABCD2345" })).toEqual({ backupCode: "ABCD2345" });
+	});
+});
+
+describe("ZodValidationPipe default engine — the handler receives the schema's parsed output", () => {
+	it("applies transforms the JSON Schema cannot express (trim, canonical lower-cased email)", () => {
+		const schema = z.object({ name: z.string().trim().min(2), email: z.email().toLowerCase() });
+		const parsed = new ZodValidationPipe(schema).transform({ name: "  Jack  ", email: "Jack@Example.COM" });
+
+		expect(parsed).toEqual({ name: "Jack", email: "jack@example.com" });
+	});
+
+	it("rejects a value that only fails after a transform (a blank name once trimmed)", () => {
+		const schema = z.object({ name: z.string().trim().min(2) });
+
+		expect(() => new ZodValidationPipe(schema).transform({ name: "   " })).toThrow(BadRequestException);
+	});
+
+	it("enforces refinements without any per-route opt-in", () => {
+		const rejectedWithoutReason = { kybStatus: "REJECTED" };
+
+		expect(() => new ZodValidationPipe(AdminKybUpdateSchema).transform(rejectedWithoutReason)).toThrow(BadRequestException);
 	});
 });

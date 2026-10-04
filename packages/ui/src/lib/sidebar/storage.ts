@@ -10,6 +10,8 @@ export interface SidebarStorageAdapter {
 export interface CreateCookieSidebarStorageOptions {
 	readonly cookieName?: string;
 	readonly maxAgeSeconds?: number;
+	/** Adds `Secure`. Defaults to whether the page itself is served over https. */
+	readonly secure?: boolean;
 }
 
 /** Default adapter — persists open state in a browser cookie. */
@@ -39,7 +41,10 @@ export function createCookieSidebarStorage(options: CreateCookieSidebarStorageOp
 			if (typeof document === "undefined") {
 				return;
 			}
-			document.cookie = `${cookieName}=${String(open)}; path=/; max-age=${String(maxAgeSeconds)}`;
+			// `Secure` on https so the cookie never travels over plain http; SameSite keeps it first-party.
+			const isSecure = options.secure ?? window.location.protocol === "https:";
+			const secure = isSecure ? "; Secure" : "";
+			document.cookie = `${cookieName}=${String(open)}; path=/; max-age=${String(maxAgeSeconds)}; SameSite=Lax${secure}`;
 		},
 	};
 }

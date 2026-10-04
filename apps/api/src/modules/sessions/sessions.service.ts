@@ -22,10 +22,8 @@ import { UserResponseMapper } from "../auth/services/user-response.mapper";
 import { CryptoService } from "../auth/services/crypto.service";
 import { SessionRestrictionService } from "../auth/services/session-restriction.service";
 import { TokenService } from "../auth/services/token.service";
+import { REFRESH_SUPERSEDED_GRACE_MS } from "./constants/refresh-token-rotation.constants";
 import { RefreshTokenRepository } from "./repositories/refresh-token.repository";
-
-/** Grace window after rotation where a stale presentation is treated as superseded, not theft. */
-const REFRESH_SUPERSEDED_GRACE_MS = 30_000;
 
 /**
  * Owns the refresh-token / active-session lifecycle: token rotation,
@@ -94,19 +92,13 @@ export class SessionsService {
 
 		const tokenMatches = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.token);
 		if (!tokenMatches) {
-			const recentlyRotated: boolean = storedToken.updatedAt >= Date.now() - REFRESH_SUPERSEDED_GRACE_MS;
-			if (recentlyRotated && storedToken.previousTokenHash !== null) {
-				const matchesPrevious = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.previousTokenHash);
-				if (matchesPrevious) {
-					await this.outbox.recordTelemetry(sessionActionEvent("refresh", user.id, "REFRESH_TOKEN_SUPERSEDED", actionStartedAt));
-					throw new UnauthorizedException({
-						message: "Refresh token was already rotated. Please retry with the latest session.",
-						error: "REFRESH_TOKEN_SUPERSEDED",
-					});
-				}
-			}
-
-			if (recentlyRotated) {
+			// Only the IMMEDIATE predecessor of the current token (its hash is
+			// `previousTokenHash`), presented within the grace window, is a benign
+			// concurrent refresh. Any other token of this session is reuse.
+			const isWithinGrace: boolean = storedToken.updatedAt >= Date.now() - REFRESH_SUPERSEDED_GRACE_MS;
+			const isImmediatePredecessor: boolean =
+				isWithinGrace && storedToken.previousTokenHash !== null && (await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.previousTokenHash));
+			if (isImmediatePredecessor) {
 				await this.outbox.recordTelemetry(sessionActionEvent("refresh", user.id, "REFRESH_TOKEN_SUPERSEDED", actionStartedAt));
 				throw new UnauthorizedException({
 					message: "Refresh token was already rotated. Please retry with the latest session.",
@@ -114,20 +106,7 @@ export class SessionsService {
 				});
 			}
 
-			this.logService.warn("Suspicious activity: token reuse detected — revoking all sessions", {
-				userId: user.id,
-				context: "SessionsService",
-				metadata: { tokenId: storedToken.id },
-			});
-
-			// Revoke every session + bump tokenVersion, and record the event, in one transaction.
-			await this.sessionRevocation.revokeAllSessionsForUser(user.id, async (tx): Promise<void> => {
-				await this.outbox.enqueueInTransaction(tx, sessionActionEvent("refresh", user.id, "TOKEN_THEFT_DETECTED", actionStartedAt));
-			});
-			throw new UnauthorizedException({
-				message: "Suspicious activity detected. All sessions have been revoked. Please log in again.",
-				error: "TOKEN_THEFT_DETECTED",
-			});
+			throw await this.revokeAllSessionsOnReuse(user.id, storedToken.id, actionStartedAt);
 		}
 
 		const userPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
@@ -167,6 +146,10 @@ export class SessionsService {
 			});
 		}
 
+		if (rotationResult === "reused") {
+			throw await this.revokeAllSessionsOnReuse(user.id, storedToken.id, actionStartedAt);
+		}
+
 		if (rotationResult === "missing") {
 			throw new UnauthorizedException({
 				message: "Invalid refresh token",
@@ -179,23 +162,21 @@ export class SessionsService {
 
 	public async logoutDevice(userId: string, refreshTokenJti: string): Promise<void> {
 		const actionStartedAt: number = performance.now();
-		const storedToken = await this.repository.findByIdIncludingDeleted(refreshTokenJti);
+		const revoked: boolean = await this.repository.revokeLiveToken(refreshTokenJti, userId, async (tx): Promise<void> => {
+			await this.outbox.enqueueInTransaction(tx, sessionActionEvent("logout-device", userId, null, actionStartedAt));
+		});
 
-		if (storedToken?.userId === userId) {
-			await this.repository.revokeById(storedToken.id, async (tx): Promise<void> => {
-				await this.outbox.enqueueInTransaction(tx, sessionActionEvent("logout-device", userId, null, actionStartedAt));
-			});
-			return;
+		if (!revoked) {
+			// Nothing to revoke (unknown, foreign, or already-revoked token) — logout is
+			// idempotent, so the outcome is still "succeeded", but there was no domain
+			// write for the event to be atomic with.
+			await this.outbox.recordTelemetry(sessionActionEvent("logout-device", userId, null, actionStartedAt));
 		}
-
-		// Nothing to revoke (unknown / foreign token) — logout is idempotent, so the
-		// outcome is still "succeeded", but there is no domain write to be atomic with.
-		await this.outbox.recordTelemetry(sessionActionEvent("logout-device", userId, null, actionStartedAt));
 	}
 
 	public async logoutAllDevices(userId: string): Promise<void> {
 		const actionStartedAt: number = performance.now();
-		await this.sessionRevocation.revokeAllSessionsForUser(userId, async (tx): Promise<void> => {
+		await this.sessionRevocation.revokeAllSessionsForUser(userId, "logout_all_devices", async (tx): Promise<void> => {
 			await this.outbox.enqueueInTransaction(tx, sessionActionEvent("logout-all", userId, null, actionStartedAt));
 		});
 	}
@@ -212,6 +193,27 @@ export class SessionsService {
 				expiresAt: token.expiresAt,
 			}),
 		);
+	}
+
+	/**
+	 * Refresh-token reuse (theft signal): revoke every session of the user and
+	 * bump `tokenVersion`, recording the event in the same transaction. Returns
+	 * the 401 the caller throws (`throw await …`).
+	 */
+	private async revokeAllSessionsOnReuse(userId: string, tokenId: string, actionStartedAt: number): Promise<UnauthorizedException> {
+		this.logService.warn("Suspicious activity: token reuse detected — revoking all sessions", {
+			userId,
+			context: "SessionsService",
+			metadata: { tokenId },
+		});
+
+		await this.sessionRevocation.revokeAllSessionsForUser(userId, "refresh_token_reuse", async (tx): Promise<void> => {
+			await this.outbox.enqueueInTransaction(tx, sessionActionEvent("refresh", userId, "TOKEN_THEFT_DETECTED", actionStartedAt));
+		});
+		return new UnauthorizedException({
+			message: "Suspicious activity detected. All sessions have been revoked. Please log in again.",
+			error: "TOKEN_THEFT_DETECTED",
+		});
 	}
 }
 

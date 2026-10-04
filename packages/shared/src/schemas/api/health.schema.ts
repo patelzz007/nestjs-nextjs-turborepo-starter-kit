@@ -29,11 +29,23 @@ export const LivenessResponseSchema = z.object({
 
 export type LivenessResponse = z.output<typeof LivenessResponseSchema>;
 
+/** One scalar of a module health report (JSON-safe: a `bigint` counter is sent as a number). */
+export const ModuleHealthDetailValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+
+export type ModuleHealthDetailValue = z.output<typeof ModuleHealthDetailValueSchema>;
+
 /** One dependency checked by `GET /health/ready`. */
 export const ReadinessCheckSchema = z.object({
 	name: z.string().meta({ description: "Probe name (startup, database, or a module indicator)", example: "database" }),
 	status: HealthProbeStatusSchema,
 	critical: z.boolean().meta({ description: "Whether a failing probe makes the API not-ready (HTTP 503)" }),
+	details: z
+		.record(z.string(), ModuleHealthDetailValueSchema)
+		.optional()
+		.meta({
+			description: "Module indicator report (same as `/health/deep`), e.g. Kafka `state` / `lastFailure`",
+			example: { state: "connecting", lastFailure: "producer connecting: Local: Broker transport failure" },
+		}),
 });
 
 export type ReadinessCheck = z.output<typeof ReadinessCheckSchema>;
@@ -46,11 +58,6 @@ export const ReadinessResponseSchema = z.object({
 });
 
 export type ReadinessResponse = z.output<typeof ReadinessResponseSchema>;
-
-/** One scalar of a module health report (JSON-safe: a `bigint` counter is sent as a number). */
-export const ModuleHealthDetailValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-
-export type ModuleHealthDetailValue = z.output<typeof ModuleHealthDetailValueSchema>;
 
 /** One module indicator in `GET /health/deep`. */
 export const ModuleHealthSchema = z.object({

@@ -1,10 +1,9 @@
 "use client";
 
 import { useWebSession } from "@/components/auth/web-authorization-provider";
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
-import { useAuth } from "@workspace/client/lib/auth";
+import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
 import { Button } from "@workspace/ui/components/form/button";
-import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 
@@ -24,18 +23,11 @@ export function ImpersonationBanner(): React.JSX.Element | null {
 }
 
 function ImpersonationBannerContent(): React.JSX.Element {
-	const { api } = useAuth();
-	const queryClient = useQueryClient();
-
-	const stopMutation = api.auth.stopImpersonation.useMutation({
-		onSuccess: async (): Promise<void> => {
-			await invalidateSessionAuth(queryClient);
-		},
-	});
-
-	const handleStop = React.useCallback((): void => {
-		void stopMutation.mutateAsync({});
-	}, [stopMutation]);
+	const router = useRouter();
+	const handleIdentityChanged = React.useCallback((): void => {
+		router.refresh();
+	}, [router]);
+	const { stop, isPending } = useImpersonation({ onIdentityChanged: handleIdentityChanged });
 
 	return (
 		<div className="shrink-0 border-b border-amber-500/40 bg-amber-500/15 px-4 py-2.5">
@@ -44,8 +36,8 @@ function ImpersonationBannerContent(): React.JSX.Element {
 					<AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
 					<span className="min-w-0">You are impersonating another user. The web app runs as that account.</span>
 				</div>
-				<Button size="sm" variant="outline" className="shrink-0" disabled={stopMutation.isPending} onClick={handleStop}>
-					{stopMutation.isPending ? "Stopping…" : "Stop impersonation"}
+				<Button size="sm" variant="outline" className="shrink-0" disabled={isPending} onClick={stop}>
+					{isPending ? "Stopping…" : "Stop impersonation"}
 				</Button>
 			</div>
 		</div>

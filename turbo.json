@@ -50,6 +50,8 @@
 				"PORT",
 				"RABBITMQ_URL",
 				"REDIS_URL",
+				"BULLMQ_PREFIX",
+				"REDIS_NAMESPACE",
 				"RESEND_API_KEY",
 				"RESEND_WEBHOOK_SECRET",
 				"STORAGE_PROVIDER",
@@ -59,9 +61,11 @@
 				"FIREBASE_STORAGE_BUCKET",
 				"GOOGLE_APPLICATION_CREDENTIALS",
 				"STORAGE_CLOUDFRONT_PUBLIC_DOMAIN",
+				"STORAGE_CLOUDFRONT_DISTRIBUTION_ID",
 				"STORAGE_DOWNLOAD_TTL_SECONDS",
 				"STORAGE_PHYSICAL_DELETE_DELAY_MS",
 				"STORAGE_PROCESSING_CALLBACK_SECRET",
+				"MALWARE_SCANNER",
 				"STORAGE_S3_BUCKET",
 				"STORAGE_S3_PRIVATE_BUCKET",
 				"STORAGE_S3_PUBLIC_BUCKET",
@@ -70,7 +74,12 @@
 				"AWS_SECRET_ACCESS_KEY",
 				"SHUTDOWN_TIMEOUT_MS",
 				"SWAGGER_ENABLED",
+				"TENANCY_ENABLED",
+				"DEFAULT_ORGANIZATION_ID",
 				"TENANT_ENCRYPTION_MASTER_KEY",
+				"TENANT_ENCRYPTION_MASTER_KEY_VERSION",
+				"TENANT_ENCRYPTION_PREVIOUS_MASTER_KEYS",
+				"TENANT_KMS_PROVIDER",
 				"TENANT_JOB_HMAC_SECRET",
 				"TRUST_PROXY",
 				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
@@ -79,7 +88,7 @@
 		},
 		"lint": {
 			"dependsOn": ["^lint"],
-			"env": ["TENANT_ENCRYPTION_MASTER_KEY", "TENANT_JOB_HMAC_SECRET"]
+			"env": ["TENANT_ENCRYPTION_MASTER_KEY", "TENANT_JOB_HMAC_SECRET", "REWARD_CODE_HASH_KEYS"]
 		},
 		"format": {
 			"dependsOn": ["^format"],
@@ -89,7 +98,18 @@
 			"dependsOn": ["^build", "^typecheck"]
 		},
 		"test": {
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build"],
+			"env": ["TZ"]
+		},
+		"test:e2e": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"env": ["DATABASE_URL", "REDIS_URL", "E2E_BULLMQ_PREFIX"]
+		},
+		"test:browser": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"env": ["WEB_E2E_BASE_URL", "ADMIN_E2E_BASE_URL", "ADMIN_E2E_EMAIL", "ADMIN_E2E_PASSWORD"]
 		},
 		"openapi:export": {
 			"dependsOn": ["^build"],
@@ -131,7 +151,7 @@
 		},
 		"db:seed": {
 			"cache": false,
-			"env": ["DATABASE_URL"],
+			"env": ["DATABASE_URL", "REWARD_CODE_HASH_KEYS"],
 			"dependsOn": ["^build", "db:generate", "db:deploy"]
 		},
 		"db:studio": {
@@ -141,8 +161,8 @@
 		},
 		"db:reset": {
 			"cache": false,
-			"env": ["DATABASE_URL"],
-			"dependsOn": ["db:generate"]
+			"env": ["DATABASE_URL", "REWARD_CODE_HASH_KEYS"],
+			"dependsOn": ["^build", "db:generate"]
 		},
 		"deps:check": {
 			"cache": false
@@ -199,6 +219,8 @@
 				"PORT",
 				"RABBITMQ_URL",
 				"REDIS_URL",
+				"BULLMQ_PREFIX",
+				"REDIS_NAMESPACE",
 				"RESEND_API_KEY",
 				"RESEND_WEBHOOK_SECRET",
 				"SHUTDOWN_TIMEOUT_MS",

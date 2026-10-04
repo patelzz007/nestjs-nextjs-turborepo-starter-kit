@@ -10,7 +10,7 @@ import { fieldWhere, toPrismaNullableComparableFilter } from "../../../platform/
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
-// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 const REWARD_NOTIFICATION_SORT_COLUMNS: SortColumns<RewardNotificationListSortField, Prisma.RewardNotificationOrderByWithRelationInput> = {
 	createdAt: (direction) => ({ createdAt: direction }),

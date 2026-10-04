@@ -19,7 +19,9 @@ Instead:
 | `prisma/rls/00-app-helpers.sql` | Base session helpers (`app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_owns()`). Applied **first** — `01` and `rls.sql` call them, so a fresh database needs them before anything else. |
 | `prisma/rls/01-acl-location-access.sql` | ReBAC + ACL helpers and location-scoped policies. Applied **second**. |
 | `prisma/rls.sql` | Main idempotent bundle (role, grants, enable RLS, baseline policies). Applied **third**. |
+| `prisma/rls/90-analytics-consumer.sql` | The analytics consumer's least-privilege `analytics_consumer` role: table grants and role-scoped policies (its LOGIN is created by `pnpm --filter @workspace/analytics-consumer db:provision-login`). Applied after `rls.sql`. |
 | `prisma/rls/*.sql` | Other ordered fragments (`NN-*.sql`, then `99-app-runtime-grants`). **app_runtime** grants run **last**. |
+| `prisma/rls/withheld-privileges.ts` | `APP_RUNTIME_WITHHELD_PRIVILEGES` — the ONE list of tables whose UPDATE/DELETE `app_runtime` must not hold (append-only audit trails, never-deleted rows). `apply-rls.ts` revokes them in the same transaction as the `99` blanket grant and verifies the live catalog; `db:check-rls-manifest` rejects unknown tables and hand-written `REVOKE … FROM app_runtime`. Adding a table is a one-line change there. |
 | `scripts/rls-apply-plan.ts` | `RLS_APPLY_ORDER` — the apply order, plus disk-drift and helper use-before-define validation (runs before any SQL, also in `db:check-rls-manifest`). |
 | `scripts/apply-rls.ts` | Applies the validated plan via Node `pg` (no local `psql` required). |
 
@@ -35,7 +37,7 @@ Add new fragments as `prisma/rls/NN-name.sql` and register them in `RLS_APPLY_OR
 
 Creating a role like `Cashier` or assigning `ORDER.UPDATE` is **data only** — no migration, no RLS change.
 
-See [RBAC + ACL + RLS architecture](../../../../docs/rbac-acl-rls-architecture.md).
+See [RBAC + ACL + RLS architecture](../../../../docs/technical/security/database-security.md).
 
 ## Session variables (fail-closed)
 

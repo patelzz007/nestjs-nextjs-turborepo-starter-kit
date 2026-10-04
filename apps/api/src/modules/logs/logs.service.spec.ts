@@ -2,7 +2,6 @@ import { Logger } from "@nestjs/common";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { LogService } from "./logs.service";
-import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { RequestContextService } from "../../common/context/request-context";
 
 describe("LogService", () => {
@@ -12,7 +11,7 @@ describe("LogService", () => {
 		vi.spyOn(console, "log").mockImplementation(() => {});
 		vi.spyOn(console, "warn").mockImplementation(() => {});
 		vi.spyOn(console, "error").mockImplementation(() => {});
-		service = new LogService(createTestTypedConfig(), new RequestContextService());
+		service = new LogService(new RequestContextService());
 	});
 
 	afterEach(() => {
@@ -92,7 +91,7 @@ describe("LogService", () => {
 		const requestContext = new RequestContextService();
 
 		function contextualService(): LogService {
-			return new LogService(createTestTypedConfig(), requestContext);
+			return new LogService(requestContext);
 		}
 
 		it("stamps the correlation id on every line written inside a request", () => {
@@ -141,32 +140,6 @@ describe("LogService", () => {
 			logger.info("boot complete");
 
 			expect(spy).toHaveBeenCalledWith("boot complete", "LogService");
-		});
-	});
-
-	describe("memory monitoring", () => {
-		// Observed through the public surface: monitoring announces its start,
-		// and stopMemoryMonitoring() only reports a stop when it was running.
-		const STARTED = "Starting memory monitoring for leak detection";
-		const STOPPED = "Memory monitoring stopped";
-
-		it("stays off outside production unless MEMORY_MONITORING=true", () => {
-			const spy = vi.spyOn(Logger.prototype, "log");
-			const logger = new LogService(createTestTypedConfig(), new RequestContextService());
-			logger.stopMemoryMonitoring();
-			expect(spy).not.toHaveBeenCalledWith(STARTED);
-			expect(spy).not.toHaveBeenCalledWith(STOPPED);
-		});
-
-		it("starts when MEMORY_MONITORING=true", () => {
-			const spy = vi.spyOn(Logger.prototype, "log");
-			const logger = new LogService(createTestTypedConfig({ MEMORY_MONITORING: "true" }), new RequestContextService());
-			try {
-				expect(spy).toHaveBeenCalledWith(STARTED);
-			} finally {
-				logger.stopMemoryMonitoring();
-			}
-			expect(spy).toHaveBeenCalledWith(STOPPED);
 		});
 	});
 });

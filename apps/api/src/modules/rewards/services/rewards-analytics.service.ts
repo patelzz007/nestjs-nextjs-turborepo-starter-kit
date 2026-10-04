@@ -12,12 +12,13 @@ import type {
 	UserSpendByCategory,
 	UserSpendingSummary,
 } from "@workspace/shared";
-import { DEFAULT_SALE_CURRENCY, EpochMsSchema } from "@workspace/shared";
+import { DEFAULT_SALE_CURRENCY, EpochMsSchema, IanaTimeZoneSchema } from "@workspace/shared";
 
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
 import { RewardReferralRepository } from "../repositories/reward-referral.repository";
 import { RewardRepository } from "../repositories/reward.repository";
+import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { RewardSaleRepository, type SalesScope } from "../repositories/reward-sale.repository";
 import {
 	averageBillMinor,
@@ -31,6 +32,7 @@ import {
 	type AnalyticsPeriod,
 } from "../utils/rewards-analytics.util";
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
+import { rewardAvailabilityWhere } from "../utils/merchant-location-scope.util";
 import { MerchantContextService } from "./merchant-context.service";
 
 /** Merchants listed in a user's "where you spent the most". */
@@ -39,8 +41,28 @@ const USER_TOP_SPEND_MERCHANTS = 5;
 /** Merchants listed in the admin's top-sellers table. */
 const ADMIN_TOP_MERCHANTS = 10;
 
-/** Shown if a merchant row vanished between the sales query and the name lookup. */
-const UNKNOWN_MERCHANT_NAME = "Merchant";
+/** Rewards listed in the merchant's "top rewards". */
+const MERCHANT_TOP_REWARDS = 8;
+
+/**
+ * A sale or redemption points at an organization/reward the lookup could not
+ * find. Foreign keys make this impossible, so it is an integrity fault —
+ * surfaced as an error, never papered over with a placeholder name.
+ */
+export class AnalyticsReferenceMissingError extends Error {
+	public constructor(entity: "organization" | "reward", id: string) {
+		super(`Analytics row references ${entity} ${id}, which could not be loaded`);
+		this.name = "AnalyticsReferenceMissingError";
+	}
+}
+
+function requireReference<TValue>(map: ReadonlyMap<string, TValue>, entity: "organization" | "reward", id: string): TValue {
+	const value = map.get(id);
+	if (value === undefined) {
+		throw new AnalyticsReferenceMissingError(entity, id);
+	}
+	return value;
+}
 
 @Injectable()
 export class RewardsAnalyticsService {
@@ -51,16 +73,21 @@ export class RewardsAnalyticsService {
 		private readonly rewardReferralRepository: RewardReferralRepository,
 		private readonly merchantContext: MerchantContextService,
 		private readonly saleRepository: RewardSaleRepository,
+		private readonly organizationRepository: OrganizationRepository,
 	) {}
 
 	public async getMerchantAnalytics(actor: MerchantActor, query: RewardsAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_analytics");
 		const orgId = actor.organizationId;
-		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
-		const period = resolveAnalyticsPeriod(query.from, query.to);
+		// Never "no filter": a store-limited member (or store-scoped key) sees only its stores' rewards, redemptions and bills.
+		const scope = await this.merchantContext.resolveLocationScope(actor, query.locationId);
+		// Merchant weeks start Monday 00:00 in the merchant's own zone (Organization.timeZone).
+		const timeZone = IanaTimeZoneSchema.parse((await this.requireOrganization(orgId)).timeZone);
+		const period = resolveAnalyticsPeriod(query.from, query.to, Date.now(), timeZone);
 		const previous = previousAnalyticsPeriod(period);
 
-		const rewardWhere: Prisma.RewardWhereInput = { organizationId: orgId, isDeleted: false, rewardKind: "CONSUMER" };
+		const rewardScope = rewardAvailabilityWhere(scope);
+		const rewardWhere: Prisma.RewardWhereInput = { AND: [{ organizationId: orgId, isDeleted: false, rewardKind: "CONSUMER" }, rewardScope] };
 
 		const [
 			totalRewards,
@@ -73,7 +100,6 @@ export class RewardsAnalyticsService {
 			redemptionRows,
 			referralCurrent,
 			referralPrevious,
-			rewardTitles,
 			sales,
 		] = await Promise.all([
 			this.rewardRepository.count(rewardWhere),
@@ -82,12 +108,11 @@ export class RewardsAnalyticsService {
 			this.rewardRepository.count({ ...rewardWhere, createdAt: { gte: previous.fromMs, lte: previous.toMs } }),
 			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: period.fromMs, lte: period.toMs } }),
 			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: previous.fromMs, lte: previous.toMs } }),
-			this.rewardClaimRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }),
-			this.redemptionRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }, locationId),
-			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: period.fromMs, lte: period.toMs }),
-			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: previous.fromMs, lte: previous.toMs }),
-			this.rewardRepository.listIdAndTitle(rewardWhere),
-			this.buildSalesSummary({ organizationId: orgId, locationId }, period),
+			this.rewardClaimRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }, rewardScope),
+			this.redemptionRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }, scope),
+			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: period.fromMs, lte: period.toMs }, rewardScope),
+			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: previous.fromMs, lte: previous.toMs }, rewardScope),
+			this.buildSalesSummary({ organizationId: orgId, locationIds: scope.kind === "ALL_LOCATIONS" ? undefined : scope.locationIds }, period),
 		]);
 
 		const currentClaims = claimRows.filter((row) => {
@@ -108,7 +133,6 @@ export class RewardsAnalyticsService {
 			return redeemedAt >= previous.fromMs && redeemedAt <= previous.toMs;
 		});
 
-		const titleByRewardId = new Map(rewardTitles.map((row) => [row.id, row.title]));
 		const topRewardMap = new Map<string, { claims: number; redemptions: number }>();
 
 		for (const claim of currentClaims) {
@@ -127,8 +151,15 @@ export class RewardsAnalyticsService {
 		const currentConversion = conversionRatePercent(currentClaims.length, currentRedemptions.length);
 		const previousConversion = conversionRatePercent(previousClaims.length, previousRedemptions.length);
 
+		const topRewards = [...topRewardMap.entries()]
+			.sort(([, left], [, right]) => right.claims + right.redemptions - (left.claims + left.redemptions))
+			.slice(0, MERCHANT_TOP_REWARDS);
+		// Titles of the listed rewards only — including soft-deleted ones that still have claims/redemptions in the period.
+		const rewardTitles = await this.rewardRepository.listIdAndTitle({ organizationId: orgId, id: { in: topRewards.map(([rewardId]) => rewardId) } });
+		const titleByRewardId = new Map(rewardTitles.map((row) => [row.id, row.title]));
+
 		return {
-			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs) },
+			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs), timeZone: period.timeZone },
 			totalRewards: { value: totalRewards, changePercent: percentChange(rewardsCreatedCurrent, rewardsCreatedPrevious) },
 			activeRewards: { value: activeRewards, changePercent: percentChange(publishedCurrent, publishedPrevious) },
 			totalClaims: buildAnalyticsMetric(currentClaims.length, previousClaims.length),
@@ -142,20 +173,18 @@ export class RewardsAnalyticsService {
 					currentRedemptions.map((row) => Number(row.redeemedAt)),
 				),
 			].map((point) => ({ ...point, date: EpochMsSchema.parse(point.date) })),
-			topRewards: [...topRewardMap.entries()]
-				.map(([rewardId, counts]) => ({
-					rewardId,
-					title: titleByRewardId.get(rewardId) ?? "Reward",
-					claims: counts.claims,
-					redemptions: counts.redemptions,
-				}))
-				.sort((left, right) => right.claims + right.redemptions - (left.claims + left.redemptions))
-				.slice(0, 8),
+			topRewards: topRewards.map(([rewardId, counts]) => ({
+				rewardId,
+				title: requireReference(titleByRewardId, "reward", rewardId),
+				claims: counts.claims,
+				redemptions: counts.redemptions,
+			})),
 			sales,
 		};
 	}
 
 	public async getUserAnalytics(userId: string, query: RewardsAnalyticsQuery): Promise<UserRewardsAnalyticsResponse> {
+		// A customer spends across merchants (and zones): their weeks are bucketed in UTC.
 		const period = resolveAnalyticsPeriod(query.from, query.to);
 		const previous = previousAnalyticsPeriod(period);
 
@@ -207,7 +236,7 @@ export class RewardsAnalyticsService {
 		}
 
 		return {
-			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs) },
+			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs), timeZone: period.timeZone },
 			totalClaims: buildAnalyticsMetric(currentClaims.length, previousClaims.length),
 			pendingClaims: buildAnalyticsMetric(currentPending, previousPending),
 			redeemedClaims: buildAnalyticsMetric(currentRedeemed, previousRedeemed),
@@ -232,6 +261,7 @@ export class RewardsAnalyticsService {
 
 	/** Platform-wide paid bills for `GET /admin/analytics/sales` (the controller enforces `ANALYTICS:READ`). */
 	public async getAdminSalesAnalytics(actorUserId: string, query: AdminSalesAnalyticsQuery): Promise<AdminSalesAnalyticsResponse> {
+		// The platform view spans every merchant: its weeks are bucketed in UTC.
 		const period = resolveAnalyticsPeriod(query.from, query.to);
 		const previous = previousAnalyticsPeriod(period);
 		const range = { gte: period.fromMs, lte: period.toMs };
@@ -248,27 +278,33 @@ export class RewardsAnalyticsService {
 		);
 
 		return {
-			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs) },
+			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs), timeZone: period.timeZone },
 			sales,
 			activeMerchants: buildAnalyticsMetric(activeNow, activeBefore),
-			topMerchants: topMerchants.map((group) => ({
-				organizationId: group.organizationId,
-				name: merchants.get(group.organizationId)?.name ?? UNKNOWN_MERCHANT_NAME,
-				category: merchants.get(group.organizationId)?.category ?? null,
-				salesMinor: group.totalMinor,
-				bills: group.bills,
-			})),
+			topMerchants: topMerchants.map((group) => {
+				const merchant = requireReference(merchants, "organization", group.organizationId);
+				return { organizationId: group.organizationId, name: merchant.name, category: merchant.category, salesMinor: group.totalMinor, bills: group.bills };
+			}),
 		};
+	}
+
+	private async requireOrganization(organizationId: string): Promise<{ readonly timeZone: string }> {
+		const organization = await this.organizationRepository.findById(organizationId);
+		if (organization === null) {
+			throw new AnalyticsReferenceMissingError("organization", organizationId);
+		}
+		return organization;
 	}
 
 	/** Paid-bill totals for `scope` in `period`, compared with the previous period of equal length. */
 	private async buildSalesSummary(scope: SalesScope, period: AnalyticsPeriod): Promise<SalesSummary> {
 		const previous = previousAnalyticsPeriod(period);
 		const range = { gte: period.fromMs, lte: period.toMs };
-		const [current, prior, points] = await Promise.all([
+		const [current, prior, weeks, firstBillAt] = await Promise.all([
 			this.saleRepository.aggregate(scope, range),
 			this.saleRepository.aggregate(scope, { gte: previous.fromMs, lte: previous.toMs }),
-			this.saleRepository.listPoints(scope, range),
+			this.saleRepository.listWeeklyTotals(scope, range, period.timeZone),
+			this.saleRepository.firstPaidAt(scope),
 		]);
 
 		return {
@@ -276,7 +312,8 @@ export class RewardsAnalyticsService {
 			totalSalesMinor: buildAnalyticsMetric(current.totalMinor, prior.totalMinor),
 			bills: buildAnalyticsMetric(current.bills, prior.bills),
 			averageBillMinor: buildAnalyticsMetric(averageBillMinor(current.totalMinor, current.bills), averageBillMinor(prior.totalMinor, prior.bills)),
-			overTime: buildWeeklySalesSeries(period, points).map((point) => ({ ...point, date: EpochMsSchema.parse(point.date) })),
+			overTime: buildWeeklySalesSeries(period, weeks).map((point) => ({ ...point, date: EpochMsSchema.parse(point.date) })),
+			firstBillAt: firstBillAt === null ? null : EpochMsSchema.parse(firstBillAt),
 		};
 	}
 
@@ -294,13 +331,10 @@ export class RewardsAnalyticsService {
 			userId,
 		);
 
-		const byMerchant = byOrganization.map((group) => ({
-			organizationId: group.organizationId,
-			merchantName: merchants.get(group.organizationId)?.name ?? UNKNOWN_MERCHANT_NAME,
-			category: merchants.get(group.organizationId)?.category ?? null,
-			totalMinor: group.totalMinor,
-			visits: group.bills,
-		}));
+		const byMerchant = byOrganization.map((group) => {
+			const merchant = requireReference(merchants, "organization", group.organizationId);
+			return { organizationId: group.organizationId, merchantName: merchant.name, category: merchant.category, totalMinor: group.totalMinor, visits: group.bills };
+		});
 
 		const categoryTotals = new Map<MerchantBusinessCategory | null, { totalMinor: number; visits: number }>();
 		for (const merchant of byMerchant) {

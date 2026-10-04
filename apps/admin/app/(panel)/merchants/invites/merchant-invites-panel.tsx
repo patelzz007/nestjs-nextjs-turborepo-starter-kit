@@ -1,123 +1,129 @@
 "use client";
 
-import EmailPreviewCard from "@/components/email/email-preview-card";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useAuth } from "@workspace/client/lib/auth";
-import { PilotCitySchema, type AdminMerchantInviteCreatedResponse, type EmailPreview, type PilotCity } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import {
+	AdminCreateMerchantInviteSchema,
+	EmailTemplateKeySchema,
+	PERMISSION,
+	PilotCitySchema,
+	type AdminCreateMerchantInviteInput,
+	type AdminMerchantInviteCreatedResponse,
+	type EmailPreview,
+	type PilotCity,
+} from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { Badge } from "@workspace/ui/components/feedback/badge";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { Button } from "@workspace/ui/components/form/button";
 import { Copy, Eye, Send } from "lucide-react";
 import * as React from "react";
+
+import { OptionSelectField, TextField, useFormSubmitHandler } from "@/components/common/form-fields";
+import EmailPreviewCard from "@/components/email/email-preview-card";
+import { toastMutationError } from "@/lib/api/mutation-error";
+import { formatDateTime } from "@/lib/format/dates";
+import { pilotCityLabel } from "@/lib/format/pilot-city";
 import { ROUTES } from "@/lib/routes";
 
-const PILOT_CITIES: readonly PilotCity[] = PilotCitySchema.options;
+/** What a submit of the invite form does. */
+type InviteIntent = "preview" | "send";
 
-function formatEpochMs(value: number): string {
-	return new Date(value).toLocaleString();
+interface InviteSubmitMeta {
+	readonly intent: InviteIntent;
 }
 
-export interface MerchantInvitesPanelProps {
-	readonly initialSamplePreview?: EmailPreview | undefined;
+/** Preselected pilot city — the first entry of the shared enum, referenced through it rather than typed by hand. */
+const DEFAULT_INVITE_CITY: PilotCity = PilotCitySchema.enum.KUALA_LUMPUR;
+
+const DEFAULT_INVITE_VALUES: AdminCreateMerchantInviteInput = {
+	email: "",
+	businessName: "",
+	city: DEFAULT_INVITE_CITY,
+};
+
+const PREVIEW_INTENT: InviteSubmitMeta = { intent: "preview" };
+const SEND_INTENT: InviteSubmitMeta = { intent: "send" };
+
+/** The template the invite email is rendered from (opened from the preview card). */
+const MERCHANT_INVITE_TEMPLATE_KEY = EmailTemplateKeySchema.enum["merchant-invite"];
+
+/** Stable identity of a form state — the send button is enabled only for the exact values that were previewed. */
+function inviteFingerprint(input: AdminCreateMerchantInviteInput): string {
+	return JSON.stringify([input.email.trim(), input.businessName.trim(), input.city]);
 }
 
-export default function MerchantInvitesPanel({ initialSamplePreview }: MerchantInvitesPanelProps): React.JSX.Element {
+export default function MerchantInvitesPanel(): React.JSX.Element {
 	const { api } = useAuth();
-	const [email, setEmail] = React.useState<string>("");
-	const [businessName, setBusinessName] = React.useState<string>("");
-	const [city, setCity] = React.useState<PilotCity>("KUALA_LUMPUR");
+	const { can } = useAuthorization();
 	const [lastInvite, setLastInvite] = React.useState<AdminMerchantInviteCreatedResponse | null>(null);
-	const [preview, setPreview] = React.useState<EmailPreview | undefined>(initialSamplePreview);
-	const [previewReady, setPreviewReady] = React.useState<boolean>(initialSamplePreview !== undefined);
+	const [preview, setPreview] = React.useState<EmailPreview | undefined>(undefined);
+	const [previewedFingerprint, setPreviewedFingerprint] = React.useState<string | null>(null);
 
 	const previewInvite = api.rewardsAdmin.previewInviteEmail.useMutation({
-		onSuccess: (response) => {
-			setPreview(response.data);
-			setPreviewReady(true);
-		},
 		onError: (error) => {
-			toastMessage.error({ title: "Preview failed", description: error.message });
+			toastMutationError("Preview failed", error);
 		},
 	});
 
 	const createInvite = api.rewardsAdmin.createInvite.useMutation({
-		onSuccess: (response) => {
-			setLastInvite(response.data);
-			toastMessage.success({ title: "Invite sent", description: "The merchant received the onboarding email." });
-			setEmail("");
-			setBusinessName("");
-			setPreviewReady(false);
-			setPreview(initialSamplePreview);
-		},
 		onError: (error) => {
-			toastMessage.error({ title: "Invite failed", description: error.message });
+			toastMutationError("Invite failed", error);
 		},
 	});
 
-	const handleEmailChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setEmail(event.target.value);
-		setPreviewReady(false);
-	}, []);
+	const form = useForm({
+		defaultValues: DEFAULT_INVITE_VALUES,
+		validators: { onSubmit: AdminCreateMerchantInviteSchema },
+		onSubmitMeta: PREVIEW_INTENT,
+		onSubmit: ({ value, meta, formApi }): void => {
+			const input: AdminCreateMerchantInviteInput = AdminCreateMerchantInviteSchema.parse(value);
+			if (meta.intent === "preview") {
+				previewInvite.mutate(input, {
+					onSuccess: (response) => {
+						setPreview(response.data);
+						setPreviewedFingerprint(inviteFingerprint(input));
+					},
+				});
+				return;
+			}
+			createInvite.mutate(input, {
+				onSuccess: (response) => {
+					setLastInvite(response.data);
+					toastMessage.success({ title: "Invite sent", description: "The merchant received the onboarding email." });
+					formApi.reset();
+					setPreview(undefined);
+					setPreviewedFingerprint(null);
+				},
+			});
+		},
+	});
 
-	const handleBusinessNameChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setBusinessName(event.target.value);
-		setPreviewReady(false);
-	}, []);
+	const values = useSelector(form.store, (state) => state.values);
+	const isPreviewCurrent = previewedFingerprint !== null && previewedFingerprint === inviteFingerprint(values);
+	const isBusy = previewInvite.isPending || createInvite.isPending;
 
-	const handleCityChange = React.useCallback((value: string | null): void => {
-		const parsed = PilotCitySchema.safeParse(value);
-		if (parsed.success) {
-			setCity(parsed.data);
-			setPreviewReady(false);
-		}
-	}, []);
+	const submitPreview = React.useCallback((): Promise<void> => form.handleSubmit(PREVIEW_INTENT), [form]);
+	const handleFormSubmit = useFormSubmitHandler(submitPreview);
 
-	const buildFormInput = React.useCallback((): { email: string; businessName: string; city: PilotCity } | null => {
-		const trimmedEmail = email.trim();
-		const trimmedBusiness = businessName.trim();
-		if (trimmedEmail.length === 0 || trimmedBusiness.length === 0) {
-			toastMessage.error({ title: "Missing fields", description: "Enter email and business name before continuing." });
-			return null;
-		}
-		return { email: trimmedEmail, businessName: trimmedBusiness, city };
-	}, [businessName, city, email]);
+	const handleSend = React.useCallback((): void => {
+		void form.handleSubmit(SEND_INTENT);
+	}, [form]);
 
-	const handlePreview = React.useCallback((): void => {
-		const input = buildFormInput();
-		if (input === null) {
-			return;
-		}
-		previewInvite.mutate(input);
-	}, [buildFormInput, previewInvite]);
-
-	const handleSendInvite = React.useCallback((): void => {
-		if (!previewReady) {
-			toastMessage.error({ title: "Preview required", description: "Preview the email with your form data before sending." });
-			return;
-		}
-		const input = buildFormInput();
-		if (input === null) {
-			return;
-		}
-		createInvite.mutate(input);
-	}, [buildFormInput, createInvite, previewReady]);
-
-	const handleCopyToken = React.useCallback(async (): Promise<void> => {
+	const handleCopyToken = React.useCallback((): void => {
 		if (lastInvite === null) {
 			return;
 		}
-		await navigator.clipboard.writeText(lastInvite.inviteToken);
-		toastMessage.success({ title: "Copied", description: "Invite token copied to clipboard." });
+		navigator.clipboard.writeText(lastInvite.inviteToken).then(
+			(): void => {
+				toastMessage.success({ title: "Copied", description: "Invite token copied to clipboard." });
+			},
+			(): void => {
+				toastMessage.error({ title: "Copy failed", description: "The browser blocked clipboard access. Select the token and copy it manually." });
+			},
+		);
 	}, [lastInvite]);
-
-	const handleCopyTokenClick = React.useCallback((): void => {
-		void handleCopyToken();
-	}, [handleCopyToken]);
-
-	const isBusy = previewInvite.isPending || createInvite.isPending;
 
 	return (
 		<div className="mx-auto flex w-full flex-col gap-6">
@@ -132,40 +138,60 @@ export default function MerchantInvitesPanel({ initialSamplePreview }: MerchantI
 						<CardTitle>New invite</CardTitle>
 						<CardDescription>Step 1: preview with your details. Step 2: create invite and email the merchant.</CardDescription>
 					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="space-y-2">
-							<Label htmlFor="invite-email">Contact email</Label>
-							<Input id="invite-email" type="email" value={email} onChange={handleEmailChange} placeholder="owner@cafe.demo" required />
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="invite-business">Business name</Label>
-							<Input id="invite-business" value={businessName} onChange={handleBusinessNameChange} placeholder="Sunrise Café" required />
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="invite-city">Pilot city</Label>
-							<Select value={city} onValueChange={handleCityChange}>
-								<SelectTrigger id="invite-city">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{PILOT_CITIES.map((option) => (
-										<SelectItem key={option} value={option}>
-											{option.replace("_", " ")}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="flex flex-wrap gap-2">
-							<Button type="button" variant="outline" disabled={isBusy} onClick={handlePreview}>
-								<Eye className="mr-2 size-4" />
-								{previewInvite.isPending ? "Rendering…" : "Preview email"}
-							</Button>
-							<Button type="button" disabled={isBusy || !previewReady} onClick={handleSendInvite}>
-								<Send className="mr-2 size-4" />
-								{createInvite.isPending ? "Sending…" : "Create & send invite"}
-							</Button>
-						</div>
+					<CardContent>
+						<form noValidate className="space-y-4" onSubmit={handleFormSubmit}>
+							<form.Field name="email">
+								{(field) => (
+									<TextField
+										id="invite-email"
+										label="Contact email"
+										type="email"
+										placeholder="owner@cafe.demo"
+										value={field.state.value}
+										onChange={field.handleChange}
+										onBlur={field.handleBlur}
+										errors={field.state.meta.errors}
+									/>
+								)}
+							</form.Field>
+							<form.Field name="businessName">
+								{(field) => (
+									<TextField
+										id="invite-business"
+										label="Business name"
+										placeholder="Sunrise Café"
+										value={field.state.value}
+										onChange={field.handleChange}
+										onBlur={field.handleBlur}
+										errors={field.state.meta.errors}
+									/>
+								)}
+							</form.Field>
+							<form.Field name="city">
+								{(field) => (
+									<OptionSelectField
+										id="invite-city"
+										label="Pilot city"
+										value={field.state.value}
+										options={PilotCitySchema.options}
+										labelOf={pilotCityLabel}
+										onChange={field.handleChange}
+										errors={field.state.meta.errors}
+									/>
+								)}
+							</form.Field>
+							<div className="flex flex-wrap gap-2">
+								<Button type="submit" variant="outline" disabled={isBusy}>
+									<Eye className="mr-2 size-4" />
+									{previewInvite.isPending ? "Rendering…" : "Preview email"}
+								</Button>
+								<Button type="button" disabled={isBusy || !isPreviewCurrent} onClick={handleSend}>
+									<Send className="mr-2 size-4" />
+									{createInvite.isPending ? "Sending…" : "Create & send invite"}
+								</Button>
+							</div>
+							{!isPreviewCurrent ? <p className="text-xs text-muted-foreground">Preview the email with the current details to enable sending.</p> : null}
+						</form>
 					</CardContent>
 				</Card>
 
@@ -173,7 +199,7 @@ export default function MerchantInvitesPanel({ initialSamplePreview }: MerchantI
 					preview={preview}
 					isLoading={previewInvite.isPending}
 					footerNote="Preview links use a placeholder token until you send the invite."
-					templatesHref={ROUTES.emails.template("merchant-invite")}
+					templatesHref={can(PERMISSION.EMAIL.READ) ? ROUTES.emails.template(MERCHANT_INVITE_TEMPLATE_KEY) : undefined}
 				/>
 			</div>
 
@@ -185,13 +211,13 @@ export default function MerchantInvitesPanel({ initialSamplePreview }: MerchantI
 					</CardHeader>
 					<CardContent className="space-y-3">
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant="outline">Expires {formatEpochMs(lastInvite.expiresAt)}</Badge>
+							<Badge variant="outline">Expires {formatDateTime(lastInvite.expiresAt)}</Badge>
 							<Badge variant="secondary" className="font-mono text-xs">
 								{lastInvite.inviteId}
 							</Badge>
 						</div>
 						<div className="rounded-md border bg-muted/40 p-3 font-mono text-sm break-all">{lastInvite.inviteToken}</div>
-						<Button type="button" variant="outline" size="sm" onClick={handleCopyTokenClick}>
+						<Button type="button" variant="outline" size="sm" onClick={handleCopyToken}>
 							<Copy className="mr-2 size-4" />
 							Copy token
 						</Button>

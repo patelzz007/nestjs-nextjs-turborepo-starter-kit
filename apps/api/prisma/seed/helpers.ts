@@ -1,17 +1,30 @@
 import type { DeviceType } from "@prisma/client";
 import * as crypto from "crypto";
 
+import { SeededRandom } from "./prng";
+import { DEFAULT_RANDOM_SEED } from "./seed-options";
+
 // ---------------------------------------------------------------------------
 // Random helpers
 // ---------------------------------------------------------------------------
 
-export const rand = <T>(arr: T[]): T => {
-	const index = Math.floor(Math.random() * arr.length);
-	const value = arr[index];
-	if (value === undefined) throw new Error("rand: unexpected undefined");
-	return value;
-};
-export const randInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
+/**
+ * The stream every demo-data helper below draws from. Seeded (never
+ * `Math.random()`), so the same `--seed` yields the same dataset; scenarios
+ * call {@link useSeedRandom} with their `--seed` before seeding. Secrets
+ * (tokens, keys) never come from here — they use `crypto`.
+ */
+let seedRandom: SeededRandom = SeededRandom.derive(DEFAULT_RANDOM_SEED, "demo-data");
+
+/** Re-seeds the demo-data stream (call once per scenario run, before any helper). */
+export function useSeedRandom(seed: number): void {
+	seedRandom = SeededRandom.derive(seed, "demo-data");
+}
+
+export const rand = <T>(arr: readonly T[]): T => seedRandom.pick(arr);
+export const randInt = (min: number, max: number): number => seedRandom.int(min, max);
+/** `true` with the given probability. */
+export const randChance = (probability: number): boolean => seedRandom.chance(probability);
 
 /** A random, non-network/non-broadcast-looking IPv4 address for seeded sessions and logs. */
 export const randomIpv4 = (): string => `${String(randInt(1, 254))}.${String(randInt(0, 255))}.${String(randInt(0, 255))}.${String(randInt(1, 254))}`;

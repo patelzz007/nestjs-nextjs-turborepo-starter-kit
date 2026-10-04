@@ -1,6 +1,6 @@
 "use client";
 
-import { initialDataOption, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
@@ -9,38 +9,45 @@ import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState 
 import { openExternalDocument, triggerBrowserDownload } from "@workspace/client/lib/merchant/kyb/document-utils";
 import { MerchantKybStoredDocumentList } from "@workspace/client/lib/merchant/kyb/stored-document-list";
 import type {
-	AdminMerchantDetailResponse,
+	Envelope,
 	FileDownloadDisposition,
 	JsonObject,
-	JsonValue,
 	KybStatus,
 	MerchantKybDocumentRecord,
 	MerchantOrgResponse,
 	OrganizationLocationResponse,
 	OrganizationLocationStatus,
 } from "@workspace/shared";
-import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, MerchantOrgResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
+import { EpochMsSchema, JsonPrimitiveSchema, MerchantOrgResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
 import { z } from "zod";
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Separator } from "@workspace/ui/components/display/separator";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { Textarea } from "@workspace/ui/components/form/textarea";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { Building2, Check, Clock, MapPin, ShieldCheck, User, X } from "lucide-react";
+import { Building2, Clock, MapPin, User } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { PENDING_KYB_MERCHANTS_QUERY } from "@/lib/merchants/kyb-review";
+import { toastMutationError } from "@/lib/api/mutation-error";
+import { KYB_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
+import { kybDocumentScanDisplay } from "@/lib/merchants/kyb-document-scan";
+import { formatDateTime } from "@/lib/format/dates";
+import { pilotCityLabel } from "@/lib/format/pilot-city";
+import { buildKybUpdate, KybReviewFieldKeySchema, type KybReviewDecision } from "@/lib/merchants/kyb-review-form";
 import { ROUTES } from "@/lib/routes";
+
+import { KybReviewDecisionForm } from "./kyb-review-decision-form";
+import { MerchantPicker } from "./merchant-picker";
 import { KYB_REVIEW_URL_STATE } from "@/lib/url-state/selection";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 
-const KYB_STATUSES: readonly KybStatus[] = KybStatusSchema.options;
+/** How often the detail refetches while an uploaded document is still being virus-scanned. */
+const DOCUMENT_SCAN_POLL_MS = 5_000;
 
 const KYB_FIELD_LABELS: Readonly<Record<string, string>> = {
 	registrationNo: "SSM / registration number",
@@ -53,16 +60,8 @@ const KYB_FIELD_LABELS: Readonly<Record<string, string>> = {
 	reviewNotes: "Review notes",
 };
 
-const FORM_KYB_KEYS: readonly string[] = ["registrationNo", "taxId", "documentType", "reviewNotes", "rejectionReason"];
-const DISPLAY_EXCLUDED_KYB_KEYS: readonly string[] = [...FORM_KYB_KEYS, "documents"];
-
-function formatPilotCity(city: string): string {
-	return city.replaceAll("_", " ");
-}
-
-function formatEpochMs(value: number): string {
-	return new Date(value).toLocaleString();
-}
+/** Payload keys shown in the decision form (or as documents) rather than as read-only fields. */
+const DISPLAY_EXCLUDED_KYB_KEYS: readonly string[] = [...KybReviewFieldKeySchema.options, "documents"];
 
 function formatKybFieldLabel(key: string): string {
 	return KYB_FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase());
@@ -72,7 +71,7 @@ function formatKybDisplayValue(key: string, rawValue: string): string {
 	if ((key === "reviewedAt" || key === "submittedAt") && rawValue.length > 0) {
 		const asEpoch = EpochMsSchema.safeParse(Number(rawValue));
 		if (asEpoch.success) {
-			return new Date(asEpoch.data).toLocaleString();
+			return formatDateTime(asEpoch.data);
 		}
 	}
 	return rawValue;
@@ -91,13 +90,6 @@ function formatJsonFieldValue(value: JsonObject[string] | undefined): string {
 		return String(asPrimitive.data);
 	}
 	return JSON.stringify(value);
-}
-
-function readKybStringField(kybFields: JsonObject | null, key: string): string {
-	if (kybFields === null) {
-		return "";
-	}
-	return formatJsonFieldValue(kybFields[key]);
 }
 
 function kybStatusVariant(status: KybStatus): "default" | "secondary" | "outline" | "destructive" {
@@ -134,53 +126,6 @@ function locationStatusVariant(status: OrganizationLocationStatus): "default" | 
 		return "outline";
 	}
 	return "secondary";
-}
-
-function buildKybFieldsPayload(
-	baseFields: JsonObject | null,
-	input: {
-		readonly registrationNo: string;
-		readonly taxId: string;
-		readonly documentType: string;
-		readonly reviewNotes: string;
-		readonly rejectionReason: string;
-		readonly kybStatus: KybStatus;
-	},
-): JsonObject {
-	const draft: Record<string, JsonValue> = {};
-
-	if (baseFields !== null) {
-		for (const [key, value] of Object.entries(baseFields)) {
-			if (!FORM_KYB_KEYS.includes(key) && key !== "reviewedAt") {
-				draft[key] = value;
-			}
-		}
-	}
-
-	const assignIfPresent = (key: string, value: string): void => {
-		const trimmed = value.trim();
-		if (trimmed.length > 0) {
-			draft[key] = trimmed;
-		}
-	};
-
-	assignIfPresent("registrationNo", input.registrationNo);
-	assignIfPresent("taxId", input.taxId);
-	assignIfPresent("documentType", input.documentType);
-	assignIfPresent("reviewNotes", input.reviewNotes);
-	assignIfPresent("rejectionReason", input.rejectionReason);
-	draft.reviewedAt = nowEpochMs();
-
-	if (input.kybStatus === "REJECTED" && input.rejectionReason.trim().length === 0) {
-		draft.rejectionReason = "Rejected during KYB review.";
-	}
-
-	const validated = JsonObjectSchema.safeParse(draft);
-	if (!validated.success) {
-		return { reviewedAt: nowEpochMs() };
-	}
-
-	return validated.data;
 }
 
 interface DetailFieldProps {
@@ -226,180 +171,19 @@ function MerchantQueueItem({ merchant, selected, onSelect }: MerchantQueueItemPr
 			<div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 				<p className="min-w-0 text-sm font-medium break-words">{merchant.businessName}</p>
 				<Badge className="shrink-0 self-start" variant={kybStatusVariant(merchant.kybStatus)}>
-					{merchant.kybStatus}
+					{KYB_STATUS_LABELS[merchant.kybStatus]}
 				</Badge>
 			</div>
 			<p className="text-xs text-muted-foreground">
-				{formatPilotCity(merchant.city)} · {merchant.category}
+				{pilotCityLabel(merchant.city)} · {merchant.category}
 			</p>
 		</button>
 	);
 }
 
-interface KybReviewDecisionFormProps {
-	readonly merchant: AdminMerchantDetailResponse;
-	readonly isSaving: boolean;
-	readonly onSubmitReview: (input: {
-		readonly kybStatus: KybStatus;
-		readonly registrationNo: string;
-		readonly taxId: string;
-		readonly documentType: string;
-		readonly reviewNotes: string;
-		readonly rejectionReason: string;
-	}) => void;
-}
-
-function KybReviewDecisionForm({ merchant, isSaving, onSubmitReview }: KybReviewDecisionFormProps): React.JSX.Element {
-	const [kybStatus, setKybStatus] = React.useState<KybStatus>(merchant.kybStatus);
-	const [registrationNo, setRegistrationNo] = React.useState<string>(() => readKybStringField(merchant.kybFields, "registrationNo"));
-	const [taxId, setTaxId] = React.useState<string>(() => readKybStringField(merchant.kybFields, "taxId"));
-	const [documentType, setDocumentType] = React.useState<string>(() => readKybStringField(merchant.kybFields, "documentType"));
-	const [reviewNotes, setReviewNotes] = React.useState<string>(() => readKybStringField(merchant.kybFields, "reviewNotes"));
-	const [rejectionReason, setRejectionReason] = React.useState<string>(() => readKybStringField(merchant.kybFields, "rejectionReason"));
-
-	const handleKybStatusChange = React.useCallback(function handleKybStatusChange(value: string | null): void {
-		const parsed = KybStatusSchema.safeParse(value);
-		if (parsed.success) {
-			setKybStatus(parsed.data);
-		}
-	}, []);
-
-	const handleRegistrationNoChange = React.useCallback(function handleRegistrationNoChange(event: React.ChangeEvent<HTMLInputElement>): void {
-		setRegistrationNo(event.target.value);
-	}, []);
-
-	const handleTaxIdChange = React.useCallback(function handleTaxIdChange(event: React.ChangeEvent<HTMLInputElement>): void {
-		setTaxId(event.target.value);
-	}, []);
-
-	const handleDocumentTypeChange = React.useCallback(function handleDocumentTypeChange(event: React.ChangeEvent<HTMLInputElement>): void {
-		setDocumentType(event.target.value);
-	}, []);
-
-	const handleReviewNotesChange = React.useCallback(function handleReviewNotesChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
-		setReviewNotes(event.target.value);
-	}, []);
-
-	const handleRejectionReasonChange = React.useCallback(function handleRejectionReasonChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
-		setRejectionReason(event.target.value);
-	}, []);
-
-	const submitReview = React.useCallback(
-		function submitReview(nextStatus: KybStatus): void {
-			onSubmitReview({
-				kybStatus: nextStatus,
-				registrationNo,
-				taxId,
-				documentType,
-				reviewNotes,
-				rejectionReason,
-			});
-		},
-		[documentType, onSubmitReview, registrationNo, rejectionReason, reviewNotes, taxId],
-	);
-
-	const handleSubmit = React.useCallback(
-		function handleSubmit(event: React.SubmitEvent<HTMLFormElement>): void {
-			event.preventDefault();
-			submitReview(kybStatus);
-		},
-		[kybStatus, submitReview],
-	);
-
-	const handleApprove = React.useCallback(
-		function handleApprove(): void {
-			setKybStatus("APPROVED");
-			submitReview("APPROVED");
-		},
-		[submitReview],
-	);
-
-	const handleReject = React.useCallback(
-		function handleReject(): void {
-			setKybStatus("REJECTED");
-			submitReview("REJECTED");
-		},
-		[submitReview],
-	);
-
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Review decision</CardTitle>
-				<CardDescription>Update verification fields, add notes, and approve or reject the merchant.</CardDescription>
-			</CardHeader>
-			<CardContent className="min-w-0">
-				<form className="grid min-w-0 gap-6" onSubmit={handleSubmit}>
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-						<div className="space-y-2">
-							<Label htmlFor="kyb-registration-no">SSM / registration number</Label>
-							<Input id="kyb-registration-no" value={registrationNo} onChange={handleRegistrationNoChange} placeholder="201901012345" />
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="kyb-tax-id">Tax ID</Label>
-							<Input id="kyb-tax-id" value={taxId} onChange={handleTaxIdChange} placeholder="C12345678" />
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="kyb-document-type">Document type</Label>
-							<Input id="kyb-document-type" value={documentType} onChange={handleDocumentTypeChange} placeholder="SSM certificate" />
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="kyb-status">KYB status</Label>
-							<Select value={kybStatus} onValueChange={handleKybStatusChange}>
-								<SelectTrigger id="kyb-status">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{KYB_STATUSES.map((status) => (
-										<SelectItem key={status} value={status}>
-											{status}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="kyb-review-notes">Internal review notes</Label>
-						<Textarea id="kyb-review-notes" value={reviewNotes} onChange={handleReviewNotesChange} placeholder="Notes for other admins (stored in KYB payload)." rows={3} />
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="kyb-rejection-reason">Rejection reason</Label>
-						<Textarea
-							id="kyb-rejection-reason"
-							value={rejectionReason}
-							onChange={handleRejectionReasonChange}
-							placeholder="Required context when rejecting — shared with the merchant team via KYB payload."
-							rows={3}
-						/>
-					</div>
-
-					<div className="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-between">
-						<Button type="submit" disabled={isSaving}>
-							<ShieldCheck className="mr-2 size-4" aria-hidden="true" />
-							{isSaving ? "Saving…" : "Save review"}
-						</Button>
-						<div className="flex flex-col gap-2 sm:flex-row">
-							<Button type="button" variant="outline" disabled={isSaving} onClick={handleReject}>
-								<X className="mr-2 size-4" aria-hidden="true" />
-								Reject
-							</Button>
-							<Button type="button" disabled={isSaving} onClick={handleApprove}>
-								<Check className="mr-2 size-4" aria-hidden="true" />
-								Approve
-							</Button>
-						</div>
-					</div>
-				</form>
-			</CardContent>
-		</Card>
-	);
-}
-
 export interface KybReviewPanelProps {
-	readonly initialPendingMerchants?: readonly MerchantOrgResponse[] | undefined;
+	/** The API's own envelope (real pagination meta) of the pending KYB queue, prefetched on the server. */
+	readonly initialPendingMerchants?: Envelope<MerchantOrgResponse[]> | undefined;
 }
 
 /**
@@ -416,18 +200,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 	const organizationId: string = selection.organizationId ?? "";
 	const [documentPreview, setDocumentPreview] = React.useState<MerchantKybDocumentPreviewState | null>(null);
 
-	const pendingInitialData = React.useMemo(
-		() =>
-			initialPendingMerchants !== undefined ? successEnvelope([...initialPendingMerchants], stubPaginatedMeta(50, initialPendingMerchants.length, 1, 1, false)) : undefined,
-		[initialPendingMerchants],
-	);
-
-	const pendingMerchantsQuery = api.rewardsAdmin.listOrganizations.useQuery(
-		{ page: 1, limit: 50, filter: { kybStatus: { eq: "PENDING" } } },
-		initialDataOption(pendingInitialData),
-	);
-
-	const allMerchantsQuery = api.rewardsAdmin.listOrganizations.useQuery({ page: 1, limit: 100 });
+	const pendingMerchantsQuery = api.rewardsAdmin.listOrganizations.useQuery(PENDING_KYB_MERCHANTS_QUERY, initialDataOption(initialPendingMerchants));
 
 	const merchantDetailQuery = api.rewardsAdmin.getOrganization.useQuery(
 		{ organizationId },
@@ -436,7 +209,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 			refetchInterval: (query): number | false => {
 				const documents = query.state.data?.data.documents ?? [];
 				const hasPending = documents.some((document) => document.scanStatus === "SCANNING");
-				return hasPending ? 5_000 : false;
+				return hasPending ? DOCUMENT_SCAN_POLL_MS : false;
 			},
 		},
 	);
@@ -446,8 +219,9 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 	const invalidateMerchantQueries = React.useCallback(
 		async (targetOrganizationOrgId: string): Promise<void> => {
 			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: targetOrganizationOrgId }) }),
-				queryClient.invalidateQueries({ queryKey: ["rewards-admin", "merchants"] }),
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getOrganization.scopeKey({ organizationId: targetOrganizationOrgId }) }),
+				// Every merchant list (the pending queue and the "all merchants" list alike).
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.listOrganizations.scopeKey(undefined) }),
 			]);
 		},
 		[queryClient],
@@ -540,53 +314,31 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 			await invalidateMerchantQueries(variables.organizationId);
 		},
 		onError: (error) => {
-			toastMessage.error({ title: "KYB update failed", description: error.message });
+			toastMutationError("KYB update failed", error);
 		},
 	});
 
 	const pendingMerchants = pendingMerchantsQuery.data?.data ?? [];
-	const allMerchants = allMerchantsQuery.data?.data ?? [];
+	// The server's count of every pending merchant — the queue shows only its first page.
+	const pendingTotal: number = readPaginatedTotal(pendingMerchantsQuery.data?.meta);
 
 	const handleMerchantSelect = React.useCallback(
 		function handleMerchantSelect(value: string | null): void {
+			// A cleared picker clears the selection; anything else must be a merchant id.
 			const parsed = MerchantOrgResponseSchema.shape.id.safeParse(value);
-			if (parsed.success) {
-				updateSelection({ organizationId: parsed.data });
-			}
+			updateSelection({ organizationId: parsed.success ? parsed.data : undefined });
 		},
 		[updateSelection],
 	);
 
 	const handleSubmitReview = React.useCallback(
-		function handleSubmitReview(input: {
-			readonly kybStatus: KybStatus;
-			readonly registrationNo: string;
-			readonly taxId: string;
-			readonly documentType: string;
-			readonly reviewNotes: string;
-			readonly rejectionReason: string;
-		}): void {
-			if (organizationId.length === 0 || merchant === null) {
-				toastMessage.error({ title: "Select a merchant", description: "Choose a merchant from the queue or dropdown." });
+		function handleSubmitReview(decision: KybReviewDecision): void {
+			if (merchant === null) {
 				return;
 			}
-
-			const kybFields = buildKybFieldsPayload(merchant.kybFields, {
-				registrationNo: input.registrationNo,
-				taxId: input.taxId,
-				documentType: input.documentType,
-				reviewNotes: input.reviewNotes,
-				rejectionReason: input.rejectionReason,
-				kybStatus: input.kybStatus,
-			});
-
-			updateKyb.mutate({
-				organizationId,
-				kybStatus: input.kybStatus,
-				kybFields,
-			});
+			updateKyb.mutate({ organizationId: merchant.id, ...buildKybUpdate(merchant.kybFields, decision, nowEpochMs()) });
 		},
-		[merchant, organizationId, updateKyb],
+		[merchant, updateKyb],
 	);
 
 	return (
@@ -605,7 +357,10 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 				<Card className="h-fit">
 					<CardHeader>
 						<CardTitle className="text-base">Pending queue</CardTitle>
-						<CardDescription>{pendingMerchants.length} merchant(s) awaiting verification</CardDescription>
+						<CardDescription>
+							{pendingTotal} merchant{pendingTotal === 1 ? "" : "s"} awaiting verification
+							{pendingTotal > pendingMerchants.length ? ` — showing the oldest ${String(pendingMerchants.length)}` : ""}
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="grid gap-2">
 						{pendingMerchantsQuery.isLoading ? (
@@ -632,18 +387,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 						<CardContent>
 							<div className="space-y-2">
 								<Label htmlFor="kyb-merchant-select">Merchant organization</Label>
-								<Select value={organizationId.length > 0 ? organizationId : null} onValueChange={handleMerchantSelect}>
-									<SelectTrigger id="kyb-merchant-select">
-										<SelectValue placeholder="Choose a merchant" />
-									</SelectTrigger>
-									<SelectContent>
-										{allMerchants.map((item) => (
-											<SelectItem key={item.id} value={item.id}>
-												{item.businessName} ({item.kybStatus})
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								<MerchantPicker id="kyb-merchant-select" value={organizationId} onChange={handleMerchantSelect} selectedName={merchant?.businessName} />
 							</div>
 						</CardContent>
 					</Card>
@@ -680,7 +424,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 											<CardDescription className="break-words">{merchant.legalName ?? "Legal name not provided"}</CardDescription>
 										</div>
 										<div className="flex shrink-0 flex-wrap gap-2">
-											<Badge variant={kybStatusVariant(merchant.kybStatus)}>{merchant.kybStatus}</Badge>
+											<Badge variant={kybStatusVariant(merchant.kybStatus)}>{KYB_STATUS_LABELS[merchant.kybStatus]}</Badge>
 											<Badge variant="secondary">{merchant.status}</Badge>
 										</div>
 									</div>
@@ -689,9 +433,9 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 									<div className="grid gap-4">
 										<DetailField label="Organization ID" value={merchant.id} mono />
 										<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-											<DetailField label="Pilot city" value={formatPilotCity(merchant.city)} />
+											<DetailField label="Pilot city" value={pilotCityLabel(merchant.city)} />
 											<DetailField label="Team members" value={String(merchant.memberCount)} />
-											<DetailField label="Last updated" value={formatEpochMs(merchant.updatedAt)} />
+											<DetailField label="Last updated" value={formatDateTime(merchant.updatedAt)} />
 										</div>
 									</div>
 
@@ -744,7 +488,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 														</div>
 														<p className="mt-2 text-sm text-muted-foreground">{location.addressText ?? "No address provided"}</p>
 														<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-															{location.city !== null ? <span>{formatPilotCity(location.city)}</span> : null}
+															{location.city !== null ? <span>{pilotCityLabel(location.city)}</span> : null}
 															{location.contactPhone !== null && location.contactPhone.length > 0 ? <span>{location.contactPhone}</span> : null}
 															<span className="font-mono">{location.code}</span>
 														</div>
@@ -783,6 +527,19 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 												{merchant.documents.length > 0 ? (
 													<div className="space-y-2">
 														<p className="text-sm font-medium">Uploaded documents</p>
+														<ul aria-label="Document scan status" className="grid gap-2">
+															{merchant.documents.map((document) => {
+																const scan = kybDocumentScanDisplay(document.scanStatus);
+																return (
+																	<li key={document.id} className="flex flex-wrap items-center gap-2 text-sm">
+																		<span className="min-w-0 break-all">{document.fileName}</span>
+																		<Badge variant={scan.variant} title={scan.description}>
+																			{scan.label}
+																		</Badge>
+																	</li>
+																);
+															})}
+														</ul>
 														<MerchantKybStoredDocumentList
 															documents={merchant.documents}
 															onView={handleViewDocument}
@@ -797,7 +554,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 
 									<div className="flex items-start gap-2 text-xs text-muted-foreground">
 										<Clock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-										<span className="break-words">Onboarded {formatEpochMs(merchant.createdAt)}</span>
+										<span className="break-words">Onboarded {formatDateTime(merchant.createdAt)}</span>
 									</div>
 								</CardContent>
 							</Card>
@@ -808,7 +565,8 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 								fallback={<AccessRestrictedNotice description="Updating a merchant's KYB status requires the merchant organization manage permission." />}>
 								<KybReviewDecisionForm
 									key={`${merchant.id}-${String(merchant.updatedAt)}`}
-									merchant={merchant}
+									kybStatus={merchant.kybStatus}
+									kybFields={merchant.kybFields}
 									isSaving={updateKyb.isPending}
 									onSubmitReview={handleSubmitReview}
 								/>

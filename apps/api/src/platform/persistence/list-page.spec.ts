@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchListPage, mapListResult, toPaginatedServiceResult, type ListPageSpec } from "./list-page";
+import { fetchListPage, keysetPagePosition, mapListResult, toPaginatedServiceResult, type ListPageSpec } from "./list-page";
 import { timestampIdKeyset } from "./list-query/keyset-cursor";
 import { CursorPaginationUnsupportedError, InvalidListCursorError } from "./persistence.errors";
 
@@ -74,6 +74,22 @@ describe("fetchListPage", () => {
 		expect(result.nextCursor).toBe(KEYSET.encode({ id: "row-2", createdAt: EPOCH }));
 	});
 
+	it("keyset mode derives page and hasPrevious from the rows before the cursor instead of faking them", async () => {
+		// 5 rows match; 3 lie after the cursor → 2 precede it → this slice starts on page 2.
+		const rowsAfterCursor = 3;
+		const count = vi.fn<ListPageSpec<Where, OrderBy, Row>["count"]>((where: Where) => Promise.resolve(where.AND === undefined ? TOTAL_ROWS : rowsAfterCursor));
+		const spec = buildSpec({ count });
+		const result = await fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: KEYSET.encode({ id: "row-4", createdAt: EPOCH }) }, spec);
+		expect(result).toEqual(expect.objectContaining({ total: TOTAL_ROWS, page: 2, totalPages: 3, hasPrevious: true }));
+		expect(count).toHaveBeenCalledTimes(2);
+	});
+
+	it("keyset mode reports no previous page when nothing precedes the cursor", async () => {
+		const spec = buildSpec({ count: () => Promise.resolve(TOTAL_ROWS) });
+		const result = await fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: KEYSET.encode({ id: "row-9", createdAt: EPOCH + 1 }) }, spec);
+		expect(result).toEqual(expect.objectContaining({ page: 1, hasPrevious: false }));
+	});
+
 	it("keyset mode reports the last page without a cursor", async () => {
 		const spec = buildSpec();
 		const result = await fetchListPage({ page: 1, limit: ROWS.length, cursor: KEYSET.encode({ id: "row-9", createdAt: EPOCH }) }, spec);
@@ -83,10 +99,27 @@ describe("fetchListPage", () => {
 
 	it("rejects a malformed cursor, a cursor with a custom sort, and a cursor on an offset-only resource", async () => {
 		await expect(fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: "garbage" }, buildSpec())).rejects.toBeInstanceOf(InvalidListCursorError);
+		await expect(fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: Buffer.from("{not json", "utf-8").toString("base64url") }, buildSpec())).rejects.toBeInstanceOf(
+			InvalidListCursorError,
+		);
 		await expect(
 			fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: KEYSET.encode(ROWS[0] ?? { id: "x", createdAt: EPOCH }) }, buildSpec({ order: { orderBy: [], isDefault: false } })),
 		).rejects.toBeInstanceOf(InvalidListCursorError);
 		await expect(fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: "abc" }, buildSpec({ keyset: undefined }))).rejects.toBeInstanceOf(CursorPaginationUnsupportedError);
+	});
+});
+
+describe("keysetPagePosition", () => {
+	it("places the slice on the offset page holding its first row", () => {
+		expect(keysetPagePosition(10, 10, 3)).toEqual({ page: 1, totalPages: 4, hasPrevious: false });
+		expect(keysetPagePosition(10, 7, 3)).toEqual({ page: 2, totalPages: 4, hasPrevious: true });
+		expect(keysetPagePosition(10, 1, 3)).toEqual({ page: 4, totalPages: 4, hasPrevious: true });
+	});
+
+	it("stays inside the contract's bounds when the two counts race with a write", () => {
+		expect(keysetPagePosition(4, 0, 2)).toEqual({ page: 2, totalPages: 2, hasPrevious: true });
+		expect(keysetPagePosition(4, 6, 2)).toEqual({ page: 1, totalPages: 2, hasPrevious: false });
+		expect(keysetPagePosition(0, 0, 2)).toEqual({ page: 1, totalPages: 1, hasPrevious: false });
 	});
 });
 

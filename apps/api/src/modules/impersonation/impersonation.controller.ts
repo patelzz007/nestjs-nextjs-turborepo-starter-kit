@@ -81,9 +81,9 @@ export class ImpersonationController {
 
 	/**
 	 * POST /auth/stop-impersonation
-	 * Stop impersonating — returns a confirmation message.
-	 * The frontend should discard the impersonation token and restore
-	 * the original SuperAdmin session.
+	 * Stop impersonating — ends the server-side impersonation session (which
+	 * revokes the impersonation token) and restores the original SuperAdmin
+	 * session, provided that account is still an active SuperAdmin.
 	 */
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@ApiBearerAuth()
@@ -97,7 +97,7 @@ export class ImpersonationController {
 		@Req() req: FastifyRequest,
 	): Promise<StopImpersonationServiceResponse> {
 		const payload = requireAccessToken(user);
-		if (payload.isImpersonating !== true || payload.originalUserId === undefined) {
+		if (payload.isImpersonating !== true || payload.originalUserId === undefined || payload.impersonationSessionId === undefined) {
 			throw new BadRequestException({
 				message: "Not currently impersonating",
 				error: "NOT_IMPERSONATING",
@@ -106,7 +106,7 @@ export class ImpersonationController {
 
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
-		return this.impersonationService.stopImpersonation(payload.originalUserId, payload.sub, ipAddress, userAgent);
+		return this.impersonationService.stopImpersonation(payload.originalUserId, payload.sub, payload.impersonationSessionId, ipAddress, userAgent);
 	}
 }
 

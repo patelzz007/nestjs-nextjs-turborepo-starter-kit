@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RewardClaimRedemptionLookup } from "../repositories/reward-claim.repository";
-import { checkoutRequestHash, isRewardValidAtStore, minSpendMinorFromRules, redemptionInvalidReason } from "./redemption-eligibility.util";
+import { checkoutRequestHash, redemptionInvalidReason, storeEligibility } from "./redemption-eligibility.util";
 
 const NOW = 1_790_000_000_000;
 const HOUR_MS = 3_600_000;
@@ -19,8 +19,6 @@ function lookup(
 			status: "PENDING",
 			claimExpiresAt: BigInt(NOW + HOUR_MS),
 			redemptionTokenHash: "hash",
-			backupFailedAttempts: 0,
-			backupLockedUntil: null,
 			...overrides.claim,
 		},
 		reward: {
@@ -37,53 +35,39 @@ function lookup(
 	};
 }
 
-describe("minSpendMinorFromRules", () => {
-	it("converts ringgit (including fractions) to sen", () => {
-		expect(minSpendMinorFromRules({ minSpendMyr: 20 })).toBe(2000);
-		expect(minSpendMinorFromRules({ minSpendMyr: 12.5 })).toBe(1250);
-	});
-
-	it("is null without a (valid) minimum", () => {
-		expect(minSpendMinorFromRules(null)).toBeNull();
-		expect(minSpendMinorFromRules({ maxUsePerUser: 1 })).toBeNull();
-		expect(minSpendMinorFromRules({ minSpendMyr: -1 })).toBeNull();
-	});
-});
-
-describe("isRewardValidAtStore", () => {
-	it("accepts any store for organization-wide rewards", () => {
-		expect(isRewardValidAtStore({ locationScopeType: "ALL_LOCATIONS", locationIds: [] }, STORE_B)).toBe(true);
+describe("storeEligibility", () => {
+	it("accepts any store — and an unknown store — for organization-wide rewards", () => {
+		expect(storeEligibility({ locationScopeType: "ALL_LOCATIONS", locationIds: [] }, STORE_B)).toBe("VALID");
+		expect(storeEligibility({ locationScopeType: "ALL_LOCATIONS", locationIds: [] }, null)).toBe("VALID");
 	});
 
 	it("limits store-scoped rewards to their stores", () => {
 		const reward = { locationScopeType: "SELECTED", locationIds: [STORE_A] } satisfies Pick<RewardClaimRedemptionLookup["reward"], "locationScopeType" | "locationIds">;
 
-		expect(isRewardValidAtStore(reward, STORE_A)).toBe(true);
-		expect(isRewardValidAtStore(reward, STORE_B)).toBe(false);
+		expect(storeEligibility(reward, STORE_A)).toBe("VALID");
+		expect(storeEligibility(reward, STORE_B)).toBe("NOT_VALID_AT_STORE");
 	});
 
-	it("does not refuse when the POS store is unknown (nothing to narrow against)", () => {
-		expect(isRewardValidAtStore({ locationScopeType: "SELECTED", locationIds: [STORE_A] }, null)).toBe(true);
+	it("fails closed when the POS store is unknown for a store-scoped reward", () => {
+		expect(storeEligibility({ locationScopeType: "SELECTED", locationIds: [STORE_A] }, null)).toBe("STORE_REQUIRED");
 	});
 });
 
 describe("redemptionInvalidReason", () => {
-	const base = { locationId: STORE_A, usedBackupCode: false, now: NOW };
+	const base = { locationId: STORE_A, now: NOW };
 
 	it("is null for a pending, unexpired claim valid at this store", () => {
 		expect(redemptionInvalidReason({ ...base, lookup: lookup() })).toBeNull();
 	});
 
-	it("reports redeemed, expired (by status or time), locked backup codes and the wrong store", () => {
+	it("reports redeemed, expired (by status or time), the wrong store and an unknown store", () => {
 		expect(redemptionInvalidReason({ ...base, lookup: lookup({ claim: { status: "REDEEMED" } }) })).toBe("ALREADY_REDEEMED");
 		expect(redemptionInvalidReason({ ...base, lookup: lookup({ claim: { status: "EXPIRED" } }) })).toBe("EXPIRED");
 		expect(redemptionInvalidReason({ ...base, lookup: lookup({ claim: { claimExpiresAt: BigInt(NOW - 1) } }) })).toBe("EXPIRED");
-		expect(redemptionInvalidReason({ ...base, usedBackupCode: true, lookup: lookup({ claim: { backupLockedUntil: BigInt(NOW + HOUR_MS) } }) })).toBe("BACKUP_LOCKED");
 		expect(redemptionInvalidReason({ ...base, lookup: lookup({ reward: { locationScopeType: "SELECTED", locationIds: [STORE_B] } }) })).toBe("NOT_VALID_AT_STORE");
-	});
-
-	it("ignores a backup lock when the customer showed the QR instead", () => {
-		expect(redemptionInvalidReason({ ...base, lookup: lookup({ claim: { backupLockedUntil: BigInt(NOW + HOUR_MS) } }) })).toBeNull();
+		expect(redemptionInvalidReason({ ...base, locationId: null, lookup: lookup({ reward: { locationScopeType: "SELECTED", locationIds: [STORE_A] } }) })).toBe(
+			"STORE_REQUIRED",
+		);
 	});
 });
 

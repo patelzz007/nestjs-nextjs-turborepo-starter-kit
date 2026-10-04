@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { BaseService } from "./base.service";
 import { ResourceNotFoundError } from "./persistence.errors";
@@ -6,6 +6,8 @@ import type { RepositoryListResult } from "./types";
 
 class TestRepository {
 	public found: string | null = "a";
+	/** When set, the conditional writes report the row as gone — the way the real repository answers. */
+	public writesMissing = false;
 
 	public list(): Promise<RepositoryListResult<string>> {
 		return Promise.resolve({ items: ["a", "b"], total: 12, page: 2, totalPages: 3, nextCursor: null, hasNext: true, hasPrevious: true });
@@ -19,18 +21,21 @@ class TestRepository {
 		return Promise.resolve(input);
 	}
 
-	public update(): Promise<string> {
-		return Promise.resolve("updated");
+	public update(id: string): Promise<string> {
+		return this.writesMissing ? Promise.reject(new ResourceNotFoundError(id)) : Promise.resolve("updated");
 	}
 
-	public async delete(): Promise<void> {}
+	public delete(id: string): Promise<void> {
+		return this.writesMissing ? Promise.reject(new ResourceNotFoundError(id)) : Promise.resolve();
+	}
 
 	public createMany(inputs: readonly string[]): Promise<readonly string[]> {
 		return Promise.resolve([...inputs]);
 	}
 
 	public deleteMany(ids: readonly string[]): Promise<number> {
-		return Promise.resolve(ids.length);
+		const first = ids.at(0);
+		return this.writesMissing && first !== undefined ? Promise.reject(new ResourceNotFoundError(first)) : Promise.resolve(ids.length);
 	}
 
 	public async softDelete(): Promise<void> {}
@@ -73,12 +78,27 @@ describe("BaseService", () => {
 
 		await expect(service.getById("missing-id")).rejects.toBeInstanceOf(ResourceNotFoundError);
 		await expect(service.getById("missing-id")).rejects.toMatchObject({ code: "NOT_FOUND", httpStatus: 404, details: { resourceId: "missing-id" } });
-		await expect(service.update("missing-id", "x")).rejects.toBeInstanceOf(ResourceNotFoundError);
-		await expect(service.delete("missing-id")).rejects.toBeInstanceOf(ResourceNotFoundError);
-		await expect(service.deleteMany(["missing-id"])).rejects.toBeInstanceOf(ResourceNotFoundError);
 	});
 
-	it("deletes many after verifying each id exists", async () => {
-		await expect(new TestService(new TestRepository()).deleteMany(["a", "b"])).resolves.toEqual({ deletedCount: 2 });
+	it("writes through the repository's conditional statements without a read-then-write pre-check", async () => {
+		const repository = new TestRepository();
+		const findById = vi.spyOn(repository, "findById");
+		const service = new TestService(repository);
+
+		await expect(service.update("a", "x")).resolves.toBe("updated");
+		await service.delete("a");
+		await expect(service.deleteMany(["a", "b"])).resolves.toEqual({ deletedCount: 2 });
+
+		expect(findById).not.toHaveBeenCalled();
+	});
+
+	it("propagates the repository's typed 404 when a write finds no live row", async () => {
+		const repository = new TestRepository();
+		repository.writesMissing = true;
+		const service = new TestService(repository);
+
+		await expect(service.update("missing-id", "x")).rejects.toBeInstanceOf(ResourceNotFoundError);
+		await expect(service.delete("missing-id")).rejects.toBeInstanceOf(ResourceNotFoundError);
+		await expect(service.deleteMany(["missing-id"])).rejects.toMatchObject({ httpStatus: 404, details: { resourceId: "missing-id" } });
 	});
 });

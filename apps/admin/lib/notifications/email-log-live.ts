@@ -1,93 +1,65 @@
 // ============================================
-// lib/email-log-live.ts - Live EmailLog updates (SSE)
+// lib/notifications/email-log-live.ts - live EmailLog updates (SSE)
 // ============================================
 "use client";
 
 import { API_BASE_URL, API_URL_PREFIX } from "@workspace/client/lib/api/config";
-import { EMAIL_LOG_LIST_QUERY_KEY_PREFIX } from "@workspace/client/lib/api/endpoints";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { useAuthCommands } from "@workspace/client/lib/auth";
+import { apiRoutes } from "@workspace/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { z } from "zod";
 
-/** SSE endpoint on the API — must match `EmailLogController.stream()`. */
-export const EMAIL_LOG_EVENTS_PATH = "/notifications/email-log/events";
+import { DEFAULT_RECONNECT_BACKOFF, ReconnectingEventStream, type LiveState, type ReconnectScheduler } from "@/lib/notifications/reconnecting-event-stream";
 
-/**
- * Connection state of the live stream, surfaced by the "Live" pill.
- *
- * - `connecting` — initial connect, or EventSource auto-reconnecting after a
- *   drop (EventSource reuses the CONNECTING ready-state for both, so a first
- *   connect and a reconnect are indistinguishable by design).
- * - `open` — connected, updates flow.
- * - `closed` — the stream is not expected to recover (only reachable after an
- *   explicit close; EventSource always retries drops itself).
- */
-export const LiveStateSchema = z.enum(["connecting", "open", "closed"]);
-
-export type LiveState = z.output<typeof LiveStateSchema>;
-
-// EventSource.readyState constants (spec-defined: 0 CONNECTING, 1 OPEN, 2
-// CLOSED). Declared locally so the mapper is testable in jsdom, where the
-// EventSource global is not available.
-const READY_CONNECTING = 0;
-const READY_OPEN = 1;
-
-/** Map a raw `EventSource.readyState` number to the exposed `LiveState`. */
-export function mapReadyState(readyState: number): LiveState {
-	if (readyState === READY_OPEN) {
-		return "open";
-	}
-	if (readyState === READY_CONNECTING) {
-		return "connecting";
-	}
-	return "closed";
+/** The email-log SSE endpoint (`GET /notifications/email-log/events`, LIST EMAIL). */
+export function emailLogEventsUrl(): string {
+	return new URL(`${API_URL_PREFIX}${apiRoutes.email.logEvents}`, API_BASE_URL).toString();
 }
 
+const BROWSER_SCHEDULER: ReconnectScheduler = {
+	schedule: (callback: () => void, delayMs: number): number => window.setTimeout(callback, delayMs),
+	cancel: (handle: number): void => {
+		window.clearTimeout(handle);
+	},
+};
+
 /**
- * Subscribe to the EmailLog SSE stream.
+ * Subscribes to the EmailLog SSE stream.
  *
  * Every frame is a "something changed" signal: the hook invalidates the
- * email-log list query, which refetches through the normal schema-validated
- * pipeline (including the 401 → silent-refresh flow), so the table rows update
- * the instant a webhook flips a status — no polling, no manual refresh.
+ * email-log list queries, which refetch through the normal schema-validated
+ * pipeline, so rows update the instant a webhook flips a status. Cookies are
+ * the only auth transport SSE supports (EventSource cannot set headers),
+ * hence `withCredentials: true`. When the stream is closed for good — the
+ * access token expired (401) or the API failed — `ReconnectingEventStream`
+ * refreshes the session and reconnects with backoff; it only reports
+ * `closed` once the session itself is over.
  *
- * Cookies are the only auth transport SSE supports (EventSource cannot set
- * Authorization headers), hence `withCredentials: true` — the API reads the
- * session cookies exactly like the regular fetch calls do.
- *
- * @returns The current connection state for the "Live" pill.
+ * @returns The connection state for the "Live" pill.
  */
 export function useEmailLogLive(): LiveState {
 	const queryClient = useQueryClient();
+	const { refreshSession } = useAuthCommands();
 	const [state, setState] = useState<LiveState>("connecting");
 
 	useEffect(() => {
-		const url: string = new URL(`${API_URL_PREFIX}${EMAIL_LOG_EVENTS_PATH}`, API_BASE_URL).toString();
-		const source: EventSource = new EventSource(url, { withCredentials: true });
-
-		const handleOpen = (): void => {
-			setState("open");
-		};
-		const handleMessage = (): void => {
-			void queryClient.invalidateQueries({ queryKey: EMAIL_LOG_LIST_QUERY_KEY_PREFIX });
-		};
-		const handleError = (): void => {
-			// A drop flips readyState back to CONNECTING (auto-reconnect); an
-			// explicit close only happens in cleanup, so `closed` is rare.
-			setState(mapReadyState(source.readyState));
-		};
-
-		source.addEventListener("open", handleOpen);
-		source.addEventListener("message", handleMessage);
-		source.addEventListener("error", handleError);
-
+		const stream = new ReconnectingEventStream({
+			openSource: (): EventSource => new EventSource(emailLogEventsUrl(), { withCredentials: true }),
+			refreshSession,
+			scheduler: BROWSER_SCHEDULER,
+			backoff: DEFAULT_RECONNECT_BACKOFF,
+			onMessage: (): void => {
+				// Every cached email-log page, whatever its filters/sort/page.
+				void queryClient.invalidateQueries({ queryKey: apiRouter.email.logList.scopeKey(undefined) });
+			},
+			onStateChange: setState,
+		});
+		stream.start();
 		return (): void => {
-			source.removeEventListener("open", handleOpen);
-			source.removeEventListener("message", handleMessage);
-			source.removeEventListener("error", handleError);
-			source.close();
+			stream.stop();
 		};
-	}, [queryClient]);
+	}, [queryClient, refreshSession]);
 
 	return state;
 }

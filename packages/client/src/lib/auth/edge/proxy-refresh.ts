@@ -9,10 +9,11 @@
 
 import { z } from "zod";
 
-import { MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, NodeEnvSchema } from "@workspace/shared";
+import { AuthClientTypeSchema, clientTypeHeader, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, NodeEnvSchema } from "@workspace/shared";
 
 import { API_URL_PREFIX, RUNTIME_NODE_ENV } from "../../api/config";
 import { apiRouter } from "../../api/endpoints";
+import { createTransientFailureBreaker, type TransientFailureBreaker } from "../transient-failure-breaker";
 import { decodeJwtPayload } from "./jwt";
 import { collectSetCookies, extractRotatedAccessToken, hasRotatedAuthCookies } from "./proxy-refresh-cookies";
 
@@ -33,7 +34,7 @@ export const ProxyRefreshConfigSchema = z.object({
 	refreshTokenName: z.string(),
 	accessTokenName: z.string(),
 	refreshToken: z.string(),
-	clientType: z.enum(["web", "admin", "merchant"]),
+	clientType: AuthClientTypeSchema,
 	clientOrigin: z.string(),
 });
 
@@ -150,7 +151,7 @@ export const ProxySessionRefreshInputSchema = z.object({
 	tokenAuthRoute: z.boolean().default(false),
 	accessTokenCookieName: z.string(),
 	refreshTokenCookieName: z.string(),
-	app: z.enum(["web", "admin", "merchant"]),
+	app: AuthClientTypeSchema,
 	pathname: z.string(),
 });
 
@@ -278,7 +279,7 @@ export const ProxyRefreshOutcomeSchema = z.enum(["refreshed", "dead-session", "t
 export type ProxyRefreshOutcome = z.output<typeof ProxyRefreshOutcomeSchema>;
 
 export const ProxyRefreshLogEntrySchema = z.object({
-	app: z.enum(["web", "admin", "merchant"]),
+	app: AuthClientTypeSchema,
 	pathname: z.string(),
 	status: z.number(),
 	elapsedMs: z.number(),
@@ -312,68 +313,87 @@ export function logProxyRefresh(entry: ProxyRefreshLogEntry): void {
 }
 
 /**
- * Call `POST /auth/refresh` from the proxy (server-to-server), forwarding the
- * refresh-token cookie (+ `X-Client-Type: admin` for the admin cookie set).
- * Returns the rotated tokens as raw `Set-Cookie` header strings so the proxy
- * can forward them to the browser. Never throws: network/timeout errors
- * surface as `{ ok: false, status: 0 }`.
- */
-/**
- * How long (ms) the proxy suppresses refresh re-attempts after a transient
- * failure (dead / 5xx API) so a broken API isn't hammered on every navigation
- * inside the expiry-skew window. `Date.now()`-based, not wall-clock-based.
+ * How long (ms) the proxy suppresses re-attempts after a transient failure
+ * (dead / 5xx API) — for the SAME refresh token, or for everyone once the
+ * circuit is open — so a broken API is not hammered on every navigation
+ * inside the expiry-skew window.
  */
 export const PROXY_REFRESH_COOLDOWN_MS = 60_000;
 
+/** Transient failures (any members) within `PROXY_REFRESH_CIRCUIT_WINDOW_MS` that mean "the API is down" and open the circuit for everyone. */
+export const PROXY_REFRESH_CIRCUIT_THRESHOLD = 5;
+
+export const PROXY_REFRESH_CIRCUIT_WINDOW_MS = 10_000;
+
+/** Refresh tokens whose cooldown is remembered at once (oldest dropped first). */
+export const PROXY_REFRESH_MAX_TRACKED_TOKENS = 10_000;
+
+export interface ProxyRefreshCooldownOptions {
+	readonly cooldownMs?: number | undefined;
+	readonly circuitThreshold?: number | undefined;
+	readonly circuitWindowMs?: number | undefined;
+	readonly now?: (() => number) | undefined;
+}
+
+/** SHA-256 of the refresh token: the cooldown map never holds a usable token. */
+async function refreshTokenFingerprint(refreshToken: string): Promise<string> {
+	const digest: ArrayBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(refreshToken));
+	return Array.from(new Uint8Array(digest), (byte: number): string => byte.toString(16).padStart(2, "0")).join("");
+}
+
 /**
- * Wrap a proxy refresh attempt with a transient-failure cooldown. After a
- * network/5xx failure, calls within `cooldownMs` short-circuit to
- * `{ ok: false, status: 0, skipped: true }` without making a network call —
- * this is what kills the ECONNREFUSED log noise when the API is down and the
- * user navigates repeatedly inside the expiry-skew window. A success, a
- * dead-session (401/403), or a fresh login (different token ⇒ different
- * attempt closure) resets the cooldown.
+ * Wraps a proxy refresh attempt with the shared transient-failure breaker
+ * (`../transient-failure-breaker.ts`): after a network/5xx failure the SAME
+ * refresh token short-circuits to `{ ok: false, status: 0, skipped: true }`
+ * for `cooldownMs` (no network call), and only a burst of failures across
+ * members — the API itself is down — opens the circuit for everyone. One
+ * member's failed refresh never delays another member's. A success or a dead
+ * session (401/403) settles the token and closes the circuit.
  *
- * The returned function owns the closure state, so the proxies instantiate it
- * once at module scope — it then survives across requests in the server
- * process, which is what makes the cooldown effective for real navigations.
- * (Dev-mode hot reloads can reset module state; that only re-arms the cooldown
- * window, which is harmless.)
- *
- * This is the PROXY-SIDE cooldown (Node runtime). The CLIENT-SIDE cooldown
- * lives in `use-api.ts` (`createRefreshCooldown`) — same pattern, different
- * return type. Both are intentionally separate to avoid coupling runtimes.
+ * The proxies instantiate it once at module scope, so it survives across
+ * requests in the server process (dev hot reloads only re-arm it). This is
+ * the proxy side; the browser's per-tab refresh uses the same breaker
+ * (`createRefreshCooldown` in `api-request.ts`).
  */
 export function createProxyRefreshCooldown(
 	refreshAttempt: (refreshToken: string) => Promise<ProxyRefreshResult>,
-	cooldownMs: number = PROXY_REFRESH_COOLDOWN_MS,
-): ((refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>) & { reset: () => void } {
-	let lastTransientFailureAt: number | null = null;
+	options: ProxyRefreshCooldownOptions = {},
+): ((refreshToken: string, attemptOptions?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>) & { reset: () => void } {
+	const breaker: TransientFailureBreaker = createTransientFailureBreaker({
+		cooldownMs: options.cooldownMs ?? PROXY_REFRESH_COOLDOWN_MS,
+		circuitThreshold: options.circuitThreshold ?? PROXY_REFRESH_CIRCUIT_THRESHOLD,
+		circuitWindowMs: options.circuitWindowMs ?? PROXY_REFRESH_CIRCUIT_WINDOW_MS,
+		maxTrackedKeys: PROXY_REFRESH_MAX_TRACKED_TOKENS,
+		now: options.now,
+	});
 
-	const attemptRefresh = async (refreshToken: string, options?: { readonly bypassCooldown?: boolean }): Promise<ProxyRefreshResult> => {
-		if (options?.bypassCooldown !== true && lastTransientFailureAt !== null && Date.now() - lastTransientFailureAt < cooldownMs) {
+	const attemptRefresh = async (refreshToken: string, attemptOptions?: { readonly bypassCooldown?: boolean }): Promise<ProxyRefreshResult> => {
+		const key: string = await refreshTokenFingerprint(refreshToken);
+		if (attemptOptions?.bypassCooldown !== true && breaker.isCoolingDown(key)) {
 			return { ok: false, status: 0, setCookies: [], skipped: true };
 		}
 
 		const result: ProxyRefreshResult = await refreshAttempt(refreshToken);
 		// Transient = network failure (status 0) or server error (5xx). A 401/403
-		// is a dead session, not a blip — never memoize it (the proxy must clear
+		// is a dead session, not a blip — never memoized (the proxy must clear
 		// cookies and redirect to login on every navigation until re-login).
 		if (!result.ok && result.status !== 401 && result.status !== 403) {
-			lastTransientFailureAt = Date.now();
+			breaker.recordTransientFailure(key);
 		} else {
-			lastTransientFailureAt = null;
+			breaker.recordSettled(key);
 		}
 		return result;
 	};
 
-	return Object.assign(attemptRefresh, {
-		reset(): void {
-			lastTransientFailureAt = null;
-		},
-	});
+	return Object.assign(attemptRefresh, { reset: breaker.reset });
 }
 
+/**
+ * Call `POST /auth/refresh` from the proxy (server-to-server), forwarding the
+ * refresh-token cookie and `X-Client-Type`. Returns the rotated tokens as raw
+ * `Set-Cookie` header strings so the proxy can forward them to the browser.
+ * Never throws: network/timeout errors surface as `{ ok: false, status: 0 }`.
+ */
 export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promise<ProxyRefreshResult> {
 	const controller: AbortController = new AbortController();
 	const timeoutId: ReturnType<typeof setTimeout> = setTimeout((): void => {
@@ -388,7 +408,7 @@ export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promi
 				Cookie: `${config.refreshTokenName}=${config.refreshToken}`,
 				Origin: config.clientOrigin,
 				[MUTATION_INTENT_HEADER]: MUTATION_INTENT_VALUE,
-				...(config.clientType === "web" ? {} : { "X-Client-Type": config.clientType }),
+				...clientTypeHeader(config.clientType),
 			},
 			signal: controller.signal,
 		});

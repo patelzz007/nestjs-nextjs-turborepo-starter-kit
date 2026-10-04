@@ -29,6 +29,20 @@ describe("tenantContextReducer", () => {
 		expect(tenantContextReducer(state(STORE_B.id), tenantContextActions.allLocationsSelected())).toEqual(state(null));
 	});
 
+	it("drops a rejected store as the choice and remembers it, once", () => {
+		const rejected = tenantContextReducer(state(STORE_A.id), tenantContextActions.locationRejected(STORE_A.id));
+
+		expect(rejected).toEqual({ selectedLocationId: null, rejectedLocationIds: [STORE_A.id] });
+		expect(tenantContextReducer(rejected, tenantContextActions.locationRejected(STORE_A.id))).toEqual(rejected);
+	});
+
+	it("keeps another store the member chose when a different one is rejected", () => {
+		expect(tenantContextReducer(state(STORE_B.id), tenantContextActions.locationRejected(STORE_A.id))).toEqual({
+			selectedLocationId: STORE_B.id,
+			rejectedLocationIds: [STORE_A.id],
+		});
+	});
+
 	it("never mutates the previous state", () => {
 		const previous = state(STORE_A.id);
 

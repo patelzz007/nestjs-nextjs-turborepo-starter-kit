@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { canSelectAllLocations, resolveAccessibleLocations, resolveActiveOrganizationLocations, resolveAllOrganizationLocations } from "@/lib/org/location-access";
+import {
+	canSelectAllLocations,
+	resolveAccessibleLocations,
+	resolveActiveOrganizationLocations,
+	resolveAllOrganizationLocations,
+	resolveMemberLocationAccess,
+} from "@/lib/org/location-access";
 import { locationFixture, organizationContextFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/test/tenant-context";
 import { STORE_B } from "@/test/terminals";
 
@@ -30,9 +36,23 @@ describe("organization location access", () => {
 		expect(resolveAccessibleLocations(context)).toEqual([STORE_B_LOCATION]);
 	});
 
-	it("offers org-wide rollups only to members with more than one store", () => {
-		expect(canSelectAllLocations([STORE_A_LOCATION, STORE_B_LOCATION])).toBe(true);
-		expect(canSelectAllLocations([STORE_A_LOCATION])).toBe(false);
-		expect(canSelectAllLocations([])).toBe(false);
+	it("records whether the membership covers the whole organization", () => {
+		expect(resolveMemberLocationAccess(organizationContextFixture({ locations: [STORE_A_LOCATION] }))).toEqual({
+			locations: [STORE_A_LOCATION],
+			hasOrganizationWideAccess: true,
+		});
+		expect(
+			resolveMemberLocationAccess(organizationContextFixture({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_B.id] })),
+		).toEqual({ locations: [STORE_B_LOCATION], hasOrganizationWideAccess: false });
+	});
+
+	it("offers org-wide rollups only to all-locations members with more than one store", () => {
+		expect(canSelectAllLocations({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], hasOrganizationWideAccess: true })).toBe(true);
+		expect(canSelectAllLocations({ locations: [STORE_A_LOCATION], hasOrganizationWideAccess: true })).toBe(false);
+		expect(canSelectAllLocations({ locations: [], hasOrganizationWideAccess: true })).toBe(false);
+	});
+
+	it("never offers org-wide rollups to a store-limited member, however many stores they have", () => {
+		expect(canSelectAllLocations({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], hasOrganizationWideAccess: false })).toBe(false);
 	});
 });

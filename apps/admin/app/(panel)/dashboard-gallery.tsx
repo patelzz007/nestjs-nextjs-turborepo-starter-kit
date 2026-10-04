@@ -7,7 +7,6 @@ import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 
 import type { AccordionDemoItem } from "@/components/showcase/accordion-showcase";
-import { ChartSkeleton } from "@/components/dashboard/chart-skeleton";
 import { LazySection } from "@/components/common/lazy-section";
 import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
 
@@ -30,15 +29,8 @@ const selectSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h
 const alertSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-40" />;
 const toastSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-40" />;
 
-// The chart sits right below the platform sales cards, so it loads immediately (its own
-// chart-shaped skeleton shows while the recharts chunk downloads). Everything
-// BELOW it is viewport-gated by `<LazySection>` and only mounts when scrolled
-// near — the chunk then downloads on demand and the section fades in.
-const ChartAreaInteractive = dynamic(() => import("@/components/dashboard/chart-area-interactive").then((m) => m.ChartAreaInteractive), {
-	ssr: false,
-	loading: ChartSkeleton,
-});
-
+// Every gallery section is viewport-gated by `<LazySection>` and only mounts
+// when scrolled near — the chunk then downloads on demand and the section fades in.
 const DataTableShowcase = dynamic(() => import("@/components/showcase/data-table-showcase").then((m) => m.DataTableShowcase), {
 	ssr: false,
 	loading: tableSectionLoading,
@@ -81,45 +73,27 @@ const faqItems: readonly AccordionDemoItem[] = [
 	{
 		id: "faq-roles",
 		value: "faq-roles",
-		title: "How do roles and permissions work?",
-		body: "Roles group permissions into named sets (e.g. Manager, Support). Every request is checked against the permission list on your access token, so revoking a role takes effect on the next refresh — not immediately.",
-	},
-	{
-		id: "faq-sessions",
-		value: "faq-sessions",
-		title: "Why was I signed out of a session?",
-		body: "Sessions rotate their refresh token on every renewal. If a token is ever reused — two tabs refreshing at the same instant, for example — the reuse-detection kicks in and all sessions for that account are revoked for safety.",
+		title: "When does a role or permission change take effect?",
+		body: "On the user's next request. Every access token carries the account's token version, and the API rejects a token whose version is stale — so a revoked role or permission stops working immediately, without waiting for the token to expire.",
 	},
 	{
 		id: "faq-two-factor",
 		value: "faq-two-factor",
-		title: "Is two-factor authentication supported?",
-		body: "Not yet. The auth service already records device + IP metadata per session, so TOTP enrolment can be layered on top without schema changes. Tracked in docs/auth-roadmap.md.",
-	},
-	{
-		id: "faq-deploy",
-		value: "faq-deploy",
-		title: "Can I deploy to my own VPS?",
-		body: "Yes — the admin panel ships as a standalone Next.js build and the API as plain Nest ESM. Point PM2 or Docker at pnpm start:prod, set the env vars from .env.example, and you're live.",
+		title: "Is two-factor authentication required for admins?",
+		body: "Yes. An admin must enrol an authenticator app before the panel opens; until then the session is restricted to the account pages.",
 		// Nested sub-topics — the showcase renders these as an inner accordion.
 		children: [
 			{
-				id: "faq-deploy-docker",
-				value: "faq-deploy-docker",
-				title: "Docker or PM2?",
-				body: "Both work. PM2 is the lightest path (pnpm start:prod per app); Docker is better when you want pinned Node versions and reproducible builds.",
+				id: "faq-two-factor-backup",
+				value: "faq-two-factor-backup",
+				title: "What if my authenticator is not at hand?",
+				body: "Sign in with one of the single-use backup codes shown at enrolment.",
 			},
 			{
-				id: "faq-deploy-proxy",
-				value: "faq-deploy-proxy",
-				title: "What about the reverse proxy?",
-				body: "Put Nginx or Caddy in front of :3001/:3000/:8080. TLS is terminated at the proxy; the apps themselves stay plain HTTP on localhost.",
-			},
-			{
-				id: "faq-deploy-env",
-				value: "faq-deploy-env",
-				title: "Which env vars are required?",
-				body: "DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, and the cookie config. Copy .env.example and fill in real secrets — never reuse dev values.",
+				id: "faq-two-factor-recovery",
+				value: "faq-two-factor-recovery",
+				title: "What if I lost both the device and the backup codes?",
+				body: "Request MFA recovery from the login screen. A super-admin reviews the request in Users → MFA recovery before two-factor is reset.",
 			},
 		],
 	},
@@ -226,7 +200,6 @@ const variantItems: readonly AccordionDemoItem[] = [
 
 /** Anchor targets for the in-page demo index — data lives at the page (rule 10). */
 const DEMO_ANCHORS: readonly { readonly id: string; readonly label: string }[] = [
-	{ id: "demo-chart", label: "Charts" },
 	{ id: "demo-breadcrumbs", label: "Breadcrumbs" },
 	{ id: "demo-table", label: "Table" },
 	{ id: "demo-accordion", label: "Accordion" },
@@ -270,12 +243,12 @@ export default function Page(): React.JSX.Element {
 				</nav>
 
 				<PlatformSalesCards />
-				<div id="demo-chart" className="scroll-mt-4 px-4 lg:px-6">
-					{/* Chart skeleton → real chart is an instant swap once the recharts
-					    chunk resolves (standard dashboard behavior — the below-fold
-					    sections get the fade/slide reveal animations instead). */}
-					<ChartAreaInteractive />
-				</div>
+				{/* Everything below is the UI kit's component gallery: sample content
+				    that demonstrates the components, never live platform data. */}
+				<header className="px-4 lg:px-6">
+					<h2 className="text-base font-semibold tracking-tight text-foreground">Component gallery</h2>
+					<p className="text-sm text-muted-foreground">UI kit examples with sample content — not live platform data.</p>
+				</header>
 				<div id="demo-breadcrumbs" className="scroll-mt-4">
 					<LazySection height="h-24">
 						<BreadcrumbShowcase />

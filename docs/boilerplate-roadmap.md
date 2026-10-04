@@ -146,7 +146,7 @@ and (b) pins `react`, `react-dom`, `zod`, `typescript` to **exact** versions.
 workspace. The commands live in **`packages/tooling`** and are wired as **turbo
 tasks** — `pnpm deps:check` (fails on drift — CI-ready), `pnpm deps:fix`
 (auto-aligns), `pnpm deps:list` (prints versions); root `pnpm deps:*` scripts
-delegate to `turbo run deps:*`. See [dependencies.md](./dependencies.md).
+delegate to `turbo run deps:*`. See [dependencies.md](./technical/tooling/dependencies.md).
 
 ---
 

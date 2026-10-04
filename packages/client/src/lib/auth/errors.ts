@@ -9,7 +9,7 @@
 // technical / inconsistent). This catalog is the single place the apps own the
 // wording, keyed by the stable code.
 
-import { ApiErrorBodySchema, AuthErrorCodeSchema, EpochMsSchema, LockedErrorCodeSchema, type CaughtValue, type EpochMs } from "@workspace/shared";
+import { ApiErrorBodySchema, AuthErrorCodeSchema, type CaughtValue } from "@workspace/shared";
 import { z } from "zod";
 
 import { ApiError } from "../api/use-api";
@@ -29,7 +29,6 @@ export type AuthMessageCatalog = z.output<typeof AuthMessageCatalogSchema>;
 
 const EN_MESSAGES: AuthMessageCatalog = {
 	INVALID_CREDENTIALS: "Incorrect email or password. Please try again.",
-	ACCOUNT_LOCKED: "Account temporarily locked due to too many failed attempts.",
 	ADMIN_ACCESS_REQUIRED: "This account doesn't have admin panel access.",
 	EMAIL_NOT_VERIFIED: "Please verify your email address before continuing.",
 	ACCESS_TOKEN_MISSING: "Your session is missing an access token. Please log in again.",
@@ -59,13 +58,6 @@ const NonEmptyStringSchema = z.string().min(1);
 
 const ErrorWithMessageSchema = z.object({
 	message: NonEmptyStringSchema,
-});
-
-/** Full lockout payload on an `ACCOUNT_LOCKED` response. */
-const AccountLockedErrorSchema = ApiErrorBodySchema.extend({
-	error: LockedErrorCodeSchema,
-	lockedUntil: EpochMsSchema,
-	remainingSeconds: z.number().int().min(0),
 });
 
 /**
@@ -118,21 +110,4 @@ export function resolveAuthErrorMessage(error: CaughtValue, locale: Locale = DEF
 	}
 
 	return extractAuthErrorMessage(error) ?? GENERIC_MESSAGE;
-}
-
-/**
- * True when the thrown error is an `ACCOUNT_LOCKED` response carrying a lockout
- * payload — the login form uses this to render a live countdown instead of the
- * static message.
- */
-export function isAccountLockedError(error: CaughtValue): error is ApiError & { readonly lockedUntil: EpochMs; readonly remainingSeconds: number } {
-	if (!(error instanceof ApiError)) return false;
-
-	return AccountLockedErrorSchema.safeParse({
-		message: error.message,
-		error: error.error,
-		statusCode: error.statusCode,
-		lockedUntil: error.lockedUntil,
-		remainingSeconds: error.remainingSeconds,
-	}).success;
 }

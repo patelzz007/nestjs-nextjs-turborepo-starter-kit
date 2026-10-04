@@ -1,18 +1,16 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useEffect, useRef } from "react";
 
 import { consumeEmailVerifiedToast } from "./verified-toast";
-import { useAuth, useAuthCommands } from "../index";
-import { syncSessionAfterEmailVerification } from "./sync-after-verification";
 
-/** Shows a one-time success toast and refreshes the session after email verification. */
+/**
+ * Shows the one-time "email verified" toast the verify page left behind. The
+ * session was already rotated and re-read by the verify page itself
+ * (`VerifyEmailView`), so nothing is synced again here.
+ */
 export function useEmailVerifiedToast(): void {
-	const queryClient = useQueryClient();
-	const { api } = useAuth();
-	const sessionCommands = useAuthCommands();
 	const handledRef = useRef(false);
 
 	useEffect((): void => {
@@ -25,9 +23,5 @@ export function useEmailVerifiedToast(): void {
 			title: "Email verified",
 			description: "Your email address has been successfully verified.",
 		});
-
-		void (async (): Promise<void> => {
-			await syncSessionAfterEmailVerification(api, sessionCommands, queryClient);
-		})();
-	}, [api, queryClient, sessionCommands]);
+	}, []);
 }

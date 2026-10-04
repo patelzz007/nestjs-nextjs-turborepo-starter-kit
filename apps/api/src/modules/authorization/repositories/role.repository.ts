@@ -3,102 +3,149 @@ import type { Prisma, Role } from "@prisma/client";
 
 import { nowEpochMs, type PaginationInput } from "@workspace/shared";
 
-import { BaseRepository } from "../../../platform/persistence/base.repository";
-import type { ListOrder } from "../../../platform/persistence/list-query/list-order";
+import { fetchListPage } from "../../../platform/persistence/list-page";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
-import type { CreateRoleInput, UpdateRoleInput } from "../services/role.service";
-
-function toDomain(row: Role): Role {
-	return row;
+/** Fields an API caller may set when creating a role (`isSystem` is never one of them). */
+export interface CreateRoleInput {
+	readonly name: string;
+	readonly description?: string | undefined;
+	readonly parentId?: string | undefined;
 }
 
-function toCreateInput(input: CreateRoleInput): Prisma.RoleCreateInput {
+/** Fields an API caller may change on a non-system role. */
+export interface UpdateRoleInput {
+	readonly name?: string | undefined;
+	readonly description?: string | undefined;
+	readonly isActive?: boolean | undefined;
+}
+
+/** A role's id and parent link, read regardless of its deleted / active state. */
+export interface RoleParentLink {
+	readonly id: string;
+	readonly parentId: string | null;
+}
+
+const ROLE_LIST_ORDER: Prisma.RoleOrderByWithRelationInput[] = [{ name: "asc" }, { id: "asc" }];
+
+function toUpdateData(input: UpdateRoleInput): Prisma.RoleUpdateInput {
 	return {
-		name: input.name,
-		description: input.description ?? null,
-		...(input.parentId !== undefined ? { parent: { connect: { id: input.parentId } } } : {}),
+		...(input.name !== undefined ? { name: input.name } : {}),
+		...(input.description !== undefined ? { description: input.description } : {}),
+		...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+		updatedAt: nowEpochMs(),
 	};
 }
 
-function toUpdateInput(input: UpdateRoleInput): Prisma.RoleUpdateInput {
-	const data: Prisma.RoleUpdateInput = {};
-	if (input.name !== undefined) {
-		data.name = input.name;
-	}
-	if (input.description !== undefined) {
-		data.description = input.description;
-	}
-	if (input.isActive !== undefined) {
-		data.isActive = input.isActive;
-	}
-	return data;
-}
-
-const RoleRepositoryPorts = {
-	toDomain,
-	toCreateInput,
-	toUpdateInput,
-	buildListWhere: (): Prisma.RoleWhereInput => ({ isDeleted: false }),
-	// Internal catalog read (no HTTP list query): name order, offset pages only.
-	buildListOrder: (): ListOrder<Prisma.RoleOrderByWithRelationInput> => ({ orderBy: [{ name: "asc" }, { id: "asc" }], isDefault: true }),
-	andWhere: (left: Prisma.RoleWhereInput, right: Prisma.RoleWhereInput): Prisma.RoleWhereInput => ({ AND: [left, right] }),
-	buildFindByIdWhere: (id: string): Prisma.RoleWhereInput => ({ id, isDeleted: false }),
-	buildUpdateWhere: (id: string): Prisma.RoleWhereUniqueInput => ({ id }),
-	stampUpdate: (data: Prisma.RoleUpdateInput): Prisma.RoleUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.RoleUpdateInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.RoleUpdateInput => ({ isDeleted: false, deletedAt: null, isActive: true, updatedAt: nowEpochMs() }),
-};
-
+/**
+ * Persistence for `roles`. Every write takes the caller's transaction client:
+ * RBAC writes only ever run inside `RbacMutationRunner` (one transaction with
+ * the session revocation and the audit row), never on a bare connection.
+ */
 @Injectable()
-export class RoleRepository extends BaseRepository<
-	Role,
-	CreateRoleInput,
-	UpdateRoleInput,
-	PaginationInput,
-	Role,
-	Prisma.RoleWhereInput,
-	Prisma.RoleOrderByWithRelationInput,
-	Prisma.RoleCreateInput,
-	Prisma.RoleUpdateInput,
-	Prisma.RoleWhereUniqueInput
-> {
-	public constructor(prisma: PrismaService) {
-		super(prisma, RoleRepositoryPorts, prisma.role, { softDelete: true, concurrency: false });
+export class RoleRepository {
+	public constructor(private readonly prisma: PrismaService) {}
+
+	public async findById(roleId: string, db: Prisma.TransactionClient = this.prisma): Promise<Role | null> {
+		return db.role.findFirst({ where: { id: roleId, isDeleted: false } });
 	}
 
-	public async findByName(name: string): Promise<Role | null> {
-		return this.prisma.role.findFirst({
-			where: { name, isDeleted: false },
-		});
+	public async findByIdIncludingDeleted(roleId: string, db: Prisma.TransactionClient): Promise<Role | null> {
+		return db.role.findFirst({ where: { id: roleId } });
+	}
+
+	public async findByName(name: string, db: Prisma.TransactionClient = this.prisma): Promise<Role | null> {
+		return db.role.findFirst({ where: { name, isDeleted: false } });
+	}
+
+	/** `roles.name` is unique across soft-deleted rows too — used to reject a create that would collide. */
+	public async findByNameIncludingDeleted(name: string, db: Prisma.TransactionClient): Promise<Role | null> {
+		return db.role.findFirst({ where: { name } });
 	}
 
 	public async findByNames(names: readonly string[]): Promise<Role[]> {
 		if (names.length === 0) {
 			return [];
 		}
-		return this.prisma.role.findMany({
-			where: { name: { in: [...names] }, isDeleted: false },
+		return this.prisma.role.findMany({ where: { name: { in: [...names] }, isDeleted: false } });
+	}
+
+	public async list(query: PaginationInput): Promise<RepositoryListResult<Role>> {
+		const where: Prisma.RoleWhereInput = { isDeleted: false };
+		return fetchListPage(query, {
+			where,
+			order: { orderBy: ROLE_LIST_ORDER, isDefault: true },
+			and: (left: Prisma.RoleWhereInput, right: Prisma.RoleWhereInput): Prisma.RoleWhereInput => ({ AND: [left, right] }),
+			count: (countWhere: Prisma.RoleWhereInput) => this.prisma.role.count({ where: countWhere }),
+			findMany: (args) => this.prisma.role.findMany(args),
 		});
 	}
 
-	public async findDeletedById(roleId: string): Promise<Role | null> {
-		return this.prisma.role.findFirst({
-			where: { id: roleId, isDeleted: true },
+	/** Parent links of `roleIds`, whatever their deleted / active state (privilege and cycle checks must see every ancestor). */
+	public async findParentLinks(roleIds: readonly string[], db: Prisma.TransactionClient): Promise<RoleParentLink[]> {
+		if (roleIds.length === 0) {
+			return [];
+		}
+		return db.role.findMany({ where: { id: { in: [...roleIds] } }, select: { id: true, parentId: true } });
+	}
+
+	/** Direct children of `roleIds`, whatever their state. */
+	public async findChildIds(roleIds: readonly string[], db: Prisma.TransactionClient): Promise<string[]> {
+		if (roleIds.length === 0) {
+			return [];
+		}
+		const rows = await db.role.findMany({ where: { parentId: { in: [...roleIds] } }, select: { id: true } });
+		return rows.map((row): string => row.id);
+	}
+
+	/** Active, non-deleted parent links — the hierarchy the kernel actually evaluates. */
+	public async findEffectiveParentLinks(roleIds: readonly string[], db: Prisma.TransactionClient): Promise<RoleParentLink[]> {
+		if (roleIds.length === 0) {
+			return [];
+		}
+		return db.role.findMany({ where: { id: { in: [...roleIds] }, isDeleted: false, isActive: true }, select: { id: true, parentId: true } });
+	}
+
+	/** Names of active, non-deleted roles among `roleIds`. */
+	public async findEffectiveNames(roleIds: readonly string[], db: Prisma.TransactionClient): Promise<Map<string, string>> {
+		if (roleIds.length === 0) {
+			return new Map<string, string>();
+		}
+		const rows = await db.role.findMany({ where: { id: { in: [...roleIds] }, isDeleted: false, isActive: true }, select: { id: true, name: true } });
+		return new Map<string, string>(rows.map((row): [string, string] => [row.id, row.name]));
+	}
+
+	/** Non-deleted system roles among `names` (missing names are simply absent). */
+	public async findSystemRolesByName(names: readonly string[], db: Prisma.TransactionClient): Promise<Role[]> {
+		return db.role.findMany({ where: { name: { in: [...names] }, isSystem: true, isDeleted: false } });
+	}
+
+	public async create(input: CreateRoleInput, db: Prisma.TransactionClient): Promise<Role> {
+		return db.role.create({
+			data: {
+				name: input.name,
+				description: input.description ?? null,
+				isSystem: false,
+				...(input.parentId !== undefined ? { parent: { connect: { id: input.parentId } } } : {}),
+			},
 		});
 	}
 
-	public async findAncestorsWithParent(roleId: string): Promise<readonly Pick<Role, "parentId">[]> {
-		return this.prisma.role.findMany({
-			where: { id: roleId, isDeleted: false, parentId: { not: null } },
-			select: { parentId: true },
-		});
+	public async update(roleId: string, input: UpdateRoleInput, db: Prisma.TransactionClient): Promise<Role> {
+		return db.role.update({ where: { id: roleId }, data: toUpdateData(input) });
 	}
 
-	public async setParent(roleId: string, parentId: string | null): Promise<Role> {
-		return this.prisma.role.update({
-			where: { id: roleId },
-			data: { parentId, updatedAt: nowEpochMs() },
-		});
+	public async softDelete(roleId: string, db: Prisma.TransactionClient): Promise<void> {
+		const now = nowEpochMs();
+		await db.role.update({ where: { id: roleId }, data: { isDeleted: true, deletedAt: now, updatedAt: now } });
+	}
+
+	public async restore(roleId: string, db: Prisma.TransactionClient): Promise<Role> {
+		return db.role.update({ where: { id: roleId }, data: { isDeleted: false, deletedAt: null, isActive: true, updatedAt: nowEpochMs() } });
+	}
+
+	public async setParent(roleId: string, parentId: string | null, db: Prisma.TransactionClient): Promise<Role> {
+		return db.role.update({ where: { id: roleId }, data: { parentId, updatedAt: nowEpochMs() } });
 	}
 }

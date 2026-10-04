@@ -3,17 +3,17 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import {
 	EmailPreviewListResponseSchema,
+	epochMs,
 	EmailPreviewSchema,
 	EmailTemplateKeySchema,
 	PERMISSION,
 	type CapabilitySlug,
 	type EmailPreview,
 	type EmailPreviewListResponse,
+	type Envelope,
 } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { successEnvelope, stubApiMeta } from "@workspace/client/lib/api/envelope";
 
 import EmailPreviewView from "../email-templates";
 
@@ -78,10 +78,17 @@ vi.mock("@workspace/client/lib/auth", () => {
 
 const PATH = "/emails/templates";
 
+/** The prefetched list as the API returns it — a fixed, real-shaped meta. */
+const LIST_ENVELOPE: Envelope<EmailPreviewListResponse> = {
+	success: true,
+	data: EmailPreviewListResponseSchema.parse(LIST),
+	meta: { correlationId: "test-correlation", timestamp: epochMs(1_786_300_000_000) },
+};
+
 function view(capabilities: readonly CapabilitySlug[]): React.JSX.Element {
 	return (
 		<CapabilitiesProvider capabilities={capabilities}>
-			<EmailPreviewView initialList={successEnvelope(EmailPreviewListResponseSchema.parse(LIST), stubApiMeta())} />
+			<EmailPreviewView initialList={LIST_ENVELOPE} />
 		</CapabilitiesProvider>
 	);
 }
@@ -110,7 +117,7 @@ describe("Email templates authorization", () => {
 	it("shows Send test email disabled with a reason for read-only sessions", () => {
 		renderView([PERMISSION.EMAIL.READ]);
 		const button = screen.getByRole("button", { name: "Send test email" });
-		expect(button.hasAttribute("disabled")).toBe(true);
+		expect(button.getAttribute("aria-disabled")).toBe("true");
 		expect(screen.getByText("Sending test emails requires the email create permission.")).toBeDefined();
 	});
 });

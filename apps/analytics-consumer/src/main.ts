@@ -1,24 +1,17 @@
+import { setTimeout as delay } from "node:timers/promises";
+
 import { EnvValidationError, KAFKA_TOPICS } from "@workspace/shared";
-import { Kafka } from "kafkajs";
-import pg from "pg";
 
 import { loadConsumerEnv, type ConsumerEnv } from "./env";
-import { InboxRetentionScheduler } from "./inbox-retention";
+import { RetentionScheduler } from "./inbox-retention";
+import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./kafka";
 import { createConsoleJsonLogger } from "./logger";
-import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type MessageHandlerDeps } from "./message-handler";
-import { PgInboxStore } from "./pg-inbox-store";
+import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type AbortableSleep, type MessageHandlerDeps } from "./message-handler";
+import { createConsumerPool, PgInboxStore } from "./pg-inbox-store";
 
-const SUBSCRIBE_RETRY_DELAY_MS = 1_000;
-const SUBSCRIBE_MAX_ATTEMPTS = 10;
 const SERVICE_NAME = "analytics-consumer";
 /** Exit code for "the worker cannot start with this configuration". */
 const INVALID_CONFIGURATION_EXIT_CODE = 1;
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolveSleep): void => {
-		setTimeout(resolveSleep, ms);
-	});
-}
 
 /** Validate the environment before connecting to anything; print a value-free error and exit if invalid. */
 function loadEnvOrExit(): ConsumerEnv {
@@ -36,69 +29,54 @@ function loadEnvOrExit(): ConsumerEnv {
 const env: ConsumerEnv = loadEnvOrExit();
 
 const logger = createConsoleJsonLogger(SERVICE_NAME);
-const pool = new pg.Pool({ connectionString: env.DATABASE_URL });
-const kafka = new Kafka({ clientId: SERVICE_NAME, brokers: env.KAFKA_BROKERS });
-// The group id doubles as the inbox consumer id — each logical consumer dedupes on its own.
-const consumer = kafka.consumer({ groupId: ANALYTICS_CONSUMER_ID });
+const pool = createConsumerPool(env.databaseUrl, env.dbPool);
+// An idle pooled connection can fail (server restart, network); log it instead of crashing the process.
+pool.on("error", (error: Error): void => {
+	logger.error({ event: "analytics.db_pool_error", error: error.message });
+});
 
+const kafkaClient = createKafkaClient(env.kafka, logger);
+const kafka = kafkaClient.kafka;
+// The group id doubles as the inbox consumer id — each logical consumer dedupes on its own.
+const consumer = kafka.consumer(buildConsumerConfig(ANALYTICS_CONSUMER_ID, env.startFrom));
 const inboxStore = new PgInboxStore(pool);
+const shutdownSignal = new AbortController();
+
+const sleep: AbortableSleep = (delayMs: number, signal: AbortSignal): Promise<void> => delay(delayMs, undefined, { signal });
 
 const handlerDeps: MessageHandlerDeps = {
 	store: inboxStore,
 	logger,
 	consumerId: ANALYTICS_CONSUMER_ID,
 	nowMs: (): number => Date.now(),
+	retry: env.retry,
+	deadLetterMaxPayloadBytes: env.deadLetterMaxPayloadBytes,
+	sleep,
+	random: Math.random,
+	signal: shutdownSignal.signal,
 };
 
-// Hourly purge of inbox claims older than ANALYTICS_INBOX_RETENTION_DAYS (advisory-locked: one instance at a time).
-const inboxRetention = new InboxRetentionScheduler({
+// Hourly purge of inbox claims and parked messages past their windows (advisory-locked: one instance at a time).
+const retention = new RetentionScheduler({
 	store: inboxStore,
 	logger,
 	nowMs: (): number => Date.now(),
-	retentionDays: env.ANALYTICS_INBOX_RETENTION_DAYS,
+	consumerId: ANALYTICS_CONSUMER_ID,
+	inboxRetentionDays: env.inboxRetentionDays,
+	deadLetterRetentionDays: env.deadLetterRetentionDays,
 });
 
 let shutdownStarted = false;
 
-/** Platform topics are created by the API producer on first publish — ensure they exist before subscribing. */
-async function ensureKafkaTopics(): Promise<void> {
+/** Topics are provisioned explicitly — refuse to start (with the provisioning hint) if one is missing. */
+async function verifyTopics(): Promise<void> {
 	const admin = kafka.admin();
 	await admin.connect();
 	try {
-		const existingTopics: string[] = await admin.listTopics();
-		const missingTopics = KAFKA_TOPICS.filter((topic: (typeof KAFKA_TOPICS)[number]): boolean => !existingTopics.includes(topic));
-		if (missingTopics.length === 0) {
-			return;
-		}
-		await admin.createTopics({
-			topics: missingTopics.map((topic) => ({
-				topic,
-				numPartitions: 1,
-				replicationFactor: 1,
-			})),
-			waitForLeaders: true,
-		});
-		logger.info({ event: "analytics.topics_created", topics: missingTopics.join(",") });
+		await assertTopicsExist(admin, KAFKA_TOPICS, env.kafka.adminTimeoutMs);
 	} finally {
 		await admin.disconnect();
 	}
-}
-
-async function subscribeToPlatformTopics(): Promise<void> {
-	let lastError: Error | undefined;
-	for (let attempt = 1; attempt <= SUBSCRIBE_MAX_ATTEMPTS; attempt += 1) {
-		try {
-			await consumer.subscribe({ topics: [...KAFKA_TOPICS], fromBeginning: false });
-			return;
-		} catch (error) {
-			lastError = error instanceof Error ? error : new Error(String(error));
-			if (attempt < SUBSCRIBE_MAX_ATTEMPTS) {
-				logger.warn({ event: "analytics.subscribe_retry", attempt, error: lastError.message });
-				await sleep(SUBSCRIBE_RETRY_DELAY_MS * attempt);
-			}
-		}
-	}
-	throw lastError ?? new Error("Kafka subscribe failed");
 }
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
@@ -107,22 +85,26 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 	}
 	shutdownStarted = true;
 
-	logger.info({ event: "analytics.shutdown_started", signal, timeoutMs: env.SHUTDOWN_TIMEOUT_MS });
+	logger.info({ event: "analytics.shutdown_started", signal, timeoutMs: env.shutdownTimeoutMs });
 
 	const forceExitTimer: NodeJS.Timeout = setTimeout((): void => {
-		logger.error({ event: "analytics.shutdown_timed_out", timeoutMs: env.SHUTDOWN_TIMEOUT_MS });
+		logger.error({ event: "analytics.shutdown_timed_out", timeoutMs: env.shutdownTimeoutMs });
 		process.exit(1);
-	}, env.SHUTDOWN_TIMEOUT_MS);
+	}, env.shutdownTimeoutMs);
 
+	// A record waiting between retries is released un-committed (redelivered after restart).
+	shutdownSignal.abort();
 	try {
 		await consumer.disconnect();
-		await inboxRetention.stop();
+		await retention.stop();
 		await pool.end();
 		clearTimeout(forceExitTimer);
+		kafkaClient.flushLogs();
 		logger.info({ event: "analytics.shutdown_completed" });
 		process.exit(0);
 	} catch (error) {
 		clearTimeout(forceExitTimer);
+		kafkaClient.flushLogs();
 		logger.error({ event: "analytics.shutdown_failed", error: error instanceof Error ? error.message : String(error) });
 		process.exit(1);
 	}
@@ -140,28 +122,30 @@ function registerGracefulShutdown(): void {
 async function main(): Promise<void> {
 	registerGracefulShutdown();
 
-	await ensureKafkaTopics();
+	await verifyTopics();
 	await consumer.connect();
-	await subscribeToPlatformTopics();
-	logger.info({ event: "analytics.subscribed", topics: KAFKA_TOPICS.join(","), groupId: ANALYTICS_CONSUMER_ID });
+	await consumer.subscribe({ topics: [...KAFKA_TOPICS] });
+	logger.info({ event: "analytics.subscribed", topics: KAFKA_TOPICS.join(","), groupId: ANALYTICS_CONSUMER_ID, startFrom: env.startFrom });
 
 	await consumer.run({
-		// At-least-once: the offset commits only after the handler resolves. The
-		// handler dedupes redeliveries via the inbox and parks poison messages;
-		// it only throws on transient failures, which kafkajs retries with backoff.
+		// At-least-once: the offset is stored only after the handler resolves —
+		// applied, deduplicated, or durably parked. The handler retries
+		// transient failures itself (bounded), so it only rejects when parking
+		// is impossible or shutdown interrupts it; the record is then redelivered.
 		eachMessage: async ({ topic, partition, message }): Promise<void> => {
 			await handlePlatformMessage({ topic, partition, offset: message.offset, value: message.value }, handlerDeps);
 		},
 	});
 
-	inboxRetention.start();
-	logger.info({ event: "analytics.inbox_retention_scheduled", retentionDays: env.ANALYTICS_INBOX_RETENTION_DAYS });
+	retention.start();
+	logger.info({ event: "analytics.retention_scheduled", inboxRetentionDays: env.inboxRetentionDays, deadLetterRetentionDays: env.deadLetterRetentionDays });
 }
 
 async function run(): Promise<void> {
 	try {
 		await main();
 	} catch (error) {
+		kafkaClient.flushLogs();
 		logger.error({ event: "analytics.fatal", error: error instanceof Error ? error.message : String(error) });
 		process.exit(1);
 	}

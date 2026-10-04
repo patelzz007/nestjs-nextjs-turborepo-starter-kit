@@ -1,10 +1,11 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 
+import { RequestContextService } from "../../../common/context/request-context";
 import { IS_PUBLIC_KEY } from "../../auth/decorators/public.decorator";
 import { ALLOW_API_KEY_AUTH_KEY } from "../constants/api-key-auth.constants";
-import type { AllowApiKeyAuthOptions } from "../decorators/allow-api-key-auth.decorator";
+import { DEFAULT_ALLOWED_API_KEY_SCOPES, type AllowApiKeyAuthOptions } from "../decorators/allow-api-key-auth.decorator";
 import { ApiKeyAuthService } from "../services/api-key-auth.service";
 import { hasApiKeyAuthOnRequest, setApiKeyAuthOnRequest } from "../types/api-key-auth-request";
 import { extractApiKeyFromRequest } from "../utils/extract-api-key.util";
@@ -19,6 +20,7 @@ export class ApiKeyAuthGuard implements CanActivate {
 	public constructor(
 		private readonly reflector: Reflector,
 		private readonly apiKeyAuthService: ApiKeyAuthService,
+		private readonly requestContext: RequestContextService,
 	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -53,7 +55,23 @@ export class ApiKeyAuthGuard implements CanActivate {
 			});
 		}
 
+		const allowedScopes = options.scopes ?? DEFAULT_ALLOWED_API_KEY_SCOPES;
+		if (!allowedScopes.includes(authContext.scope)) {
+			throw new ForbiddenException({
+				message: "This API key's scope does not allow this route",
+				error: "API_KEY_SCOPE_FORBIDDEN",
+				scope: authContext.scope,
+			});
+		}
+
 		setApiKeyAuthOnRequest(request, authContext);
+		// The key is the request's principal (ADR 017): idempotency scoping and the audit trail read it here.
+		this.requestContext.bindApiKey({
+			apiKeyId: authContext.apiKeyId,
+			organizationId: authContext.organizationId,
+			terminalId: authContext.terminal?.terminalId,
+			locationId: authContext.locationId,
+		});
 		return true;
 	}
 }

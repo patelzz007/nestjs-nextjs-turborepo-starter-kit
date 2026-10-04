@@ -18,9 +18,9 @@ vi.mock("../../../prisma/prisma.service", () => ({
 // The stream() tests only exercise the SSE wiring, so the list service sits on
 // an inert Prisma stub — the events service is real to prove the pub/sub bridge end to end.
 const serviceStub = new EmailLogService(
-	new EmailLogRepository(new PrismaService(createTestTypedConfig())),
+	new EmailLogRepository(new PrismaService(createTestTypedConfig()), new TenantTransactionService(new PrismaService(createTestTypedConfig()), new RequestContextService())),
 	new EmailLogEventsService(),
-	new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()),
+	new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig()), new RequestContextService()), new RequestContextService()),
 );
 
 describe("EmailLogController (SSE stream)", () => {

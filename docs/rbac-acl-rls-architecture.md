@@ -25,7 +25,7 @@ Authentication → RBAC (action?) → ACL (scope?) → DB context → PostgreSQL
 
 1. **Never create RLS policies per application role** (Admin, Cashier, Manager). Policies use **user id**, **organization id**, and **location scope** — not role names.
 2. **Creating or editing a role** is `INSERT`/`UPDATE` on RBAC tables only — no migration, no RLS change, no deploy.
-3. **Do not put permissions in the JWT** — resolve at guard time from the database (see [Authorization & RBAC](./authorization.md)).
+3. **Do not put permissions in the JWT** — resolve at guard time from the database (see [Authorization & RBAC](./technical/authorization/overview.md)).
 4. **Fail closed** — missing `app.current_user_id` / `app.current_organization_id` must not widen access.
 5. **Same transaction** — `set_config(..., true)` and tenant queries run inside `TenantTransactionService` (`apps/api/src/prisma/tenant-transaction.service.ts`).
 
@@ -88,7 +88,7 @@ Location scope rows use `ALL_LOCATIONS` or `SELECTED` (see `buildMembershipLocat
 - Decorator: `@RequirePermission(action, resource)` on controllers
 - Guard: `AuthorizationGuard` + `AuthorizationCheckerService`
 - Permission catalog: `packages/shared/src/schemas/domain/rbac/`
-- Seed: `apps/api/prisma/seed/permissions.ts`, `roles.ts`
+- Reference data (permissions, system roles, matrix): `apps/api/src/modules/authorization/reference-data/`, loaded by `db:sync-reference-data` and the seed
 
 ## ACL in this repo
 
@@ -202,9 +202,9 @@ Adding `ORDER.CANCEL` or a role `StoreManager`:
 
 ## Further reading
 
-- [Prisma & database — §10 Row Level Security](./prisma.md)
-- [Multi-tenancy](./multi-tenancy.md)
-- [Authorization & RBAC](./authorization.md)
+- [Prisma & database — §10 Row Level Security](./technical/database.md)
+- [Multi-tenancy](./technical/authorization/tenancy-and-rls.md)
+- [Authorization & RBAC](./technical/authorization/overview.md)
 - [ADR 007: Tenancy and RLS bypass](./adr/007-tenancy-and-rls-bypass.md)
 - [ADR 012: System operations](./adr/012-system-operations.md)
 

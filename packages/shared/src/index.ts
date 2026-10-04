@@ -7,4 +7,5 @@ export * from "./runtime/index";
 export * from "./cache/index";
 export * from "./zod";
 export { buildMerchantSubmittedKybFields } from "./lib/merchant-kyb";
-export { buildOffsetPaginationMeta, stubPaginatedMeta, stubPaginatedMetaFromHydration, type OffsetPaginationMeta } from "./lib/pagination-meta";
+export { assertNever } from "./lib/assert-never";
+export { buildOffsetPaginationMeta, type OffsetPaginationMeta } from "./lib/pagination-meta";

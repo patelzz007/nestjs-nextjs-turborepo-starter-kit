@@ -1,17 +1,18 @@
 import { BULK_MUTATION_MAX_ITEMS } from "../../api/bulk-mutation";
 import { z } from "zod";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
+import { CatalogDescriptionSchema, CatalogNameSchema, CatalogSlugSchema, OptimisticVersionSchema } from "./catalog-fields";
 
 import type { PaginatedServiceResult } from "../../api/api-response";
 
 /** Zod contracts for SampleCategory. */
 export const CreateSampleCategorySchema = z
 	.object({
-		description: z.string().nullable().optional(),
+		description: CatalogDescriptionSchema.nullable().optional(),
 		isActive: z.boolean().optional(),
-		name: z.string(),
-		slug: z.string(),
-		sortOrder: z.number().int().optional(),
+		name: CatalogNameSchema,
+		slug: CatalogSlugSchema,
+		sortOrder: z.number().int().nonnegative().optional(),
 	})
 	.strict();
 export type CreateSampleCategoryInput = z.output<typeof CreateSampleCategorySchema>;
@@ -23,11 +24,19 @@ export const BulkCreateSampleCategorySchema = z
 	.strict();
 export type BulkCreateSampleCategoryInput = z.output<typeof BulkCreateSampleCategorySchema>;
 
-export const UpdateSampleCategorySchema = CreateSampleCategorySchema.partial();
+/**
+ * `PATCH /sample-category/:id` — any subset of the fields, plus the `version`
+ * the client read (optimistic locking, rules/08 → "Race conditions", option B).
+ * The update applies only while the stored row is still at that version;
+ * otherwise the API answers 409 CONFLICT and the client reloads and retries.
+ */
+export const UpdateSampleCategorySchema = CreateSampleCategorySchema.partial().extend({
+	version: OptimisticVersionSchema.meta({ description: "The category `version` this edit is based on (optimistic lock)", example: 2 }),
+});
 export type UpdateSampleCategoryInput = z.output<typeof UpdateSampleCategorySchema>;
 
 export const SampleCategoryIdParamSchema = z.object({ id: z.uuid() }).strict();
-/** `GET /sample-category` list query — see docs/list-queries.md. */
+/** `GET /sample-category` list query — see docs/technical/api/list-queries.md. */
 export const sampleCategoryListQuery = defineListQuery({
 	sortable: ["name", "slug", "sortOrder", "createdAt"],
 	defaultSort: [{ field: "createdAt", direction: "desc" }],
@@ -49,6 +58,7 @@ export const SampleCategorySchema = z
 		name: z.string(),
 		slug: z.string(),
 		sortOrder: z.number().int(),
+		version: z.number().int().nonnegative(),
 		deletedAt: z.number().int().nonnegative().nullable(),
 		createdAt: z.number().int().nonnegative(),
 		updatedAt: z.number().int().nonnegative(),

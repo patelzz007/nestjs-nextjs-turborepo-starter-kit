@@ -1,7 +1,7 @@
 # Keeps the SHA-pinned GitHub Actions (.github/workflows, .github/actions) current:
 # Dependabot opens a small PR per update and rewrites both the SHA and the
 # version comment. npm dependency automation is a separate, planned decision
-# (see docs/operations/ci.md).
+# (see docs/technical/operations/ci.md).
 version: 2
 updates:
   - package-ecosystem: github-actions

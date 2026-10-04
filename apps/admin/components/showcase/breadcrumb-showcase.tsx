@@ -63,7 +63,12 @@ export function BreadcrumbShowcase(): React.JSX.Element {
 
 	const renderDemoLink = useCallback(
 		(item: BreadcrumbItem): React.ReactElement => {
-			return <a href={item.href} onClick={preventDemoNavigation} />;
+			// The trail replaces the children with the crumb label (cloneElement), so the label here is never duplicated.
+			return (
+				<a href={item.href} onClick={preventDemoNavigation}>
+					{item.label}
+				</a>
+			);
 		},
 		[preventDemoNavigation],
 	);

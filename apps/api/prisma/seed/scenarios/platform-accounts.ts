@@ -7,6 +7,7 @@ import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "..
 import { seedLog } from "../seed-log";
 
 const PLATFORM_ADMIN_EMAIL = "admin@example.com";
+export const PLATFORM_SUPERADMIN_EMAIL = "superadmin@example.com";
 
 export interface PlatformAccounts {
 	readonly users: User[];
@@ -32,7 +33,12 @@ export async function seedPlatformAccounts(reference: ReferenceData): Promise<Pl
 	);
 
 	seedLog("Seeding platform guardrail policies...");
-	await seedPlatformGuardrails(adminUser);
+	// Four-eyes: drafted by the platform admin, approved and published by the SuperAdmin.
+	const superAdminUser = requireRow(
+		users.find((user) => user.email === PLATFORM_SUPERADMIN_EMAIL),
+		`user ${PLATFORM_SUPERADMIN_EMAIL}`,
+	);
+	await seedPlatformGuardrails(adminUser, superAdminUser);
 	seedLog("✅ Platform guardrails seeded");
 
 	return { users, adminUser };

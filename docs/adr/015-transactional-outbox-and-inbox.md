@@ -50,7 +50,7 @@ The domain transaction usually runs under a user/tenant-scoped, non-bypass sessi
 
 `apps/analytics-consumer` validates every message with `PlatformEventMessageSchema` at the boundary. In one transaction it claims `(consumer, event_id)` in `inbox_processed_events` with `INSERT … ON CONFLICT DO NOTHING` and inserts the `analytics_events` row (id = `eventId`) only when the claim is new. The composite primary key — not an `if (exists)` check — is the guarantee.
 
-Messages that can never be applied (empty value, invalid JSON, schema violation, wrong topic, SQLSTATE class 22/23) are parked in `inbox_dead_letters` with a reason and the raw value, unique per Kafka coordinates, and their offset is committed. Transient errors roll back (including the claim) and are rethrown so Kafka redelivers. The consumer writes as `app_runtime` with `app.rls_bypass = true` and `app.system_operation = 'analytics.ingest'` (ADR 012), not as the superuser.
+Messages that can never be applied (empty value, invalid UTF-8 / JSON, schema violation, wrong topic, SQLSTATE class 22/23) are parked in `inbox_dead_letters` with a reason and the raw bytes (plus original size, SHA-256 and a truncation flag), unique per Kafka coordinates, and their offset is committed. Any other failure rolls back (including the claim) and is retried in place with bounded exponential backoff; when the attempts run out the record is parked as `RETRIES_EXHAUSTED` — never retried forever. Only a failed dead-letter write leaves the offset uncommitted (redelivery). The consumer connects as its own least-privilege login (role `analytics_consumer`, `prisma/rls/90-analytics-consumer.sql`) — not as the superuser and without any RLS bypass.
 
 ## Alternatives considered
 
@@ -72,7 +72,8 @@ Messages that can never be applied (empty value, invalid JSON, schema violation,
 
 - Every producer must carry a transaction to its outbox write; repositories grew `withinTransaction` hooks.
 - `auth.flow` events are outcome telemetry recorded after the flow, in their own transaction — a crash between a successful flow's commit and the telemetry write loses that one telemetry event. Follow-up: move auth flows onto a unit of work if `auth.flow` ever becomes a state-bearing event.
-- `inbox_processed_events` grows with traffic, so the consumer purges claims older than `ANALYTICS_INBOX_RETENTION_DAYS` (default 14 days, minimum 8 — strictly longer than Kafka's default 7-day topic retention, the horizon inside which a record can still be redelivered) hourly, under a Postgres advisory lock. A redelivery after that window would be re-applied; `analytics_events`' `ON CONFLICT (id) DO NOTHING` still keeps it from duplicating the analytics row. `inbox_dead_letters` is never auto-deleted. Details: [Messaging — Retention](../infrastructure/messaging.md#retention).
+- `auth.flow` events (written by `@TrackAuthFlow`) carry the user the flow acted on — the decorated method names it with `identifyAuthFlowSubject(userId)` as soon as it resolves the user, so failures for a known user (wrong password, lockout, reused password) carry it too — and `error` is the stable error code the API returns (`INVALID_CREDENTIALS`, `UNAUTHORIZED`, `INTERNAL_ERROR`, …), never a message. A decorated class without `authEvents` throws `AuthFlowTrackingError` instead of silently recording nothing.
+- `inbox_processed_events` grows with traffic, so the consumer purges claims older than `ANALYTICS_INBOX_RETENTION_DAYS` (default: twice `KAFKA_TOPIC_RETENTION_DAYS`, and boot fails unless it is strictly longer than that configured topic retention — the horizon inside which a record can still be redelivered) hourly, under a transaction-level Postgres advisory lock per batch. A redelivery after that window would be re-applied; `analytics_events`' `ON CONFLICT (id) DO NOTHING` still keeps it from duplicating the analytics row. `inbox_dead_letters` rows are purged after `ANALYTICS_DEAD_LETTER_RETENTION_DAYS` (default 30). Details: [Messaging — Retention](../technical/messaging.md#retention). Kafka client: [ADR 024](./024-confluent-kafka-client.md).
 - Per-key ordering is best-effort: a row in retry backoff can be overtaken by a later row with the same key.
 
 ### Rollout
@@ -86,4 +87,4 @@ The wire message now requires `eventId`, and both sides use strict schemas. Depl
 - `packages/shared/src/schemas/infrastructure/kafka.ts` (`PlatformEventMessageSchema`, `PLATFORM_EVENT_TOPICS`)
 - `apps/api/prisma/rls.sql` (`outbox_events_append`, inbox policies)
 - `apps/api/test/transactional-outbox.e2e-spec.ts`, `apps/analytics-consumer/src/pg-inbox-store.e2e-spec.ts`
-- [Messaging operations](../infrastructure/messaging.md), ADR 010, ADR 012
+- [Messaging operations](../technical/messaging.md), ADR 010, ADR 012

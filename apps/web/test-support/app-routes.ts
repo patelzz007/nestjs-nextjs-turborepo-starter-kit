@@ -37,6 +37,32 @@ export function listAppPageRoutes(): readonly (readonly string[])[] {
 	return routes;
 }
 
+/** One `app/**\/page.tsx`: its URL segments and its absolute file path. */
+export interface AppPageFile {
+	readonly segments: readonly string[];
+	readonly file: string;
+}
+
+function collectPageFiles(directory: string, segments: readonly string[], pages: AppPageFile[]): void {
+	for (const entry of readdirSync(directory, { withFileTypes: true })) {
+		if (entry.isFile() && entry.name === PAGE_FILE) {
+			pages.push({ segments: [...segments], file: join(directory, entry.name) });
+			continue;
+		}
+		if (!entry.isDirectory() || NON_ROUTE_FOLDER_PATTERN.test(entry.name)) {
+			continue;
+		}
+		collectPageFiles(join(directory, entry.name), ROUTE_GROUP_PATTERN.test(entry.name) ? segments : [...segments, entry.name], pages);
+	}
+}
+
+/** Every page file under `app/` with its route. Read from disk, so it can never go stale. */
+export function listAppPageFiles(): readonly AppPageFile[] {
+	const pages: AppPageFile[] = [];
+	collectPageFiles(APP_DIR, [], pages);
+	return pages;
+}
+
 /** The pathname of an internal href — query string and fragment removed. */
 export function pathnameOf(href: string): string {
 	return href.split(/[?#]/)[0] ?? href;

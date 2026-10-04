@@ -71,7 +71,6 @@ export class CapabilityDefinitionService implements OnModuleInit {
 
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
 		const permissions = await this.systemDb.permission.findMany({
-			where: { isDeleted: false },
 			select: {
 				id: true,
 				action: true,
@@ -115,8 +114,6 @@ export class CapabilityDefinitionService implements OnModuleInit {
 					groupName: permission.group,
 					isSystem: permission.isSystem,
 					permissionId: permission.id,
-					isDeleted: false,
-					deletedAt: null,
 					updatedAt: Date.now(),
 				},
 			});
@@ -132,7 +129,6 @@ export class CapabilityDefinitionService implements OnModuleInit {
 		}
 
 		const rows = await this.prisma.capabilityDefinition.findMany({
-			where: { isDeleted: false },
 			orderBy: [{ scope: "asc" }, { sortOrder: "asc" }, { slug: "asc" }],
 			select: {
 				id: true,

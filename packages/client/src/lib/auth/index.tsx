@@ -8,7 +8,6 @@
 
 export {
 	AuthProvider,
-	CookieNamesConfigSchema,
 	useAuth,
 	useAuthCommands,
 	useAuthStatus,
@@ -19,7 +18,7 @@ export {
 	type AuthCommands,
 	type AuthContextType,
 	type AuthProviderProps,
-	type CookieNamesConfig,
 } from "../features/auth/facade";
-export type { AuthSessionSource, AuthUser } from "./session/session";
+export type { AuthUser } from "./session/session";
+export { isRestrictedAuthUser, resolveAuthEnrollmentReason } from "./session/session";
 export type { SessionCheckState } from "../features/auth/state";

@@ -38,7 +38,7 @@ export function NetworkStatusIndicator(): React.JSX.Element {
 	return (
 		<div
 			className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-				isOnline ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-destructive/30 bg-destructive/10 text-destructive"
+				isOnline ? "border-success/30 bg-success-soft text-success" : "border-destructive/30 bg-destructive/10 text-destructive"
 			}`}
 			title={isOnline ? "Online" : "Offline"}
 			aria-label={isOnline ? "Online" : "Offline"}>

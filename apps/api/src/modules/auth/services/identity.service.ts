@@ -6,7 +6,7 @@ import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
 import { UserSessionCacheService } from "../cache/user-session-cache.service";
-import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
+import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
@@ -72,6 +72,7 @@ export class IdentityService {
 			},
 		});
 
+		identifyAuthFlowSubject(newUser.id);
 		await this.userProvisioning.assignDefaultConsumerRole(newUser.id);
 		const userPermissions = await this.authorizationChecker.getUserPermissionDetails(newUser.id);
 

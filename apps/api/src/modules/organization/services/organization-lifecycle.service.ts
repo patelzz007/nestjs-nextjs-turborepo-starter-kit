@@ -2,12 +2,16 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import type { OrganizationLifecycleState } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { OrganizationLifecycleEventRecorder } from "./organization-lifecycle-event.recorder";
 
 const DELETION_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class OrganizationLifecycleService {
-	public constructor(private readonly tenantTx: TenantTransactionService) {}
+	public constructor(
+		private readonly tenantTx: TenantTransactionService,
+		private readonly lifecycleEvents: OrganizationLifecycleEventRecorder,
+	) {}
 
 	public async requestDeletion(organizationId: string, actorUserId: string, confirmDisplayName: string): Promise<void> {
 		await this.tenantTx.withTenantTransaction(
@@ -30,14 +34,12 @@ export class OrganizationLifecycleService {
 						deletionGraceEndsAt: graceEnds,
 					},
 				});
-				await tx.organizationLifecycleEvent.create({
-					data: {
-						organizationId,
-						fromState: org.lifecycleState,
-						toState: "PENDING_DELETION",
-						actorUserId,
-						reason: "Owner requested deletion",
-					},
+				await this.lifecycleEvents.recordInTx(tx, {
+					organizationId,
+					fromState: org.lifecycleState,
+					toState: "PENDING_DELETION",
+					actorUserId,
+					reason: "Owner requested deletion",
 				});
 			},
 		);
@@ -46,9 +48,8 @@ export class OrganizationLifecycleService {
 	public async transitionState(organizationId: string, toState: OrganizationLifecycleState, actorUserId: string | null, reason: string): Promise<void> {
 		await this.tenantTx.withSystemOperation(
 			{
-				operation: "organization.provision",
+				operation: "organization.lifecycle.transition",
 				reason,
-				correlationId: `lifecycle:${organizationId}:${toState}`,
 				actorUserId,
 			},
 			async (tx) => {
@@ -60,15 +61,7 @@ export class OrganizationLifecycleService {
 					where: { id: organizationId },
 					data: { lifecycleState: toState },
 				});
-				await tx.organizationLifecycleEvent.create({
-					data: {
-						organizationId,
-						fromState: org.lifecycleState,
-						toState,
-						actorUserId,
-						reason,
-					},
-				});
+				await this.lifecycleEvents.recordInTx(tx, { organizationId, fromState: org.lifecycleState, toState, actorUserId, reason });
 			},
 		);
 	}

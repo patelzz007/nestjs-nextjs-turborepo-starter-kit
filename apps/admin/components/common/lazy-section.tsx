@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { useIsClient } from "@workspace/ui/hooks/use-is-client";
 import { cn } from "@workspace/ui/lib/core/utils";
 
 export interface LazySectionProps {
@@ -30,8 +31,10 @@ export interface LazySectionProps {
  * rendered — i.e. when this section actually scrolls into view — instead of
  * during hydration.
  *
- * SSR/hydration: `visible` starts false on both server and client, so the
- * skeleton output never mismatches.
+ * SSR/hydration: the server and the hydrating client both render the
+ * skeleton (`useIsClient` is false until hydration ends), so the output never
+ * mismatches. A browser without `IntersectionObserver` reveals the content
+ * right after hydration instead of never.
  *
  * ⚠️ Constraint: IntersectionObserver only reports elements that are *visible*
  * in the scroll path. Do NOT wrap a `LazySection` inside a `display: none`
@@ -39,33 +42,22 @@ export interface LazySectionProps {
  */
 export function LazySection({ height, children, rootMargin = "300px 0px" }: LazySectionProps): React.JSX.Element {
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
-	const [visible, setVisible] = React.useState(false);
+	const [hasIntersected, setHasIntersected] = React.useState(false);
+	const isClient = useIsClient();
+	const lacksIntersectionObserver = isClient && typeof IntersectionObserver === "undefined";
+	const visible = hasIntersected || lacksIntersectionObserver;
 
 	React.useEffect(() => {
 		const node = containerRef.current;
-		if (node === null || visible) {
+		if (node === null || visible || typeof IntersectionObserver === "undefined") {
 			return undefined;
-		}
-
-		// Ancient-browser fallback — load immediately (async via rAF so the
-		// state update never runs synchronously inside the effect).
-		if (typeof IntersectionObserver === "undefined") {
-			const frame = window.requestAnimationFrame(() => {
-				setVisible(true);
-			});
-			return (): void => {
-				window.cancelAnimationFrame(frame);
-			};
 		}
 
 		const observer = new IntersectionObserver(
 			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) {
-						setVisible(true);
-						observer.disconnect();
-						break;
-					}
+				if (entries.some((entry) => entry.isIntersecting)) {
+					setHasIntersected(true);
+					observer.disconnect();
 				}
 			},
 			{ rootMargin },

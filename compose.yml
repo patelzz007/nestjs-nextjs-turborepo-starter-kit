@@ -9,27 +9,37 @@
 # The bull-board service below is an optional dashboard for monitoring BullMQ queues.
 #
 # Service URLs (from the host machine):
-#   PostgreSQL  → localhost:5432  (postgres / postgres, database nestjs-nextjs-turborepo-starter-kit)
 #   Redis       → localhost:6379
-#   Kafka       → localhost:9092
+#   Kafka       → 127.0.0.1:9092  (IPv4 literal on purpose — see the kafka service)
 #   RabbitMQ    → localhost:5672  (AMQP)  |  http://localhost:15672  (management UI, rabbit / rabbit)
 #   Bull Board  → http://localhost:3030  (BullMQ queue dashboard)
 #   Mailpit     → localhost:1025  (SMTP)  |  http://localhost:8025  (web inbox)
-#   MinIO       → http://localhost:9000  (S3 API)  |  http://localhost:9001  (console, minioadmin / minioadmin)
 #
-# Credentials and host ports of the newer services (postgres, mailpit, minio) are
-# env-interpolated with the dev defaults shown above — override them in your shell
-# or a git-ignored `.env` file next to this compose file, e.g. when a native
-# PostgreSQL already owns port 5432:
-#   POSTGRES_PORT=5433 docker compose up -d     (then use :5433 in apps/api/.env DATABASE_URL)
-# Full reference: docs/operations/local-infrastructure.md
+# Not started by this file:
+#   PostgreSQL  — the `postgres` service below is commented out. Use a native
+#                 PostgreSQL 18 (Homebrew, apt, Postgres.app), or uncomment it
+#                 (postgres / postgres, database nestjs-nextjs-turborepo-starter-kit,
+#                 port POSTGRES_PORT, default 5432 — e.g. POSTGRES_PORT=5433 when a
+#                 native PostgreSQL already owns 5432, then use :5433 in
+#                 apps/api/.env DATABASE_URL).
+#   Object storage — there is no MinIO service. Use STORAGE_PROVIDER=local for
+#                 zero-setup storage, or a real S3 bucket (apps/api/.env.example).
 #
-# The new services bind to 127.0.0.1 only, so the default dev passwords are never
-# reachable from other machines on your network.
+# Mailpit's host ports are env-interpolated with the dev defaults shown above
+# (MAILPIT_SMTP_PORT / MAILPIT_UI_PORT) — override them in your shell or a
+# git-ignored `.env` file next to this compose file.
+#
+# Full reference: docs/technical/operations/local-infrastructure.md
+#
+# EVERY service binds to 127.0.0.1 only, so the default dev passwords are never
+# reachable from other machines on your network. Host ports and the RabbitMQ
+# credentials can be overridden (RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS,
+# REDIS_PORT, KAFKA_PORT, RABBITMQ_AMQP_PORT, RABBITMQ_UI_PORT, BULL_BOARD_PORT).
 
 name: hello-world
 
 services:
+  # Not started by default — see the header. Uncomment to run PostgreSQL in Docker.
   # postgres:
   #   # Same major as the documented local install (PostgreSQL 18) and the CI service container.
   #   image: postgres:18.6
@@ -62,7 +72,7 @@ services:
     container_name: hello-world-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     command: redis-server --appendonly yes --save 60 1
     volumes:
       - redis_data:/data
@@ -80,12 +90,18 @@ services:
     hostname: kafka
     restart: unless-stopped
     ports:
-      - "9092:9092"
+      - "127.0.0.1:${KAFKA_PORT:-9092}:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      # Host clients connect to the address the broker ADVERTISES (metadata), not
+      # only to their bootstrap address. Advertise the exact address the port is
+      # published on (127.0.0.1 — IPv4 only, like every port in this file) and
+      # follow KAFKA_PORT: `localhost` resolves to ::1 first on macOS and many
+      # Linux hosts, and librdkafka then logs a refused IPv6 connection (and
+      # "all broker connections are down") on every (re)connect.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://127.0.0.1:${KAFKA_PORT:-9092}
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
@@ -95,13 +111,18 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # Same as CI: clients never auto-create topics, and neither does the broker.
+      # Topics come from `pnpm --filter @workspace/analytics-consumer kafka:provision-topics`.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1",
+          # The in-network listener: its advertised address (kafka:29092) resolves
+          # inside the container whatever host port KAFKA_PORT publishes.
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:29092 > /dev/null 2>&1",
         ]
       interval: 10s
       timeout: 10s
@@ -115,11 +136,11 @@ services:
     container_name: hello-world-rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_UI_PORT:-15672}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: rabbit
-      RABBITMQ_DEFAULT_PASS: rabbit
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-rabbit}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-rabbit}
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
@@ -133,21 +154,21 @@ services:
       - infra
 
   bull-board:
-    image: venatum/bull-board:latest
+    image: venatum/bull-board:3.4.14
     container_name: hello-world-bull-board
     restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
     ports:
-      - "3030:3000"
+      - "127.0.0.1:${BULL_BOARD_PORT:-3030}:3000"
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,storage.cdn-invalidate
     networks:
       - infra
 
@@ -175,69 +196,13 @@ services:
       start_period: 5s
     networks:
       - infra
-
-  # minio:
-  #   # S3-compatible object storage. Upstream MinIO stopped publishing container
-  #   # images (minio/minio, quay.io/minio/minio) in late 2025; pgsty/minio is the
-  #   # maintained community build of the same server. Pinned to a release tag.
-  #   image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
-  #   container_name: hello-world-minio
-  #   restart: unless-stopped
-  #   command: ["server", "/data", "--console-address", ":9001"]
-  #   ports:
-  #     - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
-  #     - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
-  #   environment:
-  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-  #   volumes:
-  #     - minio_data:/data
-  #   healthcheck:
-  #     test: ["CMD", "mc", "ready", "local"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 20
-  #     start_period: 5s
-  #   networks:
-  #     - infra
-
-  # minio-init:
-  #   # One-shot bootstrap: creates the buckets the API's storage config expects
-  #   # (STORAGE_PRIVATE_CONTAINER / STORAGE_PUBLIC_CONTAINER fallbacks in
-  #   # TypedConfigService) and lets anonymous clients GET (not list) objects in
-  #   # the public one — the same shape as a CDN-fronted public bucket.
-  #   # Idempotent — safe on every `docker compose up`.
-  #   image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
-  #   container_name: hello-world-minio-init
-  #   restart: "no"
-  #   depends_on:
-  #     minio:
-  #       condition: service_healthy
-  #   environment:
-  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-  #     MINIO_PRIVATE_BUCKET: ${MINIO_PRIVATE_BUCKET:-local-private-bucket}
-  #     MINIO_PUBLIC_BUCKET: ${MINIO_PUBLIC_BUCKET:-local-public-bucket}
-  #   entrypoint: ["/bin/sh", "-c"]
-  #   command:
-  #     - >-
-  #       set -eu;
-  #       mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}";
-  #       mc mb --ignore-existing "local/$${MINIO_PRIVATE_BUCKET}";
-  #       mc mb --ignore-existing "local/$${MINIO_PUBLIC_BUCKET}";
-  #       printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}' "$${MINIO_PUBLIC_BUCKET}" > /tmp/public-read.json;
-  #       mc anonymous set-json /tmp/public-read.json "local/$${MINIO_PUBLIC_BUCKET}";
-  #       echo "MinIO buckets ready: $${MINIO_PRIVATE_BUCKET}, $${MINIO_PUBLIC_BUCKET}"
-  #   networks:
-  #     - infra
-
+      
 volumes:
   postgres_18_data:
   redis_data:
   kafka_data:
   rabbitmq_data:
   mailpit_data:
-  minio_data:
 
 networks:
   infra:

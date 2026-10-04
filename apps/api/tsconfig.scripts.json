@@ -6,8 +6,12 @@
 		"incremental": false,
 		"emitDecoratorMetadata": false,
 		"types": ["node"],
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext"
+		// Module settings are inherited from nestjs.json (ESNext + bundler), like
+		// tsconfig.json: the scripts run under tsx, which resolves the way a bundler
+		// does, and @workspace/* resolve to their TypeScript source (authored for
+		// bundler resolution: extensionless relative imports) via the `development`
+		// export — never to a dist/ build that may be missing or stale.
+		"customConditions": ["development"]
 	},
 	"include": ["scripts/**/*.ts"],
 	// Imports the Nest source graph (extensionless, bundler-resolved) — checked by tsconfig.check.json.

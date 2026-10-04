@@ -1,8 +1,9 @@
-import { Controller, ForbiddenException, Get, Headers, Post, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Controller, ForbiddenException, Get, Headers, Post, Req, ServiceUnavailableException, UseGuards } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
 import { ApiBody, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { Resend } from "resend";
+import { z } from "zod";
 import type { FastifyRequest } from "fastify";
 
 import {
@@ -28,7 +29,8 @@ import { Public } from "../../auth/decorators/public.decorator";
 import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
-import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
+import { EmailLogService } from "./email-log.service";
+import { EMAIL_LOG_ID_TAG } from "./email-sender.service";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
 
 /**
@@ -178,10 +180,13 @@ export class EmailWebhookController {
 		const secret: string | null = this.config.resendWebhookSecret;
 		const resend: Resend | null = this.resend;
 		if (secret === null || resend === null) {
-			// Webhook not wired up (no signing secret / no Resend client). Still
-			// answer 200 so Resend stops retrying, and log once. Nothing is trusted.
-			this.logService.warn("Resend webhook received but RESEND_WEBHOOK_SECRET / RESEND_API_KEY is not configured", { context: "EmailWebhookController" });
-			return { received: true };
+			// Not configured: the event cannot be verified, so it must not be
+			// acknowledged either — 503 makes Resend retry it once the secret is
+			// set, instead of the delivery outcome being silently lost.
+			this.logService.error("Resend webhook received but RESEND_WEBHOOK_SECRET / RESEND_API_KEY is not configured — answered 503 so Resend retries", {
+				context: "EmailWebhookController",
+			});
+			throw new ServiceUnavailableException("The email delivery webhook is not configured on this server (RESEND_WEBHOOK_SECRET / RESEND_API_KEY).");
 		}
 
 		const rawBody: string = this.readRawBody(req);
@@ -233,13 +238,14 @@ export class EmailWebhookController {
 				headers: parsedHeaders.data,
 				webhookSecret: secret,
 			});
-			const parsed = ResendWebhookEventSchema.safeParse(verified);
-			if (!parsed.success) {
-				this.logService.warn(`Webhook payload failed schema validation: ${parsed.error.message}`, { context: "EmailWebhookController" });
-				return { received: true };
-			}
-			resendEvent = parsed.data;
+			resendEvent = ResendWebhookEventSchema.parse(verified);
 		} catch (cause) {
+			if (cause instanceof z.ZodError) {
+				// Correctly signed but not a shape we understand: reject loudly (Resend
+				// retries and the failure is visible) instead of acknowledging and dropping it.
+				this.logService.error(`Signed webhook payload failed schema validation: ${cause.message}`, { context: "EmailWebhookController" });
+				throw new BadRequestException("Webhook payload does not match the expected Resend event shape.");
+			}
 			const caught = CaughtValueSchema.parse(cause);
 			const rawReason: string = readCaughtErrorMessage(caught);
 			const reason: string = /too old|too new|matching signature|missing required header/i.test(rawReason) ? rawReason : "unexpected verification error";
@@ -250,32 +256,28 @@ export class EmailWebhookController {
 			throw new ForbiddenException(`Invalid webhook signature (${reason}). ${hint}`);
 		}
 		const eventType: string = resendEvent.type;
-		const emailId: string | undefined = resendEvent.data.email_id;
-		if (emailId.length === 0) {
-			return { received: true };
-		}
-
-		// Tracking events (email.opened / email.clicked / email.forwarded) are
-		// acknowledged and ignored — only delivery outcomes update the log.
-		const status: EmailLogStatus | undefined = webhookStatusFor(eventType);
-		if (status === undefined) {
-			return { received: true };
-		}
-		// Bounce / complaint events carry a reason — surface it as the row's
-		// `error` so the admin log shows WHY, not just the status flip.
-		const detail: string | undefined = this.extractDeliveryDetail(eventType, resendEvent);
-		const outcome: WebhookUpdateResult = await this.emailLogService.updateStatusByResendId(emailId, status, detail);
-		if (outcome === "not_found") {
-			// Signed event for an email this system never sent (spoofed, or sent
-			// from the Resend dashboard / another app on the same account).
-			// Acknowledged so Resend stops retrying — nothing is written.
-			this.logService.info(`Webhook for unknown resend_id ${emailId} (${eventType}) — ignored, no matching EmailLog row`, { context: "EmailWebhookController" });
-		} else if (outcome === "stale") {
-			// Signed event that would regress an already-advanced row (e.g. a
-			// replayed `email.sent` after `delivered`). Ignored on purpose.
-			this.logService.info(`Webhook ignored: ${eventType} for resend_id ${emailId} would regress status — row already delivered/terminal`, {
-				context: "EmailWebhookController",
-			});
+		const emailId: string = resendEvent.data.email_id;
+		const taggedEmailLogId = z.uuid().safeParse(resendEvent.data.tags?.[EMAIL_LOG_ID_TAG]);
+		const result = await this.emailLogService.applyDeliveryEvent({
+			webhookId: parsedHeaders.data.id,
+			eventType,
+			resendId: emailId,
+			taggedEmailLogId: taggedEmailLogId.success ? taggedEmailLogId.data : undefined,
+			// Tracking events (opened / clicked / forwarded / delayed) map to no status: recorded as `ignored`.
+			status: webhookStatusFor(eventType),
+			// Bounce / complaint reasons become the row's `error`, so the admin log shows WHY.
+			detail: this.extractDeliveryDetail(eventType, resendEvent),
+			occurredAt: Date.parse(resendEvent.created_at),
+		});
+		if (result.kind === "duplicate") {
+			this.logService.info(`Webhook ${parsedHeaders.data.id} already recorded — redelivery ignored`, { context: "EmailWebhookController" });
+		} else if (result.outcome === "unmatched") {
+			// Signed event for an email this system never sent (sent from the Resend
+			// dashboard / another app on the same account). Recorded, nothing applied.
+			this.logService.info(`Webhook for unknown resend_id ${emailId} (${eventType}) — recorded as unmatched`, { context: "EmailWebhookController" });
+		} else if (result.outcome === "stale") {
+			// Older than (or a regression of) what the row already shows — recorded, not applied.
+			this.logService.info(`Webhook ${eventType} for resend_id ${emailId} is older than the row's latest outcome — recorded as stale`, { context: "EmailWebhookController" });
 		}
 		return { received: true };
 	}

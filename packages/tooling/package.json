@@ -2,13 +2,24 @@
 	"name": "@workspace/tooling",
 	"version": "0.0.1",
 	"private": true,
+	"type": "module",
 	"description": "Repo-wide tooling scripts. Owns the syncpack dependency-hygiene commands so they can run as turbo tasks (turbo 2.x doesn't execute root package.json scripts).",
 	"scripts": {
+		"lint": "eslint --max-warnings=0",
+		"test": "vitest run",
 		"deps:check": "syncpack lint",
 		"deps:fix": "syncpack fix-mismatches",
 		"deps:list": "syncpack list"
 	},
+	"dependencies": {
+		"zod": "4.6.2"
+	},
 	"devDependencies": {
-		"syncpack": "^15.3.3"
+		"@workspace/eslint-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"pg": "^8.23.0",
+		"syncpack": "^15.3.3",
+		"typescript": "6.0.2",
+		"vitest": "^5.0.0"
 	}
 }

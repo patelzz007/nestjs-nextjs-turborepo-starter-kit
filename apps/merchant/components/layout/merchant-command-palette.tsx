@@ -46,7 +46,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 				title: "Toggle theme",
 				description: "Switch between light and dark mode",
 				icon: SunMoon,
-				color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
+				color: "text-warning bg-warning-soft",
 				keywords: ["dark", "light", "mode", "theme"],
 				run: (): void => {
 					closePalette();
@@ -61,7 +61,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 				title: "Open rewards",
 				description: "Browse offers and inventory",
 				icon: Ticket,
-				color: "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
+				color: "text-success bg-success-soft",
 				keywords: ["home", "offers", "inventory"],
 				run: (): void => {
 					router.push(rewardsPath);

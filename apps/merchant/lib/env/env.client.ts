@@ -21,7 +21,6 @@ export const clientEnv: Readonly<MerchantClientEnv> = parseEnvOrThrow(
 	{
 		NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 		NEXT_PUBLIC_MERCHANT_URL: process.env.NEXT_PUBLIC_MERCHANT_URL,
-		NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS: process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS,
 	} satisfies Record<keyof z.input<typeof MerchantClientEnvSchema>, string | undefined>,
 	MERCHANT_ENV_SCOPE.client,
 );

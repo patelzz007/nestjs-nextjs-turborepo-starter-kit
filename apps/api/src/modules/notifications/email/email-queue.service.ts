@@ -14,7 +14,7 @@ import { TypedConfigService } from "../../../config/typed-config.service";
 export class EmailQueueService {
 	public constructor(
 		private readonly config: TypedConfigService,
-		@InjectQueue(QUEUE_NAMES[0]) private readonly queue: Queue<EmailSendJob>,
+		@InjectQueue(QUEUE_NAMES.emailSend) private readonly queue: Queue<EmailSendJob>,
 	) {}
 
 	public isEnabled(): boolean {
@@ -23,8 +23,9 @@ export class EmailQueueService {
 
 	public async enqueue(job: EmailSendJob): Promise<string> {
 		const parsed = EmailSendJobSchema.parse(job);
-		const added = await this.queue.add("send", parsed, QUEUE_JOB_OPTIONS.emailSend);
-		return added.id ?? "unknown";
+		// jobId = email log id: enqueueing the same attempt twice is deduplicated by BullMQ.
+		const added = await this.queue.add("send", parsed, { ...QUEUE_JOB_OPTIONS.emailSend, jobId: parsed.emailLogId });
+		return added.id ?? parsed.emailLogId;
 	}
 }
 
@@ -44,7 +45,7 @@ export class DisabledEmailQueueService {
 export class EmailQueueHealthAdapter {
 	public constructor(
 		@Inject(MESSAGING_OPTIONS) private readonly options: ResolvedMessagingOptions,
-		@InjectQueue(QUEUE_NAMES[0]) private readonly emailQueue: Queue,
+		@InjectQueue(QUEUE_NAMES.emailSend) private readonly emailQueue: Queue,
 	) {}
 
 	public async isHealthy(): Promise<boolean> {

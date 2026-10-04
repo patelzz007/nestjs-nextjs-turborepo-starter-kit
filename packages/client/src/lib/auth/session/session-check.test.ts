@@ -1,7 +1,7 @@
-import type { SessionPermissionsResponse, UserResponse } from "@workspace/shared";
+import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
 import { ApiError, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR, type ApiFailure, type ApiResponse, type RefreshResult } from "../../api/api-request";
 import { ApiResponseContractError } from "../../api/response-contract";
 import {
@@ -35,12 +35,12 @@ function contractError(status: number): ApiResponseContractError {
 	return new ApiResponseContractError({ method: "GET", url: ME_URL, status }, [{ path: "data.id", message: "Invalid input" }]);
 }
 
-function meAnswer(profile: UserResponse): ApiResponse<{ readonly data: UserResponse }> {
-	return { ok: true, status: 200, data: { data: profile } };
+function meAnswer(profile: Envelope<UserResponse>): ApiResponse<Envelope<UserResponse>> {
+	return { ok: true, status: 200, data: profile };
 }
 
-function permissionsAnswer(permissions: SessionPermissionsResponse): ApiResponse<{ readonly data: SessionPermissionsResponse }> {
-	return { ok: true, status: 200, data: { data: permissions } };
+function permissionsAnswer(permissions: Envelope<SessionPermissionsResponse>): ApiResponse<Envelope<SessionPermissionsResponse>> {
+	return { ok: true, status: 200, data: permissions };
 }
 
 function responses(me: SessionCheckResponses["me"], permissions: SessionCheckResponses["permissions"] = failure(401)): SessionCheckResponses {
@@ -74,28 +74,42 @@ describe("classifySessionFailure", () => {
 });
 
 describe("classifySessionResponses", () => {
-	it("restores a session from /auth/me with the /auth/permissions answer", () => {
-		const profile = userFixture();
-		const permissions = sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
+	it("restores a session from /auth/me with the /auth/permissions answer — both as the whole envelopes the server sent", () => {
+		const profile = envelopeFixture(userFixture());
+		const permissions = envelopeFixture(sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" }), {
+			correlationId: "corr-permissions",
+			timestamp: profile.meta.timestamp,
+		});
 
-		expect(classifySessionResponses(responses(meAnswer(profile), permissionsAnswer(permissions)))).toEqual({ kind: "valid", profile, permissions });
+		const verdict = classifySessionResponses(responses(meAnswer(profile), permissionsAnswer(permissions)));
+
+		expect(verdict).toEqual({ kind: "valid", profile, permissions });
+		expect(verdict.kind === "valid" ? verdict.permissions?.meta.correlationId : null).toBe("corr-permissions");
 	});
 
-	it("still restores the session when only /auth/permissions failed — /auth/me decides", () => {
-		const profile = userFixture();
+	it("still restores the session when only /auth/permissions failed — /auth/me decides, and the scope is left unknown (null), never assumed full", () => {
+		const profile = envelopeFixture(userFixture());
 
 		expect(classifySessionResponses(responses(meAnswer(profile), failure(503)))).toEqual({ kind: "valid", profile, permissions: null });
+		expect(classifySessionResponses(responses(meAnswer(profile), failure(NO_HTTP_RESPONSE_STATUS, new TypeError("fetch failed"))))).toEqual({
+			kind: "valid",
+			profile,
+			permissions: null,
+		});
 	});
 
 	it("never reads a malformed /auth/me as signed in", () => {
-		expect(classifySessionResponses(responses(failure(200, contractError(200)), permissionsAnswer(sessionPermissionsFixture())))).toEqual({
+		expect(classifySessionResponses(responses(failure(200, contractError(200)), permissionsAnswer(envelopeFixture(sessionPermissionsFixture()))))).toEqual({
 			kind: "unavailable",
 			reason: "contract-violation",
 		});
 	});
 
 	it("follows /auth/me when it failed, whatever /auth/permissions said", () => {
-		expect(classifySessionResponses(responses(failure(503), permissionsAnswer(sessionPermissionsFixture())))).toEqual({ kind: "unavailable", reason: "server-error" });
+		expect(classifySessionResponses(responses(failure(503), permissionsAnswer(envelopeFixture(sessionPermissionsFixture()))))).toEqual({
+			kind: "unavailable",
+			reason: "server-error",
+		});
 	});
 });
 
@@ -112,7 +126,7 @@ describe("findSessionCheckProblems", () => {
 	it("reports nothing for an outage, a 401 or a success — they are expected", () => {
 		expect(findSessionCheckProblems(responses(failure(503), failure(NO_HTTP_RESPONSE_STATUS)))).toEqual([]);
 		expect(findSessionCheckProblems(responses(failure(401), failure(429)))).toEqual([]);
-		expect(findSessionCheckProblems(responses(meAnswer(userFixture()), permissionsAnswer(sessionPermissionsFixture())))).toEqual([]);
+		expect(findSessionCheckProblems(responses(meAnswer(envelopeFixture(userFixture())), permissionsAnswer(envelopeFixture(sessionPermissionsFixture()))))).toEqual([]);
 	});
 });
 
@@ -141,7 +155,7 @@ describe("retry policy", () => {
 });
 
 describe("checkSession", () => {
-	const profile = userFixture();
+	const profile = envelopeFixture(userFixture());
 
 	interface Harness {
 		readonly dependencies: SessionCheckDependencies;

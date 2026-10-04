@@ -6,8 +6,8 @@ import type { SearchEntry } from "@/lib/search";
 import { initSearch } from "./search";
 
 const INDEX: readonly SearchEntry[] = [
-	{ kind: "page", title: "Prisma", href: "/docs/prisma", context: "Tooling", text: "Row level security <policies>" },
-	{ kind: "heading", title: "Row-level security", href: "/docs/prisma#rls", context: "Prisma", text: "" },
+	{ kind: "page", title: "Prisma", href: "/docs/technical/database", context: "Tooling", text: "Row level security <policies>" },
+	{ kind: "heading", title: "Row-level security", href: "/docs/technical/database#rls", context: "Prisma", text: "" },
 ];
 
 const MARKUP = `
@@ -138,7 +138,7 @@ describe("initSearch", () => {
 		expect(document.querySelector('[aria-selected="true"] .search-result__title')?.textContent).toBe("Row-level security");
 		input().dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
 		input().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-		expect(navigate).toHaveBeenCalledWith("/docs/prisma");
+		expect(navigate).toHaveBeenCalledWith("/docs/technical/database");
 		expect(dialog().open).toBe(false);
 	});
 

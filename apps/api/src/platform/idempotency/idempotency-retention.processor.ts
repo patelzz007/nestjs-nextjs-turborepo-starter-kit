@@ -11,7 +11,7 @@ import { IdempotencyRetentionService, type IdempotencyRetentionSummary } from ".
 import { IDEMPOTENCY_PURGE_INTERVAL_MS, IDEMPOTENCY_PURGE_SCHEDULER_ID, IDEMPOTENCY_RETENTION_OPERATION } from "./idempotency.constants";
 
 /** The `idempotency.retention` BullMQ queue. */
-export const IDEMPOTENCY_RETENTION_QUEUE = QUEUE_NAMES[7];
+export const IDEMPOTENCY_RETENTION_QUEUE = QUEUE_NAMES.idempotencyRetention;
 
 /** The one queue capability the scheduler needs (narrowed so tests need no Redis). */
 export type JobSchedulerRegistry = Pick<Queue, "upsertJobScheduler">;
@@ -60,10 +60,7 @@ export class IdempotencyRetentionScheduler implements OnModuleInit {
 @Processor(IDEMPOTENCY_RETENTION_QUEUE)
 @Injectable()
 export class IdempotencyRetentionProcessor extends WorkerHost {
-	public constructor(
-		_scheduler: IdempotencyRetentionScheduler,
-		private readonly retention: IdempotencyRetentionService,
-	) {
+	public constructor(private readonly retention: IdempotencyRetentionService) {
 		super();
 	}
 

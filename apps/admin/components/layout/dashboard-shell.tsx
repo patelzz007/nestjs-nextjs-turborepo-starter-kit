@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
 import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
 
 import { Button } from "@workspace/ui/components/form/button";
@@ -15,7 +15,7 @@ import { ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME, ADMIN_COMMAND_PALETTE_STORAGE_KEY 
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
 import { SidebarStoreProvider } from "@workspace/client/lib/features/sidebar/facade";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
-import type { SessionPermissionsResponse } from "@workspace/shared";
+import type { Envelope, SessionPermissionsResponse } from "@workspace/shared";
 
 export interface DashboardShellProps {
 	readonly footerActions?: readonly FooterAction[];
@@ -27,7 +27,8 @@ export interface DashboardShellProps {
 	 * resolves. `null`/`undefined` falls back to the placeholder.
 	 */
 	readonly initialUser?: SidebarUser | null | undefined;
-	readonly initialSessionPermissions?: SessionPermissionsResponse | undefined;
+	/** The server-prefetched `GET /auth/permissions` envelope (its real `meta`), seeding the permissions query. */
+	readonly initialSessionPermissions?: Envelope<SessionPermissionsResponse> | undefined;
 	/** Server-evaluated feature flags (env-backed), forwarded to the menu filter and route guard. */
 	readonly enabledFeatureFlags?: readonly string[] | undefined;
 }
@@ -54,6 +55,7 @@ const PLACEHOLDER_USER: SidebarUser = { name: "Account", email: "Loading profile
  */
 export function DashboardShell({ footerActions = [], children, initialUser = null, initialSessionPermissions, enabledFeatureFlags }: DashboardShellProps): React.JSX.Element {
 	const { api, logout } = useAuth();
+	const authUser = useAuthUser();
 	// The breadcrumb provider must wrap EVERY consumer (the layout's own
 	// `useTrailDocumentTitle` + `ShellBreadcrumb`), so it lives here — one
 	// level above `DashboardLayout` — not inside it.
@@ -107,7 +109,7 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 			<ImpersonationBanner />
 			<SessionCheckNotice />
 			<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName={ADMIN_SIDEBAR_DEVTOOLS_NAME}>
-				<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
+				<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} ownerId={authUser?.id ?? null} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
 					<DashboardLayout
 						user={{ name: resolvedUser.name, email: resolvedUser.email }}
 						onLogout={handleLogout}

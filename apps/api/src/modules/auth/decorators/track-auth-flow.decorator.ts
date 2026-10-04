@@ -1,14 +1,12 @@
-import { z } from "zod";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-import { AuthFlowEventSchema, CaughtValueSchema, JsonRecordSchema, JsonValueSchema, type CaughtValue } from "@workspace/shared";
+import { AuthFlowEventSchema, CaughtValueSchema, type ApiErrorCode, type AuthFlowEvent, type CaughtValue } from "@workspace/shared";
 
+import { mapException } from "../../../common/errors/exception-mapper";
 import { AuthEventsService } from "../services/auth-events.service";
 
-/**
- * Extracts the userId from the method's arguments or return value.
- * Return `null` for anonymous flows (e.g., forgot-password where user may not exist).
- */
-type UserIdExtractor = (...args: readonly AuthFlowMethodArg[]) => string | null | undefined;
+/** Extracts the client type ("web" | "admin" | …) from the decorated method's arguments. */
+type ClientTypeExtractor = (...args: readonly AuthFlowMethodArg[]) => string | null | undefined;
 
 /** Any runtime value a decorated method can receive as an argument. */
 export type AuthFlowMethodArg = object | string | number | boolean | bigint | symbol | null | undefined;
@@ -27,52 +25,96 @@ type AuthFlowMethodDecorator = <TArgs extends AuthFlowMethodArg[], TResult exten
 ) => TypedPropertyDescriptor<AuthFlowMethod<TArgs, TResult>>;
 
 interface TrackAuthFlowOptions {
-	/** The auth flow name (e.g., "signup", "login", "forgot-password"). */
-	readonly flow: string;
+	/** The auth flow name — one of the `AuthFlowEvent` flows. */
+	readonly flow: AuthFlowEvent["flow"];
 	/**
 	 * Optional: extract the client type from the method arguments.
 	 * Defaults to `null` (not a client-type-specific flow).
 	 */
-	readonly clientType?: UserIdExtractor;
-	/**
-	 * Optional: extract the userId from the method arguments.
-	 * If not provided, the decorator tries `result.id` or `result.userId` on success.
-	 */
-	readonly userId?: UserIdExtractor;
+	readonly clientType?: ClientTypeExtractor;
 }
 
-const AuthResultIdSchema = z.object({ id: z.string() }).strict();
-const AuthResultUserIdSchema = z.object({ userId: z.string() }).strict();
-const AuthResultNestedUserSchema = z.object({ user: z.object({ id: z.string() }).strict() }).strict();
-const AuthErrorCodeSchema = z.object({ error: z.string() }).strict();
-const AuthErrorMessageSchema = z.object({ message: z.string() }).strict();
-const AuthErrorUserIdSchema = z.object({ userId: z.string() }).strict();
+/**
+ * Exception mapping used to derive the recorded error CODE. Internal error
+ * text is never exposed — the event carries the stable code only.
+ */
+const ERROR_CODE_MAPPING_OPTIONS = { exposeInternalErrors: false } satisfies Parameters<typeof mapException>[1];
+
+/** Recorded when the thrown value is not even a recognizable runtime value. */
+const UNRECOGNIZED_ERROR_CODE: ApiErrorCode = "INTERNAL_ERROR";
+
+/**
+ * Per-invocation subject of one tracked flow. The decorated method names the
+ * user it acted on via {@link identifyAuthFlowSubject} as soon as it knows
+ * it — so the event carries the user on success AND on a failure that happens
+ * after the user was resolved (wrong password, lockout, reused password, …).
+ */
+class AuthFlowSubject {
+	private userId: string | null = null;
+
+	public identify(userId: string): void {
+		this.userId = userId;
+	}
+
+	public get identifiedUserId(): string | null {
+		return this.userId;
+	}
+}
+
+const authFlowSubjectScope = new AsyncLocalStorage<AuthFlowSubject>();
+
+/** Thrown when the tracking contract is violated — always a programming error. */
+export class AuthFlowTrackingError extends Error {
+	public constructor(message: string) {
+		super(message);
+		this.name = "AuthFlowTrackingError";
+	}
+}
+
+/**
+ * Names the user the current `@TrackAuthFlow` method acts on. Call it as soon
+ * as the method has resolved the user (also before throwing a failure that
+ * concerns a known user). Calling it outside a tracked method is a bug and
+ * throws, so a mis-wired call can never silently record nothing.
+ */
+export function identifyAuthFlowSubject(userId: string): void {
+	const subject = authFlowSubjectScope.getStore();
+	if (subject === undefined) {
+		throw new AuthFlowTrackingError("identifyAuthFlowSubject() must be called inside a @TrackAuthFlow method");
+	}
+	subject.identify(userId);
+}
+
+/**
+ * Stable machine-readable code of a flow failure — the same code the global
+ * exception filter sends to the client (`INVALID_CREDENTIALS`,
+ * `UNAUTHORIZED`, `INTERNAL_ERROR`, …), never the human-readable message.
+ */
+export function authFlowErrorCode(caught: CaughtValue): ApiErrorCode {
+	return mapException(caught, ERROR_CODE_MAPPING_OPTIONS).code;
+}
 
 /**
  * Declarative decorator that wraps a method and durably records an
  * `AuthFlowEvent` (outbox `auth.flow`) on both success and failure, with
- * accurate timing. The host class must inject `authEvents: AuthEventsService`.
+ * accurate timing. The host class MUST inject `authEvents: AuthEventsService`
+ * — a host without it throws {@link AuthFlowTrackingError} instead of
+ * silently recording nothing.
  *
- * Replaces the manual `flowStartedAt` + `recordFlow()` boilerplate that was
- * repeated in every auth method.
- *
- * @example
- *   @TrackAuthFlow({ flow: "signup" })
- *   public async signup(dto: SignupInput): Promise<SignupResponse> {
- *       // ... no recordFlow calls needed
- *   }
+ * The recorded `userId` is whatever the method passed to
+ * {@link identifyAuthFlowSubject} (null when the flow never resolved a user,
+ * e.g. forgot-password for an unknown email). The recorded `error` is the
+ * failure's stable error code.
  *
  * @example
- *   @TrackAuthFlow({
- *       flow: "login",
- *       clientType: (_dto, clientType) => clientType ?? null,
- *   })
- *   public async login(dto: LoginInput, clientType?: string): Promise<LoginServiceResponse> {
+ *   @TrackAuthFlow({ flow: "change-password" })
+ *   public async changePassword(userId: string, dto: ChangePasswordInput): Promise<ChangePasswordResponse> {
+ *       identifyAuthFlowSubject(userId);
  *       // ...
  *   }
  */
 export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDecorator {
-	const { flow, clientType: clientTypeExtractor, userId: userIdExtractor } = options;
+	const { flow, clientType: clientTypeExtractor } = options;
 
 	return function <TArgs extends AuthFlowMethodArg[], TResult extends AuthFlowMethodArg>(
 		_target: object,
@@ -85,15 +127,15 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 		}
 
 		descriptor.value = async function (this: AuthFlowHost, ...args: TArgs): Promise<TResult> {
+			const authEvents = this.authEvents;
+			if (authEvents === undefined) {
+				throw new AuthFlowTrackingError(`@TrackAuthFlow("${flow}") on ${String(propertyKey)}: the host must inject authEvents: AuthEventsService`);
+			}
+
 			const flowStartedAt: number = performance.now();
-			const getAuthEvents = (): AuthEventsService | undefined => this.authEvents;
+			const subject = new AuthFlowSubject();
 
-			const recordEvent = async (status: "succeeded" | "failed", error: string | null, userId: string | null): Promise<void> => {
-				const authEvents = getAuthEvents();
-				if (authEvents === undefined) {
-					return;
-				}
-
+			const recordEvent = async (status: AuthFlowEvent["status"], error: ApiErrorCode | null): Promise<void> => {
 				const resolvedClientType = clientTypeExtractor !== undefined ? (clientTypeExtractor(...args) ?? null) : null;
 
 				// Awaited (never fire-and-forget); `recordFlow` never throws, so a
@@ -101,7 +143,7 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 				await authEvents.recordFlow(
 					AuthFlowEventSchema.parse({
 						flow,
-						userId,
+						userId: subject.identifiedUserId,
 						clientType: resolvedClientType,
 						status,
 						error,
@@ -111,81 +153,16 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 			};
 
 			try {
-				const result: TResult = await originalMethod.apply(this, args);
-
-				let userId: string | null = null;
-				if (userIdExtractor !== undefined) {
-					userId = userIdExtractor(...args) ?? null;
-				} else {
-					userId = extractUserIdFromResult(result);
-				}
-
-				await recordEvent("succeeded", null, userId);
+				const result: TResult = await authFlowSubjectScope.run(subject, async (): Promise<TResult> => originalMethod.apply(this, args));
+				await recordEvent("succeeded", null);
 				return result;
 			} catch (caught) {
-				const errorValue = CaughtValueSchema.safeParse(caught);
-				const errorCode = errorValue.success ? extractErrorCode(errorValue.data) : "UNKNOWN_ERROR";
-				let userId: string | null = null;
-				if (userIdExtractor !== undefined) {
-					userId = userIdExtractor(...args) ?? null;
-				} else if (errorValue.success) {
-					userId = extractUserIdFromCaught(errorValue.data);
-				}
-
-				await recordEvent("failed", errorCode, userId);
+				const caughtValue = CaughtValueSchema.safeParse(caught);
+				await recordEvent("failed", caughtValue.success ? authFlowErrorCode(caughtValue.data) : UNRECOGNIZED_ERROR_CODE);
 				throw caught;
 			}
 		};
 
 		return descriptor;
 	};
-}
-
-function extractUserIdFromResult(result: AuthFlowMethodArg): string | null {
-	const jsonValue = JsonValueSchema.safeParse(result);
-	if (!jsonValue.success) {
-		return null;
-	}
-	const value = jsonValue.data;
-	const withId = AuthResultIdSchema.safeParse(value);
-	if (withId.success) {
-		return withId.data.id;
-	}
-	const withUserId = AuthResultUserIdSchema.safeParse(value);
-	if (withUserId.success) {
-		return withUserId.data.userId;
-	}
-	const withNestedUser = AuthResultNestedUserSchema.safeParse(value);
-	if (withNestedUser.success) {
-		return withNestedUser.data.user.id;
-	}
-	return null;
-}
-
-function extractUserIdFromCaught(value: CaughtValue): string | null {
-	const record = JsonRecordSchema.safeParse(value);
-	if (!record.success) {
-		return null;
-	}
-	const withUserId = AuthErrorUserIdSchema.safeParse(record.data);
-	return withUserId.success ? withUserId.data.userId : null;
-}
-
-function extractErrorCode(value: CaughtValue): string {
-	if (value instanceof Error) {
-		return value.message;
-	}
-	const record = JsonRecordSchema.safeParse(value);
-	if (!record.success) {
-		return "UNKNOWN_ERROR";
-	}
-	const withCode = AuthErrorCodeSchema.safeParse(record.data);
-	if (withCode.success) {
-		return withCode.data.error;
-	}
-	const withMessage = AuthErrorMessageSchema.safeParse(record.data);
-	if (withMessage.success) {
-		return withMessage.data.message;
-	}
-	return "UNKNOWN_ERROR";
 }

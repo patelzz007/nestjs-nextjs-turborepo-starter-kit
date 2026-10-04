@@ -1,26 +1,37 @@
 import { BULK_MUTATION_MAX_ITEMS } from "../../api/bulk-mutation";
 import { z } from "zod";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
+import {
+	CatalogDescriptionSchema,
+	CatalogNameSchema,
+	CatalogPriceSchema,
+	CatalogSlugSchema,
+	OptimisticVersionSchema,
+	ProductBrandSchema,
+	ProductImageUrlSchema,
+	ProductShortDescriptionSchema,
+	ProductSkuSchema,
+} from "./catalog-fields";
 
 import type { PaginatedServiceResult } from "../../api/api-response";
 
 /** Zod contracts for Product. */
 export const CreateProductSchema = z
 	.object({
-		brand: z.string().nullable().optional(),
+		brand: ProductBrandSchema.nullable().optional(),
 		categoryId: z.uuid(),
-		compareAtPrice: z.coerce.number().nullable().optional(),
-		description: z.string().nullable().optional(),
-		imageUrl: z.string().nullable().optional(),
+		compareAtPrice: CatalogPriceSchema.nullable().optional(),
+		description: CatalogDescriptionSchema.nullable().optional(),
+		imageUrl: ProductImageUrlSchema.nullable().optional(),
 		isActive: z.boolean().optional(),
 		isFeatured: z.boolean().optional(),
-		name: z.string(),
-		price: z.coerce.number(),
-		shortDescription: z.string().nullable().optional(),
-		sku: z.string(),
-		slug: z.string(),
-		stockQuantity: z.number().int().optional(),
-		weightGrams: z.number().int().nullable().optional(),
+		name: CatalogNameSchema,
+		price: CatalogPriceSchema,
+		shortDescription: ProductShortDescriptionSchema.nullable().optional(),
+		sku: ProductSkuSchema,
+		slug: CatalogSlugSchema,
+		stockQuantity: z.number().int().nonnegative().optional(),
+		weightGrams: z.number().int().nonnegative().nullable().optional(),
 	})
 	.strict();
 export type CreateProductInput = z.output<typeof CreateProductSchema>;
@@ -32,12 +43,20 @@ export const BulkCreateProductSchema = z
 	.strict();
 export type BulkCreateProductInput = z.output<typeof BulkCreateProductSchema>;
 
-export const UpdateProductSchema = CreateProductSchema.partial();
+/**
+ * `PATCH /product/:id` — any subset of the fields, plus the `version` the
+ * client read (optimistic locking, rules/08 → "Race conditions", option B).
+ * The update only applies while the stored row is still at that version;
+ * otherwise the API answers 409 CONFLICT and the client reloads and retries.
+ */
+export const UpdateProductSchema = CreateProductSchema.partial().extend({
+	version: OptimisticVersionSchema.meta({ description: "The product `version` this edit is based on (optimistic lock)", example: 3 }),
+});
 export type UpdateProductInput = z.output<typeof UpdateProductSchema>;
 
 export const ProductIdParamSchema = z.object({ id: z.uuid() }).strict();
 /**
- * `GET /product` list query — see docs/list-queries.md. Sort, filter and search
+ * `GET /product` list query — see docs/technical/api/list-queries.md. Sort, filter and search
  * whitelists live here once and drive the API, Swagger and the typed client.
  */
 export const productListQuery = defineListQuery({

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { browserStorage } from "../../state/browser-storage";
 import { connectFeaturePersistence } from "../../state/feature-persistence";
 import { createFeatureStoreContext } from "../../state/feature-store-context";
 import { uiPreferencesActions, type UiPreferencesAction } from "./actions";
@@ -17,6 +18,9 @@ import { createUiPreferencesStore, uiPreferencesPersistence, type UiPreferencesS
 
 /** The view mode values and their schema, for controls that parse a toggle's string value. */
 export { RewardsViewModeSchema, type RewardsViewMode } from "./state";
+
+/** The stored snapshot's format version (`{ schemaVersion, snapshot }` in localStorage). */
+export { UI_PREFERENCES_VERSION } from "./state";
 
 const uiPreferencesContext = createFeatureStoreContext<UiPreferencesState, UiPreferencesAction>("UI Preferences");
 const UiPreferencesContextProvider = uiPreferencesContext.provider;
@@ -38,7 +42,7 @@ export interface UiPreferencesStoreProviderProps {
 export function UiPreferencesStoreProvider({ storageKey, devtoolsName, children }: UiPreferencesStoreProviderProps): React.JSX.Element {
 	const createStore = React.useCallback((): UiPreferencesStore => createUiPreferencesStore(devtoolsName), [devtoolsName]);
 	const connectStorage = React.useCallback(
-		(store: UiPreferencesStore): (() => void) => connectFeaturePersistence(store, window.localStorage, uiPreferencesPersistence(storageKey)),
+		(store: UiPreferencesStore): (() => void) => connectFeaturePersistence(store, browserStorage("local"), uiPreferencesPersistence(storageKey)),
 		[storageKey],
 	);
 	return (

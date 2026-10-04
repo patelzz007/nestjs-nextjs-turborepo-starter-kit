@@ -16,8 +16,9 @@ import { z } from "zod";
 //   - the items array schema is hoisted to a module constant
 //     (`BREADCRUMB_ITEMS_SCHEMA`) — parsed once, not re-created per call
 //   - the route trail is computed during render — ready on first paint, and
-//     page overrides / tail labels are pathname-scoped state, so a parent
-//     effect can never overwrite them and they never leak onto another page
+//     page overrides / tail labels are pathname-scoped state, discarded when
+//     the pathname changes, so a parent effect can never overwrite them and
+//     they never leak onto another page or a later visit of the same page
 //   - `subscribe(listener)` returns an **unsubscribe** (rule 16) and delivers
 //     the current status immediately (listeners diff without another read)
 //   - `notify` snapshots the listener set before iterating — a listener that
@@ -103,6 +104,11 @@ function toReady(items: readonly BreadcrumbItem[]): BreadcrumbStatus {
 		return { kind: "error", message: "Breadcrumb trail failed validation" };
 	}
 	return { kind: "ready", items: parsed.data };
+}
+
+/** The current page's name — the final crumb's label once the trail is ready, otherwise `null`. */
+export function breadcrumbPageLabel(status: BreadcrumbStatus): string | null {
+	return status.kind === "ready" ? (status.items.at(-1)?.label ?? null) : null;
 }
 
 export interface BreadcrumbContextValue {
@@ -197,11 +203,23 @@ export function createBreadcrumbContext(defaultResolve: (pathname: string) => re
 	function BreadcrumbProvider({ pathname, resolve, children }: BreadcrumbProviderProps): React.JSX.Element {
 		const resolver = resolve ?? defaultResolve;
 		// Page-supplied state is keyed by the pathname it was set on, so it is
-		// ignored on any other page (no cleanup ordering to get wrong) and the
-		// route trail below can never overwrite it.
+		// ignored on any other page and the route trail below can never
+		// overwrite it. It is also DISCARDED as soon as the pathname changes
+		// (below), so returning to a page later never shows a label from the
+		// previous visit — the page sets it again from its current data.
 		const [override, setOverride] = React.useState<PathScoped<BreadcrumbStatus> | null>(null);
 		const [tailLabel, setTailLabelState] = React.useState<PathScoped<string> | null>(null);
+		const [scopedPathname, setScopedPathname] = React.useState<string>(pathname);
 		const listenersRef = React.useRef<Set<(status: BreadcrumbStatus) => void>>(new Set());
+
+		// Navigated: drop the previous page's override and label during render
+		// (React's "reset state when a prop changes" pattern) — no effect, so no
+		// frame ever shows them and no cleanup ordering can bring them back.
+		if (scopedPathname !== pathname) {
+			setScopedPathname(pathname);
+			setOverride(null);
+			setTailLabelState(null);
+		}
 
 		// The route-derived trail is computed during render (not in an effect):
 		// it is ready on the first paint, and a child's override set in its own
@@ -255,14 +273,20 @@ export function createBreadcrumbContext(defaultResolve: (pathname: string) => re
 			[pathname],
 		);
 
+		// Clearing is scoped too: a page's cleanup that runs after another page
+		// set its own value never wipes that value.
 		const reset = React.useCallback((): void => {
-			setOverride(null);
-		}, []);
+			setOverride((current) => (current !== null && current.pathname === pathname ? null : current));
+		}, [pathname]);
 
 		const setTailLabel = React.useCallback(
 			(label: string | null): void => {
 				const trimmed = label?.trim() ?? "";
-				setTailLabelState(trimmed.length === 0 ? null : { pathname, value: trimmed });
+				if (trimmed.length === 0) {
+					setTailLabelState((current) => (current !== null && current.pathname === pathname ? null : current));
+					return;
+				}
+				setTailLabelState({ pathname, value: trimmed });
 			},
 			[pathname],
 		);

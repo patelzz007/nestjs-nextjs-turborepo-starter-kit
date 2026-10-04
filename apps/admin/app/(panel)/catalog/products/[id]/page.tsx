@@ -1,18 +1,16 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
+import { readProductIdParam, type IdRouteParams } from "@/lib/catalog/route-params";
+import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
 import ProductDetailView from "../product-detail-view";
 
-interface ProductDetailPageProps {
-	readonly params: Promise<{ id: string }>;
-}
+export const dynamic = "force-dynamic";
 
-export default async function ProductDetailPage({ params }: ProductDetailPageProps): Promise<React.JSX.Element> {
-	const { id } = await params;
+/** `/catalog/products/[id]` — one product (READ PRODUCT). A malformed id or a missing product renders the 404 page. */
+export default async function ProductDetailPage(props: IdRouteParams): Promise<React.JSX.Element> {
+	const id = await readProductIdParam(props);
 	const server = createAdminServerCaller();
-	const result = await Promise.allSettled([server.product.detail.query({ id })]);
+	const result = await prefetch({ page: "/catalog/products/[id]", resource: "product" }, () => server.product.detail.query({ id }));
 
-	const first = result[0];
-	const initialProduct = first.status === "fulfilled" ? first.value.data : undefined;
-
-	return <ProductDetailView id={id} initialProduct={initialProduct} />;
+	return <ProductDetailView id={id} initialProduct={resolvePrefetchedData(result)} />;
 }

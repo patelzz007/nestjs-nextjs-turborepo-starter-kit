@@ -2,12 +2,12 @@
 
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { describeTerminalStatus, pairingActionLabel, type TerminalStatusTone } from "@/lib/terminals/terminal-summary";
-import type { MerchantTerminalSummary } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type MerchantTerminalSummary } from "@workspace/shared";
 import { CodeBlockCopyButton } from "@workspace/ui/components/display/code-block";
+import { RelativeTime } from "@workspace/ui/components/display/relative-time";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Clock, MapPin, MonitorSmartphone, Plus, RotateCw } from "lucide-react";
 import * as React from "react";
 
@@ -34,10 +34,6 @@ const TONE_TILE: Readonly<Record<TerminalStatusTone, string>> = {
 	warning: "border-warning/30 bg-warning/10 text-warning",
 	muted: "border-border bg-muted text-muted-foreground",
 };
-
-function formatLastSeen(lastSeenAt: number | null): string {
-	return lastSeenAt === null ? "Never" : formatDistanceToNow(new Date(lastSeenAt), { addSuffix: true });
-}
 
 export interface TerminalListProps {
 	readonly terminals: readonly MerchantTerminalSummary[];
@@ -202,7 +198,7 @@ function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRem
 			<p className="flex items-center gap-1.5 text-sm text-muted-foreground">
 				<Clock className="size-3.5 shrink-0 lg:hidden" aria-hidden="true" />
 				<span className="lg:sr-only">Last seen </span>
-				{formatLastSeen(terminal.lastSeenAt)}
+				{terminal.lastSeenAt === null ? "Never" : <RelativeTime epochMs={terminal.lastSeenAt} region={PLATFORM_DISPLAY_REGION} />}
 			</p>
 			<div className="flex flex-wrap gap-2 lg:justify-end">
 				<Button size="sm" variant="outline" loading={isIssuingCode} disabled={isBusy} onClick={handlePair} aria-label={`${pairLabel} for ${terminal.name}`}>

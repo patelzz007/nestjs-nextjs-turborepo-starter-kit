@@ -1,6 +1,6 @@
 "use client";
 
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
+import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
@@ -22,12 +22,14 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
+import { pilotCityLabel } from "@/lib/format/pilot-city";
+import { enumFilterOptions, KYB_STATUS_LABELS, MERCHANT_ORG_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
 
 export interface MerchantsAllTableProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -41,7 +43,6 @@ export interface MerchantsAllTableProps {
 export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
-	const queryClient = useQueryClient();
 	const router = useRouter();
 	const [urlState, updateUrlState] = useUrlState(MERCHANTS_TABLE_URL_STATE);
 	const isFiltered = urlState.search !== undefined || urlState.kybStatus !== undefined || urlState.status !== undefined;
@@ -65,11 +66,13 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	});
 
 	const rows: readonly MerchantOrgResponse[] = merchantsQuery.data?.data ?? [];
+	// The server's count of every matching row — not just the rows on this page.
+	const matchingTotal: number = readPaginatedTotal(merchantsQuery.data?.meta);
 	const { pagination } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
 		sortSpec: adminMerchantListQuery,
-		totalCount: readPaginatedTotal(merchantsQuery.data?.meta),
+		totalCount: matchingTotal,
 		nextCursor: readPaginatedNextCursor(merchantsQuery.data?.meta),
 		resetKey: MERCHANTS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
 		getRowId: getMerchantRowId,
@@ -85,11 +88,11 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		[router],
 	);
 
-	const impersonateMutation = api.auth.impersonate.useMutation({
-		onSuccess: async (): Promise<void> => {
-			await invalidateSessionAuth(queryClient);
-		},
-	});
+	const handleIdentityChanged = React.useCallback((): void => {
+		router.refresh();
+	}, [router]);
+	const impersonation = useImpersonation({ onIdentityChanged: handleIdentityChanged });
+	const { requestStart: requestImpersonation } = impersonation;
 
 	// `PATCH /admin/merchants/:id/kyb` needs MANAGE; viewing the KYB page only LIST.
 	const canManageKyb = can(PERMISSION.MERCHANT_ORG.MANAGE);
@@ -101,9 +104,9 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 			if (merchant.ownerUserId === undefined || merchant.ownerUserId === null) {
 				return;
 			}
-			void impersonateMutation.mutateAsync({ userId: merchant.ownerUserId });
+			requestImpersonation({ userId: merchant.ownerUserId, label: `the owner of ${merchant.businessName}` });
 		},
-		[impersonateMutation],
+		[requestImpersonation],
 	);
 
 	const actions = React.useMemo((): Action<MerchantOrgResponse>[] => {
@@ -138,7 +141,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 				subtitle={merchant.contactEmail}
 				badge={<Badge variant="outline">{merchant.kybStatus}</Badge>}
 				fields={[
-					{ label: "City", value: merchant.city.replace("_", " ") },
+					{ label: "City", value: pilotCityLabel(merchant.city) },
 					{ label: "Category", value: merchant.category },
 					{ label: "Status", value: merchant.status },
 				]}
@@ -158,7 +161,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 			{
 				id: "city",
 				header: "City",
-				cell: ({ row }) => <span className="text-muted-foreground">{row.original.city.replace("_", " ")}</span>,
+				cell: ({ row }) => <span className="text-muted-foreground">{pilotCityLabel(row.original.city)}</span>,
 			},
 			{
 				id: "category",
@@ -218,20 +221,12 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 			{
 				key: "kybStatus",
 				label: "KYB status",
-				options: [
-					{ value: "PENDING", label: "Pending" },
-					{ value: "APPROVED", label: "Approved" },
-					{ value: "REJECTED", label: "Rejected" },
-				],
+				options: enumFilterOptions(KybStatusSchema.options, KYB_STATUS_LABELS),
 			},
 			{
 				key: "status",
 				label: "Org status",
-				options: [
-					{ value: "ONBOARDING", label: "Onboarding" },
-					{ value: "ACTIVE", label: "Active" },
-					{ value: "SUSPENDED", label: "Suspended" },
-				],
+				options: enumFilterOptions(MerchantOrgStatusSchema.options, MERCHANT_ORG_STATUS_LABELS),
 			},
 		],
 		[],
@@ -246,6 +241,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 
 	return (
 		<div className="space-y-6">
+			{impersonation.confirmDialog}
 			<header>
 				<h1 className="text-2xl font-semibold tracking-tight">Merchants</h1>
 				<p className="text-sm text-muted-foreground">Merchant organizations onboarded in the rewards pilot.</p>
@@ -253,12 +249,12 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} merchants on this page` : "Merchant organizations"}</CardTitle>
+					<CardTitle className="text-base">{matchingTotal > 0 ? `${String(matchingTotal)} merchants` : "Merchant organizations"}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable
 						columns={columns}
-						data={[...rows]}
+						data={rows}
 						labels={tableLabels}
 						actions={actions}
 						checkbox={checkbox}

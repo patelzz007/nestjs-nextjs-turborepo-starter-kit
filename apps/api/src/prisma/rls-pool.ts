@@ -2,7 +2,7 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { ThrownErrorSchema } from "@workspace/shared";
 
-import { currentRlsContextOrUnscoped } from "./rls-context";
+import { currentRlsContextOrUnscoped, rlsSessionVariables } from "./rls-context";
 
 /** Fail checkout instead of hanging until Fastify's plugin timeout. */
 const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
@@ -15,7 +15,7 @@ type ConnectCallback = (err: Error | undefined, client?: PoolClient, done?: (rel
 /**
  * Pool that stamps every checkout with `SET ROLE app_runtime` plus the RLS
  * session vars. Superuser `DATABASE_URL` bypasses RLS unless the session role
- * is a non-superuser (see `docs/prisma.md`).
+ * is a non-superuser (see `docs/technical/security/database-security.md`).
  *
  * `pg.Pool.query` checks out via `connect(callback)`. Overriding only the
  * Promise form drops that callback and hangs every query (API never listens,
@@ -70,14 +70,23 @@ export class RlsPool extends Pool {
 	}
 }
 
-async function applyRlsSession(client: PoolClient): Promise<void> {
+/**
+ * Stamp a checked-out connection with the RLS scope: the role (`SET ROLE` to
+ * the scope's role — `app_runtime`, or a system operation's narrower role),
+ * then the session variables the policies read. `set_config('role', …)` is
+ * `SET ROLE` with a bind parameter; the value is always a `DatabaseRole`.
+ */
+export async function applyRlsSession(client: Pick<PoolClient, "query">): Promise<void> {
 	const ctx = currentRlsContextOrUnscoped();
-	await client.query("SET ROLE app_runtime");
-	if (ctx.requireExplicitContext && !ctx.bypass && ctx.organizationId.length === 0) {
+	if (ctx.kind === "user" && ctx.requireExplicitContext && ctx.organizationId === null) {
 		throw new Error("Tenant database access requires organization context — use TenantTransactionService");
 	}
-	await client.query("SELECT set_config('app.current_user_id', $1, false)", [ctx.userId]);
-	await client.query("SELECT set_config('app.rls_bypass', $1, false)", [ctx.bypass ? "true" : "false"]);
-	await client.query("SELECT set_config('app.current_organization_id', $1, false)", [ctx.organizationId]);
-	await client.query("SELECT set_config('app.system_operation', $1, false)", [ctx.systemOperation]);
+	const session = rlsSessionVariables(ctx);
+	await client.query("SELECT set_config('role', $1, false)", [session.role]);
+	await client.query("SELECT set_config('app.current_user_id', $1, false)", [session.currentUserId]);
+	await client.query("SELECT set_config('app.rls_bypass', $1, false)", [session.rlsBypass]);
+	await client.query("SELECT set_config('app.current_organization_id', $1, false)", [session.currentOrganizationId]);
+	await client.query("SELECT set_config('app.system_operation', $1, false)", [session.systemOperation]);
+	await client.query("SELECT set_config('app.current_api_key_id', $1, false)", [session.currentApiKeyId]);
+	await client.query("SELECT set_config('app.current_api_key_location_id', $1, false)", [session.currentApiKeyLocationId]);
 }

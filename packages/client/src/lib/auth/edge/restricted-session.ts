@@ -1,15 +1,14 @@
-import type { CaughtValue, EnrollmentReason } from "@workspace/shared";
+// Edge-safe (route proxies): pure functions over the token and the path — no
+// browser storage, no client modules.
+import type { AuthClientType, EnrollmentReason } from "@workspace/shared";
 
-import { ApiError } from "../../api/use-api";
 import { decodeJwtPayload } from "./jwt";
 
-export type AuthAppMode = "web" | "admin" | "merchant";
-
-const ENROLLMENT_MESSAGE_KEY = "auth:enrollment-message";
+export type AuthAppMode = AuthClientType;
 
 /**
  * Personal account pages — where a restricted session completes email
- * verification or MFA enrollment (docs/routing.md: `/account` is personal,
+ * verification or MFA enrollment (docs/technical/frontend/routing.md: `/account` is personal,
  * `/settings` is org / platform configuration).
  *
  * - web: `/rewardhub/account` (the signed-in shell lives under `/rewardhub`)
@@ -46,24 +45,4 @@ export function isEnrollmentAllowedPath(pathname: string): boolean {
 	}
 
 	return ORG_ACCOUNT_PATH_PATTERN.test(pathname);
-}
-
-/** Persist an enrollment banner message across the post-login redirect. */
-export function markEnrollmentMessage(message: string): void {
-	sessionStorage.setItem(ENROLLMENT_MESSAGE_KEY, message);
-}
-
-/** Returns the stored enrollment message once, then clears it. */
-export function consumeEnrollmentMessage(): string | null {
-	const value = sessionStorage.getItem(ENROLLMENT_MESSAGE_KEY);
-	if (value === null) {
-		return null;
-	}
-	sessionStorage.removeItem(ENROLLMENT_MESSAGE_KEY);
-	return value;
-}
-
-/** Whether an API error indicates the route is blocked for restricted sessions. */
-export function isRestrictedSessionError(error: CaughtValue): boolean {
-	return error instanceof ApiError && error.error === "RESTRICTED_SESSION";
 }

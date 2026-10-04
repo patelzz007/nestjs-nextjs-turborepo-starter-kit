@@ -1,20 +1,46 @@
 import {
 	MerchantKybProfileResponseSchema,
-	MerchantOnboardingCompleteResponseSchema,
 	type MerchantKybSubmissionFieldsInput,
 	type MerchantKybSubmissionFormInput,
 	type MerchantKybProfileResponse,
-	type MerchantOnboardingCompleteFieldsInput,
-	type MerchantOnboardingCompleteResponse,
 } from "@workspace/shared";
 
 import type { ApiClient } from "../../api/use-api";
 import type { ApiRouter } from "../../api/endpoints";
-import { calculateFileSha256Hex, uploadFileDirect, uploadFileWithTicket, toDocumentMimeType } from "../../storage/direct-upload";
-import { buildVersionedApiUrl, multipartMutationHeaders, parseApiEnvelope } from "../../storage/multipart";
+import {
+	calculateFileSha256Hex,
+	uploadFileDirect,
+	uploadFileWithTicket,
+	toDocumentMimeType,
+	waitForFileReady,
+	type DirectUploadResult,
+	type FileStatusReader,
+} from "../../storage/direct-upload";
 import type { MerchantKybPendingDocument } from "./pending-document";
 
-async function uploadKybDocuments(api: ApiClient<ApiRouter>, organizationId: string, documents: readonly MerchantKybPendingDocument[]): Promise<string[]> {
+/**
+ * Resolves once an uploaded document is READY — immediately when `files/complete`
+ * already said so, otherwise through the shared bounded poll. Rejects with a
+ * `FileProcessingError` for a QUARANTINED / FAILED document.
+ */
+export async function awaitUploadedDocumentReady(reader: FileStatusReader, upload: DirectUploadResult, signal: AbortSignal | undefined): Promise<void> {
+	if (upload.response.file.status !== "READY") {
+		await waitForFileReady(reader, upload.fileId, { signal });
+	}
+}
+
+/**
+ * Uploads each document and waits for its scan verdict (`files/complete`
+ * usually answers SCANNING): a document only counts as uploaded once it is
+ * READY; a QUARANTINED / FAILED one rejects with a `FileProcessingError`.
+ * `signal` cancels the wait (the form unmounted).
+ */
+async function uploadKybDocuments(
+	api: ApiClient<ApiRouter>,
+	organizationId: string,
+	documents: readonly MerchantKybPendingDocument[],
+	signal: AbortSignal | undefined,
+): Promise<string[]> {
 	const fileIds: string[] = [];
 	for (const document of documents) {
 		const result = await uploadFileDirect(
@@ -27,19 +53,10 @@ async function uploadKybDocuments(api: ApiClient<ApiRouter>, organizationId: str
 			},
 			document.file,
 		);
+		await awaitUploadedDocumentReady(api, result, signal);
 		fileIds.push(result.fileId);
 	}
 	return fileIds;
-}
-
-export async function submitMerchantOnboardingComplete(baseUrl: string, fields: MerchantOnboardingCompleteFieldsInput): Promise<MerchantOnboardingCompleteResponse> {
-	const response = await fetch(buildVersionedApiUrl(baseUrl, "/orgs/onboarding/complete"), {
-		method: "POST",
-		body: JSON.stringify(fields),
-		credentials: "include",
-		headers: multipartMutationHeaders({ "Content-Type": "application/json" }),
-	});
-	return parseApiEnvelope(response, MerchantOnboardingCompleteResponseSchema);
 }
 
 export async function submitMerchantOnboardingDocuments(api: ApiClient<ApiRouter>, token: string, documents: readonly MerchantKybPendingDocument[]): Promise<void> {
@@ -97,8 +114,9 @@ export async function submitMerchantKyb(
 	fields: MerchantKybSubmissionFormInput,
 	documents: readonly MerchantKybPendingDocument[],
 	organizationId: string,
+	signal?: AbortSignal,
 ): Promise<MerchantKybProfileResponse> {
-	const uploadedIds = await uploadKybDocuments(api, organizationId, documents);
+	const uploadedIds = await uploadKybDocuments(api, organizationId, documents, signal);
 	const submission: MerchantKybSubmissionFieldsInput = { ...fields, documentFileIds: uploadedIds };
 	const response = await api.organizations.kyb.submit.mutate({ orgSlug, ...submission });
 	return MerchantKybProfileResponseSchema.parse(response.data);

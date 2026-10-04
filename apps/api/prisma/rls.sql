@@ -8,7 +8,7 @@
 --
 -- via `scripts/apply-rls.ts` — apply order + fresh-database validation live in
 -- `RLS_APPLY_ORDER` (scripts/rls-apply-plan.ts).
--- See prisma/rls/README.md and docs/rbac-acl-rls-architecture.md.
+-- See prisma/rls/README.md and docs/technical/security/database-security.md.
 -- ============================================================================
 
 -- ── 1. app_runtime role ────────────────────────────────────────────────────
@@ -63,11 +63,12 @@ BEGIN
     'logs',
     'api_key_usage_logs',
     'email_logs',
+    'email_delivery_events',
     'outbox_events',
     'analytics_events',
     'inbox_processed_events',
     'inbox_dead_letters',
-    'platform_resource_audit_logs',
+    'audit_logs',
     'platform_resource_idempotency_records'
   ]
   LOOP
@@ -268,6 +269,13 @@ CREATE POLICY email_logs_select ON public.email_logs FOR SELECT USING (app_rls_b
 CREATE POLICY email_logs_update ON public.email_logs FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
 CREATE POLICY email_logs_delete ON public.email_logs FOR DELETE USING (app_rls_bypass());
 
+-- Resend delivery-webhook history (one row per verified webhook delivery). Written
+-- and read only by the signature-verified webhook route (@RlsBypass) — bypass-only.
+DROP POLICY IF EXISTS email_delivery_events_bypass ON public.email_delivery_events;
+CREATE POLICY email_delivery_events_bypass ON public.email_delivery_events
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
 -- ── Audit tables (bypass-only) ─────────────────────────────────────────────
 
 DROP POLICY IF EXISTS permission_audit_logs_bypass ON public.permission_audit_logs;
@@ -280,8 +288,8 @@ CREATE POLICY impersonation_audit_logs_bypass ON public.impersonation_audit_logs
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
--- Impersonation audit is append-only for app_runtime (not representable in PSL).
-REVOKE UPDATE, DELETE ON TABLE public.impersonation_audit_logs FROM app_runtime;
+-- Impersonation audit is append-only for app_runtime: UPDATE/DELETE are withheld
+-- via prisma/rls/withheld-privileges.ts (revoked after the blanket grant in 99).
 
 DROP POLICY IF EXISTS impersonation_audit_logs_bypass ON public.impersonation_audit_logs;
 
@@ -297,7 +305,41 @@ CREATE POLICY impersonation_audit_logs_insert ON public.impersonation_audit_logs
   TO app_runtime
   WITH CHECK (app_rls_bypass());
 
--- ── Geo tables (reference data: public read, admin write) ────────────────
+-- Impersonation sessions: written under `platform.superadmin` / `route.rls_bypass`,
+-- read by AuthGuard under `request.pre_handler` — every path is a bypass scope.
+-- Rows are never deleted (ended sessions are part of the forensic record).
+ALTER TABLE public.impersonation_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.impersonation_sessions FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS impersonation_sessions_bypass ON public.impersonation_sessions;
+CREATE POLICY impersonation_sessions_bypass ON public.impersonation_sessions
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+-- DELETE is withheld from app_runtime via prisma/rls/withheld-privileges.ts.
+
+-- MFA recovery audit: append-only domain audit, written only inside the
+-- `auth.mfa_recovery.*` / `maintenance.mfa_recovery_unlock` system operations.
+ALTER TABLE public.mfa_recovery_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mfa_recovery_audit_logs FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS mfa_recovery_audit_logs_select ON public.mfa_recovery_audit_logs;
+CREATE POLICY mfa_recovery_audit_logs_select ON public.mfa_recovery_audit_logs
+  FOR SELECT
+  TO app_runtime
+  USING (app_rls_bypass());
+
+DROP POLICY IF EXISTS mfa_recovery_audit_logs_insert ON public.mfa_recovery_audit_logs;
+CREATE POLICY mfa_recovery_audit_logs_insert ON public.mfa_recovery_audit_logs
+  FOR INSERT
+  TO app_runtime
+  WITH CHECK (app_rls_bypass());
+-- UPDATE/DELETE are withheld from app_runtime via prisma/rls/withheld-privileges.ts.
+
+-- ── Geo tables (reference data: public read, SuperAdmin write) ───────────
+-- Writes are allowed ONLY under the `geo.reference_data.write` system
+-- operation (GeoRepository, SuperAdmin-only endpoints) — not under any other
+-- bypass, not even `platform.superadmin`. Rows are soft-deleted: DELETE is
+-- revoked from app_runtime in 99-app-runtime-grants.sql.
 
 ALTER TABLE IF EXISTS public.regions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS regions_read ON public.regions;
@@ -307,8 +349,8 @@ CREATE POLICY regions_read ON public.regions
 DROP POLICY IF EXISTS regions_write ON public.regions;
 CREATE POLICY regions_write ON public.regions
   FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
+  USING (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write')
+  WITH CHECK (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write');
 
 ALTER TABLE IF EXISTS public.subregions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS subregions_read ON public.subregions;
@@ -318,8 +360,8 @@ CREATE POLICY subregions_read ON public.subregions
 DROP POLICY IF EXISTS subregions_write ON public.subregions;
 CREATE POLICY subregions_write ON public.subregions
   FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
+  USING (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write')
+  WITH CHECK (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write');
 
 ALTER TABLE IF EXISTS public.countries ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS countries_read ON public.countries;
@@ -329,8 +371,8 @@ CREATE POLICY countries_read ON public.countries
 DROP POLICY IF EXISTS countries_write ON public.countries;
 CREATE POLICY countries_write ON public.countries
   FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
+  USING (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write')
+  WITH CHECK (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write');
 
 ALTER TABLE IF EXISTS public.states ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS states_read ON public.states;
@@ -340,8 +382,8 @@ CREATE POLICY states_read ON public.states
 DROP POLICY IF EXISTS states_write ON public.states;
 CREATE POLICY states_write ON public.states
   FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
+  USING (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write')
+  WITH CHECK (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write');
 
 ALTER TABLE IF EXISTS public.cities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS cities_read ON public.cities;
@@ -351,8 +393,8 @@ CREATE POLICY cities_read ON public.cities
 DROP POLICY IF EXISTS cities_write ON public.cities;
 CREATE POLICY cities_write ON public.cities
   FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
+  USING (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write')
+  WITH CHECK (app_rls_bypass() AND app_system_operation() = 'geo.reference_data.write');
 
 -- ── Rewards platform (organization-scoped — ReBAC via app_tenant_org_member in 01) ─
 
@@ -372,8 +414,6 @@ BEGIN
     'reward_legal_acceptances',
     'reward_notifications',
     'reward_audit_logs',
-    'reward_redemption_idempotency_records',
-    'organization_kyb_documents',
     'stored_files',
     'file_variants',
     'product_images',
@@ -386,11 +426,6 @@ BEGIN
     EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', t);
   END LOOP;
 END $$;
-
-DROP POLICY IF EXISTS organization_kyb_documents_org ON public.organization_kyb_documents;
-CREATE POLICY organization_kyb_documents_org ON public.organization_kyb_documents
-  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS stored_files_owner ON public.stored_files;
 CREATE POLICY stored_files_owner ON public.stored_files
@@ -495,32 +530,51 @@ CREATE POLICY reward_claims_own ON public.reward_claims
   USING (app_owns(user_id) OR app_rls_bypass())
   WITH CHECK (app_owns(user_id) OR app_rls_bypass());
 
-DROP POLICY IF EXISTS reward_redemptions_access ON public.reward_redemptions;
-CREATE POLICY reward_redemptions_access ON public.reward_redemptions
+-- The merchant's members may READ the claims of their organization's rewards
+-- (redemption history and analytics join a redemption to its claim and reward).
+-- Read-only: claims are written by the customer (own row) or system flows.
+-- Store scope within the organization is enforced by the API service layer.
+DROP POLICY IF EXISTS reward_claims_merchant_read ON public.reward_claims;
+CREATE POLICY reward_claims_merchant_read ON public.reward_claims
+  FOR SELECT
   USING (
-    app_owns(user_id)
-    OR app_tenant_org_member(organization_id)
-    OR app_rls_bypass()
-  )
-  WITH CHECK (
-    app_owns(user_id)
-    OR app_tenant_org_member(organization_id)
-    OR app_rls_bypass()
+    EXISTS (
+      SELECT 1 FROM public.rewards r
+      WHERE r.id = reward_claims.reward_id
+        AND app_tenant_org_member(r.organization_id)
+    )
   );
 
--- A paid POS bill: visible to the customer and to the merchant's members (same shape as reward_redemptions).
-DROP POLICY IF EXISTS reward_sales_access ON public.reward_sales;
-CREATE POLICY reward_sales_access ON public.reward_sales
+-- Redemptions and paid POS bills are financial records written only by the
+-- POS checkout (a verified merchant API key, system context). The customer and
+-- the merchant's members may READ them; nobody writes them from a user session.
+DROP POLICY IF EXISTS reward_redemptions_access ON public.reward_redemptions;
+DROP POLICY IF EXISTS reward_redemptions_select ON public.reward_redemptions;
+CREATE POLICY reward_redemptions_select ON public.reward_redemptions
+  FOR SELECT
   USING (
     app_owns(user_id)
     OR app_tenant_org_member(organization_id)
     OR app_rls_bypass()
-  )
-  WITH CHECK (
+  );
+DROP POLICY IF EXISTS reward_redemptions_system_write ON public.reward_redemptions;
+CREATE POLICY reward_redemptions_system_write ON public.reward_redemptions
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS reward_sales_access ON public.reward_sales;
+DROP POLICY IF EXISTS reward_sales_select ON public.reward_sales;
+CREATE POLICY reward_sales_select ON public.reward_sales
+  FOR SELECT
+  USING (
     app_owns(user_id)
     OR app_tenant_org_member(organization_id)
     OR app_rls_bypass()
   );
+DROP POLICY IF EXISTS reward_sales_system_write ON public.reward_sales;
+CREATE POLICY reward_sales_system_write ON public.reward_sales
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
 
 DROP POLICY IF EXISTS reward_referrals_parties ON public.reward_referrals;
 CREATE POLICY reward_referrals_parties ON public.reward_referrals
@@ -559,11 +613,6 @@ CREATE POLICY reward_audit_select ON public.reward_audit_logs
     OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id))
   );
 
-DROP POLICY IF EXISTS reward_idempotency_bypass ON public.reward_redemption_idempotency_records;
-CREATE POLICY reward_idempotency_bypass ON public.reward_redemption_idempotency_records
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
-
 -- Internal infrastructure tables — bypass-only (never user-scoped reads/writes).
 DROP POLICY IF EXISTS outbox_events_bypass ON public.outbox_events;
 CREATE POLICY outbox_events_bypass ON public.outbox_events
@@ -585,31 +634,48 @@ CREATE POLICY outbox_events_append ON public.outbox_events
 
 DROP POLICY IF EXISTS analytics_events_bypass ON public.analytics_events;
 CREATE POLICY analytics_events_bypass ON public.analytics_events
+  TO app_runtime
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
--- Consumer inbox ledger + parked poison messages — written by Kafka consumers
--- (apps/analytics-consumer) inside a bypass session; never user-visible.
+-- Consumer inbox ledger + parked poison messages. Never user-visible. The
+-- bypass policies above/below apply to `app_runtime` only (operator tooling);
+-- apps/analytics-consumer writes as its own least-privilege role, whose grants
+-- and policies live in prisma/rls/90-analytics-consumer.sql.
 DROP POLICY IF EXISTS inbox_processed_events_bypass ON public.inbox_processed_events;
 CREATE POLICY inbox_processed_events_bypass ON public.inbox_processed_events
+  TO app_runtime
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
 DROP POLICY IF EXISTS inbox_dead_letters_bypass ON public.inbox_dead_letters;
 CREATE POLICY inbox_dead_letters_bypass ON public.inbox_dead_letters
+  TO app_runtime
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
-DROP POLICY IF EXISTS platform_resource_audit_logs_bypass ON public.platform_resource_audit_logs;
-CREATE POLICY platform_resource_audit_logs_bypass ON public.platform_resource_audit_logs
-  USING (app_rls_bypass())
+-- Global HTTP audit log (docs/adr/025-global-http-audit-log.md): append-only.
+-- Rows are INSERTed under a named system operation — `audit.http_request.record`
+-- (AuditLogInterceptor / GlobalExceptionFilter) or the operation of a handler's
+-- own system transaction (AuditTrailService.recordInTransaction). Reading is
+-- bypass-only; UPDATE/DELETE are revoked from app_runtime in
+-- 99-app-runtime-grants.sql (it re-grants table privileges, so the revoke must
+-- run after it).
+DROP POLICY IF EXISTS audit_logs_insert ON public.audit_logs;
+CREATE POLICY audit_logs_insert ON public.audit_logs
+  FOR INSERT
   WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS audit_logs_select ON public.audit_logs;
+CREATE POLICY audit_logs_select ON public.audit_logs
+  FOR SELECT
+  USING (app_rls_bypass());
 
 DROP POLICY IF EXISTS platform_resource_idempotency_bypass ON public.platform_resource_idempotency_records;
 CREATE POLICY platform_resource_idempotency_bypass ON public.platform_resource_idempotency_records
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
--- ── Organization multi-tenancy (docs/multi-tenancy.md) ───────────────────
+-- ── Organization multi-tenancy (docs/technical/authorization/tenancy-and-rls.md) ───────────────────
 -- ReBAC helpers: prisma/rls/01-acl-location-access.sql (applied before this bundle).
 
 DO $$
@@ -684,9 +750,20 @@ CREATE POLICY organization_locations_member ON public.organization_locations
   );
 
 -- Stores: organization members read their org's stores; store members read their store.
--- Writes happen through location sagas / seeds (bypass) — stores mirror locations.
+-- A store is the 1:1 mirror of an organization location, written in the SAME
+-- transaction as every location write (syncStoreForLocation). Location writes
+-- run in the member's tenant transaction (store request / resubmit) or a system
+-- operation (admin review, close), so the mirror is writable under exactly the
+-- tenant condition `organization_locations_member` accepts — and only for a row
+-- that mirrors one of that tenant's own locations. Never hard-deleted (DELETE
+-- stays bypass-only).
 DROP POLICY IF EXISTS stores_member ON public.stores;
-CREATE POLICY stores_member ON public.stores
+DROP POLICY IF EXISTS stores_select ON public.stores;
+DROP POLICY IF EXISTS stores_mirror_insert ON public.stores;
+DROP POLICY IF EXISTS stores_mirror_update ON public.stores;
+DROP POLICY IF EXISTS stores_delete ON public.stores;
+CREATE POLICY stores_select ON public.stores
+  FOR SELECT
   USING (
     app_rls_bypass()
     OR app_tenant_organization_member_of(organization_id)
@@ -699,8 +776,39 @@ CREATE POLICY stores_member ON public.stores
         AND sm.status = 'ACTIVE'
         AND sm.is_deleted = false
     )
-  )
-  WITH CHECK (app_rls_bypass());
+  );
+CREATE POLICY stores_mirror_insert ON public.stores
+  FOR INSERT
+  WITH CHECK (
+    app_rls_bypass()
+    OR (
+      app_tenant_organization_member_of(organization_id)
+      AND EXISTS (
+        SELECT 1
+        FROM public.organization_locations loc
+        WHERE loc.id = stores.location_id
+          AND loc.organization_id = stores.organization_id
+      )
+    )
+  );
+CREATE POLICY stores_mirror_update ON public.stores
+  FOR UPDATE
+  USING (app_rls_bypass() OR app_tenant_organization_member_of(organization_id))
+  WITH CHECK (
+    app_rls_bypass()
+    OR (
+      app_tenant_organization_member_of(organization_id)
+      AND EXISTS (
+        SELECT 1
+        FROM public.organization_locations loc
+        WHERE loc.id = stores.location_id
+          AND loc.organization_id = stores.organization_id
+      )
+    )
+  );
+CREATE POLICY stores_delete ON public.stores
+  FOR DELETE
+  USING (app_rls_bypass());
 
 -- Store memberships: a user sees their own rows; organization members see the org's rows.
 DROP POLICY IF EXISTS store_memberships_member ON public.store_memberships;
@@ -731,6 +839,15 @@ CREATE POLICY organization_access_requests_select ON public.organization_access_
 CREATE POLICY organization_access_requests_insert ON public.organization_access_requests
   FOR INSERT
   WITH CHECK (app_rls_bypass() OR user_id = app_current_user_id());
+-- Reviewing (the PENDING → APPROVED/REJECTED compare-and-set) runs only as the
+-- `organization.access_request.review` system operation, after the reviewer's
+-- manage-team check. Without an UPDATE policy forced RLS matches no row, so the
+-- claim updated nothing and every review reported "already reviewed" (409).
+DROP POLICY IF EXISTS organization_access_requests_review ON public.organization_access_requests;
+CREATE POLICY organization_access_requests_review ON public.organization_access_requests
+  FOR UPDATE
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
 
 DROP POLICY IF EXISTS organization_merchant_profiles_member ON public.organization_merchant_profiles;
 CREATE POLICY organization_merchant_profiles_member ON public.organization_merchant_profiles

@@ -6,6 +6,7 @@ import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { resolveActiveOrganizationLocations } from "@/lib/org/location-access";
 import { orgRoutes } from "@/lib/routes";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
 	OrganizationMemberInviteFieldsSchema,
@@ -167,8 +168,8 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 
 	const invalidateTeamQueries = React.useCallback(async (): Promise<void> => {
 		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: ["organization", orgSlug, "members"] }),
-			queryClient.invalidateQueries({ queryKey: ["organization", orgSlug, "members", "invites"] }),
+			queryClient.invalidateQueries({ queryKey: apiRouter.organizations.listMembers.scopeKey({ orgSlug }) }),
+			queryClient.invalidateQueries({ queryKey: apiRouter.organizations.listMemberInvites.scopeKey({ orgSlug }) }),
 		]);
 	}, [orgSlug, queryClient]);
 

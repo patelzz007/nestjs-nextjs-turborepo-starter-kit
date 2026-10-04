@@ -70,13 +70,18 @@ function toPrismaCreateInput(input: CreateProductInput): Prisma.ProductCreateInp
 	};
 }
 
-function toPrismaUpdateInput(input: UpdateProductInput): Prisma.ProductUpdateInput {
-	const data: Prisma.ProductUpdateInput = {};
+/**
+ * Update-many input (`updateManyAndReturn` runs the conditional, versioned
+ * update), so the category is written as its foreign key column. `version` is
+ * the optimistic-lock token — it goes into the update's `where`, not its data.
+ */
+function toPrismaUpdateInput(input: UpdateProductInput): Prisma.ProductUncheckedUpdateManyInput {
+	const data: Prisma.ProductUncheckedUpdateManyInput = {};
 	if (input.brand !== undefined) {
 		data.brand = input.brand;
 	}
 	if (input.categoryId !== undefined) {
-		data.category = { connect: { id: input.categoryId } };
+		data.categoryId = input.categoryId;
 	}
 	if (input.compareAtPrice !== undefined) {
 		data.compareAtPrice = input.compareAtPrice;
@@ -116,7 +121,7 @@ function toPrismaUpdateInput(input: UpdateProductInput): Prisma.ProductUpdateInp
 	}
 	return data;
 }
-// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 /** Every whitelisted sort field mapped to its column. */
 export const PRODUCT_SORT_COLUMNS: SortColumns<ProductListSortField, Prisma.ProductOrderByWithRelationInput> = {
@@ -184,10 +189,13 @@ const ProductRepositoryPorts = {
 	buildFindByIdWhere: (id: string): Prisma.ProductWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.ProductWhereInput => ({ id }),
 	readDeletedAt: (row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
-	buildUpdateWhere: (id: string, expectedVersion?: number): Prisma.ProductWhereUniqueInput => ({ id, ...(expectedVersion === undefined ? {} : { version: expectedVersion }) }),
-	stampUpdate: (data: Prisma.ProductUpdateInput): Prisma.ProductUpdateInput => ({ ...data, version: { increment: 1 }, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.ProductUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.ProductUpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
+	buildLiveWhere: (id: string): Prisma.ProductWhereInput => ({ id, deletedAt: null }),
+	buildUniqueWhere: (id: string): Prisma.ProductWhereUniqueInput => ({ id }),
+	// Optimistic locking: the update applies only to the live row still at the version the client read.
+	buildUpdateWhere: (id: string, input: UpdateProductInput): Prisma.ProductWhereInput => ({ id, deletedAt: null, version: input.version }),
+	stampUpdate: (data: Prisma.ProductUncheckedUpdateManyInput): Prisma.ProductUncheckedUpdateManyInput => ({ ...data, version: { increment: 1 }, updatedAt: nowEpochMs() }),
+	stampSoftDelete: (): Prisma.ProductUncheckedUpdateManyInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
+	stampRestore: (): Prisma.ProductUncheckedUpdateManyInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
 };
 
 @Injectable()
@@ -200,10 +208,10 @@ export class ProductRepository extends BaseRepository<
 	Prisma.ProductWhereInput,
 	Prisma.ProductOrderByWithRelationInput,
 	Prisma.ProductCreateInput,
-	Prisma.ProductUpdateInput,
+	Prisma.ProductUncheckedUpdateManyInput,
 	Prisma.ProductWhereUniqueInput
 > {
 	public constructor(prisma: PrismaService) {
-		super(prisma, ProductRepositoryPorts, prisma.product, { softDelete: true, concurrency: true });
+		super(prisma, ProductRepositoryPorts, (db: Prisma.TransactionClient) => db.product, { softDelete: true });
 	}
 }

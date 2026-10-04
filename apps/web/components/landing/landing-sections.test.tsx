@@ -17,16 +17,30 @@ vi.mock("@/components/landing/landing-auth-actions", () => ({
 }));
 
 const SIGN_IN = { label: "Sign in to claim", href: "/auth/login?redirect=%2Frewardhub" };
-/** 15 Nov 2026, midday UTC — far from a date boundary in any timezone. */
-const EXPIRY = Date.UTC(2026, 10, 15, 12);
+/** A merchant-picked expiry day (15 Nov 2026), which the reward form sends as 00:00 UTC of that day. */
+const EXPIRY_PICKED_DAY = Date.UTC(2026, 10, 15);
+/** 14 Nov 2026 16:30 UTC — already 15 Nov (00:30) in Malaysia, where the stores are, but still 14 Nov in UTC and the Americas. */
+const EXPIRY_JUST_AFTER_MALAYSIAN_MIDNIGHT = Date.UTC(2026, 10, 14, 16, 30);
+
+/** Zones the server or the visitor's browser may run in — the label must not depend on any of them. */
+const RUNTIME_TIME_ZONES: readonly string[] = ["UTC", "America/Los_Angeles", "Asia/Kuala_Lumpur", "Pacific/Kiritimati"];
 
 const OFFERS: readonly FeaturedOffer[] = [
-	{ id: "offer-1", title: "Free coffee — Grand Opening", merchantName: "Brew & Bean KL", category: "cafe", remaining: 142, total: 200, expiryDate: EXPIRY },
-	{ id: "offer-2", title: "RM10 off Jonker lunch set", merchantName: undefined, category: "restaurant", remaining: 95, total: 120, expiryDate: EXPIRY },
+	{ id: "offer-1", title: "Free coffee — Grand Opening", merchantName: "Brew & Bean KL", category: "cafe", remaining: 142, total: 200, expiryDate: EXPIRY_PICKED_DAY },
+	{
+		id: "offer-2",
+		title: "RM10 off Jonker lunch set",
+		merchantName: undefined,
+		category: "restaurant",
+		remaining: 95,
+		total: 120,
+		expiryDate: EXPIRY_JUST_AFTER_MALAYSIAN_MIDNIGHT,
+	},
 ];
 
 afterEach(() => {
 	cleanup();
+	vi.unstubAllEnvs();
 });
 
 /** No `<button>` may sit inside an `<a>` (invalid HTML; breaks keyboard and screen-reader semantics). */
@@ -61,6 +75,15 @@ describe("LandingHero", () => {
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(["/rewards/offer-1", "/rewards/offer-2"]);
 		expect(within(preview).getByText("Brew & Bean KL ·")).toBeDefined();
 		expect(within(preview).getAllByText("Until 15 Nov")).toHaveLength(2);
+	});
+
+	it.each(RUNTIME_TIME_ZONES)("dates each offer in Malaysia time whatever zone the server or browser runs in (%s)", (runtimeTimeZone: string) => {
+		// Node re-reads TZ whenever it changes, so this switches the runtime zone the way a differently configured server or browser would.
+		vi.stubEnv("TZ", runtimeTimeZone);
+
+		render(<LandingHero featuredOffers={OFFERS} liveOfferCount={12} secondaryAction={SIGN_IN} />);
+
+		expect(within(screen.getByRole("region", { name: "Ending soon" })).getAllByText("Until 15 Nov")).toHaveLength(2);
 	});
 
 	it("hides the preview when there are no claimable offers", () => {

@@ -1,11 +1,17 @@
-import { createHash } from "node:crypto";
-
 import type { User, RewardType } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
-import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
+import { POS_PAIRING_CODE_TTL_MS } from "@workspace/shared";
+
+import { sha256Hex } from "../../src/common/crypto/sha256";
+import { API_KEY_PREFIX_LENGTH } from "../../src/modules/rewards/services/merchant-api-key.service";
+
+import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_ORGANIZATION_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
 import { prisma } from "./client";
+import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
+import { seedCheckout } from "./reward-checkout";
+import { seedRewardLifecycleStates } from "./reward-lifecycle-states";
 import { seedLog } from "./seed-log";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
@@ -41,6 +47,8 @@ export const REWARD_SEED_IDS = Object.freeze({
 export const DEMO_MERCHANT_API_KEYS = Object.freeze({
 	kl: "mk_live_IwgbQID2Csq4nbnfwUxVUrQT8lwrlhEz7bzagwasKyFtZYSQ42LSH43lzTfRdBkV7tZArdHQQE4EW0wDHpVAroL57w/+5AzsCxRpax2fmu3JqITATsJKJRi4+fifNVj1E3WswonhsleEBinxwcMOlqccH0suhUq6mJWVvaWYkf8=",
 	mlk: "mk_live_Dx20Nsn5K79wGXWaTYbEvUyVLQrXWIwExA7zsK4jGyMMKxVPxsmJHoIrGimviO7RBtbb5ZdLsEcT0vxGeBVhV7NP72FoIRxFcF17juhUiMxrHxfAMuIy5NuYIK/eMqDdpWY5KNYxMGNCy/iT20Kc7813y2bMoOjZTCJJ/84JMQY=",
+	/** Organization-wide INTEGRATION key (back-office sync): not bound to a store or terminal, not usable on /redemptions/*. */
+	klIntegration: "mk_live_seedKlBackOfficeIntegrationKey7Hq2Vt9Xc4Lm8Np3Rs6Wz5Yb2Dg7Jk4Fh9Qa3Ue6Ti8Oy1Pw5",
 });
 
 /** Plaintext QR token for pending KL claim (hash stored in DB). */
@@ -62,9 +70,14 @@ export const DEMO_QR_TOKEN_PENDING_KL = "seed_qr_token_kl_pending_alice_001";
 /** Plaintext backup code for pending KL claim. */
 export const DEMO_BACKUP_CODE_PENDING_KL = "ABCD2345";
 
-function sha256Hex(value: string): string {
-	return createHash("sha256").update(value).digest("hex");
-}
+/** Plaintext one-time pairing code issued for KL-REGISTER-02 (hash stored; valid for `POS_PAIRING_CODE_TTL_MS` after seeding). */
+export const DEMO_PAIRING_CODE_KL_REGISTER_02 = "PQRS2345";
+
+/** Unknown backup codes recorded against the Melaka simulator key (below `POS_CODE_MAX_FAILURES`). */
+const SEED_RECENT_CODE_FAILURES = 2;
+
+/** How long ago that failure window opened. */
+const SEED_CODE_FAILURE_WINDOW_AGE_MS = 5 * 60_000;
 
 function msFromNow(days: number): number {
 	return Date.now() + days * 24 * 60 * 60 * 1000;
@@ -137,23 +150,35 @@ async function ensureSeedConsumerRole(userId: string): Promise<void> {
 	});
 }
 
+/** Consumer accounts whose reward rows (notifications, legal acceptances, OTP challenges) the seed owns. */
+const SEED_CONSUMER_EMAILS: readonly string[] = ["alice.johnson@example.com", "bob.smith@example.com", "carol.white@example.com", "user@example.com"];
+
+/**
+ * Removes the re-creatable reward rows of the SEED tenants (and the seed
+ * consumers' notification/legal/OTP rows) so the next run converges. Scoped by
+ * id — another tenant's data is never touched — and audit tables
+ * (`reward_audit_logs`, `organization_audit_logs`) are never deleted: the seed
+ * writes its own audit rows with deterministic ids instead.
+ */
 export async function cleanupRewardSeedData(): Promise<void> {
-	await prisma.rewardRedemptionIdempotencyRecord.deleteMany();
-	await prisma.rewardAuditLog.deleteMany();
-	await prisma.rewardNotification.deleteMany();
-	await prisma.rewardLegalAcceptance.deleteMany();
-	await prisma.rewardOtpChallenge.deleteMany();
-	await prisma.rewardRedemption.deleteMany();
+	const organizationId = { in: [...SEED_ORGANIZATION_IDS] };
+	const seedConsumers = await prisma.user.findMany({ where: { email: { in: [...SEED_CONSUMER_EMAILS] } }, select: { id: true } });
+	const userId = { in: seedConsumers.map((consumer) => consumer.id) };
+
+	await prisma.rewardNotification.deleteMany({ where: { userId } });
+	await prisma.rewardLegalAcceptance.deleteMany({ where: { userId } });
+	await prisma.rewardOtpChallenge.deleteMany({ where: { userId } });
+	await prisma.rewardRedemption.deleteMany({ where: { organizationId } });
 	// After redemptions: they reference their sale (ON DELETE RESTRICT).
-	await prisma.rewardSale.deleteMany();
-	await prisma.rewardClaim.deleteMany();
-	await prisma.rewardReferral.deleteMany();
-	await prisma.rewardLocationScope.deleteMany();
-	await prisma.reward.deleteMany();
-	await prisma.organizationInvitationLocationScope.deleteMany();
-	await prisma.organizationInvitation.deleteMany();
-	await prisma.organizationApiKey.deleteMany();
-	await prisma.organizationTerminal.deleteMany();
+	await prisma.rewardSale.deleteMany({ where: { organizationId } });
+	await prisma.rewardClaim.deleteMany({ where: { reward: { organizationId } } });
+	await prisma.rewardReferral.deleteMany({ where: { reward: { organizationId } } });
+	await prisma.rewardLocationScope.deleteMany({ where: { organizationId } });
+	// Referrer clones point at their parent; unlink before deleting either side.
+	await prisma.reward.updateMany({ where: { organizationId }, data: { referrerRewardId: null, parentConsumerRewardId: null } });
+	await prisma.reward.deleteMany({ where: { organizationId } });
+	await prisma.organizationTerminal.deleteMany({ where: { organizationId } });
+	await prisma.organizationApiKey.deleteMany({ where: { organizationId } });
 	await cleanupOrganizationSeedData();
 }
 
@@ -165,6 +190,12 @@ export interface RewardSeedSummary {
 	referrals: number;
 	notifications: number;
 }
+
+/** Bill totals (sen) of the seeded checkouts — each meets its reward's minimum spend. */
+const SEED_BILL_KL_BOB_MINOR = 1_850;
+const SEED_BILL_MLK_CAROL_MINOR = 4_820;
+const SEED_BULK_BILL_BASE_MINOR = 1_200;
+const SEED_BULK_BILL_STEP_MINOR = 350;
 
 export async function seedRewards(adminUser: User, consumerUsers: User[]): Promise<RewardSeedSummary> {
 	const now = Date.now();
@@ -189,6 +220,51 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 
 	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user, klPendingCashier);
 
+	const klKeyId = deterministicUuid("reward-seed-api-key", "kl-pos-simulator");
+	const mlkKeyId = deterministicUuid("reward-seed-api-key", "mlk-katil-pos");
+	const klIntegrationKeyId = deterministicUuid("reward-seed-api-key", "kl-integration");
+
+	// The two simulator keys only call /redemptions/* — POS scope. The Melaka key carries a few
+	// recent unknown backup codes (below the lockout limit) so the lockout columns hold real data.
+	await prisma.organizationApiKey.createMany({
+		data: [
+			{
+				id: klKeyId,
+				organizationId: klOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				name: "KL POS Simulator",
+				keyHash: sha256Hex(DEMO_MERCHANT_API_KEYS.kl),
+				keyPrefix: DEMO_MERCHANT_API_KEYS.kl.slice(0, API_KEY_PREFIX_LENGTH),
+				scope: "POS",
+				createdByUserId: klOwner.id,
+			},
+			{
+				id: mlkKeyId,
+				organizationId: mlkOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				name: "Melaka Bukit Katil POS",
+				keyHash: sha256Hex(DEMO_MERCHANT_API_KEYS.mlk),
+				keyPrefix: DEMO_MERCHANT_API_KEYS.mlk.slice(0, API_KEY_PREFIX_LENGTH),
+				scope: "POS",
+				createdByUserId: mlkOwner.id,
+				codeFailureCount: SEED_RECENT_CODE_FAILURES,
+				codeFailureWindowStartedAt: now - SEED_CODE_FAILURE_WINDOW_AGE_MS,
+			},
+			{
+				id: klIntegrationKeyId,
+				organizationId: klOrganization.id,
+				locationId: null,
+				name: "Brew & Bean back-office integration",
+				keyHash: sha256Hex(DEMO_MERCHANT_API_KEYS.klIntegration),
+				keyPrefix: DEMO_MERCHANT_API_KEYS.klIntegration.slice(0, API_KEY_PREFIX_LENGTH),
+				scope: "INTEGRATION",
+				createdByUserId: klOwner.id,
+			},
+		],
+	});
+
+	// Every till has its creator (the owner who registered it). KL-REGISTER-02 is awaiting pairing:
+	// the cashier issued a code (`DEMO_PAIRING_CODE_KL_REGISTER_02`) that the till has not used yet.
 	await prisma.organizationTerminal.createMany({
 		data: [
 			{
@@ -196,47 +272,31 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				locationId: ORGANIZATION_SEED_IDS.klLocation,
 				terminalId: "KL-REGISTER-01",
 				label: "Front counter",
+				createdByUserId: klOwner.id,
 			},
 			{
 				organizationId: klOrganization.id,
 				locationId: ORGANIZATION_SEED_IDS.klLocation,
 				terminalId: "KL-REGISTER-02",
 				label: "Drive-through",
+				createdByUserId: klOwner.id,
+				pairingCodeHash: seedCodeHash(DEMO_PAIRING_CODE_KL_REGISTER_02),
+				pairingCodeExpiresAt: now + POS_PAIRING_CODE_TTL_MS,
+				pairingCodeIssuedByUserId: klCashier.id,
+				pairingCodeIssuedAt: now,
 			},
 			{
 				organizationId: mlkOrganization.id,
 				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
 				terminalId: "MLK-KATIL-01",
 				label: "Bukit Katil counter",
+				createdByUserId: mlkOwner.id,
 			},
 			{
 				organizationId: mlkOrganization.id,
 				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
 				terminalId: "MLK-BERUANG-01",
 				label: "Bukit Beruang counter",
-			},
-		],
-	});
-
-	const klKeyHash = sha256Hex(DEMO_MERCHANT_API_KEYS.kl);
-	const mlkKeyHash = sha256Hex(DEMO_MERCHANT_API_KEYS.mlk);
-
-	await prisma.organizationApiKey.createMany({
-		data: [
-			{
-				organizationId: klOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
-				name: "KL POS Simulator",
-				keyHash: klKeyHash,
-				keyPrefix: DEMO_MERCHANT_API_KEYS.kl.slice(0, 16),
-				createdByUserId: klOwner.id,
-			},
-			{
-				organizationId: mlkOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
-				name: "Melaka Bukit Katil POS",
-				keyHash: mlkKeyHash,
-				keyPrefix: DEMO_MERCHANT_API_KEYS.mlk.slice(0, 16),
 				createdByUserId: mlkOwner.id,
 			},
 		],
@@ -256,7 +316,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardKind: "CONSUMER",
 				category: "cafe",
 				placeholderImageKey: "category-cafe",
-				rules: { minSpendMyr: 0 },
+				minSpendMinor: 0,
 				quantityTotal: 200,
 				quantityRemaining: 142,
 				quantityReserved: 8,
@@ -280,7 +340,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardKind: "CONSUMER",
 				category: "restaurant",
 				placeholderImageKey: "category-restaurant",
-				rules: { minSpendMyr: 35 },
+				minSpendMinor: 3500,
 				quantityTotal: 120,
 				quantityRemaining: 95,
 				quantityReserved: 5,
@@ -327,7 +387,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardKind: "CONSUMER",
 				category: "restaurant",
 				placeholderImageKey: "category-restaurant",
-				rules: { minSpendMyr: 25 },
+				minSpendMinor: 2500,
 				quantityTotal: 60,
 				quantityRemaining: 48,
 				quantityReserved: 2,
@@ -620,6 +680,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			attributionToken: "seed_ref_token_carol_user_mlk",
 			status: "CREDITED",
 			creditedAt: msDaysAgo(2),
+			// The "reward credited" email was delivered when the credit happened.
+			creditNotifiedAt: msDaysAgo(2),
 			refereeIp: "203.176.12.20",
 		},
 	});
@@ -632,8 +694,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			userId: alice.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
 			referralId: REWARD_SEED_IDS.referralPending,
-			redemptionTokenHash: sha256Hex(DEMO_QR_TOKEN_PENDING_KL),
-			backupCodeHash: sha256Hex(DEMO_BACKUP_CODE_PENDING_KL),
+			redemptionTokenHash: seedCodeHash(DEMO_QR_TOKEN_PENDING_KL),
+			backupCodeHash: seedCodeHash(DEMO_BACKUP_CODE_PENDING_KL),
 			status: "PENDING",
 			claimedAt: msDaysAgo(1),
 			claimExpiresAt: claimExpiresKl,
@@ -645,8 +707,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			id: REWARD_SEED_IDS.claimRedeemedKl,
 			userId: bob.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
-			redemptionTokenHash: sha256Hex("seed_qr_token_kl_redeemed_bob_001"),
-			backupCodeHash: sha256Hex("WXYZ2345"),
+			redemptionTokenHash: seedCodeHash("seed_qr_token_kl_redeemed_bob_001"),
+			backupCodeHash: seedCodeHash("WXYZ2345"),
 			status: "REDEEMED",
 			claimedAt: msDaysAgo(5),
 			claimExpiresAt: msDaysAgo(1),
@@ -654,16 +716,16 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		},
 	});
 
-	await prisma.rewardRedemption.create({
-		data: {
-			claimId: REWARD_SEED_IDS.claimRedeemedKl,
-			organizationId: klOrganization.id,
-			userId: bob.id,
-			terminalId: "KL-REGISTER-01",
-			redemptionMethod: "SCAN",
-			idempotencyKey: "50000000-0000-4000-8000-000000000001",
-			redeemedAt: msDaysAgo(4),
-		},
+	await seedCheckout({
+		key: "kl-bob",
+		organizationId: klOrganization.id,
+		locationId: ORGANIZATION_SEED_IDS.klLocation,
+		terminalId: "KL-REGISTER-01",
+		apiKeyId: klKeyId,
+		userId: bob.id,
+		claimId: REWARD_SEED_IDS.claimRedeemedKl,
+		billTotalMinor: SEED_BILL_KL_BOB_MINOR,
+		paidAt: msDaysAgo(4),
 	});
 
 	await prisma.rewardClaim.create({
@@ -671,8 +733,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			id: REWARD_SEED_IDS.claimExpiredKl,
 			userId: carol.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
-			redemptionTokenHash: sha256Hex("seed_qr_token_kl_expired_carol_001"),
-			backupCodeHash: sha256Hex("PQRS6789"),
+			redemptionTokenHash: seedCodeHash("seed_qr_token_kl_expired_carol_001"),
+			backupCodeHash: seedCodeHash("PQRS6789"),
 			status: "EXPIRED",
 			claimedAt: msDaysAgo(10),
 			claimExpiresAt: msDaysAgo(3),
@@ -685,8 +747,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			userId: user.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
 			referralId: REWARD_SEED_IDS.referralCredited,
-			redemptionTokenHash: sha256Hex("seed_qr_token_mlk_pending_user_001"),
-			backupCodeHash: sha256Hex("TUVW2345"),
+			redemptionTokenHash: seedCodeHash("seed_qr_token_mlk_pending_user_001"),
+			backupCodeHash: seedCodeHash("TUVW2345"),
 			status: "PENDING",
 			claimedAt: msDaysAgo(2),
 			claimExpiresAt: msFromNow(5),
@@ -698,8 +760,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			id: REWARD_SEED_IDS.claimRedeemedMlk,
 			userId: carol.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
-			redemptionTokenHash: sha256Hex("seed_qr_token_mlk_redeemed_carol_001"),
-			backupCodeHash: sha256Hex("JKLM2345"),
+			redemptionTokenHash: seedCodeHash("seed_qr_token_mlk_redeemed_carol_001"),
+			backupCodeHash: seedCodeHash("JKLM2345"),
 			status: "REDEEMED",
 			claimedAt: msDaysAgo(6),
 			claimExpiresAt: msDaysAgo(2),
@@ -707,19 +769,19 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		},
 	});
 
-	await prisma.rewardRedemption.create({
-		data: {
-			claimId: REWARD_SEED_IDS.claimRedeemedMlk,
-			organizationId: mlkOrganization.id,
-			userId: carol.id,
-			terminalId: "MLK-REGISTER-01",
-			redemptionMethod: "SCAN",
-			idempotencyKey: "50000000-0000-4000-8000-000000000002",
-			redeemedAt: msDaysAgo(3),
-		},
+	await seedCheckout({
+		key: "mlk-carol",
+		organizationId: mlkOrganization.id,
+		locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+		terminalId: "MLK-KATIL-01",
+		apiKeyId: mlkKeyId,
+		userId: carol.id,
+		claimId: REWARD_SEED_IDS.claimRedeemedMlk,
+		billTotalMinor: SEED_BILL_MLK_CAROL_MINOR,
+		paidAt: msDaysAgo(3),
 	});
 
-	// Bulk claims for inventory stress demo — every REDEEMED claim has a matching redemption row.
+	// Bulk claims for inventory stress demo — every REDEEMED claim has a matching paid bill + redemption.
 	const bulkClaimUsers = consumerUsers.slice(0, 6);
 	for (const [index, consumer] of bulkClaimUsers.entries()) {
 		const isRedeemed = index % 3 === 0;
@@ -728,8 +790,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			data: {
 				userId: consumer.id,
 				rewardId: REWARD_SEED_IDS.klRewardPublished,
-				redemptionTokenHash: sha256Hex(`seed_qr_bulk_kl_${consumer.id}_${String(index)}`),
-				backupCodeHash: sha256Hex(`seed_backup_bulk_${consumer.id}_${String(index)}`),
+				redemptionTokenHash: seedCodeHash(`seed_qr_bulk_kl_${consumer.id}_${String(index)}`),
+				backupCodeHash: seedCodeHash(`seed_backup_bulk_${consumer.id}_${String(index)}`),
 				status: isRedeemed ? "REDEEMED" : "PENDING",
 				claimedAt: msDaysAgo(index + 1),
 				claimExpiresAt: msFromNow(6 - index),
@@ -738,16 +800,16 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		});
 
 		if (isRedeemed && redeemedAt !== null) {
-			await prisma.rewardRedemption.create({
-				data: {
-					claimId: claim.id,
-					organizationId: klOrganization.id,
-					userId: consumer.id,
-					terminalId: "KL-REGISTER-01",
-					redemptionMethod: "SCAN",
-					idempotencyKey: `50000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}`,
-					redeemedAt,
-				},
+			await seedCheckout({
+				key: `kl-bulk-${String(index)}`,
+				organizationId: klOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				terminalId: "KL-REGISTER-01",
+				apiKeyId: klKeyId,
+				userId: consumer.id,
+				claimId: claim.id,
+				billTotalMinor: SEED_BULK_BILL_BASE_MINOR + index * SEED_BULK_BILL_STEP_MINOR,
+				paidAt: redeemedAt,
 			});
 		}
 	}
@@ -757,8 +819,10 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		data: {
 			userId: carol.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardReferrer,
-			redemptionTokenHash: sha256Hex("seed_qr_referrer_carol_mlk_001"),
-			backupCodeHash: sha256Hex("EFGH2345"),
+			// The referral this credit was earned by (the app links every credit claim to its referral).
+			referralId: REWARD_SEED_IDS.referralCredited,
+			redemptionTokenHash: seedCodeHash("seed_qr_referrer_carol_mlk_001"),
+			backupCodeHash: seedCodeHash("EFGH2345"),
 			status: "PENDING",
 			isReferrerCredit: true,
 			claimedAt: msDaysAgo(2),
@@ -829,9 +893,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		],
 	});
 
+	// Deterministic ids + skipDuplicates: audit rows are never deleted, so a re-run must not append copies.
 	await prisma.rewardAuditLog.createMany({
+		skipDuplicates: true,
 		data: [
 			{
+				id: deterministicUuid("reward-seed-audit", "kl-cashier-scan-qr"),
 				actorUserId: klCashier.id,
 				organizationId: klOrganization.id,
 				action: "merchant.scan_qr",
@@ -839,6 +906,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				createdAt: msDaysAgo(1),
 			},
 			{
+				id: deterministicUuid("reward-seed-audit", "kl-redeem-reward"),
 				actorUserId: null,
 				organizationId: klOrganization.id,
 				action: "merchant.redeem_reward",
@@ -846,6 +914,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				createdAt: msDaysAgo(4),
 			},
 			{
+				id: deterministicUuid("reward-seed-audit", "kl-owner-self-redeem"),
 				actorUserId: klOwner.id,
 				organizationId: klOrganization.id,
 				action: "self_redeem_audit",
@@ -853,6 +922,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				createdAt: msDaysAgo(6),
 			},
 			{
+				id: deterministicUuid("reward-seed-audit", "mlk-redeem-reward"),
 				actorUserId: null,
 				organizationId: mlkOrganization.id,
 				action: "merchant.redeem_reward",
@@ -874,6 +944,21 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			failedAttempts: 0,
 			consumedAt: msDaysAgo(1),
 		},
+	});
+
+	await seedRewardLifecycleStates({
+		klOrganizationId: klOrganization.id,
+		mlkOrganizationId: mlkOrganization.id,
+		adminUserId: adminUser.id,
+		klOwnerId: klOwner.id,
+		mlkOwnerId: mlkOwner.id,
+		klCashierId: klCashier.id,
+		alice,
+		bob,
+		carol,
+		klKeyId,
+		mlkKeyId,
+		now,
 	});
 
 	const organizations = await prisma.organization.count({ where: { merchantProfile: { isNot: null } } });

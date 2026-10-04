@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 00 — base session helpers (applied FIRST)
 -- ============================================================================
--- The four primitives every other RLS file depends on:
+-- The primitives every other RLS file depends on:
 --   - `01-acl-location-access.sql` builds SECURITY DEFINER functions on top of
 --     them (its SQL bodies call app_rls_bypass() / app_current_user_id()).
 --   - `prisma/rls.sql` policies call app_owns() / app_rls_bypass().
@@ -30,11 +30,40 @@ END $$;
 
 GRANT app_runtime TO CURRENT_USER;
 
+-- ── app_enumerator role — the role of the `tenant.enumerate` system operation
+-- (apps/api/src/prisma/system-operation.registry.ts). Read-only and narrow:
+-- 99-app-runtime-grants.sql grants it SELECT on `organizations` (plus the
+-- `organization_memberships` table that policy reads) and nothing else, so a
+-- scheduler fan-out can list tenant ids but never read or write tenant data.
+-- Reached only via SET ROLE, like app_runtime.
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_enumerator') THEN
+    CREATE ROLE app_enumerator NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
+  END IF;
+END $$;
+
+GRANT app_enumerator TO CURRENT_USER;
+
 -- ── session primitives
 
+-- The allowlisted system operation the session runs under (NULL for user /
+-- anonymous sessions). Set by the API pool checkout and by
+-- `withSystemOperation` (transaction-local); policies that only ONE operation
+-- may pass (geo reference-data writes, the HTTP audit log) compare it by name.
+CREATE OR REPLACE FUNCTION app_system_operation() RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(current_setting('app.system_operation', true), '');
+$$;
+
+-- A bypass is granted only when the session BOTH asks for it AND names the
+-- allowlisted system operation that justifies it. `app.rls_bypass = true`
+-- without an operation name is not a bypass (ADR 012).
 CREATE OR REPLACE FUNCTION app_rls_bypass() RETURNS boolean
 LANGUAGE sql STABLE AS $$
-  SELECT COALESCE(NULLIF(current_setting('app.rls_bypass', true), ''), 'false')::boolean;
+  SELECT COALESCE(NULLIF(current_setting('app.rls_bypass', true), ''), 'false')::boolean
+     AND app_system_operation() IS NOT NULL;
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_user_id() RETURNS text

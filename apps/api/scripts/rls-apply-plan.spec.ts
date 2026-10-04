@@ -11,7 +11,14 @@ function planFile(path: string, sql: string): RlsPlanFile {
 
 describe("RLS apply plan", () => {
 	it("registers the RLS files in canonical layer order", () => {
-		expect(RLS_APPLY_ORDER).toEqual(["prisma/rls/00-app-helpers.sql", "prisma/rls/01-acl-location-access.sql", "prisma/rls.sql", "prisma/rls/99-app-runtime-grants.sql"]);
+		expect(RLS_APPLY_ORDER).toEqual([
+			"prisma/rls/00-app-helpers.sql",
+			"prisma/rls/01-acl-location-access.sql",
+			"prisma/rls.sql",
+			"prisma/rls/40-api-key-principal.sql",
+			"prisma/rls/90-analytics-consumer.sql",
+			"prisma/rls/99-app-runtime-grants.sql",
+		]);
 	});
 
 	it("accepts the shipped files: disk matches the plan and every helper is defined before use", () => {

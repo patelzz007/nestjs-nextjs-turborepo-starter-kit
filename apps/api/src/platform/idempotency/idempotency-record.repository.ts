@@ -28,6 +28,17 @@ export interface IdempotencyRecordKey {
 }
 
 /**
+ * The lease one request holds on a key: its fencing token and the request
+ * fingerprint it acquired the key with. `complete` / `release` only succeed
+ * for the CURRENT holder, so a request whose lease expired (and was taken over
+ * by a retry) can never overwrite or free its successor's record.
+ */
+export interface IdempotencyLease {
+	readonly token: string;
+	readonly requestHash: string;
+}
+
+/**
  * Prisma access for `platform_resource_idempotency_records`.
  *
  * The table is RLS bypass-only (prisma/rls/manifest-index.ts), so every
@@ -37,26 +48,20 @@ export interface IdempotencyRecordKey {
  * retention job (`IdempotencyRetentionService`) deletes, and only rows expired
  * for longer than its grace period, under `idempotency.retention`.
  */
-/**
- * The slice of a transaction client the in-transaction writes need. Narrower
- * than `Prisma.TransactionClient`, so every transaction client in the API
- * (plain `$transaction`, tenant or system operation) satisfies it.
- */
-export type IdempotencyRecordWriter = Pick<Prisma.TransactionClient, "platformResourceIdempotencyRecord">;
-
 @Injectable()
 export class IdempotencyRecordRepository {
 	public constructor(private readonly tenantTx: TenantTransactionService) {}
 
-	/** Insert an IN_PROGRESS row. Returns `false` when the (scope, key) row already exists. */
-	public async tryAcquire(key: IdempotencyRecordKey, requestHash: string, leaseExpiresAtEpochMs: number, nowEpochMs: number): Promise<boolean> {
+	/** Insert an IN_PROGRESS row owned by `lease`. Returns `false` when the (scope, key) row already exists. */
+	public async tryAcquire(key: IdempotencyRecordKey, lease: IdempotencyLease, leaseExpiresAtEpochMs: number, nowEpochMs: number): Promise<boolean> {
 		try {
-			await this.run(key, "Acquire idempotency key", async (tx) =>
+			await this.run("Acquire idempotency key", async (tx) =>
 				tx.platformResourceIdempotencyRecord.create({
 					data: {
 						scope: key.scope,
 						idempotencyKey: key.idempotencyKey,
-						requestHash,
+						requestHash: lease.requestHash,
+						leaseToken: lease.token,
 						status: "IN_PROGRESS",
 						expiresAt: BigInt(leaseExpiresAtEpochMs),
 						createdAt: BigInt(nowEpochMs),
@@ -74,7 +79,7 @@ export class IdempotencyRecordRepository {
 	}
 
 	public async find(key: IdempotencyRecordKey): Promise<IdempotencyRecordSnapshot | null> {
-		const row = await this.run(key, "Read idempotency key", async (tx) =>
+		const row = await this.run("Read idempotency key", async (tx) =>
 			tx.platformResourceIdempotencyRecord.findUnique({
 				where: { scope_idempotencyKey: { scope: key.scope, idempotencyKey: key.idempotencyKey } },
 				select: { requestHash: true, status: true, responseBody: true, expiresAt: true },
@@ -92,72 +97,63 @@ export class IdempotencyRecordRepository {
 	}
 
 	/**
-	 * Atomically claim an EXPIRED row for a new request (conditional update —
+	 * Atomically claim an EXPIRED row for a new lease (conditional update —
 	 * race-safe: of two concurrent takeovers exactly one sees `count === 1`).
+	 * The new fencing token invalidates whatever the previous holder still has.
 	 */
-	public async takeOverExpired(key: IdempotencyRecordKey, requestHash: string, leaseExpiresAtEpochMs: number, nowEpochMs: number): Promise<boolean> {
-		const result = await this.run(key, "Take over expired idempotency key", async (tx) =>
+	public async takeOverExpired(key: IdempotencyRecordKey, lease: IdempotencyLease, leaseExpiresAtEpochMs: number, nowEpochMs: number): Promise<boolean> {
+		const result = await this.run("Take over expired idempotency key", async (tx) =>
 			tx.platformResourceIdempotencyRecord.updateMany({
 				where: { scope: key.scope, idempotencyKey: key.idempotencyKey, expiresAt: { lte: BigInt(nowEpochMs) } },
-				data: { requestHash, status: "IN_PROGRESS", responseBody: Prisma.DbNull, expiresAt: BigInt(leaseExpiresAtEpochMs), updatedAt: BigInt(nowEpochMs) },
+				data: {
+					requestHash: lease.requestHash,
+					leaseToken: lease.token,
+					status: "IN_PROGRESS",
+					responseBody: Prisma.DbNull,
+					expiresAt: BigInt(leaseExpiresAtEpochMs),
+					updatedAt: BigInt(nowEpochMs),
+				},
 			}),
 		);
 		return result.count === 1;
 	}
 
-	/** Store the response of the request that holds the lease. Returns `false` if the lease was lost. */
-	public async complete(key: IdempotencyRecordKey, requestHash: string, responseBody: JsonObject, retainUntilEpochMs: number, nowEpochMs: number): Promise<boolean> {
-		const result = await this.run(key, "Store idempotent response", async (tx) =>
+	/**
+	 * Store the response of the request that holds the lease. The lease is
+	 * ENFORCED: the row must still carry this request's fencing token, still be
+	 * IN_PROGRESS, and the lease must not have expired. Returns `false` when the
+	 * lease was lost (expired or taken over).
+	 */
+	public async complete(key: IdempotencyRecordKey, lease: IdempotencyLease, responseBody: JsonObject, retainUntilEpochMs: number, nowEpochMs: number): Promise<boolean> {
+		const result = await this.run("Store idempotent response", async (tx) =>
 			tx.platformResourceIdempotencyRecord.updateMany({
-				where: { scope: key.scope, idempotencyKey: key.idempotencyKey, requestHash, status: "IN_PROGRESS" },
+				where: {
+					scope: key.scope,
+					idempotencyKey: key.idempotencyKey,
+					leaseToken: lease.token,
+					requestHash: lease.requestHash,
+					status: "IN_PROGRESS",
+					expiresAt: { gt: BigInt(nowEpochMs) },
+				},
 				data: { status: "COMPLETED", responseBody: parsePrismaInputJson(responseBody), expiresAt: BigInt(retainUntilEpochMs), updatedAt: BigInt(nowEpochMs) },
 			}),
 		);
 		return result.count === 1;
 	}
 
-	/** Free the lease early (the request failed) by expiring it now — the next attempt takes it over. */
-	public async release(key: IdempotencyRecordKey, requestHash: string, nowEpochMs: number): Promise<void> {
-		await this.run(key, "Release idempotency key", async (tx) =>
+	/**
+	 * Free the lease early (the request failed) by expiring it now — the next
+	 * attempt takes it over. Only the current holder can release; returns
+	 * `false` when the lease had already moved on.
+	 */
+	public async release(key: IdempotencyRecordKey, lease: IdempotencyLease, nowEpochMs: number): Promise<boolean> {
+		const result = await this.run("Release idempotency key", async (tx) =>
 			tx.platformResourceIdempotencyRecord.updateMany({
-				where: { scope: key.scope, idempotencyKey: key.idempotencyKey, requestHash, status: "IN_PROGRESS" },
+				where: { scope: key.scope, idempotencyKey: key.idempotencyKey, leaseToken: lease.token, status: "IN_PROGRESS" },
 				data: { expiresAt: BigInt(nowEpochMs), updatedAt: BigInt(nowEpochMs) },
 			}),
 		);
-	}
-
-	/**
-	 * Insert an already-COMPLETED record inside the CALLER's transaction —
-	 * used by `PlatformResourceMutationService.runMutation`, where the record
-	 * must commit atomically with the business write. The caller's
-	 * transaction must run with an RLS bypass (system operation).
-	 *
-	 * An EXPIRED record for the same key (not yet purged by the retention job)
-	 * is removed first: `findReplay` already treats it as unused, so the key
-	 * may legitimately be reused. A live record is left alone, so a genuinely
-	 * concurrent request still fails on the unique (scope, key) index.
-	 */
-	public async insertCompleted(
-		tx: IdempotencyRecordWriter,
-		key: IdempotencyRecordKey,
-		requestHash: string,
-		responseBody: JsonObject,
-		retainUntilEpochMs: number,
-		nowEpochMs: number,
-	): Promise<void> {
-		await tx.platformResourceIdempotencyRecord.deleteMany({
-			where: { scope: key.scope, idempotencyKey: key.idempotencyKey, expiresAt: { lte: BigInt(nowEpochMs) } },
-		});
-		await tx.platformResourceIdempotencyRecord.create({
-			data: {
-				scope: key.scope,
-				idempotencyKey: key.idempotencyKey,
-				requestHash,
-				status: "COMPLETED",
-				responseBody: parsePrismaInputJson(responseBody),
-				expiresAt: BigInt(retainUntilEpochMs),
-			},
-		});
+		return result.count === 1;
 	}
 
 	/**
@@ -170,7 +166,7 @@ export class IdempotencyRecordRepository {
 	public async deleteExpiredBefore(cutoffEpochMs: number, batchSize: number): Promise<number> {
 		const cutoff = BigInt(cutoffEpochMs);
 		return this.tenantTx.withSystemOperation(
-			{ operation: IDEMPOTENCY_RETENTION_OPERATION, reason: "Purge expired idempotency records", correlationId: "idempotency:retention", actorUserId: null },
+			{ operation: IDEMPOTENCY_RETENTION_OPERATION, reason: "Purge expired idempotency records", actorUserId: null },
 			async (tx): Promise<number> => {
 				const expired = await tx.platformResourceIdempotencyRecord.findMany({
 					where: { expiresAt: { lt: cutoff } },
@@ -189,10 +185,7 @@ export class IdempotencyRecordRepository {
 		);
 	}
 
-	private async run<T>(key: IdempotencyRecordKey, reason: string, handler: (tx: SystemTransactionClient) => Promise<T>): Promise<T> {
-		return this.tenantTx.withSystemOperation(
-			{ operation: IDEMPOTENCY_SYSTEM_OPERATION, reason, correlationId: `idempotency:${key.scope}:${key.idempotencyKey}`, actorUserId: null },
-			handler,
-		);
+	private async run<T>(reason: string, handler: (tx: SystemTransactionClient) => Promise<T>): Promise<T> {
+		return this.tenantTx.withSystemOperation({ operation: IDEMPOTENCY_SYSTEM_OPERATION, reason, actorUserId: null }, handler);
 	}
 }

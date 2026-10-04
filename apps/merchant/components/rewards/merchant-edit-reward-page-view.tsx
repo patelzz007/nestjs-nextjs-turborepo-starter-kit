@@ -4,7 +4,8 @@ import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/me
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
@@ -13,6 +14,7 @@ import {
 	mapMerchantUpdateRewardFormToInput,
 	mapRewardResponseToFormValues,
 	MerchantUpdateRewardFormSchema,
+	type Envelope,
 	type MerchantRewardFormValues,
 	type RewardResponse,
 	type RewardType,
@@ -30,8 +32,14 @@ import { useForm, useWatch } from "react-hook-form";
 export interface MerchantEditRewardPageViewProps {
 	readonly orgSlug: string;
 	readonly rewardId: string;
-	readonly initialRewards?: readonly RewardResponse[] | undefined;
+	/**
+	 * The organization's reward list as the server fetched it (the API's own envelope). The API has no
+	 * merchant reward-detail endpoint yet, so the page reads the reward out of the list.
+	 */
+	readonly initialRewards?: Envelope<RewardResponse[]> | undefined;
 }
+
+const REWARD_LOAD_FAILED_MESSAGE = "This reward could not be loaded. Try again.";
 
 function isRewardEditable(status: RewardResponse["status"]): boolean {
 	return status === "DRAFT" || status === "PENDING_REVIEW";
@@ -51,35 +59,32 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 	const queryClient = useQueryClient();
 	const { can } = useAuthorization();
 
-	const initialQueryData = React.useMemo(() => (initialRewards !== undefined ? successEnvelope([...initialRewards], stubApiMeta()) : undefined), [initialRewards]);
-
+	// Seeded by the server and cached: no second fetch on mount (the server's answer is fresh).
 	const rewardsQuery = api.organizations.rewards.list.useQuery(
 		{ orgSlug },
 		{
-			...initialDataOption(initialQueryData),
-			staleTime: 0,
-			refetchOnMount: "always",
+			...initialDataOption(initialRewards),
+			staleTime: REWARDS_STALE_TIME_MS,
+			retry: retryTransientFailures,
 		},
 	);
 	const reward = rewardsQuery.data?.data.find((row) => row.id === rewardId);
 	const isResolvingReward = reward === undefined && (rewardsQuery.isLoading || rewardsQuery.isFetching);
+	const formValues = React.useMemo((): MerchantRewardFormValues | undefined => (reward === undefined ? undefined : mapRewardResponseToFormValues(reward)), [reward]);
 
 	const {
 		register,
 		handleSubmit,
 		setValue,
 		control,
-		reset,
 		formState: { errors },
 	} = useForm<MerchantRewardFormValues>({
 		resolver: zodResolver(MerchantUpdateRewardFormSchema),
+		// The form follows the server's reward (no effect + reset): a refetch updates the fields the
+		// merchant has not touched and keeps every unsaved edit.
+		...(formValues === undefined ? {} : { values: formValues }),
+		resetOptions: { keepDirtyValues: true },
 	});
-
-	React.useEffect((): void => {
-		if (reward !== undefined) {
-			reset(mapRewardResponseToFormValues(reward));
-		}
-	}, [reward, reset]);
 
 	const selectedType = useWatch({ control, name: "rewardType" });
 	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
@@ -91,7 +96,6 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 		onSuccess: (response): void => {
 			upsertMerchantRewardInListCache(queryClient, orgSlug, response.data);
 			toastMessage.success({ title: "Reward updated", description: "Your changes have been saved." });
-			void rewardsQuery.refetch();
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Update failed", description: "Could not save reward changes." });
@@ -140,12 +144,31 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 		[setValue],
 	);
 
+	const refetchRewards = rewardsQuery.refetch;
+	const handleRetry = React.useCallback((): void => {
+		void refetchRewards();
+	}, [refetchRewards]);
+
 	const handlePublish = React.useCallback((): void => {
 		void publishMutation.mutateAsync({ orgSlug, rewardId });
 	}, [orgSlug, publishMutation, rewardId]);
 
 	if (isResolvingReward) {
 		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
+	}
+
+	if (reward === undefined && rewardsQuery.isError) {
+		return (
+			<div className="mx-auto space-y-6">
+				<h1 className="text-2xl font-bold tracking-tight text-foreground">Could not load this reward</h1>
+				<p role="alert" className="text-muted-foreground">
+					{userSafeErrorMessage(rewardsQuery.error, REWARD_LOAD_FAILED_MESSAGE)}
+				</p>
+				<Button type="button" onClick={handleRetry}>
+					Try again
+				</Button>
+			</div>
+		);
 	}
 
 	if (reward === undefined) {

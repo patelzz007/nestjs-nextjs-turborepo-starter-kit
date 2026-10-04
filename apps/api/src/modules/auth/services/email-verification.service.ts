@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { ResendVerificationInput, ResendVerificationResponse, VerifyEmailResponse } from "@workspace/shared";
 
-import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
+import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
 import { EmailService } from "./email.service";
@@ -65,14 +65,20 @@ export class EmailVerificationService {
 		if (!user) {
 			throw new NotFoundException("User not found");
 		}
+		identifyAuthFlowSubject(user.id);
 
 		if (user.emailVerifiedAt) {
-			return { message: "Email already verified" };
+			return { message: "Email already verified", alreadyVerified: true };
 		}
 
-		await this.userRepo.update(user.id, { emailVerifiedAt: Date.now() });
+		// Conditional write: a concurrent verification of the same address (double
+		// click, two tabs) finds it already verified instead of writing twice.
+		const verifiedNow: boolean = await this.userRepo.markEmailVerifiedIfUnverified(user.id, Date.now());
+		if (!verifiedNow) {
+			return { message: "Email already verified", alreadyVerified: true };
+		}
 		this.identityService.invalidateMe(user.id);
 
-		return { message: "Email verified successfully" };
+		return { message: "Email verified successfully", alreadyVerified: false };
 	}
 }

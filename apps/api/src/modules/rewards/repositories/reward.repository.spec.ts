@@ -5,10 +5,12 @@ import { RewardListQuerySchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { RewardRepository, type RewardWithOrganization } from "./reward.repository";
+import { ALL_LOCATIONS_SCOPE, selectedLocationsScope } from "../types/merchant-location-scope";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 const REWARD_ID = "7f1c1b9e-8a43-4c2e-9d1a-3b7e6f2a9c01";
 const ORGANIZATION_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
+const STORE_ID = "7c1e2d3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
 
 const mocks = vi.hoisted(() => ({
 	findFirst: vi.fn<(args: Prisma.RewardFindFirstArgs) => Promise<RewardWithOrganization | null>>(),
@@ -68,8 +70,19 @@ describe("RewardRepository merchant logo include", () => {
 	});
 
 	it("loads the READY logo for the merchant's own reward list", async () => {
-		await createRepository().listConsumerByOrganization(ORGANIZATION_ID);
+		await createRepository().listConsumerByOrganization(ORGANIZATION_ID, ALL_LOCATIONS_SCOPE);
 
 		expect(mocks.findMany.mock.calls[0]?.[0].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
+	});
+
+	it("lists only the rewards offered at a store-limited member's stores (organization-wide ones included)", async () => {
+		await createRepository().listConsumerByOrganization(ORGANIZATION_ID, selectedLocationsScope([STORE_ID]));
+
+		expect(mocks.findMany.mock.calls[0]?.[0].where).toEqual({
+			AND: [
+				{ organizationId: ORGANIZATION_ID, isDeleted: false, rewardKind: "CONSUMER" },
+				{ OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { locationId: { in: [STORE_ID] } } } }] },
+			],
+		});
 	});
 });

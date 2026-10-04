@@ -2,7 +2,7 @@
 
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
-import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { CapabilitySlug, Envelope, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 
 /** Resolution state of the active membership that backs `useAuthorization()`. */
@@ -45,7 +45,8 @@ export function MerchantAuthorizationStateProvider({ isLoading, capabilities, ch
 }
 
 export interface MerchantAuthorizationProviderProps {
-	readonly initialMemberships?: readonly OrganizationRewardMembershipResponse[] | undefined;
+	/** The server's memberships envelope (real meta) — seeds the memberships query. */
+	readonly initialMemberships?: Envelope<OrganizationRewardMembershipResponse[]> | undefined;
 	readonly children: React.ReactNode;
 }
 

@@ -4,23 +4,17 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import * as React from "react";
+import { useIsClient } from "@workspace/ui/hooks/use-is-client";
 
 /**
  * Light/dark theme toggle for app shell topbars. Hydration-safe: renders a
- * transparent placeholder until one frame after mount, then shows the real icon.
+ * transparent placeholder on the server and during hydration, then the real icon.
  */
 export function ShellThemeToggle(): React.JSX.Element {
 	const { resolvedTheme, setTheme } = useTheme();
-	const [mounted, setMounted] = React.useState<boolean>(false);
-
-	React.useEffect((): (() => void) => {
-		const frame = window.requestAnimationFrame((): void => {
-			setMounted(true);
-		});
-		return (): void => {
-			window.cancelAnimationFrame(frame);
-		};
-	}, []);
+	// The resolved theme is only known in the browser: render the placeholder icon
+	// on the server and during hydration, the real one after (no mount effect).
+	const mounted = useIsClient();
 
 	const handleToggle = React.useCallback((): void => {
 		setTheme(resolvedTheme === "dark" ? "light" : "dark");

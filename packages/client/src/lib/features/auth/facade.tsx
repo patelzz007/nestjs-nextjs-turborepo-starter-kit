@@ -1,9 +1,8 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import type { UserResponse } from "@workspace/shared";
+import { assertNever, type ApiResponseMeta, type AuthClientType, type UserResponse } from "@workspace/shared";
 import * as React from "react";
-import { z } from "zod";
 
 import { API_BASE_URL } from "../../api/config";
 import { apiRouter, type ApiRouter } from "../../api/endpoints";
@@ -15,12 +14,11 @@ import {
 	fetchQuery,
 	useApi,
 	type ApiClient,
-	type ApiClientType,
 	type RefreshCall,
 	type RefreshResult,
 } from "../../api/use-api";
 import { createAuthQueryCache } from "../../auth/session/auth-query-cache";
-import { composeAuthUser, resolveSessionScope, type AuthSessionSource, type AuthUser } from "../../auth/session/session";
+import { composeAuthUser, resolveSessionScope, type AuthUser } from "../../auth/session/session";
 import {
 	checkSession,
 	SESSION_CHECK_TIMEOUT_MS,
@@ -35,7 +33,6 @@ import { createFeatureStoreContext } from "../../state/feature-store-context";
 import { authActions, type AuthAction } from "./actions";
 import type { AuthBroadcaster } from "./effects";
 import {
-	isSameSessionScope,
 	selectAuthStatus,
 	selectIsAuthenticated,
 	selectIsServerRenderedSession,
@@ -43,7 +40,6 @@ import {
 	selectIsSessionPending,
 	selectSessionCheck,
 	selectSessionEpoch,
-	selectSessionScope,
 } from "./selectors";
 import type { AuthSessionState, SessionCheckState, SessionRecheckTrigger } from "./state";
 import { createAuthStore, type AuthStore } from "./store";
@@ -55,11 +51,13 @@ import { createAuthStore, type AuthStore } from "./store";
  * `useAuthCommands`) in new code.
  *
  * Who owns what:
- * - session STATUS (unknown / authenticated + scope / signed out + why) — the
- *   auth feature store, one per provider mount;
+ * - session STATUS (unknown / authenticated / signed out + why) — the auth
+ *   feature store, one per provider mount;
  * - the profile — TanStack Query (`GET /auth/me`), seeded from the login
  *   response so it is never fetched twice and never copied into the store;
- * - the `AuthUser` view — composed here from both, never stored;
+ * - the session scope — TanStack Query (`GET /auth/permissions`), `pending`
+ *   (treated as restricted) until it answers for the current session;
+ * - the `AuthUser` view — composed here from those, never stored;
  * - authentication itself — the httpOnly cookies and the API. Nothing in this
  *   module authorizes anything.
  */
@@ -70,11 +68,15 @@ const AuthStoreProvider = authContext.provider;
 /** `/auth/me` and `/auth/permissions` are re-read at most once a minute by the session queries. */
 const SESSION_QUERY_STALE_TIME_MS = 60_000;
 
-/** Lets the sign-in redirect commit before `router.refresh()` re-renders the server layouts. */
-const ROUTER_REFRESH_DELAY_MS = 100;
+/**
+ * Retries of the live `/auth/permissions` query. The session scope comes from
+ * it, so a failed read leaves the scope pending (restricted) — it is retried
+ * (TanStack Query's exponential backoff) instead of being given up.
+ */
+const SESSION_PERMISSIONS_QUERY_RETRIES = 5;
 
-/** Prefix of the cross-tab channel; one channel per cookie set (web / admin / merchant). */
-const AUTH_CHANNEL_PREFIX = "freebuff:auth:";
+/** Prefix of the cross-tab channel; one channel per frontend (= cookie set). */
+const AUTH_CHANNEL_PREFIX = "auth-sync:";
 
 /** What a refresh that may not run reports: the tab invalidated its session, or the check asking is stale. */
 const REFRESH_NOT_ALLOWED: RefreshResult = "expired";
@@ -99,42 +101,23 @@ function reportSessionCheckProblem(problem: SessionCheckProblem): void {
 	console.warn("[auth] session check answer broke the API contract", { event: "auth.session_check.contract_problem", ...problem });
 }
 
-/** Exhaustiveness check: a new session-check verdict must decide what it does to the store. */
-function assertNeverSessionCheckResult(result: never): never {
-	throw new Error(`Unhandled session check result: ${JSON.stringify(result)}`);
-}
-
-/** Cookie names for the web app — schema-derived type (rule 5). */
-export const CookieNamesConfigSchema = z.object({
-	accessToken: z.string(),
-	refreshToken: z.string(),
-});
-
-export type CookieNamesConfig = z.output<typeof CookieNamesConfigSchema>;
-
-/** Default cookie names for the web app */
-const DEFAULT_COOKIE_NAMES: Readonly<CookieNamesConfig> = {
-	accessToken: "accessToken",
-	refreshToken: "refreshToken",
-};
-
 /** Session commands — one identity per provider mount (safe in effect deps). */
 export interface AuthCommands {
 	/**
-	 * A sign-in succeeded. `profile` is the user the login response returned;
-	 * `session` its scope (omit for a full session). Seeds the `/auth/me` cache
-	 * and tells the other tabs — the tokens are already in httpOnly cookies.
+	 * A sign-in succeeded. `profile` is the user the login response returned and
+	 * `answeredBy` that response's `meta` (the cache is seeded with the real
+	 * envelope). Tells the other tabs — the tokens are already in httpOnly
+	 * cookies. The scope is read from `/auth/permissions`, never assumed.
 	 */
-	readonly login: (profile: UserResponse, session?: AuthSessionSource | null) => void;
+	readonly login: (profile: UserResponse, answeredBy: ApiResponseMeta) => void;
 	/** Signs out: clears the client session and cache, the server cookies, then redirects. */
 	readonly logout: () => Promise<void>;
-	/** Rotates the session cookies (`POST /auth/refresh`); `true` on success. */
-	readonly refreshSession: () => Promise<boolean>;
 	/**
-	 * The email was verified but the session could not be re-read: apply the
-	 * known outcome (verified flag, scope) until the next `/auth/me` answer.
+	 * Rotates the session cookies (`POST /auth/refresh`) through the tab's
+	 * SINGLE-FLIGHT refresh — shared with the 401 pipeline and the session
+	 * check, so concurrent callers never rotate the refresh token twice.
 	 */
-	readonly markEmailVerified: () => void;
+	readonly refreshSession: () => Promise<RefreshResult>;
 	/**
 	 * Checks the session again now, with a fresh retry budget — the member's
 	 * "Try again" after the API was unreachable. A no-op on routes that do not
@@ -172,22 +155,19 @@ export interface AuthProviderProps {
 	 */
 	readonly baseUrl?: string | undefined;
 	readonly onUnauthorizedRedirect?: string | undefined;
-	readonly navigate?: ((url: string) => void) | undefined;
-	readonly refresh?: (() => void) | undefined;
 	/**
-	 * Cookie names of this auth context — they name the cross-tab channel.
-	 * Defaults to accessToken / refreshToken (web app).
-	 * The admin panel passes adminAccessToken / adminRefreshToken.
+	 * Leaves the session's pages for `url` once the session is gone, and makes
+	 * the server-rendered layouts render again without it (the Next.js bridge,
+	 * `ClientAuthWrapper`, navigates and refreshes once the navigation has
+	 * committed). Absent in tests and non-routing hosts.
 	 */
-	readonly cookieNames?: CookieNamesConfig | undefined;
+	readonly leaveSession?: ((url: string) => void) | undefined;
 	/**
-	 * Client type identifier. When set to "admin", the logout request
-	 * sends `X-Client-Type: admin` so the backend only clears the
-	 * admin cookie set (not the web cookies).
+	 * Which frontend this is — picks the isolated cookie set (`X-Client-Type`
+	 * on every request) and names the cross-tab channel. Required: the API is
+	 * never left to guess.
 	 */
-	readonly clientType?: ApiClientType | undefined;
-	/** Extra headers sent on every API request from this auth context. */
-	readonly extraHeaders?: Record<string, string> | undefined;
+	readonly clientType: AuthClientType;
 	/**
 	 * When a 401 invalidates the session, navigation to `onUnauthorizedRedirect`
 	 * only happens if this returns true. Defaults to always redirect.
@@ -239,7 +219,7 @@ function createAuthTabLink(): AuthTabLink {
 export function AuthProvider(props: AuthProviderProps): React.JSX.Element {
 	const queryClient = useQueryClient();
 	const [tabLink] = React.useState(createAuthTabLink);
-	const devtoolsName = `Auth · ${props.clientType ?? "web"}`;
+	const devtoolsName = `Auth · ${props.clientType}`;
 	const createStore = React.useCallback(
 		(): AuthStore => createAuthStore({ devtoolsName, queryCache: createAuthQueryCache(queryClient), broadcaster: tabLink }),
 		[devtoolsName, queryClient, tabLink],
@@ -261,11 +241,8 @@ function AuthSession({
 	children,
 	baseUrl = API_BASE_URL,
 	onUnauthorizedRedirect = "/auth/login",
-	navigate,
-	refresh,
-	cookieNames = DEFAULT_COOKIE_NAMES,
+	leaveSession,
 	clientType,
-	extraHeaders,
 	shouldRedirectOnUnauthorized,
 	revalidateSessionEnabled = true,
 	sessionHint = true,
@@ -275,7 +252,11 @@ function AuthSession({
 	const { dispatch, getState } = store;
 	const isAuthenticated = authContext.useFeatureSelector(selectIsAuthenticated);
 	const isLoading = authContext.useFeatureSelector(selectIsSessionPending);
-	const scope = authContext.useFeatureSelector(selectSessionScope);
+	// Re-render at every session boundary — including ones that keep the status
+	// "authenticated" (another member restored, the same member signing in
+	// again). The effects cleared the query cache; without this render the
+	// mounted session queries would keep showing the previous session's data.
+	authContext.useFeatureSelector(selectSessionEpoch);
 
 	// ── Silent refresh: concurrent 401s — and the session check — share ONE
 	// refresh call, so the refresh token is only rotated once (rotation
@@ -287,7 +268,7 @@ function AuthSession({
 			// Uses `fetchMutationUnchecked` (not `useApi`) deliberately: refresh must not
 			// re-enter the 401-refresh-unauthorized pipeline it drives. The procedure
 			// def still comes from the typed endpoint registry.
-			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType });
+			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, clientType);
 			const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.refresh, {});
 			if (response.ok) return "ok";
 			if (response.status === 401 || response.status === 403) return "expired";
@@ -392,7 +373,7 @@ function AuthSession({
 					retryAfterFailure();
 					return;
 				default:
-					assertNeverSessionCheckResult(result);
+					assertNever(result, "session check result");
 			}
 		},
 		[dispatch, retryAfterFailure],
@@ -405,7 +386,7 @@ function AuthSession({
 		latestCheckRef.current = run;
 		const startedInEpoch = selectSessionEpoch(getState());
 		const isCurrent = (): boolean => latestCheckRef.current === run && selectSessionEpoch(getState()) === startedInEpoch;
-		const requestContext = createApiRequestContext(baseUrl, undefined, undefined, { clientType, extraHeaders });
+		const requestContext = createApiRequestContext(baseUrl, clientType);
 
 		const result = await checkSession(
 			{
@@ -430,7 +411,7 @@ function AuthSession({
 		}
 		latestCheckRef.current = null;
 		applySessionCheckResult(result);
-	}, [applySessionCheckResult, baseUrl, clientType, extraHeaders, getState, refreshOnce, stopSessionChecks]);
+	}, [applySessionCheckResult, baseUrl, clientType, getState, refreshOnce, stopSessionChecks]);
 
 	React.useEffect((): void => {
 		revalidateSessionRef.current = revalidateSession;
@@ -514,7 +495,7 @@ function AuthSession({
 
 	const clearServerSession = React.useCallback(async (): Promise<void> => {
 		try {
-			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType });
+			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, clientType);
 			const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.logout, {});
 			if (!response.ok) {
 				console.error("Session clear request failed:", response.status);
@@ -524,15 +505,12 @@ function AuthSession({
 		}
 	}, [baseUrl, clientType]);
 
-	// The server cookies are gone: tell the other tabs (effect), leave, and
-	// re-render the server layouts without the session.
+	// The server cookies are gone: tell the other tabs (effect), then leave —
+	// the host navigates and re-renders the server layouts without the session.
 	const finalizeSessionExit = React.useCallback((): void => {
 		dispatch(authActions.serverSessionCleared(true));
-		navigate?.(onUnauthorizedRedirect);
-		setTimeout((): void => {
-			refresh?.();
-		}, ROUTER_REFRESH_DELAY_MS);
-	}, [dispatch, navigate, onUnauthorizedRedirect, refresh]);
+		leaveSession?.(onUnauthorizedRedirect);
+	}, [dispatch, leaveSession, onUnauthorizedRedirect]);
 
 	// Handle 401 responses from the API — clear httpOnly cookies server-side
 	// before navigating so the route proxy does not bounce the user back into
@@ -553,19 +531,13 @@ function AuthSession({
 		dispatch(authActions.serverSessionCleared(false));
 	}, [clearServerSession, dispatch, finalizeSessionExit, invalidateSession, shouldRedirectOnUnauthorized]);
 
-	const refreshSession = React.useCallback(async (): Promise<boolean> => {
-		const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType, extraHeaders });
-		const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.refresh, {});
-		return response.ok;
-	}, [baseUrl, clientType, extraHeaders]);
-
 	// Cookie auth + silent refresh on 401 for every typed API call.
-	const api = useApi(apiRouter, baseUrl, handleUnauthorized, refreshOnce, { clientType, extraHeaders });
+	const api = useApi(apiRouter, baseUrl, clientType, handleUnauthorized, refreshOnce);
 
 	// ── Commands.
 	const login = React.useCallback(
-		(profile: UserResponse, session?: AuthSessionSource | null): void => {
-			dispatch(authActions.sessionEstablished(profile, resolveSessionScope(session, profile.isEmailVerified)));
+		(profile: UserResponse, answeredBy: ApiResponseMeta): void => {
+			dispatch(authActions.sessionEstablished({ success: true, data: profile, meta: answeredBy }));
 		},
 		[dispatch],
 	);
@@ -587,14 +559,10 @@ function AuthSession({
 	}, [signOut]);
 	const logout = React.useCallback((): Promise<void> => signOutRef.current(), []);
 
-	const markEmailVerified = React.useCallback((): void => {
-		dispatch(authActions.emailVerified());
-	}, [dispatch]);
-
 	// ── Cross-tab sync: another tab cleared the session (shared cookie jar), so
 	// this tab drops the session and its cache AT ONCE — before any network
 	// call — then bounces to login too, closing the rotation-race gap documented
-	// in docs/token-refresh.md. The server logout is repeated here because the
+	// in docs/technical/security/token-refresh.md. The server logout is repeated here because the
 	// sender broadcasts even when its own `POST /auth/logout` failed; the
 	// redirect waits for it so the route proxy cannot bounce back with a stale
 	// cookie. `logged-in` makes this tab re-check its session.
@@ -607,7 +575,7 @@ function AuthSession({
 				void (async (): Promise<void> => {
 					await clearServerSession();
 					if (shouldRedirectOnUnauthorized?.() ?? true) {
-						navigate?.(onUnauthorizedRedirect);
+						leaveSession?.(onUnauthorizedRedirect);
 					}
 				})();
 				return;
@@ -616,7 +584,7 @@ function AuthSession({
 				void revalidateSession();
 			}
 		},
-		[clearServerSession, invalidateSession, navigate, onUnauthorizedRedirect, revalidateSession, revalidateSessionEnabled, shouldRedirectOnUnauthorized],
+		[clearServerSession, invalidateSession, leaveSession, onUnauthorizedRedirect, revalidateSession, revalidateSessionEnabled, shouldRedirectOnUnauthorized],
 	);
 
 	const tabEventHandlerRef = React.useRef(handleTabEvent);
@@ -627,7 +595,7 @@ function AuthSession({
 	// One channel per mount and cookie set, opened in the browser only and
 	// closed on unmount; the handler is read through a ref so navigation never
 	// re-opens it.
-	const channelName = `${AUTH_CHANNEL_PREFIX}${cookieNames.accessToken}`;
+	const channelName = `${AUTH_CHANNEL_PREFIX}${clientType}`;
 	React.useEffect((): (() => void) => {
 		const channel = createAuthChannel(channelName);
 		const detach = tabLink.attach(channel);
@@ -641,33 +609,31 @@ function AuthSession({
 		};
 	}, [channelName, tabLink]);
 
-	// ── The profile: server state, read from the `/auth/me` query (seeded by
-	// sign-in and by the session check), kept fresh while signed in.
+	// ── The profile and the scope: server state, read from the `/auth/me` and
+	// `/auth/permissions` queries (seeded by sign-in and by the session check),
+	// kept fresh while signed in. The permissions answer mirrors the access
+	// token, so the scope follows the session (email verified, MFA enrolled)
+	// without being copied anywhere; until it answers the scope is pending.
+	// The cache is cleared at every session boundary, so a previous session's
+	// answers cannot leak into this one.
 	const sessionQueriesEnabled = isAuthenticated && revalidateSessionEnabled;
 	const meQuery = api.auth.me.useQuery(undefined, { enabled: sessionQueriesEnabled, retry: false, staleTime: SESSION_QUERY_STALE_TIME_MS });
-	const permissionsQuery = api.auth.permissions.useQuery(undefined, { enabled: sessionQueriesEnabled, retry: false, staleTime: SESSION_QUERY_STALE_TIME_MS });
-	const profile = meQuery.data?.data;
-	const sessionPermissions = permissionsQuery.data?.data;
+	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
+		enabled: sessionQueriesEnabled,
+		retry: SESSION_PERMISSIONS_QUERY_RETRIES,
+		staleTime: SESSION_QUERY_STALE_TIME_MS,
+	});
+	const profile = isAuthenticated ? meQuery.data?.data : undefined;
+	const sessionPermissions = isAuthenticated ? permissionsQuery.data?.data : undefined;
 
-	// The live `/auth/permissions` answer mirrors the access token — when its
-	// scope differs (email verified, MFA enrolled), the session moved on.
-	React.useEffect((): void => {
-		if (profile === undefined || sessionPermissions === undefined) {
-			return;
-		}
-		const currentScope = selectSessionScope(getState());
-		const liveScope = resolveSessionScope(sessionPermissions, profile.isEmailVerified);
-		if (currentScope !== null && !isSameSessionScope(currentScope, liveScope)) {
-			dispatch(authActions.sessionScopeChanged(liveScope));
-		}
-	}, [dispatch, getState, profile, sessionPermissions]);
-
-	const user = React.useMemo((): AuthUser | null => (profile !== undefined && scope !== null ? composeAuthUser(profile, scope) : null), [profile, scope]);
-
-	const commands = React.useMemo(
-		(): AuthCommands => ({ login, logout, refreshSession, markEmailVerified, recheckSession }),
-		[login, logout, markEmailVerified, recheckSession, refreshSession],
+	const user = React.useMemo(
+		(): AuthUser | null => (profile === undefined ? null : composeAuthUser(profile, resolveSessionScope(sessionPermissions, profile.isEmailVerified))),
+		[profile, sessionPermissions],
 	);
+
+	const refreshSession = React.useCallback((): Promise<RefreshResult> => refreshOnce(), [refreshOnce]);
+
+	const commands = React.useMemo((): AuthCommands => ({ login, logout, refreshSession, recheckSession }), [login, logout, recheckSession, refreshSession]);
 
 	const value = React.useMemo(
 		(): AuthContextType => ({

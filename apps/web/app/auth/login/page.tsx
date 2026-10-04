@@ -1,21 +1,18 @@
-"use client";
-
-import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/forms/login-form";
+import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import * as React from "react";
 
-import { clientEnv } from "@/lib/env/env.client";
+import { loadWebDemoAccounts } from "@/lib/auth/demo-accounts";
 import { ROUTES } from "@/lib/routes";
 
-const WEB_DEMO_ACCOUNTS: readonly DemoAccount[] = [
-	{ label: "Super Admin", email: "superadmin@example.com", password: "SuperAdmin@123" },
-	{ label: "Admin", email: "admin@example.com", password: "Admin@123" },
-	{ label: "Manager", email: "manager@example.com", password: "Manager@123" },
-	{ label: "User", email: "user@example.com", password: "User@123" },
-];
+/**
+ * `/auth/login` — consumer sign-in. A server component, so the seeded demo
+ * logins reach the client form in development only, decided on the server per
+ * request — demo credentials never ship in a production build or client bundle.
+ */
+export default async function WebLoginPage(): Promise<React.JSX.Element> {
+	const demoAccounts = await loadWebDemoAccounts();
 
-const SHOW_DEMO_ACCOUNTS: boolean = clientEnv.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS;
-
-export default function WebLoginPage(): React.JSX.Element {
 	return (
 		<AuthLayout
 			logo={
@@ -39,7 +36,7 @@ export default function WebLoginPage(): React.JSX.Element {
 				rightsReserved: "All rights reserved.",
 			}}>
 			<LoginForm
-				{...(SHOW_DEMO_ACCOUNTS ? { demoAccounts: WEB_DEMO_ACCOUNTS } : {})}
+				{...(demoAccounts.length > 0 ? { demoAccounts } : {})}
 				redirectPath={ROUTES.rewardHub.browse}
 				footer={
 					<p className="text-center text-xs text-balance text-muted-foreground">

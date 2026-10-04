@@ -12,7 +12,8 @@ import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/u
 import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { EMAIL_LOG_PAGE_SIZE_OPTIONS, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "@/lib/url-state/email-log";
-import { useEmailLogLive, type LiveState } from "@/lib/notifications/email-log-live";
+import { useEmailLogLive } from "@/lib/notifications/email-log-live";
+import type { LiveState } from "@/lib/notifications/reconnecting-event-stream";
 import { formatDateTime } from "@/lib/format/dates";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -25,6 +26,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
 import * as React from "react";
+import { EMAIL_LOG_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enum-filter-options";
 
 // ── Status presentation ───────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ import * as React from "react";
 const STATUS_META: Readonly<
 	Record<EmailLogStatus, { readonly label: string; readonly variant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link"; readonly icon: React.ReactNode }>
 > = {
+	pending: { label: "Pending", variant: "outline", icon: <Mail className="size-3" /> },
 	sent: { label: "Sent", variant: "secondary", icon: <Mail className="size-3" /> },
 	delivered: { label: "Delivered", variant: "default", icon: <CircleCheck className="size-3" /> },
 	bounced: { label: "Bounced", variant: "destructive", icon: <CircleX className="size-3" /> },
@@ -65,14 +68,14 @@ function LivePill({ state }: { readonly state: LiveState }): React.JSX.Element {
 	const meta: Readonly<Record<LiveState, { readonly label: string; readonly dot: string; readonly text: string; readonly title: string }>> = {
 		open: {
 			label: "Live",
-			dot: "bg-emerald-500",
-			text: "text-emerald-600 dark:text-emerald-400",
+			dot: "bg-success",
+			text: "text-success",
 			title: "Connected — the log updates automatically the instant a webhook flips a status.",
 		},
 		connecting: {
 			label: "Connecting…",
-			dot: "bg-amber-500",
-			text: "text-amber-600 dark:text-amber-400",
+			dot: "bg-warning",
+			text: "text-warning",
 			title: "Connecting to the live stream — updates resume automatically once connected.",
 		},
 		closed: {
@@ -170,13 +173,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 			{
 				key: "status",
 				label: "Status",
-				options: [
-					{ value: "sent", label: "Sent" },
-					{ value: "delivered", label: "Delivered" },
-					{ value: "bounced", label: "Bounced" },
-					{ value: "complained", label: "Complained" },
-					{ value: "failed", label: "Failed" },
-				],
+				options: enumFilterOptions(EmailLogStatusSchema.options, EMAIL_LOG_STATUS_LABELS),
 			},
 		],
 		[],
@@ -296,7 +293,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 				<CardContent>
 					<DataTable
 						labels={ADMIN_DATA_TABLE_LABELS}
-						data={[...rows]}
+						data={rows}
 						columns={columns}
 						searchKeys={[]}
 						toolbarContent={searchToolbar}

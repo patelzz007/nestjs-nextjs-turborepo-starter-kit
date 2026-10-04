@@ -15,7 +15,7 @@ const { merchantsQuery } = vi.hoisted(() => ({ merchantsQuery: vi.fn() }));
 // The table reads its state from the address bar, as Next.js's
 // `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
-	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
+	useRouter: (): { readonly push: () => void; readonly refresh: () => void } => ({ push: () => undefined, refresh: () => undefined }),
 	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
@@ -25,9 +25,13 @@ vi.mock("@/lib/session/super-admin", () => ({
 
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
+		login: (): void => undefined,
 		api: {
 			rewardsAdmin: { listOrganizations: { useQuery: merchantsQuery } },
-			auth: { impersonate: { useMutation: (): object => ({ mutateAsync: (): Promise<void> => Promise.resolve(), isPending: false }) } },
+			auth: {
+				impersonate: { useMutation: (): object => ({ mutateAsync: (): Promise<void> => Promise.resolve(), isPending: false }) },
+				stopImpersonation: { useMutation: (): object => ({ mutateAsync: (): Promise<void> => Promise.resolve(), isPending: false }) },
+			},
 		},
 	}),
 }));

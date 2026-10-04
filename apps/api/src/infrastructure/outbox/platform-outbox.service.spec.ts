@@ -65,7 +65,7 @@ const LOGOUT_EVENT: PlatformEventInput = {
 };
 
 function createService(correlation: RequestContextService = new RequestContextService()): PlatformOutboxService {
-	return new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), correlation);
+	return new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig()), new RequestContextService()), correlation);
 }
 
 describe("PlatformOutboxService.enqueueInTransaction", () => {
@@ -200,12 +200,12 @@ describe("resolvePartitionKey", () => {
 		).toBeNull();
 	});
 
-	it("keys email events by recipient", () => {
+	it("never keys email events by the recipient address (null — the broker falls back to the correlation id)", () => {
 		expect(
 			resolvePartitionKey({
 				type: "email.log.updated",
-				payload: { templateKey: "welcome", status: "sent", to: "a@b.com", resendId: null, error: null, durationMs: null },
+				payload: { templateKey: "welcome", status: "sent", resendId: null, error: null, durationMs: null },
 			}),
-		).toBe("a@b.com");
+		).toBeNull();
 	});
 });

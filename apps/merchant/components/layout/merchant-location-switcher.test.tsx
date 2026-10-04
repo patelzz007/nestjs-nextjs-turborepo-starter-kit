@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantLocationSwitcher, MerchantLocationSwitcherMobile, resolveNextCycledLocationId } from "@/components/layout/merchant-location-switcher";
 import { TenantContextProvider } from "@/features/tenant-context/facade";
-import { clearOrganizationLocationCookie, ORGANIZATION_LOCATION_ID_COOKIE_NAME } from "@/lib/org/location";
+import { clearOrganizationLocationCookie, organizationLocationCookieName } from "@/lib/org/location";
 import { TEST_ORG_SLUG } from "@/test/authorization";
+import { testEnvelope } from "@/test/envelope";
+import { TestQueryClientProvider } from "@/test/query-client";
 import { contextQueryState, organizationContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
 import type { OrganizationContextResponse } from "@workspace/shared";
@@ -24,9 +26,11 @@ const TWO_STORES = [STORE_A_LOCATION, STORE_B_LOCATION];
 function renderSwitcher(ui: React.ReactElement, context: OrganizationContextResponse, initialLocationId: string | null): void {
 	contextQuery.mockReturnValue(contextQueryState(context));
 	render(
-		<TenantContextProvider orgSlug={TEST_ORG_SLUG} initialLocationId={initialLocationId} initialOrganizationContext={context}>
-			{ui}
-		</TenantContextProvider>,
+		<TestQueryClientProvider>
+			<TenantContextProvider orgSlug={TEST_ORG_SLUG} initialLocationId={initialLocationId} initialOrganizationContext={testEnvelope(context)}>
+				{ui}
+			</TenantContextProvider>
+		</TestQueryClientProvider>,
 	);
 }
 
@@ -37,7 +41,7 @@ beforeEach((): void => {
 afterEach((): void => {
 	cleanup();
 	contextQuery.mockReset();
-	clearOrganizationLocationCookie();
+	clearOrganizationLocationCookie(TEST_ORG_SLUG);
 });
 
 describe("resolveNextCycledLocationId", () => {
@@ -61,7 +65,7 @@ describe("MerchantLocationSwitcherMobile", () => {
 		fireEvent.click(screen.getByRole("button", { name: /Switch store location/u }));
 
 		expect(screen.getByRole("button", { name: `Switch store location (current: ${STORE_A.name})` })).toBeTruthy();
-		expect(document.cookie).toContain(`${ORGANIZATION_LOCATION_ID_COOKIE_NAME}=${STORE_A.id}`);
+		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
 	});
 
 	it("is hidden for a single-store member — there is nothing to switch", () => {

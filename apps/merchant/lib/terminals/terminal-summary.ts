@@ -1,4 +1,4 @@
-import type { MerchantTerminalSummary, PosTerminalStatus } from "@workspace/shared";
+import type { MerchantTerminalPairing, MerchantTerminalSummary, PosTerminalStatus } from "@workspace/shared";
 
 /** Headline numbers for the POS terminals page — computed from the terminals the page loaded. */
 export interface TerminalStats {
@@ -86,4 +86,40 @@ export function isPairingComplete(issued: MerchantTerminalSummary, current: Merc
 		return false;
 	}
 	return issued.pairedAt === null || current.pairedAt > issued.pairedAt;
+}
+
+/** The stat cards' numbers: exact when the page holds every terminal of the filter, otherwise unavailable (never a page-sized undercount). */
+export type TerminalStatsState = { readonly kind: "exact"; readonly stats: TerminalStats } | { readonly kind: "unavailable" };
+
+/** Stats from one loaded page and the API's total for the same filter. */
+export function summarizeTerminalPage(terminals: readonly MerchantTerminalSummary[], total: number): TerminalStatsState {
+	return terminals.length >= total ? { kind: "exact", stats: summarizeTerminals(terminals) } : { kind: "unavailable" };
+}
+
+/** What the open pairing dialog's status poll currently sees of the terminal's store. */
+export interface PairingPollSnapshot {
+	/** The terminals of the polled page (`undefined` before the first answer). */
+	readonly terminals: readonly MerchantTerminalSummary[] | undefined;
+}
+
+/**
+ * Whether the pairing dialog should keep polling for `issued`: only while the
+ * code can still be used and the outcome is observable. Polling stops once the
+ * till paired, once the code expired, and once the terminal is gone from a
+ * complete list (removed elsewhere) — or is not on the page at all, since a
+ * terminal past the first page can only be watched through a per-terminal
+ * status endpoint, which the API does not offer.
+ */
+export function shouldKeepPollingPairing(issued: MerchantTerminalPairing, snapshot: PairingPollSnapshot, nowMs: number): boolean {
+	if (nowMs >= issued.pairingCodeExpiresAt) {
+		return false;
+	}
+	if (snapshot.terminals === undefined) {
+		return true;
+	}
+	const current = snapshot.terminals.find((terminal) => terminal.id === issued.terminal.id);
+	if (current === undefined) {
+		return false;
+	}
+	return !isPairingComplete(issued.terminal, current);
 }

@@ -1,5 +1,7 @@
 import { RewardHubBrowseView } from "@/components/rewardhub/browse/view";
 import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/lib/url-state/rewards-browse";
+import { guardWebPage } from "@/lib/auth/page-guard";
+import { ROUTES } from "@/lib/routes";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import * as React from "react";
@@ -17,6 +19,8 @@ export default async function RewardHubBrowsePage({
 }: {
 	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<React.JSX.Element> {
+	await guardWebPage(ROUTES.rewardHub.browse);
+
 	const urlState = REWARDS_BROWSE_URL_STATE.parse(await searchParams);
 	const [result] = await Promise.allSettled([createWebServerCaller().rewards.list.query(toRewardsBrowseListQuery(urlState))]);
 

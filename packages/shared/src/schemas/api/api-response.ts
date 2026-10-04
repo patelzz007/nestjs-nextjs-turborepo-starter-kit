@@ -3,7 +3,7 @@ import { z } from "zod";
 import { EpochMsSchema, DataValueSchema, type DataValue } from "./common";
 
 // ── Shared response envelope primitives ──────────────────────────────────
-// Every success response is ONE of two envelopes (ADR 022, docs/response-contracts.md):
+// Every success response is ONE of two envelopes (ADR 022, docs/technical/api/response-contracts.md):
 //
 //   single    → { success: true, data: <Data>,   meta: ApiResponseMeta }
 //   paginated → { success: true, data: <Item>[], meta: ApiPaginatedMeta }
@@ -19,7 +19,10 @@ import { EpochMsSchema, DataValueSchema, type DataValue } from "./common";
  * Metadata included in every API response by the ResponseInterceptor.
  */
 export const ApiResponseMetaSchema = z.object({
-	correlationId: z.string().default("").meta({
+	// Required, never defaulted: the response interceptor and the exception
+	// filter stamp every envelope with it, so a response WITHOUT one is a broken
+	// server and must fail the client's parse instead of passing as "".
+	correlationId: z.string().meta({
 		description: "Request tracing ID (from X-Correlation-Id header or auto-generated)",
 		example: "abc123-def456",
 	}),
@@ -136,7 +139,7 @@ export function createApiSuccessEnvelopeSchema<DataSchema extends z.ZodType>(
 
 /**
  * The PAGINATED success envelope `{ success: true, data: Item[], meta }` with
- * pagination fields in `meta` (docs/list-queries.md) — every list endpoint.
+ * pagination fields in `meta` (docs/technical/api/list-queries.md) — every list endpoint.
  */
 export function createApiPaginatedEnvelopeSchema<ItemSchema extends z.ZodType>(
 	itemSchema: ItemSchema,

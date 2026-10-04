@@ -29,6 +29,7 @@ import {
 	RewardsAdminRewardsController,
 } from "./controllers/rewards-admin.controller";
 import { MerchantApiKeyGuard } from "./guards/merchant-api-key.guard";
+import { PosRateLimitGuard } from "./guards/pos-rate-limit.guard";
 import { ClaimService } from "./services/claim.service";
 import { ConsumerRewardsService } from "./services/consumer-rewards.service";
 import { MerchantKybService } from "./services/merchant-kyb.service";
@@ -38,6 +39,7 @@ import { MerchantTerminalService } from "./services/merchant-terminal.service";
 import { PosPairingService } from "./services/pos-pairing.service";
 import { MerchantContextService } from "./services/merchant-context.service";
 import { RedemptionService } from "./services/redemption.service";
+import { PosCodeLockoutService } from "./services/pos-code-lockout.service";
 import { RewardLegalService } from "./services/reward-legal.service";
 import { RewardOtpService } from "./services/reward-otp.service";
 import { RewardsAdminService } from "./services/rewards-admin.service";
@@ -47,6 +49,7 @@ import { RewardsPersistenceModule } from "./rewards-persistence.module";
 import { RewardsQueueModule } from "./rewards-queue.module";
 import { FilesModule } from "../files/files.module";
 import { StorageModule } from "../storage/storage.module";
+import { KybFileVerdictListener } from "./listeners/kyb-file-verdict.listener";
 import { MerchantKybDocumentService } from "./services/merchant-kyb-document.service";
 import { getApiConfig } from "../../config/api-config";
 
@@ -94,16 +97,19 @@ const rewardsQueueImports = redisUrl !== undefined ? [RewardsQueueModule] : [];
 		RewardLegalService,
 		RewardOtpService,
 		RedemptionService,
+		PosCodeLockoutService,
 		MerchantApiKeyService,
 		MerchantTerminalService,
 		PosPairingService,
 		MerchantKybService,
 		MerchantKybDocumentService,
+		KybFileVerdictListener,
 		MerchantContextService,
 		MerchantOnboardingService,
 		RewardsAdminService,
 		RewardsAnalyticsService,
 		MerchantApiKeyGuard,
+		PosRateLimitGuard,
 	],
 	exports: [RewardsCoreServicesModule, ConsumerRewardsService, ClaimService],
 })

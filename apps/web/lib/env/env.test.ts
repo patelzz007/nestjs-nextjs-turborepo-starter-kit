@@ -17,13 +17,14 @@ describe("WebClientEnvSchema", () => {
 		expect(keys.filter((key: string): boolean => !key.startsWith(PUBLIC_ENV_PREFIX))).toEqual([]);
 	});
 
-	it("defaults the demo-accounts flag to off", () => {
-		expect(parseEnvOrThrow(WebClientEnvSchema, VALID_PUBLIC_SOURCE, WEB_ENV_SCOPE.client).NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS).toBe(false);
+	it("does not expose the demo-accounts flag to the browser", () => {
+		expect(Object.keys(WebClientEnvSchema.shape)).not.toContain("NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS");
+		expect(Object.keys(parseEnvOrThrow(WebClientEnvSchema, VALID_PUBLIC_SOURCE, WEB_ENV_SCOPE.client)).sort()).toEqual(Object.keys(VALID_PUBLIC_SOURCE).sort());
 	});
 
 	it("names every missing required variable without printing values", () => {
 		const run = (): void => {
-			parseEnvOrThrow(WebClientEnvSchema, { NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS: "true" }, WEB_ENV_SCOPE.client);
+			parseEnvOrThrow(WebClientEnvSchema, {}, WEB_ENV_SCOPE.client);
 		};
 		expect(run).toThrow(EnvValidationError);
 		expect(run).toThrow(/NEXT_PUBLIC_API_URL: is required but not set/);
@@ -36,9 +37,13 @@ describe("WebClientEnvSchema", () => {
 });
 
 describe("WebServerEnvSchema", () => {
-	it("requires NODE_ENV and leaves COOKIE_DOMAIN optional", () => {
+	it("requires NODE_ENV, leaves COOKIE_DOMAIN optional", () => {
 		expect(WebServerEnvSchema.parse({ NODE_ENV: "production" })).toEqual({ NODE_ENV: "production", COOKIE_DOMAIN: undefined });
 		expect(WebServerEnvSchema.safeParse({}).success).toBe(false);
+	});
+
+	it("has no demo-accounts switch, so demo accounts cannot be forced on by configuration", () => {
+		expect(WebServerEnvSchema.safeParse({ NODE_ENV: "production", SHOW_DEMO_ACCOUNTS: "true" }).success).toBe(false);
 	});
 });
 

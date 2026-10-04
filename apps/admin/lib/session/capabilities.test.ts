@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, renderHook } from "@testing-library/react";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
-import { PERMISSION, type SessionPermissionsResponse } from "@workspace/shared";
+import { createApiSuccessEnvelopeSchema, PERMISSION, SessionPermissionsResponseSchema, type Envelope, type SessionPermissionsResponse } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
@@ -9,6 +9,8 @@ import { buildSearchableItems } from "@/lib/palette/search";
 import { resolveSessionCapabilities, SESSION_PERMISSIONS_REFETCH_INTERVAL_MS, useSessionPermissionsQuery } from "@/lib/session/capabilities";
 
 interface PermissionsQueryOptions {
+	readonly initialData?: Envelope<SessionPermissionsResponse>;
+	readonly initialDataUpdatedAt?: number;
 	readonly refetchOnWindowFocus?: boolean;
 	readonly refetchInterval?: number;
 }
@@ -16,6 +18,7 @@ interface PermissionsQueryOptions {
 interface PermissionsQueryResult {
 	readonly data: { readonly data: SessionPermissionsResponse } | undefined;
 	readonly isError: boolean;
+	readonly refetch?: () => Promise<void>;
 }
 
 const { useQueryMock } = vi.hoisted(() => ({
@@ -38,6 +41,14 @@ function permissions(capabilities: readonly string[]): SessionPermissionsRespons
 }
 
 const PRELOADED = permissions([PERMISSION.PRODUCT.LIST]);
+/** Server answer time of the preloaded envelope. */
+const PRELOADED_AT_MS = 1_793_059_200_000;
+/** The envelope the panel layout prefetched — the server's own meta. */
+const PRELOADED_ENVELOPE: Envelope<SessionPermissionsResponse> = createApiSuccessEnvelopeSchema(SessionPermissionsResponseSchema).parse({
+	success: true,
+	data: PRELOADED,
+	meta: { correlationId: "corr-permissions", timestamp: PRELOADED_AT_MS },
+});
 
 afterEach(() => {
 	cleanup();
@@ -63,9 +74,11 @@ describe("useSessionPermissionsQuery", () => {
 	it("refetches on window focus and on an interval", () => {
 		useQueryMock.mockReturnValue({ data: { data: PRELOADED }, isError: false });
 
-		renderHook(() => useSessionPermissionsQuery(PRELOADED));
+		renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
 
 		const options = useQueryMock.mock.calls[0]?.[1];
+		expect(options?.initialData).toBe(PRELOADED_ENVELOPE);
+		expect(options?.initialDataUpdatedAt).toBe(PRELOADED_AT_MS);
 		expect(options?.refetchOnWindowFocus).toBe(true);
 		expect(options?.refetchInterval).toBe(SESSION_PERMISSIONS_REFETCH_INTERVAL_MS);
 	});
@@ -73,10 +86,10 @@ describe("useSessionPermissionsQuery", () => {
 	it("returns the live (empty) list once the query has data, ignoring the preload", () => {
 		useQueryMock.mockReturnValue({ data: { data: permissions([]) }, isError: false });
 
-		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED));
+		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
 
 		expect(result.current.capabilities).toEqual([]);
-		expect(result.current.isResolved).toBe(true);
+		expect(result.current.status).toBe("ready");
 	});
 
 	it("is unresolved while the first fetch is pending without a preload", () => {
@@ -85,6 +98,34 @@ describe("useSessionPermissionsQuery", () => {
 		const { result } = renderHook(() => useSessionPermissionsQuery());
 
 		expect(result.current.capabilities).toEqual([]);
-		expect(result.current.isResolved).toBe(false);
+		expect(result.current.status).toBe("loading");
+	});
+
+	it("reports a failed first fetch as failed — not as a resolved empty permission list", () => {
+		useQueryMock.mockReturnValue({ data: undefined, isError: true, refetch: vi.fn() });
+
+		const { result } = renderHook(() => useSessionPermissionsQuery());
+
+		expect(result.current.status).toBe("failed");
+		expect(result.current.capabilities).toEqual([]);
+	});
+
+	it("keeps the preloaded answer when a refetch fails", () => {
+		useQueryMock.mockReturnValue({ data: undefined, isError: true, refetch: vi.fn() });
+
+		const { result } = renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
+
+		expect(result.current.status).toBe("ready");
+		expect(result.current.capabilities).toEqual(PRELOADED.capabilities);
+	});
+
+	it("retries by refetching the permissions", () => {
+		const refetch = vi.fn().mockResolvedValue(undefined);
+		useQueryMock.mockReturnValue({ data: undefined, isError: true, refetch });
+
+		const { result } = renderHook(() => useSessionPermissionsQuery());
+		result.current.retry();
+
+		expect(refetch).toHaveBeenCalledTimes(1);
 	});
 });

@@ -4,6 +4,10 @@
 // Imported by main.ts only AFTER the environment has been validated, because
 // several module files decide their imports from the config at load time.
 
+import { ApiDocsAccessGate } from "../common/api-docs-access.gate";
+import { TrustedProxies } from "../common/http/client-ip";
+import { AccessTokenStateService } from "../modules/auth/services/access-token-state.service";
+import { TokenService } from "../modules/auth/services/token.service";
 import type { IncomingMessage } from "node:http";
 
 import { type NestApplicationOptions } from "@nestjs/common";
@@ -21,6 +25,7 @@ import { warmupAjvValidators } from "../common/ajv-warmup";
 import { buildOpenApiDocument, setupApiDocs } from "../common/api-docs";
 import { correlationIdFor } from "../common/context/correlation-id";
 import { buildPinoRedactPaths, REDACTED } from "../common/logging/redaction";
+import { nestLoggerLevelsFor } from "../common/logging/nest-log-levels";
 import { registerGracefulShutdown } from "../common/lifecycle/graceful-shutdown";
 import { BullMqWorkerDrainService } from "@workspace/messaging/nest";
 import { HealthService } from "../modules/health/health.service";
@@ -48,7 +53,8 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	};
 
 	const isDev: boolean = config.runtime.isDevelopment || config.runtime.isTest;
-	// Swagger exposure: ON everywhere unless SWAGGER_ENABLED=0, and public.
+	// Swagger exposure: development/test on and public unless SWAGGER_ENABLED=0;
+	// production off unless SWAGGER_ENABLED=1, and then SuperAdmin-only.
 	const docsPolicy: ApiDocsPolicy = config.http.apiDocs;
 	markPhase("Environment validated");
 
@@ -58,10 +64,11 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	//
 	// Adapter options (Fastify-native improvements):
 	//  - `exposeHeadRoutes` — HEAD routes for every GET (cheap uptime probes).
-	//  - `trustProxy` — behind cloudflared/nginx the socket address is the
-	//    tunnel, not the client; trusting X-Forwarded-For gives real client IPs
-	//    to rate limiting + audit logs (cloudflared only forwards what the
-	//    Cloudflare edge set, so it's not spoofable through the tunnel).
+	//  - `trustProxy` — ONLY the proxies listed in TRUST_PROXY (IPs/CIDRs/
+	//    presets); unset = trust none, the client IP is the TCP peer. Same list
+	//    and semantics as the request context (common/http/client-ip.ts), so
+	//    `request.ip`, rate-limit trackers and audit rows always agree and a
+	//    client can never spoof its IP with X-Forwarded-For.
 	//  - `keepAliveTimeout` — detect dead keep-alive sockets faster than Node's
 	//    default (which sits just below common LB idle timeouts).
 	//  - `bodyLimit` — 1 MiB cap per request.
@@ -73,7 +80,7 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	const adapter = new FastifyAdapter({
 		bodyLimit: BODY_LIMIT_BYTES,
 		exposeHeadRoutes: true,
-		trustProxy: config.http.trustProxy,
+		trustProxy: new TrustedProxies(config.http.trustedProxies).toFastifyTrustProxy(),
 		keepAliveTimeout: KEEP_ALIVE_TIMEOUT_MS,
 		logController: new LogController({ requestIdLogLabel: REQUEST_ID_LOG_LABEL }),
 		logger: {
@@ -88,8 +95,9 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 
 	const nestOptions: NestApplicationOptions = {
 		rawBody: true,
-		// Include `log` in dev so Nest prints the mapped route list on boot.
-		...(isDev ? { logger: ["error", "warn", "log"] } : {}),
+		// Every Nest `Logger` follows LOG_LEVEL, in every environment (the same
+		// setting as pino above). `LOG_LEVEL=info` also prints the mapped-route list on boot.
+		logger: nestLoggerLevelsFor(config.observability.logLevel),
 		...(ObserveInstrument !== undefined ? { instrument: ObserveInstrument } : {}),
 	};
 	const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, nestOptions);
@@ -106,7 +114,7 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	// `GET /` + `GET /health` + the Resend webhook stay unversioned by not
 	// using `apiPath()`.
 
-	// ── Config (validated once in main.ts; see docs/api-configuration.md) ──
+	// ── Config (validated once in main.ts; see docs/technical/configuration/api.md) ──
 	const port: number = config.http.port;
 	const listenHost: string = config.http.host;
 
@@ -148,6 +156,11 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	// Build Swagger before listen — Fastify won't allow route registration after.
 	// Set SWAGGER_ENABLED=0 to skip it (saves ~50ms + static UI mount on listen).
 	if (docsPolicy.enabled) {
+		if (docsPolicy.access === "platform_admin") {
+			// Registered before the docs routes: every docs URL requires a SuperAdmin session.
+			const gate = new ApiDocsAccessGate({ tokens: app.get(TokenService), tokenState: app.get(AccessTokenStateService) });
+			app.getHttpAdapter().getInstance().addHook("onRequest", gate.onRequest);
+		}
 		httpAdapter.get("/docs", (_req, reply): void => {
 			reply.redirect(apiDocsPath());
 		});

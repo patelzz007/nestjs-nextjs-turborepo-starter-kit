@@ -23,9 +23,9 @@ export class RewardsQueueScheduler implements OnModuleInit {
 
 	public constructor(
 		private readonly config: TypedConfigService,
-		@InjectQueue(QUEUE_NAMES[1]) private readonly autoPublishQueue: Queue,
-		@InjectQueue(QUEUE_NAMES[2]) private readonly expirePendingQueue: Queue,
-		@InjectQueue(QUEUE_NAMES[3]) private readonly expireReferrerQueue: Queue,
+		@InjectQueue(QUEUE_NAMES.rewardsAutoPublish) private readonly autoPublishQueue: Queue,
+		@InjectQueue(QUEUE_NAMES.claimsExpirePending) private readonly expirePendingQueue: Queue,
+		@InjectQueue(QUEUE_NAMES.claimsExpireReferrer) private readonly expireReferrerQueue: Queue,
 	) {}
 
 	public async onModuleInit(): Promise<void> {
@@ -37,24 +37,24 @@ export class RewardsQueueScheduler implements OnModuleInit {
 		const everyMs = REWARDS_JOB_INTERVAL_MS;
 		await registerMaintenanceScheduler(
 			this.autoPublishQueue,
-			{ queueName: QUEUE_NAMES[1], schedulerId: AUTO_PUBLISH_SCHEDULER_ID, everyMs, jobName: "auto-publish", data },
+			{ queueName: QUEUE_NAMES.rewardsAutoPublish, schedulerId: AUTO_PUBLISH_SCHEDULER_ID, everyMs, jobName: "auto-publish", data },
 			this.logger,
 		);
 		await registerMaintenanceScheduler(
 			this.expirePendingQueue,
-			{ queueName: QUEUE_NAMES[2], schedulerId: EXPIRE_PENDING_SCHEDULER_ID, everyMs, jobName: "expire-pending", data },
+			{ queueName: QUEUE_NAMES.claimsExpirePending, schedulerId: EXPIRE_PENDING_SCHEDULER_ID, everyMs, jobName: "expire-pending", data },
 			this.logger,
 		);
 		await registerMaintenanceScheduler(
 			this.expireReferrerQueue,
-			{ queueName: QUEUE_NAMES[3], schedulerId: EXPIRE_REFERRER_SCHEDULER_ID, everyMs, jobName: "expire-referrer", data },
+			{ queueName: QUEUE_NAMES.claimsExpireReferrer, schedulerId: EXPIRE_REFERRER_SCHEDULER_ID, everyMs, jobName: "expire-referrer", data },
 			this.logger,
 		);
 		this.logger.log("Registered BullMQ rewards maintenance schedulers");
 	}
 }
 
-@Processor(QUEUE_NAMES[1])
+@Processor(QUEUE_NAMES.rewardsAutoPublish)
 @Injectable()
 export class RewardsAutoPublishProcessor extends WorkerHost {
 	public constructor(
@@ -65,7 +65,7 @@ export class RewardsAutoPublishProcessor extends WorkerHost {
 	}
 
 	public async process(job: Job): Promise<void> {
-		await runWithSystemRlsContext("queue.job", async (): Promise<void> => this.handle(job));
+		await runWithSystemRlsContext("queue.rewards.auto_publish", async (): Promise<void> => this.handle(job));
 	}
 
 	private async handle(job: Job): Promise<void> {
@@ -74,7 +74,7 @@ export class RewardsAutoPublishProcessor extends WorkerHost {
 	}
 }
 
-@Processor(QUEUE_NAMES[2])
+@Processor(QUEUE_NAMES.claimsExpirePending)
 @Injectable()
 export class ClaimsExpirePendingProcessor extends WorkerHost {
 	public constructor(
@@ -85,7 +85,7 @@ export class ClaimsExpirePendingProcessor extends WorkerHost {
 	}
 
 	public async process(job: Job): Promise<void> {
-		await runWithSystemRlsContext("queue.job", async (): Promise<void> => this.handle(job));
+		await runWithSystemRlsContext("queue.claims.expire_pending", async (): Promise<void> => this.handle(job));
 	}
 
 	private async handle(job: Job): Promise<void> {

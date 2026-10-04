@@ -1,12 +1,11 @@
-import { Controller, Delete, ForbiddenException, Get, Headers, HttpStatus, Inject, Post, Req, Res, UnauthorizedException } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Delete, Get, Headers, HttpStatus, Post, UnauthorizedException } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	CompleteFileUploadResponseSchema,
 	CompleteFileUploadSchema,
 	CreateFileUploadUrlResponseSchema,
 	CreateFileUploadUrlSchema,
 	DeleteSuccessDataSchema,
-	DocumentMimeTypeSchema,
 	FileDetailResponseSchema,
 	FileDownloadResponseSchema,
 	FileProcessingResultSchema,
@@ -18,35 +17,21 @@ import {
 	type FileDetailResponse,
 	type SuccessAckResponse,
 } from "@workspace/shared";
-import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
-import { SkipEnvelope } from "../../../common/decorators/skip-envelope.decorator";
-import { parseMultipartRequest } from "../../../common/multipart/parse-multipart-request";
-import { ZodBody, ZodQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
+import { ZodBody, ZodParams } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
+import { secureEquals } from "../../../common/utils/secure-equals";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
+import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
-import type { ObjectStorage } from "../../storage/domain/object-storage.port";
-import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
-import { locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
-import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { FileService } from "../services/file.service";
 import { FileAuthorizationService, type FileActor } from "../services/file-authorization.service";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
-
-const LocalUploadFieldsSchema = z.object({ key: z.string().min(1) }).strict();
-
-const LocalDownloadQuerySchema = z
-	.object({
-		container: z.string().min(1),
-		path: z.string().min(1),
-	})
-	.strict();
 
 const STORAGE_CALLBACK_SECRET_HEADER = "x-storage-callback-secret";
 
@@ -61,8 +46,6 @@ export class FilesController {
 		private readonly config: TypedConfigService,
 		private readonly files: FileService,
 		private readonly fileAuthorization: FileAuthorizationService,
-		private readonly repository: StoredFileRepository,
-		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
 	) {}
 
 	// Per-category authorization (own avatar, product, store branding, owner-only KYB)
@@ -81,8 +64,14 @@ export class FilesController {
 
 	@Public()
 	@RlsBypass()
+	// Server-to-server integration (the processing worker sends no Origin); authenticated by the shared secret.
+	@SkipMutationIntent()
 	@Post("processing-callback")
-	@ApiOperation({ summary: "External processing callback for file lifecycle updates" })
+	@ApiOperation({
+		summary: "External processing callback for file lifecycle updates",
+		description:
+			"Applies an out-of-process scanner/processing result. Accepted only while the file is awaiting a verdict (SCANNING); any later delivery — including a replay — is rejected with 409.",
+	})
 	@ZodResponse(SuccessAckResponseSchema, { status: HttpStatus.CREATED, description: "Processing result applied" })
 	public async processingCallback(
 		@Headers(STORAGE_CALLBACK_SECRET_HEADER) callbackSecret: string | undefined,
@@ -91,25 +80,6 @@ export class FilesController {
 		this.assertProcessingCallbackAuthorized(callbackSecret);
 		await this.files.applyProcessingResult(body);
 		return { success: true };
-	}
-
-	@Public()
-	@RlsBypass()
-	@SkipEnvelope()
-	@Get("local-download")
-	@ApiOperation({ summary: "Serve a local filesystem object for signed/public URLs (development only)" })
-	@ApiOkResponse({ description: "Local object bytes" })
-	public async localDownload(@ZodQuery(LocalDownloadQuerySchema) query: z.output<typeof LocalDownloadQuerySchema>, @Res() reply: FastifyReply): Promise<void> {
-		if (!this.config.useLocalStorage) {
-			throw new ForbiddenException({ message: "Local download is only available for local storage", error: "LOCAL_DOWNLOAD_DISABLED" });
-		}
-
-		const locator = toStorageObjectLocator(this.config.storageProvider, query.container, query.path);
-		const buffer = await this.storage.getObject(locator);
-		if (buffer === null) {
-			throw new ForbiddenException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-		await reply.header("Content-Type", "application/octet-stream").send(buffer);
 	}
 
 	@Post(":fileId/complete")
@@ -156,41 +126,7 @@ export class FilesController {
 	public async deleteFile(@GetUser() user: AccessTokenPayload, @ZodParams(FileIdParamSchema) params: z.output<typeof FileIdParamSchema>): Promise<DeleteSuccessData> {
 		const file = await this.files.requireFile(params.fileId);
 		await this.fileAuthorization.assertCanDelete(toFileActor(user), file);
-		await this.files.deleteStoredFile(file);
-		return { success: true };
-	}
-
-	@Public()
-	@RlsBypass()
-	@Post(":fileId/local-upload")
-	@ApiOperation({ summary: "Local filesystem shim for multipart POST uploads (development only)" })
-	@ZodResponse(SuccessAckResponseSchema, { status: HttpStatus.CREATED, description: "Local upload stored" })
-	public async localUpload(@ZodParams(FileIdParamSchema) params: z.output<typeof FileIdParamSchema>, @Req() request: FastifyRequest): Promise<SuccessAckResponse> {
-		if (!this.config.useLocalStorage) {
-			throw new ForbiddenException({ message: "Local upload is disabled when a remote provider is active", error: "LOCAL_UPLOAD_DISABLED" });
-		}
-
-		const file = await this.repository.findById(params.fileId);
-		if (file === null) {
-			throw new ForbiddenException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-
-		const parsed = await parseMultipartRequest(request, LocalUploadFieldsSchema, { maxFiles: 1 });
-		const [uploaded] = parsed.files;
-		if (uploaded === undefined) {
-			throw new ForbiddenException({ message: "Missing upload file", error: "FILE_OBJECT_MISSING" });
-		}
-		if (parsed.fields.key !== file.storagePath) {
-			throw new ForbiddenException({ message: "Upload key mismatch", error: "FILE_KEY_MISMATCH" });
-		}
-
-		const mimeType = DocumentMimeTypeSchema.parse(uploaded.mimeType);
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
-		await this.storage.upload({
-			locator,
-			buffer: uploaded.buffer,
-			mimeType,
-		});
+		await this.files.deleteStoredFile(file, user.sub);
 		return { success: true };
 	}
 
@@ -201,7 +137,8 @@ export class FilesController {
 		if (expected === null) {
 			throw new UnauthorizedException({ message: "Processing callback secret is not configured", error: "CALLBACK_UNAUTHORIZED" });
 		}
-		if (callbackSecret !== expected) {
+		// Constant-time comparison: the secret must not leak through response timing.
+		if (callbackSecret === undefined || !secureEquals(callbackSecret, expected)) {
 			throw new UnauthorizedException({ message: "Invalid processing callback secret", error: "CALLBACK_UNAUTHORIZED" });
 		}
 	}

@@ -3,7 +3,13 @@ import { createFeatureStore, type FeatureStore } from "../../state/feature-store
 import { commandPaletteActions, type CommandPaletteAction } from "./actions";
 import { commandPaletteReducer } from "./reducer";
 import { selectPreferences } from "./selectors";
-import { CommandPalettePreferencesSchema, INITIAL_COMMAND_PALETTE_STATE, type CommandPalettePreferences, type CommandPaletteState } from "./state";
+import {
+	COMMAND_PALETTE_PREFERENCES_VERSION,
+	CommandPalettePreferencesSchema,
+	INITIAL_COMMAND_PALETTE_STATE,
+	type CommandPalettePreferences,
+	type CommandPaletteState,
+} from "./state";
 
 export type CommandPaletteStore = FeatureStore<CommandPaletteState, CommandPaletteAction>;
 
@@ -20,7 +26,11 @@ export function createCommandPaletteStore(devtoolsName: string): CommandPaletteS
 export function commandPalettePersistence(storageKey: string): FeaturePersistenceOptions<CommandPaletteState, CommandPaletteAction, CommandPalettePreferences> {
 	return {
 		key: storageKey,
+		version: COMMAND_PALETTE_PREFERENCES_VERSION,
 		schema: CommandPalettePreferencesSchema,
+		// Snapshots live under a per-member key that only version 1 ever wrote; the
+		// pre-scoping, unowned key is deleted by the provider (its owner is unknown).
+		migrations: [],
 		select: selectPreferences,
 		restore: commandPaletteActions.preferencesRestored,
 	};

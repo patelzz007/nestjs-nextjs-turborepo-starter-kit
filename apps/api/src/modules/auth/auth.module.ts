@@ -1,4 +1,4 @@
-import { Inject, Logger, Module, type OnModuleDestroy } from "@nestjs/common";
+import { Logger, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule, ThrottlerStorage } from "@nestjs/throttler";
 import { JwtModule } from "@nestjs/jwt";
@@ -25,11 +25,16 @@ import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.i
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { AuthController } from "./auth.controller";
 import { MfaRecoveryController } from "./mfa-recovery.controller";
+import { OwnProfileRepository } from "./profile/own-profile.repository";
+import { OwnProfileService } from "./profile/own-profile.service";
+import { OwnProfileWritePolicy } from "./profile/own-profile-write.policy";
+import { ProfileController } from "./profile/profile.controller";
 import { TwoFactorController } from "./two-factor.controller";
 import { AuthService } from "./auth.service";
 import { RedisUserSessionCacheService } from "./cache/redis-user-session-cache.service";
 import { UserSessionCacheService } from "./cache/user-session-cache.service";
 import { AuthMeCacheListener } from "./listeners/auth-me-cache.listener";
+import { MfaRecoveryRepository } from "./repositories/mfa-recovery.repository";
 import { UserRepository } from "./repositories/user.repository";
 import { AccountLockoutService } from "./services/account-lockout.service";
 import { AdminUserService } from "./services/admin-user.service";
@@ -70,7 +75,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 			useFactory: authThrottlerOptionsFactory,
 		}),
 	],
-	controllers: [AuthController, TwoFactorController, MfaRecoveryController],
+	controllers: [AuthController, TwoFactorController, MfaRecoveryController, ProfileController],
 	providers: [
 		// ── Facade ──────────────────────────────────────────────
 		AuthService,
@@ -80,8 +85,10 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 			useClass: UserSessionCacheService,
 		},
 		{
-			provide: "REDIS_USER_SESSION_CACHE_LIFECYCLE",
-			useFactory: async (config: TypedConfigService, publisher: Redis | null): Promise<RedisUserSessionCacheService | null> => {
+			// Uses the SHARED publisher client; its connection and shutdown belong to
+			// the messaging RedisInfrastructureModule, never to this cache.
+			provide: "REDIS_USER_SESSION_CACHE",
+			useFactory: (config: TypedConfigService, publisher: Redis | null): RedisUserSessionCacheService | null => {
 				if (!config.useRedisUserSessionCache) {
 					if (config.userSessionCacheBackend === "redis" && config.redisUrl === undefined) {
 						Logger.warn("USER_SESSION_CACHE_BACKEND=redis but REDIS_URL is unset — using in-memory user session cache", AuthModule.name);
@@ -91,16 +98,14 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 				if (publisher === null) {
 					return null;
 				}
-				const redisCache = new RedisUserSessionCacheService(config, publisher);
-				await redisCache.onModuleInit();
-				return redisCache;
+				return new RedisUserSessionCacheService(config, publisher);
 			},
 			inject: [TypedConfigService, REDIS_PUBLISHER],
 		},
 		{
 			provide: UserSessionCacheService,
 			useFactory: (memory: UserSessionCacheService, redis: RedisUserSessionCacheService | null): UserSessionCacheService => redis ?? memory,
-			inject: ["IN_MEMORY_USER_SESSION_CACHE", "REDIS_USER_SESSION_CACHE_LIFECYCLE"],
+			inject: ["IN_MEMORY_USER_SESSION_CACHE", "REDIS_USER_SESSION_CACHE"],
 		},
 		// ── Domain services ─────────────────────────────────────
 		IdentityService,
@@ -120,8 +125,12 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		MfaRecoveryService,
 		SecretEncryptionService,
 		UserResponseMapper,
+		OwnProfileService,
+		OwnProfileWritePolicy,
 		// ── Infrastructure ──────────────────────────────────────
 		UserRepository,
+		MfaRecoveryRepository,
+		OwnProfileRepository,
 		AuthEventsService,
 		TokenService,
 		CryptoService,
@@ -171,6 +180,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		SecretEncryptionService,
 		EmailService,
 		EmailVerificationService,
+		LoginVerificationService,
 		AuthGuard,
 		AdminAccessGuard,
 		EmailVerifiedGuard,
@@ -180,14 +190,8 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		SetAuthCookiesInterceptor,
 		ClearAuthCookiesInterceptor,
 		CookieConfigService,
+		// Shared rate-limit store (Redis, in-memory fallback) — the POS per-API-key limiter counts here too.
+		ThrottlerStorage,
 	],
 })
-export class AuthModule implements OnModuleDestroy {
-	public constructor(@Inject("REDIS_USER_SESSION_CACHE_LIFECYCLE") private readonly redisUserSessionCache: RedisUserSessionCacheService | null) {}
-
-	public async onModuleDestroy(): Promise<void> {
-		if (this.redisUserSessionCache !== null) {
-			await this.redisUserSessionCache.onModuleDestroy();
-		}
-	}
-}
+export class AuthModule {}

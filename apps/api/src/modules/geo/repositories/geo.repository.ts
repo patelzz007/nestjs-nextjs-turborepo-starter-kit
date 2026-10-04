@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 
 import type {
@@ -46,9 +46,10 @@ import type {
 	UpdateStateInput,
 	UpdateSubregionInput,
 } from "@workspace/shared";
-import { cityListQuery, countryListQuery, JsonObjectSchema, regionListQuery, stateListQuery, subregionListQuery } from "@workspace/shared";
-import type { City as CityRow, Country as CountryRow, Prisma, Region as RegionRow, State as StateRow, Subregion as SubregionRow } from "@prisma/client";
+import { ApiErrorCodes, cityListQuery, countryListQuery, regionListQuery, stateListQuery, subregionListQuery } from "@workspace/shared";
+import type { Prisma } from "@prisma/client";
 
+import { NotFoundError, ValidationError } from "../../../common/errors/app-error";
 import { parsePrismaNullableDataValue } from "../../../common/utils/prisma-json";
 import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { defineKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
@@ -133,6 +134,7 @@ export function buildRegionListWhere(query: RegionListQuery, searchIds: readonly
 	const filter = query.filter;
 	return {
 		AND: [
+			{ isDeleted: false },
 			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
 			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
 			...(searchIds !== undefined ? [{ id: { in: [...searchIds] } }] : []),
@@ -144,6 +146,7 @@ export function buildSubregionListWhere(query: SubregionListQuery, searchIds: re
 	const filter = query.filter;
 	return {
 		AND: [
+			{ isDeleted: false },
 			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
 			...fieldWhere(toPrismaComparableFilter(filter?.regionId), (regionId) => ({ regionId })),
 			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
@@ -156,6 +159,7 @@ export function buildCountryListWhere(query: CountryListQuery, searchIds: readon
 	const filter = query.filter;
 	return {
 		AND: [
+			{ isDeleted: false },
 			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
 			...fieldWhere(toPrismaNullableStringFilter(filter?.iso2), (iso2) => ({ iso2 })),
 			...fieldWhere(toPrismaNullableComparableFilter(filter?.regionId), (regionId) => ({ regionId })),
@@ -170,6 +174,7 @@ export function buildStateListWhere(query: StateListQuery, searchIds: readonly n
 	const filter = query.filter;
 	return {
 		AND: [
+			{ isDeleted: false },
 			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
 			...fieldWhere(toPrismaComparableFilter(filter?.countryId), (countryId) => ({ countryId })),
 			...fieldWhere(toPrismaStringFilter(filter?.countryCode), (countryCode) => ({ countryCode })),
@@ -183,6 +188,7 @@ export function buildCityListWhere(query: CityListQuery, searchIds: readonly num
 	const filter = query.filter;
 	return {
 		AND: [
+			{ isDeleted: false },
 			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
 			...fieldWhere(toPrismaComparableFilter(filter?.stateId), (stateId) => ({ stateId })),
 			...fieldWhere(toPrismaComparableFilter(filter?.countryId), (countryId) => ({ countryId })),
@@ -196,39 +202,14 @@ export function buildCityListWhere(query: CityListQuery, searchIds: readonly num
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** Sanitize a string value — strip HTML tags and trim. */
-function sanitize(val: string | null | undefined): string | null {
-	if (val === null || val === undefined) return null;
-	return val.replace(/<[^>]*>/g, "").trim();
+/** Strip HTML tags and trim a free-text name. */
+function sanitizeName(value: string): string {
+	return value.replace(/<[^>]*>/g, "").trim();
 }
 
-const geoNameFieldSchema = z.string();
-const geoNonEmptyNameSchema = z.string().trim().min(1);
-const geoNonNegativeIntSchema = z.number().int().nonnegative();
-
-function sanitizePrismaNameField(input: { name?: string | null | undefined }): void {
-	const parsed = geoNameFieldSchema.safeParse(input.name);
-	if (parsed.success) {
-		input.name = sanitize(parsed.data) ?? parsed.data;
-	}
-}
-
-function parseImportName(row: JsonObject): string | null {
-	const parsed = geoNameFieldSchema.safeParse(row.name);
-	if (!parsed.success) {
-		return null;
-	}
-	return sanitize(parsed.data);
-}
-
-function parseImportIntField(row: JsonObject, field: string): number | null {
-	const parsed = geoNonNegativeIntSchema.safeParse(row[field]);
-	return parsed.success ? parsed.data : null;
-}
-
-function parseImportStringField(row: JsonObject, field: string, fallback = ""): string {
-	const parsed = geoNameFieldSchema.safeParse(row[field]);
-	return parsed.success ? parsed.data : fallback;
+/** A create/update input with its `name` (when present) sanitized — a NEW object, the input is never mutated. */
+function withSanitizedName<TInput extends { readonly name?: string | undefined }>(input: TInput): TInput {
+	return input.name === undefined ? input : { ...input, name: sanitizeName(input.name) };
 }
 
 // ── DTO → Prisma input mappers ────────────────────────────────────────────────
@@ -415,6 +396,150 @@ function toPrismaUpdateCity(input: UpdateCityInput): Prisma.CityUncheckedUpdateI
 	};
 }
 
+// ── Import row contracts (zod — the import payload is untrusted JSON) ───────
+
+/** Longest geo name the columns accept (`VarChar(255)`). */
+const GEO_NAME_MAX_LENGTH = 255;
+/** ISO 3166-1 alpha-2 country codes are two characters (`VarChar(2)`). */
+const COUNTRY_CODE_MAX_LENGTH = 2;
+/** City state codes (`VarChar(255)`). */
+const STATE_CODE_MAX_LENGTH = 255;
+
+const ImportNameSchema = z.string().transform(sanitizeName).pipe(z.string().min(1).max(GEO_NAME_MAX_LENGTH));
+const ImportIdSchema = z.number().int().nonnegative();
+
+const RegionImportRowSchema = z.looseObject({ name: ImportNameSchema });
+const SubregionImportRowSchema = z.looseObject({ name: ImportNameSchema, regionId: ImportIdSchema });
+const CountryImportRowSchema = z.looseObject({ name: ImportNameSchema });
+const StateImportRowSchema = z.looseObject({
+	name: ImportNameSchema,
+	countryId: ImportIdSchema,
+	countryCode: z.string().max(COUNTRY_CODE_MAX_LENGTH).default(""),
+});
+const CityImportRowSchema = z.looseObject({
+	name: ImportNameSchema,
+	stateId: ImportIdSchema,
+	countryId: ImportIdSchema,
+	stateCode: z.string().max(STATE_CODE_MAX_LENGTH).default(""),
+	countryCode: z.string().max(COUNTRY_CODE_MAX_LENGTH).default(""),
+});
+
+/** One validated import row, discriminated by entity. */
+type GeoImportRow =
+	| { readonly entity: "region"; readonly row: z.output<typeof RegionImportRowSchema> }
+	| { readonly entity: "subregion"; readonly row: z.output<typeof SubregionImportRowSchema> }
+	| { readonly entity: "country"; readonly row: z.output<typeof CountryImportRowSchema> }
+	| { readonly entity: "state"; readonly row: z.output<typeof StateImportRowSchema> }
+	| { readonly entity: "city"; readonly row: z.output<typeof CityImportRowSchema> };
+
+type GeoImportEntity = GeoImportInput["entity"];
+
+/** A row-level validation problem (1-based row number, offending field). */
+interface GeoRowIssue {
+	readonly field: string | null;
+	readonly message: string;
+}
+
+type ParsedImportRow = { readonly ok: true; readonly value: GeoImportRow } | { readonly ok: false; readonly issues: readonly GeoRowIssue[] };
+
+function issuesOf(error: z.ZodError): GeoRowIssue[] {
+	return error.issues.map((issue): GeoRowIssue => {
+		const [first] = issue.path;
+		return { field: typeof first === "string" ? first : null, message: issue.message };
+	});
+}
+
+function parseImportRow(entity: GeoImportEntity, row: JsonObject): ParsedImportRow {
+	switch (entity) {
+		case "region": {
+			const parsed = RegionImportRowSchema.safeParse(row);
+			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
+		}
+		case "subregion": {
+			const parsed = SubregionImportRowSchema.safeParse(row);
+			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
+		}
+		case "country": {
+			const parsed = CountryImportRowSchema.safeParse(row);
+			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
+		}
+		case "state": {
+			const parsed = StateImportRowSchema.safeParse(row);
+			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
+		}
+		case "city": {
+			const parsed = CityImportRowSchema.safeParse(row);
+			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
+		}
+		default:
+			return assertNever(entity);
+	}
+}
+
+function assertNever(value: never): never {
+	throw new Error(`Unhandled geo import entity: ${JSON.stringify(value)}`);
+}
+
+/**
+ * Key every import entity is matched on for `upsert` (its natural key: the
+ * name within its parent). Rows with the same key in one import refer to the
+ * same reference row.
+ */
+function naturalKey(row: GeoImportRow): string {
+	switch (row.entity) {
+		case "region":
+		case "country":
+			return row.row.name;
+		case "subregion":
+			return `${String(row.row.regionId)}:${row.row.name}`;
+		case "state":
+			return `${String(row.row.countryId)}:${row.row.name}`;
+		case "city":
+			return `${String(row.row.stateId)}:${row.row.name}`;
+		default:
+			return assertNever(row);
+	}
+}
+
+/** Advisory-lock key serializing geo imports (`pg_advisory_xact_lock(hashtext(...))`). */
+const GEO_IMPORT_LOCK_KEY = "geo.reference_data.import";
+
+/** Rows per INSERT statement during an import. */
+const GEO_IMPORT_INSERT_CHUNK_SIZE = 1_000;
+
+/** Transaction client of a `geo.reference_data.write` system operation. */
+export type GeoWriteTransaction = Pick<Prisma.TransactionClient, "region" | "subregion" | "country" | "state" | "city" | "$executeRaw">;
+
+/** Who soft-deleted a row, and when (epoch ms). */
+export interface GeoDeletionStamp {
+	readonly deletedBy: string;
+	readonly deletedAt: number;
+}
+
+function softDeleteData(stamp: GeoDeletionStamp): { isDeleted: true; deletedAt: bigint; deletedBy: string } {
+	return { isDeleted: true, deletedAt: BigInt(stamp.deletedAt), deletedBy: stamp.deletedBy };
+}
+
+function notFound(entity: string, id: number): NotFoundError {
+	return new NotFoundError({ message: `${entity} #${String(id)} not found` });
+}
+
+/** A body that references a parent row which does not exist (or was soft-deleted). */
+function missingParent(field: string, entity: string, id: number): ValidationError {
+	return new ValidationError({
+		message: `${field} does not reference an existing ${entity}`,
+		details: { issues: [{ path: field, message: `${entity} #${String(id)} does not exist`, code: ApiErrorCodes.VALIDATION_ERROR }] },
+	});
+}
+
+/**
+ * Geo reference data. Reads go through the shared pool (world-readable RLS
+ * policy) and always exclude soft-deleted rows. Writes take a transaction
+ * client of the `geo.reference_data.write` system operation (opened by
+ * `GeoService`) — the only session the `*_write` RLS policies accept. Rows are
+ * never hard-deleted: a delete soft-deletes the row and, in the same
+ * transaction, everything `cascadePreview` reports under it.
+ */
 @Injectable()
 export class GeoRepository {
 	public constructor(private readonly prisma: PrismaService) {}
@@ -422,21 +547,20 @@ export class GeoRepository {
 	// ── Fuzzy search ──────────────────────────────────────────────────
 
 	/**
-	 * Find IDs matching a search term using pg_trgm trigram similarity.
-	 * Returns matching IDs ordered by relevance (most similar first).
-	 * Falls back to ILIKE substring matching if pg_trgm returns no results.
+	 * Find live IDs matching a search term using pg_trgm trigram similarity,
+	 * most similar first; falls back to ILIKE substring matching when the
+	 * trigram index finds nothing. `table` is one of the five geo tables
+	 * (a closed union), never caller input.
 	 */
-	private async fuzzySearchIds(table: string, search: string, limit: number): Promise<number[]> {
-		// Try trigram similarity first (requires pg_trgm extension)
-		const trigramSql = `SELECT id, similarity(name, $1) AS similarity FROM ${table} WHERE name % $1 ORDER BY similarity DESC LIMIT $2`;
+	private async fuzzySearchIds(table: "regions" | "subregions" | "countries" | "states" | "cities", search: string, limit: number): Promise<number[]> {
+		const trigramSql = `SELECT id, similarity(name, $1) AS similarity FROM ${table} WHERE is_deleted = false AND name % $1 ORDER BY similarity DESC LIMIT $2`;
 		const trigramResults: { readonly id: number; readonly similarity: number }[] = await this.prisma.$queryRawUnsafe(trigramSql, search, limit);
 
 		if (trigramResults.length > 0) {
 			return trigramResults.map((r) => r.id);
 		}
 
-		// Fallback to ILIKE substring match
-		const likeSql = `SELECT id FROM ${table} WHERE name ILIKE $1 LIMIT $2`;
+		const likeSql = `SELECT id FROM ${table} WHERE is_deleted = false AND name ILIKE $1 LIMIT $2`;
 		const likeResults: { readonly id: number }[] = await this.prisma.$queryRawUnsafe(likeSql, `%${search}%`, limit);
 
 		return likeResults.map((r) => r.id);
@@ -445,12 +569,13 @@ export class GeoRepository {
 	// ── Stats ──────────────────────────────────────────────────────────
 
 	public async getStats(): Promise<GeoStats> {
+		const live = { where: { isDeleted: false } };
 		const [regions, subregions, countries, states, cities]: [number, number, number, number, number] = await Promise.all([
-			this.prisma.region.count(),
-			this.prisma.subregion.count(),
-			this.prisma.country.count(),
-			this.prisma.state.count(),
-			this.prisma.city.count(),
+			this.prisma.region.count(live),
+			this.prisma.subregion.count(live),
+			this.prisma.country.count(live),
+			this.prisma.state.count(live),
+			this.prisma.city.count(live),
 		]);
 		return { regions, subregions, countries, states, cities };
 	}
@@ -459,15 +584,15 @@ export class GeoRepository {
 
 	public async autocomplete(query: GeoAutocompleteQuery): Promise<readonly GeoAutocompleteItem[]> {
 		const { q, country, limit } = query;
-		const like = `%${q}%`;
+		const nameMatch = { contains: q, mode: "insensitive" } satisfies Prisma.StringFilter;
 		const countryFilter = country ? { countryCode: country } : {};
 
 		const [regions, subregions, countries, states, cities] = await Promise.all([
-			this.prisma.region.findMany({ where: { name: { contains: like, mode: "insensitive" } }, take: limit }),
-			this.prisma.subregion.findMany({ where: { name: { contains: like, mode: "insensitive" } }, take: limit }),
-			this.prisma.country.findMany({ where: { name: { contains: like, mode: "insensitive" } }, take: limit }),
-			this.prisma.state.findMany({ where: { name: { contains: like, mode: "insensitive" }, ...countryFilter }, take: limit }),
-			this.prisma.city.findMany({ where: { name: { contains: like, mode: "insensitive" }, ...countryFilter }, take: limit }),
+			this.prisma.region.findMany({ where: { isDeleted: false, name: nameMatch }, take: limit }),
+			this.prisma.subregion.findMany({ where: { isDeleted: false, name: nameMatch }, take: limit }),
+			this.prisma.country.findMany({ where: { isDeleted: false, name: nameMatch }, take: limit }),
+			this.prisma.state.findMany({ where: { isDeleted: false, name: nameMatch, ...countryFilter }, take: limit }),
+			this.prisma.city.findMany({ where: { isDeleted: false, name: nameMatch, ...countryFilter }, take: limit }),
 		]);
 
 		const items: GeoAutocompleteItem[] = [];
@@ -528,29 +653,29 @@ export class GeoRepository {
 	}
 
 	public async getRegion(id: number): Promise<Region> {
-		return toRegionDto(await this.findRegionOrThrow(id));
+		const region = await this.prisma.region.findFirst({ where: { id, isDeleted: false } });
+		if (region === null) throw notFound("Region", id);
+		return toRegionDto(region);
 	}
 
-	private async findRegionOrThrow(id: number): Promise<RegionRow> {
-		const region = await this.prisma.region.findUnique({ where: { id } });
-		if (region === null) throw new NotFoundException(`Region #${String(id)} not found`);
-		return region;
+	public async createRegion(tx: GeoWriteTransaction, input: CreateRegionInput): Promise<Region> {
+		return toRegionDto(await tx.region.create({ data: toPrismaCreateRegion(withSanitizedName(input)) }));
 	}
 
-	public async createRegion(input: CreateRegionInput): Promise<Region> {
-		if (input.name) sanitizePrismaNameField(input);
-		return toRegionDto(await this.prisma.region.create({ data: toPrismaCreateRegion(input) }));
+	public async updateRegion(tx: GeoWriteTransaction, id: number, input: UpdateRegionInput): Promise<Region> {
+		const updated = await tx.region.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateRegion(withSanitizedName(input)) });
+		if (updated.count === 0) throw notFound("Region", id);
+		return toRegionDto(await tx.region.findUniqueOrThrow({ where: { id } }));
 	}
 
-	public async updateRegion(id: number, input: UpdateRegionInput): Promise<Region> {
-		await this.findRegionOrThrow(id);
-		sanitizePrismaNameField(input);
-		return toRegionDto(await this.prisma.region.update({ where: { id }, data: toPrismaUpdateRegion(input) }));
-	}
-
-	public async deleteRegion(id: number): Promise<MessageResponse> {
-		await this.findRegionOrThrow(id);
-		await this.prisma.region.delete({ where: { id } });
+	/** Soft-delete a region and, in the same transaction, its subregions, countries, their states and cities. */
+	public async deleteRegion(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
+		const deleted = await tx.region.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
+		if (deleted.count === 0) throw notFound("Region", id);
+		await tx.city.updateMany({ where: { isDeleted: false, state: { country: { regionId: id } } }, data: softDeleteData(stamp) });
+		await tx.state.updateMany({ where: { isDeleted: false, country: { regionId: id } }, data: softDeleteData(stamp) });
+		await tx.country.updateMany({ where: { isDeleted: false, regionId: id }, data: softDeleteData(stamp) });
+		await tx.subregion.updateMany({ where: { isDeleted: false, regionId: id }, data: softDeleteData(stamp) });
 		return { message: `Region #${String(id)} deleted` };
 	}
 
@@ -575,29 +700,30 @@ export class GeoRepository {
 	}
 
 	public async getSubregion(id: number): Promise<Subregion> {
-		return toSubregionDto(await this.findSubregionOrThrow(id));
+		const subregion = await this.prisma.subregion.findFirst({ where: { id, isDeleted: false } });
+		if (subregion === null) throw notFound("Subregion", id);
+		return toSubregionDto(subregion);
 	}
 
-	private async findSubregionOrThrow(id: number): Promise<SubregionRow> {
-		const subregion = await this.prisma.subregion.findUnique({ where: { id } });
-		if (subregion === null) throw new NotFoundException(`Subregion #${String(id)} not found`);
-		return subregion;
+	public async createSubregion(tx: GeoWriteTransaction, input: CreateSubregionInput): Promise<Subregion> {
+		await this.assertLiveRegion(tx, "regionId", input.regionId);
+		return toSubregionDto(await tx.subregion.create({ data: toPrismaCreateSubregion(withSanitizedName(input)) }));
 	}
 
-	public async createSubregion(input: CreateSubregionInput): Promise<Subregion> {
-		if (input.name) sanitizePrismaNameField(input);
-		return toSubregionDto(await this.prisma.subregion.create({ data: toPrismaCreateSubregion(input) }));
+	public async updateSubregion(tx: GeoWriteTransaction, id: number, input: UpdateSubregionInput): Promise<Subregion> {
+		if (input.regionId !== undefined) await this.assertLiveRegion(tx, "regionId", input.regionId);
+		const updated = await tx.subregion.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateSubregion(withSanitizedName(input)) });
+		if (updated.count === 0) throw notFound("Subregion", id);
+		return toSubregionDto(await tx.subregion.findUniqueOrThrow({ where: { id } }));
 	}
 
-	public async updateSubregion(id: number, input: UpdateSubregionInput): Promise<Subregion> {
-		await this.findSubregionOrThrow(id);
-		sanitizePrismaNameField(input);
-		return toSubregionDto(await this.prisma.subregion.update({ where: { id }, data: toPrismaUpdateSubregion(input) }));
-	}
-
-	public async deleteSubregion(id: number): Promise<MessageResponse> {
-		await this.findSubregionOrThrow(id);
-		await this.prisma.subregion.delete({ where: { id } });
+	/** Soft-delete a subregion and, in the same transaction, its countries, their states and cities. */
+	public async deleteSubregion(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
+		const deleted = await tx.subregion.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
+		if (deleted.count === 0) throw notFound("Subregion", id);
+		await tx.city.updateMany({ where: { isDeleted: false, state: { country: { subregionId: id } } }, data: softDeleteData(stamp) });
+		await tx.state.updateMany({ where: { isDeleted: false, country: { subregionId: id } }, data: softDeleteData(stamp) });
+		await tx.country.updateMany({ where: { isDeleted: false, subregionId: id }, data: softDeleteData(stamp) });
 		return { message: `Subregion #${String(id)} deleted` };
 	}
 
@@ -618,29 +744,29 @@ export class GeoRepository {
 	}
 
 	public async getCountry(id: number): Promise<Country> {
-		return toCountryDto(await this.findCountryOrThrow(id));
+		const country = await this.prisma.country.findFirst({ where: { id, isDeleted: false } });
+		if (country === null) throw notFound("Country", id);
+		return toCountryDto(country);
 	}
 
-	private async findCountryOrThrow(id: number): Promise<CountryRow> {
-		const country = await this.prisma.country.findUnique({ where: { id } });
-		if (country === null) throw new NotFoundException(`Country #${String(id)} not found`);
-		return country;
+	public async createCountry(tx: GeoWriteTransaction, input: CreateCountryInput): Promise<Country> {
+		await this.assertCountryParents(tx, input.regionId, input.subregionId);
+		return toCountryDto(await tx.country.create({ data: toPrismaCreateCountry(withSanitizedName(input)) }));
 	}
 
-	public async createCountry(input: CreateCountryInput): Promise<Country> {
-		if (input.name) sanitizePrismaNameField(input);
-		return toCountryDto(await this.prisma.country.create({ data: toPrismaCreateCountry(input) }));
+	public async updateCountry(tx: GeoWriteTransaction, id: number, input: UpdateCountryInput): Promise<Country> {
+		await this.assertCountryParents(tx, input.regionId, input.subregionId);
+		const updated = await tx.country.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateCountry(withSanitizedName(input)) });
+		if (updated.count === 0) throw notFound("Country", id);
+		return toCountryDto(await tx.country.findUniqueOrThrow({ where: { id } }));
 	}
 
-	public async updateCountry(id: number, input: UpdateCountryInput): Promise<Country> {
-		await this.findCountryOrThrow(id);
-		sanitizePrismaNameField(input);
-		return toCountryDto(await this.prisma.country.update({ where: { id }, data: toPrismaUpdateCountry(input) }));
-	}
-
-	public async deleteCountry(id: number): Promise<MessageResponse> {
-		await this.findCountryOrThrow(id);
-		await this.prisma.country.delete({ where: { id } });
+	/** Soft-delete a country and, in the same transaction, its states and cities. */
+	public async deleteCountry(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
+		const deleted = await tx.country.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
+		if (deleted.count === 0) throw notFound("Country", id);
+		await tx.city.updateMany({ where: { isDeleted: false, countryId: id }, data: softDeleteData(stamp) });
+		await tx.state.updateMany({ where: { isDeleted: false, countryId: id }, data: softDeleteData(stamp) });
 		return { message: `Country #${String(id)} deleted` };
 	}
 
@@ -661,29 +787,28 @@ export class GeoRepository {
 	}
 
 	public async getState(id: number): Promise<State> {
-		return toStateDto(await this.findStateOrThrow(id));
+		const state = await this.prisma.state.findFirst({ where: { id, isDeleted: false } });
+		if (state === null) throw notFound("State", id);
+		return toStateDto(state);
 	}
 
-	private async findStateOrThrow(id: number): Promise<StateRow> {
-		const state = await this.prisma.state.findUnique({ where: { id } });
-		if (state === null) throw new NotFoundException(`State #${String(id)} not found`);
-		return state;
+	public async createState(tx: GeoWriteTransaction, input: CreateStateInput): Promise<State> {
+		await this.assertLiveCountry(tx, "countryId", input.countryId);
+		return toStateDto(await tx.state.create({ data: toPrismaCreateState(withSanitizedName(input)) }));
 	}
 
-	public async createState(input: CreateStateInput): Promise<State> {
-		if (input.name) sanitizePrismaNameField(input);
-		return toStateDto(await this.prisma.state.create({ data: toPrismaCreateState(input) }));
+	public async updateState(tx: GeoWriteTransaction, id: number, input: UpdateStateInput): Promise<State> {
+		if (input.countryId !== undefined) await this.assertLiveCountry(tx, "countryId", input.countryId);
+		const updated = await tx.state.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateState(withSanitizedName(input)) });
+		if (updated.count === 0) throw notFound("State", id);
+		return toStateDto(await tx.state.findUniqueOrThrow({ where: { id } }));
 	}
 
-	public async updateState(id: number, input: UpdateStateInput): Promise<State> {
-		await this.findStateOrThrow(id);
-		sanitizePrismaNameField(input);
-		return toStateDto(await this.prisma.state.update({ where: { id }, data: toPrismaUpdateState(input) }));
-	}
-
-	public async deleteState(id: number): Promise<MessageResponse> {
-		await this.findStateOrThrow(id);
-		await this.prisma.state.delete({ where: { id } });
+	/** Soft-delete a state and, in the same transaction, its cities. */
+	public async deleteState(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
+		const deleted = await tx.state.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
+		if (deleted.count === 0) throw notFound("State", id);
+		await tx.city.updateMany({ where: { isDeleted: false, stateId: id }, data: softDeleteData(stamp) });
 		return { message: `State #${String(id)} deleted` };
 	}
 
@@ -704,72 +829,109 @@ export class GeoRepository {
 	}
 
 	public async getCity(id: number): Promise<City> {
-		return toCityDto(await this.findCityOrThrow(id));
+		const city = await this.prisma.city.findFirst({ where: { id, isDeleted: false } });
+		if (city === null) throw notFound("City", id);
+		return toCityDto(city);
 	}
 
-	private async findCityOrThrow(id: number): Promise<CityRow> {
-		const city = await this.prisma.city.findUnique({ where: { id } });
-		if (city === null) throw new NotFoundException(`City #${String(id)} not found`);
-		return city;
+	public async createCity(tx: GeoWriteTransaction, input: CreateCityInput): Promise<City> {
+		await this.assertLiveState(tx, "stateId", input.stateId);
+		await this.assertLiveCountry(tx, "countryId", input.countryId);
+		return toCityDto(await tx.city.create({ data: toPrismaCreateCity(withSanitizedName(input)) }));
 	}
 
-	public async createCity(input: CreateCityInput): Promise<City> {
-		if (input.name) sanitizePrismaNameField(input);
-		return toCityDto(await this.prisma.city.create({ data: toPrismaCreateCity(input) }));
+	public async updateCity(tx: GeoWriteTransaction, id: number, input: UpdateCityInput): Promise<City> {
+		if (input.stateId !== undefined) await this.assertLiveState(tx, "stateId", input.stateId);
+		if (input.countryId !== undefined) await this.assertLiveCountry(tx, "countryId", input.countryId);
+		const updated = await tx.city.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateCity(withSanitizedName(input)) });
+		if (updated.count === 0) throw notFound("City", id);
+		return toCityDto(await tx.city.findUniqueOrThrow({ where: { id } }));
 	}
 
-	public async updateCity(id: number, input: UpdateCityInput): Promise<City> {
-		await this.findCityOrThrow(id);
-		sanitizePrismaNameField(input);
-		return toCityDto(await this.prisma.city.update({ where: { id }, data: toPrismaUpdateCity(input) }));
-	}
-
-	public async deleteCity(id: number): Promise<MessageResponse> {
-		await this.findCityOrThrow(id);
-		await this.prisma.city.delete({ where: { id } });
+	public async deleteCity(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
+		const deleted = await tx.city.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
+		if (deleted.count === 0) throw notFound("City", id);
 		return { message: `City #${String(id)} deleted` };
 	}
 
 	// ── Import ──────────────────────────────────────────────────────────
 
-	public async importData(input: GeoImportInput): Promise<GeoImportResult> {
-		const { entity, data, upsert } = input;
-		let created = 0;
-		let updated = 0;
-		let skipped = 0;
-		const errors: { row: number; message: string }[] = [];
+	/**
+	 * Bulk import inside ONE `geo.reference_data.write` transaction:
+	 *
+	 * 1. a transaction-scoped advisory lock serializes concurrent imports, so
+	 *    the `upsert` lookup below can never race another import into
+	 *    duplicates;
+	 * 2. every row is validated with the entity's zod contract and its parent
+	 *    must be a live row — an invalid row is reported (`errors`, 1-based)
+	 *    and skipped;
+	 * 3. with `upsert`, a row matching a live row (or an earlier row of the same
+	 *    import) by its natural key (name within its parent) is `updated`;
+	 *    every other valid row is inserted in bulk.
+	 *
+	 * Unexpected database errors are NOT turned into row errors: they abort the
+	 * whole import (nothing is half-written) and surface as a server error.
+	 */
+	public async importData(tx: GeoWriteTransaction, input: GeoImportInput): Promise<GeoImportResult> {
+		await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${GEO_IMPORT_LOCK_KEY}))`;
 
-		for (let i = 0; i < data.length; i++) {
-			const row = JsonObjectSchema.parse(data[i]);
-			try {
-				const result = await this.importRow(entity, row, upsert);
-				if (result === "created") created++;
-				else if (result === "updated") updated++;
-				else skipped++;
-			} catch (err) {
-				errors.push({ row: i + 1, message: err instanceof Error ? err.message : "Unknown error" });
+		const errors: { row: number; message: string }[] = [];
+		const valid: { readonly rowNumber: number; readonly value: GeoImportRow }[] = [];
+		input.data.forEach((raw: JsonObject, index: number): void => {
+			const parsed = parseImportRow(input.entity, raw);
+			if (parsed.ok) {
+				valid.push({ rowNumber: index + 1, value: parsed.value });
+			} else {
+				errors.push({ row: index + 1, message: parsed.issues.map((issue): string => (issue.field === null ? issue.message : `${issue.field}: ${issue.message}`)).join("; ") });
 			}
+		});
+
+		const missingParents: ReadonlyMap<number, string> = await this.findRowsWithMissingParents(tx, valid);
+		const existingKeys: Map<string, number> = input.upsert ? await this.liveNaturalKeys(tx, valid) : new Map<string, number>();
+
+		const toCreate: GeoImportRow[] = [];
+		const toTouch: number[] = [];
+		let updated = 0;
+		const seenInImport = new Set<string>();
+		for (const { rowNumber, value } of valid) {
+			const parentError: string | undefined = missingParents.get(rowNumber);
+			if (parentError !== undefined) {
+				errors.push({ row: rowNumber, message: parentError });
+				continue;
+			}
+			const key: string = naturalKey(value);
+			const existingId: number | undefined = existingKeys.get(key);
+			if (input.upsert && existingId !== undefined) {
+				toTouch.push(existingId);
+				updated += 1;
+				continue;
+			}
+			if (input.upsert && seenInImport.has(key)) {
+				updated += 1;
+				continue;
+			}
+			seenInImport.add(key);
+			toCreate.push(value);
 		}
 
-		return { created, updated, skipped, errors };
+		await this.touchMatchedRows(tx, input.entity, toTouch);
+		await this.insertRows(tx, toCreate);
+		errors.sort((left, right): number => left.row - right.row);
+		return { created: toCreate.length, updated, skipped: errors.length, errors };
 	}
 
 	public validateImport(input: GeoImportValidateInput): GeoImportValidationResult {
-		const { entity, data } = input;
 		const errors: { row: number; field: string | null; message: string }[] = [];
 		let validRows = 0;
-
-		for (let i = 0; i < data.length; i++) {
-			const row = JsonObjectSchema.parse(data[i]);
-			const rowErrors = this.validateRow(entity, row);
-			if (rowErrors.length === 0) {
-				validRows++;
-			} else {
-				errors.push(...rowErrors.map((e) => ({ row: i + 1, ...e })));
+		input.data.forEach((raw: JsonObject, index: number): void => {
+			const parsed = parseImportRow(input.entity, raw);
+			if (parsed.ok) {
+				validRows += 1;
+				return;
 			}
-		}
-
-		return { valid: errors.length === 0, totalRows: data.length, validRows, errors };
+			errors.push(...parsed.issues.map((issue) => ({ row: index + 1, field: issue.field, message: issue.message })));
+		});
+		return { valid: errors.length === 0, totalRows: input.data.length, validRows, errors };
 	}
 
 	// ── Export ──────────────────────────────────────────────────────────
@@ -777,8 +939,8 @@ export class GeoRepository {
 	public async exportData(query: GeoExportQuery): Promise<readonly City[]> {
 		const { countryCode, regionId } = query;
 
-		// Export countries filtered, and cascade their states/cities
 		const countryWhere: Prisma.CountryWhereInput = {
+			isDeleted: false,
 			...(countryCode !== undefined ? { iso2: countryCode } : {}),
 			...(regionId !== undefined ? { regionId } : {}),
 		};
@@ -786,11 +948,9 @@ export class GeoRepository {
 		if (countries.length === 0) return [];
 
 		const countryIds = countries.map((c) => c.id);
-
-		const states = await this.prisma.state.findMany({ where: { countryId: { in: countryIds } }, orderBy: { name: "asc" } });
+		const states = await this.prisma.state.findMany({ where: { isDeleted: false, countryId: { in: countryIds } }, orderBy: { name: "asc" } });
 		const stateIds = states.map((s) => s.id);
-
-		const cities = await this.prisma.city.findMany({ where: { stateId: { in: stateIds } }, orderBy: { name: "asc" } });
+		const cities = await this.prisma.city.findMany({ where: { isDeleted: false, stateId: { in: stateIds } }, orderBy: { name: "asc" } });
 
 		// The flat city rows ARE the export (see `GeoExportResponseSchema`).
 		return cities.map(toCityDto);
@@ -798,54 +958,210 @@ export class GeoRepository {
 
 	// ── Cascade Preview ─────────────────────────────────────────────────
 
+	/** What a delete would soft-delete — exactly the set the matching `delete*` method cascades to. */
 	public async cascadePreview(input: CascadePreviewInput): Promise<CascadePreviewResult> {
 		const { entity, id } = input;
 
 		if (entity === "region") {
-			const region = await this.prisma.region.findUnique({ where: { id } });
-			if (region === null) throw new NotFoundException(`Region #${String(id)} not found`);
+			const region = await this.prisma.region.findFirst({ where: { id, isDeleted: false } });
+			if (region === null) throw notFound("Region", id);
 			const [subregions, countries, states, cities] = await Promise.all([
-				this.prisma.subregion.count({ where: { regionId: id } }),
-				this.prisma.country.count({ where: { regionId: id } }),
-				this.prisma.state.findMany({ where: { country: { regionId: id } } }).then((s) => s.length),
-				this.prisma.city.count({ where: { state: { country: { regionId: id } } } }),
+				this.prisma.subregion.count({ where: { isDeleted: false, regionId: id } }),
+				this.prisma.country.count({ where: { isDeleted: false, regionId: id } }),
+				this.prisma.state.count({ where: { isDeleted: false, country: { regionId: id } } }),
+				this.prisma.city.count({ where: { isDeleted: false, state: { country: { regionId: id } } } }),
 			]);
 			return { entity: "region", id, name: region.name, willDelete: { subregions, countries, states, cities } };
 		}
 
 		if (entity === "subregion") {
-			const subregion = await this.prisma.subregion.findUnique({ where: { id } });
-			if (subregion === null) throw new NotFoundException(`Subregion #${String(id)} not found`);
+			const subregion = await this.prisma.subregion.findFirst({ where: { id, isDeleted: false } });
+			if (subregion === null) throw notFound("Subregion", id);
 			const [countries, states, cities] = await Promise.all([
-				this.prisma.country.count({ where: { subregionId: id } }),
-				this.prisma.state.findMany({ where: { country: { subregionId: id } } }).then((s) => s.length),
-				this.prisma.city.count({ where: { state: { country: { subregionId: id } } } }),
+				this.prisma.country.count({ where: { isDeleted: false, subregionId: id } }),
+				this.prisma.state.count({ where: { isDeleted: false, country: { subregionId: id } } }),
+				this.prisma.city.count({ where: { isDeleted: false, state: { country: { subregionId: id } } } }),
 			]);
 			return { entity: "subregion", id, name: subregion.name, willDelete: { countries, states, cities } };
 		}
 
 		if (entity === "country") {
-			const country = await this.prisma.country.findUnique({ where: { id } });
-			if (country === null) throw new NotFoundException(`Country #${String(id)} not found`);
-			const [states, cities] = await Promise.all([this.prisma.state.count({ where: { countryId: id } }), this.prisma.city.count({ where: { countryId: id } })]);
+			const country = await this.prisma.country.findFirst({ where: { id, isDeleted: false } });
+			if (country === null) throw notFound("Country", id);
+			const [states, cities] = await Promise.all([
+				this.prisma.state.count({ where: { isDeleted: false, countryId: id } }),
+				this.prisma.city.count({ where: { isDeleted: false, countryId: id } }),
+			]);
 			return { entity: "country", id, name: country.name, willDelete: { states, cities } };
 		}
 
-		// entity === "state"
-		const state = await this.prisma.state.findUnique({ where: { id } });
-		if (state === null) throw new NotFoundException(`State #${String(id)} not found`);
-		const cities = await this.prisma.city.count({ where: { stateId: id } });
+		const state = await this.prisma.state.findFirst({ where: { id, isDeleted: false } });
+		if (state === null) throw notFound("State", id);
+		const cities = await this.prisma.city.count({ where: { isDeleted: false, stateId: id } });
 		return { entity: "state", id, name: state.name, willDelete: { cities } };
 	}
 
 	// ── Private helpers ─────────────────────────────────────────────────
 
+	private async assertLiveRegion(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
+		if ((await tx.region.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "region", id);
+	}
+
+	private async assertLiveSubregion(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
+		if ((await tx.subregion.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "subregion", id);
+	}
+
+	private async assertLiveCountry(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
+		if ((await tx.country.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "country", id);
+	}
+
+	private async assertLiveState(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
+		if ((await tx.state.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "state", id);
+	}
+
+	/** A country's optional parents, when given (`null` detaches), must be live. */
+	private async assertCountryParents(tx: GeoWriteTransaction, regionId: number | null | undefined, subregionId: number | null | undefined): Promise<void> {
+		if (regionId !== undefined && regionId !== null) await this.assertLiveRegion(tx, "regionId", regionId);
+		if (subregionId !== undefined && subregionId !== null) await this.assertLiveSubregion(tx, "subregionId", subregionId);
+	}
+
+	/** Row number → error for every valid row whose parent ids do not reference live rows (one query per parent table). */
+	private async findRowsWithMissingParents(
+		tx: GeoWriteTransaction,
+		rows: readonly { readonly rowNumber: number; readonly value: GeoImportRow }[],
+	): Promise<ReadonlyMap<number, string>> {
+		const regionIds = new Set<number>();
+		const countryIds = new Set<number>();
+		const stateIds = new Set<number>();
+		for (const { value } of rows) {
+			if (value.entity === "subregion") regionIds.add(value.row.regionId);
+			if (value.entity === "state") countryIds.add(value.row.countryId);
+			if (value.entity === "city") {
+				stateIds.add(value.row.stateId);
+				countryIds.add(value.row.countryId);
+			}
+		}
+		const liveIds = async (ids: ReadonlySet<number>, find: (ids: number[]) => Promise<{ readonly id: number }[]>): Promise<ReadonlySet<number>> =>
+			ids.size === 0 ? new Set<number>() : new Set<number>((await find([...ids])).map((row): number => row.id));
+		const [liveRegions, liveCountries, liveStates] = await Promise.all([
+			liveIds(regionIds, (ids) => tx.region.findMany({ where: { id: { in: ids }, isDeleted: false }, select: { id: true } })),
+			liveIds(countryIds, (ids) => tx.country.findMany({ where: { id: { in: ids }, isDeleted: false }, select: { id: true } })),
+			liveIds(stateIds, (ids) => tx.state.findMany({ where: { id: { in: ids }, isDeleted: false }, select: { id: true } })),
+		]);
+
+		const missing = new Map<number, string>();
+		for (const { rowNumber, value } of rows) {
+			if (value.entity === "subregion" && !liveRegions.has(value.row.regionId))
+				missing.set(rowNumber, `regionId ${String(value.row.regionId)} does not reference an existing region`);
+			if (value.entity === "state" && !liveCountries.has(value.row.countryId))
+				missing.set(rowNumber, `countryId ${String(value.row.countryId)} does not reference an existing country`);
+			if (value.entity === "city" && !liveStates.has(value.row.stateId)) missing.set(rowNumber, `stateId ${String(value.row.stateId)} does not reference an existing state`);
+			if (value.entity === "city" && !liveCountries.has(value.row.countryId))
+				missing.set(rowNumber, `countryId ${String(value.row.countryId)} does not reference an existing country`);
+		}
+		return missing;
+	}
+
+	/** Natural key → id of the live rows an `upsert` import may match (one query). */
+	private async liveNaturalKeys(tx: GeoWriteTransaction, rows: readonly { readonly value: GeoImportRow }[]): Promise<Map<string, number>> {
+		const names: string[] = [...new Set(rows.map(({ value }): string => value.row.name))];
+		if (names.length === 0) {
+			return new Map<string, number>();
+		}
+		const [first] = rows;
+		const entity: GeoImportEntity | undefined = first?.value.entity;
+		const live = { isDeleted: false, name: { in: names } };
+		switch (entity) {
+			case undefined:
+				return new Map<string, number>();
+			case "region":
+				return new Map((await tx.region.findMany({ where: live, select: { id: true, name: true } })).map((row): [string, number] => [row.name, row.id]));
+			case "country":
+				return new Map((await tx.country.findMany({ where: live, select: { id: true, name: true } })).map((row): [string, number] => [row.name, row.id]));
+			case "subregion":
+				return new Map(
+					(await tx.subregion.findMany({ where: live, select: { id: true, name: true, regionId: true } })).map((row): [string, number] => [
+						`${String(row.regionId)}:${row.name}`,
+						row.id,
+					]),
+				);
+			case "state":
+				return new Map(
+					(await tx.state.findMany({ where: live, select: { id: true, name: true, countryId: true } })).map((row): [string, number] => [
+						`${String(row.countryId)}:${row.name}`,
+						row.id,
+					]),
+				);
+			case "city":
+				return new Map(
+					(await tx.city.findMany({ where: live, select: { id: true, name: true, stateId: true } })).map((row): [string, number] => [
+						`${String(row.stateId)}:${row.name}`,
+						row.id,
+					]),
+				);
+			default:
+				return assertNever(entity);
+		}
+	}
+
+	/** Matched rows of an `upsert` import: stamp `updatedAt` (the import carries no other column to change). */
+	private async touchMatchedRows(tx: GeoWriteTransaction, entity: GeoImportEntity, ids: readonly number[]): Promise<void> {
+		if (ids.length === 0) {
+			return;
+		}
+		const where = { id: { in: [...ids] }, isDeleted: false };
+		const data = { updatedAt: new Date() };
+		switch (entity) {
+			case "region":
+				await tx.region.updateMany({ where, data });
+				return;
+			case "subregion":
+				await tx.subregion.updateMany({ where, data });
+				return;
+			case "country":
+				await tx.country.updateMany({ where, data });
+				return;
+			case "state":
+				await tx.state.updateMany({ where, data });
+				return;
+			case "city":
+				await tx.city.updateMany({ where, data });
+				return;
+			default:
+				assertNever(entity);
+		}
+	}
+
+	/** Bulk INSERT in bounded chunks (one statement per chunk). */
+	private async insertRows(tx: GeoWriteTransaction, rows: readonly GeoImportRow[]): Promise<void> {
+		for (let start = 0; start < rows.length; start += GEO_IMPORT_INSERT_CHUNK_SIZE) {
+			const chunk: readonly GeoImportRow[] = rows.slice(start, start + GEO_IMPORT_INSERT_CHUNK_SIZE);
+			await tx.region.createMany({ data: chunk.flatMap((r): Prisma.RegionCreateManyInput[] => (r.entity === "region" ? [{ name: r.row.name }] : [])) });
+			await tx.subregion.createMany({
+				data: chunk.flatMap((r): Prisma.SubregionCreateManyInput[] => (r.entity === "subregion" ? [{ name: r.row.name, regionId: r.row.regionId }] : [])),
+			});
+			await tx.country.createMany({ data: chunk.flatMap((r): Prisma.CountryCreateManyInput[] => (r.entity === "country" ? [{ name: r.row.name }] : [])) });
+			await tx.state.createMany({
+				data: chunk.flatMap((r): Prisma.StateCreateManyInput[] =>
+					r.entity === "state" ? [{ name: r.row.name, countryId: r.row.countryId, countryCode: r.row.countryCode }] : [],
+				),
+			});
+			await tx.city.createMany({
+				data: chunk.flatMap((r): Prisma.CityCreateManyInput[] =>
+					r.entity === "city"
+						? [{ name: r.row.name, stateId: r.row.stateId, countryId: r.row.countryId, stateCode: r.row.stateCode, countryCode: r.row.countryCode, latitude: 0, longitude: 0 }]
+						: [],
+				),
+			});
+		}
+	}
+
 	private parseRegionInclude(include: string | undefined): Prisma.RegionInclude | undefined {
 		if (!include) return undefined;
 		const parts = include.split(",").map((s) => s.trim());
 		const result: Prisma.RegionInclude = {};
-		if (parts.includes("subregions")) result.subregions = true;
-		if (parts.includes("countries")) result.countries = true;
+		if (parts.includes("subregions")) result.subregions = { where: { isDeleted: false } };
+		if (parts.includes("countries")) result.countries = { where: { isDeleted: false } };
 		return Object.keys(result).length > 0 ? result : undefined;
 	}
 
@@ -854,7 +1170,7 @@ export class GeoRepository {
 		const parts = include.split(",").map((s) => s.trim());
 		const result: Prisma.SubregionInclude = {};
 		if (parts.includes("region")) result.region = true;
-		if (parts.includes("countries")) result.countries = true;
+		if (parts.includes("countries")) result.countries = { where: { isDeleted: false } };
 		return Object.keys(result).length > 0 ? result : undefined;
 	}
 
@@ -864,8 +1180,8 @@ export class GeoRepository {
 		const result: Prisma.CountryInclude = {};
 		if (parts.includes("region")) result.regionRelation = true;
 		if (parts.includes("subregion")) result.subregionRelation = true;
-		if (parts.includes("states")) result.states = true;
-		if (parts.includes("cities")) result.cities = true;
+		if (parts.includes("states")) result.states = { where: { isDeleted: false } };
+		if (parts.includes("cities")) result.cities = { where: { isDeleted: false } };
 		return Object.keys(result).length > 0 ? result : undefined;
 	}
 
@@ -874,7 +1190,7 @@ export class GeoRepository {
 		const parts = include.split(",").map((s) => s.trim());
 		const result: Prisma.StateInclude = {};
 		if (parts.includes("country")) result.country = true;
-		if (parts.includes("cities")) result.cities = true;
+		if (parts.includes("cities")) result.cities = { where: { isDeleted: false } };
 		return Object.keys(result).length > 0 ? result : undefined;
 	}
 
@@ -885,98 +1201,5 @@ export class GeoRepository {
 		if (parts.includes("state")) result.state = true;
 		if (parts.includes("country")) result.country = true;
 		return Object.keys(result).length > 0 ? result : undefined;
-	}
-
-	private async importRow(entity: string, row: JsonObject, upsert: boolean): Promise<"created" | "updated" | "skipped"> {
-		const name = parseImportName(row);
-		if (name === null) throw new Error("name is required");
-
-		switch (entity) {
-			case "region": {
-				if (upsert) {
-					const existing = await this.prisma.region.findFirst({ where: { name } });
-					if (existing) {
-						await this.prisma.region.update({ where: { id: existing.id }, data: { name } });
-						return "updated";
-					}
-				}
-				await this.prisma.region.create({ data: { name } });
-				return "created";
-			}
-			case "subregion": {
-				const regionId = parseImportIntField(row, "regionId");
-				if (regionId === null) throw new Error("regionId is required");
-				if (upsert) {
-					const existing = await this.prisma.subregion.findFirst({ where: { name, regionId } });
-					if (existing) {
-						await this.prisma.subregion.update({ where: { id: existing.id }, data: { name } });
-						return "updated";
-					}
-				}
-				await this.prisma.subregion.create({ data: { name, regionId } });
-				return "created";
-			}
-			case "country": {
-				if (upsert) {
-					const existing = await this.prisma.country.findFirst({ where: { name } });
-					if (existing) {
-						await this.prisma.country.update({ where: { id: existing.id }, data: { name } });
-						return "updated";
-					}
-				}
-				await this.prisma.country.create({ data: { name } });
-				return "created";
-			}
-			case "state": {
-				const countryCode = parseImportStringField(row, "countryCode");
-				const countryId = parseImportIntField(row, "countryId");
-				if (countryId === null) throw new Error("countryId is required");
-				if (upsert) {
-					const existing = await this.prisma.state.findFirst({ where: { name, countryId } });
-					if (existing) {
-						await this.prisma.state.update({ where: { id: existing.id }, data: { name } });
-						return "updated";
-					}
-				}
-				await this.prisma.state.create({ data: { name, countryCode, countryId } });
-				return "created";
-			}
-			case "city": {
-				const stateId = parseImportIntField(row, "stateId");
-				const countryId = parseImportIntField(row, "countryId");
-				const stateCode = parseImportStringField(row, "stateCode");
-				const countryCode = parseImportStringField(row, "countryCode");
-				if (stateId === null || countryId === null) throw new Error("stateId and countryId are required");
-				if (upsert) {
-					const existing = await this.prisma.city.findFirst({ where: { name, stateId } });
-					if (existing) {
-						await this.prisma.city.update({ where: { id: existing.id }, data: { name } });
-						return "updated";
-					}
-				}
-				await this.prisma.city.create({ data: { name, stateCode, countryCode, latitude: 0, longitude: 0, stateId, countryId } });
-				return "created";
-			}
-			default:
-				throw new Error(`Unknown entity: ${entity}`);
-		}
-	}
-
-	private validateRow(entity: string, row: JsonObject): readonly { readonly field: string | null; readonly message: string }[] {
-		const errors: { field: string | null; message: string }[] = [];
-		if (!geoNonEmptyNameSchema.safeParse(row.name).success) {
-			errors.push({ field: "name", message: "name is required and must be a non-empty string" });
-		}
-		if (entity === "subregion" && !geoNonNegativeIntSchema.safeParse(row.regionId).success) {
-			errors.push({ field: "regionId", message: "regionId is required and must be a non-negative integer" });
-		}
-		if (entity === "state" && !geoNonNegativeIntSchema.safeParse(row.countryId).success) {
-			errors.push({ field: "countryId", message: "countryId is required and must be a non-negative integer" });
-		}
-		if (entity === "city") {
-			if (!geoNonNegativeIntSchema.safeParse(row.stateId).success) errors.push({ field: "stateId", message: "stateId is required" });
-			if (!geoNonNegativeIntSchema.safeParse(row.countryId).success) errors.push({ field: "countryId", message: "countryId is required" });
-		}
-		return errors;
 	}
 }

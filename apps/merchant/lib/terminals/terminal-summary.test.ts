@@ -8,9 +8,11 @@ import {
 	pairingActionLabel,
 	requiresRepairConfirmation,
 	secondsUntil,
+	shouldKeepPollingPairing,
+	summarizeTerminalPage,
 	summarizeTerminals,
 } from "@/lib/terminals/terminal-summary";
-import { buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
+import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
 
 const ONE_MINUTE_MS = 60_000;
 
@@ -107,5 +109,41 @@ describe("isPairingComplete", () => {
 
 		expect(isPairingComplete(issuedRepair, issuedRepair)).toBe(false);
 		expect(isPairingComplete(issuedRepair, buildTerminal({ status: "ACTIVE", pairedAt: TERMINAL_FIXTURE_NOW + ONE_MINUTE_MS }))).toBe(true);
+	});
+});
+
+describe("summarizeTerminalPage", () => {
+	const page = [buildTerminal({ status: "ACTIVE", pairedAt: TERMINAL_FIXTURE_NOW })];
+
+	it("is exact when the page holds every terminal of the filter", () => {
+		expect(summarizeTerminalPage(page, 1)).toEqual({ kind: "exact", stats: summarizeTerminals(page) });
+	});
+
+	it("is unavailable instead of a page-sized undercount when more terminals exist", () => {
+		expect(summarizeTerminalPage(page, 140)).toEqual({ kind: "unavailable" });
+	});
+});
+
+describe("shouldKeepPollingPairing", () => {
+	const waiting = buildTerminal({ status: "AWAITING_PAIRING", pairingCodeExpiresAt: TERMINAL_FIXTURE_NOW + ONE_MINUTE_MS });
+	const issued = buildPairing(waiting);
+	const beforeExpiry = issued.pairingCodeExpiresAt - ONE_MINUTE_MS;
+
+	it("polls until the first answer and while the till has not paired", () => {
+		expect(shouldKeepPollingPairing(issued, { terminals: undefined }, beforeExpiry)).toBe(true);
+		expect(shouldKeepPollingPairing(issued, { terminals: [waiting] }, beforeExpiry)).toBe(true);
+	});
+
+	it("stops once the till paired", () => {
+		const paired = buildTerminal({ status: "ACTIVE", pairedAt: TERMINAL_FIXTURE_NOW });
+		expect(shouldKeepPollingPairing(issued, { terminals: [paired] }, beforeExpiry)).toBe(false);
+	});
+
+	it("stops once the code expired", () => {
+		expect(shouldKeepPollingPairing(issued, { terminals: [waiting] }, issued.pairingCodeExpiresAt)).toBe(false);
+	});
+
+	it("stops when the terminal is not on the polled page (removed, or beyond the first page)", () => {
+		expect(shouldKeepPollingPairing(issued, { terminals: [] }, beforeExpiry)).toBe(false);
 	});
 });

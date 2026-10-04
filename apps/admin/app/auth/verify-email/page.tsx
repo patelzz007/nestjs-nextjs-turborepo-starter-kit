@@ -1,51 +1,37 @@
-"use client";
-
 import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
-import { useSearchParams } from "next/navigation";
-import { Suspense, type JSX } from "react";
+import { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, VerifyEmailSchema } from "@workspace/shared";
 
-import { ROUTES } from "@/lib/routes";
+import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
+import { InvalidAuthLinkNotice } from "@/components/auth/invalid-auth-link-notice";
+import { AUTH_LINK_TOKEN_PARAM, ROUTES } from "@/lib/routes";
+
+export interface AdminVerifyEmailPageProps {
+	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
 /**
  * `/auth/verify-email?token=` — the link the API emails to admins
  * (`APP_LINKS.auth.verifyEmail` on the admin origin). A token route: the proxy
  * serves it even while a session cookie is set, and restricted sessions may
- * visit it. Requesting a new link happens on `/account/security`.
+ * visit it. Requesting a new link happens on `/account/security`. A server
+ * component: the token is validated with the shared verify-email schema from
+ * `searchParams`, so no `useSearchParams` + `Suspense` is needed.
  */
-function VerifyEmailContent(): JSX.Element {
-	const searchParams = useSearchParams();
-	const token = searchParams.get("token");
+export default async function AdminVerifyEmailPage({ searchParams }: AdminVerifyEmailPageProps): Promise<React.JSX.Element> {
+	const token = VerifyEmailSchema.shape.token.safeParse((await searchParams)[AUTH_LINK_TOKEN_PARAM]);
 
-	if (token === null || token.length === 0) {
-		return (
-			<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-center text-sm text-destructive">
-				This verification link is invalid. Request a new verification email from your account security page.
-			</div>
-		);
-	}
-
-	return <VerifyEmailView token={token} settingsHref={ROUTES.account.security} successRedirectHref={ROUTES.home} loginHref={ROUTES.auth.login} />;
-}
-
-export default function AdminVerifyEmailPage(): JSX.Element {
 	return (
-		<AuthLayout
-			logo={
-				<svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-					<path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-				</svg>
-			}
-			brandName="Admin Panel"
+		<AdminAuthLayout
+			icon="mail"
 			tagline="Confirm your email to finish securing your administrator account."
-			features={["One-click verification", "Secure token-based link", "Expires after 24 hours"]}
+			features={["One-click verification", "Secure token-based link", `Expires after ${formatLinkLifetimeHours(EMAIL_VERIFICATION_LINK_TTL_HOURS)}`]}
 			title="Verify email"
-			subtitle="We're confirming your email address"
-			copyright="Admin Panel"
-			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}>
-			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
-				<VerifyEmailContent />
-			</Suspense>
-		</AuthLayout>
+			subtitle="We're confirming your email address">
+			{token.success ? (
+				<VerifyEmailView token={token.data} settingsHref={ROUTES.account.security} successRedirectHref={ROUTES.home} loginHref={ROUTES.auth.login} />
+			) : (
+				<InvalidAuthLinkNotice>This verification link is invalid. Request a new verification email from your account security page.</InvalidAuthLinkNotice>
+			)}
+		</AdminAuthLayout>
 	);
 }

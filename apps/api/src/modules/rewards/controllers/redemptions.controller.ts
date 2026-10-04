@@ -1,17 +1,18 @@
 import { Controller, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import type { z } from "zod";
 
-import { apiContract, apiPath, RedemptionCheckoutResponseSchema, RedemptionConfirmedResponseSchema, RedemptionPreviewResponseSchema } from "@workspace/shared";
+import { apiContract, apiPath, RedemptionCheckoutResponseSchema, RedemptionPreviewResponseSchema } from "@workspace/shared";
 import { ZodBody } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { Public } from "../../auth/decorators/public.decorator";
-import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 
 import { MerchantPos } from "../decorators/merchant-pos.decorator";
 
 import { MerchantApiKeyGuard } from "../guards/merchant-api-key.guard";
+import { PosRateLimitGuard } from "../guards/pos-rate-limit.guard";
 import type { MerchantPosContext } from "../types/merchant-pos-context";
 import { RedemptionService } from "../services/redemption.service";
 
@@ -19,6 +20,16 @@ import { RedemptionService } from "../services/redemption.service";
  * POS (machine-to-machine) endpoints. Every route authenticates with a
  * merchant API key header only — never a cookie — so the browser CSRF
  * mutation-intent check does not apply (a POS sends no Origin).
+ *
+ * Rate limits: the per-IP `strict` auth limiter is skipped (stores share NAT
+ * addresses); the per-IP `default` limiter still applies before the key is
+ * verified, and `PosRateLimitGuard` limits each API key. Unknown backup codes
+ * additionally count toward the key's lockout (`PosCodeLockoutService`).
+ *
+ * Database scope: no RLS bypass. After `MerchantApiKeyGuard` verifies the key,
+ * the request runs as the `api_key` principal (prisma/rls/40-api-key-principal.sql):
+ * only the key's organization — and, for a store-scoped key, its store's
+ * redemptions and sales — are visible or writable.
  */
 /** OpenAPI note shared by every POS route. */
 const TERMINAL_ID_HEADER_DESCRIPTION =
@@ -31,8 +42,8 @@ export class RedemptionsController {
 	public constructor(private readonly redemptionService: RedemptionService) {}
 
 	@Public()
-	@RlsBypass()
-	@UseGuards(MerchantApiKeyGuard)
+	@SkipThrottle({ strict: true })
+	@UseGuards(MerchantApiKeyGuard, PosRateLimitGuard)
 	@Post("validate")
 	@ApiBearerAuth()
 	@ApiHeader({ name: "X-Terminal-Id", required: false, description: TERMINAL_ID_HEADER_DESCRIPTION })
@@ -46,23 +57,8 @@ export class RedemptionsController {
 	}
 
 	@Public()
-	@RlsBypass()
-	@UseGuards(MerchantApiKeyGuard)
-	@Post("confirm")
-	@ApiBearerAuth()
-	@ApiHeader({ name: "X-Terminal-Id", required: false, description: TERMINAL_ID_HEADER_DESCRIPTION })
-	@ApiOperation({ summary: "POS confirm ONE redemption without recording a sale (idempotent) — prefer /redemptions/checkout" })
-	@ZodResponse(RedemptionConfirmedResponseSchema, { status: HttpStatus.CREATED, description: "Redemption confirmed" })
-	public confirm(
-		@MerchantPos() pos: MerchantPosContext,
-		@ZodBody(apiContract.redemptions.confirm.input) body: z.output<typeof apiContract.redemptions.confirm.input>,
-	): ReturnType<RedemptionService["confirm"]> {
-		return this.redemptionService.confirm(pos, body);
-	}
-
-	@Public()
-	@RlsBypass()
-	@UseGuards(MerchantApiKeyGuard)
+	@SkipThrottle({ strict: true })
+	@UseGuards(MerchantApiKeyGuard, PosRateLimitGuard)
 	@Post("checkout")
 	@ApiBearerAuth()
 	@ApiHeader({ name: "X-Terminal-Id", required: false, description: TERMINAL_ID_HEADER_DESCRIPTION })

@@ -9,6 +9,10 @@ import {
 	AdminUserListQuerySchema,
 	AuditLogQuerySchema,
 	CityListQuerySchema,
+	CountryListQuerySchema,
+	RegionListQuerySchema,
+	StateListQuerySchema,
+	SubregionListQuerySchema,
 	EmailLogListQuerySchema,
 	ProductListQuerySchema,
 	RewardClaimListQuerySchema,
@@ -22,7 +26,7 @@ import { describe, expect, it } from "vitest";
 import { buildAdminUserListOrder, buildAdminUserListWhere } from "./auth/repositories/user.repository";
 import { buildMfaRecoveryListOrder, buildMfaRecoveryListWhere } from "./auth/services/mfa-recovery.service";
 import { buildAuditLogListOrder } from "./authorization/admin/repositories/permission-audit-log.repository";
-import { buildCityListWhere } from "./geo/repositories/geo.repository";
+import { buildCityListWhere, buildCountryListWhere, buildRegionListWhere, buildStateListWhere, buildSubregionListWhere } from "./geo/repositories/geo.repository";
 import { buildEmailLogListOrder, buildEmailLogListWhere } from "./notifications/email/email-log.repository";
 import { buildAdminLocationRequestListOrder, buildAdminLocationRequestListWhere } from "./organization/repositories/organization-location.repository";
 import { buildAdminMerchantListOrder, buildAdminMerchantListWhere } from "./organization/repositories/organization.repository";
@@ -31,6 +35,7 @@ import { buildRewardClaimListOrder, buildRewardClaimListWhere } from "./rewards/
 import { buildRewardNotificationListWhere } from "./rewards/repositories/reward-notification.repository";
 import { buildRedemptionListOrder, buildRedemptionListWhere } from "./rewards/repositories/reward-redemption.repository";
 import { buildMarketplaceOrder, buildMarketplaceWhere } from "./rewards/repositories/reward.repository";
+import { ALL_LOCATIONS_SCOPE, selectedLocationsScope } from "./rewards/types/merchant-location-scope";
 import { buildSampleCategoryListOrder } from "./sample-category/sample-category.repository";
 
 const NOW = BigInt(1_790_812_800_000);
@@ -79,11 +84,19 @@ describe("sample category", () => {
 });
 
 describe("geo cities", () => {
-	it("narrows to fuzzy-search ids and maps code filters case-insensitively", () => {
+	it("excludes soft-deleted rows, narrows to fuzzy-search ids and maps code filters case-insensitively", () => {
 		const query = CityListQuerySchema.parse({ filter: { countryCode: { eq: "my" }, stateId: { in: "1,2" } } });
 		expect(buildCityListWhere(query, [3, 4])).toEqual({
-			AND: [{ stateId: { in: [1, 2] } }, { countryCode: { equals: "my", mode: "insensitive" } }, { id: { in: [3, 4] } }],
+			AND: [{ isDeleted: false }, { stateId: { in: [1, 2] } }, { countryCode: { equals: "my", mode: "insensitive" } }, { id: { in: [3, 4] } }],
 		});
+	});
+
+	it("excludes soft-deleted rows in every geo list, even without filters", () => {
+		expect(buildRegionListWhere(RegionListQuerySchema.parse({}), undefined)).toEqual({ AND: [{ isDeleted: false }] });
+		expect(buildSubregionListWhere(SubregionListQuerySchema.parse({}), undefined)).toEqual({ AND: [{ isDeleted: false }] });
+		expect(buildCountryListWhere(CountryListQuerySchema.parse({}), undefined)).toEqual({ AND: [{ isDeleted: false }] });
+		expect(buildStateListWhere(StateListQuerySchema.parse({}), undefined)).toEqual({ AND: [{ isDeleted: false }] });
+		expect(buildCityListWhere(CityListQuerySchema.parse({}), undefined)).toEqual({ AND: [{ isDeleted: false }] });
 	});
 });
 
@@ -181,10 +194,19 @@ describe("rewards", () => {
 		expect(buildRewardNotificationListWhere(USER_ID, RewardNotificationListQuerySchema.parse({ filter: { readAt: { isNull: "true" } } }))).toEqual({
 			AND: [{ userId: USER_ID, isDeleted: false }, { readAt: { equals: null } }],
 		});
-		expect(buildRedemptionListWhere(ORG_ID, undefined)).toEqual({
+		expect(buildRedemptionListWhere(ORG_ID, ALL_LOCATIONS_SCOPE, MerchantRedemptionListQuerySchema.parse({}))).toEqual({
 			AND: [{ organizationId: ORG_ID, isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }],
 		});
-		expect(buildRedemptionListWhere(ORG_ID, CATEGORY_ID).AND).toContainEqual({ locationId: CATEGORY_ID });
+		expect(buildRedemptionListWhere(ORG_ID, selectedLocationsScope([CATEGORY_ID]), MerchantRedemptionListQuerySchema.parse({})).AND).toContainEqual({
+			locationId: { in: [CATEGORY_ID] },
+		});
+		// A store-limited member with no stores sees nothing — never every store.
+		expect(buildRedemptionListWhere(ORG_ID, selectedLocationsScope([]), MerchantRedemptionListQuerySchema.parse({})).AND).toContainEqual({ locationId: { in: [] } });
+		// "Redeemed today": the window filter is applied server-side, so `meta.total` counts the whole window, not one page.
+		expect(
+			buildRedemptionListWhere(ORG_ID, ALL_LOCATIONS_SCOPE, MerchantRedemptionListQuerySchema.parse({ filter: { redeemedAt: { gte: "1790899200000", lt: "1790985600000" } } }))
+				.AND,
+		).toContainEqual({ redeemedAt: { gte: 1790899200000, lt: 1790985600000 } });
 		expect(buildRedemptionListOrder(MerchantRedemptionListQuerySchema.parse({})).orderBy).toEqual([{ redeemedAt: "desc" }, { id: "desc" }]);
 	});
 });

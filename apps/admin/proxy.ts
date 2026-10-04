@@ -18,23 +18,24 @@ import {
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
 	type AuthCookieClearOptions,
+	type ProxyRefreshCooldownOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
-import { NodeEnvSchema } from "@workspace/shared";
+import { AUTH_COOKIE_NAMES, NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { isAdminAuthPath, isAdminTokenAuthPath, isSafeAdminRedirect } from "@/lib/auth-routes";
+import { isAdminAuthPath, isAdminTokenAuthPath, resolveAdminRedirectTarget } from "@/lib/auth-routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { serverEnv } from "@/lib/env/env.server";
-import { ROUTES } from "@/lib/routes";
+import { LOGIN_REDIRECT_PARAM, ROUTES } from "@/lib/routes";
 
 // ── Cookie names are isolated from web app ─────────────────────────────
-// The admin panel uses separate cookie names (adminAccessToken,
-// adminRefreshToken) so that a user logged in at the web app does not
-// have their cookies recognized by the admin app.
-const ACCESS_TOKEN_COOKIE = "adminAccessToken";
-const REFRESH_TOKEN_COOKIE = "adminRefreshToken";
+// The admin panel uses its own cookie pair (from the shared AUTH_COOKIE_NAMES
+// table) so that a user logged in at the web app does not have their cookies
+// recognized by the admin app.
+const ACCESS_TOKEN_COOKIE = AUTH_COOKIE_NAMES.admin.accessToken;
+const REFRESH_TOKEN_COOKIE = AUTH_COOKIE_NAMES.admin.refreshToken;
 const CLIENT_ORIGIN: string = clientEnv.NEXT_PUBLIC_ADMIN_URL;
 const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
 	domain: serverEnv.COOKIE_DOMAIN,
@@ -44,37 +45,41 @@ const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
 };
 
 // The whole admin panel lives under `/` (overview, users, settings, account, …).
-// Only the auth pages (`ADMIN_AUTH_ROUTE_PREFIXES`) are open to unauthenticated
-// visitors; token links (verify email, reset password) run even with a session.
+// There are no public pages: only the auth pages (`ADMIN_AUTH_ROUTE_PREFIXES`)
+// are open to unauthenticated visitors, and token links (verify email, reset
+// password) run even with a session.
 
-// Routes accessible without authentication.
-const PUBLIC_ROUTES: readonly string[] = [];
+/** The refresh attempt the proxy uses — a cooldown-wrapped call to the API's refresh endpoint. */
+export type AdminProxyRefreshAttempt = (refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>;
+
+/** The admin route proxy. */
+export type AdminProxy = (request: NextRequest) => Promise<NextResponse>;
 
 /**
- * Transient-failure cooldown (60s), instantiated ONCE at module scope so the
- * memoized failure survives across requests in the server process. When the
+ * A refresh attempt with its own transient-failure cooldown (60s). When the
  * API is down, the first navigation inside the skew window hits it once and
  * subsequent navigations skip — silencing the ECONNREFUSED spam in the logs.
+ * `cooldownOptions` injects the breaker's clock and limits (tests drive time
+ * through `now` instead of patching globals).
  */
-const attemptRefresh = createProxyRefreshCooldown((refreshToken: string): Promise<ProxyRefreshResult> =>
-	refreshSessionFromProxy({
-		apiBaseUrl: API_BASE_URL,
-		refreshTokenName: REFRESH_TOKEN_COOKIE,
-		accessTokenName: ACCESS_TOKEN_COOKIE,
-		refreshToken,
-		clientType: "admin",
-		clientOrigin: CLIENT_ORIGIN,
-	}),
-);
-
-/** @internal Clears the module-scope refresh cooldown between tests. */
-export function resetAdminProxyRefreshCooldownForTests(): void {
-	attemptRefresh.reset();
+export function createAdminRefreshAttempt(cooldownOptions: ProxyRefreshCooldownOptions = {}): AdminProxyRefreshAttempt {
+	return createProxyRefreshCooldown(
+		(refreshToken: string): Promise<ProxyRefreshResult> =>
+			refreshSessionFromProxy({
+				apiBaseUrl: API_BASE_URL,
+				refreshTokenName: REFRESH_TOKEN_COOKIE,
+				accessTokenName: ACCESS_TOKEN_COOKIE,
+				refreshToken,
+				clientType: "admin",
+				clientOrigin: CLIENT_ORIGIN,
+			}),
+		cooldownOptions,
+	);
 }
 
 function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
 	const loginUrl = new URL(ROUTES.auth.login, request.url);
-	loginUrl.searchParams.set("redirect", pathname);
+	loginUrl.searchParams.set(LOGIN_REDIRECT_PARAM, pathname);
 	return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
 }
 
@@ -102,14 +107,21 @@ function applyRotatedCookies(response: NextResponse, setCookies: readonly string
 	return response;
 }
 
-export async function proxy(request: NextRequest): Promise<NextResponse> {
+/**
+ * Builds the admin proxy around one refresh attempt. The exported `proxy`
+ * holds a single instance for the server process, so the cooldown memo
+ * survives across requests; tests build a fresh proxy (and cooldown) each.
+ */
+export function createAdminProxy(attemptRefresh: AdminProxyRefreshAttempt): AdminProxy {
+	return (request: NextRequest): Promise<NextResponse> => handleRequest(request, attemptRefresh);
+}
+
+async function handleRequest(request: NextRequest, attemptRefresh: AdminProxyRefreshAttempt): Promise<NextResponse> {
 	const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
 
 	const isAuthRoute = isAdminAuthPath(pathname);
-	const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route);
-	const isPanelRoute = !isAuthRoute && !isPublicRoute;
 
 	let rotatedCookies: readonly string[] = [];
 	let effectiveAccessToken: string | undefined = accessToken;
@@ -119,7 +131,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		refreshToken,
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
-		isPublicRoute,
+		// The admin app has no public pages (see above).
+		isPublicRoute: false,
 		tokenAuthRoute: isAdminTokenAuthPath(pathname),
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
@@ -132,7 +145,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	effectiveAccessToken = refreshResult.effectiveAccessToken;
 
 	if (refreshResult.sessionDead) {
-		if (isPanelRoute) {
+		if (!isAuthRoute) {
 			return redirectToLogin(request, pathname, rotatedCookies);
 		}
 		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
@@ -143,14 +156,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	const payload = effectiveAccessToken ? decodeJwtPayload(effectiveAccessToken) : null;
 	const hasAdminAccess: boolean = payload?.hasAdminAccess === true;
 
-	if (isPublicRoute) {
-		return applyRotatedCookies(NextResponse.next(), rotatedCookies);
-	}
-
 	if (isAuthRoute) {
 		if (isAuthenticated && hasAdminAccess && !isAdminTokenAuthPath(pathname)) {
-			const redirect = request.nextUrl.searchParams.get("redirect");
-			const targetUrl = redirect !== null && isSafeAdminRedirect(redirect) ? redirect : ROUTES.home;
+			const targetUrl: string = resolveAdminRedirectTarget(request.nextUrl.searchParams.get(LOGIN_REDIRECT_PARAM), CLIENT_ORIGIN);
 			return applyRotatedCookies(NextResponse.redirect(new URL(targetUrl, request.url)), rotatedCookies);
 		}
 		if (!isAuthenticated && accessToken !== undefined) {
@@ -173,6 +181,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	}
 	return applyRotatedCookies(NextResponse.next(), rotatedCookies);
 }
+
+/** The proxy Next.js runs — one refresh cooldown for the whole server process. */
+export const proxy: AdminProxy = createAdminProxy(createAdminRefreshAttempt());
 
 export const config = {
 	matcher: [

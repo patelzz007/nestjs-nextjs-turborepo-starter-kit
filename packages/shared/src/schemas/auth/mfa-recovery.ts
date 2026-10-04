@@ -55,7 +55,7 @@ export const AdminMfaRecoveryRequestSchema = z.object({
 
 export type AdminMfaRecoveryRequest = z.output<typeof AdminMfaRecoveryRequestSchema>;
 
-/** `GET /auth/admin/mfa/recovery/requests` list query — see docs/list-queries.md. */
+/** `GET /auth/admin/mfa/recovery/requests` list query — see docs/technical/api/list-queries.md. */
 export const adminMfaRecoveryListQuery = defineListQuery({
 	sortable: ["requestedAt", "createdAt"],
 	defaultSort: [{ field: "requestedAt", direction: "desc" }],

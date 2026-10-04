@@ -2,13 +2,17 @@ import "server-only";
 
 import { resolveEffectiveLocationId } from "@/features/tenant-context/selectors";
 import { loadOrganizationContext, readOrganizationLocationCookie } from "@/lib/merchant-server-api";
-import { resolveAccessibleLocations } from "@/lib/org/location-access";
-import type { OrganizationContextResponse } from "@workspace/shared";
+import { resolveMemberLocationAccess } from "@/lib/org/location-access";
+import type { Envelope, OrganizationContextResponse } from "@workspace/shared";
 import { cache } from "react";
 
 /** What the server knows about the member's store filter for one organization request. */
 export interface ServerLocationScope {
-	/** The member's choice as the cookie holds it — seeds the client tenant-context store. */
+	/**
+	 * The member's choice from this organization's cookie, kept only when it
+	 * names a store the member may operate on (`null` otherwise) — seeds the
+	 * client tenant-context store.
+	 */
 	readonly selectedLocationId: string | null;
 	/**
 	 * The filter server pages prefetch with (`null` = all stores). Derived with
@@ -18,21 +22,28 @@ export interface ServerLocationScope {
 	 */
 	readonly effectiveLocationId: string | null;
 	/** Passed to the client to seed `api.organizations.context` (`undefined` when it could not be loaded). */
-	readonly organizationContext: OrganizationContextResponse | undefined;
+	readonly organizationContext: Envelope<OrganizationContextResponse> | undefined;
 }
 
 /**
  * Resolves the store filter for `orgSlug` on the server, memoized per request.
- * Never an authorization decision: the API re-validates `locationId` against
- * the membership on every call.
+ * The cookie is client input: a store outside the member's accessible
+ * locations is dropped here, and without an organization context (not a
+ * member) no cookie value is used at all. UX state only — the API must still
+ * authorize every request against the membership's location scope.
  */
 export const loadServerLocationScope = cache(async (orgSlug: string): Promise<ServerLocationScope> => {
-	const [selectedLocationId, organizationContext] = await Promise.all([readOrganizationLocationCookie(), loadOrganizationContext(orgSlug)]);
-	const accessibleLocations = organizationContext === undefined ? undefined : resolveAccessibleLocations(organizationContext);
+	const [cookieLocationId, organizationContext] = await Promise.all([readOrganizationLocationCookie(orgSlug), loadOrganizationContext(orgSlug)]);
+	if (organizationContext === undefined) {
+		return { selectedLocationId: null, effectiveLocationId: null, organizationContext };
+	}
+
+	const access = resolveMemberLocationAccess(organizationContext.data);
+	const selectedLocationId = access.locations.some((location) => location.id === cookieLocationId) ? cookieLocationId : null;
 
 	return {
 		selectedLocationId,
-		effectiveLocationId: resolveEffectiveLocationId(selectedLocationId, accessibleLocations),
+		effectiveLocationId: resolveEffectiveLocationId(selectedLocationId, access),
 		organizationContext,
 	};
 });

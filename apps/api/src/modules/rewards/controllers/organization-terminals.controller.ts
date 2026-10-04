@@ -9,6 +9,8 @@ import {
 	MerchantTerminalPairingSchema,
 	MerchantTerminalSettingsResponseSchema,
 	MerchantTerminalSettingsSchema,
+	MerchantTerminalStatusSummaryQuerySchema,
+	MerchantTerminalStatusSummarySchema,
 	MerchantTerminalSummarySchema,
 	OkResponseSchema,
 	OrganizationSlugParamSchema,
@@ -17,11 +19,10 @@ import {
 } from "@workspace/shared";
 import type { z } from "zod";
 
-import { ZodBody, ZodListQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
+import { ZodBody, ZodListQuery, ZodParams, ZodQuery } from "../../../common/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
-import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
 import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
@@ -66,6 +67,18 @@ export class OrganizationTerminalsController {
 	}
 
 	@SkipAuthThrottle()
+	@Get("summary")
+	@ApiOperation({ summary: "Count the organization's live POS terminals per status, within the caller's stores" })
+	@ZodResponse(MerchantTerminalStatusSummarySchema, { description: "Terminal counts per status and stores covered" })
+	public summary(
+		@GetUser() user: AccessTokenPayload,
+		@ZodParams(OrganizationSlugParamSchema) params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodQuery(MerchantTerminalStatusSummaryQuerySchema) query: z.output<typeof MerchantTerminalStatusSummaryQuerySchema>,
+	): ReturnType<MerchantTerminalService["summary"]> {
+		return this.terminals.summary(user.sub, params.orgSlug, query);
+	}
+
+	@SkipAuthThrottle()
 	@Get("settings")
 	@ApiOperation({ summary: "Read the organization's POS terminal policy" })
 	@ZodResponse(MerchantTerminalSettingsResponseSchema, { description: "POS terminal settings" })
@@ -85,6 +98,17 @@ export class OrganizationTerminalsController {
 		@ZodBody(MerchantTerminalSettingsSchema) body: z.output<typeof MerchantTerminalSettingsSchema>,
 	): ReturnType<MerchantTerminalService["updateSettings"]> {
 		return this.terminals.updateSettings(user.sub, params.orgSlug, body);
+	}
+
+	@SkipAuthThrottle()
+	@Get(":id")
+	@ApiOperation({ summary: "Read one POS terminal (404 outside the caller's stores)" })
+	@ZodResponse(MerchantTerminalSummarySchema, { description: "POS terminal" })
+	public get(
+		@GetUser() user: AccessTokenPayload,
+		@ZodParams(apiContract.organizations.terminals.get.input) params: TerminalParams,
+	): ReturnType<MerchantTerminalService["get"]> {
+		return this.terminals.get(user.sub, params.orgSlug, params.id);
 	}
 
 	@Post(":id/pairing-code")
@@ -110,7 +134,8 @@ export class OrganizationTerminalsController {
 }
 
 /**
- * The till's side of pairing. Public (the till has no credential yet), not a
+ * The till's side of pairing. Public (the till has no credential yet — the service runs the exchange as the
+ * named `pos.terminal.pair` system operation, never a route-wide RLS bypass), not a
  * browser flow (no CSRF intent header), rate-limited per client IP.
  */
 @ApiTags("POS")
@@ -120,7 +145,6 @@ export class PosTerminalsController {
 	public constructor(private readonly pairing: PosPairingService) {}
 
 	@Public()
-	@RlsBypass()
 	@Throttle({ strict: { ttl: PAIRING_WINDOW_MS, limit: PAIRING_ATTEMPTS_PER_WINDOW } })
 	@Post("pair")
 	@ApiOperation({

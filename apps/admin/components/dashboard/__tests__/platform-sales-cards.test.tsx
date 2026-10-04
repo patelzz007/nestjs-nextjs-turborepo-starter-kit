@@ -52,6 +52,15 @@ describe("PlatformSalesCards", () => {
 		expect(screen.getByRole("link", { name: "View sales analytics" }).getAttribute("href")).toBe(ROUTES.analytics.sales);
 	});
 
+	it("charts the real weekly sales of the same response below the cards", () => {
+		salesQuery.mockReturnValue(queryResult({ data: { data: buildAdminSalesAnalytics() } }));
+		renderCards([PERMISSION.ANALYTICS.READ]);
+
+		expect(screen.getByText("Weekly sales")).toBeTruthy();
+		expect(screen.getByText("Paid bill totals per week, last 8 weeks")).toBeTruthy();
+		expect(salesQuery).toHaveBeenCalledTimes(1);
+	});
+
 	it("is hidden, and never queries, without ANALYTICS read", () => {
 		renderCards([PERMISSION.GEO.READ]);
 
@@ -64,7 +73,8 @@ describe("PlatformSalesCards", () => {
 		renderCards([PERMISSION.ANALYTICS.READ]);
 
 		expect(screen.getByText("Total sales")).toBeTruthy();
-		expect(screen.queryByText(/RM/)).toBeNull();
+		// No amount rendered yet (recharts' off-screen measurement span is not a card).
+		expect(screen.queryAllByText(/RM/).filter((element) => element.id !== "recharts_measurement_span")).toEqual([]);
 	});
 
 	it("offers a retry when the first load fails", () => {

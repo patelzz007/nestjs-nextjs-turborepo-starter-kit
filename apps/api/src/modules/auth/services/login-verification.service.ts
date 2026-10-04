@@ -1,9 +1,10 @@
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type Redis from "ioredis";
-import { BoundedTtlCache, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type LoginVerificationPendingResponse } from "@workspace/shared";
+import { assertNever, BoundedTtlCache, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type LoginVerificationPendingResponse } from "@workspace/shared";
 
 import { z } from "zod";
 
+import type { LoginVerificationMode } from "../../../config/api-env.fields";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { REDIS_PUBLISHER } from "../../../infrastructure/redis/redis.tokens";
 import { LogService } from "../../../modules/logs/logs.service";
@@ -137,14 +138,6 @@ export class LoginVerificationService {
 			context.ipAddress ?? "Unknown IP",
 		);
 
-		if (!this.config.isProduction) {
-			this.logService.info("Login verification OTP (dev only — use this code, not your authenticator app)", {
-				userId: context.userId,
-				context: "LoginVerificationService",
-				metadata: { verificationId, code: verificationCode },
-			});
-		}
-
 		if (!emailResult.ok) {
 			this.logService.warn("Login verification email delivery failed", {
 				userId: context.userId,
@@ -173,14 +166,21 @@ export class LoginVerificationService {
 	}
 
 	private async needsVerification(userId: string, deviceInfo: string | null): Promise<boolean> {
-		if (this.config.isTest) {
-			return false;
+		const mode: LoginVerificationMode = this.config.loginVerificationMode;
+		switch (mode) {
+			case "disabled":
+				return false;
+			case "always":
+				return true;
+			case "new-device":
+				return this.isUnrecognizedDevice(userId, deviceInfo);
+			default:
+				return assertNever(mode, "login verification mode");
 		}
+	}
 
-		if (this.config.forceLoginVerification) {
-			return true;
-		}
-
+	/** `new-device` mode: verify unless this user verified recently or from this device. */
+	private async isUnrecognizedDevice(userId: string, deviceInfo: string | null): Promise<boolean> {
 		const lastVerified = await this.getStoreValue(this.lastVerifiedKey(userId));
 		if (lastVerified !== null) {
 			return false;
@@ -209,15 +209,15 @@ export class LoginVerificationService {
 	}
 
 	private verificationKey(verificationId: string): string {
-		return `login_verify:${verificationId}`;
+		return this.config.redisNamespace.key(`login_verify:${verificationId}`);
 	}
 
 	private recognizedDeviceKey(userId: string, deviceHash: string): string {
-		return `recognized_device:${userId}:${deviceHash}`;
+		return this.config.redisNamespace.key(`recognized_device:${userId}:${deviceHash}`);
 	}
 
 	private lastVerifiedKey(userId: string): string {
-		return `last_verified:${userId}`;
+		return this.config.redisNamespace.key(`last_verified:${userId}`);
 	}
 
 	private async getStoreValue(key: string): Promise<string | null> {

@@ -1,6 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import {
 	ImpersonationActionEventSchema,
+	nowEpochMs,
 	type ImpersonateServiceResponse,
 	type StopImpersonationServiceResponse,
 	type UserResponse,
@@ -11,20 +12,41 @@ import { PlatformOutboxService } from "../../infrastructure/outbox/platform-outb
 import { LogService } from "../../modules/logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
+import { ImpersonationSessionRepository } from "../auth/repositories/impersonation-session.repository";
 import { UserResponseMapper } from "../auth/services/user-response.mapper";
+import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../auth/constants/impersonation.constants";
 import { TokenService } from "../auth/services/token.service";
 
+/** Milliseconds per second — converts the impersonation token TTL to the session's epoch-ms expiry. */
+const MS_PER_SECOND = 1000;
+
+/** The account state that decides whether a user may act as (or be restored as) a SuperAdmin. */
+interface SuperAdminEligibility {
+	readonly isSuperAdmin: boolean;
+	readonly isActive: boolean;
+	readonly isDeleted: boolean;
+}
+
+function isEligibleSuperAdmin(user: SuperAdminEligibility | null): boolean {
+	return user !== null && user.isSuperAdmin && user.isActive && !user.isDeleted;
+}
+
 /**
- * SuperAdmin impersonation flows — starting and stopping impersonation,
- * including audit-log persistence for both actions.
+ * SuperAdmin impersonation flows — starting and stopping impersonation.
+ *
+ * Every impersonation is a server-side `ImpersonationSession`: the token is
+ * bound to it, `AuthGuard` rejects the token once the session ended, and the
+ * START/STOP audit rows + `impersonation.action` events commit atomically with
+ * the session write (see `ImpersonationSessionRepository`).
  *
  * Split out of the (previously monolithic) `AuthService` — see
- * `docs/architecture.md` (module layout convention).
+ * `docs/technical/security/authentication.md` (module split).
  */
 @Injectable()
 export class ImpersonationService {
 	constructor(
 		private readonly prisma: PrismaService,
+		private readonly sessions: ImpersonationSessionRepository,
 		private readonly tokenService: TokenService,
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly logService: LogService,
@@ -38,7 +60,7 @@ export class ImpersonationService {
 	 * claims embedded in the JWT payload.
 	 *
 	 * Rules:
-	 * - Only isSuperAdmin users can impersonate
+	 * - Only active, non-deleted isSuperAdmin users can impersonate
 	 * - Cannot impersonate other superadmins
 	 * - Target user must exist and be active
 	 */
@@ -48,10 +70,10 @@ export class ImpersonationService {
 		// 1. Verify the impersonator is a superadmin
 		const superAdmin = await this.prisma.user.findUnique({
 			where: { id: superAdminId },
-			select: { id: true, isSuperAdmin: true },
+			select: { id: true, isSuperAdmin: true, isActive: true, isDeleted: true },
 		});
 
-		if (!superAdmin?.isSuperAdmin) {
+		if (superAdmin === null || !isEligibleSuperAdmin(superAdmin)) {
 			throw new ForbiddenException("Only super administrators can impersonate users");
 		}
 
@@ -95,34 +117,36 @@ export class ImpersonationService {
 		const flatUser: FlatUserResponse = this.mapper.toFlatUser(targetUser, userPermissions, isEmailVerified);
 		const profile: UserResponse = this.mapper.build(targetUser, userPermissions, isEmailVerified);
 
-		// 5. Generate impersonation token
-		const accessToken = await this.tokenService.generateImpersonationToken(flatUser, superAdmin.id);
+		// 5. Persist the session + START audit row, sign the session-bound token,
+		//    and record the platform event — atomically (transactional outbox).
+		const startedAt: number = nowEpochMs();
+		const accessToken: string = await this.sessions.start(
+			{
+				impersonatorId: superAdmin.id,
+				targetUserId: targetUser.id,
+				startedAt,
+				expiresAt: startedAt + IMPERSONATION_TOKEN_TTL_SECONDS * MS_PER_SECOND,
+				ipAddress: ipAddress ?? null,
+				userAgent: userAgent ?? null,
+			},
+			async (tx, sessionId): Promise<string> => {
+				const token: string = await this.tokenService.generateImpersonationToken(flatUser, superAdmin.id, sessionId);
+				await this.outbox.enqueueInTransaction(tx, {
+					type: "impersonation.action",
+					payload: ImpersonationActionEventSchema.parse({
+						action: "start",
+						superAdminId: superAdmin.id,
+						targetUserId: targetUser.id,
+						status: "succeeded",
+						error: null,
+						durationMs: Math.round(performance.now() - actionStartedAt),
+					}),
+				});
+				return token;
+			},
+		);
 
-		// 6. Persist the audit log entry and its platform event atomically (transactional outbox)
-		await this.prisma.$transaction(async (tx): Promise<void> => {
-			await tx.impersonationAuditLog.create({
-				data: {
-					impersonatorId: superAdmin.id,
-					targetUserId: targetUser.id,
-					action: "START",
-					ipAddress: ipAddress ?? null,
-					userAgent: userAgent ?? null,
-				},
-			});
-			await this.outbox.enqueueInTransaction(tx, {
-				type: "impersonation.action",
-				payload: ImpersonationActionEventSchema.parse({
-					action: "start",
-					superAdminId: superAdmin.id,
-					targetUserId: targetUser.id,
-					status: "succeeded",
-					error: null,
-					durationMs: Math.round(performance.now() - actionStartedAt),
-				}),
-			});
-		});
-
-		// 7. Application-level audit log
+		// 6. Application-level log
 		this.logService.warn("SuperAdmin impersonation started", {
 			context: "ImpersonationService",
 			metadata: {
@@ -141,39 +165,26 @@ export class ImpersonationService {
 	}
 
 	/**
-	 * Stop impersonating.
-	 * Returns a confirmation message. The frontend should discard the
-	 * impersonation token and restore the original session.
+	 * Stop impersonating and restore the original SuperAdmin session.
 	 *
-	 * @param impersonatorId - The SuperAdmin's original user ID (from originalUserId claim)
-	 * @param targetUserId - The user who was being impersonated (from sub claim)
+	 * Order matters: the original administrator is validated FIRST (still an
+	 * active, non-deleted SuperAdmin — otherwise nothing is restored), then the
+	 * impersonation session is ended with a compare-and-set, and the STOP audit
+	 * row (actor = the impersonator) + event commit in that same transaction.
+	 * Ending the session revokes the impersonation token server-side.
+	 *
+	 * @param impersonatorId - The SuperAdmin's original user ID (from the `originalUserId` claim)
+	 * @param targetUserId - The user who was being impersonated (from the `sub` claim)
+	 * @param sessionId - The impersonation session (from the `impersonationSessionId` claim)
 	 */
-	public async stopImpersonation(impersonatorId: string, targetUserId: string, ipAddress?: string, userAgent?: string | null): Promise<StopImpersonationServiceResponse> {
+	public async stopImpersonation(
+		impersonatorId: string,
+		targetUserId: string,
+		sessionId: string,
+		ipAddress?: string,
+		userAgent?: string | null,
+	): Promise<StopImpersonationServiceResponse> {
 		const actionStartedAt: number = performance.now();
-
-		// Persist the audit log entry (both IDs correctly recorded) and its platform event atomically
-		await this.prisma.$transaction(async (tx): Promise<void> => {
-			await tx.impersonationAuditLog.create({
-				data: {
-					impersonatorId,
-					targetUserId,
-					action: "STOP",
-					ipAddress: ipAddress ?? null,
-					userAgent: userAgent ?? null,
-				},
-			});
-			await this.outbox.enqueueInTransaction(tx, {
-				type: "impersonation.action",
-				payload: ImpersonationActionEventSchema.parse({
-					action: "stop",
-					superAdminId: impersonatorId,
-					targetUserId,
-					status: "succeeded",
-					error: null,
-					durationMs: Math.round(performance.now() - actionStartedAt),
-				}),
-			});
-		});
 
 		const impersonator = await this.prisma.user.findUnique({
 			where: { id: impersonatorId },
@@ -191,20 +202,53 @@ export class ImpersonationService {
 			},
 		});
 
-		if (!impersonator) {
+		if (impersonator === null) {
 			throw new NotFoundException("Original administrator account not found");
+		}
+
+		if (!isEligibleSuperAdmin(impersonator)) {
+			throw new ForbiddenException({
+				message: "The original administrator account can no longer be restored",
+				error: "IMPERSONATOR_NOT_ELIGIBLE",
+			});
 		}
 
 		const userPermissions = await this.authorizationChecker.getUserPermissionDetails(impersonatorId);
 		const isEmailVerified = impersonator.emailVerifiedAt !== null && impersonator.emailVerifiedAt <= Date.now();
 		const flatUser: FlatUserResponse = this.mapper.toFlatUser(impersonator, userPermissions, isEmailVerified);
+
+		const ended: boolean = await this.sessions.end(
+			{ sessionId, impersonatorId, targetUserId, endedAt: nowEpochMs(), ipAddress: ipAddress ?? null, userAgent: userAgent ?? null },
+			async (tx): Promise<void> => {
+				await this.outbox.enqueueInTransaction(tx, {
+					type: "impersonation.action",
+					payload: ImpersonationActionEventSchema.parse({
+						action: "stop",
+						superAdminId: impersonatorId,
+						targetUserId,
+						status: "succeeded",
+						error: null,
+						durationMs: Math.round(performance.now() - actionStartedAt),
+					}),
+				});
+			},
+		);
+
+		if (!ended) {
+			throw new UnauthorizedException({
+				message: "Impersonation session has ended or is no longer valid",
+				error: "IMPERSONATION_SESSION_INVALID",
+			});
+		}
+
 		const accessToken = await this.tokenService.generateAccessToken(flatUser);
 
 		this.logService.warn("SuperAdmin impersonation ended", {
 			context: "ImpersonationService",
 			metadata: {
-				impersonatorId: impersonatorId,
-				targetUserId: targetUserId,
+				impersonatorId,
+				targetUserId,
+				sessionId,
 			},
 		});
 

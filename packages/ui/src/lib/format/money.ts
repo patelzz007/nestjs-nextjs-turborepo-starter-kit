@@ -2,12 +2,17 @@
 // lib/format/money.ts - money display formatting
 // ============================================
 // Money crosses the API as an integer count of the currency's MINOR unit
-// (sen for MYR, cents for USD) plus an ISO 4217 code. These helpers are the
-// one sanctioned way to render it in every app (web, merchant, admin) — never
-// divide by 100 by hand, since not every currency has two decimals.
+// (sen for MYR) plus an ISO 4217 code. These helpers are the one sanctioned
+// way to render it in every app (web, merchant, admin) — never divide by 100
+// by hand, since not every currency has two minor digits.
+//
+// The minor-unit exponent comes from `SALE_CURRENCY_MINOR_UNIT_EXPONENTS` in
+// @workspace/shared (ISO 4217), never from ICU: `Intl`'s default fraction
+// digits are a display convention that differs from ISO 4217 for several
+// currencies. The locale is a required argument — there is no implicit
+// runtime default, so server and browser render the same string.
 
-/** Locale money is displayed in ("RM 1,234.50"). */
-export const MONEY_DISPLAY_LOCALE = "en-MY";
+import { SALE_CURRENCY_MINOR_UNIT_EXPONENTS, type SaleCurrency } from "@workspace/shared";
 
 /** Base of the decimal system — a currency with `n` minor digits has 10^n minor units per major unit. */
 const DECIMAL_BASE = 10;
@@ -15,50 +20,56 @@ const DECIMAL_BASE = 10;
 /** At most one decimal on compact amounts ("RM 12.3K"). */
 const COMPACT_FRACTION_DIGITS = 1;
 
+/** Separates the parts of a formatter cache key; never occurs in a locale tag or an ISO 4217 code. */
+const CACHE_KEY_SEPARATOR = "|";
+
 const standardFormatters = new Map<string, Intl.NumberFormat>();
 const compactFormatters = new Map<string, Intl.NumberFormat>();
 
-function standardFormatter(currency: string): Intl.NumberFormat {
-	const cached = standardFormatters.get(currency);
+function standardFormatter(currency: SaleCurrency, locale: string): Intl.NumberFormat {
+	const key = `${locale}${CACHE_KEY_SEPARATOR}${currency}`;
+	const cached = standardFormatters.get(key);
 	if (cached !== undefined) {
 		return cached;
 	}
-	const formatter = new Intl.NumberFormat(MONEY_DISPLAY_LOCALE, { style: "currency", currency });
-	standardFormatters.set(currency, formatter);
+	const exponent = minorUnitExponent(currency);
+	const formatter = new Intl.NumberFormat(locale, { style: "currency", currency, minimumFractionDigits: exponent, maximumFractionDigits: exponent });
+	standardFormatters.set(key, formatter);
 	return formatter;
 }
 
-function compactFormatter(currency: string): Intl.NumberFormat {
-	const cached = compactFormatters.get(currency);
+function compactFormatter(currency: SaleCurrency, locale: string): Intl.NumberFormat {
+	const key = `${locale}${CACHE_KEY_SEPARATOR}${currency}`;
+	const cached = compactFormatters.get(key);
 	if (cached !== undefined) {
 		return cached;
 	}
-	const formatter = new Intl.NumberFormat(MONEY_DISPLAY_LOCALE, {
+	const formatter = new Intl.NumberFormat(locale, {
 		style: "currency",
 		currency,
 		notation: "compact",
 		maximumFractionDigits: COMPACT_FRACTION_DIGITS,
 	});
-	compactFormatters.set(currency, formatter);
+	compactFormatters.set(key, formatter);
 	return formatter;
 }
 
-/** Number of minor-unit digits of `currency` (2 for MYR, 0 for JPY), per the runtime's ISO 4217 data. */
-export function minorUnitDigits(currency: string): number {
-	return standardFormatter(currency).resolvedOptions().maximumFractionDigits ?? 0;
+/** ISO 4217 minor-unit exponent of `currency` (2 for MYR) — from the shared table, never from ICU. */
+export function minorUnitExponent(currency: SaleCurrency): number {
+	return SALE_CURRENCY_MINOR_UNIT_EXPONENTS[currency];
 }
 
 /** Converts an amount in minor units to major units (`123450` sen → `1234.5` ringgit). */
-export function minorToMajorUnits(minor: number, currency: string): number {
-	return minor / DECIMAL_BASE ** minorUnitDigits(currency);
+export function minorToMajorUnits(minor: number, currency: SaleCurrency): number {
+	return minor / DECIMAL_BASE ** minorUnitExponent(currency);
 }
 
-/** `123450, "MYR"` → `"RM 1,234.50"` — full precision, for values and tooltips. */
-export function formatMinorUnits(minor: number, currency: string): string {
-	return standardFormatter(currency).format(minorToMajorUnits(minor, currency));
+/** `123450, "MYR", "en-MY"` → `"RM 1,234.50"` — full precision (the currency's minor digits), for values and tooltips. */
+export function formatMinorUnits(minor: number, currency: SaleCurrency, locale: string): string {
+	return standardFormatter(currency, locale).format(minorToMajorUnits(minor, currency));
 }
 
-/** `12345678, "MYR"` → `"RM 123.5K"` — abbreviated, for chart axes and tight spaces. */
-export function formatMinorUnitsCompact(minor: number, currency: string): string {
-	return compactFormatter(currency).format(minorToMajorUnits(minor, currency));
+/** `12345678, "MYR", "en-MY"` → `"RM 123.5K"` — abbreviated, for chart axes and tight spaces. */
+export function formatMinorUnitsCompact(minor: number, currency: SaleCurrency, locale: string): string {
+	return compactFormatter(currency, locale).format(minorToMajorUnits(minor, currency));
 }

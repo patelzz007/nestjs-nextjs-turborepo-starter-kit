@@ -158,6 +158,17 @@ export class OrganizationRewardsController {
 		return this.merchantRewardService.listRewards(actor, query);
 	}
 
+	@SkipAuthThrottle()
+	@Get(":rewardId")
+	@ApiOperation({ summary: "Read one organization reward (404 when not offered at any of the caller's stores)" })
+	@ZodResponse(RewardResponseSchema, { description: "Reward" })
+	public getReward(
+		@GetMerchantActor() actor: MerchantActor,
+		@ZodParams(apiContract.organizations.rewards.get.input) params: z.output<typeof apiContract.organizations.rewards.get.input>,
+	): ReturnType<MerchantRewardService["getReward"]> {
+		return this.merchantRewardService.getReward(actor, params.rewardId);
+	}
+
 	@Post()
 	@ApiOperation({ summary: "Create a draft reward" })
 	@ZodResponse(RewardResponseSchema, { status: HttpStatus.CREATED, description: "Created reward" })

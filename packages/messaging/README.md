@@ -34,7 +34,9 @@ export function buildAppMessagingConfig(config: MyAppConfig["messaging"]): Messa
     bullPrefix: "bull",
     healthQueueName: "email.send",
     redisUrl: config.redisUrl, // undefined → Redis + BullMQ disabled
-    kafkaBrokers: config.kafkaBrokers, // undefined → Kafka producer is a no-op
+    kafkaBrokers: config.kafkaBrokers, // undefined → Kafka disabled (publish() rejects)
+    kafkaSecurity: config.kafkaSecurity, // TLS / SASL — KAFKA_PLAINTEXT_SECURITY for a local broker
+    kafkaDeliveryTimeoutMs: config.kafkaDeliveryTimeoutMs, // bound on one publish, retries included
     rabbitmqUrl: config.rabbitmqUrl, // undefined → RabbitMQ placeholder disabled
   };
 }
@@ -74,12 +76,13 @@ export class EmailSendProcessor extends WorkerHost {
 |--------|---------|
 | `@workspace/messaging` | Redis/Bull helpers, outbox schemas |
 | `@workspace/messaging/nest` | `MessagingInfrastructureModule`, health indicators, tokens |
+| `@workspace/messaging/kafka` | Framework-free Kafka building blocks: TLS / SASL env contract (`KafkaSecurityEnvShape`, `listKafkaSecurityEnvIssues`, `toKafkaSecurityOptions`), `buildKafkaClientConfig` (logger + level in one place), `createKafkaLogger`, `AggregatingKafkaLogSink` (retry-storm aggregation with repeat counts), `provisionKafkaTopics` |
 
 ### Nest modules (all via `registerMessagingInfrastructureModule`)
 
 - **Redis** — `REDIS_PUBLISHER`, `REDIS_SUBSCRIBER` (ioredis, or `null` if no URL)
 - **BullMQ** — registers all `queueNames`, exports `BullModule`
-- **Kafka** — `KafkaProducerService.publish(topic, envelope, partitionKey?)` or no-op. Every message carries the envelope's stable `eventId` in the body and in the `event-id` header (`KAFKA_EVENT_ID_HEADER`), plus `event-type` (`KAFKA_EVENT_TYPE_HEADER`)
+- **Kafka** — `KafkaProducerService.publish(topic, envelope, partitionKey?)` on `@confluentinc/kafka-javascript` (librdkafka; [ADR 024](../../docs/adr/024-confluent-kafka-client.md)): idempotent producer, `acks = all`, no topic auto-creation. It resolves only once the broker acknowledged the record and rejects with `KafkaProducerDisabledError` (no brokers), `KafkaProducerNotConnectedError` (still connecting in the background — boot never waits for Kafka, retries use `kafkaConnectBackoff` — or after shutdown) or `KafkaPublishError` (not acknowledged within `kafkaDeliveryTimeoutMs`). Every message carries the envelope's stable `eventId` in the body and in the `event-id` header (`KAFKA_EVENT_ID_HEADER`), plus `event-type` (`KAFKA_EVENT_TYPE_HEADER`). `KafkaHealthIndicator` is unhealthy while the producer is not connected or a metadata request fails (report: `state`, `lastFailure`).
 - **RabbitMQ** — placeholder service + health (logs when URL set, no consumers)
 
 ---
@@ -89,13 +92,15 @@ export class EmailSendProcessor extends WorkerHost {
 This package **never reads `process.env`**. The app validates its own
 environment (apps/api: `REDIS_URL`, `KAFKA_BROKERS`, `RABBITMQ_URL`,
 `MESSAGING_CLIENT_ID`, `MESSAGING_CONNECTION_NAME` — see
-[API configuration](../../docs/api-configuration.md)) and passes the values
+[API configuration](../../docs/technical/configuration/api.md)) and passes the values
 through `MessagingModuleOptions`:
 
 | Option | Purpose |
 |--------|---------|
 | `redisUrl` | Enables Redis + BullMQ (`undefined` disables) |
 | `kafkaBrokers` | Kafka bootstrap servers (`undefined` disables) |
+| `kafkaSecurity` | TLS (`caLocation`) / SASL (`plain` needs TLS, `scram-sha-256`, `scram-sha-512`) — build it with `toKafkaSecurityOptions(env)` |
+| `kafkaDeliveryTimeoutMs` | librdkafka `message.timeout.ms`: the publish budget, retries included |
 | `rabbitmqUrl` | Placeholder health only (`undefined` disables) |
 
 ---
@@ -128,12 +133,13 @@ This repo’s `compose.yml` is app-agnostic except Bull Board’s `QUEUE_NAMES` 
 1. **Processors never live in this package** — only connection plumbing.
 2. **Queue names are configured, not hardcoded** — pass `queueNames: [...]`.
 3. **Kafka topics are strings** — app validates with its own Zod enums.
-4. **Disabled = safe no-op** — an `undefined` connection setting disables that broker without crashing boot.
+4. **Disabled never fakes success** — an `undefined` connection setting disables that broker without crashing boot, and any attempt to use it (e.g. `publish()`) fails with a typed error instead of pretending it worked.
+6. **Topics are provisioned, not auto-created** — use `provisionKafkaTopics` (the repo runs it via `pnpm --filter @workspace/analytics-consumer kafka:provision-topics`).
 5. **No environment reads** — connection settings arrive through options, validated by the app.
 
 ---
 
 ## See also
 
-- [Architecture ELI5](../../docs/infrastructure/architecture-eli5.md)
-- [Messaging ops](../../docs/infrastructure/messaging.md)
+- [Architecture ELI5](../../docs/technical/architecture.md)
+- [Messaging ops](../../docs/technical/messaging.md)

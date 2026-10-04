@@ -1,5 +1,7 @@
 import { EpochMsSchema, PosPairingCodeSchema, PosTerminalIdSchema, type MerchantTerminalSummary, type PosPairingCode, type PosTerminalStatus } from "@workspace/shared";
 
+import type { Prisma } from "@prisma/client";
+
 import type { OrganizationTerminalRow } from "../repositories/merchant-terminal.repository";
 import { generateBackupCode } from "./reward-crypto.util";
 
@@ -31,6 +33,24 @@ export function terminalStatus(terminal: TerminalStatusFields, now: number): Pos
 		return "ACTIVE";
 	}
 	return "UNPAIRED";
+}
+
+/**
+ * The same derivation as {@link terminalStatus}, as Prisma filters, so counts per status are computed by
+ * the database instead of loading every terminal. `UNPAIRED` is the remainder (statuses partition the rows).
+ */
+export function terminalStatusWhere(status: Exclude<PosTerminalStatus, "UNPAIRED">, now: number): Prisma.OrganizationTerminalWhereInput {
+	const awaiting: Prisma.OrganizationTerminalWhereInput = { pairingCodeHash: { not: null }, pairingCodeExpiresAt: { gte: now } };
+	if (status === "AWAITING_PAIRING") {
+		return awaiting;
+	}
+	return {
+		AND: [
+			{ OR: [{ pairingCodeHash: null }, { pairingCodeExpiresAt: null }, { pairingCodeExpiresAt: { lt: now } }] },
+			{ pairedAt: { not: null } },
+			{ apiKey: { is: { revokedAt: null } } },
+		],
+	};
 }
 
 function epochOrNull(value: bigint | null): MerchantTerminalSummary["pairedAt"] {

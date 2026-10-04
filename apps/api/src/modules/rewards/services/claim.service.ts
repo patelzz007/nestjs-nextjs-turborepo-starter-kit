@@ -3,36 +3,38 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import type {
 	CreateRewardClaimInput,
 	PaginatedServiceResult,
+	RedemptionCode,
 	RewardClaimCreatedResponse,
 	RewardClaimListQuery,
 	RewardClaimQrResponse,
 	RewardClaimResponse,
 } from "@workspace/shared";
-import { EpochMsSchema, RewardBackupCodeSchema } from "@workspace/shared";
+import { DAY_MS, EpochMsSchema } from "@workspace/shared";
 
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { RewardClaimRepository, type RewardClaimRedemptionLookup } from "../repositories/reward-claim.repository";
-import { RewardReferralRepository } from "../repositories/reward-referral.repository";
-import { RewardRepository } from "../repositories/reward.repository";
+import { RewardRepository, type RewardClaimableSummary } from "../repositories/reward.repository";
 import { RewardUserRepository } from "../repositories/reward-user.repository";
-import { generateBackupCode, generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
+import { RewardCodeHasher } from "../crypto/reward-code-hasher";
+import { rewardRulesFromStorage } from "../utils/reward-rules.util";
+import { generateBackupCode, generateOpaqueToken } from "../utils/reward-crypto.util";
 import { mapClaimToResponse } from "../utils/reward-mapper.util";
 import { RewardLegalService } from "./reward-legal.service";
 import { RewardOtpService } from "./reward-otp.service";
 
-const CLAIM_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const BACKUP_LOCK_MS = 15 * 60 * 1000;
-const MAX_BACKUP_FAILURES = 5;
+/** A consumer claim stays redeemable this long (capped by the reward's own expiry). */
+const CLAIM_TTL_DAYS = 7;
+const CLAIM_TTL_MS = CLAIM_TTL_DAYS * DAY_MS;
 
 @Injectable()
 export class ClaimService {
 	public constructor(
 		private readonly rewardRepository: RewardRepository,
 		private readonly rewardClaimRepository: RewardClaimRepository,
-		private readonly rewardReferralRepository: RewardReferralRepository,
 		private readonly rewardUserRepository: RewardUserRepository,
 		private readonly legalService: RewardLegalService,
 		private readonly otpService: RewardOtpService,
+		private readonly codeHasher: RewardCodeHasher,
 	) {}
 
 	public async requestOtp(userId: string, rewardId: string, phone: string): Promise<{ ok: true }> {
@@ -51,47 +53,32 @@ export class ClaimService {
 		const reward = await this.ensureRewardClaimable(input.rewardId);
 		const now = Date.now();
 		const claimExpiresAt = Math.min(now + CLAIM_TTL_MS, Number(reward.expiryDate));
-
-		const reserved = await this.rewardRepository.reserveQuantity(reward.id);
-
-		if (reserved === 0) {
-			throw new ConflictException({ message: "This reward just sold out", error: "REWARD_OUT_OF_STOCK" });
-		}
+		const maxClaimsPerUser = rewardRulesFromStorage(reward.rules, reward.minSpendMinor)?.maxUsePerUser ?? null;
 
 		const token = generateOpaqueToken();
 		const backupCode = generateBackupCode();
-
-		let referralId: string | null = null;
 		const user = await this.rewardUserRepository.findAttributionById(userId);
+		const attributionLive =
+			user !== null && user.pendingAttributionToken !== null && (user.pendingAttributionExpiresAt === null || Number(user.pendingAttributionExpiresAt) >= now);
 
-		if (user?.pendingAttributionToken !== null && user?.pendingAttributionToken !== undefined) {
-			const notExpired = user.pendingAttributionExpiresAt === null || Number(user.pendingAttributionExpiresAt) >= now;
-			if (notExpired) {
-				const referral = await this.rewardReferralRepository.findPendingByTokenAndReward(user.pendingAttributionToken, reward.id);
-				if (referral !== null) {
-					referralId = referral.id;
-					await this.rewardReferralRepository.assignReferee(referral.id, userId);
-				}
-			}
-		}
-
-		const claim = await this.rewardClaimRepository.create({
+		const outcome = await this.rewardClaimRepository.createReservedClaim({
 			userId,
 			rewardId: reward.id,
-			referralId,
-			redemptionTokenHash: sha256Hex(token),
-			backupCodeHash: sha256Hex(backupCode),
-			status: "PENDING",
+			maxClaimsPerUser,
+			redemptionTokenHash: this.codeHasher.hash(token),
+			backupCodeHash: this.codeHasher.hash(backupCode),
 			claimedAt: now,
 			claimExpiresAt,
-		});
-
-		await this.rewardUserRepository.updateAfterClaim(userId, {
+			attributionToken: attributionLive ? user.pendingAttributionToken : null,
 			phone: input.phone,
-			phoneVerifiedAt: now,
-			pendingAttributionToken: null,
-			pendingAttributionExpiresAt: null,
 		});
+		if (outcome.kind === "out_of_stock") {
+			throw new ConflictException({ message: "This reward just sold out", error: "REWARD_OUT_OF_STOCK" });
+		}
+		if (outcome.kind === "limit_reached") {
+			throw new ConflictException({ message: `You can hold at most ${String(outcome.limit)} claim(s) of this reward`, error: "CLAIM_LIMIT_REACHED", limit: outcome.limit });
+		}
+		const { claim } = outcome;
 
 		const claimResponse = mapClaimToResponse(claim, reward.title);
 
@@ -127,46 +114,30 @@ export class ClaimService {
 
 		const token = generateOpaqueToken();
 		const backupCode = generateBackupCode();
-		await this.rewardClaimRepository.updateTokenHashes(claim.id, userId, sha256Hex(token), sha256Hex(backupCode));
+		await this.rewardClaimRepository.updateTokenHashes(claim.id, userId, this.codeHasher.hash(token), this.codeHasher.hash(backupCode));
 
 		return {
 			claimId: claim.id,
 			qrPayload: token,
 			backupCode,
 			claimExpiresAt: EpochMsSchema.parse(Number(claim.claimExpiresAt)),
-			backupLockedUntil: claim.backupLockedUntil === null ? null : EpochMsSchema.parse(Number(claim.backupLockedUntil)),
 		};
 	}
 
-	public async findClaimByTokenOrBackup(token: string | undefined, backupCode: string | undefined): Promise<RewardClaimRedemptionLookup> {
-		if (token !== undefined) {
-			const claim = await this.rewardClaimRepository.findByRedemptionTokenHash(sha256Hex(token));
-			if (claim === null) {
-				throw new NotFoundException({ message: "Invalid token", error: "REDEMPTION_TOKEN_INVALID" });
-			}
-			return this.rewardClaimRepository.toRedemptionLookup(claim);
-		}
-
-		if (backupCode !== undefined) {
-			RewardBackupCodeSchema.parse(backupCode);
-			const claim = await this.rewardClaimRepository.findByBackupCodeHash(sha256Hex(backupCode));
-			if (claim === null) {
-				throw new NotFoundException({ message: "Invalid backup code", error: "REDEMPTION_TOKEN_INVALID" });
-			}
-			return this.rewardClaimRepository.toRedemptionLookup(claim);
-		}
-
-		throw new BadRequestException({ message: "token or backupCode required", error: "REDEMPTION_INPUT_REQUIRED" });
-	}
-
-	public async recordBackupFailure(claimId: string): Promise<void> {
-		const claim = await this.rewardClaimRepository.findById(claimId);
-		if (claim === null) {
-			return;
-		}
-
-		const attempts = claim.backupFailedAttempts + 1;
-		await this.rewardClaimRepository.recordBackupFailure(claimId, attempts, attempts >= MAX_BACKUP_FAILURES ? BigInt(Date.now() + BACKUP_LOCK_MS) : claim.backupLockedUntil);
+	/**
+	 * The claim behind one scanned code, if it belongs to `organizationId`.
+	 * `null` for an unknown code AND for another merchant's code — the caller
+	 * answers both the same way (no cross-merchant oracle). The schema
+	 * guarantees exactly one of `token` / `backupCode`.
+	 */
+	public async findMerchantClaim(code: RedemptionCode, organizationId: string): Promise<RewardClaimRedemptionLookup | null> {
+		const claim =
+			code.token !== undefined
+				? await this.rewardClaimRepository.findMerchantClaimByTokenHash(this.codeHasher.lookupCandidates(code.token), organizationId)
+				: code.backupCode !== undefined
+					? await this.rewardClaimRepository.findMerchantClaimByBackupCodeHash(this.codeHasher.lookupCandidates(code.backupCode), organizationId)
+					: null;
+		return claim === null ? null : this.rewardClaimRepository.toRedemptionLookup(claim);
 	}
 
 	private async verifyClaimOtpIfNeeded(userId: string, phone: string, otp: string | undefined, rewardId: string): Promise<void> {
@@ -183,7 +154,7 @@ export class ClaimService {
 		await this.otpService.verifyClaimOtp(userId, phone, otp, rewardId);
 	}
 
-	private async ensureRewardClaimable(rewardId: string): Promise<{ id: string; title: string; expiryDate: bigint }> {
+	private async ensureRewardClaimable(rewardId: string): Promise<RewardClaimableSummary> {
 		const reward = await this.rewardRepository.findClaimableConsumer(rewardId);
 
 		if (reward === null) {

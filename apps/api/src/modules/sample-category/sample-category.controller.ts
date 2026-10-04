@@ -26,7 +26,7 @@ import { SampleCategoryService } from "./sample-category.service";
 
 /**
  * CRUD routes for sample categories. Every route is gated by
- * `@RequirePermission`; see /docs/authorization-kernel-integration-guide.md
+ * `@RequirePermission`; see docs/technical/authorization/backend.md
  * for layering kernel checks (ACL, policies, ownership) on top.
  */
 @ApiTags("SampleCategory", "Sample Category")

@@ -1,10 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { createTestPrisma } from "../../../../test/support/test-service-graph";
 import { RoleAssignmentRepository } from "./role-assignment.repository";
-import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
-/** Records every write the repository issues inside its transaction, in order. */
+/** Records every write the repository issues on the transaction client, in order. */
 const mocks = vi.hoisted(() => ({
 	calls: new Array<{ readonly model: string; readonly op: string; readonly args: object }>(),
 }));
@@ -24,55 +23,85 @@ function recorder(model: string): Record<"updateMany" | "createMany", (args: obj
 
 vi.mock("../../../prisma/prisma.service", () => ({
 	PrismaService: class {
-		public readonly $transaction = async (work: (tx: object) => Promise<void>): Promise<void> => {
-			await work({ rolePermission: recorder("rolePermission"), userRole: recorder("userRole"), userPermission: recorder("userPermission") });
-		};
+		public readonly rolePermission = recorder("rolePermission");
+		public readonly userRole = recorder("userRole");
+		public readonly userPermission = recorder("userPermission");
 	},
 }));
 
+const NOW = 1_790_812_800_000;
+
 /**
- * Regression: sync soft-deleted every row, then `createMany({ skipDuplicates })`
- * skipped rows that already existed (unique key), so re-synced assignments
- * stayed deleted. Each sync must revive listed rows before inserting new ones.
+ * Sync writes run on the caller's transaction client (the RBAC mutation
+ * transaction). Regression: listed rows that already existed (soft-deleted)
+ * must be revived — `createMany({ skipDuplicates })` skips them.
  */
 describe("RoleAssignmentRepository sync", () => {
 	beforeEach(() => {
 		mocks.calls.length = 0;
+		vi.useFakeTimers();
+		vi.setSystemTime(NOW);
 	});
 
-	it("revives existing user roles instead of leaving them soft-deleted", async () => {
-		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncUserRoles("user-1", ["role-a", "role-b"]);
+	afterEach(() => {
+		vi.useRealTimers();
+	});
 
-		expect(mocks.calls.map((call) => call.op)).toEqual(["updateMany", "updateMany", "createMany"]);
-		expect(mocks.calls[1]).toEqual({
-			model: "userRole",
-			op: "updateMany",
-			args: { where: { userId: "user-1", roleId: { in: ["role-a", "role-b"] } }, data: { isDeleted: false, deletedAt: null } },
+	it("soft-deletes only unlisted user roles, revives deleted listed rows, then inserts new ones — all on the given client", async () => {
+		await new RoleAssignmentRepository().syncUserRoles("user-1", ["role-a", "role-b"], "admin-1", createTestPrisma());
+
+		expect(mocks.calls.map((call) => `${call.model}.${call.op}`)).toEqual(["userRole.updateMany", "userRole.updateMany", "userRole.createMany"]);
+		expect(mocks.calls[0]?.args).toEqual({
+			where: { userId: "user-1", isDeleted: false, roleId: { notIn: ["role-a", "role-b"] } },
+			data: { isDeleted: true, deletedAt: NOW, updatedAt: NOW },
+		});
+		expect(mocks.calls[1]?.args).toEqual({
+			where: { userId: "user-1", roleId: { in: ["role-a", "role-b"] }, isDeleted: true },
+			data: { isDeleted: false, deletedAt: null, assignedBy: "admin-1", assignedAt: NOW, updatedAt: NOW },
+		});
+		expect(mocks.calls[2]?.args).toEqual({
+			data: [
+				{ userId: "user-1", roleId: "role-a", assignedBy: "admin-1" },
+				{ userId: "user-1", roleId: "role-b", assignedBy: "admin-1" },
+			],
+			skipDuplicates: true,
 		});
 	});
 
-	it("revives existing role permissions", async () => {
-		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncRolePermissions("role-1", ["perm-a"]);
+	it("revives existing role permissions and stamps the assigning actor", async () => {
+		await new RoleAssignmentRepository().syncRolePermissions("role-1", ["perm-a"], "admin-1", createTestPrisma());
 
 		expect(mocks.calls[1]).toEqual({
 			model: "rolePermission",
 			op: "updateMany",
-			args: { where: { roleId: "role-1", permissionId: { in: ["perm-a"] } }, data: { isDeleted: false, deletedAt: null } },
+			args: {
+				where: { roleId: "role-1", permissionId: { in: ["perm-a"] }, isDeleted: true },
+				data: { isDeleted: false, deletedAt: null, assignedBy: "admin-1", assignedAt: NOW, updatedAt: NOW },
+			},
 		});
 	});
 
-	it("revives existing direct permissions as ALLOW grants without expiry", async () => {
-		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncUserPermissions("user-1", ["perm-a"]);
+	it("never touches DENY overrides when syncing direct ALLOW grants (a sync cannot turn a DENY into an ALLOW)", async () => {
+		await new RoleAssignmentRepository().syncUserAllowGrants("user-1", ["perm-a"], "admin-1", createTestPrisma());
 
-		expect(mocks.calls[1]).toEqual({
-			model: "userPermission",
-			op: "updateMany",
-			args: { where: { userId: "user-1", permissionId: { in: ["perm-a"] } }, data: { isDeleted: false, deletedAt: null, effect: "ALLOW", expiresAt: null } },
+		const updates = mocks.calls.filter((call) => call.op === "updateMany");
+		expect(updates[0]?.args).toEqual({
+			where: { userId: "user-1", isDeleted: false, effect: "ALLOW", permissionId: { notIn: ["perm-a"] } },
+			data: { isDeleted: true, deletedAt: NOW, updatedAt: NOW },
+		});
+		// Only soft-deleted rows are revived (as ALLOW); a live DENY row is never rewritten.
+		expect(updates[1]?.args).toEqual({
+			where: { userId: "user-1", permissionId: { in: ["perm-a"] }, isDeleted: true },
+			data: { isDeleted: false, deletedAt: null, effect: "ALLOW", expiresAt: null, assignedBy: "admin-1", assignedAt: NOW, updatedAt: NOW },
+		});
+		expect(updates[2]?.args).toEqual({
+			where: { userId: "user-1", permissionId: { in: ["perm-a"] }, isDeleted: false, effect: "ALLOW" },
+			data: { expiresAt: null, updatedAt: NOW },
 		});
 	});
 
 	it("only clears assignments when syncing to an empty set", async () => {
-		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncUserRoles("user-1", []);
+		await new RoleAssignmentRepository().syncUserRoles("user-1", [], "admin-1", createTestPrisma());
 
 		expect(mocks.calls.map((call) => call.op)).toEqual(["updateMany"]);
 	});

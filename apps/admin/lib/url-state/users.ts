@@ -10,7 +10,7 @@ export const USERS_DEFAULT_PAGE_SIZE = 20;
 
 /**
  * `/users` table state: `?page=&limit=&cursor=&sort=&search=&filter[status]=` —
- * the same keys `GET /auth/admin/users` takes (docs/list-queries.md §7).
+ * the same keys `GET /auth/admin/users` takes (docs/technical/api/list-queries.md §7).
  */
 export const USERS_TABLE_URL_STATE = defineUrlState(
 	{

@@ -1,8 +1,13 @@
 import type { Prisma, Role, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
 import { seedRewardHubTenantPolicies } from "../../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { seedAccountSecurity } from "../account-security";
 import { prisma } from "../client";
+import { upsertLiveSeedMembership } from "../memberships";
+import { defaultTenantPolicySeedIds } from "../policy-seed-ids";
+import { assignSeedRole } from "../rbac-audit";
 import {
 	buildEnterpriseDataset,
 	ENTERPRISE_DATASET_SIZES,
@@ -18,15 +23,20 @@ import { seedReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
 import { buildCategorySeedRows, seedSamplePlatform } from "../sample-platform";
 import { seedStores } from "../stores";
-import { printPlatformAccountCredentials, seedPlatformAccounts } from "./platform-accounts";
+import { PLATFORM_SUPERADMIN_EMAIL, printPlatformAccountCredentials, seedPlatformAccounts } from "./platform-accounts";
 import { seedLog } from "../seed-log";
 
-/** Seed-only credentials (documented in docs/getting-started.md) — never reuse outside local/test databases. */
+/** Seed-only credentials (documented in docs/technical/database.md, "Seed data") — never reuse outside local/test databases. */
 const ENTERPRISE_OWNER_PASSWORD = "EnterpriseOwner@123";
 const ENTERPRISE_MEMBER_PASSWORD = "EnterpriseMember@123";
 /** Matches the other seeders; seed accounts are never production accounts. */
 const SEED_BCRYPT_ROUNDS = 10;
 const CONSUMER_ROLE_NAME = "User";
+/** Enterprise members (by dataset index; 0 is the owner) cast in the account-security history. */
+const ENTERPRISE_RECOVERED_MEMBER_INDEX = 3;
+const ENTERPRISE_MFA_MEMBER_INDEX = 4;
+const ENTERPRISE_ENROLLING_MEMBER_INDEX = 5;
+const ENTERPRISE_LOCKED_MEMBER_INDEX = 6;
 
 export interface EnterpriseScenarioOptions {
 	readonly seed: number;
@@ -51,12 +61,15 @@ async function upsertOrganization(organization: EnterpriseOrganizationRow): Prom
 			slug: organization.slug,
 			displayName: organization.displayName,
 			lifecycleState: "ACTIVE",
+			// Analytics weeks are cut in the tenant's own zone (its head-office city's).
+			timeZone: PILOT_CITY_TIME_ZONES[organization.city],
 			createdAt: organization.createdAt,
 		},
 		update: {
 			slug: organization.slug,
 			displayName: organization.displayName,
 			lifecycleState: "ACTIVE",
+			timeZone: PILOT_CITY_TIME_ZONES[organization.city],
 			isDeleted: false,
 			deletedAt: null,
 		},
@@ -88,7 +101,6 @@ async function upsertOrganization(organization: EnterpriseOrganizationRow): Prom
 		features: { rewards: true, apiKeys: true, analytics: true },
 		version: 1,
 		effectiveFrom: BigInt(ENTERPRISE_SEED_EPOCH_MS),
-		effectiveUntil: null,
 	};
 	await prisma.organizationEntitlement.upsert({
 		where: { id: organization.entitlementId },
@@ -144,34 +156,20 @@ async function upsertMemberUser(member: EnterpriseMemberRow, passwordHash: strin
 		},
 	});
 
-	await prisma.userRole.upsert({
-		where: { userId_roleId: { userId: user.id, roleId: consumerRole.id } },
-		create: { userId: user.id, roleId: consumerRole.id },
-		update: { isDeleted: false, deletedAt: null },
-	});
+	// Self-provisioned account: the user is the audited actor (as `RoleService.assignDefaultConsumerRole`).
+	await assignSeedRole({ userId: user.id, roleId: consumerRole.id, actorId: user.id, action: "ROLE_ASSIGNED_AT_PROVISIONING", scenario: "enterprise" });
 
 	return user;
 }
 
 async function upsertMembership(organizationId: string, member: EnterpriseMemberRow, userId: string): Promise<void> {
-	const membership = await prisma.organizationMembership.upsert({
-		where: { organizationId_userId: { organizationId, userId } },
-		create: {
-			id: member.membershipId,
-			organizationId,
-			userId,
-			role: member.role,
-			status: "ACTIVE",
-			displayName: member.fullName,
-			createdAt: member.joinedAt,
-		},
-		update: {
-			role: member.role,
-			status: "ACTIVE",
-			displayName: member.fullName,
-			isDeleted: false,
-			deletedAt: null,
-		},
+	const membership = await upsertLiveSeedMembership({
+		id: member.membershipId,
+		organizationId,
+		userId,
+		role: member.role,
+		displayName: member.fullName,
+		createdAt: member.joinedAt,
 	});
 
 	const locationId = member.scope.scopeType === "SELECTED" ? member.scope.locationId : null;
@@ -241,7 +239,7 @@ async function persistEnterpriseDataset(dataset: EnterpriseDataset, roles: reado
 	}
 
 	seedLog("Publishing default tenant Cedar policies...");
-	await seedRewardHubTenantPolicies(prisma, dataset.organization.id, ownerUser.id);
+	await seedRewardHubTenantPolicies(prisma, dataset.organization.id, ownerUser.id, defaultTenantPolicySeedIds(dataset.organization.id));
 
 	seedLog(`Upserting ${String(dataset.products.length)} products...`);
 	await upsertProducts(dataset.products);
@@ -272,6 +270,21 @@ export async function runEnterpriseScenario(options: EnterpriseScenarioOptions):
 	seedLog("Seeding stores and store memberships...");
 	const storeSummary = await seedStores(reference.roles);
 	seedLog(`✅ Stores (all tenants): ${String(storeSummary.stores)} stores, ${String(storeSummary.memberships)} store memberships`);
+
+	seedLog("Seeding account security (impersonation, MFA recovery, 2FA enrollment, lockout, password history, support access)...");
+	const memberEmail = (index: number): string => requireRow(dataset.members.at(index), `enterprise member #${String(index)}`).email;
+	await seedAccountSecurity(
+		{
+			namespace: "seed.account-security.enterprise",
+			superAdmin: PLATFORM_SUPERADMIN_EMAIL,
+			recoveredUser: memberEmail(ENTERPRISE_RECOVERED_MEMBER_INDEX),
+			mfaUser: memberEmail(ENTERPRISE_MFA_MEMBER_INDEX),
+			enrollingUser: memberEmail(ENTERPRISE_ENROLLING_MEMBER_INDEX),
+			lockedUser: memberEmail(ENTERPRISE_LOCKED_MEMBER_INDEX),
+			supportAccess: { organizationId: dataset.organization.id, ownerEmail: ENTERPRISE_OWNER_EMAIL },
+		},
+		seedLog,
+	);
 
 	const lastMember = requireRow(dataset.members.at(-1), "last enterprise member");
 	seedLog(`

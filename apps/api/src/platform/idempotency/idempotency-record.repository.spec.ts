@@ -6,9 +6,12 @@ import { TenantTransactionService } from "../../prisma/tenant-transaction.servic
 import { IdempotencyRecordRepository } from "./idempotency-record.repository";
 import { IDEMPOTENCY_RETENTION_OPERATION, IDEMPOTENCY_SYSTEM_OPERATION } from "./idempotency.constants";
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
+import { RequestContextService } from "../../common/context/request-context";
 
 const KEY = { scope: "http:user-1:POST /api/v1/product", idempotencyKey: "key-00000001" };
 const NOW = 1_790_812_800_000;
+const LEASE = { token: "4f8e6d2a-1b3c-4d5e-8f90-a1b2c3d4e5f6", requestHash: "h1" };
+const TAKEOVER_LEASE = { token: "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d", requestHash: "h2" };
 
 describe("IdempotencyRecordRepository", () => {
 	let prisma: PrismaService;
@@ -18,7 +21,7 @@ describe("IdempotencyRecordRepository", () => {
 
 	beforeEach(() => {
 		prisma = new PrismaService(createTestTypedConfig());
-		tenantTx = new TenantTransactionService(prisma);
+		tenantTx = new TenantTransactionService(prisma, new RequestContextService());
 		systemOperation = vi.spyOn(tenantTx, "withSystemOperation").mockImplementation(async (_context, handler) => handler(prisma));
 		repository = new IdempotencyRecordRepository(tenantTx);
 	});
@@ -42,6 +45,7 @@ describe("IdempotencyRecordRepository", () => {
 				scope: KEY.scope,
 				idempotencyKey: KEY.idempotencyKey,
 				requestHash: "h1",
+				leaseToken: LEASE.token,
 				status: "IN_PROGRESS",
 				responseBody: null,
 				expiresAt: BigInt(NOW + 1),
@@ -49,10 +53,10 @@ describe("IdempotencyRecordRepository", () => {
 				updatedAt: BigInt(NOW),
 			});
 
-			await expect(repository.tryAcquire(KEY, "h1", NOW + 1, NOW)).resolves.toBe(true);
+			await expect(repository.tryAcquire(KEY, LEASE, NOW + 1, NOW)).resolves.toBe(true);
 			const args = create.mock.lastCall?.[0];
 			expect(Object.keys(args ?? {})).toEqual(["data"]);
-			expect(args?.data).toMatchObject({ ...KEY, requestHash: "h1", status: "IN_PROGRESS", expiresAt: BigInt(NOW + 1) });
+			expect(args?.data).toMatchObject({ ...KEY, requestHash: "h1", leaseToken: LEASE.token, status: "IN_PROGRESS", expiresAt: BigInt(NOW + 1) });
 		});
 
 		it("returns false when the unique (scope, key) index rejects the insert", async () => {
@@ -60,13 +64,13 @@ describe("IdempotencyRecordRepository", () => {
 				new Prisma.PrismaClientKnownRequestError("Unique constraint failed", { code: "P2002", clientVersion: "7.0.0" }),
 			);
 
-			await expect(repository.tryAcquire(KEY, "h1", NOW + 1, NOW)).resolves.toBe(false);
+			await expect(repository.tryAcquire(KEY, LEASE, NOW + 1, NOW)).resolves.toBe(false);
 		});
 
 		it("rethrows any other database error", async () => {
 			vi.spyOn(prisma.platformResourceIdempotencyRecord, "create").mockRejectedValue(new Error("connection lost"));
 
-			await expect(repository.tryAcquire(KEY, "h1", NOW + 1, NOW)).rejects.toThrow("connection lost");
+			await expect(repository.tryAcquire(KEY, LEASE, NOW + 1, NOW)).rejects.toThrow("connection lost");
 		});
 	});
 
@@ -77,6 +81,7 @@ describe("IdempotencyRecordRepository", () => {
 				scope: KEY.scope,
 				idempotencyKey: KEY.idempotencyKey,
 				requestHash: "h1",
+				leaseToken: LEASE.token,
 				status: "COMPLETED",
 				responseBody: { body: { id: "p-1" } },
 				expiresAt: BigInt(NOW),
@@ -98,37 +103,43 @@ describe("IdempotencyRecordRepository", () => {
 		it("takes over only an expired row", async () => {
 			const updateMany = vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 1 });
 
-			await expect(repository.takeOverExpired(KEY, "h2", NOW + 1, NOW)).resolves.toBe(true);
+			await expect(repository.takeOverExpired(KEY, TAKEOVER_LEASE, NOW + 1, NOW)).resolves.toBe(true);
 			const args = updateMany.mock.lastCall?.[0];
 			expect(Object.keys(args ?? {})).toEqual(["where", "data"]);
 			expect(args?.where).toEqual({ ...KEY, expiresAt: { lte: BigInt(NOW) } });
-			expect(args?.data).toMatchObject({ requestHash: "h2", status: "IN_PROGRESS", expiresAt: BigInt(NOW + 1) });
+			expect(args?.data).toMatchObject({ requestHash: "h2", leaseToken: TAKEOVER_LEASE.token, status: "IN_PROGRESS", expiresAt: BigInt(NOW + 1) });
 			expect(args?.data.responseBody).toBe(Prisma.DbNull);
 		});
 
 		it("reports a lost takeover race", async () => {
 			vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 0 });
 
-			await expect(repository.takeOverExpired(KEY, "h2", NOW + 1, NOW)).resolves.toBe(false);
+			await expect(repository.takeOverExpired(KEY, TAKEOVER_LEASE, NOW + 1, NOW)).resolves.toBe(false);
 		});
 
-		it("completes only the lease holder's IN_PROGRESS row", async () => {
+		it("completes only the CURRENT lease holder's live IN_PROGRESS row (fencing token + unexpired lease)", async () => {
 			const updateMany = vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 1 });
 
-			await expect(repository.complete(KEY, "h1", { body: { id: "p-1" } }, NOW + 5, NOW)).resolves.toBe(true);
+			await expect(repository.complete(KEY, LEASE, { body: { id: "p-1" } }, NOW + 5, NOW)).resolves.toBe(true);
 			const args = updateMany.mock.lastCall?.[0];
 			expect(Object.keys(args ?? {})).toEqual(["where", "data"]);
-			expect(args?.where).toEqual({ ...KEY, requestHash: "h1", status: "IN_PROGRESS" });
+			expect(args?.where).toEqual({ ...KEY, leaseToken: LEASE.token, requestHash: "h1", status: "IN_PROGRESS", expiresAt: { gt: BigInt(NOW) } });
 			expect(args?.data).toMatchObject({ status: "COMPLETED", expiresAt: BigInt(NOW + 5) });
 			expect(args?.data.responseBody).toEqual({ body: { id: "p-1" } });
 		});
 
-		it("releases by expiring the lease now (never deleting the row)", async () => {
+		it("reports a lost lease when the holder's token no longer matches", async () => {
+			vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 0 });
+
+			await expect(repository.complete(KEY, LEASE, { body: null }, NOW + 5, NOW)).resolves.toBe(false);
+		});
+
+		it("releases by expiring the lease now (never deleting the row), only for the lease holder", async () => {
 			const updateMany = vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 1 });
 
-			await repository.release(KEY, "h1", NOW);
+			await expect(repository.release(KEY, LEASE, NOW)).resolves.toBe(true);
 
-			expect(updateMany).toHaveBeenCalledWith({ where: { ...KEY, requestHash: "h1", status: "IN_PROGRESS" }, data: { expiresAt: BigInt(NOW), updatedAt: BigInt(NOW) } });
+			expect(updateMany).toHaveBeenCalledWith({ where: { ...KEY, leaseToken: LEASE.token, status: "IN_PROGRESS" }, data: { expiresAt: BigInt(NOW), updatedAt: BigInt(NOW) } });
 		});
 	});
 	describe("deleteExpiredBefore (retention)", () => {
@@ -149,6 +160,7 @@ describe("IdempotencyRecordRepository", () => {
 					scope: KEY.scope,
 					idempotencyKey: "k-1",
 					requestHash: "h",
+					leaseToken: LEASE.token,
 					status: "COMPLETED",
 					responseBody: null,
 					expiresAt: BigInt(1),
@@ -160,6 +172,7 @@ describe("IdempotencyRecordRepository", () => {
 					scope: KEY.scope,
 					idempotencyKey: "k-2",
 					requestHash: "h",
+					leaseToken: LEASE.token,
 					status: "IN_PROGRESS",
 					responseBody: null,
 					expiresAt: BigInt(2),

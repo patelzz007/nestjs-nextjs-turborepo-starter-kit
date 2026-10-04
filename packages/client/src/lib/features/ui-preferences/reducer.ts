@@ -1,3 +1,4 @@
+import { assertNever } from "@workspace/shared";
 import type { UiPreferencesAction } from "./actions";
 import type { UiPreferencesState } from "./state";
 
@@ -9,11 +10,6 @@ export function uiPreferencesReducer(state: UiPreferencesState, action: UiPrefer
 		case "[ UI Preferences ] Preferences Restored":
 			return { ...state, rewardsViewMode: action.preferences.rewardsViewMode };
 		default:
-			return assertNever(action);
+			return assertNever(action, "UI preferences action");
 	}
-}
-
-/** Exhaustiveness check: adding an action without handling it fails to compile. */
-function assertNever(action: never): never {
-	throw new Error(`Unhandled UI preferences action: ${JSON.stringify(action)}`);
 }

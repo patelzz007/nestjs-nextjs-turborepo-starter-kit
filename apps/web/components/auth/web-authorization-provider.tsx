@@ -3,7 +3,7 @@
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
 import { useAuth } from "@workspace/client/lib/auth";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
-import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface WebSessionState {
@@ -29,8 +29,8 @@ const WebSessionContext = React.createContext<WebSessionState>(GUEST_SESSION);
 export interface WebAuthorizationProviderProps {
 	/** Server saw a recoverable session cookie on this request. */
 	readonly sessionActive: boolean;
-	/** SSR `GET /auth/permissions` answer for first paint. */
-	readonly initialSessionPermissions?: SessionPermissionsResponse | undefined;
+	/** SSR `GET /auth/permissions` envelope for first paint. */
+	readonly initialSessionPermissions?: Envelope<SessionPermissionsResponse> | undefined;
 	readonly children: React.ReactNode;
 }
 

@@ -1,28 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiPaginatedMetaSchema } from "../schemas/api/api-response";
+import { buildOffsetPaginationMeta } from "./pagination-meta";
 
-import { stubPaginatedMeta, stubPaginatedMetaFromHydration } from "./pagination-meta";
-
-describe("stubPaginatedMeta", () => {
-	it("always satisfies ApiPaginatedMetaSchema", () => {
-		const meta = stubPaginatedMeta(20, 156, 2, 8, true, "cursor-2", true);
-		expect(ApiPaginatedMetaSchema.safeParse(meta).success).toBe(true);
-	});
-});
-
-describe("stubPaginatedMetaFromHydration", () => {
-	it("builds a valid first-page stub when more rows exist", () => {
-		const meta = stubPaginatedMetaFromHydration(20, 20, true);
-		expect(ApiPaginatedMetaSchema.safeParse(meta).success).toBe(true);
-		expect(meta.page).toBe(1);
-		expect(meta.hasNext).toBe(true);
-	});
-
-	it("builds a valid stub for an empty terminal page", () => {
-		const meta = stubPaginatedMetaFromHydration(20, 0, false);
-		expect(ApiPaginatedMetaSchema.safeParse(meta).success).toBe(true);
-		expect(meta.total).toBe(0);
-		expect(meta.hasNext).toBe(false);
+describe("buildOffsetPaginationMeta", () => {
+	it("derives pages from the total and clamps the page into range", () => {
+		expect(buildOffsetPaginationMeta(156, 2, 20)).toEqual({ total: 156, page: 2, limit: 20, totalPages: 8, hasNext: true, hasPrevious: true });
+		expect(buildOffsetPaginationMeta(0, 5, 20)).toEqual({ total: 0, page: 1, limit: 20, totalPages: 1, hasNext: false, hasPrevious: false });
 	});
 });

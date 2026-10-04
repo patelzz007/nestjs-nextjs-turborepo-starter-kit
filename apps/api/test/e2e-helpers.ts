@@ -2,12 +2,15 @@ import { randomInt } from "node:crypto";
 
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
-import { Test, type TestingModule } from "@nestjs/testing";
+import fastifyMultipart from "@fastify/multipart";
+import { Test, type TestingModule, type TestingModuleBuilder } from "@nestjs/testing";
 import { Pool } from "pg";
 import { API_VERSION_PREFIX, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, ApiSuccessResponseSchema, type ApiResponseMeta } from "@workspace/shared";
 import { type z } from "zod";
 
 import { AppModule } from "../src/app.module";
+import { TrustedProxies } from "../src/common/http/client-ip";
+import { getApiConfig } from "../src/config/api-config";
 import { HealthService } from "../src/modules/health/health.service";
 
 export interface LoginResult {
@@ -54,7 +57,12 @@ const SYNTHETIC_IP_POOL_SIZE = 2 * OCTET_VALUES * OCTET_VALUES;
  */
 let nextClientIpIndex: number = randomInt(SYNTHETIC_IP_POOL_SIZE);
 
-/** Distinct synthetic IPs so auth throttler buckets do not collide across e2e logins, files or runs. */
+/**
+ * Distinct synthetic client IPs so auth throttler buckets do not collide across
+ * e2e logins, files or runs. Send it as `X-Forwarded-For`: the e2e env trusts
+ * the loopback test client as a proxy (TEST_E2E_PROXY), so the API resolves it
+ * exactly as it resolves a real client behind a trusted reverse proxy.
+ */
 export function uniqueClientIp(): string {
 	const index: number = nextClientIpIndex % SYNTHETIC_IP_POOL_SIZE;
 	nextClientIpIndex += 1;
@@ -87,6 +95,22 @@ export async function clearPendingTeamInviteForEmail(pool: Pool, organizationId:
 	}
 }
 
+/**
+ * Precondition for suites that sign in as a seeded customer and call full-session
+ * routes. Several seed customers (alice.johnson@example.com among them) are seeded
+ * UNVERIFIED on purpose — they demo the verify-email flow — so such a suite must
+ * establish the verified state itself instead of relying on another suite having
+ * done it first (suite order differs between machines and CI). The restriction
+ * itself stays in force: this sets the same column the verify-email flow sets.
+ */
+export async function markSeedUserEmailVerified(pool: Pool, email: string): Promise<void> {
+	// COALESCE keeps an existing verification timestamp (idempotent across runs).
+	const result = await pool.query(`UPDATE public.users SET email_verified_at = COALESCE(email_verified_at, $1) WHERE email = $2`, [Date.now(), email]);
+	if (result.rowCount !== 1) {
+		throw new Error(`Seed user ${email} is missing — run pnpm db:seed`);
+	}
+}
+
 export function mutationHeaders(extra: Record<string, string> = {}): Record<string, string> {
 	return {
 		origin: CLIENT_ORIGIN,
@@ -113,13 +137,25 @@ export function extractCookie(setCookieHeader: string | string[] | undefined, na
 	return undefined;
 }
 
-export async function createE2eApp(): Promise<NestFastifyApplication> {
-	const moduleFixture: TestingModule = await Test.createTestingModule({
-		imports: [AppModule],
-	}).compile();
+/**
+ * Boots the real AppModule for e2e. `customize` may swap a provider for a
+ * TEST-ONLY one (e.g. the malware scanner) before the graph compiles.
+ */
+export async function createE2eApp(
+	customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder: TestingModuleBuilder): TestingModuleBuilder => builder,
+): Promise<NestFastifyApplication> {
+	const moduleFixture: TestingModule = await customize(
+		Test.createTestingModule({
+			imports: [AppModule],
+		}),
+	).compile();
 
-	const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true });
+	// Same trusted-proxy list as bootstrap-app.ts, so request.ip (rate limits) and the request context agree.
+	const trustProxy = new TrustedProxies(getApiConfig().http.trustedProxies).toFastifyTrustProxy();
+	const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter({ trustProxy }), { rawBody: true });
 	await app.register(fastifyCookie);
+	// Multipart bodies (local-storage uploads) — registered on the Fastify instance, as register-fastify-plugins.ts does in production.
+	await app.getHttpAdapter().getInstance().register(fastifyMultipart);
 	await app.init();
 	app.get(HealthService).markReady();
 	return app;
@@ -130,7 +166,7 @@ export async function login(app: NestFastifyApplication, email: string, password
 		method: "POST",
 		url: `${API_VERSION_PREFIX}/auth/login`,
 		headers: mutationHeaders({
-			"cf-connecting-ip": uniqueClientIp(),
+			"x-forwarded-for": uniqueClientIp(),
 			...(clientType === undefined ? {} : { "x-client-type": clientType }),
 		}),
 		payload: { email, password },

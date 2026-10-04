@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { commandPaletteActions } from "./actions";
 import { commandPaletteReducer } from "./reducer";
 import { selectPreferences } from "./selectors";
+import { commandPalettePersistence } from "./store";
 import { CommandPalettePreferencesSchema, INITIAL_COMMAND_PALETTE_STATE, MAX_RECENT_SEARCHES, type CommandPaletteRecentSearch, type CommandPaletteState } from "./state";
 
 const BILLING: CommandPaletteRecentSearch = { title: "Billing", url: "/settings/billing", section: "Platform", icon: "CreditCard" };
@@ -69,22 +70,20 @@ describe("CommandPalettePreferencesSchema", () => {
 		expect(CommandPalettePreferencesSchema.parse({ recentSearches: [BILLING], pinnedUrls: ["/docs"] })).toEqual({ recentSearches: [BILLING], pinnedUrls: ["/docs"] });
 	});
 
-	it("upgrades the envelope older builds wrote, filling missing fields with defaults", () => {
-		expect(CommandPalettePreferencesSchema.parse({ state: { recentSearches: [BILLING], pinnedUrls: ["/docs"] }, version: 0 })).toEqual({
-			recentSearches: [BILLING],
-			pinnedUrls: ["/docs"],
-		});
-		expect(CommandPalettePreferencesSchema.parse({ state: { pinnedUrls: ["/docs"] }, version: 0 })).toEqual({ recentSearches: [], pinnedUrls: ["/docs"] });
-	});
-
 	it("strips unknown keys from a stored recent search instead of rejecting the snapshot", () => {
 		const parsed = CommandPalettePreferencesSchema.parse({ recentSearches: [{ ...BILLING, searchText: "bil" }], pinnedUrls: [] });
 
 		expect(parsed.recentSearches).toEqual([BILLING]);
 	});
 
-	it("rejects tampered values", () => {
+	it("rejects tampered values and the old zustand/persist envelope", () => {
 		expect(CommandPalettePreferencesSchema.safeParse({ recentSearches: "nope", pinnedUrls: 42 }).success).toBe(false);
-		expect(CommandPalettePreferencesSchema.safeParse({ state: { recentSearches: "nope", pinnedUrls: 42 }, version: 0 }).success).toBe(false);
+		expect(CommandPalettePreferencesSchema.safeParse({ state: { recentSearches: [BILLING], pinnedUrls: ["/docs"] }, version: 0 }).success).toBe(false);
+	});
+});
+
+describe("commandPalettePersistence", () => {
+	it("has no migration steps: the per-member keys were only ever written in version 1 (the unowned key is deleted, not upgraded)", () => {
+		expect(commandPalettePersistence("key").migrations).toEqual([]);
 	});
 });

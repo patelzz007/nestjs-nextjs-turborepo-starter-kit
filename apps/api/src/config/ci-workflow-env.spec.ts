@@ -1,5 +1,5 @@
 // Keeps the CI e2e job honest: the `.env` it writes for the API (in
-// .github/workflows/ci.yml) must pass the same schema the API validates at
+// .github/actions/write-api-ci-env/action.yml, used by every database-backed CI job) must pass the same schema the API validates at
 // boot, or the job would fail on startup instead of running the suite.
 
 import { readFileSync } from "node:fs";
@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseApiConfig } from "./api-config";
 
-const WORKFLOW_PATH: string = fileURLToPath(new URL("../../../../.github/workflows/ci.yml", import.meta.url));
+const WORKFLOW_PATH: string = fileURLToPath(new URL("../../../../.github/actions/write-api-ci-env/action.yml", import.meta.url));
 
 /** The heredoc the e2e job writes: `cat > apps/api/.env <<EOF … EOF`. */
 const ENV_HEREDOC_PATTERN = /cat > apps\/api\/\.env <<EOF\n([\s\S]*?)\n\s*EOF/;
@@ -29,13 +29,14 @@ const SHELL_VARIABLES: Readonly<Record<string, string>> = {
 	email_verification: "c".repeat(SECRET_BYTES * 2),
 	two_factor: "d".repeat(SECRET_BYTES * 2),
 	mfa_key: Buffer.alloc(SECRET_BYTES, 1).toString("base64"),
+	reward_code_key: Buffer.alloc(SECRET_BYTES, 3).toString("base64"),
 	tenant_master_key: Buffer.alloc(SECRET_BYTES, 2).toString("base64"),
 };
 
 function workflowEnv(): Record<string, string> {
 	const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.[1];
 	if (heredoc === undefined) {
-		throw new Error("The e2e job no longer writes apps/api/.env with a heredoc — update this test.");
+		throw new Error("The write-api-ci-env action no longer writes apps/api/.env with a heredoc — update this test.");
 	}
 	const env: Record<string, string> = {};
 	for (const rawLine of heredoc.split("\n")) {
@@ -49,7 +50,7 @@ function workflowEnv(): Record<string, string> {
 	return env;
 }
 
-describe(".github/workflows/ci.yml — e2e job API env", () => {
+describe(".github/actions/write-api-ci-env — CI API env", () => {
 	it("passes the API config schema", () => {
 		expect(parseApiConfig(workflowEnv()).runtime.nodeEnv).toBe("test");
 	});

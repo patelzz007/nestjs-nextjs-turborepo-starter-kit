@@ -18,6 +18,7 @@ import {
 import { ZodParam } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
+import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, listTemplateMeta } from "./email-template.registry";
@@ -85,16 +86,20 @@ export class EmailPreviewController {
 	 * (dev) or the sample recipient. Admin-only; never sends real user data.
 	 * Returns the same `EmailSendResult` the auth flows get — so the admin can
 	 * see the exact outcome (id / mode / failure reason) for every template.
+	 *
+	 * Audited: the email log row of the send records `trigger=admin-test-send`,
+	 * the acting admin, correlation id, IP and user agent (on top of the global
+	 * HTTP audit entry every state-changing request gets).
 	 */
 	@RequirePermission("CREATE", "EMAIL")
 	@Post(":key/send")
 	@ApiOperation({ summary: "Send one email template (sample props)" })
 	@ZodResponse(EmailSendResultSchema, { status: HttpStatus.CREATED, description: "Outcome of the send attempt" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public async sendTest(@ZodParam("key", EmailTemplateKeyParamSchema) key: string): Promise<EmailSendResult> {
+	public async sendTest(@ZodParam("key", EmailTemplateKeyParamSchema) key: string, @GetUser("sub") actorUserId: string): Promise<EmailSendResult> {
 		const parsedKey = this.requireTemplate(key);
 		const entry = EMAIL_TEMPLATE_REGISTRY[parsedKey];
 		const template = entry.build();
-		return this.sender.send(template);
+		return this.sender.send(template, { audit: { trigger: "admin-test-send", actorUserId } });
 	}
 }

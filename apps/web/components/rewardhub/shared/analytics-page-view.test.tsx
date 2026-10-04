@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, getDefaultNormalizer, render, screen } from "@testing-library/react";
-import { epochMs, type UserRewardsAnalyticsResponse } from "@workspace/shared";
+import { epochMs, PLATFORM_DISPLAY_REGION, type UserRewardsAnalyticsResponse } from "@workspace/shared";
 import { formatMinorUnits } from "@workspace/ui/lib/format/money";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RewardHubAnalyticsPageView } from "@/components/rewardhub/shared/analytics-page-view";
+import { testEnvelope } from "@/test-support/envelope";
 
 interface AnalyticsEnvelopeStub {
 	readonly data: UserRewardsAnalyticsResponse;
@@ -53,7 +54,7 @@ vi.mock("@workspace/client/lib/auth", () => ({
 function buildAnalytics(overrides: Partial<UserRewardsAnalyticsResponse> = {}): UserRewardsAnalyticsResponse {
 	const metric = { value: 0, changePercent: null };
 	return {
-		period: { from: epochMs(PERIOD_FROM), to: epochMs(PERIOD_TO) },
+		period: { from: epochMs(PERIOD_FROM), to: epochMs(PERIOD_TO), timeZone: "UTC" },
 		totalClaims: { value: 3, changePercent: null },
 		pendingClaims: metric,
 		redeemedClaims: { value: 3, changePercent: null },
@@ -103,7 +104,7 @@ describe("RewardHubAnalyticsPageView", () => {
 		expect(screen.getByText("Where you spent the most")).toBeDefined();
 		expect(screen.getByText("What you spent on")).toBeDefined();
 		expect(screen.getByText("Teh Tarik House")).toBeDefined();
-		expect(screen.getAllByText(formatMinorUnits(4_200, "MYR"), KEEP_SPACES).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(formatMinorUnits(4_200, "MYR", PLATFORM_DISPLAY_REGION.locale), KEEP_SPACES).length).toBeGreaterThan(0);
 		expect(screen.getByRole("list", { name: "Spending by category" }).textContent).toContain("Beverage");
 	});
 
@@ -111,7 +112,7 @@ describe("RewardHubAnalyticsPageView", () => {
 		// Like TanStack Query: hydrated `initialData` is the data from the first render.
 		analyticsUseQuery.mockImplementation((_input: object, options: AnalyticsQueryOptionsStub): AnalyticsQueryStub => ({ data: options.initialData, isLoading: false }));
 
-		render(<RewardHubAnalyticsPageView initialAnalytics={buildAnalytics()} />);
+		render(<RewardHubAnalyticsPageView initialAnalytics={testEnvelope(buildAnalytics())} />);
 
 		expect(screen.getByRole("region", { name: "Your spending" }).getAttribute("aria-busy")).toBe("false");
 	});

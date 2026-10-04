@@ -1,13 +1,11 @@
-import { DataValueSchema, epochMs, singleResponse, type DataValue } from "@workspace/shared";
+import { DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { isAccountLockedError, resolveAuthErrorMessage } from "../auth/errors";
+import { resolveAuthErrorMessage } from "../auth/errors";
 import { jsonResponse, type FetchImpl } from "../test-utils";
 import { ApiError, createApiRequestContext, fetchQuery, readErrorPayload, type RefreshResult } from "./api-request";
 import { defineQuery } from "./endpoints";
-
-const LOCKED_UNTIL = 1790812800000;
 
 function errorEnvelope(code: string, message: string, details?: Record<string, DataValue>): DataValue {
 	return {
@@ -44,14 +42,6 @@ describe("readErrorPayload", () => {
 		expect(payload instanceof ApiError ? payload.details : undefined).toEqual({ issues: [{ path: "email", message: "bad", code: "format" }] });
 	});
 
-	it("lifts lockout timing out of details so the login countdown keeps working", async () => {
-		const payload = await readErrorPayload(jsonResponse(401, errorEnvelope("ACCOUNT_LOCKED", "Account locked", { lockedUntil: LOCKED_UNTIL, remainingSeconds: 299 })));
-
-		expect(payload instanceof ApiError ? payload.lockedUntil : undefined).toBe(LOCKED_UNTIL);
-		expect(payload instanceof ApiError ? payload.remainingSeconds : undefined).toBe(299);
-		expect(isAccountLockedError(payload)).toBe(true);
-	});
-
 	it("still accepts the legacy flat body and fills statusCode from the HTTP status", async () => {
 		const payload = await readErrorPayload(jsonResponse(403, { message: "Forbidden", error: "PERMISSION_DENIED" }));
 
@@ -67,18 +57,6 @@ describe("readErrorPayload", () => {
 	});
 });
 
-describe("ApiError.fromEnvelope", () => {
-	it("ignores malformed lockout details instead of throwing", () => {
-		const error = ApiError.fromEnvelope(
-			{ success: false, error: { code: "ACCOUNT_LOCKED", message: "locked", details: { lockedUntil: "soon" } }, meta: { correlationId: "c", timestamp: epochMs(1) } },
-			401,
-		);
-
-		expect(error.lockedUntil).toBeUndefined();
-		expect(error.statusCode).toBe(401);
-	});
-});
-
 describe("auth error resolution with the envelope", () => {
 	it("maps the envelope code to the friendly catalog message", async () => {
 		const payload = await readErrorPayload(jsonResponse(401, errorEnvelope("ACCESS_TOKEN_EXPIRED", "Access token has expired")));
@@ -91,14 +69,14 @@ describe("auth error resolution with the envelope", () => {
 });
 
 describe("fetchQuery with the error envelope", () => {
-	const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: singleResponse(DataValueSchema) }, { queryKey: () => ["auth", "me"] });
+	const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: singleResponse(DataValueSchema) }, { scope: () => ["auth", "me"] });
 
 	it("does not attempt a refresh when the envelope code marks the session dead", async () => {
 		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(401, errorEnvelope("TOKEN_VERSION_MISMATCH", "Token revoked"))));
 		const onRefresh = vi.fn((): Promise<RefreshResult> => Promise.resolve("ok"));
 		const onUnauthorized = vi.fn((): Promise<void> => Promise.resolve());
 
-		const result = await fetchQuery(createApiRequestContext("http://api.test", onUnauthorized, onRefresh), meDef, undefined);
+		const result = await fetchQuery(createApiRequestContext("http://api.test", "web", onUnauthorized, onRefresh), meDef, undefined);
 
 		expect(result.ok).toBe(false);
 		expect(onRefresh).not.toHaveBeenCalled();
@@ -108,12 +86,23 @@ describe("fetchQuery with the error envelope", () => {
 	it("surfaces the envelope as an ApiError on a non-401 failure", async () => {
 		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(409, errorEnvelope("IDEMPOTENCY_KEY_REUSED", "Key reused"))));
 
-		const result = await fetchQuery(createApiRequestContext("http://api.test"), meDef, undefined);
+		const result = await fetchQuery(createApiRequestContext("http://api.test", "web"), meDef, undefined);
 
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.status).toBe(409);
 			expect(result.error instanceof ApiError ? result.error.code : undefined).toBe("IDEMPOTENCY_KEY_REUSED");
 		}
+	});
+
+	it("treats a 404 as final — never silently re-sends the request to another API version", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(404, errorEnvelope("NOT_FOUND", "Not found")));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const result = await fetchQuery(createApiRequestContext("http://api.test", "web"), meDef, undefined);
+
+		expect(result.ok).toBe(false);
+		expect(result.status).toBe(404);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });

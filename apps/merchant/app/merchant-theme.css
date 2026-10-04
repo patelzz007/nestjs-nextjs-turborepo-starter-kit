@@ -37,7 +37,7 @@ html:has(body.merchant-app) {
 	--sidebar-ring: oklch(0.52 0.16 145);
 	--chart-1: oklch(0.52 0.16 145);
 	--chart-2: oklch(0.55 0.14 230);
-	--chart-3: oklch(0.68 0.15 75);
+	--chart-3: oklch(0.65 0.15 75);
 	--chart-4: oklch(0.58 0.12 165);
 	--chart-5: oklch(0.48 0.03 250);
 }

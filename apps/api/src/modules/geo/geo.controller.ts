@@ -33,10 +33,16 @@ import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../common/decorat
 import { ZodPaginatedResponse, ZodResponse } from "../../common/decorators/zod-response.decorators";
 
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
+import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
 import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import { GeoService } from "./services/geo.service";
 
+/**
+ * Geo reference data. Reads need `GEO:READ`; every write (create, update,
+ * soft-delete, import) is SuperAdmin-only and runs under the
+ * `geo.reference_data.write` system operation (GeoService).
+ */
 @ApiTags("Geo")
 @Controller(apiPath("/geo"))
 export class GeoController {
@@ -66,6 +72,7 @@ export class GeoController {
 
 	// ── Import ──────────────────────────────────────────────────────────
 
+	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Authorize({ action: "CREATE", resource: "GEO", description: "Import geo data" })
 	@Post("import")
@@ -124,6 +131,7 @@ export class GeoController {
 		return this.geoService.getRegion(param.id);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("regions")
 	@ApiOperation({ summary: "Create a region" })
@@ -132,6 +140,7 @@ export class GeoController {
 		return this.geoService.createRegion(body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("regions/:id")
 	@ApiOperation({ summary: "Update a region" })
@@ -143,6 +152,7 @@ export class GeoController {
 		return this.geoService.updateRegion(param.id, body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("regions/:id")
 	@ApiOperation({ summary: "Delete a region" })
@@ -171,6 +181,7 @@ export class GeoController {
 		return this.geoService.getSubregion(param.id);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("subregions")
 	@ApiOperation({ summary: "Create a subregion" })
@@ -181,6 +192,7 @@ export class GeoController {
 		return this.geoService.createSubregion(body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("subregions/:id")
 	@ApiOperation({ summary: "Update a subregion" })
@@ -192,6 +204,7 @@ export class GeoController {
 		return this.geoService.updateSubregion(param.id, body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("subregions/:id")
 	@ApiOperation({ summary: "Delete a subregion" })
@@ -220,6 +233,7 @@ export class GeoController {
 		return this.geoService.getCountry(param.id);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("countries")
 	@ApiOperation({ summary: "Create a country" })
@@ -228,6 +242,7 @@ export class GeoController {
 		return this.geoService.createCountry(body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("countries/:id")
 	@ApiOperation({ summary: "Update a country" })
@@ -239,6 +254,7 @@ export class GeoController {
 		return this.geoService.updateCountry(param.id, body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("countries/:id")
 	@ApiOperation({ summary: "Delete a country" })
@@ -267,6 +283,7 @@ export class GeoController {
 		return this.geoService.getState(param.id);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("states")
 	@ApiOperation({ summary: "Create a state" })
@@ -275,6 +292,7 @@ export class GeoController {
 		return this.geoService.createState(body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("states/:id")
 	@ApiOperation({ summary: "Update a state" })
@@ -286,6 +304,7 @@ export class GeoController {
 		return this.geoService.updateState(param.id, body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("states/:id")
 	@ApiOperation({ summary: "Delete a state" })
@@ -314,6 +333,7 @@ export class GeoController {
 		return this.geoService.getCity(param.id);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("cities")
 	@ApiOperation({ summary: "Create a city" })
@@ -322,6 +342,7 @@ export class GeoController {
 		return this.geoService.createCity(body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("cities/:id")
 	@ApiOperation({ summary: "Update a city" })
@@ -333,6 +354,7 @@ export class GeoController {
 		return this.geoService.updateCity(param.id, body);
 	}
 
+	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("cities/:id")
 	@ApiOperation({ summary: "Delete a city" })

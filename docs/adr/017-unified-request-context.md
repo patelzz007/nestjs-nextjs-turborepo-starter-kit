@@ -44,7 +44,7 @@ request had.
 | Field | Filled by | When |
 | --- | --- | --- |
 | `correlationId`, `traceId` (= correlation id until W3C trace context is propagated) | `RequestContextMiddleware` | request start (first middleware, before every guard) |
-| `ip` (Fastify `request.ip` semantics: `X-Forwarded-For` only with `TRUST_PROXY`), `userAgent` (≤ 512 chars) | `RequestContextMiddleware` | request start |
+| `ip` (Fastify `request.ip` semantics: the TCP peer; `X-Forwarded-For` only through proxies listed in `TRUST_PROXY`, read right to left — `common/http/client-ip.ts`), `userAgent` (≤ 512 chars) | `RequestContextMiddleware` | request start |
 | `principal.userId`, `principal.impersonatorId` (the real super-admin behind an impersonation token) | `AuthGuard`, `RefreshTokenGuard` | after authentication |
 | `tenant.organizationId` / `storeId` / `locationId` — **server-verified ids only** | `AuthorizationGuard` | after tenant resolution |
 

@@ -31,7 +31,6 @@ function buildUser(overrides: Partial<UserLogin> = {}): UserLogin {
 		passwordHash: "hash",
 		failedLoginAttempts: 0,
 		lockedUntil: null,
-		twoFactorSecret: null,
 		...overrides,
 	};
 }

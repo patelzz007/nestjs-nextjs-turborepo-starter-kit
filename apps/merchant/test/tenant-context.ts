@@ -1,4 +1,3 @@
-import { successEnvelope, stubApiMeta } from "@workspace/client/lib/api/envelope";
 import {
 	OrganizationContextResponseSchema,
 	OrganizationLocationResponseSchema,
@@ -10,6 +9,7 @@ import {
 } from "@workspace/shared";
 
 import { TEST_ORG_SLUG, type TenantContextSeed } from "@/test/authorization";
+import { testEnvelope } from "@/test/envelope";
 import { STORE_A, STORE_B } from "@/test/terminals";
 
 /** Fixed clock for tenant-context fixtures (2026-10-01T00:00:00Z). */
@@ -84,7 +84,7 @@ export interface ContextQueryState {
 
 /** What a mocked `api.organizations.context.useQuery` returns: loaded with `context`, or still loading. */
 export function contextQueryState(context: OrganizationContextResponse | undefined): ContextQueryState {
-	return context === undefined ? { data: undefined, isLoading: true } : { data: successEnvelope(context, stubApiMeta()), isLoading: false };
+	return context === undefined ? { data: undefined, isLoading: true } : { data: testEnvelope(context), isLoading: false };
 }
 
 /** Two active stores for location-filter tests (the same ids as the terminal fixtures). */
@@ -96,5 +96,5 @@ export const TWO_STORE_CONTEXT: OrganizationContextResponse = organizationContex
 
 /** The org layout's seed for a two-store member whose cookie holds `selectedLocationId`. */
 export function twoStoreSeed(selectedLocationId: string | null): TenantContextSeed {
-	return { initialLocationId: selectedLocationId, initialOrganizationContext: TWO_STORE_CONTEXT };
+	return { initialLocationId: selectedLocationId, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) };
 }

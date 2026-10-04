@@ -14,7 +14,6 @@ import {
 	UuidParamSchema,
 	AdminMerchantInviteCreatedResponseSchema,
 	EmailPreviewSchema,
-	RewardResponseListSchema,
 	RewardResponseSchema,
 	AdminLocationRequestResponseSchema,
 	MerchantOrgResponseSchema,
@@ -76,10 +75,12 @@ export class RewardsAdminRewardsController {
 
 	@RequirePermission("MANAGE", "REWARD")
 	@Get("pending")
-	@ApiOperation({ summary: "List rewards pending moderation" })
-	@ZodResponse(RewardResponseListSchema, { description: "Pending rewards" })
-	public listPendingRewards(): ReturnType<RewardsAdminService["listPendingRewards"]> {
-		return this.rewardsAdminService.listPendingRewards();
+	@ApiOperation({ summary: "List rewards pending moderation (oldest first, paginated)" })
+	@ZodPaginatedResponse(RewardResponseSchema, { description: "One page of pending rewards" })
+	public listPendingRewards(
+		@ZodListQuery(apiContract.rewardsAdmin.pendingRewards.input) query: z.output<typeof apiContract.rewardsAdmin.pendingRewards.input>,
+	): ReturnType<RewardsAdminService["listPendingRewards"]> {
+		return this.rewardsAdminService.listPendingRewards(query);
 	}
 
 	@RequirePermission("MANAGE", "REWARD")
@@ -174,10 +175,10 @@ export class RewardsAdminMerchantsController {
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Patch(":organizationId/kyb")
-	@ApiOperation({ summary: "Update merchant KYB status" })
+	@ApiOperation({ summary: "Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejectionReason)" })
 	@ZodResponse(OkResponseSchema, { description: "KYB updated" })
 	public async updateKyb(
-		@ZodParams(apiContract.rewardsAdmin.updateKyb.input) params: { organizationId: string },
+		@ZodParams(apiContract.rewardsAdmin.getOrganization.input) params: { organizationId: string },
 		@ZodBody(AdminKybUpdateSchema) body: z.output<typeof AdminKybUpdateSchema>,
 	): Promise<{ ok: true }> {
 		await this.rewardsAdminService.updateMerchantKyb(params.organizationId, body);

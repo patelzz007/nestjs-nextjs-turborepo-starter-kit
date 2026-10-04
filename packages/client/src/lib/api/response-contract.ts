@@ -4,8 +4,7 @@
 // Every successful API response is parsed with the envelope schema of its
 // shared contract leaf (`apiContract.*.response.envelope`, ADR 022) before any
 // caller sees it — the browser transport (`api-request.ts`) and the SSR
-// prefetch / server mutation pipeline (`server-request.ts`) both call
-// `parseResponseContract`. A body that does not match is NOT passed on as
+// prefetch pipeline (`server-request.ts`) both call `parseResponseText`. A body that does not match is NOT passed on as
 // "probably fine": it becomes a typed `ApiResponseContractError`, which callers
 // can branch on (it is an API/client version drift or an API bug, never a user
 // error).
@@ -65,7 +64,31 @@ function toIssue(issue: z.core.$ZodIssue): ApiResponseContractIssue {
  * client); throws {@link ApiResponseContractError} on a mismatch.
  */
 export function parseResponseContract<T>(schema: ZodType<T>, body: DataValue, source: ResponseContractSource): T {
-	const result = schema.safeParse(body);
+	return unwrapContractResult(schema.safeParse(body), source);
+}
+
+/**
+ * Parse a raw 2xx response body (its text) with its contract envelope schema —
+ * the transport's single entry point. The JSON text goes straight into the
+ * contract schema (one validation pass, no intermediate "it is JSON" cast). An
+ * empty body is `null`; a body that is not JSON at all breaks the contract
+ * like a mismatching one, so it becomes the same typed
+ * {@link ApiResponseContractError} — never a transport failure, which callers
+ * read as "the API is unreachable".
+ */
+export function parseResponseText<T>(schema: ZodType<T>, text: string, source: ResponseContractSource): T {
+	return unwrapContractResult(safeParseJsonText(schema, text, source), source);
+}
+
+function safeParseJsonText<T>(schema: ZodType<T>, text: string, source: ResponseContractSource): z.ZodSafeParseResult<T> {
+	try {
+		return schema.safeParse(text.length === 0 ? null : JSON.parse(text));
+	} catch {
+		throw new ApiResponseContractError(source, [{ path: "root", message: "Response body is not valid JSON" }]);
+	}
+}
+
+function unwrapContractResult<T>(result: z.ZodSafeParseResult<T>, source: ResponseContractSource): T {
 	if (result.success) {
 		return result.data;
 	}

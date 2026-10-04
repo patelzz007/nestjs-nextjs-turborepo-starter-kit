@@ -5,18 +5,16 @@ import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcr
 import { MerchantShellBreadcrumb } from "@/components/layout/merchant-shell-breadcrumb";
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
-import { MerchantPanelLayout } from "@/components/layout/merchant-panel-layout";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
 import type { ServerUser } from "@/lib/auth/server";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { useSwitchOrganization } from "@/lib/org/use-switch-organization";
-import { useAuth } from "@workspace/client/lib/auth";
-import type { OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { useSidebar as useShellSidebar } from "@workspace/ui/components/navigation/sidebar";
-import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
+import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
+import type { Envelope, OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import { AppPanelShell } from "@workspace/ui/components/navigation/app-panel-shell";
 import { MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME, MERCHANT_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
 import { MERCHANT_SIDEBAR_DEVTOOLS_NAME, MERCHANT_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
@@ -33,37 +31,19 @@ export interface MerchantShellProps {
 	/** The member's store choice as the server read it from the `organizationLocationId` cookie. */
 	readonly initialLocationId: string | null;
 	/** Organization context the server loaded — seeds the tenant context's accessible locations. */
-	readonly initialOrganizationContext?: OrganizationContextResponse | undefined;
-	readonly initialMemberships?: readonly OrganizationRewardMembershipResponse[];
+	readonly initialOrganizationContext?: Envelope<OrganizationContextResponse> | undefined;
+	/** The memberships the server listed — the API's own envelope (real meta), seeding the client query. */
+	readonly initialMemberships?: Envelope<OrganizationRewardMembershipResponse[]> | undefined;
 	readonly initialUser?: ServerUser | null;
 	readonly initialIsImpersonating?: boolean;
 }
 
-function MerchantSidebarContent({
-	memberships,
-	organizationSlug,
-	onStoreChange,
-}: {
-	readonly memberships: readonly OrganizationRewardMembershipResponse[];
-	readonly organizationSlug: string;
-	readonly onStoreChange: (slug: string) => void;
-}): React.JSX.Element {
-	const { setOpenMobile } = useShellSidebar();
-
-	const handleNavigate = React.useCallback((): void => {
-		if (isMobileViewport()) {
-			setOpenMobile(false);
-		}
-	}, [setOpenMobile]);
-
-	return <MerchantSidebarPanel memberships={memberships} organizationSlug={organizationSlug} onStoreChange={onStoreChange} onNavigate={handleNavigate} />;
-}
-
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */
 export function MerchantShell(props: MerchantShellProps): React.JSX.Element {
+	const authUser = useAuthUser();
 	return (
 		<SidebarStoreProvider storageKey={MERCHANT_SIDEBAR_STORAGE_KEY} devtoolsName={MERCHANT_SIDEBAR_DEVTOOLS_NAME}>
-			<CommandPaletteStoreProvider storageKey={MERCHANT_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME}>
+			<CommandPaletteStoreProvider storageKey={MERCHANT_COMMAND_PALETTE_STORAGE_KEY} ownerId={authUser?.id ?? null} devtoolsName={MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME}>
 				<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
 					<MerchantShellContent {...props} />
 				</UiPreferencesStoreProvider>
@@ -98,15 +78,10 @@ function MerchantShellContent({
 		[closeSidebar, openSidebar],
 	);
 
-	const initialMeData = React.useMemo(
-		() => (initialMemberships !== undefined && initialMemberships.length > 0 ? successEnvelope([...initialMemberships], stubApiMeta()) : undefined),
-		[initialMemberships],
-	);
-
 	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
 		{},
 		{
-			...initialDataOption(initialMeData),
+			...initialDataOption(initialMemberships),
 			...MERCHANT_ME_QUERY_OPTIONS,
 		},
 	);
@@ -121,12 +96,14 @@ function MerchantShellContent({
 		<MerchantAuthorizationProvider initialMemberships={initialMemberships}>
 			<TenantContextProvider orgSlug={orgSlug} initialLocationId={initialLocationId} initialOrganizationContext={initialOrganizationContext}>
 				<MerchantBreadcrumbProvider>
-					<MerchantPanelLayout
-						scrollKey={pathname}
+					<AppPanelShell
+						shellClassName="merchant-panel-shell"
+						contentClassName="space-y-6"
+						scrollResetKey={pathname}
 						banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
 						sidebarOpen={sidebarOpen}
 						onSidebarOpenChange={handleSidebarOpenChange}
-						sidebar={<MerchantSidebarContent memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} />}
+						sidebar={<MerchantSidebarPanel memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} />}
 						topbar={<MerchantTopbar initialUser={initialUser} />}>
 						{showMembershipLoading ? (
 							<p className="text-sm text-muted-foreground">Loading merchant access…</p>
@@ -144,7 +121,7 @@ function MerchantShellContent({
 								{children}
 							</>
 						)}
-					</MerchantPanelLayout>
+					</AppPanelShell>
 				</MerchantBreadcrumbProvider>
 			</TenantContextProvider>
 		</MerchantAuthorizationProvider>

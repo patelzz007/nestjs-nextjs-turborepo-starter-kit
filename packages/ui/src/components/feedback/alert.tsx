@@ -338,7 +338,7 @@ function Alert({
 				</p>
 			) : null}
 			{errors !== undefined && errors.length > 0 && bodyVisible ? (
-				<ul data-slot="alert-errors" role="list" className="mt-1.5 list-disc space-y-1 ps-4 text-sm text-muted-foreground">
+				<ul data-slot="alert-errors" className="mt-1.5 list-disc space-y-1 ps-4 text-sm text-muted-foreground">
 					{errors.map((error) => (
 						<li key={error}>{error}</li>
 					))}

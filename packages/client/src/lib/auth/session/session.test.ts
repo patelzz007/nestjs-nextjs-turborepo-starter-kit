@@ -1,82 +1,39 @@
-import { epochMs, UserResponseSchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { composeAuthUser, isRestrictedAuthUser, mergeAuthSessionFields, resolveAuthEnrollmentReason, resolveSessionScope, toAuthUser } from "./session";
+import { sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
+import { composeAuthUser, isRestrictedAuthUser, PENDING_SESSION_SCOPE, resolveAuthEnrollmentReason, resolveSessionScope, type AuthUser } from "./session";
 
-const testUser = UserResponseSchema.parse({
-	id: "user-1",
-	email: "user@example.com",
-	fullName: "Test User",
-	isActive: true,
-	isSuperAdmin: false,
-	isEmailVerified: false,
-	twoFactorEnabled: false,
-	hasAdminAccess: false,
-	tokenVersion: 0,
-	roles: [],
-	createdAt: epochMs(0),
-	updatedAt: epochMs(0),
-	isDeleted: false,
-	deletedAt: null,
-});
-
-describe("toAuthUser", () => {
-	it("defaults to a full session when permissions are unavailable", () => {
-		const user = toAuthUser(testUser);
-
-		expect(user.sessionScope).toBe("full");
-		expect(user.enrollmentReason).toBeNull();
-	});
-
-	it("maps restricted email verification sessions from permissions", () => {
-		const user = toAuthUser(testUser, {
-			sessionScope: "restricted",
-			enrollmentReason: "email_verification",
-		});
-
-		expect(user.sessionScope).toBe("restricted");
-		expect(user.enrollmentReason).toBe("email_verification");
-		expect(isRestrictedAuthUser(user)).toBe(true);
-	});
-
-	it("derives MFA enrollment when email is already verified", () => {
-		const verifiedUser = UserResponseSchema.parse({
-			...testUser,
-			isEmailVerified: true,
-		});
-		const user = toAuthUser(verifiedUser, { sessionScope: "restricted" });
-
-		expect(resolveAuthEnrollmentReason(user)).toBe("mfa_enrollment");
-	});
-});
-
-describe("mergeAuthSessionFields", () => {
-	it("clears enrollment reason when the session becomes full", () => {
-		const restricted = toAuthUser(testUser, { sessionScope: "restricted", enrollmentReason: "email_verification" });
-		const full = mergeAuthSessionFields(restricted, { sessionScope: "full" });
-
-		expect(full.sessionScope).toBe("full");
-		expect(full.enrollmentReason).toBeNull();
-	});
-});
+const testUser = userFixture({ email: "user@example.com", fullName: "Test User", isEmailVerified: false, tokenVersion: 0 });
+const verifiedUser = userFixture({ isEmailVerified: true });
 
 describe("resolveSessionScope", () => {
-	it("reads a missing answer as a full session", () => {
-		expect(resolveSessionScope(null, false)).toEqual({ sessionScope: "full", enrollmentReason: null });
-		expect(resolveSessionScope(undefined, true)).toEqual({ sessionScope: "full", enrollmentReason: null });
+	it("reads a missing /auth/permissions answer as a PENDING scope — never as a full session (fail closed)", () => {
+		expect(resolveSessionScope(undefined, false)).toEqual({ sessionScope: "pending", enrollmentReason: null });
+		expect(resolveSessionScope(undefined, true)).toEqual({ sessionScope: "pending", enrollmentReason: null });
+		expect(resolveSessionScope(undefined, true)).toBe(PENDING_SESSION_SCOPE);
+	});
+
+	it("reads a full answer as a full session", () => {
+		expect(resolveSessionScope(sessionPermissionsFixture({ sessionScope: "full" }), false)).toEqual({ sessionScope: "full", enrollmentReason: null });
 	});
 
 	it("keeps the reason a restricted answer gives, and derives it from the verified flag otherwise", () => {
-		expect(resolveSessionScope({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" }, false)).toEqual({
+		expect(resolveSessionScope(sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" }), false)).toEqual({
 			sessionScope: "restricted",
 			enrollmentReason: "mfa_enrollment",
 		});
-		expect(resolveSessionScope({ sessionScope: "restricted" }, false)).toEqual({ sessionScope: "restricted", enrollmentReason: "email_verification" });
-		expect(resolveSessionScope({ sessionScope: "restricted" }, true)).toEqual({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
+		expect(resolveSessionScope(sessionPermissionsFixture({ sessionScope: "restricted" }), false)).toEqual({
+			sessionScope: "restricted",
+			enrollmentReason: "email_verification",
+		});
+		expect(resolveSessionScope(sessionPermissionsFixture({ sessionScope: "restricted" }), true)).toEqual({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" });
 	});
 
 	it("drops a stray enrollment reason from a full session", () => {
-		expect(resolveSessionScope({ sessionScope: "full", enrollmentReason: "mfa_enrollment" }, true)).toEqual({ sessionScope: "full", enrollmentReason: null });
+		expect(resolveSessionScope(sessionPermissionsFixture({ sessionScope: "full", enrollmentReason: "mfa_enrollment" }), true)).toEqual({
+			sessionScope: "full",
+			enrollmentReason: null,
+		});
 	});
 });
 
@@ -95,5 +52,58 @@ describe("composeAuthUser", () => {
 			enrollmentReason: "email_verification",
 			roles: [],
 		});
+	});
+
+	it("carries a pending scope through unchanged", () => {
+		const user = composeAuthUser(testUser, PENDING_SESSION_SCOPE);
+
+		expect(user.sessionScope).toBe("pending");
+		expect(user.enrollmentReason).toBeNull();
+	});
+});
+
+describe("isRestrictedAuthUser", () => {
+	it("is false for nobody and for a full session", () => {
+		expect(isRestrictedAuthUser(null)).toBe(false);
+		expect(isRestrictedAuthUser(composeAuthUser(testUser, { sessionScope: "full", enrollmentReason: null }))).toBe(false);
+	});
+
+	it("is true for a restricted session", () => {
+		expect(isRestrictedAuthUser(composeAuthUser(testUser, { sessionScope: "restricted", enrollmentReason: "email_verification" }))).toBe(true);
+	});
+
+	it("is true for a pending session — an unknown scope fails closed", () => {
+		expect(isRestrictedAuthUser(composeAuthUser(testUser, PENDING_SESSION_SCOPE))).toBe(true);
+	});
+});
+
+describe("resolveAuthEnrollmentReason", () => {
+	it("returns the reason of a restricted session", () => {
+		const user: AuthUser = composeAuthUser(
+			testUser,
+			resolveSessionScope(sessionPermissionsFixture({ sessionScope: "restricted", enrollmentReason: "email_verification" }), false),
+		);
+
+		expect(resolveAuthEnrollmentReason(user)).toBe("email_verification");
+	});
+
+	it("derives MFA enrollment for a restricted session whose email is already verified", () => {
+		const user: AuthUser = composeAuthUser(verifiedUser, { sessionScope: "restricted", enrollmentReason: null });
+
+		expect(resolveAuthEnrollmentReason(user)).toBe("mfa_enrollment");
+	});
+
+	it("derives email verification for a restricted session whose email is not verified", () => {
+		const user: AuthUser = composeAuthUser(testUser, { sessionScope: "restricted", enrollmentReason: null });
+
+		expect(resolveAuthEnrollmentReason(user)).toBe("email_verification");
+	});
+
+	it("returns null for a full session", () => {
+		expect(resolveAuthEnrollmentReason(composeAuthUser(testUser, { sessionScope: "full", enrollmentReason: null }))).toBeNull();
+	});
+
+	it("returns null for a pending session — its reason is not known yet", () => {
+		expect(resolveAuthEnrollmentReason(composeAuthUser(testUser, PENDING_SESSION_SCOPE))).toBeNull();
 	});
 });

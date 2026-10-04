@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { browserStorage } from "../../state/browser-storage";
 import { connectFeaturePersistence } from "../../state/feature-persistence";
 import { createFeatureStoreContext } from "../../state/feature-store-context";
 import { commandPaletteActions, type CommandPaletteAction } from "./actions";
@@ -19,22 +20,63 @@ const commandPaletteContext = createFeatureStoreContext<CommandPaletteState, Com
 const CommandPaletteContextProvider = commandPaletteContext.provider;
 
 export interface CommandPaletteStoreProviderProps {
-	/** localStorage key for the persisted recents and pins (e.g. `command-palette-state`). */
+	/** Base localStorage key (e.g. `command-palette-state`); the data is stored per member under `<key>:<ownerId>`. */
 	readonly storageKey: string;
+	/**
+	 * The signed-in member the recents and pins belong to (`useAuthUser()?.id`),
+	 * `null` while nobody is signed in. Recents are personal browsing history:
+	 * they are never shown to — or persisted for — anyone else on this browser.
+	 */
+	readonly ownerId: string | null;
 	/** Redux DevTools instance name (e.g. `Command Palette · admin`). */
 	readonly devtoolsName: string;
 	readonly children: React.ReactNode;
 }
 
+/** The storage key of one member's palette state. */
+export function commandPaletteStorageKey(storageKey: string, ownerId: string): string {
+	return `${storageKey}:${ownerId}`;
+}
+
 /**
  * Mount once in the app's persistent shell layout, around every consumer (the
  * topbar's palette and the sidebar's pinned row), so navigation keeps the state.
+ * A new owner (sign-in, sign-out, impersonation) gets a fresh store; signing
+ * out removes the previous member's stored recents and pins from the browser.
+ * The pre-scoping, unowned key is removed: whose data it holds cannot be known.
  */
-export function CommandPaletteStoreProvider({ storageKey, devtoolsName, children }: CommandPaletteStoreProviderProps): React.JSX.Element {
+export function CommandPaletteStoreProvider({ storageKey, ownerId, devtoolsName, children }: CommandPaletteStoreProviderProps): React.JSX.Element {
+	const previousOwnerRef = React.useRef<string | null>(ownerId);
+
+	React.useEffect((): void => {
+		const storage = browserStorage("local");
+		storage.removeItem(storageKey);
+		const previousOwner = previousOwnerRef.current;
+		if (previousOwner !== null && previousOwner !== ownerId) {
+			storage.removeItem(commandPaletteStorageKey(storageKey, previousOwner));
+		}
+		previousOwnerRef.current = ownerId;
+	}, [ownerId, storageKey]);
+
+	return (
+		<OwnedCommandPaletteStore key={ownerId ?? NO_OWNER} storageKey={storageKey} ownerId={ownerId} devtoolsName={devtoolsName}>
+			{children}
+		</OwnedCommandPaletteStore>
+	);
+}
+
+/** React key of the store while nobody is signed in. */
+const NO_OWNER = "no-owner";
+
+function OwnedCommandPaletteStore({ storageKey, ownerId, devtoolsName, children }: CommandPaletteStoreProviderProps): React.JSX.Element {
 	const createStore = React.useCallback((): CommandPaletteStore => createCommandPaletteStore(devtoolsName), [devtoolsName]);
 	const connectStorage = React.useCallback(
-		(store: CommandPaletteStore): (() => void) => connectFeaturePersistence(store, window.localStorage, commandPalettePersistence(storageKey)),
-		[storageKey],
+		(store: CommandPaletteStore): (() => void) =>
+			// Nobody signed in: nothing is remembered.
+			ownerId === null
+				? (): void => undefined
+				: connectFeaturePersistence(store, browserStorage("local"), commandPalettePersistence(commandPaletteStorageKey(storageKey, ownerId))),
+		[ownerId, storageKey],
 	);
 	return (
 		<CommandPaletteContextProvider createStore={createStore} onMount={connectStorage}>

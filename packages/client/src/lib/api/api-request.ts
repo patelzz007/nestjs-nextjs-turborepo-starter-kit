@@ -11,9 +11,8 @@
 import {
 	ApiErrorBodySchema as ApiErrorSchema,
 	ApiErrorResponseSchema,
-	ApiLockoutDetailsSchema,
-	ApiVersionManifestSchema,
 	apiVersionPrefix,
+	clientTypeHeader,
 	JsonValueSchema,
 	MUTATION_INTENT_HEADER,
 	MUTATION_INTENT_VALUE,
@@ -21,16 +20,16 @@ import {
 	type ApiErrorDetails,
 	type ApiErrorResponse,
 	type ApiVersion,
-	type ApiVersionManifest,
+	type AuthClientType,
 	type DataValue,
-	type EpochMs,
 	type JsonValue,
 	type SerializableInput,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
+import { createTransientFailureBreaker } from "../auth/transient-failure-breaker";
 import { API_URL_PREFIX } from "./config";
-import { ApiResponseContractError, parseResponseContract, type ResponseContractSource } from "./response-contract";
+import { ApiResponseContractError, parseResponseText, type ResponseContractSource } from "./response-contract";
 import { resolveRequest, eachRouterEntry, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTree, type RouterTreeValue } from "./endpoints";
 
 // ── Auth callbacks & client config ───────────────────────────────────────────
@@ -50,62 +49,43 @@ export type OnUnauthorized = () => void | Promise<void>;
  */
 export type OnRefresh = () => Promise<RefreshResult>;
 
-/** Which isolated cookie set the client uses. */
-export type ApiClientType = "web" | "admin" | "merchant";
-
-export interface UseApiOptions {
-	readonly clientType?: ApiClientType | undefined;
-	readonly extraHeaders?: Record<string, string> | undefined;
-}
-
-/** Runtime context shared by every procedure call on the client. */
+/**
+ * Runtime context shared by every procedure call on the client. `clientType`
+ * is required: it names the frontend's isolated cookie set, and the client
+ * never lets the API guess it.
+ */
 export interface ApiRequestContext {
 	readonly baseUrl: string;
+	readonly clientType: AuthClientType;
 	readonly onUnauthorized?: OnUnauthorized | undefined;
 	readonly onRefresh?: OnRefresh | undefined;
-	readonly clientType?: ApiClientType | undefined;
-	readonly extraHeaders?: Record<string, string> | undefined;
 }
 
 /** Context for lifecycle calls that must bypass the 401 refresh pipeline (refresh / logout). */
 export interface UncheckedApiRequestContext {
 	readonly baseUrl: string;
-	readonly clientType?: ApiClientType | undefined;
-	readonly extraHeaders?: Record<string, string> | undefined;
+	readonly clientType: AuthClientType;
 }
 
-export function createApiRequestContext(baseUrl: string, onUnauthorized?: OnUnauthorized, onRefresh?: OnRefresh, options?: UseApiOptions): ApiRequestContext {
-	return {
-		baseUrl,
-		onUnauthorized,
-		onRefresh,
-		clientType: options?.clientType,
-		extraHeaders: options?.extraHeaders,
-	};
+export function createApiRequestContext(baseUrl: string, clientType: AuthClientType, onUnauthorized?: OnUnauthorized, onRefresh?: OnRefresh): ApiRequestContext {
+	return { baseUrl, clientType, onUnauthorized, onRefresh };
 }
 
-export function createUncheckedApiRequestContext(baseUrl: string, options?: Pick<UseApiOptions, "clientType" | "extraHeaders">): UncheckedApiRequestContext {
-	return {
-		baseUrl,
-		clientType: options?.clientType,
-		extraHeaders: options?.extraHeaders,
-	};
-}
-
-export function clientTypeHeaders(clientType: ApiClientType | undefined): Record<string, string> {
-	return clientType === undefined || clientType === "web" ? {} : { "X-Client-Type": clientType };
+export function createUncheckedApiRequestContext(baseUrl: string, clientType: AuthClientType): UncheckedApiRequestContext {
+	return { baseUrl, clientType };
 }
 
 export function mutationIntentHeaders(): Record<string, string> {
 	return { [MUTATION_INTENT_HEADER]: MUTATION_INTENT_VALUE };
 }
 
-export function mergeProcedureHeaders(
-	clientType: ApiClientType | undefined,
-	extraHeaders: Record<string, string> | undefined,
-	headers: Record<string, string> | undefined,
-): Record<string, string> {
-	return { ...mutationIntentHeaders(), ...clientTypeHeaders(clientType), ...extraHeaders, ...headers };
+/**
+ * The headers of one procedure call. The procedure's own headers come first;
+ * the mutation-intent and client-type headers come last, so nothing a call
+ * site passes can drop or rewrite them.
+ */
+export function mergeProcedureHeaders(clientType: AuthClientType, headers: Record<string, string> | undefined): Record<string, string> {
+	return { ...headers, ...mutationIntentHeaders(), ...clientTypeHeader(clientType) };
 }
 
 export const RefreshResultSchema = z.enum(["ok", "expired", "transient"]);
@@ -117,23 +97,34 @@ export type RefreshCall = () => Promise<RefreshResult>;
 /** After a transient refresh failure, further refreshes are skipped for this long (mirrors the proxy's fall-through). */
 export const REFRESH_TRANSIENT_COOLDOWN_MS = 30_000;
 
+/** The one key of a tab's refresh breaker: a tab has one session. */
+const TAB_SESSION_KEY = "session";
+
+/** Every tracked key of a single-session breaker. */
+const SINGLE_SESSION_KEYS = 1;
+
 /**
  * Wraps a refresh so a dead API is not re-hit on every 401: inside the
  * cooldown that follows a transient failure, the call resolves `"transient"`
- * without touching the API. An expired session or a success re-arms nothing.
+ * without touching the API. An expired session or a success settles it.
  * Keeps how the refresh ended, so callers can tell a dead session from an
- * unreachable API.
+ * unreachable API. Same breaker as the route proxy
+ * (`../auth/transient-failure-breaker.ts`), with one key: a tab has one session.
  */
 export function createRefreshCooldown(refresh: RefreshCall, cooldownMs = REFRESH_TRANSIENT_COOLDOWN_MS): RefreshCall {
-	let lastTransientFailureAt: number | null = null;
+	const breaker = createTransientFailureBreaker({ cooldownMs, circuitThreshold: 1, circuitWindowMs: cooldownMs, maxTrackedKeys: SINGLE_SESSION_KEYS });
 
 	return async (): Promise<RefreshResult> => {
-		if (lastTransientFailureAt !== null && Date.now() - lastTransientFailureAt < cooldownMs) {
+		if (breaker.isCoolingDown(TAB_SESSION_KEY)) {
 			return "transient";
 		}
 
 		const result = await refresh();
-		lastTransientFailureAt = result === "transient" ? Date.now() : null;
+		if (result === "transient") {
+			breaker.recordTransientFailure(TAB_SESSION_KEY);
+		} else {
+			breaker.recordSettled(TAB_SESSION_KEY);
+		}
 		return result;
 	};
 }
@@ -162,12 +153,11 @@ export interface ApiErrorExtras {
 /**
  * A failed API call. The API answers every error with the envelope
  * `{ success: false, error: { code, message, details? }, meta: { correlationId, timestamp } }`
- * (docs/error-model.md); this class flattens it so existing UI code keeps
+ * (docs/technical/api/errors.md); this class flattens it so existing UI code keeps
  * working unchanged:
  *
  * - `error` / `code` — the stable machine code (`"INVALID_CREDENTIALS"`)
  * - `statusCode` — the HTTP status of the response
- * - `lockedUntil` / `remainingSeconds` — lifted from `details` on `ACCOUNT_LOCKED`
  * - `details`, `correlationId` — the rest of the envelope (quote the id in support tickets)
  */
 export class ApiError extends Error implements ApiErrorBody {
@@ -175,8 +165,6 @@ export class ApiError extends Error implements ApiErrorBody {
 	public readonly error?: string | undefined;
 	public readonly code?: string | undefined;
 	public readonly statusCode?: number | undefined;
-	public readonly lockedUntil?: EpochMs | undefined;
-	public readonly remainingSeconds?: number | undefined;
 	public readonly details?: ApiErrorDetails | undefined;
 	public readonly correlationId?: string | undefined;
 
@@ -186,22 +174,14 @@ export class ApiError extends Error implements ApiErrorBody {
 		this.error = body.error;
 		this.code = body.error;
 		this.statusCode = body.statusCode;
-		this.lockedUntil = body.lockedUntil;
-		this.remainingSeconds = body.remainingSeconds;
 		this.details = extras.details;
 		this.correlationId = extras.correlationId;
 	}
 
 	/** Build from the API's standard error envelope plus the HTTP status it arrived with. */
 	public static fromEnvelope(envelope: ApiErrorResponse, httpStatus: number): ApiError {
-		const lockout = ApiLockoutDetailsSchema.safeParse(envelope.error.details ?? {});
 		return new ApiError(
-			{
-				message: envelope.error.message,
-				error: envelope.error.code,
-				statusCode: httpStatus,
-				...(lockout.success ? { lockedUntil: lockout.data.lockedUntil, remainingSeconds: lockout.data.remainingSeconds } : {}),
-			},
+			{ message: envelope.error.message, error: envelope.error.code, statusCode: httpStatus },
 			{ details: envelope.error.details, correlationId: envelope.meta.correlationId },
 		);
 	}
@@ -379,49 +359,6 @@ function buildUrl(baseUrl: string, path: string, query?: QueryParams, version?: 
 	return url.toString();
 }
 
-function versionOfUrl(url: string): string | undefined {
-	const match = /\/api\/(v\d+)\//.exec(url);
-	return match?.[1];
-}
-
-let cachedVersionManifest: ApiVersionManifest | null | undefined;
-
-async function loadVersionManifest(baseUrl: string): Promise<ApiVersionManifest | null> {
-	if (cachedVersionManifest !== undefined) return cachedVersionManifest;
-	try {
-		const response: Response = await fetch(`${baseUrl}/version`, {
-			headers: { Accept: "application/json" },
-			cache: "no-store",
-		});
-		if (!response.ok) {
-			cachedVersionManifest = null;
-			return null;
-		}
-		cachedVersionManifest = ApiVersionManifestSchema.parse(await response.json());
-		return cachedVersionManifest;
-	} catch {
-		cachedVersionManifest = null;
-		return null;
-	}
-}
-
-/**
- * A 2xx body as JSON. A body that is not JSON at all breaks the contract just
- * like a mismatching one, so it becomes the same typed
- * {@link ApiResponseContractError} — never a transport failure (status 0),
- * which callers read as "the API is unreachable".
- */
-function parseSuccessBody(text: string, source: ResponseContractSource): DataValue {
-	if (text.length === 0) {
-		return null;
-	}
-	try {
-		return z.custom<DataValue>().parse(JSON.parse(text));
-	} catch {
-		throw new ApiResponseContractError(source, [{ path: "root", message: "Response body is not valid JSON" }]);
-	}
-}
-
 function buildHeaders(baseHeaders: Record<string, string> | undefined): Record<string, string> {
 	return {
 		Accept: "application/json",
@@ -473,9 +410,8 @@ async function executeHttp<T, Body = undefined>(
 
 			const source: ResponseContractSource = { method, url: targetUrl, status: res.status };
 			const text: string = isJson ? await res.text() : "";
-			const raw: DataValue = parseSuccessBody(text, source);
 			// The one response-validation point of the browser transport (ADR 022).
-			const data: T = parseResponseContract(responseSchema, raw, source);
+			const data: T = parseResponseText(responseSchema, text, source);
 
 			return { ok: true, status: res.status, data };
 		} catch (error) {
@@ -510,14 +446,6 @@ async function executeHttp<T, Body = undefined>(
 		return { ok: false, status: result.status, data: null, error: "Unauthorized" };
 	}
 
-	if (result.status === 404) {
-		const requestedVersion: string | undefined = versionOfUrl(url);
-		const manifest: ApiVersionManifest | null = await loadVersionManifest(baseUrl);
-		if (requestedVersion !== undefined && manifest !== null && manifest.current !== requestedVersion) {
-			result = await execute(buildUrl(baseUrl, path, options?.query, manifest.current));
-		}
-	}
-
 	return result;
 }
 
@@ -536,7 +464,7 @@ function procedureHeaders<Input extends SerializableInput, Resp extends DataValu
 	def: QueryDef<Input, Resp> | MutationDef<Input, Resp>,
 	options?: ProcedureCallOptions,
 ): Record<string, string> {
-	return mergeProcedureHeaders(context.clientType, context.extraHeaders, {
+	return mergeProcedureHeaders(context.clientType, {
 		...def.baseOptions?.headers,
 		...options?.headers,
 	});

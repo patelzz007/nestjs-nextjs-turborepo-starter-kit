@@ -12,7 +12,7 @@ order: 20
 
 ## Status
 
-Accepted (2026-10-01) — implementation scheduled for roadmap Phase F.
+Accepted (2026-10-01). Not implemented as of 2026-10-04: there is no `PaymentProvider` port in `apps/api` yet. (The "roadmap" this ADR originally referenced was retired.)
 
 ## Context
 
@@ -31,7 +31,7 @@ no payment code — only `Plan`, `OrganizationEntitlement` and `OrganizationQuot
 - Ship a deterministic **fake adapter** for tests and local development. No real provider (Stripe,
   PayPal) is integrated until a product needs one.
 - Payment operations are idempotent by construction (`Idempotency-Key`, see
-  [Error model](../error-model.md) and ADR 016).
+  [Error model](../technical/api/errors.md) and ADR 016).
 
 ## Consequences
 

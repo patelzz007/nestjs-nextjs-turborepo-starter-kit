@@ -1,11 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { setInterval, clearInterval } from "timers";
 
 import { LogServiceOptionsSchema, MetadataValueSchema, type LogServiceOptions } from "@workspace/shared";
 
 import { RequestContextService, type RequestLogFields } from "../../common/context/request-context";
 import { redactSecrets } from "../../common/logging/redaction";
-import { TypedConfigService } from "../../config/typed-config.service";
 
 export type LogOptions = LogServiceOptions;
 
@@ -13,8 +11,8 @@ export type LogOptions = LogServiceOptions;
  * Application-level structured logging service.
  *
  * Wraps NestJS's built-in Logger and provides a consistent interface
- * for info, warn, and error log levels with metadata support.
- * Includes memory monitoring and leak detection capabilities.
+ * for info, warn, and error log levels with metadata support. (Memory leak
+ * detection is a separate concern: `memory/memory-monitor.service.ts`.)
  *
  * Every line written inside a request carries that request's `correlationId`
  * (plus `userId` / `impersonatorId` / `organizationId` once known), read from
@@ -23,22 +21,8 @@ export type LogOptions = LogServiceOptions;
 @Injectable()
 export class LogService {
 	private readonly logger: Logger = new Logger(LogService.name);
-	private memoryMonitorInterval: NodeJS.Timeout | null = null;
-	private memoryBaseline: number | null = null;
-	private memorySamples: number[] = [];
-	private readonly maxSamples = 60; // Keep last 60 samples (5 minutes if sampling every 5s)
-	private readonly memoryLeakThresholdMb = 50; // Alert if growth > 50MB over baseline
-	private readonly sampleIntervalMs = 5000; // Sample every 5 seconds
 
-	public constructor(
-		config: TypedConfigService,
-		private readonly requestContext: RequestContextService,
-	) {
-		// Memory monitoring: always in production, opt-in elsewhere (MEMORY_MONITORING=true).
-		if (config.memoryMonitoring) {
-			this.startMemoryMonitoring();
-		}
-	}
+	public constructor(private readonly requestContext: RequestContextService) {}
 
 	public info(message: string, options?: LogOptions): void {
 		const parsed = options === undefined ? undefined : LogServiceOptionsSchema.parse(options);
@@ -62,126 +46,6 @@ export class LogService {
 		const logContext: string = parsed?.context ?? LogService.name;
 		const formatted: string = this.formatMessage(message, parsed);
 		this.logger.error(formatted, trace, logContext);
-	}
-
-	/**
-	 * Start memory monitoring to detect potential memory leaks
-	 */
-	private startMemoryMonitoring(): void {
-		if (this.memoryMonitorInterval !== null) {
-			return; // Already started
-		}
-
-		this.logger.log("Starting memory monitoring for leak detection");
-
-		// Take initial baseline
-		this.takeMemorySample(true);
-
-		// Set up interval sampling
-		this.memoryMonitorInterval = setInterval(() => {
-			this.takeMemorySample(false);
-		}, this.sampleIntervalMs);
-	}
-
-	/**
-	 * Stop memory monitoring
-	 */
-	public stopMemoryMonitoring(): void {
-		if (this.memoryMonitorInterval !== null) {
-			clearInterval(this.memoryMonitorInterval);
-			this.memoryMonitorInterval = null;
-			this.logger.log("Memory monitoring stopped");
-		}
-	}
-
-	/**
-	 * Take a memory sample and check for leaks
-	 */
-	private takeMemorySample(isBaseline = false): void {
-		try {
-			const memoryUsage = process.memoryUsage();
-			const heapUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
-
-			if (isBaseline) {
-				this.memoryBaseline = heapUsedMB;
-				this.memorySamples = [heapUsedMB];
-				this.logger.log(`Memory baseline established: ${String(heapUsedMB)} MB`, {
-					context: "MemoryMonitor",
-					metadata: { heapUsedMB, rssMB: Math.round(memoryUsage.rss / 1024 / 1024) },
-				});
-				return;
-			}
-
-			// Add to samples array (maintain fixed size)
-			this.memorySamples.push(heapUsedMB);
-			if (this.memorySamples.length > this.maxSamples) {
-				this.memorySamples.shift();
-			}
-
-			// Check for memory leak
-			if (this.memoryBaseline !== null) {
-				const memoryGrowthMB = heapUsedMB - this.memoryBaseline;
-
-				// Log memory stats periodically
-				if (this.memorySamples.length % 12 === 0) {
-					// Every minute (12 * 5s)
-					this.logger.log(`Memory usage update: ${String(heapUsedMB)} MB (baseline: ${String(this.memoryBaseline)} MB, growth: ${String(memoryGrowthMB)} MB)`, {
-						context: "MemoryMonitor",
-						metadata: {
-							heapUsedMB,
-							baselineMB: this.memoryBaseline,
-							growthMB: memoryGrowthMB,
-							samples: this.memorySamples.length,
-						},
-					});
-				}
-
-				// Alert if memory growth exceeds threshold
-				if (memoryGrowthMB > this.memoryLeakThresholdMb) {
-					this.logger.warn(`Potential memory leak detected: ${String(memoryGrowthMB)} MB growth since baseline`, {
-						context: "MemoryMonitor",
-						metadata: {
-							heapUsedMB,
-							baselineMB: this.memoryBaseline,
-							growthMB: memoryGrowthMB,
-							thresholdMB: this.memoryLeakThresholdMb,
-							samples: this.memorySamples.length,
-							trend: this.calculateMemoryTrend(),
-						},
-					});
-				}
-			}
-		} catch (error) {
-			const message: string = error instanceof Error ? error.message : String(error);
-			this.logger.error(`Error in memory monitoring: ${message}`, {
-				context: "MemoryMonitor",
-				metadata: { error: message },
-			});
-		}
-	}
-
-	/**
-	 * Calculate memory trend over recent samples
-	 */
-	private calculateMemoryTrend(): string {
-		if (this.memorySamples.length < 10) {
-			return "insufficient_data";
-		}
-
-		const recentSamples = this.memorySamples.slice(-10);
-		const firstHalf = recentSamples.slice(0, 5);
-		const secondHalf = recentSamples.slice(5, 10);
-
-		const firstAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length;
-		const secondAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length;
-
-		const trend = secondAvg - firstAvg;
-
-		if (trend > 5) return "increasing_rapidly";
-		if (trend > 2) return "increasing";
-		if (trend < -5) return "decreasing_rapidly";
-		if (trend < -2) return "decreasing";
-		return "stable";
 	}
 
 	private formatMessage(message: string, options?: LogOptions): string {

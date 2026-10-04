@@ -1,45 +1,41 @@
-import type { Prisma } from "@prisma/client";
-import { MINOR_UNITS_PER_MAJOR, RewardRulesSchema, type RedemptionCheckoutInput, type RedemptionInvalidReason } from "@workspace/shared";
+import type { RedemptionCheckoutInput, RedemptionInvalidReason } from "@workspace/shared";
 
 import type { RewardClaimRedemptionLookup } from "../repositories/reward-claim.repository";
-import { sha256Hex } from "./reward-crypto.util";
+import { sha256Hex } from "../../../common/crypto/sha256";
 
-/** `rules.minSpendMyr` (ringgit, possibly fractional) → minor units; `null` when the reward has no valid minimum. */
-export function minSpendMinorFromRules(rules: Prisma.JsonValue | null): number | null {
-	if (rules === null) {
-		return null;
-	}
-	const parsed = RewardRulesSchema.safeParse(rules);
-	if (!parsed.success || parsed.data.minSpendMyr === undefined) {
-		return null;
-	}
-	return Math.round(parsed.data.minSpendMyr * MINOR_UNITS_PER_MAJOR);
-}
+/** Where a reward may be redeemed, given the store of the POS request. */
+export type StoreEligibility = "VALID" | "NOT_VALID_AT_STORE" | "STORE_REQUIRED";
 
 /**
  * Whether a reward may be redeemed at the store a POS request comes from.
  * `locationId === null` means the store is unknown (an organization-wide key
- * on a terminal that was never registered to a store) — there is nothing to
- * narrow against, so only an explicit mismatch is refused.
+ * on a terminal that was never registered to a store). A store-limited reward
+ * then FAILS CLOSED with `STORE_REQUIRED`: without a store there is no way to
+ * prove the redemption happens at one of the reward's stores.
  */
-export function isRewardValidAtStore(reward: Pick<RewardClaimRedemptionLookup["reward"], "locationScopeType" | "locationIds">, locationId: string | null): boolean {
-	if (reward.locationScopeType === "ALL_LOCATIONS" || locationId === null) {
-		return true;
+export function storeEligibility(reward: Pick<RewardClaimRedemptionLookup["reward"], "locationScopeType" | "locationIds">, locationId: string | null): StoreEligibility {
+	if (reward.locationScopeType === "ALL_LOCATIONS") {
+		return "VALID";
 	}
-	return reward.locationIds.includes(locationId);
+	if (locationId === null) {
+		return "STORE_REQUIRED";
+	}
+	return reward.locationIds.includes(locationId) ? "VALID" : "NOT_VALID_AT_STORE";
 }
 
 export interface RedemptionEligibilityInput {
 	readonly lookup: RewardClaimRedemptionLookup;
 	/** The store of the POS request (`null` = unknown). */
 	readonly locationId: string | null;
-	/** The customer read out the backup code instead of showing the QR. */
-	readonly usedBackupCode: boolean;
 	readonly now: number;
 }
 
-/** Why the claim cannot be redeemed now, or `null` when it can. Merchant ownership is checked separately (it is not a POS-displayable state). */
-export function redemptionInvalidReason({ lookup, locationId, usedBackupCode, now }: RedemptionEligibilityInput): RedemptionInvalidReason | null {
+/**
+ * Why the claim cannot be redeemed now, or `null` when it can. Merchant
+ * ownership is not a reason: a code of another merchant is never found
+ * (the lookup is scoped to the calling merchant).
+ */
+export function redemptionInvalidReason({ lookup, locationId, now }: RedemptionEligibilityInput): RedemptionInvalidReason | null {
 	const { claim, reward } = lookup;
 	if (claim.status === "REDEEMED") {
 		return "ALREADY_REDEEMED";
@@ -47,13 +43,8 @@ export function redemptionInvalidReason({ lookup, locationId, usedBackupCode, no
 	if (claim.status === "EXPIRED" || Number(claim.claimExpiresAt) < now) {
 		return "EXPIRED";
 	}
-	if (usedBackupCode && claim.backupLockedUntil !== null && Number(claim.backupLockedUntil) > now) {
-		return "BACKUP_LOCKED";
-	}
-	if (!isRewardValidAtStore(reward, locationId)) {
-		return "NOT_VALID_AT_STORE";
-	}
-	return null;
+	const store = storeEligibility(reward, locationId);
+	return store === "VALID" ? null : store;
 }
 
 /**

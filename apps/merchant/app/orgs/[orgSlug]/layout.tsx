@@ -1,12 +1,10 @@
 import { OrgTenantBootstrap } from "@/components/org/org-tenant-bootstrap";
 import { MerchantShell } from "@/components/merchant-shell";
 import { getMerchantServerSession } from "@/lib/auth/server";
-import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import { isCanonicalOrganizationSlug, resolveOrganizationTenantFromUrlSegment } from "@/lib/org/resolve-slug";
+import { loadMerchantServerContext, readOrganizationSlugCookie } from "@/lib/merchant-server-api";
+import { isCanonicalOrganizationSlug, resolveOrganizationTenantFromUrlSegment, resolvePreferredMembershipSlug } from "@/lib/org/resolve-slug";
 import { loadServerLocationScope, type ServerLocationScope } from "@/lib/org/server-location-scope";
-import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
 import { orgRoutes, ROUTES } from "@/lib/routes";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 interface OrgLayoutProps {
@@ -16,30 +14,29 @@ interface OrgLayoutProps {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The `/orgs/[orgSlug]` shell. The URL owns the tenant:
+ * - an organization-id segment of one of the member's organizations redirects to its canonical slug;
+ * - a segment that is none of the member's organizations redirects to the member's PREFERRED
+ *   organization — the `organizationSlug` cookie, followed only when it names one of their own
+ *   memberships — or, without a valid preference, renders (the page guard denies) / sends a
+ *   member-less user to onboarding.
+ */
 export default async function OrgLayout({ children, params }: OrgLayoutProps): Promise<React.JSX.Element> {
 	const { orgSlug } = await params;
-	const ctx = await loadMerchantServerContext();
-	const session = await getMerchantServerSession();
+	const [ctx, session, storedSlug] = await Promise.all([loadMerchantServerContext(), getMerchantServerSession(), readOrganizationSlugCookie()]);
 	const resolvedTenant = resolveOrganizationTenantFromUrlSegment(ctx.memberships, orgSlug);
+	const preferredSlug = resolvePreferredMembershipSlug(ctx.memberships, storedSlug);
 
 	if (!isCanonicalOrganizationSlug(orgSlug)) {
-		if (resolvedTenant === undefined) {
-			const cookieStore = await cookies();
-			const storedSlug = cookieStore.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;
-			if (storedSlug !== undefined && isCanonicalOrganizationSlug(storedSlug)) {
-				redirect(orgRoutes(storedSlug).dashboard);
-			}
-			redirect(ROUTES.onboarding);
+		if (resolvedTenant !== undefined) {
+			redirect(orgRoutes(resolvedTenant.slug).dashboard);
 		}
-		redirect(orgRoutes(resolvedTenant.slug).dashboard);
+		redirect(preferredSlug !== undefined ? orgRoutes(preferredSlug).dashboard : ROUTES.onboarding);
 	}
 
-	if (resolvedTenant === undefined) {
-		const cookieStore = await cookies();
-		const storedSlug = cookieStore.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;
-		if (storedSlug !== undefined && isCanonicalOrganizationSlug(storedSlug) && storedSlug !== orgSlug) {
-			redirect(orgRoutes(storedSlug).dashboard);
-		}
+	if (resolvedTenant === undefined && preferredSlug !== undefined && preferredSlug !== orgSlug) {
+		redirect(orgRoutes(preferredSlug).dashboard);
 	}
 
 	// Seeds the tenant context (store filter + accessible locations) so the first client render
@@ -51,7 +48,7 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps): P
 			orgSlug={orgSlug}
 			initialLocationId={locationScope?.selectedLocationId ?? null}
 			initialOrganizationContext={locationScope?.organizationContext}
-			initialMemberships={ctx.memberships}
+			initialMemberships={ctx.membershipsEnvelope}
 			initialUser={session.user}
 			initialIsImpersonating={session.isImpersonating}>
 			{resolvedTenant !== undefined ? <OrgTenantBootstrap orgSlug={resolvedTenant.slug} /> : null}

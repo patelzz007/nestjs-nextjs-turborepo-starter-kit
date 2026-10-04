@@ -5,6 +5,7 @@ import { defineListQuery, listFilter, ListSearchSchema } from "../api/list-query
 
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
+import { UserFullNameSchema } from "./profile";
 
 // ── Shared role shape ──────────────────────────────────────────────────────
 
@@ -69,8 +70,8 @@ export const SessionPermissionsResponseSchema = UserPermissionsSchema.extend({
 	capabilities: z.array(CapabilitySlugSchema),
 	isImpersonating: z.boolean().optional(),
 	originalUserId: z.string().optional(),
-	/** Mirrors the current access token's `sessionScope` claim. */
-	sessionScope: SessionScopeSchema.default("full"),
+	/** Mirrors the current access token's `sessionScope` claim. Required: a client must never assume a full session. */
+	sessionScope: SessionScopeSchema,
 	/** Present when `sessionScope` is `restricted`. */
 	enrollmentReason: EnrollmentReasonSchema.optional(),
 });
@@ -78,31 +79,24 @@ export const SessionPermissionsResponseSchema = UserPermissionsSchema.extend({
 export type SessionPermissionsResponse = z.output<typeof SessionPermissionsResponseSchema>;
 
 /**
- * Profile update schema — used when a user updates their own profile.
+ * Admin user update. A user's own profile edit is `UpdateOwnProfileSchema`
+ * (`./profile`, `PATCH /auth/profile`); the name rule is shared with it.
  */
-export const UpdateProfileSchema = z
+export const UpdateUserSchema = z
 	.object({
-		fullName: z.string().min(2, "FullName must be at least 2 characters").max(100, "FullName must be at most 100 characters").optional().meta({
-			description: "User's full name",
-			example: "Jane Doe",
+		fullName: UserFullNameSchema.optional(),
+		roleNames: z
+			.array(z.string())
+			.optional()
+			.meta({
+				description: "List of role names to assign to the user",
+				example: ["Admin", "Manager"],
+			}),
+		isActive: z.boolean().optional().meta({
+			description: "Whether the user account is active",
 		}),
 	})
 	.strict();
-
-export type UpdateProfileInput = z.output<typeof UpdateProfileSchema>;
-
-export const UpdateUserSchema = UpdateProfileSchema.extend({
-	roleNames: z
-		.array(z.string())
-		.optional()
-		.meta({
-			description: "List of role names to assign to the user",
-			example: ["Admin", "Manager"],
-		}),
-	isActive: z.boolean().optional().meta({
-		description: "Whether the user account is active",
-	}),
-}).strict();
 
 export type UpdateUserInput = z.output<typeof UpdateUserSchema>;
 
@@ -140,7 +134,7 @@ export type AdminUserDetail = z.output<typeof AdminUserDetailSchema>;
 export const AdminUserStatusSchema = z.enum(["active", "inactive", "locked"]);
 export type AdminUserStatus = z.output<typeof AdminUserStatusSchema>;
 
-/** `GET /auth/admin/users` list query — see docs/list-queries.md. */
+/** `GET /auth/admin/users` list query — see docs/technical/api/list-queries.md. */
 export const adminUserListQuery = defineListQuery({
 	sortable: ["fullName", "email", "createdAt"],
 	defaultSort: [{ field: "createdAt", direction: "desc" }],

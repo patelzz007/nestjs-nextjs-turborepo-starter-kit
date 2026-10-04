@@ -29,12 +29,13 @@ function toDomain(row: SampleCategoryRow): SampleCategoryEntity {
 		name: row.name,
 		slug: row.slug,
 		sortOrder: row.sortOrder ?? 0,
+		version: row.version,
 		deletedAt: row.deletedAt === null ? null : Number(row.deletedAt),
 		createdAt: Number(row.createdAt),
 		updatedAt: Number(row.updatedAt),
 	};
 }
-// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+// ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 /** Every whitelisted sort field mapped to its column. */
 export const SAMPLE_CATEGORY_SORT_COLUMNS: SortColumns<SampleCategoryListSortField, Prisma.SampleCategoryOrderByWithRelationInput> = {
@@ -91,7 +92,8 @@ function toCreateInput(input: CreateSampleCategoryInput): Prisma.SampleCategoryC
 	};
 }
 
-function toUpdateInput(input: UpdateSampleCategoryInput): Prisma.SampleCategoryUpdateInput {
+/** `version` is the optimistic-lock token — it goes into the update's `where`, never its data. */
+function toUpdateInput(input: UpdateSampleCategoryInput): Prisma.SampleCategoryUpdateManyMutationInput {
 	return {
 		...(input.name === undefined ? {} : { name: input.name }),
 		...(input.slug === undefined ? {} : { slug: input.slug }),
@@ -112,10 +114,17 @@ const SampleCategoryRepositoryPorts = {
 	buildFindByIdWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id }),
 	readDeletedAt: (row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
-	buildUpdateWhere: (id: string): Prisma.SampleCategoryWhereUniqueInput => ({ id }),
-	stampUpdate: (data: Prisma.SampleCategoryUpdateInput): Prisma.SampleCategoryUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.SampleCategoryUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.SampleCategoryUpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
+	buildLiveWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id, deletedAt: null }),
+	buildUniqueWhere: (id: string): Prisma.SampleCategoryWhereUniqueInput => ({ id }),
+	// Optimistic locking: the update applies only to the live row still at the version the client read.
+	buildUpdateWhere: (id: string, input: UpdateSampleCategoryInput): Prisma.SampleCategoryWhereInput => ({ id, deletedAt: null, version: input.version }),
+	stampUpdate: (data: Prisma.SampleCategoryUpdateManyMutationInput): Prisma.SampleCategoryUpdateManyMutationInput => ({
+		...data,
+		version: { increment: 1 },
+		updatedAt: nowEpochMs(),
+	}),
+	stampSoftDelete: (): Prisma.SampleCategoryUpdateManyMutationInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
+	stampRestore: (): Prisma.SampleCategoryUpdateManyMutationInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
 	cascadeSoftDelete: {
 		softDeleteChildren: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
 			await transaction.product.updateMany({
@@ -129,11 +138,12 @@ const SampleCategoryRepositoryPorts = {
 				data: { deletedAt: null, updatedAt: nowEpochMs() },
 			});
 		},
-		softDeleteParent: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
-			await transaction.sampleCategory.update({
-				where: { id: parentId },
+		softDeleteParent: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<number> => {
+			const result = await transaction.sampleCategory.updateMany({
+				where: { id: parentId, deletedAt: null },
 				data: { deletedAt, updatedAt: deletedAt },
 			});
+			return result.count;
 		},
 		restoreParent: async ({ parentId, transaction }: CascadeRestoreParentArgs): Promise<void> => {
 			await transaction.sampleCategory.update({
@@ -154,10 +164,10 @@ export class SampleCategoryRepository extends BaseRepository<
 	Prisma.SampleCategoryWhereInput,
 	Prisma.SampleCategoryOrderByWithRelationInput,
 	Prisma.SampleCategoryCreateInput,
-	Prisma.SampleCategoryUpdateInput,
+	Prisma.SampleCategoryUpdateManyMutationInput,
 	Prisma.SampleCategoryWhereUniqueInput
 > {
 	public constructor(prisma: PrismaService) {
-		super(prisma, SampleCategoryRepositoryPorts, prisma.sampleCategory, { softDelete: true, concurrency: false });
+		super(prisma, SampleCategoryRepositoryPorts, (db: Prisma.TransactionClient) => db.sampleCategory, { softDelete: true });
 	}
 }

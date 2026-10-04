@@ -24,9 +24,9 @@
 </p>
 
 <p align="center">
-  <a href="./docs/getting-started.md"><strong>Getting started</strong></a>
+  <a href="./docs/technical/getting-started.md"><strong>Getting started</strong></a>
   ·
-  <a href="./docs/architecture.md">Architecture</a>
+  <a href="./docs/technical/architecture.md">Architecture</a>
   ·
   <a href="./docs/README.md">All docs</a>
   ·
@@ -88,7 +88,7 @@ packages/
 
 ## Quick start
 
-**Prerequisites:** Node 20.19+ (CI uses the 24 LTS line), pnpm 12, and either Docker (`pnpm docker:up` starts PostgreSQL 18, Redis, Kafka, RabbitMQ, Mailpit and MinIO — see [local infrastructure](./docs/operations/local-infrastructure.md)) or your own PostgreSQL 18.
+**Prerequisites:** Node 20.19+ (CI uses the 24 LTS line), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) and Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ, Bull Board and Mailpit — see [local infrastructure](./docs/technical/operations/local-infrastructure.md)).
 
 ```bash
 # Install dependencies + build shared workspace package
@@ -111,9 +111,8 @@ Copy-Item apps/merchant/.env.example apps/merchant/.env
 
 # Fill in secrets and DATABASE_URL inside apps/api/.env
 
-# Start the local stack (creates the database named in apps/api/.env.example)
+# Create the database named in DATABASE_URL in your PostgreSQL 18, then start the rest of the stack
 pnpm docker:up
-# …or, with your own PostgreSQL, create the database named in DATABASE_URL first
 
 pnpm setup:db                         # build shared → generate → deploy → RLS → seed
 
@@ -148,7 +147,7 @@ pnpm dev:merchant
 pnpm dev:api
 ```
 
-> **New here?** Follow the full [A-to-Z setup guide](./docs/getting-started.md) — prerequisites, every env var, PostgreSQL setup, seeded login accounts, best practices, and troubleshooting.
+> **New here?** Follow [Getting started](./docs/technical/getting-started.md) — prerequisites, env files, database, demo accounts and troubleshooting.
 
 ---
 
@@ -163,10 +162,11 @@ pnpm dev:api
 | `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:merchant` / `pnpm dev:api` | Start individual apps |
 | `pnpm build` | Build all workspaces |
 | `pnpm lint` / `pnpm format` / `pnpm typecheck` / `pnpm test` | Quality gates across the monorepo |
-| `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/prisma.md](./docs/prisma.md) |
-| `pnpm db:seed -- --scenario empty\|development\|enterprise [--seed <n>]` | Seed a specific dataset — see [seed scenarios](./docs/getting-started.md#seed-scenarios) |
-| `pnpm docker:up` / `docker:down` / `docker:ps` / `docker:logs` | Local infrastructure — see [docs/operations/local-infrastructure.md](./docs/operations/local-infrastructure.md) |
-| `pnpm test:e2e` / `db:check-rls-manifest` / `docs:check-links` / `secrets:scan` | The extra checks CI runs — see [docs/operations/ci.md](./docs/operations/ci.md) |
+| `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/technical/database.md](./docs/technical/database.md) |
+| `pnpm db:seed -- --scenario empty\|development\|enterprise [--seed <n>]` | Seed a specific dataset — see [seed data](./docs/technical/database.md#seed-data) |
+| `pnpm docker:up` / `docker:down` / `docker:ps` / `docker:logs` | Local infrastructure — see [docs/technical/operations/local-infrastructure.md](./docs/technical/operations/local-infrastructure.md) |
+| `pnpm test:e2e` / `db:check-rls-manifest` / `docs:check-links` / `secrets:scan` | The extra checks CI runs — see [docs/technical/operations/ci.md](./docs/technical/operations/ci.md) |
+| `pnpm docs:api` | Re-render the generated API reference from `docs/generated/` (see [API conventions](./docs/technical/api/README.md#how-the-reference-is-generated)) |
 | `pnpm deps:check` / `deps:fix` / `deps:list` | Shared dependency version hygiene (syncpack) |
 | `pnpm kill:all` | Free dev ports 3000–3003 and 8080 |
 | `pnpm dlx shadcn@latest add <component> -c apps/web` | Add a shadcn component to `packages/ui` |
@@ -175,9 +175,9 @@ pnpm dev:api
 
 ## Documentation
 
-Start with **[Getting started (A-to-Z)](./docs/getting-started.md)**, then **[Architecture](./docs/architecture.md)**.
+Start with **[Getting started (A-to-Z)](./docs/technical/getting-started.md)**, then **[Architecture](./docs/technical/architecture.md)**.
 
-The full index lives in **[docs/README.md](./docs/README.md)** — auth, Prisma, RBAC, UI audit, token refresh, and more.
+The full index lives in **[docs/README.md](./docs/README.md)**: the [user guide](./docs/user-guide/README.md) (operator flows with flowcharts), the [technical documentation](./docs/technical/README.md) and the generated [API reference](./docs/technical/api-reference/README.md).
 
 ---
 

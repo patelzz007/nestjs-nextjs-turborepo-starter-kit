@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import type {
@@ -19,7 +19,9 @@ import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
-import { RewardRepository } from "../repositories/reward.repository";
+import { RewardRepository, type RewardOrgConsumerSummary } from "../repositories/reward.repository";
+import { isRewardWithinScope } from "../utils/merchant-location-scope.util";
+import { toStoredRewardRules } from "../utils/reward-rules.util";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { MerchantContextService } from "./merchant-context.service";
@@ -42,9 +44,20 @@ export class MerchantRewardService {
 
 	public async listRewards(actor: MerchantActor, query: MerchantRewardListQuery = {}): Promise<RewardResponse[]> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_rewards");
-		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
-		const rows = await this.rewardRepository.listConsumerByOrganization(actor.organizationId, locationId);
+		const scope = await this.merchantContext.resolveLocationScope(actor, query.locationId);
+		const rows = await this.rewardRepository.listConsumerByOrganization(actor.organizationId, scope);
 		return rows.map((row) => mapRewardToResponse(row, row.organization));
+	}
+
+	/** One reward as the merchant sees it; a reward not offered at any of the caller's stores is 404, exactly as it is absent from {@link listRewards}. */
+	public async getReward(actor: MerchantActor, rewardId: string): Promise<RewardResponse> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:view_rewards");
+		const scope = await this.merchantContext.resolveLocationScope(actor, undefined);
+		const row = await this.rewardRepository.findConsumerByOrganization(actor.organizationId, rewardId, scope);
+		if (row === null) {
+			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });
+		}
+		return mapRewardToResponse(row, row.organization);
 	}
 
 	public async createReward(actor: MerchantActor, input: MerchantCreateRewardInput): Promise<RewardResponse> {
@@ -71,7 +84,7 @@ export class MerchantRewardService {
 				rewardKind: "CONSUMER",
 				category: input.category,
 				placeholderImageKey: `category-${input.category}`,
-				...(input.rules === undefined ? {} : { rules: input.rules }),
+				...(input.rules === undefined ? {} : toStoredRewardRules(input.rules)),
 				quantityTotal: input.quantityTotal,
 				quantityRemaining: input.quantityTotal,
 				startDate: input.startDate ?? null,
@@ -128,6 +141,11 @@ export class MerchantRewardService {
 		requestedScopeType: OrganizationLocationScopeType,
 		requestedLocationIds: readonly string[],
 	): Promise<{ readonly locationScopeType: OrganizationLocationScopeType; readonly locationIds: string[] }> {
+		const actorScope = await this.merchantContext.resolveLocationScope(actor, undefined);
+		if (actorScope.kind === "SELECTED_LOCATIONS") {
+			return this.resolveStoreLimitedRewardScope(actor, actorScope.locationIds, requestedScopeType, requestedLocationIds);
+		}
+
 		const locationCount = await this.rewardRepository.countOrganizationLocations(actor.organizationId);
 
 		if (locationCount <= 1) {
@@ -148,10 +166,34 @@ export class MerchantRewardService {
 			});
 		}
 
-		if (actor.kind === "user" && actor.userId !== null && actor.orgSlug !== null) {
-			for (const locationId of validLocationIds) {
-				await this.merchantContext.assertAccessibleLocationForUser(actor.userId, actor.orgSlug, locationId);
-			}
+		return { locationScopeType: "SELECTED", locationIds: validLocationIds };
+	}
+
+	/**
+	 * A store-limited actor (member or store-scoped API key) may only offer a
+	 * reward at its own stores: an organization-wide reward, or one that also
+	 * names another store, would reach stores it may not manage.
+	 */
+	private async resolveStoreLimitedRewardScope(
+		actor: MerchantActor,
+		actorLocationIds: readonly string[],
+		requestedScopeType: OrganizationLocationScopeType,
+		requestedLocationIds: readonly string[],
+	): Promise<{ readonly locationScopeType: OrganizationLocationScopeType; readonly locationIds: string[] }> {
+		const uniqueLocationIds = [...new Set(requestedLocationIds)];
+		if (requestedScopeType === "ALL_LOCATIONS" || uniqueLocationIds.some((locationId) => !actorLocationIds.includes(locationId))) {
+			throw new ForbiddenException({
+				message: "You can only offer rewards at the stores you manage — select one or more of your stores",
+				error: "ORGANIZATION_LOCATION_FORBIDDEN",
+			});
+		}
+
+		const validLocationIds = await this.rewardRepository.findOrganizationLocationIds(actor.organizationId, uniqueLocationIds);
+		if (validLocationIds.length !== uniqueLocationIds.length) {
+			throw new BadRequestException({
+				message: "One or more selected stores are invalid for this organization",
+				error: "REWARD_LOCATION_INVALID",
+			});
 		}
 
 		return { locationScopeType: "SELECTED", locationIds: validLocationIds };
@@ -159,9 +201,7 @@ export class MerchantRewardService {
 
 	public async updateReward(actor: MerchantActor, rewardId: string, input: MerchantUpdateRewardInput): Promise<RewardResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
-		const orgId = actor.organizationId;
-
-		const reward = await this.findOrgConsumerReward(orgId, rewardId);
+		const reward = await this.findManageableReward(actor, rewardId);
 
 		if (reward.status !== "DRAFT" && reward.status !== "PENDING_REVIEW") {
 			throw new BadRequestException({ message: "Reward cannot be edited in current status", error: "REWARD_NOT_EDITABLE" });
@@ -176,7 +216,7 @@ export class MerchantRewardService {
 			...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
 			...(input.expiryDate !== undefined ? { expiryDate: input.expiryDate } : {}),
 			...(input.referralsEnabled !== undefined ? { referralsEnabled: input.referralsEnabled } : {}),
-			...(input.rules !== undefined ? { rules: input.rules } : {}),
+			...(input.rules !== undefined ? toStoredRewardRules(input.rules) : {}),
 		};
 
 		if (input.quantityTotal !== undefined) {
@@ -204,9 +244,7 @@ export class MerchantRewardService {
 
 	public async publishReward(actor: MerchantActor, rewardId: string): Promise<RewardResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
-		const orgId = actor.organizationId;
-
-		const reward = await this.findOrgConsumerReward(orgId, rewardId);
+		const reward = await this.findManageableReward(actor, rewardId);
 
 		if (reward.status !== "DRAFT") {
 			throw new BadRequestException({ message: "Only draft rewards can be published", error: "REWARD_NOT_DRAFT" });
@@ -235,8 +273,8 @@ export class MerchantRewardService {
 
 	public async listRedemptions(actor: MerchantActor, query: MerchantRedemptionListQuery): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_redemptions");
-		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
-		const result = await this.redemptionRepository.listForMerchant(actor.organizationId, locationId, query);
+		const scope = await this.merchantContext.resolveLocationScope(actor, query.locationId);
+		const result = await this.redemptionRepository.listForMerchant(actor.organizationId, scope, query);
 
 		return toPaginatedServiceResult(
 			mapListResult(result, (row) => ({
@@ -320,19 +358,18 @@ export class MerchantRewardService {
 		await this.outbox.enqueueInTransaction(tx, { type: "reward.platform", payload });
 	}
 
-	private async findOrgConsumerReward(
-		organizationId: string,
-		rewardId: string,
-	): Promise<{
-		id: string;
-		status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "EXPIRED" | "DISABLED";
-		referrerRewardId: string | null;
-		quantityTotal: number;
-		quantityRemaining: number;
-	}> {
-		const reward = await this.rewardRepository.findOrgConsumerReward(organizationId, rewardId);
+	/**
+	 * The organization's consumer reward, if `actor` may manage it: a
+	 * store-limited actor only manages rewards offered exclusively at its own
+	 * stores. Anything else is reported as not found (no existence oracle).
+	 */
+	private async findManageableReward(actor: MerchantActor, rewardId: string): Promise<RewardOrgConsumerSummary> {
+		const [reward, scope] = await Promise.all([
+			this.rewardRepository.findOrgConsumerReward(actor.organizationId, rewardId),
+			this.merchantContext.resolveLocationScope(actor, undefined),
+		]);
 
-		if (reward === null) {
+		if (reward === null || !isRewardWithinScope(scope, reward)) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });
 		}
 

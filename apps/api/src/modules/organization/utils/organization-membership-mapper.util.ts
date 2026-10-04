@@ -13,9 +13,13 @@ export function mapMembershipLocationScope(membership: MembershipWithScopes): {
 	readonly locationScopeType: OrganizationMembershipResponse["locationScopeType"];
 	readonly locationIds: string[];
 } {
-	// No scope rows means the membership spans every location.
-	const locationScopeType = membership.locationScopes[0]?.scopeType ?? "ALL_LOCATIONS";
-	const locationIds = membership.locationScopes.flatMap((scope) => (scope.locationId === null ? [] : [scope.locationId]));
+	// Fail closed: only explicit ALL_LOCATIONS rows (and no SELECTED rows) grant
+	// every store. No rows — or any SELECTED row — means exactly the listed
+	// stores, so a membership with no scope rows reaches no store at all.
+	const locationIds = membership.locationScopes.flatMap((scope) => (scope.scopeType === "SELECTED" && scope.locationId !== null ? [scope.locationId] : []));
+	const hasSelectedRow = membership.locationScopes.some((scope) => scope.scopeType === "SELECTED");
+	const hasAllLocationsRow = membership.locationScopes.some((scope) => scope.scopeType === "ALL_LOCATIONS");
+	const locationScopeType: OrganizationMembershipResponse["locationScopeType"] = hasAllLocationsRow && !hasSelectedRow ? "ALL_LOCATIONS" : "SELECTED";
 
 	return { locationScopeType, locationIds };
 }

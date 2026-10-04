@@ -13,7 +13,7 @@ order: 22
 ## Status
 
 Accepted (2026-10-01) — implemented in roadmap Phase C2 + C3. Guide:
-[Response contracts](../response-contracts.md).
+[Response contracts](../technical/api/response-contracts.md).
 
 ## Context
 
@@ -137,8 +137,8 @@ not contracts at all:
 
 ## References
 
-- [Response contracts guide](../response-contracts.md)
-- [API routes §13](../api-routes.md#13-api-docs-swagger)
+- [Response contracts guide](../technical/api/response-contracts.md)
+- [API routes §9](../technical/api/routes.md#9-api-docs-swagger)
 - [ADR 016 — Standard error envelope](./016-standard-error-envelope.md)
 - [ADR 021 — List-query grammar](./021-list-query-grammar.md)
 - `rules/05-contracts-zod-api.md` → "Response validation"

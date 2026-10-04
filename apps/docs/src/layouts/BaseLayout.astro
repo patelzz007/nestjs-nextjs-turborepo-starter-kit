@@ -1,6 +1,8 @@
 ---
 import "@/styles/global.css";
 
+import { Font } from "astro:assets";
+
 import Header from "@/components/Header.astro";
 import MobileDrawer from "@/components/MobileDrawer.astro";
 import SearchDialog from "@/components/SearchDialog.astro";
@@ -49,9 +51,12 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 		{imageUrl !== undefined && <meta property="og:image" content={imageUrl} />}
 		<meta name="twitter:card" content={imageUrl === undefined ? "summary" : "summary_large_image"} />
 		<meta name="theme-color" content="#ffffff" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+		<!--
+			Self-hosted fonts (configured in astro.config.ts). Only the upright body face is
+			preloaded: it paints nearly every glyph above the fold. Italic and code load on use.
+		-->
+		<Font cssVariable="--font-ibm-plex-sans" preload={[{ style: "normal" }]} />
+		<Font cssVariable="--font-jetbrains-mono" />
 		<!-- Applies the saved / OS theme before first paint (keep the key in sync with src/scripts/theme.ts). -->
 		<script is:inline>
 			(function () {

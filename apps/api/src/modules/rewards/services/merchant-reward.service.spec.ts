@@ -1,3 +1,4 @@
+import { NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +12,8 @@ import { MerchantContextService } from "./merchant-context.service";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
+import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
+import { selectedLocationsScope } from "../types/merchant-location-scope";
 
 vi.mock("../../../prisma/prisma.service", () => ({
 	PrismaService: class {},
@@ -133,5 +136,48 @@ describe("MerchantRewardService maintenance events (transactional outbox)", () =
 		// `metadata` is compared exactly (it was a plain object inside the old objectContaining).
 		expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { event: "reward.claim_expired" } });
 		expect(outbox.enqueueInTransaction.mock.lastCall?.[1].payload).toHaveProperty("metadata", { claimId: CLAIM_ID, isReferrerCredit: true });
+	});
+});
+
+describe("MerchantRewardService.getReward (store scope)", () => {
+	const STORE_A = "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f";
+	const actor = { kind: "user", userId: USER_ID, organizationId: ORGANIZATION_ID, orgSlug: "brew" } satisfies MerchantActor;
+	const rewardRepository = { findConsumerByOrganization: vi.fn<RewardRepository["findConsumerByOrganization"]>() };
+	const merchantContext = {
+		requireActorCapability: vi.fn<MerchantContextService["requireActorCapability"]>(),
+		resolveLocationScope: vi.fn<MerchantContextService["resolveLocationScope"]>(),
+	};
+
+	async function createService(): Promise<MerchantRewardService> {
+		const moduleRef = await Test.createTestingModule({
+			providers: [
+				MerchantRewardService,
+				{ provide: RewardRepository, useValue: rewardRepository },
+				{ provide: RewardClaimRepository, useValue: {} },
+				{ provide: RewardRedemptionRepository, useValue: {} },
+				{ provide: MerchantContextService, useValue: merchantContext },
+				{ provide: OrganizationRepository, useValue: {} },
+				{ provide: RewardNotificationService, useValue: {} },
+				{ provide: PlatformOutboxService, useValue: {} },
+			],
+		}).compile();
+		return moduleRef.get(MerchantRewardService);
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		merchantContext.requireActorCapability.mockResolvedValue(undefined);
+	});
+
+	it("looks the reward up within the caller's store scope and answers 404 when it is not offered there", async () => {
+		const scope = selectedLocationsScope([STORE_A]);
+		merchantContext.resolveLocationScope.mockResolvedValue(scope);
+		rewardRepository.findConsumerByOrganization.mockResolvedValue(null);
+		const service = await createService();
+
+		await expect(service.getReward(actor, REWARD_ID)).rejects.toBeInstanceOf(NotFoundException);
+		expect(merchantContext.requireActorCapability).toHaveBeenCalledWith(actor, "merchant:view_rewards");
+		expect(merchantContext.resolveLocationScope).toHaveBeenCalledWith(actor, undefined);
+		expect(rewardRepository.findConsumerByOrganization).toHaveBeenCalledWith(ORGANIZATION_ID, REWARD_ID, scope);
 	});
 });

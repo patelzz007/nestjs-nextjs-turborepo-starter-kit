@@ -1,7 +1,7 @@
 "use client";
 
 import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
+import { breadcrumbPageLabel, type BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
 import { PanelShellContent } from "@workspace/ui/components/navigation/panel-shell-content";
 import { Sidebar, SidebarInset, SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
 import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar/labels";
@@ -10,7 +10,7 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { useIsDesktop } from "@workspace/ui/hooks/use-mobile";
@@ -23,24 +23,21 @@ import { buildSearchableItems } from "@/lib/palette/search";
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
 import { useSuperAdminStatus } from "@/lib/session/super-admin";
 import { RouteAuthorizationGuard } from "@/components/access/route-authorization-guard";
-import { AuthorizedNavigationProvider } from "@/components/layout/authorized-navigation";
+import { AuthorizedNavigationProvider, useCanAccessRoute } from "@/components/layout/authorized-navigation";
+import { withAccessibleLinks } from "@/lib/navigation/breadcrumb";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
-import { useRouteExpandedItems } from "@/components/layout/use-route-expanded-items";
-import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { Topbar } from "@/components/layout/topbar";
 import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
-import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 const SIDEBAR_STORAGE = createNoopSidebarStorage();
-
-const DEFAULT_WORKSPACES: readonly { readonly id: string; readonly name: string }[] = [{ id: "default", name: SIDEBAR_MENU.header.subtitle }];
 
 const SKIP_TO_CONTENT_CLASS =
 	"sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg";
@@ -52,7 +49,8 @@ export interface DashboardLayoutProps {
 	readonly children: React.ReactNode;
 	/** Optional notification counts keyed by compiled menu item id. */
 	readonly sidebarBadges?: Readonly<Record<string, string | number>>;
-	readonly initialSessionPermissions?: SessionPermissionsResponse | undefined;
+	/** The server-prefetched `GET /auth/permissions` envelope (its real `meta`), seeding the permissions query. */
+	readonly initialSessionPermissions?: Envelope<SessionPermissionsResponse> | undefined;
 	/** Server-evaluated feature flags; items/routes behind a disabled flag are hidden. */
 	readonly enabledFeatureFlags?: readonly string[] | undefined;
 }
@@ -76,6 +74,9 @@ function useTrailDocumentTitle(): void {
 
 function ShellBreadcrumb(): React.JSX.Element {
 	const { status } = useAdminBreadcrumb();
+	const canAccessRoute = useCanAccessRoute();
+	// Same rules as the sidebar: a crumb the session may not open is shown, but not linked.
+	const items = React.useMemo(() => (status.kind === "ready" ? withAccessibleLinks(status.items, canAccessRoute) : []), [canAccessRoute, status]);
 	const isDesktop = useIsDesktop();
 	const maxItems = isDesktop ? 4 : 2;
 
@@ -93,7 +94,7 @@ function ShellBreadcrumb(): React.JSX.Element {
 
 	return (
 		<BreadcrumbTrail
-			items={status.kind === "ready" ? status.items : []}
+			items={items}
 			status={status.kind}
 			{...(status.kind === "error" ? { errorMessage: status.message } : {})}
 			maxItems={maxItems}
@@ -113,17 +114,14 @@ export function DashboardLayout({
 	enabledFeatureFlags = NO_FEATURE_FLAGS,
 }: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
-	const router = useRouter();
+	const { status: breadcrumbStatus } = useAdminBreadcrumb();
 	const isOpen = useSidebarIsOpen();
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const storeExpandedItems = useSidebarExpandedItems();
-	const { open: openSidebar, close: closeSidebar, setSearchQuery, clearSearch, setItemExpanded, resetExpandedItems, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { open: openSidebar, close: closeSidebar, setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 	const pathname = usePathname();
-	const currentPage = pathname;
-	const [activeWorkspaceId, setActiveWorkspaceId] = React.useState<string>("default");
-	const { capabilities, isResolved: isPermissionsResolved } = useSessionPermissionsQuery(initialSessionPermissions);
+	const { capabilities, status: permissionsStatus, retry: retryPermissions } = useSessionPermissionsQuery(initialSessionPermissions);
 	const superAdmin = useSuperAdminStatus();
 
 	// The facts the route guard decides with — the menu filter and every other
@@ -150,14 +148,11 @@ export function DashboardLayout({
 
 	const searchableItems = React.useMemo(() => buildSearchableItems(filteredMenu), [filteredMenu]);
 
-	const view = React.useMemo(
-		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery }),
-		[filteredMenu, currentPage, sectionOrder, searchQuery],
-	);
+	const view = React.useMemo(() => buildSidebarView({ menu: filteredMenu, pathname, sectionOrder, searchQuery }), [filteredMenu, pathname, sectionOrder, searchQuery]);
 
 	const pinnedItems = React.useMemo(() => resolvePinnedMenuItems(pinnedUrls, searchableItems), [pinnedUrls, searchableItems]);
 
-	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
+	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
 
 	const handleSidebarOpenChange = React.useCallback(
 		(open: boolean): void => {
@@ -170,36 +165,12 @@ export function DashboardLayout({
 		[openSidebar, closeSidebar],
 	);
 
-	const debouncedSetSearchQuery = useDebouncedCallback(setSearchQuery, 150);
-
-	const handleSearchChange = React.useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>): void => {
-			debouncedSetSearchQuery(event.target.value);
-		},
-		[debouncedSetSearchQuery],
-	);
-
-	const handleClearSearch = React.useCallback((): void => {
-		clearSearch();
-	}, [clearSearch]);
-
 	const handleToggleItem = React.useCallback(
 		(itemId: string): void => {
-			setItemExpanded(itemId, !(expandedItems[itemId] ?? false));
+			setItemExpanded(pathname, itemId, expandedItems[itemId] !== true);
 		},
-		[expandedItems, setItemExpanded],
+		[expandedItems, pathname, setItemExpanded],
 	);
-
-	const handleNavigate = React.useCallback(
-		(href: string): void => {
-			router.push(href);
-		},
-		[router],
-	);
-
-	const handleWorkspaceChange = React.useCallback((workspaceId: string): void => {
-		setActiveWorkspaceId(workspaceId);
-	}, []);
 
 	const handleSkipToContent = React.useCallback((): void => {
 		const main = document.getElementById("main-content");
@@ -211,47 +182,6 @@ export function DashboardLayout({
 		main.scrollIntoView({ block: "start", behavior: prefersReducedMotion ? "auto" : "smooth" });
 	}, []);
 
-	const sidebarProps = React.useMemo(
-		() => ({
-			user,
-			onLogout,
-			footerActions,
-			view,
-			labels: ADMIN_SIDEBAR_LABELS,
-			searchQuery,
-			onSearchChange: handleSearchChange,
-			onClearSearch: handleClearSearch,
-			expandedItems,
-			onToggleItem: handleToggleItem,
-			onNavigate: handleNavigate,
-			onMoveSectionUp: moveSectionUp,
-			onMoveSectionDown: moveSectionDown,
-			pinnedItems,
-			workspaces: DEFAULT_WORKSPACES,
-			activeWorkspaceId,
-			onWorkspaceChange: handleWorkspaceChange,
-			navigationKey: currentPage,
-		}),
-		[
-			user,
-			onLogout,
-			footerActions,
-			view,
-			searchQuery,
-			handleSearchChange,
-			handleClearSearch,
-			expandedItems,
-			handleToggleItem,
-			handleNavigate,
-			moveSectionUp,
-			moveSectionDown,
-			pinnedItems,
-			activeWorkspaceId,
-			handleWorkspaceChange,
-			currentPage,
-		],
-	);
-
 	return (
 		<CapabilitiesProvider capabilities={capabilities}>
 			<AuthorizedNavigationProvider searchableItems={searchableItems} canAccessRoute={canAccessPath}>
@@ -260,7 +190,22 @@ export function DashboardLayout({
 						{ADMIN_SIDEBAR_LABELS.skipToContent}
 					</Button>
 					<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-card">
-						<AdminSidebarPanel {...sidebarProps} />
+						<AdminSidebarPanel
+							user={user}
+							onLogout={onLogout}
+							footerActions={footerActions}
+							view={view}
+							pathname={pathname}
+							labels={ADMIN_SIDEBAR_LABELS}
+							searchQuery={searchQuery}
+							onSearchQueryChange={setSearchQuery}
+							expandedItems={expandedItems}
+							onToggleItem={handleToggleItem}
+							onMoveSectionUp={moveSectionUp}
+							onMoveSectionDown={moveSectionDown}
+							pinnedItems={pinnedItems}
+							pageLabel={breadcrumbPageLabel(breadcrumbStatus)}
+						/>
 					</Sidebar>
 					<SidebarInset className={cn("flex h-svh min-w-0 flex-col overflow-hidden bg-background")}>
 						<Topbar user={user} onLogout={onLogout} />
@@ -270,7 +215,8 @@ export function DashboardLayout({
 								<RouteAuthorizationGuard
 									rules={ADMIN_ROUTE_AUTHORIZATION}
 									enabledFeatureFlags={enabledFeatureFlags}
-									isResolved={isPermissionsResolved}
+									permissionsStatus={permissionsStatus}
+									onRetryPermissions={retryPermissions}
 									superAdmin={superAdmin}>
 									{children}
 								</RouteAuthorizationGuard>

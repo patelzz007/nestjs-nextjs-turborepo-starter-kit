@@ -20,7 +20,7 @@ import { CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "./categories"
 import { EMAIL_LOG_PAGE_SIZE, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "./email-log";
 import { DEFAULT_GEO_TAB, GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery } from "./geography";
 import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "./merchants";
-import { DEFAULT_MFA_RECOVERY_STATUS, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "./mfa-recovery";
+import { MFA_RECOVERY_PENDING_QUEUE_HREF, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "./mfa-recovery";
 import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "./products";
 import { EMAIL_TEMPLATES_URL_STATE, KYB_REVIEW_URL_STATE, STORE_REQUESTS_URL_STATE } from "./selection";
 import { toUsersListQuery, USERS_TABLE_URL_STATE } from "./users";
@@ -119,25 +119,29 @@ describe("geography", () => {
 });
 
 describe("mfa recovery", () => {
-	it("opens on pending requests without any param", () => {
+	it("treats a bare URL as every status: no filter param, no status filter sent", () => {
 		const state = MFA_RECOVERY_URL_STATE.parse({});
-		expect(state.status).toBe(DEFAULT_MFA_RECOVERY_STATUS);
-		expect(toMfaRecoveryListQuery(state)).toEqual({ page: 1, limit: 20, filter: { status: { eq: "PENDING" } } });
+		const input = toMfaRecoveryListQuery(state);
+		expect(state.status).toBeUndefined();
+		expect(input).toEqual({ page: 1, limit: 20 });
+		expect(AdminMfaRecoveryListQuerySchema.safeParse(input).success).toBe(true);
 		expect(MFA_RECOVERY_URL_STATE.serialize(state)).toBe("");
 	});
 
-	it("represents 'every status' as filter[status]=all and sends no status filter", () => {
-		const state = MFA_RECOVERY_URL_STATE.parse({ "filter[status]": "all" });
-		const input = toMfaRecoveryListQuery(state);
-		expect(input).toEqual({ page: 1, limit: 20 });
-		expect(AdminMfaRecoveryListQuerySchema.safeParse(input).success).toBe(true);
-		expect(MFA_RECOVERY_URL_STATE.serialize(state)).toBe("filter[status]=all");
+	it("filters by a status named in the URL, and pending links say so explicitly", () => {
+		const state = MFA_RECOVERY_URL_STATE.parse({ "filter[status]": "PENDING" });
+		expect(toMfaRecoveryListQuery(state)).toEqual({ page: 1, limit: 20, filter: { status: { eq: "PENDING" } } });
+		expect(MFA_RECOVERY_PENDING_QUEUE_HREF).toBe("/users/mfa-recovery?filter[status]=PENDING");
+	});
+
+	it("has no 'all' sentinel: ?filter[status]=all reads as no filter", () => {
+		expect(MFA_RECOVERY_URL_STATE.parse({ "filter[status]": "all" }).status).toBeUndefined();
 	});
 
 	it("reads the selected request id and drops an invalid one", () => {
 		expect(MFA_RECOVERY_URL_STATE.parse({ requestId: UUID }).requestId).toBe(UUID);
 		expect(MFA_RECOVERY_URL_STATE.parse({ requestId: "1 OR 1=1" }).requestId).toBeUndefined();
-		expect(MFA_RECOVERY_URL_STATE.parse({ "filter[status]": "unknown" }).status).toBe(DEFAULT_MFA_RECOVERY_STATUS);
+		expect(MFA_RECOVERY_URL_STATE.parse({ "filter[status]": "unknown" }).status).toBeUndefined();
 	});
 });
 

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import type { EpochMs, EmailSendResult } from "@workspace/shared";
-import { epochMs, APP_LINKS } from "@workspace/shared";
+import { epochMs, APP_LINKS, EMAIL_VERIFICATION_LINK_TTL_HOURS, PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
@@ -32,14 +32,14 @@ export class EmailService {
 	/** Send a password-reset email (single-use token in the link). */
 	public async sendPasswordResetEmail(email: string, resetToken: string, clientType?: string): Promise<void> {
 		const appUrl: string = this.config.resolveClientAppUrl(clientType);
-		const template = new PasswordResetEmailTemplate({ to: email, resetToken, expiresInHours: 1, appUrl });
+		const template = new PasswordResetEmailTemplate({ to: email, resetToken, expiresInHours: PASSWORD_RESET_LINK_TTL_HOURS, appUrl });
 		await this.sender.send(template);
 	}
 
 	/** Send an email-verification email (one-time token in the link). */
 	public async sendVerificationEmail(email: string, verificationToken: string, clientType?: string): Promise<void> {
 		const appUrl: string = this.config.resolveClientAppUrl(clientType);
-		const template = new VerificationEmailTemplate({ to: email, verificationToken, expiresInHours: 24, appUrl });
+		const template = new VerificationEmailTemplate({ to: email, verificationToken, expiresInHours: EMAIL_VERIFICATION_LINK_TTL_HOURS, appUrl });
 		await this.sender.send(template);
 	}
 
@@ -81,8 +81,9 @@ export class EmailService {
 		await this.sender.send(template);
 	}
 
+	/** Links straight to the PENDING requests — the ones awaiting this reviewer. */
 	public async sendMfaRecoveryAdminNotification(email: string, title: string, message: string): Promise<void> {
-		const queueUrl: string = new URL(APP_LINKS.admin.mfaRecoveryQueue, this.config.adminAppUrl).toString();
+		const queueUrl: string = new URL(APP_LINKS.admin.mfaRecoveryPendingQueue, this.config.adminAppUrl).toString();
 		const template = new AdminAlertEmailTemplate({ to: email, title, message, action: { label: "Review recovery requests", url: queueUrl } });
 		await this.sender.send(template);
 	}

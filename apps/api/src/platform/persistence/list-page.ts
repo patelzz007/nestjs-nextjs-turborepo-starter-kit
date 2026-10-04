@@ -13,6 +13,15 @@
 // `meta.nextCursor` is only handed out when the page was read in the default
 // order — the only order a cursor can continue — so a client can never get a
 // cursor that would continue a different sort.
+//
+// Keyset pages report their position HONESTLY. The shared paginated contract
+// (`ApiPaginatedMetaSchema`) requires `total`, `page`, `totalPages` and
+// `hasPrevious` on every page, so a keyset page derives them from two counts —
+// the rows matching the filters (`total`) and the rows after the cursor
+// (`remaining`): `total - remaining` rows precede this page, so `hasPrevious`
+// is `rowsBefore > 0` and `page` is the 1-based offset page this slice starts
+// on. This costs two COUNTs per keyset page (offset pages need one); the
+// contract forces it — see docs/technical/api/list-queries.md.
 
 import { buildOffsetPaginationMeta, type OffsetPaginationMeta, type PaginatedServiceResult } from "@workspace/shared";
 
@@ -42,35 +51,15 @@ export interface ListPageSpec<TWhere, TOrderBy, TRow> {
 
 /** Shared offset + keyset list pagination. Returns raw rows; map them to domain objects with {@link mapListResult}. */
 export async function fetchListPage<TWhere, TOrderBy, TRow>(request: ListPageRequest, spec: ListPageSpec<TWhere, TOrderBy, TRow>): Promise<RepositoryListResult<TRow>> {
+	if (request.cursor !== undefined) {
+		return fetchKeysetPage(request.cursor, request.limit, spec);
+	}
+	return fetchOffsetPage(request, spec);
+}
+
+async function fetchOffsetPage<TWhere, TOrderBy, TRow>(request: ListPageRequest, spec: ListPageSpec<TWhere, TOrderBy, TRow>): Promise<RepositoryListResult<TRow>> {
 	const total: number = await spec.count(spec.where);
 	const offsetMeta: OffsetPaginationMeta = buildOffsetPaginationMeta(total, request.page, request.limit);
-	const keyset: ListKeyset<TRow, TWhere> | undefined = spec.keyset;
-
-	if (request.cursor !== undefined) {
-		if (keyset === undefined) {
-			throw new CursorPaginationUnsupportedError();
-		}
-		if (!spec.order.isDefault) {
-			throw new InvalidListCursorError("Cursor pagination follows the default order; remove `sort` or paginate with `page`.");
-		}
-		const after: TWhere | null = keyset.decode(request.cursor);
-		if (after === null) {
-			throw new InvalidListCursorError("The cursor is malformed or no longer valid. Restart from the first page.");
-		}
-		const rows: TRow[] = await spec.findMany({ where: spec.and(spec.where, after), orderBy: spec.order.orderBy, take: request.limit + 1 });
-		const hasNext: boolean = rows.length > request.limit;
-		const pageRows: TRow[] = hasNext ? rows.slice(0, request.limit) : rows;
-		return {
-			items: pageRows,
-			total,
-			page: offsetMeta.page,
-			totalPages: offsetMeta.totalPages,
-			nextCursor: hasNext ? continuationCursor(keyset, pageRows.at(-1)) : null,
-			hasNext,
-			hasPrevious: true,
-		};
-	}
-
 	const rows: TRow[] = await spec.findMany({
 		where: spec.where,
 		orderBy: spec.order.orderBy,
@@ -82,9 +71,62 @@ export async function fetchListPage<TWhere, TOrderBy, TRow>(request: ListPageReq
 		total,
 		page: offsetMeta.page,
 		totalPages: offsetMeta.totalPages,
-		nextCursor: offsetMeta.hasNext && spec.order.isDefault ? continuationCursor(keyset, rows.at(-1)) : null,
+		nextCursor: offsetMeta.hasNext && spec.order.isDefault ? continuationCursor(spec.keyset, rows.at(-1)) : null,
 		hasNext: offsetMeta.hasNext,
 		hasPrevious: offsetMeta.hasPrevious,
+	};
+}
+
+async function fetchKeysetPage<TWhere, TOrderBy, TRow>(cursor: string, limit: number, spec: ListPageSpec<TWhere, TOrderBy, TRow>): Promise<RepositoryListResult<TRow>> {
+	const keyset: ListKeyset<TRow, TWhere> | undefined = spec.keyset;
+	if (keyset === undefined) {
+		throw new CursorPaginationUnsupportedError();
+	}
+	if (!spec.order.isDefault) {
+		throw new InvalidListCursorError("Cursor pagination follows the default order; remove `sort` or paginate with `page`.");
+	}
+	// Throws InvalidListCursorError (400) for a malformed or tampered cursor.
+	const afterCursor: TWhere = spec.and(spec.where, keyset.decode(cursor));
+	// Sequential on purpose: the spec may run on an interactive transaction client, which serves one query at a time.
+	const total: number = await spec.count(spec.where);
+	const remaining: number = await spec.count(afterCursor);
+	const rows: TRow[] = await spec.findMany({ where: afterCursor, orderBy: spec.order.orderBy, take: limit + 1 });
+	const hasNext: boolean = rows.length > limit;
+	const pageRows: TRow[] = hasNext ? rows.slice(0, limit) : rows;
+	const position: KeysetPagePosition = keysetPagePosition(total, remaining, limit);
+	return {
+		items: pageRows,
+		total,
+		page: position.page,
+		totalPages: position.totalPages,
+		nextCursor: hasNext ? continuationCursor(keyset, pageRows.at(-1)) : null,
+		hasNext,
+		hasPrevious: position.hasPrevious,
+	};
+}
+
+/** Where a keyset page sits in the filtered result, expressed in the contract's offset terms. */
+export interface KeysetPagePosition {
+	readonly page: number;
+	readonly totalPages: number;
+	readonly hasPrevious: boolean;
+}
+
+/**
+ * Derives the honest page position of a keyset slice from `total` (rows
+ * matching the filters) and `remaining` (those after the cursor). The two
+ * counts are separate statements, so a concurrent insert can make `remaining`
+ * exceed `total` by a row or two — `rowsBefore` never goes below zero and the
+ * page never past the last one.
+ */
+export function keysetPagePosition(total: number, remaining: number, limit: number): KeysetPagePosition {
+	// Same page-size floor and page count as offset pages.
+	const firstPage: OffsetPaginationMeta = buildOffsetPaginationMeta(total, 1, limit);
+	const rowsBefore: number = Math.max(0, total - remaining);
+	return {
+		page: Math.min(Math.floor(rowsBefore / firstPage.limit) + 1, firstPage.totalPages),
+		totalPages: firstPage.totalPages,
+		hasPrevious: rowsBefore > 0,
 	};
 }
 

@@ -1,9 +1,10 @@
 import { EnvValidationError } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
+import { SINGLE_TENANT_SEED_ORGANIZATION_ID } from "../../prisma/seed/organization-seed-ids";
 import { TEST_API_ENV, type TestEnv } from "../../test/support/test-api-env";
 import { API_ENV_SCOPE, parseApiConfig } from "./api-config";
-import { isLoopbackUrl, resolveApiDocsPolicy, resolveCacheBackend, type ApiConfig } from "./api-config.schema";
+import { isLoopbackUrl, resolveApiDocsPolicy, resolveCacheBackend, resolveLogLevel, resolveRedisNamespace, type ApiConfig } from "./api-config.schema";
 
 /** Parse the fixture with `overrides`; `undefined` removes a variable. */
 function parse(overrides: Readonly<Record<string, string | undefined>> = {}): ApiConfig {
@@ -40,7 +41,30 @@ const REQUIRED_VARIABLES: readonly string[] = [
 	"EMAIL_FROM_ADDRESS",
 ];
 
-const PRODUCTION: TestEnv = { NODE_ENV: "production", REDIS_URL: "redis://cache.internal:6379" };
+/** A valid production build running on localhost (the fixture's APP_URL). */
+const PRODUCTION: TestEnv = { NODE_ENV: "production", REDIS_URL: "redis://cache.internal:6379", LOGIN_VERIFICATION_MODE: "new-device", TENANT_KMS_PROVIDER: "local" };
+
+/** A valid DEPLOYED production environment: real host, real email delivery with a verifiable webhook. */
+const DEPLOYED_PRODUCTION: TestEnv = {
+	...PRODUCTION,
+	APP_URL: "https://app.example.com",
+	EMAIL_MODE: "send",
+	RESEND_API_KEY: "re_test_only_key",
+	RESEND_WEBHOOK_SECRET: "whsec_test_only_secret",
+	STORAGE_PROVIDER: "s3",
+	STORAGE_PRIVATE_CONTAINER: "app-private-bucket",
+	STORAGE_PUBLIC_CONTAINER: "app-public-origin-bucket",
+	STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net",
+	STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "E2QWRUHAPOMQZL",
+	MALWARE_SCANNER: "none",
+};
+
+/** The S3 public-delivery pair (CloudFront origin bucket + CDN host) every s3 deployment needs. */
+const S3_PUBLIC_DELIVERY: TestEnv = {
+	STORAGE_PUBLIC_CONTAINER: "app-public-origin-bucket",
+	STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net",
+	STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "E2QWRUHAPOMQZL",
+};
 
 describe("API env schema", () => {
 	it("parses the TEST-ONLY fixture into the grouped config", () => {
@@ -56,12 +80,17 @@ describe("API env schema", () => {
 	it("applies the documented defaults for optional tuning variables", () => {
 		const config = parse();
 
-		expect(config.http).toMatchObject({ host: "127.0.0.1", port: 8080, publicUrl: "http://127.0.0.1:8080", trustProxy: false, shutdownTimeoutMs: 15_000 });
+		expect(config.http).toMatchObject({ host: "127.0.0.1", port: 8080, publicUrl: "http://127.0.0.1:8080", trustedProxies: [], shutdownTimeoutMs: 15_000 });
 		expect(config.database).toMatchObject({ poolMax: 10, idleTimeoutMs: 30_000, allowExitOnIdle: true });
-		expect(config.auth).toMatchObject({ jwtAccessExpiry: "15m", jwtRefreshExpiry: "7d", twoFactorIssuer: "hello-world", forceLoginVerification: false });
+		expect(config.auth).toMatchObject({ jwtAccessExpiry: "15m", jwtRefreshExpiry: "7d", twoFactorIssuer: "hello-world", loginVerificationMode: "disabled" });
 		expect(config.rateLimits).toEqual({ throttleDefaultLimit: 300, throttleStrictLimit: 30, throttleTtlMs: 60_000, securityCounterMaxKeys: 50_000 });
-		expect(config.observability).toEqual({ logLevel: "warn", memoryMonitoring: false, observe: null });
-		expect(config.tenancy).toEqual({ enabled: false, defaultOrganizationId: "default" });
+		expect(config.observability).toEqual({
+			logLevel: "warn",
+			memoryMonitoring: false,
+			memoryLeakDetection: { warmupMs: 300_000, windowMs: 1_800_000, growthThresholdMb: 64 },
+			observe: null,
+		});
+		expect(config.tenancy).toEqual({ enabled: false, singleTenantOrganizationId: SINGLE_TENANT_SEED_ORGANIZATION_ID });
 		expect(config.encryption.tenantJobHmacSecret).toBeNull();
 		expect(config.storage).toMatchObject({
 			provider: "local",
@@ -145,6 +174,43 @@ describe("API env schema", () => {
 		});
 	});
 
+	describe("DEFAULT_ORGANIZATION_ID", () => {
+		it("is required in single-tenant mode and must be an organization uuid — there is no placeholder default", () => {
+			expect(captureEnvError({ DEFAULT_ORGANIZATION_ID: undefined }).variables).toEqual(["DEFAULT_ORGANIZATION_ID"]);
+			expect(captureEnvError({ DEFAULT_ORGANIZATION_ID: "default" }).variables).toEqual(["DEFAULT_ORGANIZATION_ID"]);
+		});
+
+		it("is not needed in multi-tenant mode, which has no fallback organization", () => {
+			expect(parse({ TENANCY_ENABLED: "true", DEFAULT_ORGANIZATION_ID: undefined }).tenancy).toEqual({ enabled: true });
+		});
+	});
+
+	describe("tenant key-encryption key ring and KMS provider", () => {
+		const RETIRED_KEY = Buffer.alloc(32, 6).toString("base64");
+
+		it("defaults to KEK version 1, no retired keys and the local provider outside production", () => {
+			expect(parse().encryption).toMatchObject({ tenantMasterKeyVersion: 1, tenantPreviousMasterKeys: {}, tenantKmsProvider: "local" });
+		});
+
+		it("requires TENANT_KMS_PROVIDER to be set explicitly in production — never an implicit local provider", () => {
+			expect(captureEnvError({ ...PRODUCTION, TENANT_KMS_PROVIDER: undefined }).variables).toEqual(["TENANT_KMS_PROVIDER"]);
+			expect(parse(PRODUCTION).encryption.tenantKmsProvider).toBe("local");
+			expect(captureEnvError({ TENANT_KMS_PROVIDER: "aws-kms" }).variables).toEqual(["TENANT_KMS_PROVIDER"]);
+		});
+
+		it("parses retired key versions below the current version", () => {
+			const config = parse({ TENANT_ENCRYPTION_MASTER_KEY_VERSION: "2", TENANT_ENCRYPTION_PREVIOUS_MASTER_KEYS: JSON.stringify({ 1: RETIRED_KEY }) });
+			expect(config.encryption.tenantMasterKeyVersion).toBe(2);
+			expect(config.encryption.tenantPreviousMasterKeys).toEqual({ 1: RETIRED_KEY });
+		});
+
+		it("rejects a retired key whose version is not below the current one, without echoing the key", () => {
+			const error = captureEnvError({ TENANT_ENCRYPTION_MASTER_KEY_VERSION: "2", TENANT_ENCRYPTION_PREVIOUS_MASTER_KEYS: JSON.stringify({ 2: RETIRED_KEY }) });
+			expect(error.variables).toEqual(["TENANT_ENCRYPTION_PREVIOUS_MASTER_KEYS"]);
+			expect(error.message).not.toContain(RETIRED_KEY);
+		});
+	});
+
 	describe("TENANT_ENCRYPTION_MASTER_KEY", () => {
 		it("is required in every environment — there is no fallback key", () => {
 			for (const nodeEnv of ["development", "test", "production"]) {
@@ -194,19 +260,39 @@ describe("API env schema", () => {
 			expect(captureEnvError({ LOG_LEVEL: "verbose" }).variables).toEqual(["LOG_LEVEL"]);
 			expect(captureEnvError({ AUTHORIZATION_CACHE_BACKEND: "memcached" }).variables).toEqual(["AUTHORIZATION_CACHE_BACKEND"]);
 			expect(captureEnvError({ STORAGE_PROVIDER: "azure" }).variables).toEqual(["STORAGE_PROVIDER"]);
+			expect(captureEnvError({ STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "https://d111111abcdef8.cloudfront.net" }).variables).toEqual(["STORAGE_CLOUDFRONT_PUBLIC_DOMAIN"]);
+			expect(captureEnvError({ STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net/assets" }).variables).toEqual(["STORAGE_CLOUDFRONT_PUBLIC_DOMAIN"]);
+			expect(parse({ STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "CDN.Example.com" }).storage.cloudfrontPublicDomain).toBe("cdn.example.com");
+			expect(captureEnvError({ STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "arn:aws:cloudfront::123456789012:distribution/E2QWRUHAPOMQZL" }).variables).toEqual([
+				"STORAGE_CLOUDFRONT_DISTRIBUTION_ID",
+			]);
+			expect(captureEnvError({ STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "e2qwruhapomqzl" }).variables).toEqual(["STORAGE_CLOUDFRONT_DISTRIBUTION_ID"]);
 			expect(captureEnvError({ JWT_ACCESS_EXPIRY: "15 minutes" }).variables).toEqual(["JWT_ACCESS_EXPIRY"]);
 		});
 
+		it("trusts no proxy by default and accepts only an explicit list of trusted proxies", () => {
+			expect(parse({}).http.trustedProxies).toEqual([]);
+			expect(parse({ TRUST_PROXY: "0" }).http.trustedProxies).toEqual([]);
+			expect(parse({ TRUST_PROXY: " 10.0.0.0/8 , loopback,203.0.113.7 " }).http.trustedProxies).toEqual(["10.0.0.0/8", "loopback", "203.0.113.7"]);
+			expect(captureEnvError({ TRUST_PROXY: "1" }).variables).toEqual(["TRUST_PROXY"]);
+			expect(captureEnvError({ TRUST_PROXY: "true" }).variables).toEqual(["TRUST_PROXY"]);
+			expect(captureEnvError({ TRUST_PROXY: "10.0.0.0/99" }).variables).toEqual(["TRUST_PROXY"]);
+			expect(captureEnvError({ TRUST_PROXY: "not-an-ip" }).variables).toEqual(["TRUST_PROXY"]);
+		});
+
 		it("accepts the 0/1/true/false toggle spellings and rejects anything else", () => {
-			expect(parse({ TRUST_PROXY: "1" }).http.trustProxy).toBe(true);
-			expect(parse({ TRUST_PROXY: " TRUE " }).http.trustProxy).toBe(true);
-			expect(parse({ TRUST_PROXY: "0" }).http.trustProxy).toBe(false);
 			expect(captureEnvError({ SWAGGER_ENABLED: "yes" }).issues).toEqual([{ variable: "SWAGGER_ENABLED", problem: "must be one of 0, 1, false, true" }]);
 		});
 
 		it("requires true/false (not 0/1) for the boolean feature flags", () => {
 			expect(parse({ TENANCY_ENABLED: "true" }).tenancy.enabled).toBe(true);
-			expect(captureEnvError({ FORCE_LOGIN_VERIFICATION: "1" }).variables).toEqual(["FORCE_LOGIN_VERIFICATION"]);
+			expect(captureEnvError({ TENANCY_ENABLED: "1" }).variables).toEqual(["TENANCY_ENABLED"]);
+		});
+
+		it("defaults LOGIN_VERIFICATION_MODE to new-device and rejects unknown modes", () => {
+			expect(parse({ LOGIN_VERIFICATION_MODE: undefined }).auth.loginVerificationMode).toBe("new-device");
+			expect(parse({ LOGIN_VERIFICATION_MODE: "always" }).auth.loginVerificationMode).toBe("always");
+			expect(captureEnvError({ LOGIN_VERIFICATION_MODE: "true" }).variables).toEqual(["LOGIN_VERIFICATION_MODE"]);
 		});
 
 		it("parses Kafka brokers, Redis and AMQP URLs", () => {
@@ -219,6 +305,21 @@ describe("API env schema", () => {
 	});
 
 	describe("cross-field rules", () => {
+		it("rejects local disk storage on a deployed production environment, but allows it on localhost", () => {
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, STORAGE_PROVIDER: "local" }).variables).toEqual(["STORAGE_PROVIDER"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, STORAGE_PROVIDER: undefined, STORAGE_PRIVATE_CONTAINER: undefined }).variables).toEqual(["STORAGE_PROVIDER"]);
+			expect(parse({ ...PRODUCTION, APP_URL: "http://localhost:3000", STORAGE_PROVIDER: "local" }).storage.provider).toBe("local");
+		});
+
+		it("resolves MALWARE_SCANNER=none to the explicit no-scanner mode (allowed everywhere, never CLEAN)", () => {
+			expect(parse(DEPLOYED_PRODUCTION).storage.malwareScanner).toEqual({ kind: "none" });
+			expect(captureEnvError({ MALWARE_SCANNER: "clamav" }).variables).toEqual(["MALWARE_SCANNER"]);
+		});
+
+		it("has no default scanner: MALWARE_SCANNER must be chosen explicitly", () => {
+			expect(captureEnvError({ MALWARE_SCANNER: undefined }).variables).toEqual(["MALWARE_SCANNER"]);
+		});
+
 		it("requires RESEND_API_KEY when EMAIL_MODE=send, but not for log-only / noop", () => {
 			expect(captureEnvError({ EMAIL_MODE: "send", RESEND_API_KEY: undefined }).issues).toEqual([
 				{ variable: "RESEND_API_KEY", problem: "is required when EMAIL_MODE=send (set EMAIL_MODE=log-only or noop to run without Resend)" },
@@ -227,11 +328,9 @@ describe("API env schema", () => {
 		});
 
 		it("forbids EMAIL_TEST_TO on a deployed production environment and requires REDIS_URL in production", () => {
-			expect(captureEnvError({ NODE_ENV: "production", APP_URL: "https://app.example.com", EMAIL_TEST_TO: "dev@example.com" }).variables).toEqual([
-				"EMAIL_TEST_TO",
-				"REDIS_URL",
-			]);
-			expect(captureEnvError({ NODE_ENV: "production" }).variables).toEqual(["REDIS_URL"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, REDIS_URL: undefined, EMAIL_TEST_TO: "dev@example.com" }).variables).toEqual(["EMAIL_TEST_TO", "REDIS_URL"]);
+			expect(captureEnvError({ ...PRODUCTION, REDIS_URL: undefined }).variables).toEqual(["REDIS_URL"]);
+			expect(parse(DEPLOYED_PRODUCTION).runtime.isProduction).toBe(true);
 			expect(parse(PRODUCTION).runtime.isProduction).toBe(true);
 			expect(parse({ EMAIL_TEST_TO: "dev@example.com" }).email.testTo).toBe("dev@example.com");
 		});
@@ -243,9 +342,60 @@ describe("API env schema", () => {
 			expect(parse({ ...PRODUCTION, APP_URL: "http://127.0.0.1:3000", EMAIL_TEST_TO: "dev@example.com" }).email.testTo).toBe("dev@example.com");
 		});
 
-		it("requires both halves of the AWS key pair", () => {
+		it("forbids log-only and noop email on a deployed production environment", () => {
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, EMAIL_MODE: "log-only" }).variables).toEqual(["EMAIL_MODE"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, EMAIL_MODE: "noop" }).variables).toEqual(["EMAIL_MODE"]);
+			// A production build on localhost may still print emails instead of sending them.
+			expect(parse({ ...PRODUCTION, EMAIL_MODE: "log-only" }).email.mode).toBe("log-only");
+		});
+
+		it("requires RESEND_WEBHOOK_SECRET on a deployed production environment that sends email", () => {
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, RESEND_WEBHOOK_SECRET: undefined }).variables).toEqual(["RESEND_WEBHOOK_SECRET"]);
+			expect(parse(DEPLOYED_PRODUCTION).email.resendWebhookSecret).toBe("whsec_test_only_secret");
+		});
+
+		it("rejects LOGIN_VERIFICATION_MODE=disabled in production, in every other environment it is allowed", () => {
+			expect(captureEnvError({ ...PRODUCTION, LOGIN_VERIFICATION_MODE: "disabled" }).variables).toEqual(["LOGIN_VERIFICATION_MODE"]);
+			expect(parse({ LOGIN_VERIFICATION_MODE: "disabled" }).auth.loginVerificationMode).toBe("disabled");
+		});
+
+		it("requires both halves of the AWS key pair for local development", () => {
 			expect(captureEnvError({ AWS_ACCESS_KEY_ID: "AKIATESTONLY" }).variables).toEqual(["AWS_SECRET_ACCESS_KEY"]);
 			expect(captureEnvError({ AWS_SECRET_ACCESS_KEY: "test-only-secret" }).variables).toEqual(["AWS_ACCESS_KEY_ID"]);
+		});
+
+		it("rejects static AWS access keys on a deployed production environment (IAM role only)", () => {
+			const error = captureEnvError({ ...DEPLOYED_PRODUCTION, AWS_ACCESS_KEY_ID: "AKIATESTONLY", AWS_SECRET_ACCESS_KEY: "test-only-secret" });
+
+			expect(error.variables).toEqual(["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]);
+			expect(error.message).toContain("IAM role");
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, AWS_SECRET_ACCESS_KEY: "test-only-secret" }).variables).toEqual(["AWS_SECRET_ACCESS_KEY"]);
+		});
+
+		it("allows static AWS access keys only off a deployed environment (development, or a production build on localhost)", () => {
+			const keys: TestEnv = { AWS_ACCESS_KEY_ID: "AKIATESTONLY", AWS_SECRET_ACCESS_KEY: "test-only-secret" };
+
+			expect(parse(keys).storage.provider).toBe("local");
+			expect(parse({ ...DEPLOYED_PRODUCTION, ...keys, APP_URL: "http://localhost:3000" }).storage.provider).toBe("s3");
+		});
+
+		it("boots S3 on a deployed production environment with no AWS keys at all (default credential chain)", () => {
+			expect(parse(DEPLOYED_PRODUCTION).storage).toMatchObject({ provider: "s3", awsRegion: "ap-southeast-1" });
+			expect(parse(DEPLOYED_PRODUCTION).storage).not.toHaveProperty("awsAccessKeyId");
+		});
+
+		it("requires the CloudFront origin bucket and CDN host for S3 public delivery", () => {
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, STORAGE_PUBLIC_CONTAINER: undefined }).variables).toEqual(["STORAGE_PUBLIC_CONTAINER"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: undefined }).variables).toEqual(["STORAGE_CLOUDFRONT_PUBLIC_DOMAIN"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, STORAGE_CLOUDFRONT_DISTRIBUTION_ID: undefined }).variables).toEqual(["STORAGE_CLOUDFRONT_DISTRIBUTION_ID"]);
+			expect(parse(DEPLOYED_PRODUCTION).storage.cloudfrontDistributionId).toBe("E2QWRUHAPOMQZL");
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, STORAGE_PUBLIC_CONTAINER: "app-private-bucket" }).variables).toEqual(["STORAGE_PUBLIC_CONTAINER"]);
+			expect(parse({ ...DEPLOYED_PRODUCTION, STORAGE_PUBLIC_CONTAINER: undefined, STORAGE_S3_PUBLIC_BUCKET: "legacy-public" }).storage.publicContainer).toBe("legacy-public");
+		});
+
+		it("needs no public bucket or CDN for the local and firebase providers", () => {
+			expect(parse({ STORAGE_PROVIDER: "firebase", FIREBASE_STORAGE_BUCKET: "app.appspot.com" }).storage.cloudfrontPublicDomain).toBeNull();
+			expect(parse({ STORAGE_PROVIDER: "local" }).storage.publicContainer).toBe("local-public-bucket");
 		});
 
 		it("requires Observe credentials when OBSERVE_ENABLED is on, and enables Observe only with them", () => {
@@ -259,7 +409,7 @@ describe("API env schema", () => {
 		});
 
 		it("requires a private container for the s3 and firebase providers", () => {
-			expect(captureEnvError({ STORAGE_PROVIDER: "s3" }).variables).toEqual(["STORAGE_PRIVATE_CONTAINER"]);
+			expect(captureEnvError({ STORAGE_PROVIDER: "s3", ...S3_PUBLIC_DELIVERY }).variables).toEqual(["STORAGE_PRIVATE_CONTAINER"]);
 			expect(captureEnvError({ STORAGE_PROVIDER: "firebase" }).variables).toEqual(["STORAGE_PRIVATE_CONTAINER"]);
 			expect(parse({ STORAGE_PROVIDER: "firebase", FIREBASE_STORAGE_BUCKET: "app.appspot.com" }).storage.privateContainer).toBe("app.appspot.com");
 		});
@@ -267,7 +417,7 @@ describe("API env schema", () => {
 
 	describe("derived values", () => {
 		it("auto-detects s3 from a legacy bucket name, but never from a local-* container", () => {
-			expect(parse({ STORAGE_S3_BUCKET: "rewardhub" }).storage).toMatchObject({ provider: "s3", privateContainer: "rewardhub" });
+			expect(parse({ STORAGE_S3_BUCKET: "rewardhub", ...S3_PUBLIC_DELIVERY }).storage).toMatchObject({ provider: "s3", privateContainer: "rewardhub" });
 			expect(parse({ STORAGE_S3_BUCKET: "local-dev" }).storage.provider).toBe("local");
 		});
 
@@ -277,6 +427,8 @@ describe("API env schema", () => {
 				STORAGE_S3_BUCKET: "legacy",
 				STORAGE_PUBLIC_CONTAINER: "public",
 				STORAGE_S3_PUBLIC_BUCKET: "legacy-public",
+				STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net",
+				STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "E2QWRUHAPOMQZL",
 			}).storage;
 
 			expect(storage.privateContainer).toBe("neutral");
@@ -306,19 +458,20 @@ describe("API env schema", () => {
 });
 
 describe("resolveApiDocsPolicy", () => {
-	it("is ON by default in every environment", () => {
-		expect(resolveApiDocsPolicy(undefined)).toEqual({ enabled: true });
+	it("is on and public by default outside production", () => {
+		expect(resolveApiDocsPolicy(undefined, false)).toEqual({ enabled: true, access: "public" });
+		expect(resolveApiDocsPolicy(false, false)).toEqual({ enabled: false, access: "public" });
 	});
 
-	it("follows SWAGGER_ENABLED when set", () => {
-		expect(resolveApiDocsPolicy(false)).toEqual({ enabled: false });
-		expect(resolveApiDocsPolicy(true)).toEqual({ enabled: true });
+	it("is OFF by default in production, and SuperAdmin-only when explicitly enabled there", () => {
+		expect(resolveApiDocsPolicy(undefined, true)).toEqual({ enabled: false, access: "platform_admin" });
+		expect(resolveApiDocsPolicy(true, true)).toEqual({ enabled: true, access: "platform_admin" });
 	});
 
-	it("is wired from SWAGGER_ENABLED, never from NODE_ENV", () => {
-		expect(parse({ SWAGGER_ENABLED: "0" }).http.apiDocs).toEqual({ enabled: false });
-		expect(parse(PRODUCTION).http.apiDocs).toEqual({ enabled: true });
-		expect(parse({ ...PRODUCTION, SWAGGER_ENABLED: "0" }).http.apiDocs).toEqual({ enabled: false });
+	it("is wired from SWAGGER_ENABLED and NODE_ENV", () => {
+		expect(parse({ SWAGGER_ENABLED: "0" }).http.apiDocs).toEqual({ enabled: false, access: "public" });
+		expect(parse(PRODUCTION).http.apiDocs).toEqual({ enabled: false, access: "platform_admin" });
+		expect(parse({ ...PRODUCTION, SWAGGER_ENABLED: "1" }).http.apiDocs).toEqual({ enabled: true, access: "platform_admin" });
 	});
 });
 
@@ -336,6 +489,29 @@ describe("resolveCacheBackend", () => {
 	});
 });
 
+describe("REDIS_NAMESPACE", () => {
+	it("uses an explicit namespace as-is", () => {
+		expect(resolveRedisNamespace("e2e:run-1", "Any App", "test")).toBe("e2e:run-1");
+		expect(parse({ REDIS_NAMESPACE: "tenant-a" }).messaging.redisNamespace).toBe("tenant-a");
+	});
+
+	it("derives a deterministic default from APP_NAME and NODE_ENV", () => {
+		expect(resolveRedisNamespace(undefined, "NestJS + NextJS Turborepo Starter Template", "development")).toBe("nestjs-nextjs-turborepo-starter-template:development");
+		expect(resolveRedisNamespace(undefined, "+++", "production")).toBe("api:production");
+	});
+
+	it("keeps a derived default within the 64-character namespace rules", () => {
+		const derived: string = resolveRedisNamespace(undefined, "A".repeat(100), "development");
+		expect(derived).toMatch(/^[A-Za-z0-9][A-Za-z0-9:_-]{0,63}$/);
+		expect(derived.endsWith(":development")).toBe(true);
+	});
+
+	it("rejects a namespace outside the Redis-key-safe character rules", () => {
+		expect(() => parse({ REDIS_NAMESPACE: "has space" })).toThrow(EnvValidationError);
+		expect(() => parse({ REDIS_NAMESPACE: "x".repeat(65) })).toThrow(EnvValidationError);
+	});
+});
+
 describe("isLoopbackUrl", () => {
 	it("recognises every way of saying 'this machine'", () => {
 		for (const url of ["http://localhost:3000", "http://LOCALHOST", "http://api.localhost:8080", "http://127.0.0.1:3000", "http://[::1]:3000"]) {
@@ -347,5 +523,18 @@ describe("isLoopbackUrl", () => {
 		for (const url of ["https://app.example.com", "http://10.0.0.5:3000", "https://localhost.example.com", "http://127.0.0.2"]) {
 			expect(isLoopbackUrl(url), url).toBe(false);
 		}
+	});
+});
+
+describe("resolveLogLevel", () => {
+	it("defaults to info in development so `pnpm dev` lists the mapped routes, and to warn elsewhere", () => {
+		expect(resolveLogLevel(undefined, "development")).toBe("info");
+		expect(resolveLogLevel(undefined, "test")).toBe("warn");
+		expect(resolveLogLevel(undefined, "production")).toBe("warn");
+	});
+
+	it("always honours an explicitly configured LOG_LEVEL", () => {
+		expect(resolveLogLevel("debug", "production")).toBe("debug");
+		expect(resolveLogLevel("error", "development")).toBe("error");
 	});
 });

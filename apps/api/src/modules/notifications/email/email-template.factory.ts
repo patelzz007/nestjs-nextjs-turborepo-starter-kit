@@ -2,7 +2,6 @@ import {
 	AccountLockedEmailPropsSchema,
 	AdminAlertEmailPropsSchema,
 	ApiKeyCreatedEmailPropsSchema,
-	EmailPreviewPropValueSchema,
 	MerchantInviteEmailPropsSchema,
 	TeamMemberInviteEmailPropsSchema,
 	LoginVerificationEmailPropsSchema,
@@ -14,6 +13,8 @@ import {
 	TwoFactorStatusEmailPropsSchema,
 	VerificationEmailPropsSchema,
 	WelcomeEmailPropsSchema,
+	EmailJobPropValueSchema,
+	type EmailJobPropValue,
 	type EmailTemplateKey,
 } from "@workspace/shared";
 
@@ -34,7 +35,7 @@ import { TwoFactorEnabledEmailTemplate } from "./templates/two-factor-enabled-em
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
 import { WelcomeEmailTemplate } from "./templates/welcome-email.template";
 
-type EmailJobProps = Record<string, string | number | boolean | null>;
+type EmailJobProps = Record<string, EmailJobPropValue>;
 
 /** Rebuild a concrete template instance from a queued job payload. */
 
@@ -73,14 +74,18 @@ export function buildEmailTemplateFromJobData(templateKey: EmailTemplateKey, pro
 	}
 }
 
-/** Coerce template props into a JSON-safe record for BullMQ. */
+/**
+ * Template props → a JSON-safe record for BullMQ. Every prop must survive the
+ * round trip: an unserializable prop throws instead of being silently dropped
+ * (it used to drop `cc` / `bcc`). `undefined` (an absent optional prop) is omitted.
+ */
 export function serializeEmailTemplateProps(props: BaseEmailProps): EmailJobProps {
 	const serialized: EmailJobProps = {};
 	for (const [key, value] of Object.entries(props)) {
-		const parsed = EmailPreviewPropValueSchema.safeParse(value);
-		if (parsed.success) {
-			serialized[key] = parsed.data;
+		if (value === undefined) {
+			continue;
 		}
+		serialized[key] = EmailJobPropValueSchema.parse(value);
 	}
 	return serialized;
 }

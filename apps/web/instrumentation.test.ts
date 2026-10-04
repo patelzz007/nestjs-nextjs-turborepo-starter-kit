@@ -33,7 +33,7 @@ async function runRegister(): Promise<void> {
 }
 
 beforeEach((): void => {
-	exitSpy = vi.spyOn(process, "exit").mockImplementation((code: number | string | null | undefined): never => {
+	exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
 		throw new ProcessExitCalled(code);
 	});
 	errorSpy = vi.spyOn(console, "error").mockImplementation((): void => undefined);

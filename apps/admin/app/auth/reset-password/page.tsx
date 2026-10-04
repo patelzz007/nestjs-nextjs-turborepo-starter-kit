@@ -1,47 +1,37 @@
-"use client";
-
 import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-password-form";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
-import { useSearchParams } from "next/navigation";
-import { Suspense, type JSX } from "react";
-import { ROUTES } from "@/lib/routes";
+import { ResetPasswordSchema } from "@workspace/shared";
 
-function ResetPasswordContent(): JSX.Element {
-	const searchParams = useSearchParams();
-	const token = searchParams.get("token");
+import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
+import { InvalidAuthLinkNotice } from "@/components/auth/invalid-auth-link-notice";
+import { AUTH_LINK_TOKEN_PARAM, ROUTES } from "@/lib/routes";
 
-	if (token === null || token.length === 0) {
-		return (
-			<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-center text-sm text-destructive">
-				This reset link is invalid. Please request a new password reset email.
-			</div>
-		);
-	}
-
-	return <ResetPasswordForm token={token} loginHref={ROUTES.auth.login} />;
+export interface AdminResetPasswordPageProps {
+	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function AdminResetPasswordPage(): JSX.Element {
+/**
+ * `/auth/reset-password?token=` — the link the API emails for a password
+ * reset. A server component: the token is read from `searchParams` and
+ * validated with the shared reset schema here, so the client gets either a
+ * form bound to a well-formed token or the invalid-link notice — no
+ * `useSearchParams` + `Suspense` round trip.
+ */
+export default async function AdminResetPasswordPage({ searchParams }: AdminResetPasswordPageProps): Promise<React.JSX.Element> {
+	const token = ResetPasswordSchema.shape.token.safeParse((await searchParams)[AUTH_LINK_TOKEN_PARAM]);
+
 	return (
-		<AuthLayout
-			logo={
-				<svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-					<path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-				</svg>
-			}
-			brandName="Admin Panel"
+		<AdminAuthLayout
+			icon="key"
 			tagline="Choose a strong new password."
 			features={["Must meet complexity requirements", "Cannot reuse recent passwords", "Other sessions will be signed out"]}
 			title="Create new password"
 			subtitle="Your new password must be different from previous passwords"
-			copyright="Admin Panel"
-			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}
-			showBackButton
-			backHref={ROUTES.auth.login}
-			backLabel="Back to sign in">
-			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
-				<ResetPasswordContent />
-			</Suspense>
-		</AuthLayout>
+			showBackToLogin>
+			{token.success ? (
+				<ResetPasswordForm token={token.data} loginHref={ROUTES.auth.login} />
+			) : (
+				<InvalidAuthLinkNotice>This reset link is invalid. Please request a new password reset email.</InvalidAuthLinkNotice>
+			)}
+		</AdminAuthLayout>
 	);
 }

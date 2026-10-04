@@ -11,7 +11,15 @@ export const ImageMimeTypeSchema = z.enum(["image/jpeg", "image/png", "image/web
 
 export type ImageMimeType = z.output<typeof ImageMimeTypeSchema>;
 
-export const StoredObjectScanStatusSchema = z.enum(["SCANNING", "CLEAN", "INFECTED"]);
+/**
+ * Malware-scan state recorded on a stored file:
+ * - `SCANNING`    — waiting for a verdict.
+ * - `CLEAN`       — a scanner examined it and found nothing.
+ * - `INFECTED`    — a scanner flagged it (the file is QUARANTINED).
+ * - `NOT_SCANNED` — no scanner is configured (`MALWARE_SCANNER=none`); the file
+ *                   passed the byte checks only. Never presented as CLEAN.
+ */
+export const StoredObjectScanStatusSchema = z.enum(["SCANNING", "CLEAN", "INFECTED", "NOT_SCANNED"]);
 
 export type StoredObjectScanStatus = z.output<typeof StoredObjectScanStatusSchema>;
 
@@ -133,6 +141,8 @@ export const FileRecordSchema = z.object({
 	mimeType: DocumentMimeTypeSchema,
 	sizeBytes: z.number().int().nonnegative(),
 	status: FileStatusSchema,
+	/** `null` until the bytes are verified (PENDING). */
+	scanStatus: StoredObjectScanStatusSchema.nullable(),
 	publicUrl: z.string().nullable(),
 	uploadedAt: EpochMsSchema,
 });

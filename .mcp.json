@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"https://mcp.reui.io": {
+			"url": "https://mcp.reui.io",
+			"type": "http"
+		}
+	}
+}

@@ -49,12 +49,35 @@ export function triggerBrowserDownload(url: string, fileName: string): void {
 	anchor.click();
 }
 
+/** How a member sees one malware-scan status of a KYB document. */
+export interface KybScanStatusPresentation {
+	readonly label: string;
+	/** Whether the document may be viewed / downloaded. */
+	readonly accessible: boolean;
+	/** `warning` marks an accessible document the member should know about (it was not malware-checked). */
+	readonly tone: "neutral" | "warning" | "danger";
+}
+
+/**
+ * One entry per scan status — a `Record` over the shared enum, so a new status
+ * fails to compile until it is presented here (the single place to change).
+ * - NOT_SCANNED: storage has no scanner; the file is READY and usable, but the
+ *   member is told it was not malware-checked.
+ * - INFECTED / SCAN_FAILED: never served; the member re-uploads.
+ */
+export const KYB_SCAN_STATUS_PRESENTATION: Readonly<Record<KybDocumentScanStatus, KybScanStatusPresentation>> = {
+	SCANNING: { label: "Scanning", accessible: false, tone: "neutral" },
+	CLEAN: { label: "Ready", accessible: true, tone: "neutral" },
+	NOT_SCANNED: { label: "Not malware-checked", accessible: true, tone: "warning" },
+	INFECTED: { label: "Action required", accessible: false, tone: "danger" },
+	SCAN_FAILED: { label: "Scan failed – re-upload", accessible: false, tone: "danger" },
+};
+
 export function formatKybScanStatus(status: KybDocumentScanStatus): string {
-	if (status === "SCANNING") {
-		return "Scanning";
-	}
-	if (status === "INFECTED") {
-		return "Action required";
-	}
-	return "Ready";
+	return KYB_SCAN_STATUS_PRESENTATION[status].label;
+}
+
+/** Whether a document in this scan status may be viewed or downloaded. */
+export function isKybDocumentAccessible(status: KybDocumentScanStatus): boolean {
+	return KYB_SCAN_STATUS_PRESENTATION[status].accessible;
 }

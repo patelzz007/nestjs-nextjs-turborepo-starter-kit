@@ -181,24 +181,22 @@ export function sectionHasActiveItem(items: readonly SidebarMenuItemLike[], acti
 	return false;
 }
 
-export const SidebarViewSectionSchema = z.object({
-	title: z.string(),
-	items: z.array(z.custom<SidebarMenuItemLike>()).readonly(),
-	color: z.enum(["blue", "green", "amber", "rose", "purple", "teal"]).optional(),
-});
+/** One section of the sidebar as rendered: its items after the search filter. Computed here, never parsed from outside. */
+export interface SidebarViewSection {
+	readonly title: string;
+	readonly items: readonly SidebarMenuItemLike[];
+	readonly color?: PanelSectionColor | undefined;
+}
 
-export type SidebarViewSection = z.output<typeof SidebarViewSectionSchema>;
-
-export const SidebarViewSchema = z.object({
-	isSearching: z.boolean(),
-	routeState: RouteStateSchema,
-	sections: z.array(SidebarViewSectionSchema).readonly(),
-	sectionTitles: z.array(z.string()).readonly(),
-	bottomItems: z.array(z.custom<SidebarMenuItemLike>()).readonly(),
-	noResults: z.boolean(),
-});
-
-export type SidebarView = z.output<typeof SidebarViewSchema>;
+/** Everything a panel sidebar renders for one pathname + search + section order (`buildSidebarView`). */
+export interface SidebarView {
+	readonly isSearching: boolean;
+	readonly routeState: RouteState;
+	readonly sections: readonly SidebarViewSection[];
+	readonly sectionTitles: readonly string[];
+	readonly bottomItems: readonly SidebarMenuItemLike[];
+	readonly noResults: boolean;
+}
 
 export function buildSidebarView({
 	menu,

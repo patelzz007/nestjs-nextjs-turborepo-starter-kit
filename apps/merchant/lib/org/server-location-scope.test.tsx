@@ -9,11 +9,13 @@ import { loadServerLocationScope, type ServerLocationScope } from "@/lib/org/ser
 import { TEST_ORG_SLUG } from "@/test/authorization";
 import { contextQueryState, organizationContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
-import type { OrganizationContextResponse } from "@workspace/shared";
+import { testEnvelope } from "@/test/envelope";
+import { TestQueryClientProvider } from "@/test/query-client";
+import type { Envelope, OrganizationContextResponse } from "@workspace/shared";
 
 const { readLocationCookie, loadContext, contextQuery } = vi.hoisted(() => ({
-	readLocationCookie: vi.fn<() => Promise<string | null>>(),
-	loadContext: vi.fn<(orgSlug: string) => Promise<OrganizationContextResponse | undefined>>(),
+	readLocationCookie: vi.fn<(orgSlug: string) => Promise<string | null>>(),
+	loadContext: vi.fn<(orgSlug: string) => Promise<Envelope<OrganizationContextResponse> | undefined>>(),
 	contextQuery: vi.fn<() => ContextQueryState>(),
 }));
 
@@ -29,21 +31,28 @@ vi.mock("@workspace/client/lib/auth", () => ({
 const REMOVED_STORE_ID = "0f0f0f0f-0000-4000-8000-0000000000ff";
 const SINGLE_STORE_CONTEXT = organizationContextFixture({ locations: [STORE_A_LOCATION] });
 const SCOPED_TO_B_CONTEXT = organizationContextFixture({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_B.id] });
+const SCOPED_TO_BOTH_CONTEXT = organizationContextFixture({
+	locations: [STORE_A_LOCATION, STORE_B_LOCATION],
+	locationScopeType: "SELECTED",
+	locationIds: [STORE_A.id, STORE_B.id],
+});
 
 function serverScope(cookie: string | null, context: OrganizationContextResponse | undefined): Promise<ServerLocationScope> {
 	readLocationCookie.mockResolvedValue(cookie);
-	loadContext.mockResolvedValue(context);
+	loadContext.mockResolvedValue(context === undefined ? undefined : testEnvelope(context));
 	return loadServerLocationScope(TEST_ORG_SLUG);
 }
 
 /** The filter the client's FIRST render asks for, given what the org layout seeded. */
 function clientFirstRenderFilter(scope: ServerLocationScope): string | undefined {
-	contextQuery.mockReturnValue(contextQueryState(scope.organizationContext));
+	contextQuery.mockReturnValue(contextQueryState(scope.organizationContext?.data));
 	function wrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 		return (
-			<TenantContextProvider orgSlug={TEST_ORG_SLUG} initialLocationId={scope.selectedLocationId} initialOrganizationContext={scope.organizationContext}>
-				{children}
-			</TenantContextProvider>
+			<TestQueryClientProvider>
+				<TenantContextProvider orgSlug={TEST_ORG_SLUG} initialLocationId={scope.selectedLocationId} initialOrganizationContext={scope.organizationContext}>
+					{children}
+				</TenantContextProvider>
+			</TestQueryClientProvider>
 		);
 	}
 	return renderHook(useActiveLocationFilter, { wrapper }).result.current.locationId;
@@ -58,15 +67,25 @@ describe("loadServerLocationScope", () => {
 	it("prefetches the stored store while the member can access it", async () => {
 		const scope = await serverScope(STORE_B.id, TWO_STORE_CONTEXT);
 
-		expect(scope).toEqual({ selectedLocationId: STORE_B.id, effectiveLocationId: STORE_B.id, organizationContext: TWO_STORE_CONTEXT });
+		expect(scope).toEqual({ selectedLocationId: STORE_B.id, effectiveLocationId: STORE_B.id, organizationContext: testEnvelope(TWO_STORE_CONTEXT) });
 		expect(loadContext).toHaveBeenCalledWith(TEST_ORG_SLUG);
 	});
 
-	it("falls back to all stores for a stale cookie, but still seeds the client with the cookie as stored", async () => {
+	it("reads the store choice of THIS organization's cookie", async () => {
+		await serverScope(STORE_B.id, TWO_STORE_CONTEXT);
+
+		expect(readLocationCookie).toHaveBeenCalledWith(TEST_ORG_SLUG);
+	});
+
+	it("drops a stale cookie on the server — neither the prefetch nor the client seed uses it", async () => {
 		const scope = await serverScope(REMOVED_STORE_ID, TWO_STORE_CONTEXT);
 
-		expect(scope.selectedLocationId).toBe(REMOVED_STORE_ID);
+		expect(scope.selectedLocationId).toBeNull();
 		expect(scope.effectiveLocationId).toBeNull();
+	});
+
+	it("never resolves a store-limited member to all stores, even with several stores in scope", async () => {
+		expect((await serverScope(null, SCOPED_TO_BOTH_CONTEXT)).effectiveLocationId).toBe(STORE_A.id);
 	});
 
 	it("prefetches a single-store member's only store even without a cookie", async () => {
@@ -77,8 +96,8 @@ describe("loadServerLocationScope", () => {
 		expect((await serverScope(STORE_A.id, SCOPED_TO_B_CONTEXT)).effectiveLocationId).toBe(STORE_B.id);
 	});
 
-	it("uses the cookie as is when the organization context cannot be loaded (the API re-validates it)", async () => {
-		expect(await serverScope(STORE_B.id, undefined)).toEqual({ selectedLocationId: STORE_B.id, effectiveLocationId: STORE_B.id, organizationContext: undefined });
+	it("ignores the cookie when the member has no organization context (not a member) — client input is never trusted unvalidated", async () => {
+		expect(await serverScope(STORE_B.id, undefined)).toEqual({ selectedLocationId: null, effectiveLocationId: null, organizationContext: undefined });
 	});
 });
 
@@ -89,6 +108,7 @@ describe("server prefetch filter ↔ client first-render filter", () => {
 		["a stale stored store", REMOVED_STORE_ID, TWO_STORE_CONTEXT],
 		["a single-store member without a cookie", null, SINGLE_STORE_CONTEXT],
 		["a SELECTED-scope member with an out-of-scope cookie", STORE_A.id, SCOPED_TO_B_CONTEXT],
+		["a SELECTED-scope member with two stores and no cookie", null, SCOPED_TO_BOTH_CONTEXT],
 		["an unavailable organization context", STORE_B.id, undefined],
 	])(
 		"agree for %s, so the prefetched data lands under the client's query key",

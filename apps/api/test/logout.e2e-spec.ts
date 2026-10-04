@@ -34,7 +34,7 @@ describe("POST /auth/logout (e2e)", () => {
 	});
 
 	it("succeeds for a guest with no cookies at all, and still clears the cookie pair", async () => {
-		const response = await app.inject({ method: "POST", url: logoutUrl, headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp() }) });
+		const response = await app.inject({ method: "POST", url: logoutUrl, headers: mutationHeaders({ "x-forwarded-for": uniqueClientIp() }) });
 
 		expect(response.statusCode, response.body).toBe(201);
 		expect(clearsCookie(response.headers["set-cookie"], "accessToken")).toBe(true);
@@ -45,7 +45,7 @@ describe("POST /auth/logout (e2e)", () => {
 		const response = await app.inject({
 			method: "POST",
 			url: logoutUrl,
-			headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp(), cookie: "accessToken=stale.access.token" }),
+			headers: mutationHeaders({ "x-forwarded-for": uniqueClientIp(), cookie: "accessToken=stale.access.token" }),
 		});
 
 		expect(response.statusCode, response.body).toBe(201);
@@ -58,14 +58,14 @@ describe("POST /auth/logout (e2e)", () => {
 		const loggedOut = await app.inject({
 			method: "POST",
 			url: logoutUrl,
-			headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp(), cookie: `refreshToken=${session.refreshToken}` }),
+			headers: mutationHeaders({ "x-forwarded-for": uniqueClientIp(), cookie: `refreshToken=${session.refreshToken}` }),
 		});
 		expect(loggedOut.statusCode, loggedOut.body).toBe(201);
 
 		const refreshed = await app.inject({
 			method: "POST",
 			url: `${API_VERSION_PREFIX}/auth/refresh`,
-			headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp(), cookie: `refreshToken=${session.refreshToken}` }),
+			headers: mutationHeaders({ "x-forwarded-for": uniqueClientIp(), cookie: `refreshToken=${session.refreshToken}` }),
 		});
 		expect(refreshed.statusCode).toBe(401);
 		expect(extractCookie(refreshed.headers["set-cookie"], "accessToken")).toBeUndefined();

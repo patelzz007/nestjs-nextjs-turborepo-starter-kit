@@ -1,6 +1,6 @@
 import { Queue, hasLegacyRepeatableKeyShape } from "bullmq";
 
-import { QUEUE_NAMES } from "@workspace/shared";
+import { ALL_QUEUE_NAMES } from "@workspace/shared";
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
@@ -21,7 +21,7 @@ if (!force && !dryRun) {
 	process.exit();
 }
 
-const queueNames = [...QUEUE_NAMES];
+const queueNames = [...ALL_QUEUE_NAMES];
 const staleRepeatPrefixes = ["repeat:"];
 
 async function findBrokenRepeatJobs(queue: Queue): Promise<string[]> {

@@ -1,11 +1,11 @@
 "use client";
 
-import { PERMISSION, type AdminUserDetail, type PermissionListItem, type RoleListItem } from "@workspace/shared";
+import { PERMISSION, type AdminUserDetail, type Envelope, type PermissionListResponse, type RoleListResponse } from "@workspace/shared";
 import { UserAccessPanel } from "@/components/access/user-access-panel";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
 import { UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/components/users/user-profile-overview";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { UserDetailBreadcrumb } from "@/components/users/user-detail-breadcrumb";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
@@ -15,9 +15,12 @@ import { ROUTES } from "@/lib/routes";
 
 export interface UserDetailViewProps {
 	readonly userId: string;
-	readonly initialUser?: AdminUserDetail | undefined;
-	readonly initialRoles?: readonly RoleListItem[] | undefined;
-	readonly initialPermissions?: readonly PermissionListItem[] | undefined;
+	/** The server-prefetched `GET /auth/admin/users/:userId` envelope, or `undefined` when the prefetch failed. */
+	readonly initialUser?: Envelope<AdminUserDetail> | undefined;
+	/** The server-prefetched `GET /admin/roles` envelope, or `undefined` when the prefetch failed. */
+	readonly initialRoles?: Envelope<RoleListResponse> | undefined;
+	/** The server-prefetched `GET /admin/permissions` envelope, or `undefined` when the prefetch failed. */
+	readonly initialPermissions?: Envelope<PermissionListResponse> | undefined;
 }
 
 /**
@@ -30,21 +33,19 @@ export default function UserDetailView({ userId, initialUser, initialRoles, init
 	const canListRoles = can(PERMISSION.ROLE.LIST);
 	const canListPermissions = can(PERMISSION.PERMISSION.LIST);
 
-	const userQuery = api.auth.adminUserDetail.useQuery({ userId }, initialDataOption(initialUser !== undefined ? successEnvelope(initialUser, stubApiMeta()) : undefined));
+	const userQuery = api.auth.adminUserDetail.useQuery({ userId }, initialDataOption(initialUser));
 	const rolesQuery = api.admin.roles.list.useQuery(
 		{},
 		{
 			enabled: canListRoles,
-			...initialDataOption(initialRoles !== undefined ? successEnvelope({ items: [...initialRoles], total: initialRoles.length }, stubApiMeta()) : undefined),
+			...initialDataOption(initialRoles),
 		},
 	);
 	const permissionsQuery = api.admin.permissions.list.useQuery(
 		{},
 		{
 			enabled: canListPermissions,
-			...initialDataOption(
-				initialPermissions !== undefined ? successEnvelope({ items: [...initialPermissions], total: initialPermissions.length }, stubApiMeta()) : undefined,
-			),
+			...initialDataOption(initialPermissions),
 		},
 	);
 

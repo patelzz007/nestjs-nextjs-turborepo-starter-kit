@@ -74,6 +74,8 @@ export class RewardUserRepository {
 			data: {
 				passwordHash: data.passwordHash,
 				fullName: data.fullName,
+				// A profile field changed: move the profile's optimistic-lock token (PATCH /auth/profile).
+				profileVersion: { increment: 1 },
 				updatedAt: Date.now(),
 			},
 		});
@@ -89,17 +91,8 @@ export class RewardUserRepository {
 	public async updateFullName(userId: string, fullName: string): Promise<void> {
 		await this.prisma.user.update({
 			where: { id: userId },
-			data: { fullName, updatedAt: Date.now() },
-		});
-	}
-
-	public async updateAfterClaim(
-		userId: string,
-		data: { readonly phone: string; readonly phoneVerifiedAt: number; readonly pendingAttributionToken: null; readonly pendingAttributionExpiresAt: null },
-	): Promise<void> {
-		await this.prisma.user.update({
-			where: { id: userId },
-			data,
+			// A profile field changed: move the profile's optimistic-lock token (PATCH /auth/profile).
+			data: { fullName, profileVersion: { increment: 1 }, updatedAt: Date.now() },
 		});
 	}
 }

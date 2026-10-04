@@ -19,7 +19,10 @@ export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 	readonly disabled?: boolean;
 	readonly loading?: boolean;
 	readonly className?: string;
+	/** Styles the trigger as invalid. A button cannot carry `aria-invalid`, so link the error text with `ariaDescribedBy`. */
 	readonly ariaInvalid?: boolean | "true" | "false" | "grammar" | "spelling";
+	/** Id(s) of the element(s) describing the field — its hint and, when invalid, its error message. */
+	readonly ariaDescribedBy?: string;
 	readonly fromDate?: string;
 	readonly toDate?: string;
 	readonly onValueChange?: (value: string) => void;
@@ -28,7 +31,24 @@ export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 }
 
 const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function DatePicker(
-	{ id, name, value, placeholder = "Pick a date", disabled = false, loading = false, className, variant, size, ariaInvalid, fromDate, toDate, onValueChange, onBlur, onFocus },
+	{
+		id,
+		name,
+		value,
+		placeholder = "Pick a date",
+		disabled = false,
+		loading = false,
+		className,
+		variant,
+		size,
+		ariaInvalid,
+		ariaDescribedBy,
+		fromDate,
+		toDate,
+		onValueChange,
+		onBlur,
+		onFocus,
+	},
 	ref,
 ): React.JSX.Element {
 	const [open, setOpen] = React.useState(false);
@@ -73,7 +93,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 						id={id}
 						onBlur={onBlur}
 						onFocus={onFocus}
-						aria-invalid={ariaInvalid}
+						aria-describedby={ariaDescribedBy}
 						className={cn(
 							inputVariants({ variant, size, state }),
 							"flex w-full items-center justify-between gap-2 text-left font-normal",

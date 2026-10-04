@@ -100,7 +100,7 @@ describe("Response contracts (e2e)", () => {
 		const response = await app.inject({
 			method: "POST",
 			url: `${API_VERSION_PREFIX}/auth/login`,
-			headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp() }),
+			headers: mutationHeaders({ "x-forwarded-for": uniqueClientIp() }),
 			payload: { email: SUPER_ADMIN_EMAIL, password: SUPER_ADMIN_PASSWORD },
 		});
 		const accessToken: string | undefined = extractCookie(response.headers["set-cookie"], "accessToken");

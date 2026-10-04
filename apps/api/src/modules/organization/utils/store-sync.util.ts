@@ -23,6 +23,7 @@ export async function syncStoreForLocation(client: StoreSyncClient, location: Or
 		status: storeStatusForLocation(location),
 		isDeleted: location.isDeleted,
 		deletedAt: location.deletedAt,
+		deletedBy: location.deletedBy,
 		updatedAt: location.updatedAt,
 	};
 	return client.store.upsert({

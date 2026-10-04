@@ -1,15 +1,8 @@
-import { resolveSessionScope } from "../../auth/session/session";
+import { assertNever } from "@workspace/shared";
+
 import { SESSION_CHECK_MAX_RETRIES, type SessionCheckFailureReason } from "../../auth/session/session-check";
 import type { AuthAction } from "./actions";
-import { SESSION_CHECK_OK, type AuthSessionScope, type AuthSessionState, type SessionCheckState } from "./state";
-
-/**
- * Verifying the email lifts an email-verification restriction; a pending MFA
- * enrollment still restricts the session (what the API's next token says).
- */
-function scopeAfterEmailVerification(scope: AuthSessionScope): AuthSessionScope {
-	return scope.enrollmentReason === "mfa_enrollment" ? { sessionScope: "restricted", enrollmentReason: "mfa_enrollment" } : { sessionScope: "full", enrollmentReason: null };
-}
+import { SESSION_CHECK_OK, type AuthSessionState, type SessionCheckState } from "./state";
 
 /**
  * A restored session continues the current epoch only when it is the session
@@ -41,15 +34,11 @@ export function authReducer(state: AuthSessionState, action: AuthAction): AuthSe
 	switch (action.type) {
 		case "[ Auth ] Session Established":
 			// A sign-in is always a new session, even for the same member.
-			return { status: "authenticated", userId: action.profile.id, scope: action.scope, epoch: state.epoch + 1, check: SESSION_CHECK_OK };
+			return { status: "authenticated", userId: action.profile.data.id, epoch: state.epoch + 1, check: SESSION_CHECK_OK };
 		case "[ Auth ] Session Restored":
-			return {
-				status: "authenticated",
-				userId: action.profile.id,
-				scope: resolveSessionScope(action.permissions, action.profile.isEmailVerified),
-				epoch: epochAfterRestore(state, action.profile.id),
-				check: SESSION_CHECK_OK,
-			};
+			// The scope is not stored: the facade derives it from `/auth/permissions`
+			// (seeded here when the check got an answer, pending — fail closed — when not).
+			return { status: "authenticated", userId: action.profile.data.id, epoch: epochAfterRestore(state, action.profile.data.id), check: SESSION_CHECK_OK };
 		case "[ Auth ] Session Not Found":
 			// A signed-out tab keeps its reason (an invalidated one keeps the silent refresh off until a
 			// sign-in or a found session). Losing a known or unconfirmed session starts a new epoch.
@@ -64,10 +53,6 @@ export function authReducer(state: AuthSessionState, action: AuthAction): AuthSe
 		case "[ Auth ] Session Check Skipped":
 			// Only settles the first check; a session this tab already knows about is kept.
 			return state.status === "unknown" ? { status: "signed-out", reason: "no-session", epoch: state.epoch, check: SESSION_CHECK_OK } : withSettledCheck(state);
-		case "[ Auth ] Session Scope Changed":
-			return state.status === "authenticated" ? { ...state, scope: action.scope } : state;
-		case "[ Auth ] Email Verified":
-			return state.status === "authenticated" ? { ...state, scope: scopeAfterEmailVerification(state.scope) } : state;
 		case "[ Auth ] Signed Out":
 			return { status: "signed-out", reason: "signed-out", epoch: state.epoch + 1, check: SESSION_CHECK_OK };
 		case "[ Auth ] Session Expired":
@@ -78,11 +63,6 @@ export function authReducer(state: AuthSessionState, action: AuthAction): AuthSe
 			// Bookkeeping for the timeline (and the cross-tab effect); the state already changed at sign-out.
 			return state;
 		default:
-			return assertNever(action);
+			return assertNever(action, "auth action");
 	}
-}
-
-/** Exhaustiveness check: adding an action without handling it fails to compile. */
-function assertNever(action: never): never {
-	throw new Error(`Unhandled auth action: ${JSON.stringify(action)}`);
 }

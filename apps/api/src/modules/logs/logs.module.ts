@@ -1,6 +1,8 @@
 import { Global, Module } from "@nestjs/common";
 
 import { LogService } from "./logs.service";
+import { MemoryMonitorService } from "./memory/memory-monitor.service";
+import { NodePostGcHeapProbe, POST_GC_HEAP_PROBE, type PostGcHeapProbe } from "./memory/post-gc-heap-probe";
 
 /**
  * Application-wide structured logging.
@@ -15,7 +17,9 @@ import { LogService } from "./logs.service";
  */
 @Global()
 @Module({
-	providers: [LogService],
+	// MemoryMonitorService: post-GC heap leak detection (MEMORY_MONITORING;
+	// always on in production) — not exported, nothing else depends on it.
+	providers: [LogService, MemoryMonitorService, { provide: POST_GC_HEAP_PROBE, useFactory: (): PostGcHeapProbe => new NodePostGcHeapProbe() }],
 	exports: [LogService],
 })
 export class LogsModule {}

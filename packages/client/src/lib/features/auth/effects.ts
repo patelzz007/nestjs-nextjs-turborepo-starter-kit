@@ -1,4 +1,4 @@
-import type { SessionPermissionsResponse, UserResponse } from "@workspace/shared";
+import { assertNever, type Envelope, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
 
 import type { AuthSyncEvent } from "../../auth/session/sync";
 import type { FeatureEffect } from "../../state/feature-store";
@@ -13,14 +13,12 @@ import type { AuthSessionState } from "./state";
 export interface AuthQueryCache {
 	/** The id of the profile cached in `/auth/me` — whose data the cache currently holds — or `null`. */
 	readonly readProfileId: () => string | null;
-	/** Writes a profile the server just returned into the `/auth/me` query. */
-	readonly seedProfile: (profile: UserResponse) => void;
+	/** Writes a profile the server just returned (with that response's real `meta`) into the `/auth/me` query. */
+	readonly seedProfile: (profile: Envelope<UserResponse>) => void;
 	/** Writes a `/auth/permissions` answer the server just returned into its query. */
-	readonly seedSessionPermissions: (permissions: SessionPermissionsResponse) => void;
+	readonly seedSessionPermissions: (permissions: Envelope<SessionPermissionsResponse>) => void;
 	/** Drops the cached `/auth/permissions` answer, so the next read fetches the new session's. */
 	readonly dropSessionPermissions: () => void;
-	/** Marks the cached `/auth/me` profile email-verified (no-op when nothing is cached). */
-	readonly markEmailVerified: () => void;
 	/** Cancels in-flight queries and drops every cached query and mutation of the previous session. */
 	readonly clear: () => void;
 }
@@ -56,15 +54,15 @@ function clearIfAnotherIdentity(cache: AuthQueryCache, userId: string): void {
  *   the session is not lost, so its data stays.
  */
 export function createAuthQueryCacheEffect(cache: AuthQueryCache): FeatureEffect<AuthSessionState, AuthAction> {
-	return (action: AuthAction, { getState }): void => {
+	return (action: AuthAction): void => {
 		switch (action.type) {
 			case "[ Auth ] Session Established":
-				clearIfAnotherIdentity(cache, action.profile.id);
+				clearIfAnotherIdentity(cache, action.profile.data.id);
 				cache.dropSessionPermissions();
 				cache.seedProfile(action.profile);
 				return;
 			case "[ Auth ] Session Restored":
-				clearIfAnotherIdentity(cache, action.profile.id);
+				clearIfAnotherIdentity(cache, action.profile.data.id);
 				cache.seedProfile(action.profile);
 				if (action.permissions !== null) {
 					cache.seedSessionPermissions(action.permissions);
@@ -76,11 +74,6 @@ export function createAuthQueryCacheEffect(cache: AuthQueryCache): FeatureEffect
 					cache.clear();
 				}
 				return;
-			case "[ Auth ] Email Verified":
-				if (getState().status === "authenticated") {
-					cache.markEmailVerified();
-				}
-				return;
 			case "[ Auth ] Signed Out":
 			case "[ Auth ] Session Expired":
 			case "[ Auth ] Signed Out In Another Tab":
@@ -89,11 +82,10 @@ export function createAuthQueryCacheEffect(cache: AuthQueryCache): FeatureEffect
 			case "[ Auth ] Session Check Failed":
 			case "[ Auth ] Session Recheck Requested":
 			case "[ Auth ] Session Check Skipped":
-			case "[ Auth ] Session Scope Changed":
 			case "[ Auth ] Server Session Cleared":
 				return;
 			default:
-				assertNever(action);
+				assertNever(action, "auth action");
 		}
 	};
 }
@@ -101,26 +93,21 @@ export function createAuthQueryCacheEffect(cache: AuthQueryCache): FeatureEffect
 /**
  * Tells the other tabs (same cookie set) what happened — event names only,
  * never a token or profile:
- * - a sign-in in this tab (and an applied email verification) → `logged-in`,
+ * - a sign-in in this tab (including the re-read after email verification) → `logged-in`,
  *   so they re-check the session instead of bouncing to the login page;
  * - the server cookies are cleared → `logged-out`, so they drop their session
  *   too. Sent only AFTER `POST /auth/logout` returns (never before the server
  *   session is gone), and only when the flow asks (`notifyOtherTabs`).
  *
- * A restored session, a scope change or a failed check is not broadcast: other
+ * A restored session or a failed check is not broadcast: other
  * tabs read the same cookies and run their own checks (and their own retries,
  * so one tab's outage never fans out into requests from every tab).
  */
 export function createAuthTabSyncEffect(broadcaster: AuthBroadcaster): FeatureEffect<AuthSessionState, AuthAction> {
-	return (action: AuthAction, { getState }): void => {
+	return (action: AuthAction): void => {
 		switch (action.type) {
 			case "[ Auth ] Session Established":
 				broadcaster.post("logged-in");
-				return;
-			case "[ Auth ] Email Verified":
-				if (getState().status === "authenticated") {
-					broadcaster.post("logged-in");
-				}
 				return;
 			case "[ Auth ] Server Session Cleared":
 				if (action.notifyOtherTabs) {
@@ -132,18 +119,12 @@ export function createAuthTabSyncEffect(broadcaster: AuthBroadcaster): FeatureEf
 			case "[ Auth ] Session Check Failed":
 			case "[ Auth ] Session Recheck Requested":
 			case "[ Auth ] Session Check Skipped":
-			case "[ Auth ] Session Scope Changed":
 			case "[ Auth ] Signed Out":
 			case "[ Auth ] Session Expired":
 			case "[ Auth ] Signed Out In Another Tab":
 				return;
 			default:
-				assertNever(action);
+				assertNever(action, "auth action");
 		}
 	};
-}
-
-/** Exhaustiveness check: a new action must decide whether it touches the cache or the other tabs. */
-function assertNever(action: never): never {
-	throw new Error(`Unhandled auth action: ${JSON.stringify(action)}`);
 }

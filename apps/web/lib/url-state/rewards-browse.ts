@@ -1,4 +1,4 @@
-// The reward catalog's search, filters and page live in the URL (docs/list-queries.md §7,
+// The reward catalog's search, filters and page live in the URL (docs/technical/api/list-queries.md §7,
 // ADR 023): a filtered catalog is shareable, survives a reload, and back/forward walks
 // through the filters. The grid/list LAYOUT is not URL state — it is a per-device
 // preference owned by the `ui-preferences` feature store.

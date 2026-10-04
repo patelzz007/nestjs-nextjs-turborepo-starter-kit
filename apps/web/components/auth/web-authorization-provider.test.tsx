@@ -7,11 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useWebSession, WebAuthorizationProvider } from "@/components/auth/web-authorization-provider";
 import { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS } from "@/lib/session/capabilities";
-import { buildSessionPermissions } from "@/test-support/session";
+import { buildSessionPermissions, FIXTURE_ANSWERED_AT, sessionPermissionsEnvelope } from "@/test-support/session";
 
 interface PermissionsQueryOptions {
 	readonly enabled?: boolean;
 	readonly initialData?: { readonly data: SessionPermissionsResponse };
+	readonly initialDataUpdatedAt?: number;
 	readonly refetchOnWindowFocus?: boolean;
 	readonly refetchInterval?: number;
 }
@@ -68,7 +69,9 @@ function Probe(): React.JSX.Element {
 
 function renderProvider(sessionActive: boolean, initialSessionPermissions?: SessionPermissionsResponse): void {
 	render(
-		<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions}>
+		<WebAuthorizationProvider
+			sessionActive={sessionActive}
+			initialSessionPermissions={initialSessionPermissions === undefined ? undefined : sessionPermissionsEnvelope(initialSessionPermissions)}>
 			<Probe />
 		</WebAuthorizationProvider>,
 	);
@@ -130,12 +133,13 @@ describe("WebAuthorizationProvider", () => {
 		expect(lastQueryOptions()).toMatchObject({ enabled: true, refetchOnWindowFocus: true, refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS });
 	});
 
-	it("seeds the permissions query with the server answer on the session the server rendered for", () => {
+	it("seeds the permissions query with the server envelope — its answer time included — on the session the server rendered for", () => {
 		harness.isLoading = true;
 		const serverAnswer = buildSessionPermissions({ capabilities: [PERMISSION.URL.CREATE] });
 		renderProvider(true, serverAnswer);
 
 		expect(lastQueryOptions()?.initialData?.data).toEqual(serverAnswer);
+		expect(lastQueryOptions()?.initialDataUpdatedAt).toBe(FIXTURE_ANSWERED_AT);
 	});
 
 	it("never seeds or trusts the server answer after the tab crossed a session boundary (another member signed in)", () => {

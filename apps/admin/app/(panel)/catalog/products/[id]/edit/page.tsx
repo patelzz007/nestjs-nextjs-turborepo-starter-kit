@@ -1,15 +1,20 @@
-interface EditProductPageProps {
-	readonly params: Promise<{ id: string }>;
-}
+import { createAdminServerCaller } from "@/lib/admin-server-api";
+import { readProductIdParam, type IdRouteParams } from "@/lib/catalog/route-params";
+import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-export default async function EditProductPage({ params }: EditProductPageProps): Promise<React.JSX.Element> {
-	const { id } = await params;
-	// PATCH /product/:id requires PRODUCT.UPDATE. Access is enforced by the route
-	// guard (lib/navigation/route-authorization.ts), so the page does not repeat it.
-	return (
-		<div className="space-y-4">
-			<h1 className="text-2xl font-semibold">Edit Product</h1>
-			<p className="text-muted-foreground">Editing resource {id}</p>
-		</div>
-	);
+import { EditProductView } from "../../product-editor";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * `/catalog/products/[id]/edit` — edit a product (UPDATE PRODUCT, enforced by
+ * the route guard; the API re-checks it). The product is prefetched so the
+ * form opens pre-filled; a missing product renders the 404 page.
+ */
+export default async function EditProductPage(props: IdRouteParams): Promise<React.JSX.Element> {
+	const id = await readProductIdParam(props);
+	const server = createAdminServerCaller();
+	const result = await prefetch({ page: "/catalog/products/[id]/edit", resource: "product" }, () => server.product.detail.query({ id }));
+
+	return <EditProductView id={id} initialProduct={resolvePrefetchedData(result)} />;
 }

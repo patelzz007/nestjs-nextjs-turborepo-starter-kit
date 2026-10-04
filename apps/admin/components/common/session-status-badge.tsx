@@ -118,10 +118,10 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 			key={refreshed ? "refreshed" : "steady"}
 			variant="outline"
 			className={cn(
-				"gap-1.5 border-emerald-500/30 bg-emerald-500/5 px-2.5 py-1 text-emerald-700 dark:text-emerald-400",
+				"gap-1.5 border-success/30 bg-success-soft px-2.5 py-1 text-success",
 				// `key` remounts the badge when the pulse toggles so the zoom-in
 				// animation replays — steady → glow → steady.
-				refreshed && "animate-in ring-2 ring-emerald-500/40 duration-300 fill-mode-both zoom-in-95",
+				refreshed && "animate-in ring-2 ring-success/40 duration-300 fill-mode-both zoom-in-95",
 			)}
 			aria-label="Session status: verified">
 			<ShieldCheck className="size-3" />
@@ -132,7 +132,7 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 				</>
 			)}
 			{refreshed ? (
-				<span className="font-semibold text-emerald-600 dark:text-emerald-400">{compact ? "Refreshed" : "· Refreshed just now"}</span>
+				<span className="font-semibold text-success">{compact ? "Refreshed" : "· Refreshed just now"}</span>
 			) : formatted === null ? (
 				<span className="text-muted-foreground/80">{compact ? "—" : "· Token expiry unknown"}</span>
 			) : (

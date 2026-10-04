@@ -1,17 +1,22 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-/** Query keys for session profile and RBAC payloads. */
-export const AUTH_ME_QUERY_KEY: readonly ["auth", "me"] = ["auth", "me"];
-export const AUTH_PERMISSIONS_QUERY_KEY: readonly ["auth", "permissions"] = ["auth", "permissions"];
-/** Merchant portal membership + capability payload (`GET /merchant/me`). */
-export const MERCHANT_ME_QUERY_KEY: readonly ["merchant", "me"] = ["merchant", "me"];
+import { apiRouter } from "../../api/endpoints";
 
 /**
- * Invalidate `/auth/me` and `/auth/permissions` after RBAC mutations or impersonation.
- * Also clears merchant membership cache so capability gates reflect the active identity.
+ * Re-reads the signed-in member's own session data after something changed it
+ * server-side for the SAME identity (e.g. an admin edited their own roles):
+ * the profile (`/auth/me`), the session's permissions and scope
+ * (`/auth/permissions`) and the organization memberships + capabilities.
+ * Keys come from the endpoint registry, so they always match the queries.
+ *
+ * An IDENTITY change (sign-in, impersonation start/stop) is not an
+ * invalidation: it goes through the auth commands (`login`), which clear the
+ * whole cache of the previous identity.
  */
 export async function invalidateSessionAuth(queryClient: QueryClient): Promise<void> {
-	await queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
-	await queryClient.invalidateQueries({ queryKey: AUTH_PERMISSIONS_QUERY_KEY });
-	await queryClient.invalidateQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
+	await Promise.all([
+		queryClient.invalidateQueries({ queryKey: apiRouter.auth.me.scopeKey(undefined) }),
+		queryClient.invalidateQueries({ queryKey: apiRouter.auth.permissions.scopeKey(undefined) }),
+		queryClient.invalidateQueries({ queryKey: apiRouter.organizations.membershipsBootstrap.scopeKey(undefined) }),
+	]);
 }

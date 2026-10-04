@@ -1,20 +1,29 @@
 import { randomUUID } from "node:crypto";
 
-import type pg from "pg";
+import pg from "pg";
 
+import type { DbPoolSettings } from "./env";
 import type { AnalyticsEventRow, DeadLetterInput, InboxClaim, InboxStore, InboxTransaction } from "./inbox";
-import { INBOX_RETENTION_OPERATION, type InboxRetentionStore, type LockedRun } from "./inbox-retention";
+import { RETENTION_LOCK_NAMES, type LockedBatch, type RetentionLedger, type RetentionStore } from "./inbox-retention";
+
+/** `application_name` on every connection — shows in `pg_stat_activity` and the Postgres logs. */
+export const CONSUMER_APPLICATION_NAME = "analytics-consumer";
 
 /**
- * Session tag recorded in `app.system_operation` for every ingest
- * transaction (claim, analytics write, dead-letter park) (ADR 012 / ADR 015): writes run as `app_runtime` with an explicit
- * bypass for the bypass-only infrastructure tables — never as the superuser.
+ * The consumer's Postgres pool: bounded size, bounded waits, and a
+ * server-side `statement_timeout`, so a stuck query or an exhausted server
+ * surfaces as an error (retried, then parked) instead of a hang.
  */
-export const ANALYTICS_INGEST_OPERATION = "analytics.ingest";
-
-/** Bound on what we keep of a poison message (TEXT column) — enough to diagnose and replay. */
-export const DEAD_LETTER_RAW_VALUE_MAX_CHARS = 65_536;
-export const DEAD_LETTER_ERROR_MAX_CHARS = 4_000;
+export function createConsumerPool(connectionString: string, settings: DbPoolSettings): pg.Pool {
+	return new pg.Pool({
+		connectionString,
+		max: settings.max,
+		connectionTimeoutMillis: settings.connectionTimeoutMs,
+		idleTimeoutMillis: settings.idleTimeoutMs,
+		statement_timeout: settings.statementTimeoutMs,
+		application_name: CONSUMER_APPLICATION_NAME,
+	});
+}
 
 class PgInboxTransaction implements InboxTransaction {
 	public constructor(private readonly _client: pg.PoolClient) {}
@@ -40,98 +49,87 @@ class PgInboxTransaction implements InboxTransaction {
 	}
 }
 
-/** Postgres inbox — one transaction per Kafka message, scoped to `app_runtime` + explicit bypass. */
-export class PgInboxStore implements InboxStore, InboxRetentionStore {
+/** One bounded, oldest-first DELETE per ledger, scoped to one consumer's rows. */
+const PURGE_SQL: Readonly<Record<RetentionLedger, string>> = {
+	inbox_claims: `DELETE FROM public.inbox_processed_events
+		 WHERE (consumer, event_id) IN (
+		   SELECT consumer, event_id FROM public.inbox_processed_events
+		   WHERE consumer = $1 AND processed_at < $2
+		   ORDER BY processed_at
+		   LIMIT $3
+		 )`,
+	dead_letters: `DELETE FROM public.inbox_dead_letters
+		 WHERE id IN (
+		   SELECT id FROM public.inbox_dead_letters
+		   WHERE consumer = $1 AND received_at < $2
+		   ORDER BY received_at
+		   LIMIT $3
+		 )`,
+};
+
+/**
+ * Postgres inbox. Connects as the least-privilege `analytics_consumer` login
+ * (prisma/rls/90-analytics-consumer.sql): INSERT/SELECT/DELETE on its three
+ * tables only, and RLS policies that apply to that role alone — it never
+ * switches role and never sets `app.rls_bypass`.
+ */
+export class PgInboxStore implements InboxStore, RetentionStore {
 	public constructor(private readonly _pool: pg.Pool) {}
 
 	public inTransaction<T>(work: (tx: InboxTransaction) => Promise<T>): Promise<T> {
-		return this.withSystemSession(ANALYTICS_INGEST_OPERATION, (client): Promise<T> => work(new PgInboxTransaction(client)));
+		return this.withTransaction((client): Promise<T> => work(new PgInboxTransaction(client)));
 	}
 
 	public async park(deadLetter: DeadLetterInput): Promise<void> {
-		await this.withSystemSession(ANALYTICS_INGEST_OPERATION, async (client): Promise<void> => {
-			await client.query(
-				`INSERT INTO public.inbox_dead_letters (id, consumer, topic, partition, "offset", event_id, reason, error, raw_value)
-				 VALUES ($1, $2, $3, $4, $5, $6::uuid, $7::"InboxDeadLetterReason", $8, $9)
-				 ON CONFLICT (consumer, topic, partition, "offset") DO NOTHING`,
-				[
-					randomUUID(),
-					deadLetter.consumer,
-					deadLetter.topic,
-					deadLetter.partition,
-					deadLetter.offset,
-					deadLetter.eventId,
-					deadLetter.reason,
-					deadLetter.error.slice(0, DEAD_LETTER_ERROR_MAX_CHARS),
-					deadLetter.rawValue === null ? null : deadLetter.rawValue.slice(0, DEAD_LETTER_RAW_VALUE_MAX_CHARS),
-				],
-			);
-		});
+		const payload = deadLetter.payload;
+		await this._pool.query(
+			`INSERT INTO public.inbox_dead_letters
+			   (id, consumer, topic, partition, "offset", event_id, reason, error, attempts,
+			    raw_value, raw_value_size_bytes, raw_value_sha256, raw_value_truncated)
+			 VALUES ($1, $2, $3, $4, $5, $6::uuid, $7::"InboxDeadLetterReason", $8, $9, $10, $11, $12, $13)
+			 ON CONFLICT (consumer, topic, partition, "offset") DO NOTHING`,
+			[
+				randomUUID(),
+				deadLetter.consumer,
+				deadLetter.topic,
+				deadLetter.partition,
+				deadLetter.offset,
+				deadLetter.eventId,
+				deadLetter.reason,
+				deadLetter.error,
+				deadLetter.attempts,
+				payload?.bytes ?? null,
+				payload?.sizeBytes ?? null,
+				payload?.sha256 ?? null,
+				payload?.truncated ?? false,
+			],
+		);
 	}
 
 	/**
-	 * Session-level advisory lock keyed by `hashtextextended('analytics.inbox_retention', 0)`
-	 * on a dedicated connection. `pg_try_advisory_lock` never waits: a second
-	 * instance gets `{ acquired: false }` immediately. The lock dies with the
-	 * session, so a crashed holder can never wedge retention; if the explicit
-	 * unlock fails, the connection is destroyed instead of being pooled.
+	 * `pg_try_advisory_xact_lock` never waits: a second instance gets
+	 * `{ acquired: false }` immediately. Being transaction-scoped, the lock is
+	 * released by COMMIT/ROLLBACK on the same server connection — correct
+	 * behind PgBouncer in transaction mode, and a crashed holder can never
+	 * leave it held.
 	 */
-	public async withRetentionLock<T>(work: () => Promise<T>): Promise<LockedRun<T>> {
-		const client = await this._pool.connect();
-		let brokenConnection: Error | undefined;
-		try {
-			const lock = await client.query<{ locked: boolean }>("SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS locked", [INBOX_RETENTION_OPERATION]);
+	public purgeBatch(ledger: RetentionLedger, consumer: string, cutoffEpochMs: number, batchSize: number): Promise<LockedBatch> {
+		return this.withTransaction(async (client): Promise<LockedBatch> => {
+			const lock = await client.query<{ locked: boolean }>("SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked", [RETENTION_LOCK_NAMES[ledger]]);
 			if (lock.rows[0]?.locked !== true) {
 				return { acquired: false };
 			}
-			try {
-				return { acquired: true, result: await work() };
-			} finally {
-				try {
-					await client.query("SELECT pg_advisory_unlock(hashtextextended($1, 0))", [INBOX_RETENTION_OPERATION]);
-				} catch (unlockError) {
-					brokenConnection = unlockError instanceof Error ? unlockError : new Error(String(unlockError));
-				}
-			}
-		} finally {
-			client.release(brokenConnection);
-		}
-	}
-
-	/**
-	 * One bounded DELETE, oldest first via the `processed_at` index. `SKIP
-	 * LOCKED` steps over any row another transaction holds instead of waiting.
-	 */
-	public deleteProcessedBefore(cutoffEpochMs: number, batchSize: number): Promise<number> {
-		return this.withSystemSession(INBOX_RETENTION_OPERATION, async (client): Promise<number> => {
-			const result = await client.query(
-				`DELETE FROM public.inbox_processed_events
-				 WHERE (consumer, event_id) IN (
-				   SELECT consumer, event_id FROM public.inbox_processed_events
-				   WHERE processed_at < $1
-				   ORDER BY processed_at
-				   LIMIT $2
-				   FOR UPDATE SKIP LOCKED
-				 )`,
-				[cutoffEpochMs, batchSize],
-			);
-			return result.rowCount ?? 0;
+			const result = await client.query(PURGE_SQL[ledger], [consumer, cutoffEpochMs, batchSize]);
+			return { acquired: true, deleted: result.rowCount ?? 0 };
 		});
 	}
 
-	/**
-	 * BEGIN → transaction-local `app_runtime` role + bypass session tag → work →
-	 * COMMIT (ROLLBACK on any error). A connection whose ROLLBACK fails is
-	 * destroyed rather than returned to the pool.
-	 */
-	private async withSystemSession<T>(operation: string, work: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+	/** BEGIN → work → COMMIT (ROLLBACK on any error). A connection whose ROLLBACK fails is destroyed rather than pooled. */
+	private async withTransaction<T>(work: (client: pg.PoolClient) => Promise<T>): Promise<T> {
 		const client = await this._pool.connect();
 		let brokenConnection: Error | undefined;
 		try {
 			await client.query("BEGIN");
-			await client.query("SELECT set_config('role', 'app_runtime', true)");
-			await client.query("SELECT set_config('app.rls_bypass', 'true', true)");
-			await client.query("SELECT set_config('app.system_operation', $1, true)", [operation]);
 			const result = await work(client);
 			await client.query("COMMIT");
 			return result;

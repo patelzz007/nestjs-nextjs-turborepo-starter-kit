@@ -1280,10 +1280,14 @@ Embla-based carousel with context, prev/next, and slide group semantics.
 Recharts wrapper: `ChartContainer`, `ChartTooltipContent`, `ChartLegendContent`, `ChartStyle` with per-theme CSS vars.
 
 > **Money in charts.** API money is an integer count of minor units (sen) plus a currency code.
-> Render it with `formatMinorUnits(minor, currency)` / `formatMinorUnitsCompact` from
+> Render it with `formatMinorUnits(minor, currency, locale)` / `formatMinorUnitsCompact` from
 > `@workspace/ui/lib/format/money` (the one money formatter for every app — `"RM 1,234.50"`,
 > `"RM 12.3K"` for axes), and pass the formatter to `ChartTooltipContent valueFormatter={…}` so the
-> tooltip never shows raw minor units. Example: the merchant and admin sales charts.
+> tooltip never shows raw minor units. Example: the merchant and admin sales charts. Counts get
+> `valueFormatter` too (`formatCount(value, locale)` from `lib/format/number`) — the default
+> `toLocaleString()` follows the browser's locale. Label analytics series points with
+> `formatEpochMs(point.date, "dayMonth", ANALYTICS_BUCKET_DISPLAY_REGION)` (UTC week buckets).
+> See `packages/ui/README.md` → "Formatting dates, counts and money".
 
 1. `[T]` `toDisplayKey(value: unknown)` and `isRecord(value: unknown)` — rule 2 violation; replace with zod schemas (`z.string() | z.number()` unions) inferred from the data model.
 2. `[T]` `typeof value === "string"` / `typeof item.value === "number"` checks (rules 5/13) — replace with `KeySchema`/`ChartValueSchema` narrowing.
@@ -3528,6 +3532,24 @@ Side sheet (top/right/bottom/left) built on base-ui Dialog.
 ---
 
 ## Sidebar — `components/navigation/sidebar.tsx`
+
+> **Panel sidebars (web, merchant, admin) share one implementation.** `PanelSidebarNav`
+> (search box + `<nav>` landmark with pinned pages and sections), `PanelSidebarFooterNav`
+> (bottom items, a second named `<nav>`), `PanelSidebarNavItem` and
+> `PanelSidebarRouteAnnouncer` live in `components/navigation/panel-sidebar-nav*.tsx`; each app
+> passes its menu view, labels (`PanelSidebarNavLabels`), icon renderers and a bare link
+> element (`renderLink`). Leaves are real links with `aria-current="page"`; branches are
+> disclosure buttons (`aria-expanded`/`aria-controls`) for a `role="group"` list; disabled
+> items are `aria-disabled` links with a described reason; every row carries its full title.
+> The current page is scrolled into view once branch transitions finish
+> (`useScrollActiveNavItem`, Web Animations API — no timer), `/` focuses the search
+> (`useFocusShortcut`), the search box commits through `useDebouncedDraft` (clear commits at
+> once), and the announcement uses the resolved breadcrumb label (`breadcrumbPageLabel`).
+> Expansion state is the sidebar feature store's page-scoped `manualExpansion`
+> (ADR 023). `AppPanelShell` takes `scrollResetKey` (the pathname) to scroll its `<main>` to
+> the top on navigation without remounting the page. Token contrast (focus ring, charts,
+> search highlight `--search-mark-*`, muted text) is enforced by
+> `styles/tokens-contrast.test.ts` and each app's theme contrast test.
 
 ### 🔧 Improvements
 

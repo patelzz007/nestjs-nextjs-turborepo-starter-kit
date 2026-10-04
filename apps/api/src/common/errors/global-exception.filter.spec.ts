@@ -17,6 +17,7 @@ import { RequestContextMiddleware } from "../middleware/request-context.middlewa
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
 import { ConflictError, DependencyUnavailableError } from "./app-error";
 import { GlobalExceptionFilter } from "./global-exception.filter";
+import { createAuditTrailDouble } from "../../../test/support/audit-trail-double";
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { RequestContextService } from "../context/request-context";
 
@@ -86,7 +87,7 @@ Module({ controllers: [ProbeController], providers: [RequestContextService, { pr
 
 describe("GlobalExceptionFilter (Fastify integration)", () => {
 	let app: NestFastifyApplication;
-	const logService = new LogService(createTestTypedConfig(), new RequestContextService());
+	const logService = new LogService(new RequestContextService());
 	// Spy WITHOUT replacing LogService.error so its option validation really runs
 	// (a strict-schema bug there once made every error log throw); only the
 	// underlying Nest logger is silenced.
@@ -99,7 +100,9 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		const moduleRef = await Test.createTestingModule({ imports: [ProbeModule] }).compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter({ bodyLimit: 64 }));
 		await app.getHttpAdapter().getInstance().register(fastifyRateLimit, { global: false, errorResponseBuilder: rateLimitErrorResponseBuilder });
-		app.useGlobalFilters(new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), createTestTypedConfig()));
+		app.useGlobalFilters(
+			new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), createAuditTrailDouble().auditTrail, createTestTypedConfig()),
+		);
 		await app.init();
 		await app.getHttpAdapter().getInstance().ready();
 	});

@@ -8,7 +8,7 @@ import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardsQueueScheduler } from "./rewards-queue.processors";
 import { runWithSystemRlsContext } from "../../../prisma/rls-context";
 
-@Processor(QUEUE_NAMES[3])
+@Processor(QUEUE_NAMES.claimsExpireReferrer)
 @Injectable()
 export class ClaimsExpireReferrerProcessor extends WorkerHost {
 	public constructor(
@@ -19,7 +19,7 @@ export class ClaimsExpireReferrerProcessor extends WorkerHost {
 	}
 
 	public async process(job: Job): Promise<void> {
-		await runWithSystemRlsContext("queue.job", async (): Promise<void> => this.handle(job));
+		await runWithSystemRlsContext("queue.claims.expire_referrer", async (): Promise<void> => this.handle(job));
 	}
 
 	private async handle(job: Job): Promise<void> {

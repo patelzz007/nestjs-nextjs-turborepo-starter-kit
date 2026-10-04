@@ -15,17 +15,20 @@ import {
 } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
-import { DEMO_MERCHANT_API_KEYS } from "../prisma/seed/rewards";
-import { sha256Hex } from "../src/modules/rewards/utils/reward-crypto.util";
-import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
+import { DEMO_MERCHANT_API_KEYS, REWARD_SEED_IDS } from "../prisma/seed/rewards";
+import { POS_CODE_MAX_FAILURES } from "../src/modules/rewards/services/pos-code-lockout.service";
+import { sha256Hex } from "../src/common/crypto/sha256";
+import { RewardCodeHasher } from "../src/modules/rewards/crypto/reward-code-hasher";
+import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
 /** Registered to the KL store in the seed (the KL demo key is scoped to that store too). */
 const KL_TERMINAL = "KL-REGISTER-01";
 /** The fixture reward's minimum spend: RM 20.00. */
-const MIN_SPEND_MYR = 20;
 const MIN_SPEND_MINOR = 2000;
+/** Parallel requests in the concurrency tests. */
+const PARALLEL_REQUESTS = 5;
 /** A bill that satisfies the minimum spend: RM 25.00. */
 const BILL_MINOR = 2500;
 const DAY_MS = 86_400_000;
@@ -50,10 +53,23 @@ function backupCode(): string {
  */
 describe("POS checkout (e2e)", () => {
 	let app: NestFastifyApplication;
+	/** The API's own keyed hasher (`REWARD_CODE_HASH_KEYS`): fixtures store codes exactly as the app does. */
+	let codeHasher: RewardCodeHasher;
 	let pool: Pool;
 	let aliceId: string;
 	let bobId: string;
 	const rewardId = randomUUID();
+	/** A store-limited reward (KL store only) for the fail-closed store check. */
+	const storeOnlyRewardId = randomUUID();
+	/** Referral pair: redeeming `referredRewardId` credits the referrer with `referrerRewardId`. */
+	const referredRewardId = randomUUID();
+	const referrerRewardId = randomUUID();
+	/** Extra KL keys (removed afterwards): an organization-wide one and a throwaway one to lock. */
+	const orgWideKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
+	const lockoutKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
+	/** Unknown backup codes count toward a key's lockout — this file never sends them with the shared demo key. */
+	const guessingKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
+	const extraKeyIds: string[] = [];
 	const claims: ClaimFixture[] = [];
 
 	async function query(sql: string, values: readonly (string | number | boolean | null)[] = []): Promise<readonly Record<string, string | number | null>[]> {
@@ -72,17 +88,17 @@ describe("POS checkout (e2e)", () => {
 		return String(row?.id);
 	}
 
-	async function createClaim(userId: string): Promise<ClaimFixture> {
+	async function createClaim(userId: string, claimRewardId: string = rewardId, referralId: string | null = null): Promise<ClaimFixture> {
 		const claim = { id: randomUUID(), token: randomBytes(TOKEN_BYTES).toString("base64url"), backupCode: backupCode() };
 		const now = Date.now();
 		await query(
-			`INSERT INTO public.reward_claims (id, user_id, reward_id, redemption_token_hash, backup_code_hash, status, claimed_at, claim_expires_at)
-       VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7)`,
-			[claim.id, userId, rewardId, sha256Hex(claim.token), sha256Hex(claim.backupCode), now, now + DAY_MS],
+			`INSERT INTO public.reward_claims (id, user_id, reward_id, referral_id, redemption_token_hash, backup_code_hash, status, claimed_at, claim_expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8)`,
+			[claim.id, userId, claimRewardId, referralId, codeHasher.hash(claim.token), codeHasher.hash(claim.backupCode), now, now + DAY_MS],
 		);
 		await query(
 			`UPDATE public.rewards SET quantity_remaining = quantity_remaining - 1, quantity_reserved = quantity_reserved + 1, claim_count = claim_count + 1 WHERE id = $1`,
-			[rewardId],
+			[claimRewardId],
 		);
 		claims.push(claim);
 		return claim;
@@ -93,13 +109,56 @@ describe("POS checkout (e2e)", () => {
 		return String(row?.status);
 	}
 
-	function pos(path: string, body: object, terminalId: string = KL_TERMINAL): Promise<InjectResponse> {
+	function pos(path: string, body: object, terminalId: string = KL_TERMINAL, apiKey: string = DEMO_MERCHANT_API_KEYS.kl): Promise<InjectResponse> {
 		return app.inject({
 			method: "POST",
 			url: `${API_VERSION_PREFIX}/redemptions/${path}`,
-			headers: { "x-api-key": DEMO_MERCHANT_API_KEYS.kl, "x-terminal-id": terminalId, "content-type": "application/json" },
+			headers: { "x-api-key": apiKey, "x-terminal-id": terminalId, "content-type": "application/json" },
 			payload: JSON.stringify(body),
 		});
+	}
+
+	async function insertKlKey(plaintext: string, name: string, locationId: string | null): Promise<void> {
+		const id = randomUUID();
+		await query(
+			`INSERT INTO public.organization_api_keys (id, organization_id, location_id, name, key_hash, key_prefix, scope, created_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'POS', $7)`,
+			[id, ORGANIZATION_SEED_IDS.klOrganization, locationId, name, sha256Hex(plaintext), plaintext.slice(0, 16), REWARD_SEED_IDS.klOwnerUser],
+		);
+		extraKeyIds.push(id);
+	}
+
+	async function insertReward(
+		id: string,
+		title: string,
+		options: { readonly scope?: "SELECTED"; readonly referrerRewardId?: string; readonly kind?: "REFERRER" } = {},
+	): Promise<void> {
+		const referred = options.referrerRewardId !== undefined;
+		await query(
+			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, reward_kind, category, placeholder_image_key, min_spend_minor,
+         quantity_total, quantity_remaining, expiry_date, status, referrals_enabled, referral_pool_total, referral_pool_remaining, referrer_reward_id, location_scope_type)
+       VALUES ($1, $2, $3, 'Created by pos-checkout.e2e-spec.ts', 'DISCOUNT', 10, $4, 'cafe', 'cafe', $5, 50, 50, $6, 'PUBLISHED', $7, $8, $8, $9, $10)`,
+			[
+				id,
+				ORGANIZATION_SEED_IDS.klOrganization,
+				title,
+				options.kind ?? "CONSUMER",
+				options.kind === undefined ? MIN_SPEND_MINOR : null,
+				Date.now() + 30 * DAY_MS,
+				referred,
+				referred ? 1 : null,
+				options.referrerRewardId ?? null,
+				options.scope ?? "ALL_LOCATIONS",
+			],
+		);
+		if (options.scope === "SELECTED") {
+			await query(`INSERT INTO public.reward_location_scopes (id, organization_id, reward_id, location_id) VALUES ($1, $2, $3, $4)`, [
+				randomUUID(),
+				ORGANIZATION_SEED_IDS.klOrganization,
+				id,
+				ORGANIZATION_SEED_IDS.klLocation,
+			]);
+		}
 	}
 
 	function checkout(codes: RedemptionCheckoutInput["codes"], billTotalMinor: number = BILL_MINOR, idempotencyKey: string = randomUUID()): Promise<InjectResponse> {
@@ -120,28 +179,34 @@ describe("POS checkout (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
+		codeHasher = app.get(RewardCodeHasher);
 		pool = new Pool({ connectionString: DATABASE_URL });
+		// Alice is seeded unverified (verify-email demo); this suite needs her full session.
+		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
 		aliceId = await userIdFor("alice.johnson@example.com");
 		bobId = await userIdFor("bob.smith@example.com");
-		const now = Date.now();
-		await query(
-			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, placeholder_image_key, rules,
-         quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
-       VALUES ($1, $2, 'E2E checkout reward', 'Created by pos-checkout.e2e-spec.ts', 'DISCOUNT', 10, 'cafe', 'cafe', $3::jsonb, 50, 50, $4, 'PUBLISHED', false)`,
-			[rewardId, ORGANIZATION_SEED_IDS.klOrganization, JSON.stringify({ minSpendMyr: MIN_SPEND_MYR }), now + 30 * DAY_MS],
-		);
+		await insertReward(rewardId, "E2E checkout reward");
+		await insertReward(storeOnlyRewardId, "E2E store-only reward", { scope: "SELECTED" });
+		await insertReward(referrerRewardId, "E2E referrer reward", { kind: "REFERRER" });
+		await insertReward(referredRewardId, "E2E referred reward", { referrerRewardId });
+		await insertKlKey(orgWideKey, "E2E organization-wide key", null);
+		await insertKlKey(lockoutKey, "E2E lockout key", ORGANIZATION_SEED_IDS.klLocation);
+		await insertKlKey(guessingKey, "E2E unknown-code key", ORGANIZATION_SEED_IDS.klLocation);
 	});
 
 	afterAll(async () => {
-		const ids = claims.map((claim) => claim.id);
-		await query(`DELETE FROM public.reward_redemptions WHERE claim_id = ANY($1::text[])`, [`{${ids.join(",")}}`]);
-		await query(`DELETE FROM public.reward_sales WHERE user_id IN ($1, $2) AND organization_id = $3 AND terminal_id = ANY($4::text[])`, [
-			aliceId,
-			bobId,
-			ORGANIZATION_SEED_IDS.klOrganization,
-			`{${KL_TERMINAL},E2E-UNREGISTERED-TILL}`,
-		]);
-		await query(`DELETE FROM public.rewards WHERE id = $1`, [rewardId]);
+		// Only this file's rows: sales are found through the fixture rewards' claims (seeded sales are left alone).
+		const fixtureRewards = `{${[rewardId, storeOnlyRewardId, referredRewardId, referrerRewardId].join(",")}}`;
+		const fixtureClaims = `SELECT id FROM public.reward_claims WHERE reward_id = ANY($1::text[])`;
+		const sales = await query(`SELECT DISTINCT sale_id FROM public.reward_redemptions WHERE claim_id IN (${fixtureClaims})`, [fixtureRewards]);
+		await query(`DELETE FROM public.reward_redemptions WHERE claim_id IN (${fixtureClaims})`, [fixtureRewards]);
+		await query(`DELETE FROM public.reward_sales WHERE id = ANY($1::text[])`, [`{${sales.map((sale) => String(sale.sale_id)).join(",")}}`]);
+		await query(`DELETE FROM public.reward_notifications WHERE metadata->>'rewardId' = $1`, [referrerRewardId]);
+		await query(`DELETE FROM public.reward_claims WHERE reward_id = ANY($1::text[])`, [fixtureRewards]);
+		await query(`DELETE FROM public.reward_referrals WHERE reward_id = ANY($1::text[])`, [fixtureRewards]);
+		await query(`UPDATE public.rewards SET referrer_reward_id = NULL WHERE id = ANY($1::text[])`, [fixtureRewards]);
+		await query(`DELETE FROM public.rewards WHERE id = ANY($1::text[])`, [fixtureRewards]);
+		await query(`DELETE FROM public.organization_api_keys WHERE id = ANY($1::text[])`, [`{${extraKeyIds.join(",")}}`]);
 		await pool.end();
 		await app.close();
 	});
@@ -283,5 +348,109 @@ describe("POS checkout (e2e)", () => {
 		const platform = parseSuccessEnvelope(admin, AdminSalesAnalyticsResponseSchema).data;
 		expect(platform.topMerchants.some((merchantSales) => merchantSales.organizationId === ORGANIZATION_SEED_IDS.klOrganization)).toBe(true);
 		expect(platform.activeMerchants.value).toBeGreaterThanOrEqual(1);
+	});
+
+	it("records ONE sale when the same checkout is sent several times in parallel", async () => {
+		const claim = await createClaim(aliceId);
+		const idempotencyKey = randomUUID();
+
+		const responses = await Promise.all(Array.from({ length: PARALLEL_REQUESTS }, async () => checkout([{ token: claim.token }], BILL_MINOR, idempotencyKey)));
+
+		expect(responses.map((response) => response.statusCode)).toEqual(Array.from({ length: PARALLEL_REQUESTS }, () => 201));
+		const saleIds = new Set(responses.map((response) => parseSuccessEnvelope(response, RedemptionCheckoutResponseSchema).data.saleId));
+		expect(saleIds.size).toBe(1);
+		const [count] = await query(`SELECT COUNT(*)::int AS n FROM public.reward_redemptions WHERE claim_id = $1`, [claim.id]);
+		expect(count?.n).toBe(1);
+	});
+
+	it("redeems a claim shared by parallel checkouts (different keys) exactly once", async () => {
+		const shared = await createClaim(aliceId);
+		const [before] = await query(`SELECT redemption_count FROM public.rewards WHERE id = $1`, [rewardId]);
+
+		const responses = await Promise.all(Array.from({ length: PARALLEL_REQUESTS }, async () => checkout([{ token: shared.token }])));
+
+		expect(responses.filter((response) => response.statusCode === 201)).toHaveLength(1);
+		expect(responses.filter((response) => response.statusCode !== 201).map(errorCodeOf)).toEqual(Array.from({ length: PARALLEL_REQUESTS - 1 }, () => "ALREADY_REDEEMED"));
+		const [after] = await query(`SELECT redemption_count FROM public.rewards WHERE id = $1`, [rewardId]);
+		expect(Number(after?.redemption_count)).toBe(Number(before?.redemption_count) + 1);
+	});
+
+	it("answers another merchant's code exactly like an unknown code (no cross-merchant oracle)", async () => {
+		// The seeded backup code TUVW2345 belongs to a Jonker Street Kitchen claim, not to the KL merchant calling here.
+		const [mlkClaim] = await query(`SELECT backup_code_hash FROM public.reward_claims WHERE id = $1`, [REWARD_SEED_IDS.claimPendingMlk]);
+		expect(codeHasher.lookupCandidates("TUVW2345")).toContain(mlkClaim?.backup_code_hash);
+
+		const foreign = await pos("validate", { backupCode: "TUVW2345" }, KL_TERMINAL, guessingKey);
+		const unknown = await pos("validate", { backupCode: backupCode() }, KL_TERMINAL, guessingKey);
+
+		expect(foreign.statusCode).toBe(404);
+		expect(unknown.statusCode).toBe(404);
+		expect(ApiErrorResponseSchema.parse(foreign.json()).error).toMatchObject({
+			code: "REDEMPTION_TOKEN_INVALID",
+			message: ApiErrorResponseSchema.parse(unknown.json()).error.message,
+		});
+	});
+
+	it("locks an API key after too many unknown backup codes — every code of a checkout counts — and audits the lock", async () => {
+		const valid = await createClaim(aliceId);
+		const guesses = Array.from({ length: POS_CODE_MAX_FAILURES }, () => ({ backupCode: backupCode() }));
+
+		const guessing = await pos("checkout", { idempotencyKey: randomUUID(), billTotalMinor: BILL_MINOR, currency: "MYR", codes: guesses }, KL_TERMINAL, lockoutKey);
+		expect(guessing.statusCode).toBe(429);
+		expect(errorCodeOf(guessing)).toBe("POS_CODE_LOCKED");
+
+		// While locked, even a valid code is refused with this key; other keys are unaffected.
+		expect((await pos("validate", { token: valid.token }, KL_TERMINAL, lockoutKey)).statusCode).toBe(429);
+		expect((await pos("validate", { token: valid.token })).statusCode).toBe(201);
+
+		const [lockAudit] = await query(`SELECT COUNT(*)::int AS n FROM public.reward_audit_logs WHERE action = 'pos.api_key_code_locked' AND metadata->>'apiKeyId' = $1`, [
+			String(extraKeyIds.at(1)),
+		]);
+		expect(lockAudit?.n).toBe(1);
+	});
+
+	it("fails closed when a store-limited reward is redeemed from a till whose store is unknown", async () => {
+		const claim = await createClaim(aliceId, storeOnlyRewardId);
+
+		const unknownStore = await pos(
+			"checkout",
+			{ idempotencyKey: randomUUID(), billTotalMinor: BILL_MINOR, currency: "MYR", codes: [{ token: claim.token }] },
+			"E2E-ORG-WIDE-TILL",
+			orgWideKey,
+		);
+		expect(unknownStore.statusCode).toBe(422);
+		expect(errorCodeOf(unknownStore)).toBe("STORE_REQUIRED");
+		expect(await claimStatus(claim.id)).toBe("PENDING");
+
+		// The store-scoped KL key knows its store: the same reward redeems.
+		expect((await checkout([{ token: claim.token }])).statusCode).toBe(201);
+	});
+
+	it("credits the referrer inside the checkout transaction, once, even when the referee's rewards are redeemed in parallel", async () => {
+		const referralId = randomUUID();
+		await query(`INSERT INTO public.reward_referrals (id, referrer_user_id, referee_user_id, reward_id, attribution_token, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')`, [
+			referralId,
+			bobId,
+			aliceId,
+			referredRewardId,
+			`e2e-${referralId}`.slice(0, 64),
+		]);
+		const first = await createClaim(aliceId, referredRewardId, referralId);
+		const second = await createClaim(aliceId, referredRewardId, referralId);
+
+		const responses = await Promise.all([checkout([{ token: first.token }]), checkout([{ token: second.token }])]);
+		expect(responses.map((response) => response.statusCode)).toEqual([201, 201]);
+
+		const [referral] = await query(`SELECT status, credit_notified_at FROM public.reward_referrals WHERE id = $1`, [referralId]);
+		expect(referral?.status).toBe("CREDITED");
+		// EMAIL_MODE=noop in e2e: the post-commit delivery succeeds and marks the referral notified.
+		expect(referral?.credit_notified_at).not.toBeNull();
+		const [credits] = await query(`SELECT COUNT(*)::int AS n FROM public.reward_claims WHERE referral_id = $1 AND is_referrer_credit = true AND user_id = $2`, [
+			referralId,
+			bobId,
+		]);
+		expect(credits?.n).toBe(1);
+		const [parent] = await query(`SELECT referral_pool_remaining FROM public.rewards WHERE id = $1`, [referredRewardId]);
+		expect(Number(parent?.referral_pool_remaining)).toBe(0);
 	});
 });

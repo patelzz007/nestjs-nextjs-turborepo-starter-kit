@@ -5,7 +5,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 /** Black / white inverted buttons for the user detail page (light: black bg, dark: white bg). */
-export const USER_DETAIL_PAGE_BUTTON_CLASS = "border-transparent bg-black text-white shadow-none hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90";
+export const USER_DETAIL_PAGE_BUTTON_CLASS = "border-transparent bg-foreground text-background shadow-none hover:bg-foreground/90";
 
 type UserDetailButtonProps = React.ComponentProps<typeof Button>;
 

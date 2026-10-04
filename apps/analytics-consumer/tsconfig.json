@@ -2,7 +2,10 @@
 	"extends": "@workspace/typescript-config/nestjs.json",
 	"compilerOptions": {
 		"outDir": "./dist",
-		"rootDir": "./src"
+		"rootDir": "./src",
+		// Resolve @workspace/* through their `development` export (src/), like every
+		// other workspace — never through an unbuilt or stale dist/ (clean CI checkout).
+		"customConditions": ["development"]
 	},
 	"include": ["src/**/*"]
 }

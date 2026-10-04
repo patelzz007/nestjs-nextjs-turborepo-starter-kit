@@ -1,5 +1,7 @@
 "use client";
 
+import { DISPLAY_LOCALE } from "@/lib/format/dates";
+import { formatCount } from "@/lib/format/numbers";
 import type { AdminSalesAnalyticsResponse } from "@workspace/shared";
 import { AnalyticsStatCard, type AnalyticsStatAccent } from "@workspace/ui/components/display/analytics-stat-card";
 import { formatMinorUnits } from "@workspace/ui/lib/format/money";
@@ -33,13 +35,13 @@ function statValue(key: SalesStatCardDefinition["key"], summary: SalesStatSummar
 	const { sales, activeMerchants } = summary;
 	switch (key) {
 		case "totalSales":
-			return { value: formatMinorUnits(sales.totalSalesMinor.value, sales.currency), changePercent: sales.totalSalesMinor.changePercent };
+			return { value: formatMinorUnits(sales.totalSalesMinor.value, sales.currency, DISPLAY_LOCALE), changePercent: sales.totalSalesMinor.changePercent };
 		case "bills":
-			return { value: sales.bills.value.toLocaleString(), changePercent: sales.bills.changePercent };
+			return { value: formatCount(sales.bills.value), changePercent: sales.bills.changePercent };
 		case "averageBill":
-			return { value: formatMinorUnits(sales.averageBillMinor.value, sales.currency), changePercent: sales.averageBillMinor.changePercent };
+			return { value: formatMinorUnits(sales.averageBillMinor.value, sales.currency, DISPLAY_LOCALE), changePercent: sales.averageBillMinor.changePercent };
 		case "activeMerchants":
-			return { value: activeMerchants.value.toLocaleString(), changePercent: activeMerchants.changePercent };
+			return { value: formatCount(activeMerchants.value), changePercent: activeMerchants.changePercent };
 	}
 }
 

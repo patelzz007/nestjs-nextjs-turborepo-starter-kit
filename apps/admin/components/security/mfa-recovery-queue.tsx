@@ -1,13 +1,13 @@
 "use client";
 
-import { adminMfaRecoveryListQuery, type AdminMfaRecoveryRequest, type Envelope, type MfaRecoveryRecordStatus } from "@workspace/shared";
+import { adminMfaRecoveryListQuery, MfaRecoveryRecordStatusSchema, type AdminMfaRecoveryRequest, type Envelope, type MfaRecoveryRecordStatus } from "@workspace/shared";
 import { ALL_FILTER_OPTION } from "@workspace/client/lib/api/list-query";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
-import { MFA_RECOVERY_PAGE_SIZE_OPTIONS, MFA_RECOVERY_URL_STATE, MfaRecoveryStatusFilterSchema, toMfaRecoveryListQuery } from "@/lib/url-state/mfa-recovery";
+import { MFA_RECOVERY_PAGE_SIZE_OPTIONS, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "@/lib/url-state/mfa-recovery";
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
@@ -22,16 +22,18 @@ import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
+import { Button } from "@workspace/ui/components/form/button";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
 
-const STATUS_FILTER_OPTIONS: readonly { readonly value: MfaRecoveryRecordStatus; readonly label: string }[] = [
-	{ value: "PENDING", label: "Pending review" },
-	{ value: "APPROVED", label: "Approved" },
-	{ value: "DENIED", label: "Denied" },
-	{ value: "COMPLETED", label: "Completed" },
-];
+/** Display label of every request status — the filter's options are the shared enum, so a new status cannot be missing. */
+const STATUS_FILTER_LABELS: Readonly<Record<MfaRecoveryRecordStatus, string>> = {
+	PENDING: "Pending review",
+	APPROVED: "Approved",
+	DENIED: "Denied",
+	COMPLETED: "Completed",
+};
 
 export interface MfaRecoveryQueueProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -42,17 +44,19 @@ export interface MfaRecoveryQueueProps {
  * Super-admin MFA recovery queue. The status filter (pending by default), page
  * and the request open in the review panel (`?requestId=`) live in the URL
  * (lib/url-state/mfa-recovery), so a link from an email or a colleague opens
- * the same request; without one, the first request on the page is shown.
+ * the same request. Only the request the URL names is ever shown for review —
+ * when it is not on the current page, the queue says so instead of
+ * substituting another request.
  */
 export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueueProps>(function MfaRecoveryQueue({ initialPage }, ref): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 	const [urlState, updateUrlState] = useUrlState(MFA_RECOVERY_URL_STATE);
 	const statusFilter = urlState.status;
-	const isFiltered = statusFilter !== ALL_FILTER_OPTION;
+	const isFiltered = statusFilter !== undefined;
 
 	const handleClearFilters = React.useCallback((): void => {
-		updateUrlState({ status: ALL_FILTER_OPTION, page: LIST_FIRST_PAGE, cursor: undefined });
+		updateUrlState({ status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
 	}, [updateUrlState]);
 
 	const stateKey: string = MFA_RECOVERY_URL_STATE.serialize({ ...urlState, requestId: undefined });
@@ -62,11 +66,14 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 	});
 
 	const rows = React.useMemo((): readonly AdminMfaRecoveryRequest[] => requestsQuery.data?.data ?? [], [requestsQuery.data?.data]);
+	const isRefetching: boolean = requestsQuery.isFetching && !requestsQuery.isLoading;
+	// The server's count of every matching request, not just this page.
+	const matchingTotal: number = readPaginatedTotal(requestsQuery.data?.meta);
 	const { pagination } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
 		sortSpec: adminMfaRecoveryListQuery,
-		totalCount: readPaginatedTotal(requestsQuery.data?.meta),
+		totalCount: matchingTotal,
 		nextCursor: readPaginatedNextCursor(requestsQuery.data?.meta),
 		resetKey: MFA_RECOVERY_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined, requestId: undefined }),
 		getRowId: getRequestRowId,
@@ -74,28 +81,34 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		isFiltered,
 	});
 
-	// Derived, not synced: the URL's request when it is on this page, else the first row.
-	const selectedRequest: AdminMfaRecoveryRequest | undefined = rows.find((row) => row.id === urlState.requestId) ?? rows[0];
+	// Derived, not synced: only the request the URL names — never another one in its place.
+	const selectedRequest: AdminMfaRecoveryRequest | undefined = urlState.requestId === undefined ? undefined : rows.find((row) => row.id === urlState.requestId);
+	const isSelectionOutOfView: boolean = urlState.requestId !== undefined && selectedRequest === undefined && !requestsQuery.isLoading;
+
+	const handleClearSelection = React.useCallback((): void => {
+		updateUrlState({ requestId: undefined });
+	}, [updateUrlState]);
 
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
 			if (filterKey !== "status") {
 				return;
 			}
-			const parsed = MfaRecoveryStatusFilterSchema.safeParse(value ?? ALL_FILTER_OPTION);
-			updateUrlState({ status: parsed.success ? parsed.data : ALL_FILTER_OPTION, page: LIST_FIRST_PAGE, cursor: undefined, requestId: undefined });
+			// The control's "all" option (or a cleared control) means no status filter.
+			const parsed = MfaRecoveryRecordStatusSchema.safeParse(value);
+			updateUrlState({ status: parsed.success ? parsed.data : undefined, page: LIST_FIRST_PAGE, cursor: undefined, requestId: undefined });
 		},
 		[updateUrlState],
 	);
 
-	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: statusFilter }), [statusFilter]);
+	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: statusFilter ?? ALL_FILTER_OPTION }), [statusFilter]);
 
 	const tableFilters = React.useMemo(
 		(): Filter[] => [
 			{
 				key: "status",
 				label: "Status",
-				options: STATUS_FILTER_OPTIONS.map((option) => ({ value: option.value, label: option.label })),
+				options: MfaRecoveryRecordStatusSchema.options.map((status) => ({ value: status, label: STATUS_FILTER_LABELS[status] })),
 			},
 		],
 		[],
@@ -198,12 +211,12 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 						<CardTitle>MFA recovery queue</CardTitle>
 						<CardDescription>Review requests from users who lost access to their authenticator and backup codes.</CardDescription>
 					</div>
-					{statusFilter === "PENDING" && rows.length > 0 ? <Badge variant="secondary">{String(rows.length)} pending on this page</Badge> : null}
+					{statusFilter === MfaRecoveryRecordStatusSchema.enum.PENDING && matchingTotal > 0 ? <Badge variant="secondary">{String(matchingTotal)} pending</Badge> : null}
 				</CardHeader>
 				<CardContent className="space-y-6">
 					<DataTable
 						columns={columns}
-						data={[...rows]}
+						data={rows}
 						labels={tableLabels}
 						actions={actions}
 						checkbox={checkbox}
@@ -215,7 +228,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 						pagination={pagination}
 						pageSizeOptions={MFA_RECOVERY_PAGE_SIZE_OPTIONS}
 						isLoading={requestsQuery.isLoading}
-						isRefetching={requestsQuery.isFetching && !requestsQuery.isLoading ? true : false}
+						isRefetching={isRefetching}
 						onRowClick={handleRowClick}
 						emptyState={{
 							title: "No requests",
@@ -228,8 +241,17 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 			{selectedRequest !== undefined ? (
 				<section className="space-y-3">
 					<h2 className="text-lg font-semibold">Review request</h2>
-					<MfaRecoveryReviewPanel request={selectedRequest} onReviewed={handleReviewed} />
+					{/* Keyed by request: review notes typed for one request never carry over to another. */}
+					<MfaRecoveryReviewPanel key={selectedRequest.id} request={selectedRequest} onReviewed={handleReviewed} />
 				</section>
+			) : null}
+			{isSelectionOutOfView ? (
+				<div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+					<span>The linked request is not in this view — change the filter or page to find it.</span>
+					<Button type="button" variant="outline" size="sm" onClick={handleClearSelection}>
+						Clear selection
+					</Button>
+				</div>
 			) : null}
 		</div>
 	);

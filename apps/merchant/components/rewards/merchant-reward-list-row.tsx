@@ -5,11 +5,11 @@ import { MerchantRewardLocationLabel } from "@/components/rewards/merchant-rewar
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
-import type { RewardResponse } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -22,7 +22,7 @@ export interface MerchantRewardListRowProps {
 /** Dense list row for merchant rewards — optimized for scanning many offers. */
 export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewardListRowProps): React.JSX.Element {
 	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.edit(reward.id));
-	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
+	const expiryLabel = formatEpochMs(reward.expiryDate, "date", PLATFORM_DISPLAY_REGION);
 	const isLive = reward.status === "PUBLISHED";
 
 	return (

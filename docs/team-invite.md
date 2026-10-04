@@ -297,7 +297,7 @@ Used for all invite CRUD and membership creation:
 
 | Operation | Used for |
 | --------- | -------- |
-| `organization.membership.invite` | Create, revoke, resolve invite by token |
+| `organization.invitation.create` / `.revoke` / `.resolve_token` | Create, revoke, resolve invite by token (one operation per purpose) |
 | `organization.membership.accept` | Accept invite + create membership |
 | `auth.pre_login` | Check account existence, existing membership |
 
@@ -306,7 +306,7 @@ Executor: `apps/api/src/prisma/tenant-transaction.service.ts` — sets `app.rls_
 
 ### Why invite create initially failed (500)
 
-The original invite-create path ran inside a tenant transaction without bypass. Postgres returned `42501` (insufficient privilege) on `INSERT INTO organization_invitations`. The fix wraps all invite writes in `withSystemOperation("organization.membership.invite", ...)`.
+The original invite-create path ran inside a tenant transaction without bypass. Postgres returned `42501` (insufficient privilege) on `INSERT INTO organization_invitations`. The fix wraps all invite writes in `withSystemOperation({ operation: "organization.invitation.create", … })`.
 
 ### Accept endpoint RLS note
 
@@ -358,7 +358,7 @@ This enables the **existing-account** flow: sign in first, then accept.
   [team-member-invite] email=... url=https://merchant.../team-invite?token=...
   ```
 
-See [Email + Webhook Setup](./email-setup.md) for Resend configuration.
+See [Email + Webhook Setup](./technical/email/resend-setup.md) for Resend configuration.
 
 ---
 
@@ -623,7 +623,7 @@ pnpm --filter merchant dev
 | `apps/api/src/modules/organization/utils/organization-membership-location-scope.util.ts` | Location scope row builder |
 | `apps/api/src/modules/auth/services/auth-session.service.ts` | Pending-invite login bypass |
 | `apps/api/src/modules/notifications/email/templates/team-member-invite-email.template.ts` | Email template |
-| `apps/api/src/prisma/system-operation.registry.ts` | `organization.membership.invite` / `.accept` |
+| `apps/api/src/prisma/system-operation.registry.ts` | `organization.invitation.*` / `organization.membership.accept` |
 | `apps/api/prisma/schema.prisma` | `organization_invitations` model |
 | `apps/api/prisma/seed/organizations.ts` | Seed invite record |
 
@@ -662,7 +662,7 @@ pnpm --filter @workspace/shared build && pnpm --filter api dev
 
 ### `42501` RLS violation on invite create
 
-Ensure invite writes use `withSystemOperation("organization.membership.invite", ...)`, not a plain tenant transaction.
+Ensure invite writes use `withSystemOperation({ operation: "organization.invitation.create", … })`, not a plain tenant transaction.
 
 ### `MERCHANT_ACCESS_REQUIRED` on login before accepting
 
@@ -682,12 +682,54 @@ Invites expire after 7 days. Admin must send a new invite (or revoke and re-invi
 
 ---
 
+## Removing a member from a store, and closing a store
+
+Both run in one `withSystemOperation` transaction with their audit row (`OrganizationAuditService.recordInTx`, real actor). Nothing is hard-deleted except `organization_membership_location_scopes` rows (a pure junction; the audit row keeps the history).
+
+### `POST /api/v1/orgs/:orgSlug/members/:membershipId/stores/:locationId/remove`
+
+Needs `merchant:manage_team` and a location scope that covers the store (else `403 ORGANIZATION_STORE_OUT_OF_SCOPE`). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deleted_at`, `deleted_by` = actor). Body: `{ "allowNoStores": false }`.
+
+| Status | Code | When |
+|---|---|---|
+| 201 | - | Removed; `remainingLocationIds` lists the stores the member still has |
+| 404 | `NOT_FOUND` | Unknown member, or the member is not scoped to that store |
+| 409 | `ORGANIZATION_OWNER_PROTECTED` | Target is the OWNER |
+| 409 | `ORGANIZATION_MEMBER_COVERS_ALL_STORES` | Target has ALL_LOCATIONS (narrow them first) |
+| 409 | `ORGANIZATION_MEMBER_LAST_STORE` | Would leave the member with no store and `allowNoStores` is false |
+
+The member row is locked (`FOR UPDATE`) first, so two concurrent removals cannot both pass the last-store check.
+
+Sample (seed: Jonker Street Kitchen owner removes the cashier from Bukit Beruang, who then has no store, so `allowNoStores` is required):
+
+```json
+POST /api/v1/orgs/<jonker-slug>/members/157401d5-536e-464f-9ae9-4756b6dd5f64/stores/257401d5-536e-464f-9ae9-4756b6dd5f65/remove
+{ "allowNoStores": true }
+-> { "success": true, "data": { "membershipId": "157401d5-...", "locationId": "257401d5-...", "removedAt": 1790000000000, "remainingLocationIds": [] } }
+```
+
+### `POST /api/v1/orgs/:orgSlug/locations/:locationId/close`
+
+Needs `merchant:manage_locations` and a covering location scope. Body: `{ "reason": "<1-500 chars>" }`. In one transaction: soft-deletes the location (`status = INACTIVE`, `closure_reason`, `deleted_at`, `deleted_by`) and its mirrored store, soft-deletes the store's memberships, deletes SELECTED member scope rows pointing at it, soft-deletes its terminals, and revokes every API key scoped to the store (including terminal-paired keys). Sales and redemption history stay readable. The primary store cannot be closed (`409 ORGANIZATION_LOCATION_PRIMARY_CANNOT_CLOSE`); an unknown or already-closed store is `404`; a lost race is `409 ORGANIZATION_LOCATION_STATUS_CONFLICT`.
+
+```json
+POST /api/v1/orgs/<jonker-slug>/locations/<location-id>/close
+{ "reason": "Franchise partner went bankrupt; the outlet was closed permanently." }
+-> { "success": true, "data": { "locationId": "...", "storeId": "...", "closedAt": 1790000000000, "reason": "...", "storeMembershipsRemoved": 2, "memberScopesRemoved": 0, "terminalsRemoved": 0, "apiKeysRevoked": 0 } }
+```
+
+**Claims and redemptions after a closure.** Closed stores no longer count as places a reward is valid: a reward offered only at closed stores cannot be claimed (the stock reservation requires `ALL_LOCATIONS` or a live ACTIVE store, so it answers out-of-stock), and redemption eligibility drops closed stores from the reward's store list (`NOT_VALID_AT_STORE`). The store's terminals are removed and its keys revoked, so no POS call can come from it. Claims already pending stay valid until their own expiry: they remain redeemable at any remaining open store of the reward, and a claim whose reward had no other store simply cannot be redeemed and is expired by the normal expiry sweep, which returns its stock. Sales and redemption history are untouched.
+
+Seed: `prisma/seed/store-closure.ts` creates one closed store ("Taman Melaka Raya (Closed)") and one removed store member (the Jonker cashier, removed from Bukit Katil).
+
+---
+
 ## Related documentation
 
-- [Multi-Tenancy](./multi-tenancy.md) — RLS and tenant isolation
+- [Multi-Tenancy](./technical/authorization/tenancy-and-rls.md) — RLS and tenant isolation
 - [ADR 012: System Operations](./adr/012-system-operations.md) — bypass registry pattern
 - [ADR 007: Tenancy and RLS Bypass](./adr/007-tenancy-and-rls-bypass.md) — when bypass is allowed
-- [Authorization & RBAC](./authorization.md) — org roles and permissions
-- [API Routes](./api-routes.md) — route constant conventions
-- [Email + Webhook Setup](./email-setup.md) — transactional email configuration
-- [Merchant Onboarding](./merchant-onboarding.md) — `PLATFORM_ONBOARDING` invites (different flow)
+- [Authorization & RBAC](./technical/authorization/overview.md) — org roles and permissions
+- [API Routes](./technical/api/routes.md) — route constant conventions
+- [Email + Webhook Setup](./technical/email/resend-setup.md) — transactional email configuration
+- [Merchant Onboarding](./user-guide/02-merchant-onboarding.md) — `PLATFORM_ONBOARDING` invites (different flow)

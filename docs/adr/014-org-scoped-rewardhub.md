@@ -139,5 +139,5 @@ Seed demo org slugs: `brew-bean-kl`, `jonker-street-kitchen`.
 
 - [ADR 008: Canonical Organization Tenant Boundary](./008-canonical-organization-tenant.md)
 - [ADR 013: Organization and Location Ownership](./013-organization-location-ownership.md)
-- [Multi-tenancy](../multi-tenancy.md)
-- [Rewards platform PRD](../rewards-platform-prd.md)
+- [Multi-tenancy](../technical/authorization/tenancy-and-rls.md)
+- [Rewards platform PRD](../user-guide/README.md)

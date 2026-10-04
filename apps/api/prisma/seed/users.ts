@@ -2,6 +2,7 @@ import type { Permission, PermissionAction, PermissionResource, Plan, Role, User
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
+import { assignSeedRole } from "./rbac-audit";
 import { requireRow } from "./require-row";
 
 /** Grace period before MFA enrollment is required for existing seed users. */
@@ -236,15 +237,10 @@ export async function assignRolesToUsers(users: User[], roles: Role[]): Promise<
 		{ user: get("jack.anderson@example.com"), role: role("User") },
 	];
 
+	// Staff and customer roles are assigned by the platform operator (the SuperAdmin), audited like the admin API does.
+	const operator: User = get("superadmin@example.com");
 	for (const a of assignments) {
-		await prisma.userRole.upsert({
-			where: { userId_roleId: { userId: a.user.id, roleId: a.role.id } },
-			update: {},
-			create: {
-				user: { connect: { id: a.user.id } },
-				role: { connect: { id: a.role.id } },
-			},
-		});
+		await assignSeedRole({ userId: a.user.id, roleId: a.role.id, actorId: operator.id, action: "ROLE_ASSIGNED", scenario: "platform-accounts" });
 	}
 }
 

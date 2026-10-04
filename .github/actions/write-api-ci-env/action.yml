@@ -1,0 +1,56 @@
+# Writes the throwaway apps/api/.env every database-backed CI job uses (the API
+# e2e job and the browser e2e job), so they boot the API with the SAME config.
+# Signing secrets are random per run and masked in logs. Redis, Kafka and
+# RabbitMQ are left unset: the API falls back to in-memory caches and skips the
+# broker/queue integrations. apps/api/src/config/ci-workflow-env.spec.ts parses
+# the heredoc below through the API's config schema, so it cannot drift.
+name: Write the CI API env
+description: Write a throwaway apps/api/.env (random secrets, masked) pointing at the job's database.
+
+inputs:
+  database-url:
+    description: Connection string of the job's throwaway Postgres database.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Write throwaway apps/api/.env
+      shell: bash
+      env:
+        DATABASE_URL: ${{ inputs.database-url }}
+      run: |
+        random_secret() { openssl rand -hex 32; }
+        jwt_access="$(random_secret)"; jwt_refresh="$(random_secret)"
+        email_verification="$(random_secret)"; two_factor="$(random_secret)"; mfa_key="$(openssl rand -base64 32)"; reward_code_key="$(openssl rand -base64 32)"
+        tenant_master_key="$(openssl rand -base64 32)"  # exactly 32 bytes, base64 (validated at boot)
+        for value in "$jwt_access" "$jwt_refresh" "$email_verification" "$two_factor" "$mfa_key" "$reward_code_key" "$tenant_master_key"; do echo "::add-mask::${value}"; done
+        cat > apps/api/.env <<EOF
+        NODE_ENV=test
+        DATABASE_URL=${DATABASE_URL}
+        JWT_ACCESS_SECRET=${jwt_access}
+        JWT_ACCESS_EXPIRY=15m
+        JWT_REFRESH_SECRET=${jwt_refresh}
+        JWT_REFRESH_EXPIRY=7d
+        EMAIL_VERIFICATION_SECRET=${email_verification}
+        TWO_FACTOR_PENDING_SECRET=${two_factor}
+        MFA_ENCRYPTION_KEYS={"1":"${mfa_key}"}
+        REWARD_CODE_HASH_KEYS={"1":"${reward_code_key}"}
+        TENANT_ENCRYPTION_MASTER_KEY=${tenant_master_key}
+        BCRYPT_SALT_ROUNDS=10
+        LOGIN_VERIFICATION_MODE=disabled
+        EMAIL_MODE=noop
+        EMAIL_FROM_ADDRESS=noreply@example.com
+        STORAGE_PROVIDER=local
+        MALWARE_SCANNER=none
+        APP_NAME=Starter Kit CI
+        # Explicit Redis namespace (inert while REDIS_URL is unset; the e2e suite forces its own per run).
+        REDIS_NAMESPACE=starter-kit-ci
+        APP_URL=http://localhost:3000
+        ADMIN_APP_URL=http://localhost:3001
+        MERCHANT_APP_URL=http://localhost:3003
+        CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3003
+        COOKIE_DOMAIN=localhost
+        # Single-tenant mode serves the organization `pnpm db:seed` creates (verified at API boot).
+        DEFAULT_ORGANIZATION_ID=a178a4d1-6915-4eb3-bf84-6fb14e1feb6c
+        EOF

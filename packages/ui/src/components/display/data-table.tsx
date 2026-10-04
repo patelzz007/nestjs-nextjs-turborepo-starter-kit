@@ -283,7 +283,7 @@ export { sanitizeExportCell, exportToCSV, exportToJSON, exportToPDF, exportToSpr
 export interface DataTableProps<TData extends RowData> {
 	readonly ref?: React.Ref<HTMLDivElement>;
 	// Core
-	readonly data: TData[];
+	readonly data: readonly TData[];
 	readonly columns: ColumnDef<DataTableFeatures, TData>[];
 	readonly filters?: Filter[];
 	readonly actions?: Action<TData>[];

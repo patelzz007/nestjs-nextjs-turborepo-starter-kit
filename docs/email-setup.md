@@ -11,7 +11,7 @@ coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=f
 # Email + Webhook Setup (Resend & Cloudflare Tunnel)
 
 > [!NOTE] This guide is the **operational** half of the email system. It assumes you already
-> understand the code — read [Email Template System](./email.md) first for the architecture
+> understand the code — read [Email Template System](./technical/email/templates.md) first for the architecture
 > (base template, registry, sender service, log, preview page). Here we answer the three
 > questions every dev hits:
 >
@@ -107,13 +107,13 @@ All of these live in `apps/api/.env` and are read through `TypedConfigService`:
 | ------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `RESEND_API_KEY`                | `""`                  | Resend API key (`re_…`). Empty key ⇒ sends fail with `missing_api_key`.                                                         |
 | `EMAIL_FROM_ADDRESS`            | `noreply@example.com` | Sender. Must use a **verified** domain.                                                                                         |
-| `EMAIL_MODE`                    | `send`                | `send` (real) · `log-only` (print body, no network) · `noop` (skip entirely).                                                   |
+| `EMAIL_MODE`                    | `send`                | `send` (real) · `log-only` (print body, no network) · `noop` (skip entirely). Only `send` is accepted on a deployed production env.  |
 | `EMAIL_TEST_TO`                 | unset                 | **Dev override** — every send redirects here (never spams real recipients).                                                     |
 | `EMAIL_REPLY_TO`                | unset                 | `replyTo` on every email.                                                                                                       |
 | `EMAIL_MAX_ATTEMPTS`            | `3`                   | Send attempts incl. first try; jittered exponential backoff.                                                                    |
 | `EMAIL_TIMEOUT_MS`              | `10000`               | Per-attempt timeout; a hung Resend call is cut.                                                                                 |
 | `EMAIL_RATE_LIMIT_PER_MINUTE`   | `0`                   | Per-recipient sends/min; `0` disables.                                                                                          |
-| `RESEND_WEBHOOK_SECRET`         | `""`                  | Required for delivery webhooks (Part 2).                                                                                        |
+| `RESEND_WEBHOOK_SECRET`         | `""`                  | Required for delivery webhooks (Part 2); required at boot on a deployed production env with `EMAIL_MODE=send`. Unset → the webhook answers **503** (Resend retries) instead of dropping events. |
 | `WEBHOOK_RATE_LIMIT_PER_MINUTE` | `120`                 | Per-IP cap on the **public** `POST /notifications/email-webhook` route (fixed window / min). `0` disables the limiter entirely. |
 
 ### 2.4 Send your first email — the admin "Send test email" button
@@ -162,7 +162,7 @@ failed. Without them, a password-reset email that bounced silently is a support 
 > **The admin log is live.** Every write (a new send, a delivery webhook flip) pushes an
 > SSE frame down `GET /notifications/email-log/events`, and the `/emails/log` page refetches
 > instantly — status flips appear the moment the event lands, no polling, no refresh. (See
-> [Email Template System → Live updates (SSE)](./email.md) for the wiring.)
+> [Email Template System → Live updates (SSE)](./technical/email/templates.md) for the wiring.)
 
 ### 3.2 Create the webhook in Resend
 
@@ -214,9 +214,11 @@ keeps it safe is **verification**:
 - **The route is rate-limited per IP as defense-in-depth** (`WEBHOOK_RATE_LIMIT_PER_MINUTE`,
   default `120`/min, fixed window via `@nestjs/throttler`). Every request costs signature
   work + a log line, so even though the trust boundary is the HMAC signature, a client
-  (attacker or a misbehaving script) can't hammer the endpoint. The IP is resolved from
-  `cf-connecting-ip` (set by Cloudflare's edge, unspoofable through the tunnel), falling
-  back to the first `x-forwarded-for` hop, then the socket address. **Important:** a request
+  (attacker or a misbehaving script) can't hammer the endpoint. The IP is Fastify's
+  `request.ip`: the TCP peer, or — only when that peer is listed in `TRUST_PROXY` (e.g.
+  `loopback` for a local cloudflared) — the first untrusted `X-Forwarded-For` hop read right to
+  left (`apps/api/src/common/http/client-ip.ts`). Spoofed forwarding headers from an untrusted
+  peer are ignored; `cf-connecting-ip` is never read. **Important:** a request
   that fails signature verification still **counts against the limit** (the guard runs before
   the handler), so brute-forcing is throttled too. Over-limit requests get `429 Too Many
 Requests`. Set `0` to disable (empty throttlers = guard passes everything).
@@ -631,9 +633,9 @@ After setup, run through this in order — each step builds on the last:
 
 ## 7. Related docs
 
-- **[Email Template System](./email.md)** — the architecture: base template, registry,
+- **[Email Template System](./technical/email/templates.md)** — the architecture: base template, registry,
   sender service internals, EmailLog, admin preview/log pages, how to add a new email.
-- **[Getting Started](./getting-started.md)** — the monorepo env setup + running all apps.
-- **[Logging system](./logging.md)** — where send logs land and how to query them.
+- **[Getting Started](./technical/getting-started.md)** — the monorepo env setup + running all apps.
+- **[Logging system](./technical/operations/observability.md)** — where send logs land and how to query them.
 
 _Last updated: 2026-08-11._

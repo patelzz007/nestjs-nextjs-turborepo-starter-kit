@@ -15,7 +15,10 @@ import type { SessionCheckFailureReason } from "../../auth/session/session-check
  * - the user's profile (only its id, as the session's subject) — server state owned by TanStack Query (`GET /auth/me`).
  *   A sign-in seeds that cache from the login response (`effects.ts`), and the
  *   facade composes the `AuthUser` view from the query + this state;
- * - capabilities / permissions — `GET /auth/permissions` (TanStack Query);
+ * - capabilities / permissions and the session's SCOPE (full / restricted +
+ *   enrollment reason) — `GET /auth/permissions` (TanStack Query), which
+ *   mirrors the access token. The facade derives the scope from that query;
+ *   until it has answered the scope is `pending` and the UI fails closed;
  * - `isAuthenticated` / `isLoading` — derived from `status` by the selectors.
  */
 export type AuthSessionState = AuthSessionStatus & {
@@ -63,21 +66,18 @@ export type AuthSessionStatus =
 	 * `userId` is the session's subject (the JWT `sub`), kept to detect an
 	 * identity change; the rest of the profile stays in the `/auth/me` query.
 	 */
-	| { readonly status: "authenticated"; readonly userId: string; readonly scope: AuthSessionScope }
+	| { readonly status: "authenticated"; readonly userId: string }
 	/** No session in this tab, and why. */
 	| { readonly status: "signed-out"; readonly reason: SignedOutReason };
 
 /**
  * What kind of session this is — the access token's `sessionScope` claim as
- * the server reported it (login response or `/auth/permissions`). A session
- * fact the login response carries before any query exists, which is why it is
- * state and not read from the permissions query alone.
+ * `/auth/permissions` reports it. Derived by the facade from that query, never
+ * stored: `pending` until the query has answered for the current session, and
+ * a pending scope is treated as restricted (fail closed).
  */
-export interface AuthSessionScope {
-	readonly sessionScope: SessionScope;
-	/** Present when `sessionScope` is `restricted` (email verification / MFA enrollment pending). */
-	readonly enrollmentReason: EnrollmentReason | null;
-}
+export type AuthSessionScope =
+	{ readonly sessionScope: SessionScope; readonly enrollmentReason: EnrollmentReason | null } | { readonly sessionScope: "pending"; readonly enrollmentReason: null };
 
 /**
  * - `no-session` — the check found no session (guest, or `/auth/me` answered

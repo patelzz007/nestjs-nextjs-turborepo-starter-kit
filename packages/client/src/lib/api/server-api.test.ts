@@ -1,22 +1,35 @@
 // ============================================
-// lib/api-server.test.ts - SSR prefetch helper coverage
+// lib/server-api.test.ts - SSR prefetch helper coverage
 // ============================================
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { classifyError, createServerCallerForRouter, createServerRequestContext, describeFailure, isPrefetchFailure, resolveConfig, type ServerApiConfig } from "./server-api";
+import {
+	classifyError,
+	createServerCaller,
+	createServerCallerForRouter,
+	createServerRequestContext,
+	describeFailure,
+	isNoteworthyPrefetchFailure,
+	isPrefetchFailure,
+	resolveConfig,
+	type PrefetchLogEvent,
+	type ServerApiConfig,
+} from "./server-api";
 import { singleResponse } from "@workspace/shared";
 
-import { apiRouter, defineQuery, resolveRequest } from "./endpoints";
+import { headersOf, type FetchImpl } from "../test-utils";
+import { apiRouter, defineMutation, defineQuery, resolveRequest } from "./endpoints";
 import { ApiResponseContractError } from "./response-contract";
 
 // `server-only` throws outside React Server Components; stub it for tests.
 vi.mock("server-only", () => ({}));
 
 // Mock `next/headers` so `cookies()` / `headers()` don't touch the request context.
-// The mocks are typed (not `vi.fn()` any) so the factory properties return real
-// types — no `any`, no `unknown`, no casts.
+// The cookie store also records writes: a Server Component cannot write
+// cookies, so the SSR pipeline must never try (the old refresh did).
 interface CookieStore {
 	readonly get: (name: string) => { readonly value: string } | undefined;
+	readonly set: (name: string, value: string) => void;
 }
 const cookiesMock = vi.fn<() => CookieStore>();
 const headersMock = vi.fn<() => Promise<Headers>>();
@@ -28,51 +41,56 @@ vi.mock("next/headers", () => ({
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const okResponse = singleResponse(z.object({ ok: z.literal("yes") }));
+const OK_BODY = { success: true, data: { ok: "yes" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } };
 
 /** Fixture GET def — the def factories infer the constrained Input/Resp generics, so no widening cast is needed. */
-const endpoint = defineQuery(
-	{ method: "GET", path: "/geo/stats", input: z.object({}), response: okResponse },
-	{
-		queryKey: () => ["geo", "stats"],
-	},
+const endpoint = defineQuery({ method: "GET", path: "/geo/stats", input: z.object({}), response: okResponse }, { scope: () => ["geo", "stats"] });
+const publicEndpoint = defineQuery(
+	{ method: "GET", path: "/geo/stats", input: z.object({}), response: okResponse, access: "public" },
+	{ scope: () => ["geo", "stats", "public"] },
 );
+const writeEndpoint = defineMutation({ method: "POST", path: "/geo/stats", input: z.object({}), response: okResponse });
 
-const testConfig: ServerApiConfig = {
-	accessTokenCookie: "adminAccessToken",
-	refreshTokenCookie: "adminRefreshToken",
-	clientType: "admin",
-	clientOrigin: "http://localhost:3001",
-	timeoutMs: 5_000,
-	retries: 0,
-	retryDelayMs: 5,
-	retryBackoffMs: 10,
-	staleTimeMs: 60_000,
-	gcTimeMs: 300_000,
-	logger: (): void => {
-		// silent in tests
-	},
-	logLevel: "silent",
-};
+const silent = (): void => undefined;
 
-function jsonResponse(body: object, status = 200, headers: Record<string, string> = {}): Response {
-	return new Response(JSON.stringify(body), {
-		status,
-		headers: { "content-type": "application/json", ...headers },
-	});
+function testConfig(overrides: Partial<ServerApiConfig> = {}): ServerApiConfig {
+	return {
+		clientType: "admin",
+		attemptTimeoutMs: 5_000,
+		deadlineMs: 5_000,
+		retries: 0,
+		retryDelayMs: 1,
+		retryJitterMs: 0,
+		logger: silent,
+		...overrides,
+	};
 }
+
+function jsonResponse(body: object, status = 200): Response {
+	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
+
+const cookieWrites = vi.fn<(name: string, value: string) => void>();
 
 function cookieStoreWithAccess(value: string | undefined): CookieStore {
 	return {
 		get: (name: string): { readonly value: string } | undefined => {
 			if (name === "adminAccessToken") return value === undefined ? undefined : { value };
-			return { value: "refresh-token-value" };
+			if (name === "adminRefreshToken") return { value: "refresh-token-value" };
+			return undefined;
 		},
+		set: cookieWrites,
 	};
 }
 
-function mockForwardedHeaders(): void {
-	headersMock.mockResolvedValue(new Headers({ "user-agent": "vitest", "accept-language": "en-US" }));
-}
+beforeEach(() => {
+	cookieWrites.mockReset();
+	headersMock.mockResolvedValue(new Headers({ "user-agent": "vitest", "accept-language": "en-US", "x-forwarded-for": "203.0.113.7" }));
+});
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -107,13 +125,15 @@ describe("resolveRequest", () => {
 
 describe("classifyError", () => {
 	it("classifies an AbortError as aborted", () => {
-		const failure = classifyError(new DOMException("aborted", "AbortError"));
-		expect(failure).toEqual({ kind: "aborted" });
+		expect(classifyError(new DOMException("aborted", "AbortError"))).toEqual({ kind: "aborted" });
+	});
+
+	it("classifies a TimeoutError as timeout", () => {
+		expect(classifyError(new DOMException("timed out", "TimeoutError"))).toEqual({ kind: "timeout" });
 	});
 
 	it("classifies a ZodError as schema", () => {
-		const failure = classifyError(new z.ZodError([]));
-		expect(failure.kind).toBe("schema");
+		expect(classifyError(new z.ZodError([])).kind).toBe("schema");
 	});
 
 	it("classifies a response-contract mismatch as schema, naming the first failing path", () => {
@@ -124,73 +144,190 @@ describe("classifyError", () => {
 	});
 
 	it("classifies a generic Error as unreachable with its message", () => {
-		const failure = classifyError(new Error("boom"));
-		expect(failure).toEqual({ kind: "unreachable", cause: "boom" });
+		expect(classifyError(new Error("boom"))).toEqual({ kind: "unreachable", cause: "boom" });
 	});
 
-	it("classifies non-Error values as unreachable with a stringified cause", () => {
-		expect(classifyError("nope")).toEqual({ kind: "unreachable", cause: "nope" });
+	it("classifies a rejection without an Error as an unclassified unreachable failure", () => {
+		expect(classifyError(undefined)).toEqual({ kind: "unreachable", cause: "non-Error rejection" });
 	});
 });
 
 describe("createServerCallerForRouter", () => {
 	beforeEach(() => {
 		cookiesMock.mockReturnValue(cookieStoreWithAccess("access-token"));
-		mockForwardedHeaders();
-	});
-
-	afterEach(() => {
-		vi.unstubAllGlobals();
 	});
 
 	it("binds query leaves from a router tree without a manual literal", async () => {
-		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: { ok: "yes" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } }));
-		const context = createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh);
-		const server = createServerCallerForRouter({ stats: endpoint }, context);
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(OK_BODY));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));
 
-		const data = await server.stats.query({});
-
-		expect(data).toEqual({ success: true, data: { ok: "yes" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } });
+		await expect(server.stats.query({})).resolves.toEqual(OK_BODY);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
+	it("is read-only: mutation leaves are not bound (writes belong to Server Actions or the browser)", () => {
+		const server = createServerCallerForRouter({ stats: endpoint, write: writeEndpoint, nested: { write: writeEndpoint } }, createServerRequestContext(testConfig()));
+
+		expect(Object.keys(server)).toEqual(["stats", "nested"]);
+		expect(Object.keys(server.nested)).toEqual([]);
+	});
+
+	it("binds the real apiRouter without its mutations (no refresh / login leaves on the server)", () => {
+		const server = createServerCaller({ clientType: "web" });
+
+		expect("me" in server.auth).toBe(true);
+		expect("refresh" in server.auth).toBe(false);
+		expect("login" in server.auth).toBe(false);
+	});
+
+	it("forwards the frontend's cookie, client type and the browser's identity headers — and nothing can override them", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(OK_BODY));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));
+
+		await server.stats.query({});
+
+		const headers = headersOf(fetchMock.mock.calls[0]?.[1] ?? {});
+		expect(headers.Cookie).toBe("adminAccessToken=access-token");
+		expect(headers["X-Client-Type"]).toBe("admin");
+		expect(headers["user-agent"]).toBe("vitest");
+		expect(headers["x-forwarded-for"]).toBe("203.0.113.7");
+	});
+
 	it("rejects a prefetched body that violates the response contract with a typed error", async () => {
-		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: { ok: "no" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } }));
-		const context = createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh);
-		const server = createServerCallerForRouter({ stats: endpoint }, context);
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse({ ...OK_BODY, data: { ok: "no" } }));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));
 
 		await expect(server.stats.query({})).rejects.toBeInstanceOf(ApiResponseContractError);
 	});
 });
 
-describe("server queries without a session cookie", () => {
-	const publicEndpoint = defineQuery(
-		{ method: "GET", path: "/geo/stats", input: z.object({}), response: okResponse, access: "public" },
-		{
-			queryKey: () => ["geo", "stats", "public"],
-		},
-	);
-	const okBody = { success: true, data: { ok: "yes" }, meta: { correlationId: "corr-2", timestamp: 1786428000000 } };
+describe("a 401 during SSR never rotates the session", () => {
+	beforeEach(() => {
+		cookiesMock.mockReturnValue(cookieStoreWithAccess("expired-access-token"));
+	});
 
+	it("rejects with HTTP 401 after ONE request: no refresh call, no cookie write", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse({ success: false }, 401));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock, retries: 3 })));
+
+		await expect(server.stats.query({})).rejects.toThrow("HTTP 401");
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+		expect(cookieWrites).not.toHaveBeenCalled();
+	});
+});
+
+describe("prefetch outcomes are logged, never swallowed", () => {
+	beforeEach(() => {
+		cookiesMock.mockReturnValue(cookieStoreWithAccess("access-token"));
+	});
+
+	it("reports a success and a failure to the configured logger", async () => {
+		const events: PrefetchLogEvent[] = [];
+		const logger = (event: PrefetchLogEvent): void => {
+			events.push(event);
+		};
+		const fetchMock = vi
+			.fn<FetchImpl>()
+			.mockResolvedValueOnce(jsonResponse(OK_BODY))
+			.mockResolvedValueOnce(jsonResponse({ success: false }, 503));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock, logger })));
+
+		await server.stats.query({});
+		await expect(server.stats.query({})).rejects.toThrow("HTTP 503");
+
+		expect(events.map((event) => event.outcome)).toEqual([{ ok: true }, { ok: false, failure: { kind: "http", status: 503 } }]);
+		expect(events.every((event) => event.path === "/geo/stats")).toBe(true);
+	});
+
+	it("the default logger warns on an unexpected failure and stays quiet on expected ones", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(silent);
+		const fetchMock = vi
+			.fn<FetchImpl>()
+			.mockResolvedValueOnce(jsonResponse({ success: false }, 500))
+			.mockResolvedValueOnce(jsonResponse({ success: false }, 401));
+		const config: ServerApiConfig = { ...resolveConfig({ clientType: "admin" }), fetchImpl: fetchMock, retries: 0 };
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(config));
+
+		await expect(server.stats.query({})).rejects.toThrow("HTTP 500");
+		await expect(server.stats.query({})).rejects.toThrow("HTTP 401");
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0]?.[0]).toContain("HTTP 500");
+		warn.mockRestore();
+	});
+});
+
+describe("timeouts", () => {
+	beforeEach(() => {
+		cookiesMock.mockReturnValue(cookieStoreWithAccess("access-token"));
+	});
+
+	/** A fetch that never answers until its signal aborts — then rejects with the signal's reason, like the platform fetch. */
+	function hangingFetch(): FetchImpl {
+		return (_input, init): Promise<Response> =>
+			new Promise((_resolve, reject): void => {
+				init?.signal?.addEventListener("abort", (): void => {
+					const reason: Error | undefined = init.signal?.reason instanceof Error ? init.signal.reason : undefined;
+					reject(reason ?? new DOMException("aborted", "AbortError"));
+				});
+			});
+	}
+
+	it("retries an attempt that timed out, within the overall deadline", async () => {
+		const fetchMock = vi.fn<FetchImpl>(hangingFetch()).mockImplementationOnce(hangingFetch()).mockResolvedValueOnce(jsonResponse(OK_BODY));
+		const server = createServerCallerForRouter(
+			{ stats: endpoint },
+			createServerRequestContext(testConfig({ fetchImpl: fetchMock, attemptTimeoutMs: 20, deadlineMs: 2_000, retries: 2 })),
+		);
+
+		await expect(server.stats.query({})).resolves.toEqual(OK_BODY);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it("gives up as a timeout once the overall deadline passes, however many retries are left", async () => {
+		const fetchMock = vi.fn<FetchImpl>(hangingFetch());
+		const events: PrefetchLogEvent[] = [];
+		const server = createServerCallerForRouter(
+			{ stats: endpoint },
+			createServerRequestContext(
+				testConfig({
+					fetchImpl: fetchMock,
+					attemptTimeoutMs: 30,
+					deadlineMs: 50,
+					retries: 10,
+					logger: (event: PrefetchLogEvent): void => {
+						events.push(event);
+					},
+				}),
+			),
+		);
+
+		await expect(server.stats.query({})).rejects.toThrow("timeout");
+		expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(2);
+		expect(events[0]?.outcome).toEqual({ ok: false, failure: { kind: "timeout" } });
+	});
+});
+
+describe("server queries without a session cookie", () => {
 	beforeEach(() => {
 		cookiesMock.mockReturnValue(cookieStoreWithAccess(undefined));
-		mockForwardedHeaders();
 	});
 
 	it("skips a route that needs a session (no request is made)", async () => {
-		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(okBody));
-		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(OK_BODY));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));
 
 		await expect(server.stats.query({})).rejects.toThrow("no access-token cookie");
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
 	it("fetches a public route anonymously — no Cookie header — so guests get server-rendered data", async () => {
-		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(okBody));
-		const server = createServerCallerForRouter({ stats: publicEndpoint }, createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(OK_BODY));
+		const server = createServerCallerForRouter({ stats: publicEndpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));
 
-		await expect(server.stats.query({})).resolves.toEqual(okBody);
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		await expect(server.stats.query({})).resolves.toEqual(OK_BODY);
 		const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
 		expect(headers.has("cookie")).toBe(false);
 		expect(headers.get("x-client-type")).toBe("admin");
@@ -205,20 +342,19 @@ describe("server queries without a session cookie", () => {
 });
 
 describe("resolveConfig", () => {
-	const APP_ORIGIN = "https://admin.example.com";
-
-	it("merges partial overrides onto defaults", () => {
-		const config = resolveConfig({ clientOrigin: APP_ORIGIN, timeoutMs: 999 });
-		expect(config.timeoutMs).toBe(999);
-		expect(config.accessTokenCookie).toBe("adminAccessToken");
-		expect(config.clientType).toBe("admin");
+	it("requires the frontend's client type and fills in the library defaults", () => {
+		const config = resolveConfig({ clientType: "merchant" });
+		expect(config.clientType).toBe("merchant");
+		expect(config.retries).toBeGreaterThanOrEqual(0);
+		expect(config.deadlineMs).toBeGreaterThanOrEqual(config.attemptTimeoutMs);
 	});
 
-	it("returns full defaults when only the required clientOrigin is given", () => {
-		const config = resolveConfig({ clientOrigin: APP_ORIGIN });
-		expect(config.retries).toBe(3);
-		expect(config.staleTimeMs).toBe(60_000);
-		expect(config.clientOrigin).toBe(APP_ORIGIN);
+	it("merges partial overrides onto the defaults", () => {
+		expect(resolveConfig({ clientType: "web", attemptTimeoutMs: 999 }).attemptTimeoutMs).toBe(999);
+	});
+
+	it("rejects a deadline shorter than one attempt (retries could never run)", () => {
+		expect(() => resolveConfig({ clientType: "web", attemptTimeoutMs: 1_000, deadlineMs: 500 })).toThrow(/deadlineMs/);
 	});
 });
 
@@ -233,5 +369,14 @@ describe("helpers", () => {
 		expect(isPrefetchFailure({ kind: "http", status: 404 })).toBe(true);
 		expect(isPrefetchFailure({ kind: "nope" })).toBe(false);
 		expect(isPrefetchFailure({})).toBe(false);
+	});
+
+	it("treats a guest, an expired access token and an abort as expected — everything else is noteworthy", () => {
+		expect(isNoteworthyPrefetchFailure({ kind: "no-cookie" })).toBe(false);
+		expect(isNoteworthyPrefetchFailure({ kind: "http", status: 401 })).toBe(false);
+		expect(isNoteworthyPrefetchFailure({ kind: "aborted" })).toBe(false);
+		expect(isNoteworthyPrefetchFailure({ kind: "http", status: 403 })).toBe(true);
+		expect(isNoteworthyPrefetchFailure({ kind: "unreachable", cause: "ECONNREFUSED" })).toBe(true);
+		expect(isNoteworthyPrefetchFailure({ kind: "timeout" })).toBe(true);
 	});
 });

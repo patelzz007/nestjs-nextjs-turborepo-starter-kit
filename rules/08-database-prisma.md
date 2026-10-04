@@ -206,6 +206,14 @@ Use explicit `select` when it materially reduces payload or clarifies intent. Fo
 
 Every schema change needs: a migration, a test/verification step, a deployment consideration (is this backward-compatible with the currently-deployed code? — see `13-ci-cd-and-quality-gates.md`'s expand/contract pattern), and a rollback/recovery plan for risky changes.
 
+- **Migration history is append-only after the first deploy — never squash.** Once a migration folder has reached a shared branch, never edit, rename, delete or re-squash it: every database that applied it records its name and checksum in `_prisma_migrations`. A change that must be undone is undone by another forward migration. Squashing is only for a fork that has never been deployed anywhere (`docs/technical/database.md`, "Migration history is append-only").
+- **The only way to drop history is the explicit baseline** (`apps/api/prisma/migrations-baseline.json`: `{ baseline, reason, since }`). CI's migration-history guard ignores migrations older than the baseline. In the same change that moves the baseline FORWARD, to a migration that exists, the migrations it passes may be deleted (never edited); the guard prints a "MIGRATION BASELINE MOVED" notice so reviewers see it. Moving the baseline is acceptable only when **no shared or deployed database ever ran the dropped migrations**. Otherwise `migrate deploy` there fails: it finds applied migrations missing locally, and the new baseline would recreate existing tables. Procedure: `docs/technical/operations/ci.md`, "Migration baseline".
+- **Migrations are generated, not hand-written.** Edit `schema.prisma`, then `pnpm db:migrate:create --name <change>` (or `db:migrate`). The generated SQL must contain only your change; if it contains anything else, the schema has drifted — fix the drift, don't strip the SQL by hand.
+- **`dbgenerated(...)` defaults are written in Postgres's canonical form** — the text `pg_get_expr` returns, which Prisma compares literally. The epoch-ms default is exactly `dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")`. Any other spelling (`EXTRACT(EPOCH …) * 1000`) means the same thing but makes every future migration re-emit `ALTER COLUMN … SET DEFAULT` for every such column. For a new expression: apply it once, read `information_schema.columns.column_default`, and copy that text back into the schema.
+- **`pnpm db:check-drift` must pass** (`apps/api/scripts/check-migration-drift.ts`): it replays `prisma/migrations` into the throwaway `SHADOW_DATABASE_URL` database and fails if the result differs from `schema.prisma`.
+- **RLS, roles and grants are not migrations.** They live in `apps/api/prisma/rls.sql` and `apps/api/prisma/rls/NN-*.sql` and are applied by `pnpm db:apply-security` (run by `db:migrate`, `db:deploy`, `db:push` and `db:reset`). Never append them to a `migration.sql`.
+- **Documented exception — the vendored geography dataset.** `Region`, `Subregion`, `Country`, `State` and `City` (seeded from dr5hn/countries-states-cities-database by `prisma/seed/geo-seed.ts`) keep the source dataset's column shape: `createdAt`/`updatedAt` are `DateTime @db.Timestamp(0)`, and `createdAt` defaults to the dataset's fixed `dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")` (canonical form, like every `dbgenerated`). This keeps the tables a faithful mirror of the published dataset. The exception covers these five tables only; every other table uses epoch-ms `BigInt` timestamps, and a new table never copies this shape.
+
 ## Seed data — mandatory on every schema change
 
 `packages/database/prisma/seed.ts` must be updated in the **same PR** as any migration that adds or changes a table or column:
@@ -230,6 +238,7 @@ await prisma.order.create({
 - A new table that other seeded entities relate to gets its own seed data, or an explicit comment explaining why it's intentionally left empty for now.
 - Seed data stays deterministic: fixed IDs/UUIDs and fixed timestamps, not `Math.random()`/`new Date()` at seed time, so `prisma db seed` produces an identical local/test dataset on every run.
 - Treat a migration PR that doesn't touch `seed.ts` when it should as equivalent to a migration PR with no migration file — flag it in review (`16-code-review-checklist.md`).
+- Every table gets rows and every nullable column gets a real value in at least one row (soft-delete fields included: seed a soft-deleted row). CI enforces this with `pnpm --filter @workspace/api db:check-seed-coverage` right after the seed; the only exceptions are entries with a written structural reason in `apps/api/prisma/seed/coverage-exemptions.ts` (`docs/technical/database.md`, "Seed coverage — every table, every column").
 
 ## Connection pooling
 
@@ -356,6 +365,18 @@ model Vote {
   pollId String
 
   @@unique([userId, pollId])
+}
+```
+
+On a soft-deletable model, decide explicitly whether a soft-deleted row should still hold its unique value. Usually it should not (a deleted till must not block re-registering its id), so make the constraint partial with the `partialIndexes` preview feature, which is enabled in `apps/api/prisma/schema.prisma`:
+
+```prisma
+model OrganizationTerminal {
+  // ...
+  isDeleted Boolean @default(false)
+
+  // ✅ DO — unique among live rows only
+  @@unique([organizationId, terminalId], where: { isDeleted: false })
 }
 ```
 

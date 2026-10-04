@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { adminUserListQuery, type AdminUserListQuery, type AdminUserListSortField, type AdminUserStatus } from "@workspace/shared";
+import { assertNever, adminUserListQuery, type AdminUserListQuery, type AdminUserListSortField, type AdminUserStatus } from "@workspace/shared";
 
 import { fetchListPage } from "../../../platform/persistence/list-page";
 import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
@@ -38,7 +38,6 @@ const USER_SELECT_LOGIN = {
 	passwordHash: true,
 	failedLoginAttempts: true,
 	lockedUntil: true,
-	twoFactorSecret: true,
 } satisfies Prisma.UserSelect;
 
 const USER_SELECT_ADMIN_DETAIL = {
@@ -82,12 +81,8 @@ function buildAdminUserStatusWhere(status: AdminUserStatus, now: bigint): Prisma
 		case "locked":
 			return { lockedUntil: { gt: now } };
 		default:
-			return assertNever(status);
+			return assertNever(status, "admin user status");
 	}
-}
-
-function assertNever(value: never): never {
-	throw new Error(`Unhandled admin user status: ${String(value)}`);
 }
 
 /** Search + the filter AST, one explicit condition per whitelisted field. */
@@ -221,6 +216,19 @@ export class UserRepository {
 			where: { id },
 			data: { ...data, updatedAt: Date.now() },
 		});
+	}
+
+	/**
+	 * Marks the email verified only if it is not yet — one conditional update,
+	 * so two concurrent verifications cannot both "win". Returns whether THIS
+	 * call verified it (false: it was already verified).
+	 */
+	public async markEmailVerifiedIfUnverified(id: string, verifiedAt: number): Promise<boolean> {
+		const result = await this.prisma.user.updateMany({
+			where: { id, emailVerifiedAt: null },
+			data: { emailVerifiedAt: verifiedAt, updatedAt: verifiedAt },
+		});
+		return result.count === 1;
 	}
 
 	/** Create a new user. Returns base fields. */

@@ -1,19 +1,20 @@
 import type { FastifyRequest } from "fastify";
-import { ForwardedForHeaderSchema } from "@workspace/shared";
+
+import { MAX_USER_AGENT_LENGTH } from "../middleware/request-context.middleware";
+import { readFirstHeader } from "./http-headers";
+
+/** The calling device and client IP, as stored on sessions, impersonation logs and invitations. */
+export interface ClientInfo {
+	readonly deviceInfo: string | undefined;
+	readonly ipAddress: string | undefined;
+}
 
 /**
- * Extract client device information and IP address from a Fastify request.
- *
- * @param req - The FastifyRequest object
- * @returns An object with `deviceInfo` (User-Agent string) and `ipAddress`
+ * Device (User-Agent, bounded) and client IP of a request. The IP is Fastify's
+ * `request.ip`, computed with the SAME trusted-proxy list and semantics as the
+ * request context (`TRUST_PROXY`, common/http/client-ip.ts): a forwarding
+ * header from an untrusted peer is never believed.
  */
-export const extractClientInfo = (req: FastifyRequest): { deviceInfo: string | undefined; ipAddress: string | undefined } => {
-	const deviceInfo: string | undefined = req.headers["user-agent"];
-	// Trust the X-Forwarded-For header if behind a reverse proxy, fall back to req.ip
-	const forwardedParsed = ForwardedForHeaderSchema.safeParse(req.headers["x-forwarded-for"]);
-	const forwardedRaw = forwardedParsed.success ? forwardedParsed.data : undefined;
-	const forwardedStr: string = forwardedRaw !== undefined ? (Array.isArray(forwardedRaw) ? (forwardedRaw[0] ?? "") : forwardedRaw) : "";
-	const ipAddress: string | undefined = forwardedStr.length > 0 ? forwardedStr.split(",")[0]?.trim() : req.ip;
-
-	return { deviceInfo, ipAddress };
-};
+export function extractClientInfo(req: FastifyRequest): ClientInfo {
+	return { deviceInfo: readFirstHeader(req.headers["user-agent"])?.slice(0, MAX_USER_AGENT_LENGTH), ipAddress: req.ip };
+}

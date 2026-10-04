@@ -1634,8 +1634,9 @@ const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfaceProps>
 				role="region"
 				aria-label={label}
 				aria-busy={streaming ? true : undefined}
-				aria-activedescendant={selectable && activeLine !== null ? `${contentId}-L${String(activeLine)}` : undefined}
-				tabIndex={0}
+				/* Keyboard scrolling needs a focusable region — unless the block is
+				   selectable, where the listbox below takes focus (and scrolls). */
+				tabIndex={selectable ? undefined : 0}
 				onScroll={handleScroll}
 				className={cn(
 					"relative min-w-0 rounded-[inherit] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
@@ -1657,6 +1658,10 @@ const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfaceProps>
 					role={selectable ? "listbox" : undefined}
 					data-selectable={selectable ? true : undefined}
 					aria-multiselectable={selectable ? true : undefined}
+					/* The listbox owns the focus and its active option, so assistive
+					   technology announces the line the arrow keys moved to. */
+					tabIndex={selectable ? 0 : undefined}
+					aria-activedescendant={selectable && activeLine !== null ? `${contentId}-L${String(activeLine)}` : undefined}
 					aria-label={selectable ? labels.lines(label) : undefined}
 					className={cn(
 						"w-max min-w-full py-(--code-block-padding) font-mono text-(length:--code-block-font-size)",
@@ -1875,19 +1880,24 @@ const CodeBlockCopyButton = React.forwardRef<HTMLElement, CodeBlockCopyButtonPro
 		const clipboard: Clipboard | undefined = typeof navigator === "undefined" ? undefined : navigator.clipboard;
 		if (!clipboard) return;
 
-		clipboard.writeText(payload).then(
-			() => {
-				setCopied(true);
-				onCopy?.(payload);
-			},
-			/* Rejection is routine: a denied permission, or a document that lost
-			   focus. Without the handler it surfaced as an unhandled rejection in
-			   the consumer's error monitoring. */
-			(error: unknown) => {
+		/* Rejection is routine: a denied permission, or a document that lost
+		   focus. Without the handler it surfaced as an unhandled rejection in
+		   the consumer's error monitoring. Only the write's own rejection is
+		   a failed copy — never an error thrown by `onCopy`. */
+		const written: Promise<boolean> = clipboard
+			.writeText(payload)
+			.then((): boolean => true)
+			.catch((error: unknown): boolean => {
 				setCopyFailed(true);
 				onCopyError?.(error instanceof Error ? error : new Error("Clipboard write failed", { cause: error }));
-			},
-		);
+				return false;
+			});
+		void written.then((isWritten: boolean): void => {
+			if (isWritten) {
+				setCopied(true);
+				onCopy?.(payload);
+			}
+		});
 	}, [value, blockDocument, onCopy, onCopyError]);
 
 	return (

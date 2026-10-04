@@ -9,7 +9,6 @@ import {
 	OrganizationTeamInviteTokenSchema,
 	type LoginRestrictedEnrollmentResponse,
 	type LoginServiceResponse,
-	type LoginTwoFactorPendingResponse,
 	type LoginVerificationPendingResponse,
 	type OrganizationTeamInviteAcceptResponse,
 	type OrganizationTeamInvitePreview,
@@ -21,11 +20,11 @@ import type { FastifyRequest } from "fastify";
 import { extractClientInfo } from "../../../common/utils/client-info";
 import { ZodBody } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
-import { AuthService } from "../../auth/auth.service";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "../../auth/interceptors/set-auth-cookies.interceptor";
+import { LoginVerificationService } from "../../auth/services/login-verification.service";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 import { OrganizationMembershipService } from "../services/organization-membership.service";
 
@@ -34,7 +33,7 @@ import { OrganizationMembershipService } from "../services/organization-membersh
 export class OrganizationTeamInviteController {
 	public constructor(
 		private readonly membership: OrganizationMembershipService,
-		private readonly authService: AuthService,
+		private readonly loginVerification: LoginVerificationService,
 	) {}
 
 	@Public()
@@ -63,10 +62,17 @@ export class OrganizationTeamInviteController {
 		@ZodBody(OrganizationTeamInviteRegisterAcceptSchema) body: OrganizationTeamInviteRegisterAcceptInput,
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@Req() req: FastifyRequest,
-	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const accepted = await this.membership.registerAndAcceptTeamInvite(body);
-		const clientType = headerClientType ?? "merchant";
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
-		return this.authService.login({ email: accepted.email, password: body.password }, clientType, deviceInfo, ipAddress);
+		// Session for the identity just created in the same flow — the same
+		// post-credential step as login (login-verification policy applies), but
+		// the plaintext password is never replayed through the login path.
+		return this.loginVerification.maybeRequireVerification({
+			userId: accepted.userId,
+			clientType: headerClientType ?? "merchant",
+			deviceInfo: deviceInfo ?? null,
+			ipAddress: ipAddress ?? null,
+		});
 	}
 }

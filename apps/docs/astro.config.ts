@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
 import { preloadCodeBlockHighlighter } from "@workspace/ui/components/display/code-block-highlight";
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 
 import { rehypeCodeBlock } from "./src/lib/markdown/code-block";
 import { remarkContentLinks } from "./src/lib/markdown/links";
@@ -36,6 +36,23 @@ await preloadCodeBlockHighlighter();
 const REPO_ROOT: string = fileURLToPath(new URL("../../", import.meta.url));
 
 /**
+ * Self-hosted fonts (Astro Fonts API, `local` provider). The files come from the
+ * Fontsource npm packages, so the build never calls a font CDN and readers'
+ * browsers never make a third-party request. Only the Latin subset is shipped
+ * (the guides are English; anything outside it falls back per glyph to the
+ * system stack). Astro emits the `@font-face` rules, `font-display: swap`, and a
+ * metric-matched fallback face (size-adjust / ascent / descent overrides) so the
+ * swap does not shift the layout. `<Font>` in BaseLayout.astro renders them.
+ *
+ * Why these faces (see "Typography" in README.md): IBM Plex Sans for UI and
+ * prose, JetBrains Mono for code — the "Developer Mono" pairing for technical
+ * documentation.
+ */
+const FONT_FILES = "@fontsource-variable";
+const SANS_FALLBACKS: string[] = ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"];
+const MONO_FALLBACKS: string[] = ["ui-monospace", "SFMono-Regular", "SF Mono", "Menlo", "Consolas", "monospace"];
+
+/**
  * Static docs site. Content comes from the repo-root `docs/` and `blog/`
  * folders (see `src/content.config.ts`); search reads the JSON index emitted
  * by `src/pages/search-index.json.ts`.
@@ -47,6 +64,32 @@ export default defineConfig({
 	build: { format: "file" },
 	server: { port: 3002 },
 	integrations: [sitemap()],
+	fonts: [
+		{
+			provider: fontProviders.local(),
+			name: "IBM Plex Sans",
+			cssVariable: "--font-ibm-plex-sans",
+			fallbacks: SANS_FALLBACKS,
+			options: {
+				variants: [
+					{ src: [`${FONT_FILES}/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2`], weight: "100 700", style: "normal" },
+					{ src: [`${FONT_FILES}/ibm-plex-sans/files/ibm-plex-sans-latin-wght-italic.woff2`], weight: "100 700", style: "italic" },
+				],
+			},
+		},
+		{
+			provider: fontProviders.local(),
+			name: "JetBrains Mono",
+			cssVariable: "--font-jetbrains-mono",
+			fallbacks: MONO_FALLBACKS,
+			options: {
+				variants: [
+					{ src: [`${FONT_FILES}/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2`], weight: "100 800", style: "normal" },
+					{ src: [`${FONT_FILES}/jetbrains-mono/files/jetbrains-mono-latin-wght-italic.woff2`], weight: "100 800", style: "italic" },
+				],
+			},
+		},
+	],
 	markdown: {
 		processor: unified({
 			// Order matters: links/images are rewritten before galleries and callouts; mermaid fences leave before rehypeCodeBlock sees them.

@@ -1,10 +1,10 @@
 "use client";
 
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
 import { APP_LINKS } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
-import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 
@@ -15,27 +15,22 @@ import { clientEnv } from "@/lib/env/env.client";
  */
 export function ImpersonationBanner(): React.JSX.Element | null {
 	const { api } = useAuth();
-	const queryClient = useQueryClient();
+	const router = useRouter();
 
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
 		retry: 1,
 	});
 
-	const stopMutation = api.auth.stopImpersonation.useMutation({
-		onSuccess: async (): Promise<void> => {
-			await invalidateSessionAuth(queryClient);
-		},
-	});
+	const handleIdentityChanged = React.useCallback((): void => {
+		router.refresh();
+	}, [router]);
+	const { stop, isPending } = useImpersonation({ onIdentityChanged: handleIdentityChanged });
 
 	const session = permissionsQuery.data?.data;
 	const isImpersonating = session?.isImpersonating === true;
 
 	const webUrl: string = clientEnv.NEXT_PUBLIC_WEB_URL;
 	const merchantUrl: string = clientEnv.NEXT_PUBLIC_MERCHANT_URL;
-
-	const handleStop = React.useCallback((): void => {
-		void stopMutation.mutateAsync({});
-	}, [stopMutation]);
 
 	if (!isImpersonating) {
 		return null;
@@ -55,8 +50,8 @@ export function ImpersonationBanner(): React.JSX.Element | null {
 					<a href={merchantUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
 						Merchant portal
 					</a>
-					<Button size="sm" variant="outline" disabled={stopMutation.isPending} onClick={handleStop}>
-						{stopMutation.isPending ? "Stopping…" : "Stop impersonation"}
+					<Button size="sm" variant="outline" disabled={isPending} onClick={stop}>
+						{isPending ? "Stopping…" : "Stop impersonation"}
 					</Button>
 				</div>
 			</div>

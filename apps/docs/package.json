@@ -8,17 +8,21 @@
 		"build": "node scripts/check-links.mjs && astro build --force",
 		"preview": "astro preview --port 3002",
 		"start": "astro preview --port 3002",
-		"lint": "eslint",
+		"lint": "astro sync && eslint --max-warnings=0",
 		"format": "prettier --write \"src/**/*.ts\" \"*.ts\" \"scripts/**/*.mjs\"",
 		"typecheck": "astro check",
 		"test": "vitest run",
-		"check:links": "node scripts/check-links.mjs"
+		"check:links": "node scripts/check-links.mjs",
+		"docs:api": "vitest run src/lib/api-reference/api-reference.artifact.test.ts --update",
+		"capture:api-samples": "node scripts/capture-api-samples.mjs"
 	},
 	"dependencies": {
 		"@astrojs/check": "^0.9.10",
 		"@astrojs/markdown-remark": "^7.3.1",
 		"@astrojs/rss": "^4.0.19",
 		"@astrojs/sitemap": "^3.7.4",
+		"@fontsource-variable/ibm-plex-sans": "5.3.0",
+		"@fontsource-variable/jetbrains-mono": "5.3.0",
 		"@workspace/ui": "workspace:*",
 		"astro": "^7.3.5",
 		"date-fns": "^4.4.0",

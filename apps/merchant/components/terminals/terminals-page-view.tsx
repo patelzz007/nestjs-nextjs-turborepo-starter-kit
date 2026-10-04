@@ -12,13 +12,19 @@ import { TerminalSettingsCard } from "@/components/terminals/terminal-settings-c
 import { clientEnv } from "@/lib/env/env.client";
 import { useActiveLocationFilter, useMerchantLocation } from "@/features/tenant-context/facade";
 import { prefetchForLocation, type LocationScopedPrefetch } from "@/lib/org/location-prefetch";
-import { isPairingComplete, requiresRepairConfirmation, summarizeTerminals } from "@/lib/terminals/terminal-summary";
-import { initialDataOption, readPaginatedTotal, stubApiMeta, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { toFormSubmissionError } from "@/lib/forms/api-field-errors";
+import { CREATE_TERMINAL_FIELD_ERRORS } from "@/lib/terminals/create-terminal-form";
+import { isPairingComplete, requiresRepairConfirmation, shouldKeepPollingPairing, summarizeTerminalPage, type TerminalStatsState } from "@/lib/terminals/terminal-summary";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import {
 	MERCHANT_CAPABILITY,
 	MERCHANT_TERMINALS_PAGE_SIZE,
+	nowEpochMs,
+	type Envelope,
 	type MerchantCreateTerminalInput,
 	type MerchantTerminalPairing,
 	type MerchantTerminalSettings,
@@ -34,14 +40,27 @@ import * as React from "react";
 /** How often the open pairing dialog asks whether the till has used its code. */
 export const PAIRING_STATUS_POLL_INTERVAL_MS = 3000;
 
+const CREATE_TERMINAL_FAILED_MESSAGE = "The terminal could not be added. Try again.";
 const REMOVE_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Remove terminal", loading: "Removing…" };
 const REPAIR_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Issue new code", loading: "Issuing…" };
 
+/** Shown instead of a number that is still loading or cannot be counted from one page. */
+const UNKNOWN_STAT_VALUE = "—";
+const UNCOUNTABLE_STAT_HINT = "Too many terminals to count here — see the list";
+
+function statValue(state: TerminalStatsState | undefined, key: "active" | "awaitingPairing" | "storesCovered"): string {
+	return state?.kind === "exact" ? String(state.stats[key]) : UNKNOWN_STAT_VALUE;
+}
+
+function statHint(state: TerminalStatsState | undefined, hint: string): string {
+	return state?.kind === "unavailable" ? UNCOUNTABLE_STAT_HINT : hint;
+}
+
 export interface TerminalsPageViewProps {
 	readonly orgSlug: string;
-	/** Server-prefetched first page with the store filter it was fetched for. */
-	readonly initialTerminals?: LocationScopedPrefetch<readonly MerchantTerminalSummary[]> | undefined;
-	readonly initialSettings?: MerchantTerminalSettings | undefined;
+	/** Server-prefetched first page — the API's own envelope (real pagination meta) — with the store filter it was fetched for. */
+	readonly initialTerminals?: LocationScopedPrefetch<Envelope<MerchantTerminalSummary[]>> | undefined;
+	readonly initialSettings?: Envelope<MerchantTerminalSettings> | undefined;
 }
 
 /** POS terminals route — list/add/pair/remove and the policy all require `merchant:manage_api_keys`. */
@@ -65,6 +84,7 @@ export function TerminalsPageView(props: TerminalsPageViewProps): React.JSX.Elem
 
 function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: TerminalsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const queryClient = useQueryClient();
 	const { locationId } = useActiveLocationFilter();
 	const { activeLocation, accessibleLocations } = useMerchantLocation();
 
@@ -77,65 +97,47 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 
 	// Seed only with terminals the server fetched for this exact filter — never another store's under this key.
 	const prefetchedTerminals = prefetchForLocation(initialTerminals, locationId);
-	const initialTerminalsData = React.useMemo(
-		() =>
-			prefetchedTerminals !== undefined
-				? successEnvelope(
-						[...prefetchedTerminals],
-						stubPaginatedMetaFromHydration(MERCHANT_TERMINALS_PAGE_SIZE, prefetchedTerminals.length, prefetchedTerminals.length >= MERCHANT_TERMINALS_PAGE_SIZE),
-					)
-				: undefined,
-		[prefetchedTerminals],
-	);
-	const initialSettingsData = React.useMemo(() => (initialSettings !== undefined ? successEnvelope(initialSettings, stubApiMeta()) : undefined), [initialSettings]);
 
 	const terminalsQuery = api.organizations.terminals.list.useQuery(
 		{ orgSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId },
-		initialDataOption(initialTerminalsData),
+		initialDataOption(prefetchedTerminals),
 	);
 	const terminals: readonly MerchantTerminalSummary[] = terminalsQuery.data?.data ?? [];
 	const totalTerminals: number = readPaginatedTotal(terminalsQuery.data?.meta, terminals.length);
-	const stats = summarizeTerminals(terminals);
+	const statsState: TerminalStatsState | undefined = terminalsQuery.data === undefined ? undefined : summarizeTerminalPage(terminals, totalTerminals);
 
-	// While a code is on screen, watch the terminal's own store until the till pairs.
+	// While a code is on screen, watch the terminal's own store — and stop as soon as the till paired, the code
+	// expired, or the terminal cannot be observed on the page (there is no per-terminal status endpoint).
 	const pairingStatusQuery = api.organizations.terminals.list.useQuery(
 		{ orgSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId: pairing?.terminal.locationId },
 		{
 			enabled: pairing !== null,
 			refetchInterval: (query): number | false =>
-				pairing !== null &&
-				isPairingComplete(
-					pairing.terminal,
-					query.state.data?.data.find((terminal) => terminal.id === pairing.terminal.id),
-				)
-					? false
-					: PAIRING_STATUS_POLL_INTERVAL_MS,
+				pairing !== null && shouldKeepPollingPairing(pairing, { terminals: query.state.data?.data }, nowEpochMs()) ? PAIRING_STATUS_POLL_INTERVAL_MS : false,
 		},
 	);
 	const polledTerminal = pairing === null ? undefined : pairingStatusQuery.data?.data.find((terminal) => terminal.id === pairing.terminal.id);
 	const isPaired = pairing !== null && isPairingComplete(pairing.terminal, polledTerminal);
 
-	const settingsQuery = api.organizations.terminals.settings.useQuery({ orgSlug }, initialDataOption(initialSettingsData));
+	const settingsQuery = api.organizations.terminals.settings.useQuery({ orgSlug }, initialDataOption(initialSettings));
 
-	const refetchTerminals = terminalsQuery.refetch;
-	React.useEffect(() => {
-		if (isPaired) {
-			void refetchTerminals();
-		}
-	}, [isPaired, refetchTerminals]);
+	/** Every terminal list of this organization (any store, the pairing poll included) is stale after a change. */
+	const invalidateTerminals = React.useCallback((): void => {
+		void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.terminals.list.scopeKey({ orgSlug }) });
+	}, [orgSlug, queryClient]);
 
 	const createMutation = api.organizations.terminals.create.useMutation({
 		onSuccess: (response): void => {
 			setIsAddOpen(false);
 			setPairing(response.data);
-			void refetchTerminals();
+			invalidateTerminals();
 		},
 	});
 
 	const pairingCodeMutation = api.organizations.terminals.pairingCode.useMutation({
 		onSuccess: (response): void => {
 			setPairing(response.data);
-			void refetchTerminals();
+			invalidateTerminals();
 		},
 		onError: (error): void => {
 			toastMessage.error({ title: resolveAuthErrorMessage(error) });
@@ -214,11 +216,16 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 		issuePairingCode(terminalToRepair);
 	}, [issuePairingCode, terminalToRepair]);
 
-	const handlePairingDialogChange = React.useCallback((open: boolean): void => {
-		if (!open) {
-			setPairing(null);
-		}
-	}, []);
+	const handlePairingDialogChange = React.useCallback(
+		(open: boolean): void => {
+			if (!open) {
+				setPairing(null);
+				// The till may have paired while the dialog was open: the list shows its new state.
+				invalidateTerminals();
+			}
+		},
+		[invalidateTerminals],
+	);
 
 	const handleNewCode = React.useCallback((): void => {
 		if (pairing !== null) {
@@ -247,7 +254,7 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 				onSuccess: (): void => {
 					setTerminalToRemove(null);
 					toastMessage.success({ title: `“${removed.name}” removed`, description: "Its key no longer works." });
-					void refetchTerminals();
+					invalidateTerminals();
 				},
 				// Keep the dialog open so the merchant can retry.
 				onError: (error): void => {
@@ -258,8 +265,9 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 				},
 			},
 		);
-	}, [orgSlug, refetchTerminals, removeMutation, terminalToRemove]);
+	}, [invalidateTerminals, orgSlug, removeMutation, terminalToRemove]);
 
+	const refetchTerminals = terminalsQuery.refetch;
 	const handleRetryTerminals = React.useCallback((): void => {
 		void refetchTerminals();
 	}, [refetchTerminals]);
@@ -289,20 +297,25 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 					</Button>
 				}
 			/>
-			<MerchantLocationScopeBanner />
+			<MerchantLocationScopeBanner filteredNote="Only this store's tills are listed and counted." allStoresNote="Listing the tills of every store you can access." />
 
 			<div className="grid gap-4 sm:grid-cols-3">
-				<MerchantStatCard label="Active" value={String(stats.active)} hint="Paired and ready to redeem" icon={<CheckCircle2 className="size-5" aria-hidden="true" />} />
+				<MerchantStatCard
+					label="Active"
+					value={statValue(statsState, "active")}
+					hint={statHint(statsState, "Paired and ready to redeem")}
+					icon={<CheckCircle2 className="size-5" aria-hidden="true" />}
+				/>
 				<MerchantStatCard
 					label="Awaiting pairing"
-					value={String(stats.awaitingPairing)}
-					hint="Code issued, till not paired yet"
+					value={statValue(statsState, "awaitingPairing")}
+					hint={statHint(statsState, "Code issued, till not paired yet")}
 					icon={<Hourglass className="size-5" aria-hidden="true" />}
 				/>
 				<MerchantStatCard
 					label="Stores covered"
-					value={String(stats.storesCovered)}
-					hint="With at least one active till"
+					value={statValue(statsState, "storesCovered")}
+					hint={statHint(statsState, "With at least one active till")}
 					icon={<Store className="size-5" aria-hidden="true" />}
 				/>
 			</div>
@@ -338,7 +351,7 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 				stores={stores}
 				defaultStoreId={defaultStoreId}
 				isPending={createMutation.isPending}
-				errorMessage={createMutation.error === null ? null : resolveAuthErrorMessage(createMutation.error)}
+				submissionError={createMutation.error === null ? null : toFormSubmissionError(createMutation.error, CREATE_TERMINAL_FIELD_ERRORS, CREATE_TERMINAL_FAILED_MESSAGE)}
 				onSubmit={handleCreate}
 			/>
 

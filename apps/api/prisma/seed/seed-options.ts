@@ -31,6 +31,8 @@ export const SEED_SCENARIO_DESCRIPTIONS: Readonly<Record<SeedScenario, string>> 
 
 const SCENARIO_FLAG = "--scenario";
 const SEED_FLAG = "--seed";
+/** Opt-in to seed a database that is not a local development/test database (see seed-guard.ts). */
+export const ALLOW_DESTRUCTIVE_FLAG = "--allow-destructive";
 const HELP_FLAGS: ReadonlySet<string> = new Set<string>(["--help", "-h"]);
 /** pnpm/turbo forward a literal `--` separator in some versions — it carries no meaning here. */
 const ARGUMENT_SEPARATOR = "--";
@@ -51,6 +53,7 @@ const RawSeedArgumentsSchema = z
 	.object({
 		scenario: SeedScenarioSchema.default(DEFAULT_SEED_SCENARIO),
 		seed: SeedValueSchema.default(DEFAULT_RANDOM_SEED),
+		allowDestructive: z.boolean().default(false),
 	})
 	.strict();
 
@@ -68,9 +71,10 @@ export class SeedArgumentError extends Error {
 interface RawSeedArguments {
 	scenario?: string;
 	seed?: string;
+	allowDestructive?: boolean;
 }
 
-type ValueFlagName = keyof RawSeedArguments;
+type ValueFlagName = "scenario" | "seed";
 
 function valueFlagName(flag: string): ValueFlagName | null {
 	if (flag === SCENARIO_FLAG) return "scenario";
@@ -99,6 +103,13 @@ function tokenize(argv: readonly string[]): RawSeedArguments | "help" {
 		}
 		if (HELP_FLAGS.has(token)) {
 			return "help";
+		}
+		if (token === ALLOW_DESTRUCTIVE_FLAG) {
+			if (raw.allowDestructive !== undefined) {
+				throw new SeedArgumentError(`${ALLOW_DESTRUCTIVE_FLAG} was given more than once.`);
+			}
+			raw.allowDestructive = true;
+			continue;
 		}
 
 		const { flag, inlineValue } = splitInlineValue(token);
@@ -147,11 +158,12 @@ export function formatSeedUsage(): string {
 	const nameWidth = Math.max(...SeedScenarioSchema.options.map((scenario) => scenario.length));
 	const scenarioLines = SeedScenarioSchema.options.map((scenario) => `  ${scenario.padEnd(nameWidth)}  ${SEED_SCENARIO_DESCRIPTIONS[scenario]}`);
 	return [
-		"Usage: pnpm db:seed [-- --scenario <name>] [--seed <n>]",
+		"Usage: pnpm db:seed [-- --scenario <name>] [--seed <n>] [--allow-destructive]",
 		"",
 		"Options:",
 		`  --scenario <name>  Dataset to seed (default: ${DEFAULT_SEED_SCENARIO})`,
 		`  --seed <n>         PRNG seed for generated data, 0–${String(MAX_RANDOM_SEED)} (default: ${String(DEFAULT_RANDOM_SEED)})`,
+		`  ${ALLOW_DESTRUCTIVE_FLAG}  Seed a database that is not local development/test (rewrites the demo tenants' rows)`,
 		"  -h, --help         Show this message",
 		"",
 		"Scenarios:",

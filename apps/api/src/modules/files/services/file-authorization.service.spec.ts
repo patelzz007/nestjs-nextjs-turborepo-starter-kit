@@ -6,11 +6,13 @@ import type { CreateFileUploadUrlInput, FileCategory, OrganizationMembershipRole
 import { createTestAuthorizationKernel, createTestPrisma } from "../../../../test/support/test-service-graph";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { AuthorizationException } from "../../authorization/exceptions/authorization.exception";
+import { CedarWasmPolicyEngine } from "../../authorization-cedar/engine/cedar-wasm-policy-engine";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
 import { OrganizationAuditService } from "../../organization/services/organization-audit.service";
 import { OrganizationContextService } from "../../organization/services/organization-context.service";
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { FILE_AUTHORIZATION_OPERATION, FileAuthorizationService } from "./file-authorization.service";
+import { RequestContextService } from "../../../common/context/request-context";
 
 const mocks = vi.hoisted(() => ({
 	authorize: vi.fn(),
@@ -71,6 +73,8 @@ function storedFile(category: FileCategory, overrides: Partial<StoredFile> = {})
 		scannedAt: null,
 		scanResult: null,
 		uploadedById: "user-1",
+		productId: null,
+		deletedBy: null,
 		organizationId: category === "STORE_LOGO" || category === "STORE_BANNER" || category === "MERCHANT_KYB" ? "org-1" : null,
 		isDeleted: false,
 		deletedAt: null,
@@ -88,9 +92,9 @@ interface ServiceUnderTest {
 /** Real FileAuthorizationService + real OrganizationRewardAuthService; only membership lookup and the Cedar call are stubbed. */
 function build(): ServiceUnderTest {
 	const prisma = createTestPrisma();
-	const tenantTx = new TenantTransactionService(prisma);
-	const cedar = new CedarPolicyEvaluatorService(tenantTx);
-	const audit = new OrganizationAuditService(tenantTx);
+	const tenantTx = new TenantTransactionService(prisma, new RequestContextService());
+	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
+	const audit = new OrganizationAuditService();
 	const organizationAuth = new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit), cedar, audit);
 	const requireCedarAction = vi.fn().mockResolvedValue(undefined);
 	vi.spyOn(organizationAuth, "requireCedarAction").mockImplementation(requireCedarAction);

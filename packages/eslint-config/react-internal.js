@@ -5,6 +5,7 @@ import globals from "globals";
 
 import { config as baseConfig } from "./base.js";
 import { frontendImportBoundaryConfig } from "./import-boundaries.js";
+import { withErrorSeverity } from "./rule-severity.js";
 
 /**
  * A custom ESLint configuration for libraries that use React.
@@ -18,7 +19,12 @@ export const config = [
 	// ── React strict rules ─────────────────────────────────────────────
 	{
 		...pluginReact.configs.flat.recommended,
-		...pluginReact.configs.flat["jsx-runtime"],
+		// Merge the two presets' rules explicitly: spreading both objects would let
+		// jsx-runtime's `rules` (2 entries) replace recommended's (22 entries).
+		rules: withErrorSeverity({
+			...pluginReact.configs.flat.recommended.rules,
+			...pluginReact.configs.flat["jsx-runtime"].rules,
+		}),
 		languageOptions: {
 			...pluginReact.configs.flat.recommended.languageOptions,
 			globals: {
@@ -38,7 +44,7 @@ export const config = [
 		rules: {
 			"react/jsx-no-leaked-render": ["error", { validStrategies: ["ternary"] }],
 			"react/jsx-no-bind": [
-				"warn",
+				"error",
 				{
 					ignoreDOMComponents: false,
 					ignoreRefs: false,
@@ -49,7 +55,7 @@ export const config = [
 			"react/jsx-boolean-value": ["error", "never"],
 			"react/jsx-key": ["error", { checkFragmentShorthand: true }],
 			"react/no-unstable-nested-components": ["error", { allowAsProps: true }],
-			"react/no-array-index-key": "warn",
+			"react/no-array-index-key": "error",
 			"react/react-in-jsx-scope": "off",
 			"react/prop-types": "off",
 		},
@@ -61,21 +67,23 @@ export const config = [
 			"react-hooks": pluginReactHooks,
 		},
 		rules: {
-			...pluginReactHooks.configs.recommended.rules,
+			...withErrorSeverity(pluginReactHooks.configs.recommended.rules),
 		},
 	},
 
 	// ── Import boundaries (frontend) ────────────────────────────────────
-	// Same browser-safety boundaries as the Next apps (see docs/eslint.md).
+	// Same browser-safety boundaries as the Next apps (see docs/technical/tooling/eslint.md).
 	frontendImportBoundaryConfig,
 
 	// ── Accessibility rules ─────────────────────────────────────────────
 	{
 		...jsxA11y.flatConfigs.recommended,
+		// Keep the preset's rules: a bare `rules: {}` here would replace them all.
 		rules: {
+			...withErrorSeverity(jsxA11y.flatConfigs.recommended.rules),
 			"jsx-a11y/click-events-have-key-events": "off",
-			"jsx-a11y/no-static-element-interactions": "warn",
-			"jsx-a11y/no-noninteractive-element-interactions": "warn",
+			"jsx-a11y/no-static-element-interactions": "error",
+			"jsx-a11y/no-noninteractive-element-interactions": "error",
 			"jsx-a11y/alt-text": "error",
 			"jsx-a11y/aria-role": ["error", { ignoreNonDom: true }],
 		},

@@ -1,39 +1,41 @@
-import { DynamicModule, Global, Inject, Injectable, Logger, Module, type OnModuleDestroy } from "@nestjs/common";
+import { DynamicModule, Global, Inject, Injectable, Logger, Module, type OnApplicationShutdown } from "@nestjs/common";
 import Redis from "ioredis";
 
 import { createRedisClientOptions } from "../../core/redis";
 
 import { type ResolvedMessagingOptions } from "../messaging-options";
 import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../tokens";
+import { RedisClientSupervisor } from "./redis-client-supervisor";
 
-/** Closes shared Redis clients when the API shuts down. */
+/**
+ * Owns the shared Redis clients' shutdown — the ONLY code that closes them
+ * (consumers such as caches or the invalidation subscriber must never QUIT a
+ * shared client).
+ *
+ * Ordered shutdown: Nest runs every `onModuleDestroy` (consumers stop timers,
+ * unsubscribe, finish their last commands) BEFORE any `onApplicationShutdown`,
+ * so the clients are closed here, last — subscriber first, then publisher —
+ * and each close is awaited. Errors after the close started are expected and
+ * logged at debug; a genuine connection error while running is logged at
+ * ERROR (see RedisClientSupervisor).
+ */
 @Injectable()
-class RedisConnectionLifecycleService implements OnModuleDestroy {
+export class RedisConnectionLifecycleService implements OnApplicationShutdown {
 	private readonly logger: Logger = new Logger(RedisConnectionLifecycleService.name);
+	/** Closed in this order: the subscriber (no more incoming messages), then the publisher. */
+	private readonly supervisors: readonly RedisClientSupervisor[];
 
-	public constructor(
-		@Inject(REDIS_PUBLISHER) private readonly publisher: Redis | null,
-		@Inject(REDIS_SUBSCRIBER) private readonly subscriber: Redis | null,
-	) {}
-
-	public async onModuleDestroy(): Promise<void> {
-		await this.disconnectClient(this.subscriber, "subscriber");
-		await this.disconnectClient(this.publisher, "publisher");
+	public constructor(@Inject(REDIS_PUBLISHER) publisher: Redis | null, @Inject(REDIS_SUBSCRIBER) subscriber: Redis | null) {
+		const clients: [Redis | null, string][] = [
+			[subscriber, "subscriber"],
+			[publisher, "publisher"],
+		];
+		this.supervisors = clients.flatMap(([client, label]): RedisClientSupervisor[] => (client === null ? [] : [new RedisClientSupervisor(client, label, this.logger)]));
 	}
 
-	private async disconnectClient(client: Redis | null, label: string): Promise<void> {
-		if (client === null) {
-			return;
-		}
-		if (client.status === "end") {
-			return;
-		}
-		try {
-			await client.quit();
-			this.logger.log(`Redis ${label} disconnected`);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			this.logger.warn(`Redis ${label} disconnect skipped: ${message}`);
+	public async onApplicationShutdown(): Promise<void> {
+		for (const supervisor of this.supervisors) {
+			await supervisor.close();
 		}
 	}
 }

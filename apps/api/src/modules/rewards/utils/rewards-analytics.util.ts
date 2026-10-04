@@ -1,26 +1,34 @@
-export const DEFAULT_ANALYTICS_WEEKS = 8;
+import { nextWeekStartInTimeZone, resolveAnalyticsPeriodRange, startOfWeekInTimeZone, UTC_TIME_ZONE, type AnalyticsPeriodRange } from "@workspace/shared";
 
-export interface AnalyticsPeriod {
-	readonly fromMs: number;
-	readonly toMs: number;
+export type AnalyticsPeriod = AnalyticsPeriodRange;
+
+/** Whole percent: `percentChange` rounds to integers. */
+const PERCENT = 100;
+
+/** Conversion rate keeps one decimal place: round on a per-mille scale, then divide back. */
+const PER_MILLE = 1000;
+const PER_MILLE_PER_PERCENT = PER_MILLE / PERCENT;
+
+/**
+ * The period a request covers, aligned so `fromMs` is a UTC week start (see
+ * `resolveAnalyticsPeriodRange` in `@workspace/shared`). Every weekly bucket
+ * is then a whole week, and the echoed `period.from` is the real start.
+ */
+export function resolveAnalyticsPeriod(from: number | undefined, to: number | undefined, nowMs: number = Date.now(), timeZone: string = UTC_TIME_ZONE): AnalyticsPeriod {
+	return resolveAnalyticsPeriodRange(from, to, nowMs, timeZone);
 }
 
-export function resolveAnalyticsPeriod(from: number | undefined, to: number | undefined): AnalyticsPeriod {
-	const toMs = to ?? Date.now();
-	const fromMs = from ?? toMs - DEFAULT_ANALYTICS_WEEKS * 7 * 24 * 60 * 60 * 1000;
-	return { fromMs, toMs };
-}
-
+/** The equally long period right before `period` (for the "vs previous period" change). */
 export function previousAnalyticsPeriod(period: AnalyticsPeriod): AnalyticsPeriod {
 	const duration = period.toMs - period.fromMs;
-	return { fromMs: period.fromMs - duration, toMs: period.fromMs };
+	return { fromMs: period.fromMs - duration, toMs: period.fromMs, timeZone: period.timeZone };
 }
 
 export function percentChange(current: number, previous: number): number | null {
 	if (previous === 0) {
-		return current === 0 ? null : 100;
+		return current === 0 ? null : PERCENT;
 	}
-	return Math.round(((current - previous) / previous) * 100);
+	return Math.round(((current - previous) / previous) * PERCENT);
 }
 
 export function buildAnalyticsMetric(value: number, previous: number): { value: number; changePercent: number | null } {
@@ -31,15 +39,17 @@ export function conversionRatePercent(claims: number, redemptions: number): numb
 	if (claims === 0) {
 		return 0;
 	}
-	return Math.round((redemptions / claims) * 1000) / 10;
+	return Math.round((redemptions / claims) * PER_MILLE) / PER_MILLE_PER_PERCENT;
 }
 
-function startOfWeekUtc(ms: number): number {
-	const date = new Date(ms);
-	const day = date.getUTCDay();
-	const diff = (day + 6) % 7;
-	date.setUTCHours(0, 0, 0, 0);
-	return date.getTime() - diff * 86_400_000;
+/** Every week start (Monday 00:00 in the period's zone) from the week containing `fromMs` through the one containing `toMs`. */
+function weekStarts(period: AnalyticsPeriod): number[] {
+	const starts: number[] = [];
+	const last = startOfWeekInTimeZone(period.toMs, period.timeZone);
+	for (let cursor = startOfWeekInTimeZone(period.fromMs, period.timeZone); cursor <= last; cursor = nextWeekStartInTimeZone(cursor, period.timeZone)) {
+		starts.push(cursor);
+	}
+	return starts;
 }
 
 export function buildWeeklyTimeSeries(
@@ -47,20 +57,13 @@ export function buildWeeklyTimeSeries(
 	claimTimestamps: readonly number[],
 	redemptionTimestamps: readonly number[],
 ): readonly { date: number; claims: number; redemptions: number }[] {
-	const weekStart = startOfWeekUtc(period.fromMs);
-	const weekEnd = startOfWeekUtc(period.toMs);
-	const buckets = new Map<number, { claims: number; redemptions: number }>();
-
-	for (let cursor = weekStart; cursor <= weekEnd; cursor += 7 * 86_400_000) {
-		buckets.set(cursor, { claims: 0, redemptions: 0 });
-	}
+	const buckets = new Map<number, { claims: number; redemptions: number }>(weekStarts(period).map((start) => [start, { claims: 0, redemptions: 0 }]));
 
 	for (const at of claimTimestamps) {
 		if (at < period.fromMs || at > period.toMs) {
 			continue;
 		}
-		const key = startOfWeekUtc(at);
-		const bucket = buckets.get(key);
+		const bucket = buckets.get(startOfWeekInTimeZone(at, period.timeZone));
 		if (bucket !== undefined) {
 			bucket.claims += 1;
 		}
@@ -70,8 +73,7 @@ export function buildWeeklyTimeSeries(
 		if (at < period.fromMs || at > period.toMs) {
 			continue;
 		}
-		const key = startOfWeekUtc(at);
-		const bucket = buckets.get(key);
+		const bucket = buckets.get(startOfWeekInTimeZone(at, period.timeZone));
 		if (bucket !== undefined) {
 			bucket.redemptions += 1;
 		}
@@ -85,26 +87,18 @@ export function averageBillMinor(totalMinor: number, bills: number): number {
 	return bills === 0 ? 0 : Math.round(totalMinor / bills);
 }
 
-/** Paid bills per UTC week (Monday start) across the period — every week present, empty weeks as zero. */
+/**
+ * Paid bills per week (Monday 00:00 in the period's zone) across the period — every week
+ * present, empty weeks as zero. `weeks` are the per-week totals the database
+ * grouped (`RewardSaleRepository.listWeeklyTotals`); weeks outside the period are ignored.
+ */
 export function buildWeeklySalesSeries(
 	period: AnalyticsPeriod,
-	bills: readonly { readonly paidAt: number; readonly billTotalMinor: number }[],
+	weeks: readonly { readonly weekStartMs: number; readonly totalMinor: number; readonly bills: number }[],
 ): readonly { date: number; salesMinor: number; bills: number }[] {
-	const buckets = new Map<number, { salesMinor: number; bills: number }>();
-	for (let cursor = startOfWeekUtc(period.fromMs); cursor <= startOfWeekUtc(period.toMs); cursor += 7 * 86_400_000) {
-		buckets.set(cursor, { salesMinor: 0, bills: 0 });
-	}
-
-	for (const bill of bills) {
-		if (bill.paidAt < period.fromMs || bill.paidAt > period.toMs) {
-			continue;
-		}
-		const bucket = buckets.get(startOfWeekUtc(bill.paidAt));
-		if (bucket !== undefined) {
-			bucket.salesMinor += bill.billTotalMinor;
-			bucket.bills += 1;
-		}
-	}
-
-	return [...buckets.entries()].sort((left, right) => left[0] - right[0]).map(([date, totals]) => ({ date, salesMinor: totals.salesMinor, bills: totals.bills }));
+	const totalsByWeek = new Map(weeks.map((week) => [week.weekStartMs, week]));
+	return weekStarts(period).map((start) => {
+		const week = totalsByWeek.get(start);
+		return { date: start, salesMinor: week?.totalMinor ?? 0, bills: week?.bills ?? 0 };
+	});
 }

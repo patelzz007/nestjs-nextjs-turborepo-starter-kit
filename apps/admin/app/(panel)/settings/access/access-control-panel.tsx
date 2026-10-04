@@ -1,37 +1,23 @@
 "use client";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import { formatPermissionGrantVia } from "@/lib/permissions/format-permission-grant";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { buildPermissionTree } from "@/lib/permissions/build-permission-tree";
 import { AccessPermissionExplorerTree } from "@/components/access/access-permission-explorer-tree";
-import {
-	PERMISSION,
-	PermissionActionSchema,
-	PermissionResourceSchema,
-	type CheckPermissionResponse,
-	type PermissionAction,
-	type PermissionListItem,
-	type PermissionResource,
-	type RoleListItem,
-} from "@workspace/shared";
+import { PermissionCheckForm, PermissionCheckResult } from "@/components/access/permission-check-form";
+import { toastMutationError } from "@/lib/api/mutation-error";
+import { PERMISSION, type CheckPermissionInput, type CheckPermissionResponse, type Envelope, type PermissionListResponse, type RoleListResponse } from "@workspace/shared";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/navigation/tabs";
-import { ShieldCheck, ShieldX } from "lucide-react";
 import * as React from "react";
 
-const PERMISSION_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"];
-
-const PERMISSION_RESOURCES: readonly PermissionResource[] = PermissionResourceSchema.options;
-
 export interface AccessControlPanelProps {
-	readonly initialRoles?: readonly RoleListItem[] | undefined;
-	readonly initialPermissions?: readonly PermissionListItem[] | undefined;
+	/** The server-prefetched `GET /admin/roles` envelope, or `undefined` when the prefetch failed. */
+	readonly initialRoles?: Envelope<RoleListResponse> | undefined;
+	/** The server-prefetched `GET /admin/permissions` envelope, or `undefined` when the prefetch failed. */
+	readonly initialPermissions?: Envelope<PermissionListResponse> | undefined;
 }
 
 type AccessControlTab = "roles" | "permissions" | "checker";
@@ -72,51 +58,35 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 		{},
 		{
 			enabled: canListRoles,
-			...initialDataOption(initialRoles !== undefined ? successEnvelope({ items: [...initialRoles], total: initialRoles.length }, stubApiMeta()) : undefined),
+			...initialDataOption(initialRoles),
 		},
 	);
 	const permissionsQuery = api.admin.permissions.list.useQuery(
 		{},
 		{
 			enabled: canListPermissions,
-			...initialDataOption(
-				initialPermissions !== undefined ? successEnvelope({ items: [...initialPermissions], total: initialPermissions.length }, stubApiMeta()) : undefined,
-			),
+			...initialDataOption(initialPermissions),
 		},
 	);
 
-	const [checkUserId, setCheckUserId] = React.useState<string>("");
-	const [checkAction, setCheckAction] = React.useState<PermissionAction>("READ");
-	const [checkResource, setCheckResource] = React.useState<PermissionResource>("USER");
 	const [checkResult, setCheckResult] = React.useState<CheckPermissionResponse | null>(null);
 
 	const checkPermission = api.admin.permissions.check.useMutation({
 		onSuccess: (resp) => {
 			setCheckResult(resp.data);
 		},
+		onError: (error) => {
+			setCheckResult(null);
+			toastMutationError("Could not check the permission", error);
+		},
 	});
 
-	const handleCheckUserIdChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setCheckUserId(event.target.value);
-	}, []);
-
-	const handleCheckActionSelect = React.useCallback((value: string | null): void => {
-		const parsed = PermissionActionSchema.safeParse(value);
-		if (parsed.success) {
-			setCheckAction(parsed.data);
-		}
-	}, []);
-
-	const handleCheckResourceSelect = React.useCallback((value: string | null): void => {
-		const parsed = PermissionResourceSchema.safeParse(value);
-		if (parsed.success) {
-			setCheckResource(parsed.data);
-		}
-	}, []);
-
-	const handleCheckPermissionClick = React.useCallback((): void => {
-		checkPermission.mutate({ userId: checkUserId, action: checkAction, resource: checkResource });
-	}, [checkAction, checkPermission, checkResource, checkUserId]);
+	const handleCheck = React.useCallback(
+		(input: CheckPermissionInput): void => {
+			checkPermission.mutate(input);
+		},
+		[checkPermission],
+	);
 
 	const roles = rolesQuery.data?.data.items ?? [];
 	const permissions = React.useMemo(() => permissionsQuery.data?.data.items ?? [], [permissionsQuery.data?.data.items]);
@@ -185,68 +155,8 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
-								<div className="space-y-1">
-									<Label htmlFor="checker-user-id">User ID</Label>
-									<input
-										id="checker-user-id"
-										className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-										placeholder="UUID"
-										value={checkUserId}
-										onChange={handleCheckUserIdChange}
-									/>
-								</div>
-								<div className="grid gap-4 sm:grid-cols-2">
-									<div className="space-y-1">
-										<Label htmlFor="checker-action">Action</Label>
-										<Select value={checkAction} onValueChange={handleCheckActionSelect}>
-											<SelectTrigger id="checker-action" className="w-full">
-												<SelectValue placeholder="Action" />
-											</SelectTrigger>
-											<SelectContent>
-												{PERMISSION_ACTIONS.map((action) => (
-													<SelectItem key={action} value={action}>
-														{action}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-									<div className="space-y-1">
-										<Label htmlFor="checker-resource">Resource</Label>
-										<Select value={checkResource} onValueChange={handleCheckResourceSelect}>
-											<SelectTrigger id="checker-resource" className="w-full">
-												<SelectValue placeholder="Resource" />
-											</SelectTrigger>
-											<SelectContent>
-												{PERMISSION_RESOURCES.map((resource) => (
-													<SelectItem key={resource} value={resource}>
-														{resource}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								</div>
-								<Button type="button" disabled={checkUserId.length === 0 || checkPermission.isPending} onClick={handleCheckPermissionClick}>
-									Check permission
-								</Button>
-
-								{checkResult !== null ? (
-									<div className="rounded-lg border bg-muted/30 p-4">
-										<div className="flex items-center gap-2 text-sm font-medium">
-											{checkResult.allowed ? <ShieldCheck className="size-4 text-green-600" /> : <ShieldX className="size-4 text-destructive" />}
-											{checkResult.allowed ? "Allowed" : "Denied"}
-										</div>
-										<ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-											{checkResult.grants.map((grant, index) => (
-												<li key={`${grant.via}-${grant.detail ?? ""}-${String(index)}`}>
-													<span className="font-medium text-foreground">{formatPermissionGrantVia(grant.via)}</span>
-													{grant.detail !== undefined ? ` — ${grant.detail}` : ""}
-												</li>
-											))}
-										</ul>
-									</div>
-								) : null}
+								<PermissionCheckForm idPrefix="checker" isPending={checkPermission.isPending} onCheck={handleCheck} submitLabel="Check permission" />
+								{checkResult !== null ? <PermissionCheckResult result={checkResult} /> : null}
 							</CardContent>
 						</Card>
 					</TabsContent>

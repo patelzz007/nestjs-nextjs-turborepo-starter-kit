@@ -30,7 +30,7 @@ describe("rehypeHeadingAnchors", () => {
 describe("rehypeExternalLinks", () => {
 	it("opens external links in a new tab", () => {
 		const link = element("a", { href: "https://example.com" });
-		const internal = element("a", { href: "/docs/prisma" });
+		const internal = element("a", { href: "/docs/technical/database" });
 		rehypeExternalLinks()(rootOf([link, internal]));
 		expect(link.properties).toMatchObject({ target: "_blank", rel: ["noopener", "noreferrer"] });
 		expect(internal.properties.target).toBeUndefined();

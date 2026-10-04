@@ -1,10 +1,10 @@
 "use client";
 
+import { DISPLAY_LOCALE, formatUtcShortDate } from "@/lib/format/dates";
 import type { SalesSummary } from "@workspace/shared";
 import { AnalyticsChartCard } from "@workspace/ui/components/display/analytics-chart-card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/display/chart";
 import { formatMinorUnits, formatMinorUnitsCompact } from "@workspace/ui/lib/format/money";
-import { format } from "date-fns";
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -25,9 +25,10 @@ export interface SalesOverTimeChartProps {
 
 function SalesBars({ sales }: { readonly sales: SalesSummary }): React.JSX.Element {
 	const { currency } = sales;
-	const chartData = React.useMemo(() => sales.overTime.map((point) => ({ ...point, label: format(new Date(point.date), "MMM d") })), [sales.overTime]);
-	const formatMoney = React.useCallback((minor: number): string => formatMinorUnits(minor, currency), [currency]);
-	const formatMoneyTick = React.useCallback((minor: number): string => formatMinorUnitsCompact(minor, currency), [currency]);
+	// Each point starts a UTC week (Monday 00:00 UTC); label it by that UTC day, never the viewer's zone.
+	const chartData = React.useMemo(() => sales.overTime.map((point) => ({ ...point, label: formatUtcShortDate(point.date) })), [sales.overTime]);
+	const formatMoney = React.useCallback((minor: number): string => formatMinorUnits(minor, currency, DISPLAY_LOCALE), [currency]);
+	const formatMoneyTick = React.useCallback((minor: number): string => formatMinorUnitsCompact(minor, currency, DISPLAY_LOCALE), [currency]);
 
 	return (
 		<ChartContainer config={SALES_CHART_CONFIG} className="aspect-auto h-[300px] w-full">

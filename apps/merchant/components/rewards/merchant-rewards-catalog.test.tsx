@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
+import { UI_PREFERENCES_VERSION, UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -50,7 +50,9 @@ describe("MerchantRewardsCatalog layout preference", () => {
 
 		expect(isPressed("List view")).toBe(true);
 		expect(listColumnHeader()).not.toBeNull();
-		expect(window.localStorage.getItem(MERCHANT_UI_PREFERENCES_STORAGE_KEY)).toBe(JSON.stringify({ rewardsViewMode: "list" }));
+		expect(window.localStorage.getItem(MERCHANT_UI_PREFERENCES_STORAGE_KEY)).toBe(
+			JSON.stringify({ schemaVersion: UI_PREFERENCES_VERSION, snapshot: { rewardsViewMode: "list" } }),
+		);
 	});
 
 	it("keeps the layout the older view-mode helper saved as a bare string", () => {

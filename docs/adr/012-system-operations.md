@@ -29,6 +29,14 @@ Only named system operations may bypass tenant RLS, each with:
 - Required reason / correlation metadata
 - Structured audit record
 
+### Enforcement (2026-10)
+
+- The allowlist is a closed zod enum (`SystemOperationSchema`); one narrowly named operation per purpose.
+- `role` is enforced with `SET ROLE` (pool checkout and `withSystemOperation`); `app_enumerator` exists and is read-only.
+- `app_rls_bypass()` requires a named `app.system_operation`; policies may require a specific operation.
+- Correlation ids come from the request context (or are generated per transaction outside a request) — never from callers.
+- Every use is audited: an `rls.system_operation` log line, and the request's `audit_logs` row (ADR 025).
+
 ### Cross-tenant schedules
 
 Schedulers use `app_enumerator` to list active organization IDs, then enqueue **one tenant-scoped job per organization**. Workers re-authorize at execution using signed job context.

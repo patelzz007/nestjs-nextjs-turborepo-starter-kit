@@ -2,11 +2,15 @@
 
 /*
  * Docs theme, matched to the apidog documentation look (values measured from
- * docs.apidog.com): Inter on white, a cool slate text scale (#344054 /
- * #475467 / #667085), hairline #f2f4f7 borders, a single violet accent
- * (#9373ee) used only for links and the active state, and a soft violet glow
- * at the top of every page. Every colour is a token so light and dark stay in
- * sync — change the palette here, never in components.
+ * docs.apidog.com): a cool slate text scale (#344054 / #475467 / #667085) on
+ * white, hairline #f2f4f7 borders, a single violet accent (#9373ee) used for
+ * links and the active state, and a soft violet glow at the top of every page.
+ * Every colour, size and weight is a token so light and dark stay in sync and
+ * the type scale stays coherent — change them here, never in components.
+ *
+ * Typography: IBM Plex Sans (UI + prose) and JetBrains Mono (code), self-hosted
+ * through the Astro Fonts API (astro.config.ts → `<Font>` in BaseLayout.astro).
+ * See "Typography" in README.md for the scale and the reasoning behind it.
  */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -22,6 +26,20 @@
 	--brand-hover: #7f5ee6;
 	--brand-soft: #f3eefe;
 	--brand-glow: rgb(147 115 238 / 0.24);
+	/*
+	 * Brand as TEXT (links, active nav/TOC items). The accent itself is 3.5:1 on
+	 * white — fine for bars, borders and fills, too light for 14–16px text. These
+	 * keep the same hue at >= 4.5:1 (WCAG AA) on --bg and on --brand-soft.
+	 */
+	--brand-text: #6f4bdf;
+	--brand-text-hover: #5f3dc4;
+	/*
+	 * Brand as a FILL behind white text (primary buttons, the skip link). White on
+	 * --brand is only 3.5:1; these shades keep >= 4.5:1 (5.6:1, hover 7.1:1).
+	 */
+	--brand-solid: #6f4bdf;
+	--brand-solid-hover: #5f3dc4;
+	--on-brand-solid: #fff;
 	/* Surfaces */
 	--bg: #ffffff;
 	--surface: #ffffff;
@@ -73,6 +91,37 @@
 	--header-height: calc(var(--header-top) + var(--header-tabs) + 1px);
 	--sidebar-width: 300px;
 	--toc-width: 240px;
+	/*
+	 * Typography — one scale for the whole site. Sizes are rem so the reader's
+	 * browser font size is respected: 12 · 14 · 16 · 18 · 20 · 24 · 30 · 36 px.
+	 * Body copy is 16px / 1.65 / 400; 14px is the "chrome" size (navigation,
+	 * table of contents, metadata, controls).
+	 */
+	--type-size-xs: 0.75rem; /* 12px — tags, keyboard hints, small labels */
+	--type-size-sm: 0.875rem; /* 14px — chrome, tables */
+	--type-size-base: 1rem; /* 16px — body copy */
+	--type-size-lg: 1.125rem; /* 18px — h4, the page's lead paragraph */
+	--type-size-xl: 1.25rem; /* 20px — h3, card titles */
+	--type-size-2xl: 1.5rem; /* 24px — h2, section titles */
+	--type-size-3xl: 1.875rem; /* 30px — page title on small screens */
+	--type-size-4xl: 2.25rem; /* 36px — page title */
+	--type-weight-regular: 400;
+	--type-weight-medium: 500;
+	--type-weight-semibold: 600;
+	--type-weight-bold: 700;
+	--type-leading-tight: 1.2; /* page titles, h2 */
+	--type-leading-snug: 1.35; /* h3, h4, card titles */
+	--type-leading-normal: 1.5; /* chrome and tables */
+	--type-leading-relaxed: 1.65; /* body copy */
+	/* Large headings are tracked in slightly; text sizes keep the font's own spacing. */
+	--type-tracking-tight: -0.022em; /* 30px and up */
+	--type-tracking-snug: -0.012em; /* 20–24px */
+	/* Comfortable line length for running text (~65–75 characters). */
+	--type-measure: 70ch;
+	/* Inline code is relative to the text around it, so it scales inside headings. */
+	--type-code-size: 0.875em;
+	/* Fenced code blocks (the @workspace/ui CodeBlock, see src/lib/code-block/element.ts). */
+	--type-code-block-size: 0.875rem;
 	color-scheme: light;
 }
 
@@ -82,6 +131,12 @@
 	--brand-hover: #a197e0;
 	--brand-soft: #302d4a;
 	--brand-glow: rgb(130 118 201 / 0.18);
+	--brand-text: #aaa1e6;
+	--brand-text-hover: #c2bbef;
+	/* White on these: 5.35:1 and 6.6:1 (WCAG AA). */
+	--brand-solid: #6a5cc2;
+	--brand-solid-hover: #5b4db8;
+	--on-brand-solid: #fff;
 	--bg: #22272e;
 	--surface: #262c34;
 	--surface-muted: #2d333b;
@@ -146,8 +201,9 @@
 	--color-input: var(--border-strong);
 	--font-button: var(--font-sans);
 	--radius-lg: 12px;
-	--font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-	--font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	/* Set by `<Font>` (BaseLayout.astro); the second value only applies if that tag is ever missing. */
+	--font-sans: var(--font-ibm-plex-sans, system-ui, sans-serif);
+	--font-mono: var(--font-jetbrains-mono, ui-monospace, monospace);
 }
 
 /*
@@ -172,9 +228,9 @@
 		background: var(--bg);
 		color: var(--text);
 		font-family: var(--font-sans);
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 1.15;
+		font-size: var(--type-size-base);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-relaxed);
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 	}
@@ -196,6 +252,16 @@
 		pointer-events: none;
 	}
 
+	/*
+	 * Code ligatures off: in documentation the reader copies what they see, so
+	 * `!==`, `=>` and `>=` must look like the characters they type, not like
+	 * ≢ / ⇒ / ≥. (`none` also turns off JetBrains Mono's contextual alternates,
+	 * which is where its code ligatures live.)
+	 */
+	:where(code, kbd, pre, samp, [data-slot="code-block"]) {
+		font-variant-ligatures: none;
+	}
+
 	::selection {
 		background: var(--brand-soft);
 	}
@@ -213,8 +279,8 @@
 		z-index: 100;
 		padding: 8px 14px;
 		border-radius: 8px;
-		background: var(--brand);
-		color: #fff;
+		background: var(--brand-solid);
+		color: var(--on-brand-solid);
 	}
 
 	.skip-link:focus {
@@ -259,8 +325,9 @@
 		align-items: center;
 		gap: 10px;
 		color: var(--text);
-		font-size: 16px;
-		font-weight: 600;
+		font-size: var(--type-size-base);
+		font-weight: var(--type-weight-semibold);
+		line-height: var(--type-leading-normal);
 		text-decoration: none;
 	}
 
@@ -285,10 +352,11 @@
 		border: 1px solid var(--border-strong);
 		border-radius: 8px;
 		background: var(--surface);
-		color: var(--faint);
+		color: var(--muted);
 		font: inherit;
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		cursor: pointer;
 		transition: border-color 0.15s;
 	}
@@ -330,8 +398,9 @@
 		align-items: center;
 		color: var(--muted);
 		font-family: var(--font-sans);
-		font-size: 12px;
-		font-weight: 500;
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 	}
 
 	.icon-button {
@@ -381,9 +450,9 @@
 		align-items: center;
 		gap: 4px;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 		text-decoration: none;
 		white-space: nowrap;
 		transition: color 0.15s;
@@ -491,9 +560,9 @@
 		background: transparent;
 		color: var(--text-secondary);
 		font: inherit;
-		font-size: 14px;
-		font-weight: 400;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		text-align: left;
 		text-decoration: none;
 		cursor: pointer;
@@ -508,7 +577,8 @@
 
 	.nav-node.is-active {
 		background: var(--brand-soft);
-		color: var(--brand);
+		color: var(--brand-text);
+		font-weight: var(--type-weight-medium);
 	}
 
 	.nav-group > summary {
@@ -577,9 +647,10 @@
 
 	.drawer__label {
 		margin: 16px 12px 6px;
-		color: var(--faint);
-		font-size: 12px;
-		font-weight: 500;
+		color: var(--muted);
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 	}
 
 	.drawer-backdrop {
@@ -626,9 +697,9 @@
 		gap: 8px;
 		margin: 0 0 16px;
 		color: var(--text);
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-semibold);
+		line-height: var(--type-leading-normal);
 	}
 
 	/*
@@ -653,9 +724,9 @@
 		padding: 6px 0 6px 16px;
 		border-left: 2px solid transparent;
 		color: var(--text-secondary);
-		font-size: 14px;
-		font-weight: 400;
-		line-height: 20px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		text-decoration: none;
 		transition:
 			color 0.12s,
@@ -665,7 +736,6 @@
 	.toc__list--nested .toc__link {
 		padding-left: 14px;
 		color: var(--muted);
-		font-size: 13px;
 	}
 
 	.toc__link:hover {
@@ -674,8 +744,8 @@
 
 	.toc__link.is-active {
 		border-left-color: var(--brand);
-		color: var(--brand);
-		font-weight: 500;
+		color: var(--brand-text);
+		font-weight: var(--type-weight-medium);
 	}
 
 	.toc__actions {
@@ -695,8 +765,9 @@
 		background: none;
 		color: var(--muted);
 		font: inherit;
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		text-decoration: none;
 		cursor: pointer;
 	}
@@ -715,9 +786,9 @@
 		margin: 0 0 8px;
 		padding: 0;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		list-style: none;
 	}
 
@@ -737,17 +808,30 @@
 	.page-title {
 		margin: 0;
 		color: var(--text);
-		font-size: 32px;
-		font-weight: 600;
-		line-height: 40px;
+		font-size: var(--type-size-3xl);
+		font-weight: var(--type-weight-bold);
+		line-height: var(--type-leading-tight);
+		letter-spacing: var(--type-tracking-tight);
+		text-wrap: balance;
 	}
 
+	@media (min-width: 768px) {
+		.page-title {
+			font-size: var(--type-size-4xl);
+		}
+	}
+
+	/* The lead paragraph under the title. */
 	.page-description {
 		margin: 16px 0 0;
-		color: var(--text);
-		font-size: 16px;
-		font-weight: 400;
-		line-height: 28px;
+		color: var(--text-secondary);
+		font-size: var(--type-size-lg);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-relaxed);
+	}
+
+	.docs-article .page-description {
+		max-width: var(--type-measure);
 	}
 
 	.page-meta {
@@ -757,9 +841,9 @@
 		gap: 6px 16px;
 		margin: 16px 0 0;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 400;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.page-meta span {
@@ -785,9 +869,9 @@
 		border-radius: 6px;
 		background: var(--surface);
 		color: var(--text-secondary);
-		font-size: 12px;
-		font-weight: 500;
-		line-height: 20px;
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 	}
 
 	/* ─── Prose ─────────────────────────────────────────────────────────── */
@@ -795,10 +879,18 @@
 	.prose {
 		margin-top: 24px;
 		color: var(--text);
-		font-size: 16px;
-		font-weight: 400;
-		line-height: 28px;
+		font-size: var(--type-size-base);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-relaxed);
 		overflow-wrap: break-word;
+	}
+
+	/*
+	 * Running text keeps a readable line length; tables, code blocks, diagrams
+	 * and galleries still use the full article width.
+	 */
+	.prose > :where(p, ul, ol, dl, blockquote, aside, h2, h3, h4) {
+		max-width: var(--type-measure);
 	}
 
 	.prose > :first-child {
@@ -812,32 +904,35 @@
 	.prose :where(h2, h3, h4) {
 		position: relative;
 		color: var(--text);
-		font-weight: 600;
+		font-weight: var(--type-weight-semibold);
 		scroll-margin-top: calc(var(--header-height) + 24px);
+		text-wrap: balance;
 	}
 
 	.prose h2 {
 		margin: 48px 0 16px;
-		font-size: 24px;
-		line-height: 30px;
+		font-size: var(--type-size-2xl);
+		line-height: var(--type-leading-tight);
+		letter-spacing: var(--type-tracking-snug);
 	}
 
 	.prose h3 {
-		margin: 32px 0 16px;
-		font-size: 20px;
-		line-height: 25px;
+		margin: 32px 0 12px;
+		font-size: var(--type-size-xl);
+		line-height: var(--type-leading-snug);
+		letter-spacing: var(--type-tracking-snug);
 	}
 
 	.prose h4 {
-		margin: 24px 0 12px;
-		font-size: 16px;
-		line-height: 24px;
+		margin: 24px 0 8px;
+		font-size: var(--type-size-lg);
+		line-height: var(--type-leading-snug);
 	}
 
 	.heading-anchor {
 		margin-left: 6px;
 		color: var(--faint);
-		font-weight: 400;
+		font-weight: var(--type-weight-regular);
 		text-decoration: none;
 		opacity: 0;
 		transition: opacity 0.12s;
@@ -849,18 +944,19 @@
 	}
 
 	.prose a:not(.heading-anchor) {
-		color: var(--brand);
+		color: var(--brand-text);
 		text-decoration: none;
 	}
 
 	.prose a:not(.heading-anchor):hover {
+		color: var(--brand-text-hover);
 		text-decoration: underline;
 		text-underline-offset: 3px;
 	}
 
 	.prose strong {
 		color: var(--text);
-		font-weight: 600;
+		font-weight: var(--type-weight-semibold);
 	}
 
 	.prose :where(ul, ol) {
@@ -907,8 +1003,8 @@
 		background: var(--code-inline-bg);
 		color: var(--text);
 		font-family: var(--font-mono);
-		font-size: 14px;
-		line-height: 20px;
+		font-size: var(--type-code-size);
+		line-height: var(--type-leading-normal);
 		overflow-wrap: break-word;
 	}
 
@@ -933,16 +1029,17 @@
 		border-radius: 8px;
 	}
 
+	/* Tables are reference material: the denser chrome size fits more columns before scrolling. */
 	.prose table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 16px;
-		line-height: 28px;
+		font-size: var(--type-size-sm);
+		line-height: var(--type-leading-normal);
 	}
 
 	.prose th {
 		color: var(--text);
-		font-weight: 600;
+		font-weight: var(--type-weight-semibold);
 		text-align: left;
 	}
 
@@ -951,7 +1048,7 @@
 	}
 
 	.prose :where(th, td) {
-		padding: 6px 16px;
+		padding: 8px 16px;
 		border-bottom: 1px solid var(--border);
 		vertical-align: top;
 	}
@@ -994,8 +1091,8 @@
 		border-radius: 999px;
 		background: var(--callout-accent);
 		color: #fff;
-		font-size: 12px;
-		font-weight: 700;
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-bold);
 		line-height: 1;
 	}
 
@@ -1029,7 +1126,7 @@
 
 	.callout[data-kind="error"]::before {
 		content: "×";
-		font-size: 14px;
+		font-size: var(--type-size-sm);
 	}
 
 	.callout > :last-child {
@@ -1042,7 +1139,7 @@
 
 	.callout .callout-title {
 		color: var(--callout-accent);
-		font-weight: 500;
+		font-weight: var(--type-weight-semibold);
 	}
 
 	/* Code blocks: the @workspace/ui CodeBlock, server-rendered then hydrated (src/lib/code-block/). */
@@ -1067,7 +1164,7 @@
 		background: none;
 		color: var(--muted);
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: var(--type-size-xs);
 		text-align: left;
 		white-space: pre-wrap;
 	}
@@ -1101,8 +1198,8 @@
 	.image-gallery figcaption {
 		padding: 8px 12px;
 		color: var(--muted);
-		font-size: 14px;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		line-height: var(--type-leading-normal);
 	}
 
 	/* ─── Page footer pieces ────────────────────────────────────────────── */
@@ -1120,8 +1217,9 @@
 	.page-feedback__question {
 		margin: 0;
 		color: var(--text);
-		font-size: 14px;
-		font-weight: 500;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 	}
 
 	.page-feedback__buttons {
@@ -1140,7 +1238,8 @@
 		background: var(--surface);
 		color: var(--text);
 		font: inherit;
-		font-size: 14px;
+		font-size: var(--type-size-sm);
+		line-height: var(--type-leading-normal);
 		cursor: pointer;
 		transition:
 			border-color 0.12s,
@@ -1150,14 +1249,15 @@
 	.pill-button:hover,
 	.pill-button[aria-pressed="true"] {
 		border-color: var(--brand);
-		color: var(--brand);
+		color: var(--brand-text);
 	}
 
 	.page-feedback__thanks {
 		margin: 0;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.page-footer-meta {
@@ -1168,8 +1268,9 @@
 		gap: 8px 16px;
 		margin-top: 16px;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.page-footer-meta a {
@@ -1229,19 +1330,19 @@
 		align-items: center;
 		gap: 4px;
 		color: var(--muted);
-		font-size: 12px;
-		font-weight: 400;
-		line-height: 18px;
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.pager__title {
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 	}
 
 	.pager__card:hover .pager__title {
-		color: var(--brand);
+		color: var(--brand-text);
 	}
 
 	/* ─── Learning center cards ─────────────────────────────────────────── */
@@ -1253,9 +1354,10 @@
 	.card-section__title {
 		margin: 0 0 16px;
 		color: var(--text);
-		font-size: 24px;
-		font-weight: 600;
-		line-height: 30px;
+		font-size: var(--type-size-2xl);
+		font-weight: var(--type-weight-semibold);
+		line-height: var(--type-leading-tight);
+		letter-spacing: var(--type-tracking-snug);
 		scroll-margin-top: calc(var(--header-height) + 24px);
 	}
 
@@ -1315,9 +1417,10 @@
 
 	.guide-card__title {
 		margin: 0;
-		font-size: 20px;
-		font-weight: 600;
-		line-height: 28px;
+		font-size: var(--type-size-xl);
+		font-weight: var(--type-weight-semibold);
+		line-height: var(--type-leading-snug);
+		letter-spacing: var(--type-tracking-snug);
 	}
 
 	.guide-card__title a {
@@ -1340,13 +1443,13 @@
 	.guide-card__description {
 		margin: 16px 0 0;
 		color: var(--muted);
-		font-size: 16px;
-		font-weight: 400;
-		line-height: 28px;
+		font-size: var(--type-size-base);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-relaxed);
 	}
 
 	.guide-card__more {
-		color: var(--brand);
+		color: var(--brand-text);
 		white-space: nowrap;
 	}
 
@@ -1354,9 +1457,9 @@
 		margin: 16px 0 0;
 		padding: 0 0 0 20px;
 		color: var(--faint);
-		font-size: 16px;
-		font-weight: 400;
-		line-height: 28px;
+		font-size: var(--type-size-base);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-relaxed);
 		list-style: disc;
 	}
 
@@ -1372,11 +1475,12 @@
 	.guide-card__links a {
 		position: relative;
 		z-index: 1;
-		color: var(--brand);
+		color: var(--brand-text);
 		text-decoration: none;
 	}
 
 	.guide-card__links a:hover {
+		color: var(--brand-text-hover);
 		text-decoration: underline;
 		text-underline-offset: 3px;
 	}
@@ -1388,8 +1492,9 @@
 		gap: 6px 12px;
 		margin: 0 0 12px;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.post-grid {
@@ -1445,12 +1550,12 @@
 		background: transparent;
 		color: var(--text);
 		font: inherit;
-		font-size: 16px;
-		font-weight: 400;
+		font-size: var(--type-size-base);
+		font-weight: var(--type-weight-regular);
 	}
 
 	.search-dialog__input::placeholder {
-		color: var(--faint);
+		color: var(--muted);
 	}
 
 	.search-dialog__results {
@@ -1490,9 +1595,9 @@
 
 	.search-result__title {
 		display: block;
-		font-size: 14px;
-		font-weight: 500;
-		line-height: 22px;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 	}
 
 	.search-result__context,
@@ -1500,9 +1605,9 @@
 		display: block;
 		overflow: hidden;
 		color: var(--muted);
-		font-size: 13px;
-		font-weight: 400;
-		line-height: 20px;
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
@@ -1524,8 +1629,9 @@
 		margin: 0;
 		padding: 32px 16px;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 		text-align: center;
 	}
 
@@ -1536,8 +1642,9 @@
 		padding: 10px 16px;
 		border-top: 1px solid var(--border);
 		color: var(--muted);
-		font-size: 12px;
-		font-weight: 400;
+		font-size: var(--type-size-xs);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.search-dialog__footer span {
@@ -1560,8 +1667,9 @@
 		gap: 12px 24px;
 		padding: 24px 20px;
 		color: var(--muted);
-		font-size: 14px;
-		font-weight: 400;
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-regular);
+		line-height: var(--type-leading-normal);
 	}
 
 	.site-footer nav {
@@ -1591,9 +1699,10 @@
 	.not-found__code {
 		margin: 0;
 		color: var(--text);
-		font-size: 32px;
-		font-weight: 600;
-		line-height: 40px;
+		font-size: var(--type-size-4xl);
+		font-weight: var(--type-weight-bold);
+		line-height: var(--type-leading-tight);
+		letter-spacing: var(--type-tracking-tight);
 	}
 
 	.button-primary {
@@ -1603,14 +1712,16 @@
 		height: 32px;
 		padding: 0 12px;
 		border-radius: 8px;
-		background: var(--brand);
-		color: #fff;
-		font-size: 14px;
+		background: var(--brand-solid);
+		color: var(--on-brand-solid);
+		font-size: var(--type-size-sm);
+		font-weight: var(--type-weight-medium);
+		line-height: var(--type-leading-normal);
 		text-decoration: none;
 	}
 
 	.button-primary:hover {
-		background: var(--brand-hover);
+		background: var(--brand-solid-hover);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

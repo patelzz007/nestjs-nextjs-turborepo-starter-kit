@@ -1,10 +1,10 @@
 "use client";
 
 import { useAuth, useIsServerRenderedSession } from "@workspace/client/lib/auth";
-import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 
 /** Re-checks revocations promptly without hammering the API. */
 export const SESSION_PERMISSIONS_REFETCH_INTERVAL_MS = 60_000;
@@ -47,12 +47,11 @@ export function resolveSessionCapabilities(live: SessionPermissionsResponse | un
  * would show the previous member's capabilities, and as `initialData` it
  * would recreate the query as fresh right after the sign-out cache clear.
  */
-export function useSessionPermissionsQuery(initialSessionPermissions: SessionPermissionsResponse | undefined, isAuthenticated: boolean): SessionPermissionsState {
+export function useSessionPermissionsQuery(initialSessionPermissions: Envelope<SessionPermissionsResponse> | undefined, isAuthenticated: boolean): SessionPermissionsState {
 	const { api } = useAuth();
 	const isServerRenderedSession = useIsServerRenderedSession();
-	const serverPermissions = isServerRenderedSession ? initialSessionPermissions : undefined;
-
-	const initialPermissionsData = React.useMemo(() => (serverPermissions !== undefined ? successEnvelope(serverPermissions, stubApiMeta()) : undefined), [serverPermissions]);
+	const serverEnvelope = isServerRenderedSession ? initialSessionPermissions : undefined;
+	const serverPermissions = serverEnvelope?.data;
 
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
 		retry: 1,
@@ -60,7 +59,7 @@ export function useSessionPermissionsQuery(initialSessionPermissions: SessionPer
 		refetchOnWindowFocus: true,
 		refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS,
 		enabled: isAuthenticated,
-		...initialDataOption(initialPermissionsData),
+		...initialDataOption(serverEnvelope),
 	});
 
 	const liveResponse = isAuthenticated ? permissionsQuery.data?.data : undefined;

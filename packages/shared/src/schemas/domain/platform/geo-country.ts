@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
+import { JsonValueSchema } from "../../runtime/json";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
 import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
@@ -60,8 +61,8 @@ export const CreateCountrySchema = z
 		region: z.string().max(255).optional(),
 		subregion: z.string().max(255).optional(),
 		nationality: z.string().max(255).optional(),
-		timezones: DataValueSchema.optional(),
-		translations: DataValueSchema.optional(),
+		timezones: JsonValueSchema.optional(),
+		translations: JsonValueSchema.optional(),
 		latitude: z.coerce.number().min(-90).max(90).optional(),
 		longitude: z.coerce.number().min(-180).max(180).optional(),
 		emoji: z.string().max(191).optional(),
@@ -93,8 +94,8 @@ export const UpdateCountrySchema = z
 		region: z.string().max(255).nullable().optional(),
 		subregion: z.string().max(255).nullable().optional(),
 		nationality: z.string().max(255).nullable().optional(),
-		timezones: DataValueSchema.nullable().optional(),
-		translations: DataValueSchema.nullable().optional(),
+		timezones: JsonValueSchema.nullable().optional(),
+		translations: JsonValueSchema.nullable().optional(),
 		latitude: z.coerce.number().min(-90).max(90).nullable().optional(),
 		longitude: z.coerce.number().min(-180).max(180).nullable().optional(),
 		emoji: z.string().max(191).nullable().optional(),
@@ -109,7 +110,7 @@ export const UpdateCountrySchema = z
 
 export type UpdateCountryInput = z.output<typeof UpdateCountrySchema>;
 
-/** `GET /geo/countries` list query — see docs/list-queries.md. */
+/** `GET /geo/countries` list query — see docs/technical/api/list-queries.md. */
 export const countryListQuery = defineListQuery({
 	sortable: ["id", "name", "iso2"],
 	defaultSort: [{ field: "id", direction: "asc" }],

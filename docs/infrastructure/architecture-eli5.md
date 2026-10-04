@@ -230,7 +230,7 @@ pnpm --filter @workspace/analytics-consumer start   # optional
 
 ## Related docs
 
-- [Messaging operations](./messaging.md)
+- [Messaging operations](../technical/messaging.md)
 - [ADR 015 — Transactional outbox + consumer inbox](../adr/015-transactional-outbox-and-inbox.md)
 - [`@workspace/messaging` package README](../../packages/messaging/README.md)
 - [RabbitMQ ADR](../adr/rabbitmq-placeholder.md)

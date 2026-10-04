@@ -1,7 +1,7 @@
 "use client";
 
 import { RewardHubCatalog } from "@/components/rewardhub/browse/catalog";
-import { ALL_FILTER_CHIP, RewardHubFilters } from "@/components/rewardhub/browse/filters";
+import { RewardHubFilters, type RewardHubCityOption } from "@/components/rewardhub/browse/filters";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor } from "@workspace/client/lib/api/envelope";
 import { toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
@@ -9,14 +9,30 @@ import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/u
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { Envelope, PilotCity, RewardCategory, RewardResponse } from "@workspace/shared";
-import { Gift, MapPin, Search, Sparkles } from "lucide-react";
+import { PILOT_CITY_LABELS, PilotCitySchema, RewardCategorySchema, type Envelope, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
+import { Button } from "@workspace/ui/components/form/button";
+import { AlertTriangle, Gift, MapPin, Search, Sparkles } from "lucide-react";
 import * as React from "react";
 import { LANDING_SECTION_IDS, ROUTE_PREFIXES } from "@/lib/routes";
 import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/lib/url-state/rewards-browse";
-import { useSubmittedUrlDraft } from "@/lib/url-state/use-submitted-url-draft";
+import { useSubmittedUrlDraft } from "@workspace/client/lib/url-state/use-submitted-url-draft";
 
-const CATEGORIES: readonly RewardCategory[] = ["cafe", "restaurant", "retail", "wellness", "entertainment", "food", "beverage"];
+/** Every reward category, in the contract's order — the chips and the "Categories" count come from the shared enum. */
+const CATEGORIES: readonly RewardCategory[] = RewardCategorySchema.options;
+
+/** Every pilot city with its display name — the chips, the "Cities" count and the header copy come from the shared enum. */
+const CITY_OPTIONS: readonly RewardHubCityOption[] = PilotCitySchema.options.map((city: PilotCity): RewardHubCityOption => ({ value: city, label: PILOT_CITY_LABELS[city] }));
+
+/** The language of this view's copy — the city list is joined with that language's conjunction. */
+const COPY_LOCALE = "en";
+
+const CITY_NAMES: readonly string[] = CITY_OPTIONS.map((option: RewardHubCityOption): string => option.label);
+
+/** "Kuala Lumpur and Melaka" — the pilot cities as running text. */
+const CITY_NAMES_TEXT: string = new Intl.ListFormat(COPY_LOCALE, { style: "long", type: "conjunction" }).format(CITY_NAMES);
+
+/** "Kuala Lumpur & Melaka pilots" — the pilot cities as a compact hint. */
+const CITY_NAMES_HINT = `${new Intl.ListFormat(COPY_LOCALE, { style: "short", type: "conjunction" }).format(CITY_NAMES)} pilots`;
 
 export interface RewardHubBrowseViewProps {
 	/** The catalog page the server prefetched for the URL it rendered. */
@@ -51,15 +67,15 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 	}, [searchDraft, updateUrlState]);
 
 	const handleCityChange = React.useCallback(
-		(nextCity: PilotCity | typeof ALL_FILTER_CHIP): void => {
-			updateUrlState({ city: nextCity === ALL_FILTER_CHIP ? undefined : nextCity, page: LIST_FIRST_PAGE, cursor: undefined });
+		(nextCity: PilotCity | undefined): void => {
+			updateUrlState({ city: nextCity, page: LIST_FIRST_PAGE, cursor: undefined });
 		},
 		[updateUrlState],
 	);
 
 	const handleCategoryChange = React.useCallback(
-		(nextCategory: RewardCategory | typeof ALL_FILTER_CHIP): void => {
-			updateUrlState({ category: nextCategory === ALL_FILTER_CHIP ? undefined : nextCategory, page: LIST_FIRST_PAGE, cursor: undefined });
+		(nextCategory: RewardCategory | undefined): void => {
+			updateUrlState({ category: nextCategory, page: LIST_FIRST_PAGE, cursor: undefined });
 		},
 		[updateUrlState],
 	);
@@ -81,7 +97,13 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 
 	const hasActiveFilters = urlState.search !== undefined || urlState.city !== undefined || urlState.category !== undefined;
 	const isLoading = rewardsQuery.isLoading;
-	const showEmpty = !isLoading && rewards.length === 0;
+	// A failed fetch with nothing to show is an error, never "everything is sold out".
+	const showError = rewardsQuery.isError && rewardsQuery.data === undefined;
+	const showEmpty = !isLoading && !showError && rewards.length === 0;
+
+	const handleRetry = React.useCallback((): void => {
+		void rewardsQuery.refetch();
+	}, [rewardsQuery]);
 
 	const summaryItems = React.useMemo(
 		() => [
@@ -93,8 +115,8 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 			},
 			{
 				label: "Cities",
-				value: "2",
-				hint: "KL & Melaka pilots",
+				value: String(CITY_OPTIONS.length),
+				hint: CITY_NAMES_HINT,
 				icon: <MapPin className="size-4" aria-hidden="true" />,
 			},
 			{
@@ -117,7 +139,7 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 						<p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">Reward Hub</p>
 						<h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Discover local rewards</h1>
 						<p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-							Claim discounts and free items from participating merchants across Kuala Lumpur and Melaka.
+							Claim discounts and free items from participating merchants across {CITY_NAMES_TEXT}.
 						</p>
 					</div>
 					<div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
@@ -144,8 +166,9 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 
 			<RewardHubFilters
 				searchDraft={searchDraft}
-				city={urlState.city ?? ALL_FILTER_CHIP}
-				category={urlState.category ?? ALL_FILTER_CHIP}
+				city={urlState.city}
+				category={urlState.category}
+				cities={CITY_OPTIONS}
 				categories={CATEGORIES}
 				onSearchDraftChange={setSearchDraft}
 				onSearchSubmit={handleSearchSubmit}
@@ -155,7 +178,18 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 				hasActiveFilters={hasActiveFilters}
 			/>
 
-			{showEmpty ? (
+			{showError ? (
+				<WebEmptyState
+					title="Couldn't load rewards"
+					description="Something went wrong while loading the catalog. Check your connection and try again."
+					icon={<AlertTriangle className="size-5" aria-hidden="true" />}
+					action={
+						<Button type="button" onClick={handleRetry}>
+							Try again
+						</Button>
+					}
+				/>
+			) : showEmpty ? (
 				<WebEmptyState
 					title="No claimable rewards"
 					description="Everything matching your filters is sold out or expired. Try another city or category."

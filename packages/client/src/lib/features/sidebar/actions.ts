@@ -9,8 +9,7 @@ export type SidebarAction =
 	| { readonly type: "[ Sidebar ] Expanded" }
 	| { readonly type: "[ Sidebar ] Collapsed" }
 	| { readonly type: "[ Sidebar ] Section Moved"; readonly title: string; readonly direction: SectionMoveDirection; readonly allTitles: readonly string[] }
-	| { readonly type: "[ Sidebar ] Item Expansion Changed"; readonly itemId: string; readonly expanded: boolean }
-	| { readonly type: "[ Sidebar ] Expanded Items Reset" }
+	| { readonly type: "[ Sidebar ] Item Expansion Changed"; readonly pathname: string; readonly itemId: string; readonly expanded: boolean }
 	| { readonly type: "[ Sidebar ] Search Changed"; readonly query: string }
 	| { readonly type: "[ Sidebar ] Search Cleared" }
 	| { readonly type: "[ Sidebar ] Preferences Restored"; readonly preferences: SidebarPreferences };
@@ -26,8 +25,12 @@ export const sidebarActions = {
 		direction,
 		allTitles,
 	}),
-	itemExpansionChanged: (itemId: string, expanded: boolean): SidebarAction => ({ type: "[ Sidebar ] Item Expansion Changed", itemId, expanded }),
-	expandedItemsReset: (): SidebarAction => ({ type: "[ Sidebar ] Expanded Items Reset" }),
+	itemExpansionChanged: (pathname: string, itemId: string, expanded: boolean): SidebarAction => ({
+		type: "[ Sidebar ] Item Expansion Changed",
+		pathname,
+		itemId,
+		expanded,
+	}),
 	searchChanged: (query: string): SidebarAction => ({ type: "[ Sidebar ] Search Changed", query }),
 	searchCleared: (): SidebarAction => ({ type: "[ Sidebar ] Search Cleared" }),
 	preferencesRestored: (preferences: SidebarPreferences): SidebarAction => ({ type: "[ Sidebar ] Preferences Restored", preferences }),

@@ -1,42 +1,52 @@
-import type { QueryClient } from "@tanstack/react-query";
-
-import { invalidateSessionAuth } from "../session/invalidate-auth";
 import type { ApiClient } from "../../api/use-api";
 import type { ApiRouter } from "../../api/endpoints";
 import type { AuthCommands } from "../../features/auth/facade";
+import { catchCaught } from "../../caught";
 
 /** The session commands the post-verification sync drives (`useAuthCommands()`). */
-export type EmailVerificationSessionCommands = Pick<AuthCommands, "login" | "markEmailVerified" | "refreshSession">;
+export type EmailVerificationSessionCommands = Pick<AuthCommands, "login" | "refreshSession">;
 
-/** The two session reads it needs (`useAuth().api` satisfies it). */
+/** The session read it needs (`useAuth().api` satisfies it). */
 export interface EmailVerificationSessionApi {
 	readonly auth: {
 		readonly me: Pick<ApiClient<ApiRouter>["auth"]["me"], "fetchOrThrow">;
-		readonly permissions: Pick<ApiClient<ApiRouter>["auth"]["permissions"], "fetchOrThrow">;
 	};
 }
 
 /**
- * Rotates the httpOnly session after email verification so access tokens pick up
- * `isEmailVerified` / `sessionScope: full` from the database, then re-reads the
- * session. Runs from event handlers / effects with the provider's commands —
- * it never reaches into a store directly.
+ * How the session sync after a verified email ended:
+ * - `synced` — the session was rotated (the new access token carries the
+ *   verified flag / new scope) and re-read; the tab now shows it;
+ * - `no-session` — there is no session to update in this browser (a guest
+ *   opened the link, or this tab already signed out);
+ * - `unavailable` — the API could not be reached for the rotation or the
+ *   re-read. Nothing about the session was assumed; the caller offers a retry.
  */
-export async function syncSessionAfterEmailVerification(api: EmailVerificationSessionApi, session: EmailVerificationSessionCommands, queryClient: QueryClient): Promise<void> {
-	try {
-		await session.refreshSession();
-	} catch {
-		// Guest may open the verify link without an active session.
+export type EmailVerificationSyncResult = "synced" | "no-session" | "unavailable";
+
+/**
+ * Rotates the httpOnly session after email verification so the access token
+ * picks up `isEmailVerified` / `sessionScope` from the database, then re-reads
+ * the profile and establishes it (the scope is re-read from
+ * `/auth/permissions` by the facade). The rotation goes through the tab's
+ * SINGLE-FLIGHT refresh (`refreshSession`), so it can never race another
+ * refresh of the same refresh token. Nothing is applied without a server
+ * answer.
+ */
+export async function syncSessionAfterEmailVerification(api: EmailVerificationSessionApi, session: EmailVerificationSessionCommands): Promise<EmailVerificationSyncResult> {
+	const refreshed = await session.refreshSession();
+	if (refreshed === "expired") {
+		return "no-session";
+	}
+	if (refreshed === "transient") {
+		return "unavailable";
 	}
 
-	await invalidateSessionAuth(queryClient);
-
-	try {
-		const [meResponse, permissionsResponse] = await Promise.all([api.auth.me.fetchOrThrow(undefined), api.auth.permissions.fetchOrThrow(undefined)]);
-		// Establishes the session from the fresh answers (seeds the `/auth/me` cache too).
-		session.login(meResponse.data, permissionsResponse.data);
-	} catch {
-		// The session could not be re-read: apply the known outcome to a signed-in tab (no-op otherwise).
-		session.markEmailVerified();
-	}
+	return catchCaught(
+		api.auth.me.fetchOrThrow(undefined).then((me): EmailVerificationSyncResult => {
+			session.login(me.data, me.meta);
+			return "synced";
+		}),
+		(): EmailVerificationSyncResult => "unavailable",
+	);
 }

@@ -14,7 +14,7 @@
 	--accent-foreground: oklch(0.28 0.03 250);
 	--border: oklch(0.88 0.015 250);
 	--input: oklch(0.88 0.015 250);
-	--ring: oklch(0.72 0.02 264);
+	--ring: oklch(0.52 0.03 264);
 	/* slate-800 active nav + primary actions */
 	--primary: oklch(0.279 0.041 260.031);
 	--primary-foreground: oklch(1 0 0);
@@ -27,7 +27,7 @@
 	--sidebar-accent: oklch(0.95 0.02 250);
 	--sidebar-accent-foreground: oklch(0.28 0.03 250);
 	--sidebar-border: oklch(0.82 0.015 250);
-	--sidebar-ring: oklch(0.72 0.02 264);
+	--sidebar-ring: oklch(0.52 0.03 264);
 }
 
 /* Dark: brand colours only — the soft-dark neutrals come from packages/ui tokens.css. */

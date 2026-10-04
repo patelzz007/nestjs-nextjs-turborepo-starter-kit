@@ -10,11 +10,12 @@ import { TypedConfigService } from "../../../config/typed-config.service";
  * permissions) for a single user.  The cache is keyed by user ID and
  * entries expire after a configurable TTL (default 5 minutes).
  *
- * ## Redis migration path
+ * ## Multi-instance invalidation
  *
- * Replace the internal store with a Redis client that exposes the same
- * `get / set / invalidate / invalidateRole` contract.  The NestJS module
- * wiring stays identical — swap the provider at the module level.
+ * This store is per process. Never invalidate it directly after an RBAC
+ * change: go through `AuthorizationInvalidationService`, which applies the
+ * invalidation here and broadcasts it to every other API instance over Redis
+ * pub/sub (when the Redis authorization backend is configured).
  */
 
 // ── Public types ────────────────────────────────────────────────────────────
@@ -101,17 +102,17 @@ export class AuthorizationCacheService {
 	 * on their next request.
 	 *
 	 * @param affectedUserIds - The user IDs whose authorization changed.
+	 *
+	 * Not logged here: `AuthorizationInvalidationService` (the only caller)
+	 * logs which users, the trigger and the originating instance.
 	 */
 	public invalidateUsers(affectedUserIds: readonly string[]): void {
 		this.store.deleteMany(affectedUserIds);
-		this.logger.debug(`Invalidated authorization cache for ${String(affectedUserIds.length)} user(s)`);
 	}
 
-	/** Drop every cached entry.  Useful for testing and full invalidation. */
+	/** Drop every cached entry (logged, with its origin, by `AuthorizationInvalidationService`). */
 	public clear(): void {
-		const size: number = this.store.size;
 		this.store.clear();
-		this.logger.debug(`Cleared authorization cache (${String(size)} entries)`);
 	}
 
 	/** Current number of entries (including possibly-expired ones). */

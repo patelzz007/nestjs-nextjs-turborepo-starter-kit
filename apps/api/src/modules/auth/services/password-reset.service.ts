@@ -1,16 +1,20 @@
 import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { z } from "zod";
+import { PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
 import type { ForgotPasswordInput, ForgotPasswordResponse, ResetPasswordInput, ResetPasswordResponse, ValidateResetTokenResponse } from "@workspace/shared";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
-import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
+import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { PasswordHistoryService } from "./password-history.service";
-import { AccessTokenStateService } from "./access-token-state.service";
+import { AuthorizationInvalidationService } from "../../authorization/cache/authorization-invalidation.service";
+
+/** Milliseconds per hour — converts the shared reset-link lifetime (hours) to an expiry. */
+const MS_PER_HOUR = 3_600_000;
 
 /**
  * Handles the password reset flow: initiating a reset (forgot password)
@@ -26,7 +30,7 @@ export class PasswordResetService {
 		private readonly cryptoService: CryptoService,
 		private readonly emailService: EmailService,
 		private readonly passwordHistoryService: PasswordHistoryService,
-		private readonly accessTokenState: AccessTokenStateService,
+		private readonly authorizationInvalidation: AuthorizationInvalidationService,
 		private readonly authEvents: AuthEventsService,
 		private readonly logService: LogService,
 	) {}
@@ -47,6 +51,9 @@ export class PasswordResetService {
 		const { email } = dto;
 
 		const user = await this.userRepo.findResetLookupByEmail(email);
+		if (user) {
+			identifyAuthFlowSubject(user.id);
+		}
 
 		if (!user?.isActive || user.isDeleted) {
 			return { message: "If an account with that email exists, a password reset link has been sent." };
@@ -67,7 +74,7 @@ export class PasswordResetService {
 				userId: user.id,
 				token: tokenHash,
 				tokenDigest,
-				expiresAt: Date.now() + 3_600_000, // 1 hour
+				expiresAt: Date.now() + PASSWORD_RESET_LINK_TTL_HOURS * MS_PER_HOUR,
 			},
 		});
 
@@ -93,6 +100,7 @@ export class PasswordResetService {
 		if (!matchedToken) {
 			throw new UnauthorizedException("Invalid or expired reset token");
 		}
+		identifyAuthFlowSubject(matchedToken.userId);
 
 		const reused = await this.passwordHistoryService.isPasswordReused(matchedToken.userId, password);
 		if (reused) {
@@ -101,14 +109,16 @@ export class PasswordResetService {
 
 		const newPasswordHash = await this.cryptoService.hash(password);
 
+		// Password, token consumption, history and the revocation of every session commit together.
+		const resetAt: number = Date.now();
 		await this.prisma.$transaction([
 			this.prisma.user.update({
 				where: { id: matchedToken.userId },
-				data: { passwordHash: newPasswordHash, tokenVersion: { increment: 1 }, updatedAt: Date.now() },
+				data: { passwordHash: newPasswordHash, tokenVersion: { increment: 1 }, updatedAt: resetAt },
 			}),
 			this.prisma.passwordResetToken.update({
 				where: { id: matchedToken.id },
-				data: { usedAt: Date.now(), updatedAt: Date.now() },
+				data: { usedAt: resetAt, updatedAt: resetAt },
 			}),
 			this.prisma.passwordHistory.create({
 				data: {
@@ -116,15 +126,15 @@ export class PasswordResetService {
 					passwordHash: newPasswordHash,
 				},
 			}),
+			// Revoke all existing refresh tokens (force re-login)
+			this.prisma.refreshToken.updateMany({
+				where: { userId: matchedToken.userId, isDeleted: false },
+				data: { isDeleted: true, deletedAt: resetAt, updatedAt: resetAt },
+			}),
 		]);
 
-		// Revoke all existing refresh tokens (force re-login)
-		await this.prisma.refreshToken.updateMany({
-			where: { userId: matchedToken.userId },
-			data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
-		});
-
-		this.accessTokenState.invalidate(matchedToken.userId);
+		// After commit: drop the cached token/authorization state on EVERY API instance.
+		await this.authorizationInvalidation.invalidateUsers([matchedToken.userId], { accessTokenState: true, trigger: "password_reset" });
 
 		const user = await this.prisma.user.findUnique({
 			where: { id: matchedToken.userId },

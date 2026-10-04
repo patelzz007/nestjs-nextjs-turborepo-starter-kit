@@ -5,7 +5,7 @@
 // The result is ONE zod schema used by the API (validation + Swagger), the
 // typed client (request validation + query keys) and the frontends — so the
 // whitelist of sortable fields, filterable fields and operators lives in
-// exactly one place (platform spec §16, §18; ADR 021; docs/list-queries.md).
+// exactly one place (platform spec §16, §18; ADR 021; docs/technical/api/list-queries.md).
 //
 // Wire grammar (query string):
 //
@@ -71,6 +71,15 @@ export type ListFilterOperator = ComparisonOperator | SetOperator | TextOperator
 
 /** Every operator name the grammar knows — used to validate `filter[field][op]` keys. */
 export const LIST_FILTER_OPERATORS: readonly ListFilterOperator[] = ["eq", "ne", "gt", "gte", "lt", "lte", "in", "nin", "contains", "startsWith", "isNull"];
+
+/**
+ * `filter[field]` (shorthand for `eq`) or `filter[field][op]` — the query key
+ * of one list filter. The single definition of the key grammar: the API reads
+ * it, frontends' URL state writes it, and the API builds deep links with it.
+ */
+export function listFilterKey(field: string, operator?: ListFilterOperator): string {
+	return operator === undefined || operator === "eq" ? `filter[${field}]` : `filter[${field}][${operator}]`;
+}
 
 // ── Value coercion (query strings arrive as strings) ───────────────────────
 
@@ -427,7 +436,7 @@ export interface ListQueryDefinition<TSortField extends string, TFilter extends 
 const RESERVED_LIST_PARAMS: readonly string[] = ["page", "limit", "cursor", "sort", "filter"];
 
 /**
- * Declares a resource's list query. See docs/list-queries.md.
+ * Declares a resource's list query. See docs/technical/api/list-queries.md.
  *
  * ```ts
  * export const productListQuery = defineListQuery({

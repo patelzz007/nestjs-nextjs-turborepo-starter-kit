@@ -7,7 +7,7 @@
 // failed `register()` and keeps serving 500s, so `loadEnvOrExit` prints the
 // message and exits with code 1 in the Node.js runtime. The Edge runtime has
 // no working `process.exit`; there the error is rethrown as before. See
-// docs/configuration.md. Imports stay inside `register` per the Next.js
+// docs/technical/configuration/frontend.md. Imports stay inside `register` per the Next.js
 // instrumentation guide, so all start-up side effects live in one place.
 
 import { loadEnvOrExit } from "@workspace/shared";

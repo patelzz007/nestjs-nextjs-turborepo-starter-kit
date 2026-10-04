@@ -1,18 +1,18 @@
 import { randomUUID } from "node:crypto";
 
-import type { Queue } from "bullmq";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
 import { IdempotencyRecordRepository } from "../src/platform/idempotency/idempotency-record.repository";
-import { IdempotencyRetentionProcessor, IdempotencyRetentionScheduler } from "../src/platform/idempotency/idempotency-retention.processor";
+import { IdempotencyRetentionProcessor } from "../src/platform/idempotency/idempotency-retention.processor";
 import { IdempotencyRetentionService } from "../src/platform/idempotency/idempotency-retention.service";
 import { IDEMPOTENCY_IN_PROGRESS_LEASE_MS, IDEMPOTENCY_PURGE_GRACE_MS } from "../src/platform/idempotency/idempotency.constants";
-import { PlatformResourceIdempotencyService } from "../src/platform/platform-resource.services";
+import { IdempotencyLedgerService } from "../src/platform/idempotency/idempotency-ledger.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
+import { RequestContextService } from "../src/common/context/request-context";
 
 /**
  * Real-Postgres proof of the idempotency retention job: it deletes only rows
@@ -36,9 +36,9 @@ describe("Idempotency record retention (integration)", () => {
 
 	async function insertRecord(key: string, status: "IN_PROGRESS" | "COMPLETED", expiresAtMs: number): Promise<void> {
 		await verifier.query(
-			`INSERT INTO public.platform_resource_idempotency_records (id, scope, idempotency_key, request_hash, status, response_body, expires_at, created_at, updated_at)
-			 VALUES ($1, $2, $3, 'hash-1', $4::"IdempotencyRecordStatus", $5::jsonb, $6, $6, $6)`,
-			[randomUUID(), scope, key, status, status === "COMPLETED" ? JSON.stringify({ body: { ok: true } }) : null, expiresAtMs],
+			`INSERT INTO public.platform_resource_idempotency_records (id, scope, idempotency_key, request_hash, lease_token, status, response_body, expires_at, created_at, updated_at)
+			 VALUES ($1, $2, $3, 'hash-1', $7, $4::"IdempotencyRecordStatus", $5::jsonb, $6, $6, $6)`,
+			[randomUUID(), scope, key, status, status === "COMPLETED" ? JSON.stringify({ body: { ok: true } }) : null, expiresAtMs, randomUUID()],
 		);
 	}
 
@@ -52,13 +52,11 @@ describe("Idempotency record retention (integration)", () => {
 
 	beforeAll(async () => {
 		// The REAL environment (apps/api/.env + test/setup-env.ts), not the unit fixture.
-		const config = new TypedConfigService(getApiConfig());
-		prisma = new PrismaService(config);
-		await prisma.onModuleInit();
+		prisma = new PrismaService(new TypedConfigService(getApiConfig()));
+		prisma.onModuleInit();
 		await prisma.ensureConnected();
-		const retention = new IdempotencyRetentionService(new IdempotencyRecordRepository(new TenantTransactionService(prisma)));
-		// The scheduler is only a constructor dependency here; its Redis registration is not exercised.
-		processor = new IdempotencyRetentionProcessor(new IdempotencyRetentionScheduler(config, { upsertJobScheduler: vi.fn<Queue["upsertJobScheduler"]>() }), retention);
+		const retention = new IdempotencyRetentionService(new IdempotencyRecordRepository(new TenantTransactionService(prisma, new RequestContextService())));
+		processor = new IdempotencyRetentionProcessor(retention);
 		// Superuser pool — fixtures, verification and cleanup only (bypasses RLS).
 		verifier = new Pool({ connectionString: DATABASE_URL });
 	});
@@ -104,9 +102,9 @@ describe("Idempotency record retention (integration)", () => {
 		await processor.process({ data: {} });
 		expect(await remainingKeys()).not.toContain(key);
 
-		const idempotency = new PlatformResourceIdempotencyService(new IdempotencyRecordRepository(new TenantTransactionService(prisma)));
+		const idempotency = new IdempotencyLedgerService(new IdempotencyRecordRepository(new TenantTransactionService(prisma, new RequestContextService())));
 
-		await expect(idempotency.begin(scope, key, "hash-2")).resolves.toEqual({ kind: "acquired" });
+		await expect(idempotency.begin(scope, key, "hash-2")).resolves.toMatchObject({ kind: "acquired" });
 		expect(await remainingKeys()).toContain(key);
 	});
 });

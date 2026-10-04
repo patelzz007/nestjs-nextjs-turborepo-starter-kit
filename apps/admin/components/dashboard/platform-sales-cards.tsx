@@ -2,18 +2,19 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
-import { PERMISSION } from "@workspace/shared";
+import { PERMISSION, type AdminSalesAnalyticsQuery } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { SalesOverTimeChart } from "@/components/analytics/sales-over-time-chart";
 import { SalesStatCards } from "@/components/analytics/sales-stat-cards";
 import { DEFAULT_SALES_PERIOD_WEEKS, salesPeriodLabel } from "@/lib/analytics/sales-period";
 import { ROUTES } from "@/lib/routes";
 
-/** `{}` — the API's default period, which is the sales page's default preset too. */
-const DEFAULT_PERIOD_QUERY = {};
+/** No `from`/`to` — the API's default period, which is the sales page's default preset too. */
+const DEFAULT_PERIOD_QUERY: AdminSalesAnalyticsQuery = {};
 
 function PlatformSalesCardsContent(): React.JSX.Element {
 	const { api } = useAuth();
@@ -47,7 +48,10 @@ function PlatformSalesCardsContent(): React.JSX.Element {
 					</Button>
 				</div>
 			) : (
-				<SalesStatCards summary={analytics} />
+				<>
+					<SalesStatCards summary={analytics} />
+					<SalesOverTimeChart sales={analytics?.sales} description={`Paid bill totals per week, ${salesPeriodLabel(DEFAULT_SALES_PERIOD_WEEKS).toLowerCase()}`} />
+				</>
 			)}
 		</section>
 	);
@@ -55,7 +59,7 @@ function PlatformSalesCardsContent(): React.JSX.Element {
 
 /**
  * Overview headline: real platform sales from `GET /admin/analytics/sales`
- * (READ ANALYTICS). The overview page itself is open to every admin, so the
+ * (READ ANALYTICS) — the stat cards and the weekly sales chart, from one query. The overview page itself is open to every admin, so the
  * section is hidden — and never queried — without that permission.
  */
 export function PlatformSalesCards(): React.JSX.Element {

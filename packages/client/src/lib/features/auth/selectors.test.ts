@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	isSameSessionScope,
 	selectAuthStatus,
 	selectIsAuthenticated,
 	selectIsServerRenderedSession,
@@ -9,15 +8,13 @@ import {
 	selectIsSessionPending,
 	selectSessionCheck,
 	selectSessionEpoch,
-	selectSessionScope,
 	selectSessionUserId,
 	selectSignedOutReason,
 } from "./selectors";
-import { SESSION_CHECK_OK, type AuthSessionScope, type AuthSessionState, type SignedOutReason } from "./state";
+import { SESSION_CHECK_OK, type AuthSessionState, type SignedOutReason } from "./state";
 
-const FULL: AuthSessionScope = { sessionScope: "full", enrollmentReason: null };
 const UNKNOWN: AuthSessionState = { status: "unknown", epoch: 0, check: SESSION_CHECK_OK };
-const AUTHENTICATED: AuthSessionState = { status: "authenticated", userId: "user-1", scope: FULL, epoch: 0, check: SESSION_CHECK_OK };
+const AUTHENTICATED: AuthSessionState = { status: "authenticated", userId: "user-1", epoch: 0, check: SESSION_CHECK_OK };
 
 function signedOut(reason: SignedOutReason): AuthSessionState {
 	return { status: "signed-out", reason, epoch: 1, check: SESSION_CHECK_OK };
@@ -28,12 +25,6 @@ describe("auth selectors", () => {
 		expect([UNKNOWN, AUTHENTICATED, signedOut("no-session")].map(selectAuthStatus)).toEqual(["unknown", "authenticated", "signed-out"]);
 		expect([UNKNOWN, AUTHENTICATED, signedOut("no-session")].map(selectIsAuthenticated)).toEqual([false, true, false]);
 		expect([UNKNOWN, AUTHENTICATED, signedOut("no-session")].map(selectIsSessionPending)).toEqual([true, false, false]);
-	});
-
-	it("expose the scope only while authenticated", () => {
-		expect(selectSessionScope(AUTHENTICATED)).toBe(FULL);
-		expect(selectSessionScope(UNKNOWN)).toBeNull();
-		expect(selectSessionScope(signedOut("signed-out"))).toBeNull();
 	});
 
 	it("expose the session's subject only while authenticated", () => {
@@ -61,14 +52,6 @@ describe("auth selectors", () => {
 		expect(selectIsSessionInvalidated(signedOut("no-session"))).toBe(false);
 		expect(selectIsSessionInvalidated(UNKNOWN)).toBe(false);
 		expect(selectIsSessionInvalidated(AUTHENTICATED)).toBe(false);
-	});
-
-	it("compare scopes by value", () => {
-		expect(isSameSessionScope(FULL, { sessionScope: "full", enrollmentReason: null })).toBe(true);
-		expect(isSameSessionScope(FULL, { sessionScope: "restricted", enrollmentReason: "mfa_enrollment" })).toBe(false);
-		expect(
-			isSameSessionScope({ sessionScope: "restricted", enrollmentReason: "mfa_enrollment" }, { sessionScope: "restricted", enrollmentReason: "email_verification" }),
-		).toBe(false);
 	});
 
 	it("keep an unknown tab pending while its check cannot reach the API — never read as signed out", () => {

@@ -1,91 +1,84 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { RequestContextService } from "../../../common/context/request-context";
+import type { SystemOperation } from "../../../prisma/system-operation.registry";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
+/** Every action written to `permission_audit_logs`. */
+export type AuthorizationAuditAction =
+	| "ROLE_CREATED"
+	| "ROLE_UPDATED"
+	| "ROLE_DELETED"
+	| "ROLE_RESTORED"
+	| "ROLE_PARENT_SET"
+	| "ROLE_PERMISSIONS_SYNCED"
+	| "ROLE_ASSIGNED"
+	| "ROLE_ASSIGNED_AT_PROVISIONING"
+	| "ROLE_REMOVED"
+	| "USER_ROLES_SYNCED"
+	| "PERMISSION_CREATED"
+	| "PERMISSION_UPDATED"
+	| "PERMISSION_DELETED"
+	| "PERMISSION_RESTORED"
+	| "PERMISSION_GRANTED"
+	| "PERMISSION_REVOKED"
+	| "PERMISSION_EXPIRED"
+	| "USER_PERMISSIONS_SYNCED"
+	| "SUPER_ADMIN_BYPASS"
+	| "SUPER_ADMIN_BOOTSTRAPPED"
+	| "REFERENCE_DATA_SYNCED";
+
+/**
+ * Who performed the change. A user is identified by their `users.id`; a
+ * scheduled job by the allowlisted system operation it ran under — never by a
+ * placeholder such as `"system"`, which would not say which code path acted.
+ */
+export type AuditActor = { readonly kind: "USER"; readonly userId: string } | { readonly kind: "SYSTEM_OPERATION"; readonly operation: SystemOperation };
+
 export interface AuditEntry {
-	readonly action: string;
-	readonly actorId: string;
+	readonly action: AuthorizationAuditAction;
+	readonly actor: AuditActor;
 	readonly targetUserId?: string;
 	readonly targetRoleId?: string;
 	readonly permissionId?: string;
+	/** The applied change (JSON) — never secrets. */
 	readonly detail?: string;
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────
 
 /**
- * Logs all authorization mutations to the `PermissionAuditLog` table.
+ * Appends authorization changes to `permission_audit_logs` (bypass-only table).
  *
- * Writes are fire-and-forget — never block the caller.  Failures are
- * logged but never thrown.
+ * The write runs on the caller's transaction client so the audit row commits
+ * or rolls back together with the change it describes. Failures propagate:
+ * an RBAC change that cannot be audited does not happen.
  */
 @Injectable()
 export class AuthorizationAuditService {
-	private readonly logger: Logger = new Logger(AuthorizationAuditService.name);
-
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(private readonly requestContext: RequestContextService) {}
 
 	/**
-	 * Record an authorization audit event.
-	 *
-	 * @param entry - The event to record.
+	 * Record an authorization audit event on `db` (the mutation's transaction,
+	 * or a bypass-scoped client for standalone events such as the SuperAdmin
+	 * bypass). Stamps the request's correlation id and impersonator.
 	 */
-	public async log(entry: AuditEntry): Promise<void> {
-		try {
-			await this.prisma.permissionAuditLog.create({
-				data: {
-					actorId: entry.actorId,
-					targetUserId: entry.targetUserId ?? null,
-					targetRoleId: entry.targetRoleId ?? null,
-					permissionId: entry.permissionId ?? null,
-					action: entry.action,
-					detail: entry.detail ?? null,
-				},
-			});
-		} catch (error) {
-			this.logger.error(`Audit log write failed: ${error instanceof Error ? error.message : "unknown"}`);
-		}
-	}
-
-	/** Log a role assignment. */
-	public async logRoleAssignment(actorId: string, userId: string, roleId: string): Promise<void> {
-		await this.log({ action: "ROLE_ASSIGNED", actorId, targetUserId: userId, targetRoleId: roleId });
-	}
-
-	/** Log a role removal. */
-	public async logRoleRemoval(actorId: string, userId: string, roleId: string): Promise<void> {
-		await this.log({ action: "ROLE_REMOVED", actorId, targetUserId: userId, targetRoleId: roleId });
-	}
-
-	/** Log a direct permission grant. */
-	public async logPermissionGrant(actorId: string, userId: string, permissionId: string): Promise<void> {
-		await this.log({ action: "PERMISSION_GRANTED", actorId, targetUserId: userId, permissionId });
-	}
-
-	/** Log a direct permission revocation. */
-	public async logPermissionRevocation(actorId: string, userId: string, permissionId: string): Promise<void> {
-		await this.log({ action: "PERMISSION_REVOKED", actorId, targetUserId: userId, permissionId });
-	}
-
-	/** Log a role creation. */
-	public async logRoleCreation(actorId: string, roleId: string, roleName: string): Promise<void> {
-		await this.log({ action: "ROLE_CREATED", actorId, targetRoleId: roleId, detail: roleName });
-	}
-
-	/** Log a role deletion. */
-	public async logRoleDeletion(actorId: string, roleId: string, roleName: string): Promise<void> {
-		await this.log({ action: "ROLE_DELETED", actorId, targetRoleId: roleId, detail: roleName });
-	}
-
-	/** Log a permission creation. */
-	public async logPermissionCreation(actorId: string, permissionId: string, detail: string): Promise<void> {
-		await this.log({ action: "PERMISSION_CREATED", actorId, permissionId, detail });
-	}
-
-	/** Log a permission deletion. */
-	public async logPermissionDeletion(actorId: string, permissionId: string, detail: string): Promise<void> {
-		await this.log({ action: "PERMISSION_DELETED", actorId, permissionId, detail });
+	public async record(entry: AuditEntry, db: Prisma.TransactionClient): Promise<void> {
+		const context = this.requestContext.current();
+		await db.permissionAuditLog.create({
+			data: {
+				actorKind: entry.actor.kind,
+				actorId: entry.actor.kind === "USER" ? entry.actor.userId : entry.actor.operation,
+				targetUserId: entry.targetUserId ?? null,
+				targetRoleId: entry.targetRoleId ?? null,
+				permissionId: entry.permissionId ?? null,
+				action: entry.action,
+				detail: entry.detail ?? null,
+				correlationId: context?.correlationId ?? null,
+				impersonatorId: context?.principal?.impersonatorId ?? null,
+			},
+		});
 	}
 }

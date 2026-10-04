@@ -1,8 +1,10 @@
 "use client";
 
-import { canSelectAllLocations, resolveAccessibleLocations } from "@/lib/org/location-access";
+import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/lib/org/location-access";
 import { clearOrganizationLocationCookie, writeOrganizationLocationCookie } from "@/lib/org/location";
-import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { createFeatureStoreContext } from "@workspace/client/lib/state/feature-store-context";
 import type { Envelope, OrganizationContextResponse, OrganizationLocationResponse } from "@workspace/shared";
@@ -10,7 +12,15 @@ import * as React from "react";
 
 import { tenantContextActions, type TenantContextAction } from "./actions";
 import type { LocationCookieWriter } from "./effects";
-import { resolveActiveLocation, resolveEffectiveLocationId, selectSelectedLocationId, toLocationQueryInput } from "./selectors";
+import { subscribeToLocationRejections } from "./location-rejection";
+import {
+	resolveActiveLocation,
+	resolveEffectiveLocationId,
+	selectRejectedLocationIds,
+	selectSelectedLocationId,
+	toLocationQueryInput,
+	withoutRejectedLocations,
+} from "./selectors";
 import type { TenantContextState } from "./state";
 import { createTenantContextStore, type TenantContextStore } from "./store";
 
@@ -24,10 +34,17 @@ import { createTenantContextStore, type TenantContextStore } from "./store";
 
 const TENANT_CONTEXT_DEVTOOLS_NAME = "Tenant Context · merchant";
 
-const BROWSER_LOCATION_COOKIE: LocationCookieWriter = {
-	write: writeOrganizationLocationCookie,
-	clear: clearOrganizationLocationCookie,
-};
+/** The browser cookie of ONE organization's store choice (`organizationLocationId.<orgSlug>`). */
+function createBrowserLocationCookie(orgSlug: string): LocationCookieWriter {
+	return {
+		write: (locationId: string): void => {
+			writeOrganizationLocationCookie(orgSlug, locationId);
+		},
+		clear: (): void => {
+			clearOrganizationLocationCookie(orgSlug);
+		},
+	};
+}
 
 const NO_LOCATIONS: readonly OrganizationLocationResponse[] = [];
 
@@ -46,10 +63,10 @@ TenantScopeContext.displayName = "TenantScopeContext";
 export interface TenantContextProviderProps {
 	/** The `[orgSlug]` URL segment — the tenant. Another organization mounts a fresh store. */
 	readonly orgSlug: string;
-	/** The `organizationLocationId` cookie as the server read it (`ServerLocationScope.selectedLocationId`). */
+	/** This organization's store-choice cookie as the server read it (`ServerLocationScope.selectedLocationId`). Seeds the store once per mount. */
 	readonly initialLocationId: string | null;
-	/** The organization context the server loaded — seeds the query so the first render already validates the choice. */
-	readonly initialOrganizationContext?: OrganizationContextResponse | undefined;
+	/** The organization context the server loaded — the API's own envelope — seeds the query so the first render already validates the choice. */
+	readonly initialOrganizationContext?: Envelope<OrganizationContextResponse> | undefined;
 	readonly children: React.ReactNode;
 }
 
@@ -59,21 +76,44 @@ export function TenantContextProvider(props: TenantContextProviderProps): React.
 }
 
 function OrganizationTenantContextProvider({ orgSlug, initialLocationId, initialOrganizationContext, children }: TenantContextProviderProps): React.JSX.Element {
-	const createStore = React.useCallback(
-		(): TenantContextStore => createTenantContextStore({ devtoolsName: TENANT_CONTEXT_DEVTOOLS_NAME, locationCookie: BROWSER_LOCATION_COOKIE }, initialLocationId),
-		[initialLocationId],
+	// The provider builds its store ONCE per mount (and the mount is keyed by the organization), so the
+	// factory is fixed for the mount's lifetime too — `initialLocationId` only seeds the first state.
+	const queryClient = useQueryClient();
+	const [createStore] = React.useState(
+		() => (): TenantContextStore =>
+			createTenantContextStore(
+				{
+					devtoolsName: TENANT_CONTEXT_DEVTOOLS_NAME,
+					locationCookie: createBrowserLocationCookie(orgSlug),
+					refreshOrganizationContext: (): void => {
+						void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.context.scopeKey({ orgSlug }) });
+					},
+				},
+				initialLocationId,
+			),
+	);
+	// A store the API refuses for this member (403 ORGANIZATION_LOCATION_FORBIDDEN on any of this
+	// organization's queries) is rejected: the choice resets, the cookie is rewritten, the context re-read.
+	const [handleMount] = React.useState(
+		() =>
+			(store: TenantContextStore): (() => void) =>
+				subscribeToLocationRejections(queryClient.getQueryCache(), orgSlug, (locationId: string): void => {
+					store.dispatch(tenantContextActions.locationRejected(locationId));
+				}),
 	);
 	const scope = React.useMemo(
 		(): TenantScope => ({
 			orgSlug,
-			initialOrganizationContext: initialOrganizationContext === undefined ? undefined : successEnvelope(initialOrganizationContext, stubApiMeta()),
+			initialOrganizationContext,
 		}),
 		[initialOrganizationContext, orgSlug],
 	);
 
 	return (
 		<TenantScopeContext.Provider value={scope}>
-			<TenantContextStoreProvider createStore={createStore}>{children}</TenantContextStoreProvider>
+			<TenantContextStoreProvider createStore={createStore} onMount={handleMount}>
+				{children}
+			</TenantContextStoreProvider>
 		</TenantScopeContext.Provider>
 	);
 }
@@ -86,30 +126,31 @@ function useTenantScope(): TenantScope {
 	return scope;
 }
 
-interface AccessibleLocationsState {
+interface MemberLocationAccessState {
 	/** `undefined` until the organization context has loaded. */
-	readonly accessibleLocations: readonly OrganizationLocationResponse[] | undefined;
+	readonly access: MemberLocationAccess | undefined;
 	readonly isLoading: boolean;
 }
 
-/** Server state: the member's accessible locations, read from the shared context query (never stored in Zustand). */
-function useAccessibleLocations(): AccessibleLocationsState {
+/** Server state: what the member may access, read from the shared context query (never stored in Zustand). */
+function useMemberLocationAccess(): MemberLocationAccessState {
 	const { api } = useAuth();
 	const { orgSlug, initialOrganizationContext } = useTenantScope();
+	const rejectedLocationIds = tenantContext.useFeatureSelector(selectRejectedLocationIds);
 	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
 	const context = contextQuery.data?.data;
-	const accessibleLocations = React.useMemo(
-		(): readonly OrganizationLocationResponse[] | undefined => (context === undefined ? undefined : resolveAccessibleLocations(context)),
-		[context],
+	const access = React.useMemo(
+		(): MemberLocationAccess | undefined => (context === undefined ? undefined : withoutRejectedLocations(resolveMemberLocationAccess(context), rejectedLocationIds)),
+		[context, rejectedLocationIds],
 	);
-	return { accessibleLocations, isLoading: contextQuery.isLoading };
+	return { access, isLoading: contextQuery.isLoading };
 }
 
-/** The store filter in effect (`null` = all stores) — the choice, validated against the accessible locations. */
+/** The store filter in effect (`null` = all stores) — the choice, validated against what the member may access. */
 export function useActiveLocationId(): string | null {
 	const selectedLocationId = tenantContext.useFeatureSelector(selectSelectedLocationId);
-	const { accessibleLocations } = useAccessibleLocations();
-	return resolveEffectiveLocationId(selectedLocationId, accessibleLocations);
+	const { access } = useMemberLocationAccess();
+	return resolveEffectiveLocationId(selectedLocationId, access);
 }
 
 /**
@@ -154,6 +195,8 @@ export interface MerchantLocationState {
 	readonly accessibleLocations: readonly OrganizationLocationResponse[];
 	/** Whether "All locations" (org-wide rollups) is an option for this member. */
 	readonly canSelectAllLocations: boolean;
+	/** Whether the membership covers the whole organization — only then may the member create organization-wide credentials. */
+	readonly hasOrganizationWideAccess: boolean;
 	/** True until the organization context has loaded for the first time. */
 	readonly isLoading: boolean;
 }
@@ -161,17 +204,18 @@ export interface MerchantLocationState {
 /** Everything the location switcher, the scope banner and location-aware forms render from. */
 export function useMerchantLocation(): MerchantLocationState {
 	const selectedLocationId = tenantContext.useFeatureSelector(selectSelectedLocationId);
-	const { accessibleLocations, isLoading } = useAccessibleLocations();
-	const effectiveLocationId = resolveEffectiveLocationId(selectedLocationId, accessibleLocations);
+	const { access, isLoading } = useMemberLocationAccess();
+	const effectiveLocationId = resolveEffectiveLocationId(selectedLocationId, access);
 
 	return React.useMemo(
 		(): MerchantLocationState => ({
 			locationId: toLocationQueryInput(effectiveLocationId),
-			activeLocation: resolveActiveLocation(effectiveLocationId, accessibleLocations),
-			accessibleLocations: accessibleLocations ?? NO_LOCATIONS,
-			canSelectAllLocations: accessibleLocations !== undefined && canSelectAllLocations(accessibleLocations),
+			activeLocation: resolveActiveLocation(effectiveLocationId, access?.locations),
+			accessibleLocations: access?.locations ?? NO_LOCATIONS,
+			canSelectAllLocations: access !== undefined && canSelectAllLocations(access),
+			hasOrganizationWideAccess: access?.hasOrganizationWideAccess ?? false,
 			isLoading,
 		}),
-		[accessibleLocations, effectiveLocationId, isLoading],
+		[access, effectiveLocationId, isLoading],
 	);
 }

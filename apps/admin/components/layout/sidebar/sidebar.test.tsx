@@ -23,13 +23,12 @@ import {
 import { PERMISSION } from "@workspace/shared";
 
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
-import { useRouteExpandedItems } from "@/components/layout/use-route-expanded-items";
+import { PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS } from "@workspace/ui/components/navigation/panel-sidebar-search";
 import { SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
 import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar/labels";
 import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 
-const { pushMock, pathnameMock, setOpenMobileMock } = vi.hoisted(() => ({
-	pushMock: vi.fn<(href: string) => void>(),
+const { pathnameMock, setOpenMobileMock } = vi.hoisted(() => ({
 	pathnameMock: vi.fn<() => string>(),
 	setOpenMobileMock: vi.fn<(open: boolean) => void>(),
 }));
@@ -54,21 +53,6 @@ vi.mock("@workspace/ui/components/navigation/sidebar", async (importOriginal) =>
 
 vi.mock("next/navigation", () => ({
 	usePathname: (): string => pathnameMock(),
-	useRouter: (): {
-		push: typeof pushMock;
-		back: ReturnType<typeof vi.fn>;
-		forward: ReturnType<typeof vi.fn>;
-		refresh: ReturnType<typeof vi.fn>;
-		prefetch: ReturnType<typeof vi.fn>;
-		replace: ReturnType<typeof vi.fn>;
-	} => ({
-		push: pushMock,
-		back: vi.fn(),
-		forward: vi.fn(),
-		refresh: vi.fn(),
-		prefetch: vi.fn(),
-		replace: vi.fn(),
-	}),
 }));
 
 /** What the probe renders: the sidebar store state, read through the facade like any component would. */
@@ -79,12 +63,15 @@ const SidebarStateSchema = z.object({
 	searchQuery: z.string(),
 });
 
-/** What the store writes to localStorage — `searchQuery` optional so tests can assert its absence. */
+/** What the store writes to localStorage (version 1) — `searchQuery` optional so tests can assert its absence. */
 const StoredPreferencesSchema = z.object({
-	isOpen: z.boolean(),
-	sectionOrder: z.array(z.string()).nullable(),
-	expandedItems: z.record(z.string(), z.boolean()),
-	searchQuery: z.string().optional(),
+	schemaVersion: z.literal(1),
+	snapshot: z.object({
+		isOpen: z.boolean(),
+		sectionOrder: z.array(z.string()).nullable(),
+		manualExpansion: z.object({ pathname: z.string(), items: z.record(z.string(), z.boolean()) }).nullable(),
+		searchQuery: z.string().optional(),
+	}),
 });
 
 const MENU: SidebarMenuData = {
@@ -147,25 +134,15 @@ interface HarnessProps {
 function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU }: HarnessProps): React.JSX.Element {
 	const searchQuery = useSidebarSearchQuery();
 	const sectionOrder = useSidebarSectionOrder();
-	const storeExpandedItems = useSidebarExpandedItems();
-	const { setSearchQuery, clearSearch, setItemExpanded, resetExpandedItems, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const view: SidebarView = React.useMemo(() => buildSidebarView({ menu, pathname, sectionOrder, searchQuery }), [menu, pathname, sectionOrder, searchQuery]);
-	const expandedItems = useRouteExpandedItems(pathname, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
-	const handleSearchChange = React.useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>): void => {
-			setSearchQuery(event.target.value);
-		},
-		[setSearchQuery],
-	);
+	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
 	const handleToggleItem = React.useCallback(
 		(itemId: string): void => {
-			setItemExpanded(itemId, !(expandedItems[itemId] ?? false));
+			setItemExpanded(pathname, itemId, expandedItems[itemId] !== true);
 		},
-		[expandedItems, setItemExpanded],
+		[expandedItems, pathname, setItemExpanded],
 	);
-	const handleNavigate = React.useCallback((href: string): void => {
-		pushMock(href);
-	}, []);
 
 	return (
 		<SidebarProvider labels={DEFAULT_SIDEBAR_LABELS} storage={createNoopSidebarStorage()}>
@@ -174,30 +151,34 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 				onLogout={onLogout ?? vi.fn()}
 				footerActions={[{ icon: AlertCircle, label: "Report issue", onClick: onReportIssue ?? vi.fn() }]}
 				view={view}
+				pathname={pathname}
 				labels={ADMIN_SIDEBAR_LABELS}
 				searchQuery={searchQuery}
-				onSearchChange={handleSearchChange}
-				onClearSearch={clearSearch}
+				onSearchQueryChange={setSearchQuery}
 				expandedItems={expandedItems}
 				onToggleItem={handleToggleItem}
-				onNavigate={handleNavigate}
 				onMoveSectionUp={moveSectionUp}
 				onMoveSectionDown={moveSectionDown}
 				pinnedItems={pinnedItems}
-				workspaces={[{ id: "default", name: "Admin Panel" }]}
-				activeWorkspaceId="default"
-				onWorkspaceChange={vi.fn()}
-				navigationKey={pathname}
+				pageLabel={null}
 			/>
+			<output data-testid="expanded-items">{JSON.stringify(expandedItems)}</output>
 		</SidebarProvider>
 	);
 }
 
 /** Renders the store state as JSON, so tests assert on it without reaching into the store. */
-function SidebarStateProbe(): React.JSX.Element {
-	const state = { isOpen: useSidebarIsOpen(), sectionOrder: useSidebarSectionOrder(), expandedItems: useSidebarExpandedItems(), searchQuery: useSidebarSearchQuery() };
+function SidebarStateProbe({ pathname }: { readonly pathname: string }): React.JSX.Element {
+	const state = {
+		isOpen: useSidebarIsOpen(),
+		sectionOrder: useSidebarSectionOrder(),
+		expandedItems: useSidebarExpandedItems(pathname, NO_AUTO_EXPANSION),
+		searchQuery: useSidebarSearchQuery(),
+	};
 	return <output data-testid="sidebar-state">{JSON.stringify(state)}</output>;
 }
+
+const NO_AUTO_EXPANSION: Readonly<Record<string, boolean>> = {};
 
 function readSidebarState(): z.output<typeof SidebarStateSchema> {
 	return SidebarStateSchema.parse(JSON.parse(screen.getByTestId("sidebar-state").textContent));
@@ -207,14 +188,36 @@ function readStoredPreferences(): z.output<typeof StoredPreferencesSchema> {
 	return StoredPreferencesSchema.parse(JSON.parse(localStorage.getItem(ADMIN_SIDEBAR_STORAGE_KEY) ?? "null"));
 }
 
-/** A fresh sidebar store per render (as in the app: one per mounted shell). */
-function renderSidebar(props: HarnessProps): ReturnType<typeof render> {
-	return render(
+function sidebarTree(props: HarnessProps): React.JSX.Element {
+	return (
 		<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName="Sidebar · test">
 			<SidebarHarness {...props} />
-			<SidebarStateProbe />
-		</SidebarStoreProvider>,
+			<SidebarStateProbe pathname={props.pathname} />
+		</SidebarStoreProvider>
 	);
+}
+
+/** A fresh sidebar store per render (as in the app: one per mounted shell). */
+function renderSidebar(props: HarnessProps): ReturnType<typeof render> {
+	return render(sidebarTree(props));
+}
+
+/** Types into the sidebar search and lets its debounce commit the text to the store. */
+function searchFor(text: string): void {
+	vi.useFakeTimers();
+	try {
+		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: text } });
+		act(() => {
+			vi.advanceTimersByTime(PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS);
+		});
+	} finally {
+		vi.useRealTimers();
+	}
+}
+
+/** The leaf link for a page — leaves navigate, so they are links, not buttons. */
+function link(name: string): HTMLElement {
+	return screen.getByRole("link", { name });
 }
 
 describe("Sidebar", () => {
@@ -244,7 +247,12 @@ describe("Sidebar", () => {
 
 	it("renders nested children inside an indented submenu branch", () => {
 		renderSidebar({ pathname: "/settings/general" });
-		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
+		expect(link("General")).toBeTruthy();
+		const settings = screen.getByRole("button", { name: "Settings" });
+		expect(settings.getAttribute("aria-expanded")).toBe("true");
+		const group = document.getElementById(settings.getAttribute("aria-controls") ?? "");
+		expect(group?.getAttribute("role")).toBe("group");
+		expect(group?.contains(link("General"))).toBe(true);
 	});
 
 	it("renders the pinned section even while the sidebar search is active", () => {
@@ -252,79 +260,107 @@ describe("Sidebar", () => {
 			pathname: "/",
 			pinnedItems: [{ id: "main-settings-general", title: "General", url: "/settings/general", section: "Main", breadcrumb: ["Settings", "General"] }],
 		});
-		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "settings" } });
+		searchFor("settings");
 		expect(screen.getByText("Pinned")).toBeTruthy();
-		expect(screen.getAllByRole("button", { name: "General" }).length).toBeGreaterThan(0);
+		expect(screen.getAllByRole("link", { name: "General" }).length).toBeGreaterThan(0);
 	});
 
 	it("renders sections, bottom items, the footer action and the user row", () => {
 		renderSidebar({ pathname: "/" });
 		expect(screen.getByText("Main")).toBeTruthy();
 		expect(screen.getByText("Docs")).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Overview" })).toBeTruthy();
-		// Bottom items render under the footer.
-		expect(screen.getByRole("button", { name: "Support" })).toBeTruthy();
+		expect(link("Overview")).toBeTruthy();
+		// Two named navigation landmarks: the menu, and the footer's bottom items.
+		expect(screen.getByRole("navigation", { name: "Main navigation" }).contains(link("Overview"))).toBe(true);
+		expect(screen.getByRole("navigation", { name: "Account" }).contains(link("Support"))).toBe(true);
 		// Footer action + user identity.
 		expect(screen.getByRole("button", { name: "Report issue" })).toBeTruthy();
 		expect(screen.getByText("ada@example.com")).toBeTruthy();
 	});
 
-	it("marks only the active item with data-active, never its ancestors", () => {
+	it("marks only the active page with aria-current, never its ancestors, and links every leaf to its URL", () => {
 		pathnameMock.mockReturnValue("/settings/general");
 		renderSidebar({ pathname: "/settings/general" });
-		expect(screen.getByRole("button", { name: "General" }).getAttribute("data-active")).toBe("true");
+		expect(link("General").getAttribute("aria-current")).toBe("page");
+		expect(link("General").getAttribute("href")).toBe("/settings/general");
 		// "/settings" is a route prefix, but the parent must not highlight
 		// alongside its active child.
 		expect(screen.getByRole("button", { name: "Settings" }).getAttribute("data-active")).toBeNull();
 		// Unrelated items are not.
-		expect(screen.getByRole("button", { name: "Overview" }).getAttribute("data-active")).toBeNull();
+		expect(link("Overview").getAttribute("aria-current")).toBeNull();
 	});
 
-	it("auto-expands the active branch without writing the store, and route wins on toggle", () => {
+	it("gives every row its full title, so a truncated label can still be read", () => {
+		renderSidebar({ pathname: "/settings/general" });
+		expect(link("Getting Started").getAttribute("title")).toBe("Getting Started");
+		expect(screen.getByRole("button", { name: "Docs Home" }).getAttribute("title")).toBe("Docs Home");
+	});
+
+	function expandedItems(): Readonly<Record<string, boolean>> {
+		return z.record(z.string(), z.boolean()).parse(JSON.parse(screen.getByTestId("expanded-items").textContent));
+	}
+
+	it("auto-expands the active branch without writing the store, and lets the member collapse it on this page", () => {
 		pathnameMock.mockReturnValue("/settings/general");
 		renderSidebar({ pathname: "/settings/general" });
-		// Children render because the route auto-expanded the branch…
-		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
-		// …but nothing was persisted to the store yet.
+		// The route auto-expanded the branch…
+		expect(expandedItems()["main-settings"]).toBe(true);
+		// …but nothing was stored.
 		expect(readSidebarState().expandedItems["main-settings"]).toBeUndefined();
-		// Clicking the auto-expanded parent (route wins) must not collapse it.
+		// A manual collapse of the active branch wins over auto-expansion.
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
+		expect(expandedItems()["main-settings"]).toBe(false);
+		expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-expanded")).toBe("false");
 	});
 
-	it("persists manual expansion toggles when no route drives the branch", () => {
+	it("keeps a page's manual expansions only on that page — no reset on mount or navigation", () => {
+		const { rerender } = renderSidebar({ pathname: "/" });
+		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		expect(expandedItems()["main-settings"]).toBe(true);
+
+		rerender(sidebarTree({ pathname: "/docs" }));
+		expect(expandedItems()["main-settings"]).toBeUndefined();
+
+		rerender(sidebarTree({ pathname: "/" }));
+		expect(expandedItems()["main-settings"]).toBe(true);
+	});
+
+	it("restores this page's manual expansions after a reload (the store restores after mount, nothing resets them)", () => {
+		const first = renderSidebar({ pathname: "/" });
+		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		first.unmount();
+
 		renderSidebar({ pathname: "/" });
-		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-		expect(readSidebarState().expandedItems["main-settings"]).toBe(true);
-		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-		// Collapsing prunes the key (no dead `false` entries persisted).
-		expect(readSidebarState().expandedItems["main-settings"]).toBeUndefined();
+		expect(expandedItems()["main-settings"]).toBe(true);
 	});
 
-	it("renders disabled parents as a single disabled row with no children", () => {
+	it("renders a disabled parent as an unavailable row that does not toggle", () => {
 		renderSidebar({ pathname: "/" });
 		const analytics = screen.getByRole("button", { name: "Analytics" });
-		expect(analytics.hasAttribute("disabled")).toBe(true);
-		expect(screen.queryByText("Realtime")).toBeNull();
+		expect(analytics.getAttribute("aria-disabled")).toBe("true");
+		expect(analytics.getAttribute("title")).toBe(ADMIN_SIDEBAR_LABELS.itemUnavailableTitle);
+		fireEvent.click(analytics);
+		expect(analytics.getAttribute("aria-expanded")).toBe("false");
 	});
 
 	it("filters the tree by search and restores it on clear", () => {
 		renderSidebar({ pathname: "/" });
-		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "security" } });
+		searchFor("security");
 		// Only the Settings → Security branch survives…
-		expect(screen.getByRole("button", { name: "Security" })).toBeTruthy();
+		expect(link("Security")).toBeTruthy();
 		expect(screen.queryByText("Overview")).toBeNull();
 		expect(screen.queryByText("General")).toBeNull();
 		expect(screen.queryByText("Getting Started")).toBeNull();
-		// …and clearing brings everything back.
+		// …and clearing brings everything back at once.
 		fireEvent.click(screen.getByLabelText("Clear search"));
-		expect(screen.getByRole("button", { name: "Overview" })).toBeTruthy();
+		expect(link("Overview")).toBeTruthy();
+		expect(readSidebarState().searchQuery).toBe("");
 		expect(screen.queryByLabelText("Clear search")).toBeNull();
 	});
 
 	it("shows the no-results state for a query with zero matches", () => {
 		renderSidebar({ pathname: "/" });
-		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "zzz-no-match" } });
+		searchFor("zzz-no-match");
 		expect(screen.getByText("No menu items found")).toBeTruthy();
 	});
 
@@ -344,11 +380,11 @@ describe("Sidebar", () => {
 		otherInput.remove();
 	});
 
-	it("navigates on leaf click and closes the mobile menu", () => {
+	it("follows a leaf link and closes the mobile menu", () => {
 		harnessIsMobile = true;
 		renderSidebar({ pathname: "/" });
-		fireEvent.click(screen.getByRole("button", { name: "Support" }));
-		expect(pushMock).toHaveBeenCalledWith("/support");
+		expect(link("Support").getAttribute("href")).toBe("/support");
+		fireEvent.click(link("Support"));
 		expect(setOpenMobileMock).toHaveBeenCalledWith(false);
 	});
 
@@ -426,7 +462,7 @@ describe("Sidebar preferences persistence", () => {
 		cleanup();
 	});
 
-	it("restores the rail, section order and expansions saved by an older build — never its search text", () => {
+	it("migrates the rail and section order saved by an older build — dropping its unscoped expansions and never its search text", () => {
 		// The envelope `zustand/persist` wrote before the sidebar became a feature store.
 		localStorage.setItem(
 			ADMIN_SIDEBAR_STORAGE_KEY,
@@ -438,29 +474,28 @@ describe("Sidebar preferences persistence", () => {
 
 		renderSidebar({ pathname: "/" });
 
-		expect(readSidebarState()).toEqual({ isOpen: false, sectionOrder: ["Docs", "Main"], expandedItems: { "main-settings": true }, searchQuery: "" });
+		expect(readSidebarState()).toEqual({ isOpen: false, sectionOrder: ["Docs", "Main"], expandedItems: {}, searchQuery: "" });
 	});
 
 	it("ignores a corrupted payload and starts from the defaults", () => {
-		localStorage.setItem(ADMIN_SIDEBAR_STORAGE_KEY, JSON.stringify({ isOpen: "nope", sectionOrder: 42, expandedItems: {} }));
+		localStorage.setItem(ADMIN_SIDEBAR_STORAGE_KEY, JSON.stringify({ schemaVersion: 1, snapshot: { isOpen: "nope", sectionOrder: 42, manualExpansion: null } }));
 
 		renderSidebar({ pathname: "/" });
 
 		expect(readSidebarState()).toEqual({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
 	});
 
-	it("saves expansions and section order but never the search text", () => {
+	it("saves this page's expansions and the section order but never the search text", () => {
 		renderSidebar({ pathname: "/" });
 
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 		fireEvent.click(screen.getByRole("button", { name: "Move Docs section up" }));
-		act(() => {
-			fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "security" } });
-		});
+		searchFor("security");
+		expect(readSidebarState().searchQuery).toBe("security");
 
 		const stored = readStoredPreferences();
-		expect(stored).toMatchObject({ isOpen: true, sectionOrder: ["Docs", "Main"], expandedItems: { "main-settings": true } });
-		expect(stored).not.toHaveProperty("searchQuery");
+		expect(stored.snapshot).toMatchObject({ isOpen: true, sectionOrder: ["Docs", "Main"], manualExpansion: { pathname: "/", items: { "main-settings": true } } });
+		expect(stored.snapshot).not.toHaveProperty("searchQuery");
 	});
 });
 
@@ -478,14 +513,14 @@ describe("Sidebar with the authorized admin menu", () => {
 		const menu = filterCompiledSidebarMenu(SIDEBAR_MENU, [], { enabledFeatureFlags: [] });
 		renderSidebar({ pathname: "/", menu });
 
-		expect(screen.queryByRole("button", { name: "Products" })).toBeNull();
-		expect(screen.getByRole("button", { name: "Overview" })).toBeDefined();
+		expect(screen.queryByRole("link", { name: "Products" })).toBeNull();
+		expect(link("Overview")).toBeDefined();
 	});
 
 	it("renders Products when the product list permission is held", () => {
 		const menu = filterCompiledSidebarMenu(SIDEBAR_MENU, [PERMISSION.PRODUCT.LIST], { enabledFeatureFlags: [] });
 		renderSidebar({ pathname: "/", menu });
 
-		expect(screen.getByRole("button", { name: "Products" })).toBeDefined();
+		expect(link("Products")).toBeDefined();
 	});
 });

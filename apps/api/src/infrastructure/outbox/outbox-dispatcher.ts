@@ -34,7 +34,23 @@ export interface OutboxDispatchStore {
 	readBacklog(): Promise<OutboxBacklog>;
 }
 
-/** Broker boundary. The message's `eventId` is the idempotency key for every consumer. */
+/**
+ * The publisher cannot reach its broker right now (e.g. Kafka not connected
+ * yet) and did NOT attempt the send. Not a failure of the row: the dispatcher
+ * releases the batch without spending an attempt, so an outage of any length
+ * never dead-letters an event.
+ */
+export class OutboxPublisherUnavailableError extends Error {
+	public constructor(message: string, options?: { readonly cause: Error }) {
+		super(message, options);
+		this.name = "OutboxPublisherUnavailableError";
+	}
+}
+
+/**
+ * Broker boundary. The message's `eventId` is the idempotency key for every consumer.
+ * Throws {@link OutboxPublisherUnavailableError} when nothing was attempted (broker unreachable).
+ */
 export interface OutboxPublisher {
 	publish(topic: KafkaTopic, message: PlatformEventMessage, partitionKey: string | null): Promise<void>;
 }
@@ -145,7 +161,10 @@ export function prepareOutboxRow(row: ClaimedOutboxRow): PreparedRow {
  * - malformed row → dead-letter now (FAILED; retrying cannot help);
  * - publish error → `attempts+1`, exponential backoff with jitter; at
  *   `maxAttempts` → dead-letter; the rest of the batch is released (not
- *   attempted) so a down broker is not hammered with one timeout per row.
+ *   attempted) so a down broker is not hammered with one timeout per row;
+ * - publisher unavailable (broker not connected, nothing sent) → the whole
+ *   remaining batch is released for `baseDelayMs` WITHOUT spending an
+ *   attempt — the rows stay PENDING for as long as the outage lasts.
  */
 export class OutboxDispatcher {
 	public constructor(
@@ -173,6 +192,14 @@ export class OutboxDispatcher {
 				summary.deadLettered += 1;
 				continue;
 			}
+			if (outcome.kind === "publisher_unavailable") {
+				const unattempted = rows.slice(index).map((pending) => pending.id);
+				const nowMs = this.clock.nowEpochMs();
+				await this.store.release(unattempted, nowMs + this.policy.baseDelayMs, nowMs);
+				summary.released = unattempted.length;
+				this.logger.warn({ event: "outbox.publisher_unavailable", released: unattempted.length, retryInMs: this.policy.baseDelayMs, error: outcome.error });
+				break;
+			}
 			summary.retried += 1;
 			const remaining = rows.slice(index + 1).map((pending) => pending.id);
 			await this.store.release(remaining, outcome.availableAtMs, this.clock.nowEpochMs());
@@ -189,7 +216,12 @@ export class OutboxDispatcher {
 
 	private async dispatchRow(
 		row: ClaimedOutboxRow,
-	): Promise<{ readonly kind: "published" } | { readonly kind: "dead_lettered" } | { readonly kind: "retry_scheduled"; readonly availableAtMs: number }> {
+	): Promise<
+		| { readonly kind: "published" }
+		| { readonly kind: "dead_lettered" }
+		| { readonly kind: "retry_scheduled"; readonly availableAtMs: number }
+		| { readonly kind: "publisher_unavailable"; readonly error: string }
+	> {
 		const prepared = prepareOutboxRow(row);
 		if (prepared.kind === "malformed") {
 			// The stored row can never be published — retrying cannot help.
@@ -201,6 +233,9 @@ export class OutboxDispatcher {
 		try {
 			await this.publisher.publish(prepared.topic, prepared.message, row.partitionKey);
 		} catch (error) {
+			if (error instanceof OutboxPublisherUnavailableError) {
+				return { kind: "publisher_unavailable", error: error.message };
+			}
 			return this.handlePublishFailure(row, error instanceof Error ? error.message : String(error));
 		}
 

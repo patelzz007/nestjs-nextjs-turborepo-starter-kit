@@ -26,7 +26,7 @@ const RESTRICTED_SESSION_ALLOWLIST: readonly RestrictedRouteRule[] = [
 	{ method: "GET", pathSuffix: "/session" },
 	{ method: "POST", pathSuffix: "/auth/logout" },
 	{ method: "POST", pathSuffix: "/auth/logout-all" },
-	{ method: "GET", pathSuffix: "/auth/2fa/setup" },
+	{ method: "POST", pathSuffix: "/auth/2fa/setup" },
 	{ method: "GET", pathSuffix: "/auth/2fa/backup-codes/remaining" },
 	{ method: "POST", pathSuffix: "/auth/2fa/enable" },
 	{ method: "POST", pathSuffix: "/auth/resend-verification" },

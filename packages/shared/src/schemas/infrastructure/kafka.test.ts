@@ -36,6 +36,19 @@ describe("PlatformEventMessageSchema", () => {
 		expect(PlatformEventMessageSchema.safeParse(buildSessionEnvelope()).success).toBe(false);
 	});
 
+	it("rejects an email.log.updated event that carries the recipient address (no PII on Kafka)", () => {
+		const emailEvent = {
+			type: "email.log.updated",
+			correlationId: null,
+			occurredAt: OCCURRED_AT_MS,
+			eventId: EVENT_ID,
+			payload: { templateKey: "welcome", status: "sent", resendId: "re-1", error: null, durationMs: 12 },
+		};
+
+		expect(PlatformEventMessageSchema.safeParse(emailEvent).success).toBe(true);
+		expect(PlatformEventMessageSchema.safeParse({ ...emailEvent, payload: { ...emailEvent.payload, to: "person@example.com" } }).success).toBe(false);
+	});
+
 	it("rejects a non-uuid eventId", () => {
 		expect(PlatformEventMessageSchema.safeParse({ ...buildSessionEnvelope(), eventId: "not-a-uuid" }).success).toBe(false);
 	});

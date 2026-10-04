@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../api/common";
+import { CanonicalEmailSchema } from "../../api/email-address";
 import { defineListQuery, listFilter } from "../../api/list-query";
 import { strongPassword } from "../../auth/password";
 import { KybStatusSchema, PilotCitySchema } from "../rewards/rewards-enums";
@@ -145,6 +146,60 @@ export const OrganizationLocationIdParamSchema = z
 
 export type OrganizationLocationIdParam = z.output<typeof OrganizationLocationIdParamSchema>;
 
+/** Longest closure reason a merchant can record (stored on the location, echoed in the audit row). */
+export const ORGANIZATION_LOCATION_CLOSURE_REASON_MAX_LENGTH = 500;
+
+/** Close a store for good (bankruptcy, lease ended, ...): the reason is required and kept with the closed store. */
+export const OrganizationLocationCloseSchema = z
+	.object({
+		reason: z.string().trim().min(1).max(ORGANIZATION_LOCATION_CLOSURE_REASON_MAX_LENGTH),
+	})
+	.strict();
+
+export type OrganizationLocationCloseInput = z.output<typeof OrganizationLocationCloseSchema>;
+
+/** What closing a store took with it (the store itself stays readable as history). */
+export const OrganizationLocationCloseResponseSchema = z.object({
+	locationId: z.uuid(),
+	storeId: z.uuid(),
+	closedAt: EpochMsSchema,
+	reason: z.string(),
+	storeMembershipsRemoved: z.number().int().nonnegative(),
+	memberScopesRemoved: z.number().int().nonnegative(),
+	terminalsRemoved: z.number().int().nonnegative(),
+	apiKeysRevoked: z.number().int().nonnegative(),
+});
+
+export type OrganizationLocationCloseResponse = z.output<typeof OrganizationLocationCloseResponseSchema>;
+
+export const OrganizationMemberStoreParamSchema = z
+	.object({
+		orgSlug: OrganizationSlugSchema,
+		membershipId: z.uuid(),
+		locationId: z.uuid(),
+	})
+	.strict();
+
+export type OrganizationMemberStoreParam = z.output<typeof OrganizationMemberStoreParamSchema>;
+
+/** Remove a team member from one store. A member left with no store at all is refused unless `allowNoStores` is set. */
+export const OrganizationMemberStoreRemoveSchema = z
+	.object({
+		allowNoStores: z.boolean().default(false),
+	})
+	.strict();
+
+export type OrganizationMemberStoreRemoveInput = z.output<typeof OrganizationMemberStoreRemoveSchema>;
+
+export const OrganizationMemberStoreRemoveResponseSchema = z.object({
+	membershipId: z.uuid(),
+	locationId: z.uuid(),
+	removedAt: EpochMsSchema,
+	remainingLocationIds: z.array(z.uuid()),
+});
+
+export type OrganizationMemberStoreRemoveResponse = z.output<typeof OrganizationMemberStoreRemoveResponseSchema>;
+
 export const AdminOrganizationLocationCreateSchema = z
 	.object({
 		name: z.string().min(1).max(200),
@@ -235,6 +290,25 @@ export const OrganizationMembershipResponseSchema = z.object({
 
 export type OrganizationMembershipResponse = z.output<typeof OrganizationMembershipResponseSchema>;
 
+/** Longest display name a member can choose for one organization (`organization_memberships.display_name` is VARCHAR(100)). */
+export const ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH = 100;
+
+/** A member's display name for one organization: trimmed, never blank. */
+export const OrganizationMemberDisplayNameSchema = z.string().trim().min(1).max(ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH);
+
+/**
+ * `PATCH /orgs/:orgSlug/members/me` — the signed-in member updates their OWN
+ * membership. `displayName: null` clears it (the account's full name is shown
+ * instead); a blank string is rejected rather than silently stored.
+ */
+export const OrganizationOwnMembershipUpdateSchema = z
+	.object({
+		displayName: OrganizationMemberDisplayNameSchema.nullable(),
+	})
+	.strict();
+
+export type OrganizationOwnMembershipUpdateInput = z.output<typeof OrganizationOwnMembershipUpdateSchema>;
+
 export const OrganizationSummaryResponseSchema = z.object({
 	id: z.uuid(),
 	slug: OrganizationSlugSchema,
@@ -250,7 +324,8 @@ export type OrganizationSummaryResponse = z.output<typeof OrganizationSummaryRes
 export const OrganizationMerchantProfileResponseSchema = z.object({
 	organizationId: z.uuid(),
 	legalName: z.string().nullable(),
-	category: z.string(),
+	/** Null until the merchant submits a business category during onboarding. */
+	category: z.string().nullable(),
 	city: PilotCitySchema,
 	kybStatus: KybStatusSchema,
 	contactEmail: z.email(),
@@ -271,7 +346,7 @@ export type OrganizationContextResponse = z.output<typeof OrganizationContextRes
 
 export const AdminCreateOrganizationInviteSchema = z
 	.object({
-		email: z.email(),
+		email: CanonicalEmailSchema,
 		displayName: z.string().min(1).max(200),
 		slug: OrganizationSlugSchema,
 		intendedRole: OrganizationMembershipRoleSchema.default("OWNER"),
@@ -301,19 +376,61 @@ export const OrganizationAccessRequestResponseSchema = z.object({
 
 export type OrganizationAccessRequestResponse = z.output<typeof OrganizationAccessRequestResponseSchema>;
 
-export const ReviewOrganizationAccessRequestSchema = z
+/**
+ * Roles a team manager may grant through a team invite or an access-request
+ * approval. OWNER is never grantable this way (ownership is provisioned).
+ */
+export const OrganizationTeamGrantableRoleSchema = z.enum(["ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"]);
+
+export type OrganizationTeamGrantableRole = z.output<typeof OrganizationTeamGrantableRoleSchema>;
+
+/** Upper bound on the store ids one membership scope may list. */
+export const ORGANIZATION_SCOPE_MAX_LOCATION_IDS = 200;
+
+/**
+ * Approving an access request states the granted role and location scope
+ * explicitly — nothing defaults to a permissive value. `SELECTED` needs at
+ * least one (distinct) store; `ALL_LOCATIONS` takes none.
+ */
+const ReviewOrganizationAccessRequestApproveSchema = z
 	.object({
-		approve: z.boolean(),
-		role: OrganizationMembershipRoleSchema.optional(),
-		locationScopeType: OrganizationLocationScopeTypeSchema.optional(),
-		locationIds: z.array(z.uuid()).default([]),
+		approve: z.literal(true),
+		role: OrganizationTeamGrantableRoleSchema,
+		locationScopeType: OrganizationLocationScopeTypeSchema,
+		locationIds: z.array(z.uuid()).max(ORGANIZATION_SCOPE_MAX_LOCATION_IDS),
 	})
-	.strict()
+	.strict();
+
+const ReviewOrganizationAccessRequestRejectSchema = z
+	.object({
+		approve: z.literal(false),
+	})
+	.strict();
+
+export const ReviewOrganizationAccessRequestSchema = z
+	.discriminatedUnion("approve", [ReviewOrganizationAccessRequestApproveSchema, ReviewOrganizationAccessRequestRejectSchema])
 	.superRefine((value, ctx): void => {
-		if (value.approve && value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
+		if (!value.approve) {
+			return;
+		}
+		if (value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
 			ctx.addIssue({
 				code: "custom",
 				message: "Select at least one location",
+				path: ["locationIds"],
+			});
+		}
+		if (value.locationScopeType === "ALL_LOCATIONS" && value.locationIds.length > 0) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Locations can only be listed for a selected-locations scope",
+				path: ["locationIds"],
+			});
+		}
+		if (new Set(value.locationIds).size !== value.locationIds.length) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Each location may be listed only once",
 				path: ["locationIds"],
 			});
 		}
@@ -321,11 +438,11 @@ export const ReviewOrganizationAccessRequestSchema = z
 
 export type ReviewOrganizationAccessRequestInput = z.output<typeof ReviewOrganizationAccessRequestSchema>;
 
-const TEAM_INVITE_ROLES: readonly OrganizationMembershipRole[] = ["ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"];
+const TEAM_INVITE_ROLES: readonly OrganizationMembershipRole[] = OrganizationTeamGrantableRoleSchema.options;
 
 export const OrganizationMemberInviteFieldsSchema = z
 	.object({
-		email: z.email(),
+		email: CanonicalEmailSchema,
 		role: OrganizationMembershipRoleSchema,
 		locationScopeType: OrganizationLocationScopeTypeSchema.default("ALL_LOCATIONS"),
 		locationIds: z.array(z.uuid()).default([]),
@@ -479,15 +596,6 @@ export const SupportAccessGrantRequestSchema = z
 	.strict();
 
 export type SupportAccessGrantRequestInput = z.output<typeof SupportAccessGrantRequestSchema>;
-
-/** Body of `POST /support-access/:grantId/approve` — the tenant approving the grant for one of its organizations. */
-export const SupportAccessGrantApproveSchema = z
-	.object({
-		organizationId: z.uuid(),
-	})
-	.strict();
-
-export type SupportAccessGrantApproveInput = z.output<typeof SupportAccessGrantApproveSchema>;
 
 export const SupportAccessGrantResponseSchema = z.object({
 	id: z.uuid(),

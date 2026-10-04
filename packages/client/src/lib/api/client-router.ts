@@ -5,7 +5,6 @@
 import {
 	useQuery as rqUseQuery,
 	useMutation as rqUseMutation,
-	type QueryKey,
 	type UseQueryOptions,
 	type UseQueryResult,
 	type UseMutationOptions,
@@ -13,14 +12,14 @@ import {
 } from "@tanstack/react-query";
 import type { DataValue, SerializableInput } from "@workspace/shared";
 
-import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse } from "./api-request";
+import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse, type ProcedureCallOptions } from "./api-request";
 import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
 
 /** A GET procedure on the client — `.useQuery()` / `.fetch()` / `.fetchOrThrow()`. */
 export interface ClientQueryProcedure<Input, Resp> {
-	useQuery(input: Input, queryOptions?: Omit<UseQueryOptions<Resp, Error, Resp>, "queryKey" | "queryFn">, overrideQueryKey?: QueryKey): UseQueryResult<Resp>;
-	fetch(input: Input): Promise<ApiResponse<Resp>>;
-	fetchOrThrow(input: Input): Promise<Resp>;
+	useQuery(input: Input, queryOptions?: Omit<UseQueryOptions<Resp, Error, Resp>, "queryKey" | "queryFn">): UseQueryResult<Resp>;
+	fetch(input: Input, options?: ProcedureCallOptions): Promise<ApiResponse<Resp>>;
+	fetchOrThrow(input: Input, options?: ProcedureCallOptions): Promise<Resp>;
 }
 
 /** A mutation procedure on the client — `.useMutation()` / `.mutate()`. */
@@ -40,16 +39,15 @@ export function createQueryProcedure<Input extends SerializableInput, Resp exten
 ): ClientQueryProcedure<Input, Resp> {
 	const caller = createQueryCaller(context, def);
 	return {
-		useQuery: (input, queryOptions?, overrideQueryKey?): UseQueryResult<Resp> => {
-			const key: QueryKey = overrideQueryKey ?? def.queryKey(input);
+		useQuery: (input, queryOptions?): UseQueryResult<Resp> => {
 			return rqUseQuery<Resp, Error, Resp>({
-				queryKey: key,
+				queryKey: def.queryKey(input),
 				queryFn: ({ signal }): Promise<Resp> => caller.fetchOrThrow(input, { signal }),
 				...queryOptions,
 			});
 		},
-		fetch: (input: Input): Promise<ApiResponse<Resp>> => caller.fetch(input),
-		fetchOrThrow: (input: Input): Promise<Resp> => caller.fetchOrThrow(input),
+		fetch: (input: Input, options?: ProcedureCallOptions): Promise<ApiResponse<Resp>> => caller.fetch(input, options),
+		fetchOrThrow: (input: Input, options?: ProcedureCallOptions): Promise<Resp> => caller.fetchOrThrow(input, options),
 	};
 }
 

@@ -152,6 +152,28 @@ describe("HealthService", () => {
 			expect(result.checks).toContainEqual({ name: "queue", status: "up", critical: false });
 		});
 
+		it("carries a down indicator's report (Kafka state / lastFailure) on its readiness check", async () => {
+			let connected = false;
+			const kafka: ModuleHealthIndicator = {
+				isHealthy: async (): Promise<boolean> => Promise.resolve(connected),
+				getReport: async () =>
+					Promise.resolve(connected ? { state: "connected" } : { state: "connecting", lastFailure: "producer connecting: Local: Broker transport failure" }),
+			};
+			const service = createService([{ name: "kafka", indicator: kafka, critical: false }]);
+			service.markReady();
+
+			expect((await service.readiness()).checks).toContainEqual({
+				name: "kafka",
+				status: "down",
+				critical: false,
+				details: { state: "connecting", lastFailure: "producer connecting: Local: Broker transport failure" },
+			});
+
+			connected = true;
+
+			expect((await service.readiness()).checks).toContainEqual({ name: "kafka", status: "up", critical: false, details: { state: "connected" } });
+		});
+
 		it("times out a hanging indicator instead of hanging the probe", async () => {
 			vi.useFakeTimers();
 			const service = createService([{ name: "rabbitmq", indicator: indicator("hangs"), critical: true }]);

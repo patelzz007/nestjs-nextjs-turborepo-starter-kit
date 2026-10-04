@@ -1,8 +1,5 @@
-import { Global, Inject, Logger, Module, type OnModuleDestroy } from "@nestjs/common";
-import type Redis from "ioredis";
+import { Global, Module } from "@nestjs/common";
 
-import { TypedConfigService } from "../../config/typed-config.service";
-import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../infrastructure/redis/redis.tokens";
 import { PrismaModule } from "../../prisma/prisma.module";
 
 import { SessionsPersistenceModule } from "../sessions/sessions-persistence.module";
@@ -11,7 +8,7 @@ import { AccessTokenModule } from "../auth/access-token.module";
 
 import { AuthorizationAuditService } from "./audit/authorization-audit.service";
 import { AuthorizationCacheService } from "./cache/authorization-cache.service";
-import { RedisAuthorizationCacheService } from "./cache/redis-authorization-cache.service";
+import { AuthorizationInvalidationService } from "./cache/authorization-invalidation.service";
 import { AuthorizationHealthIndicator } from "./health/authorization.health";
 import { AuthorizationGuard } from "./guards/authorization.guard";
 import { AuthorizationCheckerService } from "./services/authorization-checker.service";
@@ -29,6 +26,7 @@ import { AuditLogCleanup } from "./cleanup/audit-log.cleanup";
 import { AuthorizationEventEmitter } from "./events/authorization.events";
 import { CapabilityDefinitionService } from "./services/capability-definition.service";
 import { PrivilegeEscalationService } from "./services/privilege-escalation.service";
+import { RbacMutationRunner } from "./services/rbac-mutation.runner";
 import { PermissionRepository } from "./repositories/permission.repository";
 import { RoleAssignmentRepository } from "./repositories/role-assignment.repository";
 import { RoleRepository } from "./repositories/role.repository";
@@ -42,7 +40,9 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
  * - **AuthorizationCheckerService** — permission/role evaluation
  * - **RoleService** — CRUD + assignment + hierarchy
  * - **PermissionService** — CRUD + direct user grants
- * - **AuthorizationCacheService** — in-memory cache (Redis-ready)
+ * - **AuthorizationCacheService** — per-process cache
+ * - **AuthorizationInvalidationService** — post-commit invalidation, broadcast over Redis pub/sub
+ * - **RbacMutationRunner** — the one transactional path for RBAC writes
  * - **AuthorizationGuard** — global guard
  * - **ConflictDetectionService** — role conflict rules
  * - **PolicyRegistry** — resource-specific policies
@@ -60,34 +60,13 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 			provide: "IN_MEMORY_AUTH_CACHE",
 			useClass: AuthorizationCacheService,
 		},
-		{
-			provide: "REDIS_AUTH_CACHE_LIFECYCLE",
-			useFactory: async (
-				config: TypedConfigService,
-				memory: AuthorizationCacheService,
-				publisher: Redis | null,
-				subscriber: Redis | null,
-			): Promise<RedisAuthorizationCacheService | null> => {
-				if (!config.useRedisAuthorizationCache) {
-					if (config.authorizationCacheBackend === "redis" && config.redisUrl === undefined) {
-						Logger.warn("AUTHORIZATION_CACHE_BACKEND=redis but REDIS_URL is unset — using in-memory authorization cache", AuthorizationModule.name);
-					}
-					return null;
-				}
-				if (publisher === null || subscriber === null) {
-					return null;
-				}
-				const redis = new RedisAuthorizationCacheService(memory, publisher, subscriber);
-				await redis.onModuleInit();
-				return redis;
-			},
-			inject: [TypedConfigService, "IN_MEMORY_AUTH_CACHE", REDIS_PUBLISHER, REDIS_SUBSCRIBER],
-		},
+		// One per-process cache instance; cross-instance invalidation is AuthorizationInvalidationService's job.
 		{
 			provide: AuthorizationCacheService,
-			useFactory: (memory: AuthorizationCacheService, redis: RedisAuthorizationCacheService | null): AuthorizationCacheService => redis ?? memory,
-			inject: ["IN_MEMORY_AUTH_CACHE", "REDIS_AUTH_CACHE_LIFECYCLE"],
+			useExisting: "IN_MEMORY_AUTH_CACHE",
 		},
+		AuthorizationInvalidationService,
+		RbacMutationRunner,
 		AuthorizationCheckerService,
 		RoleRepository,
 		PermissionRepository,
@@ -112,6 +91,7 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 	],
 	exports: [
 		AuthorizationCacheService,
+		AuthorizationInvalidationService,
 		AuthorizationCheckerService,
 		RoleService,
 		PermissionService,
@@ -131,12 +111,4 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 		AuthorizationKernelModule,
 	],
 })
-export class AuthorizationModule implements OnModuleDestroy {
-	public constructor(@Inject("REDIS_AUTH_CACHE_LIFECYCLE") private readonly redisAuthCache: RedisAuthorizationCacheService | null) {}
-
-	public async onModuleDestroy(): Promise<void> {
-		if (this.redisAuthCache !== null) {
-			await this.redisAuthCache.onModuleDestroy();
-		}
-	}
-}
+export class AuthorizationModule {}

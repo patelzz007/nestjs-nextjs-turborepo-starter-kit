@@ -1,29 +1,26 @@
-import { isSafeAdminRedirect } from "@/lib/auth-routes";
+import { loadAdminDemoAccounts } from "@/lib/auth/demo-accounts";
+import { resolveAdminRedirectTarget } from "@/lib/auth-routes";
 import { clientEnv } from "@/lib/env/env.client";
-import { ROUTES } from "@/lib/routes";
+import { LOGIN_REDIRECT_PARAM } from "@/lib/routes";
 
 import { LoginView } from "./login-view";
 
+export interface AdminLoginPageProps {
+	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
 /**
- * `/auth/login` — admin login. Server component: reads `?redirect=` from the
- * URL (set by the proxy when bouncing an unauthenticated request) and the web
- * base URL from the validated public env, then hands both to the client
- * `LoginView` as props — so `useSearchParams`/`Suspense` stay out of the
- * client bundle.
- * The static brand/testimonial shell renders in the initial SSR HTML.
+ * `/auth/login` — admin login. Server component: resolves `?redirect=` (set by
+ * the proxy when bouncing an unauthenticated request) to a safe, normalized
+ * in-app path, and hands it, the web base URL and — only in development —
+ * the seeded demo logins to the client
+ * `LoginView` as props. The demo credentials are decided here, on the server, so they never ship in the
+ * client bundle, and `useSearchParams`/`Suspense` stay out of it too.
  */
-export default async function AdminLoginPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
-	const sp = await searchParams;
-	const rawRedirect: string | undefined = typeof sp.redirect === "string" ? sp.redirect : undefined;
-	const redirectPath: string = rawRedirect !== undefined && isSafeAdminRedirect(rawRedirect) ? rawRedirect : ROUTES.home;
+export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps): Promise<React.JSX.Element> {
+	const params = await searchParams;
+	const rawRedirect = params[LOGIN_REDIRECT_PARAM];
+	const redirectPath: string = resolveAdminRedirectTarget(typeof rawRedirect === "string" ? rawRedirect : undefined, clientEnv.NEXT_PUBLIC_ADMIN_URL);
 
-	// Web app URL for the "Returning to main website" link.
-	const webBaseUrl: string = clientEnv.NEXT_PUBLIC_WEB_URL;
-
-	// One-click demo account — only when explicitly enabled (local/dev
-	// convenience). Resolved server-side so the demo credential is only passed
-	// to the client view when the flag is on.
-	const showDemoAccounts: boolean = clientEnv.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS;
-
-	return <LoginView redirectPath={redirectPath} webBaseUrl={webBaseUrl} showDemoAccounts={showDemoAccounts} />;
+	return <LoginView redirectPath={redirectPath} webBaseUrl={clientEnv.NEXT_PUBLIC_WEB_URL} demoAccounts={await loadAdminDemoAccounts()} />;
 }

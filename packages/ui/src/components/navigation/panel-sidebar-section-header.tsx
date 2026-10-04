@@ -2,10 +2,9 @@
 
 import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import type { PanelSectionColor } from "@workspace/ui/lib/sidebar/menu-view";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import * as React from "react";
-
-export type PanelSectionColor = "blue" | "green" | "amber" | "rose" | "purple" | "teal";
 
 const SECTION_COLOR_MAP: Record<PanelSectionColor, string> = {
 	blue: "bg-blue-500",
@@ -18,6 +17,8 @@ const SECTION_COLOR_MAP: Record<PanelSectionColor, string> = {
 
 export interface PanelSidebarSectionHeaderProps {
 	readonly title: string;
+	/** Id of the title element, so the section's list can be named by it (`aria-labelledby`). */
+	readonly titleId?: string;
 	readonly index: number;
 	readonly isLast: boolean;
 	readonly isSearching: boolean;
@@ -32,9 +33,10 @@ export interface PanelSidebarSectionHeaderProps {
 	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
 }
 
-/** Admin-style section label with colored dot and optional reorder controls. */
+/** Section label with a coloured dot and reorder controls (buttons, or Alt+↑ / Alt+↓ while one is focused). */
 export function PanelSidebarSectionHeader({
 	title,
+	titleId,
 	index,
 	isLast,
 	isSearching,
@@ -56,10 +58,29 @@ export function PanelSidebarSectionHeader({
 		onMoveSectionDown(title, allTitles);
 	}, [onMoveSectionDown, title, allTitles]);
 
+	const handleKeyDown = React.useCallback(
+		(event: React.KeyboardEvent<HTMLElement>): void => {
+			if (!event.altKey) {
+				return;
+			}
+			if (event.key === "ArrowUp") {
+				event.preventDefault();
+				onMoveSectionUp(title, allTitles);
+			}
+			if (event.key === "ArrowDown") {
+				event.preventDefault();
+				onMoveSectionDown(title, allTitles);
+			}
+		},
+		[onMoveSectionUp, onMoveSectionDown, title, allTitles],
+	);
+
 	return (
 		<div data-sidebar-section-header="true" data-active-section={isActiveSection ? true : undefined} className="group/section-header mb-2 flex items-center gap-1 px-2">
 			{color !== undefined ? <span className={cn("inline-block size-1.5 shrink-0 rounded-full", SECTION_COLOR_MAP[color])} aria-hidden="true" /> : null}
 			<span
+				id={titleId}
+				title={title}
 				className={cn(
 					"truncate text-[length:var(--text-sidebar-section)] font-semibold transition-colors duration-200 motion-reduce:transition-none",
 					isActiveSection ? "text-sidebar-foreground" : "text-muted-foreground",
@@ -74,6 +95,7 @@ export function PanelSidebarSectionHeader({
 						variant="ghost"
 						size="icon-xs"
 						onClick={handleMoveUp}
+						onKeyDown={handleKeyDown}
 						disabled={index === 0}
 						className={cn(index === 0 ? "text-muted-foreground/25" : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground")}
 						title={moveUpTitle}
@@ -85,6 +107,7 @@ export function PanelSidebarSectionHeader({
 						variant="ghost"
 						size="icon-xs"
 						onClick={handleMoveDown}
+						onKeyDown={handleKeyDown}
 						disabled={isLast}
 						className={cn(isLast ? "text-muted-foreground/25" : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground")}
 						title={moveDownTitle}

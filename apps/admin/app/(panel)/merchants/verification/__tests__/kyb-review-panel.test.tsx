@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
-import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
+import { KybDocumentScanStatusSchema, PERMISSION, type CapabilitySlug, type KybDocumentScanStatus } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { PENDING_KYB_MERCHANTS_QUERY } from "@/lib/merchants/kyb-review";
 
 import KybReviewPanel from "../kyb-review-panel";
 
@@ -22,8 +25,8 @@ interface MerchantDetailStub {
 	readonly kybStatus: string;
 	readonly status: string;
 	readonly memberCount: number;
-	readonly kybFields: null;
-	readonly documents: readonly [];
+	readonly kybFields: Readonly<Record<string, string>>;
+	readonly documents: readonly DocumentStub[];
 	readonly locations: readonly [];
 	readonly createdAt: number;
 	readonly updatedAt: number;
@@ -38,12 +41,37 @@ interface QueueMerchantStub {
 	readonly category: string;
 }
 
+/** The document fields the panel's scan-status list reads. */
+interface DocumentStub {
+	readonly id: string;
+	readonly fileName: string;
+	readonly scanStatus: KybDocumentScanStatus;
+}
+
+/** The KYB update's input fields `onSuccess` reads. */
+interface UpdateKybInputStub {
+	readonly organizationId: string;
+}
+
+/** The body the panel sends to `PATCH /admin/organizations/:id/kyb`. */
+interface UpdateKybMutationInputStub extends UpdateKybInputStub {
+	readonly kybStatus: string;
+	readonly kybFields?: Readonly<Record<string, string | number>>;
+}
+
+/** The mutation options the panel passes — captured so a test can complete an update. */
+interface UpdateKybOptionsStub {
+	readonly onSuccess?: (response: null, input: UpdateKybInputStub) => Promise<void>;
+}
+
 interface AuthStub {
 	readonly api: {
 		readonly rewardsAdmin: {
 			readonly listOrganizations: { readonly useQuery: () => { readonly data: { readonly data: readonly QueueMerchantStub[] }; readonly isLoading: boolean } };
 			readonly getOrganization: { readonly useQuery: () => { readonly data: { readonly data: MerchantDetailStub }; readonly isLoading: boolean; readonly isError: boolean } };
-			readonly updateKyb: { readonly useMutation: () => { readonly mutate: () => void; readonly isPending: boolean } };
+			readonly updateKyb: {
+				readonly useMutation: (options: UpdateKybOptionsStub) => { readonly mutate: (input: UpdateKybMutationInputStub) => void; readonly isPending: boolean };
+			};
 		};
 	};
 }
@@ -57,7 +85,9 @@ vi.mock("@workspace/client/lib/merchant/kyb/stored-document-list", () => ({
 	MerchantKybStoredDocumentList: (): null => null,
 }));
 
-const { SELECTED_ORG_ID, OTHER_ORG_ID, getOrganizationQuery } = vi.hoisted(() => ({
+const { SELECTED_ORG_ID, OTHER_ORG_ID, getOrganizationQuery, updateKybOptions, updateKybMutate } = vi.hoisted(() => ({
+	updateKybMutate: vi.fn<(input: UpdateKybMutationInputStub) => void>(),
+	updateKybOptions: vi.fn<(options: UpdateKybOptionsStub) => void>(),
 	SELECTED_ORG_ID: "0c6d6c3e-3b8f-4a52-9a0e-6c1b7f2d4e10",
 	OTHER_ORG_ID: "7a1e2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b",
 	getOrganizationQuery: vi.fn(),
@@ -83,8 +113,9 @@ vi.mock("@workspace/client/lib/auth", () => {
 		kybStatus: "PENDING",
 		status: "ACTIVE",
 		memberCount: 1,
-		kybFields: null,
-		documents: [],
+		kybFields: { registrationNo: "201901012345" },
+		// One document per scan status, so every badge renders.
+		documents: KybDocumentScanStatusSchema.options.map((scanStatus, index) => ({ id: `doc-${String(index)}`, fileName: `${scanStatus.toLowerCase()}.pdf`, scanStatus })),
 		locations: [],
 		createdAt: 1_786_300_000_000,
 		updatedAt: 1_786_300_000_000,
@@ -94,7 +125,7 @@ vi.mock("@workspace/client/lib/auth", () => {
 			rewardsAdmin: {
 				listOrganizations: {
 					useQuery: () => ({
-						data: { data: [{ id: OTHER_ORG_ID, businessName: "Moonlight Bakery", kybStatus: "PENDING", city: "PENANG", category: "FOOD" }] },
+						data: { data: [{ id: OTHER_ORG_ID, businessName: "Moonlight Bakery", kybStatus: "PENDING", city: "MELAKA", category: "FOOD" }] },
 						isLoading: false,
 					}),
 				},
@@ -104,7 +135,12 @@ vi.mock("@workspace/client/lib/auth", () => {
 						return { data: { data: merchant }, isLoading: false, isError: false };
 					},
 				},
-				updateKyb: { useMutation: () => ({ mutate: () => undefined, isPending: false }) },
+				updateKyb: {
+					useMutation: (options: UpdateKybOptionsStub) => {
+						updateKybOptions(options);
+						return { mutate: updateKybMutate, isPending: false };
+					},
+				},
 			},
 		},
 	};
@@ -113,9 +149,9 @@ vi.mock("@workspace/client/lib/auth", () => {
 
 const PATH = "/merchants/verification";
 
-function panel(capabilities: readonly CapabilitySlug[]): React.JSX.Element {
+function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient = new QueryClient()): React.JSX.Element {
 	return (
-		<QueryClientProvider client={new QueryClient()}>
+		<QueryClientProvider client={queryClient}>
 			<CapabilitiesProvider capabilities={capabilities}>
 				<KybReviewPanel />
 			</CapabilitiesProvider>
@@ -134,6 +170,8 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	getOrganizationQuery.mockReset();
+	updateKybOptions.mockReset();
+	updateKybMutate.mockReset();
 	vi.restoreAllMocks();
 });
 
@@ -180,5 +218,73 @@ describe("KybReviewPanel selection (URL is the only source)", () => {
 		});
 		view.rerender(panel([PERMISSION.MERCHANT_ORG.LIST]));
 		expect(getOrganizationQuery).toHaveBeenLastCalledWith({ organizationId: OTHER_ORG_ID }, expect.objectContaining({ enabled: true }));
+	});
+});
+
+describe("KybReviewPanel KYB update invalidation", () => {
+	const ALL_MERCHANTS_QUERY = { page: 1, limit: 100 };
+
+	function isInvalidated(queryClient: QueryClient, queryKey: QueryKey): boolean | undefined {
+		return queryClient.getQueryState(queryKey)?.isInvalidated;
+	}
+
+	it("invalidates the updated merchant and every merchant list, but not other merchants", async () => {
+		const queryClient = new QueryClient();
+		queryClient.setQueryData(apiRouter.rewardsAdmin.listOrganizations.queryKey(PENDING_KYB_MERCHANTS_QUERY), null);
+		queryClient.setQueryData(apiRouter.rewardsAdmin.listOrganizations.queryKey(ALL_MERCHANTS_QUERY), null);
+		queryClient.setQueryData(apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: SELECTED_ORG_ID }), null);
+		queryClient.setQueryData(apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: OTHER_ORG_ID }), null);
+		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient));
+
+		const options: UpdateKybOptionsStub | undefined = updateKybOptions.mock.lastCall?.at(0);
+		await options?.onSuccess?.(null, { organizationId: SELECTED_ORG_ID });
+
+		expect(isInvalidated(queryClient, apiRouter.rewardsAdmin.listOrganizations.queryKey(PENDING_KYB_MERCHANTS_QUERY))).toBe(true);
+		expect(isInvalidated(queryClient, apiRouter.rewardsAdmin.listOrganizations.queryKey(ALL_MERCHANTS_QUERY))).toBe(true);
+		expect(isInvalidated(queryClient, apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: SELECTED_ORG_ID }))).toBe(true);
+		expect(isInvalidated(queryClient, apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: OTHER_ORG_ID }))).toBe(false);
+	});
+});
+
+describe("KybReviewPanel decision form", () => {
+	async function clickAndSettle(element: HTMLElement): Promise<void> {
+		fireEvent.click(element);
+		await act(() => Promise.resolve());
+	}
+
+	it("refuses a rejection without the reviewer's reason — no reason is invented", async () => {
+		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		await clickAndSettle(screen.getByRole("button", { name: "Reject" }));
+
+		expect(updateKybMutate).not.toHaveBeenCalled();
+		expect(screen.getByText("Tell the merchant why — a reason is required for this decision.")).toBeDefined();
+	});
+
+	it("sends the reviewer's reason with the rejection", async () => {
+		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		fireEvent.change(screen.getByLabelText("Rejection reason"), { target: { value: "SSM certificate is expired" } });
+		await clickAndSettle(screen.getByRole("button", { name: "Reject" }));
+
+		expect(updateKybMutate).toHaveBeenCalledTimes(1);
+		expect(updateKybMutate.mock.lastCall?.[0]).toMatchObject({
+			organizationId: SELECTED_ORG_ID,
+			kybStatus: "REJECTED",
+			kybFields: { rejectionReason: "SSM certificate is expired" },
+		});
+	});
+});
+
+describe("KybReviewPanel document scan status", () => {
+	it("shows a distinct badge for every scan status", () => {
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
+		const list = within(screen.getByRole("list", { name: "Document scan status" }));
+
+		expect(list.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+			"scanning.pdfScanning",
+			"clean.pdfClean",
+			"not_scanned.pdfNot scanned",
+			"infected.pdfInfected",
+			"scan_failed.pdfScan failed",
+		]);
 	});
 });

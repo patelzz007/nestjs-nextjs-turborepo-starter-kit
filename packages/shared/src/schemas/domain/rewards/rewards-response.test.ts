@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { epochMs } from "../../api/common";
 
-import { MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "./rewards-kyb";
+import { MerchantKybDocumentRecordSchema, MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "./rewards-kyb";
 import { MerchantCreateRewardSchema, RewardResponseSchema, type RewardResponse } from "./rewards-entities";
-import { RewardRulesResponseSchema, RewardRulesSchema, type RewardRules } from "./rewards-enums";
+import { KybDocumentScanStatusSchema, RewardRulesResponseSchema, RewardRulesSchema, type RewardRules } from "./rewards-enums";
 
 // Response schemas are OPEN (ADR 022): the API strips unknown keys and clients
 // tolerate additive fields. Request schemas sharing the same fields stay CLOSED.
@@ -78,6 +78,13 @@ const kybProfile: MerchantKybProfileResponse = {
 	],
 	status: "ACTIVE",
 };
+
+describe("KYB document scan status", () => {
+	it("reports a failed scan as SCAN_FAILED, distinct from an infected document", () => {
+		expect(KybDocumentScanStatusSchema.options).toEqual(["SCANNING", "CLEAN", "NOT_SCANNED", "INFECTED", "SCAN_FAILED"]);
+		expect(MerchantKybDocumentRecordSchema.parse({ ...kybProfile.documents.at(0), scanStatus: "SCAN_FAILED" }).scanStatus).toBe("SCAN_FAILED");
+	});
+});
 
 describe("reward rules", () => {
 	it("rejects unknown keys on the request side", () => {

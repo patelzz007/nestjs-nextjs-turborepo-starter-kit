@@ -16,10 +16,46 @@ import {
 	daysFromNow,
 	generateSeedApiKey,
 	rand,
+	randChance,
 	randInt,
 	randomIpv4,
 } from "./helpers";
 import { seedLog } from "./seed-log";
+
+/** Display names of the additional demo users; user N gets `user-NN@example.com`. */
+const NAMES: readonly string[] = [
+	"Liam Smith",
+	"Olivia Johnson",
+	"Noah Davis",
+	"Emma Brown",
+	"Oliver Wilson",
+	"Ava Taylor",
+	"William Anderson",
+	"Sophie Thomas",
+	"James Jackson",
+	"Mia White",
+	"Benjamin Harris",
+	"Charlotte Martin",
+	"Lucas Thompson",
+	"Amelia Garcia",
+	"Henry Martinez",
+	"Harper Robinson",
+	"Alexander Clark",
+	"Evelyn Rodriguez",
+	"Daniel Lewis",
+	"Abigail Lee",
+];
+
+/** Email of the `index`-th additional demo user. */
+function extraUserEmail(index: number): string {
+	return `user-${String(index + 1).padStart(2, "0")}@example.com`;
+}
+
+/** Every account {@link generateAdditionalSeedData} owns — the seed's cleanup is scoped to these. */
+export const EXTRA_SEED_USER_EMAILS: readonly string[] = NAMES.map((_name, index) => extraUserEmail(index));
+
+/** Short codes of the anonymous demo URLs share this prefix (they have no owner to scope by). */
+export const ANONYMOUS_SEED_URL_PREFIX = "anon-bulk-";
 
 // Additional Seed Data (20 extra users with URLs, tags, clicks, and API keys)
 export async function generateAdditionalSeedData(roles: Role[], userRole: Role): Promise<User[]> {
@@ -27,28 +63,6 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 	const defaultPassword = await hash("User@123");
 
 	const PLANS: Plan[] = ["FREE", "PRO"];
-	const NAMES = [
-		"Liam Smith",
-		"Olivia Johnson",
-		"Noah Davis",
-		"Emma Brown",
-		"Oliver Wilson",
-		"Ava Taylor",
-		"William Anderson",
-		"Sophie Thomas",
-		"James Jackson",
-		"Mia White",
-		"Benjamin Harris",
-		"Charlotte Martin",
-		"Lucas Thompson",
-		"Amelia Garcia",
-		"Henry Martinez",
-		"Harper Robinson",
-		"Alexander Clark",
-		"Evelyn Rodriguez",
-		"Daniel Lewis",
-		"Abigail Lee",
-	];
 
 	const createdUsers: User[] = [];
 	const urlList: Url[] = [];
@@ -66,7 +80,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 	const rawKeyLog: { email: string; rawKey: string }[] = [];
 
 	for (const [i, name] of NAMES.entries()) {
-		const email = `user-${String(i + 1).padStart(2, "0")}@example.com`;
+		const email = extraUserEmail(i);
 		const plan = rand(PLANS);
 		const isActive = i < 17; // 3 inactive users
 
@@ -147,7 +161,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 					redirectType: "TEMPORARY",
 					isActive: true,
 					clickCount: randInt(0, 500),
-					expiresAt: Math.random() > 0.8 ? daysFromNow(randInt(30, 90)) : null,
+					expiresAt: randChance(0.2) ? daysFromNow(randInt(30, 90)) : null,
 				},
 			});
 			urlList.push(url);
@@ -208,7 +222,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 	// ── Create 50 anonymous URLs (userId: null) for extra pagination data ─
 	const ANONYMOUS_URL_COUNT = 50;
 	for (let a = 0; a < ANONYMOUS_URL_COUNT; a++) {
-		const shortCode = `anon-bulk-${String(a)}`;
+		const shortCode = `${ANONYMOUS_SEED_URL_PREFIX}${String(a)}`;
 		const anonymousUrl = await prisma.url.upsert({
 			where: { shortCode },
 			update: {},
@@ -216,11 +230,11 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 				userId: null,
 				shortCode,
 				originalUrl: `https://example.com/anonymous/${String(a)}`,
-				title: Math.random() > 0.3 ? `Anonymous Page ${String(a + 1)}` : null,
-				redirectType: Math.random() > 0.5 ? "PERMANENT" : "TEMPORARY",
+				title: randChance(0.7) ? `Anonymous Page ${String(a + 1)}` : null,
+				redirectType: randChance(0.5) ? "PERMANENT" : "TEMPORARY",
 				isActive: true,
 				clickCount: randInt(0, 300),
-				expiresAt: Math.random() > 0.85 ? daysFromNow(randInt(30, 180)) : null,
+				expiresAt: randChance(0.15) ? daysFromNow(randInt(30, 180)) : null,
 			},
 		});
 		urlList.push(anonymousUrl);
@@ -255,9 +269,9 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 					os: rand(OSS),
 					browser: rand(BROWSERS),
 					referrer: rand(REFERRERS),
-					utmSource: Math.random() > 0.7 ? rand(UTM_SOURCES) : null,
-					utmMedium: Math.random() > 0.7 ? rand(UTM_MEDIUMS) : null,
-					utmCampaign: Math.random() > 0.7 ? "bulk_seed" : null,
+					utmSource: randChance(0.3) ? rand(UTM_SOURCES) : null,
+					utmMedium: randChance(0.3) ? rand(UTM_MEDIUMS) : null,
+					utmCampaign: randChance(0.3) ? "bulk_seed" : null,
 					clickedAt: daysAgo(randInt(0, 60)),
 				});
 			}

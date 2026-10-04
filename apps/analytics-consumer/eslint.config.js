@@ -11,7 +11,7 @@ const config = [
 	{
 		files: ["src/**/*.ts"],
 		rules: {
-			"no-console": ["warn", { allow: ["log", "warn", "error"] }],
+			"no-console": ["error", { allow: ["log", "warn", "error"] }],
 		},
 	},
 

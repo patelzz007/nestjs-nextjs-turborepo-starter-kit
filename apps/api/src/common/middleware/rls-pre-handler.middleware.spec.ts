@@ -20,7 +20,7 @@ class ScopeProbeGuard implements CanActivate {
 }
 
 class ProbeController {
-	public probe(): { operation: string } {
+	public probe(): { operation: string | null } {
 		return { operation: currentRlsContextOrUnscoped().systemOperation };
 	}
 }

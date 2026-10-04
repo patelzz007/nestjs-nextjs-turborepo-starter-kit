@@ -1,5 +1,6 @@
 import { Logger } from "@nestjs/common";
-import { QUEUE_JOB_OPTIONS, QUEUE_NAMES } from "@workspace/shared";
+import { QUEUE_JOB_OPTIONS } from "@workspace/shared";
+import { SchedulerRegistry } from "@nestjs/schedule";
 import type { Queue } from "bullmq";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
@@ -16,6 +17,7 @@ import {
 	IdempotencyRetentionScheduler,
 	type JobSchedulerRegistry,
 } from "./idempotency-retention.processor";
+import { IdempotencyRetentionIntervalScheduler } from "./idempotency-retention-interval.scheduler";
 import { IDEMPOTENCY_PURGE_POLICY, IdempotencyRetentionService, type IdempotencyRetentionSummary } from "./idempotency-retention.service";
 import {
 	IDEMPOTENCY_IN_PROGRESS_LEASE_MS,
@@ -26,6 +28,7 @@ import {
 	IDEMPOTENCY_PURGE_TIME_BUDGET_MS,
 	IDEMPOTENCY_RETENTION_OPERATION,
 } from "./idempotency.constants";
+import { RequestContextService } from "../../common/context/request-context";
 
 const START_EPOCH_MS = 1_790_812_800_000;
 /** A Redis URL makes `useBullMq` true — nothing connects to it in these tests. */
@@ -47,7 +50,7 @@ class InMemoryRetentionRecords extends IdempotencyRecordRepository {
 	public msPerBatch = 0;
 
 	public constructor(public expiresAt: number[]) {
-		super(new TenantTransactionService(new PrismaService(createTestTypedConfig())));
+		super(new TenantTransactionService(new PrismaService(createTestTypedConfig()), new RequestContextService()));
 	}
 
 	public override deleteExpiredBefore(cutoffEpochMs: number, batchSize: number): Promise<number> {
@@ -76,7 +79,7 @@ describe("idempotency retention policy", () => {
 
 	it("runs under a registered, specific system operation", () => {
 		expect(isAllowlistedSystemOperation(IDEMPOTENCY_RETENTION_OPERATION)).toBe(true);
-		expect(SYSTEM_OPERATIONS[IDEMPOTENCY_RETENTION_OPERATION]?.role).toBe("app_runtime");
+		expect(SYSTEM_OPERATIONS[IDEMPOTENCY_RETENTION_OPERATION].role).toBe("app_runtime");
 	});
 });
 
@@ -176,7 +179,7 @@ describe("IdempotencyRetentionScheduler", () => {
 
 		await scheduler.onModuleInit();
 
-		expect(IDEMPOTENCY_RETENTION_QUEUE).toBe(QUEUE_NAMES[7]);
+		expect(IDEMPOTENCY_RETENTION_QUEUE).toBe("idempotency.retention");
 		expect(upsert).toHaveBeenCalledTimes(1);
 		expect(upsert).toHaveBeenCalledWith(
 			IDEMPOTENCY_PURGE_SCHEDULER_ID,
@@ -185,7 +188,7 @@ describe("IdempotencyRetentionScheduler", () => {
 		);
 	});
 
-	it("registers nothing without Redis (BullMQ disabled), like every other scheduler", async () => {
+	it("registers nothing when BullMQ is disabled (the in-process interval scheduler runs retention instead)", async () => {
 		const { scheduler, upsert } = schedulerWith(undefined);
 
 		await scheduler.onModuleInit();
@@ -199,8 +202,7 @@ describe("IdempotencyRetentionProcessor", () => {
 		const records = new InMemoryRetentionRecords([]);
 		const retention = new IdempotencyRetentionService(records);
 		vi.spyOn(retention, "purgeExpired").mockImplementation(purge);
-		const scheduler = new IdempotencyRetentionScheduler(createTestTypedConfig(), { upsertJobScheduler: vi.fn<Queue["upsertJobScheduler"]>() });
-		return new IdempotencyRetentionProcessor(scheduler, retention);
+		return new IdempotencyRetentionProcessor(retention);
 	}
 
 	afterEach(() => {
@@ -209,10 +211,10 @@ describe("IdempotencyRetentionProcessor", () => {
 
 	it("runs the purge inside the idempotency.retention system RLS scope and returns its summary", async () => {
 		const summary: IdempotencyRetentionSummary = { deleted: 3, batches: 1, durationMs: 4, stoppedBy: "drained", cutoffEpochMs: START_EPOCH_MS };
-		let operation = "";
+		let operation: string | null = null;
 		const processor = processorWith((): Promise<IdempotencyRetentionSummary> => {
 			const context = currentRlsContext();
-			operation = context.bypass ? context.systemOperation : "";
+			operation = context.bypass ? context.systemOperation : null;
 			return Promise.resolve(summary);
 		});
 
@@ -226,5 +228,56 @@ describe("IdempotencyRetentionProcessor", () => {
 
 		await expect(processor.process({ data: { batchSize: 1_000_000 } })).rejects.toThrow();
 		expect(purge).not.toHaveBeenCalled();
+	});
+});
+
+describe("IdempotencyRetentionIntervalScheduler (no Redis)", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.useRealTimers();
+	});
+
+	function intervalSchedulerWith(purge: () => Promise<IdempotencyRetentionSummary>): { scheduler: IdempotencyRetentionIntervalScheduler; registry: SchedulerRegistry } {
+		const retention = new IdempotencyRetentionService(new InMemoryRetentionRecords([]));
+		vi.spyOn(retention, "purgeExpired").mockImplementation(purge);
+		const registry = new SchedulerRegistry();
+		return { scheduler: new IdempotencyRetentionIntervalScheduler(registry, retention), registry };
+	}
+
+	it("registers ONE in-process interval so retention runs even without Redis, and removes it on shutdown", () => {
+		vi.spyOn(Logger.prototype, "log").mockImplementation((): void => undefined);
+		const { scheduler, registry } = intervalSchedulerWith(() =>
+			Promise.resolve({ deleted: 0, batches: 1, durationMs: 1, stoppedBy: "drained", cutoffEpochMs: START_EPOCH_MS }),
+		);
+
+		scheduler.onModuleInit();
+		expect(registry.doesExist("interval", IDEMPOTENCY_PURGE_SCHEDULER_ID)).toBe(true);
+
+		scheduler.onApplicationShutdown();
+		expect(registry.doesExist("interval", IDEMPOTENCY_PURGE_SCHEDULER_ID)).toBe(false);
+	});
+
+	it("fires a purge every interval inside the idempotency.retention system scope", async () => {
+		vi.useFakeTimers();
+		vi.spyOn(Logger.prototype, "log").mockImplementation((): void => undefined);
+		const operations: (string | null)[] = [];
+		const { scheduler } = intervalSchedulerWith((): Promise<IdempotencyRetentionSummary> => {
+			operations.push(currentRlsContext().systemOperation);
+			return Promise.resolve({ deleted: 0, batches: 1, durationMs: 1, stoppedBy: "drained", cutoffEpochMs: START_EPOCH_MS });
+		});
+
+		scheduler.onModuleInit();
+		await vi.advanceTimersByTimeAsync(IDEMPOTENCY_PURGE_INTERVAL_MS * 2);
+		scheduler.onApplicationShutdown();
+
+		expect(operations).toEqual([IDEMPOTENCY_RETENTION_OPERATION, IDEMPOTENCY_RETENTION_OPERATION]);
+	});
+
+	it("logs a failed run at error and keeps the schedule alive", async () => {
+		const error = vi.spyOn(Logger.prototype, "error").mockImplementation((): void => undefined);
+		const { scheduler } = intervalSchedulerWith(() => Promise.reject(new Error("connection lost")));
+
+		await expect(scheduler.runOnce()).resolves.toBeNull();
+		expect(error).toHaveBeenCalledWith({ event: "idempotency.retention_failed", error: "connection lost" });
 	});
 });

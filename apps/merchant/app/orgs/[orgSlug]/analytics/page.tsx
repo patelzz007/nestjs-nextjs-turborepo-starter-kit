@@ -4,7 +4,8 @@ import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import type { LocationScopedPrefetch } from "@/lib/org/location-prefetch";
 import { guardOrgPage } from "@/lib/org/org-page-guard";
 import { loadServerLocationScope } from "@/lib/org/server-location-scope";
-import type { MerchantAnalyticsResponse } from "@workspace/shared";
+import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
+import type { Envelope, MerchantAnalyticsResponse } from "@workspace/shared";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +24,11 @@ export default async function MerchantAnalyticsPage({ params }: MerchantAnalytic
 	// The same store filter the client's first render derives, so the data lands under its query key.
 	const locationId = toLocationQueryInput((await loadServerLocationScope(orgSlug)).effectiveLocationId);
 
-	let initialAnalytics: LocationScopedPrefetch<MerchantAnalyticsResponse> | undefined;
-	try {
-		const response = await server.organizations.analytics.query({ orgSlug, locationId });
-		initialAnalytics = { locationId, data: response.data };
-	} catch {
-		initialAnalytics = undefined;
-	}
+	// An access answer (401/403/404) leaves the data to the client query, which renders that state;
+	// any other failure is logged and rethrown to `error.tsx`.
+	const [result] = await Promise.allSettled([server.organizations.analytics.query({ orgSlug, locationId })]);
+	const analytics = prefetchedDataOrUndefined(result, "organizations.analytics");
+	const initialAnalytics: LocationScopedPrefetch<Envelope<MerchantAnalyticsResponse>> | undefined = analytics === undefined ? undefined : { locationId, data: analytics };
 
 	return <MerchantAnalyticsPageView orgSlug={orgSlug} initialAnalytics={initialAnalytics} />;
 }

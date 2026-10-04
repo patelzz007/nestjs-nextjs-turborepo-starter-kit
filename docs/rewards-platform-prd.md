@@ -57,10 +57,10 @@ Extend existing auth: **User**, **RBAC**, **RLS** patterns from hello-world. **M
 ### 3.2 Redemption (POS or Simulator)
 
 1. `POST /v1/redemptions/validate` — preview only + **audit log** (`merchant.scan_qr`).
-2. Merchant confirms → `POST /v1/redemptions/confirm` with `token`, `idempotencyKey`, headers `Authorization: Bearer <api_key>`, `X-Terminal-Id: <terminal_id>`.
-3. First confirm: `Claim` pending → redeemed, insert `Redemption`. Second confirm same token: **409**.
+2. After payment the POS checks out → `POST /v1/redemptions/checkout` with `idempotencyKey`, `billTotalMinor`, `currency` and the presented `codes`, headers `Authorization: Bearer <api_key>`, `X-Terminal-Id: <terminal_id>` (see `docs/pos-integration.md`).
+3. First checkout: each `Claim` pending → redeemed, one `RewardSale` + its `Redemption`s inserted. The same claim in another checkout: **409**; the same idempotency key + body replays the original result.
 4. **Strict idempotency:** same token + **different** `idempotencyKey` → **409** (sloppy integrator protection).
-5. **Checkout (preferred):** after payment the POS calls `POST /v1/redemptions/checkout` with the bill total (sen) and every code on the bill — all-or-nothing, idempotent, recorded as one sale (the source of sales analytics). See [POS integration](./pos-integration.md).
+5. **Checkout (preferred):** after payment the POS calls `POST /v1/redemptions/checkout` with the bill total (sen) and every code on the bill — all-or-nothing, idempotent, recorded as one sale (the source of sales analytics). See [POS integration](./technical/pos-integration.md).
 
 ### 3.3 Merchant publish
 
@@ -331,10 +331,10 @@ Headers: `Authorization: Bearer <api_key>`, `X-Terminal-Id: <terminal_id>`
 | Method | Path | Body |
 |--------|------|------|
 | POST | `/v1/redemptions/validate` | `{ "token" }` or `{ "backupCode" }` |
-| POST | `/v1/redemptions/confirm` | `{ "token" \| "backupCode", "idempotencyKey" }` |
+| POST | `/v1/redemptions/checkout` | `{ "idempotencyKey", "billTotalMinor", "currency", "codes": [{ "token" } \| { "backupCode" }] }` |
 | POST | `/v1/redemptions/checkout` | `{ "idempotencyKey", "billTotalMinor", "currency", "codes": [{ "token" \| "backupCode" }] }` |
 
-Full integrator guide (store resolution, errors, retries): [POS integration](./pos-integration.md).
+Full integrator guide (store resolution, errors, retries): [POS integration](./technical/pos-integration.md).
 
 **Validate:** read-only state except **audit log** write.
 

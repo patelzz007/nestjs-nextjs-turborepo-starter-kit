@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
 import { OrganizationAuditService } from "./organization-audit.service";
 
 /** Verified erasure saga — tombstone, per-system evidence, deletion certificate hook. */
@@ -11,14 +12,16 @@ export class OrganizationErasureService {
 	public constructor(
 		private readonly tenantTx: TenantTransactionService,
 		private readonly audit: OrganizationAuditService,
+		private readonly cedar: CedarPolicyEvaluatorService,
 	) {}
 
-	public async executeErasure(organizationId: string, actorUserId: string | null): Promise<void> {
+	/** Tombstones the organization; the audit row commits in the same transaction, attributed to the real actor. */
+	public async executeErasure(organizationId: string, actorUserId: string): Promise<void> {
+		const policyVersion = await this.cedar.getActivePolicyVersion(organizationId);
 		await this.tenantTx.withSystemOperation(
 			{
 				operation: "organization.erase",
 				reason: "Verified tenant erasure",
-				correlationId: `erase:${organizationId}`,
 				actorUserId,
 			},
 			async (tx) => {
@@ -30,17 +33,17 @@ export class OrganizationErasureService {
 						deletedAt: BigInt(Date.now()),
 					},
 				});
-				this.logger.log(`Erasure completed for organization ${organizationId}`);
+				await this.audit.recordInTx(tx, {
+					organizationId,
+					actorUserId,
+					policyVersion,
+					action: "organization.erased",
+					resourceType: "Organization",
+					resourceId: organizationId,
+					decision: "Allow",
+				});
 			},
 		);
-
-		await this.audit.record({
-			organizationId,
-			actorUserId,
-			action: "organization.erased",
-			resourceType: "Organization",
-			resourceId: organizationId,
-			decision: "Allow",
-		});
+		this.logger.log(`Erasure completed for organization ${organizationId}`);
 	}
 }

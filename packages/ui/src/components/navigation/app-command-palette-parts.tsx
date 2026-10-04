@@ -8,7 +8,7 @@ import { Button } from "@workspace/ui/components/form/button";
 import { CommandEmpty, CommandGroup, CommandItem } from "@workspace/ui/components/overlay/command";
 import { highlightText } from "@workspace/ui/lib/core/highlight-text";
 import { scopeConfig } from "@workspace/ui/lib/palette/search";
-import { getDefaultIconColor, getItemColor, getSectionBadgeColor } from "@workspace/ui/lib/palette/styles";
+import { getDefaultIconColor, getItemColor, getSectionBadgeColor, PALETTE_MARK_CLASS } from "@workspace/ui/lib/palette/styles";
 import type { PaletteRecentSearch, PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
 import { cn } from "@workspace/ui/lib/core/utils";
 
@@ -18,12 +18,9 @@ export interface AppCommandPaletteQuickAction {
 	readonly description: string;
 	readonly icon: React.ComponentType<{ readonly className?: string }>;
 	readonly color: string;
-	readonly shortcut?: string;
 	readonly keywords?: readonly string[];
 	readonly run: () => void;
 }
-
-export const PALETTE_MARK_CLASS = "rounded-sm bg-amber-200/60 px-0.5 font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
 
 // ── Search Input ────────────────────────────────────────────────────────────
 
@@ -51,7 +48,7 @@ export function AppCommandPaletteSearchInput({
 	return (
 		<div className="px-4 pt-3 pb-2">
 			<div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3.5 py-2.5 shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10">
-				<Search className="size-4 shrink-0 text-muted-foreground/50 dark:text-muted-foreground/60" />
+				<Search className="size-4 shrink-0 text-muted-foreground" />
 
 				{/* Scope badge */}
 				{showScopeBadge ? (
@@ -72,14 +69,12 @@ export function AppCommandPaletteSearchInput({
 					placeholder={placeholder}
 					value={searchText}
 					onValueChange={onSearchChange}
-					className="flex-1 bg-transparent text-sm text-foreground outline-hidden placeholder:text-muted-foreground/50 dark:placeholder:text-muted-foreground/40"
+					className="flex-1 bg-transparent text-sm text-foreground outline-hidden placeholder:text-muted-foreground"
 				/>
 
 				{/* Shortcut hint */}
 				{!isSearching ? (
-					<kbd className="hidden h-5 items-center gap-0.5 rounded-md bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground/50 sm:inline-flex dark:text-muted-foreground/60">
-						⌘K
-					</kbd>
+					<kbd className="hidden h-5 items-center gap-0.5 rounded-md bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">⌘K</kbd>
 				) : null}
 			</div>
 		</div>
@@ -99,8 +94,8 @@ export function AppCommandPalettePinnedSection({ pinnedItems, showDivider, rende
 	return (
 		<div className="animate-in pt-1 duration-300 fill-mode-both fade-in slide-in-from-bottom-1">
 			<div className="flex items-center gap-1.5 px-4 py-1.5">
-				<Pin className="size-3 text-muted-foreground/40" />
-				<span className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase dark:text-muted-foreground/60">Pinned</span>
+				<Pin className="size-3 text-muted-foreground" />
+				<span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Pinned</span>
 			</div>
 			<div className="flex flex-wrap gap-1.5 px-4 pb-1">
 				{pinnedItems.map((pinned) => (
@@ -111,7 +106,7 @@ export function AppCommandPalettePinnedSection({ pinnedItems, showDivider, rende
 						size="xs"
 						data-url={pinned.url}
 						onClick={onSelectChip}
-						className="gap-1.5 rounded-lg border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground/80 hover:border-border hover:bg-muted hover:text-foreground dark:text-muted-foreground/70">
+						className="gap-1.5 rounded-lg border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground">
 						{renderIcon(pinned.icon, "size-3")}
 						<span className="max-w-28 truncate">{pinned.title}</span>
 					</Button>
@@ -139,8 +134,8 @@ export function AppCommandPaletteRecentSection({ recentSearches, showDivider, re
 	return (
 		<div className="animate-in pt-1 duration-300 fill-mode-both fade-in slide-in-from-bottom-1">
 			<div className="flex items-center gap-1.5 px-4 py-1.5">
-				<Clock className="size-3 text-muted-foreground/40" />
-				<span className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase dark:text-muted-foreground/60">Recent</span>
+				<Clock className="size-3 text-muted-foreground" />
+				<span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Recent</span>
 			</div>
 			<div className="flex flex-wrap gap-1.5 px-4 pb-1">
 				{recentSearches.map((recent) => (
@@ -151,7 +146,7 @@ export function AppCommandPaletteRecentSection({ recentSearches, showDivider, re
 						size="xs"
 						data-url={recent.url}
 						onClick={onSelectChip}
-						className="gap-1.5 rounded-lg border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground/80 hover:border-border hover:bg-muted hover:text-foreground dark:text-muted-foreground/70">
+						className="gap-1.5 rounded-lg border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground">
 						{renderIcon(recent.icon, "size-3")}
 						<span className="max-w-28 truncate">{recent.title}</span>
 					</Button>
@@ -186,15 +181,12 @@ export function AppCommandPaletteQuickActionsSection({
 	return (
 		<CommandGroup>
 			<div className="flex items-center gap-1.5 px-4 py-2">
-				<Zap className="size-3 text-muted-foreground/40" />
-				<span className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase dark:text-muted-foreground/60">
-					{scope === "commands" ? "Commands" : "Quick Actions"}
-				</span>
+				<Zap className="size-3 text-muted-foreground" />
+				<span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">{scope === "commands" ? "Commands" : "Quick Actions"}</span>
 			</div>
 
 			{actions.map((action) => {
 				const Icon = action.icon;
-				const shortcut = action.shortcut;
 				return (
 					<CommandItem
 						key={action.id}
@@ -207,16 +199,11 @@ export function AppCommandPaletteQuickActionsSection({
 							</div>
 							<div>
 								<div className="text-sm leading-tight font-medium">{isSearching ? <>{highlightText(action.title, effectiveQuery, PALETTE_MARK_CLASS)}</> : action.title}</div>
-								<div className="mt-0.5 text-xs text-muted-foreground/60">
+								<div className="mt-0.5 text-xs text-muted-foreground">
 									{isSearching ? <>{highlightText(action.description, effectiveQuery, PALETTE_MARK_CLASS)}</> : action.description}
 								</div>
 							</div>
 						</div>
-						{shortcut !== undefined ? (
-							<kbd className="ml-3 inline-flex h-5 items-center rounded-md bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">
-								{shortcut}
-							</kbd>
-						) : null}
 					</CommandItem>
 				);
 			})}
@@ -255,8 +242,8 @@ export function AppCommandPaletteNavigationSection({
 		<div className="pt-0.5 pb-1">
 			{!isSearching && scope === "all" ? (
 				<div className="flex items-center gap-1.5 px-4 py-2">
-					<FileText className="size-3 text-muted-foreground/40" />
-					<span className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase dark:text-muted-foreground/60">Pages</span>
+					<FileText className="size-3 text-muted-foreground" />
+					<span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Pages</span>
 				</div>
 			) : null}
 
@@ -275,8 +262,8 @@ export function AppCommandPaletteNavigationSection({
 							className="h-auto justify-between gap-2 px-4 py-2 text-left"
 							aria-expanded={!isCollapsed}
 							aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${section}`}>
-							<span className="text-xs font-semibold tracking-wider text-muted-foreground/70 uppercase">{section}</span>
-							<ChevronDown className={cn("size-3 text-muted-foreground/50 transition-transform duration-150", isCollapsed && "-rotate-90")} />
+							<span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{section}</span>
+							<ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isCollapsed && "-rotate-90")} />
 						</Button>
 						<div style={{ gridTemplateRows: isCollapsed ? "0fr" : "1fr" }} className="grid transition-all duration-200 ease-out">
 							<div className="min-h-0 overflow-hidden">
@@ -306,7 +293,7 @@ export function AppCommandPaletteNavigationSection({
 														{item.breadcrumb.length > 1 ? (
 															<div className="mt-0.5 flex items-center gap-1">
 																{item.breadcrumb.slice(0, -1).map((crumb, i) => (
-																	<span key={`${crumb}-${String(i)}`} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/40">
+																	<span key={`${crumb}-${String(i)}`} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
 																		<span className="max-w-14 truncate">
 																			<>{highlightText(crumb, effectiveQuery, PALETTE_MARK_CLASS)}</>
 																		</span>
@@ -327,12 +314,11 @@ export function AppCommandPaletteNavigationSection({
 														onClick={onTogglePin}
 														className={cn("size-5 opacity-0 transition-all group-hover/command-item:opacity-100 data-selected:opacity-100", isPinned && "opacity-100")}
 														aria-label={isPinned ? `Unpin ${item.title}` : `Pin ${item.title}`}>
-														<Pin className={cn("size-3 transition-colors", isPinned ? "text-primary" : "text-muted-foreground/40")} />
+														<Pin className={cn("size-3 transition-colors", isPinned ? "text-primary" : "text-muted-foreground")} />
 													</Button>
 
 													{/* Section badge */}
-													<span
-														className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-medium tracking-wider uppercase", getSectionBadgeColor(section))}>
+													<span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-medium tracking-wider uppercase", getSectionBadgeColor())}>
 														{section}
 													</span>
 												</div>
@@ -343,7 +329,7 @@ export function AppCommandPaletteNavigationSection({
 							</div>
 						</div>
 						{isCollapsed && items.length > 0 ? (
-							<div className="px-4 py-2 text-[10px] text-muted-foreground/40 italic">
+							<div className="px-4 py-2 text-[10px] text-muted-foreground italic">
 								<hr className="mb-2 h-px bg-linear-to-r from-transparent via-muted-foreground/10 to-transparent" />
 								{items.length} item{items.length !== 1 ? "s" : ""} hidden
 							</div>
@@ -366,11 +352,11 @@ export function AppCommandPaletteEmptyState({ onClearSearch }: AppCommandPalette
 		<CommandEmpty>
 			<div className="flex flex-col items-center gap-4 py-10">
 				<div className="flex size-14 items-center justify-center rounded-2xl bg-muted/60">
-					<SearchX className="size-6 text-muted-foreground/40" />
+					<SearchX className="size-6 text-muted-foreground" />
 				</div>
 				<div className="max-w-60 text-center">
 					<p className="text-sm font-medium text-foreground">No results found</p>
-					<p className="mt-1 text-xs leading-relaxed text-muted-foreground/60">
+					<p className="mt-1 text-xs leading-relaxed text-muted-foreground">
 						Try adjusting your search terms or{" "}
 						<Button type="button" variant="link" size="sm" onClick={onClearSearch} className="h-auto p-0 text-xs underline underline-offset-2 hover:no-underline">
 							clear the filter
@@ -395,7 +381,7 @@ export function AppCommandPaletteSuggestion({ query, suggestion, onSelectSuggest
 	return (
 		<div className="flex flex-col items-center gap-3 py-10">
 			<div className="flex size-14 items-center justify-center rounded-2xl bg-muted/60">
-				<SearchX className="size-6 text-muted-foreground/40" />
+				<SearchX className="size-6 text-muted-foreground" />
 			</div>
 			<div className="max-w-64 text-center">
 				<p className="text-sm font-medium text-foreground">No results for &ldquo;{query}&rdquo;</p>
@@ -418,31 +404,23 @@ export function AppCommandPaletteSuggestion({ query, suggestion, onSelectSuggest
 export function AppCommandPaletteFooter(): React.JSX.Element {
 	return (
 		<div className="flex items-center justify-center gap-5 border-t border-border/40 bg-muted/30 px-4 py-2.5">
-			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 dark:text-muted-foreground/60">
-				<kbd className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">
-					↑↓
-				</kbd>
+			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+				<kbd className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground">↑↓</kbd>
 				<span>navigate</span>
 			</span>
-			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 dark:text-muted-foreground/60">
-				<kbd className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">
-					↵
-				</kbd>
+			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+				<kbd className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground">↵</kbd>
 				<span>open</span>
 			</span>
-			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 dark:text-muted-foreground/60">
-				<kbd className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">
-					esc
-				</kbd>
+			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+				<kbd className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground">esc</kbd>
 				<span>close</span>
 			</span>
 			<span className="mx-1 h-3 w-px bg-muted-foreground/10 dark:bg-muted-foreground/20" />
-			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 dark:text-muted-foreground/50">
-				<kbd className="inline-flex h-4 items-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">
-					{">"}
-				</kbd>
-				<kbd className="inline-flex h-4 items-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">/</kbd>
-				<kbd className="inline-flex h-4 items-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground/50 dark:text-muted-foreground/60">#</kbd>
+			<span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+				<kbd className="inline-flex h-4 items-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground">{">"}</kbd>
+				<kbd className="inline-flex h-4 items-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground">/</kbd>
+				<kbd className="inline-flex h-4 items-center rounded-md bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground">#</kbd>
 				<span>prefix</span>
 			</span>
 		</div>

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, getDefaultNormalizer, render, screen, within } from "@testing-library/react";
-import type { UserSpendingSummary } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type UserSpendingSummary } from "@workspace/shared";
 import { formatMinorUnits } from "@workspace/ui/lib/format/money";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SpendingSection } from "@/components/rewardhub/shared/spending-section";
 import { toSpendingSectionState } from "@/lib/rewards/spending-insights";
 import { ROUTES } from "@/lib/routes";
+
+const LOCALE = PLATFORM_DISPLAY_REGION.locale;
 
 /** Keep Intl's no-break space after "RM" intact when matching formatted amounts. */
 const KEEP_SPACES = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
@@ -53,7 +55,7 @@ afterEach((): void => {
 
 describe("SpendingSection", () => {
 	it("is labelled by its heading and busy while loading, without breakdown lists", () => {
-		render(<SpendingSection state={toSpendingSectionState(undefined)} />);
+		render(<SpendingSection state={toSpendingSectionState(undefined, LOCALE)} />);
 
 		const section = screen.getByRole("region", { name: "Your spending" });
 		expect(section.getAttribute("aria-busy")).toBe("true");
@@ -66,18 +68,19 @@ describe("SpendingSection", () => {
 			<SpendingSection
 				state={toSpendingSectionState(
 					buildSpending({ totalSpentMinor: { value: 0, changePercent: null }, visits: { value: 0, changePercent: null }, byMerchant: [], byCategory: [] }),
+					LOCALE,
 				)}
 			/>,
 		);
 
-		expect(screen.getByText(formatMinorUnits(0, "MYR"), KEEP_SPACES)).toBeDefined();
+		expect(screen.getByText(formatMinorUnits(0, "MYR", LOCALE), KEEP_SPACES)).toBeDefined();
 		expect(screen.getByText("Spending shows up after you redeem a reward at a participating shop.")).toBeDefined();
 		expect(screen.getByRole("link", { name: "Browse rewards" }).getAttribute("href")).toBe(ROUTES.rewardHub.browse);
 		expect(screen.queryByRole("list", { name: "Shops ranked by your spending" })).toBeNull();
 	});
 
 	it("shows total spent and visits with their change vs the previous period", () => {
-		render(<SpendingSection state={toSpendingSectionState(buildSpending())} />);
+		render(<SpendingSection state={toSpendingSectionState(buildSpending(), LOCALE)} />);
 
 		expect(screen.getByText("Total spent")).toBeDefined();
 		expect(screen.getByText("Shop visits")).toBeDefined();
@@ -86,14 +89,14 @@ describe("SpendingSection", () => {
 	});
 
 	it("ranks the shops with amount, visits and share of spend stated as text", () => {
-		render(<SpendingSection state={toSpendingSectionState(buildSpending())} />);
+		render(<SpendingSection state={toSpendingSectionState(buildSpending(), LOCALE)} />);
 
 		const items = within(screen.getByRole("list", { name: "Shops ranked by your spending" })).getAllByRole("listitem");
 		expect(items).toHaveLength(2);
 
 		const [top, second] = items;
 		expect(top?.textContent).toContain("Kopi Corner");
-		expect(top?.textContent).toContain(formatMinorUnits(7_500, "MYR"));
+		expect(top?.textContent).toContain(formatMinorUnits(7_500, "MYR", LOCALE));
 		expect(top?.textContent).toContain("Café · 3 visits");
 		expect(top?.textContent).toContain("75% of spend");
 		expect(second?.textContent).toContain("Nasi Lemak Hub");
@@ -101,16 +104,19 @@ describe("SpendingSection", () => {
 	});
 
 	it("does not announce the shop monogram on top of the shop name", () => {
-		render(<SpendingSection state={toSpendingSectionState(buildSpending())} />);
+		render(<SpendingSection state={toSpendingSectionState(buildSpending(), LOCALE)} />);
 
 		const list = screen.getByRole("list", { name: "Shops ranked by your spending" });
 		expect(list.querySelector('[data-slot="entity-avatar"]')?.getAttribute("aria-hidden")).toBe("true");
 	});
 
 	it("lists every category with its amount and share, so colour is never the only cue", () => {
-		render(<SpendingSection state={toSpendingSectionState(buildSpending())} />);
+		render(<SpendingSection state={toSpendingSectionState(buildSpending(), LOCALE)} />);
 
 		const items = within(screen.getByRole("list", { name: "Spending by category" })).getAllByRole("listitem");
-		expect(items.map((item) => item.textContent)).toEqual([`Café${formatMinorUnits(7_500, "MYR")}3 visits75%`, `Other${formatMinorUnits(2_500, "MYR")}1 visit25%`]);
+		expect(items.map((item) => item.textContent)).toEqual([
+			`Café${formatMinorUnits(7_500, "MYR", LOCALE)}3 visits75%`,
+			`Other${formatMinorUnits(2_500, "MYR", LOCALE)}1 visit25%`,
+		]);
 	});
 });

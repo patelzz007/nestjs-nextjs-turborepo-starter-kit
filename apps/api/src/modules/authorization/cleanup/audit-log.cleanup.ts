@@ -30,7 +30,7 @@ export class AuditLogCleanup {
 	 */
 	@Cron(CronExpression.EVERY_HOUR)
 	public async handleCleanup(): Promise<void> {
-		await runWithSystemRlsContext("scheduled.maintenance", async (): Promise<void> => this.runHandleCleanup());
+		await runWithSystemRlsContext("maintenance.audit_log_retention", async (): Promise<void> => this.runHandleCleanup());
 	}
 
 	private async runHandleCleanup(): Promise<void> {

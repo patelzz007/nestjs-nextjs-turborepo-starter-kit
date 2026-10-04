@@ -2,19 +2,28 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import type { Envelope, RewardResponse } from "@workspace/shared";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
-import { stubApiMeta } from "@workspace/client/lib/api/envelope";
-
 type MerchantRewardsListResponse = Envelope<readonly RewardResponse[]>;
 
 const rewardsListDef = apiRouter.organizations.rewards.list;
 
 function merchantRewardsListQueryKeyPrefix(orgSlug: string): QueryKey {
-	return rewardsListDef.queryKey({ orgSlug, locationId: undefined }).slice(0, -1);
+	return rewardsListDef.scopeKey({ orgSlug });
 }
 
-function readLocationIdFromRewardsListQueryKey(queryKey: QueryKey): string | undefined {
-	const locationId = queryKey[queryKey.length - 1];
-	return typeof locationId === "string" ? locationId : undefined;
+/** The store filter a cached rewards list was fetched for. */
+interface RewardsListLocationFilter {
+	/** `undefined` = every store. */
+	readonly locationId: string | undefined;
+}
+
+/**
+ * The store filter of a cached rewards list, read from the key's last segment —
+ * the def's parsed input (`[...scope, input]`). `null` when that segment is not
+ * a rewards-list input (the entry is then left untouched, never guessed at).
+ */
+function readLocationFilterFromRewardsListQueryKey(queryKey: QueryKey): RewardsListLocationFilter | null {
+	const parsed = rewardsListDef.inputSchema.safeParse(queryKey.at(-1));
+	return parsed.success ? { locationId: parsed.data.locationId } : null;
 }
 
 function rewardMatchesLocationFilter(reward: RewardResponse, locationId: string | undefined): boolean {
@@ -36,14 +45,10 @@ function upsertRewardInListResponse(
 ): MerchantRewardsListResponse | undefined {
 	const matchesFilter = rewardMatchesLocationFilter(reward, locationId);
 
+	// A list that has not loaded yet is left alone: it will read the reward from the API. Building an
+	// envelope here would fabricate a server answer (meta) the API never sent.
 	if (current === undefined) {
-		if (!matchesFilter) return undefined;
-
-		return {
-			success: true,
-			data: [reward],
-			meta: stubApiMeta(),
-		};
+		return undefined;
 	}
 
 	const withoutDuplicate = current.data.filter((row) => row.id !== reward.id);
@@ -63,8 +68,11 @@ export function upsertMerchantRewardInListCache(queryClient: QueryClient, orgSlu
 	const queries = queryClient.getQueriesData<MerchantRewardsListResponse>({ queryKey: merchantRewardsListQueryKeyPrefix(orgSlug) });
 
 	for (const [queryKey, current] of queries) {
-		const locationId = readLocationIdFromRewardsListQueryKey(queryKey);
-		const next = upsertRewardInListResponse(current, reward, locationId);
+		const filter = readLocationFilterFromRewardsListQueryKey(queryKey);
+		if (filter === null) {
+			continue;
+		}
+		const next = upsertRewardInListResponse(current, reward, filter.locationId);
 
 		if (next !== current) {
 			queryClient.setQueryData(queryKey, next);

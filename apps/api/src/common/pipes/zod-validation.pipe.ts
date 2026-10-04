@@ -17,15 +17,23 @@ import {
 /**
  * How a {@link ZodValidationPipe} validates:
  *
- * - `"ajv"` (default) — the schema compiled to JSON Schema + Ajv; returns the
- *   (coerced) input. Fastest; for schemas JSON Schema can fully express.
- * - `"zod"` — `schema.safeParse()`; returns the PARSED output. For schemas whose
- *   rules JSON Schema cannot express (preprocess, refinements) — the list-query
- *   grammar (`@ZodListQuery`) relies on this to normalize filters and to reject
- *   unknown sort fields with a message listing the allowed ones.
+ * - `"ajv+zod"` (default) — Ajv first (fast structural rejection and type
+ *   coercion of query-string / path values), then `schema.safeParse()` on the
+ *   coerced value; returns the PARSED output. Zod is the single runtime
+ *   contract, so the handler always receives exactly what the shared schema
+ *   produces: trims, lower-casing (canonical emails), defaults and refinements
+ *   (cross-field rules such as "exactly one of" or "reason required when
+ *   rejected") are never skipped.
+ * - `"zod"` — `schema.safeParse()` only. Used by `@ZodListQuery`, whose
+ *   bracket grammar is normalized by preprocess steps before any JSON-Schema
+ *   check could apply.
+ * - `"ajv"` — the JSON-Schema check alone, returning the coerced input. An
+ *   explicit opt-out for a hot path whose schema has no transforms, defaults
+ *   beyond JSON Schema, or refinements; never the default, because it would
+ *   silently skip any rule JSON Schema cannot express.
  */
 export interface ZodValidationPipeOptions {
-	readonly engine: "ajv" | "zod";
+	readonly engine: "ajv" | "zod" | "ajv+zod";
 }
 
 /**
@@ -62,7 +70,7 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 
 	constructor(
 		private readonly schema: ZodV4.ZodType,
-		private readonly options: ZodValidationPipeOptions = { engine: "ajv" },
+		private readonly options: ZodValidationPipeOptions = { engine: "ajv+zod" },
 	) {}
 
 	public transform(value: JsonValue): JsonValue {
@@ -72,7 +80,7 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 		const validator: ValidateFunction = this.getValidator();
 
 		if (validator(value)) {
-			return value;
+			return this.options.engine === "ajv+zod" ? this.parseWithZod(value) : value;
 		}
 
 		const validationErrors = validator.errors;

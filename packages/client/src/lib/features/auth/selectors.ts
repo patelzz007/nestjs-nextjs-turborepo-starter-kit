@@ -1,4 +1,4 @@
-import { SERVER_RENDERED_SESSION_EPOCH, type AuthSessionScope, type AuthSessionState, type SessionCheckState, type SignedOutReason } from "./state";
+import { SERVER_RENDERED_SESSION_EPOCH, type AuthSessionState, type SessionCheckState, type SignedOutReason } from "./state";
 
 export function selectAuthStatus(state: AuthSessionState): AuthSessionState["status"] {
 	return state.status;
@@ -22,11 +22,6 @@ export function selectIsSessionPending(state: AuthSessionState): boolean {
 /** Whether the latest session check reached a verdict, and if not, whether the tab retries by itself. */
 export function selectSessionCheck(state: AuthSessionState): SessionCheckState {
 	return state.check;
-}
-
-/** The session's scope while authenticated; `null` otherwise. */
-export function selectSessionScope(state: AuthSessionState): AuthSessionScope | null {
-	return state.status === "authenticated" ? state.scope : null;
 }
 
 export function selectSignedOutReason(state: AuthSessionState): SignedOutReason | null {
@@ -58,8 +53,4 @@ export function selectSessionEpoch(state: AuthSessionState): number {
  */
 export function selectIsServerRenderedSession(state: AuthSessionState): boolean {
 	return state.epoch === SERVER_RENDERED_SESSION_EPOCH;
-}
-
-export function isSameSessionScope(left: AuthSessionScope, right: AuthSessionScope): boolean {
-	return left.sessionScope === right.sessionScope && left.enrollmentReason === right.enrollmentReason;
 }

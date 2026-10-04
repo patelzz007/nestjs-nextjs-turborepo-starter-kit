@@ -47,8 +47,8 @@ const toastPositionSchema = z.enum(["bottom-right", "bottom-left", "bottom-cente
 const toastDataSchema = z.object({
 	/** 0–100 progress rendered as a thin bar at the toast's bottom edge (feature 12). */
 	progress: z.number().min(0).max(100).optional(),
-	/** Overrides the per-type default icon (feature 13). */
-	icon: z.custom<ReactNode>().optional(),
+	/** Overrides the per-type default icon (feature 13) — a rendered element, e.g. `<Gift />`; checked, not cast. */
+	icon: z.custom<React.ReactElement>((value): boolean => React.isValidElement(value)).optional(),
 });
 
 type ToastType = z.infer<typeof toastTypeSchema>;

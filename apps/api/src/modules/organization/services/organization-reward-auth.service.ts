@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { CapabilitySlug, OrganizationMembershipRole, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { CapabilitySlug, CedarAuthorizationDecision, OrganizationMembershipRole, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { epochMs, merchantRoleHasCapability, MerchantCapabilitySchema } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
 import { MERCHANT_CAPABILITY_CEDAR_ACTIONS } from "../constants/merchant-capability-cedar-actions";
+import { mapMembershipLocationScope } from "../utils/organization-membership-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 import { OrganizationContextService } from "./organization-context.service";
 
@@ -48,6 +49,11 @@ function requireRoleCapability(role: OrganizationMembershipRole, capability: Cap
 	}
 }
 
+/** The membership's location scope in the shape the Cedar principal carries. */
+function cedarLocationScope(scope: ReturnType<typeof mapMembershipLocationScope>): { readonly locationScope: string; readonly locationIds: readonly string[] } {
+	return { locationScope: scope.locationScopeType, locationIds: scope.locationIds };
+}
+
 @Injectable()
 export class OrganizationRewardAuthService {
 	public constructor(
@@ -61,9 +67,8 @@ export class OrganizationRewardAuthService {
 		const resolved = await this.organizationContext.resolveBySlug(userId, orgSlug);
 		const org = await this.tenantTx.withSystemOperation(
 			{
-				operation: "auth.pre_login",
+				operation: "organization.reward_hub.resolve_context",
 				reason: "Resolve organization reward hub context",
-				correlationId: `reward-org:${orgSlug}`,
 				actorUserId: userId,
 			},
 			async (tx) =>
@@ -121,27 +126,41 @@ export class OrganizationRewardAuthService {
 		resourceId: string,
 		membershipRole: OrganizationMembershipRole,
 	): Promise<void> {
-		const decision = await this.cedar.evaluate({
-			organizationId,
-			principal: `User::"${userId}"`,
-			action: `Action::"${action}"`,
-			resource: `${resourceType}::"${resourceId}"`,
-			membershipRole,
-			locationScopeType: "ALL_LOCATIONS",
-			locationIds: [],
-		});
+		const policyVersion = await this.cedar.getActivePolicyVersion(organizationId);
+		const decision = await this.tenantTx.withTenantTransaction(
+			{ userId, organizationId, purpose: `authorize.${action}`, policyVersion },
+			async (tx): Promise<CedarAuthorizationDecision["decision"]> => {
+				// The member's REAL location scope (read in the same tenant session
+				// the decision is audited in) — never a hard-coded ALL_LOCATIONS.
+				// No live membership → no stores and an explicit Deny.
+				const membership = await tx.organizationMembership.findFirst({
+					where: { organizationId, userId, status: "ACTIVE", isDeleted: false },
+					include: { locationScopes: true },
+				});
+				const evaluated: CedarAuthorizationDecision | null =
+					membership === null
+						? null
+						: await this.cedar.evaluate({
+								organizationId,
+								principal: { userId, role: membershipRole, ...cedarLocationScope(mapMembershipLocationScope(membership)) },
+								action,
+							});
+				const outcome: CedarAuthorizationDecision["decision"] = evaluated?.decision ?? "Deny";
 
-		await this.audit.record({
-			organizationId,
-			actorUserId: userId,
-			action: `authorize.${action}`,
-			resourceType,
-			resourceId,
-			decision: decision.decision,
-			policyVersion: decision.policyVersion,
-		});
+				await this.audit.recordInTx(tx, {
+					organizationId,
+					actorUserId: userId,
+					action: `authorize.${action}`,
+					resourceType,
+					resourceId,
+					decision: outcome,
+					policyVersion: evaluated?.policyVersion ?? policyVersion,
+				});
+				return outcome;
+			},
+		);
 
-		if (decision.decision !== "Allow") {
+		if (decision !== "Allow") {
 			throw new ForbiddenException({
 				message: "Insufficient organization permissions",
 				error: "ORGANIZATION_ACTION_FORBIDDEN",
@@ -153,9 +172,8 @@ export class OrganizationRewardAuthService {
 	public async listMembershipsForUser(userId: string): Promise<OrganizationRewardMembershipResponse[]> {
 		const rows = await this.tenantTx.withSystemOperation(
 			{
-				operation: "auth.pre_login",
+				operation: "organization.reward_hub.list_memberships",
 				reason: "List organization reward hub memberships",
-				correlationId: `reward-memberships:${userId}`,
 				actorUserId: userId,
 			},
 			async (tx) =>

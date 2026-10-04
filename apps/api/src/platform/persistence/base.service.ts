@@ -36,13 +36,13 @@ export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends Pagi
 		return this.repository.create(input);
 	}
 
-	public async update(id: string, input: TUpdate, expectedVersion?: number): Promise<TEntity> {
-		await this.getById(id);
-		return this.repository.update(id, input, expectedVersion);
+	/** Conditional, race-safe update — the repository answers 404 (gone) or 409 (stale version) itself. */
+	public async update(id: string, input: TUpdate): Promise<TEntity> {
+		return this.repository.update(id, input);
 	}
 
+	/** Conditional, race-safe delete — the repository answers 404 when the row is missing or already deleted. */
 	public async delete(id: string): Promise<void> {
-		await this.getById(id);
 		await this.repository.delete(id);
 	}
 
@@ -50,11 +50,9 @@ export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends Pagi
 		return this.repository.createMany(inputs);
 	}
 
+	/** All-or-nothing bulk delete in one transaction; any missing id fails the batch with a 404. */
 	public async deleteMany(ids: readonly string[]): Promise<BulkDeleteResult> {
-		for (const id of ids) {
-			await this.getById(id);
-		}
-		const deletedCount = await this.repository.deleteMany(ids);
+		const deletedCount: number = await this.repository.deleteMany(ids);
 		return { deletedCount };
 	}
 

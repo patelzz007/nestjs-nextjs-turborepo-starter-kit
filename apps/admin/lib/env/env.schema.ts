@@ -4,9 +4,9 @@
 // Pure zod schemas (no `process.env` access) so they can be unit-tested in
 // isolation. `env.client.ts`, `env.server.ts` and `env.runtime.ts` (the
 // NEXT_RUNTIME check) are the only modules that read `process.env`; see
-// docs/configuration.md.
+// docs/technical/configuration/frontend.md.
 
-import { BooleanFlagEnvSchema, createPublicEnvSchema, HttpUrlEnvSchema, NextAppServerEnvSchema, OptionalIntervalMsEnvSchema } from "@workspace/shared";
+import { createPublicEnvSchema, HttpUrlEnvSchema, NextAppServerEnvSchema, OptionalIntervalMsEnvSchema } from "@workspace/shared";
 import type { z } from "zod";
 
 /** Public (browser-visible) config. Every key must be `NEXT_PUBLIC_*`. */
@@ -19,8 +19,6 @@ export const AdminClientEnvSchema = createPublicEnvSchema({
 	NEXT_PUBLIC_WEB_URL: HttpUrlEnvSchema,
 	/** Merchant portal origin (impersonation banner link). */
 	NEXT_PUBLIC_MERCHANT_URL: HttpUrlEnvSchema,
-	/** Renders the one-click demo account on the login page. Off unless explicitly `"true"`. */
-	NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS: BooleanFlagEnvSchema,
 	/**
 	 * Session-status badge steady-poll interval (ms). Unset / `0` → no steady
 	 * polling (`null`); the badge still fetches on mount and on tab return.

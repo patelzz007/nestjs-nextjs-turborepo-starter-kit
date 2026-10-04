@@ -20,11 +20,7 @@ export function AdminClientAuthWrapper({ children }: AdminClientAuthWrapperProps
 	const revalidateSessionEnabled = !isAdminAuthPath(pathname);
 
 	return (
-		<ClientAuthWrapper
-			cookieNames={{ accessToken: "adminAccessToken", refreshToken: "adminRefreshToken" }}
-			clientType="admin"
-			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
-			revalidateSessionEnabled={revalidateSessionEnabled}>
+		<ClientAuthWrapper clientType="admin" shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled}>
 			{children}
 		</ClientAuthWrapper>
 	);

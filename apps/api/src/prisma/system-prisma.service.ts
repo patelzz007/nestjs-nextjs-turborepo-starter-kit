@@ -1,9 +1,28 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { Pool } from "pg";
+import { Pool, type PoolConfig } from "pg";
 
 import { TypedConfigService } from "../config/typed-config.service";
+import { DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
+
+/**
+ * Pool settings for the system client — the same validated limits as the
+ * request pool (`DB_POOL_MAX`, `DB_IDLE_TIMEOUT_MS`, exit-on-idle outside
+ * production) plus a bounded connect timeout, so a dead database fails a
+ * system operation fast instead of hanging it, and the pool never grows
+ * without limit. Note: the two pools are sized independently, so the API can
+ * hold up to 2 × `DB_POOL_MAX` connections in total.
+ */
+export function buildSystemPoolConfig(config: TypedConfigService): PoolConfig {
+	return {
+		connectionString: config.databaseUrl,
+		max: config.databasePoolMax,
+		idleTimeoutMillis: config.databaseIdleTimeoutMs,
+		allowExitOnIdle: config.databaseAllowExitOnIdle,
+		connectionTimeoutMillis: DATABASE_CONNECT_TIMEOUT_MS,
+	};
+}
 
 /**
  * Dedicated Prisma client for system-level operations (migrations, initialization, etc.).
@@ -28,7 +47,7 @@ export class SystemPrismaService extends PrismaClient<Prisma.PrismaClientOptions
 	private readonly pool: Pool;
 
 	public constructor(config: TypedConfigService) {
-		const pool = new Pool({ connectionString: config.databaseUrl });
+		const pool = new Pool(buildSystemPoolConfig(config));
 		const adapter = new PrismaPg(pool);
 
 		const isDebug: boolean = config.isDebugLogging;

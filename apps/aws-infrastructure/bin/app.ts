@@ -13,7 +13,7 @@ const account: string | undefined = process.env.CDK_DEFAULT_ACCOUNT;
 new StoragePlatformStack(app, `StoragePlatform-${environmentName}`, {
 	env: account !== undefined ? { account, region } : { region },
 	environmentName,
-	description: `Private/public S3 buckets, CloudFront, processing queues, and scanners for ${environmentName}`,
+	description: `Private/public S3 buckets, CloudFront and the API IAM role for ${environmentName}`,
 });
 
 app.synth();

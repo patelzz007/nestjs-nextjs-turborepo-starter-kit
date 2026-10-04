@@ -8,6 +8,13 @@
 		},
 		"typecheck": {
 			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/**", "$TURBO_ROOT$/blog/**"]
+		},
+		"capture:api-samples": {
+			"cache": false,
+			"passThroughEnv": ["API_BASE_URL", "API_LOG_FILE", "SEED_LOG_FILE", "CAPTURE_RESEND_WEBHOOK_SECRET", "CAPTURE_STORAGE_CALLBACK_SECRET"]
+		},
+		"test": {
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/generated/**", "$TURBO_ROOT$/docs/technical/api-reference/**", "$TURBO_ROOT$/apps/api/src/**/*.controller.ts"]
 		}
 	}
 }

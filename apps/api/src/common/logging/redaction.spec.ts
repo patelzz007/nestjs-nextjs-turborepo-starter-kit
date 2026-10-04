@@ -26,6 +26,8 @@ describe("isSensitiveFieldName", () => {
 		expect(isSensitiveFieldName("stripeApiKey")).toBe(true);
 		expect(isSensitiveFieldName("userPassword")).toBe(true);
 		expect(isSensitiveFieldName("emailOtp")).toBe(true);
+		expect(isSensitiveFieldName("terminalPairingCode")).toBe(true);
+		expect(isSensitiveFieldName("pairing_code")).toBe(true);
 	});
 
 	it("does not redact ordinary fields that merely contain a secret word", () => {

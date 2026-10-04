@@ -79,14 +79,20 @@ type ExpectedAccess =
 	| { readonly kind: "public" }
 	| { readonly kind: "open" }
 	| { readonly kind: "super-admin" }
-	| { readonly kind: "permissions"; readonly permissions: readonly CapabilitySlug[] };
+	| { readonly kind: "permissions"; readonly permissions: readonly CapabilitySlug[]; readonly mode: "any" | "all" };
 
 const PUBLIC: ExpectedAccess = { kind: "public" };
 const OPEN: ExpectedAccess = { kind: "open" };
 const SUPER_ADMIN: ExpectedAccess = { kind: "super-admin" };
 
+/** EVERY one of `permissions` is needed to open the page. */
+function needsAll(...permissions: readonly CapabilitySlug[]): ExpectedAccess {
+	return { kind: "permissions", permissions, mode: "all" };
+}
+
+/** Any ONE of `permissions` opens the page (the rule's default mode). */
 function needs(...permissions: readonly CapabilitySlug[]): ExpectedAccess {
-	return { kind: "permissions", permissions };
+	return { kind: "permissions", permissions, mode: "any" };
 }
 
 /**
@@ -100,7 +106,7 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/auth/forgot-password", PUBLIC],
 	["/auth/reset-password", PUBLIC],
 	["/auth/verify-email", PUBLIC],
-	// Any signed-in admin: the overview, section redirects, demo billing, personal account.
+	// Any signed-in admin: the overview, section redirects, personal account.
 	["/", OPEN],
 	["/account", OPEN],
 	["/account/profile", OPEN],
@@ -110,7 +116,6 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/emails", OPEN],
 	["/rewards", OPEN],
 	["/settings", OPEN],
-	["/settings/billing", OPEN],
 	// @SuperAdminOnly API routes.
 	["/users", SUPER_ADMIN],
 	["/users/[id]", SUPER_ADMIN],
@@ -118,13 +123,13 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	// @RequirePermission API routes.
 	["/analytics/sales", needs(PERMISSION.ANALYTICS.READ)],
 	["/catalog/products", needs(PERMISSION.PRODUCT.LIST)],
-	["/catalog/products/new", needs(PERMISSION.PRODUCT.CREATE)],
+	["/catalog/products/new", needsAll(PERMISSION.PRODUCT.CREATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ)],
 	["/catalog/products/[id]", needs(PERMISSION.PRODUCT.READ)],
-	["/catalog/products/[id]/edit", needs(PERMISSION.PRODUCT.UPDATE)],
+	["/catalog/products/[id]/edit", needsAll(PERMISSION.PRODUCT.READ, PERMISSION.PRODUCT.UPDATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ)],
 	["/catalog/categories", needs(PERMISSION.SAMPLE_CATEGORY.LIST)],
 	["/catalog/categories/new", needs(PERMISSION.SAMPLE_CATEGORY.CREATE)],
 	["/catalog/categories/[id]", needs(PERMISSION.SAMPLE_CATEGORY.READ)],
-	["/catalog/categories/[id]/edit", needs(PERMISSION.SAMPLE_CATEGORY.UPDATE)],
+	["/catalog/categories/[id]/edit", needsAll(PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE)],
 	["/emails/templates", needs(PERMISSION.EMAIL.READ)],
 	["/emails/log", needs(PERMISSION.EMAIL.LIST)],
 	["/geography", needs(PERMISSION.GEO.READ)],
@@ -145,8 +150,17 @@ function describeRule(rule: RouteAuthorizationRule): ExpectedAccess {
 	if (isOpenRouteRule(rule) || rule.authorization === undefined) {
 		return OPEN;
 	}
-	return needs(...rule.authorization.permissions);
+	// The mode is part of the classification: an "all" rule where "any" was reviewed (or the reverse) must fail.
+	return { kind: "permissions", permissions: rule.authorization.permissions, mode: rule.authorization.mode ?? "any" };
 }
+
+describe("describeRule", () => {
+	it("tells an any-of rule from an all-of rule with the same permissions", () => {
+		const permissions = [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST];
+		expect(describeRule({ prefix: "/x", authorization: { permissions, mode: "all" } })).not.toEqual(needs(...permissions));
+		expect(describeRule({ prefix: "/x", authorization: { permissions } })).toEqual(needs(...permissions));
+	});
+});
 
 describe("every admin page has an explicit access rule (guard)", () => {
 	it("discovers the app's pages from disk", () => {
@@ -174,7 +188,7 @@ describe("every admin page has an explicit access rule (guard)", () => {
 			const isPublic = EXPECTED_PAGE_ACCESS.get(page.pattern)?.kind === "public";
 			expect(isPublic, page.pattern).toBe(!page.inPanel);
 			if (isPublic) {
-				expect(isPathWithin(AUTH_SECTION_PREFIX, page.pattern), page.pattern).toBe(true);
+				expect(isPathWithin(page.pattern, AUTH_SECTION_PREFIX), page.pattern).toBe(true);
 			}
 		}
 	});

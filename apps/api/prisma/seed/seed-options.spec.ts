@@ -5,7 +5,7 @@ import { DEFAULT_RANDOM_SEED, DEFAULT_SEED_SCENARIO, formatSeedUsage, parseSeedA
 
 describe("parseSeedArguments", () => {
 	it("defaults to the development scenario and the default seed", () => {
-		expect(parseSeedArguments([])).toEqual({ kind: "run", scenario: DEFAULT_SEED_SCENARIO, seed: DEFAULT_RANDOM_SEED });
+		expect(parseSeedArguments([])).toEqual({ kind: "run", scenario: DEFAULT_SEED_SCENARIO, seed: DEFAULT_RANDOM_SEED, allowDestructive: false });
 		expect(DEFAULT_SEED_SCENARIO).toBe("development");
 	});
 
@@ -14,12 +14,17 @@ describe("parseSeedArguments", () => {
 	});
 
 	it("parses space-separated and inline (=) values", () => {
-		expect(parseSeedArguments(["--scenario", "enterprise", "--seed", "123"])).toEqual({ kind: "run", scenario: "enterprise", seed: 123 });
-		expect(parseSeedArguments(["--scenario=enterprise", "--seed=123"])).toEqual({ kind: "run", scenario: "enterprise", seed: 123 });
+		expect(parseSeedArguments(["--scenario", "enterprise", "--seed", "123"])).toEqual({ kind: "run", scenario: "enterprise", seed: 123, allowDestructive: false });
+		expect(parseSeedArguments(["--scenario=enterprise", "--seed=123"])).toEqual({ kind: "run", scenario: "enterprise", seed: 123, allowDestructive: false });
 	});
 
 	it("ignores the bare -- separator that pnpm forwards", () => {
-		expect(parseSeedArguments(["--", "--scenario", "empty", "--seed", "7"])).toEqual({ kind: "run", scenario: "empty", seed: 7 });
+		expect(parseSeedArguments(["--", "--scenario", "empty", "--seed", "7"])).toEqual({ kind: "run", scenario: "empty", seed: 7, allowDestructive: false });
+	});
+
+	it("parses the --allow-destructive opt-in (a flag without a value)", () => {
+		expect(parseSeedArguments(["--allow-destructive", "--scenario", "empty"])).toMatchObject({ scenario: "empty", allowDestructive: true });
+		expect(() => parseSeedArguments(["--allow-destructive", "--allow-destructive"])).toThrow(SeedArgumentError);
 	});
 
 	it("accepts the seed boundaries 0 and MAX_RANDOM_SEED", () => {

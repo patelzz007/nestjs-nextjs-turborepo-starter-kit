@@ -2,11 +2,11 @@
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth, useAuthUser, useIsServerRenderedSession, type AuthUser } from "@workspace/client/lib/auth";
-import type { Envelope, UserResponse } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type Envelope, type UserResponse } from "@workspace/shared";
 
 import { useCallback, useState, type JSX } from "react";
 
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 
 import { Button } from "@workspace/ui/components/form/button";
 import { BreadcrumbTrail } from "@/components/breadcrumb-trail";
@@ -175,7 +175,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 								{user.createdAt !== undefined ? (
 									<div className="flex justify-between">
 										<span className="text-muted-foreground">Created</span>
-										<span>{format(new Date(user.createdAt), "MMM d, yyyy")}</span>
+										<span>{formatEpochMs(user.createdAt, "date", PLATFORM_DISPLAY_REGION)}</span>
 									</div>
 								) : null}
 								<div className="flex justify-between">

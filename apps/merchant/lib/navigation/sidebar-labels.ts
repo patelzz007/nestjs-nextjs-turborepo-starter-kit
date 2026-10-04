@@ -1,26 +1,19 @@
-/** Copy for the sidebar search, empty state, pinned section, and section reorder controls. */
-interface SidebarLabels {
-	readonly searchPlaceholder: string;
-	readonly searchAriaLabel: string;
-	readonly clearSearchAriaLabel: string;
-	readonly noResultsTitle: string;
-	readonly noResultsDescription: string;
-	readonly pinnedSectionTitle: string;
-	readonly moveSectionUpTitle: string;
-	readonly moveSectionDownTitle: string;
-	readonly moveSectionUpAriaLabel: (title: string) => string;
-	readonly moveSectionDownAriaLabel: (title: string) => string;
-}
+import type { PanelSidebarNavLabels } from "@workspace/ui/lib/sidebar/labels";
 
-export const MERCHANT_SIDEBAR_LABELS: SidebarLabels = {
+/** Copy for the merchant sidebar: landmarks, search, empty state, pinned section, reorder controls, route announcements. */
+export const MERCHANT_SIDEBAR_LABELS: PanelSidebarNavLabels = {
+	navigationAriaLabel: "Main navigation",
+	secondaryNavigationAriaLabel: "Account",
 	searchPlaceholder: "Search menu…",
 	searchAriaLabel: "Search sidebar menu",
 	clearSearchAriaLabel: "Clear sidebar search",
 	noResultsTitle: "No matching pages",
 	noResultsDescription: "Try a different search term",
 	pinnedSectionTitle: "Pinned",
-	moveSectionUpTitle: "Move section up",
-	moveSectionDownTitle: "Move section down",
-	moveSectionUpAriaLabel: (title: string): string => `Move ${title} section up`,
-	moveSectionDownAriaLabel: (title: string): string => `Move ${title} section down`,
+	moveSectionUpTitle: "Move section up (Alt+↑)",
+	moveSectionDownTitle: "Move section down (Alt+↓)",
+	moveSectionUpAriaLabel: (sectionTitle: string): string => `Move ${sectionTitle} section up`,
+	moveSectionDownAriaLabel: (sectionTitle: string): string => `Move ${sectionTitle} section down`,
+	itemUnavailableTitle: "This feature is currently unavailable",
+	routeAnnouncement: (pageLabel: string): string => `Navigated to ${pageLabel}`,
 };

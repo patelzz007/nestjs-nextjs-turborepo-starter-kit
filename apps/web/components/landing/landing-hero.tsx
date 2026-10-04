@@ -2,8 +2,9 @@ import { RewardCategoryVisual } from "@/components/rewardhub/detail/category-vis
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
 import type { FeaturedOffer } from "@/lib/rewards/featured-offers";
 import { buttonVariants } from "@workspace/ui/components/form/button";
+import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { format } from "date-fns";
+import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ArrowDown, ArrowRight, ChevronRight, Gift, Home, MapPin, QrCode, Search, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -180,7 +181,7 @@ function PhonePreview({ offers }: PhonePreviewProps): React.JSX.Element {
 											<span className="line-clamp-2 text-sm leading-snug font-semibold text-foreground">{offer.title}</span>
 											<span className="mt-0.5 flex min-w-0 gap-1 text-xs text-muted-foreground">
 												{offer.merchantName === undefined ? null : <span className="truncate">{offer.merchantName} ·</span>}
-												<span className="shrink-0">Until {format(new Date(offer.expiryDate), "d MMM")}</span>
+												<span className="shrink-0">Until {formatEpochMs(offer.expiryDate, "dayMonth", PLATFORM_DISPLAY_REGION)}</span>
 											</span>
 											<RewardInventoryBar compact remaining={offer.remaining} total={offer.total} className="mt-2" />
 										</span>

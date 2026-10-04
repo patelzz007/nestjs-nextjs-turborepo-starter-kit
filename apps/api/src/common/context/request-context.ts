@@ -20,7 +20,9 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { IncomingMessage } from "node:http";
 
 import { Injectable } from "@nestjs/common";
+import { nowEpochMs } from "@workspace/shared";
 
+import type { SystemOperation } from "../../prisma/system-operation.registry";
 import { correlationIdFor } from "./correlation-id";
 
 /** Server-verified tenant scope of the request. Absent ids were not requested or not proven. */
@@ -37,6 +39,22 @@ export interface RequestPrincipal {
 	readonly impersonatorId: string | undefined;
 }
 
+/**
+ * A machine caller authenticated by an API key (merchant POS keys,
+ * `@AllowApiKeyAuth()` routes). Bound by the API-key guards; mutually
+ * exclusive with a user principal in practice, but kept separate so the user
+ * principal's shape never changes.
+ */
+export interface RequestApiKeyPrincipal {
+	readonly apiKeyId: string;
+	/** The organization the key belongs to (server-verified by the key lookup). */
+	readonly organizationId: string;
+	/** The POS terminal the key acts for, when known. */
+	readonly terminalId: string | undefined;
+	/** The store the key itself is limited to (`null` = organization-wide) — the database store scope of the request. */
+	readonly locationId: string | null;
+}
+
 /** Everything the platform knows about the current request. Immutable snapshots. */
 export interface RequestContext {
 	/** One id per request: `X-Correlation-Id`, `meta.correlationId`, pino `correlationId`, outbox rows. */
@@ -46,7 +64,18 @@ export interface RequestContext {
 	readonly ip: string | undefined;
 	readonly userAgent: string | undefined;
 	readonly principal: RequestPrincipal | undefined;
+	readonly apiKey: RequestApiKeyPrincipal | undefined;
 	readonly tenant: RequestTenant;
+	/** Allowlisted system operations (RLS bypasses) used on behalf of this request, in first-use order, de-duplicated. */
+	readonly systemOperations: readonly SystemOperation[];
+	/** When the request arrived (epoch ms) — the audit entry's `occurredAt`. */
+	readonly receivedAtEpochMs: number;
+	/**
+	 * True once the handler appended this request's audit entry inside its own
+	 * transaction (`AuditTrailService.recordInTransaction`); the audit
+	 * interceptor then does not write a second success entry.
+	 */
+	readonly isAuditRecordedInTransaction: boolean;
 }
 
 /** Fields known at request start (before authentication). */
@@ -92,7 +121,11 @@ export class RequestContextService {
 			ip: seed.ip,
 			userAgent: seed.userAgent,
 			principal: undefined,
+			apiKey: undefined,
 			tenant: EMPTY_TENANT,
+			systemOperations: [],
+			receivedAtEpochMs: nowEpochMs(),
+			isAuditRecordedInTransaction: false,
 		};
 		return requestContextStorage.run({ current: context }, callback);
 	}
@@ -119,6 +152,27 @@ export class RequestContextService {
 	/** Records the authenticated principal (after AuthGuard). No-op outside a request. */
 	public bindPrincipal(principal: RequestPrincipal): void {
 		this.update((context: RequestContext): RequestContext => ({ ...context, principal }));
+	}
+
+	/** Records the API key that authenticated the request (API-key guards). No-op outside a request. */
+	public bindApiKey(apiKey: RequestApiKeyPrincipal): void {
+		this.update((context: RequestContext): RequestContext => ({ ...context, apiKey }));
+	}
+
+	/**
+	 * Records that a system operation bypassed RLS for this request, so the
+	 * request's audit entry names every bypass it caused. No-op outside a
+	 * request (background work is audited by the system-operation log line).
+	 */
+	public recordSystemOperation(operation: SystemOperation): void {
+		this.update((context: RequestContext): RequestContext =>
+			context.systemOperations.includes(operation) ? context : { ...context, systemOperations: [...context.systemOperations, operation] },
+		);
+	}
+
+	/** Marks the request's audit entry as written inside the handler's transaction. No-op outside a request. */
+	public markAuditRecordedInTransaction(): void {
+		this.update((context: RequestContext): RequestContext => ({ ...context, isAuditRecordedInTransaction: true }));
 	}
 
 	/** Records the server-verified tenant (after AuthorizationGuard). No-op outside a request. */

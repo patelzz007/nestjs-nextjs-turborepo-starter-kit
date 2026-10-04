@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { DataValue } from "@workspace/shared";
+import { epochMs, type DataValue } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import { stubApiMeta, successEnvelope } from "../../api/envelope";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
 import { AuthProvider, type AuthProviderProps } from "../../features/auth/facade";
 import { SESSION_CHECK_MAX_RETRIES, sessionCheckRetryDelayMs } from "./session-check";
 import { SessionCheckNotice } from "./session-check-notice";
@@ -14,10 +13,11 @@ import { SessionCheckNotice } from "./session-check-notice";
 const LOWEST_RANDOM = 0;
 const UNAVAILABLE_STATUS = 503;
 const SESSION_READ_REQUESTS = 2;
-const RETRY_DELAYS_MS: readonly number[] = Array.from({ length: SESSION_CHECK_MAX_RETRIES }, (_: unknown, index: number): number =>
+const RETRY_DELAYS_MS: readonly number[] = Array.from(Array(SESSION_CHECK_MAX_RETRIES).keys(), (index: number): number =>
 	sessionCheckRetryDelayMs(index + 1, (): number => LOWEST_RANDOM),
 );
 
+/** Answers are stamped with the (fake) time they are given, as the API's interceptor does — so seeded queries start fresh. */
 function jsonResponse(body: DataValue, status: number): Response {
 	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
@@ -31,14 +31,14 @@ const fetchMock = vi.fn<typeof fetch>((input: string | URL | Request): Promise<R
 		return Promise.resolve(jsonResponse({ success: false }, UNAVAILABLE_STATUS));
 	}
 	const data: DataValue = pathname.endsWith("/auth/permissions") ? sessionPermissionsFixture() : userFixture();
-	return Promise.resolve(jsonResponse(successEnvelope(data, stubApiMeta()), 200));
+	return Promise.resolve(jsonResponse(envelopeFixture(data, { correlationId: "corr-test", timestamp: epochMs(Date.now()) }), 200));
 });
 
-function renderNotice(options: Omit<AuthProviderProps, "children">): void {
+function renderNotice(options: Omit<AuthProviderProps, "children" | "clientType">): void {
 	const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	render(
 		<QueryClientProvider client={queryClient}>
-			<AuthProvider {...options}>
+			<AuthProvider clientType="web" {...options}>
 				<SessionCheckNotice />
 			</AuthProvider>
 		</QueryClientProvider>,

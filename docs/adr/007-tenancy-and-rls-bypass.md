@@ -34,7 +34,7 @@ Make **tenancy mode** and **RLS bypass** configurable via environment variables,
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `TENANCY_ENABLED` | `false` | `true` = multi-tenant mode |
-| `DEFAULT_ORGANIZATION_ID` | `default` | Fixed org in single-tenant; fallback when `x-organization-id` is absent |
+| `DEFAULT_ORGANIZATION_ID` | none (required in single-tenant mode) | Id (uuid) of the REAL organization a single-tenant deployment serves; verified to be a live row at boot (`DefaultOrganizationService`). Unused in multi-tenant mode |
 
 ### RLS bypass matrix
 
@@ -50,8 +50,8 @@ Make **tenancy mode** and **RLS bypass** configurable via environment variables,
 
 Every request gets `organizationId` in `RlsContext` (AsyncLocalStorage):
 
-- **Single-tenant:** always `DEFAULT_ORGANIZATION_ID`
-- **Multi-tenant:** `x-organization-id` header when present, else `DEFAULT_ORGANIZATION_ID`
+- **Single-tenant:** always `DEFAULT_ORGANIZATION_ID` (a real organization, verified at boot)
+- **Multi-tenant:** only the organization `AuthorizationGuard` verified for the request; with none bound the RLS scope has no organization (`null`) and tenant-scoped access fails closed — there is no fallback organization
 
 `RlsPool` sets `app.current_organization_id` on checkout. SQL helper: `app_current_organization_id()` in `prisma/rls.sql`.
 
@@ -76,7 +76,7 @@ Future table policies can use org id without changing the interceptor contract.
 
 ### Mitigations
 
-- Document bypass matrix in [Prisma §10](../prisma.md#10-row-level-security) and [Authorization](../authorization.md).
+- Document bypass matrix in [Prisma §10](../technical/security/database-security.md) and [Authorization](../technical/authorization/overview.md).
 - `@RlsBypass()` remains the explicit escape hatch for intentional cross-tenant work.
 - Super-admin identity (`isSuperAdmin`) still bypasses globally in both modes.
 
@@ -93,4 +93,4 @@ Future table policies can use org id without changing the interceptor contract.
 - `apps/api/src/common/interceptors/rls.interceptor.ts` — bypass rules
 - `apps/api/src/prisma/rls-pool.ts` — session variable stamping
 - `apps/api/prisma/rls.sql` — `app_current_organization_id()`
-- [Prisma & RLS — §10](../prisma.md#10-row-level-security)
+- [Prisma & RLS — §10](../technical/security/database-security.md)

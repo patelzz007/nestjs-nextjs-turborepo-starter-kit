@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 > [!WARNING]
 > **Superseded.** This page describes the authorization design *before* the authorization overhaul and is kept for history only.
-> The current, maintained documentation is **[Authorization System — Start Here](./authorization-system/overview.md)**.
+> The current, maintained documentation is **[Authorization System — Start Here](./technical/authorization/overview.md)**.
 
 # Authorization Context Middleware
 
@@ -353,5 +353,5 @@ const mockRequest = {
 
 ## See Also
 - [Authorization Guard Documentation](./authorization-kernel.md)
-- [@Authorize Decorator Documentation](./authorization-system/backend.md)
+- [@Authorize Decorator Documentation](./technical/authorization/backend.md)
 - [Authorization Kernel Architecture](./authorization-kernel.md)

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Post, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Post, Req, UnauthorizedException, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { LogoutAllResponse, LogoutResponse, RefreshResponse, RefreshResponseMessage, SessionListResponse } from "@workspace/shared";
@@ -10,11 +10,10 @@ import { SkipAuthThrottle } from "../auth/decorators/skip-auth-throttle.decorato
 import { Public } from "../auth/decorators/public.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { ZodResponse } from "../../common/decorators/zod-response.decorators";
-import { OptionalRefreshTokenGuard, RefreshTokenGuard } from "../auth/guards/refresh-token.guard";
+import { OptionalRefreshTokenGuard, readRefreshTokenCookie, RefreshTokenGuard } from "../auth/guards/refresh-token.guard";
 import { ClearAuthCookiesInterceptor } from "../auth/interceptors/clear-auth-cookies.interceptor";
 import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies.interceptor";
 import { extractClientInfo } from "../../common/utils/client-info";
-import { readFirstHeader } from "../../common/utils/http-headers";
 import type { RefreshTokenPayload } from "../auth/services/token.service";
 
 import { SessionsService } from "./sessions.service";
@@ -42,11 +41,16 @@ export class SessionsController {
 	public async refreshToken(@GetUser() user: RefreshTokenPayload, @Req() req: FastifyRequest): Promise<RefreshResponseMessage> {
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
 
-		// Extract the raw refresh token JWT from the app-specific cookie.
-		const clientType: string | undefined = readFirstHeader(req.headers["x-client-type"]);
-		const isAdmin: boolean = clientType === "admin";
-		const isMerchant: boolean = clientType === "merchant";
-		const rawRefreshToken: string = isAdmin ? (req.cookies.adminRefreshToken ?? "") : isMerchant ? (req.cookies.merchantRefreshToken ?? "") : (req.cookies.refreshToken ?? "");
+		// The raw refresh token JWT from the app-specific cookie. RefreshTokenGuard
+		// already required it; an absent cookie here is still rejected explicitly
+		// rather than compared as an empty string.
+		const rawRefreshToken: string | undefined = readRefreshTokenCookie(req);
+		if (rawRefreshToken === undefined) {
+			throw new UnauthorizedException({
+				message: "Refresh token not found",
+				error: "REFRESH_TOKEN_MISSING",
+			});
+		}
 
 		// The refresh token's jti (JWT ID) is used for direct DB lookup
 		const tokens: RefreshResponse = await this.sessionsService.refreshToken(user.sub, rawRefreshToken, user.jti, deviceInfo, ipAddress);
