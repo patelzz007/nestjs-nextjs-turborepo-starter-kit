@@ -520,6 +520,8 @@ export const apiRouter = {
 		create: defineMutation(apiContract.claims.create),
 		list: defineQuery(apiContract.claims.list, { scope: (): QueryKey => ["claims", "list"] }),
 		analytics: defineQuery(apiContract.claims.analytics, { scope: (): QueryKey => ["claims", "analytics"] }),
+		/** The customer's analytics dashboard (custom range + interval); keyed under the `analytics` scope. */
+		analyticsDashboard: defineQuery(apiContract.claims.analyticsDashboard, { scope: (): QueryKey => ["claims", "analytics", "dashboard"] }),
 		qr: defineQuery(apiContract.claims.qr, { scope: ({ claimId }: { readonly claimId: string }): QueryKey => ["claims", "qr", claimId] }),
 	},
 	rewardNotifications: {
@@ -584,6 +586,10 @@ export const apiRouter = {
 		},
 		redemptions: defineQuery(apiContract.organizations.redemptions, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "redemptions"] }),
 		analytics: defineQuery(apiContract.organizations.analytics, { scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "analytics"] }),
+		/** The merchant analytics dashboard (custom range + interval, breakdowns); the export is `apiDownloads.organizations.analyticsExport`. */
+		analyticsDashboard: defineQuery(apiContract.organizations.analyticsDashboard, {
+			scope: ({ orgSlug }: OrganizationScope): QueryKey => ["organization", orgSlug, "analytics", "dashboard"],
+		}),
 		locations: {
 			create: defineMutation(apiContract.organizations.locations.create),
 			update: defineMutation(apiContract.organizations.locations.update),
@@ -614,6 +620,8 @@ export const apiRouter = {
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite),
 		previewInviteEmail: defineMutation(apiContract.rewardsAdmin.previewInviteEmail),
 		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, { scope: (): QueryKey => ["rewards-admin", "analytics", "sales"] }),
+		/** The platform analytics dashboard; the export is `apiDownloads.rewardsAdmin.analyticsExport`. */
+		analyticsDashboard: defineQuery(apiContract.rewardsAdmin.analyticsDashboard, { scope: (): QueryKey => ["rewards-admin", "analytics", "dashboard"] }),
 		approveReward: defineMutation(apiContract.rewardsAdmin.approveReward),
 		rejectReward: defineMutation(apiContract.rewardsAdmin.rejectReward),
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb),

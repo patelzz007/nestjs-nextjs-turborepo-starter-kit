@@ -9,6 +9,7 @@ function toAppRouterPattern(destination: string): string {
 }
 
 const CURRENT_PATHS: ReadonlySet<string> = new Set<string>([
+	ROUTES.analytics.index,
 	ROUTES.users.list,
 	ROUTES.users.mfaRecovery,
 	ROUTES.account.security,

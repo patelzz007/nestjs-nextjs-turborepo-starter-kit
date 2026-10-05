@@ -302,6 +302,18 @@ function notCaptured(operationId, reason) {
 	samples[operationId] = { notCaptured: reason };
 }
 
+/** Days of the range the export samples cover (the 30 days before the capture run). */
+const EXPORT_SAMPLE_DAYS = 30;
+const EXPORT_SAMPLE_DAY_MS = 86_400_000;
+const EXPORT_SAMPLE_NOTE =
+	"The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.";
+
+/** `from` / `to` (epoch ms, as query strings) of the 30 days before now — exports require both. */
+function analyticsExportRange() {
+	const to = Date.now();
+	return { from: String(to - EXPORT_SAMPLE_DAYS * EXPORT_SAMPLE_DAY_MS), to: String(to) };
+}
+
 // ── Helpers: login, log scraping, TOTP, files ───────────────────────────────
 
 /** The credentials request every sign-in sends (`POST /auth/login`) for a seed account. */
@@ -905,6 +917,13 @@ async function captureMerchantAdmin(context) {
 	context.klDocumentId = documentId;
 	await capture("RewardsAdminLocationRequestsController_listLocationRequests", admin, { method: "GET", path: api("/admin/location-requests") });
 	await capture("RewardsAdminAnalyticsController_getSales", admin, { method: "GET", path: api("/admin/analytics/sales") });
+	await capture("RewardsAdminAnalyticsController_getDashboard", admin, { method: "GET", path: api("/admin/analytics/dashboard"), query: { interval: "week" } });
+	await capture(
+		"RewardsAdminAnalyticsController_exportReport",
+		admin,
+		{ method: "GET", path: api("/admin/analytics/export"), query: { ...analyticsExportRange(), format: "csv" } },
+		{ note: EXPORT_SAMPLE_NOTE },
+	);
 
 	const inviteBody = { email: "nyonya.house@melaka-rewards.demo", businessName: "Nyonya House Melaka", city: "MELAKA" };
 	await capture("RewardsAdminInvitesController_previewInviteEmail", admin, { method: "POST", path: api("/admin/invites/preview-email"), body: inviteBody });
@@ -1260,6 +1279,13 @@ async function capturePos(context) {
 
 	await capture("OrganizationRedemptionsController_listRedemptions", owner, { method: "GET", path: api(`/orgs/${slug}/redemptions`), query: { limit: "2" } });
 	await capture("OrganizationAnalyticsController_getAnalytics", owner, { method: "GET", path: api(`/orgs/${slug}/analytics`) });
+	await capture("OrganizationAnalyticsController_getDashboard", owner, { method: "GET", path: api(`/orgs/${slug}/analytics/dashboard`), query: { interval: "week" } });
+	await capture(
+		"OrganizationAnalyticsController_exportReport",
+		owner,
+		{ method: "GET", path: api(`/orgs/${slug}/analytics/export`), query: { ...analyticsExportRange(), format: "xlsx" } },
+		{ note: EXPORT_SAMPLE_NOTE },
+	);
 	await capture("OrganizationApiKeysController_listKeys", owner, { method: "GET", path: api(`/orgs/${slug}/api-keys`), query: { limit: "2" } });
 	const key = await capture("OrganizationApiKeysController_createKey", owner, {
 		method: "POST",
@@ -1271,6 +1297,7 @@ async function capturePos(context) {
 
 	const { customer } = context;
 	await capture("ConsumerClaimsController_getAnalytics", customer, { method: "GET", path: api("/claims/analytics") });
+	await capture("ConsumerClaimsController_getAnalyticsDashboard", customer, { method: "GET", path: api("/claims/analytics/dashboard"), query: { interval: "month" } });
 	await capture("RewardNotificationsController_listNotifications", customer, { method: "GET", path: api("/reward-notifications"), query: { limit: "2" } });
 	await capture("RewardNotificationsController_markRead", customer, { method: "POST", path: api("/reward-notifications/read"), body: { markAll: true } });
 }

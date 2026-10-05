@@ -1,8 +1,9 @@
-import { Controller, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Patch, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 
 import {
+	AdminAnalyticsDashboardSchema,
 	AdminKybUpdateSchema,
 	AdminSalesAnalyticsResponseSchema,
 	AdminOrganizationLocationCreateSchema,
@@ -23,19 +24,25 @@ import {
 	OrganizationLocationResponseSchema,
 } from "@workspace/shared";
 import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
-import { ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
+import { ZodFileResponse, ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
 import { RewardsEmptyBodyDto } from "../dtos/rewards.dto";
-import type { MerchantKybDocumentDownloadResponse } from "@workspace/shared";
+import type { AdminAnalyticsDashboard, MerchantKybDocumentDownloadResponse } from "@workspace/shared";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { OrganizationLocationService } from "../../organization/services/organization-location.service";
 import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
 import { RewardsAdminService } from "../services/rewards-admin.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
+import { AnalyticsDashboardService } from "../analytics/analytics-dashboard.service";
+import { ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION, ANALYTICS_EXPORT_OPERATION_DESCRIPTION } from "../analytics/analytics-api-docs";
+import { AnalyticsExportRateLimitGuard } from "../analytics/analytics-export-rate-limit.guard";
+import { AnalyticsExportService } from "../analytics/analytics-export.service";
+import { sendAnalyticsExport } from "../analytics/analytics-export.reply";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
@@ -215,7 +222,11 @@ export class RewardsAdminMerchantsController {
 @RlsBypass()
 @Controller(apiPath("/admin/analytics"))
 export class RewardsAdminAnalyticsController {
-	public constructor(private readonly analytics: RewardsAnalyticsService) {}
+	public constructor(
+		private readonly analytics: RewardsAnalyticsService,
+		private readonly dashboards: AnalyticsDashboardService,
+		private readonly exports: AnalyticsExportService,
+	) {}
 
 	@RequirePermission("READ", "ANALYTICS")
 	@Get("sales")
@@ -226,5 +237,36 @@ export class RewardsAdminAnalyticsController {
 		@ZodQuery(apiContract.rewardsAdmin.salesAnalytics.input) query: z.output<typeof apiContract.rewardsAdmin.salesAnalytics.input>,
 	): ReturnType<RewardsAnalyticsService["getAdminSalesAnalytics"]> {
 		return this.analytics.getAdminSalesAnalytics(user.sub, query);
+	}
+
+	/** Authorization: `READ ANALYTICS` (platform admins); platform-wide, buckets in UTC. */
+	@RequirePermission("READ", "ANALYTICS")
+	@Get("dashboard")
+	@ApiOperation({
+		summary: "Platform analytics dashboard: custom range + interval, compared totals, series, top merchants, categories, cities, new vs returning customers",
+		description: ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION,
+	})
+	@ZodResponse(AdminAnalyticsDashboardSchema, { description: "Platform analytics dashboard" })
+	public getDashboard(
+		@ZodQuery(apiContract.rewardsAdmin.analyticsDashboard.input) query: z.output<typeof apiContract.rewardsAdmin.analyticsDashboard.input>,
+	): Promise<AdminAnalyticsDashboard> {
+		return this.dashboards.getAdminDashboard(query);
+	}
+
+	/** Authorization: `READ ANALYTICS`. Rate-limited per admin (`ANALYTICS_EXPORT_RATE_LIMIT`); every export writes an audit row. */
+	@RequirePermission("READ", "ANALYTICS")
+	@UseGuards(AnalyticsExportRateLimitGuard)
+	@Get("export")
+	@ApiOperation({
+		summary: "Download the platform analytics report (csv | xlsx | pdf) for a date range",
+		description: ANALYTICS_EXPORT_OPERATION_DESCRIPTION,
+	})
+	@ZodFileResponse(apiContract.rewardsAdmin.analyticsExport.response, { description: "The report file (Content-Disposition: attachment)" })
+	public async exportReport(
+		@ZodQuery(apiContract.rewardsAdmin.analyticsExport.input) query: z.output<typeof apiContract.rewardsAdmin.analyticsExport.input>,
+		@Req() request: FastifyRequest,
+		@Res() reply: FastifyReply,
+	): Promise<void> {
+		await sendAnalyticsExport(reply, await this.exports.exportPlatformReport(query, request));
 	}
 }

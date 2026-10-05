@@ -43,3 +43,22 @@ export function singleResponse<Data extends DataValue>(schema: ZodType<Data>): A
 export function paginatedResponse<Item extends DataValue>(itemSchema: ZodType<Item>): ApiResponseContract<Item[]> {
 	return { kind: "paginated", schema: itemSchema, envelope: createApiPaginatedEnvelopeSchema(itemSchema) };
 }
+
+/**
+ * The response of a FILE download endpoint (an export): the body is the file
+ * itself in one of `contentTypes` — never the JSON envelope — with
+ * `Content-Disposition: attachment`. Errors still use the JSON error envelope.
+ * The API documents each media type as a binary body (`@ZodFileResponse`); the
+ * client reads it as a `Blob` (`fetchDownload` in @workspace/client), not
+ * through `parseResponseContract`.
+ */
+export interface ApiFileResponseContract {
+	readonly kind: "file";
+	/** Every media type the endpoint may answer with (the request picks one, e.g. by `format`). */
+	readonly contentTypes: readonly string[];
+}
+
+/** `fileResponse(["text/csv; charset=utf-8", "application/pdf"])` — a download endpoint's response half. */
+export function fileResponse(contentTypes: readonly string[]): ApiFileResponseContract {
+	return { kind: "file", contentTypes: [...contentTypes] };
+}

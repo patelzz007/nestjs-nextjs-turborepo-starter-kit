@@ -9,12 +9,6 @@ describe("resolveAdminTrail", () => {
 		expect(trail[0]?.href).toBeUndefined();
 	});
 
-	it("resolves the sales analytics page under its Analytics section", () => {
-		const trail = resolveAdminTrail("/analytics/sales");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Analytics", "Sales"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual(["/analytics", undefined]);
-	});
-
 	it("resolves a nested route as parent crumb + current page", () => {
 		const trail = resolveAdminTrail("/merchants/verification");
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Merchants", "Verification"]);

@@ -7,7 +7,7 @@ import { throwError, type Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
 import { RequestContextService } from "../context/request-context";
-import { getResponseContract, type RouteResponseContract } from "../decorators/zod-response.decorators";
+import { getFileResponseContract, getResponseContract, type RouteResponseContract } from "../decorators/zod-response.decorators";
 import { SKIP_ENVELOPE } from "../decorators/skip-envelope.decorator";
 import { MissingResponseContractError, ResponseContractViolationError } from "../errors/response-contract.error";
 
@@ -47,7 +47,8 @@ type ResponseBody = SingleEnvelope | PaginatedEnvelope | DataValue;
  *
  * Pass-through (no contract, no envelope): `@Sse()` routes and
  * `text/event-stream` requests (frames are written to the socket directly) and
- * `@SkipEnvelope()` routes that write their own reply (binary downloads).
+ * `@SkipEnvelope()` routes that write their own reply (binary downloads), and
+ * `@ZodFileResponse()` routes (a declared, documented file download).
  */
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -64,6 +65,10 @@ export class ResponseInterceptor implements NestInterceptor {
 			return next.handle();
 		}
 		if (this.reflector.getAllAndOverride<boolean>(SKIP_ENVELOPE, [context.getHandler(), context.getClass()])) {
+			return next.handle();
+		}
+		// A file download (`@ZodFileResponse`) wrote its own reply: the body is the file, not an envelope.
+		if (getFileResponseContract(context.getHandler()) !== undefined) {
 			return next.handle();
 		}
 

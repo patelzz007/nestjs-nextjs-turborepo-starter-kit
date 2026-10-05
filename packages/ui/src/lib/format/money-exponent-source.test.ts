@@ -23,6 +23,6 @@ describe("money helpers take the minor-unit exponent from the shared table, not 
 	it("scales and renders by the table's exponent", () => {
 		expect(minorUnitExponent("MYR")).toBe(TABLE_EXPONENT);
 		expect(minorToMajorUnits(1_234, "MYR")).toBe(1.234);
-		expect(formatMinorUnits(1_234, "MYR", "en-MY")).toBe("RM\u00A01.234");
+		expect(formatMinorUnits(1_234, "MYR", "en-MY")).toBe("RM 1.234");
 	});
 });

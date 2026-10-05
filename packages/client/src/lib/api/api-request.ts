@@ -300,7 +300,7 @@ export async function readErrorPayload(response: Response): Promise<ApiErrorPayl
 }
 
 /** `path` already carries its query string (`resolveRequest` builds it). */
-function buildUrl(baseUrl: string, path: string, version?: ApiVersion): string {
+export function buildUrl(baseUrl: string, path: string, version?: ApiVersion): string {
 	const prefix: string = version === undefined ? API_URL_PREFIX : apiVersionPrefix(version);
 	return new URL(`${prefix}${path}`, baseUrl).toString();
 }
@@ -327,7 +327,7 @@ interface HttpRequest<T> {
 }
 
 /** Low-level HTTP executor — internal; procedure callers are the public entry point. */
-async function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> {
+function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> {
 	const { method, responseSchema, signal, onUnauthorized, onRefresh } = request;
 	const url = buildUrl(request.baseUrl, request.path, request.version);
 	const headers = buildHeaders(request.headers);
@@ -377,12 +377,26 @@ async function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> 
 		}
 	};
 
-	let result: ApiResponse<T> = await execute(url);
+	return withSessionRefresh(() => execute(url), { onRefresh, onUnauthorized });
+}
+
+/**
+ * The 401 pipeline every call shares (JSON procedures and file downloads):
+ * a 401 triggers ONE silent refresh and a retry; a refresh with no verdict
+ * (`transient`) fails only this call with {@link SessionRefreshUnavailableError};
+ * a dead session (`expired`, or a dead-session error code) ends in `onUnauthorized`.
+ */
+export async function withSessionRefresh<T>(
+	execute: () => Promise<ApiResponse<T>>,
+	callbacks: { readonly onRefresh?: OnRefresh | undefined; readonly onUnauthorized?: OnUnauthorized | undefined },
+): Promise<ApiResponse<T>> {
+	const { onRefresh, onUnauthorized } = callbacks;
+	let result: ApiResponse<T> = await execute();
 
 	if (!result.ok && result.status === 401 && onRefresh && !isDeadSessionError(result.error)) {
 		const refreshed: RefreshResult = await onRefresh();
 		if (refreshed === "ok") {
-			result = await execute(url);
+			result = await execute();
 		} else if (refreshed === "transient") {
 			// No verdict on the session: fail this request only, never the session.
 			return { ok: false, status: result.status, data: null, error: new SessionRefreshUnavailableError() };

@@ -27,7 +27,13 @@ import { z } from "zod";
 
 import { BEARER_SECURITY_SCHEME, buildOpenApiDocument, CLIENT_TYPE_SECURITY_SCHEME, collectPublicOperationIds } from "../src/common/api-docs";
 import { SKIP_ENVELOPE } from "../src/common/decorators/skip-envelope.decorator";
-import { getResponseContract, type ResponseContractTarget, type RouteResponseContract } from "../src/common/decorators/zod-response.decorators";
+import {
+	getFileResponseContract,
+	getResponseContract,
+	type FileResponseContract,
+	type ResponseContractTarget,
+	type RouteResponseContract,
+} from "../src/common/decorators/zod-response.decorators";
 import { zodToOpenApi } from "../src/common/openapi/zod-openapi-schema";
 import { ZodValidationPipe } from "../src/common/pipes/zod-validation.pipe";
 import { createE2eApp } from "./e2e-helpers";
@@ -130,6 +136,8 @@ interface RouteHandler {
 	/** Streams / binary downloads write their own reply and carry no JSON contract. */
 	readonly isPassThrough: boolean;
 	readonly contract: RouteResponseContract | undefined;
+	/** A declared file download (`@ZodFileResponse`): its media types — the body is the file, not JSON. */
+	readonly fileContract: FileResponseContract | undefined;
 	/** `@HttpCode` on the handler — the response decorators set it from the contract. */
 	readonly httpCode: number | undefined;
 }
@@ -155,6 +163,7 @@ function collectRouteHandlers(app: NestFastifyApplication): ReadonlyMap<string, 
 					handler: `${controller}.${methodName}`,
 					isPassThrough: Reflect.getMetadata(SSE_METADATA, handler) === true || Reflect.getMetadata(SKIP_ENVELOPE, handler) === true,
 					contract: getResponseContract(handler),
+					fileContract: getFileResponseContract(handler),
 					httpCode: z.number().int().optional().parse(Reflect.getMetadata(HTTP_CODE_METADATA, handler)),
 				});
 			}
@@ -169,7 +178,10 @@ const ContractLeafSchema = z.object({
 	path: z.string(),
 	version: z.enum(["v1", "v2"]).optional(),
 	access: ApiAccessSchema.optional(),
-	response: z.object({ kind: z.enum(["single", "paginated"]), schema: z.instanceof(z.ZodType) }),
+	response: z.discriminatedUnion("kind", [
+		z.object({ kind: z.enum(["single", "paginated"]), schema: z.instanceof(z.ZodType) }),
+		z.object({ kind: z.literal("file"), contentTypes: z.array(z.string()) }),
+	]),
 });
 const ContractBranchSchema = z.record(z.string(), z.instanceof(Object));
 
@@ -391,7 +403,7 @@ describe("OpenAPI document (e2e)", () => {
 
 		it("gives every JSON route a response contract (only streams and binary downloads pass through)", () => {
 			const missing: string[] = [...routes.values()]
-				.filter((route: RouteHandler): boolean => !route.isPassThrough && route.contract === undefined)
+				.filter((route: RouteHandler): boolean => !route.isPassThrough && route.contract === undefined && route.fileContract === undefined)
 				.map((route: RouteHandler): string => route.handler);
 			const passThrough: string[] = [...routes.values()].filter((route: RouteHandler): boolean => route.isPassThrough).map((route: RouteHandler): string => route.handler);
 			expect(missing).toEqual([]);
@@ -402,8 +414,8 @@ describe("OpenAPI document (e2e)", () => {
 		it("sends exactly the status the contract documents (no stray @HttpCode overriding it)", () => {
 			const mismatched: string[] = [];
 			for (const route of routes.values()) {
-				if (route.contract !== undefined && route.httpCode !== route.contract.status)
-					mismatched.push(`${route.handler}: contract ${String(route.contract.status)}, sends ${String(route.httpCode)}`);
+				const status: number | undefined = route.contract?.status ?? route.fileContract?.status;
+				if (status !== undefined && route.httpCode !== status) mismatched.push(`${route.handler}: contract ${String(status)}, sends ${String(route.httpCode)}`);
 			}
 			expect(mismatched).toEqual([]);
 		});
@@ -429,6 +441,33 @@ describe("OpenAPI document (e2e)", () => {
 			expect(problems).toEqual([]);
 		});
 
+		it("documents every file download (@ZodFileResponse) as one binary 200 body per media type, plus the 4XX / 5XX error envelope", () => {
+			const problems: string[] = [];
+			const fileRoutes: readonly RouteHandler[] = [...routes.values()].filter((route: RouteHandler): boolean => route.fileContract !== undefined);
+			for (const route of fileRoutes) {
+				const located: LocatedOperation | undefined = operations.get(route.operationId);
+				const contentTypes: readonly string[] = route.fileContract?.contentTypes ?? [];
+				const documented: ResponseObject | ReferenceObject | undefined = located?.operation.responses["200"];
+				if (located === undefined || documented === undefined || isReference(documented)) {
+					problems.push(`${route.handler}: 200 response`);
+					continue;
+				}
+				if (JSON.stringify(Object.keys(documented.content ?? {}).sort()) !== JSON.stringify([...contentTypes].sort())) problems.push(`${located.label}: media types`);
+				for (const contentType of contentTypes) {
+					if (JSON.stringify(documented.content?.[contentType]?.schema) !== JSON.stringify({ type: "string", format: "binary" }))
+						problems.push(`${located.label}: ${contentType} body`);
+				}
+				for (const range of ["4XX", "5XX"]) {
+					if (located.operation.responses[range] === undefined) problems.push(`${located.label}: ${range}`);
+				}
+			}
+			expect(fileRoutes.map((route: RouteHandler): string => route.handler).sort()).toEqual([
+				"OrganizationAnalyticsController.exportReport",
+				"RewardsAdminAnalyticsController.exportReport",
+			]);
+			expect(problems).toEqual([]);
+		});
+
 		it("never uses a closed (.strict()) response schema — the API strips unknown keys and clients must tolerate additive fields", () => {
 			const closed: string[] = [];
 			for (const route of routes.values()) {
@@ -446,6 +485,12 @@ describe("OpenAPI document (e2e)", () => {
 			for (const leaf of collectContractLeaves(ContractBranchSchema.parse(apiContract), "", [])) {
 				const label = `${leaf.method} ${documentPathOf(leaf)}`;
 				const route: RouteHandler | undefined = routes.get(byOperation.get(label) ?? "");
+				if (leaf.response.kind === "file") {
+					if (route?.fileContract === undefined) drift.push(`${leaf.name}: no @ZodFileResponse handler at ${label}`);
+					else if (JSON.stringify(route.fileContract.contentTypes) !== JSON.stringify(leaf.response.contentTypes))
+						drift.push(`${leaf.name} (${route.handler}): handler and contract declare different media types`);
+					continue;
+				}
 				if (route?.contract === undefined) {
 					drift.push(`${leaf.name}: no handler with a response contract at ${label}`);
 					continue;

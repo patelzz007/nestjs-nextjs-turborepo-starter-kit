@@ -8,6 +8,7 @@
 //   @ZodResponse(ProductSchema, { status: HttpStatus.CREATED })  // 201
 //   @ZodPaginatedResponse(ProductSchema)                         // { success, data: Product[], meta: paginated }
 //   @ZodRawResponse(ApiVersionManifestSchema)                    // no envelope (the unversioned version manifest)
+//   @ZodFileResponse(contract.response)                          // a FILE download (an export), body written via @Res()
 //
 // Each one, from the SAME shared schema (`@workspace/shared`):
 //   1. documents the success response in Swagger — the full envelope, converted
@@ -172,4 +173,61 @@ export function ZodPaginatedResponse<TItemSchema extends z.ZodType<DataValue>>(
  */
 export function ZodRawResponse<TSchema extends z.ZodType<DataValue>>(schema: TSchema, options: ZodResponseOptions = {}): TypedResponseDecorator<z.input<TSchema>> {
 	return responseDecorator<z.input<TSchema>>({ kind: "raw", schema, status: options.status ?? HttpStatus.OK }, schema, options.description);
+}
+
+/**
+ * The response contract of a FILE download route (an export): the body is the
+ * file itself in one of `contentTypes`, written by the handler through
+ * `@Res()` — `ResponseInterceptor` passes it through untouched. Errors still
+ * answer the JSON error envelope (the global exception filter).
+ */
+export interface FileResponseContract {
+	readonly contentTypes: readonly string[];
+	readonly status: HttpStatus;
+}
+
+/** Handler → file contract, as Nest metadata (see {@link ResponseContract} for why not a WeakMap). */
+export const FileResponseContractMetadata = Reflector.createDecorator<FileResponseContract>();
+
+/** The file contract registered for a route handler, or `undefined` for every JSON route. */
+export function getFileResponseContract(handler: ResponseContractTarget): FileResponseContract | undefined {
+	return contractReflector.get(FileResponseContractMetadata, handler);
+}
+
+/** A handler that writes the file itself (through `@Res()`) and resolves once it has handed the stream over. */
+export type FileResponseDecorator = <THandler extends (...args: Parameters<THandler>) => Promise<void>>(
+	target: object,
+	propertyKey: string | symbol,
+	descriptor: TypedPropertyDescriptor<THandler>,
+) => void;
+
+/** The binary body documented for every media type of a file route. */
+const BINARY_BODY_SCHEMA = { type: "string", format: "binary" };
+
+/** Default description of a file route's 200. */
+const FILE_RESPONSE_DESCRIPTION = "The file (Content-Disposition: attachment)";
+
+/**
+ * Declares (and documents) a FILE download route from the shared contract
+ * leaf's `fileResponse(...)`: registers the file contract (so
+ * `ResponseInterceptor` passes the reply through), sets the 200 status,
+ * documents the 200 as one binary body per media type and the 4XX / 5XX JSON
+ * error envelope. The handler writes the reply itself (`@Res()`), sets
+ * `Content-Type` to one of `contentTypes` and `Content-Disposition: attachment`.
+ */
+export function ZodFileResponse(contract: { readonly contentTypes: readonly string[] }, options: Pick<ZodResponseOptions, "description"> = {}): FileResponseDecorator {
+	return (target, propertyKey, descriptor): void => {
+		const fileContract: FileResponseContract = { contentTypes: [...contract.contentTypes], status: HttpStatus.OK };
+		applyDecorators(
+			FileResponseContractMetadata(fileContract),
+			HttpCode(fileContract.status),
+			ApiResponse({
+				status: fileContract.status,
+				description: options.description ?? FILE_RESPONSE_DESCRIPTION,
+				content: Object.fromEntries(fileContract.contentTypes.map((contentType) => [contentType, { schema: BINARY_BODY_SCHEMA }])),
+			}),
+			ApiResponse({ status: "4XX", description: CLIENT_ERROR_DESCRIPTION, type: ApiErrorResponseDto }),
+			ApiResponse({ status: "5XX", description: SERVER_ERROR_DESCRIPTION, type: ApiErrorResponseDto }),
+		)(target, propertyKey, descriptor);
+	};
 }

@@ -3,7 +3,7 @@ title: "API reference — Merchant organizations (portal API)"
 description: "Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics."
 order: 5
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -78,12 +78,12 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "a27302d4-92a5-41b2-bdab-9b9548ed02a1",
-    "inviteToken": "32a733eefcffe53f5b2d860e3d909d6d215751fbdc7631f6cdbc4adb8e2bdaaf"
+    "organizationId": "3abb90aa-c3e3-4a46-aceb-b5cde63c6edb",
+    "inviteToken": "d1f7fe76180c2c9387aa848cad6055a9c29e387a8aa579c003a1ad2755235889"
   },
   "meta": {
-    "correlationId": "7YGjdJGAS1TPI3OIIAhjv",
-    "timestamp": 1791099729647
+    "correlationId": "mTb1oHq3aOuNIhxBhSUB-",
+    "timestamp": 1791193329755
   }
 }
 ```
@@ -146,16 +146,16 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "57026a8e-0f7e-43fc-834f-fd1677086a65",
+    "id": "cc36b793-3101-484c-8063-8d5b14a4ebdd",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-    "userId": "77baf757-d737-4f41-8488-795f24d157eb",
+    "userId": "c9600578-399b-4d47-81b0-6d84531ea8ea",
     "status": "PENDING",
     "message": "I run the Bangsar morning shift",
-    "createdAt": 1791099737504
+    "createdAt": 1791193337895
   },
   "meta": {
-    "correlationId": "8ARqKI5TBx9NetMXfc7T_",
-    "timestamp": 1791099737513
+    "correlationId": "j8cDqo8c8BjA0xayDHz0J",
+    "timestamp": 1791193337908
   }
 }
 ```
@@ -198,8 +198,39 @@ Response `201 Created` (application/json):
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!NOTE]
-> No captured sample: The capture run got 409 ORGANIZATION_ACCESS_REQUEST_ALREADY_REVIEWED instead of a success response; re-run the capture after fixing it.
+**Example** — called as brew.owner@kl-rewards.demo (merchant portal).
+
+```http
+POST /api/v1/orgs/brew-bean-kl/access-requests/cc36b793-3101-484c-8063-8d5b14a4ebdd/review
+X-Client-Type: merchant
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "approve": true,
+  "role": "CASHIER",
+  "locationScopeType": "SELECTED",
+  "locationIds": [
+    "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d"
+  ]
+}
+```
+
+Response `201 Created` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Access request reviewed"
+  },
+  "meta": {
+    "correlationId": "2G9_13QhlZ8UdpN8Aw9dQ",
+    "timestamp": 1791193337982
+  }
+}
+```
 
 ### GET /api/v1/orgs/{orgSlug}/context
 
@@ -256,6 +287,7 @@ Response `201 Created` (application/json):
 | `data.organization.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
 | `data.organization.primaryLocationId` | string (uuid) \| null | yes |  |
 | `data.organization.slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.organization.timeZone` | string | yes | length 1–64 |
 | `data.organization.updatedAt` | integer | yes |  |
 | `data.policyVersion` | integer | yes |  |
 
@@ -287,8 +319,9 @@ Response `200 OK` (application/json):
       "displayName": "Brew & Bean KL",
       "lifecycleState": "ACTIVE",
       "primaryLocationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-      "createdAt": 1791099673551,
-      "updatedAt": 1791099673551
+      "createdAt": 1791193151201,
+      "updatedAt": 1791193151201,
+      "timeZone": "Asia/Kuala_Lumpur"
     },
     "membership": {
       "id": "e178a4d1-6915-4eb3-bf84-6fb14e1feb6e",
@@ -296,11 +329,11 @@ Response `200 OK` (application/json):
       "userId": "326494e1-b45d-4203-b881-05b60ae50b4a",
       "role": "OWNER",
       "status": "ACTIVE",
-      "displayName": null,
+      "displayName": "Ahmad (Owner)",
       "locationScopeType": "ALL_LOCATIONS",
       "locationIds": [],
-      "createdAt": 1791099673578,
-      "updatedAt": 1791099673578
+      "createdAt": 1791193151229,
+      "updatedAt": 1791193151229
     },
     "locations": [
       {
@@ -314,8 +347,8 @@ Response `200 OK` (application/json):
         "status": "ACTIVE",
         "rejectionReason": null,
         "isPrimary": true,
-        "createdAt": 1791099673558,
-        "updatedAt": 1791099673558
+        "createdAt": 1791193151207,
+        "updatedAt": 1791193151207
       }
     ],
     "merchantProfile": {
@@ -330,8 +363,8 @@ Response `200 OK` (application/json):
     "policyVersion": 1
   },
   "meta": {
-    "correlationId": "RTYOek45I_2bGyjxf3AVP",
-    "timestamp": 1791099732714
+    "correlationId": "gXU-zok3v4Bj8CkeKATtp",
+    "timestamp": 1791193332764
   }
 }
 ```
@@ -382,8 +415,47 @@ Response `200 OK` (application/json):
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!NOTE]
-> No captured sample: The capture run got 500 INTERNAL_ERROR instead of a success response; re-run the capture after fixing it.
+**Example** — called as brew.owner@kl-rewards.demo (merchant portal).
+
+```http
+POST /api/v1/orgs/brew-bean-kl/locations
+X-Client-Type: merchant
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "name": "Brew & Bean KL — Bangsar",
+  "addressText": "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+  "contactPhone": "+60 3-2283 1234"
+}
+```
+
+Response `201 Created` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "name": "Brew & Bean KL — Bangsar",
+    "code": "brew-bean-kl-bangsar",
+    "addressText": "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+    "city": "KUALA_LUMPUR",
+    "contactPhone": "+60 3-2283 1234",
+    "status": "PENDING_APPROVAL",
+    "rejectionReason": null,
+    "isPrimary": false,
+    "createdAt": 1791193334906,
+    "updatedAt": 1791193334906
+  },
+  "meta": {
+    "correlationId": "18mUO8iNoAH76SP5vf0wW",
+    "timestamp": 1791193334912
+  }
+}
+```
 
 ### PATCH /api/v1/orgs/{orgSlug}/locations/{locationId}
 
@@ -432,8 +504,47 @@ Response `200 OK` (application/json):
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!NOTE]
-> No captured sample: The capture run got 500 INTERNAL_ERROR instead of a success response; re-run the capture after fixing it.
+**Example** — called as brew.owner@kl-rewards.demo (merchant portal).
+
+```http
+PATCH /api/v1/orgs/brew-bean-kl/locations/7856bea1-dcf7-4112-81e4-5e91034ef1ed
+X-Client-Type: merchant
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "name": "Brew & Bean KL — Bangsar",
+  "addressText": "Lot G-21, 21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+  "contactPhone": "+60 3-2283 1234"
+}
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "name": "Brew & Bean KL — Bangsar",
+    "code": "brew-bean-kl-bangsar",
+    "addressText": "Lot G-21, 21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+    "city": "KUALA_LUMPUR",
+    "contactPhone": "+60 3-2283 1234",
+    "status": "PENDING_APPROVAL",
+    "rejectionReason": null,
+    "isPrimary": false,
+    "createdAt": 1791193334906,
+    "updatedAt": 1791193335021
+  },
+  "meta": {
+    "correlationId": "4llO8AvP9cjNydMf-LlYz",
+    "timestamp": 1791193335028
+  }
+}
+```
 
 ### POST /api/v1/orgs/{orgSlug}/locations/{locationId}/close
 
@@ -479,7 +590,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/locations/23f73bc6-337d-496d-9259-4c72346c71c9/close
+POST /api/v1/orgs/brew-bean-kl/locations/6cbdc605-bea0-4d7b-bb73-209d1812064b/close
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -496,9 +607,9 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "locationId": "23f73bc6-337d-496d-9259-4c72346c71c9",
-    "storeId": "7d92e363-7448-4728-aa04-b55b1923a5cb",
-    "closedAt": 1791099735037,
+    "locationId": "6cbdc605-bea0-4d7b-bb73-209d1812064b",
+    "storeId": "f8daebca-8e4f-4366-aef3-6407f329bc1c",
+    "closedAt": 1791193335149,
     "reason": "Mall lease not renewed",
     "storeMembershipsRemoved": 0,
     "memberScopesRemoved": 0,
@@ -506,8 +617,8 @@ Response `201 Created` (application/json):
     "apiKeysRevoked": 0
   },
   "meta": {
-    "correlationId": "ZBqqpdl06PxFKlh-v3CqX",
-    "timestamp": 1791099735052
+    "correlationId": "GAeoRFxkTIXgmV_VYZaJH",
+    "timestamp": 1791193335160
   }
 }
 ```
@@ -572,16 +683,16 @@ Response `200 OK` (application/json):
       "fullName": "Ahmad Brew",
       "role": "OWNER",
       "status": "ACTIVE",
-      "displayName": null,
+      "displayName": "Ahmad (Owner)",
       "locationScopeType": "ALL_LOCATIONS",
       "locationIds": [],
-      "createdAt": 1791099673578,
-      "updatedAt": 1791099673578
+      "createdAt": 1791193151229,
+      "updatedAt": 1791193151229
     },
     {
       "id": "e8875947-75f2-44c2-adf0-713c9e955ed5",
       "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-      "userId": "e8079268-f4dd-497f-9d3c-5aaa57429d49",
+      "userId": "884d283d-fd7d-4c6b-863b-030d40f448d4",
       "email": "user-02@example.com",
       "fullName": "Olivia Johnson",
       "role": "CASHIER",
@@ -592,12 +703,12 @@ Response `200 OK` (application/json):
         "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d"
       ],
       "createdAt": 1788753600000,
-      "updatedAt": 1791099673784
+      "updatedAt": 1791193152966
     }
   ],
   "meta": {
-    "correlationId": "mOPAFNhmRVvif0OA344C-",
-    "timestamp": 1791099732757
+    "correlationId": "FF9Urk6uDBqWAGXJLUcbn",
+    "timestamp": 1791193332824
   }
 }
 ```
@@ -662,12 +773,12 @@ Response `201 Created` (application/json):
   "data": {
     "membershipId": "157401d5-536e-464f-9ae9-4756b6dd5f64",
     "locationId": "257401d5-536e-464f-9ae9-4756b6dd5f65",
-    "removedAt": 1791099735251,
+    "removedAt": 1791193335353,
     "remainingLocationIds": []
   },
   "meta": {
-    "correlationId": "Gui859p1nBJVx0z7knoUF",
-    "timestamp": 1791099735253
+    "correlationId": "zttAeLFFqRWazQ-jUEukC",
+    "timestamp": 1791193335355
   }
 }
 ```
@@ -734,12 +845,12 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "inviteId": "76f4cc8b-4094-48aa-958c-ba3a4bdeece8",
+    "inviteId": "c3fcab93-bbbf-4524-9376-dd5bf9b1865d",
     "message": "Invitation sent"
   },
   "meta": {
-    "correlationId": "pYOchXCZMNFNfrMehUdiC",
-    "timestamp": 1791099735137
+    "correlationId": "pFrhrcWjS9yWi47gTzzhi",
+    "timestamp": 1791193335237
   }
 }
 ```
@@ -807,13 +918,13 @@ Response `200 OK` (application/json):
       "status": "PENDING",
       "invitedByUserId": "326494e1-b45d-4203-b881-05b60ae50b4a",
       "invitedByName": "Ahmad Brew",
-      "expiresAt": 1791704473591,
-      "createdAt": 1791099673593
+      "expiresAt": 1791797951242,
+      "createdAt": 1791193151243
     }
   ],
   "meta": {
-    "correlationId": "iJVSWH0KzzgInU5ber0Ao",
-    "timestamp": 1791099732807
+    "correlationId": "RECGVxVSKkByZd6qEHGdr",
+    "timestamp": 1791193332884
   }
 }
 ```
@@ -849,7 +960,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/members/invites/76f4cc8b-4094-48aa-958c-ba3a4bdeece8/revoke
+POST /api/v1/orgs/brew-bean-kl/members/invites/c3fcab93-bbbf-4524-9376-dd5bf9b1865d/revoke
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -864,8 +975,8 @@ Response `201 Created` (application/json):
     "message": "Invitation revoked"
   },
   "meta": {
-    "correlationId": "hqzQv2e061wzFgX-erEDM",
-    "timestamp": 1791099735183
+    "correlationId": "mbt9nPtAjVfXDJL4t_uo4",
+    "timestamp": 1791193335285
   }
 }
 ```
@@ -912,8 +1023,43 @@ Response `201 Created` (application/json):
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!WARNING]
-> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+**Example** — called as jonker.owner@melaka-rewards.demo (merchant portal). Jonker Street Kitchen's owner sets her display name; it is trimmed. `{ "displayName": null }` clears it.
+
+```http
+PATCH /api/v1/orgs/jonker-street-kitchen/members/me
+X-Client-Type: merchant
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "displayName": "  Siti (Owner)  "
+}
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "f57401d5-536e-464f-9ae9-4756b6dd5f63",
+    "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+    "userId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
+    "role": "OWNER",
+    "status": "ACTIVE",
+    "displayName": "Siti (Owner)",
+    "locationScopeType": "ALL_LOCATIONS",
+    "locationIds": [],
+    "createdAt": 1791193151234,
+    "updatedAt": 1791193335396
+  },
+  "meta": {
+    "correlationId": "rTgtYctwUjo-QoCDE-9Gy",
+    "timestamp": 1791193335399
+  }
+}
+```
 
 ### POST /api/v1/orgs/invites/accept
 
@@ -966,8 +1112,8 @@ Response `201 Created` (application/json):
     "message": "Invitation accepted"
   },
   "meta": {
-    "correlationId": "p_JYCVd5DDXKI3LlDT7U0",
-    "timestamp": 1791099736030
+    "correlationId": "0SQd8yT37Oar3BMfaQYM7",
+    "timestamp": 1791193336261
   }
 }
 ```
@@ -1070,11 +1216,11 @@ Response `201 Created` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1791099736395,
-      "updatedAt": 1791099736395,
+      "createdAt": 1791193336668,
+      "updatedAt": 1791193336668,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "45aad3d1-7ec2-45ad-9bac-4d37e7df6c1b",
+      "id": "cd0a74b1-4882-4a1a-a9ad-3856af1d5a55",
       "email": "barista.bangsar@kl-rewards.demo",
       "fullName": "Bangsar Barista",
       "isActive": true,
@@ -1085,7 +1231,7 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
+          "id": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
           "name": "User",
           "description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
         }
@@ -1094,8 +1240,8 @@ Response `201 Created` (application/json):
     "organizationSlug": "brew-bean-kl"
   },
   "meta": {
-    "correlationId": "bm8joC-UFN60e-bttusk0",
-    "timestamp": 1791099736757
+    "correlationId": "JHkMwm2O4R8Q2BuSMxPiH",
+    "timestamp": 1791193337060
   }
 }
 ```
@@ -1168,12 +1314,12 @@ Response `201 Created` (application/json):
         "name": "Brew & Bean KL — Bukit Bintang"
       }
     ],
-    "expiresAt": 1791704473591,
+    "expiresAt": 1791797951242,
     "hasExistingAccount": true
   },
   "meta": {
-    "correlationId": "tfD27_7sm6iIDvVvkDN0T",
-    "timestamp": 1791099735280
+    "correlationId": "3xgQdT3W-zH8YLgp-0Ak4",
+    "timestamp": 1791193335460
   }
 }
 ```
@@ -1236,12 +1382,12 @@ Response `200 OK` (application/json):
       "role": "OWNER",
       "kybStatus": "APPROVED",
       "lifecycleState": "ACTIVE",
-      "createdAt": 1791099673578
+      "createdAt": 1791193151229
     }
   ],
   "meta": {
-    "correlationId": "5uZQIdm-Rezw-kh14L6W4",
-    "timestamp": 1791099732672
+    "correlationId": "RjIvvA3oAie_AkbEx7TOp",
+    "timestamp": 1791193332696
   }
 }
 ```
@@ -1294,12 +1440,12 @@ Response `200 OK` (application/json):
       "role": "OWNER",
       "kybStatus": "APPROVED",
       "lifecycleState": "ACTIVE",
-      "createdAt": 1791099673578
+      "createdAt": 1791193151229
     }
   ],
   "meta": {
-    "correlationId": "JorgxZ_t96Ad3AoYg7mM_",
-    "timestamp": 1791099732645
+    "correlationId": "ulmrUjAxh7KARVNc1dGCX",
+    "timestamp": 1791193332661
   }
 }
 ```
@@ -1383,14 +1529,14 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "8b632542-54cd-4211-b47a-cfb4f29e3b2a",
+    "organizationId": "62cc685a-d679-4b51-8a57-2715674d1906",
     "organizationSlug": "nyonya-house-melaka",
     "businessName": "Nyonya House Melaka",
     "role": "OWNER"
   },
   "meta": {
-    "correlationId": "yU2f2zNPvsDviOmp-VtEb",
-    "timestamp": 1791099730051
+    "correlationId": "ZowmGuUDjkn45St7T_FZj",
+    "timestamp": 1791193330158
   }
 }
 ```
@@ -1441,8 +1587,8 @@ Content-Type: application/json
 {
   "token": "<redacted: one-time secret>",
   "fileIds": [
-    "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-    "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+    "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+    "203e5b59-64fc-4a86-9735-7c5fd51449f2"
   ]
 }
 ```
@@ -1455,26 +1601,26 @@ Response `201 Created` (application/json):
   "data": {
     "documents": [
       {
-        "id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+        "id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
         "fileName": "welcome.png",
         "mimeType": "image/png",
         "sizeBytes": 61292,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1791099730080
+        "uploadedAt": 1791193330185
       },
       {
-        "id": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+        "id": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
         "fileName": "welcome.png",
         "mimeType": "image/png",
         "sizeBytes": 61292,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1791099730172
+        "uploadedAt": 1791193330261
       }
     ]
   },
   "meta": {
-    "correlationId": "Q1WMFaJ3TEV5BXfovYBvZ",
-    "timestamp": 1791099731783
+    "correlationId": "KINz8t2yLLA3zP1a09kv2",
+    "timestamp": 1791193331840
   }
 }
 ```
@@ -1518,8 +1664,8 @@ Content-Type: application/json
 {
   "token": "<redacted: one-time secret>",
   "documentFileIds": [
-    "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-    "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+    "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+    "203e5b59-64fc-4a86-9735-7c5fd51449f2"
   ]
 }
 ```
@@ -1533,8 +1679,8 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "EXK5p2RiQpgCSNzwV0hq1",
-    "timestamp": 1791099731849
+    "correlationId": "rjbm4syevNY15_jMG1nf1",
+    "timestamp": 1791193331877
   }
 }
 ```
@@ -1588,7 +1734,7 @@ Content-Type: application/json
 
 {
   "token": "<redacted: one-time secret>",
-  "fileId": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+  "fileId": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
   "checksumSha256": "0fe260bfe734b5b3a68f1ecc1e8e55460eb2afece003d430cdf3ba2fe01204bf"
 }
 ```
@@ -1600,7 +1746,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+      "id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
       "category": "MERCHANT_KYB",
       "visibility": "PRIVATE",
       "originalName": "welcome.png",
@@ -1609,12 +1755,12 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1791099730080
+      "uploadedAt": 1791193330185
     }
   },
   "meta": {
-    "correlationId": "udxmrQwvZKm3M2_sEfiEG",
-    "timestamp": 1791099730133
+    "correlationId": "MHvxDUAyQ-haL2YL3jmBg",
+    "timestamp": 1791193330237
   }
 }
 ```
@@ -1661,7 +1807,7 @@ Content-Type: application/json
   "token": "<redacted: one-time secret>",
   "completions": [
     {
-      "fileId": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+      "fileId": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
       "checksumSha256": "0fe260bfe734b5b3a68f1ecc1e8e55460eb2afece003d430cdf3ba2fe01204bf"
     }
   ]
@@ -1675,12 +1821,12 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "fileIds": [
-      "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+      "203e5b59-64fc-4a86-9735-7c5fd51449f2"
     ]
   },
   "meta": {
-    "correlationId": "T0Qd4homZ-ts3SeP-YDwY",
-    "timestamp": 1791099730223
+    "correlationId": "SKHmkHwxh58a2se1QLGV8",
+    "timestamp": 1791193330311
   }
 }
 ```
@@ -1745,19 +1891,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-    "objectPath": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/4e6eb041-0969-4fd1-975a-ca5b42f1d691-welcome.png",
+    "fileId": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+    "objectPath": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/42ce5478-2feb-44b2-bc49-51e3a8b233c5-welcome.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://127.0.0.1:8097/api/v1/files/4e6eb041-0969-4fd1-975a-ca5b42f1d691/local-upload",
+    "uploadUrl": "http://127.0.0.1:8097/api/v1/files/42ce5478-2feb-44b2-bc49-51e3a8b233c5/local-upload",
     "fields": {
-      "key": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/4e6eb041-0969-4fd1-975a-ca5b42f1d691-welcome.png",
+      "key": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/42ce5478-2feb-44b2-bc49-51e3a8b233c5-welcome.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "zKB7EFMGpwk20oxsa0Kcw",
-    "timestamp": 1791099730081
+    "correlationId": "OjkX44qyQYcHkrxOuotSq",
+    "timestamp": 1791193330187
   }
 }
 ```
@@ -1830,21 +1976,21 @@ Response `201 Created` (application/json):
   "data": {
     "uploads": [
       {
-        "fileId": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
-        "objectPath": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c-welcome.png",
+        "fileId": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
+        "objectPath": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/203e5b59-64fc-4a86-9735-7c5fd51449f2-welcome.png",
         "expiresIn": 300,
         "method": "POST_MULTIPART",
-        "uploadUrl": "http://127.0.0.1:8097/api/v1/files/381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c/local-upload",
+        "uploadUrl": "http://127.0.0.1:8097/api/v1/files/203e5b59-64fc-4a86-9735-7c5fd51449f2/local-upload",
         "fields": {
-          "key": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c-welcome.png",
+          "key": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/203e5b59-64fc-4a86-9735-7c5fd51449f2-welcome.png",
           "token": "<redacted: one-time secret>"
         }
       }
     ]
   },
   "meta": {
-    "correlationId": "dAsDC6g2fxGNf0y7tcVsH",
-    "timestamp": 1791099730174
+    "correlationId": "stRGfTe_6M5AwuYmRZ3j9",
+    "timestamp": 1791193330262
   }
 }
 ```
@@ -1902,12 +2048,12 @@ Response `201 Created` (application/json):
     "email": "nyonya.house@melaka-rewards.demo",
     "businessName": "Nyonya House Melaka",
     "city": "MELAKA",
-    "expiresAt": 1791704529565,
+    "expiresAt": 1791798129682,
     "hasExistingAccount": false
   },
   "meta": {
-    "correlationId": "2Uga5RUt54RsEzReuNutH",
-    "timestamp": 1791099729675
+    "correlationId": "0wAgKtAUlMceoYOzk3KI7",
+    "timestamp": 1791193329781
   }
 }
 ```
@@ -1972,7 +2118,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "8b632542-54cd-4211-b47a-cfb4f29e3b2a",
+    "organizationId": "62cc685a-d679-4b51-8a57-2715674d1906",
     "businessName": "Nyonya House Melaka",
     "legalName": "Nyonya House Melaka Sdn Bhd",
     "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -1982,33 +2128,33 @@ Response `200 OK` (application/json):
     "kybStatus": "PENDING",
     "kybFields": {
       "taxId": "C2584563202",
-      "submittedAt": 1791099730027,
+      "submittedAt": 1791193330132,
       "documentType": "SSM",
       "registrationNo": "202601012345"
     },
     "documents": [
       {
-        "id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+        "id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
         "fileName": "welcome.png",
         "mimeType": "image/png",
         "sizeBytes": 61292,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1791099730080
+        "uploadedAt": 1791193330185
       },
       {
-        "id": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+        "id": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
         "fileName": "welcome.png",
         "mimeType": "image/png",
         "sizeBytes": 61292,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1791099730172
+        "uploadedAt": 1791193330261
       }
     ],
     "status": "ACTIVE"
   },
   "meta": {
-    "correlationId": "S2cNPeUqWDSTr_6KOH0UZ",
-    "timestamp": 1791099734614
+    "correlationId": "Mh5dkOae3CrGb3Bzgt_qv",
+    "timestamp": 1791193334763
   }
 }
 ```
@@ -2089,8 +2235,8 @@ Content-Type: application/json
   "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
   "contactPhone": "+60 6-282 1234",
   "documentFileIds": [
-    "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-    "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+    "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+    "203e5b59-64fc-4a86-9735-7c5fd51449f2"
   ]
 }
 ```
@@ -2101,7 +2247,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "8b632542-54cd-4211-b47a-cfb4f29e3b2a",
+    "organizationId": "62cc685a-d679-4b51-8a57-2715674d1906",
     "businessName": "Nyonya House Melaka",
     "legalName": "Nyonya House Melaka Sdn Bhd",
     "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -2111,33 +2257,33 @@ Response `200 OK` (application/json):
     "kybStatus": "PENDING",
     "kybFields": {
       "taxId": "C2584563202",
-      "submittedAt": 1791099734665,
+      "submittedAt": 1791193334812,
       "documentType": "SSM",
       "registrationNo": "202601012345"
     },
     "documents": [
       {
-        "id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+        "id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
         "fileName": "welcome.png",
         "mimeType": "image/png",
         "sizeBytes": 61292,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1791099730080
+        "uploadedAt": 1791193330185
       },
       {
-        "id": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+        "id": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
         "fileName": "welcome.png",
         "mimeType": "image/png",
         "sizeBytes": 61292,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1791099730172
+        "uploadedAt": 1791193330261
       }
     ],
     "status": "ACTIVE"
   },
   "meta": {
-    "correlationId": "aTQ5bsj-mzXaeupYZFEq0",
-    "timestamp": 1791099734684
+    "correlationId": "iDexG2xClpEiDUHA9XmHd",
+    "timestamp": 1791193334825
   }
 }
 ```
@@ -2192,11 +2338,11 @@ Response `200 OK` (application/json):
     "documentId": "d1597799-9b05-49c8-95e1-864ddfa666a8",
     "scanStatus": "SCANNING",
     "downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1791100032900
+    "expiresAt": 1791193633048
   },
   "meta": {
-    "correlationId": "IIKc1M8MJl8owMqxhSd8M",
-    "timestamp": 1791099732900
+    "correlationId": "ClkP1wkKab9w5imaj8iLX",
+    "timestamp": 1791193333048
   }
 }
 ```
@@ -2283,8 +2429,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791099673754,
-      "updatedAt": 1791099673754,
+      "createdAt": 1791193151399,
+      "updatedAt": 1791193151399,
       "isDeleted": false,
       "deletedAt": null,
       "id": "d5d755fa-18e6-45a7-bf33-d2461e75ba1a",
@@ -2303,7 +2449,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 500,
       "quantityReserved": 0,
       "startDate": null,
-      "expiryDate": 1793691673173,
+      "expiryDate": 1793785150840,
       "status": "DRAFT",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2316,11 +2462,11 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1791099673691,
-      "updatedAt": 1791099673691,
+      "createdAt": 1791193151325,
+      "updatedAt": 1791193151325,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "1ebf1501-cee5-4147-9746-7050a5a58455",
+      "id": "c9eeb787-7376-4c46-b2fa-43f626bccfca",
       "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
       "organizationName": "Brew & Bean KL",
       "organizationLogoUrl": null,
@@ -2336,7 +2482,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 20,
       "quantityReserved": 1,
       "startDate": null,
-      "expiryDate": 1794987673690,
+      "expiryDate": 1795081151324,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2350,8 +2496,8 @@ Response `200 OK` (application/json):
     }
   ],
   "meta": {
-    "correlationId": "e30eSzbBpYGjmZ1CGh51h",
-    "timestamp": 1791099737656
+    "correlationId": "ZT4mw5a2vXr6CBsMgy48O",
+    "timestamp": 1791193338042
   }
 }
 ```
@@ -2459,8 +2605,8 @@ Content-Type: application/json
   "rewardType": "FREE_ITEM",
   "rewardValue": 6,
   "quantityTotal": 200,
-  "startDate": 1791099737709,
-  "expiryDate": 1796283737709,
+  "startDate": 1791193338104,
+  "expiryDate": 1796377338104,
   "locationScopeType": "ALL_LOCATIONS",
   "rules": {
     "maxUsePerUser": 1,
@@ -2479,11 +2625,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099737763,
-    "updatedAt": 1791099737763,
+    "createdAt": 1791193338159,
+    "updatedAt": 1791193338159,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+    "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
@@ -2498,15 +2644,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1791099737709,
-    "expiryDate": 1796283737709,
+    "startDate": 1791193338104,
+    "expiryDate": 1796377338104,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+    "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -2515,8 +2661,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "cSQj_w42AmE1qhNI0fIH-",
-    "timestamp": 1791099737780
+    "correlationId": "rJrQZuRRsal2xv_K1Xvd-",
+    "timestamp": 1791193338177
   }
 }
 ```
@@ -2599,8 +2745,8 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099673754,
-    "updatedAt": 1791099673754,
+    "createdAt": 1791193151399,
+    "updatedAt": 1791193151399,
     "isDeleted": false,
     "deletedAt": null,
     "id": "d5d755fa-18e6-45a7-bf33-d2461e75ba1a",
@@ -2619,7 +2765,7 @@ Response `200 OK` (application/json):
     "quantityRemaining": 500,
     "quantityReserved": 0,
     "startDate": null,
-    "expiryDate": 1793691673173,
+    "expiryDate": 1793785150840,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -2632,8 +2778,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "gPIVk1EGhRS-FdZg7zweg",
-    "timestamp": 1791099737708
+    "correlationId": "KvDy2F9ECVrk-KxWNQWLz",
+    "timestamp": 1791193338103
   }
 }
 ```
@@ -2725,7 +2871,7 @@ Update a draft or pending reward
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/orgs/brew-bean-kl/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9
+PATCH /api/v1/orgs/brew-bean-kl/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2742,11 +2888,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099737763,
-    "updatedAt": 1791099737763,
+    "createdAt": 1791193338159,
+    "updatedAt": 1791193338159,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+    "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
@@ -2761,15 +2907,15 @@ Response `200 OK` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1791099737709,
-    "expiryDate": 1796283737709,
+    "startDate": 1791193338104,
+    "expiryDate": 1796377338104,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+    "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -2778,8 +2924,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "SLrzWtFjlj-XHo7EOSIHR",
-    "timestamp": 1791099737849
+    "correlationId": "7wthwTkh8tOTB4kF1lpts",
+    "timestamp": 1791193338246
   }
 }
 ```
@@ -2856,7 +3002,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9/publish
+POST /api/v1/orgs/brew-bean-kl/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb/publish
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2871,11 +3017,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099737763,
-    "updatedAt": 1791099737763,
+    "createdAt": 1791193338159,
+    "updatedAt": 1791193338159,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+    "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
@@ -2890,15 +3036,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1791099737709,
-    "expiryDate": 1796283737709,
+    "startDate": 1791193338104,
+    "expiryDate": 1796377338104,
     "status": "PENDING_REVIEW",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+    "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -2907,8 +3053,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "oAMKeIxWzUHCH4rdDBxHr",
-    "timestamp": 1791099737907
+    "correlationId": "-cE6zNEbOy-S1vmHDls4r",
+    "timestamp": 1791193338300
   }
 }
 ```
@@ -2984,8 +3130,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791099673749,
-      "updatedAt": 1791099673749,
+      "createdAt": 1791193151391,
+      "updatedAt": 1791193151391,
       "isDeleted": false,
       "deletedAt": null,
       "id": "1cb82368-3b87-4524-81bc-c78d2b61ed56",
@@ -2995,15 +3141,15 @@ Response `200 OK` (application/json):
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "ACTIVE",
       "pairingCodeExpiresAt": null,
-      "pairedAt": 1790840533173,
-      "lastSeenAt": 1791099553173
+      "pairedAt": 1790934010840,
+      "lastSeenAt": 1791193030840
     },
     {
-      "createdAt": 1791099673653,
-      "updatedAt": 1791099673653,
+      "createdAt": 1791193151294,
+      "updatedAt": 1791193151294,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "97595cdb-674f-4c6e-84f4-281aad7e8b76",
+      "id": "6558ba96-88a2-4fbd-a3f7-7bb562cb0e91",
       "terminalId": "KL-REGISTER-01",
       "name": "Front counter",
       "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
@@ -3022,8 +3168,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "kY9tr8b-oHeIJZ345U2Nj",
-    "timestamp": 1791099739061
+    "correlationId": "PYLy6ZzshGakWw8zb_3eI",
+    "timestamp": 1791193339484
   }
 }
 ```
@@ -3103,26 +3249,26 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "terminal": {
-      "createdAt": 1791099739225,
-      "updatedAt": 1791099739225,
+      "createdAt": 1791193339668,
+      "updatedAt": 1791193339668,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "a68aadac-9151-4e05-8096-dc84d14a43c5",
+      "id": "b4b027e2-fe01-49bb-8a14-5ad67d72f407",
       "terminalId": "KL-BANGSAR-01",
       "name": "Bangsar front counter",
       "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1791100639224,
+      "pairingCodeExpiresAt": 1791194239667,
       "pairedAt": null,
       "lastSeenAt": null
     },
-    "pairingCode": "Y3PMW66T",
-    "pairingCodeExpiresAt": 1791100639224
+    "pairingCode": "DFKJMGPC",
+    "pairingCodeExpiresAt": 1791194239667
   },
   "meta": {
-    "correlationId": "gLR9OA-PWjVr-fH4_yCiF",
-    "timestamp": 1791099739230
+    "correlationId": "JoO9WUdQwd_6mEorL65uq",
+    "timestamp": 1791193339674
   }
 }
 ```
@@ -3171,7 +3317,7 @@ Read one POS terminal (404 outside the caller's stores)
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/terminals/a68aadac-9151-4e05-8096-dc84d14a43c5
+GET /api/v1/orgs/brew-bean-kl/terminals/b4b027e2-fe01-49bb-8a14-5ad67d72f407
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -3182,23 +3328,23 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099739225,
-    "updatedAt": 1791099739225,
+    "createdAt": 1791193339668,
+    "updatedAt": 1791193339668,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "a68aadac-9151-4e05-8096-dc84d14a43c5",
+    "id": "b4b027e2-fe01-49bb-8a14-5ad67d72f407",
     "terminalId": "KL-BANGSAR-01",
     "name": "Bangsar front counter",
     "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
     "locationName": "Brew & Bean KL — Bukit Bintang",
     "status": "AWAITING_PAIRING",
-    "pairingCodeExpiresAt": 1791100639224,
+    "pairingCodeExpiresAt": 1791194239667,
     "pairedAt": null,
     "lastSeenAt": null
   },
   "meta": {
-    "correlationId": "YIGZvLqOHxFtrvX8ZCdWZ",
-    "timestamp": 1791099739268
+    "correlationId": "bXnt-WUhSgt401oXcxWKS",
+    "timestamp": 1791193339712
   }
 }
 ```
@@ -3236,7 +3382,7 @@ Remove a POS terminal and revoke its API key
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-DELETE /api/v1/orgs/brew-bean-kl/terminals/a68aadac-9151-4e05-8096-dc84d14a43c5
+DELETE /api/v1/orgs/brew-bean-kl/terminals/b4b027e2-fe01-49bb-8a14-5ad67d72f407
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3251,8 +3397,8 @@ Response `200 OK` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "8TGjC2IxS3iyGTUlasinQ",
-    "timestamp": 1791099739801
+    "correlationId": "ERlbHGry5hSk__sXvzT9I",
+    "timestamp": 1791193340460
   }
 }
 ```
@@ -3309,7 +3455,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/terminals/a68aadac-9151-4e05-8096-dc84d14a43c5/pairing-code
+POST /api/v1/orgs/brew-bean-kl/terminals/b4b027e2-fe01-49bb-8a14-5ad67d72f407/pairing-code
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3325,26 +3471,26 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "terminal": {
-      "createdAt": 1791099739225,
-      "updatedAt": 1791099739225,
+      "createdAt": 1791193339668,
+      "updatedAt": 1791193339668,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "a68aadac-9151-4e05-8096-dc84d14a43c5",
+      "id": "b4b027e2-fe01-49bb-8a14-5ad67d72f407",
       "terminalId": "KL-BANGSAR-01",
       "name": "Bangsar front counter",
       "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1791100639302,
+      "pairingCodeExpiresAt": 1791194239750,
       "pairedAt": null,
       "lastSeenAt": null
     },
-    "pairingCode": "G3NU9BKK",
-    "pairingCodeExpiresAt": 1791100639302
+    "pairingCode": "TADMREEM",
+    "pairingCodeExpiresAt": 1791194239750
   },
   "meta": {
-    "correlationId": "8AA587C_PjGYHb7g7Nrtw",
-    "timestamp": 1791099739308
+    "correlationId": "w3l5hcQiPIfg3aHiEFRC7",
+    "timestamp": 1791193339757
   }
 }
 ```
@@ -3394,8 +3540,8 @@ Response `200 OK` (application/json):
     "requireRegisteredTerminals": false
   },
   "meta": {
-    "correlationId": "2BAATBIdBXZwR5YGPK-9b",
-    "timestamp": 1791099739130
+    "correlationId": "GQgi3vrCmT6b3WIUzEVi4",
+    "timestamp": 1791193339567
   }
 }
 ```
@@ -3458,8 +3604,8 @@ Response `200 OK` (application/json):
     "requireRegisteredTerminals": false
   },
   "meta": {
-    "correlationId": "hj88bTWR72ZHIkWFZkCBf",
-    "timestamp": 1791099739168
+    "correlationId": "4L0mNZN7-CCO2oegq-ASe",
+    "timestamp": 1791193339606
   }
 }
 ```
@@ -3521,8 +3667,8 @@ Response `200 OK` (application/json):
     "storesWithTerminals": 1
   },
   "meta": {
-    "correlationId": "lytqGDxOPBAWtlsTV6E_l",
-    "timestamp": 1791099739102
+    "correlationId": "e2QWJAX2BvmXubgCV3ef9",
+    "timestamp": 1791193339535
   }
 }
 ```
@@ -3595,11 +3741,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791099739331,
-      "updatedAt": 1791099739331,
+      "createdAt": 1791193339781,
+      "updatedAt": 1791193339781,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "5da6e84c-f9cc-46a7-8c2c-f1d2936e7718",
+      "id": "38d27a49-5aa8-4547-b80e-e1d373748f3d",
       "name": "Bangsar front counter",
       "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
       "locationName": "Brew & Bean KL — Bukit Bintang",
@@ -3607,8 +3753,8 @@ Response `200 OK` (application/json):
       "revokedAt": null
     },
     {
-      "createdAt": 1791099673748,
-      "updatedAt": 1791099673748,
+      "createdAt": 1791193151388,
+      "updatedAt": 1791193151388,
       "isDeleted": false,
       "deletedAt": null,
       "id": "ebd565dd-45b7-4d6c-b2dc-131764ba3baf",
@@ -3616,7 +3762,7 @@ Response `200 OK` (application/json):
       "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "scope": "POS",
-      "revokedAt": 1789371673173
+      "revokedAt": 1789465150840
     }
   ],
   "meta": {
@@ -3624,11 +3770,11 @@ Response `200 OK` (application/json):
     "total": 5,
     "page": 1,
     "totalPages": 3,
-    "nextCursor": "eyJhdCI6MTc5MTA5OTY3Mzc0OCwiaWQiOiJlYmQ1NjVkZC00NWI3LTRkNmMtYjJkYy0xMzE3NjRiYTNiYWYifQ",
+    "nextCursor": "eyJhdCI6MTc5MTE5MzE1MTM4OCwiaWQiOiJlYmQ1NjVkZC00NWI3LTRkNmMtYjJkYy0xMzE3NjRiYTNiYWYifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "ZJk6kESK0Xi0ww6PIzn1R",
-    "timestamp": 1791099739616
+    "correlationId": "bLrofxmhAQiY47gKoK4iR",
+    "timestamp": 1791193340295
   }
 }
 ```
@@ -3695,15 +3841,15 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "ccd5ee11-9fcf-4b39-8936-819b83674d4e",
+    "id": "563b904c-d9c4-4f6f-9e8e-d9fc8f0dc418",
     "apiKey": "<redacted: one-time secret>",
     "name": "Back-office sync",
     "scope": "INTEGRATION",
     "locationId": null
   },
   "meta": {
-    "correlationId": "CnTIbsEOU1tvc2H8m1YGj",
-    "timestamp": 1791099739679
+    "correlationId": "lA0yJtyFrwo6KEii__dvC",
+    "timestamp": 1791193340358
   }
 }
 ```
@@ -3745,7 +3891,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/api-keys/ccd5ee11-9fcf-4b39-8936-819b83674d4e/revoke
+POST /api/v1/orgs/brew-bean-kl/api-keys/563b904c-d9c4-4f6f-9e8e-d9fc8f0dc418/revoke
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3763,8 +3909,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "kDcw7wo51CH1tJb02L0ww",
-    "timestamp": 1791099739756
+    "correlationId": "c_zl1Ky0U5ounVBQ0IX2G",
+    "timestamp": 1791193340414
   }
 }
 ```
@@ -3833,30 +3979,30 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "redemptionId": "3c5f2558-9602-42d9-ad25-28839a80d14a",
+      "redemptionId": "6b43c61d-2092-43bc-beed-cd4a75de8122",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1791099739415,
+      "redeemedAt": 1791193339862,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "MANUAL"
     },
     {
       "redemptionId": "004e9593-80d2-48da-91b4-a19fec069aef",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1791099673721,
+      "redeemedAt": 1791193151336,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "SCAN"
     }
   ],
   "meta": {
     "limit": 2,
-    "total": 4,
+    "total": 929,
     "page": 1,
-    "totalPages": 2,
-    "nextCursor": "eyJhdCI6MTc5MTA5OTY3MzcyMSwiaWQiOiIwMDRlOTU5My04MGQyLTQ4ZGEtOTFiNC1hMTlmZWMwNjlhZWYifQ",
+    "totalPages": 465,
+    "nextCursor": "eyJhdCI6MTc5MTE5MzE1MTMzNiwiaWQiOiIwMDRlOTU5My04MGQyLTQ4ZGEtOTFiNC1hMTlmZWMwNjlhZWYifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "A_CYJpoqbJpbMXIOmugbp",
-    "timestamp": 1791099739504
+    "correlationId": "leUKxy03tj8Lwdz4eb0MX",
+    "timestamp": 1791193339996
   }
 }
 ```
@@ -3956,29 +4102,29 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "period": {
-      "from": 1786291200000,
-      "to": 1791099739546,
+      "from": 1786896000000,
+      "to": 1791193340044,
       "timeZone": "Asia/Kuala_Lumpur"
     },
     "totalRewards": {
-      "value": 13,
+      "value": 16,
       "changePercent": 100
     },
     "activeRewards": {
-      "value": 8,
+      "value": 10,
       "changePercent": 100
     },
     "totalClaims": {
-      "value": 11,
-      "changePercent": 100
+      "value": 188,
+      "changePercent": 4
     },
     "totalRedemptions": {
-      "value": 4,
-      "changePercent": 100
+      "value": 163,
+      "changePercent": 6
     },
     "conversionRate": {
-      "value": 36.4,
-      "changePercent": 100
+      "value": 86.7,
+      "changePercent": 2
     },
     "referralCount": {
       "value": 0,
@@ -3986,62 +4132,362 @@ Response `200 OK` (application/json):
     },
     "claimsOverTime": [
       {
-        "date": 1786291200000,
-        "claims": 0,
-        "redemptions": 0
+        "date": 1786896000000,
+        "claims": 21,
+        "redemptions": 22
       },
       {
-        "date": 1786896000000,
-        "claims": 0,
-        "redemptions": 0
+        "date": 1787500800000,
+        "claims": 28,
+        "redemptions": 22
       }
     ],
     "topRewards": [
       {
-        "rewardId": "c1214e16-bf0f-4410-8871-8d1a9970f75e",
-        "title": "Free coffee — Grand Opening",
-        "claims": 10,
-        "redemptions": 4
+        "rewardId": "ca5e4873-45fa-4124-b24b-14ef2df21d7c",
+        "title": "Morning brew club — free refill",
+        "claims": 96,
+        "redemptions": 90
       },
       {
-        "rewardId": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
-        "title": "Free Kopi O with any breakfast set",
-        "claims": 1,
-        "redemptions": 0
+        "rewardId": "291eb43c-eb37-49f1-aab4-fda4428983b4",
+        "title": "Weekend latte art special",
+        "claims": 81,
+        "redemptions": 69
       }
     ],
     "sales": {
       "currency": "MYR",
       "totalSalesMinor": {
-        "value": 7800,
-        "changePercent": 100
+        "value": 466520,
+        "changePercent": 6
       },
       "bills": {
-        "value": 4,
-        "changePercent": 100
+        "value": 163,
+        "changePercent": 6
       },
       "averageBillMinor": {
-        "value": 1950,
-        "changePercent": 100
+        "value": 2862,
+        "changePercent": 1
       },
       "overTime": [
         {
-          "date": 1786291200000,
-          "salesMinor": 0,
-          "bills": 0
+          "date": 1786896000000,
+          "salesMinor": 52410,
+          "bills": 22
         },
         {
-          "date": 1786896000000,
-          "salesMinor": 0,
-          "bills": 0
+          "date": 1787500800000,
+          "salesMinor": 61748,
+          "bills": 22
         }
       ],
-      "firstBillAt": 1790754073703
+      "firstBillAt": 1759625940000
     }
   },
   "meta": {
-    "correlationId": "jpqdJgnD_takoe9mR1TXX",
-    "timestamp": 1791099739561
+    "correlationId": "cC1l05dlqXE4gEr3Qr8gO",
+    "timestamp": 1791193340078
   }
 }
+```
+
+### GET /api/v1/orgs/{orgSlug}/analytics/dashboard
+
+Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns
+
+Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Also accepts an **INTEGRATION-scope merchant API key**.
+- Operation id `OrganizationAnalyticsController_getDashboard` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `from` | query | integer | no | Range start, epoch ms, inclusive. Default: 30 days before `to`. |
+| `to` | query | integer | no | Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`. |
+| `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
+| `locationId` | query | string (uuid) | no |  |
+
+**Response 200 OK** — Merchant analytics dashboard
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.byRedemptionMethod` | object[] | yes |  |
+| `data.byRedemptionMethod[].method` | "SCAN" \| "MANUAL" | yes |  |
+| `data.byRedemptionMethod[].redemptions` | integer | yes |  |
+| `data.byReward` | object[] | yes |  |
+| `data.byReward[].claims` | integer | yes |  |
+| `data.byReward[].conversionRate` | number | yes | range 0–∞ |
+| `data.byReward[].redemptions` | integer | yes |  |
+| `data.byReward[].rewardId` | string (uuid) | yes |  |
+| `data.byReward[].title` | string | yes |  |
+| `data.byStore` | object[] | yes |  |
+| `data.byStore[].averageBillMinor` | integer | yes |  |
+| `data.byStore[].bills` | integer | yes |  |
+| `data.byStore[].city` | "KUALA_LUMPUR" \| "MELAKA" \| null | yes |  |
+| `data.byStore[].locationId` | string (uuid) \| null | yes |  |
+| `data.byStore[].name` | string \| null | yes |  |
+| `data.byStore[].redemptions` | integer | yes |  |
+| `data.byStore[].salesMinor` | integer | yes |  |
+| `data.currency` | "MYR" | yes |  |
+| `data.firstBillAt` | integer \| null | yes |  |
+| `data.range` | object | yes |  |
+| `data.range.from` | integer | yes |  |
+| `data.range.interval` | "day" \| "week" \| "month" | yes | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
+| `data.range.previousFrom` | integer | yes |  |
+| `data.range.previousTo` | integer | yes |  |
+| `data.range.timeZone` | string | yes | length 1–64 |
+| `data.range.to` | integer | yes |  |
+| `data.series` | object[] | yes |  |
+| `data.series[].averageBillMinor` | integer | yes |  |
+| `data.series[].bills` | integer | yes |  |
+| `data.series[].claims` | integer | yes |  |
+| `data.series[].end` | integer | yes |  |
+| `data.series[].isPartial` | boolean | yes |  |
+| `data.series[].redemptions` | integer | yes |  |
+| `data.series[].salesMinor` | integer | yes |  |
+| `data.series[].start` | integer | yes |  |
+| `data.totals` | object | yes |  |
+| `data.totals.averageBillMinor` | object | yes |  |
+| `data.totals.averageBillMinor.change` | number | yes |  |
+| `data.totals.averageBillMinor.changePercent` | number \| null | yes |  |
+| `data.totals.averageBillMinor.previous` | number | yes |  |
+| `data.totals.averageBillMinor.value` | number | yes |  |
+| `data.totals.bills` | object | yes |  |
+| `data.totals.bills.change` | number | yes |  |
+| `data.totals.bills.changePercent` | number \| null | yes |  |
+| `data.totals.bills.previous` | number | yes |  |
+| `data.totals.bills.value` | number | yes |  |
+| `data.totals.claims` | object | yes |  |
+| `data.totals.claims.change` | number | yes |  |
+| `data.totals.claims.changePercent` | number \| null | yes |  |
+| `data.totals.claims.previous` | number | yes |  |
+| `data.totals.claims.value` | number | yes |  |
+| `data.totals.conversionRate` | object | yes |  |
+| `data.totals.conversionRate.change` | number | yes |  |
+| `data.totals.conversionRate.changePercent` | number \| null | yes |  |
+| `data.totals.conversionRate.previous` | number | yes |  |
+| `data.totals.conversionRate.value` | number | yes |  |
+| `data.totals.customers` | object | yes |  |
+| `data.totals.customers.change` | number | yes |  |
+| `data.totals.customers.changePercent` | number \| null | yes |  |
+| `data.totals.customers.previous` | number | yes |  |
+| `data.totals.customers.value` | number | yes |  |
+| `data.totals.redemptions` | object | yes |  |
+| `data.totals.redemptions.change` | number | yes |  |
+| `data.totals.redemptions.changePercent` | number \| null | yes |  |
+| `data.totals.redemptions.previous` | number | yes |  |
+| `data.totals.redemptions.value` | number | yes |  |
+| `data.totals.salesMinor` | object | yes |  |
+| `data.totals.salesMinor.change` | number | yes |  |
+| `data.totals.salesMinor.changePercent` | number \| null | yes |  |
+| `data.totals.salesMinor.previous` | number | yes |  |
+| `data.totals.salesMinor.value` | number | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | Stated in the endpoint description. |
+| 503 | `ANALYTICS_QUERY_TIMEOUT` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as brew.owner@kl-rewards.demo (merchant portal).
+
+```http
+GET /api/v1/orgs/brew-bean-kl/analytics/dashboard?interval=week
+X-Client-Type: merchant
+Cookie: <session cookies from POST /api/v1/auth/login>
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "range": {
+      "from": 1788601340135,
+      "to": 1791193340135,
+      "timeZone": "Asia/Kuala_Lumpur",
+      "interval": "week",
+      "previousFrom": 1786009340135,
+      "previousTo": 1788601340135
+    },
+    "currency": "MYR",
+    "firstBillAt": 1759625940000,
+    "totals": {
+      "salesMinor": {
+        "value": 295205,
+        "previous": 264767,
+        "change": 30438,
+        "changePercent": 11.5
+      },
+      "bills": {
+        "value": 102,
+        "previous": 93,
+        "change": 9,
+        "changePercent": 9.7
+      },
+      "averageBillMinor": {
+        "value": 2894,
+        "previous": 2847,
+        "change": 47,
+        "changePercent": 1.7
+      },
+      "claims": {
+        "value": 116,
+        "previous": 108,
+        "change": 8,
+        "changePercent": 7.4
+      },
+      "redemptions": {
+        "value": 102,
+        "previous": 93,
+        "change": 9,
+        "changePercent": 9.7
+      },
+      "conversionRate": {
+        "value": 87.9,
+        "previous": 86.1,
+        "change": 1.8,
+        "changePercent": 2.1
+      },
+      "customers": {
+        "value": 31,
+        "previous": 30,
+        "change": 1,
+        "changePercent": 3.3
+      }
+    },
+    "series": [
+      {
+        "start": 1788601340135,
+        "end": 1788710400000,
+        "isPartial": true,
+        "salesMinor": 14143,
+        "bills": 5,
+        "averageBillMinor": 2829,
+        "claims": 5,
+        "redemptions": 5
+      },
+      {
+        "start": 1788710400000,
+        "end": 1789315200000,
+        "isPartial": false,
+        "salesMinor": 69394,
+        "bills": 23,
+        "averageBillMinor": 3017,
+        "claims": 31,
+        "redemptions": 23
+      }
+    ],
+    "byStore": [
+      {
+        "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
+        "name": "Brew & Bean KL — Bukit Bintang",
+        "city": "KUALA_LUMPUR",
+        "salesMinor": 295205,
+        "bills": 102,
+        "averageBillMinor": 2894,
+        "redemptions": 102
+      },
+      {
+        "locationId": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+        "name": "Brew & Bean KL — Bangsar",
+        "city": "KUALA_LUMPUR",
+        "salesMinor": 0,
+        "bills": 0,
+        "averageBillMinor": 0,
+        "redemptions": 0
+      }
+    ],
+    "byReward": [
+      {
+        "rewardId": "ca5e4873-45fa-4124-b24b-14ef2df21d7c",
+        "title": "Morning brew club — free refill",
+        "claims": 52,
+        "redemptions": 50,
+        "conversionRate": 96.2
+      },
+      {
+        "rewardId": "291eb43c-eb37-49f1-aab4-fda4428983b4",
+        "title": "Weekend latte art special",
+        "claims": 53,
+        "redemptions": 48,
+        "conversionRate": 90.6
+      }
+    ],
+    "byRedemptionMethod": [
+      {
+        "method": "SCAN",
+        "redemptions": 66
+      },
+      {
+        "method": "MANUAL",
+        "redemptions": 36
+      }
+    ]
+  },
+  "meta": {
+    "correlationId": "mf_-urIQuG3tk9g7889Yq",
+    "timestamp": 1791193340151
+  }
+}
+```
+
+### GET /api/v1/orgs/{orgSlug}/analytics/export
+
+Download the merchant analytics report (csv | xlsx | pdf) for a date range
+
+The body is the file (Content-Disposition: attachment). Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); both bounds are required. Each export writes an audit row and is limited to 10 per caller per 10 minutes: 429 ANALYTICS_EXPORT_RATE_LIMITED with `Retry-After`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Also accepts an **INTEGRATION-scope merchant API key**.
+- Operation id `OrganizationAnalyticsController_exportReport` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `from` | query | integer | yes | Range start, epoch ms, inclusive. |
+| `to` | query | integer | yes | Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`. |
+| `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
+| `locationId` | query | string (uuid) | no |  |
+| `format` | query | "csv" \| "xlsx" \| "pdf" | yes | File format of the export |
+
+**Response 200 OK** — The report file (Content-Disposition: attachment) (`application/pdf` · `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` · `text/csv; charset=utf-8`)
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | Stated in the endpoint description. |
+| 429 | `ANALYTICS_EXPORT_RATE_LIMITED` | Stated in the endpoint description. |
+| 503 | `ANALYTICS_QUERY_TIMEOUT` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as brew.owner@kl-rewards.demo (merchant portal). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
+
+```http
+GET /api/v1/orgs/brew-bean-kl/analytics/export?from=1788601340153&to=1791193340153&format=xlsx
+X-Client-Type: merchant
+Cookie: <session cookies from POST /api/v1/auth/login>
+```
+
+Response `200 OK` (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet):
+
+```text
+<8703 bytes of application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>
 ```

@@ -4,7 +4,7 @@ tags: ["api", "contracts", "openapi", "zod", "client"]
 description: "How every endpoint declares its response once in @workspace/shared, how the API documents and enforces it, how the typed client parses it, and how the committed OpenAPI artifact stays in sync."
 order: 16
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -40,6 +40,18 @@ Paginated is for list-grammar endpoints ([List queries](./list-queries.md)): the
 `PaginatedServiceResult` (`items` + pagination fields) and the interceptor moves the fields into
 `meta`. Bounded catalogs returned whole are `single` with a named array schema
 (`RewardResponseListSchema = z.array(RewardResponseSchema)`).
+
+**File downloads** (the analytics exports) are a third, non-JSON kind: the contract leaf is
+`defineFileContract({ …, response: fileResponse([<media types>]) })`, the handler carries
+`@ZodFileResponse(leaf.response)` (it documents the 200 as one binary body per media type, plus
+the 4XX / 5XX envelope, and satisfies the "every route declares its response" lint rule) and
+writes the file itself through `@Res()` (`Content-Type` of the format,
+`Content-Disposition: attachment`, `Cache-Control: no-store`). The interceptor passes the reply
+through; errors still use the error envelope. The client fetches it with `fetchDownload` /
+`api.download(apiDownloads.…)` (`packages/client/src/lib/api/download.ts`) — a `Blob` plus the
+server's file name, or a typed `ApiDownloadError` — never as a query. The OpenAPI e2e test holds
+the handler's media types to the leaf's and pins the list of file routes.
+[Analytics API](./analytics.md#exports) is the worked example.
 
 `@ZodRawResponse(Schema)` sends the value without an envelope. Use it only for consumers outside the
 typed client that expect a fixed shape (the unversioned `GET /version` manifest, which the client
@@ -88,8 +100,9 @@ monitors key on the HTTP status only, so they keep the standard envelope. Errors
 - **No contract → no response.** A JSON route without a response decorator answers 500 before its
   handler runs (`MissingResponseContractError`); the OpenAPI e2e test stops that from merging.
 - **Pass-through by design:** `@Sse()` streams and `@SkipEnvelope()` routes that write their own
-  reply — today `EmailLogController.stream` and `FilesController.localDownload`. The e2e test pins
-  this list; extending it is a reviewed decision.
+  reply — today `EmailLogController.stream` and the two local-storage transfer routes — plus the
+  declared file downloads (`@ZodFileResponse`: the analytics exports). The e2e test pins both
+  lists; extending either is a reviewed decision.
 
 ## 4. Why response schemas are never `.strict()`
 

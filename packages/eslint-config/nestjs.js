@@ -99,10 +99,11 @@ export const nestjsConfig = [
 			// The Zod response decorators (apps/api/src/common/decorators/
 			// zod-response.decorators.ts, ADR 022) document the success and error
 			// responses in Swagger from the shared contract, so they satisfy this
-			// rule. A handler with no response decorator still fails.
+			// rule — `ZodFileResponse` documents a file download's binary 200 per
+			// media type. A handler with no response decorator still fails.
 			"@darraghor/nestjs-typed/api-method-should-specify-api-response": [
 				"error",
-				{ additionalCustomApiResponseDecorators: ["ZodResponse", "ZodPaginatedResponse", "ZodRawResponse"] },
+				{ additionalCustomApiResponseDecorators: ["ZodResponse", "ZodPaginatedResponse", "ZodRawResponse", "ZodFileResponse"] },
 			],
 		},
 	},

@@ -3,7 +3,7 @@
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
-import { NativeSelect, NativeSelectOption } from "@workspace/ui/components/form/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import {
 	API_KEY_SCOPE_OPTIONS,
 	ORGANIZATION_WIDE_STORE_CHOICE,
@@ -28,18 +28,21 @@ export interface CreateApiKeyCardProps {
 	readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
 	/** The select's value: a store id, {@link ORGANIZATION_WIDE_STORE_CHOICE}, or `""` until chosen. */
 	readonly storeChoice: string;
-	readonly onStoreChoiceChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+	readonly onStoreChoiceChange: (choice: string) => void;
 	/** The stores this member may create a key for (organization-wide only for an all-locations member). */
 	readonly storeChoices: ApiKeyStoreChoices;
 	/** The select's value: one of the shared API key scopes. */
 	readonly scope: string;
-	readonly onScopeChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+	readonly onScopeChange: (scope: string) => void;
 	/** Whether the form values pass the shared create schema and the member's store scope. */
 	readonly canSubmit: boolean;
 	readonly isPending: boolean;
 	/** The last create attempt's failure — on the field it is about, or for the form — shown inline so the input is kept. */
 	readonly submissionError: FormSubmissionError<CreateApiKeyField> | null;
 }
+
+/** The organization-wide choice, as the store field names it. */
+const ORGANIZATION_WIDE_LABEL = "Every store (organization-wide)";
 
 function FieldError({ id, message }: { readonly id: string; readonly message: string | undefined }): React.JSX.Element | null {
 	return message === undefined ? null : (
@@ -67,6 +70,28 @@ export function CreateApiKeyCard({
 	const storeError = fieldErrorMessage(submissionError, "store");
 	const formError = formErrorMessage(submissionError);
 	const scopeDescription = API_KEY_SCOPE_OPTIONS.find((option) => option.scope === scope)?.description;
+	const storeLabel = React.useCallback(
+		(choice: string): string =>
+			choice === ORGANIZATION_WIDE_STORE_CHOICE ? ORGANIZATION_WIDE_LABEL : (storeChoices.stores.find((store) => store.id === choice)?.name ?? choice),
+		[storeChoices.stores],
+	);
+	const scopeLabel = React.useCallback((value: string): string => API_KEY_SCOPE_OPTIONS.find((option) => option.scope === value)?.label ?? value, []);
+	const handleStoreChoiceChange = React.useCallback(
+		(choice: string | null): void => {
+			if (choice !== null) {
+				onStoreChoiceChange(choice);
+			}
+		},
+		[onStoreChoiceChange],
+	);
+	const handleScopeChange = React.useCallback(
+		(value: string | null): void => {
+			if (value !== null) {
+				onScopeChange(value);
+			}
+		},
+		[onScopeChange],
+	);
 
 	return (
 		<section aria-labelledby="create-api-key-heading" className="relative overflow-hidden rounded-xl border border-border bg-card shadow-xs">
@@ -101,25 +126,24 @@ export function CreateApiKeyCard({
 					</div>
 					<div className="grid gap-2">
 						<Label htmlFor="key-store">Store</Label>
-						<NativeSelect
-							id="key-store"
-							className="w-full"
-							value={storeChoice}
-							onChange={onStoreChoiceChange}
+						<Select<string>
+							value={storeChoice === "" ? null : storeChoice}
+							onValueChange={handleStoreChoiceChange}
 							required
 							disabled={hasNoStore}
-							aria-invalid={storeError !== undefined}
-							aria-describedby={storeError === undefined ? "key-store-hint" : "key-store-hint key-store-error"}>
-							<NativeSelectOption value="" disabled>
-								Choose a store
-							</NativeSelectOption>
-							{storeChoices.stores.map((store: ApiKeyStoreOption): React.JSX.Element => (
-								<NativeSelectOption key={store.id} value={store.id}>
-									{store.name}
-								</NativeSelectOption>
-							))}
-							{storeChoices.allowOrganizationWide ? <NativeSelectOption value={ORGANIZATION_WIDE_STORE_CHOICE}>Every store (organization-wide)</NativeSelectOption> : null}
-						</NativeSelect>
+							invalid={storeError !== undefined}>
+							<SelectTrigger id="key-store" aria-describedby={storeError === undefined ? "key-store-hint" : "key-store-hint key-store-error"}>
+								<SelectValue placeholder="Choose a store" formatValue={storeLabel} />
+							</SelectTrigger>
+							<SelectContent>
+								{storeChoices.stores.map((store: ApiKeyStoreOption): React.JSX.Element => (
+									<SelectItem key={store.id} value={store.id}>
+										{store.name}
+									</SelectItem>
+								))}
+								{storeChoices.allowOrganizationWide ? <SelectItem value={ORGANIZATION_WIDE_STORE_CHOICE}>{ORGANIZATION_WIDE_LABEL}</SelectItem> : null}
+							</SelectContent>
+						</Select>
 						<p id="key-store-hint" className="flex items-center gap-1.5 text-xs text-muted-foreground">
 							<MapPin className="size-3.5 shrink-0" aria-hidden="true" />
 							{hasNoStore ? "No active store yet — add one under Settings › Locations first." : "The key only works at the store you choose."}
@@ -128,13 +152,18 @@ export function CreateApiKeyCard({
 					</div>
 					<div className="grid gap-2">
 						<Label htmlFor="key-scope">Access</Label>
-						<NativeSelect id="key-scope" className="w-full" value={scope} onChange={onScopeChange} aria-describedby="key-scope-hint">
-							{API_KEY_SCOPE_OPTIONS.map((option): React.JSX.Element => (
-								<NativeSelectOption key={option.scope} value={option.scope}>
-									{option.label}
-								</NativeSelectOption>
-							))}
-						</NativeSelect>
+						<Select<string> value={scope} onValueChange={handleScopeChange}>
+							<SelectTrigger id="key-scope" aria-describedby="key-scope-hint">
+								<SelectValue formatValue={scopeLabel} />
+							</SelectTrigger>
+							<SelectContent>
+								{API_KEY_SCOPE_OPTIONS.map((option): React.JSX.Element => (
+									<SelectItem key={option.scope} value={option.scope}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 						<p id="key-scope-hint" className="text-xs text-muted-foreground">
 							{scopeDescription}
 						</p>

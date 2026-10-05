@@ -3,7 +3,7 @@ title: "API conventions"
 description: "What every endpoint shares: base URL and versioning, authentication and client type, CSRF intent header, the response and error envelopes, list queries, idempotency, rate limits — and how the generated API reference is produced."
 order: 20
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "conventions", "reference"]
 ---
@@ -51,7 +51,8 @@ the Next.js proxies add it. Bearer-token and API-key callers and the machine rou
 
 - Branch on `error.code`, never on `message`. Quote `meta.correlationId` (also the
   `X-Correlation-Id` header) in bug reports. Full contract: [Errors](./errors.md).
-- A few routes return a raw body (`GET /version`, file downloads, the SSE stream).
+- A few routes return a raw body (`GET /version`, file downloads such as the
+  [analytics exports](./analytics.md#exports), the SSE stream).
 - Timestamps are epoch milliseconds (UTC); money is integer minor units (sen).
 - Responses are validated against their contract before they leave the API
   ([response contracts](./response-contracts.md)).
@@ -74,7 +75,8 @@ supported. Details and the per-endpoint allowed fields: [List queries](./list-qu
 
 Per client IP: a default limiter (`THROTTLE_DEFAULT_LIMIT`, 300 per `THROTTLE_TTL_MS` = 60 s) and a
 strict limiter for auth routes (30), tightened per route (login 5/min, signup and resets lower). POS
-calls are limited per API key (120/min). Over the limit: `429 RATE_LIMITED` with
+calls are limited per API key (120/min); analytics exports per user or API key (10 per 10 min,
+`429 ANALYTICS_EXPORT_RATE_LIMITED`). Over the limit: `429 RATE_LIMITED` with
 `error.details.retryAfterSeconds`. The client IP honours `X-Forwarded-For` only from `TRUST_PROXY`.
 
 ## How the reference is generated

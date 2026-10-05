@@ -6,7 +6,7 @@ import { POS_TERMINAL_ID_MAX_LENGTH, POS_TERMINAL_NAME_MAX_LENGTH, type Merchant
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
-import { NativeSelect, NativeSelectOption } from "@workspace/ui/components/form/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
 import { Plus } from "lucide-react";
 import * as React from "react";
@@ -64,9 +64,10 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, submissionError, o
 		setName(event.target.value);
 	}, []);
 
-	const handleStoreChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>): void => {
-		setStoreId(event.target.value);
+	const handleStoreChange = React.useCallback((value: string | null): void => {
+		setStoreId(value ?? "");
 	}, []);
+	const storeName = React.useCallback((id: string): string => stores.find((store) => store.id === id)?.name ?? id, [stores]);
 
 	const handleSubmit = React.useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
@@ -104,24 +105,18 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, submissionError, o
 				</div>
 				<div className="grid gap-2">
 					<Label htmlFor="terminal-store">Store</Label>
-					<NativeSelect
-						id="terminal-store"
-						className="w-full"
-						value={storeId}
-						onChange={handleStoreChange}
-						required
-						disabled={stores.length === 0}
-						aria-invalid={storeError !== undefined}
-						{...(storeError === undefined ? {} : { "aria-describedby": "terminal-store-error" })}>
-						<NativeSelectOption value="" disabled>
-							Choose a store
-						</NativeSelectOption>
-						{stores.map((store: TerminalStoreOption): React.JSX.Element => (
-							<NativeSelectOption key={store.id} value={store.id}>
-								{store.name}
-							</NativeSelectOption>
-						))}
-					</NativeSelect>
+					<Select<string> value={storeId === "" ? null : storeId} onValueChange={handleStoreChange} disabled={stores.length === 0} required invalid={storeError !== undefined}>
+						<SelectTrigger id="terminal-store" {...(storeError === undefined ? {} : { "aria-describedby": "terminal-store-error" })}>
+							<SelectValue placeholder="Choose a store" formatValue={storeName} />
+						</SelectTrigger>
+						<SelectContent>
+							{stores.map((store: TerminalStoreOption): React.JSX.Element => (
+								<SelectItem key={store.id} value={store.id}>
+									{store.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					{stores.length === 0 ? <p className="text-xs text-muted-foreground">No active store yet — add one under Settings › Locations first.</p> : null}
 					{storeError === undefined ? null : (
 						<p id="terminal-store-error" role="alert" className="text-xs text-destructive">

@@ -179,3 +179,46 @@ describe("base config: query-cache keys and unchecked z.custom", () => {
 		expect(restrictedSyntaxMessages("export const schema = z.custom<Thing>((value): value is Thing => value !== null);")).toEqual([]);
 	});
 });
+
+describe("nestjs: every route declares its response", () => {
+	const RULE = "@darraghor/nestjs-typed/api-method-should-specify-api-response";
+	/** The rule exactly as the shared NestJS config sets it (options included). */
+	const ruleEntry = nestjsConfig.findLast((block) => block.rules?.[RULE] !== undefined)?.rules?.[RULE];
+	const plugins = nestjsConfig.find((block) => block.plugins?.["@darraghor/nestjs-typed"] !== undefined)?.plugins;
+
+	function lintController(decorator) {
+		const linter = new Linter({ configType: "flat" });
+		const source = `
+import { Controller, Get } from "@nestjs/common";
+@Controller("reports")
+export class ReportsController {
+	${decorator}
+	@Get("export")
+	public async exportReport(): Promise<void> {}
+}
+`;
+		return linter.verify(
+			source,
+			[
+				{
+					files: ["**/*.ts"],
+					languageOptions: { parser: tseslint.parser, parserOptions: { ecmaVersion: "latest", sourceType: "module" } },
+					plugins,
+					rules: { [RULE]: ruleEntry },
+				},
+			],
+			"reports.controller.ts",
+		);
+	}
+
+	it.each(["@ZodResponse(ReportSchema)", "@ZodPaginatedResponse(ReportSchema)", "@ZodRawResponse(ReportSchema)", "@ZodFileResponse(contract.response)"])(
+		"accepts a route documented by %s",
+		(decorator) => {
+			expect(lintController(decorator).filter((message) => message.ruleId === RULE)).toEqual([]);
+		},
+	);
+
+	it("still fails a route with no response decorator", () => {
+		expect(lintController("").map((message) => message.ruleId)).toContain(RULE);
+	});
+});

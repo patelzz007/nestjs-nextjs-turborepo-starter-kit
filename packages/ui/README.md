@@ -189,13 +189,14 @@ reads as different days.
 
 Every formatter takes the locale — and, for dates, the IANA time zone — explicitly. Apps pass
 `PLATFORM_DISPLAY_REGION` from `@workspace/shared` (`en-MY`, `Asia/Kuala_Lumpur`: every pilot city
-is in that zone, so it is the stores' wall-clock time), and `ANALYTICS_BUCKET_DISPLAY_REGION` for
-analytics series points, which the API buckets by UTC week.
+is in that zone, so it is the stores' wall-clock time). Analytics dashboards label buckets in the
+report's own zone (`range.timeZone` of the response — the merchant's zone, UTC for admin and
+customer).
 
 | Module | Exports |
 |---|---|
-| `lib/format/date-time` | `formatEpochMs(epochMs, "date" \| "dateTime" \| "dayMonth", region)`, `toIsoTimestamp`, `formatRelativeTime(epochMs, nowMs, locale)` |
-| `lib/format/number` | `formatCount(value, locale)` |
+| `lib/format/date-time` | `formatEpochMs(epochMs, "date" \| "dateTime" \| "dayMonth", region)`, `formatEpochMsRange(fromMs, toMs, region)` (half-open range → "6 Sept – 5 Oct 2026"), `formatBucket(startMs, endMs, interval, "axis" \| "full", region)`, `toIsoTimestamp`, `formatRelativeTime(epochMs, nowMs, locale)` |
+| `lib/format/number` | `formatCount(value, locale)`, `formatPercent(percent, locale)`, `formatPercentChange(percent, locale)` (percent units, one decimal) |
 | `lib/format/money` | `formatMinorUnits(minor, currency, locale)`, `formatMinorUnitsCompact`, `minorToMajorUnits`, `minorUnitExponent` — the minor-unit exponent comes from `SALE_CURRENCY_MINOR_UNIT_EXPONENTS` (ISO 4217) in `@workspace/shared`, never from ICU's display precision |
 
 **Relative times** ("5 minutes ago") depend on the current time, which the server and the browser
@@ -206,6 +207,14 @@ wording (refreshed every 30 s; the absolute time stays as the tooltip).
 ```tsx
 <RelativeTime epochMs={terminal.lastSeenAt} region={PLATFORM_DISPLAY_REGION} />
 ```
+
+## Analytics primitives (`components/analytics/`)
+
+`KpiStatCard`, `TimeSeriesChart` (line / area / bar / stacked bar), `RankedBarList`, `ShareBar`,
+`AnalyticsRangePicker`, `AnalyticsPanel` + `ChartStateFrame`, and the chart colour slots in
+`lib/charts/chart-colors`. Data-agnostic: they take formatted strings, numbers, colour slots and
+callbacks — never an API type. What each is for, the colour rules, accessibility and testing:
+[Analytics dashboards](../../docs/technical/frontend/analytics-charts.md).
 
 ## React Hook Form
 

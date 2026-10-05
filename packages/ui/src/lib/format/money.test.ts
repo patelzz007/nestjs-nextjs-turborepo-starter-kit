@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { formatMinorUnits, formatMinorUnitsCompact, minorToMajorUnits, minorUnitExponent } from "./money";
 
 /** Intl separates the currency symbol from the amount with a no-break space. */
-const NBSP = "\u00A0";
+/** Formatters normalise every ICU space variant to a plain space (see intl-text.ts). */
+const SPACE = " ";
 const MALAYSIAN_ENGLISH = "en-MY";
 const US_ENGLISH = "en-US";
 const GERMAN = "de-DE";
@@ -27,32 +28,32 @@ describe("minorToMajorUnits", () => {
 
 describe("formatMinorUnits", () => {
 	it("renders sen as ringgit with two decimals", () => {
-		expect(formatMinorUnits(123_450, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}1,234.50`);
+		expect(formatMinorUnits(123_450, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}1,234.50`);
 	});
 
 	it("renders zero and sub-ringgit amounts", () => {
-		expect(formatMinorUnits(0, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}0.00`);
-		expect(formatMinorUnits(5, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}0.05`);
+		expect(formatMinorUnits(0, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}0.00`);
+		expect(formatMinorUnits(5, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}0.05`);
 	});
 
 	it("renders negative amounts with a leading sign", () => {
-		expect(formatMinorUnits(-1_230, "MYR", MALAYSIAN_ENGLISH)).toBe(`-RM${NBSP}12.30`);
+		expect(formatMinorUnits(-1_230, "MYR", MALAYSIAN_ENGLISH)).toBe(`-RM${SPACE}12.30`);
 	});
 
 	it("formats in the locale it is given — never the runtime's default", () => {
-		expect(formatMinorUnits(123_450, "MYR", US_ENGLISH)).toBe(`MYR${NBSP}1,234.50`);
-		expect(formatMinorUnits(123_450, "MYR", GERMAN)).toBe(`1.234,50${NBSP}MYR`);
+		expect(formatMinorUnits(123_450, "MYR", US_ENGLISH)).toBe(`MYR${SPACE}1,234.50`);
+		expect(formatMinorUnits(123_450, "MYR", GERMAN)).toBe(`1.234,50${SPACE}MYR`);
 	});
 });
 
 describe("formatMinorUnitsCompact", () => {
 	it("abbreviates thousands and millions with one decimal at most", () => {
-		expect(formatMinorUnitsCompact(12_345_678, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}123.5K`);
-		expect(formatMinorUnitsCompact(123_456_700, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}1.2M`);
+		expect(formatMinorUnitsCompact(12_345_678, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}123.5K`);
+		expect(formatMinorUnitsCompact(123_456_700, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}1.2M`);
 	});
 
 	it("drops decimals on small round amounts", () => {
-		expect(formatMinorUnitsCompact(0, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}0`);
-		expect(formatMinorUnitsCompact(99_900, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${NBSP}999`);
+		expect(formatMinorUnitsCompact(0, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}0`);
+		expect(formatMinorUnitsCompact(99_900, "MYR", MALAYSIAN_ENGLISH)).toBe(`RM${SPACE}999`);
 	});
 });

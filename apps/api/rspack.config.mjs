@@ -20,6 +20,9 @@ export default defineConfig((_env, argv) => {
 			filename: "main.js",
 			module: true,
 			chunkFormat: "module",
+			// Files referenced by `new URL("<file>", import.meta.url)` (the PDF report fonts and their
+			// licences) are emitted here, next to main.js, and resolved relative to the bundle at runtime.
+			assetModuleFilename: "assets/[name].[contenthash:8][ext]",
 		},
 		resolve: {
 			extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],

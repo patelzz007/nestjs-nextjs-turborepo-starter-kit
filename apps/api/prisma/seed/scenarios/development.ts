@@ -7,6 +7,9 @@ import { seedAuthorizationKernel } from "../authorization-kernel";
 import { prisma } from "../client";
 import { ANONYMOUS_SEED_URL_PREFIX, EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-users";
 import { useSeedRandom } from "../helpers";
+import { seedAnalyticsHistory } from "../analytics-history";
+import { alignCustomerAccountAges } from "../customer-account-age";
+import { SeededRandom } from "../prng";
 import type { SeedRunOptions } from "../seed-options";
 import { seedFileLifecycle } from "../files";
 import { seedGeo } from "../geo-seed";
@@ -24,7 +27,7 @@ import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS, printOrganizationSeedCr
 import { seedProducts } from "../products";
 import { seedReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
-import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "../rewards";
+import { cleanupRewardSeedData, printRewardSeedCredentials, REWARD_SEED_IDS, seedRewards } from "../rewards";
 import { seedSamplePlatform } from "../sample-platform";
 import { seedStores } from "../stores";
 import { createTags } from "../tags";
@@ -45,6 +48,9 @@ const DEVELOPMENT_ACCOUNT_SECURITY_CAST: AccountSecurityCastEmails = {
 	lockedUser: "grace.wilson@example.com",
 	supportAccess: { organizationId: ORGANIZATION_SEED_IDS.klOrganization, ownerEmail: "brew.owner@kl-rewards.demo" },
 };
+
+/** Seed accounts that never shop as customers (platform staff); every other seeded user may appear in the analytics history. */
+const NON_CUSTOMER_SEED_EMAILS: readonly string[] = ["superadmin@example.com", "admin@example.com", "manager@example.com"];
 
 /**
  * `development` scenario (the default): reference data plus the full demo
@@ -185,6 +191,19 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog(
 		`✅ Rewards: ${String(rewardSummary.organizations)} organizations, ${String(rewardSummary.rewards)} rewards, ${String(rewardSummary.claims)} claims, ${String(rewardSummary.redemptions)} redemptions`,
 	);
+	seedLog("Seeding a year of POS activity for the analytics dashboards and exports...");
+	const history = await seedAnalyticsHistory({
+		random: SeededRandom.derive(options.seed, "analytics-history"),
+		nowMs: Date.now(),
+		customerIds: allUsers.filter((user) => !NON_CUSTOMER_SEED_EMAILS.includes(user.email)).map((user) => user.id),
+		createdByUserId: REWARD_SEED_IDS.mlkOwnerUser,
+	});
+	seedLog(`✅ Analytics history: ${String(history.rewards)} campaign rewards, ${String(history.claims)} claims, ${String(history.sales)} paid bills`);
+	const alignedAccounts = await alignCustomerAccountAges(
+		options.seed,
+		allUsers.map((user) => user.id),
+	);
+	seedLog(`✅ ${String(alignedAccounts)} customer accounts dated before their first claim / bill`);
 	seedLog("Seeding organization review + lifecycle states (reviewed requests, rejected store, deletion flow, deleted user)...");
 	const reviewStates = await seedOrganizationReviewStates(adminUser);
 	seedLog(

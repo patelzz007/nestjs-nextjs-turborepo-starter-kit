@@ -1,30 +1,54 @@
 "use client";
 
+import { AnalyticsKpiGrid } from "@workspace/client/lib/analytics/analytics-kpi-grid";
+import {
+	ANALYTICS_CHART_LABELS,
+	analyticsDisplayRegion,
+	analyticsFormatters,
+	bucketFormatters,
+	formatPreviousPeriodLabel,
+	MONEY_AXIS_WIDTH_PX,
+	toChartFrameState,
+	toChartSeriesData,
+	toKpiViews,
+	type AnalyticsDataStatus,
+} from "@workspace/client/lib/analytics/analytics-presentation";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
-import { PERMISSION, type AdminSalesAnalyticsQuery } from "@workspace/shared";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { DEFAULT_SALE_CURRENCY, PERMISSION, PLATFORM_DISPLAY_REGION, UTC_TIME_ZONE, type AdminAnalyticsDashboardQuery } from "@workspace/shared";
+import { AnalyticsPanel } from "@workspace/ui/components/analytics/analytics-panel";
+import { TimeSeriesChart } from "@workspace/ui/components/analytics/time-series-chart";
+import { buttonVariants } from "@workspace/ui/components/form/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { SalesOverTimeChart } from "@/components/analytics/sales-over-time-chart";
-import { SalesStatCards } from "@/components/analytics/sales-stat-cards";
-import { DEFAULT_SALES_PERIOD_WEEKS, salesPeriodLabel } from "@/lib/analytics/sales-period";
+import { ADMIN_SALES_KPIS, ADMIN_SALES_SERIES } from "@/lib/analytics/admin-analytics";
 import { ROUTES } from "@/lib/routes";
 
-/** No `from`/`to` — the API's default period, which is the sales page's default preset too. */
-const DEFAULT_PERIOD_QUERY: AdminSalesAnalyticsQuery = {};
+/** No range — the API's default (the last 30 days), the analytics page's default preset too. */
+const DEFAULT_RANGE_QUERY: AdminAnalyticsDashboardQuery = {};
 
 function PlatformSalesCardsContent(): React.JSX.Element {
 	const { api } = useAuth();
-	const salesQuery = api.rewardsAdmin.salesAnalytics.useQuery(DEFAULT_PERIOD_QUERY);
-	const analytics = salesQuery.data?.data;
-	const { refetch } = salesQuery;
+	const dashboardQuery = api.rewardsAdmin.analyticsDashboard.useQuery(DEFAULT_RANGE_QUERY);
+	const dashboard = dashboardQuery.data?.data;
+	const { refetch } = dashboardQuery;
 
 	const handleRetry = React.useCallback((): void => {
 		void refetch();
 	}, [refetch]);
+
+	const status: AnalyticsDataStatus =
+		dashboard !== undefined
+			? { status: "ready" }
+			: dashboardQuery.isError
+				? { status: "error", message: "Couldn't load platform sales.", onRetry: handleRetry }
+				: { status: "loading" };
+	const formatters = analyticsFormatters(dashboard?.currency ?? DEFAULT_SALE_CURRENCY, PLATFORM_DISPLAY_REGION.locale);
+	const region = analyticsDisplayRegion(dashboard?.range.timeZone ?? UTC_TIME_ZONE);
+	const buckets = bucketFormatters(dashboard?.range.interval ?? "day", region);
+	const sales = toChartSeriesData(dashboard?.series ?? [], ADMIN_SALES_SERIES);
 
 	return (
 		<section aria-labelledby="platform-sales-heading" className="space-y-3 px-4 lg:px-6">
@@ -33,34 +57,42 @@ function PlatformSalesCardsContent(): React.JSX.Element {
 					<h2 id="platform-sales-heading" className="text-base font-semibold tracking-tight text-foreground">
 						Platform sales
 					</h2>
-					<p className="text-sm text-muted-foreground">{salesPeriodLabel(DEFAULT_SALES_PERIOD_WEEKS)}, vs the previous period</p>
+					<p className="text-sm text-muted-foreground">Last 30 days, vs the 30 days before</p>
 				</div>
-				<Link href={ROUTES.analytics.sales} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-					View sales analytics
+				<Link href={ROUTES.analytics.index} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+					View analytics
 					<ArrowRight aria-hidden="true" />
 				</Link>
 			</div>
-			{analytics === undefined && salesQuery.isError ? (
-				<div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-					<span>Couldn&apos;t load platform sales.</span>
-					<Button type="button" variant="outline" size="sm" onClick={handleRetry}>
-						Try again
-					</Button>
-				</div>
-			) : (
-				<>
-					<SalesStatCards summary={analytics} />
-					<SalesOverTimeChart sales={analytics?.sales} description={`Paid bill totals per week, ${salesPeriodLabel(DEFAULT_SALES_PERIOD_WEEKS).toLowerCase()}`} />
-				</>
-			)}
+			<AnalyticsKpiGrid
+				label="Platform sales"
+				kpis={toKpiViews(ADMIN_SALES_KPIS, dashboard?.totals, formatters)}
+				comparisonLabel={dashboard === undefined ? undefined : formatPreviousPeriodLabel(dashboard.range, region)}
+			/>
+			<AnalyticsPanel title="Sales per day" description="Paid bill totals, last 30 days">
+				<TimeSeriesChart
+					title="Sales per day"
+					kind="bar"
+					points={sales.points}
+					series={ADMIN_SALES_SERIES}
+					formatValue={formatters.money}
+					formatAxisValue={formatters.moneyCompact}
+					formatBucketTick={buckets.tick}
+					formatBucketLabel={buckets.label}
+					labels={ANALYTICS_CHART_LABELS}
+					axisWidth={MONEY_AXIS_WIDTH_PX}
+					state={toChartFrameState(status, sales.isEmpty, "No paid bills in the last 30 days.")}
+				/>
+			</AnalyticsPanel>
 		</section>
 	);
 }
 
 /**
- * Overview headline: real platform sales from `GET /admin/analytics/sales`
- * (READ ANALYTICS) — the stat cards and the weekly sales chart, from one query. The overview page itself is open to every admin, so the
- * section is hidden — and never queried — without that permission.
+ * Overview headline: platform sales for the last 30 days from
+ * `GET /admin/analytics/dashboard` (READ ANALYTICS) — the sales KPIs and the
+ * daily sales chart, from one query. The overview page itself is open to every
+ * admin, so the section is hidden — and never queried — without that permission.
  */
 export function PlatformSalesCards(): React.JSX.Element {
 	return (

@@ -3,7 +3,7 @@ title: "Technical documentation — start here"
 description: "Index of the engineering documentation: setup, architecture, dos and don'ts, the generated API reference, configuration, database, security, messaging, storage, email, frontend, tooling, operations — plus the known gaps."
 order: 1
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
 tags: ["overview", "technical", "index"]
 ---
@@ -29,13 +29,13 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 | Area | Pages |
 | --- | --- |
 | Basics | [Getting started](./getting-started.md) · [Architecture](./architecture.md) · [Dos and don'ts](./dos-and-donts.md) · [Adding a feature](./adding-a-feature.md) |
-| API | [Conventions](./api/README.md) · [**Reference (generated)**](./api-reference/README.md) · [Routes registry](./api/routes.md) · [Errors](./api/errors.md) · [List queries](./api/list-queries.md) · [Response contracts](./api/response-contracts.md) · [HTTP server (Fastify)](./api/http-server.md) · [POS integration](./pos-integration.md) |
+| API | [Conventions](./api/README.md) · [**Reference (generated)**](./api-reference/README.md) · [Routes registry](./api/routes.md) · [Errors](./api/errors.md) · [List queries](./api/list-queries.md) · [Response contracts](./api/response-contracts.md) · [Analytics dashboards and exports](./api/analytics.md) · [HTTP server (Fastify)](./api/http-server.md) · [POS integration](./pos-integration.md) |
 | Configuration | [API environment](./configuration/api.md) · [Frontend environment](./configuration/frontend.md) |
 | Data | [Database, migrations and seed](./database.md) · [Messaging, jobs, outbox](./messaging.md) |
 | Authorization | [Overview](./authorization/overview.md) · [Backend kernel](./authorization/backend.md) · [RBAC internals](./authorization/rbac.md) · [Tenancy and RLS](./authorization/tenancy-and-rls.md) · [Frontend](./authorization/frontend.md) · [Recipes](./authorization/recipes.md) · [Testing](./authorization/testing.md) · [Troubleshooting](./authorization/troubleshooting.md) · [Dos and don'ts](./authorization/dos-and-donts.md) · [Change log](./authorization/changelog.md) |
 | Security | [Authentication, MFA, impersonation](./security/authentication.md) · [Token refresh](./security/token-refresh.md) · [Database security](./security/database-security.md) · [Encryption and KMS](./security/encryption-and-kms.md) · [Threat model](./security/threat-model.md) · [Data classification](./security/data-classification.md) |
 | Files and email | [Storage overview](./storage/overview.md) · [**AWS S3 setup**](./storage/aws-s3.md) · [**Firebase Storage setup**](./storage/firebase.md) · [**Resend setup**](./email/resend-setup.md) · [Email templates](./email/templates.md) |
-| Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Toasts](./frontend/toast.md) · [Streams (RxJS)](./frontend/streams.md) |
+| Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Analytics dashboards](./frontend/analytics-charts.md) · [Toasts](./frontend/toast.md) · [Streams (RxJS)](./frontend/streams.md) |
 | Tooling | [TypeScript](./tooling/typescript.md) · [ESLint](./tooling/eslint.md) · [Dependencies](./tooling/dependencies.md) |
 | Operations | [CI](./operations/ci.md) · [Local infrastructure](./operations/local-infrastructure.md) · [Observability](./operations/observability.md) · [Multi-tenancy runbook](./operations/multi-tenancy-runbook.md) · [Bootstrap the first SuperAdmin](./operations/superadmin-bootstrap.md) |
 | Decisions | [Architecture decision records](../adr/README.md) |

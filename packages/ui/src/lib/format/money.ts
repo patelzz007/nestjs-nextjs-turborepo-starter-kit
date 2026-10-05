@@ -13,6 +13,7 @@
 // runtime default, so server and browser render the same string.
 
 import { SALE_CURRENCY_MINOR_UNIT_EXPONENTS, type SaleCurrency } from "@workspace/shared";
+import { normalizeIntlSpacing } from "./intl-text";
 
 /** Base of the decimal system — a currency with `n` minor digits has 10^n minor units per major unit. */
 const DECIMAL_BASE = 10;
@@ -66,10 +67,10 @@ export function minorToMajorUnits(minor: number, currency: SaleCurrency): number
 
 /** `123450, "MYR", "en-MY"` → `"RM 1,234.50"` — full precision (the currency's minor digits), for values and tooltips. */
 export function formatMinorUnits(minor: number, currency: SaleCurrency, locale: string): string {
-	return standardFormatter(currency, locale).format(minorToMajorUnits(minor, currency));
+	return normalizeIntlSpacing(standardFormatter(currency, locale).format(minorToMajorUnits(minor, currency)));
 }
 
 /** `12345678, "MYR", "en-MY"` → `"RM 123.5K"` — abbreviated, for chart axes and tight spaces. */
 export function formatMinorUnitsCompact(minor: number, currency: SaleCurrency, locale: string): string {
-	return compactFormatter(currency, locale).format(minorToMajorUnits(minor, currency));
+	return normalizeIntlSpacing(compactFormatter(currency, locale).format(minorToMajorUnits(minor, currency)));
 }

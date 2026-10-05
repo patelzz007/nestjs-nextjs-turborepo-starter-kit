@@ -40,6 +40,31 @@ describe("AuditTrailService", () => {
 		expect(errorLog).toHaveBeenCalledWith(expect.objectContaining({ event: "audit.write_failed", phase: "success" }));
 	});
 
+	it("audits a sensitive GET (an export) with the summary as its response body", async () => {
+		const { auditTrail, append } = createAuditTrailDouble(requestContext);
+		const request = await captureFastifyRequest({ headers: {} });
+
+		await requestContext.run(SEED, () => auditTrail.recordSensitiveRead(request, 200, { report: "merchant", format: "csv", rowCounts: { series: 3 } }));
+
+		expect(append).toHaveBeenCalledWith(
+			expect.objectContaining({
+				correlationId: "corr-trail",
+				outcome: "SUCCEEDED",
+				responseStatus: 200,
+				responseBody: { report: "merchant", format: "csv", rowCounts: { series: 3 } },
+			}),
+		);
+	});
+
+	it("refuses to release a sensitive read whose audit row cannot be written (AuditLogWriteError)", async () => {
+		const { auditTrail, append } = createAuditTrailDouble(requestContext);
+		append.mockRejectedValueOnce(new Error("db down"));
+		const request = await captureFastifyRequest({ headers: {} });
+
+		await expect(requestContext.run(SEED, () => auditTrail.recordSensitiveRead(request, 200, { report: "merchant" }))).rejects.toBeInstanceOf(AuditLogWriteError);
+		expect(errorLog).toHaveBeenCalledWith(expect.objectContaining({ event: "audit.write_failed", phase: "sensitive_read" }));
+	});
+
 	it("never throws on the failure path: the original error must reach the client, the lost entry is logged", async () => {
 		const { auditTrail, append } = createAuditTrailDouble(requestContext);
 		append.mockRejectedValueOnce(new Error("db down"));

@@ -2249,6 +2249,12 @@ model RewardClaim {
   @@index([rewardId])
   @@index([status])
   @@index([claimExpiresAt])
+  /// Analytics: a merchant's claims per bucket (rewards → claims of each reward in the range).
+  @@index([rewardId, claimedAt])
+  /// Analytics: one customer's claims in a range.
+  @@index([userId, claimedAt])
+  /// Analytics: platform-wide claims in a range.
+  @@index([claimedAt])
   @@map("reward_claims")
 }
 
@@ -2281,6 +2287,10 @@ model RewardRedemption {
   @@index([userId])
   @@index([redeemedAt])
   @@index([saleId])
+  /// Analytics: one merchant's redemptions in a range (series, totals, store / reward / method breakdowns).
+  @@index([organizationId, redeemedAt])
+  /// Analytics: one customer's redemptions in a range.
+  @@index([userId, redeemedAt])
   @@map("reward_redemptions")
 }
 

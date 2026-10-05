@@ -8,6 +8,7 @@ import { useMemo } from "react";
 
 import { createApiRequestContext, type ApiRequestContext, type OnRefresh, type OnUnauthorized } from "./api-request";
 import { buildClientRouter, createProcedureForDef, type ClientMutationProcedure, type ClientQueryProcedure, type ClientRouterTree } from "./client-router";
+import { fetchDownload, type DownloadDef, type DownloadedFile, type DownloadOptions } from "./download";
 import type { MutationDef, ProcedureDef, QueryDef, RouterTree } from "./endpoints";
 
 export {
@@ -47,6 +48,15 @@ export interface ApiClientProcedureBinding {
 	procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
 	procedure<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
 	procedure<Input extends SerializableInput, Resp extends DataValue>(def: ProcedureDef<Input, Resp>): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp>;
+	/**
+	 * Downloads a file route (`apiDownloads.*`) with this client's session and
+	 * refresh pipeline — `fetchDownload` bound to the hook's request context.
+	 */
+	download<Input extends SerializableInput>(
+		def: DownloadDef<Input>,
+		input: Input,
+		options?: DownloadOptions & { readonly fallbackFileName?: string | undefined },
+	): Promise<DownloadedFile>;
 }
 
 /** `procedure()` binder + the typed router tree for `R`. */
@@ -76,8 +86,17 @@ export function useApi<R extends object>(router: R, baseUrl: string, clientType:
 			return createProcedureForDef(routerContext, def);
 		}
 
+		function download<Input extends SerializableInput>(
+			def: DownloadDef<Input>,
+			input: Input,
+			options?: DownloadOptions & { readonly fallbackFileName?: string | undefined },
+		): Promise<DownloadedFile> {
+			return fetchDownload(routerContext, def, input, options);
+		}
+
 		return {
 			procedure,
+			download,
 			...buildClientRouter(router, routerContext),
 		};
 	}, [router, baseUrl, clientType, onUnauthorized, onRefresh]);

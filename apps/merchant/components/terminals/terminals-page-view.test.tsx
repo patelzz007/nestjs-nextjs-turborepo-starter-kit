@@ -213,10 +213,18 @@ function liveRegionText(container: HTMLElement): string {
 		.join(" ");
 }
 
-function addBackOffice(): Promise<HTMLElement> {
+/** Picks `option` in the shared Select labelled `label` with the pointer (opens its listbox, then presses the option). */
+async function chooseInSelect(scope: HTMLElement, label: string, option: string): Promise<void> {
+	fireEvent.click(within(scope).getByLabelText(label));
+	const item = await screen.findByRole("option", { name: option });
+	fireEvent.pointerDown(item, { pointerType: "mouse" });
+	fireEvent.click(item);
+}
+
+async function addBackOffice(): Promise<HTMLElement> {
 	const dialog = openAddDialog();
 	fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "  Back office  " } });
-	fireEvent.change(within(dialog).getByLabelText("Store"), { target: { value: STORE_A.id } });
+	await chooseInSelect(dialog, "Store", STORE_A.name);
 	fireEvent.click(within(dialog).getByRole("button", { name: "Add terminal" }));
 	return screen.findByRole("dialog", { name: "Pair “Back office”" });
 }
@@ -379,7 +387,7 @@ describe("TerminalsPageView add and pair", () => {
 		renderAsAdmin();
 		const dialog = openAddDialog();
 		fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "Back office" } });
-		fireEvent.change(within(dialog).getByLabelText("Store"), { target: { value: STORE_A.id } });
+		await chooseInSelect(dialog, "Store", STORE_A.name);
 		fireEvent.change(within(dialog).getByLabelText("Terminal ID (optional)"), { target: { value: "KL-REGISTER-01" } });
 		fireEvent.click(within(dialog).getByRole("button", { name: "Add terminal" }));
 
@@ -414,8 +422,7 @@ describe("TerminalsPageView add and pair", () => {
 		seedTenant(ONE_STORE, null);
 		renderAsAdmin();
 
-		const storeSelect = within(openAddDialog()).getByLabelText("Store");
-		expect(storeSelect instanceof HTMLSelectElement ? storeSelect.value : "").toBe(STORE_A.id);
+		expect(within(openAddDialog()).getByLabelText("Store").textContent).toContain(STORE_A.name);
 	});
 
 	it("preselects the active store, and keeps the submit disabled for a blank name", () => {
@@ -423,8 +430,7 @@ describe("TerminalsPageView add and pair", () => {
 		renderAsAdmin();
 
 		const dialog = openAddDialog();
-		const storeSelect = within(dialog).getByLabelText("Store");
-		expect(storeSelect instanceof HTMLSelectElement ? storeSelect.value : "").toBe(STORE_B.id);
+		expect(within(dialog).getByLabelText("Store").textContent).toContain(STORE_B.name);
 
 		fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "   " } });
 		expect(within(dialog).getByRole("button", { name: "Add terminal" }).hasAttribute("disabled")).toBe(true);

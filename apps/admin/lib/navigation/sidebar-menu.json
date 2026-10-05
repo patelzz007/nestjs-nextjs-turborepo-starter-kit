@@ -16,14 +16,7 @@
 				{
 					"title": "Analytics",
 					"url": "/analytics",
-					"icon": "BarChart3",
-					"children": [
-						{
-							"title": "Sales",
-							"url": "/analytics/sales",
-							"icon": "TrendingUp"
-						}
-					]
+					"icon": "BarChart3"
 				},
 				{
 					"title": "Users",

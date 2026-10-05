@@ -3,7 +3,7 @@ title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
 order: 8
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -58,7 +58,7 @@ Get file metadata
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a
+GET /api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -70,7 +70,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "126f79f2-389f-4e76-b9b9-95aaf677577a",
+      "id": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "welcome.png",
@@ -78,13 +78,13 @@ Response `200 OK` (application/json):
       "sizeBytes": 61292,
       "status": "READY",
       "scanStatus": "NOT_SCANNED",
-      "publicUrl": "http://127.0.0.1:8097/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/local-public",
-      "uploadedAt": 1791099726070
+      "publicUrl": "http://127.0.0.1:8097/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/local-public",
+      "uploadedAt": 1791193326179
     }
   },
   "meta": {
-    "correlationId": "fjdYZBYkOJ-TMnBkEMHoe",
-    "timestamp": 1791099727656
+    "correlationId": "0P0sQYKrTLyaMXWpFP9Fl",
+    "timestamp": 1791193327764
   }
 }
 ```
@@ -120,7 +120,7 @@ Soft-delete a file and queue physical deletion
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/files/82f6652d-e3f6-405a-8574-f2ae9a22e16e
+DELETE /api/v1/files/11df9b25-2636-4a71-be60-ad1bbb3ca11e
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -135,8 +135,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "vI7TG6-DZFy--fH23zOv5",
-    "timestamp": 1791099729364
+    "correlationId": "vRvOV_U7ctXXwFCykqKRO",
+    "timestamp": 1791193329422
   }
 }
 ```
@@ -188,7 +188,7 @@ Complete a direct upload after browser upload
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/complete
+POST /api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/complete
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -206,7 +206,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "126f79f2-389f-4e76-b9b9-95aaf677577a",
+      "id": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "welcome.png",
@@ -215,12 +215,12 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1791099726070
+      "uploadedAt": 1791193326179
     }
   },
   "meta": {
-    "correlationId": "6vVak_lKBPSLnX7Q3JThp",
-    "timestamp": 1791099726126
+    "correlationId": "DCyL33d1fQLJTkyuB2SnT",
+    "timestamp": 1791193326244
   }
 }
 ```
@@ -258,7 +258,7 @@ Get a short-lived download URL for a private file
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/download-url
+GET /api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/download-url
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -269,14 +269,14 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "126f79f2-389f-4e76-b9b9-95aaf677577a",
+    "fileId": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
     "status": "READY",
     "downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1791100027673
+    "expiresAt": 1791193627776
   },
   "meta": {
-    "correlationId": "mnfJYegedEBsDimTSw9rZ",
-    "timestamp": 1791099727674
+    "correlationId": "Jf2VPrL6IO1F-7oI6Ap1N",
+    "timestamp": 1791193327776
   }
 }
 ```
@@ -307,7 +307,7 @@ Serve a READY public asset from local storage (development only)
 **Example** — called as no session.
 
 ```http
-GET /api/v1/files/82f6652d-e3f6-405a-8574-f2ae9a22e16e/local-public
+GET /api/v1/files/11df9b25-2636-4a71-be60-ad1bbb3ca11e/local-public
 X-Client-Type: web
 ```
 
@@ -347,12 +347,12 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 **Example** — called as the browser, posting to the upload ticket (no session needed).
 
 ```http
-POST /api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/local-upload
+POST /api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/local-upload
 Content-Type: multipart/form-data
 
 {
   "multipart/form-data": {
-    "key": "staging/users/1e06b347-4142-4ea4-ab85-7fbca1d1f1c0/avatar/126f79f2-389f-4e76-b9b9-95aaf677577a-welcome.png",
+    "key": "staging/users/9194a7c0-e721-4833-95cc-eca2f319f542/avatar/cd5829ab-ad2f-4539-8b7b-7ae2b739564e-welcome.png",
     "token": "<redacted: one-time secret>",
     "file": "<the image bytes: welcome.png, image/png>"
   }
@@ -368,8 +368,8 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "FoX0rHwxKe7qYnfdYZX3H",
-    "timestamp": 1791099726093
+    "correlationId": "QV-qS2nwa3it-nrRvU_fk",
+    "timestamp": 1791193326208
   }
 }
 ```
@@ -452,28 +452,27 @@ Applies an out-of-process scanner/processing result. Accepted only while the fil
 
 ```http
 POST /api/v1/files/processing-callback
-x-storage-callback-secret: <STORAGE_PROCESSING_CALLBACK_SECRET>
 Content-Type: application/json
 
 {
-  "fileId": "82f6652d-e3f6-405a-8574-f2ae9a22e16e",
+  "fileId": "11df9b25-2636-4a71-be60-ad1bbb3ca11e",
   "status": "READY",
   "scanStatus": "CLEAN"
 }
 ```
 
-Response `409 Conflict` (application/json):
+Response `401 Unauthorized` (application/json):
 
 ```json
 {
   "success": false,
   "error": {
-    "code": "FILE_STATE_CONFLICT",
-    "message": "File is READY, not awaiting a processing result"
+    "code": "CALLBACK_UNAUTHORIZED",
+    "message": "Invalid processing callback secret"
   },
   "meta": {
-    "correlationId": "VLZDWZw5ptTZGQ8phVAbg",
-    "timestamp": 1791099729323
+    "correlationId": "qkNI6fJt5mkHcePBtSmNM",
+    "timestamp": 1791193329393
   }
 }
 ```
@@ -535,7 +534,7 @@ Content-Type: application/json
   "mimeType": "image/png",
   "sizeBytes": 61292,
   "checksumSha256": "0fe260bfe734b5b3a68f1ecc1e8e55460eb2afece003d430cdf3ba2fe01204bf",
-  "userId": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0"
+  "userId": "9194a7c0-e721-4833-95cc-eca2f319f542"
 }
 ```
 
@@ -545,19 +544,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "126f79f2-389f-4e76-b9b9-95aaf677577a",
-    "objectPath": "staging/users/1e06b347-4142-4ea4-ab85-7fbca1d1f1c0/avatar/126f79f2-389f-4e76-b9b9-95aaf677577a-welcome.png",
+    "fileId": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
+    "objectPath": "staging/users/9194a7c0-e721-4833-95cc-eca2f319f542/avatar/cd5829ab-ad2f-4539-8b7b-7ae2b739564e-welcome.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://127.0.0.1:8097/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/local-upload",
+    "uploadUrl": "http://127.0.0.1:8097/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/local-upload",
     "fields": {
-      "key": "staging/users/1e06b347-4142-4ea4-ab85-7fbca1d1f1c0/avatar/126f79f2-389f-4e76-b9b9-95aaf677577a-welcome.png",
+      "key": "staging/users/9194a7c0-e721-4833-95cc-eca2f319f542/avatar/cd5829ab-ad2f-4539-8b7b-7ae2b739564e-welcome.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "2PQWBs1qFcMySo3RlI8cD",
-    "timestamp": 1791099726072
+    "correlationId": "KKfmvFBmikrbK7iZKB1Pm",
+    "timestamp": 1791193326183
   }
 }
 ```

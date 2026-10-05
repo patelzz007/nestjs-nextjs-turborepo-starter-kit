@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Input } from "./input";
 import { InputGroupInput, InputGroupTextarea } from "./input-group";
-import { NativeSelect, NativeSelectOption } from "./native-select";
 import { PasswordInput } from "./password-input";
 import { Textarea } from "./textarea";
 
@@ -31,19 +30,6 @@ describe("form primitives forward refs (rule 20)", () => {
 		const textarea = screen.getByTestId("textarea");
 		expect(ref.current).toBe(textarea);
 		expect(ref.current).toBeInstanceOf(HTMLTextAreaElement);
-	});
-
-	it("NativeSelect forwards its ref to the native select", (): void => {
-		const ref: { readonly current: HTMLSelectElement | null } = { current: null };
-
-		render(
-			<NativeSelect ref={ref} data-testid="select">
-				<NativeSelectOption value="a">A</NativeSelectOption>
-			</NativeSelect>,
-		);
-		const select = screen.getByTestId("select");
-		expect(ref.current).toBe(select);
-		expect(ref.current).toBeInstanceOf(HTMLSelectElement);
 	});
 
 	it("InputGroupInput forwards its ref to the inner input", (): void => {

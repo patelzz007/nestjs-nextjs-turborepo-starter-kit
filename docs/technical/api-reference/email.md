@@ -3,7 +3,7 @@ title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
 order: 9
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -84,22 +84,22 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "65e16aed-4d6d-4295-97bc-54b81a475779",
+      "id": "f374a4bc-77e5-458e-8e0e-3548743de6e2",
       "templateKey": "admin-alert",
       "to": "recipient@example.com",
       "subject": "[Admin] MFA Recovery Denied",
       "status": "sent",
-      "createdAt": 1791099722455,
-      "updatedAt": 1791099722455
+      "createdAt": 1791193322456,
+      "updatedAt": 1791193322456
     },
     {
-      "id": "82eec831-f4f0-4c92-94e2-1a9caff9e72f",
+      "id": "024685c8-e941-4ebb-9549-7c528cd12e10",
       "templateKey": "admin-alert",
       "to": "recipient@example.com",
       "subject": "[Admin] MFA Recovery Review Required",
       "status": "sent",
-      "createdAt": 1791099722371,
-      "updatedAt": 1791099722371
+      "createdAt": 1791193322376,
+      "updatedAt": 1791193322376
     }
   ],
   "meta": {
@@ -107,11 +107,11 @@ Response `200 OK` (application/json):
     "total": 16,
     "page": 1,
     "totalPages": 8,
-    "nextCursor": "eyJhdCI6MTc5MTA5OTcyMjM3MSwiaWQiOiI4MmVlYzgzMS1mNGYwLTRjOTItOTRlMi0xYTljYWZmOWU3MmYifQ",
+    "nextCursor": "eyJhdCI6MTc5MTE5MzMyMjM3NiwiaWQiOiIwMjQ2ODVjOC1lOTQxLTRlYmItOTU0OS03YzUyOGNkMTJlMTAifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "IO6aUDL1Mvtm1VCPPv8a7",
-    "timestamp": 1791099725971
+    "correlationId": "RFLA0zB57y3EQ3Whoduoc",
+    "timestamp": 1791193326086
   }
 }
 ```
@@ -197,8 +197,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "4yFRuy4GDAYKNdWL-T9nv",
-    "timestamp": 1791099725979
+    "correlationId": "gy2F1Dc1FX7DmM89vcHjG",
+    "timestamp": 1791193326096
   }
 }
 ```
@@ -271,8 +271,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "_b5IGsyYHoOlKVVjLKoA4",
-    "timestamp": 1791099725994
+    "correlationId": "nT-d5ELmW7Yri5DsuXqoo",
+    "timestamp": 1791193326109
   }
 }
 ```
@@ -330,12 +330,12 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "ok": true,
-    "id": "43dab28a-194d-4b82-86d9-5d1a0f8c9652",
+    "id": "65365541-6cc3-4d9d-ba19-aa15e2ca34cd",
     "mode": "log-only"
   },
   "meta": {
-    "correlationId": "y1grSBOZ4rR0bhLYhCzmN",
-    "timestamp": 1791099726011
+    "correlationId": "UO9jk_maNDT6Joe9EzdEG",
+    "timestamp": 1791193326130
   }
 }
 ```
@@ -383,8 +383,8 @@ Response `200 OK` (application/json):
     "path": "/notifications/email-webhook"
   },
   "meta": {
-    "correlationId": "NwxhLtd-y6JsswZsmubM2",
-    "timestamp": 1791099726020
+    "correlationId": "JwtK1WVbdPyZqIIIu5Z_8",
+    "timestamp": 1791193326142
   }
 }
 ```
@@ -448,14 +448,13 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 
 ```http
 POST /notifications/email-webhook
-svix-id: msg_5925f4b7ef894279a73431b4da0082c1
-svix-timestamp: 1791099726
-svix-signature: v1,<redacted: HMAC of the body with RESEND_WEBHOOK_SECRET>
+svix-id: msg_8eea0ab6115c4f4a91788e1f7ac1dc37
+svix-timestamp: 1791193326
 Content-Type: application/json
 
 {
   "type": "email.delivered",
-  "created_at": "2026-10-04T07:42:06.034Z",
+  "created_at": "2026-10-05T09:42:06.154Z",
   "data": {
     "email_id": "seed",
     "to": [
@@ -465,17 +464,18 @@ Content-Type: application/json
 }
 ```
 
-Response `200 OK` (application/json):
+Response `403 Forbidden` (application/json):
 
 ```json
 {
-  "success": true,
-  "data": {
-    "received": true
+  "success": false,
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Missing webhook signature header(s): webhook-signature/svix-signature. Resend signs every webhook with these headers — a browser/curl request without them is rejected by design."
   },
   "meta": {
-    "correlationId": "BgU_xgMlr9I4SfEcP6yg-",
-    "timestamp": 1791099726049
+    "correlationId": "XZNlWta9y2RbEqN4xN9YT",
+    "timestamp": 1791193326161
   }
 }
 ```

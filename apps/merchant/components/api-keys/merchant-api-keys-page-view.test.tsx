@@ -189,6 +189,14 @@ afterEach((): void => {
 	window.history.replaceState(null, "", "/");
 });
 
+/** Picks `option` in the shared Select labelled `label` with the pointer (opens its listbox, then presses the option). */
+async function chooseInSelect(scope: HTMLElement, label: string, option: string): Promise<void> {
+	fireEvent.click(within(scope).getByLabelText(label));
+	const item = await screen.findByRole("option", { name: option });
+	fireEvent.pointerDown(item, { pointerType: "mouse" });
+	fireEvent.click(item);
+}
+
 describe("MerchantApiKeysPageView authorization", () => {
 	it("shows create and revoke actions with merchant:manage_api_keys", () => {
 		renderAsAdmin();
@@ -294,21 +302,24 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 });
 
 describe("MerchantApiKeysPageView create", () => {
-	it("needs an explicit store under All locations — it never silently creates an organization-wide key", () => {
+	it("needs an explicit store under All locations — it never silently creates an organization-wide key", async () => {
 		renderAsAdmin();
 
 		fireEvent.change(screen.getByLabelText("Terminal name"), { target: { value: "Back office" } });
 		expect(screen.getByRole("button", { name: "Create API key" }).hasAttribute("disabled")).toBe(true);
 
-		fireEvent.change(screen.getByLabelText("Store"), { target: { value: STORE_B.id } });
+		expect(screen.getByLabelText("Store").textContent).toContain("Choose a store");
+		await chooseInSelect(document.body, "Store", STORE_B.name);
+		expect(screen.getByLabelText("Store").textContent).toContain(STORE_B.name);
 		fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
 
 		expect(createMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_B.id, scope: "POS" });
 	});
 
-	it("offers organization-wide keys only to an all-locations member", () => {
+	it("offers organization-wide keys only to an all-locations member", async () => {
 		renderAsAdmin();
-		expect(screen.getByRole("option", { name: "Every store (organization-wide)" })).toBeTruthy();
+		fireEvent.click(screen.getByLabelText("Store"));
+		expect(await screen.findByRole("option", { name: "Every store (organization-wide)" })).toBeTruthy();
 		cleanup();
 
 		const limited = organizationContextFixture({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_B.id] });
@@ -318,9 +329,11 @@ describe("MerchantApiKeysPageView create", () => {
 			tenantContext: { initialLocationId: null, initialOrganizationContext: testEnvelope(limited) },
 		});
 
+		expect(screen.getByLabelText("Store").textContent).toContain(STORE_B.name);
+		fireEvent.click(screen.getByLabelText("Store"));
+		expect(await screen.findByRole("option", { name: STORE_B.name })).toBeTruthy();
 		expect(screen.queryByRole("option", { name: "Every store (organization-wide)" })).toBeNull();
 		expect(screen.queryByRole("option", { name: STORE_A.name })).toBeNull();
-		expect(screen.getByLabelText("Store")).toHaveProperty("value", STORE_B.id);
 	});
 
 	it("preselects the store in view", () => {
@@ -368,10 +381,11 @@ describe("MerchantApiKeysPageView create", () => {
 		expect(screen.getByText(/Choose one of your stores — only members with access to every store/u).id).toBe("key-store-error");
 	});
 
-	it("creates a POS key by default and an integration key when chosen", () => {
+	it("creates a POS key by default and an integration key when chosen", async () => {
 		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
-		fireEvent.change(screen.getByLabelText("Access"), { target: { value: "INTEGRATION" } });
+		expect(screen.getByLabelText("Access").textContent).toContain("POS terminal");
+		await chooseInSelect(document.body, "Access", "Integration");
 		fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
 
 		expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({ scope: "INTEGRATION", locationId: STORE_A.id }));

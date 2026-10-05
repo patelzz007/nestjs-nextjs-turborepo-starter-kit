@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { epochMs, UuidParamSchema, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
+import { epochMs, IanaTimeZoneSchema, UuidParamSchema, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
@@ -120,6 +120,8 @@ export class OrganizationContextService {
 						primaryLocationId: primary?.id ?? null,
 						createdAt: epochMs(Number(org.createdAt)),
 						updatedAt: epochMs(Number(org.updatedAt)),
+						// The zone merchant analytics are cut in — validated, never passed through unchecked.
+						timeZone: IanaTimeZoneSchema.parse(org.timeZone),
 					},
 					membership: resolved.membership,
 					locations: org.locations.map((l) => mapOrganizationLocationToResponse(l)),

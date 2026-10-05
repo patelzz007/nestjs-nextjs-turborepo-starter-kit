@@ -233,7 +233,7 @@ interface ActiveCase {
 
 const ACTIVE_CASES: readonly ActiveCase[] = [
 	{ pathname: "/", expected: ["Overview"] },
-	{ pathname: "/analytics/sales", expected: ["Analytics", "Sales"] },
+	{ pathname: "/analytics", expected: ["Analytics"] },
 	{ pathname: "/users", expected: ["Users", "All users"] },
 	{ pathname: "/users/123", expected: ["Users", "All users"] },
 	{ pathname: "/users/mfa-recovery", expected: ["Users", "MFA recovery"] },

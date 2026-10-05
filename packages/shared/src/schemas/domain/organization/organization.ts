@@ -4,6 +4,7 @@ import { EpochMsSchema } from "../../api/common";
 import { CanonicalEmailSchema } from "../../api/email-address";
 import { defineListQuery, listFilter } from "../../api/list-query";
 import { strongPassword } from "../../auth/password";
+import { IanaTimeZoneSchema } from "../rewards/analytics-time-zone";
 import { KybStatusSchema, PilotCitySchema } from "../rewards/rewards-enums";
 
 /** Organization lifecycle states — authoritative across API, workers, billing. */
@@ -334,8 +335,20 @@ export const OrganizationMerchantProfileResponseSchema = z.object({
 
 export type OrganizationMerchantProfileResponse = z.output<typeof OrganizationMerchantProfileResponseSchema>;
 
+/**
+ * The organization as its own members see it in the context: the summary plus
+ * the IANA zone the merchant operates in (`Organization.timeZone`) — the zone
+ * merchant analytics cut days, weeks and months in, so a screen can resolve a
+ * date range in it before asking for a report.
+ */
+export const OrganizationContextSummaryResponseSchema = OrganizationSummaryResponseSchema.extend({
+	timeZone: IanaTimeZoneSchema,
+});
+
+export type OrganizationContextSummaryResponse = z.output<typeof OrganizationContextSummaryResponseSchema>;
+
 export const OrganizationContextResponseSchema = z.object({
-	organization: OrganizationSummaryResponseSchema,
+	organization: OrganizationContextSummaryResponseSchema,
 	membership: OrganizationMembershipResponseSchema,
 	locations: z.array(OrganizationLocationResponseSchema),
 	merchantProfile: OrganizationMerchantProfileResponseSchema.nullable(),

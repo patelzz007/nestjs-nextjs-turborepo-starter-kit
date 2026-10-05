@@ -1,7 +1,8 @@
-import { Controller, Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Patch, Post, Req, Res, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { MerchantKybDocumentDownloadResponse, MerchantKybProfileResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { MerchantAnalyticsDashboard, MerchantKybDocumentDownloadResponse, MerchantKybProfileResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import {
 	FileDownloadDispositionSchema,
@@ -27,10 +28,13 @@ import {
 	OkResponseSchema,
 	MerchantRedemptionListItemSchema,
 	MerchantAnalyticsResponseSchema,
+	MerchantAnalyticsDashboardQuerySchema,
+	MerchantAnalyticsDashboardSchema,
+	MerchantAnalyticsExportQuerySchema,
 	MERCHANT_CAPABILITY,
 } from "@workspace/shared";
 import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
-import { ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
+import { ZodFileResponse, ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { AllowApiKeyAuth } from "../../api-keys/decorators/allow-api-key-auth.decorator";
 import { GetMerchantActor } from "../../api-keys/decorators/get-merchant-actor.decorator";
 import { MerchantActorInterceptor } from "../../api-keys/interceptors/merchant-actor.interceptor";
@@ -46,6 +50,11 @@ import { MerchantKybDocumentService } from "../services/merchant-kyb-document.se
 import { MerchantKybService } from "../services/merchant-kyb.service";
 import { MerchantRewardService } from "../services/merchant-reward.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
+import { AnalyticsDashboardService } from "../analytics/analytics-dashboard.service";
+import { ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION, ANALYTICS_EXPORT_OPERATION_DESCRIPTION } from "../analytics/analytics-api-docs";
+import { AnalyticsExportRateLimitGuard } from "../analytics/analytics-export-rate-limit.guard";
+import { AnalyticsExportService } from "../analytics/analytics-export.service";
+import { sendAnalyticsExport } from "../analytics/analytics-export.reply";
 
 @ApiTags("Organization RewardHub")
 @ApiBearerAuth()
@@ -282,7 +291,11 @@ export class OrganizationRedemptionsController {
 @UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/orgs/:orgSlug/analytics"))
 export class OrganizationAnalyticsController {
-	public constructor(private readonly rewardsAnalyticsService: RewardsAnalyticsService) {}
+	public constructor(
+		private readonly rewardsAnalyticsService: RewardsAnalyticsService,
+		private readonly dashboards: AnalyticsDashboardService,
+		private readonly exports: AnalyticsExportService,
+	) {}
 
 	@SkipAuthThrottle()
 	@Get()
@@ -294,5 +307,48 @@ export class OrganizationAnalyticsController {
 		@ZodQuery(RewardsAnalyticsQuerySchema) query: z.output<typeof RewardsAnalyticsQuerySchema>,
 	): ReturnType<RewardsAnalyticsService["getMerchantAnalytics"]> {
 		return this.rewardsAnalyticsService.getMerchantAnalytics(actor, query);
+	}
+
+	/**
+	 * Auth: member session or organization API key. Authorization:
+	 * `merchant:view_analytics`, data limited to the caller's store scope
+	 * (a store-limited member / store-scoped key never sees another store).
+	 */
+	@SkipAuthThrottle()
+	@Get("dashboard")
+	@ApiOperation({
+		summary: "Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns",
+		description: ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION,
+	})
+	@ZodResponse(MerchantAnalyticsDashboardSchema, { description: "Merchant analytics dashboard" })
+	public getDashboard(
+		@GetMerchantActor() actor: MerchantActor,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodQuery(MerchantAnalyticsDashboardQuerySchema) query: z.output<typeof MerchantAnalyticsDashboardQuerySchema>,
+	): Promise<MerchantAnalyticsDashboard> {
+		return this.dashboards.getMerchantDashboard(actor, query);
+	}
+
+	/**
+	 * The dashboard's report as a CSV / XLSX / PDF file. Same authorization and
+	 * store scope as the dashboard; rate-limited per caller
+	 * (`ANALYTICS_EXPORT_RATE_LIMIT`); every export writes an audit row.
+	 */
+	@SkipAuthThrottle()
+	@UseGuards(AnalyticsExportRateLimitGuard)
+	@Get("export")
+	@ApiOperation({
+		summary: "Download the merchant analytics report (csv | xlsx | pdf) for a date range",
+		description: ANALYTICS_EXPORT_OPERATION_DESCRIPTION,
+	})
+	@ZodFileResponse(apiContract.organizations.analyticsExport.response, { description: "The report file (Content-Disposition: attachment)" })
+	public async exportReport(
+		@GetMerchantActor() actor: MerchantActor,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodQuery(MerchantAnalyticsExportQuerySchema) query: z.output<typeof MerchantAnalyticsExportQuerySchema>,
+		@Req() request: FastifyRequest,
+		@Res() reply: FastifyReply,
+	): Promise<void> {
+		await sendAnalyticsExport(reply, await this.exports.exportMerchantReport(actor, query, request));
 	}
 }

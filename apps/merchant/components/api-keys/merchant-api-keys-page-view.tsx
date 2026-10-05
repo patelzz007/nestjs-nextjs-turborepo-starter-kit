@@ -170,12 +170,12 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 		setName(event.target.value);
 	}, []);
 
-	const handleStoreChoiceChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>): void => {
-		setPickedStoreChoice(event.target.value);
+	const handleStoreChoiceChange = React.useCallback((choice: string): void => {
+		setPickedStoreChoice(choice);
 	}, []);
 
-	const handleScopeChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>): void => {
-		setScope(event.target.value);
+	const handleScopeChange = React.useCallback((value: string): void => {
+		setScope(value);
 	}, []);
 
 	const handleCreate = React.useCallback(

@@ -418,6 +418,783 @@
         ]
       }
     },
+    "/api/v1/admin/analytics/dashboard": {
+      "get": {
+        "description": "Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.",
+        "operationId": "RewardsAdminAnalyticsController_getDashboard",
+        "parameters": [
+          {
+            "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
+              "example": 1788192000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "description": "Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`.",
+              "example": 1790784000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "schema": {
+              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "example": "week",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "byCategory": {
+                          "items": {
+                            "properties": {
+                              "bills": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "category": {
+                                "enum": [
+                                  "cafe",
+                                  "restaurant",
+                                  "retail",
+                                  "wellness",
+                                  "entertainment",
+                                  "food",
+                                  "beverage"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "merchants": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "salesMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "category",
+                              "salesMinor",
+                              "bills",
+                              "merchants"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byCity": {
+                          "items": {
+                            "properties": {
+                              "bills": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "city": {
+                                "enum": [
+                                  "KUALA_LUMPUR",
+                                  "MELAKA"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "merchants": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "salesMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "city",
+                              "salesMinor",
+                              "bills",
+                              "merchants"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "currency": {
+                          "enum": [
+                            "MYR"
+                          ],
+                          "type": "string"
+                        },
+                        "range": {
+                          "properties": {
+                            "from": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "interval": {
+                              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+                              "enum": [
+                                "day",
+                                "week",
+                                "month"
+                              ],
+                              "example": "week",
+                              "type": "string"
+                            },
+                            "previousFrom": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "previousTo": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "timeZone": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "to": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "timeZone",
+                            "interval",
+                            "previousFrom",
+                            "previousTo"
+                          ],
+                          "type": "object"
+                        },
+                        "series": {
+                          "items": {
+                            "properties": {
+                              "averageBillMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "bills": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "claims": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "end": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "isPartial": {
+                                "type": "boolean"
+                              },
+                              "newCustomers": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "returningCustomers": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "salesMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "start": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end",
+                              "isPartial",
+                              "salesMinor",
+                              "bills",
+                              "averageBillMinor",
+                              "claims",
+                              "redemptions",
+                              "newCustomers",
+                              "returningCustomers"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "topMerchants": {
+                          "items": {
+                            "properties": {
+                              "averageBillMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "bills": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "category": {
+                                "enum": [
+                                  "cafe",
+                                  "restaurant",
+                                  "retail",
+                                  "wellness",
+                                  "entertainment",
+                                  "food",
+                                  "beverage"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "organizationId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "salesMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "organizationId",
+                              "name",
+                              "category",
+                              "salesMinor",
+                              "bills",
+                              "averageBillMinor"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "totals": {
+                          "properties": {
+                            "activeMerchants": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "averageBillMinor": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "bills": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "claims": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "conversionRate": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "customers": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "newCustomers": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "redemptions": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "returningCustomers": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "salesMinor": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "salesMinor",
+                            "bills",
+                            "averageBillMinor",
+                            "claims",
+                            "redemptions",
+                            "conversionRate",
+                            "activeMerchants",
+                            "customers",
+                            "newCustomers",
+                            "returningCustomers"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "currency",
+                        "totals",
+                        "series",
+                        "topMerchants",
+                        "byCategory",
+                        "byCity"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Platform analytics dashboard"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Platform analytics dashboard: custom range + interval, compared totals, series, top merchants, categories, cities, new vs returning customers",
+        "tags": [
+          "Rewards Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/analytics/export": {
+      "get": {
+        "description": "The body is the file (Content-Disposition: attachment). Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); both bounds are required. Each export writes an audit row and is limited to 10 per caller per 10 minutes: 429 ANALYTICS_EXPORT_RATE_LIMITED with `Retry-After`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.",
+        "operationId": "RewardsAdminAnalyticsController_exportReport",
+        "parameters": [
+          {
+            "description": "Range start, epoch ms, inclusive.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Range start, epoch ms, inclusive.",
+              "example": 1788192000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`.",
+              "example": 1790784000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "schema": {
+              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "example": "week",
+              "type": "string"
+            }
+          },
+          {
+            "description": "File format of the export",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "description": "File format of the export",
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "example": "xlsx",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/csv; charset=utf-8": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The report file (Content-Disposition: attachment)"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Download the platform analytics report (csv | xlsx | pdf) for a date range",
+        "tags": [
+          "Rewards Admin"
+        ]
+      }
+    },
     "/api/v1/admin/analytics/sales": {
       "get": {
         "operationId": "RewardsAdminAnalyticsController_getSales",
@@ -17114,6 +17891,664 @@
         ]
       }
     },
+    "/api/v1/claims/analytics/dashboard": {
+      "get": {
+        "description": "Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.",
+        "operationId": "ConsumerClaimsController_getAnalyticsDashboard",
+        "parameters": [
+          {
+            "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
+              "example": 1788192000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "description": "Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`.",
+              "example": 1790784000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "schema": {
+              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "example": "week",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "claimsByStatus": {
+                          "items": {
+                            "properties": {
+                              "claims": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "status": {
+                                "enum": [
+                                  "PENDING",
+                                  "REDEEMED",
+                                  "EXPIRED"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "claims"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "currency": {
+                          "enum": [
+                            "MYR"
+                          ],
+                          "type": "string"
+                        },
+                        "range": {
+                          "properties": {
+                            "from": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "interval": {
+                              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+                              "enum": [
+                                "day",
+                                "week",
+                                "month"
+                              ],
+                              "example": "week",
+                              "type": "string"
+                            },
+                            "previousFrom": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "previousTo": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "timeZone": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "to": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "timeZone",
+                            "interval",
+                            "previousFrom",
+                            "previousTo"
+                          ],
+                          "type": "object"
+                        },
+                        "series": {
+                          "items": {
+                            "properties": {
+                              "claims": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "end": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "isPartial": {
+                                "type": "boolean"
+                              },
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "spentMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "start": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "visits": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end",
+                              "isPartial",
+                              "spentMinor",
+                              "visits",
+                              "claims",
+                              "redemptions"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "spendingByCategory": {
+                          "items": {
+                            "properties": {
+                              "category": {
+                                "enum": [
+                                  "cafe",
+                                  "restaurant",
+                                  "retail",
+                                  "wellness",
+                                  "entertainment",
+                                  "food",
+                                  "beverage"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "series": {
+                                "items": {
+                                  "properties": {
+                                    "start": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "totalMinor": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "totalMinor"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "totalMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "visits": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "category",
+                              "totalMinor",
+                              "visits",
+                              "series"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "spendingByMerchant": {
+                          "items": {
+                            "properties": {
+                              "category": {
+                                "enum": [
+                                  "cafe",
+                                  "restaurant",
+                                  "retail",
+                                  "wellness",
+                                  "entertainment",
+                                  "food",
+                                  "beverage"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "merchantName": {
+                                "type": "string"
+                              },
+                              "organizationId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "series": {
+                                "items": {
+                                  "properties": {
+                                    "start": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "totalMinor": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "totalMinor"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "totalMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "visits": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "organizationId",
+                              "merchantName",
+                              "category",
+                              "totalMinor",
+                              "visits",
+                              "series"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "totals": {
+                          "properties": {
+                            "averageBillMinor": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "claims": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "conversionRate": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "merchants": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "redemptions": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "referralRewardsEarned": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "referralsCredited": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "referralsSent": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "spentMinor": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "visits": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "spentMinor",
+                            "visits",
+                            "averageBillMinor",
+                            "claims",
+                            "redemptions",
+                            "conversionRate",
+                            "merchants",
+                            "referralsSent",
+                            "referralsCredited",
+                            "referralRewardsEarned"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "currency",
+                        "totals",
+                        "series",
+                        "spendingByCategory",
+                        "spendingByMerchant",
+                        "claimsByStatus"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Customer analytics dashboard"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "My analytics dashboard: custom range + interval, compared totals, series, spending by category / merchant over time",
+        "tags": [
+          "Claims"
+        ]
+      }
+    },
     "/api/v1/claims/otp": {
       "post": {
         "operationId": "ConsumerClaimsController_requestOtp",
@@ -31339,6 +32774,748 @@
         ]
       }
     },
+    "/api/v1/orgs/{orgSlug}/analytics/dashboard": {
+      "get": {
+        "description": "Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.",
+        "operationId": "OrganizationAnalyticsController_getDashboard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgSlug",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 2,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
+              "example": 1788192000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "description": "Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`.",
+              "example": 1790784000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "schema": {
+              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "example": "week",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locationId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "byRedemptionMethod": {
+                          "items": {
+                            "properties": {
+                              "method": {
+                                "enum": [
+                                  "SCAN",
+                                  "MANUAL"
+                                ],
+                                "type": "string"
+                              },
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "method",
+                              "redemptions"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byReward": {
+                          "items": {
+                            "properties": {
+                              "claims": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "conversionRate": {
+                                "minimum": 0,
+                                "type": "number"
+                              },
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "rewardId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "rewardId",
+                              "title",
+                              "claims",
+                              "redemptions",
+                              "conversionRate"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byStore": {
+                          "items": {
+                            "properties": {
+                              "averageBillMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "bills": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "city": {
+                                "enum": [
+                                  "KUALA_LUMPUR",
+                                  "MELAKA"
+                                ],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "locationId": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "salesMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "locationId",
+                              "name",
+                              "city",
+                              "salesMinor",
+                              "bills",
+                              "averageBillMinor",
+                              "redemptions"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "currency": {
+                          "enum": [
+                            "MYR"
+                          ],
+                          "type": "string"
+                        },
+                        "firstBillAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "range": {
+                          "properties": {
+                            "from": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "interval": {
+                              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+                              "enum": [
+                                "day",
+                                "week",
+                                "month"
+                              ],
+                              "example": "week",
+                              "type": "string"
+                            },
+                            "previousFrom": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "previousTo": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "timeZone": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "to": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "timeZone",
+                            "interval",
+                            "previousFrom",
+                            "previousTo"
+                          ],
+                          "type": "object"
+                        },
+                        "series": {
+                          "items": {
+                            "properties": {
+                              "averageBillMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "bills": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "claims": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "end": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "isPartial": {
+                                "type": "boolean"
+                              },
+                              "redemptions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "salesMinor": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "start": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end",
+                              "isPartial",
+                              "salesMinor",
+                              "bills",
+                              "averageBillMinor",
+                              "claims",
+                              "redemptions"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "totals": {
+                          "properties": {
+                            "averageBillMinor": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "bills": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "claims": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "conversionRate": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "customers": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "redemptions": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            },
+                            "salesMinor": {
+                              "properties": {
+                                "change": {
+                                  "type": "number"
+                                },
+                                "changePercent": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "previous": {
+                                  "type": "number"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "previous",
+                                "change",
+                                "changePercent"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "salesMinor",
+                            "bills",
+                            "averageBillMinor",
+                            "claims",
+                            "redemptions",
+                            "conversionRate",
+                            "customers"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "currency",
+                        "firstBillAt",
+                        "totals",
+                        "series",
+                        "byStore",
+                        "byReward",
+                        "byRedemptionMethod"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Merchant analytics dashboard"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns",
+        "tags": [
+          "Organization Analytics"
+        ]
+      }
+    },
+    "/api/v1/orgs/{orgSlug}/analytics/export": {
+      "get": {
+        "description": "The body is the file (Content-Disposition: attachment). Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); both bounds are required. Each export writes an audit row and is limited to 10 per caller per 10 minutes: 429 ANALYTICS_EXPORT_RATE_LIMITED with `Retry-After`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.",
+        "operationId": "OrganizationAnalyticsController_exportReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgSlug",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 2,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "description": "Range start, epoch ms, inclusive.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Range start, epoch ms, inclusive.",
+              "example": 1788192000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`.",
+              "example": 1790784000000,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "schema": {
+              "description": "Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length.",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "example": "week",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locationId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "File format of the export",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "description": "File format of the export",
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "example": "xlsx",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/csv; charset=utf-8": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The report file (Content-Disposition: attachment)"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Download the merchant analytics report (csv | xlsx | pdf) for a date range",
+        "tags": [
+          "Organization Analytics"
+        ]
+      }
+    },
     "/api/v1/orgs/{orgSlug}/api-keys": {
       "get": {
         "operationId": "OrganizationApiKeysController_listKeys",
@@ -32257,6 +34434,11 @@
                               "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
                               "type": "string"
                             },
+                            "timeZone": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            },
                             "updatedAt": {
                               "maximum": 9007199254740991,
                               "minimum": 0,
@@ -32270,7 +34452,8 @@
                             "lifecycleState",
                             "primaryLocationId",
                             "createdAt",
-                            "updatedAt"
+                            "updatedAt",
+                            "timeZone"
                           ],
                           "type": "object"
                         },

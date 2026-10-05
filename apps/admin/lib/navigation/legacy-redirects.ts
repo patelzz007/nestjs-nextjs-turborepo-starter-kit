@@ -21,6 +21,7 @@ function moved(source: string, destination: string): LegacyRouteRedirect {
 
 /** Old path → current path. More specific sources come first (Next.js applies the first match). */
 export const LEGACY_ROUTE_REDIRECTS: readonly LegacyRouteRedirect[] = [
+	moved("/analytics/sales", "/analytics"),
 	moved("/settings/security/mfa-recovery", "/users/mfa-recovery"),
 	moved("/settings/security", "/account/security"),
 	moved("/users/all", "/users"),

@@ -29,8 +29,8 @@ Conventions and the shared rules: [Routing](./routing.md). Paths come from `apps
 | Route | Page |
 | --- | --- |
 | `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email` | Auth (outside the shell; safe `?redirect=` handling) |
-| `/` | Overview — platform sales cards and the weekly sales chart (real data from one `GET /admin/analytics/sales` query, shown with `ANALYTICS.READ`), then the UI kit's component gallery, headed as sample content |
-| `/analytics/sales` (`/analytics` redirects) | Platform sales: total sales, bills, average bill, active merchants, weekly sales, top 10 merchants; `?weeks=4\|8\|12` picks the period (default 8) |
+| `/` | Overview — the last 30 days' sales KPIs and daily sales chart (real data from one `GET /admin/analytics/dashboard` query, shown with `ANALYTICS.READ`), then the UI kit's component gallery, headed as sample content |
+| `/analytics` (`/analytics/sales` redirects here) | Platform dashboard: sales, customer (new / returning) and reward KPIs vs the previous period; sales, bills, claims vs redemptions and new vs returning customers over time; top 10 merchants, sales by category and by city; CSV / Excel / PDF export. Range and interval live in the URL — see [Analytics dashboards](./analytics-charts.md) |
 | `/users`, `/users/[id]` | Users directory + profile (RBAC panel, **impersonate**) — super-admin |
 | `/users/mfa-recovery` | MFA recovery request queue — super-admin |
 | `/merchants` (+ `/invites`, `/verification`, `/store-requests`) | Merchants, merchant invites, KYB verification queue, store requests |

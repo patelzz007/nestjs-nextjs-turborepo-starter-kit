@@ -168,15 +168,24 @@ function errorRows(endpoint: Endpoint, access: EndpointAccess | undefined): read
 	return rows;
 }
 
-function successResponse(
-	endpoint: Endpoint,
-): { readonly status: string; readonly description: string; readonly schema: JsonSchema | undefined; readonly mediaType: string | undefined } | undefined {
+/** The documented success response of an operation. */
+interface SuccessResponse {
+	readonly status: string;
+	readonly description: string;
+	readonly schema: JsonSchema | undefined;
+	readonly mediaType: string | undefined;
+	/** Every media type the response may have (a file download lists one per format). */
+	readonly mediaTypes: readonly string[];
+}
+
+function successResponse(endpoint: Endpoint): SuccessResponse | undefined {
 	const entry = Object.entries(endpoint.operation.responses).find(([status]) => SUCCESS_STATUS.test(status));
 	if (entry === undefined) return undefined;
 	const [status, response] = entry;
-	const mediaType = Object.keys(response.content ?? {})[0];
+	const mediaTypes = Object.keys(response.content ?? {});
+	const mediaType = mediaTypes[0];
 	const schema = mediaType === undefined ? undefined : response.content?.[mediaType]?.schema;
-	return { status, description: response.description, schema, mediaType };
+	return { status, description: response.description, schema, mediaType, mediaTypes };
 }
 
 /** Rows of the `data` part of a `{ success, data, meta }` envelope (and any list `meta` beyond the envelope's own). */
@@ -266,7 +275,8 @@ function renderEndpoint(endpoint: Endpoint, inputs: ApiReferenceInputs): string 
 		if (success.schema !== undefined && success.mediaType === JSON_MEDIA_TYPE) {
 			parts.push(`**Response ${label}** — ${success.description}`, "", fieldTable(responseRows(success.schema, registry)));
 		} else {
-			parts.push(`**Response ${label}** — ${success.description}${success.mediaType === undefined ? "" : ` (${code(success.mediaType)})`}`, "");
+			const mediaTypes = success.mediaTypes.map((mediaType) => code(mediaType)).join(" · ");
+			parts.push(`**Response ${label}** — ${success.description}${mediaTypes.length === 0 ? "" : ` (${mediaTypes})`}`, "");
 		}
 	}
 

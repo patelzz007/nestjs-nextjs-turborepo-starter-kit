@@ -94,6 +94,26 @@ export class AuditTrailService {
 		}
 	}
 
+	/**
+	 * A SENSITIVE READ that must be audited although it is a GET — a data
+	 * export (rules/10: "every sensitive read"). Writes one SUCCEEDED row with
+	 * the complete request facts (actor, impersonator, tenant, IP, device,
+	 * endpoint, params) and `summary` as its response body (what was released:
+	 * report, range, format, row counts — never the data itself). Call it
+	 * BEFORE the data leaves the server; throws {@link AuditLogWriteError} when
+	 * the row cannot be written, so nothing is released unaudited.
+	 */
+	public async recordSensitiveRead(request: FastifyRequest, status: number, summary: JsonValue): Promise<void> {
+		const entry: HttpAuditEntry = this.entryFor(request, { outcome: "SUCCEEDED", status, responseBody: summary });
+		try {
+			await this.repository.append(entry);
+		} catch (error) {
+			const cause: Error = error instanceof Error ? error : new Error(String(error));
+			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", entry, error: cause.message });
+			throw new AuditLogWriteError(cause);
+		}
+	}
+
 	/** Failure path (exception filter). Never throws: the original failure must reach the client. */
 	public async recordFailure(request: FastifyRequest, failure: AuditFailure): Promise<void> {
 		if (!isAuditedMethod(request.method)) {

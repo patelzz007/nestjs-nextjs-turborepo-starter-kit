@@ -111,7 +111,6 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/account", OPEN],
 	["/account/profile", OPEN],
 	["/account/security", OPEN],
-	["/analytics", OPEN],
 	["/catalog", OPEN],
 	["/emails", OPEN],
 	["/rewards", OPEN],
@@ -121,7 +120,7 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/users/[id]", SUPER_ADMIN],
 	["/users/mfa-recovery", SUPER_ADMIN],
 	// @RequirePermission API routes.
-	["/analytics/sales", needs(PERMISSION.ANALYTICS.READ)],
+	["/analytics", needs(PERMISSION.ANALYTICS.READ)],
 	["/catalog/products", needs(PERMISSION.PRODUCT.LIST)],
 	["/catalog/products/new", needsAll(PERMISSION.PRODUCT.CREATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ)],
 	["/catalog/products/[id]", needs(PERMISSION.PRODUCT.READ)],

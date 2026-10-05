@@ -161,6 +161,15 @@ import {
 	RewardsAnalyticsQuerySchema,
 	UserRewardsAnalyticsResponseSchema,
 } from "../schemas/domain/rewards/analytics";
+import {
+	AdminAnalyticsDashboardQuerySchema,
+	AdminAnalyticsDashboardSchema,
+	CustomerAnalyticsDashboardQuerySchema,
+	CustomerAnalyticsDashboardSchema,
+	MerchantAnalyticsDashboardQuerySchema,
+	MerchantAnalyticsDashboardSchema,
+} from "../schemas/domain/rewards/analytics-dashboard";
+import { AdminAnalyticsExportQuerySchema, ANALYTICS_EXPORT_CONTENT_TYPES, MerchantAnalyticsExportQuerySchema } from "../schemas/domain/rewards/analytics-export";
 import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac/rbac";
 import {
 	BulkCreateSampleCategorySchema,
@@ -246,7 +255,7 @@ import {
 	MerchantOnboardingDocumentBatchUploadUrlResponseSchema,
 	MerchantOnboardingInvitePreviewSchema,
 } from "../schemas/domain/rewards/rewards-kyb";
-import { paginatedResponse, singleResponse, type ApiResponseContract } from "./response";
+import { fileResponse, paginatedResponse, singleResponse, type ApiFileResponseContract, type ApiResponseContract } from "./response";
 import type { ApiVersion } from "./versioning";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
@@ -271,7 +280,7 @@ export * from "./versioning";
 export * from "./mutation-intent";
 export * from "./client-session";
 export { contractPathParam } from "./path-param";
-export { paginatedResponse, singleResponse, type ApiResponseContract, type ApiResponseKind } from "./response";
+export { fileResponse, paginatedResponse, singleResponse, type ApiFileResponseContract, type ApiResponseContract, type ApiResponseKind } from "./response";
 
 // ── Route contract ─────────────────────────────────────────────────────────
 
@@ -315,6 +324,28 @@ export interface ApiContractDef<Input extends SerializableInput, M extends RestM
 export function defineContract<Input extends SerializableInput, M extends RestMethod, Data extends DataValue>(
 	def: ApiContractDef<Input, M, Data>,
 ): ApiContractDef<Input, M, Data> {
+	return def;
+}
+
+/**
+ * One FILE download route (an export): a GET whose success body is the file
+ * itself (`fileResponse`), not the JSON envelope. It is a contract leaf like
+ * any other — the API validates the same `input`, the OpenAPI e2e test holds
+ * the handler's `@ZodFileResponse` to the same media types — but the client
+ * fetches it with `fetchDownload` (a `Blob` + file name), never as a query.
+ */
+export interface ApiFileContractDef<Input extends SerializableInput> {
+	readonly method: "GET";
+	readonly path: string;
+	readonly input: ZodType<Input>;
+	readonly response: ApiFileResponseContract;
+	/** Who may call the route; omitted = `"authenticated"`. */
+	readonly access?: ApiAccess;
+	readonly version?: ApiVersion;
+}
+
+/** Declares one file download route. */
+export function defineFileContract<Input extends SerializableInput>(def: ApiFileContractDef<Input>): ApiFileContractDef<Input> {
 	return def;
 }
 
@@ -653,6 +684,13 @@ export const apiContract = {
 			input: RewardsAnalyticsQuerySchema,
 			response: singleResponse(UserRewardsAnalyticsResponseSchema),
 		}),
+		/** The customer's dashboard: custom range + interval, series, spending by category / merchant over time. */
+		analyticsDashboard: defineContract({
+			method: "GET",
+			path: apiRoutes.claims.analyticsDashboard,
+			input: CustomerAnalyticsDashboardQuerySchema,
+			response: singleResponse(CustomerAnalyticsDashboardSchema),
+		}),
 		qr: defineContract({
 			method: "GET",
 			path: apiRoutes.claims.qr,
@@ -947,6 +985,20 @@ export const apiContract = {
 			input: z.intersection(OrganizationSlugParamSchema, RewardsAnalyticsQuerySchema),
 			response: singleResponse(MerchantAnalyticsResponseSchema),
 		}),
+		/** The merchant dashboard: custom range + interval, series, store / reward / redemption-method breakdowns. */
+		analyticsDashboard: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.analyticsDashboard,
+			input: z.intersection(OrganizationSlugParamSchema, MerchantAnalyticsDashboardQuerySchema),
+			response: singleResponse(MerchantAnalyticsDashboardSchema),
+		}),
+		/** The merchant report as a file (`format`: csv | xlsx | pdf) — fetch it with `fetchDownload`. */
+		analyticsExport: defineFileContract({
+			method: "GET",
+			path: apiRoutes.organizations.analyticsExport,
+			input: z.intersection(OrganizationSlugParamSchema, MerchantAnalyticsExportQuerySchema),
+			response: fileResponse(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES)),
+		}),
 		locations: {
 			create: defineContract({
 				method: "POST",
@@ -1052,6 +1104,20 @@ export const apiContract = {
 			path: apiRoutes.rewardsAdmin.salesAnalytics,
 			input: AdminSalesAnalyticsQuerySchema,
 			response: singleResponse(AdminSalesAnalyticsResponseSchema),
+		}),
+		/** The platform dashboard: custom range + interval, series, top merchants, categories, cities, new vs returning customers. */
+		analyticsDashboard: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.analyticsDashboard,
+			input: AdminAnalyticsDashboardQuerySchema,
+			response: singleResponse(AdminAnalyticsDashboardSchema),
+		}),
+		/** The platform report as a file (`format`: csv | xlsx | pdf) — fetch it with `fetchDownload`. */
+		analyticsExport: defineFileContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.analyticsExport,
+			input: AdminAnalyticsExportQuerySchema,
+			response: fileResponse(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES)),
 		}),
 		pendingRewards: defineContract({
 			method: "GET",

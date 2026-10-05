@@ -54,7 +54,7 @@ consistent across the three Next.js apps.
   `/rewardhub/activity`, `/rewardhub/account`. The catalog on `/rewardhub` and on `/` keeps its
   search, filters and page in the query string (`?search=&filter[city]=&filter[category]=&page=`);
   the wallet keeps its page there (`/rewardhub/wallet?page=&cursor=`).
-- **admin** — grouped by domain: `/analytics/sales` (`?weeks=` period filter), `/users` (+ `/[id]`, `/mfa-recovery`), `/merchants`
+- **admin** — grouped by domain: `/analytics` (the platform dashboard; `?range=`, `?from=&to=`, `?interval=` — the shared `ANALYTICS_URL_STATE`, see [Analytics dashboards](./analytics-charts.md); the old `/analytics/sales` redirects here), `/users` (+ `/[id]`, `/mfa-recovery`), `/merchants`
   (+ `/invites`, `/verification`, `/store-requests`), `/rewards/review`, `/emails/{templates,log}`,
   `/geography`, `/catalog/{products,categories}`, `/settings/{billing,access}` (platform),
   `/account/{profile,security}` (personal). Full table: [Admin panel](./admin-panel.md).

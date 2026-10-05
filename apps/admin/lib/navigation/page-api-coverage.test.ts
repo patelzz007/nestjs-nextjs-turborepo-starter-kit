@@ -36,7 +36,8 @@ function isCoveredByOwnRecordGrant(call: PageApiCall): boolean {
  * only with its own permission) are not listed.
  */
 const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<string, readonly PageApiCall[]>([
-	[ROUTES.analytics.sales, [{ endpoint: "GET /admin/analytics/sales", permission: PERMISSION.ANALYTICS.READ }]],
+	// The export (GET /admin/analytics/export) needs the same READ ANALYTICS.
+	[ROUTES.analytics.index, [{ endpoint: "GET /admin/analytics/dashboard", permission: PERMISSION.ANALYTICS.READ }]],
 	[ROUTES.catalog.products.list, [{ endpoint: "GET /product", permission: PERMISSION.PRODUCT.LIST }]],
 	[
 		ROUTES.catalog.products.create,

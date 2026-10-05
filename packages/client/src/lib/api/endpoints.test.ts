@@ -80,6 +80,35 @@ describe("apiRouter.rewardsAdmin.salesAnalytics", () => {
 	});
 });
 
+describe("analytics dashboards", () => {
+	const from = epochMs(1_788_220_800_000);
+	const to = epochMs(1_793_059_200_000);
+
+	it("are authenticated GETs on their contract paths", () => {
+		expect([apiRouter.claims.analyticsDashboard.path, apiRouter.organizations.analyticsDashboard.path, apiRouter.rewardsAdmin.analyticsDashboard.path]).toEqual([
+			"/claims/analytics/dashboard",
+			"/orgs/:orgSlug/analytics/dashboard",
+			"/admin/analytics/dashboard",
+		]);
+		expect(apiRouter.organizations.analyticsDashboard.access).toBe("authenticated");
+	});
+
+	it("key the cache by range, interval and store, so no two views share an entry", () => {
+		const merchant = apiRouter.organizations.analyticsDashboard;
+		const daily = merchant.queryKey({ orgSlug: "acme", from, to, interval: "day" });
+		expect(daily).toEqual(["organization", "acme", "analytics", "dashboard", { orgSlug: "acme", from, to, interval: "day" }]);
+		expect(merchant.queryKey({ orgSlug: "acme", from, to, interval: "week" })).not.toEqual(daily);
+		expect(merchant.queryKey({ orgSlug: "acme", from, to, interval: "day", locationId: "0f0f0f0f-0000-4000-8000-00000000000a" })).not.toEqual(daily);
+	});
+
+	it("sit under their audience's analytics scope (invalidating it refreshes the dashboard too)", () => {
+		const merchant = apiRouter.organizations.analyticsDashboard;
+		expect(startsWith(merchant.queryKey({ orgSlug: "acme" }), apiRouter.organizations.analytics.scopeKey({ orgSlug: "acme" }))).toBe(true);
+		expect(startsWith(apiRouter.claims.analyticsDashboard.queryKey({ from, to }), apiRouter.claims.analytics.scopeKey({}))).toBe(true);
+		expect(apiRouter.rewardsAdmin.analyticsDashboard.queryKey({})).toEqual(["rewards-admin", "analytics", "dashboard", {}]);
+	});
+});
+
 describe("apiRouter.organizations.updateOwnMembership", () => {
 	const updateOwnMembership = apiRouter.organizations.updateOwnMembership;
 

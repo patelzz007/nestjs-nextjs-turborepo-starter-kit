@@ -3,7 +3,7 @@ title: "API reference — Platform administration (merchants, rewards review, an
 description: "What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales."
 order: 4
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -17,6 +17,341 @@ What platform admins do in the admin panel: invite merchants, review KYB and sto
 How these endpoints fit together: [Merchant onboarding guide](../../user-guide/02-merchant-onboarding.md). Conventions shared by every endpoint (envelope, auth, errors, pagination): [API reference overview](./README.md).
 
 ## Rewards Admin
+
+### GET /api/v1/admin/analytics/dashboard
+
+Platform analytics dashboard: custom range + interval, compared totals, series, top merchants, categories, cities, new vs returning customers
+
+Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `READ:ANALYTICS`.
+- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Operation id `RewardsAdminAnalyticsController_getDashboard` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `from` | query | integer | no | Range start, epoch ms, inclusive. Default: 30 days before `to`. |
+| `to` | query | integer | no | Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`. |
+| `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
+
+**Response 200 OK** — Platform analytics dashboard
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.byCategory` | object[] | yes |  |
+| `data.byCategory[].bills` | integer | yes |  |
+| `data.byCategory[].category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" \| null | yes |  |
+| `data.byCategory[].merchants` | integer | yes |  |
+| `data.byCategory[].salesMinor` | integer | yes |  |
+| `data.byCity` | object[] | yes |  |
+| `data.byCity[].bills` | integer | yes |  |
+| `data.byCity[].city` | "KUALA_LUMPUR" \| "MELAKA" \| null | yes |  |
+| `data.byCity[].merchants` | integer | yes |  |
+| `data.byCity[].salesMinor` | integer | yes |  |
+| `data.currency` | "MYR" | yes |  |
+| `data.range` | object | yes |  |
+| `data.range.from` | integer | yes |  |
+| `data.range.interval` | "day" \| "week" \| "month" | yes | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
+| `data.range.previousFrom` | integer | yes |  |
+| `data.range.previousTo` | integer | yes |  |
+| `data.range.timeZone` | string | yes | length 1–64 |
+| `data.range.to` | integer | yes |  |
+| `data.series` | object[] | yes |  |
+| `data.series[].averageBillMinor` | integer | yes |  |
+| `data.series[].bills` | integer | yes |  |
+| `data.series[].claims` | integer | yes |  |
+| `data.series[].end` | integer | yes |  |
+| `data.series[].isPartial` | boolean | yes |  |
+| `data.series[].newCustomers` | integer | yes |  |
+| `data.series[].redemptions` | integer | yes |  |
+| `data.series[].returningCustomers` | integer | yes |  |
+| `data.series[].salesMinor` | integer | yes |  |
+| `data.series[].start` | integer | yes |  |
+| `data.topMerchants` | object[] | yes |  |
+| `data.topMerchants[].averageBillMinor` | integer | yes |  |
+| `data.topMerchants[].bills` | integer | yes |  |
+| `data.topMerchants[].category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" \| null | yes |  |
+| `data.topMerchants[].name` | string | yes |  |
+| `data.topMerchants[].organizationId` | string (uuid) | yes |  |
+| `data.topMerchants[].salesMinor` | integer | yes |  |
+| `data.totals` | object | yes |  |
+| `data.totals.activeMerchants` | object | yes |  |
+| `data.totals.activeMerchants.change` | number | yes |  |
+| `data.totals.activeMerchants.changePercent` | number \| null | yes |  |
+| `data.totals.activeMerchants.previous` | number | yes |  |
+| `data.totals.activeMerchants.value` | number | yes |  |
+| `data.totals.averageBillMinor` | object | yes |  |
+| `data.totals.averageBillMinor.change` | number | yes |  |
+| `data.totals.averageBillMinor.changePercent` | number \| null | yes |  |
+| `data.totals.averageBillMinor.previous` | number | yes |  |
+| `data.totals.averageBillMinor.value` | number | yes |  |
+| `data.totals.bills` | object | yes |  |
+| `data.totals.bills.change` | number | yes |  |
+| `data.totals.bills.changePercent` | number \| null | yes |  |
+| `data.totals.bills.previous` | number | yes |  |
+| `data.totals.bills.value` | number | yes |  |
+| `data.totals.claims` | object | yes |  |
+| `data.totals.claims.change` | number | yes |  |
+| `data.totals.claims.changePercent` | number \| null | yes |  |
+| `data.totals.claims.previous` | number | yes |  |
+| `data.totals.claims.value` | number | yes |  |
+| `data.totals.conversionRate` | object | yes |  |
+| `data.totals.conversionRate.change` | number | yes |  |
+| `data.totals.conversionRate.changePercent` | number \| null | yes |  |
+| `data.totals.conversionRate.previous` | number | yes |  |
+| `data.totals.conversionRate.value` | number | yes |  |
+| `data.totals.customers` | object | yes |  |
+| `data.totals.customers.change` | number | yes |  |
+| `data.totals.customers.changePercent` | number \| null | yes |  |
+| `data.totals.customers.previous` | number | yes |  |
+| `data.totals.customers.value` | number | yes |  |
+| `data.totals.newCustomers` | object | yes |  |
+| `data.totals.newCustomers.change` | number | yes |  |
+| `data.totals.newCustomers.changePercent` | number \| null | yes |  |
+| `data.totals.newCustomers.previous` | number | yes |  |
+| `data.totals.newCustomers.value` | number | yes |  |
+| `data.totals.redemptions` | object | yes |  |
+| `data.totals.redemptions.change` | number | yes |  |
+| `data.totals.redemptions.changePercent` | number \| null | yes |  |
+| `data.totals.redemptions.previous` | number | yes |  |
+| `data.totals.redemptions.value` | number | yes |  |
+| `data.totals.returningCustomers` | object | yes |  |
+| `data.totals.returningCustomers.change` | number | yes |  |
+| `data.totals.returningCustomers.changePercent` | number \| null | yes |  |
+| `data.totals.returningCustomers.previous` | number | yes |  |
+| `data.totals.returningCustomers.value` | number | yes |  |
+| `data.totals.salesMinor` | object | yes |  |
+| `data.totals.salesMinor.change` | number | yes |  |
+| `data.totals.salesMinor.changePercent` | number \| null | yes |  |
+| `data.totals.salesMinor.previous` | number | yes |  |
+| `data.totals.salesMinor.value` | number | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | Stated in the endpoint description. |
+| 503 | `ANALYTICS_QUERY_TIMEOUT` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as superadmin@example.com (admin panel).
+
+```http
+GET /api/v1/admin/analytics/dashboard?interval=week
+X-Client-Type: admin
+Cookie: <session cookies from POST /api/v1/auth/login>
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "range": {
+      "from": 1788601329586,
+      "to": 1791193329586,
+      "timeZone": "UTC",
+      "interval": "week",
+      "previousFrom": 1786009329586,
+      "previousTo": 1788601329586
+    },
+    "currency": "MYR",
+    "totals": {
+      "salesMinor": {
+        "value": 1349641,
+        "previous": 1368484,
+        "change": -18843,
+        "changePercent": -1.4
+      },
+      "bills": {
+        "value": 226,
+        "previous": 213,
+        "change": 13,
+        "changePercent": 6.1
+      },
+      "averageBillMinor": {
+        "value": 5972,
+        "previous": 6425,
+        "change": -453,
+        "changePercent": -7.1
+      },
+      "claims": {
+        "value": 260,
+        "previous": 260,
+        "change": 0,
+        "changePercent": 0
+      },
+      "redemptions": {
+        "value": 226,
+        "previous": 213,
+        "change": 13,
+        "changePercent": 6.1
+      },
+      "conversionRate": {
+        "value": 86.9,
+        "previous": 81.9,
+        "change": 5,
+        "changePercent": 6.1
+      },
+      "activeMerchants": {
+        "value": 2,
+        "previous": 2,
+        "change": 0,
+        "changePercent": 0
+      },
+      "customers": {
+        "value": 33,
+        "previous": 30,
+        "change": 3,
+        "changePercent": 10
+      },
+      "newCustomers": {
+        "value": 3,
+        "previous": 4,
+        "change": -1,
+        "changePercent": -25
+      },
+      "returningCustomers": {
+        "value": 30,
+        "previous": 26,
+        "change": 4,
+        "changePercent": 15.4
+      }
+    },
+    "series": [
+      {
+        "start": 1788601329586,
+        "end": 1788739200000,
+        "isPartial": true,
+        "salesMinor": 82725,
+        "bills": 12,
+        "averageBillMinor": 6894,
+        "claims": 11,
+        "redemptions": 12,
+        "newCustomers": 0,
+        "returningCustomers": 9
+      },
+      {
+        "start": 1788739200000,
+        "end": 1789344000000,
+        "isPartial": false,
+        "salesMinor": 314959,
+        "bills": 51,
+        "averageBillMinor": 6176,
+        "claims": 69,
+        "redemptions": 51,
+        "newCustomers": 0,
+        "returningCustomers": 24
+      }
+    ],
+    "topMerchants": [
+      {
+        "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+        "name": "Jonker Street Kitchen",
+        "category": "restaurant",
+        "salesMinor": 1056936,
+        "bills": 125,
+        "averageBillMinor": 8455
+      },
+      {
+        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+        "name": "Brew & Bean KL",
+        "category": "cafe",
+        "salesMinor": 292705,
+        "bills": 101,
+        "averageBillMinor": 2898
+      }
+    ],
+    "byCategory": [
+      {
+        "category": "restaurant",
+        "salesMinor": 1056936,
+        "bills": 125,
+        "merchants": 1
+      },
+      {
+        "category": "cafe",
+        "salesMinor": 292705,
+        "bills": 101,
+        "merchants": 1
+      }
+    ],
+    "byCity": [
+      {
+        "city": "MELAKA",
+        "salesMinor": 1056936,
+        "bills": 125,
+        "merchants": 1
+      },
+      {
+        "city": "KUALA_LUMPUR",
+        "salesMinor": 292705,
+        "bills": 101,
+        "merchants": 1
+      }
+    ]
+  },
+  "meta": {
+    "correlationId": "3mqd--ujXE5RmdYhXzK9c",
+    "timestamp": 1791193329601
+  }
+}
+```
+
+### GET /api/v1/admin/analytics/export
+
+Download the platform analytics report (csv | xlsx | pdf) for a date range
+
+The body is the file (Content-Disposition: attachment). Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); both bounds are required. Each export writes an audit row and is limited to 10 per caller per 10 minutes: 429 ANALYTICS_EXPORT_RATE_LIMITED with `Retry-After`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `READ:ANALYTICS`.
+- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Operation id `RewardsAdminAnalyticsController_exportReport` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `from` | query | integer | yes | Range start, epoch ms, inclusive. |
+| `to` | query | integer | yes | Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`. |
+| `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
+| `format` | query | "csv" \| "xlsx" \| "pdf" | yes | File format of the export |
+
+**Response 200 OK** — The report file (Content-Disposition: attachment) (`application/pdf` · `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` · `text/csv; charset=utf-8`)
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | Stated in the endpoint description. |
+| 429 | `ANALYTICS_EXPORT_RATE_LIMITED` | Stated in the endpoint description. |
+| 503 | `ANALYTICS_QUERY_TIMEOUT` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as superadmin@example.com (admin panel). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
+
+```http
+GET /api/v1/admin/analytics/export?from=1788601329603&to=1791193329603&format=csv
+X-Client-Type: admin
+Cookie: <session cookies from POST /api/v1/auth/login>
+```
+
+Response `200 OK` (text/csv):
+
+```text
+<2313 bytes of text/csv>
+```
 
 ### GET /api/v1/admin/analytics/sales
 
@@ -92,62 +427,62 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "period": {
-      "from": 1786320000000,
-      "to": 1791099729490,
+      "from": 1786924800000,
+      "to": 1791193329535,
       "timeZone": "UTC"
     },
     "sales": {
       "currency": "MYR",
       "totalSalesMinor": {
-        "value": 10120,
-        "changePercent": 100
+        "value": 2264953,
+        "changePercent": 11
       },
       "bills": {
-        "value": 4,
-        "changePercent": 100
+        "value": 366,
+        "changePercent": 12
       },
       "averageBillMinor": {
-        "value": 2530,
-        "changePercent": 100
+        "value": 6188,
+        "changePercent": -1
       },
       "overTime": [
         {
-          "date": 1786320000000,
-          "salesMinor": 0,
-          "bills": 0
+          "date": 1786924800000,
+          "salesMinor": 336839,
+          "bills": 52
         },
         {
-          "date": 1786924800000,
-          "salesMinor": 0,
-          "bills": 0
+          "date": 1787529600000,
+          "salesMinor": 310258,
+          "bills": 48
         }
       ],
-      "firstBillAt": 1790754073703
+      "firstBillAt": 1759625940000
     },
     "activeMerchants": {
       "value": 2,
-      "changePercent": 100
+      "changePercent": 0
     },
     "topMerchants": [
-      {
-        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-        "name": "Brew & Bean KL",
-        "category": "cafe",
-        "salesMinor": 5300,
-        "bills": 3
-      },
       {
         "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
         "name": "Jonker Street Kitchen",
         "category": "restaurant",
-        "salesMinor": 4820,
-        "bills": 1
+        "salesMinor": 1800933,
+        "bills": 204
+      },
+      {
+        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+        "name": "Brew & Bean KL",
+        "category": "cafe",
+        "salesMinor": 464020,
+        "bills": 162
       }
     ]
   },
   "meta": {
-    "correlationId": "liP_q7oHCzvs4D70aWIYY",
-    "timestamp": 1791099729524
+    "correlationId": "BnsbcMHYg-vqXzFbgfC1W",
+    "timestamp": 1791193329572
   }
 }
 ```
@@ -209,13 +544,13 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "inviteId": "54d94be8-ab6d-4436-94ee-c0fa94a08649",
-    "inviteToken": "066b3904d0bb6322ac154d99002a5c22d543a79f1dc0518a8f315715b59c3f4d",
-    "expiresAt": 1791704529565
+    "inviteId": "53605450-6cb2-4571-a094-c3f6a7dc3a3a",
+    "inviteToken": "b941ccc7b3fba7399ccda90880d0dcfec8eb3f651fa32d9fd1740a2c99d7e96e",
+    "expiresAt": 1791798129682
   },
   "meta": {
-    "correlationId": "FL7HCm7Wl_PhlJpgol1gk",
-    "timestamp": 1791099729604
+    "correlationId": "CN6KJumUVqCnaZe0iAK03",
+    "timestamp": 1791193329718
   }
 }
 ```
@@ -300,8 +635,8 @@ Response `201 Created` (application/json):
     }
   },
   "meta": {
-    "correlationId": "LD62XkaUHyyxy--W6Trls",
-    "timestamp": 1791099729540
+    "correlationId": "YNkPjQgEs9UFpRUbVoG4M",
+    "timestamp": 1791193329660
   }
 }
 ```
@@ -405,7 +740,7 @@ Response `200 OK` (application/json):
       "rejectionReason": null,
       "isPrimary": false,
       "requestedByUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
-      "createdAt": 1791099673573
+      "createdAt": 1791193151223
     }
   ],
   "meta": {
@@ -416,8 +751,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "uh1zdiNJxn_1ujIfcy5wf",
-    "timestamp": 1791099729475
+    "correlationId": "fCXQ3mxWgdqmjRNIqcnTf",
+    "timestamp": 1791193329522
   }
 }
 ```
@@ -494,8 +829,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791099673569,
-      "updatedAt": 1791099673569,
+      "createdAt": 1791193151217,
+      "updatedAt": 1791193151217,
       "isDeleted": false,
       "deletedAt": null,
       "id": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
@@ -511,8 +846,8 @@ Response `200 OK` (application/json):
       "ownerUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022"
     },
     {
-      "createdAt": 1791099673551,
-      "updatedAt": 1791099673551,
+      "createdAt": 1791193151201,
+      "updatedAt": 1791193151201,
       "isDeleted": false,
       "deletedAt": null,
       "id": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
@@ -533,11 +868,11 @@ Response `200 OK` (application/json):
     "total": 3,
     "page": 1,
     "totalPages": 2,
-    "nextCursor": "eyJhdCI6MTc5MTA5OTY3MzU1MSwiaWQiOiJhMTc4YTRkMS02OTE1LTRlYjMtYmY4NC02ZmIxNGUxZmViNmMifQ",
+    "nextCursor": "eyJhdCI6MTc5MTE5MzE1MTIwMSwiaWQiOiJhMTc4YTRkMS02OTE1LTRlYjMtYmY4NC02ZmIxNGUxZmViNmMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "gIE_mNzbM1eGiplBMnlpT",
-    "timestamp": 1791099729393
+    "correlationId": "Os1cKGZemDi-lUOESlYLp",
+    "timestamp": 1791193329449
   }
 }
 ```
@@ -624,8 +959,8 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099673551,
-    "updatedAt": 1791099673551,
+    "createdAt": 1791193151201,
+    "updatedAt": 1791193151201,
     "isDeleted": false,
     "deletedAt": null,
     "id": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
@@ -650,7 +985,7 @@ Response `200 OK` (application/json):
         "mimeType": "application/pdf",
         "sizeBytes": 69,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1789371674185
+        "uploadedAt": 1789465153348
       }
     ],
     "locations": [
@@ -665,8 +1000,8 @@ Response `200 OK` (application/json):
         "status": "ACTIVE",
         "rejectionReason": null,
         "isPrimary": true,
-        "createdAt": 1791099673558,
-        "updatedAt": 1791099673558
+        "createdAt": 1791193151207,
+        "updatedAt": 1791193151207
       }
     ],
     "ownerEmail": "brew.owner@kl-rewards.demo",
@@ -674,8 +1009,8 @@ Response `200 OK` (application/json):
     "memberCount": 3
   },
   "meta": {
-    "correlationId": "gaOvM8CkVxHRsdtFYHNbD",
-    "timestamp": 1791099729431
+    "correlationId": "QCw1OtZvM2KEsSoFi11zX",
+    "timestamp": 1791193329484
   }
 }
 ```
@@ -732,11 +1067,11 @@ Response `200 OK` (application/json):
     "documentId": "d1597799-9b05-49c8-95e1-864ddfa666a8",
     "scanStatus": "SCANNING",
     "downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1791100029455
+    "expiresAt": 1791193629504
   },
   "meta": {
-    "correlationId": "y-2cL1pDlXUQj_SoEGNjx",
-    "timestamp": 1791099729456
+    "correlationId": "E359Qq2C9jfCBlfH5QHKo",
+    "timestamp": 1791193329504
   }
 }
 ```
@@ -789,7 +1124,7 @@ Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejecti
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/merchants/8b632542-54cd-4211-b47a-cfb4f29e3b2a/kyb
+PATCH /api/v1/admin/merchants/62cc685a-d679-4b51-8a57-2715674d1906/kyb
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -812,8 +1147,8 @@ Response `200 OK` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "KkvbBrEk8mES511E7nnNk",
-    "timestamp": 1791099734721
+    "correlationId": "XOSr6hrwgmZzaGnwb5bEQ",
+    "timestamp": 1791193334854
   }
 }
 ```
@@ -893,7 +1228,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "23f73bc6-337d-496d-9259-4c72346c71c9",
+    "id": "6cbdc605-bea0-4d7b-bb73-209d1812064b",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "name": "Brew & Bean KL — Mid Valley",
     "code": "brew-bean-kl-mid-valley",
@@ -903,12 +1238,12 @@ Response `201 Created` (application/json):
     "status": "ACTIVE",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1791099734967,
-    "updatedAt": 1791099734967
+    "createdAt": 1791193335079,
+    "updatedAt": 1791193335079
   },
   "meta": {
-    "correlationId": "OFMvUQi6OZ2ZaVMyejh6i",
-    "timestamp": 1791099734973
+    "correlationId": "FJgsR-WDQykRjAqvIRfIv",
+    "timestamp": 1791193335085
   }
 }
 ```
@@ -966,7 +1301,7 @@ Approve or reject an organization store location request
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/locations/cb9ed179-5400-4fbb-aad8-bf8cb50e9d5c/review
+PATCH /api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/locations/7856bea1-dcf7-4112-81e4-5e91034ef1ed/review
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -984,7 +1319,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "cb9ed179-5400-4fbb-aad8-bf8cb50e9d5c",
+    "id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
@@ -994,12 +1329,12 @@ Response `200 OK` (application/json):
     "status": "REJECTED",
     "rejectionReason": "Add the unit number to the address",
     "isPrimary": false,
-    "createdAt": 1791099734813,
-    "updatedAt": 1791099734847
+    "createdAt": 1791193334906,
+    "updatedAt": 1791193334941
   },
   "meta": {
-    "correlationId": "H6BESAom1mALZqWAMEnno",
-    "timestamp": 1791099734855
+    "correlationId": "CeszNt0Uv5HK6bJDJEKdD",
+    "timestamp": 1791193334947
   }
 }
 ```
@@ -1076,7 +1411,7 @@ _No fields._
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9/approve
+POST /api/v1/admin/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb/approve
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1091,11 +1426,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099737763,
-    "updatedAt": 1791099737763,
+    "createdAt": 1791193338159,
+    "updatedAt": 1791193338159,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+    "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
@@ -1110,15 +1445,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1791099737709,
-    "expiryDate": 1796283737709,
+    "startDate": 1791193338104,
+    "expiryDate": 1796377338104,
     "status": "PUBLISHED",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+    "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -1127,8 +1462,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "-ZrVlzXQoITs4Jt7Y5d1A",
-    "timestamp": 1791099737961
+    "correlationId": "H6Ifq3e5LvOL8k-5eLs-e",
+    "timestamp": 1791193338364
   }
 }
 ```
@@ -1208,14 +1543,14 @@ Reject a pending reward
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/rewards/0d4a7173-a829-49fb-8f3a-4f93ae6f9e7e/reject
+POST /api/v1/admin/rewards/c3a98194-259f-4357-a73e-8cc933eb4e87/reject
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "0d4a7173-a829-49fb-8f3a-4f93ae6f9e7e",
+  "rewardId": "c3a98194-259f-4357-a73e-8cc933eb4e87",
   "reason": "Add the participating stores and the daily limit to the terms"
 }
 ```
@@ -1226,11 +1561,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791099738005,
-    "updatedAt": 1791099738005,
+    "createdAt": 1791193338412,
+    "updatedAt": 1791193338412,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "0d4a7173-a829-49fb-8f3a-4f93ae6f9e7e",
+    "id": "c3a98194-259f-4357-a73e-8cc933eb4e87",
     "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
@@ -1245,8 +1580,8 @@ Response `201 Created` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1791099737709,
-    "expiryDate": 1796283737709,
+    "startDate": 1791193338104,
+    "expiryDate": 1796377338104,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -1262,8 +1597,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "d_06Fn7Tbau3ZFnkUKEDs",
-    "timestamp": 1791099738056
+    "correlationId": "OPtzoK-2qtKz7Z8UNAy1j",
+    "timestamp": 1791193338457
   }
 }
 ```
@@ -1359,8 +1694,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791099673678,
-      "updatedAt": 1791099673678,
+      "createdAt": 1791193151316,
+      "updatedAt": 1791193151316,
       "isDeleted": false,
       "deletedAt": null,
       "id": "c25c75db-a700-499b-9649-dc965aa21264",
@@ -1379,7 +1714,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 80,
       "quantityReserved": 0,
       "startDate": null,
-      "expiryDate": 1793691673676,
+      "expiryDate": 1793785151314,
       "status": "PENDING_REVIEW",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -1392,11 +1727,11 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1791099737763,
-      "updatedAt": 1791099737763,
+      "createdAt": 1791193338159,
+      "updatedAt": 1791193338159,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+      "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
       "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
       "organizationName": "Brew & Bean KL",
       "organizationLogoUrl": null,
@@ -1411,15 +1746,15 @@ Response `200 OK` (application/json):
       "quantityTotal": 250,
       "quantityRemaining": 250,
       "quantityReserved": 0,
-      "startDate": 1791099737709,
-      "expiryDate": 1796283737709,
+      "startDate": 1791193338104,
+      "expiryDate": 1796377338104,
       "status": "PENDING_REVIEW",
       "claimCount": 0,
       "redemptionCount": 0,
       "referralsEnabled": true,
       "referralPoolTotal": 50,
       "referralPoolRemaining": 50,
-      "referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+      "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
       "rules": {
         "minSpendMyr": 15,
         "maxUsePerUser": 1
@@ -1436,8 +1771,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "HL21PfUsT01fDUPRlQYdq",
-    "timestamp": 1791099737931
+    "correlationId": "v2mZ9zu_QVum0Bbx2JgAY",
+    "timestamp": 1791193338326
   }
 }
 ```

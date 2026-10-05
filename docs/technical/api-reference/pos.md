@@ -3,7 +3,7 @@ title: "API reference — Point of sale (machine-to-machine)"
 description: "Terminal pairing, validating a customer's QR / backup code and recording the paid bill. Authenticated with a merchant API key."
 order: 7
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -62,7 +62,7 @@ POST /api/v1/pos/terminals/pair
 Content-Type: application/json
 
 {
-  "pairingCode": "G3NU9BKK"
+  "pairingCode": "TADMREEM"
 }
 ```
 
@@ -85,8 +85,8 @@ Response `201 Created` (application/json):
     }
   },
   "meta": {
-    "correlationId": "iGtglpvLl13bJje7ywbUm",
-    "timestamp": 1791099739341
+    "correlationId": "61AeUu7DbdvCsykliVPXU",
+    "timestamp": 1791193339789
   }
 }
 ```
@@ -152,7 +152,7 @@ X-Terminal-Id: KL-REGISTER-01
 Content-Type: application/json
 
 {
-  "idempotencyKey": "f3475462-208c-424c-8e2b-7f2e8ea10288",
+  "idempotencyKey": "f815f2d6-2049-4703-94ac-b79e5b21cf1c",
   "billTotalMinor": 2500,
   "currency": "MYR",
   "codes": [
@@ -169,14 +169,14 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "saleId": "76ed304c-9d90-471c-96e9-52d7081aaa25",
+    "saleId": "388bfe2d-4b41-4904-9468-85e8bfdbd808",
     "billTotalMinor": 2500,
     "currency": "MYR",
-    "paidAt": 1791099739415,
-    "idempotencyKey": "f3475462-208c-424c-8e2b-7f2e8ea10288",
+    "paidAt": 1791193339862,
+    "idempotencyKey": "f815f2d6-2049-4703-94ac-b79e5b21cf1c",
     "redemptions": [
       {
-        "redemptionId": "3c5f2558-9602-42d9-ad25-28839a80d14a",
+        "redemptionId": "6b43c61d-2092-43bc-beed-cd4a75de8122",
         "claimId": "74199f6f-877f-4d87-8a02-78941a4ae1af",
         "rewardId": "c1214e16-bf0f-4410-8871-8d1a9970f75e",
         "rewardTitle": "Free coffee — Grand Opening"
@@ -184,8 +184,8 @@ Response `201 Created` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "jRr19LPSAdQmxudjvj-Yq",
-    "timestamp": 1791099739441
+    "correlationId": "85STI5qqDySqXtFTtYj7P",
+    "timestamp": 1791193339893
   }
 }
 ```
@@ -252,14 +252,14 @@ Response `201 Created` (application/json):
     "claimId": "74199f6f-877f-4d87-8a02-78941a4ae1af",
     "rewardTitle": "Free coffee — Grand Opening",
     "rewardType": "FREE_ITEM",
-    "claimExpiresAt": 1791704473699,
+    "claimExpiresAt": 1791797951336,
     "valid": true,
     "invalidReason": null,
     "minSpendMinor": 0
   },
   "meta": {
-    "correlationId": "g_qzX_jvsKqEtZ8sy3inK",
-    "timestamp": 1791099739383
+    "correlationId": "UrL8x1g3o-dPmgn-TFhRj",
+    "timestamp": 1791193339830
   }
 }
 ```

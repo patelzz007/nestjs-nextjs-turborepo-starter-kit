@@ -58,6 +58,7 @@ export function organizationContextFixture({ locations, locationScopeType = "ALL
 			primaryLocationId: null,
 			createdAt: FIXTURE_NOW,
 			updatedAt: FIXTURE_NOW,
+			timeZone: "Asia/Kuala_Lumpur",
 		},
 		membership: {
 			id: "1a2b3c4d-1111-4222-8333-444455556666",

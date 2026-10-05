@@ -3,7 +3,7 @@ title: "API reference — System: health and version"
 description: "Liveness, readiness and deep health probes and the API version manifest."
 order: 12
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -51,8 +51,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": "Hello from the Freebuff API!",
   "meta": {
-    "correlationId": "Z4hyGpPY8pYjIwNtIXb28",
-    "timestamp": 1791099694976
+    "correlationId": "rGfVPPOGljIslcomfSM6G",
+    "timestamp": 1791193300023
   }
 }
 ```
@@ -96,11 +96,11 @@ Response `200 OK` (application/json):
   "data": {
     "status": "ok",
     "db": "connected",
-    "timestamp": 1791099694989
+    "timestamp": 1791193300035
   },
   "meta": {
-    "correlationId": "K9dzySWmwTpvtRInCVVj-",
-    "timestamp": 1791099694989
+    "correlationId": "VBB9AmL53t1jdlN5Kys4g",
+    "timestamp": 1791193300035
   }
 }
 ```
@@ -147,10 +147,18 @@ Response `200 OK` (application/json):
   "data": {
     "status": "ok",
     "db": "connected",
-    "timestamp": 1791099695017,
+    "timestamp": 1791193300066,
     "filesystem": "ok",
     "checks": {},
     "modules": [
+      {
+        "name": "authorization",
+        "healthy": true,
+        "details": {
+          "systemRolesExpected": 6,
+          "systemRolesMissing": null
+        }
+      },
       {
         "name": "queue",
         "healthy": true,
@@ -159,20 +167,12 @@ Response `200 OK` (application/json):
           "redis": "configured",
           "prefix": "docs-capture"
         }
-      },
-      {
-        "name": "rabbitmq",
-        "healthy": true,
-        "details": {
-          "backend": "placeholder",
-          "url": "configured"
-        }
       }
     ]
   },
   "meta": {
-    "correlationId": "J9F8CklmaMMs04Pn5HRO-",
-    "timestamp": 1791099695017
+    "correlationId": "LzG0AoTTZIk99LUbP6Mrw",
+    "timestamp": 1791193300066
   }
 }
 ```
@@ -212,12 +212,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "status": "ok",
-    "uptimeSeconds": 12.145588292,
-    "timestamp": 1791099694996
+    "uptimeSeconds": 126.54879925,
+    "timestamp": 1791193300041
   },
   "meta": {
-    "correlationId": "63q8i5_IKEuZGURgim0qL",
-    "timestamp": 1791099694996
+    "correlationId": "UCQVMt5uajM3l-Nuxjumk",
+    "timestamp": 1791193300041
   }
 }
 ```
@@ -274,11 +274,11 @@ Response `200 OK` (application/json):
         "critical": true
       }
     ],
-    "timestamp": 1791099695007
+    "timestamp": 1791193300053
   },
   "meta": {
-    "correlationId": "FZoI2OKNuieGwJHSS-P5u",
-    "timestamp": 1791099695008
+    "correlationId": "U7bdksNsMmiDrAJlAQA5H",
+    "timestamp": 1791193300053
   }
 }
 ```

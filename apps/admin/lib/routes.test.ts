@@ -34,7 +34,6 @@ describe("ROUTES", () => {
 	});
 
 	it("nests every section's pages under the section prefix", () => {
-		expect(isPathWithin(ROUTES.analytics.sales, ROUTES.analytics.index)).toBe(true);
 		expect(isPathWithin(ROUTES.merchants.storeRequests, ROUTES.merchants.list)).toBe(true);
 		expect(isPathWithin(ROUTES.rewards.review, ROUTES.rewards.index)).toBe(true);
 		expect(isPathWithin(ROUTES.emails.log, ROUTES.emails.index)).toBe(true);

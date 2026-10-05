@@ -40,8 +40,14 @@
 		"vitest": "^5.0.0"
 	},
 	"exports": {
+		"./lib/analytics/analytics-export-menu": "./src/lib/analytics/analytics-export-menu.tsx",
+		"./lib/analytics/analytics-kpi-grid": "./src/lib/analytics/analytics-kpi-grid.tsx",
+		"./lib/analytics/analytics-presentation": "./src/lib/analytics/analytics-presentation.ts",
+		"./lib/analytics/analytics-range": "./src/lib/analytics/analytics-range.ts",
+		"./lib/analytics/analytics-range-controls": "./src/lib/analytics/analytics-range-controls.tsx",
 		"./lib/api/api-request": "./src/lib/api/api-request.ts",
 		"./lib/api/config": "./src/lib/api/config.ts",
+		"./lib/api/download": "./src/lib/api/download.ts",
 		"./lib/api/endpoints": "./src/lib/api/endpoints.ts",
 		"./lib/api/envelope": "./src/lib/api/envelope.ts",
 		"./lib/api/list-query": "./src/lib/api/list-query.ts",

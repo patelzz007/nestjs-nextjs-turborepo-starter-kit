@@ -123,6 +123,8 @@ export const apiRoutes = {
 		create: "/claims",
 		list: "/claims",
 		analytics: "/claims/analytics",
+		/** The customer's analytics dashboard (custom range + interval). */
+		analyticsDashboard: "/claims/analytics/dashboard",
 		qr: "/claims/:claimId/qr",
 	},
 	rewardNotifications: {
@@ -186,6 +188,10 @@ export const apiRoutes = {
 		},
 		redemptions: "/orgs/:orgSlug/redemptions",
 		analytics: "/orgs/:orgSlug/analytics",
+		/** The merchant analytics dashboard (custom range + interval, breakdowns). */
+		analyticsDashboard: "/orgs/:orgSlug/analytics/dashboard",
+		/** The merchant analytics report as a CSV / XLSX / PDF file. */
+		analyticsExport: "/orgs/:orgSlug/analytics/export",
 		locations: {
 			create: "/orgs/:orgSlug/locations",
 			update: "/orgs/:orgSlug/locations/:locationId",
@@ -224,6 +230,10 @@ export const apiRoutes = {
 		organizationLocationReview: "/admin/merchants/:organizationId/locations/:locationId/review",
 		organizationKybDocumentDownload: "/admin/merchants/:organizationId/documents/:documentId/download",
 		salesAnalytics: "/admin/analytics/sales",
+		/** The platform analytics dashboard (custom range + interval, breakdowns). */
+		analyticsDashboard: "/admin/analytics/dashboard",
+		/** The platform analytics report as a CSV / XLSX / PDF file. */
+		analyticsExport: "/admin/analytics/export",
 	},
 	sampleCategory: {
 		list: "/sample-category",

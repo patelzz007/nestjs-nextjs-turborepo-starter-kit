@@ -19,7 +19,8 @@
 // server and the browser never agree on — render them with the `RelativeTime`
 // component, which shows the absolute time until after hydration.
 
-import type { DisplayRegion } from "@workspace/shared";
+import type { AnalyticsInterval, DisplayRegion } from "@workspace/shared";
+import { normalizeIntlSpacing } from "./intl-text";
 
 /** How an instant is written. */
 export type DateTimeDisplayStyle = "date" | "dateTime" | "dayMonth";
@@ -52,12 +53,76 @@ function dateTimeFormatter(style: DateTimeDisplayStyle, region: DisplayRegion): 
 
 /** `epochMs` written in `style`, on the wall clock of `region.timeZone` and in `region.locale`. */
 export function formatEpochMs(epochMs: number, style: DateTimeDisplayStyle, region: DisplayRegion): string {
-	return dateTimeFormatter(style, region).format(epochMs);
+	return normalizeIntlSpacing(dateTimeFormatter(style, region).format(epochMs));
 }
 
 /** ISO 8601 (UTC) form of an instant — the machine-readable `dateTime` of a `<time>` element. */
 export function toIsoTimestamp(epochMs: number): string {
 	return new Date(epochMs).toISOString();
+}
+
+// ── Ranges and analytics buckets ───────────────────────────────────────────
+// A range or bucket is half-open `[start, end)`: the last instant it covers is
+// `end - 1`, so "1 Sep → 1 Oct" is written "1 – 30 Sep 2026".
+
+/** The last instant of a half-open range is one millisecond before its exclusive end. */
+const EXCLUSIVE_END_OFFSET_MS = 1;
+
+const RANGE_DATE_OPTIONS: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+
+/** How an analytics bucket is written: compact for an axis tick, complete for a tooltip or a table row. */
+export type BucketLabelStyle = "axis" | "full";
+
+const BUCKET_LABEL_OPTIONS: Readonly<Record<BucketLabelStyle, Readonly<Record<AnalyticsInterval, Intl.DateTimeFormatOptions>>>> = {
+	axis: {
+		/** "5 Oct" */
+		day: { month: "short", day: "numeric" },
+		/** "5 Oct" — the week's Monday. */
+		week: { month: "short", day: "numeric" },
+		/** "Oct 26" */
+		month: { month: "short", year: "2-digit" },
+	},
+	full: {
+		/** "Mon, 5 Oct 2026" */
+		day: { weekday: "short", year: "numeric", month: "short", day: "numeric" },
+		/** "5 – 11 Oct 2026" (a range) */
+		week: RANGE_DATE_OPTIONS,
+		/** "October 2026" */
+		month: { month: "long", year: "numeric" },
+	},
+};
+
+function formatterFor(options: Intl.DateTimeFormatOptions, cacheKey: string, region: DisplayRegion): Intl.DateTimeFormat {
+	const key = [cacheKey, region.locale, region.timeZone].join(CACHE_KEY_SEPARATOR);
+	const cached = dateTimeFormatters.get(key);
+	if (cached !== undefined) {
+		return cached;
+	}
+	const formatter = new Intl.DateTimeFormat(region.locale, { ...options, timeZone: region.timeZone });
+	dateTimeFormatters.set(key, formatter);
+	return formatter;
+}
+
+/**
+ * A half-open range `[fromMs, toMs)` as dates in `region` — "6 Sep – 5 Oct 2026",
+ * "1 – 30 Sep 2026", or one date when it covers a single day.
+ */
+export function formatEpochMsRange(fromMs: number, toMs: number, region: DisplayRegion): string {
+	const lastMs = Math.max(fromMs, toMs - EXCLUSIVE_END_OFFSET_MS);
+	return normalizeIntlSpacing(formatterFor(RANGE_DATE_OPTIONS, "range", region).formatRange(fromMs, lastMs));
+}
+
+/**
+ * One analytics bucket `[startMs, endMs)` cut at `interval` in `region.timeZone`:
+ * `axis` → "5 Oct" / "Oct 26"; `full` → "Mon, 5 Oct 2026" / "5 – 11 Oct 2026" / "October 2026".
+ * A clipped (partial) week is written with its own clipped dates.
+ */
+export function formatBucket(startMs: number, endMs: number, interval: AnalyticsInterval, style: BucketLabelStyle, region: DisplayRegion): string {
+	const formatter = formatterFor(BUCKET_LABEL_OPTIONS[style][interval], `bucket-${style}-${interval}`, region);
+	if (style === "full" && interval === "week") {
+		return normalizeIntlSpacing(formatter.formatRange(startMs, Math.max(startMs, endMs - EXCLUSIVE_END_OFFSET_MS)));
+	}
+	return normalizeIntlSpacing(formatter.format(startMs));
 }
 
 // ── Relative time ──────────────────────────────────────────────────────────
@@ -105,8 +170,8 @@ export function formatRelativeTime(epochMs: number, nowMs: number, locale: strin
 	const formatter = relativeTimeFormatter(locale);
 	for (const [unit, unitSeconds] of RELATIVE_TIME_UNITS) {
 		if (magnitude >= unitSeconds) {
-			return formatter.format(Math.trunc(elapsedSeconds / unitSeconds), unit);
+			return normalizeIntlSpacing(formatter.format(Math.trunc(elapsedSeconds / unitSeconds), unit));
 		}
 	}
-	return formatter.format(Math.trunc(elapsedSeconds), "second");
+	return normalizeIntlSpacing(formatter.format(Math.trunc(elapsedSeconds), "second"));
 }

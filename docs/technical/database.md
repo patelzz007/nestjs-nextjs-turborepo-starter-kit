@@ -3,7 +3,7 @@ title: "Database, migrations and seed"
 description: "PostgreSQL + Prisma: every db command, the generated-only migration flow, the migration baseline marker, drift checks, seed scenarios and seed coverage."
 order: 10
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1200&h=630&fit=crop"
 tags: ["database", "prisma", "migrations", "seed"]
 ---
@@ -125,7 +125,7 @@ migrations**. The procedure is in [CI → Migration baseline](./operations/ci.md
 
 | Scenario | Contents |
 | --- | --- |
-| `development` (default) | Reference data (126 permissions, 6 roles), platform accounts, demo customers, two demo merchants (Brew & Bean KL, Jonker Street Kitchen) with stores, staff, invites, rewards in every lifecycle state, claims, referrals, POS keys and terminals, sales, KYB files, geography, sample catalog, email log, audit trail, account-security history |
+| `development` (default) | Reference data (126 permissions, 6 roles), platform accounts, demo customers, two demo merchants (Brew & Bean KL, Jonker Street Kitchen) with stores, staff, invites, rewards in every lifecycle state, claims, referrals, POS keys and terminals, sales plus a year of POS history for the analytics dashboards and exports (`prisma/seed/analytics-history.ts`: ~2,000 bills across the three stores, six campaign rewards, QR and backup-code redemptions, expired claims, customers joining month by month, campaign titles in Chinese, Tamil, Hindi and Malay — through the same invariants as checkout), KYB files, geography, sample catalog, email log, audit trail, account-security history |
 | `empty` | Reference data only (permissions and roles); no users or tenants. Deployments use `db:sync-reference-data` instead (same loader, no seed guard needed) |
 | `enterprise --seed <n>` | One large tenant, **Northwind Retail Group** (`/orgs/northwind-enterprise/dashboard`): 25 stores, 250 members, 500 products; deterministic for a given seed and additive (other tenants are left alone) |
 

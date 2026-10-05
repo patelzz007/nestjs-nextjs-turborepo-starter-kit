@@ -18,7 +18,7 @@ const { analyticsQuery, guardWebPage, analyticsView } = vi.hoisted(() => ({
 	analyticsView: vi.fn<(props: RewardHubAnalyticsPageViewProps) => React.JSX.Element>(),
 }));
 
-vi.mock("@/lib/web-server-api", () => ({ createWebServerCaller: (): object => ({ claims: { analytics: { query: analyticsQuery } } }) }));
+vi.mock("@/lib/web-server-api", () => ({ createWebServerCaller: (): object => ({ claims: { analyticsDashboard: { query: analyticsQuery } } }) }));
 vi.mock("@/lib/auth/page-guard", () => ({ guardWebPage }));
 vi.mock("@/components/rewardhub/shared/analytics-page-view", () => ({ RewardHubAnalyticsPageView: analyticsView }));
 vi.mock("@/components/auth/access-gate", () => ({ AccessGate: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <>{children}</> }));
@@ -34,11 +34,16 @@ vi.mock("next/navigation", async (importOriginal) => {
 /** The page only forwards the analytics payload, so an opaque marker stands in for it. */
 const ANALYTICS = { marker: "user-analytics" };
 
-async function renderPage(): Promise<void> {
-	render(await RewardHubActivityPage());
+/** 5 Oct 2026 12:00 UTC — the request time the page resolves the range against. */
+const NOW_MS = Date.UTC(2026, 9, 5, 12);
+
+async function renderPage(query: Record<string, string> = {}): Promise<void> {
+	render(await RewardHubActivityPage({ searchParams: Promise.resolve(query) }));
 }
 
 beforeEach((): void => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(NOW_MS);
 	guardWebPage.mockResolvedValue(undefined);
 	analyticsView.mockReturnValue(<p>activity</p>);
 	vi.spyOn(console, "error").mockImplementation((): void => {
@@ -47,6 +52,7 @@ beforeEach((): void => {
 });
 
 afterEach((): void => {
+	vi.useRealTimers();
 	cleanup();
 	vi.resetAllMocks();
 	vi.restoreAllMocks();
@@ -61,12 +67,26 @@ describe("RewardHubActivityPage (server)", () => {
 		expect(guardWebPage).toHaveBeenCalledWith(ROUTES.rewardHub.activity);
 	});
 
-	it("hands the prefetched analytics to the view", async () => {
+	it("prefetches the last 30 UTC days by default and hands the answer, keyed by its request, to the view", async () => {
 		analyticsQuery.mockResolvedValue(testEnvelope(ANALYTICS));
 
 		await renderPage();
 
-		expect(analyticsView.mock.lastCall?.[0]).toEqual({ initialAnalytics: testEnvelope(ANALYTICS) });
+		const from = Date.UTC(2026, 8, 6);
+		const to = Date.UTC(2026, 9, 6);
+		expect(analyticsQuery).toHaveBeenCalledWith({ from, to, interval: "day" });
+		expect(analyticsView.mock.lastCall?.[0]).toEqual({
+			nowMs: NOW_MS,
+			initialDashboard: { stateKey: `${String(from)}|${String(to)}|day|`, data: testEnvelope(ANALYTICS) },
+		});
+	});
+
+	it("prefetches the range a shared link asks for", async () => {
+		analyticsQuery.mockResolvedValue(testEnvelope(ANALYTICS));
+
+		await renderPage({ range: "custom", from: "2026-01-01", to: "2026-06-30" });
+
+		expect(analyticsQuery).toHaveBeenCalledWith({ from: Date.UTC(2026, 0, 1), to: Date.UTC(2026, 6, 1), interval: "week" });
 	});
 
 	it("sends a rejected session (401) to sign-in", async () => {
@@ -87,7 +107,7 @@ describe("RewardHubActivityPage (server)", () => {
 	it("rethrows a server error to the error boundary instead of rendering empty analytics", async () => {
 		analyticsQuery.mockImplementation(() => failedQuery(httpFailure(500)));
 
-		await expect(renderPage()).rejects.toThrow("claims.analytics failed during server render: HTTP 500");
+		await expect(renderPage()).rejects.toThrow("claims.analyticsDashboard failed during server render: HTTP 500");
 		expect(analyticsView).not.toHaveBeenCalled();
 	});
 });

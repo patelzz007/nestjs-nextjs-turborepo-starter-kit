@@ -1,6 +1,6 @@
 {
 	"capturedFrom": "pnpm db:seed (development scenario)",
-	"capturedAt": 1791072000000,
+	"capturedAt": 1791158400000,
 	"samples": {
 		"AuditController_list": {
 			"as": "superadmin@example.com (admin panel)",
@@ -22,12 +22,12 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099724638,
-							"updatedAt": 1791099724638,
-							"id": "d40914c6-6c58-4ad4-81f2-24555ff13ff5",
+							"createdAt": 1791193324764,
+							"updatedAt": 1791193324764,
+							"id": "03538d88-06e0-4dff-9a17-e47562c96482",
 							"actor": {
 								"kind": "USER",
-								"userId": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+								"userId": "9194a7c0-e721-4833-95cc-eca2f319f542",
 								"impersonatorId": null
 							},
 							"targetUserId": null,
@@ -37,31 +37,31 @@
 							"detail": "Bypassed authorization for list at GET /api/v1/admin/audit?limit=2"
 						},
 						{
-							"createdAt": 1791099724581,
-							"updatedAt": 1791099724581,
-							"id": "8e5fd71f-3f5a-47b1-ae6e-bf339ce68459",
+							"createdAt": 1791193324701,
+							"updatedAt": 1791193324701,
+							"id": "6c442714-97d4-40f6-84fd-ae3f8fbcbb9b",
 							"actor": {
 								"kind": "USER",
-								"userId": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+								"userId": "9194a7c0-e721-4833-95cc-eca2f319f542",
 								"impersonatorId": null
 							},
 							"targetUserId": null,
 							"targetRoleId": null,
 							"permissionId": null,
 							"action": "SUPER_ADMIN_BYPASS",
-							"detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c"
+							"detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=048bb0a7-bec4-4453-a311-d54f51a211e5"
 						}
 					],
 					"meta": {
 						"limit": 2,
-						"total": 104,
+						"total": 109,
 						"page": 1,
-						"totalPages": 52,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTcyNDU4MSwiaWQiOiI4ZTVmZDcxZi0zZjVhLTQ3YjEtYWU2ZS1iZjMzOWNlNjg0NTkifQ",
+						"totalPages": 55,
+						"nextCursor": "eyJhdCI6MTc5MTE5MzMyNDcwMSwiaWQiOiI2YzQ0MjcxNC05N2Q0LTQwZjYtODRmZC1hZTNmOGZiY2JiOWIifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "otJ2Hq8mj7_Erq5WqgRWn",
-						"timestamp": 1791099724652
+						"correlationId": "F5WRU9zo1FaadnwjxaU3p",
+						"timestamp": 1791193324777
 					}
 				}
 			}
@@ -91,8 +91,8 @@
 						"message": "Password changed successfully"
 					},
 					"meta": {
-						"correlationId": "eE6LbMEDOuF5NDN0JC7m4",
-						"timestamp": 1791099699598
+						"correlationId": "JMWhNEtIvuiq9z6eNMjJW",
+						"timestamp": 1791193304792
 					}
 				}
 			}
@@ -119,8 +119,8 @@
 						"message": "If an account with that email exists, a password reset link has been sent."
 					},
 					"meta": {
-						"correlationId": "6hzbinYKWFK2qg-isfXPG",
-						"timestamp": 1791099697581
+						"correlationId": "_9fCnk0GNWvfTyI2IlVCK",
+						"timestamp": 1791193302723
 					}
 				}
 			}
@@ -129,7 +129,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/auth/admin/users/50f966ee-c2db-4828-a6ef-3e088d34e080",
+				"path": "/api/v1/auth/admin/users/363565ab-118f-4983-aeff-0b7eb1634f47",
 				"headers": {
 					"X-Client-Type": "admin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -141,11 +141,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099608530,
-						"updatedAt": 1791099608530,
+						"createdAt": 1766561160000,
+						"updatedAt": 1791193088873,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "50f966ee-c2db-4828-a6ef-3e088d34e080",
+						"id": "363565ab-118f-4983-aeff-0b7eb1634f47",
 						"email": "grace.wilson@example.com",
 						"fullName": "Grace Wilson",
 						"isActive": true,
@@ -156,21 +156,21 @@
 						"tokenVersion": 0,
 						"roles": [
 							{
-								"id": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
+								"id": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
 								"name": "User",
 								"description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
 							}
 						],
 						"permissions": [
 							{
-								"id": "89942508-ed71-4c14-abdc-3212fc486d3d",
+								"id": "b61ea7ad-24e9-4233-8715-a8778243215f",
 								"action": "READ",
 								"resource": "PROFILE",
 								"description": "View own profile",
 								"group": "Own Records"
 							},
 							{
-								"id": "0a018761-0bba-48d0-afc0-710bac7d55f4",
+								"id": "8f159dec-62e8-4b7e-a8cb-27078dc4ac39",
 								"action": "UPDATE",
 								"resource": "PROFILE",
 								"description": "Update own profile",
@@ -178,12 +178,12 @@
 							}
 						],
 						"failedLoginAttempts": 5,
-						"lockedUntil": 1791100574480,
+						"lockedUntil": 1791194053624,
 						"directPermissionIds": []
 					},
 					"meta": {
-						"correlationId": "gvZKVGNp89sXhv2mtslgE",
-						"timestamp": 1791099697205
+						"correlationId": "FbXskSGFXfRfjodqJkJsS",
+						"timestamp": 1791193302317
 					}
 				}
 			}
@@ -209,24 +209,24 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099631657,
-							"updatedAt": 1791099631657,
+							"createdAt": 1790707211336,
+							"updatedAt": 1791193088857,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "ec589838-11e3-4131-bc30-542924e99da9",
-							"email": "user-20@example.com",
-							"fullName": "Abigail Lee",
-							"isActive": false,
+							"id": "048bb0a7-bec4-4453-a311-d54f51a211e5",
+							"email": "manager@example.com",
+							"fullName": "Manager User",
+							"isActive": true,
 							"isSuperAdmin": false,
 							"isEmailVerified": false,
 							"twoFactorEnabled": false,
-							"hasAdminAccess": false,
+							"hasAdminAccess": true,
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
-									"name": "User",
-									"description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
+									"id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
+									"name": "Manager",
+									"description": "Admin panel — read/update users and reports (no RBAC or system settings)"
 								}
 							],
 							"permissions": [],
@@ -235,24 +235,24 @@
 							"directPermissionIds": []
 						},
 						{
-							"createdAt": 1791099630545,
-							"updatedAt": 1791099630545,
+							"createdAt": 1790312891336,
+							"updatedAt": 1791193088854,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "c04d98e9-9f80-4d7b-b4cf-374ed31d7f10",
-							"email": "user-19@example.com",
-							"fullName": "Daniel Lewis",
-							"isActive": false,
+							"id": "9af46920-bdda-4924-9aba-113055a21a2f",
+							"email": "admin@example.com",
+							"fullName": "Admin User",
+							"isActive": true,
 							"isSuperAdmin": false,
-							"isEmailVerified": false,
+							"isEmailVerified": true,
 							"twoFactorEnabled": false,
-							"hasAdminAccess": false,
+							"hasAdminAccess": true,
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
-									"name": "User",
-									"description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
+									"id": "6b129548-41be-4834-b36a-a15cf3b7e855",
+									"name": "Admin",
+									"description": "Admin panel — manage users, settings, and platform data"
 								}
 							],
 							"permissions": [],
@@ -266,11 +266,11 @@
 						"total": 35,
 						"page": 1,
 						"totalPages": 7,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTYyNzAxNywiaWQiOiI5YjJmODVkNi1mZTUxLTQ3NGQtYmNiNy02MDY3MDJiMTdlMmIifQ",
+						"nextCursor": "eyJhdCI6MTc4NzcyMzM0MDAwMCwiaWQiOiI4MDQ3NTk1Yi1iYTg5LTRlMjctYmUyNy0xYmEzYjkxNTlhZTQifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "mER5WgRmKXUPGPRmVaaqJ",
-						"timestamp": 1791099697129
+						"correlationId": "-IasGzEF9QYYLe8FYgdt_",
+						"timestamp": 1791193302229
 					}
 				}
 			}
@@ -291,11 +291,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099608504,
-						"updatedAt": 1791099608504,
+						"createdAt": 1790015951336,
+						"updatedAt": 1791193088846,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+						"id": "9194a7c0-e721-4833-95cc-eca2f319f542",
 						"email": "superadmin@example.com",
 						"fullName": "Super Admin",
 						"isActive": true,
@@ -306,15 +306,15 @@
 						"tokenVersion": 0,
 						"roles": [
 							{
-								"id": "866b0d60-4c13-452b-b621-aa1d883330b2",
+								"id": "7c9e04fb-139e-418c-8d71-8e0f57f636e4",
 								"name": "SuperAdmin",
 								"description": "Full system access (platform operator)"
 							}
 						]
 					},
 					"meta": {
-						"correlationId": "0iTy3lc82DZ0ZR_BaAWEZ",
-						"timestamp": 1791099696451
+						"correlationId": "ZHd7Zs8XeqCbTYib1LLl3",
+						"timestamp": 1791193301531
 					}
 				}
 			}
@@ -337,21 +337,21 @@
 					"data": {
 						"roles": [
 							{
-								"id": "866b0d60-4c13-452b-b621-aa1d883330b2",
+								"id": "7c9e04fb-139e-418c-8d71-8e0f57f636e4",
 								"name": "SuperAdmin",
 								"description": "Full system access (platform operator)"
 							}
 						],
 						"permissions": [
 							{
-								"id": "a8b52efa-4f50-41ca-82b9-a5f664c74f75",
+								"id": "8645327b-3853-40e8-a895-897b948f3b7d",
 								"action": "CREATE",
 								"resource": "USER",
 								"description": "Create new users",
 								"group": "User Management"
 							},
 							{
-								"id": "81cfabb8-c5d4-4197-8ae1-509f32d53d25",
+								"id": "7c220360-19dc-4546-950c-d0a48cad6177",
 								"action": "READ",
 								"resource": "USER",
 								"description": "View user details",
@@ -367,8 +367,8 @@
 						"sessionScope": "full"
 					},
 					"meta": {
-						"correlationId": "nZPIFXTcm1YFh20e4i7WK",
-						"timestamp": 1791099696456
+						"correlationId": "DJYOStMELjZUvJfgSqu9I",
+						"timestamp": 1791193301534
 					}
 				}
 			}
@@ -395,11 +395,11 @@
 					"success": true,
 					"data": {
 						"user": {
-							"createdAt": 1791099608504,
-							"updatedAt": 1791099608504,
+							"createdAt": 1790015951336,
+							"updatedAt": 1791193088846,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+							"id": "9194a7c0-e721-4833-95cc-eca2f319f542",
 							"email": "superadmin@example.com",
 							"fullName": "Super Admin",
 							"isActive": true,
@@ -410,7 +410,7 @@
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "866b0d60-4c13-452b-b621-aa1d883330b2",
+									"id": "7c9e04fb-139e-418c-8d71-8e0f57f636e4",
 									"name": "SuperAdmin",
 									"description": "Full system access (platform operator)"
 								}
@@ -418,8 +418,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "uqhQbx8xghOOjD_DIwcC1",
-						"timestamp": 1791099695755
+						"correlationId": "LrLNFS_tWavVt4HfAnBhN",
+						"timestamp": 1791193300809
 					}
 				}
 			}
@@ -446,8 +446,8 @@
 						"message": "If an account with that email exists, a verification email has been sent."
 					},
 					"meta": {
-						"correlationId": "4m8_6524YSN9MjHv77qu7",
-						"timestamp": 1791099697249
+						"correlationId": "PQV5xmLGDkWXI-PX6bjee",
+						"timestamp": 1791193302383
 					}
 				}
 			}
@@ -475,8 +475,8 @@
 						"message": "Password has been reset successfully. Please log in with your new password."
 					},
 					"meta": {
-						"correlationId": "FvOkNzHUHxtr_BdB5cBoV",
-						"timestamp": 1791099698459
+						"correlationId": "Zc23LE9oWldow7YRWIBzY",
+						"timestamp": 1791193303616
 					}
 				}
 			}
@@ -507,8 +507,8 @@
 						"message": "If this email is available, check your inbox for verification instructions."
 					},
 					"meta": {
-						"correlationId": "Gu-kWEdh9BUfs-uj0tvVj",
-						"timestamp": 1791099699935
+						"correlationId": "C5un2kHsU0onQUp7B2sxO",
+						"timestamp": 1791193305135
 					}
 				}
 			}
@@ -517,7 +517,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/auth/admin/users/50f966ee-c2db-4828-a6ef-3e088d34e080/unlock",
+				"path": "/api/v1/auth/admin/users/363565ab-118f-4983-aeff-0b7eb1634f47/unlock",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -533,8 +533,8 @@
 						"message": "User account has been unlocked successfully."
 					},
 					"meta": {
-						"correlationId": "tIzd36lVCZf2FrWS2KGSs",
-						"timestamp": 1791099697222
+						"correlationId": "J4oZICXcO6G8idMClfSlG",
+						"timestamp": 1791193302338
 					}
 				}
 			}
@@ -561,8 +561,8 @@
 						"valid": true
 					},
 					"meta": {
-						"correlationId": "U_R46jEjTIOtniyQFGVFs",
-						"timestamp": 1791099697872
+						"correlationId": "26WNRMQdlR27cLwzklRyi",
+						"timestamp": 1791193303014
 					}
 				}
 			}
@@ -590,8 +590,8 @@
 						"alreadyVerified": false
 					},
 					"meta": {
-						"correlationId": "YAcESQRyW2n02ldseTCx9",
-						"timestamp": 1791099697275
+						"correlationId": "R0YSzpdKajxXpcLvYljfn",
+						"timestamp": 1791193302408
 					}
 				}
 			}
@@ -642,8 +642,8 @@
 						]
 					},
 					"meta": {
-						"correlationId": "CEN1A3MxknmjCKsees1oz",
-						"timestamp": 1791099724568
+						"correlationId": "OPC3NHuIKvl1W3C_kZnYZ",
+						"timestamp": 1791193324688
 					}
 				}
 			}
@@ -656,7 +656,7 @@
 				"query": {
 					"action": "READ",
 					"resource": "GEO",
-					"userId": "bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c"
+					"userId": "048bb0a7-bec4-4453-a311-d54f51a211e5"
 				},
 				"headers": {
 					"X-Client-Type": "admin",
@@ -672,7 +672,7 @@
 						"decision": "ALLOW",
 						"request": {
 							"subject": {
-								"userId": "bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c",
+								"userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
 								"isSuperAdmin": false
 							},
 							"action": "READ",
@@ -697,8 +697,8 @@
 						"durationMs": 18
 					},
 					"meta": {
-						"correlationId": "cU2d6IaVIejwlF_tP-iC9",
-						"timestamp": 1791099724607
+						"correlationId": "0j6mMqWqICIqOsq9esJWd",
+						"timestamp": 1791193324727
 					}
 				}
 			}
@@ -720,7 +720,7 @@
 					"success": true,
 					"data": [
 						{
-							"id": "f377f674-de60-48df-a30b-bf900595b068",
+							"id": "f62c2e12-af2a-4838-b271-d61b1130d6be",
 							"slug": "merchant:view_dashboard",
 							"scope": "MERCHANT",
 							"label": "View dashboard",
@@ -730,7 +730,7 @@
 							"isSystem": true
 						},
 						{
-							"id": "c2148d04-e9bc-4e22-8bd0-b8b6cfb49cca",
+							"id": "4a25b76a-1b01-4f10-aa2e-d3310468eb41",
 							"slug": "platform:admin_dashboard.manage",
 							"scope": "PLATFORM",
 							"label": "Full admin dashboard access",
@@ -741,8 +741,8 @@
 						}
 					],
 					"meta": {
-						"correlationId": "FJFdTr6RTEnvlCvNI1TM3",
-						"timestamp": 1791099724621
+						"correlationId": "y-0i8oHsIprRqsfAAmP3q",
+						"timestamp": 1791193324748
 					}
 				}
 			}
@@ -758,9 +758,9 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"rewardId": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+					"rewardId": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 					"phone": "+60123456789",
-					"otp": "465611"
+					"otp": "110800"
 				}
 			},
 			"response": {
@@ -770,25 +770,25 @@
 					"success": true,
 					"data": {
 						"claim": {
-							"createdAt": 1791099738919,
-							"updatedAt": 1791099738919,
+							"createdAt": 1791193339350,
+							"updatedAt": 1791193339350,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "3f95c140-8fb1-4c61-a3f3-fa853d0081ab",
-							"rewardId": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+							"id": "01110696-4751-4c2e-834b-915b53339fa0",
+							"rewardId": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 							"rewardTitle": "Free Kopi O with any breakfast set",
 							"status": "PENDING",
-							"claimedAt": 1791099738915,
-							"claimExpiresAt": 1791704538915,
+							"claimedAt": 1791193339345,
+							"claimExpiresAt": 1791798139345,
 							"redeemedAt": null,
 							"isReferrerCredit": false
 						},
-						"qrDeepLink": "/rewards/claims/3f95c140-8fb1-4c61-a3f3-fa853d0081ab/qr",
-						"backupCode": "Y4EEP3E8"
+						"qrDeepLink": "/rewards/claims/01110696-4751-4c2e-834b-915b53339fa0/qr",
+						"backupCode": "PUDEZW79"
 					},
 					"meta": {
-						"correlationId": "BhU14HGUO7eDe_0_NPI_L",
-						"timestamp": 1791099738932
+						"correlationId": "0vlZP81M9WmX03Kqu2fG4",
+						"timestamp": 1791193339371
 					}
 				}
 			}
@@ -810,25 +810,25 @@
 					"success": true,
 					"data": {
 						"period": {
-							"from": 1786320000000,
-							"to": 1791099739824,
+							"from": 1786924800000,
+							"to": 1791193340481,
 							"timeZone": "UTC"
 						},
 						"totalClaims": {
-							"value": 3,
-							"changePercent": 100
+							"value": 20,
+							"changePercent": 43
 						},
 						"pendingClaims": {
 							"value": 2,
 							"changePercent": 100
 						},
 						"redeemedClaims": {
-							"value": 1,
-							"changePercent": 100
+							"value": 17,
+							"changePercent": 31
 						},
 						"expiredClaims": {
-							"value": 0,
-							"changePercent": null
+							"value": 1,
+							"changePercent": 0
 						},
 						"referralsSent": {
 							"value": 1,
@@ -839,19 +839,19 @@
 							"changePercent": null
 						},
 						"conversionRate": {
-							"value": 33.3,
-							"changePercent": 100
+							"value": 85,
+							"changePercent": -9
 						},
 						"claimsOverTime": [
 							{
-								"date": 1786320000000,
-								"claims": 0,
-								"redemptions": 0
+								"date": 1786924800000,
+								"claims": 3,
+								"redemptions": 3
 							},
 							{
-								"date": 1786924800000,
-								"claims": 0,
-								"redemptions": 0
+								"date": 1787529600000,
+								"claims": 3,
+								"redemptions": 2
 							}
 						],
 						"byStatus": [
@@ -861,49 +861,64 @@
 							},
 							{
 								"status": "REDEEMED",
-								"count": 1
+								"count": 17
 							}
 						],
 						"spending": {
 							"currency": "MYR",
 							"totalSpentMinor": {
-								"value": 2500,
-								"changePercent": 100
+								"value": 78798,
+								"changePercent": -19
 							},
 							"visits": {
-								"value": 1,
-								"changePercent": 100
+								"value": 17,
+								"changePercent": 31
 							},
 							"byMerchant": [
+								{
+									"organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+									"merchantName": "Jonker Street Kitchen",
+									"category": "restaurant",
+									"totalMinor": 57356,
+									"visits": 8
+								},
 								{
 									"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 									"merchantName": "Brew & Bean KL",
 									"category": "cafe",
-									"totalMinor": 2500,
-									"visits": 1
+									"totalMinor": 21442,
+									"visits": 9
 								}
 							],
 							"byCategory": [
 								{
+									"category": "restaurant",
+									"totalMinor": 57356,
+									"visits": 8
+								},
+								{
 									"category": "cafe",
-									"totalMinor": 2500,
-									"visits": 1
+									"totalMinor": 21442,
+									"visits": 9
 								}
 							]
 						}
 					},
 					"meta": {
-						"correlationId": "umwGM_8Ad9vDi4QIb1A7o",
-						"timestamp": 1791099739837
+						"correlationId": "n7Q9zq_gakhPRJEMvIfWk",
+						"timestamp": 1791193340489
 					}
 				}
 			}
 		},
-		"ConsumerClaimsController_getClaimQr": {
+		"ConsumerClaimsController_getAnalyticsDashboard": {
 			"as": "alice.johnson@example.com (web app)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/claims/3f95c140-8fb1-4c61-a3f3-fa853d0081ab/qr",
+				"path": "/api/v1/claims/analytics/dashboard",
+				"query": {
+					"interval": "month"
+				},
 				"headers": {
 					"X-Client-Type": "web",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -915,14 +930,207 @@
 				"body": {
 					"success": true,
 					"data": {
-						"claimId": "3f95c140-8fb1-4c61-a3f3-fa853d0081ab",
-						"qrPayload": "rDD-OcYvLLMQUff8cuAhFA5SgMl9dWmrfy7sfXZ3adE",
-						"backupCode": "U9CTEZN9",
-						"claimExpiresAt": 1791704538915
+						"range": {
+							"from": 1788601340509,
+							"to": 1791193340509,
+							"timeZone": "UTC",
+							"interval": "month",
+							"previousFrom": 1786009340509,
+							"previousTo": 1788601340509
+						},
+						"currency": "MYR",
+						"totals": {
+							"spentMinor": {
+								"value": 46707,
+								"previous": 39569,
+								"change": 7138,
+								"changePercent": 18
+							},
+							"visits": {
+								"value": 11,
+								"previous": 7,
+								"change": 4,
+								"changePercent": 57.1
+							},
+							"averageBillMinor": {
+								"value": 4246,
+								"previous": 5653,
+								"change": -1407,
+								"changePercent": -24.9
+							},
+							"claims": {
+								"value": 13,
+								"previous": 8,
+								"change": 5,
+								"changePercent": 62.5
+							},
+							"redemptions": {
+								"value": 11,
+								"previous": 7,
+								"change": 4,
+								"changePercent": 57.1
+							},
+							"conversionRate": {
+								"value": 84.6,
+								"previous": 87.5,
+								"change": -2.9,
+								"changePercent": -3.3
+							},
+							"merchants": {
+								"value": 2,
+								"previous": 2,
+								"change": 0,
+								"changePercent": 0
+							},
+							"referralsSent": {
+								"value": 1,
+								"previous": 0,
+								"change": 1,
+								"changePercent": null
+							},
+							"referralsCredited": {
+								"value": 0,
+								"previous": 0,
+								"change": 0,
+								"changePercent": null
+							},
+							"referralRewardsEarned": {
+								"value": 0,
+								"previous": 0,
+								"change": 0,
+								"changePercent": null
+							}
+						},
+						"series": [
+							{
+								"start": 1788601340509,
+								"end": 1790812800000,
+								"isPartial": true,
+								"spentMinor": 41419,
+								"visits": 9,
+								"claims": 11,
+								"redemptions": 9
+							},
+							{
+								"start": 1790812800000,
+								"end": 1791193340509,
+								"isPartial": true,
+								"spentMinor": 5288,
+								"visits": 2,
+								"claims": 2,
+								"redemptions": 2
+							}
+						],
+						"spendingByCategory": [
+							{
+								"category": "restaurant",
+								"totalMinor": 35635,
+								"visits": 6,
+								"series": [
+									{
+										"start": 1788601340509,
+										"totalMinor": 35635
+									},
+									{
+										"start": 1790812800000,
+										"totalMinor": 0
+									}
+								]
+							},
+							{
+								"category": "cafe",
+								"totalMinor": 11072,
+								"visits": 5,
+								"series": [
+									{
+										"start": 1788601340509,
+										"totalMinor": 5784
+									},
+									{
+										"start": 1790812800000,
+										"totalMinor": 5288
+									}
+								]
+							}
+						],
+						"spendingByMerchant": [
+							{
+								"organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+								"merchantName": "Jonker Street Kitchen",
+								"category": "restaurant",
+								"totalMinor": 35635,
+								"visits": 6,
+								"series": [
+									{
+										"start": 1788601340509,
+										"totalMinor": 35635
+									},
+									{
+										"start": 1790812800000,
+										"totalMinor": 0
+									}
+								]
+							},
+							{
+								"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+								"merchantName": "Brew & Bean KL",
+								"category": "cafe",
+								"totalMinor": 11072,
+								"visits": 5,
+								"series": [
+									{
+										"start": 1788601340509,
+										"totalMinor": 5784
+									},
+									{
+										"start": 1790812800000,
+										"totalMinor": 5288
+									}
+								]
+							}
+						],
+						"claimsByStatus": [
+							{
+								"status": "PENDING",
+								"claims": 2
+							},
+							{
+								"status": "REDEEMED",
+								"claims": 10
+							}
+						]
 					},
 					"meta": {
-						"correlationId": "jc5GpISqVNzhUAykI20Xf",
-						"timestamp": 1791099738997
+						"correlationId": "Q_1q5YUaJDKvgzYgfngIU",
+						"timestamp": 1791193340518
+					}
+				}
+			}
+		},
+		"ConsumerClaimsController_getClaimQr": {
+			"as": "alice.johnson@example.com (web app)",
+			"request": {
+				"method": "GET",
+				"path": "/api/v1/claims/01110696-4751-4c2e-834b-915b53339fa0/qr",
+				"headers": {
+					"X-Client-Type": "web",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"claimId": "01110696-4751-4c2e-834b-915b53339fa0",
+						"qrPayload": "lfrOK5Aq43GkTC89VDklOJFTOzVXhJlcpUMNcYLYkwg",
+						"backupCode": "MMLMWHEY",
+						"claimExpiresAt": 1791798139345
+					},
+					"meta": {
+						"correlationId": "6C-xQmcpnq3bNtvqnCg4v",
+						"timestamp": 1791193339432
 					}
 				}
 			}
@@ -947,44 +1155,44 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099738919,
-							"updatedAt": 1791099738919,
+							"createdAt": 1791193339350,
+							"updatedAt": 1791193339350,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "3f95c140-8fb1-4c61-a3f3-fa853d0081ab",
-							"rewardId": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+							"id": "01110696-4751-4c2e-834b-915b53339fa0",
+							"rewardId": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 							"rewardTitle": "Free Kopi O with any breakfast set",
 							"status": "PENDING",
-							"claimedAt": 1791099738915,
-							"claimExpiresAt": 1791704538915,
+							"claimedAt": 1791193339345,
+							"claimExpiresAt": 1791798139345,
 							"redeemedAt": null,
 							"isReferrerCredit": false
 						},
 						{
-							"createdAt": 1791099673700,
-							"updatedAt": 1791099673700,
+							"createdAt": 1791193151337,
+							"updatedAt": 1791193151337,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "74199f6f-877f-4d87-8a02-78941a4ae1af",
 							"rewardId": "c1214e16-bf0f-4410-8871-8d1a9970f75e",
 							"rewardTitle": "Free coffee — Grand Opening",
 							"status": "PENDING",
-							"claimedAt": 1791013273699,
-							"claimExpiresAt": 1791704473699,
+							"claimedAt": 1791106751336,
+							"claimExpiresAt": 1791797951336,
 							"redeemedAt": null,
 							"isReferrerCredit": false
 						}
 					],
 					"meta": {
 						"limit": 2,
-						"total": 3,
+						"total": 192,
 						"page": 1,
-						"totalPages": 2,
-						"nextCursor": "eyJhdCI6MTc5MTAxMzI3MzY5OSwiaWQiOiI3NDE5OWY2Zi04NzdmLTRkODctOGEwMi03ODk0MWE0YWUxYWYifQ",
+						"totalPages": 96,
+						"nextCursor": "eyJhdCI6MTc5MTEwNjc1MTMzNiwiaWQiOiI3NDE5OWY2Zi04NzdmLTRkODctOGEwMi03ODk0MWE0YWUxYWYifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "ce_8ei5u-PnHB64Z7H3g6",
-						"timestamp": 1791099738964
+						"correlationId": "KMZGbkQvsNEP62GHdY0tW",
+						"timestamp": 1791193339404
 					}
 				}
 			}
@@ -1000,7 +1208,7 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"rewardId": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+					"rewardId": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 					"phone": "+60123456789"
 				}
 			},
@@ -1013,8 +1221,8 @@
 						"ok": true
 					},
 					"meta": {
-						"correlationId": "e3jOJjIenNnMhLL5fH0bU",
-						"timestamp": 1791099738876
+						"correlationId": "WA9cWcHl6C61uwyz9l8Wa",
+						"timestamp": 1791193339303
 					}
 				}
 			}
@@ -1023,7 +1231,7 @@
 			"as": "no session",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+				"path": "/api/v1/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb",
 				"headers": {
 					"X-Client-Type": "web"
 				}
@@ -1034,11 +1242,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099737763,
-						"updatedAt": 1791099737763,
+						"createdAt": 1791193338159,
+						"updatedAt": 1791193338159,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+						"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"organizationName": "Brew & Bean KL",
 						"organizationLogoUrl": null,
@@ -1053,15 +1261,15 @@
 						"quantityTotal": 250,
 						"quantityRemaining": 250,
 						"quantityReserved": 0,
-						"startDate": 1791099737709,
-						"expiryDate": 1796283737709,
+						"startDate": 1791193338104,
+						"expiryDate": 1796377338104,
 						"status": "PUBLISHED",
 						"claimCount": 0,
 						"redemptionCount": 0,
 						"referralsEnabled": true,
 						"referralPoolTotal": 50,
 						"referralPoolRemaining": 50,
-						"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+						"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 						"rules": {
 							"minSpendMyr": 15,
 							"maxUsePerUser": 1
@@ -1070,8 +1278,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "RxROOtZROXaI2lARJlFh6",
-						"timestamp": 1791099738098
+						"correlationId": "K-l_Z_Nh2k--VVfk76RhN",
+						"timestamp": 1791193338496
 					}
 				}
 			}
@@ -1095,11 +1303,11 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099737763,
-							"updatedAt": 1791099737763,
+							"createdAt": 1791193338159,
+							"updatedAt": 1791193338159,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+							"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 							"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 							"organizationName": "Brew & Bean KL",
 							"organizationLogoUrl": null,
@@ -1114,15 +1322,15 @@
 							"quantityTotal": 250,
 							"quantityRemaining": 250,
 							"quantityReserved": 0,
-							"startDate": 1791099737709,
-							"expiryDate": 1796283737709,
+							"startDate": 1791193338104,
+							"expiryDate": 1796377338104,
 							"status": "PUBLISHED",
 							"claimCount": 0,
 							"redemptionCount": 0,
 							"referralsEnabled": true,
 							"referralPoolTotal": 50,
 							"referralPoolRemaining": 50,
-							"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+							"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 							"rules": {
 								"minSpendMyr": 15,
 								"maxUsePerUser": 1
@@ -1131,11 +1339,11 @@
 							"locationIds": []
 						},
 						{
-							"createdAt": 1791099673694,
-							"updatedAt": 1791099673694,
+							"createdAt": 1791193151330,
+							"updatedAt": 1791193151330,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "6157d369-0a3f-4841-9944-80b69666af02",
+							"id": "e830ae78-08b7-4b32-b524-2780a5c71bab",
 							"organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
 							"organizationName": "Jonker Street Kitchen",
 							"organizationLogoUrl": null,
@@ -1151,7 +1359,7 @@
 							"quantityRemaining": 28,
 							"quantityReserved": 2,
 							"startDate": null,
-							"expiryDate": 1794123673694,
+							"expiryDate": 1794217151329,
 							"status": "PUBLISHED",
 							"claimCount": 0,
 							"redemptionCount": 0,
@@ -1171,14 +1379,14 @@
 					],
 					"meta": {
 						"limit": 2,
-						"total": 13,
+						"total": 17,
 						"page": 1,
-						"totalPages": 7,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTY3MzY5NCwiaWQiOiI2MTU3ZDM2OS0wYTNmLTQ4NDEtOTk0NC04MGI2OTY2NmFmMDIifQ",
+						"totalPages": 9,
+						"nextCursor": "eyJhdCI6MTc5MTE5MzE1MTMzMCwiaWQiOiJlODMwYWU3OC0wOGI3LTRiMzItYjUyNC0yNzgwYTVjNzFiYWIifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "efwzxFpogS4wSriE0_OUu",
-						"timestamp": 1791099738080
+						"correlationId": "LkGjeJGCWnUp4S1fM8dnp",
+						"timestamp": 1791193338481
 					}
 				}
 			}
@@ -1203,22 +1411,22 @@
 					"success": true,
 					"data": [
 						{
-							"id": "65e16aed-4d6d-4295-97bc-54b81a475779",
+							"id": "f374a4bc-77e5-458e-8e0e-3548743de6e2",
 							"templateKey": "admin-alert",
 							"to": "recipient@example.com",
 							"subject": "[Admin] MFA Recovery Denied",
 							"status": "sent",
-							"createdAt": 1791099722455,
-							"updatedAt": 1791099722455
+							"createdAt": 1791193322456,
+							"updatedAt": 1791193322456
 						},
 						{
-							"id": "82eec831-f4f0-4c92-94e2-1a9caff9e72f",
+							"id": "024685c8-e941-4ebb-9549-7c528cd12e10",
 							"templateKey": "admin-alert",
 							"to": "recipient@example.com",
 							"subject": "[Admin] MFA Recovery Review Required",
 							"status": "sent",
-							"createdAt": 1791099722371,
-							"updatedAt": 1791099722371
+							"createdAt": 1791193322376,
+							"updatedAt": 1791193322376
 						}
 					],
 					"meta": {
@@ -1226,11 +1434,11 @@
 						"total": 16,
 						"page": 1,
 						"totalPages": 8,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTcyMjM3MSwiaWQiOiI4MmVlYzgzMS1mNGYwLTRjOTItOTRlMi0xYTljYWZmOWU3MmYifQ",
+						"nextCursor": "eyJhdCI6MTc5MTE5MzMyMjM3NiwiaWQiOiIwMjQ2ODVjOC1lOTQxLTRlYmItOTU0OS03YzUyOGNkMTJlMTAifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "IO6aUDL1Mvtm1VCPPv8a7",
-						"timestamp": 1791099725971
+						"correlationId": "RFLA0zB57y3EQ3Whoduoc",
+						"timestamp": 1791193326086
 					}
 				}
 			}
@@ -1269,8 +1477,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "_b5IGsyYHoOlKVVjLKoA4",
-						"timestamp": 1791099725994
+						"correlationId": "nT-d5ELmW7Yri5DsuXqoo",
+						"timestamp": 1791193326109
 					}
 				}
 			}
@@ -1307,8 +1515,8 @@
 						]
 					},
 					"meta": {
-						"correlationId": "4yFRuy4GDAYKNdWL-T9nv",
-						"timestamp": 1791099725979
+						"correlationId": "gy2F1Dc1FX7DmM89vcHjG",
+						"timestamp": 1791193326096
 					}
 				}
 			}
@@ -1331,12 +1539,12 @@
 					"success": true,
 					"data": {
 						"ok": true,
-						"id": "43dab28a-194d-4b82-86d9-5d1a0f8c9652",
+						"id": "65365541-6cc3-4d9d-ba19-aa15e2ca34cd",
 						"mode": "log-only"
 					},
 					"meta": {
-						"correlationId": "y1grSBOZ4rR0bhLYhCzmN",
-						"timestamp": 1791099726011
+						"correlationId": "UO9jk_maNDT6Joe9EzdEG",
+						"timestamp": 1791193326130
 					}
 				}
 			}
@@ -1362,8 +1570,8 @@
 						"path": "/notifications/email-webhook"
 					},
 					"meta": {
-						"correlationId": "NwxhLtd-y6JsswZsmubM2",
-						"timestamp": 1791099726020
+						"correlationId": "JwtK1WVbdPyZqIIIu5Z_8",
+						"timestamp": 1791193326142
 					}
 				}
 			}
@@ -1374,13 +1582,12 @@
 				"method": "POST",
 				"path": "/notifications/email-webhook",
 				"headers": {
-					"svix-id": "msg_5925f4b7ef894279a73431b4da0082c1",
-					"svix-timestamp": "1791099726",
-					"svix-signature": "v1,<redacted: HMAC of the body with RESEND_WEBHOOK_SECRET>"
+					"svix-id": "msg_8eea0ab6115c4f4a91788e1f7ac1dc37",
+					"svix-timestamp": "1791193326"
 				},
 				"body": {
 					"type": "email.delivered",
-					"created_at": "2026-10-04T07:42:06.034Z",
+					"created_at": "2026-10-05T09:42:06.154Z",
 					"data": {
 						"email_id": "seed",
 						"to": [
@@ -1390,16 +1597,17 @@
 				}
 			},
 			"response": {
-				"status": 200,
+				"status": 403,
 				"contentType": "application/json",
 				"body": {
-					"success": true,
-					"data": {
-						"received": true
+					"success": false,
+					"error": {
+						"code": "FORBIDDEN",
+						"message": "Missing webhook signature header(s): webhook-signature/svix-signature. Resend signs every webhook with these headers — a browser/curl request without them is rejected by design."
 					},
 					"meta": {
-						"correlationId": "BgU_xgMlr9I4SfEcP6yg-",
-						"timestamp": 1791099726049
+						"correlationId": "XZNlWta9y2RbEqN4xN9YT",
+						"timestamp": 1791193326161
 					}
 				}
 			}
@@ -1408,7 +1616,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/complete",
+				"path": "/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/complete",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -1425,7 +1633,7 @@
 					"success": true,
 					"data": {
 						"file": {
-							"id": "126f79f2-389f-4e76-b9b9-95aaf677577a",
+							"id": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
 							"category": "USER_AVATAR",
 							"visibility": "PUBLIC",
 							"originalName": "welcome.png",
@@ -1434,12 +1642,12 @@
 							"status": "SCANNING",
 							"scanStatus": "SCANNING",
 							"publicUrl": null,
-							"uploadedAt": 1791099726070
+							"uploadedAt": 1791193326179
 						}
 					},
 					"meta": {
-						"correlationId": "6vVak_lKBPSLnX7Q3JThp",
-						"timestamp": 1791099726126
+						"correlationId": "DCyL33d1fQLJTkyuB2SnT",
+						"timestamp": 1791193326244
 					}
 				}
 			}
@@ -1460,7 +1668,7 @@
 					"mimeType": "image/png",
 					"sizeBytes": 61292,
 					"checksumSha256": "0fe260bfe734b5b3a68f1ecc1e8e55460eb2afece003d430cdf3ba2fe01204bf",
-					"userId": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0"
+					"userId": "9194a7c0-e721-4833-95cc-eca2f319f542"
 				}
 			},
 			"response": {
@@ -1469,19 +1677,19 @@
 				"body": {
 					"success": true,
 					"data": {
-						"fileId": "126f79f2-389f-4e76-b9b9-95aaf677577a",
-						"objectPath": "staging/users/1e06b347-4142-4ea4-ab85-7fbca1d1f1c0/avatar/126f79f2-389f-4e76-b9b9-95aaf677577a-welcome.png",
+						"fileId": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
+						"objectPath": "staging/users/9194a7c0-e721-4833-95cc-eca2f319f542/avatar/cd5829ab-ad2f-4539-8b7b-7ae2b739564e-welcome.png",
 						"expiresIn": 300,
 						"method": "POST_MULTIPART",
-						"uploadUrl": "http://127.0.0.1:8097/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/local-upload",
+						"uploadUrl": "http://127.0.0.1:8097/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/local-upload",
 						"fields": {
-							"key": "staging/users/1e06b347-4142-4ea4-ab85-7fbca1d1f1c0/avatar/126f79f2-389f-4e76-b9b9-95aaf677577a-welcome.png",
+							"key": "staging/users/9194a7c0-e721-4833-95cc-eca2f319f542/avatar/cd5829ab-ad2f-4539-8b7b-7ae2b739564e-welcome.png",
 							"token": "<redacted: one-time secret>"
 						}
 					},
 					"meta": {
-						"correlationId": "2PQWBs1qFcMySo3RlI8cD",
-						"timestamp": 1791099726072
+						"correlationId": "KKfmvFBmikrbK7iZKB1Pm",
+						"timestamp": 1791193326183
 					}
 				}
 			}
@@ -1490,7 +1698,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "DELETE",
-				"path": "/api/v1/files/82f6652d-e3f6-405a-8574-f2ae9a22e16e",
+				"path": "/api/v1/files/11df9b25-2636-4a71-be60-ad1bbb3ca11e",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -1506,8 +1714,8 @@
 						"success": true
 					},
 					"meta": {
-						"correlationId": "vI7TG6-DZFy--fH23zOv5",
-						"timestamp": 1791099729364
+						"correlationId": "vRvOV_U7ctXXwFCykqKRO",
+						"timestamp": 1791193329422
 					}
 				}
 			}
@@ -1516,7 +1724,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/download-url",
+				"path": "/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/download-url",
 				"headers": {
 					"X-Client-Type": "admin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -1528,14 +1736,14 @@
 				"body": {
 					"success": true,
 					"data": {
-						"fileId": "126f79f2-389f-4e76-b9b9-95aaf677577a",
+						"fileId": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
 						"status": "READY",
 						"downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-						"expiresAt": 1791100027673
+						"expiresAt": 1791193627776
 					},
 					"meta": {
-						"correlationId": "mnfJYegedEBsDimTSw9rZ",
-						"timestamp": 1791099727674
+						"correlationId": "Jf2VPrL6IO1F-7oI6Ap1N",
+						"timestamp": 1791193327776
 					}
 				}
 			}
@@ -1544,7 +1752,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a",
+				"path": "/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
 				"headers": {
 					"X-Client-Type": "admin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -1557,7 +1765,7 @@
 					"success": true,
 					"data": {
 						"file": {
-							"id": "126f79f2-389f-4e76-b9b9-95aaf677577a",
+							"id": "cd5829ab-ad2f-4539-8b7b-7ae2b739564e",
 							"category": "USER_AVATAR",
 							"visibility": "PUBLIC",
 							"originalName": "welcome.png",
@@ -1565,13 +1773,13 @@
 							"sizeBytes": 61292,
 							"status": "READY",
 							"scanStatus": "NOT_SCANNED",
-							"publicUrl": "http://127.0.0.1:8097/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/local-public",
-							"uploadedAt": 1791099726070
+							"publicUrl": "http://127.0.0.1:8097/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/local-public",
+							"uploadedAt": 1791193326179
 						}
 					},
 					"meta": {
-						"correlationId": "fjdYZBYkOJ-TMnBkEMHoe",
-						"timestamp": 1791099727656
+						"correlationId": "0P0sQYKrTLyaMXWpFP9Fl",
+						"timestamp": 1791193327764
 					}
 				}
 			}
@@ -1582,27 +1790,25 @@
 			"request": {
 				"method": "POST",
 				"path": "/api/v1/files/processing-callback",
-				"headers": {
-					"x-storage-callback-secret": "<STORAGE_PROCESSING_CALLBACK_SECRET>"
-				},
+				"headers": {},
 				"body": {
-					"fileId": "82f6652d-e3f6-405a-8574-f2ae9a22e16e",
+					"fileId": "11df9b25-2636-4a71-be60-ad1bbb3ca11e",
 					"status": "READY",
 					"scanStatus": "CLEAN"
 				}
 			},
 			"response": {
-				"status": 409,
+				"status": 401,
 				"contentType": "application/json",
 				"body": {
 					"success": false,
 					"error": {
-						"code": "FILE_STATE_CONFLICT",
-						"message": "File is READY, not awaiting a processing result"
+						"code": "CALLBACK_UNAUTHORIZED",
+						"message": "Invalid processing callback secret"
 					},
 					"meta": {
-						"correlationId": "VLZDWZw5ptTZGQ8phVAbg",
-						"timestamp": 1791099729323
+						"correlationId": "qkNI6fJt5mkHcePBtSmNM",
+						"timestamp": 1791193329393
 					}
 				}
 			}
@@ -1628,8 +1834,8 @@
 					"success": true,
 					"data": [],
 					"meta": {
-						"correlationId": "jLE3WqtkivMyPVfZPQOFZ",
-						"timestamp": 1791099725172
+						"correlationId": "pPSHfGvpZniiUfvTAvFwe",
+						"timestamp": 1791193325246
 					}
 				}
 			}
@@ -1662,8 +1868,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "IGYXWynxaEZ6JsLKZDD-D",
-						"timestamp": 1791099725190
+						"correlationId": "vVHJIIFAoxGixcENWT_Th",
+						"timestamp": 1791193325264
 					}
 				}
 			}
@@ -1708,11 +1914,11 @@
 						"stateId": 5257,
 						"countryId": 252,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193326000
 					},
 					"meta": {
-						"correlationId": "QTywYlaNkhco_-V_VWqJ2",
-						"timestamp": 1791099725447
+						"correlationId": "ztVNLh7BW4rB_Zv52fZZP",
+						"timestamp": 1791193325541
 					}
 				}
 			}
@@ -1767,11 +1973,11 @@
 						"regionId": 8,
 						"subregionId": 24,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "i1adWcvjBy-saUUFO6hzZ",
-						"timestamp": 1791099725350
+						"correlationId": "xT7v0fHRaY3uvjHIv2s5e",
+						"timestamp": 1791193325430
 					}
 				}
 			}
@@ -1802,11 +2008,11 @@
 						"wikiDataId": null,
 						"flag": true,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "0TbTdXr4vcAcqg3cXKenu",
-						"timestamp": 1791099725270
+						"correlationId": "FcwZcbN-GYvSj5FfABzjX",
+						"timestamp": 1791193325337
 					}
 				}
 			}
@@ -1851,11 +2057,11 @@
 						"flag": true,
 						"countryId": 252,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "ZRxddb51X31RaOjRYVr1t",
-						"timestamp": 1791099725395
+						"correlationId": "diClUi3veR0QIjK4GtMr7",
+						"timestamp": 1791193325485
 					}
 				}
 			}
@@ -1888,11 +2094,11 @@
 						"flag": true,
 						"regionId": 8,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "9HZQ0DghlLgqlILRKBjZu",
-						"timestamp": 1791099725310
+						"correlationId": "TV6FTlVTcPe2TP7gfuwAX",
+						"timestamp": 1791193325383
 					}
 				}
 			}
@@ -1917,8 +2123,8 @@
 						"message": "City #153315 deleted"
 					},
 					"meta": {
-						"correlationId": "qUHEPOXPKlg9FBpUhFJAx",
-						"timestamp": 1791099725490
+						"correlationId": "Uym22BRGhFAMTRdq4C1ml",
+						"timestamp": 1791193325587
 					}
 				}
 			}
@@ -1943,8 +2149,8 @@
 						"message": "Country #252 deleted"
 					},
 					"meta": {
-						"correlationId": "0Z5q9alTjVYWaq59y7WJk",
-						"timestamp": 1791099725530
+						"correlationId": "do1gBantEygIE0oEd3PAO",
+						"timestamp": 1791193325627
 					}
 				}
 			}
@@ -1969,8 +2175,8 @@
 						"message": "Region #8 deleted"
 					},
 					"meta": {
-						"correlationId": "Et-D1BKo4mx-n09aAA4G7",
-						"timestamp": 1791099725578
+						"correlationId": "vByPyMWiI3qC7-cIalm6B",
+						"timestamp": 1791193325680
 					}
 				}
 			}
@@ -1995,8 +2201,8 @@
 						"message": "State #5257 deleted"
 					},
 					"meta": {
-						"correlationId": "ZHiVNsdPc2UkjajjIRDUd",
-						"timestamp": 1791099725508
+						"correlationId": "WBSwcHsEOA_z1mBHtwlMh",
+						"timestamp": 1791193325607
 					}
 				}
 			}
@@ -2021,8 +2227,8 @@
 						"message": "Subregion #24 deleted"
 					},
 					"meta": {
-						"correlationId": "oXwGglW-X0oFWpfUMkQQD",
-						"timestamp": 1791099725553
+						"correlationId": "VFwx5rvztPq77ldvd71LV",
+						"timestamp": 1791193325655
 					}
 				}
 			}
@@ -2062,7 +2268,7 @@
 							"stateId": 2490,
 							"countryId": 130,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099660000
+							"updatedAt": 1791193139000
 						},
 						{
 							"id": 71028,
@@ -2079,12 +2285,12 @@
 							"stateId": 2486,
 							"countryId": 130,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099660000
+							"updatedAt": 1791193139000
 						}
 					],
 					"meta": {
-						"correlationId": "10nQa3ksJpokwerqCW10O",
-						"timestamp": 1791099725211
+						"correlationId": "n-CwdR-43n9RsfWnoESqH",
+						"timestamp": 1791193325285
 					}
 				}
 			}
@@ -2119,11 +2325,11 @@
 						"stateId": 2490,
 						"countryId": 130,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099660000
+						"updatedAt": 1791193139000
 					},
 					"meta": {
-						"correlationId": "EPho25SSyAMZOcWlcb6JC",
-						"timestamp": 1791099725107
+						"correlationId": "FSq9C_98LbB0fE2SI610b",
+						"timestamp": 1791193325230
 					}
 				}
 			}
@@ -2207,11 +2413,11 @@
 						"regionId": 3,
 						"subregionId": 16,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099644000
+						"updatedAt": 1791193124000
 					},
 					"meta": {
-						"correlationId": "UI06CcUyQuDjWhnW6znwj",
-						"timestamp": 1791099724942
+						"correlationId": "1--g6_8jwfvMyO4E4rOkR",
+						"timestamp": 1791193325081
 					}
 				}
 			}
@@ -2256,11 +2462,11 @@
 						"wikiDataId": "Q15",
 						"flag": true,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099643000
+						"updatedAt": 1791193123000
 					},
 					"meta": {
-						"correlationId": "uuH2EPtOm7_-vWLM8hCjf",
-						"timestamp": 1791099724882
+						"correlationId": "Exlrz6GR-NDRFqdUfL6Ex",
+						"timestamp": 1791193325019
 					}
 				}
 			}
@@ -2319,11 +2525,11 @@
 						"flag": true,
 						"countryId": 130,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099646000
+						"updatedAt": 1791193125000
 					},
 					"meta": {
-						"correlationId": "hg5p8wcf_fiXUWLn4eLuU",
-						"timestamp": 1791099724985
+						"correlationId": "LsixYucMFej4el7C5KjjW",
+						"timestamp": 1791193325124
 					}
 				}
 			}
@@ -2351,8 +2557,8 @@
 						"cities": 153312
 					},
 					"meta": {
-						"correlationId": "-ugiPZm998i4TPeRFb8xc",
-						"timestamp": 1791099724854
+						"correlationId": "rC5JkygCGudYedhKrDott",
+						"timestamp": 1791193324982
 					}
 				}
 			}
@@ -2396,11 +2602,11 @@
 						"flag": true,
 						"regionId": 5,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099643000
+						"updatedAt": 1791193123000
 					},
 					"meta": {
-						"correlationId": "NRgKhKkKILOBkmdBMiEmc",
-						"timestamp": 1791099724910
+						"correlationId": "3ulJZsNs4YaxmPGl5ZrFj",
+						"timestamp": 1791193325046
 					}
 				}
 			}
@@ -2438,8 +2644,8 @@
 						"errors": []
 					},
 					"meta": {
-						"correlationId": "kNtmKA1eUxItBZ2b-fglg",
-						"timestamp": 1791099725621
+						"correlationId": "7YXNlvRgfE3qRZFxyCwMO",
+						"timestamp": 1791193325720
 					}
 				}
 			}
@@ -2480,7 +2686,7 @@
 							"stateId": 2490,
 							"countryId": 130,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099660000
+							"updatedAt": 1791193139000
 						},
 						{
 							"id": 71028,
@@ -2497,7 +2703,7 @@
 							"stateId": 2486,
 							"countryId": 130,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099660000
+							"updatedAt": 1791193139000
 						}
 					],
 					"meta": {
@@ -2508,8 +2714,8 @@
 						"nextCursor": null,
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "ZUtsaZhnfCuXZk9haaoj3",
-						"timestamp": 1791099725092
+						"correlationId": "rtK8TFJ7BmoJovHIfDhEt",
+						"timestamp": 1791193325215
 					}
 				}
 			}
@@ -2598,7 +2804,7 @@
 							"regionId": 3,
 							"subregionId": 16,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099644000
+							"updatedAt": 1791193124000
 						}
 					],
 					"meta": {
@@ -2609,8 +2815,8 @@
 						"nextCursor": null,
 						"hasNext": false,
 						"hasPrevious": false,
-						"correlationId": "8vBs_Bk6k5S8CZCr9ntnS",
-						"timestamp": 1791099724926
+						"correlationId": "OuukoFcPXHv0j-i_l9m7t",
+						"timestamp": 1791193325066
 					}
 				}
 			}
@@ -2659,7 +2865,7 @@
 							"wikiDataId": "Q15",
 							"flag": true,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099643000
+							"updatedAt": 1791193123000
 						},
 						{
 							"id": 2,
@@ -2686,7 +2892,7 @@
 							"wikiDataId": "Q828",
 							"flag": true,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099643000
+							"updatedAt": 1791193123000
 						}
 					],
 					"meta": {
@@ -2697,8 +2903,8 @@
 						"nextCursor": "eyJpZCI6Mn0",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "dJqOQbwjijjXheB9nug7I",
-						"timestamp": 1791099724869
+						"correlationId": "59TXlTFQCBZ22PG6sDdlA",
+						"timestamp": 1791193325000
 					}
 				}
 			}
@@ -2763,7 +2969,7 @@
 							"flag": true,
 							"countryId": 130,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099646000
+							"updatedAt": 1791193125000
 						},
 						{
 							"id": 2486,
@@ -2804,7 +3010,7 @@
 							"flag": true,
 							"countryId": 130,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099646000
+							"updatedAt": 1791193125000
 						}
 					],
 					"meta": {
@@ -2815,8 +3021,8 @@
 						"nextCursor": null,
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "o6J1A7JqIbsY71zoEFwLl",
-						"timestamp": 1791099724970
+						"correlationId": "2xaYycuW-HT3MWPBcpCiO",
+						"timestamp": 1791193325110
 					}
 				}
 			}
@@ -2864,7 +3070,7 @@
 							"flag": true,
 							"regionId": 5,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099643000
+							"updatedAt": 1791193123000
 						},
 						{
 							"id": 2,
@@ -2890,7 +3096,7 @@
 							"flag": true,
 							"regionId": 2,
 							"createdAt": 1388577661000,
-							"updatedAt": 1791099643000
+							"updatedAt": 1791193123000
 						}
 					],
 					"meta": {
@@ -2901,8 +3107,8 @@
 						"nextCursor": "eyJpZCI6Mn0",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "66aAYPt-pF-bx9-jRtEly",
-						"timestamp": 1791099724894
+						"correlationId": "WfbIrgDpjsF7l9q18Rty5",
+						"timestamp": 1791193325032
 					}
 				}
 			}
@@ -2941,11 +3147,11 @@
 						"stateId": 5257,
 						"countryId": 252,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193326000
 					},
 					"meta": {
-						"correlationId": "07OtqAOzTkt-LgPnd0ASR",
-						"timestamp": 1791099725472
+						"correlationId": "P_oGZnM_ibmAuRC8kg3pI",
+						"timestamp": 1791193325567
 					}
 				}
 			}
@@ -2998,11 +3204,11 @@
 						"regionId": 8,
 						"subregionId": 24,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "AxeZZZALfUGHc8WqGlBzJ",
-						"timestamp": 1791099725376
+						"correlationId": "5tMebHCXgI3lfG89tVs_9",
+						"timestamp": 1791193325458
 					}
 				}
 			}
@@ -3033,11 +3239,11 @@
 						"wikiDataId": null,
 						"flag": true,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "bMyC34cs2xZA3PaehTyAG",
-						"timestamp": 1791099725289
+						"correlationId": "Q70W7stSaLifK_-7s3wfK",
+						"timestamp": 1791193325361
 					}
 				}
 			}
@@ -3080,11 +3286,11 @@
 						"flag": true,
 						"countryId": 252,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193326000
 					},
 					"meta": {
-						"correlationId": "xigiFDQ92b-zcc5qmyBtH",
-						"timestamp": 1791099725422
+						"correlationId": "6r1FJOcpOUBPMthZhcxRJ",
+						"timestamp": 1791193325515
 					}
 				}
 			}
@@ -3116,11 +3322,11 @@
 						"flag": true,
 						"regionId": 8,
 						"createdAt": 1388577661000,
-						"updatedAt": 1791099725000
+						"updatedAt": 1791193325000
 					},
 					"meta": {
-						"correlationId": "e8ZBm67TBadMpZH3o_vLa",
-						"timestamp": 1791099725330
+						"correlationId": "76gky9KAS5aeYot-quen3",
+						"timestamp": 1791193325406
 					}
 				}
 			}
@@ -3157,8 +3363,8 @@
 						"errors": []
 					},
 					"meta": {
-						"correlationId": "4RarJD3i8ZbY9nVHlDR6o",
-						"timestamp": 1791099725591
+						"correlationId": "Wyx7Nxpf-fJLvYbZTS7AB",
+						"timestamp": 1791193325694
 					}
 				}
 			}
@@ -3180,10 +3386,18 @@
 					"data": {
 						"status": "ok",
 						"db": "connected",
-						"timestamp": 1791099695017,
+						"timestamp": 1791193300066,
 						"filesystem": "ok",
 						"checks": {},
 						"modules": [
+							{
+								"name": "authorization",
+								"healthy": true,
+								"details": {
+									"systemRolesExpected": 6,
+									"systemRolesMissing": null
+								}
+							},
 							{
 								"name": "queue",
 								"healthy": true,
@@ -3192,20 +3406,12 @@
 									"redis": "configured",
 									"prefix": "docs-capture"
 								}
-							},
-							{
-								"name": "rabbitmq",
-								"healthy": true,
-								"details": {
-									"backend": "placeholder",
-									"url": "configured"
-								}
 							}
 						]
 					},
 					"meta": {
-						"correlationId": "J9F8CklmaMMs04Pn5HRO-",
-						"timestamp": 1791099695017
+						"correlationId": "LzG0AoTTZIk99LUbP6Mrw",
+						"timestamp": 1791193300066
 					}
 				}
 			}
@@ -3227,11 +3433,11 @@
 					"data": {
 						"status": "ok",
 						"db": "connected",
-						"timestamp": 1791099694989
+						"timestamp": 1791193300035
 					},
 					"meta": {
-						"correlationId": "K9dzySWmwTpvtRInCVVj-",
-						"timestamp": 1791099694989
+						"correlationId": "VBB9AmL53t1jdlN5Kys4g",
+						"timestamp": 1791193300035
 					}
 				}
 			}
@@ -3252,8 +3458,8 @@
 					"success": true,
 					"data": "Hello from the Freebuff API!",
 					"meta": {
-						"correlationId": "Z4hyGpPY8pYjIwNtIXb28",
-						"timestamp": 1791099694976
+						"correlationId": "rGfVPPOGljIslcomfSM6G",
+						"timestamp": 1791193300023
 					}
 				}
 			}
@@ -3274,12 +3480,12 @@
 					"success": true,
 					"data": {
 						"status": "ok",
-						"uptimeSeconds": 12.145588292,
-						"timestamp": 1791099694996
+						"uptimeSeconds": 126.54879925,
+						"timestamp": 1791193300041
 					},
 					"meta": {
-						"correlationId": "63q8i5_IKEuZGURgim0qL",
-						"timestamp": 1791099694996
+						"correlationId": "UCQVMt5uajM3l-Nuxjumk",
+						"timestamp": 1791193300041
 					}
 				}
 			}
@@ -3312,11 +3518,11 @@
 								"critical": true
 							}
 						],
-						"timestamp": 1791099695007
+						"timestamp": 1791193300053
 					},
 					"meta": {
-						"correlationId": "FZoI2OKNuieGwJHSS-P5u",
-						"timestamp": 1791099695008
+						"correlationId": "U7bdksNsMmiDrAJlAQA5H",
+						"timestamp": 1791193300053
 					}
 				}
 			}
@@ -3325,7 +3531,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/auth/impersonate/90f3721b-e99a-4ec8-9f71-c0c679b69f67",
+				"path": "/api/v1/auth/impersonate/98cd0ea1-f072-4e9d-9b56-e92f4fcf8605",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -3340,13 +3546,13 @@
 					"data": {
 						"message": "Now impersonating user@example.com",
 						"impersonating": true,
-						"originalUserId": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+						"originalUserId": "9194a7c0-e721-4833-95cc-eca2f319f542",
 						"user": {
-							"createdAt": 1791099608520,
-							"updatedAt": 1791099608520,
+							"createdAt": 1758886680000,
+							"updatedAt": 1791193088860,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "90f3721b-e99a-4ec8-9f71-c0c679b69f67",
+							"id": "98cd0ea1-f072-4e9d-9b56-e92f4fcf8605",
 							"email": "user@example.com",
 							"fullName": "Regular User",
 							"isActive": true,
@@ -3357,7 +3563,7 @@
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
+									"id": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
 									"name": "User",
 									"description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
 								}
@@ -3365,8 +3571,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "ug17x6XK2-xnB4hnDF8hP",
-						"timestamp": 1791099750666
+						"correlationId": "YQ5XoRw3zlLp20bnmBOE1",
+						"timestamp": 1791193350533
 					}
 				}
 			}
@@ -3391,8 +3597,8 @@
 						"message": "Impersonation ended. Original session restored."
 					},
 					"meta": {
-						"correlationId": "9Wc_gbuVgFnWq0YyZH0U2",
-						"timestamp": 1791099750714
+						"correlationId": "n78Zkm-VCSjP8M97WhdE9",
+						"timestamp": 1791193350583
 					}
 				}
 			}
@@ -3417,7 +3623,7 @@
 			"as": "no session",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/files/82f6652d-e3f6-405a-8574-f2ae9a22e16e/local-public",
+				"path": "/api/v1/files/11df9b25-2636-4a71-be60-ad1bbb3ca11e/local-public",
 				"headers": {
 					"X-Client-Type": "web"
 				}
@@ -3432,11 +3638,11 @@
 			"as": "the browser, posting to the upload ticket (no session needed)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/files/126f79f2-389f-4e76-b9b9-95aaf677577a/local-upload",
+				"path": "/api/v1/files/cd5829ab-ad2f-4539-8b7b-7ae2b739564e/local-upload",
 				"headers": {},
 				"body": {
 					"multipart/form-data": {
-						"key": "staging/users/1e06b347-4142-4ea4-ab85-7fbca1d1f1c0/avatar/126f79f2-389f-4e76-b9b9-95aaf677577a-welcome.png",
+						"key": "staging/users/9194a7c0-e721-4833-95cc-eca2f319f542/avatar/cd5829ab-ad2f-4539-8b7b-7ae2b739564e-welcome.png",
 						"token": "<redacted: one-time secret>",
 						"file": "<the image bytes: welcome.png, image/png>"
 					}
@@ -3451,8 +3657,8 @@
 						"success": true
 					},
 					"meta": {
-						"correlationId": "FoX0rHwxKe7qYnfdYZX3H",
-						"timestamp": 1791099726093
+						"correlationId": "QV-qS2nwa3it-nrRvU_fk",
+						"timestamp": 1791193326208
 					}
 				}
 			}
@@ -3468,7 +3674,7 @@
 				},
 				"body": {
 					"token": "<redacted: one-time secret>",
-					"fileId": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+					"fileId": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
 					"checksumSha256": "0fe260bfe734b5b3a68f1ecc1e8e55460eb2afece003d430cdf3ba2fe01204bf"
 				}
 			},
@@ -3479,7 +3685,7 @@
 					"success": true,
 					"data": {
 						"file": {
-							"id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+							"id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
 							"category": "MERCHANT_KYB",
 							"visibility": "PRIVATE",
 							"originalName": "welcome.png",
@@ -3488,12 +3694,12 @@
 							"status": "SCANNING",
 							"scanStatus": "SCANNING",
 							"publicUrl": null,
-							"uploadedAt": 1791099730080
+							"uploadedAt": 1791193330185
 						}
 					},
 					"meta": {
-						"correlationId": "udxmrQwvZKm3M2_sEfiEG",
-						"timestamp": 1791099730133
+						"correlationId": "MHvxDUAyQ-haL2YL3jmBg",
+						"timestamp": 1791193330237
 					}
 				}
 			}
@@ -3511,7 +3717,7 @@
 					"token": "<redacted: one-time secret>",
 					"completions": [
 						{
-							"fileId": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+							"fileId": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
 							"checksumSha256": "0fe260bfe734b5b3a68f1ecc1e8e55460eb2afece003d430cdf3ba2fe01204bf"
 						}
 					]
@@ -3524,12 +3730,12 @@
 					"success": true,
 					"data": {
 						"fileIds": [
-							"381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+							"203e5b59-64fc-4a86-9735-7c5fd51449f2"
 						]
 					},
 					"meta": {
-						"correlationId": "T0Qd4homZ-ts3SeP-YDwY",
-						"timestamp": 1791099730223
+						"correlationId": "SKHmkHwxh58a2se1QLGV8",
+						"timestamp": 1791193330311
 					}
 				}
 			}
@@ -3566,14 +3772,14 @@
 				"body": {
 					"success": true,
 					"data": {
-						"organizationId": "8b632542-54cd-4211-b47a-cfb4f29e3b2a",
+						"organizationId": "62cc685a-d679-4b51-8a57-2715674d1906",
 						"organizationSlug": "nyonya-house-melaka",
 						"businessName": "Nyonya House Melaka",
 						"role": "OWNER"
 					},
 					"meta": {
-						"correlationId": "yU2f2zNPvsDviOmp-VtEb",
-						"timestamp": 1791099730051
+						"correlationId": "ZowmGuUDjkn45St7T_FZj",
+						"timestamp": 1791193330158
 					}
 				}
 			}
@@ -3601,19 +3807,19 @@
 				"body": {
 					"success": true,
 					"data": {
-						"fileId": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-						"objectPath": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/4e6eb041-0969-4fd1-975a-ca5b42f1d691-welcome.png",
+						"fileId": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+						"objectPath": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/42ce5478-2feb-44b2-bc49-51e3a8b233c5-welcome.png",
 						"expiresIn": 300,
 						"method": "POST_MULTIPART",
-						"uploadUrl": "http://127.0.0.1:8097/api/v1/files/4e6eb041-0969-4fd1-975a-ca5b42f1d691/local-upload",
+						"uploadUrl": "http://127.0.0.1:8097/api/v1/files/42ce5478-2feb-44b2-bc49-51e3a8b233c5/local-upload",
 						"fields": {
-							"key": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/4e6eb041-0969-4fd1-975a-ca5b42f1d691-welcome.png",
+							"key": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/42ce5478-2feb-44b2-bc49-51e3a8b233c5-welcome.png",
 							"token": "<redacted: one-time secret>"
 						}
 					},
 					"meta": {
-						"correlationId": "zKB7EFMGpwk20oxsa0Kcw",
-						"timestamp": 1791099730081
+						"correlationId": "OjkX44qyQYcHkrxOuotSq",
+						"timestamp": 1791193330187
 					}
 				}
 			}
@@ -3647,21 +3853,21 @@
 					"data": {
 						"uploads": [
 							{
-								"fileId": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
-								"objectPath": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c-welcome.png",
+								"fileId": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
+								"objectPath": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/203e5b59-64fc-4a86-9735-7c5fd51449f2-welcome.png",
 								"expiresIn": 300,
 								"method": "POST_MULTIPART",
-								"uploadUrl": "http://127.0.0.1:8097/api/v1/files/381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c/local-upload",
+								"uploadUrl": "http://127.0.0.1:8097/api/v1/files/203e5b59-64fc-4a86-9735-7c5fd51449f2/local-upload",
 								"fields": {
-									"key": "staging/kyb/8b632542-54cd-4211-b47a-cfb4f29e3b2a/381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c-welcome.png",
+									"key": "staging/kyb/62cc685a-d679-4b51-8a57-2715674d1906/203e5b59-64fc-4a86-9735-7c5fd51449f2-welcome.png",
 									"token": "<redacted: one-time secret>"
 								}
 							}
 						]
 					},
 					"meta": {
-						"correlationId": "dAsDC6g2fxGNf0y7tcVsH",
-						"timestamp": 1791099730174
+						"correlationId": "stRGfTe_6M5AwuYmRZ3j9",
+						"timestamp": 1791193330262
 					}
 				}
 			}
@@ -3678,8 +3884,8 @@
 				"body": {
 					"token": "<redacted: one-time secret>",
 					"fileIds": [
-						"4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-						"381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+						"42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+						"203e5b59-64fc-4a86-9735-7c5fd51449f2"
 					]
 				}
 			},
@@ -3691,26 +3897,26 @@
 					"data": {
 						"documents": [
 							{
-								"id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+								"id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
 								"fileName": "welcome.png",
 								"mimeType": "image/png",
 								"sizeBytes": 61292,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1791099730080
+								"uploadedAt": 1791193330185
 							},
 							{
-								"id": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+								"id": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
 								"fileName": "welcome.png",
 								"mimeType": "image/png",
 								"sizeBytes": 61292,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1791099730172
+								"uploadedAt": 1791193330261
 							}
 						]
 					},
 					"meta": {
-						"correlationId": "Q1WMFaJ3TEV5BXfovYBvZ",
-						"timestamp": 1791099731783
+						"correlationId": "KINz8t2yLLA3zP1a09kv2",
+						"timestamp": 1791193331840
 					}
 				}
 			}
@@ -3727,8 +3933,8 @@
 				"body": {
 					"token": "<redacted: one-time secret>",
 					"documentFileIds": [
-						"4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-						"381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+						"42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+						"203e5b59-64fc-4a86-9735-7c5fd51449f2"
 					]
 				}
 			},
@@ -3741,8 +3947,8 @@
 						"success": true
 					},
 					"meta": {
-						"correlationId": "EXK5p2RiQpgCSNzwV0hq1",
-						"timestamp": 1791099731849
+						"correlationId": "rjbm4syevNY15_jMG1nf1",
+						"timestamp": 1791193331877
 					}
 				}
 			}
@@ -3769,12 +3975,12 @@
 						"email": "nyonya.house@melaka-rewards.demo",
 						"businessName": "Nyonya House Melaka",
 						"city": "MELAKA",
-						"expiresAt": 1791704529565,
+						"expiresAt": 1791798129682,
 						"hasExistingAccount": false
 					},
 					"meta": {
-						"correlationId": "2Uga5RUt54RsEzReuNutH",
-						"timestamp": 1791099729675
+						"correlationId": "0wAgKtAUlMceoYOzk3KI7",
+						"timestamp": 1791193329781
 					}
 				}
 			}
@@ -3799,8 +4005,8 @@
 						"message": "Your MFA recovery request is pending administrator review."
 					},
 					"meta": {
-						"correlationId": "8fB_xH-LgVNlJgyUitHrb",
-						"timestamp": 1791099722415
+						"correlationId": "3ptUFiGCxcKfa7-CHBxTN",
+						"timestamp": 1791193322415
 					}
 				}
 			}
@@ -3829,8 +4035,8 @@
 						"message": "MFA recovery request submitted. An administrator will review it shortly."
 					},
 					"meta": {
-						"correlationId": "uGJpZ_plqbTEcDvN4-AUb",
-						"timestamp": 1791099722376
+						"correlationId": "dcxZjl389nCxGQ8Ox4NdE",
+						"timestamp": 1791193322381
 					}
 				}
 			}
@@ -3852,12 +4058,12 @@
 					"success": true,
 					"data": [
 						{
-							"id": "d7cc8161-5611-44b0-bcf5-c0c69055cd11",
-							"userId": "afe1a273-0c88-4409-8925-f7f0d11ea2f9",
+							"id": "cc3ee822-7bdd-4bbb-a7a7-9033ca8e8d21",
+							"userId": "97da204d-674e-4aec-bb78-729c4f07b9e4",
 							"userEmail": "david.lee@example.com",
 							"userFullName": "David Lee",
 							"status": "PENDING",
-							"requestedAt": 1791099722346,
+							"requestedAt": 1791193322356,
 							"reviewedBy": null,
 							"reviewedAt": null,
 							"scheduledUnlockAt": null,
@@ -3866,15 +4072,15 @@
 						},
 						{
 							"id": "db7f4a2d-246a-40f7-8c91-c6e16596fa40",
-							"userId": "77baf757-d737-4f41-8488-795f24d157eb",
+							"userId": "c9600578-399b-4d47-81b0-6d84531ea8ea",
 							"userEmail": "bob.smith@example.com",
 							"userFullName": "Bob Smith",
 							"status": "COMPLETED",
-							"requestedAt": 1790235794480,
-							"reviewedBy": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
-							"reviewedAt": 1790322074480,
-							"scheduledUnlockAt": 1790408474480,
-							"completedAt": 1790408474480,
+							"requestedAt": 1790329273624,
+							"reviewedBy": "9194a7c0-e721-4833-95cc-eca2f319f542",
+							"reviewedAt": 1790415553624,
+							"scheduledUnlockAt": 1790501953624,
+							"completedAt": 1790501953624,
 							"notes": "Lost authenticator device; identity verified by video call against government ID."
 						}
 					],
@@ -3886,8 +4092,8 @@
 						"nextCursor": null,
 						"hasNext": false,
 						"hasPrevious": false,
-						"correlationId": "qa3WKAgYySMPWQAwGNRg8",
-						"timestamp": 1791099722428
+						"correlationId": "jYuo4IYkFSbBzknbcSIw4",
+						"timestamp": 1791193322425
 					}
 				}
 			}
@@ -3903,7 +4109,7 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"requestId": "d7cc8161-5611-44b0-bcf5-c0c69055cd11",
+					"requestId": "cc3ee822-7bdd-4bbb-a7a7-9033ca8e8d21",
 					"action": "deny",
 					"notes": "Identity not confirmed"
 				}
@@ -3918,8 +4124,8 @@
 						"message": "Your MFA recovery request was denied."
 					},
 					"meta": {
-						"correlationId": "PB6B7hK0VkWj7VhXlj7SI",
-						"timestamp": 1791099722460
+						"correlationId": "vfeIxPXvWzOlwiE1HeYLr",
+						"timestamp": 1791193322461
 					}
 				}
 			}
@@ -3949,14 +4155,36 @@
 				"body": {
 					"success": true,
 					"data": {
-						"organizationId": "a27302d4-92a5-41b2-bdab-9b9548ed02a1",
-						"inviteToken": "32a733eefcffe53f5b2d860e3d909d6d215751fbdc7631f6cdbc4adb8e2bdaaf"
+						"organizationId": "3abb90aa-c3e3-4a46-aceb-b5cde63c6edb",
+						"inviteToken": "d1f7fe76180c2c9387aa848cad6055a9c29e387a8aa579c003a1ad2755235889"
 					},
 					"meta": {
-						"correlationId": "7YGjdJGAS1TPI3OIIAhjv",
-						"timestamp": 1791099729647
+						"correlationId": "mTb1oHq3aOuNIhxBhSUB-",
+						"timestamp": 1791193329755
 					}
 				}
+			}
+		},
+		"OrganizationAnalyticsController_exportReport": {
+			"as": "brew.owner@kl-rewards.demo (merchant portal)",
+			"note": "The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.",
+			"request": {
+				"method": "GET",
+				"path": "/api/v1/orgs/brew-bean-kl/analytics/export",
+				"query": {
+					"from": "1788601340153",
+					"to": "1791193340153",
+					"format": "xlsx"
+				},
+				"headers": {
+					"X-Client-Type": "merchant",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"body": "<8703 bytes of application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>"
 			}
 		},
 		"OrganizationAnalyticsController_getAnalytics": {
@@ -3976,29 +4204,29 @@
 					"success": true,
 					"data": {
 						"period": {
-							"from": 1786291200000,
-							"to": 1791099739546,
+							"from": 1786896000000,
+							"to": 1791193340044,
 							"timeZone": "Asia/Kuala_Lumpur"
 						},
 						"totalRewards": {
-							"value": 13,
+							"value": 16,
 							"changePercent": 100
 						},
 						"activeRewards": {
-							"value": 8,
+							"value": 10,
 							"changePercent": 100
 						},
 						"totalClaims": {
-							"value": 11,
-							"changePercent": 100
+							"value": 188,
+							"changePercent": 4
 						},
 						"totalRedemptions": {
-							"value": 4,
-							"changePercent": 100
+							"value": 163,
+							"changePercent": 6
 						},
 						"conversionRate": {
-							"value": 36.4,
-							"changePercent": 100
+							"value": 86.7,
+							"changePercent": 2
 						},
 						"referralCount": {
 							"value": 0,
@@ -4006,62 +4234,211 @@
 						},
 						"claimsOverTime": [
 							{
-								"date": 1786291200000,
-								"claims": 0,
-								"redemptions": 0
+								"date": 1786896000000,
+								"claims": 21,
+								"redemptions": 22
 							},
 							{
-								"date": 1786896000000,
-								"claims": 0,
-								"redemptions": 0
+								"date": 1787500800000,
+								"claims": 28,
+								"redemptions": 22
 							}
 						],
 						"topRewards": [
 							{
-								"rewardId": "c1214e16-bf0f-4410-8871-8d1a9970f75e",
-								"title": "Free coffee — Grand Opening",
-								"claims": 10,
-								"redemptions": 4
+								"rewardId": "ca5e4873-45fa-4124-b24b-14ef2df21d7c",
+								"title": "Morning brew club — free refill",
+								"claims": 96,
+								"redemptions": 90
 							},
 							{
-								"rewardId": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
-								"title": "Free Kopi O with any breakfast set",
-								"claims": 1,
-								"redemptions": 0
+								"rewardId": "291eb43c-eb37-49f1-aab4-fda4428983b4",
+								"title": "Weekend latte art special",
+								"claims": 81,
+								"redemptions": 69
 							}
 						],
 						"sales": {
 							"currency": "MYR",
 							"totalSalesMinor": {
-								"value": 7800,
-								"changePercent": 100
+								"value": 466520,
+								"changePercent": 6
 							},
 							"bills": {
-								"value": 4,
-								"changePercent": 100
+								"value": 163,
+								"changePercent": 6
 							},
 							"averageBillMinor": {
-								"value": 1950,
-								"changePercent": 100
+								"value": 2862,
+								"changePercent": 1
 							},
 							"overTime": [
 								{
-									"date": 1786291200000,
-									"salesMinor": 0,
-									"bills": 0
+									"date": 1786896000000,
+									"salesMinor": 52410,
+									"bills": 22
 								},
 								{
-									"date": 1786896000000,
-									"salesMinor": 0,
-									"bills": 0
+									"date": 1787500800000,
+									"salesMinor": 61748,
+									"bills": 22
 								}
 							],
-							"firstBillAt": 1790754073703
+							"firstBillAt": 1759625940000
 						}
 					},
 					"meta": {
-						"correlationId": "jpqdJgnD_takoe9mR1TXX",
-						"timestamp": 1791099739561
+						"correlationId": "cC1l05dlqXE4gEr3Qr8gO",
+						"timestamp": 1791193340078
+					}
+				}
+			}
+		},
+		"OrganizationAnalyticsController_getDashboard": {
+			"as": "brew.owner@kl-rewards.demo (merchant portal)",
+			"request": {
+				"method": "GET",
+				"path": "/api/v1/orgs/brew-bean-kl/analytics/dashboard",
+				"query": {
+					"interval": "week"
+				},
+				"headers": {
+					"X-Client-Type": "merchant",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"range": {
+							"from": 1788601340135,
+							"to": 1791193340135,
+							"timeZone": "Asia/Kuala_Lumpur",
+							"interval": "week",
+							"previousFrom": 1786009340135,
+							"previousTo": 1788601340135
+						},
+						"currency": "MYR",
+						"firstBillAt": 1759625940000,
+						"totals": {
+							"salesMinor": {
+								"value": 295205,
+								"previous": 264767,
+								"change": 30438,
+								"changePercent": 11.5
+							},
+							"bills": {
+								"value": 102,
+								"previous": 93,
+								"change": 9,
+								"changePercent": 9.7
+							},
+							"averageBillMinor": {
+								"value": 2894,
+								"previous": 2847,
+								"change": 47,
+								"changePercent": 1.7
+							},
+							"claims": {
+								"value": 116,
+								"previous": 108,
+								"change": 8,
+								"changePercent": 7.4
+							},
+							"redemptions": {
+								"value": 102,
+								"previous": 93,
+								"change": 9,
+								"changePercent": 9.7
+							},
+							"conversionRate": {
+								"value": 87.9,
+								"previous": 86.1,
+								"change": 1.8,
+								"changePercent": 2.1
+							},
+							"customers": {
+								"value": 31,
+								"previous": 30,
+								"change": 1,
+								"changePercent": 3.3
+							}
+						},
+						"series": [
+							{
+								"start": 1788601340135,
+								"end": 1788710400000,
+								"isPartial": true,
+								"salesMinor": 14143,
+								"bills": 5,
+								"averageBillMinor": 2829,
+								"claims": 5,
+								"redemptions": 5
+							},
+							{
+								"start": 1788710400000,
+								"end": 1789315200000,
+								"isPartial": false,
+								"salesMinor": 69394,
+								"bills": 23,
+								"averageBillMinor": 3017,
+								"claims": 31,
+								"redemptions": 23
+							}
+						],
+						"byStore": [
+							{
+								"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
+								"name": "Brew & Bean KL — Bukit Bintang",
+								"city": "KUALA_LUMPUR",
+								"salesMinor": 295205,
+								"bills": 102,
+								"averageBillMinor": 2894,
+								"redemptions": 102
+							},
+							{
+								"locationId": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+								"name": "Brew & Bean KL — Bangsar",
+								"city": "KUALA_LUMPUR",
+								"salesMinor": 0,
+								"bills": 0,
+								"averageBillMinor": 0,
+								"redemptions": 0
+							}
+						],
+						"byReward": [
+							{
+								"rewardId": "ca5e4873-45fa-4124-b24b-14ef2df21d7c",
+								"title": "Morning brew club — free refill",
+								"claims": 52,
+								"redemptions": 50,
+								"conversionRate": 96.2
+							},
+							{
+								"rewardId": "291eb43c-eb37-49f1-aab4-fda4428983b4",
+								"title": "Weekend latte art special",
+								"claims": 53,
+								"redemptions": 48,
+								"conversionRate": 90.6
+							}
+						],
+						"byRedemptionMethod": [
+							{
+								"method": "SCAN",
+								"redemptions": 66
+							},
+							{
+								"method": "MANUAL",
+								"redemptions": 36
+							}
+						]
+					},
+					"meta": {
+						"correlationId": "mf_-urIQuG3tk9g7889Yq",
+						"timestamp": 1791193340151
 					}
 				}
 			}
@@ -4087,15 +4464,15 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "ccd5ee11-9fcf-4b39-8936-819b83674d4e",
+						"id": "563b904c-d9c4-4f6f-9e8e-d9fc8f0dc418",
 						"apiKey": "<redacted: one-time secret>",
 						"name": "Back-office sync",
 						"scope": "INTEGRATION",
 						"locationId": null
 					},
 					"meta": {
-						"correlationId": "CnTIbsEOU1tvc2H8m1YGj",
-						"timestamp": 1791099739679
+						"correlationId": "lA0yJtyFrwo6KEii__dvC",
+						"timestamp": 1791193340358
 					}
 				}
 			}
@@ -4120,11 +4497,11 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099739331,
-							"updatedAt": 1791099739331,
+							"createdAt": 1791193339781,
+							"updatedAt": 1791193339781,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "5da6e84c-f9cc-46a7-8c2c-f1d2936e7718",
+							"id": "38d27a49-5aa8-4547-b80e-e1d373748f3d",
 							"name": "Bangsar front counter",
 							"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
 							"locationName": "Brew & Bean KL — Bukit Bintang",
@@ -4132,8 +4509,8 @@
 							"revokedAt": null
 						},
 						{
-							"createdAt": 1791099673748,
-							"updatedAt": 1791099673748,
+							"createdAt": 1791193151388,
+							"updatedAt": 1791193151388,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "ebd565dd-45b7-4d6c-b2dc-131764ba3baf",
@@ -4141,7 +4518,7 @@
 							"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
 							"locationName": "Brew & Bean KL — Bukit Bintang",
 							"scope": "POS",
-							"revokedAt": 1789371673173
+							"revokedAt": 1789465150840
 						}
 					],
 					"meta": {
@@ -4149,11 +4526,11 @@
 						"total": 5,
 						"page": 1,
 						"totalPages": 3,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTY3Mzc0OCwiaWQiOiJlYmQ1NjVkZC00NWI3LTRkNmMtYjJkYy0xMzE3NjRiYTNiYWYifQ",
+						"nextCursor": "eyJhdCI6MTc5MTE5MzE1MTM4OCwiaWQiOiJlYmQ1NjVkZC00NWI3LTRkNmMtYjJkYy0xMzE3NjRiYTNiYWYifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "ZJk6kESK0Xi0ww6PIzn1R",
-						"timestamp": 1791099739616
+						"correlationId": "bLrofxmhAQiY47gKoK4iR",
+						"timestamp": 1791193340295
 					}
 				}
 			}
@@ -4162,7 +4539,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/orgs/brew-bean-kl/api-keys/ccd5ee11-9fcf-4b39-8936-819b83674d4e/revoke",
+				"path": "/api/v1/orgs/brew-bean-kl/api-keys/563b904c-d9c4-4f6f-9e8e-d9fc8f0dc418/revoke",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -4179,8 +4556,8 @@
 						"ok": true
 					},
 					"meta": {
-						"correlationId": "kDcw7wo51CH1tJb02L0ww",
-						"timestamp": 1791099739756
+						"correlationId": "c_zl1Ky0U5ounVBQ0IX2G",
+						"timestamp": 1791193340414
 					}
 				}
 			}
@@ -4189,7 +4566,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/orgs/brew-bean-kl/locations/23f73bc6-337d-496d-9259-4c72346c71c9/close",
+				"path": "/api/v1/orgs/brew-bean-kl/locations/6cbdc605-bea0-4d7b-bb73-209d1812064b/close",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -4205,9 +4582,9 @@
 				"body": {
 					"success": true,
 					"data": {
-						"locationId": "23f73bc6-337d-496d-9259-4c72346c71c9",
-						"storeId": "7d92e363-7448-4728-aa04-b55b1923a5cb",
-						"closedAt": 1791099735037,
+						"locationId": "6cbdc605-bea0-4d7b-bb73-209d1812064b",
+						"storeId": "f8daebca-8e4f-4366-aef3-6407f329bc1c",
+						"closedAt": 1791193335149,
 						"reason": "Mall lease not renewed",
 						"storeMembershipsRemoved": 0,
 						"memberScopesRemoved": 0,
@@ -4215,14 +4592,53 @@
 						"apiKeysRevoked": 0
 					},
 					"meta": {
-						"correlationId": "ZBqqpdl06PxFKlh-v3CqX",
-						"timestamp": 1791099735052
+						"correlationId": "GAeoRFxkTIXgmV_VYZaJH",
+						"timestamp": 1791193335160
 					}
 				}
 			}
 		},
 		"OrganizationController_createLocation": {
-			"notCaptured": "The capture run got 500 INTERNAL_ERROR instead of a success response; re-run the capture after fixing it."
+			"as": "brew.owner@kl-rewards.demo (merchant portal)",
+			"request": {
+				"method": "POST",
+				"path": "/api/v1/orgs/brew-bean-kl/locations",
+				"headers": {
+					"X-Client-Type": "merchant",
+					"X-Mutation-Intent": "same-origin",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				},
+				"body": {
+					"name": "Brew & Bean KL — Bangsar",
+					"addressText": "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+					"contactPhone": "+60 3-2283 1234"
+				}
+			},
+			"response": {
+				"status": 201,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+						"name": "Brew & Bean KL — Bangsar",
+						"code": "brew-bean-kl-bangsar",
+						"addressText": "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+						"city": "KUALA_LUMPUR",
+						"contactPhone": "+60 3-2283 1234",
+						"status": "PENDING_APPROVAL",
+						"rejectionReason": null,
+						"isPrimary": false,
+						"createdAt": 1791193334906,
+						"updatedAt": 1791193334906
+					},
+					"meta": {
+						"correlationId": "18mUO8iNoAH76SP5vf0wW",
+						"timestamp": 1791193334912
+					}
+				}
+			}
 		},
 		"OrganizationController_getContext": {
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
@@ -4246,8 +4662,9 @@
 							"displayName": "Brew & Bean KL",
 							"lifecycleState": "ACTIVE",
 							"primaryLocationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-							"createdAt": 1791099673551,
-							"updatedAt": 1791099673551
+							"createdAt": 1791193151201,
+							"updatedAt": 1791193151201,
+							"timeZone": "Asia/Kuala_Lumpur"
 						},
 						"membership": {
 							"id": "e178a4d1-6915-4eb3-bf84-6fb14e1feb6e",
@@ -4255,11 +4672,11 @@
 							"userId": "326494e1-b45d-4203-b881-05b60ae50b4a",
 							"role": "OWNER",
 							"status": "ACTIVE",
-							"displayName": null,
+							"displayName": "Ahmad (Owner)",
 							"locationScopeType": "ALL_LOCATIONS",
 							"locationIds": [],
-							"createdAt": 1791099673578,
-							"updatedAt": 1791099673578
+							"createdAt": 1791193151229,
+							"updatedAt": 1791193151229
 						},
 						"locations": [
 							{
@@ -4273,8 +4690,8 @@
 								"status": "ACTIVE",
 								"rejectionReason": null,
 								"isPrimary": true,
-								"createdAt": 1791099673558,
-								"updatedAt": 1791099673558
+								"createdAt": 1791193151207,
+								"updatedAt": 1791193151207
 							}
 						],
 						"merchantProfile": {
@@ -4289,8 +4706,8 @@
 						"policyVersion": 1
 					},
 					"meta": {
-						"correlationId": "RTYOek45I_2bGyjxf3AVP",
-						"timestamp": 1791099732714
+						"correlationId": "gXU-zok3v4Bj8CkeKATtp",
+						"timestamp": 1791193332764
 					}
 				}
 			}
@@ -4320,12 +4737,12 @@
 				"body": {
 					"success": true,
 					"data": {
-						"inviteId": "76f4cc8b-4094-48aa-958c-ba3a4bdeece8",
+						"inviteId": "c3fcab93-bbbf-4524-9376-dd5bf9b1865d",
 						"message": "Invitation sent"
 					},
 					"meta": {
-						"correlationId": "pYOchXCZMNFNfrMehUdiC",
-						"timestamp": 1791099735137
+						"correlationId": "pFrhrcWjS9yWi47gTzzhi",
+						"timestamp": 1791193335237
 					}
 				}
 			}
@@ -4358,13 +4775,13 @@
 							"status": "PENDING",
 							"invitedByUserId": "326494e1-b45d-4203-b881-05b60ae50b4a",
 							"invitedByName": "Ahmad Brew",
-							"expiresAt": 1791704473591,
-							"createdAt": 1791099673593
+							"expiresAt": 1791797951242,
+							"createdAt": 1791193151243
 						}
 					],
 					"meta": {
-						"correlationId": "iJVSWH0KzzgInU5ber0Ao",
-						"timestamp": 1791099732807
+						"correlationId": "RECGVxVSKkByZd6qEHGdr",
+						"timestamp": 1791193332884
 					}
 				}
 			}
@@ -4393,16 +4810,16 @@
 							"fullName": "Ahmad Brew",
 							"role": "OWNER",
 							"status": "ACTIVE",
-							"displayName": null,
+							"displayName": "Ahmad (Owner)",
 							"locationScopeType": "ALL_LOCATIONS",
 							"locationIds": [],
-							"createdAt": 1791099673578,
-							"updatedAt": 1791099673578
+							"createdAt": 1791193151229,
+							"updatedAt": 1791193151229
 						},
 						{
 							"id": "e8875947-75f2-44c2-adf0-713c9e955ed5",
 							"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-							"userId": "e8079268-f4dd-497f-9d3c-5aaa57429d49",
+							"userId": "884d283d-fd7d-4c6b-863b-030d40f448d4",
 							"email": "user-02@example.com",
 							"fullName": "Olivia Johnson",
 							"role": "CASHIER",
@@ -4413,12 +4830,12 @@
 								"c178a4d1-6915-4eb3-bf84-6fb14e1feb6d"
 							],
 							"createdAt": 1788753600000,
-							"updatedAt": 1791099673784
+							"updatedAt": 1791193152966
 						}
 					],
 					"meta": {
-						"correlationId": "mOPAFNhmRVvif0OA344C-",
-						"timestamp": 1791099732757
+						"correlationId": "FF9Urk6uDBqWAGXJLUcbn",
+						"timestamp": 1791193332824
 					}
 				}
 			}
@@ -4446,12 +4863,12 @@
 					"data": {
 						"membershipId": "157401d5-536e-464f-9ae9-4756b6dd5f64",
 						"locationId": "257401d5-536e-464f-9ae9-4756b6dd5f65",
-						"removedAt": 1791099735251,
+						"removedAt": 1791193335353,
 						"remainingLocationIds": []
 					},
 					"meta": {
-						"correlationId": "Gui859p1nBJVx0z7knoUF",
-						"timestamp": 1791099735253
+						"correlationId": "zttAeLFFqRWazQ-jUEukC",
+						"timestamp": 1791193335355
 					}
 				}
 			}
@@ -4476,28 +4893,59 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "57026a8e-0f7e-43fc-834f-fd1677086a65",
+						"id": "cc36b793-3101-484c-8063-8d5b14a4ebdd",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-						"userId": "77baf757-d737-4f41-8488-795f24d157eb",
+						"userId": "c9600578-399b-4d47-81b0-6d84531ea8ea",
 						"status": "PENDING",
 						"message": "I run the Bangsar morning shift",
-						"createdAt": 1791099737504
+						"createdAt": 1791193337895
 					},
 					"meta": {
-						"correlationId": "8ARqKI5TBx9NetMXfc7T_",
-						"timestamp": 1791099737513
+						"correlationId": "j8cDqo8c8BjA0xayDHz0J",
+						"timestamp": 1791193337908
 					}
 				}
 			}
 		},
 		"OrganizationController_reviewAccessRequest": {
-			"notCaptured": "The capture run got 409 ORGANIZATION_ACCESS_REQUEST_ALREADY_REVIEWED instead of a success response; re-run the capture after fixing it."
+			"as": "brew.owner@kl-rewards.demo (merchant portal)",
+			"request": {
+				"method": "POST",
+				"path": "/api/v1/orgs/brew-bean-kl/access-requests/cc36b793-3101-484c-8063-8d5b14a4ebdd/review",
+				"headers": {
+					"X-Client-Type": "merchant",
+					"X-Mutation-Intent": "same-origin",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				},
+				"body": {
+					"approve": true,
+					"role": "CASHIER",
+					"locationScopeType": "SELECTED",
+					"locationIds": [
+						"c178a4d1-6915-4eb3-bf84-6fb14e1feb6d"
+					]
+				}
+			},
+			"response": {
+				"status": 201,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"message": "Access request reviewed"
+					},
+					"meta": {
+						"correlationId": "2G9_13QhlZ8UdpN8Aw9dQ",
+						"timestamp": 1791193337982
+					}
+				}
+			}
 		},
 		"OrganizationController_revokeMemberInvite": {
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/orgs/brew-bean-kl/members/invites/76f4cc8b-4094-48aa-958c-ba3a4bdeece8/revoke",
+				"path": "/api/v1/orgs/brew-bean-kl/members/invites/c3fcab93-bbbf-4524-9376-dd5bf9b1865d/revoke",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -4513,14 +4961,92 @@
 						"message": "Invitation revoked"
 					},
 					"meta": {
-						"correlationId": "hqzQv2e061wzFgX-erEDM",
-						"timestamp": 1791099735183
+						"correlationId": "mbt9nPtAjVfXDJL4t_uo4",
+						"timestamp": 1791193335285
 					}
 				}
 			}
 		},
 		"OrganizationController_updateLocation": {
-			"notCaptured": "The capture run got 500 INTERNAL_ERROR instead of a success response; re-run the capture after fixing it."
+			"as": "brew.owner@kl-rewards.demo (merchant portal)",
+			"request": {
+				"method": "PATCH",
+				"path": "/api/v1/orgs/brew-bean-kl/locations/7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+				"headers": {
+					"X-Client-Type": "merchant",
+					"X-Mutation-Intent": "same-origin",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				},
+				"body": {
+					"name": "Brew & Bean KL — Bangsar",
+					"addressText": "Lot G-21, 21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+					"contactPhone": "+60 3-2283 1234"
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
+						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+						"name": "Brew & Bean KL — Bangsar",
+						"code": "brew-bean-kl-bangsar",
+						"addressText": "Lot G-21, 21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
+						"city": "KUALA_LUMPUR",
+						"contactPhone": "+60 3-2283 1234",
+						"status": "PENDING_APPROVAL",
+						"rejectionReason": null,
+						"isPrimary": false,
+						"createdAt": 1791193334906,
+						"updatedAt": 1791193335021
+					},
+					"meta": {
+						"correlationId": "4llO8AvP9cjNydMf-LlYz",
+						"timestamp": 1791193335028
+					}
+				}
+			}
+		},
+		"OrganizationController_updateOwnMembership": {
+			"as": "jonker.owner@melaka-rewards.demo (merchant portal)",
+			"note": "Jonker Street Kitchen's owner sets her display name; it is trimmed. `{ \"displayName\": null }` clears it.",
+			"request": {
+				"method": "PATCH",
+				"path": "/api/v1/orgs/jonker-street-kitchen/members/me",
+				"headers": {
+					"X-Client-Type": "merchant",
+					"X-Mutation-Intent": "same-origin",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				},
+				"body": {
+					"displayName": "  Siti (Owner)  "
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"id": "f57401d5-536e-464f-9ae9-4756b6dd5f63",
+						"organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+						"userId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
+						"role": "OWNER",
+						"status": "ACTIVE",
+						"displayName": "Siti (Owner)",
+						"locationScopeType": "ALL_LOCATIONS",
+						"locationIds": [],
+						"createdAt": 1791193151234,
+						"updatedAt": 1791193335396
+					},
+					"meta": {
+						"correlationId": "rTgtYctwUjo-QoCDE-9Gy",
+						"timestamp": 1791193335399
+					}
+				}
+			}
 		},
 		"OrganizationKybController_downloadDocument": {
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
@@ -4541,11 +5067,11 @@
 						"documentId": "d1597799-9b05-49c8-95e1-864ddfa666a8",
 						"scanStatus": "SCANNING",
 						"downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-						"expiresAt": 1791100032900
+						"expiresAt": 1791193633048
 					},
 					"meta": {
-						"correlationId": "IIKc1M8MJl8owMqxhSd8M",
-						"timestamp": 1791099732900
+						"correlationId": "ClkP1wkKab9w5imaj8iLX",
+						"timestamp": 1791193333048
 					}
 				}
 			}
@@ -4566,7 +5092,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"organizationId": "8b632542-54cd-4211-b47a-cfb4f29e3b2a",
+						"organizationId": "62cc685a-d679-4b51-8a57-2715674d1906",
 						"businessName": "Nyonya House Melaka",
 						"legalName": "Nyonya House Melaka Sdn Bhd",
 						"addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -4576,33 +5102,33 @@
 						"kybStatus": "PENDING",
 						"kybFields": {
 							"taxId": "C2584563202",
-							"submittedAt": 1791099730027,
+							"submittedAt": 1791193330132,
 							"documentType": "SSM",
 							"registrationNo": "202601012345"
 						},
 						"documents": [
 							{
-								"id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+								"id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
 								"fileName": "welcome.png",
 								"mimeType": "image/png",
 								"sizeBytes": 61292,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1791099730080
+								"uploadedAt": 1791193330185
 							},
 							{
-								"id": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+								"id": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
 								"fileName": "welcome.png",
 								"mimeType": "image/png",
 								"sizeBytes": 61292,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1791099730172
+								"uploadedAt": 1791193330261
 							}
 						],
 						"status": "ACTIVE"
 					},
 					"meta": {
-						"correlationId": "S2cNPeUqWDSTr_6KOH0UZ",
-						"timestamp": 1791099734614
+						"correlationId": "Mh5dkOae3CrGb3Bzgt_qv",
+						"timestamp": 1791193334763
 					}
 				}
 			}
@@ -4626,8 +5152,8 @@
 					"addressText": "88 Jalan Hang Jebat, 75200 Melaka",
 					"contactPhone": "+60 6-282 1234",
 					"documentFileIds": [
-						"4e6eb041-0969-4fd1-975a-ca5b42f1d691",
-						"381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c"
+						"42ce5478-2feb-44b2-bc49-51e3a8b233c5",
+						"203e5b59-64fc-4a86-9735-7c5fd51449f2"
 					]
 				}
 			},
@@ -4637,7 +5163,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"organizationId": "8b632542-54cd-4211-b47a-cfb4f29e3b2a",
+						"organizationId": "62cc685a-d679-4b51-8a57-2715674d1906",
 						"businessName": "Nyonya House Melaka",
 						"legalName": "Nyonya House Melaka Sdn Bhd",
 						"addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -4647,33 +5173,33 @@
 						"kybStatus": "PENDING",
 						"kybFields": {
 							"taxId": "C2584563202",
-							"submittedAt": 1791099734665,
+							"submittedAt": 1791193334812,
 							"documentType": "SSM",
 							"registrationNo": "202601012345"
 						},
 						"documents": [
 							{
-								"id": "4e6eb041-0969-4fd1-975a-ca5b42f1d691",
+								"id": "42ce5478-2feb-44b2-bc49-51e3a8b233c5",
 								"fileName": "welcome.png",
 								"mimeType": "image/png",
 								"sizeBytes": 61292,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1791099730080
+								"uploadedAt": 1791193330185
 							},
 							{
-								"id": "381b73cd-ea6a-4b8e-82e2-553ed1a3fd9c",
+								"id": "203e5b59-64fc-4a86-9735-7c5fd51449f2",
 								"fileName": "welcome.png",
 								"mimeType": "image/png",
 								"sizeBytes": 61292,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1791099730172
+								"uploadedAt": 1791193330261
 							}
 						],
 						"status": "ACTIVE"
 					},
 					"meta": {
-						"correlationId": "aTQ5bsj-mzXaeupYZFEq0",
-						"timestamp": 1791099734684
+						"correlationId": "iDexG2xClpEiDUHA9XmHd",
+						"timestamp": 1791193334825
 					}
 				}
 			}
@@ -4701,12 +5227,12 @@
 							"role": "OWNER",
 							"kybStatus": "APPROVED",
 							"lifecycleState": "ACTIVE",
-							"createdAt": 1791099673578
+							"createdAt": 1791193151229
 						}
 					],
 					"meta": {
-						"correlationId": "JorgxZ_t96Ad3AoYg7mM_",
-						"timestamp": 1791099732645
+						"correlationId": "ulmrUjAxh7KARVNc1dGCX",
+						"timestamp": 1791193332661
 					}
 				}
 			}
@@ -4731,30 +5257,30 @@
 					"success": true,
 					"data": [
 						{
-							"redemptionId": "3c5f2558-9602-42d9-ad25-28839a80d14a",
+							"redemptionId": "6b43c61d-2092-43bc-beed-cd4a75de8122",
 							"rewardTitle": "Free coffee — Grand Opening",
-							"redeemedAt": 1791099739415,
+							"redeemedAt": 1791193339862,
 							"terminalId": "KL-REGISTER-01",
 							"redemptionMethod": "MANUAL"
 						},
 						{
 							"redemptionId": "004e9593-80d2-48da-91b4-a19fec069aef",
 							"rewardTitle": "Free coffee — Grand Opening",
-							"redeemedAt": 1791099673721,
+							"redeemedAt": 1791193151336,
 							"terminalId": "KL-REGISTER-01",
 							"redemptionMethod": "SCAN"
 						}
 					],
 					"meta": {
 						"limit": 2,
-						"total": 4,
+						"total": 929,
 						"page": 1,
-						"totalPages": 2,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTY3MzcyMSwiaWQiOiIwMDRlOTU5My04MGQyLTQ4ZGEtOTFiNC1hMTlmZWMwNjlhZWYifQ",
+						"totalPages": 465,
+						"nextCursor": "eyJhdCI6MTc5MTE5MzE1MTMzNiwiaWQiOiIwMDRlOTU5My04MGQyLTQ4ZGEtOTFiNC1hMTlmZWMwNjlhZWYifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "A_CYJpoqbJpbMXIOmugbp",
-						"timestamp": 1791099739504
+						"correlationId": "leUKxy03tj8Lwdz4eb0MX",
+						"timestamp": 1791193339996
 					}
 				}
 			}
@@ -4782,12 +5308,12 @@
 							"role": "OWNER",
 							"kybStatus": "APPROVED",
 							"lifecycleState": "ACTIVE",
-							"createdAt": 1791099673578
+							"createdAt": 1791193151229
 						}
 					],
 					"meta": {
-						"correlationId": "5uZQIdm-Rezw-kh14L6W4",
-						"timestamp": 1791099732672
+						"correlationId": "RjIvvA3oAie_AkbEx7TOp",
+						"timestamp": 1791193332696
 					}
 				}
 			}
@@ -4809,8 +5335,8 @@
 					"rewardType": "FREE_ITEM",
 					"rewardValue": 6,
 					"quantityTotal": 200,
-					"startDate": 1791099737709,
-					"expiryDate": 1796283737709,
+					"startDate": 1791193338104,
+					"expiryDate": 1796377338104,
 					"locationScopeType": "ALL_LOCATIONS",
 					"rules": {
 						"maxUsePerUser": 1,
@@ -4828,11 +5354,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099737763,
-						"updatedAt": 1791099737763,
+						"createdAt": 1791193338159,
+						"updatedAt": 1791193338159,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+						"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"organizationName": "Brew & Bean KL",
 						"organizationLogoUrl": null,
@@ -4847,15 +5373,15 @@
 						"quantityTotal": 200,
 						"quantityRemaining": 200,
 						"quantityReserved": 0,
-						"startDate": 1791099737709,
-						"expiryDate": 1796283737709,
+						"startDate": 1791193338104,
+						"expiryDate": 1796377338104,
 						"status": "DRAFT",
 						"claimCount": 0,
 						"redemptionCount": 0,
 						"referralsEnabled": true,
 						"referralPoolTotal": 50,
 						"referralPoolRemaining": 50,
-						"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+						"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 						"rules": {
 							"minSpendMyr": 15,
 							"maxUsePerUser": 1
@@ -4864,8 +5390,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "cSQj_w42AmE1qhNI0fIH-",
-						"timestamp": 1791099737780
+						"correlationId": "rJrQZuRRsal2xv_K1Xvd-",
+						"timestamp": 1791193338177
 					}
 				}
 			}
@@ -4886,8 +5412,8 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099673754,
-						"updatedAt": 1791099673754,
+						"createdAt": 1791193151399,
+						"updatedAt": 1791193151399,
 						"isDeleted": false,
 						"deletedAt": null,
 						"id": "d5d755fa-18e6-45a7-bf33-d2461e75ba1a",
@@ -4906,7 +5432,7 @@
 						"quantityRemaining": 500,
 						"quantityReserved": 0,
 						"startDate": null,
-						"expiryDate": 1793691673173,
+						"expiryDate": 1793785150840,
 						"status": "DRAFT",
 						"claimCount": 0,
 						"redemptionCount": 0,
@@ -4919,8 +5445,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "gPIVk1EGhRS-FdZg7zweg",
-						"timestamp": 1791099737708
+						"correlationId": "KvDy2F9ECVrk-KxWNQWLz",
+						"timestamp": 1791193338103
 					}
 				}
 			}
@@ -4942,8 +5468,8 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099673754,
-							"updatedAt": 1791099673754,
+							"createdAt": 1791193151399,
+							"updatedAt": 1791193151399,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "d5d755fa-18e6-45a7-bf33-d2461e75ba1a",
@@ -4962,7 +5488,7 @@
 							"quantityRemaining": 500,
 							"quantityReserved": 0,
 							"startDate": null,
-							"expiryDate": 1793691673173,
+							"expiryDate": 1793785150840,
 							"status": "DRAFT",
 							"claimCount": 0,
 							"redemptionCount": 0,
@@ -4975,11 +5501,11 @@
 							"locationIds": []
 						},
 						{
-							"createdAt": 1791099673691,
-							"updatedAt": 1791099673691,
+							"createdAt": 1791193151325,
+							"updatedAt": 1791193151325,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "1ebf1501-cee5-4147-9746-7050a5a58455",
+							"id": "c9eeb787-7376-4c46-b2fa-43f626bccfca",
 							"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 							"organizationName": "Brew & Bean KL",
 							"organizationLogoUrl": null,
@@ -4995,7 +5521,7 @@
 							"quantityRemaining": 20,
 							"quantityReserved": 1,
 							"startDate": null,
-							"expiryDate": 1794987673690,
+							"expiryDate": 1795081151324,
 							"status": "PUBLISHED",
 							"claimCount": 0,
 							"redemptionCount": 0,
@@ -5009,8 +5535,8 @@
 						}
 					],
 					"meta": {
-						"correlationId": "e30eSzbBpYGjmZ1CGh51h",
-						"timestamp": 1791099737656
+						"correlationId": "ZT4mw5a2vXr6CBsMgy48O",
+						"timestamp": 1791193338042
 					}
 				}
 			}
@@ -5019,7 +5545,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/orgs/brew-bean-kl/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9/publish",
+				"path": "/api/v1/orgs/brew-bean-kl/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb/publish",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -5033,11 +5559,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099737763,
-						"updatedAt": 1791099737763,
+						"createdAt": 1791193338159,
+						"updatedAt": 1791193338159,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+						"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"organizationName": "Brew & Bean KL",
 						"organizationLogoUrl": null,
@@ -5052,15 +5578,15 @@
 						"quantityTotal": 250,
 						"quantityRemaining": 250,
 						"quantityReserved": 0,
-						"startDate": 1791099737709,
-						"expiryDate": 1796283737709,
+						"startDate": 1791193338104,
+						"expiryDate": 1796377338104,
 						"status": "PENDING_REVIEW",
 						"claimCount": 0,
 						"redemptionCount": 0,
 						"referralsEnabled": true,
 						"referralPoolTotal": 50,
 						"referralPoolRemaining": 50,
-						"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+						"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 						"rules": {
 							"minSpendMyr": 15,
 							"maxUsePerUser": 1
@@ -5069,8 +5595,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "oAMKeIxWzUHCH4rdDBxHr",
-						"timestamp": 1791099737907
+						"correlationId": "-cE6zNEbOy-S1vmHDls4r",
+						"timestamp": 1791193338300
 					}
 				}
 			}
@@ -5079,7 +5605,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/orgs/brew-bean-kl/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+				"path": "/api/v1/orgs/brew-bean-kl/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -5095,11 +5621,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099737763,
-						"updatedAt": 1791099737763,
+						"createdAt": 1791193338159,
+						"updatedAt": 1791193338159,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+						"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"organizationName": "Brew & Bean KL",
 						"organizationLogoUrl": null,
@@ -5114,15 +5640,15 @@
 						"quantityTotal": 250,
 						"quantityRemaining": 250,
 						"quantityReserved": 0,
-						"startDate": 1791099737709,
-						"expiryDate": 1796283737709,
+						"startDate": 1791193338104,
+						"expiryDate": 1796377338104,
 						"status": "DRAFT",
 						"claimCount": 0,
 						"redemptionCount": 0,
 						"referralsEnabled": true,
 						"referralPoolTotal": 50,
 						"referralPoolRemaining": 50,
-						"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+						"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 						"rules": {
 							"minSpendMyr": 15,
 							"maxUsePerUser": 1
@@ -5131,8 +5657,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "SLrzWtFjlj-XHo7EOSIHR",
-						"timestamp": 1791099737849
+						"correlationId": "7wthwTkh8tOTB4kF1lpts",
+						"timestamp": 1791193338246
 					}
 				}
 			}
@@ -5161,8 +5687,8 @@
 						"message": "Invitation accepted"
 					},
 					"meta": {
-						"correlationId": "p_JYCVd5DDXKI3LlDT7U0",
-						"timestamp": 1791099736030
+						"correlationId": "0SQd8yT37Oar3BMfaQYM7",
+						"timestamp": 1791193336261
 					}
 				}
 			}
@@ -5193,11 +5719,11 @@
 						"enrollmentReason": "email_verification",
 						"message": "Verify your email address to continue.",
 						"user": {
-							"createdAt": 1791099736395,
-							"updatedAt": 1791099736395,
+							"createdAt": 1791193336668,
+							"updatedAt": 1791193336668,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "45aad3d1-7ec2-45ad-9bac-4d37e7df6c1b",
+							"id": "cd0a74b1-4882-4a1a-a9ad-3856af1d5a55",
 							"email": "barista.bangsar@kl-rewards.demo",
 							"fullName": "Bangsar Barista",
 							"isActive": true,
@@ -5208,7 +5734,7 @@
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
+									"id": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
 									"name": "User",
 									"description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
 								}
@@ -5217,8 +5743,8 @@
 						"organizationSlug": "brew-bean-kl"
 					},
 					"meta": {
-						"correlationId": "bm8joC-UFN60e-bttusk0",
-						"timestamp": 1791099736757
+						"correlationId": "JHkMwm2O4R8Q2BuSMxPiH",
+						"timestamp": 1791193337060
 					}
 				}
 			}
@@ -5256,12 +5782,12 @@
 								"name": "Brew & Bean KL — Bukit Bintang"
 							}
 						],
-						"expiresAt": 1791704473591,
+						"expiresAt": 1791797951242,
 						"hasExistingAccount": true
 					},
 					"meta": {
-						"correlationId": "tfD27_7sm6iIDvVvkDN0T",
-						"timestamp": 1791099735280
+						"correlationId": "3xgQdT3W-zH8YLgp-0Ak4",
+						"timestamp": 1791193335460
 					}
 				}
 			}
@@ -5289,26 +5815,26 @@
 					"success": true,
 					"data": {
 						"terminal": {
-							"createdAt": 1791099739225,
-							"updatedAt": 1791099739225,
+							"createdAt": 1791193339668,
+							"updatedAt": 1791193339668,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "a68aadac-9151-4e05-8096-dc84d14a43c5",
+							"id": "b4b027e2-fe01-49bb-8a14-5ad67d72f407",
 							"terminalId": "KL-BANGSAR-01",
 							"name": "Bangsar front counter",
 							"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
 							"locationName": "Brew & Bean KL — Bukit Bintang",
 							"status": "AWAITING_PAIRING",
-							"pairingCodeExpiresAt": 1791100639224,
+							"pairingCodeExpiresAt": 1791194239667,
 							"pairedAt": null,
 							"lastSeenAt": null
 						},
-						"pairingCode": "Y3PMW66T",
-						"pairingCodeExpiresAt": 1791100639224
+						"pairingCode": "DFKJMGPC",
+						"pairingCodeExpiresAt": 1791194239667
 					},
 					"meta": {
-						"correlationId": "gLR9OA-PWjVr-fH4_yCiF",
-						"timestamp": 1791099739230
+						"correlationId": "JoO9WUdQwd_6mEorL65uq",
+						"timestamp": 1791193339674
 					}
 				}
 			}
@@ -5317,7 +5843,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/orgs/brew-bean-kl/terminals/a68aadac-9151-4e05-8096-dc84d14a43c5",
+				"path": "/api/v1/orgs/brew-bean-kl/terminals/b4b027e2-fe01-49bb-8a14-5ad67d72f407",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -5329,23 +5855,23 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099739225,
-						"updatedAt": 1791099739225,
+						"createdAt": 1791193339668,
+						"updatedAt": 1791193339668,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "a68aadac-9151-4e05-8096-dc84d14a43c5",
+						"id": "b4b027e2-fe01-49bb-8a14-5ad67d72f407",
 						"terminalId": "KL-BANGSAR-01",
 						"name": "Bangsar front counter",
 						"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
 						"locationName": "Brew & Bean KL — Bukit Bintang",
 						"status": "AWAITING_PAIRING",
-						"pairingCodeExpiresAt": 1791100639224,
+						"pairingCodeExpiresAt": 1791194239667,
 						"pairedAt": null,
 						"lastSeenAt": null
 					},
 					"meta": {
-						"correlationId": "YIGZvLqOHxFtrvX8ZCdWZ",
-						"timestamp": 1791099739268
+						"correlationId": "bXnt-WUhSgt401oXcxWKS",
+						"timestamp": 1791193339712
 					}
 				}
 			}
@@ -5369,8 +5895,8 @@
 						"requireRegisteredTerminals": false
 					},
 					"meta": {
-						"correlationId": "2BAATBIdBXZwR5YGPK-9b",
-						"timestamp": 1791099739130
+						"correlationId": "GQgi3vrCmT6b3WIUzEVi4",
+						"timestamp": 1791193339567
 					}
 				}
 			}
@@ -5379,7 +5905,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/orgs/brew-bean-kl/terminals/a68aadac-9151-4e05-8096-dc84d14a43c5/pairing-code",
+				"path": "/api/v1/orgs/brew-bean-kl/terminals/b4b027e2-fe01-49bb-8a14-5ad67d72f407/pairing-code",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -5394,26 +5920,26 @@
 					"success": true,
 					"data": {
 						"terminal": {
-							"createdAt": 1791099739225,
-							"updatedAt": 1791099739225,
+							"createdAt": 1791193339668,
+							"updatedAt": 1791193339668,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "a68aadac-9151-4e05-8096-dc84d14a43c5",
+							"id": "b4b027e2-fe01-49bb-8a14-5ad67d72f407",
 							"terminalId": "KL-BANGSAR-01",
 							"name": "Bangsar front counter",
 							"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
 							"locationName": "Brew & Bean KL — Bukit Bintang",
 							"status": "AWAITING_PAIRING",
-							"pairingCodeExpiresAt": 1791100639302,
+							"pairingCodeExpiresAt": 1791194239750,
 							"pairedAt": null,
 							"lastSeenAt": null
 						},
-						"pairingCode": "G3NU9BKK",
-						"pairingCodeExpiresAt": 1791100639302
+						"pairingCode": "TADMREEM",
+						"pairingCodeExpiresAt": 1791194239750
 					},
 					"meta": {
-						"correlationId": "8AA587C_PjGYHb7g7Nrtw",
-						"timestamp": 1791099739308
+						"correlationId": "w3l5hcQiPIfg3aHiEFRC7",
+						"timestamp": 1791193339757
 					}
 				}
 			}
@@ -5435,8 +5961,8 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099673749,
-							"updatedAt": 1791099673749,
+							"createdAt": 1791193151391,
+							"updatedAt": 1791193151391,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "1cb82368-3b87-4524-81bc-c78d2b61ed56",
@@ -5446,15 +5972,15 @@
 							"locationName": "Brew & Bean KL — Bukit Bintang",
 							"status": "ACTIVE",
 							"pairingCodeExpiresAt": null,
-							"pairedAt": 1790840533173,
-							"lastSeenAt": 1791099553173
+							"pairedAt": 1790934010840,
+							"lastSeenAt": 1791193030840
 						},
 						{
-							"createdAt": 1791099673653,
-							"updatedAt": 1791099673653,
+							"createdAt": 1791193151294,
+							"updatedAt": 1791193151294,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "97595cdb-674f-4c6e-84f4-281aad7e8b76",
+							"id": "6558ba96-88a2-4fbd-a3f7-7bb562cb0e91",
 							"terminalId": "KL-REGISTER-01",
 							"name": "Front counter",
 							"locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
@@ -5473,8 +5999,8 @@
 						"nextCursor": null,
 						"hasNext": false,
 						"hasPrevious": false,
-						"correlationId": "kY9tr8b-oHeIJZ345U2Nj",
-						"timestamp": 1791099739061
+						"correlationId": "PYLy6ZzshGakWw8zb_3eI",
+						"timestamp": 1791193339484
 					}
 				}
 			}
@@ -5483,7 +6009,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "DELETE",
-				"path": "/api/v1/orgs/brew-bean-kl/terminals/a68aadac-9151-4e05-8096-dc84d14a43c5",
+				"path": "/api/v1/orgs/brew-bean-kl/terminals/b4b027e2-fe01-49bb-8a14-5ad67d72f407",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -5499,8 +6025,8 @@
 						"ok": true
 					},
 					"meta": {
-						"correlationId": "8TGjC2IxS3iyGTUlasinQ",
-						"timestamp": 1791099739801
+						"correlationId": "ERlbHGry5hSk__sXvzT9I",
+						"timestamp": 1791193340460
 					}
 				}
 			}
@@ -5530,8 +6056,8 @@
 						"storesWithTerminals": 1
 					},
 					"meta": {
-						"correlationId": "lytqGDxOPBAWtlsTV6E_l",
-						"timestamp": 1791099739102
+						"correlationId": "e2QWJAX2BvmXubgCV3ef9",
+						"timestamp": 1791193339535
 					}
 				}
 			}
@@ -5559,8 +6085,8 @@
 						"requireRegisteredTerminals": false
 					},
 					"meta": {
-						"correlationId": "hj88bTWR72ZHIkWFZkCBf",
-						"timestamp": 1791099739168
+						"correlationId": "4L0mNZN7-CCO2oegq-ASe",
+						"timestamp": 1791193339606
 					}
 				}
 			}
@@ -5576,7 +6102,7 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c",
+					"userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
 					"action": "READ",
 					"resource": "GEO"
 				}
@@ -5591,8 +6117,8 @@
 						"grants": []
 					},
 					"meta": {
-						"correlationId": "bEwOqIWDKI62EiQnVvQqb",
-						"timestamp": 1791099723987
+						"correlationId": "aTD5044dD48_V9l1aP6-d",
+						"timestamp": 1791193324052
 					}
 				}
 			}
@@ -5620,11 +6146,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724018,
-						"updatedAt": 1791099724018,
+						"createdAt": 1791193324078,
+						"updatedAt": 1791193324078,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "6fb84401-aa39-46dd-bd10-78737fac8ce4",
+						"id": "bbde0c64-3f12-436b-affb-0c607834e398",
 						"action": "MANAGE",
 						"resource": "INVENTORY",
 						"description": "Manage inventory records",
@@ -5634,8 +6160,8 @@
 						"conditions": null
 					},
 					"meta": {
-						"correlationId": "Vuhv_EeiYXNplYK8ansTI",
-						"timestamp": 1791099724024
+						"correlationId": "_6OCalHSER3qFH4r5NF5X",
+						"timestamp": 1791193324086
 					}
 				}
 			}
@@ -5644,7 +6170,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/admin/permissions/b319ed81-3bf4-4993-b25a-9b7aad46d9bf",
+				"path": "/api/v1/admin/permissions/365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8",
 				"headers": {
 					"X-Client-Type": "admin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -5656,11 +6182,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099607154,
-						"updatedAt": 1791099607154,
+						"createdAt": 1791193087621,
+						"updatedAt": 1791193087621,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "b319ed81-3bf4-4993-b25a-9b7aad46d9bf",
+						"id": "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8",
 						"action": "READ",
 						"resource": "GEO",
 						"description": "View geographic data (regions, countries, states, cities)",
@@ -5670,8 +6196,8 @@
 						"conditions": null
 					},
 					"meta": {
-						"correlationId": "eHmQasbCeWB3mC17LQ5Ih",
-						"timestamp": 1791099723943
+						"correlationId": "TjgWgMuhhw2c8cIePIFX4",
+						"timestamp": 1791193324003
 					}
 				}
 			}
@@ -5687,8 +6213,8 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c",
-					"permissionId": "b319ed81-3bf4-4993-b25a-9b7aad46d9bf",
+					"userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
+					"permissionId": "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8",
 					"effect": "ALLOW"
 				}
 			},
@@ -5701,8 +6227,8 @@
 						"message": "Permission granted to user successfully"
 					},
 					"meta": {
-						"correlationId": "ctMB4guS-QSQiheAo8RLP",
-						"timestamp": 1791099724133
+						"correlationId": "c97eL_XAbln3cewePWRz3",
+						"timestamp": 1791193324215
 					}
 				}
 			}
@@ -5728,7 +6254,7 @@
 					"data": {
 						"items": [
 							{
-								"id": "a8b52efa-4f50-41ca-82b9-a5f664c74f75",
+								"id": "8645327b-3853-40e8-a895-897b948f3b7d",
 								"action": "CREATE",
 								"resource": "USER",
 								"description": "Create new users",
@@ -5736,7 +6262,7 @@
 								"isSystem": false
 							},
 							{
-								"id": "81cfabb8-c5d4-4197-8ae1-509f32d53d25",
+								"id": "7c220360-19dc-4546-950c-d0a48cad6177",
 								"action": "READ",
 								"resource": "USER",
 								"description": "View user details",
@@ -5747,8 +6273,8 @@
 						"total": 126
 					},
 					"meta": {
-						"correlationId": "bu4yNsq_bjbi_Ik6-g1hd",
-						"timestamp": 1791099723895
+						"correlationId": "n82Rse82ereJh2n4a-HN0",
+						"timestamp": 1791193323935
 					}
 				}
 			}
@@ -5775,8 +6301,8 @@
 						]
 					},
 					"meta": {
-						"correlationId": "hzEfN433qfegftkd3M5Xp",
-						"timestamp": 1791099723957
+						"correlationId": "bxrqF5X0RxsYjoeI03lyi",
+						"timestamp": 1791193324018
 					}
 				}
 			}
@@ -5785,7 +6311,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "DELETE",
-				"path": "/api/v1/admin/permissions/6fb84401-aa39-46dd-bd10-78737fac8ce4",
+				"path": "/api/v1/admin/permissions/bbde0c64-3f12-436b-affb-0c607834e398",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -5801,8 +6327,8 @@
 						"message": "Permission deleted successfully"
 					},
 					"meta": {
-						"correlationId": "LSrwt9FwHEo1iFFBQgBqB",
-						"timestamp": 1791099724081
+						"correlationId": "Rz_2M6xCu21F4HhMgZWUf",
+						"timestamp": 1791193324147
 					}
 				}
 			}
@@ -5811,7 +6337,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/admin/permissions/6fb84401-aa39-46dd-bd10-78737fac8ce4/restore",
+				"path": "/api/v1/admin/permissions/bbde0c64-3f12-436b-affb-0c607834e398/restore",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -5824,11 +6350,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724018,
-						"updatedAt": 1791099724100,
+						"createdAt": 1791193324078,
+						"updatedAt": 1791193324177,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "6fb84401-aa39-46dd-bd10-78737fac8ce4",
+						"id": "bbde0c64-3f12-436b-affb-0c607834e398",
 						"action": "MANAGE",
 						"resource": "INVENTORY",
 						"description": "Manage every inventory record",
@@ -5838,8 +6364,8 @@
 						"conditions": null
 					},
 					"meta": {
-						"correlationId": "QdjXvzek03Y-3U5HPSIK-",
-						"timestamp": 1791099724103
+						"correlationId": "Ha7Tms9WDs3IBK4iUSf-D",
+						"timestamp": 1791193324181
 					}
 				}
 			}
@@ -5855,8 +6381,8 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c",
-					"permissionId": "b319ed81-3bf4-4993-b25a-9b7aad46d9bf"
+					"userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
+					"permissionId": "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8"
 				}
 			},
 			"response": {
@@ -5868,8 +6394,8 @@
 						"message": "Permission revoked from user"
 					},
 					"meta": {
-						"correlationId": "UdM-4bj1FHRZrFcnVjtOK",
-						"timestamp": 1791099724159
+						"correlationId": "l1scB6ETGjYZ5gdYQ9XnE",
+						"timestamp": 1791193324246
 					}
 				}
 			}
@@ -5885,9 +6411,9 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "bc9ed3df-dcfb-4a53-b0d0-3a8b2f504a3c",
+					"userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
 					"permissionIds": [
-						"b319ed81-3bf4-4993-b25a-9b7aad46d9bf"
+						"365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8"
 					]
 				}
 			},
@@ -5900,8 +6426,8 @@
 						"message": "User permissions synced successfully"
 					},
 					"meta": {
-						"correlationId": "2_8LHUDXpKZ4bX2nBuZUV",
-						"timestamp": 1791099724192
+						"correlationId": "5TuVevGnch1oIMvEs6Ot3",
+						"timestamp": 1791193324283
 					}
 				}
 			}
@@ -5910,7 +6436,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/admin/permissions/6fb84401-aa39-46dd-bd10-78737fac8ce4",
+				"path": "/api/v1/admin/permissions/bbde0c64-3f12-436b-affb-0c607834e398",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -5926,11 +6452,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724018,
-						"updatedAt": 1791099724054,
+						"createdAt": 1791193324078,
+						"updatedAt": 1791193324115,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "6fb84401-aa39-46dd-bd10-78737fac8ce4",
+						"id": "bbde0c64-3f12-436b-affb-0c607834e398",
 						"action": "MANAGE",
 						"resource": "INVENTORY",
 						"description": "Manage every inventory record",
@@ -5940,8 +6466,8 @@
 						"conditions": null
 					},
 					"meta": {
-						"correlationId": "LF223UIWU8x-ycT4M8gn6",
-						"timestamp": 1791099724057
+						"correlationId": "gyKro0TG_ehKGLk6-HBq5",
+						"timestamp": 1791193324118
 					}
 				}
 			}
@@ -5978,11 +6504,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"draftId": "4a00647d-7d9c-4aee-af69-5b531c029dd3"
+						"draftId": "8e527d9e-8481-4fbf-ad5a-aaf654b61bb1"
 					},
 					"meta": {
-						"correlationId": "KwZEsEFl6qfKXCXaoT_gy",
-						"timestamp": 1791099724692
+						"correlationId": "7hR-WmQZvukl0mSvvlcGd",
+						"timestamp": 1791193324815
 					}
 				}
 			}
@@ -5999,7 +6525,7 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"draftId": "4a00647d-7d9c-4aee-af69-5b531c029dd3",
+					"draftId": "8e527d9e-8481-4fbf-ad5a-aaf654b61bb1",
 					"approvalNote": "Reviewed against the tenant guardrails"
 				}
 			},
@@ -6013,8 +6539,8 @@
 						"message": "A policy draft must be approved by a SuperAdmin other than its author"
 					},
 					"meta": {
-						"correlationId": "n7NIxNPoBUnSuYIE9hu_Q",
-						"timestamp": 1791099724798
+						"correlationId": "Kqnoi7YZXlc7-oX1GEbM8",
+						"timestamp": 1791193324923
 					}
 				}
 			}
@@ -6023,7 +6549,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/policies/drafts/4a00647d-7d9c-4aee-af69-5b531c029dd3/simulate",
+				"path": "/api/v1/policies/drafts/8e527d9e-8481-4fbf-ad5a-aaf654b61bb1/simulate",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -6036,7 +6562,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"simulationId": "05bbdfab-59c2-478f-8ce9-4b31487ef171",
+						"simulationId": "0d9feff4-cb54-4d52-a7d5-cab22ea32709",
 						"passed": true,
 						"warnings": [
 							"2 principal(s) would get at least one different decision"
@@ -6066,8 +6592,8 @@
 						"decisionChangesTruncated": false
 					},
 					"meta": {
-						"correlationId": "GlkiIbeOQ9rSbL2Y5bYB9",
-						"timestamp": 1791099724768
+						"correlationId": "RVI_owThglKLDX6siZNnT",
+						"timestamp": 1791193324890
 					}
 				}
 			}
@@ -6079,7 +6605,7 @@
 				"path": "/api/v1/pos/terminals/pair",
 				"headers": {},
 				"body": {
-					"pairingCode": "G3NU9BKK"
+					"pairingCode": "TADMREEM"
 				}
 			},
 			"response": {
@@ -6101,8 +6627,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "iGtglpvLl13bJje7ywbUm",
-						"timestamp": 1791099739341
+						"correlationId": "61AeUu7DbdvCsykliVPXU",
+						"timestamp": 1791193339789
 					}
 				}
 			}
@@ -6136,7 +6662,7 @@
 					"success": true,
 					"data": [
 						{
-							"id": "52256206-a76c-4eee-b5fa-cbafbb986f4b",
+							"id": "a26a0417-b755-414c-af72-72b9fb3c590e",
 							"brand": null,
 							"categoryId": "6a843aeb-0ade-4d25-bc8d-6889c1dcb372",
 							"compareAtPrice": null,
@@ -6153,13 +6679,13 @@
 							"weightGrams": null,
 							"version": 0,
 							"deletedAt": null,
-							"createdAt": 1791099725924,
-							"updatedAt": 1791099725924
+							"createdAt": 1791193326038,
+							"updatedAt": 1791193326038
 						}
 					],
 					"meta": {
-						"correlationId": "P4RuMQOG50EVsgnOpoR6y",
-						"timestamp": 1791099725925
+						"correlationId": "5cKordJ7i_ZujBBqE4ArZ",
+						"timestamp": 1791193326041
 					}
 				}
 			}
@@ -6176,8 +6702,8 @@
 				},
 				"body": {
 					"ids": [
-						"6da2defd-b5b1-423a-935f-965e936fda52",
-						"52256206-a76c-4eee-b5fa-cbafbb986f4b"
+						"21c503df-1714-4d06-a30c-e1268e64c810",
+						"a26a0417-b755-414c-af72-72b9fb3c590e"
 					]
 				}
 			},
@@ -6190,8 +6716,8 @@
 						"deletedCount": 2
 					},
 					"meta": {
-						"correlationId": "oLBq2eY30xdLIiN_heup0",
-						"timestamp": 1791099725950
+						"correlationId": "LA1WKf7GiRt0kOyxy8nDz",
+						"timestamp": 1791193326063
 					}
 				}
 			}
@@ -6220,7 +6746,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "6da2defd-b5b1-423a-935f-965e936fda52",
+						"id": "21c503df-1714-4d06-a30c-e1268e64c810",
 						"brand": null,
 						"categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
 						"compareAtPrice": null,
@@ -6237,12 +6763,12 @@
 						"weightGrams": null,
 						"version": 0,
 						"deletedAt": null,
-						"createdAt": 1791099725835,
-						"updatedAt": 1791099725835
+						"createdAt": 1791193325943,
+						"updatedAt": 1791193325943
 					},
 					"meta": {
-						"correlationId": "JwGNANoUPUh88rnY3zMg-",
-						"timestamp": 1791099725836
+						"correlationId": "EJ4HWFXJixl0ad__tUFAT",
+						"timestamp": 1791193325945
 					}
 				}
 			}
@@ -6251,7 +6777,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "DELETE",
-				"path": "/api/v1/product/6da2defd-b5b1-423a-935f-965e936fda52",
+				"path": "/api/v1/product/21c503df-1714-4d06-a30c-e1268e64c810",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -6267,8 +6793,8 @@
 						"success": true
 					},
 					"meta": {
-						"correlationId": "pG8CL712pLMNiQkH8DcLS",
-						"timestamp": 1791099725883
+						"correlationId": "z_nyleqWdLcJ2ahgjW48I",
+						"timestamp": 1791193325993
 					}
 				}
 			}
@@ -6306,12 +6832,12 @@
 						"weightGrams": 845,
 						"version": 0,
 						"deletedAt": null,
-						"createdAt": 1790581273012,
-						"updatedAt": 1791099673011
+						"createdAt": 1790674750687,
+						"updatedAt": 1791193150687
 					},
 					"meta": {
-						"correlationId": "Az69bLDXzZIMaSRfXZR6r",
-						"timestamp": 1791099725818
+						"correlationId": "bybxq_E87wkwiYWB37UtW",
+						"timestamp": 1791193325926
 					}
 				}
 			}
@@ -6353,8 +6879,8 @@
 							"weightGrams": 845,
 							"version": 0,
 							"deletedAt": null,
-							"createdAt": 1790581273012,
-							"updatedAt": 1791099673011
+							"createdAt": 1790674750687,
+							"updatedAt": 1791193150687
 						},
 						{
 							"id": "b0367802-0712-49ec-9c0f-3e25cbd83702",
@@ -6374,8 +6900,8 @@
 							"weightGrams": 820,
 							"version": 2,
 							"deletedAt": null,
-							"createdAt": 1790494873012,
-							"updatedAt": 1791099673011
+							"createdAt": 1790588350687,
+							"updatedAt": 1791193150687
 						}
 					],
 					"meta": {
@@ -6383,11 +6909,11 @@
 						"total": 71,
 						"page": 1,
 						"totalPages": 36,
-						"nextCursor": "eyJjcmVhdGVkQXQiOjE3OTA0OTQ4NzMwMTIsImlkIjoiYjAzNjc4MDItMDcxMi00OWVjLTljMGYtM2UyNWNiZDgzNzAyIn0",
+						"nextCursor": "eyJjcmVhdGVkQXQiOjE3OTA1ODgzNTA2ODcsImlkIjoiYjAzNjc4MDItMDcxMi00OWVjLTljMGYtM2UyNWNiZDgzNzAyIn0",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "t6ZvVeueoKvubH1qAht_1",
-						"timestamp": 1791099725804
+						"correlationId": "aS9mFGvNABo8vJ286Ny0L",
+						"timestamp": 1791193325910
 					}
 				}
 			}
@@ -6396,7 +6922,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/product/6da2defd-b5b1-423a-935f-965e936fda52/restore",
+				"path": "/api/v1/product/21c503df-1714-4d06-a30c-e1268e64c810/restore",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -6409,7 +6935,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "6da2defd-b5b1-423a-935f-965e936fda52",
+						"id": "21c503df-1714-4d06-a30c-e1268e64c810",
 						"brand": null,
 						"categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
 						"compareAtPrice": null,
@@ -6426,12 +6952,12 @@
 						"weightGrams": null,
 						"version": 1,
 						"deletedAt": null,
-						"createdAt": 1791099725835,
-						"updatedAt": 1791099725899
+						"createdAt": 1791193325943,
+						"updatedAt": 1791193326012
 					},
 					"meta": {
-						"correlationId": "6T3z45YqFLlcePdRGrl6s",
-						"timestamp": 1791099725902
+						"correlationId": "6pIGEwn4cjGuUHBHcDUEU",
+						"timestamp": 1791193326015
 					}
 				}
 			}
@@ -6440,7 +6966,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/product/6da2defd-b5b1-423a-935f-965e936fda52",
+				"path": "/api/v1/product/21c503df-1714-4d06-a30c-e1268e64c810",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -6457,7 +6983,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "6da2defd-b5b1-423a-935f-965e936fda52",
+						"id": "21c503df-1714-4d06-a30c-e1268e64c810",
 						"brand": null,
 						"categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
 						"compareAtPrice": null,
@@ -6474,12 +7000,12 @@
 						"weightGrams": null,
 						"version": 1,
 						"deletedAt": null,
-						"createdAt": 1791099725835,
-						"updatedAt": 1791099725859
+						"createdAt": 1791193325943,
+						"updatedAt": 1791193325968
 					},
 					"meta": {
-						"correlationId": "EBGa5Z6wO94y5tPKmqNSx",
-						"timestamp": 1791099725862
+						"correlationId": "7YaoahHttFqXnT_GypQUJ",
+						"timestamp": 1791193325971
 					}
 				}
 			}
@@ -6500,17 +7026,17 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+						"id": "9194a7c0-e721-4833-95cc-eca2f319f542",
 						"email": "superadmin@example.com",
 						"fullName": "Super Admin",
 						"avatar": null,
 						"version": 0,
-						"createdAt": 1791099608504,
-						"updatedAt": 1791099608504
+						"createdAt": 1790015951336,
+						"updatedAt": 1791193088846
 					},
 					"meta": {
-						"correlationId": "JefNAQ01u1c9_xBZFS9Fn",
-						"timestamp": 1791099697078
+						"correlationId": "uISsjp3LfeM6Rf9pTP6RB",
+						"timestamp": 1791193302177
 					}
 				}
 			}
@@ -6536,17 +7062,17 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+						"id": "9194a7c0-e721-4833-95cc-eca2f319f542",
 						"email": "superadmin@example.com",
 						"fullName": "Super Admin",
 						"avatar": null,
 						"version": 1,
-						"createdAt": 1791099608504,
-						"updatedAt": 1791099697096
+						"createdAt": 1790015951336,
+						"updatedAt": 1791193302197
 					},
 					"meta": {
-						"correlationId": "g_yjMUTTr_8tKjfgkHurf",
-						"timestamp": 1791099697105
+						"correlationId": "n_zIt2nSmKDo0EA5NqydA",
+						"timestamp": 1791193302206
 					}
 				}
 			}
@@ -6561,7 +7087,7 @@
 					"X-Terminal-Id": "KL-REGISTER-01"
 				},
 				"body": {
-					"idempotencyKey": "f3475462-208c-424c-8e2b-7f2e8ea10288",
+					"idempotencyKey": "f815f2d6-2049-4703-94ac-b79e5b21cf1c",
 					"billTotalMinor": 2500,
 					"currency": "MYR",
 					"codes": [
@@ -6577,14 +7103,14 @@
 				"body": {
 					"success": true,
 					"data": {
-						"saleId": "76ed304c-9d90-471c-96e9-52d7081aaa25",
+						"saleId": "388bfe2d-4b41-4904-9468-85e8bfdbd808",
 						"billTotalMinor": 2500,
 						"currency": "MYR",
-						"paidAt": 1791099739415,
-						"idempotencyKey": "f3475462-208c-424c-8e2b-7f2e8ea10288",
+						"paidAt": 1791193339862,
+						"idempotencyKey": "f815f2d6-2049-4703-94ac-b79e5b21cf1c",
 						"redemptions": [
 							{
-								"redemptionId": "3c5f2558-9602-42d9-ad25-28839a80d14a",
+								"redemptionId": "6b43c61d-2092-43bc-beed-cd4a75de8122",
 								"claimId": "74199f6f-877f-4d87-8a02-78941a4ae1af",
 								"rewardId": "c1214e16-bf0f-4410-8871-8d1a9970f75e",
 								"rewardTitle": "Free coffee — Grand Opening"
@@ -6592,8 +7118,8 @@
 						]
 					},
 					"meta": {
-						"correlationId": "jRr19LPSAdQmxudjvj-Yq",
-						"timestamp": 1791099739441
+						"correlationId": "85STI5qqDySqXtFTtYj7P",
+						"timestamp": 1791193339893
 					}
 				}
 			}
@@ -6620,14 +7146,14 @@
 						"claimId": "74199f6f-877f-4d87-8a02-78941a4ae1af",
 						"rewardTitle": "Free coffee — Grand Opening",
 						"rewardType": "FREE_ITEM",
-						"claimExpiresAt": 1791704473699,
+						"claimExpiresAt": 1791797951336,
 						"valid": true,
 						"invalidReason": null,
 						"minSpendMinor": 0
 					},
 					"meta": {
-						"correlationId": "g_qzX_jvsKqEtZ8sy3inK",
-						"timestamp": 1791099739383
+						"correlationId": "UrL8x1g3o-dPmgn-TFhRj",
+						"timestamp": 1791193339830
 					}
 				}
 			}
@@ -6656,8 +7182,8 @@
 						"ok": true
 					},
 					"meta": {
-						"correlationId": "BR62HUxYnFBspq_EgvK0u",
-						"timestamp": 1791099738840
+						"correlationId": "KvslkQVDQU7La6x_yZUm1",
+						"timestamp": 1791193339265
 					}
 				}
 			}
@@ -6685,8 +7211,8 @@
 						"phoneVerified": false
 					},
 					"meta": {
-						"correlationId": "yPe0GcYypjJPJfUJsCEHh",
-						"timestamp": 1791099738801
+						"correlationId": "FNAghOvIOjlBOGU5QovoW",
+						"timestamp": 1791193339221
 					}
 				}
 			}
@@ -6712,11 +7238,11 @@
 					"data": {
 						"items": [
 							{
-								"createdAt": 1791013273741,
-								"updatedAt": 1791099673742,
+								"createdAt": 1791106751377,
+								"updatedAt": 1791193151379,
 								"isDeleted": false,
 								"deletedAt": null,
-								"id": "d795660f-90af-4307-a9ef-efefe8e96349",
+								"id": "de9c47f5-3bf2-445b-b48e-e72971f53e2a",
 								"type": "claim_confirmed",
 								"title": "Claim confirmed",
 								"body": "Your free coffee reward is ready. Show QR at Brew & Bean KL.",
@@ -6731,8 +7257,8 @@
 						"hasNext": false
 					},
 					"meta": {
-						"correlationId": "7qGNM2ojcN9AdbcjteMN5",
-						"timestamp": 1791099739861
+						"correlationId": "AalD--4X1IuvCzWW4atAx",
+						"timestamp": 1791193340543
 					}
 				}
 			}
@@ -6760,8 +7286,200 @@
 						"ok": true
 					},
 					"meta": {
-						"correlationId": "_tGADyzB2z26gEZJ6b8Mi",
-						"timestamp": 1791099739884
+						"correlationId": "uI2i9v-3uNDmXDOLXnrzY",
+						"timestamp": 1791193340565
+					}
+				}
+			}
+		},
+		"RewardsAdminAnalyticsController_exportReport": {
+			"as": "superadmin@example.com (admin panel)",
+			"note": "The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.",
+			"request": {
+				"method": "GET",
+				"path": "/api/v1/admin/analytics/export",
+				"query": {
+					"from": "1788601329603",
+					"to": "1791193329603",
+					"format": "csv"
+				},
+				"headers": {
+					"X-Client-Type": "admin",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "text/csv",
+				"body": "<2313 bytes of text/csv>"
+			}
+		},
+		"RewardsAdminAnalyticsController_getDashboard": {
+			"as": "superadmin@example.com (admin panel)",
+			"request": {
+				"method": "GET",
+				"path": "/api/v1/admin/analytics/dashboard",
+				"query": {
+					"interval": "week"
+				},
+				"headers": {
+					"X-Client-Type": "admin",
+					"Cookie": "<session cookies from POST /api/v1/auth/login>"
+				}
+			},
+			"response": {
+				"status": 200,
+				"contentType": "application/json",
+				"body": {
+					"success": true,
+					"data": {
+						"range": {
+							"from": 1788601329586,
+							"to": 1791193329586,
+							"timeZone": "UTC",
+							"interval": "week",
+							"previousFrom": 1786009329586,
+							"previousTo": 1788601329586
+						},
+						"currency": "MYR",
+						"totals": {
+							"salesMinor": {
+								"value": 1349641,
+								"previous": 1368484,
+								"change": -18843,
+								"changePercent": -1.4
+							},
+							"bills": {
+								"value": 226,
+								"previous": 213,
+								"change": 13,
+								"changePercent": 6.1
+							},
+							"averageBillMinor": {
+								"value": 5972,
+								"previous": 6425,
+								"change": -453,
+								"changePercent": -7.1
+							},
+							"claims": {
+								"value": 260,
+								"previous": 260,
+								"change": 0,
+								"changePercent": 0
+							},
+							"redemptions": {
+								"value": 226,
+								"previous": 213,
+								"change": 13,
+								"changePercent": 6.1
+							},
+							"conversionRate": {
+								"value": 86.9,
+								"previous": 81.9,
+								"change": 5,
+								"changePercent": 6.1
+							},
+							"activeMerchants": {
+								"value": 2,
+								"previous": 2,
+								"change": 0,
+								"changePercent": 0
+							},
+							"customers": {
+								"value": 33,
+								"previous": 30,
+								"change": 3,
+								"changePercent": 10
+							},
+							"newCustomers": {
+								"value": 3,
+								"previous": 4,
+								"change": -1,
+								"changePercent": -25
+							},
+							"returningCustomers": {
+								"value": 30,
+								"previous": 26,
+								"change": 4,
+								"changePercent": 15.4
+							}
+						},
+						"series": [
+							{
+								"start": 1788601329586,
+								"end": 1788739200000,
+								"isPartial": true,
+								"salesMinor": 82725,
+								"bills": 12,
+								"averageBillMinor": 6894,
+								"claims": 11,
+								"redemptions": 12,
+								"newCustomers": 0,
+								"returningCustomers": 9
+							},
+							{
+								"start": 1788739200000,
+								"end": 1789344000000,
+								"isPartial": false,
+								"salesMinor": 314959,
+								"bills": 51,
+								"averageBillMinor": 6176,
+								"claims": 69,
+								"redemptions": 51,
+								"newCustomers": 0,
+								"returningCustomers": 24
+							}
+						],
+						"topMerchants": [
+							{
+								"organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+								"name": "Jonker Street Kitchen",
+								"category": "restaurant",
+								"salesMinor": 1056936,
+								"bills": 125,
+								"averageBillMinor": 8455
+							},
+							{
+								"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+								"name": "Brew & Bean KL",
+								"category": "cafe",
+								"salesMinor": 292705,
+								"bills": 101,
+								"averageBillMinor": 2898
+							}
+						],
+						"byCategory": [
+							{
+								"category": "restaurant",
+								"salesMinor": 1056936,
+								"bills": 125,
+								"merchants": 1
+							},
+							{
+								"category": "cafe",
+								"salesMinor": 292705,
+								"bills": 101,
+								"merchants": 1
+							}
+						],
+						"byCity": [
+							{
+								"city": "MELAKA",
+								"salesMinor": 1056936,
+								"bills": 125,
+								"merchants": 1
+							},
+							{
+								"city": "KUALA_LUMPUR",
+								"salesMinor": 292705,
+								"bills": 101,
+								"merchants": 1
+							}
+						]
+					},
+					"meta": {
+						"correlationId": "3mqd--ujXE5RmdYhXzK9c",
+						"timestamp": 1791193329601
 					}
 				}
 			}
@@ -6783,62 +7501,62 @@
 					"success": true,
 					"data": {
 						"period": {
-							"from": 1786320000000,
-							"to": 1791099729490,
+							"from": 1786924800000,
+							"to": 1791193329535,
 							"timeZone": "UTC"
 						},
 						"sales": {
 							"currency": "MYR",
 							"totalSalesMinor": {
-								"value": 10120,
-								"changePercent": 100
+								"value": 2264953,
+								"changePercent": 11
 							},
 							"bills": {
-								"value": 4,
-								"changePercent": 100
+								"value": 366,
+								"changePercent": 12
 							},
 							"averageBillMinor": {
-								"value": 2530,
-								"changePercent": 100
+								"value": 6188,
+								"changePercent": -1
 							},
 							"overTime": [
 								{
-									"date": 1786320000000,
-									"salesMinor": 0,
-									"bills": 0
+									"date": 1786924800000,
+									"salesMinor": 336839,
+									"bills": 52
 								},
 								{
-									"date": 1786924800000,
-									"salesMinor": 0,
-									"bills": 0
+									"date": 1787529600000,
+									"salesMinor": 310258,
+									"bills": 48
 								}
 							],
-							"firstBillAt": 1790754073703
+							"firstBillAt": 1759625940000
 						},
 						"activeMerchants": {
 							"value": 2,
-							"changePercent": 100
+							"changePercent": 0
 						},
 						"topMerchants": [
-							{
-								"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-								"name": "Brew & Bean KL",
-								"category": "cafe",
-								"salesMinor": 5300,
-								"bills": 3
-							},
 							{
 								"organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
 								"name": "Jonker Street Kitchen",
 								"category": "restaurant",
-								"salesMinor": 4820,
-								"bills": 1
+								"salesMinor": 1800933,
+								"bills": 204
+							},
+							{
+								"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+								"name": "Brew & Bean KL",
+								"category": "cafe",
+								"salesMinor": 464020,
+								"bills": 162
 							}
 						]
 					},
 					"meta": {
-						"correlationId": "liP_q7oHCzvs4D70aWIYY",
-						"timestamp": 1791099729524
+						"correlationId": "BnsbcMHYg-vqXzFbgfC1W",
+						"timestamp": 1791193329572
 					}
 				}
 			}
@@ -6865,13 +7583,13 @@
 				"body": {
 					"success": true,
 					"data": {
-						"inviteId": "54d94be8-ab6d-4436-94ee-c0fa94a08649",
-						"inviteToken": "066b3904d0bb6322ac154d99002a5c22d543a79f1dc0518a8f315715b59c3f4d",
-						"expiresAt": 1791704529565
+						"inviteId": "53605450-6cb2-4571-a094-c3f6a7dc3a3a",
+						"inviteToken": "b941ccc7b3fba7399ccda90880d0dcfec8eb3f651fa32d9fd1740a2c99d7e96e",
+						"expiresAt": 1791798129682
 					},
 					"meta": {
-						"correlationId": "FL7HCm7Wl_PhlJpgol1gk",
-						"timestamp": 1791099729604
+						"correlationId": "CN6KJumUVqCnaZe0iAK03",
+						"timestamp": 1791193329718
 					}
 				}
 			}
@@ -6915,8 +7633,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "LD62XkaUHyyxy--W6Trls",
-						"timestamp": 1791099729540
+						"correlationId": "YNkPjQgEs9UFpRUbVoG4M",
+						"timestamp": 1791193329660
 					}
 				}
 			}
@@ -6967,7 +7685,7 @@
 							"rejectionReason": null,
 							"isPrimary": false,
 							"requestedByUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
-							"createdAt": 1791099673573
+							"createdAt": 1791193151223
 						}
 					],
 					"meta": {
@@ -6978,8 +7696,8 @@
 						"nextCursor": null,
 						"hasNext": false,
 						"hasPrevious": false,
-						"correlationId": "uh1zdiNJxn_1ujIfcy5wf",
-						"timestamp": 1791099729475
+						"correlationId": "fCXQ3mxWgdqmjRNIqcnTf",
+						"timestamp": 1791193329522
 					}
 				}
 			}
@@ -7007,7 +7725,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "23f73bc6-337d-496d-9259-4c72346c71c9",
+						"id": "6cbdc605-bea0-4d7b-bb73-209d1812064b",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"name": "Brew & Bean KL — Mid Valley",
 						"code": "brew-bean-kl-mid-valley",
@@ -7017,12 +7735,12 @@
 						"status": "ACTIVE",
 						"rejectionReason": null,
 						"isPrimary": false,
-						"createdAt": 1791099734967,
-						"updatedAt": 1791099734967
+						"createdAt": 1791193335079,
+						"updatedAt": 1791193335079
 					},
 					"meta": {
-						"correlationId": "OFMvUQi6OZ2ZaVMyejh6i",
-						"timestamp": 1791099734973
+						"correlationId": "FJgsR-WDQykRjAqvIRfIv",
+						"timestamp": 1791193335085
 					}
 				}
 			}
@@ -7046,11 +7764,11 @@
 						"documentId": "d1597799-9b05-49c8-95e1-864ddfa666a8",
 						"scanStatus": "SCANNING",
 						"downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-						"expiresAt": 1791100029455
+						"expiresAt": 1791193629504
 					},
 					"meta": {
-						"correlationId": "y-2cL1pDlXUQj_SoEGNjx",
-						"timestamp": 1791099729456
+						"correlationId": "E359Qq2C9jfCBlfH5QHKo",
+						"timestamp": 1791193329504
 					}
 				}
 			}
@@ -7071,8 +7789,8 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099673551,
-						"updatedAt": 1791099673551,
+						"createdAt": 1791193151201,
+						"updatedAt": 1791193151201,
 						"isDeleted": false,
 						"deletedAt": null,
 						"id": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
@@ -7097,7 +7815,7 @@
 								"mimeType": "application/pdf",
 								"sizeBytes": 69,
 								"scanStatus": "SCANNING",
-								"uploadedAt": 1789371674185
+								"uploadedAt": 1789465153348
 							}
 						],
 						"locations": [
@@ -7112,8 +7830,8 @@
 								"status": "ACTIVE",
 								"rejectionReason": null,
 								"isPrimary": true,
-								"createdAt": 1791099673558,
-								"updatedAt": 1791099673558
+								"createdAt": 1791193151207,
+								"updatedAt": 1791193151207
 							}
 						],
 						"ownerEmail": "brew.owner@kl-rewards.demo",
@@ -7121,8 +7839,8 @@
 						"memberCount": 3
 					},
 					"meta": {
-						"correlationId": "gaOvM8CkVxHRsdtFYHNbD",
-						"timestamp": 1791099729431
+						"correlationId": "QCw1OtZvM2KEsSoFi11zX",
+						"timestamp": 1791193329484
 					}
 				}
 			}
@@ -7147,8 +7865,8 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099673569,
-							"updatedAt": 1791099673569,
+							"createdAt": 1791193151217,
+							"updatedAt": 1791193151217,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
@@ -7164,8 +7882,8 @@
 							"ownerUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022"
 						},
 						{
-							"createdAt": 1791099673551,
-							"updatedAt": 1791099673551,
+							"createdAt": 1791193151201,
+							"updatedAt": 1791193151201,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
@@ -7186,11 +7904,11 @@
 						"total": 3,
 						"page": 1,
 						"totalPages": 2,
-						"nextCursor": "eyJhdCI6MTc5MTA5OTY3MzU1MSwiaWQiOiJhMTc4YTRkMS02OTE1LTRlYjMtYmY4NC02ZmIxNGUxZmViNmMifQ",
+						"nextCursor": "eyJhdCI6MTc5MTE5MzE1MTIwMSwiaWQiOiJhMTc4YTRkMS02OTE1LTRlYjMtYmY4NC02ZmIxNGUxZmViNmMifQ",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "gIE_mNzbM1eGiplBMnlpT",
-						"timestamp": 1791099729393
+						"correlationId": "Os1cKGZemDi-lUOESlYLp",
+						"timestamp": 1791193329449
 					}
 				}
 			}
@@ -7199,7 +7917,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/locations/cb9ed179-5400-4fbb-aad8-bf8cb50e9d5c/review",
+				"path": "/api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/locations/7856bea1-dcf7-4112-81e4-5e91034ef1ed/review",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7216,7 +7934,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "cb9ed179-5400-4fbb-aad8-bf8cb50e9d5c",
+						"id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"name": "Brew & Bean KL — Bangsar",
 						"code": "brew-bean-kl-bangsar",
@@ -7226,12 +7944,12 @@
 						"status": "REJECTED",
 						"rejectionReason": "Add the unit number to the address",
 						"isPrimary": false,
-						"createdAt": 1791099734813,
-						"updatedAt": 1791099734847
+						"createdAt": 1791193334906,
+						"updatedAt": 1791193334941
 					},
 					"meta": {
-						"correlationId": "H6BESAom1mALZqWAMEnno",
-						"timestamp": 1791099734855
+						"correlationId": "CeszNt0Uv5HK6bJDJEKdD",
+						"timestamp": 1791193334947
 					}
 				}
 			}
@@ -7240,7 +7958,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/admin/merchants/8b632542-54cd-4211-b47a-cfb4f29e3b2a/kyb",
+				"path": "/api/v1/admin/merchants/62cc685a-d679-4b51-8a57-2715674d1906/kyb",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7262,8 +7980,8 @@
 						"ok": true
 					},
 					"meta": {
-						"correlationId": "KkvbBrEk8mES511E7nnNk",
-						"timestamp": 1791099734721
+						"correlationId": "XOSr6hrwgmZzaGnwb5bEQ",
+						"timestamp": 1791193334854
 					}
 				}
 			}
@@ -7272,7 +7990,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/admin/rewards/7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9/approve",
+				"path": "/api/v1/admin/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb/approve",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7286,11 +8004,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099737763,
-						"updatedAt": 1791099737763,
+						"createdAt": 1791193338159,
+						"updatedAt": 1791193338159,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+						"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"organizationName": "Brew & Bean KL",
 						"organizationLogoUrl": null,
@@ -7305,15 +8023,15 @@
 						"quantityTotal": 250,
 						"quantityRemaining": 250,
 						"quantityReserved": 0,
-						"startDate": 1791099737709,
-						"expiryDate": 1796283737709,
+						"startDate": 1791193338104,
+						"expiryDate": 1796377338104,
 						"status": "PUBLISHED",
 						"claimCount": 0,
 						"redemptionCount": 0,
 						"referralsEnabled": true,
 						"referralPoolTotal": 50,
 						"referralPoolRemaining": 50,
-						"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+						"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 						"rules": {
 							"minSpendMyr": 15,
 							"maxUsePerUser": 1
@@ -7322,8 +8040,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "-ZrVlzXQoITs4Jt7Y5d1A",
-						"timestamp": 1791099737961
+						"correlationId": "H6Ifq3e5LvOL8k-5eLs-e",
+						"timestamp": 1791193338364
 					}
 				}
 			}
@@ -7345,8 +8063,8 @@
 					"success": true,
 					"data": [
 						{
-							"createdAt": 1791099673678,
-							"updatedAt": 1791099673678,
+							"createdAt": 1791193151316,
+							"updatedAt": 1791193151316,
 							"isDeleted": false,
 							"deletedAt": null,
 							"id": "c25c75db-a700-499b-9649-dc965aa21264",
@@ -7365,7 +8083,7 @@
 							"quantityRemaining": 80,
 							"quantityReserved": 0,
 							"startDate": null,
-							"expiryDate": 1793691673676,
+							"expiryDate": 1793785151314,
 							"status": "PENDING_REVIEW",
 							"claimCount": 0,
 							"redemptionCount": 0,
@@ -7378,11 +8096,11 @@
 							"locationIds": []
 						},
 						{
-							"createdAt": 1791099737763,
-							"updatedAt": 1791099737763,
+							"createdAt": 1791193338159,
+							"updatedAt": 1791193338159,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "7e1cfc68-9fcb-4b12-b6c5-35e9c017dcd9",
+							"id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
 							"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 							"organizationName": "Brew & Bean KL",
 							"organizationLogoUrl": null,
@@ -7397,15 +8115,15 @@
 							"quantityTotal": 250,
 							"quantityRemaining": 250,
 							"quantityReserved": 0,
-							"startDate": 1791099737709,
-							"expiryDate": 1796283737709,
+							"startDate": 1791193338104,
+							"expiryDate": 1796377338104,
 							"status": "PENDING_REVIEW",
 							"claimCount": 0,
 							"redemptionCount": 0,
 							"referralsEnabled": true,
 							"referralPoolTotal": 50,
 							"referralPoolRemaining": 50,
-							"referrerRewardId": "a1c61717-ce92-409d-ad5f-04e8c28906c5",
+							"referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
 							"rules": {
 								"minSpendMyr": 15,
 								"maxUsePerUser": 1
@@ -7422,8 +8140,8 @@
 						"nextCursor": null,
 						"hasNext": false,
 						"hasPrevious": false,
-						"correlationId": "HL21PfUsT01fDUPRlQYdq",
-						"timestamp": 1791099737931
+						"correlationId": "v2mZ9zu_QVum0Bbx2JgAY",
+						"timestamp": 1791193338326
 					}
 				}
 			}
@@ -7432,14 +8150,14 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/admin/rewards/0d4a7173-a829-49fb-8f3a-4f93ae6f9e7e/reject",
+				"path": "/api/v1/admin/rewards/c3a98194-259f-4357-a73e-8cc933eb4e87/reject",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"rewardId": "0d4a7173-a829-49fb-8f3a-4f93ae6f9e7e",
+					"rewardId": "c3a98194-259f-4357-a73e-8cc933eb4e87",
 					"reason": "Add the participating stores and the daily limit to the terms"
 				}
 			},
@@ -7449,11 +8167,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099738005,
-						"updatedAt": 1791099738005,
+						"createdAt": 1791193338412,
+						"updatedAt": 1791193338412,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "0d4a7173-a829-49fb-8f3a-4f93ae6f9e7e",
+						"id": "c3a98194-259f-4357-a73e-8cc933eb4e87",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"organizationName": "Brew & Bean KL",
 						"organizationLogoUrl": null,
@@ -7468,8 +8186,8 @@
 						"quantityTotal": 200,
 						"quantityRemaining": 200,
 						"quantityReserved": 0,
-						"startDate": 1791099737709,
-						"expiryDate": 1796283737709,
+						"startDate": 1791193338104,
+						"expiryDate": 1796377338104,
 						"status": "DRAFT",
 						"claimCount": 0,
 						"redemptionCount": 0,
@@ -7485,8 +8203,8 @@
 						"locationIds": []
 					},
 					"meta": {
-						"correlationId": "d_06Fn7Tbau3ZFnkUKEDs",
-						"timestamp": 1791099738056
+						"correlationId": "OPtzoK-2qtKz7Z8UNAy1j",
+						"timestamp": 1791193338457
 					}
 				}
 			}
@@ -7502,8 +8220,8 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "d44d6636-ae71-4b9a-9bc1-a25ade30ea02",
-					"roleId": "2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e"
+					"userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
+					"roleId": "4c089d88-90b8-4b32-970a-fc37eee785ec"
 				}
 			},
 			"response": {
@@ -7515,8 +8233,8 @@
 						"message": "Role assigned to user successfully"
 					},
 					"meta": {
-						"correlationId": "TJiVh9_UgEOb5iu13cWJw",
-						"timestamp": 1791099724443
+						"correlationId": "Y3pqxIFNk7Ug4XUWn-nem",
+						"timestamp": 1791193324560
 					}
 				}
 			}
@@ -7534,7 +8252,7 @@
 				"body": {
 					"name": "Store Auditor",
 					"description": "Reads geography and audit data for store reviews",
-					"parentId": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363"
+					"parentId": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
 				}
 			},
 			"response": {
@@ -7543,20 +8261,20 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724247,
-						"updatedAt": 1791099724247,
+						"createdAt": 1791193324349,
+						"updatedAt": 1791193324349,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e",
+						"id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
 						"name": "Store Auditor",
 						"description": "Reads geography and audit data for store reviews",
 						"isActive": true,
 						"isSystem": false,
-						"parentId": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363"
+						"parentId": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
 					},
 					"meta": {
-						"correlationId": "0NxpCC3FCby379SI-HhLo",
-						"timestamp": 1791099724260
+						"correlationId": "MILfVfWwlOqyNoZgZB41w",
+						"timestamp": 1791193324362
 					}
 				}
 			}
@@ -7565,7 +8283,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "GET",
-				"path": "/api/v1/admin/roles/3cdd637e-5cd8-416d-9df1-9475e825e66f",
+				"path": "/api/v1/admin/roles/ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
 				"headers": {
 					"X-Client-Type": "admin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
@@ -7577,11 +8295,11 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099607264,
-						"updatedAt": 1791099607264,
+						"createdAt": 1791193087695,
+						"updatedAt": 1791193087695,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "3cdd637e-5cd8-416d-9df1-9475e825e66f",
+						"id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
 						"name": "Manager",
 						"description": "Admin panel — read/update users and reports (no RBAC or system settings)",
 						"isActive": true,
@@ -7589,8 +8307,8 @@
 						"parentId": null
 					},
 					"meta": {
-						"correlationId": "eWf29IvOTmN3JqhxjNnsI",
-						"timestamp": 1791099724231
+						"correlationId": "tCFI7LMubyhOg22WSyIIr",
+						"timestamp": 1791193324333
 					}
 				}
 			}
@@ -7613,14 +8331,14 @@
 					"data": {
 						"items": [
 							{
-								"id": "250afdc1-c97c-44a0-bf9e-3accfe2d0c2f",
+								"id": "6b129548-41be-4834-b36a-a15cf3b7e855",
 								"name": "Admin",
 								"description": "Admin panel — manage users, settings, and platform data",
 								"isActive": true,
 								"parentId": null
 							},
 							{
-								"id": "3cdd637e-5cd8-416d-9df1-9475e825e66f",
+								"id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
 								"name": "Manager",
 								"description": "Admin panel — read/update users and reports (no RBAC or system settings)",
 								"isActive": true,
@@ -7630,8 +8348,8 @@
 						"total": 8
 					},
 					"meta": {
-						"correlationId": "mkxWZZAkNxf83MA0iGBS_",
-						"timestamp": 1791099724206
+						"correlationId": "id2-7M4N2wJXVGrslt3XW",
+						"timestamp": 1791193324303
 					}
 				}
 			}
@@ -7647,10 +8365,10 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "d44d6636-ae71-4b9a-9bc1-a25ade30ea02",
+					"userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
 					"roleIds": [
-						"1c3e77b3-65d8-4c21-9f3d-a821afaa9363",
-						"2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e"
+						"4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
+						"4c089d88-90b8-4b32-970a-fc37eee785ec"
 					]
 				}
 			},
@@ -7678,8 +8396,8 @@
 						"permissionsLost": []
 					},
 					"meta": {
-						"correlationId": "jiCgs0nn7S4Iz4ZcZx7n8",
-						"timestamp": 1791099724408
+						"correlationId": "Xloz3yYDCLoO5GCLN8xht",
+						"timestamp": 1791193324527
 					}
 				}
 			}
@@ -7688,7 +8406,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "DELETE",
-				"path": "/api/v1/admin/roles/2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e",
+				"path": "/api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7704,8 +8422,8 @@
 						"message": "Role deleted successfully"
 					},
 					"meta": {
-						"correlationId": "4FnQtXiT2b7dHL88xNib9",
-						"timestamp": 1791099724529
+						"correlationId": "SvIrd9BgQ2S7klSKjVVyK",
+						"timestamp": 1791193324648
 					}
 				}
 			}
@@ -7721,8 +8439,8 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "d44d6636-ae71-4b9a-9bc1-a25ade30ea02",
-					"roleId": "2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e"
+					"userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
+					"roleId": "4c089d88-90b8-4b32-970a-fc37eee785ec"
 				}
 			},
 			"response": {
@@ -7734,8 +8452,8 @@
 						"message": "Role removed from user successfully"
 					},
 					"meta": {
-						"correlationId": "gySUBnBIyf2qwe5FzK5yL",
-						"timestamp": 1791099724473
+						"correlationId": "84auXSzPaaEoZdbl-xpC6",
+						"timestamp": 1791193324586
 					}
 				}
 			}
@@ -7744,7 +8462,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/admin/roles/2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e/restore",
+				"path": "/api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/restore",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7757,20 +8475,20 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724247,
-						"updatedAt": 1791099724551,
+						"createdAt": 1791193324349,
+						"updatedAt": 1791193324669,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e",
+						"id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
 						"name": "Store Auditor",
 						"description": "Reads geography, audit and analytics data for store reviews",
 						"isActive": true,
 						"isSystem": false,
-						"parentId": "3cdd637e-5cd8-416d-9df1-9475e825e66f"
+						"parentId": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca"
 					},
 					"meta": {
-						"correlationId": "EMZOPyUDMwNb65TmJcGnD",
-						"timestamp": 1791099724554
+						"correlationId": "y9ohp1XVe5u96A0jQFSKE",
+						"timestamp": 1791193324673
 					}
 				}
 			}
@@ -7779,14 +8497,14 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/admin/roles/2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e/parent",
+				"path": "/api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/parent",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"parentId": "3cdd637e-5cd8-416d-9df1-9475e825e66f"
+					"parentId": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca"
 				}
 			},
 			"response": {
@@ -7795,20 +8513,20 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724247,
-						"updatedAt": 1791099724315,
+						"createdAt": 1791193324349,
+						"updatedAt": 1791193324424,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e",
+						"id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
 						"name": "Store Auditor",
 						"description": "Reads geography, audit and analytics data for store reviews",
 						"isActive": true,
 						"isSystem": false,
-						"parentId": "3cdd637e-5cd8-416d-9df1-9475e825e66f"
+						"parentId": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca"
 					},
 					"meta": {
-						"correlationId": "emz991ccbYeu0O6Df7AkT",
-						"timestamp": 1791099724317
+						"correlationId": "bWKsbEdUz9Hf1CY4nmQQO",
+						"timestamp": 1791193324427
 					}
 				}
 			}
@@ -7817,7 +8535,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/admin/roles/2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e/permissions",
+				"path": "/api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/permissions",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7825,7 +8543,7 @@
 				},
 				"body": {
 					"permissionIds": [
-						"b319ed81-3bf4-4993-b25a-9b7aad46d9bf"
+						"365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8"
 					]
 				}
 			},
@@ -7838,8 +8556,8 @@
 						"message": "Role permissions synced successfully"
 					},
 					"meta": {
-						"correlationId": "7qUm4_3_xHpvAsMD11eP0",
-						"timestamp": 1791099724350
+						"correlationId": "gOyyWOElMLy98DpOdmQCs",
+						"timestamp": 1791193324461
 					}
 				}
 			}
@@ -7855,9 +8573,9 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "d44d6636-ae71-4b9a-9bc1-a25ade30ea02",
+					"userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
 					"roleIds": [
-						"1c3e77b3-65d8-4c21-9f3d-a821afaa9363"
+						"4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
 					]
 				}
 			},
@@ -7870,8 +8588,8 @@
 						"message": "User roles synced successfully"
 					},
 					"meta": {
-						"correlationId": "h5n7gQIROQr2TWk_X-j6g",
-						"timestamp": 1791099724503
+						"correlationId": "XlF3BLyp8EOyfFO06LXPn",
+						"timestamp": 1791193324618
 					}
 				}
 			}
@@ -7880,7 +8598,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/admin/roles/2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e",
+				"path": "/api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -7896,20 +8614,20 @@
 				"body": {
 					"success": true,
 					"data": {
-						"createdAt": 1791099724247,
-						"updatedAt": 1791099724287,
+						"createdAt": 1791193324349,
+						"updatedAt": 1791193324389,
 						"isDeleted": false,
 						"deletedAt": null,
-						"id": "2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e",
+						"id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
 						"name": "Store Auditor",
 						"description": "Reads geography, audit and analytics data for store reviews",
 						"isActive": true,
 						"isSystem": false,
-						"parentId": "1c3e77b3-65d8-4c21-9f3d-a821afaa9363"
+						"parentId": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
 					},
 					"meta": {
-						"correlationId": "a8F6AjQ-7VPCVB_B8Yk7s",
-						"timestamp": 1791099724289
+						"correlationId": "-T66j1FN7u9cy_GHqcLQQ",
+						"timestamp": 1791193324392
 					}
 				}
 			}
@@ -7918,16 +8636,16 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/admin/roles/2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e/validate-assignment",
+				"path": "/api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/validate-assignment",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"userId": "d44d6636-ae71-4b9a-9bc1-a25ade30ea02",
+					"userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
 					"roleIds": [
-						"2b26b403-e2cb-4ae3-bc2a-b22bd4f7550e"
+						"4c089d88-90b8-4b32-970a-fc37eee785ec"
 					]
 				}
 			},
@@ -7941,8 +8659,8 @@
 						"message": "No conflicts detected"
 					},
 					"meta": {
-						"correlationId": "cm9A1l1R6ygYsaNH-I5f4",
-						"timestamp": 1791099724376
+						"correlationId": "_u06krdI3-dl4bSnlJWqJ",
+						"timestamp": 1791193324490
 					}
 				}
 			}
@@ -7973,7 +8691,7 @@
 					"success": true,
 					"data": [
 						{
-							"id": "6974a092-c9a8-438d-bc59-a6b9d620288f",
+							"id": "91ca8b70-1d7f-4c9b-a024-698e1497e12f",
 							"description": null,
 							"isActive": true,
 							"name": "Health & Wellness — Collection 5 Archive",
@@ -7981,13 +8699,13 @@
 							"sortOrder": 0,
 							"version": 0,
 							"deletedAt": null,
-							"createdAt": 1791099725758,
-							"updatedAt": 1791099725758
+							"createdAt": 1791193325864,
+							"updatedAt": 1791193325864
 						}
 					],
 					"meta": {
-						"correlationId": "1C-a-AuMhnhYWpewxqBRr",
-						"timestamp": 1791099725759
+						"correlationId": "_5SUh3d_M3twkSDXUncGr",
+						"timestamp": 1791193325864
 					}
 				}
 			}
@@ -8004,8 +8722,8 @@
 				},
 				"body": {
 					"ids": [
-						"16cf8581-793a-4715-8174-a2b22c60c6bc",
-						"6974a092-c9a8-438d-bc59-a6b9d620288f"
+						"32c5ff73-f150-4e1a-88e3-9f8469954063",
+						"91ca8b70-1d7f-4c9b-a024-698e1497e12f"
 					]
 				}
 			},
@@ -8018,8 +8736,8 @@
 						"deletedCount": 2
 					},
 					"meta": {
-						"correlationId": "x_yVOwB67PnHv1BJOx7Og",
-						"timestamp": 1791099725780
+						"correlationId": "TxVSWh_pOZCzXO4CWWS_h",
+						"timestamp": 1791193325887
 					}
 				}
 			}
@@ -8046,7 +8764,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "16cf8581-793a-4715-8174-a2b22c60c6bc",
+						"id": "32c5ff73-f150-4e1a-88e3-9f8469954063",
 						"description": "Curated pet supplies — collection 5 for the demo storefront.",
 						"isActive": true,
 						"name": "Pet Supplies — Collection 5 Archive",
@@ -8054,12 +8772,12 @@
 						"sortOrder": 0,
 						"version": 0,
 						"deletedAt": null,
-						"createdAt": 1791099725670,
-						"updatedAt": 1791099725670
+						"createdAt": 1791193325767,
+						"updatedAt": 1791193325767
 					},
 					"meta": {
-						"correlationId": "E3MxLAJRmqP13HkUizLJG",
-						"timestamp": 1791099725670
+						"correlationId": "UU6LnJgNNec-iT8O2A2LA",
+						"timestamp": 1791193325768
 					}
 				}
 			}
@@ -8068,7 +8786,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "DELETE",
-				"path": "/api/v1/sample-category/16cf8581-793a-4715-8174-a2b22c60c6bc",
+				"path": "/api/v1/sample-category/32c5ff73-f150-4e1a-88e3-9f8469954063",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -8084,8 +8802,8 @@
 						"success": true
 					},
 					"meta": {
-						"correlationId": "1QoSLPI8X0GSKwwZpjvww",
-						"timestamp": 1791099725714
+						"correlationId": "e8xJwfMqT2Cm5-EY5zOYF",
+						"timestamp": 1791193325817
 					}
 				}
 			}
@@ -8114,12 +8832,12 @@
 						"sortOrder": 70,
 						"version": 0,
 						"deletedAt": null,
-						"createdAt": 1789285272967,
-						"updatedAt": 1791099672967
+						"createdAt": 1789378750638,
+						"updatedAt": 1791193150637
 					},
 					"meta": {
-						"correlationId": "l8SlxJY2153Xy6vOeUcER",
-						"timestamp": 1791099725654
+						"correlationId": "BSJDaD3-3gI9x0K4KoD1Q",
+						"timestamp": 1791193325752
 					}
 				}
 			}
@@ -8152,8 +8870,8 @@
 							"sortOrder": 70,
 							"version": 0,
 							"deletedAt": null,
-							"createdAt": 1789285272967,
-							"updatedAt": 1791099672967
+							"createdAt": 1789378750638,
+							"updatedAt": 1791193150637
 						},
 						{
 							"id": "6a843aeb-0ade-4d25-bc8d-6889c1dcb372",
@@ -8164,8 +8882,8 @@
 							"sortOrder": 69,
 							"version": 0,
 							"deletedAt": null,
-							"createdAt": 1789198872967,
-							"updatedAt": 1791099672967
+							"createdAt": 1789292350638,
+							"updatedAt": 1791193150637
 						}
 					],
 					"meta": {
@@ -8173,11 +8891,11 @@
 						"total": 70,
 						"page": 1,
 						"totalPages": 35,
-						"nextCursor": "eyJjcmVhdGVkQXQiOjE3ODkxOTg4NzI5NjcsImlkIjoiNmE4NDNhZWItMGFkZS00ZDI1LWJjOGQtNjg4OWMxZGNiMzcyIn0",
+						"nextCursor": "eyJjcmVhdGVkQXQiOjE3ODkyOTIzNTA2MzgsImlkIjoiNmE4NDNhZWItMGFkZS00ZDI1LWJjOGQtNjg4OWMxZGNiMzcyIn0",
 						"hasNext": true,
 						"hasPrevious": false,
-						"correlationId": "gTq_cTj_2R3NLr8Dyynw_",
-						"timestamp": 1791099725638
+						"correlationId": "-E-OcJMH-X2yrVyK-rL3M",
+						"timestamp": 1791193325738
 					}
 				}
 			}
@@ -8186,7 +8904,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/sample-category/16cf8581-793a-4715-8174-a2b22c60c6bc/restore",
+				"path": "/api/v1/sample-category/32c5ff73-f150-4e1a-88e3-9f8469954063/restore",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -8199,7 +8917,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "16cf8581-793a-4715-8174-a2b22c60c6bc",
+						"id": "32c5ff73-f150-4e1a-88e3-9f8469954063",
 						"description": "Curated pet supplies — collection 5 for the demo storefront.",
 						"isActive": false,
 						"name": "Pet Supplies — Collection 5 Archive",
@@ -8207,12 +8925,12 @@
 						"sortOrder": 0,
 						"version": 1,
 						"deletedAt": null,
-						"createdAt": 1791099725670,
-						"updatedAt": 1791099725734
+						"createdAt": 1791193325767,
+						"updatedAt": 1791193325840
 					},
 					"meta": {
-						"correlationId": "Dxr3E4y2QPRnMA2E0QvYI",
-						"timestamp": 1791099725737
+						"correlationId": "rrdHaxFNozn085FH8FXNq",
+						"timestamp": 1791193325845
 					}
 				}
 			}
@@ -8221,7 +8939,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "PATCH",
-				"path": "/api/v1/sample-category/16cf8581-793a-4715-8174-a2b22c60c6bc",
+				"path": "/api/v1/sample-category/32c5ff73-f150-4e1a-88e3-9f8469954063",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -8238,7 +8956,7 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "16cf8581-793a-4715-8174-a2b22c60c6bc",
+						"id": "32c5ff73-f150-4e1a-88e3-9f8469954063",
 						"description": "Curated pet supplies — collection 5 for the demo storefront.",
 						"isActive": false,
 						"name": "Pet Supplies — Collection 5 Archive",
@@ -8246,12 +8964,12 @@
 						"sortOrder": 0,
 						"version": 1,
 						"deletedAt": null,
-						"createdAt": 1791099725670,
-						"updatedAt": 1791099725690
+						"createdAt": 1791193325767,
+						"updatedAt": 1791193325789
 					},
 					"meta": {
-						"correlationId": "KxPSLk1Qc5biH6OpqLNae",
-						"timestamp": 1791099725693
+						"correlationId": "77Y_1xxlpn9xOV1e-0k0u",
+						"timestamp": 1791193325793
 					}
 				}
 			}
@@ -8273,23 +8991,23 @@
 					"success": true,
 					"data": [
 						{
-							"id": "7aca9ae0-1a57-4492-895a-f99625cffa44",
+							"id": "dd03c4ab-25b6-4c2c-9039-6768e254f6de",
 							"deviceInfo": "node",
 							"ipAddress": "203.0.113.10",
-							"expiresAt": 1793691696128,
-							"createdAt": 1791099696130
+							"expiresAt": 1793785301195,
+							"createdAt": 1791193301197
 						},
 						{
-							"id": "0e775225-0536-4f2a-8506-b39c7d962d52",
+							"id": "30f63e1f-2087-40ee-a1da-7fe8ec2a71c1",
 							"deviceInfo": "node",
 							"ipAddress": "203.0.113.10",
-							"expiresAt": 1793691695426,
-							"createdAt": 1791099695429
+							"expiresAt": 1793785300475,
+							"createdAt": 1791193300479
 						}
 					],
 					"meta": {
-						"correlationId": "_Yr_SzHkbs0-skOgPdYxb",
-						"timestamp": 1791099696479
+						"correlationId": "M9UFQnlbWteKvj9k87L7-",
+						"timestamp": 1791193301558
 					}
 				}
 			}
@@ -8314,8 +9032,8 @@
 						"message": "Logged out successfully"
 					},
 					"meta": {
-						"correlationId": "ht0tVWFoqaaaNZBOQesQf",
-						"timestamp": 1791099723167
+						"correlationId": "LUDBsAGh8ZsiXyJKpJK9-",
+						"timestamp": 1791193323179
 					}
 				}
 			}
@@ -8340,8 +9058,8 @@
 						"message": "Logged out from all devices"
 					},
 					"meta": {
-						"correlationId": "Phcm7DCIWGRnOisI2hONi",
-						"timestamp": 1791099723875
+						"correlationId": "J5-gqnS9QVqa4W7cvNlAm",
+						"timestamp": 1791193323915
 					}
 				}
 			}
@@ -8366,8 +9084,8 @@
 						"message": "Tokens refreshed successfully"
 					},
 					"meta": {
-						"correlationId": "tM4ZT47W5YgkXWXDhcIAV",
-						"timestamp": 1791099697048
+						"correlationId": "6-xhauabu_Q9nykHDHPJZ",
+						"timestamp": 1791193302145
 					}
 				}
 			}
@@ -8388,15 +9106,15 @@
 				"body": {
 					"success": true,
 					"data": {
-						"userId": "1e06b347-4142-4ea4-ab85-7fbca1d1f1c0",
+						"userId": "9194a7c0-e721-4833-95cc-eca2f319f542",
 						"email": "superadmin@example.com",
 						"fullName": "Super Admin",
-						"expiresAt": 1791108696000,
-						"checkedAt": 1791099696473
+						"expiresAt": 1791202301000,
+						"checkedAt": 1791193301552
 					},
 					"meta": {
-						"correlationId": "i2efYGQeIV_7DF2A50EKb",
-						"timestamp": 1791099696473
+						"correlationId": "L_h3CNonnxxi8nl6YkumK",
+						"timestamp": 1791193301552
 					}
 				}
 			}
@@ -8405,7 +9123,7 @@
 			"as": "brew.owner@kl-rewards.demo (merchant portal)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/support-access/86f5acfd-a6d1-412d-b13c-09da95857ebe/approve",
+				"path": "/api/v1/support-access/0a67729a-f5e2-44a6-a36b-46e581696eaf/approve",
 				"headers": {
 					"X-Client-Type": "merchant",
 					"X-Mutation-Intent": "same-origin",
@@ -8421,8 +9139,8 @@
 						"message": "Support access approved"
 					},
 					"meta": {
-						"correlationId": "pX4K8p876RC_7D7ynYkJO",
-						"timestamp": 1791099739952
+						"correlationId": "MPYYR7SxO2q02113VZ_37",
+						"timestamp": 1791193340624
 					}
 				}
 			}
@@ -8451,16 +9169,16 @@
 				"body": {
 					"success": true,
 					"data": {
-						"id": "86f5acfd-a6d1-412d-b13c-09da95857ebe",
+						"id": "0a67729a-f5e2-44a6-a36b-46e581696eaf",
 						"organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 						"mode": "READ_ONLY",
 						"status": "PENDING_TENANT_APPROVAL",
-						"expiresAt": 1791103339903,
-						"createdAt": 1791099739905
+						"expiresAt": 1791196940582,
+						"createdAt": 1791193340584
 					},
 					"meta": {
-						"correlationId": "0cp37xqOoj_F9Ghi745-h",
-						"timestamp": 1791099739911
+						"correlationId": "ViTlMHCNP_oT0vWP6wqjj",
+						"timestamp": 1791193340588
 					}
 				}
 			}
@@ -8469,7 +9187,7 @@
 			"as": "superadmin@example.com (admin panel)",
 			"request": {
 				"method": "POST",
-				"path": "/api/v1/support-access/86f5acfd-a6d1-412d-b13c-09da95857ebe/revoke",
+				"path": "/api/v1/support-access/0a67729a-f5e2-44a6-a36b-46e581696eaf/revoke",
 				"headers": {
 					"X-Client-Type": "admin",
 					"X-Mutation-Intent": "same-origin",
@@ -8485,8 +9203,8 @@
 						"message": "Support access revoked"
 					},
 					"meta": {
-						"correlationId": "IvzsgLUJ7nilGcY0--UU8",
-						"timestamp": 1791099739979
+						"correlationId": "NiLb3EL1sDhs8uL_CRzvm",
+						"timestamp": 1791193340652
 					}
 				}
 			}
@@ -8514,8 +9232,8 @@
 						"message": "Two-factor authentication enabled successfully"
 					},
 					"meta": {
-						"correlationId": "ntti8Pe1nGalV1rPaUOw9",
-						"timestamp": 1791099703402
+						"correlationId": "KBvuSo4hBIWtya6MgmEU5",
+						"timestamp": 1791193308669
 					}
 				}
 			}
@@ -8539,8 +9257,8 @@
 						"remaining": 8
 					},
 					"meta": {
-						"correlationId": "TUGdmgGuEBm3tRfCPBriJ",
-						"timestamp": 1791099700727
+						"correlationId": "47QinlzyRJlV_qKbT4lvl",
+						"timestamp": 1791193305928
 					}
 				}
 			}
@@ -8557,7 +9275,7 @@
 				},
 				"body": {
 					"tempToken": "<redacted: one-time secret>",
-					"backupCode": "43JYH5JPNXH44GV2"
+					"backupCode": "5SW7U77684HH2XU6"
 				}
 			},
 			"response": {
@@ -8570,11 +9288,11 @@
 						"enrollmentReason": "email_verification",
 						"message": "Verify your email address to continue.",
 						"user": {
-							"createdAt": 1791099608526,
-							"updatedAt": 1791099701375,
+							"createdAt": 1762667100000,
+							"updatedAt": 1791193306593,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "afe1a273-0c88-4409-8925-f7f0d11ea2f9",
+							"id": "97da204d-674e-4aec-bb78-729c4f07b9e4",
 							"email": "david.lee@example.com",
 							"fullName": "David Lee",
 							"isActive": true,
@@ -8585,7 +9303,7 @@
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "3cdd637e-5cd8-416d-9df1-9475e825e66f",
+									"id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
 									"name": "Manager",
 									"description": "Admin panel — read/update users and reports (no RBAC or system settings)"
 								},
@@ -8598,8 +9316,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "Q5pxeCOytSS1zCsS67uYr",
-						"timestamp": 1791099701696
+						"correlationId": "h8qUmaA1WcotVEeOxYJq2",
+						"timestamp": 1791193306926
 					}
 				}
 			}
@@ -8629,11 +9347,11 @@
 						"enrollmentReason": "email_verification",
 						"message": "Verify your email address to continue.",
 						"user": {
-							"createdAt": 1791099608526,
-							"updatedAt": 1791099700339,
+							"createdAt": 1762667100000,
+							"updatedAt": 1791193305536,
 							"isDeleted": false,
 							"deletedAt": null,
-							"id": "afe1a273-0c88-4409-8925-f7f0d11ea2f9",
+							"id": "97da204d-674e-4aec-bb78-729c4f07b9e4",
 							"email": "david.lee@example.com",
 							"fullName": "David Lee",
 							"isActive": true,
@@ -8644,7 +9362,7 @@
 							"tokenVersion": 0,
 							"roles": [
 								{
-									"id": "3cdd637e-5cd8-416d-9df1-9475e825e66f",
+									"id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
 									"name": "Manager",
 									"description": "Admin panel — read/update users and reports (no RBAC or system settings)"
 								},
@@ -8657,8 +9375,8 @@
 						}
 					},
 					"meta": {
-						"correlationId": "k2Y8jMlhrK1WmsKPppwyI",
-						"timestamp": 1791099700694
+						"correlationId": "ym0tl3v0d_Tuc-__mH5W5",
+						"timestamp": 1791193305881
 					}
 				}
 			}
@@ -8675,7 +9393,7 @@
 				},
 				"body": {
 					"password": "Henry@123",
-					"backupCode": "UT2ZJA5Q77TD9975"
+					"backupCode": "ZYCGVR3V5K9RSHN4"
 				}
 			},
 			"response": {
@@ -8692,8 +9410,8 @@
 						]
 					},
 					"meta": {
-						"correlationId": "66Z56x_ZeyoeeGNgmX7Kk",
-						"timestamp": 1791099722279
+						"correlationId": "kX6FbqOkl5Qbi2uUYKJUR",
+						"timestamp": 1791193322290
 					}
 				}
 			}
@@ -8724,8 +9442,8 @@
 						]
 					},
 					"meta": {
-						"correlationId": "uEY63yxgPGN-aKzzyojSv",
-						"timestamp": 1791099703325
+						"correlationId": "bHs5DhaOQoyi7sSoDCcc5",
+						"timestamp": 1791193308579
 					}
 				}
 			}
@@ -8741,7 +9459,7 @@
 					"Cookie": "<session cookies from POST /api/v1/auth/login>"
 				},
 				"body": {
-					"backupCode": "5K79S5RCBWJD4CFV"
+					"backupCode": "PFXPWESS8DF7RNN9"
 				}
 			},
 			"response": {
@@ -8753,8 +9471,8 @@
 						"valid": true
 					},
 					"meta": {
-						"correlationId": "6tTWaPmMKic0_JxZ92rD9",
-						"timestamp": 1791099720760
+						"correlationId": "neICtDVFtRANyQBEnSztC",
+						"timestamp": 1791193320746
 					}
 				}
 			}

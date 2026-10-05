@@ -9,6 +9,8 @@ import {
 	RewardClaimCreatedResponseSchema,
 	RewardClaimResponseSchema,
 	UserRewardsAnalyticsResponseSchema,
+	CustomerAnalyticsDashboardSchema,
+	type CustomerAnalyticsDashboard,
 	RewardClaimQrResponseSchema,
 } from "@workspace/shared";
 import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
@@ -19,6 +21,8 @@ import type { AccessTokenPayload } from "../../auth/services/token.service";
 
 import { ClaimService } from "../services/claim.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
+import { AnalyticsDashboardService } from "../analytics/analytics-dashboard.service";
+import { ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION } from "../analytics/analytics-api-docs";
 
 @ApiTags("Claims")
 @ApiBearerAuth()
@@ -27,6 +31,7 @@ export class ConsumerClaimsController {
 	public constructor(
 		private readonly claimService: ClaimService,
 		private readonly rewardsAnalyticsService: RewardsAnalyticsService,
+		private readonly dashboards: AnalyticsDashboardService,
 	) {}
 
 	@Post("otp")
@@ -69,6 +74,20 @@ export class ConsumerClaimsController {
 		@ZodQuery(apiContract.claims.analytics.input) query: z.output<typeof apiContract.claims.analytics.input>,
 	): ReturnType<RewardsAnalyticsService["getUserAnalytics"]> {
 		return this.rewardsAnalyticsService.getUserAnalytics(user.sub, query);
+	}
+
+	/** Self only: the user id comes from the access token, never from the request. */
+	@Get("analytics/dashboard")
+	@ApiOperation({
+		summary: "My analytics dashboard: custom range + interval, compared totals, series, spending by category / merchant over time",
+		description: ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION,
+	})
+	@ZodResponse(CustomerAnalyticsDashboardSchema, { description: "Customer analytics dashboard" })
+	public getAnalyticsDashboard(
+		@GetUser() user: AccessTokenPayload,
+		@ZodQuery(apiContract.claims.analyticsDashboard.input) query: z.output<typeof apiContract.claims.analyticsDashboard.input>,
+	): Promise<CustomerAnalyticsDashboard> {
+		return this.dashboards.getCustomerDashboard(user.sub, query);
 	}
 
 	@Get(":claimId/qr")

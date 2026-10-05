@@ -192,6 +192,27 @@ describe("renderApiReference", () => {
 		expect(files.get("README.md")).toContain("[`/api/v1/admin/roles/{id}`](./access-control.md#patch-apiv1adminrolesid)");
 	});
 
+	it("lists every media type of a file download's success response", () => {
+		const document = OpenApiDocumentSchema.parse({
+			paths: {
+				"/api/v1/redemptions/export": {
+					get: {
+						operationId: "RedemptionsController_checkout",
+						tags: ["Redemptions"],
+						responses: {
+							"200": {
+								description: "The report file",
+								content: { "text/csv": { schema: { type: "string", format: "binary" } }, "application/pdf": { schema: { type: "string", format: "binary" } } },
+							},
+						},
+					},
+				},
+			},
+		});
+		const pos = renderApiReference({ document, access: ACCESS, samples: SAMPLES }).get("pos.md") ?? "";
+		expect(pos).toContain("**Response 200 OK** — The report file (`text/csv` · `application/pdf`)");
+	});
+
 	it("refuses an operation whose tag has no page", () => {
 		const document = OpenApiDocumentSchema.parse({ paths: { "/x": { get: { operationId: "X_get", tags: ["Unmapped"], responses: {} } } } });
 		expect(() => renderApiReference({ document, access: ACCESS, samples: SAMPLES })).toThrow(/No API reference page/);

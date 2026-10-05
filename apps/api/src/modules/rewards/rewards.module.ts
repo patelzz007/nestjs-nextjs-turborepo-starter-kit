@@ -47,6 +47,7 @@ import { RewardsAnalyticsService } from "./services/rewards-analytics.service";
 import { RewardsCoreServicesModule } from "./rewards-core-services.module";
 import { RewardsPersistenceModule } from "./rewards-persistence.module";
 import { RewardsQueueModule } from "./rewards-queue.module";
+import { RewardsAnalyticsModule } from "./analytics/rewards-analytics.module";
 import { FilesModule } from "../files/files.module";
 import { StorageModule } from "../storage/storage.module";
 import { KybFileVerdictListener } from "./listeners/kyb-file-verdict.listener";
@@ -65,6 +66,7 @@ const rewardsQueueImports = redisUrl !== undefined ? [RewardsQueueModule] : [];
 		OutboxModule,
 		RewardsPersistenceModule,
 		RewardsCoreServicesModule,
+		RewardsAnalyticsModule,
 		StorageModule,
 		FilesModule,
 		...rewardsQueueImports,

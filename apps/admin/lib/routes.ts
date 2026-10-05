@@ -39,10 +39,8 @@ export interface AuthRoutes {
 }
 
 export interface AnalyticsRoutes {
-	/** Section prefix — redirects to `sales`. */
+	/** The platform dashboard; `?range=` / `?from=&to=` / `?interval=` pick the view (ANALYTICS_URL_STATE). The old `/analytics/sales` redirects here. */
 	readonly index: string;
-	/** Platform sales; `?weeks=` picks the period (lib/url-state/analytics.ts builds those links). */
-	readonly sales: string;
 }
 
 export interface UsersRoutes {
@@ -145,9 +143,6 @@ export const LOGIN_REDIRECT_PARAM = "redirect";
 /** Query parameter carrying the single-use token of an emailed auth link (`/auth/verify-email?token=`). */
 export const AUTH_LINK_TOKEN_PARAM = "token";
 
-/** Query parameter of the sales analytics period preset (`/analytics/sales?weeks=8`). */
-export const SALES_PERIOD_WEEKS_PARAM = "weeks";
-
 // In-page selection params (lib/url-state declares how each is parsed).
 /** The merchant selected in the KYB verification queue (`/merchants/verification?organizationId=`). */
 export const MERCHANT_VERIFICATION_ORGANIZATION_PARAM = "organizationId";
@@ -159,7 +154,6 @@ export const REVIEW_REQUEST_PARAM = "requestId";
 export const GEOGRAPHY_TAB_PARAM = "tab";
 
 const ANALYTICS = "/analytics";
-const ANALYTICS_SALES = `${ANALYTICS}/sales`;
 const USERS = "/users";
 const MERCHANTS = "/merchants";
 const MERCHANT_VERIFICATION = `${MERCHANTS}/verification`;
@@ -180,7 +174,6 @@ export const ROUTES: AdminRoutes = {
 	},
 	analytics: {
 		index: ANALYTICS,
-		sales: ANALYTICS_SALES,
 	},
 	users: {
 		list: USERS,

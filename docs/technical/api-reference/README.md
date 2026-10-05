@@ -1,9 +1,9 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (211 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (216 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791072000000
+lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 211 operations, 205 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 216 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 > [!NOTE]
 > This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
@@ -23,9 +23,9 @@ Every endpoint of `apps/api` — 211 operations, 205 with a sample captured from
 | --- | --- | --- |
 | [Auth, sessions and account security](./auth-and-sessions.md) | 37 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions, policies and audit](./access-control.md) | 31 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
-| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 13 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
-| [Merchant organizations (portal API)](./merchant-organizations.md) | 47 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
-| [Customer rewards and claims](./customer-rewards.md) | 11 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
+| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 15 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
+| [Merchant organizations (portal API)](./merchant-organizations.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
+| [Customer rewards and claims](./customer-rewards.md) | 12 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
 | [Point of sale (machine-to-machine)](./pos.md) | 3 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill. Authenticated with a merchant API key. |
 | [Files and object storage](./files.md) | 9 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
@@ -105,6 +105,8 @@ Every endpoint of `apps/api` — 211 operations, 205 with a sample captured from
 | POST | [`/api/v1/policies/drafts`](./access-control.md#post-apiv1policiesdrafts) |  |
 | POST | [`/api/v1/policies/drafts/{draftId}/simulate`](./access-control.md#post-apiv1policiesdraftsdraftidsimulate) |  |
 | POST | [`/api/v1/policies/publish`](./access-control.md#post-apiv1policiespublish) |  |
+| GET | [`/api/v1/admin/analytics/dashboard`](./platform-admin.md#get-apiv1adminanalyticsdashboard) | Platform analytics dashboard: custom range + interval, compared totals, series, top merchants, categories, cities, new vs returning customers |
+| GET | [`/api/v1/admin/analytics/export`](./platform-admin.md#get-apiv1adminanalyticsexport) | Download the platform analytics report (csv \| xlsx \| pdf) for a date range |
 | GET | [`/api/v1/admin/analytics/sales`](./platform-admin.md#get-apiv1adminanalyticssales) | Platform-wide sales: paid POS bills, compared with the previous period, plus top merchants |
 | POST | [`/api/v1/admin/invites`](./platform-admin.md#post-apiv1admininvites) | Create merchant invite |
 | POST | [`/api/v1/admin/invites/preview-email`](./platform-admin.md#post-apiv1admininvitespreview-email) | Preview merchant invite email with form data (does not send) |
@@ -122,6 +124,8 @@ Every endpoint of `apps/api` — 211 operations, 205 with a sample captured from
 | POST | [`/api/v1/orgs/{orgSlug}/access-requests`](./merchant-organizations.md#post-apiv1orgsorgslugaccess-requests) |  |
 | POST | [`/api/v1/orgs/{orgSlug}/access-requests/{requestId}/review`](./merchant-organizations.md#post-apiv1orgsorgslugaccess-requestsrequestidreview) |  |
 | GET | [`/api/v1/orgs/{orgSlug}/analytics`](./merchant-organizations.md#get-apiv1orgsorgsluganalytics) | Organization reward performance analytics |
+| GET | [`/api/v1/orgs/{orgSlug}/analytics/dashboard`](./merchant-organizations.md#get-apiv1orgsorgsluganalyticsdashboard) | Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns |
+| GET | [`/api/v1/orgs/{orgSlug}/analytics/export`](./merchant-organizations.md#get-apiv1orgsorgsluganalyticsexport) | Download the merchant analytics report (csv \| xlsx \| pdf) for a date range |
 | GET | [`/api/v1/orgs/{orgSlug}/api-keys`](./merchant-organizations.md#get-apiv1orgsorgslugapi-keys) | List organization API keys |
 | POST | [`/api/v1/orgs/{orgSlug}/api-keys`](./merchant-organizations.md#post-apiv1orgsorgslugapi-keys) | Create a POS API key |
 | POST | [`/api/v1/orgs/{orgSlug}/api-keys/{keyId}/revoke`](./merchant-organizations.md#post-apiv1orgsorgslugapi-keyskeyidrevoke) | Revoke a POS API key (no body required) |
@@ -169,6 +173,7 @@ Every endpoint of `apps/api` — 211 operations, 205 with a sample captured from
 | POST | [`/api/v1/claims`](./customer-rewards.md#post-apiv1claims) | Claim a reward after OTP verification |
 | GET | [`/api/v1/claims/{claimId}/qr`](./customer-rewards.md#get-apiv1claimsclaimidqr) | Refresh QR payload for an active claim |
 | GET | [`/api/v1/claims/analytics`](./customer-rewards.md#get-apiv1claimsanalytics) | Reward activity analytics for the signed-in user |
+| GET | [`/api/v1/claims/analytics/dashboard`](./customer-rewards.md#get-apiv1claimsanalyticsdashboard) | My analytics dashboard: custom range + interval, compared totals, series, spending by category / merchant over time |
 | POST | [`/api/v1/claims/otp`](./customer-rewards.md#post-apiv1claimsotp) | Request claim OTP (emailed to your account — no SMS in dev) |
 | POST | [`/api/v1/legal/accept`](./customer-rewards.md#post-apiv1legalaccept) | Accept rewards terms and privacy policy |
 | GET | [`/api/v1/legal/status`](./customer-rewards.md#get-apiv1legalstatus) | Get rewards legal acceptance and verified phone status |

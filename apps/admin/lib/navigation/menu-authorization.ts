@@ -13,8 +13,8 @@ import { ROUTES } from "@/lib/routes";
  * slug — they are listed in the route rules as `superAdminOnly` instead.
  */
 export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization> = new Map<string, SidebarAuthorization>([
-	// GET /admin/analytics/sales (READ ANALYTICS)
-	[ROUTES.analytics.sales, { permissions: [PERMISSION.ANALYTICS.READ] }],
+	// GET /admin/analytics/dashboard + /admin/analytics/export (READ ANALYTICS)
+	[ROUTES.analytics.index, { permissions: [PERMISSION.ANALYTICS.READ] }],
 	// GET /admin/roles (LIST ROLE) · GET /admin/permissions (LIST PERMISSION) · POST /admin/permissions/check (READ PERMISSION)
 	[ROUTES.settings.access, { permissions: [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ], mode: "any" }],
 	// GET /notifications/email-preview (READ EMAIL)
