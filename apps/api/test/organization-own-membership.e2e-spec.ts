@@ -121,12 +121,21 @@ describe("Own membership display name (e2e)", () => {
 
 	it("serializes concurrent edits: each audit row records the value it actually replaced", async () => {
 		const before = await displayNameAudits();
+		const initial = await pool.query<{ displayName: string | null }>(`SELECT display_name AS "displayName" FROM public.organization_memberships WHERE id = $1`, [
+			CASHIER_MEMBERSHIP_ID,
+		]);
+		const initialDisplayName: string | null = initial.rows.at(0)?.displayName ?? null;
 
 		const responses = await Promise.all([patchOwn(cashier, { displayName: "Mira (morning shift)" }), patchOwn(cashier, { displayName: "Mira (evening shift)" })]);
 
 		expect(responses.map((response) => response.statusCode)).toEqual([200, 200]);
-		const [first, second] = (await displayNameAudits()).slice(before.length);
-		expect(first?.metadata.previousDisplayName).toBeNull();
+		// Both writes can land in the same millisecond, so created_at cannot order them; the audit
+		// metadata can: the write that ran first replaced the initial value, the other replaced it.
+		const edits = (await displayNameAudits()).slice(before.length);
+		expect(edits).toHaveLength(2);
+		const first = edits.find((edit) => edit.metadata.previousDisplayName === initialDisplayName);
+		const second = edits.find((edit) => edit !== first);
+		expect(first, "one edit must have replaced the initial value").toBeDefined();
 		expect(second?.metadata.previousDisplayName).toBe(first?.metadata.displayName);
 		const stored = await pool.query<{ displayName: string | null }>(`SELECT display_name AS "displayName" FROM public.organization_memberships WHERE id = $1`, [
 			CASHIER_MEMBERSHIP_ID,
