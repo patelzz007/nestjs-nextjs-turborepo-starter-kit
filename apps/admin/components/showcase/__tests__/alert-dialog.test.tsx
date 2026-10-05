@@ -10,7 +10,6 @@ import {
 	AlertDialogDescription,
 	AlertDialogTitle,
 	AlertDialogTrigger,
-	confirmDialogLabels,
 	type AlertDialogLabels,
 } from "@workspace/ui/components/overlay/alert-dialog";
 import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
@@ -185,9 +184,5 @@ describe("AlertDialog", () => {
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: /Working/ })).toBeTruthy();
 		});
-	});
-
-	it("confirmDialogLabels returns the provided label bundle (feature 20)", () => {
-		expect(confirmDialogLabels(SHOWCASE_ALERT_DIALOG_LABELS)).toEqual(SHOWCASE_ALERT_DIALOG_LABELS);
 	});
 });

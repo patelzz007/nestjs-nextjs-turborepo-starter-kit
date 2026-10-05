@@ -1,19 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Reward } from "@prisma/client";
-
 import type { PaginatedServiceResult, RewardListQuery, RewardResponse } from "@workspace/shared";
 
-import { BaseService } from "../../../platform/persistence/base.service";
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
-import type { EmptyMutationInput } from "../../../platform/persistence/types";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { RewardRepository } from "../repositories/reward.repository";
 
 @Injectable()
-export class ConsumerRewardsService extends BaseService<Reward, EmptyMutationInput, EmptyMutationInput, RewardListQuery, RewardRepository> {
-	public constructor(repository: RewardRepository) {
-		super(repository);
-	}
+export class ConsumerRewardsService {
+	public constructor(private readonly repository: RewardRepository) {}
 
 	public async listMarketplace(query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
 		const result = await this.repository.listMarketplace(query);

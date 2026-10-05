@@ -16,6 +16,7 @@ import { seedOrganizationReviewStates } from "../organization-review-states";
 import { seedTenantPolicyRevision } from "../tenant-policy-revision";
 import { seedHttpAuditTrail } from "../http-audit";
 import { seedOwnProfileHistory } from "../own-profile";
+import { seedAnalyticsIngest } from "../analytics-ingest";
 import { seedPlatformRecords } from "../platform-records";
 import { seedEmailDelivery } from "../email-delivery";
 import { seedInboxDeadLetters } from "../inbox-dead-letters";
@@ -226,6 +227,9 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog(
 		`✅ ${String(platformRecords.logs)} logs, ${String(platformRecords.outboxEvents)} outbox events, ${String(platformRecords.slugHistory)} slug history, ${String(platformRecords.softDeletedCatalogRows)} catalog + ${String(platformRecords.urlRecords)} URL records`,
 	);
+
+	seedLog("Replaying the published outbox events through the analytics consumer (analytics_events, inbox_processed_events)...");
+	await seedAnalyticsIngest();
 
 	seedLog("Seeding account security (impersonation, MFA recovery, 2FA enrollment, lockout, password history, support access)...");
 	await seedAccountSecurity(DEVELOPMENT_ACCOUNT_SECURITY_CAST, seedLog);

@@ -83,7 +83,7 @@ export class EmailService {
 
 	/** Links straight to the PENDING requests — the ones awaiting this reviewer. */
 	public async sendMfaRecoveryAdminNotification(email: string, title: string, message: string): Promise<void> {
-		const queueUrl: string = new URL(APP_LINKS.admin.mfaRecoveryPendingQueue, this.config.adminAppUrl).toString();
+		const queueUrl: string = new URL(APP_LINKS.admin.mfaRecoveryPendingQueue, this.config.clientApps.adminUrl).toString();
 		const template = new AdminAlertEmailTemplate({ to: email, title, message, action: { label: "Review recovery requests", url: queueUrl } });
 		await this.sender.send(template);
 	}

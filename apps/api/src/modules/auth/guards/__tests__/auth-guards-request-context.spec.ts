@@ -78,7 +78,7 @@ describe("AuthGuard → request context", () => {
 	const guard = createAuthGuard();
 
 	it("binds the authenticated user as the principal", async () => {
-		const token: string = await jwt.signAsync(accessToken({ sub: "user-42", id: "user-42" }), { secret: config.jwtAccessSecret });
+		const token: string = await jwt.signAsync(accessToken({ sub: "user-42", id: "user-42" }), { secret: config.auth.jwtAccessSecret });
 		const context = createHttpContext(requestWith({ authorization: `Bearer ${token}` }));
 
 		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "user-42", impersonatorId: undefined });
@@ -88,7 +88,7 @@ describe("AuthGuard → request context", () => {
 		const token: string = await jwt.signAsync(
 			accessToken({ sub: "target-1", id: "target-1", isImpersonating: true, originalUserId: "admin-1", impersonationSessionId: "session-1" }),
 			{
-				secret: config.jwtAccessSecret,
+				secret: config.auth.jwtAccessSecret,
 			},
 		);
 		const context = createHttpContext(requestWith({ authorization: `Bearer ${token}` }));
@@ -97,14 +97,14 @@ describe("AuthGuard → request context", () => {
 	});
 
 	it("falls back to the session cookie when the bearer header is blank", async () => {
-		const token: string = await jwt.signAsync(accessToken({ sub: "user-7", id: "user-7" }), { secret: config.jwtAccessSecret });
+		const token: string = await jwt.signAsync(accessToken({ sub: "user-7", id: "user-7" }), { secret: config.auth.jwtAccessSecret });
 		const context = createHttpContext(requestWith({ authorization: "Bearer " }, { accessToken: token }));
 
 		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "user-7", impersonatorId: undefined });
 	});
 
 	it("reads the admin cookie when X-Client-Type is admin (what Swagger UI sends by default)", async () => {
-		const token: string = await jwt.signAsync(accessToken({ sub: "admin-3", id: "admin-3" }), { secret: config.jwtAccessSecret });
+		const token: string = await jwt.signAsync(accessToken({ sub: "admin-3", id: "admin-3" }), { secret: config.auth.jwtAccessSecret });
 		const context = createHttpContext(requestWith({ "x-client-type": "admin" }, { adminAccessToken: token }));
 
 		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "admin-3", impersonatorId: undefined });
@@ -126,7 +126,7 @@ describe("AuthGuard → revocation state", () => {
 	const guard = createAuthGuard();
 
 	async function bearerContext(overrides: Parameters<typeof accessToken>[0]): Promise<ReturnType<typeof createHttpContext>> {
-		const token: string = await jwt.signAsync(accessToken(overrides), { secret: config.jwtAccessSecret });
+		const token: string = await jwt.signAsync(accessToken(overrides), { secret: config.auth.jwtAccessSecret });
 		return createHttpContext(requestWith({ authorization: `Bearer ${token}` }));
 	}
 
@@ -182,7 +182,7 @@ describe("RefreshTokenGuard → request context", () => {
 	it("binds the refresh-token subject as the principal", async () => {
 		const token: string = await jwt.signAsync(
 			{ sub: "user-9", email: "u@example.com", jti: "jti-1", tokenType: "refresh" },
-			{ secret: config.jwtRefreshSecret, expiresIn: REFRESH_TOKEN_TTL_SECONDS },
+			{ secret: config.auth.jwtRefreshSecret, expiresIn: REFRESH_TOKEN_TTL_SECONDS },
 		);
 		const context = createHttpContext(requestWith({}, { refreshToken: token }));
 

@@ -30,7 +30,7 @@ import { z, type ZodType } from "zod";
 import { createTransientFailureBreaker } from "../auth/transient-failure-breaker";
 import { API_URL_PREFIX } from "./config";
 import { ApiResponseContractError, parseResponseText, type ResponseContractSource } from "./response-contract";
-import { resolveRequest, eachRouterEntry, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTree, type RouterTreeValue } from "./endpoints";
+import { assertCompleteRouterTree, mapRouterTree, resolveRequest, type MutationDef, type QueryDef, type RouterTree, type RouterTreeValue } from "./endpoints";
 
 // ── Auth callbacks & client config ───────────────────────────────────────────
 
@@ -191,16 +191,6 @@ export type ApiErrorPayload = Error | string;
 
 // ── Transport envelope ───────────────────────────────────────────────────────
 
-type QueryParams = Record<string, string | number | boolean | undefined>;
-
-export interface BaseRequestOptions {
-	query?: QueryParams | undefined;
-	headers?: Record<string, string> | undefined;
-	signal?: AbortSignal | undefined;
-}
-
-export type RequestOptions<Method extends HttpMethod, Body = undefined> = Method extends "GET" ? BaseRequestOptions : BaseRequestOptions & { body: Body };
-
 export interface ApiSuccess<T> {
 	ok: true;
 	status: number;
@@ -249,45 +239,6 @@ export type CallerTreeBranch<V> =
 
 /** Recursively maps a router tree to tRPC-style caller leaves. */
 export type CallerTree<R extends object> = { [K in keyof R]: CallerTreeBranch<R[K]> };
-
-/** Erased build-time shape — widened so each router key can accept any branch variant. */
-type CallerTreeBuild<R extends RouterTree> = {
-	[K in keyof R]?: CallerTreeBranch<RouterTreeValue>;
-};
-
-function isCompleteCallerTree<R extends RouterTree>(router: R, candidate: CallerTreeBuild<R>): candidate is CallerTree<R> {
-	let complete = true;
-	eachRouterEntry(router, (key) => {
-		if (candidate[key] === undefined) {
-			complete = false;
-		}
-	});
-	return complete;
-}
-
-function mapCallerBranch(value: RouterTreeValue, context: ApiRequestContext): CallerTreeBranch<RouterTreeValue> {
-	if (isRouterSubtree(value)) {
-		return createCaller(value, context);
-	}
-	if (value.kind === "query") {
-		return createQueryCaller(context, value);
-	}
-	return createMutationCaller(context, value);
-}
-
-function buildCallerTree<R extends RouterTree>(router: R, context: ApiRequestContext): CallerTree<R> {
-	const out: CallerTreeBuild<R> = {};
-
-	eachRouterEntry(router, (key, value) => {
-		out[key] = mapCallerBranch(value, context);
-	});
-
-	if (!isCompleteCallerTree(router, out)) {
-		throw new Error("Failed to build caller tree — one or more router entries were not bound.");
-	}
-
-	return out;
-}
 
 function extractErrorMessage(error: Error | string, status: number): string {
 	if (typeof error === "string" && error.length > 0) {
@@ -348,15 +299,10 @@ export async function readErrorPayload(response: Response): Promise<ApiErrorPayl
 	return text;
 }
 
-function buildUrl(baseUrl: string, path: string, query?: QueryParams, version?: ApiVersion): string {
+/** `path` already carries its query string (`resolveRequest` builds it). */
+function buildUrl(baseUrl: string, path: string, version?: ApiVersion): string {
 	const prefix: string = version === undefined ? API_URL_PREFIX : apiVersionPrefix(version);
-	const url = new URL(`${prefix}${path}`, baseUrl);
-	if (query) {
-		Object.entries(query).forEach(([key, value]) => {
-			if (value !== undefined) url.searchParams.set(key, String(value));
-		});
-	}
-	return url.toString();
+	return new URL(`${prefix}${path}`, baseUrl).toString();
 }
 
 function buildHeaders(baseHeaders: Record<string, string> | undefined): Record<string, string> {
@@ -366,21 +312,25 @@ function buildHeaders(baseHeaders: Record<string, string> | undefined): Record<s
 	};
 }
 
+/** One HTTP call of {@link executeHttp}. A mutation carries `body`; a query has no `body` key at all. */
+interface HttpRequest<T> {
+	readonly baseUrl: string;
+	readonly method: HttpMethod;
+	readonly path: string;
+	readonly headers: Record<string, string>;
+	readonly body?: DataValue;
+	readonly signal?: AbortSignal | undefined;
+	readonly responseSchema: ZodType<T>;
+	readonly onUnauthorized?: OnUnauthorized | undefined;
+	readonly onRefresh?: OnRefresh | undefined;
+	readonly version?: ApiVersion | undefined;
+}
+
 /** Low-level HTTP executor — internal; procedure callers are the public entry point. */
-async function executeHttp<T, Body = undefined>(
-	baseUrl: string,
-	method: HttpMethod,
-	path: string,
-	options: (BaseRequestOptions & { body?: Body }) | undefined,
-	responseSchema: ZodType<T>,
-	bodySchema: ZodType<Body> | undefined,
-	onUnauthorized?: OnUnauthorized,
-	onRefresh?: OnRefresh,
-	version?: ApiVersion,
-): Promise<ApiResponse<T>> {
-	const url = buildUrl(baseUrl, path, options?.query, version);
-	const headers = buildHeaders(options?.headers);
-	const signal: AbortSignal | undefined = options?.signal;
+async function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> {
+	const { method, responseSchema, signal, onUnauthorized, onRefresh } = request;
+	const url = buildUrl(request.baseUrl, request.path, request.version);
+	const headers = buildHeaders(request.headers);
 	const init: RequestInit = {
 		method,
 		headers,
@@ -388,13 +338,12 @@ async function executeHttp<T, Body = undefined>(
 		credentials: "include",
 	};
 
-	if (method !== "GET" && options && "body" in options) {
-		if (options.body instanceof FormData) {
-			init.body = options.body;
+	if (method !== "GET" && "body" in request) {
+		if (request.body instanceof FormData) {
+			init.body = request.body;
 		} else {
-			if (bodySchema) bodySchema.parse(options.body);
 			headers["Content-Type"] = "application/json";
-			init.body = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
+			init.body = typeof request.body === "string" ? request.body : JSON.stringify(request.body);
 		}
 	}
 
@@ -480,17 +429,17 @@ export function fetchQuery<Input extends SerializableInput, Resp extends DataVal
 ): Promise<ApiResponse<Resp>> {
 	const parsed: Input = def.inputSchema.parse(input);
 	const url: string = resolveRequest(def.path, parsed).url;
-	return executeHttp<Resp>(
-		context.baseUrl,
-		"GET",
-		url,
-		{ headers: procedureHeaders(context, def, options), signal: options?.signal },
-		def.responseSchema,
-		undefined,
-		context.onUnauthorized,
-		context.onRefresh,
-		def.version,
-	);
+	return executeHttp({
+		baseUrl: context.baseUrl,
+		method: "GET",
+		path: url,
+		headers: procedureHeaders(context, def, options),
+		signal: options?.signal,
+		responseSchema: def.responseSchema,
+		onUnauthorized: context.onUnauthorized,
+		onRefresh: context.onRefresh,
+		version: def.version,
+	});
 }
 
 export async function fetchQueryOrThrow<Input extends SerializableInput, Resp extends DataValue>(
@@ -510,17 +459,17 @@ export function fetchMutation<Input extends SerializableInput, Resp extends Data
 	const parsed: Input = def.inputSchema.parse(input);
 	const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
 	const finalBody: DataValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
-	return executeHttp<Resp, DataValue>(
-		context.baseUrl,
-		def.method,
-		url,
-		{ body: finalBody, headers: procedureHeaders(context, def) },
-		def.responseSchema,
-		undefined,
-		context.onUnauthorized,
-		context.onRefresh,
-		def.version,
-	);
+	return executeHttp({
+		baseUrl: context.baseUrl,
+		method: def.method,
+		path: url,
+		headers: procedureHeaders(context, def),
+		body: finalBody,
+		responseSchema: def.responseSchema,
+		onUnauthorized: context.onUnauthorized,
+		onRefresh: context.onRefresh,
+		version: def.version,
+	});
 }
 
 export async function fetchMutationOrThrow<Input extends SerializableInput, Resp extends DataValue>(
@@ -531,26 +480,16 @@ export async function fetchMutationOrThrow<Input extends SerializableInput, Resp
 	return throwOnFailure(await fetchMutation(context, def, input));
 }
 
-/** Lifecycle calls (refresh / logout) that must not re-enter the 401 pipeline. */
+/**
+ * Lifecycle calls (refresh / logout) that must not re-enter the 401 pipeline:
+ * a mutation with no `onUnauthorized` / `onRefresh`, whatever object is passed.
+ */
 export function fetchMutationUnchecked<Input extends SerializableInput, Resp extends DataValue>(
 	context: UncheckedApiRequestContext,
 	def: MutationDef<Input, Resp>,
 	input: Input,
 ): Promise<ApiResponse<Resp>> {
-	const parsed: Input = def.inputSchema.parse(input);
-	const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
-	const finalBody: DataValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
-	return executeHttp<Resp, DataValue>(
-		context.baseUrl,
-		def.method,
-		url,
-		{ body: finalBody, headers: procedureHeaders(context, def) },
-		def.responseSchema,
-		undefined,
-		undefined,
-		undefined,
-		def.version,
-	);
+	return fetchMutation({ baseUrl: context.baseUrl, clientType: context.clientType }, def, input);
 }
 
 export function createQueryCaller<Input extends SerializableInput, Resp extends DataValue>(context: ApiRequestContext, def: QueryDef<Input, Resp>): QueryCaller<Input, Resp> {
@@ -571,20 +510,15 @@ export function createMutationCaller<Input extends SerializableInput, Resp exten
 	};
 }
 
-export function createProcedureCaller<Input extends SerializableInput, Resp extends DataValue>(
-	context: ApiRequestContext,
-	def: ProcedureDef<Input, Resp>,
-): QueryCaller<Input, Resp> | MutationCaller<Input, Resp> {
-	if (def.kind === "query") {
-		return createQueryCaller(context, def);
-	}
-	return createMutationCaller(context, def);
-}
-
 /**
  * Walks a router tree and binds every leaf to a tRPC-style caller.
  * `caller.auth.me.fetchOrThrow(undefined)` — no manual path/method wiring.
  */
 export function createCaller<R extends RouterTree>(router: R, context: ApiRequestContext): CallerTree<R> {
-	return buildCallerTree(router, context);
+	const { nodes, settledKeys } = mapRouterTree<R, CallerTreeBranch<RouterTreeValue>>(router, {
+		leaf: (def): CallerTreeBranch<RouterTreeValue> => (def.kind === "query" ? createQueryCaller(context, def) : createMutationCaller(context, def)),
+		router: (subtree): CallerTreeBranch<RouterTreeValue> => createCaller(subtree, context),
+	});
+	assertCompleteRouterTree<R, CallerTree<R>>(router, nodes, settledKeys);
+	return nodes;
 }

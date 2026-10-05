@@ -20,12 +20,12 @@ export class SecretEncryptionService {
 	private readonly currentKeyVersion: number;
 
 	public constructor(private readonly config: TypedConfigService) {
-		this.currentKeyVersion = this.resolveCurrentKeyVersion(this.config.mfaEncryptionKeys);
+		this.currentKeyVersion = this.resolveCurrentKeyVersion(this.config.mfa.encryptionKeys);
 	}
 
 	public encrypt(plaintext: string, context: TotpSecretEncryptionContext): EncryptedTotpSecret {
 		const validatedContext = TotpSecretEncryptionContextSchema.parse(context);
-		const keyMaterial = this.requireKeyMaterial(this.config.mfaEncryptionKeys, this.currentKeyVersion);
+		const keyMaterial = this.requireKeyMaterial(this.config.mfa.encryptionKeys, this.currentKeyVersion);
 		const key = this.decodeKeyMaterial(keyMaterial, this.currentKeyVersion);
 		const iv = crypto.randomBytes(AES_GCM_IV_BYTES);
 		const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
@@ -44,7 +44,7 @@ export class SecretEncryptionService {
 
 	public decrypt(ciphertext: string, iv: string, keyVersion: number, context: TotpSecretEncryptionContext): string {
 		const validatedContext = TotpSecretEncryptionContextSchema.parse(context);
-		const keyMaterial = this.requireKeyMaterial(this.config.mfaEncryptionKeys, keyVersion);
+		const keyMaterial = this.requireKeyMaterial(this.config.mfa.encryptionKeys, keyVersion);
 		const key = this.decodeKeyMaterial(keyMaterial, keyVersion);
 		const ivBuffer = Buffer.from(iv, "base64");
 		if (ivBuffer.length !== AES_GCM_IV_BYTES) {

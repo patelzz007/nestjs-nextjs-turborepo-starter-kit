@@ -1,6 +1,6 @@
 import * as bcrypt from "bcrypt";
 import type { OutboxEventStatus, Prisma } from "@prisma/client";
-import { JsonObjectSchema, PLATFORM_EVENT_TOPICS, PlatformEventEnvelopeSchema, type PlatformEventInput } from "@workspace/shared";
+import { JsonObjectSchema, PLATFORM_EVENT_TOPICS, PlatformEventEnvelopeSchema, type PlatformEventInput, DAY_MS } from "@workspace/shared";
 
 import { resolvePartitionKey } from "../../src/infrastructure/outbox/platform-outbox.service";
 import { prisma } from "./client";
@@ -31,7 +31,6 @@ const NAMESPACE = "seed.platform_records";
 /** Fixed demo clock (2026-09-15T08:00:00Z) — byte-identical rows across runs. */
 const BASE_EPOCH_MS = 1_789_459_200_000;
 const ONE_MINUTE_MS = 60_000;
-const ONE_DAY_MS = 86_400_000;
 /** How long a released organization slug stays reserved for its former owner. */
 const SLUG_RESERVATION_DAYS = 90;
 /** bcrypt cost for seeded secrets (matches the users seeder). */
@@ -156,6 +155,36 @@ async function seedOutbox(actors: PlatformRecordsActors): Promise<number> {
 		},
 		{
 			...outboxRow(
+				"outbox:published-session",
+				{ type: "session.action", payload: { action: "refresh", userId: actors.userId, status: "succeeded", error: null, durationMs: 41 } },
+				15,
+			),
+			status: published,
+			attempts: 1,
+			lastError: null,
+			availableAt: at(15),
+			publishedAt: at(16),
+			updatedAt: at(16),
+		},
+		{
+			// Tagged with its tenant, so the analytics row is partitioned by organization.
+			...outboxRow(
+				"outbox:published-reward",
+				{
+					type: "reward.platform",
+					payload: { event: "reward.auto_published", actorUserId: null, organizationId: ORGANIZATION_SEED_IDS.klOrganization, metadata: { rewardCount: "2" } },
+				},
+				25,
+			),
+			status: published,
+			attempts: 1,
+			lastError: null,
+			availableAt: at(25),
+			publishedAt: at(26),
+			updatedAt: at(26),
+		},
+		{
+			...outboxRow(
 				"outbox:failed",
 				{
 					type: "email.log.updated",
@@ -185,7 +214,7 @@ async function seedSlugHistory(): Promise<number> {
 		create: {
 			organizationId: ORGANIZATION_SEED_IDS.klOrganization,
 			slug: previousSlug,
-			reservedUntil: BigInt(Date.now() + SLUG_RESERVATION_DAYS * ONE_DAY_MS),
+			reservedUntil: BigInt(Date.now() + SLUG_RESERVATION_DAYS * DAY_MS),
 			createdAt: at(-30 * 24 * 60),
 		},
 		update: {},
@@ -281,7 +310,7 @@ async function seedUrls(actors: PlatformRecordsActors): Promise<number> {
 			title: "Q3 board pack (password protected)",
 			passwordHash: await bcrypt.hash("BoardPack@2026", SEED_BCRYPT_ROUNDS),
 			clickLimit: 50,
-			expiresAt: BigInt(Date.now() + SLUG_RESERVATION_DAYS * ONE_DAY_MS),
+			expiresAt: BigInt(Date.now() + SLUG_RESERVATION_DAYS * DAY_MS),
 			createdAt: at(0),
 			updatedAt: at(0),
 		},

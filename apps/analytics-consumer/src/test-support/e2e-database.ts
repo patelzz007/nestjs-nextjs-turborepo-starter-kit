@@ -2,8 +2,8 @@ import pg from "pg";
 
 import { parseConsumerLogin, provisionConsumerLogin } from "../db-login";
 import { DEFAULT_DB_CONNECTION_TIMEOUT_MS, DEFAULT_DB_IDLE_TIMEOUT_MS, DEFAULT_DB_STATEMENT_TIMEOUT_MS, loadDbLoginProvisioningEnv } from "../env";
-import type { ConsumerLogger } from "../message-handler";
-import { createConsumerPool } from "../pg-inbox-store";
+import type { ConsumerLogger } from "@workspace/messaging/inbox";
+import { createConsumerPool } from "@workspace/messaging/inbox";
 
 /** Small pool — the suites run one file at a time. */
 const E2E_POOL_MAX = 3;

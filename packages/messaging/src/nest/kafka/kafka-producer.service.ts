@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } f
 import { KafkaJS } from "@confluentinc/kafka-javascript";
 
 import type { MessagingHealthIndicator } from "../../core/health";
-import { buildKafkaClientConfig, type KafkaLogContext, type KafkaLogSink } from "../../kafka/kafka-client-config";
+import { buildKafkaClientConfig, kafkaLogSinkFrom, type KafkaClientLogEntry, type KafkaLogSink } from "../../kafka/kafka-client-config";
 import { kafkaConnectRetryDelayMs } from "../../kafka/kafka-connect-backoff";
 import { AggregatingKafkaLogSink } from "../../kafka/kafka-log-aggregator";
 import { MessageEnvelopeSchema, type MessageEnvelope } from "../../schemas/outbox";
@@ -74,28 +74,20 @@ export class KafkaPublishError extends Error {
  * `repeatCount` / `repeatWindowMs`.
  */
 export function nestKafkaLogSink(logger: Logger): KafkaLogSink {
-	const format = (message: string, context: KafkaLogContext): string =>
-		JSON.stringify({
-			event: "kafka.client_log",
-			namespace: context.namespace,
-			facility: context.facility,
-			message,
-			...(context.repeats === null ? {} : { repeatCount: context.repeats.count, repeatWindowMs: context.repeats.windowMs }),
-		});
-	return {
-		error: (message: string, context: KafkaLogContext): void => {
-			logger.error(format(message, context));
+	return kafkaLogSinkFrom({
+		error: (entry: KafkaClientLogEntry): void => {
+			logger.error(JSON.stringify(entry));
 		},
-		warn: (message: string, context: KafkaLogContext): void => {
-			logger.warn(format(message, context));
+		warn: (entry: KafkaClientLogEntry): void => {
+			logger.warn(JSON.stringify(entry));
 		},
-		info: (message: string, context: KafkaLogContext): void => {
-			logger.log(format(message, context));
+		info: (entry: KafkaClientLogEntry): void => {
+			logger.log(JSON.stringify(entry));
 		},
-		debug: (message: string, context: KafkaLogContext): void => {
-			logger.debug(format(message, context));
+		debug: (entry: KafkaClientLogEntry): void => {
+			logger.debug(JSON.stringify(entry));
 		},
-	};
+	});
 }
 
 /** Resolves after `delayMs`, or as soon as `signal` aborts (shutdown) — never rejects. */
@@ -323,30 +315,6 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 
 /** Outcome of {@link KafkaProducerService.ping}. */
 export type KafkaPingResult = { readonly reachable: true } | { readonly reachable: false; readonly reason: string };
-
-/** Stands in for the producer when Kafka is disabled: reports disabled and refuses to publish. */
-@Injectable()
-export class DisabledKafkaProducerService {
-	public isEnabled(): boolean {
-		return false;
-	}
-
-	public getState(): KafkaProducerState {
-		return "disabled";
-	}
-
-	public isConnected(): boolean {
-		return false;
-	}
-
-	public async publish(topic: string): Promise<void> {
-		throw new KafkaProducerDisabledError(topic);
-	}
-
-	public async ping(): Promise<KafkaPingResult> {
-		return { reachable: false, reason: "producer disabled" };
-	}
-}
 
 /** Health: disabled → healthy (nothing to check); enabled → connected and the broker answers. */
 @Injectable()

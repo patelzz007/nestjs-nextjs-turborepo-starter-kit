@@ -380,7 +380,7 @@ export type OrganizationAccessRequestResponse = z.output<typeof OrganizationAcce
  * Roles a team manager may grant through a team invite or an access-request
  * approval. OWNER is never grantable this way (ownership is provisioned).
  */
-export const OrganizationTeamGrantableRoleSchema = z.enum(["ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"]);
+export const OrganizationTeamGrantableRoleSchema = OrganizationMembershipRoleSchema.exclude(["OWNER"]);
 
 export type OrganizationTeamGrantableRole = z.output<typeof OrganizationTeamGrantableRoleSchema>;
 
@@ -528,13 +528,10 @@ export const OrganizationTeamInviteTokenSchema = z
 
 export type OrganizationTeamInviteTokenInput = z.output<typeof OrganizationTeamInviteTokenSchema>;
 
-export const OrganizationTeamInviteRegisterAcceptSchema = z
-	.object({
-		token: z.string().min(16).max(256),
-		fullName: z.string().min(2, "Full name must be at least 2 characters"),
-		password: strongPassword,
-	})
-	.strict();
+export const OrganizationTeamInviteRegisterAcceptSchema = OrganizationTeamInviteTokenSchema.extend({
+	fullName: z.string().min(2, "Full name must be at least 2 characters"),
+	password: strongPassword,
+}).strict();
 
 export type OrganizationTeamInviteRegisterAcceptInput = z.output<typeof OrganizationTeamInviteRegisterAcceptSchema>;
 

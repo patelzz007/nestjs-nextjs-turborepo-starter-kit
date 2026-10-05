@@ -120,8 +120,12 @@ then create named staff. Guarantees, audit rows and exit codes: [Bootstrap the f
 | --- | --- |
 | API exits listing `DEFAULT_ORGANIZATION_ID`, `MALWARE_SCANNER`, a secret … | Fill in the named variables; `pnpm secrets:generate apps/api/.env` for secrets. Single-tenant mode needs `DEFAULT_ORGANIZATION_ID` to be a real organization (the seed creates Brew & Bean KL). |
 | `Refusing to seed` | The seed only runs against a local database with `NODE_ENV` development/test (or `--allow-destructive`). |
-| `EADDRINUSE :8080` | `pnpm kill:api` |
+| `EADDRINUSE :8080` | `pnpm kill:all` |
 | Logins return `RATE_LIMITED` | 5 attempts per minute per IP on login; wait, or raise `THROTTLE_*` locally. |
 | Login works but every page says verify your email | Seed customer accounts are unverified; use the link from the API log (`EMAIL_MODE=log-only`) or Mailpit. |
 | Uploads fail with `NoSuchBucket` / CORS errors | Use `STORAGE_PROVIDER=local` offline, or follow [AWS S3](./storage/aws-s3.md#troubleshooting). |
+| `permission denied for schema public` (`42501` / `P2039`) | The security layer is missing after a bare `prisma migrate reset`: `pnpm db:apply-security`, or use `pnpm db:reset` ([Database security](./security/database-security.md#how-the-api-connects)). |
+| Prisma client does not know a new field | `pnpm db:generate` (or `pnpm db:migrate`, which regenerates), then restart the TypeScript server. |
+| `ESLint couldn't find an eslint.config.js file` | There is no root ESLint config: run `pnpm run lint` from the root, or `pnpm exec eslint .` inside a workspace ([ESLint](./tooling/eslint.md)). |
+| Signed in on web but "not authenticated" on admin, or a customer cannot sign in to admin | By design: each app has its own cookies, and the admin login only accepts staff with admin-panel access ([Authentication](./security/authentication.md#sessions)). |
 | Kafka shown unhealthy at boot | Expected until the producer connects; `KAFKA_BROKERS=127.0.0.1:9092` with `pnpm docker:up`. Unset it to run without Kafka. |

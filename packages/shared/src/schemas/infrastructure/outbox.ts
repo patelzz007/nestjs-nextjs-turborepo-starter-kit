@@ -3,11 +3,11 @@ import { z } from "zod";
 import { JsonObjectSchema } from "../runtime/json";
 import { KafkaTopicSchema } from "./kafka";
 
-export const OUTBOX_EVENT_STATUSES: ["PENDING", "PUBLISHED", "FAILED"] = ["PENDING", "PUBLISHED", "FAILED"];
-
-export const OutboxEventStatusSchema = z.enum(OUTBOX_EVENT_STATUSES);
+export const OutboxEventStatusSchema = z.enum(["PENDING", "PUBLISHED", "FAILED"]);
 
 export type OutboxEventStatus = z.output<typeof OutboxEventStatusSchema>;
+
+export const OUTBOX_EVENT_STATUSES: readonly OutboxEventStatus[] = OutboxEventStatusSchema.options;
 
 /** Row shape for the transactional outbox table. */
 export const OutboxEventRecordSchema = z

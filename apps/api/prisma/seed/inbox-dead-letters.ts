@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
+import { DAY_MS } from "@workspace/shared";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
+import { sha256BytesHex } from "./helpers";
 
 /**
  * Development-scenario sample of parked Kafka records (`inbox_dead_letters`),
@@ -11,11 +12,10 @@ import { deterministicUuid } from "./deterministic-uuid";
  * and the `analytics-warehouse` consumer id its RLS policies are scoped to.
  */
 
-/** ANALYTICS_CONSUMER_ID in apps/analytics-consumer/src/message-handler.ts. */
+/** ANALYTICS_CONSUMER_ID in packages/messaging/src/inbox/message-handler.ts. */
 export const DEAD_LETTER_SEED_CONSUMER = "analytics-warehouse";
 
 const SEED_TOPIC = "platform.rewards";
-const MS_PER_DAY = 86_400_000;
 
 export interface DeadLetterSeedRow {
 	readonly id: string;
@@ -92,9 +92,9 @@ export function buildDeadLetterSeedRows(nowMs: number): readonly DeadLetterSeedR
 			attempts: spec.attempts,
 			rawValue: new Uint8Array(bytes),
 			rawValueSizeBytes: bytes.length,
-			rawValueSha256: createHash("sha256").update(bytes).digest("hex"),
+			rawValueSha256: sha256BytesHex(bytes),
 			rawValueTruncated: false,
-			receivedAt: BigInt(nowMs - spec.daysAgo * MS_PER_DAY),
+			receivedAt: BigInt(nowMs - spec.daysAgo * DAY_MS),
 		};
 	});
 }

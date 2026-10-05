@@ -47,6 +47,7 @@
 		"./lib/api/list-query": "./src/lib/api/list-query.ts",
 		"./lib/api/query-provider": "./src/lib/api/query-provider.tsx",
 		"./lib/api/server-api": "./src/lib/api/server-api.ts",
+		"./lib/api/server-query-outcome": "./src/lib/api/server-query-outcome.ts",
 		"./lib/api/use-api": "./src/lib/api/use-api.ts",
 		"./lib/auth": "./src/lib/auth/index.tsx",
 		"./lib/auth/can": "./src/lib/auth/can.tsx",

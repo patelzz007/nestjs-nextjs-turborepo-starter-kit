@@ -158,6 +158,14 @@ Enterprise accounts (in addition to the development platform accounts):
 
 ### Seed coverage — every table, every column
 
+> **Only meaningful on a freshly reset database.** A long-lived dev database accumulates rows that the
+> seed does not write (the analytics consumer fills `analytics_events`, the API boot fills capability
+> links, …), so a pass there proves nothing about CI, which seeds an empty database. Check it the way CI
+> does: `pnpm ci:local --e2e-only` (throwaway databases: migrate → RLS → `db:seed` → coverage → e2e, then
+> dropped), or `pnpm db:reset` first. `analytics_events` and `inbox_processed_events` are seeded by replaying the
+> PUBLISHED outbox events through the analytics consumer's own handler and SQL
+> (`packages/messaging/src/inbox`, `prisma/seed/analytics-ingest.ts`), so they match what the consumer writes.
+
 `db:check-seed-coverage` audits a freshly seeded database in a read-only transaction and fails when
 any table has no rows or any nullable column is `NULL` in every row, unless
 `apps/api/prisma/seed/coverage-exemptions.ts` lists the gap with a written reason. CI runs it right

@@ -71,7 +71,7 @@ describe("SessionsService", () => {
 				{ provide: UserRepository, useValue: users },
 				{ provide: TokenService, useValue: tokenService },
 				{ provide: CryptoService, useValue: cryptoService },
-				{ provide: TypedConfigService, useValue: { jwtRefreshExpiry: "7d" } },
+				{ provide: TypedConfigService, useValue: { auth: { jwtRefreshExpiry: "7d" } } },
 				{ provide: LogService, useValue: { warn: vi.fn() } },
 				{ provide: AuthorizationCheckerService, useValue: { getUserPermissionDetails: vi.fn().mockResolvedValue({ roles: [], permissions: [] }) } },
 				{ provide: UserResponseMapper, useValue: { toFlatUser: vi.fn().mockReturnValue({ id: userId, tokenVersion: 1 }) } },

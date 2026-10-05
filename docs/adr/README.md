@@ -41,6 +41,9 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [023](./023-client-state-feature-stores.md) | Client state as Zustand feature stores | Accepted |
 | [024](./024-confluent-kafka-client.md) | Confluent Kafka client instead of kafkajs | Accepted |
 | [025](./025-global-http-audit-log.md) | One global, append-only HTTP audit log — kept forever | Accepted |
+| [026](./026-kernel-first-authorization.md) | One in-house authorization kernel behind one global guard | Accepted |
+| [027](./027-fastify-http-adapter.md) | Fastify as the API's HTTP adapter | Accepted |
+| [028](./028-epoch-millisecond-timestamps.md) | Epoch-millisecond timestamps everywhere | Accepted |
 | [RabbitMQ](./rabbitmq-placeholder.md) | RabbitMQ as infrastructure placeholder only | Accepted |
 
 ## Pending decisions

@@ -13,10 +13,10 @@ describe("buildSystemPoolConfig", () => {
 		const config = createTestTypedConfig({ DB_POOL_MAX: String(POOL_MAX), DB_IDLE_TIMEOUT_MS: String(IDLE_TIMEOUT_MS) });
 
 		expect(buildSystemPoolConfig(config)).toEqual({
-			connectionString: config.databaseUrl,
+			connectionString: config.database.url,
 			max: POOL_MAX,
 			idleTimeoutMillis: IDLE_TIMEOUT_MS,
-			allowExitOnIdle: config.databaseAllowExitOnIdle,
+			allowExitOnIdle: config.database.allowExitOnIdle,
 			connectionTimeoutMillis: DATABASE_CONNECT_TIMEOUT_MS,
 		});
 	});

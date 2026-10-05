@@ -13,12 +13,12 @@
 //   - `severity` tiers (info | warning | critical) driving the icon
 //     tile + confirm tone; `confirmLabel`/`cancelLabel`
 //   - `requireConfirmation` (type a keyword), `requireReason`
-//     (textarea), `delaySeconds` countdown, batch `count`
+//     (textarea), `delaySeconds` countdown
 //   - `actionOrder` (confirm-first | cancel-first), `stackOrder`
 //   - `align` (center | start), `summary`, `undoHint`, `thirdAction`,
 //     `confirmShortcut`, `onConfirm`/`onDismiss` analytics hooks
 //   - sticky footer, scrollable content, `motion-safe` animations
-//   - `confirmDialogLabels()` + zod schemas exported for tests
+//   - zod schemas exported for tests
 //
 // Data lives in the smart component / page — this file renders what
 // it is given (rules 9/10/11).
@@ -47,11 +47,8 @@ const alertDialogSizeSchema = z.enum(["sm", "default", "lg"]);
 /** Escalation tier driving the icon tile + confirm tone (feature 5). */
 const alertDialogSeveritySchema = z.enum(["info", "warning", "critical"]);
 
-/** Button ordering on desktop (feature 18). */
+/** Button ordering — `actionOrder` on desktop (feature 18), `stackOrder` on mobile (improvement 7). */
 const alertDialogActionOrderSchema = z.enum(["confirm-first", "cancel-first"]);
-
-/** Button ordering on mobile (improvement 7). */
-const alertDialogStackOrderSchema = z.enum(["confirm-first", "cancel-first"]);
 
 /** Header alignment (improvement 13). */
 const alertDialogAlignSchema = z.enum(["center", "start"]);
@@ -60,7 +57,6 @@ type AlertDialogWidth = z.infer<typeof alertDialogWidthSchema>;
 type AlertDialogSize = z.infer<typeof alertDialogSizeSchema>;
 type AlertDialogSeverity = z.infer<typeof alertDialogSeveritySchema>;
 type AlertDialogActionOrder = z.infer<typeof alertDialogActionOrderSchema>;
-type AlertDialogStackOrder = z.infer<typeof alertDialogStackOrderSchema>;
 type AlertDialogAlign = z.infer<typeof alertDialogAlignSchema>;
 
 // ── Module-scope style constants (improvement 17 — no GC churn) ─────────────
@@ -193,15 +189,13 @@ export interface AlertDialogContentProps extends AlertDialogPrimitive.Popup.Prop
 	/** Desktop button order (feature 18). */
 	readonly actionOrder?: AlertDialogActionOrder;
 	/** Mobile button order (improvement 7). */
-	readonly stackOrder?: AlertDialogStackOrder;
+	readonly stackOrder?: AlertDialogActionOrder;
 	/** Header alignment (improvement 13). */
 	readonly align?: AlertDialogAlign;
 	/** Small table of affected resources (feature 10). */
 	readonly summary?: readonly { readonly label: string; readonly value: string }[];
 	/** Undo fallback copy under the description (feature 11). */
 	readonly undoHint?: string;
-	/** Batch count rendered as "Delete 12 items?" (feature 13). */
-	readonly count?: number;
 	/** Fired when the confirm action is activated (feature 16 analytics hook). */
 	readonly onConfirm?: () => void;
 	/** Fired when the cancel action is activated (feature 16 analytics hook). */
@@ -246,7 +240,6 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 		align = "center",
 		summary,
 		undoHint,
-		count,
 		onConfirm,
 		onCancel,
 		onPreferenceChange,
@@ -464,7 +457,7 @@ function AlertDialogDescription({ className, ...props }: React.ComponentProps<ty
 
 export interface AlertDialogFooterProps extends React.ComponentProps<"div"> {
 	readonly actionOrder?: AlertDialogActionOrder | undefined;
-	readonly stackOrder?: AlertDialogStackOrder | undefined;
+	readonly stackOrder?: AlertDialogActionOrder | undefined;
 	readonly confirmShortcut?: string | undefined;
 	readonly confirmLoading?: boolean | undefined;
 	readonly loadingLabel: string;
@@ -583,7 +576,7 @@ const AlertDialogAction = React.forwardRef<HTMLButtonElement, AlertDialogActionP
 			variant={SEVERITY_CONFIRM_VARIANTS[severity]}
 			onClick={handleClick}
 			disabled={effectiveDisabled || effectiveLoading}
-			className={cn(className)}
+			className={className}
 			{...props}>
 			{buttonContent}
 		</Button>
@@ -616,27 +609,13 @@ const AlertDialogCancel = React.forwardRef<HTMLButtonElement, AlertDialogCancelP
 			ref={ref}
 			data-slot="alert-dialog-cancel"
 			onClick={handleClick}
-			className={cn(className)}
+			className={className}
 			render={<Button variant={variant} size={size} />}
 			{...props}>
 			{children}
 		</AlertDialogPrimitive.Close>
 	);
 });
-
-// ── Label helper (feature 20) ───────────────────────────────────────────────
-
-export interface ConfirmDialogLabels {
-	readonly confirm: string;
-	readonly cancel: string;
-	readonly loading: string;
-	readonly close: string;
-}
-
-/** Computed ARIA/UI labels for a confirmation dialog — reuse in tests (feature 20). */
-export function confirmDialogLabels(labels: AlertDialogLabels): AlertDialogLabels {
-	return labels;
-}
 
 export {
 	AlertDialog,
@@ -655,12 +634,10 @@ export {
 	alertDialogAlignSchema,
 	alertDialogSeveritySchema,
 	alertDialogSizeSchema,
-	alertDialogStackOrderSchema,
 	alertDialogWidthSchema,
 	type AlertDialogActionOrder,
 	type AlertDialogAlign,
 	type AlertDialogSeverity,
 	type AlertDialogSize,
-	type AlertDialogStackOrder,
 	type AlertDialogWidth,
 };

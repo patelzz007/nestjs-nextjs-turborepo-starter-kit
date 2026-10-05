@@ -13,7 +13,7 @@ import {
 import type { DataValue, SerializableInput } from "@workspace/shared";
 
 import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse, type ProcedureCallOptions } from "./api-request";
-import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
+import { assertCompleteRouterTree, mapRouterTree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
 
 /** A GET procedure on the client — `.useQuery()` / `.fetch()` / `.fetchOrThrow()`. */
 export interface ClientQueryProcedure<Input, Resp> {
@@ -90,50 +90,15 @@ type ClientRouterTreeBranch<V> =
 				? ClientRouterTree<V>
 				: V;
 
-/** Erased build-time shape — widened so each router key can accept any branch variant. */
-type ClientRouterTreeBuild<R extends object> = {
-	[K in keyof R]?: ClientRouterTreeBranch<RouterTreeValue>;
-};
-
-function mapClientRouterBranch(context: ApiRequestContext, value: object): ClientRouterTreeBranch<RouterTreeValue> {
-	if (isErasedProcedureDef(value)) {
-		return createProcedureForDef(context, value);
-	}
-
-	if (isRouterSubtree(value)) {
-		return buildClientRouter(value, context);
-	}
-
-	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
-}
-
-function isCompleteClientRouter<R extends object>(router: R, candidate: ClientRouterTreeBuild<R> | ClientRouterTree<R>): candidate is ClientRouterTree<R> {
-	let complete = true;
-	eachRouterEntry(router, (key) => {
-		if (candidate[key] === undefined) {
-			complete = false;
-		}
-	});
-	return complete;
-}
-
 /**
  * Walks an endpoint router tree and binds every leaf to a React procedure.
  * Transport is delegated to the tRPC-style caller in `api-request`.
  */
 export function buildClientRouter<R extends object>(router: R, context: ApiRequestContext): ClientRouterTree<R> {
-	const out: ClientRouterTreeBuild<R> = {};
-
-	eachRouterEntry(router, (key, value) => {
-		if (typeof value !== "object" || value === null) {
-			throw new Error("Invalid router node — expected a procedure leaf or nested router.");
-		}
-		out[key] = mapClientRouterBranch(context, value);
+	const { nodes, settledKeys } = mapRouterTree<R, ClientRouterTreeBranch<RouterTreeValue>>(router, {
+		leaf: (def): ClientRouterTreeBranch<RouterTreeValue> => createProcedureForDef(context, def),
+		router: (subtree): ClientRouterTreeBranch<RouterTreeValue> => buildClientRouter(subtree, context),
 	});
-
-	if (!isCompleteClientRouter(router, out)) {
-		throw new Error("Failed to build client router — one or more router entries were not bound.");
-	}
-
-	return out;
+	assertCompleteRouterTree<R, ClientRouterTree<R>>(router, nodes, settledKeys);
+	return nodes;
 }

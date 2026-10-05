@@ -66,7 +66,7 @@ export class ImpersonationController {
 		@Req() req: FastifyRequest,
 	): Promise<ImpersonateServiceResponse> {
 		const admin = requireAccessToken(user);
-		assertFreshMfaAssurance(admin, this.config.mfaStepUpTtlMs);
+		assertFreshMfaAssurance(admin, this.config.mfa.stepUpTtlMs);
 		if (admin.isImpersonating === true) {
 			throw new BadRequestException({
 				message: "Already impersonating; stop the current session first",

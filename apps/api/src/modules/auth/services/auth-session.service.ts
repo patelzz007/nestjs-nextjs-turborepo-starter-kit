@@ -118,7 +118,7 @@ export class AuthSessionService {
 			mfaAssuredAt,
 		};
 
-		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
+		const expiryMs = parseExpiryToMilliseconds(this.config.auth.jwtRefreshExpiry);
 		const expiresAt: EpochMs = epochMs(now + expiryMs);
 
 		const refreshTokenRecord = await this.prisma.refreshToken.create({

@@ -53,7 +53,7 @@ export class LoginVerificationService {
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis | null,
 	) {
 		this.memoryStore = new BoundedTtlCache<string, string>({
-			maxEntries: config.securityCounterMaxKeys,
+			maxEntries: config.rateLimits.securityCounterMaxKeys,
 			capacityPolicy: "evict-oldest",
 		});
 	}
@@ -166,7 +166,7 @@ export class LoginVerificationService {
 	}
 
 	private async needsVerification(userId: string, deviceInfo: string | null): Promise<boolean> {
-		const mode: LoginVerificationMode = this.config.loginVerificationMode;
+		const mode: LoginVerificationMode = this.config.auth.loginVerificationMode;
 		switch (mode) {
 			case "disabled":
 				return false;

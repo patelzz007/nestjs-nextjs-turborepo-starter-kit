@@ -1,4 +1,5 @@
 import type { OrganizationLocationStatus, OrganizationMembershipStatus, PilotCity, Role } from "@prisma/client";
+import { DAY_MS } from "@workspace/shared";
 
 import { findActivePolicyVersionInTx } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
 import { syncStoreForLocation } from "../../src/modules/organization/utils/store-sync.util";
@@ -10,7 +11,6 @@ import { requireRow } from "./require-row";
 const CLOSED_STORE_STATUS: OrganizationLocationStatus = "INACTIVE";
 const CLOSED_STORE_CITY: PilotCity = "MELAKA";
 const STORE_MEMBERSHIP_STATUS: OrganizationMembershipStatus = "ACTIVE";
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const STORE_CLOSED_DAYS_AGO = 45;
 const STORE_MEMBER_REMOVED_DAYS_AGO = 12;
 
@@ -48,7 +48,7 @@ export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeSt
 	);
 	const policyVersion = await findActivePolicyVersionInTx(prisma, organizationId);
 
-	const closedAt = Date.now() - STORE_CLOSED_DAYS_AGO * MS_PER_DAY;
+	const closedAt = Date.now() - STORE_CLOSED_DAYS_AGO * DAY_MS;
 	const closedData = {
 		name: "Jonker Street Kitchen — Taman Melaka Raya (Closed)",
 		addressText: "21 Jalan Melaka Raya 3, Taman Melaka Raya, 75000 Melaka",
@@ -58,7 +58,7 @@ export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeSt
 		rejectionReason: null,
 		requestedByUserId: owner.userId,
 		reviewedByUserId: owner.userId,
-		reviewedAt: closedAt - 90 * MS_PER_DAY,
+		reviewedAt: closedAt - 90 * DAY_MS,
 		isPrimary: false,
 		closureReason: CLOSED_STORE_REASON,
 		isDeleted: true,
@@ -68,7 +68,7 @@ export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeSt
 	};
 	const location = await prisma.organizationLocation.upsert({
 		where: { organizationId_code: { organizationId, code: CLOSED_STORE_CODE } },
-		create: { id: CLOSED_STORE_LOCATION_ID, organizationId, code: CLOSED_STORE_CODE, createdAt: closedAt - 120 * MS_PER_DAY, ...closedData },
+		create: { id: CLOSED_STORE_LOCATION_ID, organizationId, code: CLOSED_STORE_CODE, createdAt: closedAt - 120 * DAY_MS, ...closedData },
 		update: closedData,
 	});
 	const store = await syncStoreForLocation(prisma, location);
@@ -80,7 +80,7 @@ export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeSt
 		const removed = { organizationId, storeId: store.id, ...member, status: STORE_MEMBERSHIP_STATUS, isDeleted: true, deletedAt: closedAt, deletedBy: owner.userId };
 		await prisma.storeMembership.upsert({
 			where: { storeId_userId: { storeId: store.id, userId: member.userId } },
-			create: { ...removed, createdAt: closedAt - 100 * MS_PER_DAY },
+			create: { ...removed, createdAt: closedAt - 100 * DAY_MS },
 			update: removed,
 		});
 	}
@@ -101,7 +101,7 @@ export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeSt
 	});
 
 	const katilStore = requireRow((await prisma.store.findUnique({ where: { locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil } })) ?? undefined, "Bukit Katil store");
-	const removedAt = Date.now() - STORE_MEMBER_REMOVED_DAYS_AGO * MS_PER_DAY;
+	const removedAt = Date.now() - STORE_MEMBER_REMOVED_DAYS_AGO * DAY_MS;
 	const removedMembership = {
 		organizationId,
 		storeId: katilStore.id,
@@ -114,7 +114,7 @@ export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeSt
 	};
 	await prisma.storeMembership.upsert({
 		where: { storeId_userId: { storeId: katilStore.id, userId: cashier.userId } },
-		create: { ...removedMembership, createdAt: removedAt - 60 * MS_PER_DAY },
+		create: { ...removedMembership, createdAt: removedAt - 60 * DAY_MS },
 		update: removedMembership,
 	});
 	await prisma.organizationAuditLog.upsert({

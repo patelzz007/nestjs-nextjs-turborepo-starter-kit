@@ -121,6 +121,13 @@ back. Repeating it:
 | `complete` already succeeded | `409 MERCHANT_INVITE_UNAVAILABLE` | Continue with the document steps (still inside the 24-hour window) |
 | The invite expired | `410 MERCHANT_INVITE_EXPIRED` | Ask the platform admin for a new invite |
 | `submit` repeated | `410` (the first `submit` consumed the token) | Nothing — the application is submitted |
+| A document call more than 24 hours after `complete` | `410 MERCHANT_ONBOARDING_DOCUMENTS_CLOSED` | Sign in and upload from **Settings → Verification** (`merchant:manage_verification`) |
+| Submitting after the review was approved or rejected | `409 KYB_REVIEW_CLOSED` | Nothing to resubmit |
+
+Why the documents are separate calls after `complete`: KYB files are private uploads through the
+normal direct-to-storage pipeline, and a file can only be bound to an organization and an owner that
+already exist. After `complete`, the invite token becomes a narrow credential for this organization's
+document endpoints only (`ONBOARDING_DOCUMENTS_WINDOW_MS`, 24 hours, until `submit` consumes it).
 
 Request and response examples: [Merchant organizations API](../technical/api-reference/merchant-organizations.md)
 and [Platform administration API](../technical/api-reference/platform-admin.md). Upload

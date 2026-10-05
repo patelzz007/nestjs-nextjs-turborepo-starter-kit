@@ -31,7 +31,7 @@ import { AccountLockoutService } from "./account-lockout.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { LoginVerificationService } from "./login-verification.service";
-import { MfaChallengeService } from "./mfa-challenge.service";
+import { MfaChallengeService, type VerifiedMfaChallengeRef } from "./mfa-challenge.service";
 import { SecretEncryptionService } from "./secret-encryption.service";
 
 const SETUP_TTL_MS = 15 * 60 * 1000;
@@ -94,27 +94,22 @@ export class TwoFactorService {
 		const encryptedSecret = this.secretEncryptionService.encrypt(secret, "totp-pending");
 		const expiresAt = Date.now() + SETUP_TTL_MS;
 
+		const pendingSetup = {
+			secretCiphertext: encryptedSecret.ciphertext,
+			secretIv: encryptedSecret.iv,
+			secretKeyVersion: encryptedSecret.keyVersion,
+			backupCodesHashes,
+			expiresAt,
+		} satisfies Prisma.TwoFactorPendingSetupUpdateInput;
+
 		await this.prisma.twoFactorPendingSetup.upsert({
 			where: { userId },
-			update: {
-				secretCiphertext: encryptedSecret.ciphertext,
-				secretIv: encryptedSecret.iv,
-				secretKeyVersion: encryptedSecret.keyVersion,
-				backupCodesHashes,
-				expiresAt,
-			},
-			create: {
-				userId,
-				secretCiphertext: encryptedSecret.ciphertext,
-				secretIv: encryptedSecret.iv,
-				secretKeyVersion: encryptedSecret.keyVersion,
-				backupCodesHashes,
-				expiresAt,
-			},
+			update: pendingSetup,
+			create: { userId, ...pendingSetup },
 		});
 
 		const otpAuthUrl = generateURI({
-			issuer: this.config.appName,
+			issuer: this.config.auth.twoFactorIssuer,
 			label: user.email,
 			secret,
 		});
@@ -314,32 +309,7 @@ export class TwoFactorService {
 				metadata: { event: "mfa.challenge.fail", challengeId: challenge.challengeId, method: "totp" },
 			});
 		} else {
-			const assuredAt = Date.now();
-
-			await this.mfaChallengeService.consumeChallenge(challenge.challengeId);
-			await this.accountLockoutService.resetAttempts(challenge.userId);
-			await this.prisma.user.update({
-				where: { id: challenge.userId },
-				data: {
-					twoFactorLastTotpStep: BigInt(verification.timeStep),
-					mfaAssuredAt: assuredAt,
-					updatedAt: assuredAt,
-				},
-			});
-
-			this.logService.info("MFA login challenge succeeded", {
-				userId: challenge.userId,
-				context: "TwoFactorService",
-				metadata: { event: "mfa.challenge.success", challengeId: challenge.challengeId, method: "totp" },
-			});
-
-			return this.loginVerificationService.maybeRequireVerification({
-				userId: challenge.userId,
-				clientType: challenge.clientType,
-				deviceInfo: challenge.deviceInfo,
-				ipAddress: challenge.ipAddress,
-				mfaAssured: true,
-			});
+			return this.finishMfaLogin(challenge, "totp", { twoFactorLastTotpStep: BigInt(verification.timeStep) });
 		}
 
 		throw new UnauthorizedException("Invalid 2FA code");
@@ -365,22 +335,32 @@ export class TwoFactorService {
 			throw new UnauthorizedException("Invalid or used backup code");
 		}
 
+		return this.finishMfaLogin(challenge, "backup_code");
+	}
+
+	/**
+	 * A passed login MFA challenge: consume it, reset the lockout counter, stamp
+	 * MFA assurance (plus `userData`, e.g. the consumed TOTP step), log the
+	 * success, then continue with login verification.
+	 */
+	private async finishMfaLogin(
+		challenge: VerifiedMfaChallengeRef,
+		method: "totp" | "backup_code",
+		userData: Prisma.UserUpdateInput = {},
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const assuredAt = Date.now();
 
 		await this.mfaChallengeService.consumeChallenge(challenge.challengeId);
 		await this.accountLockoutService.resetAttempts(challenge.userId);
 		await this.prisma.user.update({
 			where: { id: challenge.userId },
-			data: {
-				mfaAssuredAt: assuredAt,
-				updatedAt: assuredAt,
-			},
+			data: { ...userData, mfaAssuredAt: assuredAt, updatedAt: assuredAt },
 		});
 
 		this.logService.info("MFA login challenge succeeded", {
 			userId: challenge.userId,
 			context: "TwoFactorService",
-			metadata: { event: "mfa.challenge.success", challengeId: challenge.challengeId, method: "backup_code" },
+			metadata: { event: "mfa.challenge.success", challengeId: challenge.challengeId, method },
 		});
 
 		return this.loginVerificationService.maybeRequireVerification({
@@ -441,23 +421,8 @@ export class TwoFactorService {
 		return { valid: true, timeStep: this.resolveVerifiedTimeStep(verification.delta) };
 	}
 
-	private async matchesUnusedBackupCode(userId: string, backupCode: string): Promise<boolean> {
-		const records = await this.prisma.backupCode.findMany({
-			where: { userId, usedAt: null, isDeleted: false },
-			select: { codeHash: true },
-		});
-
-		for (const record of records) {
-			const matches = await this.cryptoService.compare(backupCode, record.codeHash);
-			if (matches) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private async consumeBackupCode(userId: string, backupCode: string, usageContext: string): Promise<boolean> {
+	/** The user's unused backup code matching `backupCode` (bcrypt-compared one by one), or `null`. */
+	private async findMatchingBackupCode(userId: string, backupCode: string): Promise<{ readonly id: string } | null> {
 		const records = await this.prisma.backupCode.findMany({
 			where: { userId, usedAt: null, isDeleted: false },
 			select: { id: true, codeHash: true },
@@ -466,28 +431,41 @@ export class TwoFactorService {
 		for (const record of records) {
 			const matches = await this.cryptoService.compare(backupCode, record.codeHash);
 			if (matches) {
-				const consumedAt = Date.now();
-				const updatedCount = await this.prisma.$transaction(async (tx) => {
-					const result = await tx.backupCode.updateMany({
-						where: { id: record.id, usedAt: null, isDeleted: false },
-						data: { usedAt: consumedAt },
-					});
-					return result.count;
-				});
-
-				if (updatedCount === 1) {
-					this.logService.info("MFA backup code consumed", {
-						userId,
-						context: "TwoFactorService",
-						metadata: { event: "mfa.backup_code.use", usageContext, backupCodeId: record.id },
-					});
-				}
-
-				return updatedCount === 1;
+				return record;
 			}
 		}
 
-		return false;
+		return null;
+	}
+
+	private async matchesUnusedBackupCode(userId: string, backupCode: string): Promise<boolean> {
+		return (await this.findMatchingBackupCode(userId, backupCode)) !== null;
+	}
+
+	private async consumeBackupCode(userId: string, backupCode: string, usageContext: string): Promise<boolean> {
+		const record = await this.findMatchingBackupCode(userId, backupCode);
+		if (record === null) {
+			return false;
+		}
+
+		const consumedAt = Date.now();
+		const updatedCount = await this.prisma.$transaction(async (tx) => {
+			const result = await tx.backupCode.updateMany({
+				where: { id: record.id, usedAt: null, isDeleted: false },
+				data: { usedAt: consumedAt },
+			});
+			return result.count;
+		});
+
+		if (updatedCount === 1) {
+			this.logService.info("MFA backup code consumed", {
+				userId,
+				context: "TwoFactorService",
+				metadata: { event: "mfa.backup_code.use", usageContext, backupCodeId: record.id },
+			});
+		}
+
+		return updatedCount === 1;
 	}
 
 	private generateBackupCodes(): string[] {

@@ -1,4 +1,5 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { assignRef } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ChevronDownIcon, GripVerticalIcon } from "lucide-react";
 import { forwardRef, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -38,11 +39,7 @@ export const AccordionItem = forwardRef<HTMLDivElement, AccordionItemProps>(func
 	const setRefs = useCallback(
 		(node: HTMLDivElement | null): void => {
 			itemDomRef.current = node;
-			if (typeof ref === "function") {
-				ref(node);
-			} else if (ref !== null) {
-				ref.current = node;
-			}
+			assignRef(ref, node);
 		},
 		[ref],
 	);

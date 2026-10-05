@@ -14,7 +14,7 @@
 -- (prisma/rls.sql) apply to `app_runtime` only, so even a consumer session
 -- that sets `app.rls_bypass` gains nothing: its rows are limited to the
 -- `analytics-warehouse` inbox consumer id (ANALYTICS_CONSUMER_ID in
--- apps/analytics-consumer/src/message-handler.ts — keep the two in step).
+-- packages/messaging/src/inbox/message-handler.ts — keep the two in step).
 --
 -- The LOGIN role (name + password from ANALYTICS_CONSUMER_DATABASE_URL) is
 -- created by `pnpm --filter @workspace/analytics-consumer db:provision-login`

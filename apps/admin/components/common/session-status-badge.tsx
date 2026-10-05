@@ -21,10 +21,11 @@ const INITIAL_STATE: SessionState = { status: "loading" };
  *
  * - `sessionState$`  — fetches `GET /session` through the typed procedure's
  *   `fetchOrThrow()`, which runs the SAME 401 → silent-refresh → retry flow
- *   the old `useQuery` used. Fetches happen on mount, on tab-return, and on a
- *   steady poll (`NEXT_PUBLIC_SESSION_POLL_MS`, default 5 minutes; set to `0`
- *   to disable steady polling — the old badge never polled, so the rotation
- *   pulse below was dead code; polling is what makes it observable).
+ *   the old `useQuery` used. Fetches happen on mount and on tab-return; a
+ *   steady poll is OPT-IN via `NEXT_PUBLIC_SESSION_POLL_MS` (unset, empty or
+ *   `0` = no steady polling, the default; a positive value polls every N ms —
+ *   see apps/admin/.env.example). Polling is what makes the rotation pulse
+ *   below observable while the tab sits idle.
  * - `secondsLeft$`    — the live countdown, re-emitted every second only while
  *   the tab is visible (the old setInterval kept firing in hidden tabs).
  * - `rotationPulse$`  — `true` for 2s whenever `expiresAt` jumps FORWARD: the

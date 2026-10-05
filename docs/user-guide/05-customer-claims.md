@@ -72,3 +72,16 @@ exposes them, but no screen in the web or merchant app shows them yet.
 `GET /api/v1/reward-notifications`, `POST /api/v1/reward-notifications/read` —
 examples in [Customer rewards API](../technical/api-reference/customer-rewards.md). QR tokens and
 backup codes are stored only as keyed hashes (`REWARD_CODE_HASH_KEYS`).
+
+**Stock is reserved, not spent, at claim time.** Each reward keeps `quantityRemaining` (still
+claimable) and `quantityReserved` (held by pending claims); every change is one conditional update in
+the claim's transaction, so two customers can never take the last unit:
+
+| Event | `quantityRemaining` | `quantityReserved` |
+| --- | --- | --- |
+| Claim created (after the phone code) | −1 (only if > 0) | +1 |
+| Pending claim expires | +1 | −1 |
+| Claim redeemed at the till | — | −1 |
+
+A claim's validity is `min(claimed at + 7 days, reward expiry)`. A reward offered only at closed
+stores cannot be claimed (the reservation finds no live store and answers out of stock).

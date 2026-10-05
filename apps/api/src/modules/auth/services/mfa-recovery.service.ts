@@ -157,7 +157,7 @@ export class MfaRecoveryService {
 
 	public async adminApprove(adminUserId: string, dto: AdminReviewMfaRecoveryInput): Promise<MfaRecoveryStatusResponse> {
 		const reviewedAt = Date.now();
-		const scheduledUnlockAt = reviewedAt + this.config.mfaRecoveryDelayMs;
+		const scheduledUnlockAt = reviewedAt + this.config.mfa.recoveryDelayMs;
 		const updated = await this.review(adminUserId, dto, MfaRecoveryRequestStatus.APPROVED, reviewedAt, scheduledUnlockAt);
 
 		const user = await this.prisma.user.findUnique({
@@ -166,7 +166,7 @@ export class MfaRecoveryService {
 		});
 
 		if (user !== null) {
-			const delayHours = Math.round(this.config.mfaRecoveryDelayMs / MS_PER_HOUR);
+			const delayHours = Math.round(this.config.mfa.recoveryDelayMs / MS_PER_HOUR);
 			await this.emailService.sendMfaRecoveryUserNotification(
 				user.email,
 				"MFA Recovery Approved",

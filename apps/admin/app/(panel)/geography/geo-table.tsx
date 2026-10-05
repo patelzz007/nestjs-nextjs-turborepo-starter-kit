@@ -37,7 +37,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, type ReactNode } from "react";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { toListSearch } from "@workspace/client/lib/api/list-query";
+import { toListSearch, type ListSortSpec, type SortColumnAliases } from "@workspace/client/lib/api/list-query";
 import { cityListQuery, countryListQuery, stateListQuery, type CityListItem, type CountryListItem, type Envelope, type GeoStats, type StateListItem } from "@workspace/shared";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -108,6 +108,15 @@ function StatCard({ label, value, icon }: { readonly label: string; readonly val
 	);
 }
 
+/** The five stat cards, in display order. */
+const STAT_CARDS: readonly { readonly key: keyof GeoStats; readonly label: string; readonly icon: ReactNode }[] = [
+	{ key: "regions", label: "Regions", icon: <Globe className="size-4 text-muted-foreground" /> },
+	{ key: "subregions", label: "Subregions", icon: <Landmark className="size-4 text-muted-foreground" /> },
+	{ key: "countries", label: "Countries", icon: <Building2 className="size-4 text-muted-foreground" /> },
+	{ key: "states", label: "States", icon: <MapPin className="size-4 text-muted-foreground" /> },
+	{ key: "cities", label: "Cities", icon: <TreePine className="size-4 text-muted-foreground" /> },
+];
+
 // ── Segmented tab control ──────────────────────────────────────────────────
 
 const TAB_CONFIG: readonly { readonly key: GeoTab; readonly label: string; readonly icon: typeof Globe }[] = [
@@ -167,76 +176,68 @@ function SegmentedTabs({
 	);
 }
 
-// ── Column definitions ─────────────────────────────────────────────────────
+// ── Per-tab table config (module scope: built once, stable identities) ────
 
-function useCountryColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
-	return useMemo(
-		() => [
-			{ accessorKey: "id", header: "ID" },
-			{
-				accessorKey: "name",
-				header: "Name",
-				cell: ({ row }) => (
-					<span className="flex items-center gap-2">
-						{row.original.emoji ? <span className="text-lg">{row.original.emoji}</span> : null}
-						{String(row.getValue("name"))}
-					</span>
-				),
-			},
-			{ accessorKey: "countryCode", header: "ISO2" },
-			{
-				accessorKey: "flag",
-				header: "Active",
-				cell: ({ row }) => (row.getValue("flag") ? <Badge variant="default">Active</Badge> : <Badge variant="secondary">Inactive</Badge>),
-			},
-		],
-		[],
-	);
-}
+const LAT_LNG_COLUMNS: ColumnDef<DataTableFeatures, GeoRow>[] = [
+	{
+		accessorKey: "latitude",
+		header: "Lat",
+		cell: ({ row }) => formatCoordinate(row.original.latitude),
+	},
+	{
+		accessorKey: "longitude",
+		header: "Lng",
+		cell: ({ row }) => formatCoordinate(row.original.longitude),
+	},
+];
 
-function useStateColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
-	return useMemo(
-		() => [
-			{ accessorKey: "id", header: "ID" },
-			{ accessorKey: "name", header: "Name" },
-			{ accessorKey: "countryCode", header: "Country" },
-			{ accessorKey: "stateCode", header: "State Code" },
-			{
-				accessorKey: "latitude",
-				header: "Lat",
-				cell: ({ row }) => formatCoordinate(row.original.latitude),
-			},
-			{
-				accessorKey: "longitude",
-				header: "Lng",
-				cell: ({ row }) => formatCoordinate(row.original.longitude),
-			},
-		],
-		[],
-	);
-}
+const GEO_COLUMNS: Readonly<Record<GeoTab, ColumnDef<DataTableFeatures, GeoRow>[]>> = {
+	countries: [
+		{ accessorKey: "id", header: "ID" },
+		{
+			accessorKey: "name",
+			header: "Name",
+			cell: ({ row }) => (
+				<span className="flex items-center gap-2">
+					{row.original.emoji ? <span className="text-lg">{row.original.emoji}</span> : null}
+					{String(row.getValue("name"))}
+				</span>
+			),
+		},
+		{ accessorKey: "countryCode", header: "ISO2" },
+		{
+			accessorKey: "flag",
+			header: "Active",
+			cell: ({ row }) => (row.getValue("flag") ? <Badge variant="default">Active</Badge> : <Badge variant="secondary">Inactive</Badge>),
+		},
+	],
+	states: [
+		{ accessorKey: "id", header: "ID" },
+		{ accessorKey: "name", header: "Name" },
+		{ accessorKey: "countryCode", header: "Country" },
+		{ accessorKey: "stateCode", header: "State Code" },
+		...LAT_LNG_COLUMNS,
+	],
+	cities: [
+		{ accessorKey: "id", header: "ID" },
+		{ accessorKey: "name", header: "Name" },
+		{ accessorKey: "countryCode", header: "Country" },
+		{ accessorKey: "stateCode", header: "State" },
+		...LAT_LNG_COLUMNS,
+	],
+};
 
-function useCityColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
-	return useMemo(
-		() => [
-			{ accessorKey: "id", header: "ID" },
-			{ accessorKey: "name", header: "Name" },
-			{ accessorKey: "countryCode", header: "Country" },
-			{ accessorKey: "stateCode", header: "State" },
-			{
-				accessorKey: "latitude",
-				header: "Lat",
-				cell: ({ row }) => formatCoordinate(row.original.latitude),
-			},
-			{
-				accessorKey: "longitude",
-				header: "Lng",
-				cell: ({ row }) => formatCoordinate(row.original.longitude),
-			},
-		],
-		[],
-	);
-}
+const GEO_LABELS: Readonly<Record<GeoTab, DataTableLabels>> = {
+	countries: createDataTableLabels({ actionsMenuTitle: "Country actions", openRowMenu: "Open country row menu" }),
+	states: createDataTableLabels({ actionsMenuTitle: "State actions", openRowMenu: "Open state row menu" }),
+	cities: createDataTableLabels({ actionsMenuTitle: "City actions", openRowMenu: "Open city row menu" }),
+};
+
+const GEO_SORT: Readonly<Record<GeoTab, { readonly sortSpec: ListSortSpec<string>; readonly sortAliases: SortColumnAliases<string> }>> = {
+	countries: { sortSpec: countryListQuery, sortAliases: COUNTRY_SORT_ALIASES },
+	states: { sortSpec: stateListQuery, sortAliases: STATE_SORT_ALIASES },
+	cities: { sortSpec: cityListQuery, sortAliases: CITY_SORT_ALIASES },
+};
 
 // ── Main component ─────────────────────────────────────────────────────────
 
@@ -306,11 +307,7 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
-		...(activeTab === "countries"
-			? { sortSpec: countryListQuery, sortAliases: COUNTRY_SORT_ALIASES }
-			: activeTab === "states"
-				? { sortSpec: stateListQuery, sortAliases: STATE_SORT_ALIASES }
-				: { sortSpec: cityListQuery, sortAliases: CITY_SORT_ALIASES }),
+		...GEO_SORT[activeTab],
 		totalCount: readPaginatedTotal(activeQuery.data?.meta, 0),
 		nextCursor: readPaginatedNextCursor(activeQuery.data?.meta),
 		resetKey: GEO_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
@@ -318,36 +315,6 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 		onClearFilters: handleClearFilters,
 		isFiltered,
 	});
-
-	const countryColumns = useCountryColumns();
-	const stateColumns = useStateColumns();
-	const cityColumns = useCityColumns();
-
-	const columns = useMemo(() => {
-		switch (activeTab) {
-			case "countries":
-				return countryColumns;
-			case "states":
-				return stateColumns;
-			case "cities":
-				return cityColumns;
-		}
-	}, [activeTab, countryColumns, stateColumns, cityColumns]);
-
-	const countryLabels = useMemo((): DataTableLabels => createDataTableLabels({ actionsMenuTitle: "Country actions", openRowMenu: "Open country row menu" }), []);
-	const stateLabels = useMemo((): DataTableLabels => createDataTableLabels({ actionsMenuTitle: "State actions", openRowMenu: "Open state row menu" }), []);
-	const cityLabels = useMemo((): DataTableLabels => createDataTableLabels({ actionsMenuTitle: "City actions", openRowMenu: "Open city row menu" }), []);
-
-	const labels = useMemo(() => {
-		switch (activeTab) {
-			case "countries":
-				return countryLabels;
-			case "states":
-				return stateLabels;
-			case "cities":
-				return cityLabels;
-		}
-	}, [activeTab, countryLabels, stateLabels, cityLabels]);
 
 	const handleCountryFilterChange = useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -447,11 +414,9 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 
 			{stats ? (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-					<StatCard label="Regions" value={stats.regions} icon={<Globe className="size-4 text-muted-foreground" />} />
-					<StatCard label="Subregions" value={stats.subregions} icon={<Landmark className="size-4 text-muted-foreground" />} />
-					<StatCard label="Countries" value={stats.countries} icon={<Building2 className="size-4 text-muted-foreground" />} />
-					<StatCard label="States" value={stats.states} icon={<MapPin className="size-4 text-muted-foreground" />} />
-					<StatCard label="Cities" value={stats.cities} icon={<TreePine className="size-4 text-muted-foreground" />} />
+					{STAT_CARDS.map(({ key, label, icon }) => (
+						<StatCard key={key} label={label} value={stats[key]} icon={icon} />
+					))}
 				</div>
 			) : null}
 
@@ -467,8 +432,8 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 						transition={{ duration: 0.2, ease: "easeInOut" }}>
 						<DataTable
 							data={items}
-							columns={columns}
-							labels={labels}
+							columns={GEO_COLUMNS[activeTab]}
+							labels={GEO_LABELS[activeTab]}
 							checkbox={checkbox}
 							enableColumnVisibility
 							mobileCardRender={mobileCardRender}
@@ -478,7 +443,7 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 							onManualSortingChange={handleSortingChange}
 							toolbarContent={toolbarContent}
 							error={tableError}
-							isLoading={activeTab === "countries" ? countriesQuery.isLoading : activeTab === "states" ? statesQuery.isLoading : citiesQuery.isLoading}
+							isLoading={activeQuery.isLoading}
 						/>
 					</motion.div>
 				</AnimatePresence>

@@ -3,7 +3,6 @@ import type { Prisma, Reward } from "@prisma/client";
 
 import {
 	adminPendingRewardListQuery,
-	nowEpochMs,
 	rewardListQuery,
 	type AdminPendingRewardListQuery,
 	type AdminPendingRewardListSortField,
@@ -11,12 +10,11 @@ import {
 	type RewardListSortField,
 } from "@workspace/shared";
 
-import { BaseRepository } from "../../../platform/persistence/base.repository";
 import { fetchListPage } from "../../../platform/persistence/list-page";
 import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
 import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
 import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
-import type { EmptyMutationInput, RepositoryListResult } from "../../../platform/persistence/types";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 import type { MerchantLocationScope } from "../types/merchant-location-scope";
 import { rewardAvailabilityWhere } from "../utils/merchant-location-scope.util";
@@ -71,18 +69,6 @@ export type RewardOrgConsumerSummary = Pick<Reward, "id" | "status" | "referrerR
 export type RewardPendingReviewSummary = Pick<Reward, "id" | "title" | "organizationId" | "referrerRewardId" | "status">;
 
 export type RewardWithReferrerReward = Prisma.RewardGetPayload<{ include: { referrerReward: true } }>;
-
-function toDomain(row: Reward): Reward {
-	return row;
-}
-
-function toCreateInput(_input: EmptyMutationInput): Prisma.RewardCreateInput {
-	throw new Error("RewardRepository.create via BaseRepository ports is not supported");
-}
-
-function toUpdateInput(_input: EmptyMutationInput): Prisma.RewardUpdateManyMutationInput {
-	throw new Error("RewardRepository.update via BaseRepository ports is not supported");
-}
 
 // ── Marketplace list query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
@@ -149,44 +135,26 @@ export function buildMarketplaceOrder(query: RewardListQuery): ListOrder<Prisma.
 	});
 }
 
-const RewardRepositoryPorts = {
-	toDomain,
-	toCreateInput,
-	toUpdateInput,
-	buildListWhere: (query: RewardListQuery): Prisma.RewardWhereInput => buildMarketplaceWhere(query),
-	buildListOrder: buildMarketplaceOrder,
-	listKeyset: rewardListKeyset<Reward>(),
-	andWhere: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
-	buildFindByIdWhere: (id: string): Prisma.RewardWhereInput => ({
-		id,
-		isDeleted: false,
-		status: "PUBLISHED",
-		rewardKind: "CONSUMER",
-	}),
-	buildLiveWhere: (id: string): Prisma.RewardWhereInput => ({ id, isDeleted: false }),
-	buildUniqueWhere: (id: string): Prisma.RewardWhereUniqueInput => ({ id }),
-	buildUpdateWhere: (id: string): Prisma.RewardWhereInput => ({ id, isDeleted: false }),
-	stampUpdate: (data: Prisma.RewardUpdateManyMutationInput): Prisma.RewardUpdateManyMutationInput => ({ ...data, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.RewardUpdateManyMutationInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.RewardUpdateManyMutationInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
-};
+/**
+ * One review-state transition: `shared` is written to the reward AND (when it
+ * has one) its referrer reward; `rewardOnly` goes to the reward alone.
+ */
+async function transitionWithReferrer(
+	tx: Prisma.TransactionClient,
+	rewardId: string,
+	referrerRewardId: string | null,
+	shared: Prisma.RewardUncheckedUpdateInput,
+	rewardOnly: Prisma.RewardUncheckedUpdateInput = {},
+): Promise<void> {
+	await tx.reward.update({ where: { id: rewardId }, data: { ...shared, ...rewardOnly } });
+	if (referrerRewardId !== null) {
+		await tx.reward.update({ where: { id: referrerRewardId }, data: shared });
+	}
+}
 
 @Injectable()
-export class RewardRepository extends BaseRepository<
-	Reward,
-	EmptyMutationInput,
-	EmptyMutationInput,
-	RewardListQuery,
-	Reward,
-	Prisma.RewardWhereInput,
-	Prisma.RewardOrderByWithRelationInput,
-	Prisma.RewardCreateInput,
-	Prisma.RewardUpdateManyMutationInput,
-	Prisma.RewardWhereUniqueInput
-> {
-	public constructor(prisma: PrismaService) {
-		super(prisma, RewardRepositoryPorts, (db: Prisma.TransactionClient) => db.reward, { softDelete: true });
-	}
+export class RewardRepository {
+	public constructor(private readonly prisma: PrismaService) {}
 
 	public async listMarketplace(query: RewardListQuery): Promise<RepositoryListResult<RewardWithOrganization>> {
 		return fetchListPage(query, {
@@ -384,21 +352,7 @@ export class RewardRepository extends BaseRepository<
 		withinTransaction: (tx: Prisma.TransactionClient) => Promise<void>,
 	): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
-			await tx.reward.update({
-				where: { id: rewardId },
-				data: {
-					status: "PUBLISHED",
-					reviewedAt: now,
-					autoPublishAt: null,
-				},
-			});
-
-			if (referrerRewardId !== null) {
-				await tx.reward.update({
-					where: { id: referrerRewardId },
-					data: { status: "PUBLISHED", reviewedAt: now, autoPublishAt: null },
-				});
-			}
+			await transitionWithReferrer(tx, rewardId, referrerRewardId, { status: "PUBLISHED", reviewedAt: now, autoPublishAt: null });
 
 			await appendRewardAuditLog(tx, {
 				organizationId,
@@ -412,57 +366,25 @@ export class RewardRepository extends BaseRepository<
 
 	public async approveInTransaction(rewardId: string, referrerRewardId: string | null, adminUserId: string, now: number): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
-			await tx.reward.update({
-				where: { id: rewardId },
-				data: {
-					status: "PUBLISHED",
-					reviewedAt: now,
-					reviewedByUserId: adminUserId,
-					autoPublishAt: null,
-					rejectionReason: null,
-				},
-			});
-
-			if (referrerRewardId !== null) {
-				await tx.reward.update({
-					where: { id: referrerRewardId },
-					data: {
-						status: "PUBLISHED",
-						reviewedAt: now,
-						reviewedByUserId: adminUserId,
-						autoPublishAt: null,
-					},
-				});
-			}
+			await transitionWithReferrer(
+				tx,
+				rewardId,
+				referrerRewardId,
+				{ status: "PUBLISHED", reviewedAt: now, reviewedByUserId: adminUserId, autoPublishAt: null },
+				{ rejectionReason: null },
+			);
 		});
 	}
 
 	public async rejectInTransaction(rewardId: string, referrerRewardId: string | null, adminUserId: string, reason: string | null, now: number): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
-			await tx.reward.update({
-				where: { id: rewardId },
-				data: {
-					status: "DRAFT",
-					reviewedAt: now,
-					reviewedByUserId: adminUserId,
-					autoPublishAt: null,
-					rejectionReason: reason,
-					submittedForReviewAt: null,
-				},
-			});
-
-			if (referrerRewardId !== null) {
-				await tx.reward.update({
-					where: { id: referrerRewardId },
-					data: {
-						status: "DRAFT",
-						reviewedAt: now,
-						reviewedByUserId: adminUserId,
-						autoPublishAt: null,
-						submittedForReviewAt: null,
-					},
-				});
-			}
+			await transitionWithReferrer(
+				tx,
+				rewardId,
+				referrerRewardId,
+				{ status: "DRAFT", reviewedAt: now, reviewedByUserId: adminUserId, autoPublishAt: null, submittedForReviewAt: null },
+				{ rejectionReason: reason },
+			);
 		});
 	}
 

@@ -16,10 +16,10 @@ import { DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
  */
 export function buildSystemPoolConfig(config: TypedConfigService): PoolConfig {
 	return {
-		connectionString: config.databaseUrl,
-		max: config.databasePoolMax,
-		idleTimeoutMillis: config.databaseIdleTimeoutMs,
-		allowExitOnIdle: config.databaseAllowExitOnIdle,
+		connectionString: config.database.url,
+		max: config.database.poolMax,
+		idleTimeoutMillis: config.database.idleTimeoutMs,
+		allowExitOnIdle: config.database.allowExitOnIdle,
 		connectionTimeoutMillis: DATABASE_CONNECT_TIMEOUT_MS,
 	};
 }

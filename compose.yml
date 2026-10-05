@@ -168,7 +168,7 @@ services:
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,storage.cdn-invalidate
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate
     networks:
       - infra
 

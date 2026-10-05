@@ -113,7 +113,7 @@ describe("OrganizationMembershipService", () => {
 	const crypto = { hash: vi.fn<CryptoService["hash"]>() };
 	const userProvisioning = { createConsumerAccountInTx: vi.fn() };
 	const emailVerification = { sendVerificationEmailIfUnverified: vi.fn() };
-	const config = { merchantAppUrl: "https://merchant.example.com", isProduction: false };
+	const config = { clientApps: { merchantUrl: "https://merchant.example.com" }, runtime: { isProduction: false } };
 
 	beforeEach(async () => {
 		vi.clearAllMocks();

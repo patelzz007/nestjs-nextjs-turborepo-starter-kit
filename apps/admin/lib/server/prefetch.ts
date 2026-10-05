@@ -12,15 +12,11 @@
 import "server-only";
 
 import { classifyError, describeFailure, type PrefetchFailure } from "@workspace/client/lib/api/server-api";
+import { expectedFailureKind } from "@workspace/client/lib/api/server-query-outcome";
 import type { PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { notFound, redirect } from "next/navigation";
 
 import { ROUTES } from "@/lib/routes";
-
-/** HTTP statuses the outcome distinguishes. */
-const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
-const HTTP_NOT_FOUND = 404;
 
 /** Outcome of one server prefetch. */
 export type PrefetchResult<TData> =
@@ -49,21 +45,13 @@ function logToConsole(level: "warn" | "error", message: string): void {
 	console.error(message);
 }
 
-/** Maps a classified failure onto the outcome the page acts on. */
+/**
+ * Maps a classified failure onto the outcome the page acts on: the shared
+ * expected-failure categories (no cookie / 401, 403, 404), else `failed`.
+ */
 export function prefetchResultFromFailure<TData>(failure: PrefetchFailure): PrefetchResult<TData> {
-	if (failure.kind === "no-cookie") {
-		return { status: "unauthenticated" };
-	}
-	if (failure.kind === "http" && failure.status === HTTP_UNAUTHORIZED) {
-		return { status: "unauthenticated" };
-	}
-	if (failure.kind === "http" && failure.status === HTTP_FORBIDDEN) {
-		return { status: "forbidden" };
-	}
-	if (failure.kind === "http" && failure.status === HTTP_NOT_FOUND) {
-		return { status: "not-found" };
-	}
-	return { status: "failed", failure };
+	const kind = expectedFailureKind(failure);
+	return kind === undefined ? { status: "failed", failure } : { status: kind };
 }
 
 /** Runs `load`, classifying and logging a rejection instead of swallowing it. */

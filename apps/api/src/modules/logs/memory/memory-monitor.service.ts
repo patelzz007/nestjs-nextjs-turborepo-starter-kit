@@ -35,10 +35,10 @@ export class MemoryMonitorService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	public onModuleInit(): void {
-		if (!this.config.memoryMonitoring || this.stopProbe !== null) {
+		if (!this.config.observability.memoryMonitoring || this.stopProbe !== null) {
 			return;
 		}
-		const thresholds = this.config.memoryLeakDetection;
+		const thresholds = this.config.observability.memoryLeakDetection;
 		const detector = new HeapGrowthDetector(thresholds, this.probe.nowEpochMs());
 		this.stopProbe = this.probe.start((sample: HeapSample): void => {
 			detector.record(sample);
@@ -56,7 +56,7 @@ export class MemoryMonitorService implements OnModuleInit, OnModuleDestroy {
 		if (assessment.status !== "suspected_leak") {
 			return;
 		}
-		const windowMs = this.config.memoryLeakDetection.windowMs;
+		const windowMs = this.config.observability.memoryLeakDetection.windowMs;
 		if (this.lastWarningAtEpochMs !== null && nowEpochMs - this.lastWarningAtEpochMs < windowMs) {
 			return;
 		}
@@ -67,7 +67,7 @@ export class MemoryMonitorService implements OnModuleInit, OnModuleDestroy {
 				earlyFloorMb: toMb(assessment.earlyFloorBytes),
 				lateFloorMb: toMb(assessment.lateFloorBytes),
 				growthMb: toMb(assessment.growthBytes),
-				thresholdMb: this.config.memoryLeakDetection.growthThresholdMb,
+				thresholdMb: this.config.observability.memoryLeakDetection.growthThresholdMb,
 				windowMs,
 				coveredMs: assessment.coveredMs,
 			}),

@@ -35,13 +35,18 @@
  * them those samples show the rejection instead.
  *
  * Samples are made safe to commit: session tokens, signed links, generated API
- * keys and one-time secrets are replaced by `<redacted: …>` markers; arrays are cut
+ * keys and one-time secrets are replaced by `<redacted: …>` markers; every email
+ * address outside the documentation/demo domains (e.g. the developer's
+ * EMAIL_FROM_ADDRESS / EMAIL_TEST_TO) is rewritten to example.com
+ * (src/lib/api-reference/sample-privacy.ts — its test guards the committed file); arrays are cut
  * to their first two items and very long strings are shortened (see `sanitize`).
  */
 
 import { createHash, createHmac, randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+import { neutralizeEmailAddresses } from "../src/lib/api-reference/sample-privacy.ts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 const OUTPUT_FILE = resolve(REPO_ROOT, "docs/generated/api-samples.json");
@@ -203,6 +208,8 @@ function readSeedMfaDemo() {
 
 /** @param {string} value */
 function redactString(value) {
+	// The capture API reads the developer's own apps/api/.env: never publish their addresses.
+	value = neutralizeEmailAddresses(value);
 	if (PUBLIC_SEED_VALUES.has(value)) return value;
 	if (JWT_PATTERN.test(value)) return "<redacted: signed token>";
 	if (value.startsWith("mk_live_")) return "mk_live_<redacted: shown once at creation>";
@@ -297,10 +304,16 @@ function notCaptured(operationId, reason) {
 
 // ── Helpers: login, log scraping, TOTP, files ───────────────────────────────
 
+/** The credentials request every sign-in sends (`POST /auth/login`) for a seed account. */
+function loginRequest(name) {
+	const account = ACCOUNTS[name];
+	return { method: "POST", path: api("/auth/login"), body: { email: account.email, password: account.password } };
+}
+
 async function login(name) {
 	const account = ACCOUNTS[name];
 	const session = newSession(name, account);
-	const response = await send(session, { method: "POST", path: `${API_PREFIX}/auth/login`, body: { email: account.email, password: account.password } });
+	const response = await send(session, loginRequest(name));
 	if (response.status !== 200 && response.status !== 201) {
 		throw new Error(`login ${account.email} failed: ${String(response.status)} ${response.text}`);
 	}
@@ -390,6 +403,11 @@ async function uploadToTicket(ticket) {
 const api = (path) => `${API_PREFIX}${path}`;
 
 /** The list inside a response `data` (a bare array, or the first array property of an object). */
+/** Ids of the rows a bulk-create answered with (a bare array, or `{ items }` / `{ created }`). */
+function idsOf(created) {
+	return (Array.isArray(created) ? created : (created?.items ?? created?.created ?? [])).map((item) => item.id).filter(Boolean);
+}
+
 function firstArray(value) {
 	if (Array.isArray(value)) return value;
 	if (value !== null && typeof value === "object") return Object.values(value).find((child) => Array.isArray(child)) ?? [];
@@ -408,11 +426,7 @@ async function captureSystem() {
 }
 
 async function captureAuth(context) {
-	const superAdmin = await capture("AuthController_login", newSession("superAdmin", ACCOUNTS.superAdmin), {
-		method: "POST",
-		path: api("/auth/login"),
-		body: { email: ACCOUNTS.superAdmin.email, password: ACCOUNTS.superAdmin.password },
-	});
+	const superAdmin = await capture("AuthController_login", newSession("superAdmin", ACCOUNTS.superAdmin), loginRequest("superAdmin"));
 	void superAdmin;
 	const admin = await login("superAdmin");
 	context.admin = admin;
@@ -467,7 +481,7 @@ async function captureAuth(context) {
 	// Two-factor login with the seed's MFA demo user (david.lee: TOTP secret + unused backup code are printed by the seed).
 	const mfaDemo = readSeedMfaDemo();
 	const davidPending = newSession("david", ACCOUNTS.david);
-	const firstStep = await send(davidPending, { method: "POST", path: api("/auth/login"), body: { email: ACCOUNTS.david.email, password: ACCOUNTS.david.password } });
+	const firstStep = await send(davidPending, loginRequest("david"));
 	await capture("TwoFactorController_loginWithTwoFactor", davidPending, {
 		method: "POST",
 		path: api("/auth/login/2fa"),
@@ -475,7 +489,7 @@ async function captureAuth(context) {
 	});
 	await capture("TwoFactorController_getBackupCodesRemaining", davidPending, { method: "GET", path: api("/auth/2fa/backup-codes/remaining") });
 	const davidBackup = newSession("david", ACCOUNTS.david);
-	const secondStep = await send(davidBackup, { method: "POST", path: api("/auth/login"), body: { email: ACCOUNTS.david.email, password: ACCOUNTS.david.password } });
+	const secondStep = await send(davidBackup, loginRequest("david"));
 	await capture("TwoFactorController_loginWithBackupCode", davidBackup, {
 		method: "POST",
 		path: api("/auth/login/backup-code"),
@@ -486,13 +500,13 @@ async function captureAuth(context) {
 	// Enrollment for henry.moore (the seed's mid-enrollment user): setup → enable → verify a backup code → rotate.
 	await verifyEmailOf(ACCOUNTS.henry.email);
 	const henry = newSession("henry", ACCOUNTS.henry);
-	await send(henry, { method: "POST", path: api("/auth/login"), body: { email: ACCOUNTS.henry.email, password: ACCOUNTS.henry.password } });
+	await send(henry, loginRequest("henry"));
 	const setup = await capture("TwoFactorController_startSetup", henry, { method: "POST", path: api("/auth/2fa/setup"), body: {} });
 	const henrySecret = setup?.secret ?? setup?.manualEntryKey ?? new URL(setup?.otpauthUrl ?? "otpauth://x?secret=").searchParams.get("secret");
 	await capture("TwoFactorController_enableTwoFactor", henry, { method: "POST", path: api("/auth/2fa/enable"), body: { token: await totp(henrySecret) } });
 	const henryBackupCodes = setup?.backupCodes ?? [];
 	// Enabling 2FA revokes the old tokens: sign in again, now with the second factor.
-	const henryStep = await send(henry, { method: "POST", path: api("/auth/login"), body: { email: ACCOUNTS.henry.email, password: ACCOUNTS.henry.password } });
+	const henryStep = await send(henry, loginRequest("henry"));
 	await send(henry, { method: "POST", path: api("/auth/login/2fa"), body: { tempToken: henryStep.json?.data?.tempToken, token: await totp(henrySecret) } });
 	await capture("TwoFactorController_verifyBackupCode", henry, { method: "POST", path: api("/auth/2fa/verify-backup-code"), body: { backupCode: henryBackupCodes[0] } });
 	await capture("TwoFactorController_rotateTwoFactor", henry, {
@@ -740,7 +754,7 @@ async function captureCatalog(context) {
 		path: api("/sample-category/bulk"),
 		body: { items: [{ name: `${categories?.[1]?.name} Archive`, slug: `${categories?.[1]?.slug}-archive` }] },
 	});
-	const bulkIds = (Array.isArray(bulk) ? bulk : (bulk?.items ?? bulk?.created ?? [])).map((item) => item.id).filter(Boolean);
+	const bulkIds = idsOf(bulk);
 	await capture("SampleCategoryController_bulkDelete", admin, { method: "POST", path: api("/sample-category/bulk-delete"), body: { ids: [newCategory?.id, ...bulkIds] } });
 
 	const products = await capture("ProductController_list", admin, { method: "GET", path: api("/product"), query: { limit: "2" } });
@@ -773,7 +787,7 @@ async function captureCatalog(context) {
 			],
 		},
 	});
-	const productBulkIds = (Array.isArray(productBulk) ? productBulk : (productBulk?.items ?? productBulk?.created ?? [])).map((item) => item.id).filter(Boolean);
+	const productBulkIds = idsOf(productBulk);
 	await capture("ProductController_bulkDelete", admin, { method: "POST", path: api("/product/bulk-delete"), body: { ids: [newProduct?.id, ...productBulkIds] } });
 }
 
@@ -1281,7 +1295,7 @@ async function captureImpersonation(context) {
 	const secret = setup.json?.data?.secret;
 	await send(superAdmin, { method: "POST", path: api("/auth/2fa/enable"), body: { token: await totp(secret) } });
 	const stepped = newSession("superAdmin", ACCOUNTS.superAdmin);
-	const first = await send(stepped, { method: "POST", path: api("/auth/login"), body: { email: ACCOUNTS.superAdmin.email, password: ACCOUNTS.superAdmin.password } });
+	const first = await send(stepped, loginRequest("superAdmin"));
 	await send(stepped, { method: "POST", path: api("/auth/login/2fa"), body: { tempToken: first.json?.data?.tempToken, token: await totp(secret) } });
 	await capture("ImpersonationController_impersonate", stepped, { method: "POST", path: api(`/auth/impersonate/${context.userIds["user@example.com"]}`) });
 	await capture("ImpersonationController_stopImpersonation", stepped, { method: "POST", path: api("/auth/stop-impersonation") });

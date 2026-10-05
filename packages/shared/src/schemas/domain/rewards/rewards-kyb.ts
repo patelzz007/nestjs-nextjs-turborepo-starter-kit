@@ -100,9 +100,12 @@ export const MerchantOnboardingBusinessFieldsSchema = MerchantKybSubmissionField
 
 export type MerchantOnboardingBusinessFieldsInput = z.output<typeof MerchantOnboardingBusinessFieldsSchema>;
 
+/** The onboarding invite token every signed-out onboarding call carries. */
+const MerchantOnboardingInviteTokenSchema = z.string().min(1);
+
 export const MerchantOnboardingValidateTokenSchema = z
 	.object({
-		token: z.string().min(1),
+		token: MerchantOnboardingInviteTokenSchema,
 	})
 	.strict();
 
@@ -120,7 +123,7 @@ export type MerchantOnboardingInvitePreview = z.output<typeof MerchantOnboarding
 
 export const MerchantOnboardingCompleteFieldsSchema = z
 	.object({
-		token: z.string().min(1),
+		token: MerchantOnboardingInviteTokenSchema,
 		password: strongPassword,
 		fullName: z.string().min(2).max(200),
 		category: MerchantBusinessCategorySchema,
@@ -135,30 +138,6 @@ export const MerchantOnboardingCompleteFieldsSchema = z
 
 export type MerchantOnboardingCompleteFieldsInput = z.output<typeof MerchantOnboardingCompleteFieldsSchema>;
 
-/** Invite-authorized upload ticket request used before the merchant can sign in. */
-export const MerchantOnboardingDocumentUploadUrlSchema = z
-	.object({
-		token: z.string().min(1),
-		fileName: z.string().min(1).max(255),
-		mimeType: DocumentMimeTypeSchema,
-		sizeBytes: z.number().int().positive(),
-		checksumSha256: z.string().length(64),
-	})
-	.strict();
-
-export type MerchantOnboardingDocumentUploadUrlInput = z.output<typeof MerchantOnboardingDocumentUploadUrlSchema>;
-
-/** Confirms an invite-authorized direct upload. */
-export const MerchantOnboardingDocumentUploadCompleteSchema = z
-	.object({
-		token: z.string().min(1),
-		fileId: z.uuid(),
-		checksumSha256: z.string().length(64),
-	})
-	.strict();
-
-export type MerchantOnboardingDocumentUploadCompleteInput = z.output<typeof MerchantOnboardingDocumentUploadCompleteSchema>;
-
 /** One file in a batch onboarding KYB upload request. */
 export const MerchantOnboardingDocumentUploadItemSchema = z
 	.object({
@@ -171,10 +150,39 @@ export const MerchantOnboardingDocumentUploadItemSchema = z
 
 export type MerchantOnboardingDocumentUploadItem = z.output<typeof MerchantOnboardingDocumentUploadItemSchema>;
 
+export const MerchantOnboardingDocumentBatchUploadCompleteItemSchema = z
+	.object({
+		fileId: z.uuid(),
+		checksumSha256: z.string().length(64),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentBatchUploadCompleteItem = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteItemSchema>;
+
+/** Invite-authorized upload ticket request used before the merchant can sign in. */
+export const MerchantOnboardingDocumentUploadUrlSchema = z
+	.object({
+		token: MerchantOnboardingInviteTokenSchema,
+		...MerchantOnboardingDocumentUploadItemSchema.shape,
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentUploadUrlInput = z.output<typeof MerchantOnboardingDocumentUploadUrlSchema>;
+
+/** Confirms an invite-authorized direct upload. */
+export const MerchantOnboardingDocumentUploadCompleteSchema = z
+	.object({
+		token: MerchantOnboardingInviteTokenSchema,
+		...MerchantOnboardingDocumentBatchUploadCompleteItemSchema.shape,
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentUploadCompleteInput = z.output<typeof MerchantOnboardingDocumentUploadCompleteSchema>;
+
 /** Batch invite-authorized upload ticket request for onboarding KYB documents. */
 export const MerchantOnboardingDocumentBatchUploadUrlSchema = z
 	.object({
-		token: z.string().min(1),
+		token: MerchantOnboardingInviteTokenSchema,
 		files: z.array(MerchantOnboardingDocumentUploadItemSchema).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
 	})
 	.strict();
@@ -187,19 +195,10 @@ export const MerchantOnboardingDocumentBatchUploadUrlResponseSchema = z.object({
 
 export type MerchantOnboardingDocumentBatchUploadUrlResponse = z.output<typeof MerchantOnboardingDocumentBatchUploadUrlResponseSchema>;
 
-export const MerchantOnboardingDocumentBatchUploadCompleteItemSchema = z
-	.object({
-		fileId: z.uuid(),
-		checksumSha256: z.string().length(64),
-	})
-	.strict();
-
-export type MerchantOnboardingDocumentBatchUploadCompleteItem = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteItemSchema>;
-
 /** Batch confirmation for invite-authorized onboarding KYB uploads. */
 export const MerchantOnboardingDocumentBatchUploadCompleteSchema = z
 	.object({
-		token: z.string().min(1),
+		token: MerchantOnboardingInviteTokenSchema,
 		completions: z.array(MerchantOnboardingDocumentBatchUploadCompleteItemSchema).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
 	})
 	.strict();
@@ -215,7 +214,7 @@ export type MerchantOnboardingDocumentBatchUploadCompleteResponse = z.output<typ
 /** Attaches completed onboarding documents to the newly provisioned merchant. */
 export const MerchantOnboardingDocumentsSubmitSchema = z
 	.object({
-		token: z.string().min(1),
+		token: MerchantOnboardingInviteTokenSchema,
 		documentFileIds: z.array(z.uuid()).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
 	})
 	.strict();
@@ -229,7 +228,7 @@ export type MerchantOnboardingDocumentsSubmitInput = z.output<typeof MerchantOnb
  */
 export const MerchantOnboardingDocumentStatusSchema = z
 	.object({
-		token: z.string().min(1),
+		token: MerchantOnboardingInviteTokenSchema,
 		fileIds: z.array(z.uuid()).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
 	})
 	.strict();

@@ -16,6 +16,18 @@ export const MessageResponseSchema = z.object({
 export type MessageResponse = z.output<typeof MessageResponseSchema>;
 
 /**
+ * `{ message }` with no OpenAPI metadata — the shared shape behind the
+ * per-endpoint aliases (`SignupResponseSchema`, `LogoutResponseSchema`, …).
+ * A response schema, so it strips unknown keys (ADR 022).
+ */
+export const PlainMessageResponseSchema = z.object({
+	message: z.string(),
+});
+
+/** Closed `{ message }` (`.strict()`) — for the service-level payloads that must reject extra keys. */
+export const StrictMessageResponseSchema = PlainMessageResponseSchema.strict();
+
+/**
  * Legacy FLAT error body (`{ message, error?, statusCode?, … }`).
  *
  * LEGACY: the API no longer returns this shape — every failure is the

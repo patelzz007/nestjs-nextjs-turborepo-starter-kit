@@ -33,14 +33,3 @@ export function createBullMqConnection(redisUrl: string): { url: string; maxRetr
 		maxRetriesPerRequest: null,
 	};
 }
-
-export function parseCommaSeparatedEnv(value: string | undefined): readonly string[] | undefined {
-	if (value === undefined || value.length === 0) {
-		return undefined;
-	}
-	const parts = value
-		.split(",")
-		.map((part) => part.trim())
-		.filter((part) => part.length > 0);
-	return parts.length > 0 ? parts : undefined;
-}

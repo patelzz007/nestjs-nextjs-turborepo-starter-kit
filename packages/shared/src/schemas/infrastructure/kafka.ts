@@ -4,17 +4,11 @@ import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEve
 import { RewardPlatformEventSchema } from "../domain/rewards/rewards-entities";
 
 /** Kafka topics the API publishes platform events to. */
-export const KAFKA_TOPICS: ["platform.auth", "platform.sessions", "platform.impersonation", "platform.email", "platform.rewards"] = [
-	"platform.auth",
-	"platform.sessions",
-	"platform.impersonation",
-	"platform.email",
-	"platform.rewards",
-];
-
-export const KafkaTopicSchema = z.enum(KAFKA_TOPICS);
+export const KafkaTopicSchema = z.enum(["platform.auth", "platform.sessions", "platform.impersonation", "platform.email", "platform.rewards"]);
 
 export type KafkaTopic = z.output<typeof KafkaTopicSchema>;
+
+export const KAFKA_TOPICS: readonly KafkaTopic[] = KafkaTopicSchema.options;
 
 const AuthFlowEnvelopeSchema = z
 	.object({

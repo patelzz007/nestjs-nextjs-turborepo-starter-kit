@@ -1,55 +1,43 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../prisma/prisma.service";
+import type { ModuleHealthIndicator, ModuleHealthReport } from "../../health/health.service";
+import { SYSTEM_ROLE_CATALOG } from "../reference-data/system-role-catalog";
 
 /**
- * Health check for the authorization system.
+ * Readiness of the authorization system: every platform role the code depends on by
+ * name (`SYSTEM_ROLE_CATALOG`) exists as a live system role. A missing role means the
+ * reference data was never loaded (`pnpm --filter @workspace/api db:sync-reference-data`),
+ * and every authorization decision that needs it would fail — so the indicator is
+ * registered as CRITICAL (see module-health-indicators.provider.ts).
  *
- * Verifies that the database has the expected RBAC tables and seed data
- * by querying for a known role.
+ * Database errors are not caught here: the health service turns a thrown probe into
+ * "down" and reports it.
  */
 @Injectable()
-export class AuthorizationHealthIndicator {
-	private readonly logger: Logger = new Logger(AuthorizationHealthIndicator.name);
-
+export class AuthorizationHealthIndicator implements ModuleHealthIndicator {
 	public constructor(private readonly prisma: PrismaService) {}
 
-	/**
-	 * Check that the authorization system is operational.
-	 *
-	 * @returns `true` if the database is reachable and RBAC tables exist.
-	 */
 	public async isHealthy(): Promise<boolean> {
-		try {
-			const role = await this.prisma.role.findFirst({ where: { isDeleted: false }, select: { id: true } });
-			return role !== null;
-		} catch {
-			this.logger.warn("Authorization health check failed");
-			return false;
-		}
+		return (await this.missingSystemRoles()).length === 0;
 	}
 
-	/**
-	 * Return a detailed health report.
-	 */
-	public async getReport(): Promise<{
-		readonly healthy: boolean;
-		readonly roleCount: number;
-		readonly permissionCount: number;
-		readonly userRoleCount: number;
-		readonly rolePermissionCount: number;
-	}> {
-		try {
-			const [roleCount, permissionCount, userRoleCount, rolePermissionCount] = await Promise.all([
-				this.prisma.role.count({ where: { isDeleted: false } }),
-				this.prisma.permission.count({ where: { isDeleted: false } }),
-				this.prisma.userRole.count({ where: { isDeleted: false } }),
-				this.prisma.rolePermission.count({ where: { isDeleted: false } }),
-			]);
+	public async getReport(): Promise<ModuleHealthReport> {
+		const missing: readonly string[] = await this.missingSystemRoles();
+		return {
+			systemRolesExpected: SYSTEM_ROLE_CATALOG.length,
+			systemRolesMissing: missing.length === 0 ? null : missing.join(", "),
+		};
+	}
 
-			return { healthy: true, roleCount, permissionCount, userRoleCount, rolePermissionCount };
-		} catch {
-			return { healthy: false, roleCount: 0, permissionCount: 0, userRoleCount: 0, rolePermissionCount: 0 };
-		}
+	/** Names from the catalog with no live system role, in catalog order. */
+	private async missingSystemRoles(): Promise<readonly string[]> {
+		const expected: readonly string[] = SYSTEM_ROLE_CATALOG.map((role) => role.name);
+		const present = await this.prisma.role.findMany({
+			where: { name: { in: [...expected] }, isSystem: true, isDeleted: false },
+			select: { name: true },
+		});
+		const presentNames: ReadonlySet<string> = new Set(present.map((role) => role.name));
+		return expected.filter((name) => !presentNames.has(name));
 	}
 }

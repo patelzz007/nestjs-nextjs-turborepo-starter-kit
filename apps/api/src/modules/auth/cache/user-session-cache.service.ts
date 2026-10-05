@@ -18,14 +18,14 @@ export class UserSessionCacheService {
 	private readonly permissionsStore: BoundedTtlCache<string, SessionPermissionsResponse>;
 
 	public constructor(protected readonly config: TypedConfigService) {
-		this.defaultTtlMs = config.userSessionCacheTtlMs;
+		this.defaultTtlMs = config.caches.userSessionTtlMs;
 		this.meStore = new BoundedTtlCache<string, UserResponse>({
-			maxEntries: config.userSessionCacheMaxEntries,
+			maxEntries: config.caches.userSessionMaxEntries,
 			defaultTtlMs: this.defaultTtlMs,
 			capacityPolicy: "evict-oldest",
 		});
 		this.permissionsStore = new BoundedTtlCache<string, SessionPermissionsResponse>({
-			maxEntries: config.userSessionCacheMaxEntries,
+			maxEntries: config.caches.userSessionMaxEntries,
 			defaultTtlMs: this.defaultTtlMs,
 			capacityPolicy: "evict-oldest",
 		});

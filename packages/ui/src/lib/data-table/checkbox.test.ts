@@ -60,38 +60,31 @@ interface DemoRow {
 }
 
 describe("resolveDataTableCheckboxConfig", () => {
-	it("keeps legacy props when checkbox is undefined", () => {
+	it("disables selection, bulk actions and export when checkbox is undefined", () => {
 		const resolved = resolveDataTableCheckboxConfig<DemoRow>({
 			checkbox: undefined,
-			enableBulkSelection: true,
-			bulkActions: [{ key: "custom", label: "Custom", onClick: (): void => undefined }],
-			exportable: true,
-			exportFilename: "legacy.csv",
-			exportableColumns: ["name"],
 			labels,
 			deleteSelectedIcon: null,
 		});
 
-		expect(resolved.enableBulkSelection).toBe(true);
-		expect(resolved.bulkActions).toHaveLength(1);
-		expect(resolved.exportable).toBe(true);
-		expect(resolved.exportFormats).toEqual(["csv", "json", "pdf", "xlsx"]);
-		expect(resolved.exportFilename).toBe("legacy.csv");
+		expect(resolved.enableBulkSelection).toBe(false);
+		expect(resolved.bulkActions).toHaveLength(0);
+		expect(resolved.exportable).toBe(false);
+		expect(resolved.exportFormats).toEqual([]);
+		expect(resolved.exportFilename).toBeUndefined();
 	});
 
-	it("enables selection and merges legacy bulk actions when checkbox is true", () => {
+	it("enables selection without bulk actions or export when checkbox is true", () => {
 		const resolved = resolveDataTableCheckboxConfig<DemoRow>({
 			checkbox: true,
-			enableBulkSelection: false,
-			bulkActions: [{ key: "legacy", label: "Legacy", onClick: (): void => undefined }],
-			exportable: false,
 			labels,
 			deleteSelectedIcon: null,
 		});
 
 		expect(resolved.enableBulkSelection).toBe(true);
-		expect(resolved.bulkActions).toHaveLength(1);
-		expect(resolved.bulkActions[0]?.key).toBe("legacy");
+		expect(resolved.bulkActions).toHaveLength(0);
+		expect(resolved.exportable).toBe(false);
+		expect(resolved.exportFormats).toEqual([]);
 	});
 
 	it("adds delete action and export formats from checkbox config", () => {
@@ -101,9 +94,6 @@ describe("resolveDataTableCheckboxConfig", () => {
 				export: ["csv", "json"],
 				exportFilename: "rows.csv",
 			},
-			enableBulkSelection: false,
-			bulkActions: [],
-			exportable: false,
 			labels,
 			deleteSelectedIcon: null,
 		});
@@ -117,12 +107,27 @@ describe("resolveDataTableCheckboxConfig", () => {
 		expect(resolved.exportFilename).toBe("rows.csv");
 	});
 
+	it("appends custom bulk actions after delete and enables every format for export: true", () => {
+		const resolved = resolveDataTableCheckboxConfig<DemoRow>({
+			checkbox: {
+				onDeleteAll: (): void => undefined,
+				bulkActions: [{ key: "custom", label: "Custom", onClick: (): void => undefined }],
+				export: true,
+				exportableColumns: ["name"],
+			},
+			labels,
+			deleteSelectedIcon: null,
+		});
+
+		expect(resolved.bulkActions.map((action) => action.key)).toEqual(["delete-selected", "custom"]);
+		expect(resolved.exportable).toBe(true);
+		expect(resolved.exportFormats).toEqual(["csv", "json", "pdf", "xlsx"]);
+		expect(resolved.exportableColumns).toEqual(["name"]);
+	});
+
 	it("disables selection when checkbox is false", () => {
 		const resolved = resolveDataTableCheckboxConfig<DemoRow>({
 			checkbox: false,
-			enableBulkSelection: true,
-			bulkActions: [{ key: "custom", label: "Custom", onClick: (): void => undefined }],
-			exportable: true,
 			labels,
 			deleteSelectedIcon: null,
 		});

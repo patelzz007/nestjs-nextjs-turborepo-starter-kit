@@ -26,8 +26,14 @@ allowBuilds:
 # too-young version stops the install instead of being silently appended to
 # an exclusion list). To take a fresh release early (e.g. a security fix),
 # add `name@version` under `minimumReleaseAgeExclude` WITH a comment giving the
-# reason and the date after which the entry can be deleted; remove it then.
+# reason and the date after which the entry can be deleted. Push CI only checks
+# the entry is well-formed; the weekly `dependency-review` workflow reports it
+# once that date arrives (it never blocks a push).
 minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  # Security fix GHSA-ch52-4w7c-c8xp (published 2026-10-04, see the astro override below).
+  # Delete this entry on or after 2026-10-05, once 4.3.0 is past the cooldown.
+  - http-cache-semantics@4.3.0
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7
@@ -63,6 +69,9 @@ overrides:
   "teeny-request>uuid": "11.1.1" # GHSA: uuid <11.1.1
   "gaxios>uuid": "11.1.1"
   "google-gax>uuid": "11.1.1"
+  # astro@7.3.5 (latest) depends on http-cache-semantics ^4.2.0 but its lockfile resolution
+  # stayed on 4.2.0; 4.3.0 is in astro's own range. Remove once a fresh resolution picks >=4.3.0.
+  "astro>http-cache-semantics": "4.3.0" # GHSA-ch52-4w7c-c8xp: http-cache-semantics <=4.2.0
 
 # typescript-eslint@8.x does not support TypeScript 7.0 (no compiler API).
 # Keep the whole workspace on TS 6.0.2 until TS 7.1 + typescript-eslint support
@@ -75,3 +84,19 @@ peerDependencyRules:
   allowedVersions:
     "nestjs-zod>@nestjs/common": "12"
     "nestjs-zod>@nestjs/swagger": "12"
+
+# ── Accepted audit advisories ─────────────────────────────────────────────
+# ONLY for an advisory with NO patched version, after checking it cannot be
+# reached with untrusted input. Every entry needs a reason and a review date
+# (push CI checks both exist: packages/tooling/tests/dependency-exceptions.test.mjs).
+# The weekly `dependency-review` workflow reports entries past their review date,
+# forcing a re-check (is a fix out? upgrade and remove the entry) without ever
+# blocking a push.
+auditConfig:
+  ignoreGhsas:
+    # braces <=3.0.3 stack-exhaustion DoS on deeply nested brace patterns; no patched
+    # release exists (3.0.3 is the latest). Reached only through build/lint tooling —
+    # @next/eslint-plugin-next and the shadcn CLI (ts-morph) via fast-glob → micromatch —
+    # which expand glob patterns written in this repository, never request input.
+    # review-by: 2026-11-04
+    - GHSA-vfj7-8cjw-p6xm

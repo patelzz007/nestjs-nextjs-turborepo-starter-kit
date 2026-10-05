@@ -78,6 +78,6 @@ export class MutationIntentGuard implements CanActivate {
 	}
 
 	private isAllowedOrigin(origin: string): boolean {
-		return this.config.corsOrigins.some((allowed) => allowed === origin);
+		return this.config.http.corsOrigins.some((allowed) => allowed === origin);
 	}
 }

@@ -57,7 +57,7 @@ export class RewardOtpService {
 			}),
 		);
 
-		if (!this.config.isProduction) {
+		if (!this.config.runtime.isProduction) {
 			// Dev visibility when EMAIL_MODE=log-only.
 			process.stdout.write(`[reward-otp] user=${userId} email=${user.email} phone=${phone} code=${code}\n`);
 		}

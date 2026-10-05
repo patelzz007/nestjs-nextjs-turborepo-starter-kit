@@ -1,4 +1,4 @@
-import type { ConsumerLogEntry, ConsumerLogger } from "./message-handler";
+import type { ConsumerLogEntry, ConsumerLogger } from "@workspace/messaging/inbox";
 
 type LogLevel = "info" | "warn" | "error";
 

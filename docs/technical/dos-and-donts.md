@@ -67,6 +67,7 @@ A one-page checklist. Each line links to the rule that explains *why*; the ruleb
 - ✅ Return the generic 403; use `self()` for own-account routes; audits name the real actor.
 - ❌ No `if (user.role === "ADMIN")`; membership is not permission; no permissions in JWTs; no second
   authorization engine; never bypass `PrivilegeEscalationService`.
+- The full list, with the reason behind each rule: [Authorization dos and don'ts](./authorization/dos-and-donts.md).
 
 ## Database and RLS ([rules/08](../../rules/08-database-prisma.md), [database](./database.md), [database security](./security/database-security.md))
 

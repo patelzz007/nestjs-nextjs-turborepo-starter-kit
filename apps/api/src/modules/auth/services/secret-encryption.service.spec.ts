@@ -16,7 +16,7 @@ const configState = vi.hoisted(() => {
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
 		/** Snapshot at construction so each service instance keeps its own key ring. */
-		public readonly mfaEncryptionKeys = configState.mfaEncryptionKeys;
+		public readonly mfa = { encryptionKeys: configState.mfaEncryptionKeys };
 	},
 }));
 

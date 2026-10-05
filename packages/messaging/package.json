@@ -4,7 +4,7 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json && node ../../packages/tooling/scripts/fix-dist-extensions.mjs dist",
+		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths",
 		"lint": "eslint --max-warnings=0",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
@@ -29,6 +29,14 @@
 			"types": "./dist/nest/index.d.ts",
 			"default": "./dist/nest/index.js"
 		},
+		"./inbox": {
+			"development": {
+				"types": "./src/inbox/index.ts",
+				"default": "./src/inbox/index.ts"
+			},
+			"types": "./dist/inbox/index.d.ts",
+			"default": "./dist/inbox/index.js"
+		},
 		"./kafka": {
 			"development": {
 				"types": "./src/kafka/index.ts",
@@ -43,14 +51,18 @@
 		"@nestjs/bullmq": "^12.0.0",
 		"@nestjs/common": "^12.1.1",
 		"@nestjs/core": "^12.1.1",
+		"@workspace/shared": "workspace:*",
 		"bullmq": "^6.3.4",
 		"ioredis": "^6.0.0",
+		"pg": "^8.23.0",
 		"zod": "4.6.2"
 	},
 	"devDependencies": {
+		"@types/pg": "^8.23.1",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
+		"tsc-alias": "^1.9.7",
 		"typescript": "6.0.2",
 		"vitest": "^5.0.0"
 	}

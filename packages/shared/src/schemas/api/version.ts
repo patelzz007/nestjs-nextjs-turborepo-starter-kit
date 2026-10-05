@@ -8,24 +8,21 @@
 // API returns it from `VersionController` as a RAW body (`@ZodRawResponse` —
 // no envelope), because the client parses the body with this schema directly.
 //
-// The `ApiVersion` type lives in `contracts/versioning.ts` (zero imports).
-// This file imports only the type (no runtime dep on contracts), so no cycle.
+// `ApiVersionSchema` lives in `contracts/versioning.ts` (no workspace imports),
+// so importing it here creates no cycle.
 
 import { z } from "zod";
 
-import { type ApiVersion } from "../../contracts/versioning";
-
-/** Zod enum derived from the single `ApiVersion` type source in `contracts/versioning`. */
-const ApiVersionEnum: z.ZodType<ApiVersion> = z.enum(["v1", "v2"]);
+import { ApiVersionSchema } from "../../contracts/versioning";
 
 export const ApiVersionManifestSchema = z
 	.object({
 		/** The version currently deployed. Clients pin to this on negotiation. */
-		current: ApiVersionEnum,
+		current: ApiVersionSchema,
 		/** Alias for `current` (some clients read "default" — both agree). */
-		default: ApiVersionEnum,
+		default: ApiVersionSchema,
 		/** Every version the server answers on, with sunset dates for deprecated ones. */
-		supported: z.array(z.object({ version: ApiVersionEnum, sunsetAt: z.string().optional() })),
+		supported: z.array(z.object({ version: ApiVersionSchema, sunsetAt: z.string().optional() })),
 		/** Swagger UI location for the current version (`/v1/docs`). */
 		docs: z.string(),
 		/** Physical path prefix for the current version (`/api/v1`). */

@@ -14,8 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
-		public readonly accessTokenStateCacheTtlMs = 30_000;
-		public readonly accessTokenStateCacheMaxEntries = 50_000;
+		public readonly caches = { accessTokenStateTtlMs: 30_000, accessTokenStateMaxEntries: 50_000 };
 	},
 }));
 

@@ -1,4 +1,5 @@
 import type { Permission, PermissionAction, PermissionResource, Prisma, Role, User } from "@prisma/client";
+import { DAY_MS } from "@workspace/shared";
 
 import { deterministicUuid } from "./deterministic-uuid";
 import { prisma } from "./client";
@@ -28,7 +29,6 @@ import { requireRow } from "./require-row";
 // ---------------------------------------------------------------------------
 
 const NAMESPACE = "seed.rbac-demo";
-const DAY_MS = 24 * 60 * 60 * 1000;
 /** A live temporary grant lasts 30 days from the seed run. */
 const TEMPORARY_GRANT_TTL_MS = 30 * DAY_MS;
 /** The expired grant lapsed two days before the seed run; the hourly job expired it. */

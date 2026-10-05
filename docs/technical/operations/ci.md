@@ -40,7 +40,7 @@ them individually.
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm db:check-rls-manifest` |
 | **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack) | `pnpm deps:check` |
 | **Migration history** | Committed Prisma migrations at or after the [baseline](#migration-baseline) are immutable: relative to the merge base, none is edited, deleted, renamed or extended, and every new one is strictly newer than the latest committed one with a unique timestamp prefix. Migrations older than the baseline are ignored | `node packages/tooling/scripts/check-migration-history.mjs --base origin/main --working-tree` |
-| **Dependency audit** | `pnpm audit --audit-level=high` finds no high/critical advisory. Fix by upgrading, or with a scoped `overrides` entry in `pnpm-workspace.yaml` that names the advisory and the condition for removing it | `pnpm audit --audit-level=high` |
+| **Dependency audit** | `pnpm audit --audit-level=high` finds no high/critical advisory. Fix by upgrading, or with a scoped `overrides` entry in `pnpm-workspace.yaml` that names the advisory and the condition for removing it. An advisory with **no patched release** that is unreachable from untrusted input may be accepted under `auditConfig.ignoreGhsas` (reason + `# review-by:` date) — see [Dependency review](#dependency-review-weekly) | `pnpm audit --audit-level=high` |
 | **Secret scan (.env.example)** | No real-looking secrets in tracked `.env.example` files | `pnpm secrets:scan` |
 | **Docs link check** | Every internal link and anchor in `docs/` resolves | `pnpm docs:check-links` |
 | **Database + API e2e** | See below | See below |
@@ -162,3 +162,14 @@ placeholder steps that always pass — a green check must always mean something 
 CI cannot enforce itself. In GitHub → Settings → Branches, protect `main` and require every job
 above as a status check, plus at least one approving review, an up-to-date branch, and no force
 pushes (`rules/13-ci-cd-and-quality-gates.md`, "Required status checks").
+
+## Dependency review (weekly)
+
+`.github/workflows/dependency-review.yml` runs every Monday 01:00 UTC (and on demand via *Run workflow*). It holds the checks that depend on **today's date**, which must never block a push:
+
+| Check | What it reports | Local |
+|---|---|---|
+| **Due dependency exceptions** | An accepted advisory (`auditConfig.ignoreGhsas`) past its `# review-by:` date, or a supply-chain cooldown exception (`minimumReleaseAgeExclude`) whose "Delete this entry on or after" date has arrived — with the action to take for each | `pnpm --filter @workspace/tooling deps:review` (add `-- --today YYYY-MM-DD` to preview a date) |
+| **Dependency audit** | New high/critical advisories, even in weeks with no pushes | `pnpm audit --audit-level=high` |
+
+Push CI only checks that every exception is **well-formed** (a written reason and a valid date — `packages/tooling/tests/dependency-exceptions.test.mjs`), so a calendar day passing never turns a push red. When the weekly run fails, follow the printed action (upgrade and delete an accepted advisory once a fix exists, or move its review-by date after re-checking it is still unreachable; delete a cooldown exception once its version is mature), then re-run the workflow.

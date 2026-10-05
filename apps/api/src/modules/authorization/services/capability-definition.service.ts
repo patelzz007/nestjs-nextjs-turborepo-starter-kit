@@ -1,16 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import type { CapabilityScope } from "@prisma/client";
-import {
-	CapabilityDefinitionSchema,
-	PermissionActionSchema,
-	PermissionResourceSchema,
-	type CapabilityDefinition,
-	type CapabilitySlug,
-	CapabilitySlugSchema,
-	toPlatformCapabilitySlug,
-} from "@workspace/shared";
+import { CapabilityDefinitionSchema, type CapabilityDefinition, type CapabilitySlug, CapabilitySlugSchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
+import { derivePlatformCapabilityRows } from "../reference-data/platform-capability-rows";
 import { SystemPrismaService } from "../../../prisma/system-prisma.service";
 
 type CatalogCache = ReadonlyMap<CapabilityScope, readonly CapabilityDefinition[]>;
@@ -70,57 +63,17 @@ export class CapabilityDefinitionService implements OnModuleInit {
 	}
 
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
-		const permissions = await this.systemDb.permission.findMany({
-			select: {
-				id: true,
-				action: true,
-				resource: true,
-				scope: true,
-				description: true,
-				group: true,
-				isSystem: true,
-			},
-			// GLOBAL rows sort first, so they own the capability when several scopes share a slug.
-			orderBy: [{ scope: "asc" }, { createdAt: "asc" }],
-		});
-
-		const syncedSlugs = new Set<string>();
-		for (const permission of permissions) {
-			const actionParsed = PermissionActionSchema.safeParse(permission.action);
-			const resourceParsed = PermissionResourceSchema.safeParse(permission.resource);
-			if (!actionParsed.success || !resourceParsed.success) {
-				continue;
-			}
-			const slug = toPlatformCapabilitySlug(actionParsed.data, resourceParsed.data);
-			// One capability per action × resource: the first (preferably GLOBAL) permission row links it.
-			if (syncedSlugs.has(slug)) {
-				continue;
-			}
-			syncedSlugs.add(slug);
+		const rows = await derivePlatformCapabilityRows(this.systemDb);
+		for (const row of rows) {
 			await this.systemDb.capabilityDefinition.upsert({
-				where: { slug },
-				create: {
-					slug,
-					scope: "PLATFORM",
-					label: permission.description ?? `${permission.action} ${permission.resource}`,
-					description: permission.description,
-					groupName: permission.group,
-					isSystem: permission.isSystem,
-					permissionId: permission.id,
-				},
-				update: {
-					label: permission.description ?? `${permission.action} ${permission.resource}`,
-					description: permission.description,
-					groupName: permission.group,
-					isSystem: permission.isSystem,
-					permissionId: permission.id,
-					updatedAt: Date.now(),
-				},
+				where: { slug: row.slug },
+				create: { ...row, scope: "PLATFORM" },
+				update: { ...row, updatedAt: Date.now() },
 			});
 		}
 
 		this.invalidateCache();
-		this.logger.log(`Synced ${String(permissions.length)} platform capability definition(s) from permissions`);
+		this.logger.log(`Synced ${String(rows.length)} platform capability definition(s) from permissions`);
 	}
 
 	private async loadCatalogCache(): Promise<CatalogCache> {

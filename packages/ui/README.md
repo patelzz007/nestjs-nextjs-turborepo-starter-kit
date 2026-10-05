@@ -61,7 +61,7 @@ import {
 ## Code block (`display/code-block.tsx`)
 
 A full port of the [ReUI code block](https://reui.io/components/code-block) (registry item
-`code-block.json`): Shiki highlighting, streaming, diffs, ANSI, folding, focus mode, line
+`code-block.json`): Shiki highlighting, streaming, diffs, folding, focus mode, line
 selection, per-line actions, wrap, collapse/expand, copy and download. Public names, prop names,
 `data-slot` / `data-*` attributes and `--code-block-*` custom properties match ReUI, so its docs
 and examples apply — with the deviations listed below.
@@ -73,9 +73,9 @@ Two modules:
   (JavaScript regex engine, so no `wasm-unsafe-eval` in your CSP; static per-grammar/theme
   import maps — add a language by adding a line to `codeBlockLanguages`) and pure helpers:
   `highlightCode`, `parseLineSpec`, `normalizeCode`, `buildWordDecorations`,
-  `stripNotationComments`, `toPlainLines`, `markdownCodeProps`, `markdownFences`,
-  `resolveCodeBlockLanguage`, `parseUnifiedDiff`, `ansiToLines`, `resetCodeBlockHighlighter`
-  (test seam), `codeBlockLanguages`, `codeBlockThemes`, `DEFAULT_CODE_BLOCK_THEMES`.
+  `stripNotationComments`, `toPlainLines`, `resolveCodeBlockLanguage`,
+  `resetCodeBlockHighlighter` (test seam), `codeBlockLanguages`, `codeBlockThemes`,
+  `DEFAULT_CODE_BLOCK_THEMES`.
 
 **Parts:** `CodeBlock` (root; renders the code surface itself — children are chrome only),
 `CodeBlockHeader`, `CodeBlockTitle`, `CodeBlockLanguage`, `CodeBlockCopyButton`,
@@ -136,10 +136,9 @@ const lines = await highlightCode(source, { language: "tsx", highlightedLines: "
 </CodeBlock>;
 ```
 
-`parseUnifiedDiff(patch)` returns per-file `lines` with dual old/new gutter labels;
-`ansiToLines(stdout)` turns SGR colour codes into `lines` (palette overridable via
-`--code-ansi-*`). `markdownCodeProps` / `markdownFences` are the react-markdown / raw-transcript
-glue. Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `--warning`,
+A pre-built `lines` array can also carry per-line `gutter` labels (e.g. dual old/new numbers for a
+patch) and per-token `color` / `colorDark`. ReUI's unified-diff, ANSI and markdown-fence parsers
+were not kept, because nothing in the monorepo used them. Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `--warning`,
 `--info`, `--accent`, `--muted` (all in `styles/tokens.css`).
 
 **Deliberate deviations from ReUI** (behaviour otherwise identical):

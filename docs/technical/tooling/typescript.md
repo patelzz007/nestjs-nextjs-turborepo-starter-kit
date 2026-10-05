@@ -180,9 +180,10 @@ Extends `base.json` with NestJS requirements:
 > Turbopack cannot map a `.js` specifier back to a `.ts` file, so `.js`-suffixed
 > imports in source break web/admin (see the gotcha below).
 > `packages/shared` is built to ESM with plain **`tsc`** (`pnpm build` →
-> `tsc -p tsconfig.build.json`), then `packages/tooling/scripts/fix-dist-extensions.mjs` rewrites
-> `dist/` so every relative import gets its `.js` extension — Node's ESM runtime
-> requires them even though source stays extensionless.
+> `tsc -p tsconfig.build.json`), then `tsc-alias --resolve-full-paths` rewrites
+> `dist/` (`.js` and `.d.ts`) so every relative import gets its full `.js` path —
+> Node's ESM runtime requires them even though source stays extensionless.
+> `packages/messaging` is built the same way.
 >
 > **How `@workspace/shared` is resolved:** the package `exports` field exposes a
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
@@ -308,7 +309,7 @@ in `packages/shared/src` gained a `.js` extension (e.g. `./schemas/index.js`).
 Turbopack resolves **source** directly through the `development` export condition,
 but cannot map a `.js` specifier back to a `.ts` file — it sees an empty module
 and reports every export as missing. Source must stay **extensionless**; `.js`
-extensions belong in `dist/` only, applied by `packages/tooling/scripts/fix-dist-extensions.mjs`
+extensions belong in `dist/` only, applied by `tsc-alias --resolve-full-paths`
 during `pnpm build`.
 
 ### The API is ESM now — CJS named imports need interop care
@@ -403,7 +404,7 @@ directly from `@workspace/shared` at the validation site.
 - **Function contracts** — `OnRefresh`, `AuthChannel`, `FooterAction`, store
   shapes like `SidebarState` (they carry callbacks/observables zod can't
   validate).
-- **Generics** — `PaginatedServiceResult<T>`, `ApiResponse<T>`, `RequestOptions`.
+- **Generics** — `PaginatedServiceResult<T>`, `ApiResponse<T>`, `CallerTree<R>`.
   A schema can't be generic; where a generic factory exists, derive the type
   from it (below) instead of writing the shape by hand.
 - **Third-party `extends`** — `RequestWithTrace extends Request`,

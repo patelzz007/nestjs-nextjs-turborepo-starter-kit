@@ -10,12 +10,14 @@ import {
 	resolveCollectionItemDensityClasses,
 	selectTriggerVariants,
 } from "@workspace/ui/lib/form/field-variants";
+import { assignRef } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, XIcon } from "lucide-react";
 import * as React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { z } from "zod";
 
+import { CollectionEmptyAction, CollectionItemLabel, CollectionLoading, CollectionOverflowPill, useCappedChildren } from "./collection-shared";
 import { type SelectSize, useSelectContext } from "./select-context";
 
 // ── Value ───────────────────────────────────────────────────────────────────
@@ -78,11 +80,7 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
 	const setRefs = useCallback(
 		(node: HTMLButtonElement | null): void => {
 			context.registerTrigger(node);
-			if (typeof ref === "function") {
-				ref(node);
-			} else if (ref !== null) {
-				ref.current = node;
-			}
+			assignRef(ref, node);
 		},
 		[context, ref],
 	);
@@ -153,29 +151,12 @@ export const SelectChips = React.forwardRef<HTMLDivElement, SelectChipsProps>(fu
 	{ className, children, maxChips, overflowLabel = "More selected options", ...props },
 	ref,
 ): React.JSX.Element {
-	// Cap the visible chips. `React.Children.toArray` keeps keys so the hidden
-	// chips stay mounted; the overflow count derives from the same toArray.
-	const allChildren = useMemo(() => React.Children.toArray(children), [children]);
-	const visibleChildren = useMemo(() => {
-		if (maxChips === undefined || allChildren.length <= maxChips) {
-			return allChildren;
-		}
-		return allChildren.slice(0, maxChips);
-	}, [allChildren, maxChips]);
-	const hiddenCount = allChildren.length - visibleChildren.length;
+	const { visibleChildren, hiddenCount } = useCappedChildren(children, maxChips);
 
 	return (
 		<div ref={ref} data-slot="select-chips" className={cn("flex min-w-0 flex-1 flex-wrap items-center gap-1", className)} {...props}>
 			{visibleChildren}
-			{hiddenCount > 0 ? (
-				<span
-					data-slot="select-chips-overflow"
-					aria-label={overflowLabel}
-					title={overflowLabel}
-					className="flex h-[calc(--spacing(5.5))] w-fit items-center justify-center rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-muted-foreground">
-					+{hiddenCount}
-				</span>
-			) : null}
+			<CollectionOverflowPill slot="select-chips-overflow" label={overflowLabel} hiddenCount={hiddenCount} />
 		</div>
 	);
 });
@@ -303,7 +284,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
 					{...props}>
 					<SelectScrollUpButton />
 					<SelectPrimitive.List data-slot="select-list" className="scroll-my-1 p-1">
-						{context.loading ? <SelectLoading label={loadingLabel} /> : null}
+						{context.loading ? <CollectionLoading slot="select-loading" label={loadingLabel} /> : null}
 						{children}
 					</SelectPrimitive.List>
 					<SelectScrollDownButton />
@@ -312,22 +293,6 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
 		</SelectPrimitive.Portal>
 	);
 });
-
-// ── Loading row (feature 1) ─────────────────────────────────────────────────
-
-interface SelectLoadingProps {
-	/** The loading message — always supplied by the smart component (rule 9). */
-	readonly label: string;
-}
-
-function SelectLoading({ label }: SelectLoadingProps): React.JSX.Element {
-	return (
-		<div data-slot="select-loading" role="status" aria-busy="true" className="flex w-full items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
-			<Loader2Icon className="pointer-events-none size-4 shrink-0 animate-spin" />
-			<span>{label}</span>
-		</div>
-	);
-}
 
 // ── Group / Label ───────────────────────────────────────────────────────────
 
@@ -377,14 +342,7 @@ export const SelectItem = React.memo(
 		return (
 			<SelectPrimitive.Item ref={ref} data-slot="select-item" data-variant={variant} className={resolveItemClassName} {...props}>
 				<SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">
-					{description !== undefined ? (
-						<span className="flex min-w-0 flex-col">
-							<span className="truncate">{children}</span>
-							<span className="truncate text-xs text-muted-foreground">{description}</span>
-						</span>
-					) : (
-						<span className="block truncate">{children}</span>
-					)}
+					<CollectionItemLabel description={description}>{children}</CollectionItemLabel>
 				</SelectPrimitive.ItemText>
 				<SelectPrimitive.ItemIndicator render={<span className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />}>
 					<CheckIcon className="pointer-events-none" />
@@ -454,12 +412,7 @@ export function SelectEmpty({ className, text = "No options", actionLabel, onAct
 	return (
 		<div data-slot="select-empty" className={cn("flex w-full flex-col items-center gap-1.5 px-2 py-2 text-center text-sm text-muted-foreground", className)} {...props}>
 			<span>{text}</span>
-			{hasAction ? (
-				<Button type="button" variant="link" size="sm" data-slot="select-empty-action" onClick={onAction} className="h-auto gap-1 p-0 text-xs no-underline hover:underline">
-					<PlusIcon className="pointer-events-none size-3.5" />
-					{actionLabel}
-				</Button>
-			) : null}
+			{hasAction ? <CollectionEmptyAction slot="select-empty-action" label={actionLabel} onAction={onAction} /> : null}
 		</div>
 	);
 }

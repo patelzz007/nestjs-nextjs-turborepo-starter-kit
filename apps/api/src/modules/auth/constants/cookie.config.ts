@@ -64,7 +64,7 @@ export class CookieConfigService {
 		// host or unset (same-origin behind a reverse proxy).
 		const shared: ExtendedCookieOptions = {
 			// Omit `domain` entirely when unset (host-only cookie).
-			...(config.cookieDomain === undefined ? {} : { domain: config.cookieDomain }),
+			...(config.http.cookieDomain === undefined ? {} : { domain: config.http.cookieDomain }),
 			httpOnly: true,
 			secure: config.secureCookies,
 			sameSite: "lax",

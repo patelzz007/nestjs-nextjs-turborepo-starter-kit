@@ -22,7 +22,7 @@ export class TenantJobContextService {
 	private readonly secret: string | null;
 
 	public constructor(config: TypedConfigService) {
-		this.secret = config.tenantJobHmacSecret;
+		this.secret = config.encryption.tenantJobHmacSecret;
 	}
 
 	public sign(context: Omit<TenantJobContext, "signature">): TenantJobContext {

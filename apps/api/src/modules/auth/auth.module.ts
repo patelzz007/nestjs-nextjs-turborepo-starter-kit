@@ -90,7 +90,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 			provide: "REDIS_USER_SESSION_CACHE",
 			useFactory: (config: TypedConfigService, publisher: Redis | null): RedisUserSessionCacheService | null => {
 				if (!config.useRedisUserSessionCache) {
-					if (config.userSessionCacheBackend === "redis" && config.redisUrl === undefined) {
+					if (config.caches.userSessionBackend === "redis" && config.messaging.redisUrl === undefined) {
 						Logger.warn("USER_SESSION_CACHE_BACKEND=redis but REDIS_URL is unset — using in-memory user session cache", AuthModule.name);
 					}
 					return null;

@@ -42,7 +42,7 @@ vi.mock("@nestjs/jwt", () => ({
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
-		public readonly twoFactorPendingSecret = "test-pending-secret";
+		public readonly auth = { twoFactorPendingSecret: "test-pending-secret" };
 	},
 }));
 

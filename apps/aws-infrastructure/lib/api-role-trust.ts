@@ -4,6 +4,16 @@ import { z } from "zod";
 
 import { readContextString } from "./cdk-context.util.js";
 
+/** `arn:aws:iam::<12-digit account>:role/<path/name>` (any AWS partition). */
+const IAM_ROLE_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:role\/[\w+=,.@/-]{1,512}$/;
+/** `arn:aws:iam::<account>:oidc-provider/<issuer host/path>`; the issuer is captured. */
+const OIDC_PROVIDER_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:oidc-provider\/([a-z0-9.-]+(?:\/[\w.-]+)*)$/;
+/** Kubernetes `namespace:service-account` (DNS-1123 labels / subdomains). */
+const SERVICE_ACCOUNT_PATTERN = /^([a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?):([a-z0-9](?:[-.a-z0-9]{0,251}[a-z0-9])?)$/;
+
+/** Audience the AWS STS web-identity exchange requires in an IRSA token. */
+const STS_AUDIENCE = "sts.amazonaws.com";
+
 /**
  * Who may assume the API's IAM role. The API never holds long-lived access
  * keys: its runtime obtains temporary credentials for this role and the AWS
@@ -19,22 +29,6 @@ import { readContextString } from "./cdk-context.util.js";
  * Adding a runtime is one more variant here plus one case in
  * {@link apiRoleTrustPrincipal}.
  */
-export type ApiRoleTrust =
-	| { readonly kind: "ecs-task" }
-	| { readonly kind: "ec2-instance" }
-	| { readonly kind: "eks-irsa"; readonly oidcProviderArn: string; readonly serviceAccount: string }
-	| { readonly kind: "aws-role"; readonly roleArn: string };
-
-/** `arn:aws:iam::<12-digit account>:role/<path/name>` (any AWS partition). */
-const IAM_ROLE_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:role\/[\w+=,.@/-]{1,512}$/;
-/** `arn:aws:iam::<account>:oidc-provider/<issuer host/path>`; the issuer is captured. */
-const OIDC_PROVIDER_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:oidc-provider\/([a-z0-9.-]+(?:\/[\w.-]+)*)$/;
-/** Kubernetes `namespace:service-account` (DNS-1123 labels / subdomains). */
-const SERVICE_ACCOUNT_PATTERN = /^([a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?):([a-z0-9](?:[-.a-z0-9]{0,251}[a-z0-9])?)$/;
-
-/** Audience the AWS STS web-identity exchange requires in an IRSA token. */
-const STS_AUDIENCE = "sts.amazonaws.com";
-
 const ApiRoleTrustSchema = z.discriminatedUnion("kind", [
 	z.object({ kind: z.literal("ecs-task") }),
 	z.object({ kind: z.literal("ec2-instance") }),
@@ -48,6 +42,8 @@ const ApiRoleTrustSchema = z.discriminatedUnion("kind", [
 		roleArn: z.string().regex(IAM_ROLE_ARN_PATTERN, "apiTrustRoleArn must be arn:aws:iam::<account>:role/<name>"),
 	}),
 ]);
+
+export type ApiRoleTrust = z.output<typeof ApiRoleTrustSchema>;
 
 const DEFAULT_TRUST_KIND = "ecs-task";
 

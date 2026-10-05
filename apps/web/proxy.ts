@@ -136,7 +136,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
-	const isAuthenticated = hasRouteSession(accessToken, refreshToken, effectiveAccessToken);
+	const isAuthenticated = hasRouteSession(refreshToken);
 
 	// If accessing protected route without authentication, redirect to login
 	if (isProtectedRoute && !isAuthenticated) {

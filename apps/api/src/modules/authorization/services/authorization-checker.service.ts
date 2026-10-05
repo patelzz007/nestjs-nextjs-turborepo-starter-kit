@@ -1,4 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import type { AclEffect, Prisma } from "@prisma/client";
 import {
 	nowEpochMs,
 	type EpochMs,
@@ -17,13 +18,19 @@ import {
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCacheService, type CachedAuthorization, type CachedPermission } from "../cache/authorization-cache.service";
+import { collectRoleHierarchy } from "../kernel/subject-grants.loader";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-/** Requirement shape stored as route metadata by decorators. */
-export interface PermissionRequirement {
-	readonly action: PermissionAction;
-	readonly resource: PermissionResource;
+/** Permission columns every grant query reads (the superset the callers below need). */
+const GRANT_PERMISSION_SELECT = { id: true, action: true, resource: true, description: true, group: true } satisfies Prisma.PermissionSelect;
+
+interface GrantRows {
+	readonly userRoles: Prisma.UserRoleGetPayload<{ include: { role: { select: { id: true; name: true; description: true; parentId: true } } } }>[];
+	/** Directly assigned + inherited (ancestor) active role ids. */
+	readonly roleIds: string[];
+	readonly rolePermissions: Prisma.RolePermissionGetPayload<{ include: { permission: { select: typeof GRANT_PERMISSION_SELECT } } }>[];
+	readonly userPermissions: Prisma.UserPermissionGetPayload<{ include: { permission: { select: typeof GRANT_PERMISSION_SELECT } } }>[];
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────
@@ -42,110 +49,10 @@ export interface PermissionRequirement {
  */
 @Injectable()
 export class AuthorizationCheckerService {
-	private readonly logger: Logger = new Logger(AuthorizationCheckerService.name);
-
 	public constructor(
 		private readonly cache: AuthorizationCacheService,
 		private readonly prisma: PrismaService,
 	) {}
-
-	// ── Permission checks ────────────────────────────────────────────────
-
-	/**
-	 * Check whether a user has a specific permission.
-	 */
-	public async hasPermission(userId: string, action: PermissionAction, resource: PermissionResource): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return matchesPermission(auth.permissions, action, resource);
-	}
-
-	/**
-	 * Check whether a user has ANY of the listed permissions (OR semantics).
-	 */
-	public async hasAnyPermission(userId: string, requirements: readonly { readonly action: PermissionAction; readonly resource: PermissionResource }[]): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return requirements.some((r) => matchesPermission(auth.permissions, r.action, r.resource));
-	}
-
-	/**
-	 * Check whether a user has ALL of the listed permissions (AND semantics).
-	 */
-	public async hasAllPermissions(userId: string, requirements: readonly { readonly action: PermissionAction; readonly resource: PermissionResource }[]): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return requirements.every((r) => matchesPermission(auth.permissions, r.action, r.resource));
-	}
-
-	// ── Role checks ──────────────────────────────────────────────────────
-
-	/**
-	 * Check whether a user has a specific role.
-	 */
-	public async hasRole(userId: string, roleName: string): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return auth.roles.includes(roleName);
-	}
-
-	/**
-	 * Check whether a user has ANY of the listed roles (OR semantics).
-	 */
-	public async hasAnyRole(userId: string, roleNames: readonly string[]): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return roleNames.some((name) => auth.roles.includes(name));
-	}
-
-	/**
-	 * Check whether a user has ALL of the listed roles (AND semantics).
-	 */
-	public async hasAllRoles(userId: string, roleNames: readonly string[]): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return roleNames.every((name) => auth.roles.includes(name));
-	}
-
-	/**
-	 * Unified role check — accepts a mode to determine AND vs OR semantics.
-	 *
-	 * ```ts
-	 * // User must have BOTH admin AND auditor roles
-	 * await checker.hasRoles(userId, ["admin", "auditor"], "all");
-	 *
-	 * // User needs at least ONE of admin or manager
-	 * await checker.hasRoles(userId, ["admin", "manager"], "any");
-	 * ```
-	 */
-	public async hasRoles(userId: string, roleNames: readonly string[], mode: "all" | "any" = "all"): Promise<boolean> {
-		return mode === "all" ? this.hasAllRoles(userId, roleNames) : this.hasAnyRole(userId, roleNames);
-	}
-
-	/**
-	 * Unified permission check — accepts a mode to determine AND vs OR semantics.
-	 *
-	 * ```ts
-	 * // User needs ALL of these permissions
-	 * await checker.hasPermissions(userId, [
-	 *   { action: "CREATE", resource: "USER" },
-	 *   { action: "READ", resource: "ADMIN_DASHBOARD" },
-	 * ], "all");
-	 *
-	 * // User needs ANY one of these permissions
-	 * await checker.hasPermissions(userId, [
-	 *   { action: "UPDATE", resource: "ROLE" },
-	 *   { action: "UPDATE", resource: "PERMISSION" },
-	 * ], "any");
-	 * ```
-	 */
-	public async hasPermissions(
-		userId: string,
-		requirements: readonly { readonly action: PermissionAction; readonly resource: PermissionResource }[],
-		mode: "all" | "any" = "all",
-	): Promise<boolean> {
-		return mode === "all" ? this.hasAllPermissions(userId, requirements) : this.hasAnyPermission(userId, requirements);
-	}
-
-	/** Check whether a user has a dynamic capability slug from the catalog. */
-	public async hasCapability(userId: string, slug: CapabilitySlug): Promise<boolean> {
-		const auth: CachedAuthorization = await this.resolve(userId);
-		return auth.capabilities.includes(slug);
-	}
 
 	/** Flat capability slug list for FE gating (`GET /auth/permissions`). */
 	public async getUserCapabilitySlugs(userId: string): Promise<readonly CapabilitySlug[]> {
@@ -165,18 +72,16 @@ export class AuthorizationCheckerService {
 		return slugs;
 	}
 
-	// ── Generic can() ────────────────────────────────────────────────────
-
-	/**
-	 * Generic authorization check — delegates to permission checks for now.
-	 *
-	 * Future: chain super-admin → permission → policy → resource ownership.
-	 */
-	public async can(userId: string, action: PermissionAction, resource: PermissionResource): Promise<boolean> {
-		return this.hasPermission(userId, action, resource);
-	}
-
 	// ── Full permission details ──────────────────────────────────────────
+
+	/** Ids of the user's live direct ALLOW grants. */
+	public async getUserDirectPermissionIds(userId: string): Promise<readonly string[]> {
+		const rows = await this.prisma.userPermission.findMany({
+			where: liveUserPermissionWhere(userId, "ALLOW", nowEpochMs()),
+			select: { permissionId: true },
+		});
+		return rows.map((row) => row.permissionId);
+	}
 
 	/**
 	 * Resolve the full permission details for a user, including role
@@ -186,30 +91,8 @@ export class AuthorizationCheckerService {
 	 * This replaces `RbacService.getUserPermissions()` and returns the
 	 * `UserPermissions` shape expected by `buildUserResponse()`.
 	 */
-	public async getUserDirectPermissionIds(userId: string): Promise<readonly string[]> {
-		const nowMs: EpochMs = nowEpochMs();
-		const rows = await this.prisma.userPermission.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				effect: "ALLOW",
-				permission: { isDeleted: false },
-				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
-			},
-			select: { permissionId: true },
-		});
-		return rows.map((row) => row.permissionId);
-	}
-
 	public async getUserPermissionDetails(userId: string): Promise<UserPermissions> {
-		const nowMs: EpochMs = nowEpochMs();
-
-		const userRoles = await this.prisma.userRole.findMany({
-			where: { userId, isDeleted: false, role: { isDeleted: false, isActive: true } },
-			include: {
-				role: { select: { id: true, name: true, description: true, parentId: true } },
-			},
-		});
+		const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(userId, nowEpochMs());
 
 		const roles: SlimRoleResponse[] = userRoles.map((ur) => ({
 			id: ur.role.id,
@@ -217,47 +100,14 @@ export class AuthorizationCheckerService {
 			description: ur.role.description,
 		}));
 
-		const allRoleIds: Set<string> = await this.collectRoleHierarchyIds(userRoles.map((ur) => ({ id: ur.role.id, parentId: ur.role.parentId })));
-
-		const rolePermissions = await this.prisma.rolePermission.findMany({
-			where: {
-				roleId: { in: Array.from(allRoleIds) },
-				isDeleted: false,
-				permission: { isDeleted: false },
-			},
-			include: { permission: { select: { id: true, action: true, resource: true, description: true, group: true } } },
-		});
-
-		const userPermissions = await this.prisma.userPermission.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				effect: "ALLOW",
-				permission: { isDeleted: false },
-				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
-			},
-			include: { permission: { select: { id: true, action: true, resource: true, description: true, group: true } } },
-		});
-
 		const permissionMap: Map<string, PermissionDetailsResponse> = new Map<string, PermissionDetailsResponse>();
-
-		for (const rp of rolePermissions) {
-			permissionMap.set(`${rp.permission.action}:${rp.permission.resource}`, {
-				id: rp.permission.id,
-				action: rp.permission.action,
-				resource: rp.permission.resource,
-				description: rp.permission.description,
-				group: rp.permission.group ?? null,
-			});
-		}
-
-		for (const up of userPermissions) {
-			permissionMap.set(`${up.permission.action}:${up.permission.resource}`, {
-				id: up.permission.id,
-				action: up.permission.action,
-				resource: up.permission.resource,
-				description: up.permission.description,
-				group: up.permission.group ?? null,
+		for (const { permission } of [...rolePermissions, ...userPermissions]) {
+			permissionMap.set(`${permission.action}:${permission.resource}`, {
+				id: permission.id,
+				action: permission.action,
+				resource: permission.resource,
+				description: permission.description,
+				group: permission.group ?? null,
 			});
 		}
 
@@ -286,7 +136,6 @@ export class AuthorizationCheckerService {
 			};
 		}
 
-		const nowMs: EpochMs = nowEpochMs();
 		const grants: CheckPermissionResponse["grants"] = [];
 		const seenGrantKeys: Set<string> = new Set<string>();
 
@@ -299,16 +148,7 @@ export class AuthorizationCheckerService {
 			grants.push(detail !== undefined ? { via, detail } : { via });
 		};
 
-		const userPermissions = await this.prisma.userPermission.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				effect: "ALLOW",
-				permission: { isDeleted: false },
-				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
-			},
-			include: { permission: { select: { action: true, resource: true } } },
-		});
+		const { userRoles, roleIds, rolePermissions, userPermissions } = await this.loadGrantRows(userId, nowEpochMs());
 
 		for (const up of userPermissions) {
 			if (matchesPermission([{ action: up.permission.action, resource: up.permission.resource }], action, resource)) {
@@ -317,30 +157,15 @@ export class AuthorizationCheckerService {
 			}
 		}
 
-		const userRoles = await this.prisma.userRole.findMany({
-			where: { userId, isDeleted: false, role: { isDeleted: false, isActive: true } },
-			include: { role: { select: { id: true, name: true, parentId: true } } },
-		});
-
 		const directRoleIds: Set<string> = new Set<string>(userRoles.map((ur) => ur.role.id));
 		const directRoleNames: string[] = userRoles.map((ur) => ur.role.name);
-		const allRoleIds: Set<string> = await this.collectRoleHierarchyIds(userRoles.map((ur) => ({ id: ur.role.id, parentId: ur.role.parentId })));
 
 		const rolesById = await this.prisma.role.findMany({
-			where: { id: { in: Array.from(allRoleIds) }, isDeleted: false },
+			where: { id: { in: roleIds }, isDeleted: false },
 			select: { id: true, name: true },
 		});
 
 		const roleNameById: Map<string, string> = new Map<string, string>(rolesById.map((r) => [r.id, r.name]));
-
-		const rolePermissions = await this.prisma.rolePermission.findMany({
-			where: {
-				roleId: { in: Array.from(allRoleIds) },
-				isDeleted: false,
-				permission: { isDeleted: false },
-			},
-			include: { permission: { select: { action: true, resource: true } } },
-		});
 
 		for (const rp of rolePermissions) {
 			if (!matchesPermission([{ action: rp.permission.action, resource: rp.permission.resource }], action, resource)) {
@@ -380,6 +205,34 @@ export class AuthorizationCheckerService {
 	}
 
 	/**
+	 * The user's active direct roles, every role id in their hierarchy, the
+	 * live permissions of those roles, and the user's live direct ALLOW grants.
+	 */
+	private async loadGrantRows(userId: string, nowMs: EpochMs): Promise<GrantRows> {
+		const userRoles = await this.prisma.userRole.findMany({
+			where: { userId, isDeleted: false, role: { isDeleted: false, isActive: true } },
+			include: { role: { select: { id: true, name: true, description: true, parentId: true } } },
+		});
+
+		const roleIds: string[] = await collectRoleHierarchy(
+			this.prisma,
+			userRoles.map((ur) => ({ id: ur.role.id, parentId: ur.role.parentId })),
+		);
+
+		const rolePermissions = await this.prisma.rolePermission.findMany({
+			where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
+			include: { permission: { select: GRANT_PERMISSION_SELECT } },
+		});
+
+		const userPermissions = await this.prisma.userPermission.findMany({
+			where: liveUserPermissionWhere(userId, "ALLOW", nowMs),
+			include: { permission: { select: GRANT_PERMISSION_SELECT } },
+		});
+
+		return { userRoles, roleIds, rolePermissions, userPermissions };
+	}
+
+	/**
 	 * Load authorization state from the database.
 	 *
 	 * Walks the role hierarchy to collect inherited permissions, merges
@@ -387,74 +240,17 @@ export class AuthorizationCheckerService {
 	 */
 	private async loadFromDatabase(userId: string): Promise<CachedAuthorization> {
 		const nowMs: EpochMs = nowEpochMs();
+		const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(userId, nowMs);
 
-		// 1. Fetch direct role assignments (skip soft-deleted)
-		const userRoles = await this.prisma.userRole.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				role: { isDeleted: false, isActive: true },
-			},
-			include: {
-				role: { select: { id: true, name: true, parentId: true } },
-			},
-		});
-
-		const roleNames: string[] = userRoles.map((ur) => ur.role.name);
-
-		// 2. Walk role hierarchy to collect all ancestor role IDs
-		const allRoleIds: Set<string> = await this.collectRoleHierarchyIds(userRoles.map((ur) => ({ id: ur.role.id, parentId: ur.role.parentId })));
-
-		// 3. Fetch role permissions for all collected roles
-		const rolePermissions = await this.prisma.rolePermission.findMany({
-			where: {
-				roleId: { in: Array.from(allRoleIds) },
-				isDeleted: false,
-				permission: { isDeleted: false },
-			},
-			include: { permission: { select: { action: true, resource: true } } },
-		});
-
-		// 4. Fetch direct user permissions (not expired)
-		const userPermissions = await this.prisma.userPermission.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				effect: "ALLOW",
-				permission: { isDeleted: false },
-				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
-			},
-			include: { permission: { select: { action: true, resource: true } } },
-		});
-
-		// 5. Deduplicate into a flat set
+		// Deduplicate role + direct grants into a flat set
 		const permissionMap: Map<string, CachedPermission> = new Map<string, CachedPermission>();
-
-		for (const rp of rolePermissions) {
-			const key = `${rp.permission.action}:${rp.permission.resource}`;
-			permissionMap.set(key, {
-				action: rp.permission.action,
-				resource: rp.permission.resource,
-			});
+		for (const { permission } of [...rolePermissions, ...userPermissions]) {
+			permissionMap.set(`${permission.action}:${permission.resource}`, { action: permission.action, resource: permission.resource });
 		}
 
-		for (const up of userPermissions) {
-			const key = `${up.permission.action}:${up.permission.resource}`;
-			permissionMap.set(key, {
-				action: up.permission.action,
-				resource: up.permission.resource,
-			});
-		}
-
-		// 6. Explicit DENY overrides remove the permission (DENY on MANAGE removes the whole resource).
+		// Explicit DENY overrides remove the permission (DENY on MANAGE removes the whole resource).
 		const deniedOverrides = await this.prisma.userPermission.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				effect: "DENY",
-				permission: { isDeleted: false },
-				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
-			},
+			where: liveUserPermissionWhere(userId, "DENY", nowMs),
 			select: { permission: { select: { action: true, resource: true } } },
 		});
 		for (const [key, permission] of permissionMap) {
@@ -476,45 +272,26 @@ export class AuthorizationCheckerService {
 		}
 
 		return {
-			roles: roleNames,
+			roles: userRoles.map((ur) => ur.role.name),
 			permissions: Array.from(permissionMap.values()),
 			capabilities: Array.from(capabilitySet.values()),
 			cachedAt: nowMs,
 		};
 	}
-
-	/**
-	 * Walk the role hierarchy upward, collecting all ancestor role IDs.
-	 */
-	private async collectRoleHierarchyIds(start: readonly { readonly id: string; readonly parentId: string | null }[]): Promise<Set<string>> {
-		const collected: Set<string> = new Set<string>();
-		let frontier: readonly { readonly id: string; readonly parentId: string | null }[] = start;
-
-		while (frontier.length > 0) {
-			const parentIds: string[] = [];
-			for (const role of frontier) {
-				if (collected.has(role.id)) {
-					continue;
-				}
-				collected.add(role.id);
-				if (role.parentId !== null && !collected.has(role.parentId)) {
-					parentIds.push(role.parentId);
-				}
-			}
-			if (parentIds.length === 0) {
-				break;
-			}
-			frontier = await this.prisma.role.findMany({
-				where: { id: { in: parentIds }, isDeleted: false, isActive: true },
-				select: { id: true, parentId: true },
-			});
-		}
-
-		return collected;
-	}
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+/** A user's live direct grants of one effect: not deleted, permission not deleted, not expired. */
+function liveUserPermissionWhere(userId: string, effect: AclEffect, nowMs: EpochMs): Prisma.UserPermissionWhereInput {
+	return {
+		userId,
+		isDeleted: false,
+		effect,
+		permission: { isDeleted: false },
+		OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
+	};
+}
 
 /** Every platform capability (`resource × action`) — the SuperAdmin capability set. */
 function allPlatformCapabilitySlugs(): CapabilitySlug[] {

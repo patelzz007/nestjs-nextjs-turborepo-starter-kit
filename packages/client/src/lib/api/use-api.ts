@@ -29,7 +29,6 @@ export {
 	type ApiResponse,
 	type ApiSuccess,
 	type ApiFailure,
-	type BaseRequestOptions,
 	type CallerTree,
 	type HttpMethod,
 	type MutationCaller,
@@ -39,7 +38,6 @@ export {
 	type QueryCaller,
 	type RefreshCall,
 	type RefreshResult,
-	type RequestOptions,
 	type UncheckedApiRequestContext,
 } from "./api-request";
 

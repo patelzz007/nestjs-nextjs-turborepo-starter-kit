@@ -154,11 +154,11 @@ export class LocalStorageTransferService {
 			}
 			throw error;
 		}
-		await this.storage.upload({ locator: locatorFromStoredFile(file, this.config.storageProvider), buffer, mimeType: ticket.mimeType });
+		await this.storage.upload({ locator: locatorFromStoredFile(file, this.config.storage.provider), buffer, mimeType: ticket.mimeType });
 	}
 
 	private async open(file: StoredFile, disposition: FileDownloadDisposition, fileName: string): Promise<LocalObjectDownload> {
-		const stream = await this.storage.getObjectStream(locatorFromStoredFile(file, this.config.storageProvider));
+		const stream = await this.storage.getObjectStream(locatorFromStoredFile(file, this.config.storage.provider));
 		if (stream === null) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
@@ -166,7 +166,7 @@ export class LocalStorageTransferService {
 	}
 
 	private isAtLocation(file: StoredFile, container: string, path: string): boolean {
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
+		const locator = locatorFromStoredFile(file, this.config.storage.provider);
 		return locator.container === container && locator.path === path;
 	}
 

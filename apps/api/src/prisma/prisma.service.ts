@@ -23,10 +23,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
 	public constructor(config: TypedConfigService) {
 		const pool = new RlsPool({
-			connectionString: config.databaseUrl,
-			max: config.databasePoolMax,
-			idleTimeoutMillis: config.databaseIdleTimeoutMs,
-			allowExitOnIdle: config.databaseAllowExitOnIdle,
+			connectionString: config.database.url,
+			max: config.database.poolMax,
+			idleTimeoutMillis: config.database.idleTimeoutMs,
+			allowExitOnIdle: config.database.allowExitOnIdle,
 		});
 		const adapter = new PrismaPg(pool);
 

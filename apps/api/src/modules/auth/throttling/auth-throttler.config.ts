@@ -13,8 +13,8 @@ export function authThrottlerOptionsFactory(config: TypedConfigService): Throttl
 		errorMessage: "Too many requests — please try again shortly.",
 		getTracker: (req: Record<string, string>): string => throttleTrackerFor(req),
 		throttlers: [
-			{ name: "strict", ttl: config.throttleTtlMs, limit: config.throttleStrictLimit },
-			{ name: "default", ttl: config.throttleTtlMs, limit: config.throttleDefaultLimit },
+			{ name: "strict", ttl: config.rateLimits.throttleTtlMs, limit: config.rateLimits.throttleStrictLimit },
+			{ name: "default", ttl: config.rateLimits.throttleTtlMs, limit: config.rateLimits.throttleDefaultLimit },
 		],
 	};
 }

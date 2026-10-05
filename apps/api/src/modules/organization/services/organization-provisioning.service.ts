@@ -1,8 +1,9 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
 import type { AdminCreateOrganizationInviteInput, PilotCity } from "@workspace/shared";
 
+import { sha256Hex } from "../../../common/crypto/sha256";
 import { ConflictError } from "../../../common/errors/app-error";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { ORGANIZATION_DEFAULT_PLAN } from "../constants/organization-plan";
@@ -29,10 +30,6 @@ export const ORGANIZATION_PROVISIONING_ERROR_CODES = {
 
 /** The transaction client a system operation hands its handler (the caller's onboarding transaction). */
 type ProvisioningTransaction = Parameters<Parameters<TenantTransactionService["withSystemOperation"]>[1]>[0];
-
-function sha256Hex(value: string): string {
-	return createHash("sha256").update(value).digest("hex");
-}
 
 export interface ProvisionedOrganization {
 	readonly organizationId: string;

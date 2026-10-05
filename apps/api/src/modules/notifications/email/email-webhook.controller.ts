@@ -85,7 +85,7 @@ export class EmailWebhookController {
 		private readonly emailLogService: EmailLogService,
 		private readonly logService: LogService,
 	) {
-		const apiKey: string | null = this.config.resendApiKey;
+		const apiKey: string | null = this.config.email.resendApiKey;
 		this.resend = apiKey === null ? null : new Resend(apiKey);
 	}
 
@@ -177,7 +177,7 @@ export class EmailWebhookController {
 	// 200 (not 201) on purpose: Resend treats any 2xx as delivered, and the route has always answered 200.
 	@ZodResponse(EmailWebhookReceivedResponseSchema, { description: "Webhook accepted" })
 	public async receive(@Req() req: RawBodyRequest<FastifyRequest>, @Headers() headers: Record<string, string | undefined>): Promise<EmailWebhookReceivedResponse> {
-		const secret: string | null = this.config.resendWebhookSecret;
+		const secret: string | null = this.config.email.resendWebhookSecret;
 		const resend: Resend | null = this.resend;
 		if (secret === null || resend === null) {
 			// Not configured: the event cannot be verified, so it must not be

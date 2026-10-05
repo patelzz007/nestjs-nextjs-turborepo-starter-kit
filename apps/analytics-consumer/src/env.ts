@@ -12,6 +12,7 @@
 // development via `dotenv -e .env`, the deployment's env in production). It
 // never loads the API's .env, and never sees the API's secrets.
 
+import type { DbPoolSettings, ProcessingRetrySettings } from "@workspace/messaging/inbox";
 import { KafkaSecurityEnvShape, listKafkaSecurityEnvIssues, toKafkaSecurityOptions, type KafkaSecurityOptions } from "@workspace/messaging/kafka";
 import { integerEnvSchema, KafkaBrokersEnvSchema, optionalIntegerEnvSchema, parseEnvOrThrow, PostgresUrlEnvSchema, type EnvSource } from "@workspace/shared";
 import { z } from "zod";
@@ -68,8 +69,8 @@ export const DEFAULT_DB_IDLE_TIMEOUT_MS: number = 30 * MS_PER_SECOND;
 export const DEFAULT_DB_STATEMENT_TIMEOUT_MS: number = 30 * MS_PER_SECOND;
 
 /** Where a NEW consumer group (no committed offset) starts reading. */
-export const CONSUMER_START_POSITIONS: ["earliest", "latest"] = ["earliest", "latest"];
-export const ConsumerStartPositionSchema = z.enum(CONSUMER_START_POSITIONS);
+export const ConsumerStartPositionSchema = z.enum(["earliest", "latest"]);
+export type { DbPoolSettings, ProcessingRetrySettings };
 export type ConsumerStartPosition = z.output<typeof ConsumerStartPositionSchema>;
 
 /** Default: a new group consumes the whole retained backlog — nothing already published is skipped. */
@@ -135,25 +136,12 @@ export interface ConsumerEnv {
 	readonly deadLetterMaxPayloadBytes: number;
 }
 
-export interface DbPoolSettings {
-	readonly max: number;
-	readonly connectionTimeoutMs: number;
-	readonly idleTimeoutMs: number;
-	readonly statementTimeoutMs: number;
-}
-
 export interface KafkaConnectionSettings {
 	readonly brokers: readonly string[];
 	readonly clientId: string;
 	readonly security: KafkaSecurityOptions;
 	readonly adminTimeoutMs: number;
 	readonly topicRetentionDays: number;
-}
-
-export interface ProcessingRetrySettings {
-	readonly maxAttempts: number;
-	readonly baseDelayMs: number;
-	readonly maxDelayMs: number;
 }
 
 /** Inbox window when `ANALYTICS_INBOX_RETENTION_DAYS` is unset. */

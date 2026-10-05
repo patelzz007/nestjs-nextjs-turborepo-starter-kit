@@ -132,7 +132,7 @@ export class FileFinalizationService {
 			return "SKIPPED";
 		}
 		// Infected bytes are removed outright; the row keeps the verdict for the audit trail.
-		await this.storage.deleteObject(locatorFromStoredFile(file, this.config.storageProvider));
+		await this.storage.deleteObject(locatorFromStoredFile(file, this.config.storage.provider));
 		this.logger.warn(`Quarantined file ${file.id}: ${scanResult}`);
 		return "QUARANTINED";
 	}
@@ -230,7 +230,7 @@ export class FileFinalizationService {
 
 	/** Copies the staging object to its durable final key (or adopts the worker's copy) and removes the staging object. */
 	private async promoteObject(file: StoredFile, alreadyAtFinalPath: boolean): Promise<{ readonly locator: StorageObjectLocator; readonly revision: string | null }> {
-		const sourceLocator = locatorFromStoredFile(file, this.config.storageProvider);
+		const sourceLocator = locatorFromStoredFile(file, this.config.storage.provider);
 		const destinationLocator = toStorageObjectLocator(sourceLocator.provider, sourceLocator.container, buildFinalStoragePath(this.pathInput(file)));
 		if (file.storagePath === destinationLocator.path) {
 			return { locator: sourceLocator, revision: file.objectRevision ?? file.objectGeneration };
@@ -271,7 +271,7 @@ export class FileFinalizationService {
 		if (!isStagingPath(file.storagePath)) {
 			return;
 		}
-		await this.storage.deleteObject(locatorFromStoredFile(file, this.config.storageProvider));
+		await this.storage.deleteObject(locatorFromStoredFile(file, this.config.storage.provider));
 	}
 
 	private pathInput(file: StoredFile): Parameters<typeof buildFinalStoragePath>[0] {

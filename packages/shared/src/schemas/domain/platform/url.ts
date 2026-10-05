@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema } from "../../api/common";
 import { PaginationSchema } from "../../api/pagination";
+import { StrictMessageResponseSchema } from "../../api/message";
+import { RedirectTypeSchema } from "./enums";
 
 // ── Input Schemas ────────────────────────────────────────────────────────
 
@@ -15,7 +17,7 @@ export const CreateUrlSchema = z
 			.max(64)
 			.regex(/^[a-zA-Z0-9_-]+$/, "customAlias may only contain letters, numbers, hyphens, and underscores")
 			.optional(),
-		redirectType: z.enum(["PERMANENT", "TEMPORARY"]).optional().default("TEMPORARY"),
+		redirectType: RedirectTypeSchema.optional().default("TEMPORARY"),
 		password: z.string().max(72).optional(),
 		clickLimit: z.coerce.number().int().min(1).optional(),
 		expiresAt: EpochMsSchema.optional(),
@@ -28,7 +30,7 @@ export const UpdateUrlSchema = z
 	.object({
 		originalUrl: z.url("Must be a valid URL").max(2048).optional(),
 		title: z.string().max(255).optional(),
-		redirectType: z.enum(["PERMANENT", "TEMPORARY"]).optional(),
+		redirectType: RedirectTypeSchema.optional(),
 		isActive: z.boolean().optional(),
 		clickLimit: z.coerce.number().int().min(1).optional(),
 		expiresAt: EpochMsSchema.optional(),
@@ -71,11 +73,7 @@ export const UrlResponseSchema = BaseResponseSchema.extend({
 
 export type UrlResponse = z.output<typeof UrlResponseSchema>;
 
-export const UrlMessageResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const UrlMessageResponseSchema = StrictMessageResponseSchema;
 
 export type UrlMessageResponse = z.output<typeof UrlMessageResponseSchema>;
 

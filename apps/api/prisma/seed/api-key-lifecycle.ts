@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import type { Prisma, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import { DAY_MS } from "@workspace/shared";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -30,7 +31,6 @@ import { requireRow } from "./require-row";
 
 const NAMESPACE = "seed.api-key-lifecycle";
 const MS_PER_MINUTE = 60_000;
-const MS_PER_DAY = 86_400_000;
 /** bcrypt cost for seeded key hashes (matches `createApiKeys`). */
 const SEED_BCRYPT_ROUNDS = 10;
 /** Random bytes behind the discarded secret of the revoked key. */
@@ -79,7 +79,7 @@ export function buildRevokedApiKeySeed(input: { readonly userId: string; readonl
 		ipAddress: REVOKED_KEY_IP,
 		userAgent: REVOKED_KEY_USER_AGENT,
 		responseTimeMs: usage.responseTimeMs,
-		createdAt: deletedAt - usage.daysBeforeDeletion * MS_PER_DAY + index * MS_PER_MINUTE,
+		createdAt: deletedAt - usage.daysBeforeDeletion * DAY_MS + index * MS_PER_MINUTE,
 		updatedAt: deletedAt,
 		isDeleted: true,
 		deletedAt,

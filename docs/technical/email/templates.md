@@ -67,13 +67,43 @@ below (headless Chrome, light mode):
 | ![Password reset](../../images/email/password-reset.png) | ![Account locked](../../images/email/account-locked.png) | ![Security alert](../../images/email/security-alert.png) |
 | ![API key created](../../images/email/api-key-created.png) | ![Team member invite](../../images/email/team-member-invite.png) | ![Admin alert](../../images/email/admin-alert.png) |
 
+## Design: one shell, one set of building blocks
+
+Every email renders through `BaseEmailTemplate` (`base/base-email-template.ts`), so templates only
+supply content:
+
+- **Shell:** brand row above a 600 px card, a 4 px accent bar in the template's tone, an eyebrow
+  pill, the heading, the body and a footer. Table layout with inline styles for every mail client;
+  a `prefers-color-scheme: dark` block and a ≤ 620 px mobile block override them.
+- **Tokens:** `EMAIL_THEME` mirrors the web brand theme (`apps/web/app/web-theme.css`) as hex —
+  mail clients support neither `oklch()` nor CSS variables. **Change both together.**
+- **Tone:** each template sets `accent`, which picks a palette in `ACCENT_PALETTES`: `indigo`
+  (brand: account, product), `green` (success), `amber` (a security change worth a look), `red`
+  (danger), `sky` (codes, invites). The call-to-action button is always the brand colour.
+- **Building blocks** — compose bodies from these protected helpers instead of hand-written inline
+  styles; each escapes its own values:
+
+  | Block | Use for |
+  | --- | --- |
+  | `paragraph(html)`, `note(html)` | Body copy and small muted notes; interpolate data only via `strong()`, `link()` or `escape()` |
+  | `detailsCard(rows)` | Label / value facts (device, location, role, expiry) |
+  | `highlight(title, subtitle?)` | The one thing the reader must notice |
+  | `callout(title, body)` | Guidance in the tone's colour ("Wasn't you?") |
+  | `steps(items)` | A numbered how-to |
+  | `otpCodeBlock(code)` | One-time codes, one tile per character |
+  | `ctaInBody(context)` with `ctaPlacement = "in-body"` | The button mid-body; otherwise the shell renders `getCta()` after the body |
+  | `linkBlock(href)` | The "button not working?" raw-link fallback |
+
+Open and click tracking is deliberately **not** used: no tracking pixel, no engagement columns. The
+webhook acknowledges `email.opened` / `email.clicked` events and ignores them.
+
 ## Adding a template
 
 1. Add the key to `EmailTemplateKeySchema` in `packages/shared`.
 2. Create `templates/<name>-email.template.ts` extending `BaseEmailTemplate` with a strict zod
    props schema; never put secrets other than the intended one-time link/code in the body.
-3. Register it with sample props in `email-template.registry.ts` and the factory
-   (`email-template.factory.ts`, used to rebuild queued jobs).
+3. Register it in `email-template.registry.ts` (label, description, class, props schema). The
+   registry drives both the admin preview and `email-template.factory.ts`, which rebuilds queued jobs.
 4. Send it from the owning service with `EmailSenderService.send(new XxxEmailTemplate(props))` and
    handle the result.
 5. Test the rendering (HTML + text) and the call site; preview it in **Emails → Templates**.

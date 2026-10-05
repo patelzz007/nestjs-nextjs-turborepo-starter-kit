@@ -2,6 +2,8 @@ import type { Provider } from "@nestjs/common";
 
 import { BullMqHealthIndicator, KafkaHealthIndicator, RabbitMqHealthIndicator } from "@workspace/messaging/nest";
 
+import { AuthorizationHealthIndicator } from "../authorization/health/authorization.health";
+
 import { MODULE_HEALTH_INDICATORS, type RegisteredModuleHealthIndicator } from "./health.service";
 
 /**
@@ -16,15 +18,21 @@ import { MODULE_HEALTH_INDICATORS, type RegisteredModuleHealthIndicator } from "
  * API outage (rules/12-observability-and-operations.md → single points of
  * failure). Promote an indicator to `critical: true` only when the API truly
  * cannot serve requests without that dependency.
+ *
+ * The authorization indicator IS critical: without the system roles every
+ * authorization decision fails, and the cause (reference data never loaded)
+ * is a broken deploy, not a transient blip — such an instance must not take
+ * traffic.
  */
 export const moduleHealthIndicatorsProvider: Provider = {
 	provide: MODULE_HEALTH_INDICATORS,
 	useFactory: (
+		authorizationIndicator: AuthorizationHealthIndicator,
 		queueIndicator?: BullMqHealthIndicator,
 		kafkaIndicator?: KafkaHealthIndicator,
 		rabbitIndicator?: RabbitMqHealthIndicator,
 	): readonly RegisteredModuleHealthIndicator[] => {
-		const indicators: RegisteredModuleHealthIndicator[] = [];
+		const indicators: RegisteredModuleHealthIndicator[] = [{ name: "authorization", indicator: authorizationIndicator, critical: true }];
 		if (queueIndicator !== undefined) {
 			indicators.push({ name: "queue", indicator: queueIndicator, critical: false });
 		}
@@ -37,6 +45,7 @@ export const moduleHealthIndicatorsProvider: Provider = {
 		return indicators;
 	},
 	inject: [
+		AuthorizationHealthIndicator,
 		{ token: BullMqHealthIndicator, optional: true },
 		{ token: KafkaHealthIndicator, optional: true },
 		{ token: RabbitMqHealthIndicator, optional: true },

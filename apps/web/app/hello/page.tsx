@@ -1,4 +1,4 @@
-import { settleServerQuery } from "@/lib/api/server-query-outcome";
+import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { guardWebPage } from "@/lib/auth/page-guard";
 import { loginPath, ROUTES } from "@/lib/routes";
 import { createWebServerCaller } from "@/lib/web-server-api";

@@ -449,28 +449,23 @@ function issuesOf(error: z.ZodError): GeoRowIssue[] {
 	});
 }
 
+/** A row's safe-parse result as a {@link ParsedImportRow}. */
+function toParsedRow<TRow>(result: z.ZodSafeParseResult<TRow>, toValue: (row: TRow) => GeoImportRow): ParsedImportRow {
+	return result.success ? { ok: true, value: toValue(result.data) } : { ok: false, issues: issuesOf(result.error) };
+}
+
 function parseImportRow(entity: GeoImportEntity, row: JsonObject): ParsedImportRow {
 	switch (entity) {
-		case "region": {
-			const parsed = RegionImportRowSchema.safeParse(row);
-			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
-		}
-		case "subregion": {
-			const parsed = SubregionImportRowSchema.safeParse(row);
-			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
-		}
-		case "country": {
-			const parsed = CountryImportRowSchema.safeParse(row);
-			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
-		}
-		case "state": {
-			const parsed = StateImportRowSchema.safeParse(row);
-			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
-		}
-		case "city": {
-			const parsed = CityImportRowSchema.safeParse(row);
-			return parsed.success ? { ok: true, value: { entity, row: parsed.data } } : { ok: false, issues: issuesOf(parsed.error) };
-		}
+		case "region":
+			return toParsedRow(RegionImportRowSchema.safeParse(row), (parsed) => ({ entity: "region", row: parsed }));
+		case "subregion":
+			return toParsedRow(SubregionImportRowSchema.safeParse(row), (parsed) => ({ entity: "subregion", row: parsed }));
+		case "country":
+			return toParsedRow(CountryImportRowSchema.safeParse(row), (parsed) => ({ entity: "country", row: parsed }));
+		case "state":
+			return toParsedRow(StateImportRowSchema.safeParse(row), (parsed) => ({ entity: "state", row: parsed }));
+		case "city":
+			return toParsedRow(CityImportRowSchema.safeParse(row), (parsed) => ({ entity: "city", row: parsed }));
 		default:
 			return assertNever(entity);
 	}
@@ -523,6 +518,91 @@ function softDeleteData(stamp: GeoDeletionStamp): { isDeleted: true; deletedAt: 
 function notFound(entity: string, id: number): NotFoundError {
 	return new NotFoundError({ message: `${entity} #${String(id)} not found` });
 }
+
+/**
+ * The live descendants a geo delete soft-deletes together with its row — and
+ * exactly what `cascadePreview` counts — per child table (the filter is added
+ * to `isDeleted: false`). Child tables are listed top-down.
+ */
+interface GeoCascade {
+	readonly subregions?: Prisma.SubregionWhereInput;
+	readonly countries?: Prisma.CountryWhereInput;
+	readonly states?: Prisma.StateWhereInput;
+	readonly cities?: Prisma.CityWhereInput;
+}
+
+type GeoCascadeEntity = CascadePreviewInput["entity"];
+
+const GEO_CASCADE: Readonly<Record<GeoCascadeEntity, (id: number) => GeoCascade>> = {
+	region: (id) => ({
+		subregions: { regionId: id },
+		countries: { regionId: id },
+		states: { country: { regionId: id } },
+		cities: { state: { country: { regionId: id } } },
+	}),
+	subregion: (id) => ({ countries: { subregionId: id }, states: { country: { subregionId: id } }, cities: { state: { country: { subregionId: id } } } }),
+	country: (id) => ({ states: { countryId: id }, cities: { countryId: id } }),
+	state: (id) => ({ cities: { stateId: id } }),
+};
+
+/** Soft-delete every live descendant in `cascade`, bottom-up (cities first). */
+async function softDeleteCascade(tx: GeoWriteTransaction, cascade: GeoCascade, stamp: GeoDeletionStamp): Promise<void> {
+	if (cascade.cities !== undefined) await tx.city.updateMany({ where: { isDeleted: false, ...cascade.cities }, data: softDeleteData(stamp) });
+	if (cascade.states !== undefined) await tx.state.updateMany({ where: { isDeleted: false, ...cascade.states }, data: softDeleteData(stamp) });
+	if (cascade.countries !== undefined) await tx.country.updateMany({ where: { isDeleted: false, ...cascade.countries }, data: softDeleteData(stamp) });
+	if (cascade.subregions !== undefined) await tx.subregion.updateMany({ where: { isDeleted: false, ...cascade.subregions }, data: softDeleteData(stamp) });
+}
+
+/** Display name of each geo entity in error messages. */
+const GEO_ENTITY_LABEL: Readonly<Record<GeoCascadeEntity, string>> = { region: "Region", subregion: "Subregion", country: "Country", state: "State" };
+
+/** Live-row count of a parent entity (0 = missing or soft-deleted). */
+const LIVE_PARENT_COUNT: Readonly<Record<GeoCascadeEntity, (tx: GeoWriteTransaction, id: number) => Promise<number>>> = {
+	region: (tx, id) => tx.region.count({ where: { id, isDeleted: false } }),
+	subregion: (tx, id) => tx.subregion.count({ where: { id, isDeleted: false } }),
+	country: (tx, id) => tx.country.count({ where: { id, isDeleted: false } }),
+	state: (tx, id) => tx.state.count({ where: { id, isDeleted: false } }),
+};
+
+/** Where + data of an `upsert` import's "touch the matched rows" update. */
+interface GeoTouchArgs {
+	readonly where: { readonly id: { readonly in: number[] }; readonly isDeleted: false };
+	readonly data: { readonly updatedAt: Date };
+}
+
+const TOUCH_ROWS: Readonly<Record<GeoImportEntity, (tx: GeoWriteTransaction, args: GeoTouchArgs) => Promise<Prisma.BatchPayload>>> = {
+	region: (tx, args) => tx.region.updateMany(args),
+	subregion: (tx, args) => tx.subregion.updateMany(args),
+	country: (tx, args) => tx.country.updateMany(args),
+	state: (tx, args) => tx.state.updateMany(args),
+	city: (tx, args) => tx.city.updateMany(args),
+};
+
+/**
+ * `?include=a,b` → the Prisma include built from the matching fragments of
+ * `fragments` (in their declared order); `undefined` when nothing matches.
+ */
+function parseInclude<TInclude extends object>(include: string | undefined, fragments: Readonly<Record<string, TInclude>>): TInclude | undefined {
+	if (!include) return undefined;
+	const parts = include.split(",").map((s) => s.trim());
+	const picked: TInclude[] = Object.entries(fragments)
+		.filter(([token]) => parts.includes(token))
+		.map(([, fragment]) => fragment);
+	return picked.length > 0 ? picked.reduce((merged, fragment) => ({ ...merged, ...fragment })) : undefined;
+}
+
+const LIVE_ONLY = { where: { isDeleted: false } } satisfies { where: { isDeleted: boolean } };
+
+const REGION_INCLUDES: Readonly<Record<string, Prisma.RegionInclude>> = { subregions: { subregions: LIVE_ONLY }, countries: { countries: LIVE_ONLY } };
+const SUBREGION_INCLUDES: Readonly<Record<string, Prisma.SubregionInclude>> = { region: { region: true }, countries: { countries: LIVE_ONLY } };
+const COUNTRY_INCLUDES: Readonly<Record<string, Prisma.CountryInclude>> = {
+	region: { regionRelation: true },
+	subregion: { subregionRelation: true },
+	states: { states: LIVE_ONLY },
+	cities: { cities: LIVE_ONLY },
+};
+const STATE_INCLUDES: Readonly<Record<string, Prisma.StateInclude>> = { country: { country: true }, cities: { cities: LIVE_ONLY } };
+const CITY_INCLUDES: Readonly<Record<string, Prisma.CityInclude>> = { state: { state: true }, country: { country: true } };
 
 /** A body that references a parent row which does not exist (or was soft-deleted). */
 function missingParent(field: string, entity: string, id: number): ValidationError {
@@ -640,7 +720,7 @@ export class GeoRepository {
 
 	public async listRegions(query: RegionListQuery): Promise<PaginatedServiceResult<RegionListItem>> {
 		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("regions", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
-		const includeObj = this.parseRegionInclude(query.include);
+		const includeObj = parseInclude(query.include, REGION_INCLUDES);
 		const result = await fetchListPage(query, {
 			where: buildRegionListWhere(query, searchIds),
 			order: buildListOrder(regionListQuery.resolveSort(query.sort), { columns: REGION_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
@@ -672,10 +752,7 @@ export class GeoRepository {
 	public async deleteRegion(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
 		const deleted = await tx.region.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
 		if (deleted.count === 0) throw notFound("Region", id);
-		await tx.city.updateMany({ where: { isDeleted: false, state: { country: { regionId: id } } }, data: softDeleteData(stamp) });
-		await tx.state.updateMany({ where: { isDeleted: false, country: { regionId: id } }, data: softDeleteData(stamp) });
-		await tx.country.updateMany({ where: { isDeleted: false, regionId: id }, data: softDeleteData(stamp) });
-		await tx.subregion.updateMany({ where: { isDeleted: false, regionId: id }, data: softDeleteData(stamp) });
+		await softDeleteCascade(tx, GEO_CASCADE.region(id), stamp);
 		return { message: `Region #${String(id)} deleted` };
 	}
 
@@ -683,7 +760,7 @@ export class GeoRepository {
 
 	public async listSubregions(query: SubregionListQuery): Promise<PaginatedServiceResult<SubregionListItem>> {
 		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("subregions", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
-		const includeObj = this.parseSubregionInclude(query.include);
+		const includeObj = parseInclude(query.include, SUBREGION_INCLUDES);
 		const result = await fetchListPage(query, {
 			where: buildSubregionListWhere(query, searchIds),
 			order: buildListOrder(subregionListQuery.resolveSort(query.sort), {
@@ -706,12 +783,12 @@ export class GeoRepository {
 	}
 
 	public async createSubregion(tx: GeoWriteTransaction, input: CreateSubregionInput): Promise<Subregion> {
-		await this.assertLiveRegion(tx, "regionId", input.regionId);
+		await this.assertLive(tx, "region", "regionId", input.regionId);
 		return toSubregionDto(await tx.subregion.create({ data: toPrismaCreateSubregion(withSanitizedName(input)) }));
 	}
 
 	public async updateSubregion(tx: GeoWriteTransaction, id: number, input: UpdateSubregionInput): Promise<Subregion> {
-		if (input.regionId !== undefined) await this.assertLiveRegion(tx, "regionId", input.regionId);
+		if (input.regionId !== undefined) await this.assertLive(tx, "region", "regionId", input.regionId);
 		const updated = await tx.subregion.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateSubregion(withSanitizedName(input)) });
 		if (updated.count === 0) throw notFound("Subregion", id);
 		return toSubregionDto(await tx.subregion.findUniqueOrThrow({ where: { id } }));
@@ -721,9 +798,7 @@ export class GeoRepository {
 	public async deleteSubregion(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
 		const deleted = await tx.subregion.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
 		if (deleted.count === 0) throw notFound("Subregion", id);
-		await tx.city.updateMany({ where: { isDeleted: false, state: { country: { subregionId: id } } }, data: softDeleteData(stamp) });
-		await tx.state.updateMany({ where: { isDeleted: false, country: { subregionId: id } }, data: softDeleteData(stamp) });
-		await tx.country.updateMany({ where: { isDeleted: false, subregionId: id }, data: softDeleteData(stamp) });
+		await softDeleteCascade(tx, GEO_CASCADE.subregion(id), stamp);
 		return { message: `Subregion #${String(id)} deleted` };
 	}
 
@@ -731,7 +806,7 @@ export class GeoRepository {
 
 	public async listCountries(query: CountryListQuery): Promise<PaginatedServiceResult<CountryListItem>> {
 		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("countries", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
-		const includeObj = this.parseCountryInclude(query.include);
+		const includeObj = parseInclude(query.include, COUNTRY_INCLUDES);
 		const result = await fetchListPage(query, {
 			where: buildCountryListWhere(query, searchIds),
 			order: buildListOrder(countryListQuery.resolveSort(query.sort), { columns: COUNTRY_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
@@ -765,8 +840,7 @@ export class GeoRepository {
 	public async deleteCountry(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
 		const deleted = await tx.country.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
 		if (deleted.count === 0) throw notFound("Country", id);
-		await tx.city.updateMany({ where: { isDeleted: false, countryId: id }, data: softDeleteData(stamp) });
-		await tx.state.updateMany({ where: { isDeleted: false, countryId: id }, data: softDeleteData(stamp) });
+		await softDeleteCascade(tx, GEO_CASCADE.country(id), stamp);
 		return { message: `Country #${String(id)} deleted` };
 	}
 
@@ -774,7 +848,7 @@ export class GeoRepository {
 
 	public async listStates(query: StateListQuery): Promise<PaginatedServiceResult<StateListItem>> {
 		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("states", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
-		const includeObj = this.parseStateInclude(query.include);
+		const includeObj = parseInclude(query.include, STATE_INCLUDES);
 		const result = await fetchListPage(query, {
 			where: buildStateListWhere(query, searchIds),
 			order: buildListOrder(stateListQuery.resolveSort(query.sort), { columns: STATE_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
@@ -793,12 +867,12 @@ export class GeoRepository {
 	}
 
 	public async createState(tx: GeoWriteTransaction, input: CreateStateInput): Promise<State> {
-		await this.assertLiveCountry(tx, "countryId", input.countryId);
+		await this.assertLive(tx, "country", "countryId", input.countryId);
 		return toStateDto(await tx.state.create({ data: toPrismaCreateState(withSanitizedName(input)) }));
 	}
 
 	public async updateState(tx: GeoWriteTransaction, id: number, input: UpdateStateInput): Promise<State> {
-		if (input.countryId !== undefined) await this.assertLiveCountry(tx, "countryId", input.countryId);
+		if (input.countryId !== undefined) await this.assertLive(tx, "country", "countryId", input.countryId);
 		const updated = await tx.state.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateState(withSanitizedName(input)) });
 		if (updated.count === 0) throw notFound("State", id);
 		return toStateDto(await tx.state.findUniqueOrThrow({ where: { id } }));
@@ -808,7 +882,7 @@ export class GeoRepository {
 	public async deleteState(tx: GeoWriteTransaction, id: number, stamp: GeoDeletionStamp): Promise<MessageResponse> {
 		const deleted = await tx.state.updateMany({ where: { id, isDeleted: false }, data: softDeleteData(stamp) });
 		if (deleted.count === 0) throw notFound("State", id);
-		await tx.city.updateMany({ where: { isDeleted: false, stateId: id }, data: softDeleteData(stamp) });
+		await softDeleteCascade(tx, GEO_CASCADE.state(id), stamp);
 		return { message: `State #${String(id)} deleted` };
 	}
 
@@ -816,7 +890,7 @@ export class GeoRepository {
 
 	public async listCities(query: CityListQuery): Promise<PaginatedServiceResult<CityListItem>> {
 		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("cities", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
-		const includeObj = this.parseCityInclude(query.include);
+		const includeObj = parseInclude(query.include, CITY_INCLUDES);
 		const result = await fetchListPage(query, {
 			where: buildCityListWhere(query, searchIds),
 			order: buildListOrder(cityListQuery.resolveSort(query.sort), { columns: CITY_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
@@ -835,14 +909,14 @@ export class GeoRepository {
 	}
 
 	public async createCity(tx: GeoWriteTransaction, input: CreateCityInput): Promise<City> {
-		await this.assertLiveState(tx, "stateId", input.stateId);
-		await this.assertLiveCountry(tx, "countryId", input.countryId);
+		await this.assertLive(tx, "state", "stateId", input.stateId);
+		await this.assertLive(tx, "country", "countryId", input.countryId);
 		return toCityDto(await tx.city.create({ data: toPrismaCreateCity(withSanitizedName(input)) }));
 	}
 
 	public async updateCity(tx: GeoWriteTransaction, id: number, input: UpdateCityInput): Promise<City> {
-		if (input.stateId !== undefined) await this.assertLiveState(tx, "stateId", input.stateId);
-		if (input.countryId !== undefined) await this.assertLiveCountry(tx, "countryId", input.countryId);
+		if (input.stateId !== undefined) await this.assertLive(tx, "state", "stateId", input.stateId);
+		if (input.countryId !== undefined) await this.assertLive(tx, "country", "countryId", input.countryId);
 		const updated = await tx.city.updateMany({ where: { id, isDeleted: false }, data: toPrismaUpdateCity(withSanitizedName(input)) });
 		if (updated.count === 0) throw notFound("City", id);
 		return toCityDto(await tx.city.findUniqueOrThrow({ where: { id } }));
@@ -961,68 +1035,53 @@ export class GeoRepository {
 	/** What a delete would soft-delete — exactly the set the matching `delete*` method cascades to. */
 	public async cascadePreview(input: CascadePreviewInput): Promise<CascadePreviewResult> {
 		const { entity, id } = input;
-
-		if (entity === "region") {
-			const region = await this.prisma.region.findFirst({ where: { id, isDeleted: false } });
-			if (region === null) throw notFound("Region", id);
-			const [subregions, countries, states, cities] = await Promise.all([
-				this.prisma.subregion.count({ where: { isDeleted: false, regionId: id } }),
-				this.prisma.country.count({ where: { isDeleted: false, regionId: id } }),
-				this.prisma.state.count({ where: { isDeleted: false, country: { regionId: id } } }),
-				this.prisma.city.count({ where: { isDeleted: false, state: { country: { regionId: id } } } }),
-			]);
-			return { entity: "region", id, name: region.name, willDelete: { subregions, countries, states, cities } };
-		}
-
-		if (entity === "subregion") {
-			const subregion = await this.prisma.subregion.findFirst({ where: { id, isDeleted: false } });
-			if (subregion === null) throw notFound("Subregion", id);
-			const [countries, states, cities] = await Promise.all([
-				this.prisma.country.count({ where: { isDeleted: false, subregionId: id } }),
-				this.prisma.state.count({ where: { isDeleted: false, country: { subregionId: id } } }),
-				this.prisma.city.count({ where: { isDeleted: false, state: { country: { subregionId: id } } } }),
-			]);
-			return { entity: "subregion", id, name: subregion.name, willDelete: { countries, states, cities } };
-		}
-
-		if (entity === "country") {
-			const country = await this.prisma.country.findFirst({ where: { id, isDeleted: false } });
-			if (country === null) throw notFound("Country", id);
-			const [states, cities] = await Promise.all([
-				this.prisma.state.count({ where: { isDeleted: false, countryId: id } }),
-				this.prisma.city.count({ where: { isDeleted: false, countryId: id } }),
-			]);
-			return { entity: "country", id, name: country.name, willDelete: { states, cities } };
-		}
-
-		const state = await this.prisma.state.findFirst({ where: { id, isDeleted: false } });
-		if (state === null) throw notFound("State", id);
-		const cities = await this.prisma.city.count({ where: { isDeleted: false, stateId: id } });
-		return { entity: "state", id, name: state.name, willDelete: { cities } };
+		const row = await this.findLiveCascadeRoot(entity, id);
+		if (row === null) throw notFound(GEO_ENTITY_LABEL[entity], id);
+		return { entity, id, name: row.name, willDelete: await this.countCascade(GEO_CASCADE[entity](id)) };
 	}
 
 	// ── Private helpers ─────────────────────────────────────────────────
 
-	private async assertLiveRegion(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
-		if ((await tx.region.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "region", id);
+	private async findLiveCascadeRoot(entity: GeoCascadeEntity, id: number): Promise<{ readonly name: string } | null> {
+		const where = { id, isDeleted: false };
+		switch (entity) {
+			case "region":
+				return this.prisma.region.findFirst({ where });
+			case "subregion":
+				return this.prisma.subregion.findFirst({ where });
+			case "country":
+				return this.prisma.country.findFirst({ where });
+			case "state":
+				return this.prisma.state.findFirst({ where });
+			default:
+				return assertNever(entity);
+		}
 	}
 
-	private async assertLiveSubregion(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
-		if ((await tx.subregion.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "subregion", id);
+	/** Live descendant counts per child table of `cascade` (tables it does not list are omitted). */
+	private async countCascade(cascade: GeoCascade): Promise<CascadePreviewResult["willDelete"]> {
+		const [subregions, countries, states, cities] = await Promise.all([
+			cascade.subregions === undefined ? undefined : this.prisma.subregion.count({ where: { isDeleted: false, ...cascade.subregions } }),
+			cascade.countries === undefined ? undefined : this.prisma.country.count({ where: { isDeleted: false, ...cascade.countries } }),
+			cascade.states === undefined ? undefined : this.prisma.state.count({ where: { isDeleted: false, ...cascade.states } }),
+			cascade.cities === undefined ? undefined : this.prisma.city.count({ where: { isDeleted: false, ...cascade.cities } }),
+		]);
+		return {
+			...(subregions === undefined ? {} : { subregions }),
+			...(countries === undefined ? {} : { countries }),
+			...(states === undefined ? {} : { states }),
+			...(cities === undefined ? {} : { cities }),
+		};
 	}
 
-	private async assertLiveCountry(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
-		if ((await tx.country.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "country", id);
-	}
-
-	private async assertLiveState(tx: GeoWriteTransaction, field: string, id: number): Promise<void> {
-		if ((await tx.state.count({ where: { id, isDeleted: false } })) === 0) throw missingParent(field, "state", id);
+	private async assertLive(tx: GeoWriteTransaction, entity: GeoCascadeEntity, field: string, id: number): Promise<void> {
+		if ((await LIVE_PARENT_COUNT[entity](tx, id)) === 0) throw missingParent(field, entity, id);
 	}
 
 	/** A country's optional parents, when given (`null` detaches), must be live. */
 	private async assertCountryParents(tx: GeoWriteTransaction, regionId: number | null | undefined, subregionId: number | null | undefined): Promise<void> {
-		if (regionId !== undefined && regionId !== null) await this.assertLiveRegion(tx, "regionId", regionId);
-		if (subregionId !== undefined && subregionId !== null) await this.assertLiveSubregion(tx, "subregionId", subregionId);
+		if (regionId !== undefined && regionId !== null) await this.assertLive(tx, "region", "regionId", regionId);
+		if (subregionId !== undefined && subregionId !== null) await this.assertLive(tx, "subregion", "subregionId", subregionId);
 	}
 
 	/** Row number → error for every valid row whose parent ids do not reference live rows (one query per parent table). */
@@ -1109,27 +1168,7 @@ export class GeoRepository {
 		if (ids.length === 0) {
 			return;
 		}
-		const where = { id: { in: [...ids] }, isDeleted: false };
-		const data = { updatedAt: new Date() };
-		switch (entity) {
-			case "region":
-				await tx.region.updateMany({ where, data });
-				return;
-			case "subregion":
-				await tx.subregion.updateMany({ where, data });
-				return;
-			case "country":
-				await tx.country.updateMany({ where, data });
-				return;
-			case "state":
-				await tx.state.updateMany({ where, data });
-				return;
-			case "city":
-				await tx.city.updateMany({ where, data });
-				return;
-			default:
-				assertNever(entity);
-		}
+		await TOUCH_ROWS[entity](tx, { where: { id: { in: [...ids] }, isDeleted: false }, data: { updatedAt: new Date() } });
 	}
 
 	/** Bulk INSERT in bounded chunks (one statement per chunk). */
@@ -1154,52 +1193,5 @@ export class GeoRepository {
 				),
 			});
 		}
-	}
-
-	private parseRegionInclude(include: string | undefined): Prisma.RegionInclude | undefined {
-		if (!include) return undefined;
-		const parts = include.split(",").map((s) => s.trim());
-		const result: Prisma.RegionInclude = {};
-		if (parts.includes("subregions")) result.subregions = { where: { isDeleted: false } };
-		if (parts.includes("countries")) result.countries = { where: { isDeleted: false } };
-		return Object.keys(result).length > 0 ? result : undefined;
-	}
-
-	private parseSubregionInclude(include: string | undefined): Prisma.SubregionInclude | undefined {
-		if (!include) return undefined;
-		const parts = include.split(",").map((s) => s.trim());
-		const result: Prisma.SubregionInclude = {};
-		if (parts.includes("region")) result.region = true;
-		if (parts.includes("countries")) result.countries = { where: { isDeleted: false } };
-		return Object.keys(result).length > 0 ? result : undefined;
-	}
-
-	private parseCountryInclude(include: string | undefined): Prisma.CountryInclude | undefined {
-		if (!include) return undefined;
-		const parts = include.split(",").map((s) => s.trim());
-		const result: Prisma.CountryInclude = {};
-		if (parts.includes("region")) result.regionRelation = true;
-		if (parts.includes("subregion")) result.subregionRelation = true;
-		if (parts.includes("states")) result.states = { where: { isDeleted: false } };
-		if (parts.includes("cities")) result.cities = { where: { isDeleted: false } };
-		return Object.keys(result).length > 0 ? result : undefined;
-	}
-
-	private parseStateInclude(include: string | undefined): Prisma.StateInclude | undefined {
-		if (!include) return undefined;
-		const parts = include.split(",").map((s) => s.trim());
-		const result: Prisma.StateInclude = {};
-		if (parts.includes("country")) result.country = true;
-		if (parts.includes("cities")) result.cities = { where: { isDeleted: false } };
-		return Object.keys(result).length > 0 ? result : undefined;
-	}
-
-	private parseCityInclude(include: string | undefined): Prisma.CityInclude | undefined {
-		if (!include) return undefined;
-		const parts = include.split(",").map((s) => s.trim());
-		const result: Prisma.CityInclude = {};
-		if (parts.includes("state")) result.state = true;
-		if (parts.includes("country")) result.country = true;
-		return Object.keys(result).length > 0 ? result : undefined;
 	}
 }

@@ -19,7 +19,8 @@ import {
 	type PermissionListResponse,
 	type RbacMessageResponse,
 } from "@workspace/shared";
-import { AuthorizationService } from "../services/authorization.service";
+import { AuthorizationCheckerService } from "../services/authorization-checker.service";
+import { PermissionService } from "../services/permission.service";
 import { ZodBody, ZodParam } from "../../../common/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { ResourceNotFoundError } from "../../../platform/persistence/persistence.errors";
@@ -33,14 +34,17 @@ import { toAdminPermissionResponse } from "./mappers/rbac-response.mappers";
 @Controller(apiPath("/admin/permissions"))
 @ApiTags("Permissions")
 export class PermissionsController {
-	public constructor(private readonly authorization: AuthorizationService) {}
+	public constructor(
+		private readonly permissions: PermissionService,
+		private readonly checker: AuthorizationCheckerService,
+	) {}
 
 	@Get()
 	@SkipAuthThrottle()
 	@RequirePermission("LIST", "PERMISSION")
 	@ZodResponse(PermissionListResponseSchema, { description: "List of permissions" })
 	public async list(): Promise<PermissionListResponse> {
-		const { items } = await this.authorization.permissions.findAll({ limit: 500 });
+		const { items } = await this.permissions.findAll({ limit: 500 });
 		return {
 			items: items.map((permission): PermissionListItem => ({
 				id: permission.id,
@@ -60,7 +64,7 @@ export class PermissionsController {
 	@Authorize({ action: "CREATE", resource: "PERMISSION", description: "Create new permission" })
 	@ZodResponse(AdminPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Created permission" })
 	public async create(@CurrentUser() actor: AuthenticatedUser, @ZodBody(CreatePermissionDto.schema) body: CreatePermissionDto): Promise<AdminPermissionResponse> {
-		const permission = await this.authorization.permissions.create(actor, {
+		const permission = await this.permissions.create(actor, {
 			action: body.action,
 			resource: body.resource,
 			description: body.description,
@@ -73,7 +77,7 @@ export class PermissionsController {
 	@RequirePermission("READ", "PERMISSION")
 	@ZodResponse(AdminPermissionResponseSchema, { description: "Permission detail (404 NOT_FOUND when no live permission has that id)" })
 	public async detail(@ZodParam("id", UuidParamSchema) id: string): Promise<AdminPermissionResponse> {
-		const permission = await this.authorization.permissions.findById(id);
+		const permission = await this.permissions.findById(id);
 		if (permission === null) {
 			throw new ResourceNotFoundError(id);
 		}
@@ -90,7 +94,7 @@ export class PermissionsController {
 		@ZodParam("id", UuidParamSchema) id: string,
 		@ZodBody(UpdatePermissionDto.schema) body: UpdatePermissionDto,
 	): Promise<AdminPermissionResponse> {
-		const permission = await this.authorization.permissions.update(actor, id, {
+		const permission = await this.permissions.update(actor, id, {
 			...(body.description !== undefined ? { description: body.description } : {}),
 			...(body.group !== undefined ? { group: body.group } : {}),
 		});
@@ -102,7 +106,7 @@ export class PermissionsController {
 	@RequirePermission("DELETE", "PERMISSION")
 	@ZodResponse(RbacMessageResponseSchema, { description: "Permission deleted" })
 	public async remove(@CurrentUser() actor: AuthenticatedUser, @ZodParam("id", UuidParamSchema) id: string): Promise<RbacMessageResponse> {
-		await this.authorization.permissions.remove(actor, id);
+		await this.permissions.remove(actor, id);
 		return { message: "Permission deleted successfully" };
 	}
 
@@ -111,14 +115,14 @@ export class PermissionsController {
 	@RequirePermission("UPDATE", "PERMISSION")
 	@ZodResponse(AdminPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Restored permission" })
 	public async restore(@CurrentUser() actor: AuthenticatedUser, @ZodParam("id", UuidParamSchema) id: string): Promise<AdminPermissionResponse> {
-		return toAdminPermissionResponse(await this.authorization.permissions.restore(actor, id));
+		return toAdminPermissionResponse(await this.permissions.restore(actor, id));
 	}
 
 	@Get("groups/list")
 	@RequirePermission("LIST", "PERMISSION")
 	@ZodResponse(PermissionGroupsResponseSchema, { description: "List of permission groups" })
 	public async listGroups(): Promise<PermissionGroupsResponse> {
-		const groups = await this.authorization.permissions.listGroups();
+		const groups = await this.permissions.listGroups();
 		return { groups };
 	}
 
@@ -126,7 +130,7 @@ export class PermissionsController {
 	@RequirePermission("READ", "PERMISSION")
 	@ZodResponse(CheckPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Permission check result with grant provenance" })
 	public async checkPermission(@ZodBody(CheckPermissionDto.schema) body: CheckPermissionDto): Promise<CheckPermissionResponse> {
-		return this.authorization.checkerService.checkPermissionWithGrants(body.userId, body.action, body.resource);
+		return this.checker.checkPermissionWithGrants(body.userId, body.action, body.resource);
 	}
 
 	@Post("user/grant")
@@ -135,7 +139,7 @@ export class PermissionsController {
 	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "Direct permission granted to user" })
 	public async grantToUser(@CurrentUser() actor: AuthenticatedUser, @ZodBody(GrantPermissionToUserDto.schema) body: GrantPermissionToUserDto): Promise<RbacMessageResponse> {
 		// Escalation checks (self, SuperAdmin target, subset rule for ALLOW and DENY) run inside the service's transaction.
-		await this.authorization.permissions.giveToUser(actor, {
+		await this.permissions.giveToUser(actor, {
 			userId: body.userId,
 			permissionId: body.permissionId,
 			effect: body.effect ?? "ALLOW",
@@ -153,7 +157,7 @@ export class PermissionsController {
 		@ZodBody(GrantPermissionToUserDto.schema) body: GrantPermissionToUserDto,
 	): Promise<RbacMessageResponse> {
 		// Revoking an override can lift a DENY — the service treats it like granting.
-		await this.authorization.permissions.revokeFromUser(actor, body.userId, body.permissionId);
+		await this.permissions.revokeFromUser(actor, body.userId, body.permissionId);
 		return { message: "Permission revoked from user" };
 	}
 
@@ -165,7 +169,7 @@ export class PermissionsController {
 		@CurrentUser() actor: AuthenticatedUser,
 		@ZodBody(SyncUserPermissionsDto.schema) body: SyncUserPermissionsDto,
 	): Promise<RbacMessageResponse> {
-		await this.authorization.permissions.syncUserPermissions(actor, body.userId, body.permissionIds);
+		await this.permissions.syncUserPermissions(actor, body.userId, body.permissionIds);
 		return { message: "User permissions synced successfully" };
 	}
 }

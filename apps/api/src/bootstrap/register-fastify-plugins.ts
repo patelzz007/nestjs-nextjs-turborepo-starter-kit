@@ -50,7 +50,7 @@ export interface RegisterFastifyPluginsOptions {
  */
 export async function registerFastifyPlugins(app: NestFastifyApplication, options: RegisterFastifyPluginsOptions, config: TypedConfigService): Promise<void> {
 	const server = app.getHttpAdapter().getInstance();
-	const hardeningEnabled: boolean = config.securityHardeningEnabled;
+	const hardeningEnabled: boolean = config.http.securityHardeningEnabled;
 
 	await server.register(fastifyCookie);
 	await server.register(fastifyMultipart, {

@@ -1,4 +1,4 @@
-import type { User, RewardType } from "@prisma/client";
+import type { RewardClaimStatus, RewardType, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { POS_PAIRING_CODE_TTL_MS } from "@workspace/shared";
@@ -10,7 +10,8 @@ import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_ORGANIZATION_I
 import { prisma } from "./client";
 import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
-import { seedCheckout } from "./reward-checkout";
+import { daysAgo, daysFromNow } from "./helpers";
+import { seedCheckout, type SeedCheckoutInput } from "./reward-checkout";
 import { seedRewardLifecycleStates } from "./reward-lifecycle-states";
 import { seedLog } from "./seed-log";
 
@@ -78,14 +79,6 @@ const SEED_RECENT_CODE_FAILURES = 2;
 
 /** How long ago that failure window opened. */
 const SEED_CODE_FAILURE_WINDOW_AGE_MS = 5 * 60_000;
-
-function msFromNow(days: number): number {
-	return Date.now() + days * 24 * 60 * 60 * 1000;
-}
-
-function msDaysAgo(days: number): number {
-	return Date.now() - days * 24 * 60 * 60 * 1000;
-}
 
 async function hashPassword(password: string): Promise<string> {
 	return bcrypt.hash(password, 10);
@@ -196,6 +189,34 @@ const SEED_BILL_KL_BOB_MINOR = 1_850;
 const SEED_BILL_MLK_CAROL_MINOR = 4_820;
 const SEED_BULK_BILL_BASE_MINOR = 1_200;
 const SEED_BULK_BILL_STEP_MINOR = 350;
+
+/** The paid POS bill a REDEEMED seed claim went through; seeded at the claim's `redeemedAt`. */
+type SeedClaimCheckout = Omit<SeedCheckoutInput, "userId" | "claimId" | "paidAt">;
+
+/** One seeded reward claim; the QR token and backup code are stored as their keyed hashes. */
+interface SeedClaim {
+	readonly id?: string;
+	readonly userId: string;
+	readonly rewardId: string;
+	readonly referralId?: string;
+	readonly qrToken: string;
+	readonly backupCode: string;
+	readonly status: RewardClaimStatus;
+	readonly isReferrerCredit?: boolean;
+	readonly claimedAt: number;
+	readonly claimExpiresAt: number;
+	readonly redeemedAt?: number | null;
+	readonly checkout?: SeedClaimCheckout;
+}
+
+async function seedClaim({ qrToken, backupCode, checkout, ...claim }: SeedClaim): Promise<void> {
+	const created = await prisma.rewardClaim.create({
+		data: { ...claim, redemptionTokenHash: seedCodeHash(qrToken), backupCodeHash: seedCodeHash(backupCode) },
+	});
+	if (checkout !== undefined && claim.redeemedAt !== undefined && claim.redeemedAt !== null) {
+		await seedCheckout({ ...checkout, userId: claim.userId, claimId: created.id, paidAt: claim.redeemedAt });
+	}
+}
 
 export async function seedRewards(adminUser: User, consumerUsers: User[]): Promise<RewardSeedSummary> {
 	const now = Date.now();
@@ -320,8 +341,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 200,
 				quantityRemaining: 142,
 				quantityReserved: 8,
-				startDate: msDaysAgo(14),
-				expiryDate: msFromNow(45),
+				startDate: daysAgo(14),
+				expiryDate: daysFromNow(45),
 				status: "PUBLISHED",
 				claimCount: 58,
 				redemptionCount: 42,
@@ -344,8 +365,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 120,
 				quantityRemaining: 95,
 				quantityReserved: 5,
-				startDate: msDaysAgo(7),
-				expiryDate: msFromNow(50),
+				startDate: daysAgo(7),
+				expiryDate: daysFromNow(50),
 				status: "PUBLISHED",
 				claimCount: 28,
 				redemptionCount: 18,
@@ -368,8 +389,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 80,
 				quantityRemaining: 64,
 				quantityReserved: 3,
-				startDate: msDaysAgo(3),
-				expiryDate: msFromNow(40),
+				startDate: daysAgo(3),
+				expiryDate: daysFromNow(40),
 				status: "PUBLISHED",
 				claimCount: 16,
 				redemptionCount: 11,
@@ -391,8 +412,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 60,
 				quantityRemaining: 48,
 				quantityReserved: 2,
-				startDate: msDaysAgo(5),
-				expiryDate: msFromNow(45),
+				startDate: daysAgo(5),
+				expiryDate: daysFromNow(45),
 				status: "PUBLISHED",
 				claimCount: 12,
 				redemptionCount: 8,
@@ -419,7 +440,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			quantityTotal: 50,
 			quantityRemaining: 48,
 			quantityReserved: 1,
-			expiryDate: msFromNow(90),
+			expiryDate: daysFromNow(90),
 			status: "PUBLISHED",
 			referralsEnabled: false,
 			parentConsumerRewardId: REWARD_SEED_IDS.klRewardPublished,
@@ -439,7 +460,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			quantityTotal: 30,
 			quantityRemaining: 29,
 			quantityReserved: 0,
-			expiryDate: msFromNow(60),
+			expiryDate: daysFromNow(60),
 			status: "PUBLISHED",
 			referralsEnabled: false,
 			parentConsumerRewardId: REWARD_SEED_IDS.mlkRewardPublished,
@@ -472,10 +493,10 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 80,
 				quantityRemaining: 80,
 				quantityReserved: 0,
-				expiryDate: msFromNow(30),
+				expiryDate: daysFromNow(30),
 				status: "PENDING_REVIEW",
-				submittedForReviewAt: msDaysAgo(1),
-				autoPublishAt: msFromNow(1),
+				submittedForReviewAt: daysAgo(1),
+				autoPublishAt: daysFromNow(1),
 				referralsEnabled: false,
 			},
 			{
@@ -490,7 +511,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 40,
 				quantityRemaining: 40,
 				quantityReserved: 0,
-				expiryDate: msFromNow(20),
+				expiryDate: daysFromNow(20),
 				status: "DRAFT",
 				referralsEnabled: false,
 			},
@@ -506,7 +527,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 100,
 				quantityRemaining: 12,
 				quantityReserved: 0,
-				expiryDate: msDaysAgo(3),
+				expiryDate: daysAgo(3),
 				status: "EXPIRED",
 				referralsEnabled: false,
 			},
@@ -522,7 +543,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 50,
 				quantityRemaining: 0,
 				quantityReserved: 0,
-				expiryDate: msFromNow(10),
+				expiryDate: daysFromNow(10),
 				status: "DISABLED",
 				referralsEnabled: false,
 			},
@@ -611,7 +632,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: row.quantityTotal,
 				quantityRemaining: row.quantityRemaining,
 				quantityReserved: row.quantityReserved,
-				expiryDate: msFromNow(40 + index),
+				expiryDate: daysFromNow(40 + index),
 				status: "PUBLISHED",
 				referralsEnabled: false,
 			},
@@ -650,7 +671,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				quantityTotal: 35,
 				quantityRemaining: 28,
 				quantityReserved: 2,
-				expiryDate: msFromNow(35),
+				expiryDate: daysFromNow(35),
 				status: "PUBLISHED",
 				referralsEnabled: false,
 				locationScopeType: "SELECTED",
@@ -679,156 +700,110 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
 			attributionToken: "seed_ref_token_carol_user_mlk",
 			status: "CREDITED",
-			creditedAt: msDaysAgo(2),
+			creditedAt: daysAgo(2),
 			// The "reward credited" email was delivered when the credit happened.
-			creditNotifiedAt: msDaysAgo(2),
+			creditNotifiedAt: daysAgo(2),
 			refereeIp: "203.176.12.20",
 		},
 	});
 
-	const claimExpiresKl = Math.min(msFromNow(7), msFromNow(45));
-
-	await prisma.rewardClaim.create({
-		data: {
+	const klCheckout = { organizationId: klOrganization.id, locationId: ORGANIZATION_SEED_IDS.klLocation, terminalId: "KL-REGISTER-01", apiKeyId: klKeyId };
+	const seedClaims: SeedClaim[] = [
+		{
 			id: REWARD_SEED_IDS.claimPendingKl,
 			userId: alice.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
 			referralId: REWARD_SEED_IDS.referralPending,
-			redemptionTokenHash: seedCodeHash(DEMO_QR_TOKEN_PENDING_KL),
-			backupCodeHash: seedCodeHash(DEMO_BACKUP_CODE_PENDING_KL),
+			qrToken: DEMO_QR_TOKEN_PENDING_KL,
+			backupCode: DEMO_BACKUP_CODE_PENDING_KL,
 			status: "PENDING",
-			claimedAt: msDaysAgo(1),
-			claimExpiresAt: claimExpiresKl,
+			claimedAt: daysAgo(1),
+			claimExpiresAt: Math.min(daysFromNow(7), daysFromNow(45)),
 		},
-	});
-
-	await prisma.rewardClaim.create({
-		data: {
+		{
 			id: REWARD_SEED_IDS.claimRedeemedKl,
 			userId: bob.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
-			redemptionTokenHash: seedCodeHash("seed_qr_token_kl_redeemed_bob_001"),
-			backupCodeHash: seedCodeHash("WXYZ2345"),
+			qrToken: "seed_qr_token_kl_redeemed_bob_001",
+			backupCode: "WXYZ2345",
 			status: "REDEEMED",
-			claimedAt: msDaysAgo(5),
-			claimExpiresAt: msDaysAgo(1),
-			redeemedAt: msDaysAgo(4),
+			claimedAt: daysAgo(5),
+			claimExpiresAt: daysAgo(1),
+			redeemedAt: daysAgo(4),
+			checkout: { key: "kl-bob", ...klCheckout, billTotalMinor: SEED_BILL_KL_BOB_MINOR },
 		},
-	});
-
-	await seedCheckout({
-		key: "kl-bob",
-		organizationId: klOrganization.id,
-		locationId: ORGANIZATION_SEED_IDS.klLocation,
-		terminalId: "KL-REGISTER-01",
-		apiKeyId: klKeyId,
-		userId: bob.id,
-		claimId: REWARD_SEED_IDS.claimRedeemedKl,
-		billTotalMinor: SEED_BILL_KL_BOB_MINOR,
-		paidAt: msDaysAgo(4),
-	});
-
-	await prisma.rewardClaim.create({
-		data: {
+		{
 			id: REWARD_SEED_IDS.claimExpiredKl,
 			userId: carol.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
-			redemptionTokenHash: seedCodeHash("seed_qr_token_kl_expired_carol_001"),
-			backupCodeHash: seedCodeHash("PQRS6789"),
+			qrToken: "seed_qr_token_kl_expired_carol_001",
+			backupCode: "PQRS6789",
 			status: "EXPIRED",
-			claimedAt: msDaysAgo(10),
-			claimExpiresAt: msDaysAgo(3),
+			claimedAt: daysAgo(10),
+			claimExpiresAt: daysAgo(3),
 		},
-	});
-
-	await prisma.rewardClaim.create({
-		data: {
+		{
 			id: REWARD_SEED_IDS.claimPendingMlk,
 			userId: user.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
 			referralId: REWARD_SEED_IDS.referralCredited,
-			redemptionTokenHash: seedCodeHash("seed_qr_token_mlk_pending_user_001"),
-			backupCodeHash: seedCodeHash("TUVW2345"),
+			qrToken: "seed_qr_token_mlk_pending_user_001",
+			backupCode: "TUVW2345",
 			status: "PENDING",
-			claimedAt: msDaysAgo(2),
-			claimExpiresAt: msFromNow(5),
+			claimedAt: daysAgo(2),
+			claimExpiresAt: daysFromNow(5),
 		},
-	});
-
-	await prisma.rewardClaim.create({
-		data: {
+		{
 			id: REWARD_SEED_IDS.claimRedeemedMlk,
 			userId: carol.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
-			redemptionTokenHash: seedCodeHash("seed_qr_token_mlk_redeemed_carol_001"),
-			backupCodeHash: seedCodeHash("JKLM2345"),
+			qrToken: "seed_qr_token_mlk_redeemed_carol_001",
+			backupCode: "JKLM2345",
 			status: "REDEEMED",
-			claimedAt: msDaysAgo(6),
-			claimExpiresAt: msDaysAgo(2),
-			redeemedAt: msDaysAgo(3),
+			claimedAt: daysAgo(6),
+			claimExpiresAt: daysAgo(2),
+			redeemedAt: daysAgo(3),
+			checkout: {
+				key: "mlk-carol",
+				organizationId: mlkOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				terminalId: "MLK-KATIL-01",
+				apiKeyId: mlkKeyId,
+				billTotalMinor: SEED_BILL_MLK_CAROL_MINOR,
+			},
 		},
-	});
-
-	await seedCheckout({
-		key: "mlk-carol",
-		organizationId: mlkOrganization.id,
-		locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
-		terminalId: "MLK-KATIL-01",
-		apiKeyId: mlkKeyId,
-		userId: carol.id,
-		claimId: REWARD_SEED_IDS.claimRedeemedMlk,
-		billTotalMinor: SEED_BILL_MLK_CAROL_MINOR,
-		paidAt: msDaysAgo(3),
-	});
-
-	// Bulk claims for inventory stress demo — every REDEEMED claim has a matching paid bill + redemption.
-	const bulkClaimUsers = consumerUsers.slice(0, 6);
-	for (const [index, consumer] of bulkClaimUsers.entries()) {
-		const isRedeemed = index % 3 === 0;
-		const redeemedAt = isRedeemed ? msDaysAgo(index) : null;
-		const claim = await prisma.rewardClaim.create({
-			data: {
+		// Bulk claims for inventory stress demo — every REDEEMED claim has a matching paid bill + redemption.
+		...consumerUsers.slice(0, 6).map((consumer, index): SeedClaim => {
+			const isRedeemed = index % 3 === 0;
+			return {
 				userId: consumer.id,
 				rewardId: REWARD_SEED_IDS.klRewardPublished,
-				redemptionTokenHash: seedCodeHash(`seed_qr_bulk_kl_${consumer.id}_${String(index)}`),
-				backupCodeHash: seedCodeHash(`seed_backup_bulk_${consumer.id}_${String(index)}`),
+				qrToken: `seed_qr_bulk_kl_${consumer.id}_${String(index)}`,
+				backupCode: `seed_backup_bulk_${consumer.id}_${String(index)}`,
 				status: isRedeemed ? "REDEEMED" : "PENDING",
-				claimedAt: msDaysAgo(index + 1),
-				claimExpiresAt: msFromNow(6 - index),
-				redeemedAt,
-			},
-		});
-
-		if (isRedeemed && redeemedAt !== null) {
-			await seedCheckout({
-				key: `kl-bulk-${String(index)}`,
-				organizationId: klOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
-				terminalId: "KL-REGISTER-01",
-				apiKeyId: klKeyId,
-				userId: consumer.id,
-				claimId: claim.id,
-				billTotalMinor: SEED_BULK_BILL_BASE_MINOR + index * SEED_BULK_BILL_STEP_MINOR,
-				paidAt: redeemedAt,
-			});
-		}
-	}
-
-	// Referrer credit claim for carol (R′)
-	await prisma.rewardClaim.create({
-		data: {
+				claimedAt: daysAgo(index + 1),
+				claimExpiresAt: daysFromNow(6 - index),
+				redeemedAt: isRedeemed ? daysAgo(index) : null,
+				...(isRedeemed ? { checkout: { key: `kl-bulk-${String(index)}`, ...klCheckout, billTotalMinor: SEED_BULK_BILL_BASE_MINOR + index * SEED_BULK_BILL_STEP_MINOR } } : {}),
+			};
+		}),
+		// Referrer credit claim for carol (R′)
+		{
 			userId: carol.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardReferrer,
 			// The referral this credit was earned by (the app links every credit claim to its referral).
 			referralId: REWARD_SEED_IDS.referralCredited,
-			redemptionTokenHash: seedCodeHash("seed_qr_referrer_carol_mlk_001"),
-			backupCodeHash: seedCodeHash("EFGH2345"),
+			qrToken: "seed_qr_referrer_carol_mlk_001",
+			backupCode: "EFGH2345",
 			status: "PENDING",
 			isReferrerCredit: true,
-			claimedAt: msDaysAgo(2),
-			claimExpiresAt: msFromNow(28),
+			claimedAt: daysAgo(2),
+			claimExpiresAt: daysFromNow(28),
 		},
-	});
+	];
+	for (const claim of seedClaims) {
+		await seedClaim(claim);
+	}
 
 	await prisma.rewardLegalAcceptance.createMany({
 		data: [
@@ -836,19 +811,19 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				userId: alice.id,
 				termsVersion: "2026-01-01",
 				privacyVersion: "2026-01-01",
-				acceptedAt: msDaysAgo(30),
+				acceptedAt: daysAgo(30),
 			},
 			{
 				userId: bob.id,
 				termsVersion: "2026-01-01",
 				privacyVersion: "2026-01-01",
-				acceptedAt: msDaysAgo(20),
+				acceptedAt: daysAgo(20),
 			},
 			{
 				userId: user.id,
 				termsVersion: "2026-01-01",
 				privacyVersion: "2026-01-01",
-				acceptedAt: msDaysAgo(5),
+				acceptedAt: daysAgo(5),
 			},
 		],
 	});
@@ -857,7 +832,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		where: { id: bob.id },
 		data: {
 			pendingAttributionToken: "seed_ref_token_alice_bob_kl",
-			pendingAttributionExpiresAt: msFromNow(7),
+			pendingAttributionExpiresAt: daysFromNow(7),
 			phone: "+60198765432",
 			phoneVerifiedAt: now,
 		},
@@ -871,7 +846,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "You earned a referrer reward!",
 				body: "Your friend redeemed at Jonker Street Kitchen. Claim your 15% off reward.",
 				metadata: { rewardId: REWARD_SEED_IDS.mlkRewardReferrer, claimExpiresDays: 30 },
-				createdAt: msDaysAgo(2),
+				createdAt: daysAgo(2),
 			},
 			{
 				userId: alice.id,
@@ -879,7 +854,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "Claim confirmed",
 				body: "Your free coffee reward is ready. Show QR at Brew & Bean KL.",
 				metadata: { claimId: REWARD_SEED_IDS.claimPendingKl },
-				createdAt: msDaysAgo(1),
+				createdAt: daysAgo(1),
 			},
 			{
 				userId: bob.id,
@@ -887,8 +862,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "Reward redeemed",
 				body: "Enjoy your coffee! Redeemed at Brew & Bean KL.",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedKl },
-				readAt: msDaysAgo(3),
-				createdAt: msDaysAgo(4),
+				readAt: daysAgo(3),
+				createdAt: daysAgo(4),
 			},
 		],
 	});
@@ -903,7 +878,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				organizationId: klOrganization.id,
 				action: "merchant.scan_qr",
 				metadata: { claimId: REWARD_SEED_IDS.claimPendingKl, terminalId: "KL-REGISTER-01" },
-				createdAt: msDaysAgo(1),
+				createdAt: daysAgo(1),
 			},
 			{
 				id: deterministicUuid("reward-seed-audit", "kl-redeem-reward"),
@@ -911,7 +886,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				organizationId: klOrganization.id,
 				action: "merchant.redeem_reward",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedKl, redemptionMethod: "SCAN" },
-				createdAt: msDaysAgo(4),
+				createdAt: daysAgo(4),
 			},
 			{
 				id: deterministicUuid("reward-seed-audit", "kl-owner-self-redeem"),
@@ -919,7 +894,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				organizationId: klOrganization.id,
 				action: "self_redeem_audit",
 				metadata: { note: "Owner self-redeem allowed with audit flag" },
-				createdAt: msDaysAgo(6),
+				createdAt: daysAgo(6),
 			},
 			{
 				id: deterministicUuid("reward-seed-audit", "mlk-redeem-reward"),
@@ -927,7 +902,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				organizationId: mlkOrganization.id,
 				action: "merchant.redeem_reward",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedMlk, redemptionMethod: "SCAN" },
-				createdAt: msDaysAgo(3),
+				createdAt: daysAgo(3),
 			},
 		],
 	});
@@ -939,10 +914,10 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			purpose: "CLAIM",
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
 			codeHash: sha256Hex("123456"),
-			expiresAt: msFromNow(1),
+			expiresAt: daysFromNow(1),
 			attempts: 1,
 			failedAttempts: 0,
-			consumedAt: msDaysAgo(1),
+			consumedAt: daysAgo(1),
 		},
 	});
 

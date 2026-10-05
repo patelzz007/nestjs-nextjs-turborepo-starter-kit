@@ -10,13 +10,17 @@
 // so they can never drift. Unversioned routes (health / webhook / the version
 // manifest) simply don't use `apiPath()`.
 //
-// Deliberately a STANDALONE module with zero imports — `contracts/index.ts`
-// imports schemas, so importing `../../contracts` from a schema would create a
-// runtime circular-import crash. Anything that only needs the version constants
-// imports `./versioning` directly.
+// Deliberately a STANDALONE module with no workspace imports (only zod) —
+// `contracts/index.ts` imports schemas, so importing `../../contracts` from a
+// schema would create a runtime circular-import crash. Anything that only needs
+// the version constants imports `./versioning` directly.
+
+import { z } from "zod";
 
 /** The API versions that exist. Add `"v3"` here before any new major. */
-export type ApiVersion = "v1" | "v2";
+export const ApiVersionSchema = z.enum(["v1", "v2"]);
+
+export type ApiVersion = z.output<typeof ApiVersionSchema>;
 
 /** The current default version served by the API. */
 export const API_VERSION: ApiVersion = "v1";
@@ -34,13 +38,17 @@ export const API_VERSION_PREFIX: string = apiVersionPrefix(API_VERSION);
  * rule in apps/api (a controller that forgets the helper silently serves a
  * path the client can't reach, exactly like the `/session` regression).
  */
-export const UNVERSIONED_ROUTE_PREFIXES: readonly ["", "health", "notifications/email-webhook", "version"] = ["", "health", "notifications/email-webhook", "version"];
+export const UnversionedRoutePrefixSchema = z.enum(["", "health", "notifications/email-webhook", "version"]);
+
+export type UnversionedRoutePrefix = z.output<typeof UnversionedRoutePrefixSchema>;
+
+export const UNVERSIONED_ROUTE_PREFIXES: readonly UnversionedRoutePrefix[] = UnversionedRoutePrefixSchema.options;
 
 /**
  * Every business controller prefix, as a compile-time literal union: a typo
  * like `apiPath("/authh")` now fails to compile instead of 404ing at runtime.
  */
-export const VERSIONED_ROUTE_PREFIXES: readonly [
+export const VersionedRoutePrefixSchema = z.enum([
 	"/auth",
 	"/session",
 	"/notifications/email-preview",
@@ -84,53 +92,11 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/product",
 	"/capabilities/catalog",
 	"/authorization/decisions",
-] = [
-	"/auth",
-	"/session",
-	"/notifications/email-preview",
-	"/notifications/email-log",
-	"/version",
-	"/admin/roles",
-	"/admin/permissions",
-	"/admin/audit",
-	"/admin/organizations",
-	"/geo",
-	"/rewards",
-	"/legal",
-	"/claims",
-	"/reward-notifications",
-	"/redemptions",
-	"/pos/terminals",
-	"/files",
-	"/orgs",
-	"/orgs/memberships",
-	"/orgs/:orgSlug",
-	"/orgs/:orgSlug/kyb",
-	"/orgs/:orgSlug/kyb/documents",
-	"/orgs/:orgSlug/rewards",
-	"/orgs/:orgSlug/api-keys",
-	"/orgs/:orgSlug/terminals",
-	"/orgs/:orgSlug/redemptions",
-	"/orgs/:orgSlug/analytics",
-	"/orgs/:orgSlug/locations",
-	"/orgs/onboarding",
-	"/orgs/invites",
-	"/orgs/:orgSlug/members",
-	"/policies",
-	"/support-access",
-	"/admin/invites",
-	"/admin/rewards",
-	"/admin/merchants",
-	"/admin/merchants/documents",
-	"/admin/location-requests",
-	"/admin/analytics",
-	"/sample-category",
-	"/product",
-	"/capabilities/catalog",
-	"/authorization/decisions",
-];
+]);
 
-export type VersionedRoutePrefix = (typeof VERSIONED_ROUTE_PREFIXES)[number];
+export type VersionedRoutePrefix = z.output<typeof VersionedRoutePrefixSchema>;
+
+export const VERSIONED_ROUTE_PREFIXES: readonly VersionedRoutePrefix[] = VersionedRoutePrefixSchema.options;
 
 /**
  * Prefix a logical endpoint path with an API version.

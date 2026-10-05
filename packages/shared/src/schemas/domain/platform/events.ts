@@ -3,6 +3,9 @@ import { z } from "zod";
 import { ApiErrorCodeSchema } from "../../api/api-error";
 import { EmailLogStatusSchema } from "../../email/email";
 
+/** Whether the flow / action an event reports succeeded. */
+const PlatformEventOutcomeSchema = z.enum(["succeeded", "failed"]);
+
 /** Completed credential/identity flow (signup, login, password reset, …). */
 export const AuthFlowEventSchema = z
 	.object({
@@ -11,7 +14,7 @@ export const AuthFlowEventSchema = z
 		userId: z.string().nullable(),
 		/** Login origin ("web" | "admin") — null for flows without a client type. */
 		clientType: z.string().nullable(),
-		status: z.enum(["succeeded", "failed"]),
+		status: PlatformEventOutcomeSchema,
 		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */
 		error: ApiErrorCodeSchema.nullable(),
 		/** Wall-clock duration of the whole flow in ms. */
@@ -26,7 +29,7 @@ export const SessionActionEventSchema = z
 	.object({
 		action: z.enum(["refresh", "logout-device", "logout-all"]),
 		userId: z.string(),
-		status: z.enum(["succeeded", "failed"]),
+		status: PlatformEventOutcomeSchema,
 		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */
 		error: ApiErrorCodeSchema.nullable(),
 		/** Wall-clock duration of the whole action in ms. */
@@ -42,7 +45,7 @@ export const ImpersonationActionEventSchema = z
 		action: z.enum(["start", "stop"]),
 		superAdminId: z.string(),
 		targetUserId: z.string(),
-		status: z.enum(["succeeded", "failed"]),
+		status: PlatformEventOutcomeSchema,
 		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */
 		error: ApiErrorCodeSchema.nullable(),
 		/** Wall-clock duration of the whole action in ms. */

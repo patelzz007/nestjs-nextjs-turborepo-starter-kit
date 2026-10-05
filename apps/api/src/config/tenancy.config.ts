@@ -16,7 +16,7 @@ export class TenancyConfigService {
 	public constructor(private readonly config: TypedConfigService) {}
 
 	public get enabled(): boolean {
-		return this.config.tenancyEnabled;
+		return this.config.tenancy.enabled;
 	}
 
 	/**

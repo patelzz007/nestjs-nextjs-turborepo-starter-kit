@@ -1,6 +1,6 @@
 import type { OrganizationLifecycleState, OrganizationMembershipRole, Prisma, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
-import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
+import { PILOT_CITY_TIME_ZONES, DAY_MS } from "@workspace/shared";
 
 import { findActivePolicyVersionInTx, seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
 
@@ -33,7 +33,6 @@ import { seedTenantEncryptionKeys } from "./tenant-encryption";
 // ---------------------------------------------------------------------------
 
 const NAMESPACE = "seed.organization-review-states";
-const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 /** Owner-requested deletion keeps the organization recoverable for this long (`OrganizationLifecycleService`). */
 const DELETION_GRACE_MS = 30 * DAY_MS;

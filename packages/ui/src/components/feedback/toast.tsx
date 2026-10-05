@@ -109,24 +109,17 @@ const TOAST_POSITION_CLASSES: Readonly<Record<ToastPosition, string>> = {
 	"top-center": "top-4 sm:inset-x-0 sm:mx-auto sm:w-full",
 };
 
-/** Which vertical edge a position hugs — drives the card anchor, origin and slide direction. */
-const TOAST_POSITION_EDGE: Readonly<Record<ToastPosition, "top" | "bottom">> = {
-	"bottom-right": "bottom",
-	"bottom-left": "bottom",
-	"bottom-center": "bottom",
-	"top-right": "top",
-	"top-left": "top",
-	"top-center": "top",
-};
+type ToastEdge = "top" | "bottom";
 
-/** Swipe direction(s) that dismiss a toast — constrained per position (dismiss toward its edge). */
-const TOAST_POSITION_SWIPE: Readonly<Record<ToastPosition, ("up" | "down")[]>> = {
-	"bottom-right": ["down"],
-	"bottom-left": ["down"],
-	"bottom-center": ["down"],
-	"top-right": ["up"],
-	"top-left": ["up"],
-	"top-center": ["up"],
+/** Which vertical edge a position hugs — drives the card anchor, origin and slide direction. */
+function toastPositionEdge(position: ToastPosition): ToastEdge {
+	return position.startsWith("top") ? "top" : "bottom";
+}
+
+/** Swipe direction(s) that dismiss a toast — toward its edge. Module-scoped so each edge keeps one array identity. */
+const TOAST_EDGE_SWIPE: Readonly<Record<ToastEdge, ("up" | "down")[]>> = {
+	top: ["up"],
+	bottom: ["down"],
 };
 
 // ── Viewport position context (improvement 5) ───────────────────────────────
@@ -300,7 +293,7 @@ const ToastViewport = React.forwardRef<HTMLDivElement, ToastViewportProps>(funct
 
 const Toast = React.forwardRef<HTMLDivElement, ToastPrimitive.Root.Props>(function Toast({ className, ...props }, ref): React.JSX.Element {
 	const position = useToastPosition();
-	const edge = TOAST_POSITION_EDGE[position];
+	const edge = toastPositionEdge(position);
 	const fromTop = edge === "top";
 	return (
 		<ToastPrimitive.Root
@@ -308,7 +301,7 @@ const Toast = React.forwardRef<HTMLDivElement, ToastPrimitive.Root.Props>(functi
 			data-slot="toast"
 			// Swipe dismissal is constrained per position — top stacks dismiss upward,
 			// bottom stacks downward (overridable via props for custom setups).
-			swipeDirection={TOAST_POSITION_SWIPE[position]}
+			swipeDirection={TOAST_EDGE_SWIPE[edge]}
 			className={cn(
 				"pointer-events-auto absolute z-[calc(1000-var(--toast-index))] w-full rounded-2xl border bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
 				// Anchor the card to the viewport's vertical edge so it grows INTO the
@@ -401,22 +394,18 @@ export interface ToastIconProps {
 }
 
 function ToastIcon({ type, icon }: ToastIconProps): React.JSX.Element | null {
-	if (icon !== undefined) {
-		return (
-			<span data-slot="toast-icon" className="shrink-0 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4">
-				{icon}
-			</span>
-		);
+	let content: ReactNode = icon;
+	if (icon === undefined) {
+		if (type === undefined) {
+			return null;
+		}
+		const IconComponent = TOAST_TYPE_ICONS[type];
+		content = <IconComponent className={cn(type === "loading" ? "animate-spin" : undefined, TOAST_TYPE_STYLES[type].icon)} aria-hidden="true" />;
 	}
 
-	if (type === undefined) {
-		return null;
-	}
-
-	const IconComponent = TOAST_TYPE_ICONS[type];
 	return (
 		<span data-slot="toast-icon" className="shrink-0 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4">
-			<IconComponent className={cn(type === "loading" ? "animate-spin" : undefined, TOAST_TYPE_STYLES[type].icon)} aria-hidden="true" />
+			{content}
 		</span>
 	);
 }
@@ -736,22 +725,18 @@ interface ToastMessageApi {
  * apps use `createToastMessage(manager)` for isolation (feature 17).
  */
 function createToastMessage(manager: ToastPrimitive.Provider.Props["toastManager"] = toast): ToastMessageApi {
+	/** One typed `add` per toast type; the priority defaults from the type. */
+	const add =
+		(type: ToastType): ((options: ToastMessageOptions) => string) =>
+		(options: ToastMessageOptions): string =>
+			manager.add({ ...options, type, priority: options.priority ?? TOAST_TYPE_PRIORITY[type] });
+
 	return {
-		success(options: ToastMessageOptions): string {
-			return manager.add({ ...options, type: "success", priority: options.priority ?? TOAST_TYPE_PRIORITY.success });
-		},
-		info(options: ToastMessageOptions): string {
-			return manager.add({ ...options, type: "info", priority: options.priority ?? TOAST_TYPE_PRIORITY.info });
-		},
-		warning(options: ToastMessageOptions): string {
-			return manager.add({ ...options, type: "warning", priority: options.priority ?? TOAST_TYPE_PRIORITY.warning });
-		},
-		error(options: ToastMessageOptions): string {
-			return manager.add({ ...options, type: "error", priority: options.priority ?? TOAST_TYPE_PRIORITY.error });
-		},
-		loading(options: ToastMessageOptions): string {
-			return manager.add({ ...options, type: "loading", priority: options.priority ?? TOAST_TYPE_PRIORITY.loading });
-		},
+		success: add("success"),
+		info: add("info"),
+		warning: add("warning"),
+		error: add("error"),
+		loading: add("loading"),
 		/** Dismiss one toast by id, or all when omitted (feature 7). */
 		dismiss(id?: string): void {
 			manager.close(id);

@@ -130,6 +130,30 @@ Seed data: `prisma/seed/store-closure.ts` creates one closed store ("Taman Melak
 and one member removed from a store (the Jonker cashier, removed from Bukit Katil); the demo
 members of both organizations have display names except the Jonker Street Kitchen owner.
 
+### Invite links — how they are protected
+
+- The invite token is 32 random bytes; only its SHA-256 hash is stored
+  (`organization_invitations.token_hash`, `kind = TEAM_MEMBER`), and the raw token exists only in the
+  email link. With `EMAIL_MODE=log-only` the link is in the API log.
+- `validate` and `register-and-accept` are public routes that also declare `@RlsBypass()` — a public
+  route alone does **not** bypass row-level security. Every invite write runs under its own
+  allow-listed system operation (`organization.invitation.create`, `.revoke`,
+  `.register_and_accept`, `organization.membership.accept`, …).
+- `register-and-accept` creates the account, its default `User` role and the membership in **one**
+  transaction, then signs the user in (or asks for the email code first).
+- An invitee with no membership yet may still sign in to the merchant portal while a pending,
+  unexpired invite exists for their email — that is how an existing account reaches the accept
+  button. Without one, merchant login answers `403 MERCHANT_ACCESS_REQUIRED`.
+
+| Error | When |
+| --- | --- |
+| `404` on validate | Unknown, revoked, used or expired token |
+| `403 ORGANIZATION_INVITE_EMAIL_MISMATCH` | Accepting while signed in with a different email — sign in with the invited address |
+| `409 ORGANIZATION_INVITE_PENDING` | Inviting an email that already has a pending invite (revoke it first) |
+| `409 ORGANIZATION_ALREADY_MEMBER` | The invitee (or the person accepting) is already a member |
+| `409 ORGANIZATION_INVITE_ACCOUNT_EXISTS` | `register-and-accept` for an email that already has an account — sign in and accept instead |
+| `409 ORGANIZATION_INVITE_NO_LONGER_PENDING` | The invite was used, revoked or expired between opening and accepting |
+
 Examples: [Merchant organizations API](../technical/api-reference/merchant-organizations.md). How
 store scoping is enforced in the database: [Tenancy and RLS](../technical/authorization/tenancy-and-rls.md).
 

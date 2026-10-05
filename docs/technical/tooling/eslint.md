@@ -47,7 +47,7 @@ rules — with small, deliberate deviations per repo.
 ```
 packages/eslint-config/          ← the shared config package (@workspace/eslint-config)
 ├── base.js                      ← core rules applied to EVERY repo
-├── next.js                      ← web + admin + merchant (adds React / Hooks / a11y / Next.js rules)
+├── next.js                      ← web + admin + merchant (react-internal.js + Next.js rules)
 ├── react-internal.js            ← packages/ui + packages/client (React library rules)
 ├── nestjs.js                    ← apps/api (NestJS + DI-friendly rules)
 └── import-boundaries.js         ← import-boundary patterns + the local `workspace-boundaries` rule
@@ -134,7 +134,7 @@ This is the heart of the setup. It stacks these layers, in order:
     `node_modules/`, `*.config.*`, `*.d.ts`, `prisma/`. (`apps/api` re-includes its hand-written
     `prisma/**/*.ts` seed and RLS manifest — see [Per-repo exceptions](#4-per-repo-exceptions).)
 
-### `next.js` (web + admin + merchant)
+### `react-internal.js` (packages/ui, packages/client — and the base of `next.js`)
 
 Everything from `base.js`, plus:
 
@@ -145,14 +145,16 @@ Everything from `base.js`, plus:
 - `eslint-plugin-react` (recommended + jsx-runtime), browser/serviceworker globals
 - `react-hooks` recommended rules
 - `jsx-a11y` recommended (alt-text, aria-role enforced; some relaxed for shadcn patterns)
-- `@next/eslint-plugin-next` (recommended + core-web-vitals)
 - Extra React rules: `jsx-no-leaked-render`, `jsx-no-bind`, `jsx-key`,
-  `no-unstable-nested-components`, `no-array-index-key` (warn)
+  `no-unstable-nested-components`, `no-array-index-key`
 
-### `react-internal.js` (packages/ui, packages/client)
+### `next.js` (web + admin + merchant)
 
-Everything from `base.js` plus the same React / hooks / a11y rules and the same
-frontend import boundaries as `next.js`, **without** the Next.js-specific rules.
+Spreads `react-internal.js` (so the Next apps and the React libraries cannot drift apart) and adds
+only the Next-specific part:
+
+- `@next/eslint-plugin-next` (recommended + core-web-vitals)
+- `react/require-default-props` off (TypeScript handles optional props)
 
 ### `nestjs.js` (apps/api)
 
@@ -570,8 +572,8 @@ stale results.
 ## 9. Adding / changing rules
 
 1. **Rule that should apply to every repo** → edit `packages/eslint-config/base.js`.
-2. **Rule only for React apps** → edit `packages/eslint-config/next.js` or
-   `react-internal.js`.
+2. **Rule only for React code** → edit `packages/eslint-config/react-internal.js` (applies to
+   the Next apps too); a rule only for the Next apps goes in `next.js`.
 3. **Rule only for the API** → edit `packages/eslint-config/nestjs.js`.
 4. **Rule only for one workspace** → add an override block in that workspace's
    `eslint.config.js`.

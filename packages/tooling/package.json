@@ -9,7 +9,8 @@
 		"test": "vitest run",
 		"deps:check": "syncpack lint",
 		"deps:fix": "syncpack fix-mismatches",
-		"deps:list": "syncpack list"
+		"deps:list": "syncpack list",
+		"deps:review": "node scripts/check-dependency-exceptions.mjs"
 	},
 	"dependencies": {
 		"zod": "4.6.2"

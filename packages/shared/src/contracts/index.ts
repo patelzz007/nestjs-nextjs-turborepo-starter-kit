@@ -312,24 +312,11 @@ export interface ApiContractDef<Input extends SerializableInput, M extends RestM
 }
 
 /** Declares one route in the contract. */
-export function defineContract<Input extends SerializableInput, M extends RestMethod, Data extends DataValue>(def: {
-	readonly method: M;
-	readonly path: string;
-	readonly input: ZodType<Input>;
-	readonly response: ApiResponseContract<Data>;
-	readonly access?: ApiAccess;
-	readonly version?: ApiVersion;
-	readonly deprecatedSince?: string;
-	readonly sunsetAt?: string;
-}): ApiContractDef<Input, M, Data> {
+export function defineContract<Input extends SerializableInput, M extends RestMethod, Data extends DataValue>(
+	def: ApiContractDef<Input, M, Data>,
+): ApiContractDef<Input, M, Data> {
 	return def;
 }
-
-/**
- * Convenience: extract the `path` string from a `RouteDef` (static or
- * parameterized) so contracts can reference `apiRoutes` directly.
- */
-export type RoutePathOf<T> = T extends { path: string } ? T["path"] : T;
 
 // ── Local helpers ──────────────────────────────────────────────────────────
 
@@ -495,13 +482,13 @@ export const apiContract = {
 		adminUsers: defineContract({ method: "GET", path: apiRoutes.auth.adminUsers, input: AdminUserListQuerySchema, response: paginatedResponse(AdminUserDetailSchema) }),
 		adminUserDetail: defineContract({
 			method: "GET",
-			path: apiRoutes.auth.adminUserDetail.path,
+			path: apiRoutes.auth.adminUserDetail,
 			input: z.object({ userId: UuidParamSchema }).strict(),
 			response: singleResponse(AdminUserDetailSchema),
 		}),
 		impersonate: defineContract({
 			method: "POST",
-			path: apiRoutes.auth.impersonate.path,
+			path: apiRoutes.auth.impersonate,
 			input: z.object({ userId: UuidParamSchema }).strict(),
 			response: singleResponse(ImpersonateResponseSchema),
 		}),
@@ -576,14 +563,14 @@ export const apiContract = {
 		/** Preview detail for one template key. */
 		previewDetail: defineContract({
 			method: "GET",
-			path: apiRoutes.email.previewDetail.path,
+			path: apiRoutes.email.previewDetail,
 			input: z.object({ key: z.string() }).strict(),
 			response: singleResponse(EmailPreviewSchema),
 		}),
 		/** Sends one template to the configured test address. */
 		previewSend: defineContract({
 			method: "POST",
-			path: apiRoutes.email.previewSend.path,
+			path: apiRoutes.email.previewSend,
 			input: z.object({ key: z.string() }).strict(),
 			response: singleResponse(EmailSendResultSchema),
 		}),
@@ -611,34 +598,34 @@ export const apiContract = {
 		cascadePreview: defineContract({ method: "GET", path: apiRoutes.geo.cascadePreview, input: CascadePreviewSchema, response: singleResponse(CascadePreviewResultSchema) }),
 		// Regions
 		regions: defineContract({ method: "GET", path: apiRoutes.geo.regions, input: RegionListQuerySchema, response: paginatedResponse(RegionListItemSchema) }),
-		regionDetail: defineContract({ method: "GET", path: apiRoutes.geo.regionDetail.path, input: GeoIdParamSchema, response: singleResponse(RegionSchema) }),
+		regionDetail: defineContract({ method: "GET", path: apiRoutes.geo.regionDetail, input: GeoIdParamSchema, response: singleResponse(RegionSchema) }),
 		createRegion: defineContract({ method: "POST", path: apiRoutes.geo.regions, input: CreateRegionSchema, response: singleResponse(RegionSchema) }),
-		updateRegion: defineContract({ method: "PATCH", path: apiRoutes.geo.regionDetail.path, input: UpdateRegionSchema, response: singleResponse(RegionSchema) }),
-		deleteRegion: defineContract({ method: "DELETE", path: apiRoutes.geo.regionDetail.path, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
+		updateRegion: defineContract({ method: "PATCH", path: apiRoutes.geo.regionDetail, input: UpdateRegionSchema, response: singleResponse(RegionSchema) }),
+		deleteRegion: defineContract({ method: "DELETE", path: apiRoutes.geo.regionDetail, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
 		// Subregions
 		subregions: defineContract({ method: "GET", path: apiRoutes.geo.subregions, input: SubregionListQuerySchema, response: paginatedResponse(SubregionListItemSchema) }),
-		subregionDetail: defineContract({ method: "GET", path: apiRoutes.geo.subregionDetail.path, input: GeoIdParamSchema, response: singleResponse(SubregionSchema) }),
+		subregionDetail: defineContract({ method: "GET", path: apiRoutes.geo.subregionDetail, input: GeoIdParamSchema, response: singleResponse(SubregionSchema) }),
 		createSubregion: defineContract({ method: "POST", path: apiRoutes.geo.subregions, input: CreateSubregionSchema, response: singleResponse(SubregionSchema) }),
-		updateSubregion: defineContract({ method: "PATCH", path: apiRoutes.geo.subregionDetail.path, input: UpdateSubregionSchema, response: singleResponse(SubregionSchema) }),
-		deleteSubregion: defineContract({ method: "DELETE", path: apiRoutes.geo.subregionDetail.path, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
+		updateSubregion: defineContract({ method: "PATCH", path: apiRoutes.geo.subregionDetail, input: UpdateSubregionSchema, response: singleResponse(SubregionSchema) }),
+		deleteSubregion: defineContract({ method: "DELETE", path: apiRoutes.geo.subregionDetail, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
 		// Countries
 		countries: defineContract({ method: "GET", path: apiRoutes.geo.countries, input: CountryListQuerySchema, response: paginatedResponse(CountryListItemSchema) }),
-		countryDetail: defineContract({ method: "GET", path: apiRoutes.geo.countryDetail.path, input: GeoIdParamSchema, response: singleResponse(CountrySchema) }),
+		countryDetail: defineContract({ method: "GET", path: apiRoutes.geo.countryDetail, input: GeoIdParamSchema, response: singleResponse(CountrySchema) }),
 		createCountry: defineContract({ method: "POST", path: apiRoutes.geo.countries, input: CreateCountrySchema, response: singleResponse(CountrySchema) }),
-		updateCountry: defineContract({ method: "PATCH", path: apiRoutes.geo.countryDetail.path, input: UpdateCountrySchema, response: singleResponse(CountrySchema) }),
-		deleteCountry: defineContract({ method: "DELETE", path: apiRoutes.geo.countryDetail.path, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
+		updateCountry: defineContract({ method: "PATCH", path: apiRoutes.geo.countryDetail, input: UpdateCountrySchema, response: singleResponse(CountrySchema) }),
+		deleteCountry: defineContract({ method: "DELETE", path: apiRoutes.geo.countryDetail, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
 		// States
 		states: defineContract({ method: "GET", path: apiRoutes.geo.states, input: StateListQuerySchema, response: paginatedResponse(StateListItemSchema) }),
-		stateDetail: defineContract({ method: "GET", path: apiRoutes.geo.stateDetail.path, input: GeoIdParamSchema, response: singleResponse(StateSchema) }),
+		stateDetail: defineContract({ method: "GET", path: apiRoutes.geo.stateDetail, input: GeoIdParamSchema, response: singleResponse(StateSchema) }),
 		createState: defineContract({ method: "POST", path: apiRoutes.geo.states, input: CreateStateSchema, response: singleResponse(StateSchema) }),
-		updateState: defineContract({ method: "PATCH", path: apiRoutes.geo.stateDetail.path, input: UpdateStateSchema, response: singleResponse(StateSchema) }),
-		deleteState: defineContract({ method: "DELETE", path: apiRoutes.geo.stateDetail.path, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
+		updateState: defineContract({ method: "PATCH", path: apiRoutes.geo.stateDetail, input: UpdateStateSchema, response: singleResponse(StateSchema) }),
+		deleteState: defineContract({ method: "DELETE", path: apiRoutes.geo.stateDetail, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
 		// Cities
 		cities: defineContract({ method: "GET", path: apiRoutes.geo.cities, input: CityListQuerySchema, response: paginatedResponse(CityListItemSchema) }),
-		cityDetail: defineContract({ method: "GET", path: apiRoutes.geo.cityDetail.path, input: GeoIdParamSchema, response: singleResponse(CitySchema) }),
+		cityDetail: defineContract({ method: "GET", path: apiRoutes.geo.cityDetail, input: GeoIdParamSchema, response: singleResponse(CitySchema) }),
 		createCity: defineContract({ method: "POST", path: apiRoutes.geo.cities, input: CreateCitySchema, response: singleResponse(CitySchema) }),
-		updateCity: defineContract({ method: "PATCH", path: apiRoutes.geo.cityDetail.path, input: UpdateCitySchema, response: singleResponse(CitySchema) }),
-		deleteCity: defineContract({ method: "DELETE", path: apiRoutes.geo.cityDetail.path, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
+		updateCity: defineContract({ method: "PATCH", path: apiRoutes.geo.cityDetail, input: UpdateCitySchema, response: singleResponse(CitySchema) }),
+		deleteCity: defineContract({ method: "DELETE", path: apiRoutes.geo.cityDetail, input: GeoIdParamSchema, response: singleResponse(MessageResponseSchema) }),
 	},
 
 	// ── Rewards platform (Phase 1) ───────────────────────────────────
@@ -647,7 +634,7 @@ export const apiContract = {
 		detail: defineContract({
 			access: "public",
 			method: "GET",
-			path: apiRoutes.rewards.detail.path,
+			path: apiRoutes.rewards.detail,
 			input: z.object({ rewardId: UuidParamSchema }).strict(),
 			response: singleResponse(RewardResponseSchema),
 		}),
@@ -668,7 +655,7 @@ export const apiContract = {
 		}),
 		qr: defineContract({
 			method: "GET",
-			path: apiRoutes.claims.qr.path,
+			path: apiRoutes.claims.qr,
 			input: z.object({ claimId: UuidParamSchema }).strict(),
 			response: singleResponse(RewardClaimQrResponseSchema),
 		}),
@@ -716,25 +703,25 @@ export const apiContract = {
 		}),
 		complete: defineContract({
 			method: "POST",
-			path: apiRoutes.files.complete.path,
+			path: apiRoutes.files.complete,
 			input: z.intersection(z.object({ fileId: UuidParamSchema }).strict(), CompleteFileUploadSchema),
 			response: singleResponse(CompleteFileUploadResponseSchema),
 		}),
 		detail: defineContract({
 			method: "GET",
-			path: apiRoutes.files.detail.path,
+			path: apiRoutes.files.detail,
 			input: z.object({ fileId: UuidParamSchema }).strict(),
 			response: singleResponse(FileDetailResponseSchema),
 		}),
 		downloadUrl: defineContract({
 			method: "GET",
-			path: apiRoutes.files.downloadUrl.path,
+			path: apiRoutes.files.downloadUrl,
 			input: z.object({ fileId: UuidParamSchema }).strict(),
 			response: singleResponse(FileDownloadResponseSchema),
 		}),
 		delete: defineContract({
 			method: "DELETE",
-			path: apiRoutes.files.delete.path,
+			path: apiRoutes.files.delete,
 			input: z.object({ fileId: UuidParamSchema }).strict(),
 			response: singleResponse(DeleteSuccessDataSchema),
 		}),
@@ -748,49 +735,49 @@ export const apiContract = {
 		}),
 		context: defineContract({
 			method: "GET",
-			path: apiRoutes.organizations.context.path,
+			path: apiRoutes.organizations.context,
 			input: OrganizationSlugParamSchema,
 			response: singleResponse(OrganizationContextResponseSchema),
 		}),
 		createAccessRequest: defineContract({
 			method: "POST",
-			path: apiRoutes.organizations.accessRequests.path,
+			path: apiRoutes.organizations.accessRequests,
 			input: z.intersection(OrganizationSlugParamSchema, OrganizationAccessRequestCreateSchema),
 			response: singleResponse(OrganizationAccessRequestResponseSchema),
 		}),
 		inviteMember: defineContract({
 			method: "POST",
-			path: apiRoutes.organizations.inviteMember.path,
+			path: apiRoutes.organizations.inviteMember,
 			input: z.intersection(OrganizationSlugParamSchema, OrganizationMemberInviteSchema),
 			response: singleResponse(OrganizationMemberInviteCreatedResponseSchema),
 		}),
 		listMembers: defineContract({
 			method: "GET",
-			path: apiRoutes.organizations.listMembers.path,
+			path: apiRoutes.organizations.listMembers,
 			input: OrganizationSlugParamSchema,
 			response: singleResponse(OrganizationMemberRosterListResponseSchema),
 		}),
 		updateOwnMembership: defineContract({
 			method: "PATCH",
-			path: apiRoutes.organizations.ownMembership.path,
+			path: apiRoutes.organizations.ownMembership,
 			input: z.intersection(OrganizationSlugParamSchema, OrganizationOwnMembershipUpdateSchema),
 			response: singleResponse(OrganizationMembershipResponseSchema),
 		}),
 		listMemberInvites: defineContract({
 			method: "GET",
-			path: apiRoutes.organizations.listMemberInvites.path,
+			path: apiRoutes.organizations.listMemberInvites,
 			input: OrganizationSlugParamSchema,
 			response: singleResponse(OrganizationMemberInviteListResponseSchema),
 		}),
 		revokeMemberInvite: defineContract({
 			method: "POST",
-			path: apiRoutes.organizations.revokeMemberInvite.path,
+			path: apiRoutes.organizations.revokeMemberInvite,
 			input: OrganizationMemberInviteIdParamSchema,
 			response: singleResponse(MessageResponseSchema),
 		}),
 		removeMemberFromStore: defineContract({
 			method: "POST",
-			path: apiRoutes.organizations.removeMemberFromStore.path,
+			path: apiRoutes.organizations.removeMemberFromStore,
 			input: z.intersection(OrganizationMemberStoreParamSchema, OrganizationMemberStoreRemoveSchema),
 			response: singleResponse(OrganizationMemberStoreRemoveResponseSchema),
 		}),
@@ -816,26 +803,26 @@ export const apiContract = {
 		}),
 		memberships: defineContract({
 			method: "GET",
-			path: apiRoutes.organizations.memberships.path,
+			path: apiRoutes.organizations.memberships,
 			input: OrganizationSlugParamSchema,
 			response: singleResponse(OrganizationRewardMembershipListResponseSchema),
 		}),
 		kyb: {
 			get: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.kyb.path,
+				path: apiRoutes.organizations.kyb,
 				input: OrganizationSlugParamSchema,
 				response: singleResponse(MerchantKybProfileResponseSchema),
 			}),
 			submit: defineContract({
 				method: "PATCH",
-				path: apiRoutes.organizations.kyb.path,
+				path: apiRoutes.organizations.kyb,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantKybSubmissionFieldsSchema),
 				response: singleResponse(MerchantKybProfileResponseSchema),
 			}),
 			downloadDocument: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.kybDocumentDownload.path,
+				path: apiRoutes.organizations.kybDocumentDownload,
 				input: z
 					.object({
 						orgSlug: OrganizationSlugParamSchema.shape.orgSlug,
@@ -849,31 +836,31 @@ export const apiContract = {
 		rewards: {
 			list: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.rewards.list.path,
+				path: apiRoutes.organizations.rewards.list,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantRewardListQuerySchema),
 				response: singleResponse(RewardResponseListSchema),
 			}),
 			get: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.rewards.get.path,
+				path: apiRoutes.organizations.rewards.get,
 				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict(),
 				response: singleResponse(RewardResponseSchema),
 			}),
 			create: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.rewards.create.path,
+				path: apiRoutes.organizations.rewards.create,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantCreateRewardSchema),
 				response: singleResponse(RewardResponseSchema),
 			}),
 			update: defineContract({
 				method: "PATCH",
-				path: apiRoutes.organizations.rewards.update.path,
+				path: apiRoutes.organizations.rewards.update,
 				input: MerchantUpdateRewardPathInputSchema.extend({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug }),
 				response: singleResponse(RewardResponseSchema),
 			}),
 			publish: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.rewards.publish.path,
+				path: apiRoutes.organizations.rewards.publish,
 				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict(),
 				response: singleResponse(RewardResponseSchema),
 			}),
@@ -881,49 +868,49 @@ export const apiContract = {
 		terminals: {
 			list: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.terminals.list.path,
+				path: apiRoutes.organizations.terminals.list,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalListQuerySchema),
 				response: paginatedResponse(MerchantTerminalSummarySchema),
 			}),
 			summary: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.terminals.summary.path,
+				path: apiRoutes.organizations.terminals.summary,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalStatusSummaryQuerySchema),
 				response: singleResponse(MerchantTerminalStatusSummarySchema),
 			}),
 			get: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.terminals.get.path,
+				path: apiRoutes.organizations.terminals.get,
 				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
 				response: singleResponse(MerchantTerminalSummarySchema),
 			}),
 			create: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.terminals.create.path,
+				path: apiRoutes.organizations.terminals.create,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantCreateTerminalSchema),
 				response: singleResponse(MerchantTerminalPairingSchema),
 			}),
 			pairingCode: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.terminals.pairingCode.path,
+				path: apiRoutes.organizations.terminals.pairingCode,
 				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
 				response: singleResponse(MerchantTerminalPairingSchema),
 			}),
 			remove: defineContract({
 				method: "DELETE",
-				path: apiRoutes.organizations.terminals.remove.path,
+				path: apiRoutes.organizations.terminals.remove,
 				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
 				response: singleResponse(OkResponseSchema),
 			}),
 			settings: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.terminals.settings.path,
+				path: apiRoutes.organizations.terminals.settings,
 				input: OrganizationSlugParamSchema,
 				response: singleResponse(MerchantTerminalSettingsResponseSchema),
 			}),
 			updateSettings: defineContract({
 				method: "PATCH",
-				path: apiRoutes.organizations.terminals.settings.path,
+				path: apiRoutes.organizations.terminals.settings,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalSettingsSchema),
 				response: singleResponse(MerchantTerminalSettingsResponseSchema),
 			}),
@@ -931,51 +918,51 @@ export const apiContract = {
 		apiKeys: {
 			list: defineContract({
 				method: "GET",
-				path: apiRoutes.organizations.apiKeys.list.path,
+				path: apiRoutes.organizations.apiKeys.list,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantApiKeyListQuerySchema),
 				response: paginatedResponse(MerchantApiKeySummarySchema),
 			}),
 			create: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.apiKeys.create.path,
+				path: apiRoutes.organizations.apiKeys.create,
 				input: z.intersection(OrganizationSlugParamSchema, MerchantCreateApiKeySchema),
 				response: singleResponse(MerchantApiKeyCreatedSchema),
 			}),
 			revoke: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.apiKeys.revoke.path,
+				path: apiRoutes.organizations.apiKeys.revoke,
 				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, keyId: UuidParamSchema }).strict(),
 				response: singleResponse(OkResponseSchema),
 			}),
 		},
 		redemptions: defineContract({
 			method: "GET",
-			path: apiRoutes.organizations.redemptions.path,
+			path: apiRoutes.organizations.redemptions,
 			input: z.intersection(OrganizationSlugParamSchema, MerchantRedemptionListQuerySchema),
 			response: paginatedResponse(MerchantRedemptionListItemSchema),
 		}),
 		analytics: defineContract({
 			method: "GET",
-			path: apiRoutes.organizations.analytics.path,
+			path: apiRoutes.organizations.analytics,
 			input: z.intersection(OrganizationSlugParamSchema, RewardsAnalyticsQuerySchema),
 			response: singleResponse(MerchantAnalyticsResponseSchema),
 		}),
 		locations: {
 			create: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.locations.create.path,
+				path: apiRoutes.organizations.locations.create,
 				input: z.intersection(OrganizationSlugParamSchema, OrganizationLocationCreateSchema),
 				response: singleResponse(OrganizationLocationResponseSchema),
 			}),
 			update: defineContract({
 				method: "PATCH",
-				path: apiRoutes.organizations.locations.update.path,
+				path: apiRoutes.organizations.locations.update,
 				input: z.intersection(OrganizationLocationIdParamSchema, OrganizationLocationUpdateSchema),
 				response: singleResponse(OrganizationLocationResponseSchema),
 			}),
 			close: defineContract({
 				method: "POST",
-				path: apiRoutes.organizations.locations.close.path,
+				path: apiRoutes.organizations.locations.close,
 				input: z.intersection(OrganizationLocationIdParamSchema, OrganizationLocationCloseSchema),
 				response: singleResponse(OrganizationLocationCloseResponseSchema),
 			}),
@@ -1080,13 +1067,13 @@ export const apiContract = {
 		}),
 		getOrganization: defineContract({
 			method: "GET",
-			path: apiRoutes.rewardsAdmin.organizationDetail.path,
+			path: apiRoutes.rewardsAdmin.organizationDetail,
 			input: AdminMerchantIdParamSchema,
 			response: singleResponse(AdminMerchantDetailResponseSchema),
 		}),
 		downloadOrganizationDocument: defineContract({
 			method: "GET",
-			path: apiRoutes.rewardsAdmin.organizationKybDocumentDownload.path,
+			path: apiRoutes.rewardsAdmin.organizationKybDocumentDownload,
 			input: z
 				.object({
 					organizationId: UuidParamSchema,
@@ -1098,19 +1085,19 @@ export const apiContract = {
 		}),
 		approveReward: defineContract({
 			method: "POST",
-			path: apiRoutes.rewardsAdmin.rewardApprove.path,
+			path: apiRoutes.rewardsAdmin.rewardApprove,
 			input: z.object({ rewardId: UuidParamSchema }).strict(),
 			response: singleResponse(RewardResponseSchema),
 		}),
 		rejectReward: defineContract({
 			method: "POST",
-			path: apiRoutes.rewardsAdmin.rewardReject.path,
+			path: apiRoutes.rewardsAdmin.rewardReject,
 			input: AdminRejectRewardPathInputSchema,
 			response: singleResponse(RewardResponseSchema),
 		}),
 		updateKyb: defineContract({
 			method: "PATCH",
-			path: apiRoutes.rewardsAdmin.organizationKyb.path,
+			path: apiRoutes.rewardsAdmin.organizationKyb,
 			input: AdminKybUpdatePathInputSchema,
 			response: singleResponse(OkResponseSchema),
 		}),
@@ -1122,20 +1109,20 @@ export const apiContract = {
 		}),
 		createOrganizationLocation: defineContract({
 			method: "POST",
-			path: apiRoutes.rewardsAdmin.organizationLocationCreate.path,
+			path: apiRoutes.rewardsAdmin.organizationLocationCreate,
 			input: z.intersection(AdminMerchantIdParamSchema, AdminOrganizationLocationCreateSchema),
 			response: singleResponse(OrganizationLocationResponseSchema),
 		}),
 		reviewOrganizationLocation: defineContract({
 			method: "PATCH",
-			path: apiRoutes.rewardsAdmin.organizationLocationReview.path,
+			path: apiRoutes.rewardsAdmin.organizationLocationReview,
 			input: z.intersection(AdminOrganizationLocationReviewPathInputSchema, AdminOrganizationLocationReviewSchema),
 			response: singleResponse(OrganizationLocationResponseSchema),
 		}),
 	},
 	sampleCategory: {
 		list: defineContract({ method: "GET", path: apiRoutes.sampleCategory.list, input: SampleCategoryListQuerySchema, response: paginatedResponse(SampleCategorySchema) }),
-		detail: defineContract({ method: "GET", path: apiRoutes.sampleCategory.detail.path, input: SampleCategoryIdParamSchema, response: singleResponse(SampleCategorySchema) }),
+		detail: defineContract({ method: "GET", path: apiRoutes.sampleCategory.detail, input: SampleCategoryIdParamSchema, response: singleResponse(SampleCategorySchema) }),
 		create: defineContract({ method: "POST", path: apiRoutes.sampleCategory.create, input: CreateSampleCategorySchema, response: singleResponse(SampleCategorySchema) }),
 		bulkCreate: defineContract({
 			method: "POST",
@@ -1146,26 +1133,26 @@ export const apiContract = {
 		bulkDelete: defineContract({ method: "POST", path: apiRoutes.sampleCategory.bulkDelete, input: BulkDeleteIdsSchema, response: singleResponse(BulkDeleteResultSchema) }),
 		update: defineContract({
 			method: "PATCH",
-			path: apiRoutes.sampleCategory.update.path,
+			path: apiRoutes.sampleCategory.update,
 			input: z.intersection(SampleCategoryIdParamSchema, UpdateSampleCategorySchema),
 			response: singleResponse(SampleCategorySchema),
 		}),
 		delete: defineContract({
 			method: "DELETE",
-			path: apiRoutes.sampleCategory.delete.path,
+			path: apiRoutes.sampleCategory.delete,
 			input: SampleCategoryIdParamSchema,
 			response: singleResponse(DeleteSuccessDataSchema),
 		}),
 		restore: defineContract({
 			method: "POST",
-			path: apiRoutes.sampleCategory.restore.path,
+			path: apiRoutes.sampleCategory.restore,
 			input: SampleCategoryIdParamSchema,
 			response: singleResponse(SampleCategorySchema),
 		}),
 	},
 	product: {
 		list: defineContract({ method: "GET", path: apiRoutes.product.list, input: ProductListQuerySchema, response: paginatedResponse(ProductSchema) }),
-		detail: defineContract({ method: "GET", path: apiRoutes.product.detail.path, input: ProductIdParamSchema, response: singleResponse(ProductSchema) }),
+		detail: defineContract({ method: "GET", path: apiRoutes.product.detail, input: ProductIdParamSchema, response: singleResponse(ProductSchema) }),
 		create: defineContract({ method: "POST", path: apiRoutes.product.create, input: CreateProductSchema, response: singleResponse(ProductSchema) }),
 		bulkCreate: defineContract({
 			method: "POST",
@@ -1176,12 +1163,12 @@ export const apiContract = {
 		bulkDelete: defineContract({ method: "POST", path: apiRoutes.product.bulkDelete, input: BulkDeleteIdsSchema, response: singleResponse(BulkDeleteResultSchema) }),
 		update: defineContract({
 			method: "PATCH",
-			path: apiRoutes.product.update.path,
+			path: apiRoutes.product.update,
 			input: z.intersection(ProductIdParamSchema, UpdateProductSchema),
 			response: singleResponse(ProductSchema),
 		}),
-		delete: defineContract({ method: "DELETE", path: apiRoutes.product.delete.path, input: ProductIdParamSchema, response: singleResponse(DeleteSuccessDataSchema) }),
-		restore: defineContract({ method: "POST", path: apiRoutes.product.restore.path, input: ProductIdParamSchema, response: singleResponse(ProductSchema) }),
+		delete: defineContract({ method: "DELETE", path: apiRoutes.product.delete, input: ProductIdParamSchema, response: singleResponse(DeleteSuccessDataSchema) }),
+		restore: defineContract({ method: "POST", path: apiRoutes.product.restore, input: ProductIdParamSchema, response: singleResponse(ProductSchema) }),
 	},
 };
 

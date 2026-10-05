@@ -6,6 +6,7 @@ import { defineListQuery, listFilter, ListSearchSchema } from "../api/list-query
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { UserFullNameSchema } from "./profile";
+import { StrictMessageResponseSchema } from "../api/message";
 
 // ── Shared role shape ──────────────────────────────────────────────────────
 
@@ -150,10 +151,6 @@ export type AdminUserListSortField = (typeof adminUserListQuery.sortable)[number
 
 // ── Generic message response ───────────────────────────────────────────────
 
-export const UserMessageResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const UserMessageResponseSchema = StrictMessageResponseSchema;
 
 export type UserMessageResponse = z.output<typeof UserMessageResponseSchema>;

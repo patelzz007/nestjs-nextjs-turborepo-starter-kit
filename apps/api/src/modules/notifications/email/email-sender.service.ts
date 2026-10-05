@@ -144,12 +144,12 @@ export class EmailSenderService {
 		private readonly requestContext: RequestContextService,
 		@Optional() private readonly emailQueue?: EmailQueueService,
 	) {
-		const apiKey: string | null = this.config.resendApiKey;
+		const apiKey: string | null = this.config.email.resendApiKey;
 		this.resend = apiKey === null ? null : new Resend(apiKey);
 		this.renderContext = EmailRenderContextSchema.parse({
-			appName: this.config.appName,
-			appUrl: this.config.appUrl,
-			supportEmail: this.config.emailFromAddress,
+			appName: this.config.runtime.appName,
+			appUrl: this.config.clientApps.webUrl,
+			supportEmail: this.config.email.fromAddress,
 		});
 	}
 
@@ -169,7 +169,7 @@ export class EmailSenderService {
 
 		// 2. Simulated modes (development / test only — refused on a deployed
 		//    production environment by the config schema) never touch the network.
-		const mode = this.config.emailMode;
+		const mode = this.config.email.mode;
 		if (mode === "noop" || mode === "log-only") {
 			return this.simulate(template, effectiveTo, mode, metadata);
 		}
@@ -293,7 +293,7 @@ export class EmailSenderService {
 	): Promise<EmailSendResult> {
 		const startedAt: number = performance.now();
 		let failure: ClassifiedFailure | null = null;
-		for (let attemptNumber = 1; attemptNumber <= this.config.emailMaxAttempts; attemptNumber += 1) {
+		for (let attemptNumber = 1; attemptNumber <= this.config.email.maxAttempts; attemptNumber += 1) {
 			if (attemptNumber > 1) {
 				await this.backoff(attemptNumber);
 			}
@@ -325,11 +325,11 @@ export class EmailSenderService {
 			// Unreachable in a valid deployment: EMAIL_MODE=send requires RESEND_API_KEY at boot.
 			throw new ResendError("RESEND_API_KEY is not configured — set it, or use EMAIL_MODE=log-only / noop", "missing_api_key");
 		}
-		const replyTo: string | undefined = props.replyTo ?? this.config.emailReplyTo;
+		const replyTo: string | undefined = props.replyTo ?? this.config.email.replyTo;
 		const call: Promise<ResendSendResponse> = resend.emails
 			.send(
 				{
-					from: this.config.emailFromAddress,
+					from: this.config.email.fromAddress,
 					to,
 					subject: template.subject,
 					html: template.renderHtml(this.renderContext),
@@ -345,7 +345,7 @@ export class EmailSenderService {
 		let result: ResendSendResponse;
 		try {
 			// Resend's send() takes no AbortSignal — a hung call is cut by the timeout branch.
-			result = await Promise.race([call, rejectAfter<ResendSendResponse>(this.config.emailTimeoutMs, new EmailTimeoutError())]);
+			result = await Promise.race([call, rejectAfter<ResendSendResponse>(this.config.email.timeoutMs, new EmailTimeoutError())]);
 		} catch (error) {
 			throw this.normalizeError(CaughtValueSchema.parse(error));
 		}
@@ -409,7 +409,7 @@ export class EmailSenderService {
 	}
 
 	private effectiveRecipient(subject: string, to: string): string {
-		const override: string | undefined = this.config.emailTestTo;
+		const override: string | undefined = this.config.email.testTo;
 		if (override !== undefined && override !== to) {
 			this.logService.info(`EMAIL_TEST_TO override: "${subject}" redirected from ${this.maskEmail(to)} to ${this.maskEmail(override)}`, { context: "EmailSenderService" });
 		}

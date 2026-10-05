@@ -14,9 +14,13 @@ import { MfaChallengeService } from "./mfa-challenge.service";
 import { SecretEncryptionService } from "./secret-encryption.service";
 import { TwoFactorService } from "./two-factor.service";
 
+const otplib = vi.hoisted(() => ({
+	generateURI: vi.fn((_options: { readonly issuer: string; readonly label: string; readonly secret: string }): string => "otpauth://totp/test"),
+}));
+
 vi.mock("otplib", () => ({
 	generateSecret: (): string => "SECRET",
-	generateURI: (): string => "otpauth://totp/test",
+	generateURI: otplib.generateURI,
 	verifySync: (): { readonly valid: true; readonly delta: number } => ({ valid: true, delta: 0 }),
 }));
 
@@ -50,6 +54,7 @@ const prismaDouble = {
 			}),
 		),
 		delete: recorder("twoFactorPendingSetup.delete"),
+		upsert: vi.fn(() => Promise.resolve({})),
 	},
 	user: {
 		update: recorder("user.update"),
@@ -71,8 +76,8 @@ async function createService(): Promise<TwoFactorService> {
 		providers: [
 			TwoFactorService,
 			{ provide: PrismaService, useValue: prismaDouble },
-			{ provide: CryptoService, useValue: {} },
-			{ provide: TypedConfigService, useValue: { appName: "Test" } },
+			{ provide: CryptoService, useValue: { hash: (): Promise<string> => Promise.resolve("hash") } },
+			{ provide: TypedConfigService, useValue: { runtime: { appName: "Test" }, auth: { twoFactorIssuer: "Issuer Co" } } },
 			{
 				provide: SecretEncryptionService,
 				useValue: {
@@ -94,6 +99,16 @@ async function createService(): Promise<TwoFactorService> {
 		.compile();
 	return moduleRef.get(TwoFactorService);
 }
+
+describe("TwoFactorService.generateSetup", () => {
+	it("labels the authenticator entry with the configured TWO_FACTOR_ISSUER, not the app name", async () => {
+		const service = await createService();
+
+		await service.generateSetup(USER_ID);
+
+		expect(otplib.generateURI).toHaveBeenCalledWith({ issuer: "Issuer Co", label: "member@example.com", secret: "SECRET" });
+	});
+});
 
 describe("TwoFactorService.enableTwoFactor", () => {
 	beforeEach(() => {

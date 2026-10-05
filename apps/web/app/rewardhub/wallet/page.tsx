@@ -1,7 +1,7 @@
 import { FeatureUnavailableNotice } from "@/components/auth/access-fallback";
 import { AccessGate } from "@/components/auth/access-gate";
 import { MyClaimsPageView } from "@/components/rewardhub/claims/my-claims-page-view";
-import { settleServerQuery } from "@/lib/api/server-query-outcome";
+import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { guardWebPage } from "@/lib/auth/page-guard";
 import { loginPath, ROUTES } from "@/lib/routes";
 import { toReadyToRedeemCountQuery, toWalletClaimsListQuery, WALLET_CLAIMS_URL_STATE } from "@/lib/url-state/wallet-claims";

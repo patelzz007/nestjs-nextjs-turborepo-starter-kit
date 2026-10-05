@@ -101,7 +101,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("propagates the header select-all to every visible row checkbox", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} enableBulkSelection />);
+		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} checkbox />);
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
 
@@ -124,7 +124,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
 		const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation((): void => undefined);
 		try {
-			render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} enableBulkSelection exportable exportFilename="sections.csv" />);
+			render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} checkbox={{ export: true, exportFilename: "sections.csv" }} />);
 
 			// Select rows 1 and 3 only.
 			const rowCheckboxes = screen.getAllByRole("checkbox", { name: "Select row" });
@@ -206,8 +206,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 				labels={ADMIN_DATA_TABLE_LABELS}
 				data={makeRows(12)}
 				columns={demoColumns}
-				enableBulkSelection
-				bulkActions={[{ key: "delete", label: "Delete", onClick: (): void => undefined }]}
+				checkbox={{ bulkActions: [{ key: "delete", label: "Delete", onClick: (): void => undefined }] }}
 			/>,
 		);
 
@@ -228,8 +227,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 				labels={ADMIN_DATA_TABLE_LABELS}
 				data={makeRows(12)}
 				columns={demoColumns}
-				enableBulkSelection
-				bulkActions={[{ key: "delete", label: "Delete", onClick: (): void => undefined }]}
+				checkbox={{ bulkActions: [{ key: "delete", label: "Delete", onClick: (): void => undefined }] }}
 			/>,
 		);
 

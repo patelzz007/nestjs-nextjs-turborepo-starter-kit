@@ -48,14 +48,13 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	let database: ScratchDatabase;
 	let scratch: Pool;
 	let config: TypedConfigService;
-	const prismas: PrismaService[] = [];
 
 	/** A fresh service over its OWN connection pool — each concurrent run is a separate database session, like separate CLI processes. */
 	async function newService(): Promise<SuperAdminBootstrapService> {
 		const prisma = new PrismaService(config);
 		prisma.onModuleInit();
 		await prisma.ensureConnected();
-		prismas.push(prisma);
+		database.track((): Promise<void> => prisma.onModuleDestroy());
 		return createSuperAdminBootstrapService(config, prisma);
 	}
 
@@ -92,7 +91,6 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	});
 
 	afterAll(async () => {
-		await Promise.all(prismas.map((prisma: PrismaService): Promise<void> => prisma.onModuleDestroy()));
 		await database.drop();
 	});
 
@@ -241,7 +239,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 			new SuperAdminBootstrapCommand({
 				createPasswordReader: (): PasswordReader => new StdinPasswordReader(Readable.from([`${password}\n`])),
 				bootstrap: (request: BootstrapRequest): Promise<BootstrapOutcome> => service.bootstrap(request),
-				loginUrl: (): string => config.adminAppUrl,
+				loginUrl: (): string => config.clientApps.adminUrl,
 				log: (line: string): void => void logs.push(line),
 			});
 

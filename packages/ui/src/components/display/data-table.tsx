@@ -87,11 +87,14 @@ import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
+import { DESKTOP_MEDIA_QUERY } from "@workspace/ui/hooks/use-mobile";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table/export";
 import {
 	includesExportFormat,
 	resolveDataTableCheckboxConfig,
+	type DataTableBulkAction,
 	type DataTableBulkSelectionContext,
 	type DataTableCheckboxConfig,
 	type DataTableExportFormat,
@@ -130,22 +133,6 @@ function applyTableUpdater<T>(updater: T | ((previous: T) => T), previous: T): T
 }
 
 const columnHeaderLabelSchema = z.string();
-
-function useIsDesktopViewport(): boolean {
-	const [isDesktop, setIsDesktop] = useState(true);
-	useEffect((): (() => void) => {
-		const mediaQuery = globalThis.matchMedia("(min-width: 1024px)");
-		const handleChange = (): void => {
-			setIsDesktop(mediaQuery.matches);
-		};
-		handleChange();
-		mediaQuery.addEventListener("change", handleChange);
-		return (): void => {
-			mediaQuery.removeEventListener("change", handleChange);
-		};
-	}, []);
-	return isDesktop;
-}
 
 // ── The v9 feature set (module scope — built once, shared by every instance) ─
 
@@ -189,7 +176,6 @@ const DEFAULT_PAGE_SIZE_OPTIONS: readonly number[] = [5, 10, 20, 50, 100];
 const EMPTY_FILTERS: Filter[] = [];
 const EMPTY_ACTIONS: Action[] = [];
 const EMPTY_SEARCH_KEYS: string[] = [];
-const EMPTY_BULK_ACTIONS: BulkAction[] = [];
 const EMPTY_PINNED_STYLES: React.CSSProperties = {};
 const EMPTY_FACETED_COUNTS: ReadonlyMap<string, number> = new Map<string, number>();
 
@@ -231,7 +217,7 @@ const DataTableShell = React.forwardRef<HTMLDivElement, DataTableShellProps>(fun
 	return <Card ref={ref} className={cn(dataTableShellVariants({ state }), className)} {...props} />;
 });
 
-// ── Filter / Action / BulkAction Types ─────────────────────────────────────
+// ── Filter / Action Types ──────────────────────────────────────────────────
 
 export interface Filter {
 	readonly key: string;
@@ -251,14 +237,6 @@ export interface Action<TData extends RowData = RowData> {
 	readonly isDestructive?: boolean;
 }
 
-export interface BulkAction<TData extends RowData = RowData> {
-	readonly key: string;
-	readonly label: string;
-	readonly icon?: React.ReactNode;
-	readonly onClick: (selectedRows: TData[], context: DataTableBulkSelectionContext) => void | Promise<void>;
-	readonly variant?: "default" | "destructive" | "outline";
-}
-
 export interface EmptyStateConfig {
 	readonly icon?: React.ReactNode;
 	readonly title?: string;
@@ -272,7 +250,7 @@ export interface EmptyStateConfig {
 export type { DataTableLabels } from "@workspace/ui/lib/data-table/labels";
 export type { DataTableStorageAdapter } from "@workspace/ui/lib/data-table/storage";
 export { createLocalStorageDataTableStorage } from "@workspace/ui/lib/data-table/storage";
-export type { DataTableBulkSelectionContext, DataTableCheckboxConfig, DataTableExportFormat } from "@workspace/ui/lib/data-table/checkbox";
+export type { DataTableBulkAction, DataTableBulkSelectionContext, DataTableCheckboxConfig, DataTableExportFormat } from "@workspace/ui/lib/data-table/checkbox";
 export { DATA_TABLE_EXPORT_FORMATS, resolveDataTableCheckboxConfig } from "@workspace/ui/lib/data-table/checkbox";
 export type { DataTablePagination, DataTableClientPagination, DataTableServerPagination } from "@workspace/ui/lib/data-table/pagination";
 export { isServerPagination } from "@workspace/ui/lib/data-table/pagination";
@@ -297,10 +275,8 @@ export interface DataTableProps<TData extends RowData> {
 	// Responsive
 	readonly mobileCardRender?: (item: TData, actions?: Action<TData>[]) => React.ReactNode;
 
-	// Bulk selection — prefer `checkbox`; legacy `enableBulkSelection` / `exportable` still work.
+	// Bulk selection, bulk actions and export
 	readonly checkbox?: boolean | DataTableCheckboxConfig<TData>;
-	readonly enableBulkSelection?: boolean;
-	readonly bulkActions?: BulkAction<TData>[];
 
 	// Empty state
 	readonly emptyState?: EmptyStateConfig;
@@ -313,11 +289,6 @@ export interface DataTableProps<TData extends RowData> {
 
 	// ── NEW FEATURE 2: Column visibility toggle ───────────────────────────
 	readonly enableColumnVisibility?: boolean;
-
-	// ── NEW FEATURE 3: CSV Export (prefer `checkbox={{ export: true }}`) ───
-	readonly exportable?: boolean;
-	readonly exportFilename?: string;
-	readonly exportableColumns?: string[];
 
 	// ── NEW FEATURE 4: Preference persistence ─────────────────────────────
 	readonly persistKey?: string;
@@ -638,6 +609,102 @@ const rowSelectionSelector =
 	(selection: RowSelectionState): boolean =>
 		selection[rowId] === true;
 
+/** One export format's menu entry: its handler, copy and tile colours. */
+interface ExportFormatOption {
+	readonly format: DataTableExportFormat;
+	readonly labelKey: keyof DataTableLabels;
+	readonly descriptionKey: keyof DataTableLabels;
+	readonly tileClassName: string;
+	readonly iconClassName: string;
+	readonly resolveFilename: (exportFilename: string | undefined) => string;
+	readonly exportRows: <TData extends RowData>(rows: TData[], columns: ColumnDef<DataTableFeatures, TData>[], filename: string) => void;
+}
+
+/** CSV keeps the full filename (default `export.csv`); the others get it without its extension. */
+const csvExportFilename = (exportFilename: string | undefined): string => exportFilename ?? "export.csv";
+const baseExportFilename = (exportFilename: string | undefined): string => exportFilename?.replace(/\.\w+$/, "") ?? "export";
+
+/** Menu order: CSV, JSON, PDF, spreadsheet. */
+const EXPORT_FORMAT_OPTIONS: readonly ExportFormatOption[] = [
+	{
+		format: "csv",
+		labelKey: "exportCsv",
+		descriptionKey: "exportCsvDescription",
+		tileClassName: "bg-success-soft dark:bg-success-soft",
+		iconClassName: "text-green-600 dark:text-green-400",
+		resolveFilename: csvExportFilename,
+		exportRows: exportToCSV,
+	},
+	{
+		format: "json",
+		labelKey: "exportJson",
+		descriptionKey: "exportJsonDescription",
+		tileClassName: "bg-info-soft dark:bg-info-soft/30",
+		iconClassName: "text-info",
+		resolveFilename: baseExportFilename,
+		exportRows: exportToJSON,
+	},
+	{
+		format: "pdf",
+		labelKey: "exportPdf",
+		descriptionKey: "exportPdfDescription",
+		tileClassName: "bg-destructive-soft dark:bg-destructive-soft",
+		iconClassName: "text-destructive",
+		resolveFilename: baseExportFilename,
+		exportRows: exportToPDF,
+	},
+	{
+		format: "xlsx",
+		labelKey: "exportSpreadsheet",
+		descriptionKey: "exportSpreadsheetDescription",
+		tileClassName: "bg-success-soft dark:bg-success-soft",
+		iconClassName: "text-success",
+		resolveFilename: baseExportFilename,
+		exportRows: exportToSpreadsheet,
+	},
+];
+
+interface ExportItemProps<TData extends RowData> {
+	readonly option: ExportFormatOption;
+	readonly table: TanStackTable<DataTableFeatures, TData>;
+	readonly exportCols: ColumnDef<DataTableFeatures, TData>[];
+	readonly exportFilename?: string | undefined;
+	readonly labels: DataTableLabels;
+	readonly isServerMode: boolean;
+	readonly onFetchAllMatching?: (() => Promise<TData[]>) | undefined;
+}
+
+const ExportItem = memoGeneric(function ExportItem<TData extends RowData>({
+	option,
+	table,
+	exportCols,
+	exportFilename,
+	labels,
+	isServerMode,
+	onFetchAllMatching,
+}: ExportItemProps<TData>): React.JSX.Element {
+	// Stable handler (rule 16): it reads the selection-fresh row set at click
+	// time, so the menu never ships stale rows even though the parent doesn't
+	// re-render on selection changes (#6).
+	const handleClick = useCallback((): void => {
+		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
+			option.exportRows(rows, exportCols, option.resolveFilename(exportFilename));
+		});
+	}, [option, table, exportCols, exportFilename, isServerMode, onFetchAllMatching]);
+
+	return (
+		<DropdownMenuItem onClick={handleClick} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
+			<div className={`flex h-7 w-7 items-center justify-center rounded-md ${option.tileClassName}`}>
+				<FileDown className={`h-3.5 w-3.5 ${option.iconClassName}`} />
+			</div>
+			<div className="flex flex-col">
+				<span className="text-sm font-medium">{labels[option.labelKey]}</span>
+				<span className="text-[10px] text-muted-foreground">{labels[option.descriptionKey]}</span>
+			</div>
+		</DropdownMenuItem>
+	);
+});
+
 const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
 	table,
 	columns,
@@ -659,41 +726,7 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
 		return base;
 	}, [columns, exportableColumns]);
 
-	// The export panel subscribes to the `rowSelection` atom so its row set is
-	// always fresh even though the parent never re-renders on selection changes
-	// (#6). Selection-aware export: selected rows first, else the filtered set.
-	const filename = exportFilename?.replace(/\.\w+$/, "") ?? "export";
-	const csvFilename = exportFilename ?? "export.csv";
-
-	// Stable handlers (rule 16): each reads the selection-fresh row set at click
-	// time, so the menu never ships stale rows even though the parent doesn't
-	// re-render on selection changes (#6).
-	const handleExportCSV = useCallback((): void => {
-		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
-			exportToCSV(rows, exportCols, csvFilename);
-		});
-	}, [table, exportCols, csvFilename, isServerMode, onFetchAllMatching]);
-
-	const handleExportJSON = useCallback((): void => {
-		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
-			exportToJSON(rows, exportCols, filename);
-		});
-	}, [table, exportCols, filename, isServerMode, onFetchAllMatching]);
-
-	const handleExportPDF = useCallback((): void => {
-		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
-			exportToPDF(rows, exportCols, filename);
-		});
-	}, [table, exportCols, filename, isServerMode, onFetchAllMatching]);
-
-	const handleExportSpreadsheet = useCallback((): void => {
-		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
-			exportToSpreadsheet(rows, exportCols, filename);
-		});
-	}, [table, exportCols, filename, isServerMode, onFetchAllMatching]);
-
-	// Re-render the menu (and thus recompute the exported row set) whenever the
-	// selection slice changes — the parent does not subscribe to it (#6).
+	// Selection-aware export: selected rows first, else the filtered set.
 	const renderMenu = (): React.JSX.Element => (
 		<DropdownMenu>
 			<DropdownMenuTrigger className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-foreground">
@@ -702,50 +735,20 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-44 p-1.5">
 				<div className="mb-1 px-2 py-1 text-xs font-medium text-muted-foreground">{labels.exportAs}</div>
-				{includesExportFormat(exportFormats, "csv") ? (
-					<DropdownMenuItem onClick={handleExportCSV} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-						<div className="flex h-7 w-7 items-center justify-center rounded-md bg-success-soft dark:bg-success-soft">
-							<FileDown className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-						</div>
-						<div className="flex flex-col">
-							<span className="text-sm font-medium">{labels.exportCsv}</span>
-							<span className="text-[10px] text-muted-foreground">{labels.exportCsvDescription}</span>
-						</div>
-					</DropdownMenuItem>
-				) : null}
-				{includesExportFormat(exportFormats, "json") ? (
-					<DropdownMenuItem onClick={handleExportJSON} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-						<div className="flex h-7 w-7 items-center justify-center rounded-md bg-info-soft dark:bg-info-soft/30">
-							<FileDown className="h-3.5 w-3.5 text-info" />
-						</div>
-						<div className="flex flex-col">
-							<span className="text-sm font-medium">{labels.exportJson}</span>
-							<span className="text-[10px] text-muted-foreground">{labels.exportJsonDescription}</span>
-						</div>
-					</DropdownMenuItem>
-				) : null}
-				{includesExportFormat(exportFormats, "pdf") ? (
-					<DropdownMenuItem onClick={handleExportPDF} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-						<div className="flex h-7 w-7 items-center justify-center rounded-md bg-destructive-soft dark:bg-destructive-soft">
-							<FileDown className="h-3.5 w-3.5 text-destructive" />
-						</div>
-						<div className="flex flex-col">
-							<span className="text-sm font-medium">{labels.exportPdf}</span>
-							<span className="text-[10px] text-muted-foreground">{labels.exportPdfDescription}</span>
-						</div>
-					</DropdownMenuItem>
-				) : null}
-				{includesExportFormat(exportFormats, "xlsx") ? (
-					<DropdownMenuItem onClick={handleExportSpreadsheet} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-						<div className="flex h-7 w-7 items-center justify-center rounded-md bg-success-soft dark:bg-success-soft">
-							<FileDown className="h-3.5 w-3.5 text-success" />
-						</div>
-						<div className="flex flex-col">
-							<span className="text-sm font-medium">{labels.exportSpreadsheet}</span>
-							<span className="text-[10px] text-muted-foreground">{labels.exportSpreadsheetDescription}</span>
-						</div>
-					</DropdownMenuItem>
-				) : null}
+				{EXPORT_FORMAT_OPTIONS.map((option) =>
+					includesExportFormat(exportFormats, option.format) ? (
+						<ExportItem
+							key={option.format}
+							option={option}
+							table={table}
+							exportCols={exportCols}
+							exportFilename={exportFilename}
+							labels={labels}
+							isServerMode={isServerMode}
+							onFetchAllMatching={onFetchAllMatching}
+						/>
+					) : null,
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
@@ -879,6 +882,32 @@ const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 	);
 });
 
+// ── No-results state (filters/search matched nothing) ─────────────────────
+
+interface NoResultsProps {
+	readonly labels: DataTableLabels;
+	readonly onClearFilters: () => void;
+}
+
+const NoResults = React.memo(function NoResults({ labels, onClearFilters }: NoResultsProps): React.JSX.Element {
+	return (
+		<Empty>
+			<EmptyHeader>
+				<EmptyMedia variant="icon">
+					<Search className="h-6 w-6" />
+				</EmptyMedia>
+				<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
+				<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
+			</EmptyHeader>
+			<EmptyContent>
+				<Button variant="outline" onClick={onClearFilters}>
+					{labels.clearFilters}
+				</Button>
+			</EmptyContent>
+		</Empty>
+	);
+});
+
 // ── Bulk selection chrome (neutral surface — plays nice with outline/destructive buttons) ─
 
 const bulkSelectionSurfaceClasses = "mb-4 rounded-lg border border-border bg-muted/50 p-3 sm:p-4";
@@ -886,7 +915,7 @@ const bulkSelectionSurfaceClasses = "mb-4 rounded-lg border border-border bg-mut
 // ── Bulk Action Button (sub-component: the per-action closure lives here) ───
 
 interface BulkActionButtonProps<TData extends RowData> {
-	readonly action: BulkAction<TData>;
+	readonly action: DataTableBulkAction<TData>;
 	readonly selectedRows: TData[];
 	readonly selectionContext: DataTableBulkSelectionContext;
 	readonly onDone: () => void;
@@ -1349,7 +1378,7 @@ const SkeletonRow = React.memo(function SkeletonRow({ cells, height }: SkeletonR
 
 interface BulkSelectionBarProps<TData extends RowData> {
 	readonly table: TanStackTable<DataTableFeatures, TData>;
-	readonly bulkActions: BulkAction<TData>[];
+	readonly bulkActions: DataTableBulkAction<TData>[];
 	readonly selectedRows: TData[];
 	readonly selectionContext: DataTableBulkSelectionContext;
 	readonly selectAllPages: boolean;
@@ -1459,8 +1488,6 @@ export function DataTable<TData extends RowData>({
 
 	// Bulk selection
 	checkbox,
-	enableBulkSelection = false,
-	bulkActions = EMPTY_BULK_ACTIONS,
 
 	// Empty state
 	emptyState,
@@ -1473,11 +1500,6 @@ export function DataTable<TData extends RowData>({
 
 	// NEW FEATURE 2: Column visibility
 	enableColumnVisibility = false,
-
-	// NEW FEATURE 3: CSV export
-	exportable = false,
-	exportFilename,
-	exportableColumns,
 
 	// NEW FEATURE 4: Preference persistence
 	persistKey,
@@ -1526,7 +1548,8 @@ export function DataTable<TData extends RowData>({
 
 	labels,
 }: DataTableProps<TData>): React.JSX.Element {
-	const isDesktopViewport = useIsDesktopViewport();
+	// Server snapshot `true`: SSR and hydration render the desktop layout first.
+	const isDesktopViewport = useMediaQuery(DESKTOP_MEDIA_QUERY, true);
 	const resolvedPagination = useMemo((): DataTablePagination<TData> => {
 		if (paginationProp !== undefined) {
 			return paginationProp;
@@ -1549,15 +1572,10 @@ export function DataTable<TData extends RowData>({
 		(): ReturnType<typeof resolveDataTableCheckboxConfig<TData>> =>
 			resolveDataTableCheckboxConfig({
 				checkbox,
-				enableBulkSelection,
-				bulkActions,
-				exportable,
-				exportFilename,
-				exportableColumns,
 				labels,
 				deleteSelectedIcon,
 			}),
-		[checkbox, enableBulkSelection, bulkActions, exportable, exportFilename, exportableColumns, labels, deleteSelectedIcon],
+		[checkbox, labels, deleteSelectedIcon],
 	);
 
 	const {
@@ -2099,6 +2117,7 @@ export function DataTable<TData extends RowData>({
 		[searchDebounceMs],
 	);
 
+	/** Clears the search box and any pending debounced search. */
 	const handleClearSearch = useCallback((): void => {
 		setSearchInput("");
 		setScrollTop(0);
@@ -2107,16 +2126,13 @@ export function DataTable<TData extends RowData>({
 	}, []);
 
 	const handleClearFilters = useCallback((): void => {
-		setSearchInput("");
-		setScrollTop(0);
-		if (searchTimerRef.current !== null) clearTimeout(searchTimerRef.current);
-		setGlobalFilter("");
+		handleClearSearch();
 		if (isServerMode) {
 			onClearServerFilters?.();
 			return;
 		}
 		table.resetColumnFilters();
-	}, [isServerMode, onClearServerFilters, table]);
+	}, [handleClearSearch, isServerMode, onClearServerFilters, table]);
 
 	const handleSelectAllPages = useCallback((): void => {
 		setSelectAllPages(true);
@@ -2159,76 +2175,53 @@ export function DataTable<TData extends RowData>({
 		[effectivePageSize, serverPagination, usePagePager],
 	);
 
-	const handleFirstPage = useCallback((): void => {
-		if (isServerMode) {
-			if (controlledPageIndex <= 0) {
-				return;
-			}
-			handleManualPageChange(0);
-			return;
-		}
-		setScrollTop(0);
-		handlePaginationChange((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
-	}, [controlledPageIndex, handleManualPageChange, handlePaginationChange, isServerMode]);
-
-	const handlePreviousPage = useCallback((): void => {
-		if (isServerMode) {
-			if (controlledPageIndex <= 0) {
-				return;
-			}
-			handleManualPageChange(controlledPageIndex - 1);
-			return;
-		}
-		setScrollTop(0);
-		handlePaginationChange((prev) => (prev.pageIndex <= 0 ? prev : { ...prev, pageIndex: prev.pageIndex - 1 }));
-	}, [controlledPageIndex, handleManualPageChange, handlePaginationChange, isServerMode]);
-
-	const handleNextPage = useCallback((): void => {
-		if (isServerMode) {
-			if (controlledPageIndex >= effectiveTotalPages - 1) {
-				return;
-			}
-			handleManualPageChange(controlledPageIndex + 1);
-			return;
-		}
-		setScrollTop(0);
-		handlePaginationChange((prev) => {
-			const maxIndex = Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0);
-			return prev.pageIndex >= maxIndex ? prev : { ...prev, pageIndex: prev.pageIndex + 1 };
-		});
-	}, [controlledPageIndex, effectiveTotalPages, filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode]);
-
-	const handleLastPage = useCallback((): void => {
-		if (isServerMode) {
-			const lastPageIndex = effectiveTotalPages - 1;
-			if (controlledPageIndex >= lastPageIndex) {
-				return;
-			}
-			handleManualPageChange(lastPageIndex);
-			return;
-		}
-		setScrollTop(0);
-		handlePaginationChange((prev) => {
-			const maxIndex = Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0);
-			return prev.pageIndex === maxIndex ? prev : { ...prev, pageIndex: maxIndex };
-		});
-	}, [controlledPageIndex, effectiveTotalPages, filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode]);
-
-	const handlePageSelect = useCallback(
-		(pageNumber: number): void => {
+	/**
+	 * Moves to the page `resolve` picks from the current page index and the
+	 * last page index; `undefined` means "stay". Server mode asks the server
+	 * for the page; client mode updates local pagination state and keeps the
+	 * same state object when the page does not change.
+	 */
+	const goToPage = useCallback(
+		(resolve: (pageIndex: number, lastPageIndex: number) => number | undefined): void => {
 			if (isServerMode) {
-				handleManualPageChange(pageNumber - 1);
+				const nextPageIndex = resolve(controlledPageIndex, effectiveTotalPages - 1);
+				if (nextPageIndex !== undefined) {
+					handleManualPageChange(nextPageIndex);
+				}
 				return;
 			}
 			setScrollTop(0);
-			const targetIndex = pageNumber - 1;
 			handlePaginationChange((prev) => {
-				const maxIndex = Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0);
-				const clampedIndex = Math.min(Math.max(targetIndex, 0), maxIndex);
-				return prev.pageIndex === clampedIndex ? prev : { ...prev, pageIndex: clampedIndex };
+				const nextPageIndex = resolve(prev.pageIndex, Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0));
+				return nextPageIndex === undefined || nextPageIndex === prev.pageIndex ? prev : { ...prev, pageIndex: nextPageIndex };
 			});
 		},
-		[filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode],
+		[controlledPageIndex, effectiveTotalPages, filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode],
+	);
+
+	const handleFirstPage = useCallback((): void => {
+		goToPage((pageIndex) => (pageIndex <= 0 ? undefined : 0));
+	}, [goToPage]);
+
+	const handlePreviousPage = useCallback((): void => {
+		goToPage((pageIndex) => (pageIndex <= 0 ? undefined : pageIndex - 1));
+	}, [goToPage]);
+
+	const handleNextPage = useCallback((): void => {
+		goToPage((pageIndex, lastPageIndex) => (pageIndex >= lastPageIndex ? undefined : pageIndex + 1));
+	}, [goToPage]);
+
+	const handleLastPage = useCallback((): void => {
+		goToPage((pageIndex, lastPageIndex) => (pageIndex >= lastPageIndex ? undefined : lastPageIndex));
+	}, [goToPage]);
+
+	const handlePageSelect = useCallback(
+		(pageNumber: number): void => {
+			const targetIndex = pageNumber - 1;
+			// Server mode passes the page through unclamped: the server owns the page range.
+			goToPage((_pageIndex, lastPageIndex) => (isServerMode ? targetIndex : Math.min(Math.max(targetIndex, 0), lastPageIndex)));
+		},
+		[goToPage, isServerMode],
 	);
 
 	const handleTableDragOver = useCallback(
@@ -2280,6 +2273,19 @@ export function DataTable<TData extends RowData>({
 		const allPageRowsSelected = table.getIsAllPageRowsSelected();
 		const showSelectAllBanner =
 			resolvedEnableBulkSelection && allPageRowsSelected && !selectAllPages && effectiveTotalFiltered > pageRowCount && (!isServerMode || onFetchAllMatching !== undefined);
+		// The desktop and mobile bars render the same bar from the same props.
+		const bulkSelectionBarProps: BulkSelectionBarProps<TData> = {
+			table,
+			bulkActions: resolvedBulkActions,
+			selectedRows: selectedData,
+			selectionContext,
+			selectAllPages,
+			totalFilteredRows: effectiveTotalFiltered,
+			labels,
+			onAnyDeselect: handleAnyDeselect,
+			onBulkActionDone: handleBulkActionDone,
+			onClearSelection: handleClearSelection,
+		};
 
 		return (
 			<>
@@ -2303,18 +2309,7 @@ export function DataTable<TData extends RowData>({
 				{/* ── BULK ACTIONS BAR (desktop) ────────────────────────── */}
 				{hasSelection && resolvedEnableBulkSelection ? (
 					<div className="hidden lg:block">
-						<BulkSelectionBar
-							table={table}
-							bulkActions={resolvedBulkActions}
-							selectedRows={selectedData}
-							selectionContext={selectionContext}
-							selectAllPages={selectAllPages}
-							totalFilteredRows={effectiveTotalFiltered}
-							labels={labels}
-							onAnyDeselect={handleAnyDeselect}
-							onBulkActionDone={handleBulkActionDone}
-							onClearSelection={handleClearSelection}
-						/>
+						<BulkSelectionBar {...bulkSelectionBarProps} />
 					</div>
 				) : null}
 
@@ -2322,18 +2317,7 @@ export function DataTable<TData extends RowData>({
 				{resolvedEnableBulkSelection && mobileCardRender ? (
 					<div className="lg:hidden">
 						{hasSelection ? (
-							<BulkSelectionBar
-								table={table}
-								bulkActions={resolvedBulkActions}
-								selectedRows={selectedData}
-								selectionContext={selectionContext}
-								selectAllPages={selectAllPages}
-								totalFilteredRows={effectiveTotalFiltered}
-								labels={labels}
-								onAnyDeselect={handleAnyDeselect}
-								onBulkActionDone={handleBulkActionDone}
-								onClearSelection={handleClearSelection}
-							/>
+							<BulkSelectionBar {...bulkSelectionBarProps} />
 						) : (
 							<MobileSelectionBar
 								table={table}
@@ -2520,20 +2504,7 @@ export function DataTable<TData extends RowData>({
 						{mobileCardRender && !isDesktopViewport ? (
 							<div className={cn("space-y-4 transition-opacity duration-150", isRefetching && "opacity-60")}>
 								{isEmptyFiltered ? (
-									<Empty>
-										<EmptyHeader>
-											<EmptyMedia variant="icon">
-												<Search className="h-6 w-6" />
-											</EmptyMedia>
-											<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
-											<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
-										</EmptyHeader>
-										<EmptyContent>
-											<Button variant="outline" onClick={handleClearFilters}>
-												{labels.clearFilters}
-											</Button>
-										</EmptyContent>
-									</Empty>
+									<NoResults labels={labels} onClearFilters={handleClearFilters} />
 								) : (
 									table
 										.getRowModel()
@@ -2626,20 +2597,7 @@ export function DataTable<TData extends RowData>({
 										) : (
 											<TableRow>
 												<TableCell colSpan={columns.length} className="h-64">
-													<Empty>
-														<EmptyHeader>
-															<EmptyMedia variant="icon">
-																<Search className="h-6 w-6" />
-															</EmptyMedia>
-															<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
-															<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
-														</EmptyHeader>
-														<EmptyContent>
-															<Button variant="outline" onClick={handleClearFilters}>
-																{labels.clearFilters}
-															</Button>
-														</EmptyContent>
-													</Empty>
+													<NoResults labels={labels} onClearFilters={handleClearFilters} />
 												</TableCell>
 											</TableRow>
 										)}

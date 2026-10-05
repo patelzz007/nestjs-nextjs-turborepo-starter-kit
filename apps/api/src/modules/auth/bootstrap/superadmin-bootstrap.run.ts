@@ -20,7 +20,7 @@ export async function runSuperAdminBootstrap(argv: readonly string[], streams: B
 			prisma = new PrismaService(config);
 			return createSuperAdminBootstrapService(config, prisma).bootstrap(request);
 		},
-		loginUrl: (): string => new TypedConfigService(getApiConfig()).adminAppUrl,
+		loginUrl: (): string => new TypedConfigService(getApiConfig()).clientApps.adminUrl,
 		log,
 	});
 	try {

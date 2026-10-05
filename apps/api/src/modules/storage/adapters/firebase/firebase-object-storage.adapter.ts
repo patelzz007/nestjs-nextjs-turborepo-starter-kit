@@ -61,8 +61,8 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 	private readonly firebaseApp: App;
 
 	public constructor(private readonly config: TypedConfigService) {
-		const projectId = this.config.firebaseProjectId;
-		const bucketName = this.config.firebaseStorageBucket ?? this.config.storagePrivateBucket;
+		const projectId = this.config.storage.firebaseProjectId;
+		const bucketName = this.config.storage.firebaseStorageBucket ?? this.config.storage.privateContainer;
 		if (projectId === null) {
 			throw new Error("FIREBASE_PROJECT_ID is required when STORAGE_PROVIDER=firebase");
 		}
@@ -179,7 +179,7 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 			contentType: input.mimeType,
 			contentDisposition: `inline; filename="${input.fileName.replaceAll('"', "_")}"`,
 		});
-		const bucketName = this.config.firebaseStorageBucket ?? this.config.storagePrivateBucket;
+		const bucketName = this.config.storage.firebaseStorageBucket ?? this.config.storage.privateContainer;
 		const encodedPath = encodeURIComponent(input.locator.path);
 		return {
 			publicUrl: `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${downloadToken}`,

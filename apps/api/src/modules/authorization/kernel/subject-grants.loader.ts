@@ -50,6 +50,37 @@ export function grantsFor(grants: readonly SubjectGrant[], required: PermissionP
 }
 
 /**
+ * Walk parent links breadth-first from `start`, collecting every active role
+ * id (the start roles included); each level is one query, cycles are ignored.
+ */
+export async function collectRoleHierarchy(prisma: PrismaService, start: readonly RoleNode[]): Promise<string[]> {
+	const collected = new Set<string>();
+	let frontier: readonly RoleNode[] = start;
+
+	while (frontier.length > 0) {
+		const parentIds: string[] = [];
+		for (const role of frontier) {
+			if (collected.has(role.id)) {
+				continue;
+			}
+			collected.add(role.id);
+			if (role.parentId !== null && !collected.has(role.parentId)) {
+				parentIds.push(role.parentId);
+			}
+		}
+		if (parentIds.length === 0) {
+			break;
+		}
+		frontier = await prisma.role.findMany({
+			where: { id: { in: parentIds }, isActive: true, isDeleted: false },
+			select: { id: true, parentId: true },
+		});
+	}
+
+	return Array.from(collected);
+}
+
+/**
  * Loads a subject's roles (with hierarchy), role permissions, and user
  * overrides in a fixed number of batched queries — never one query per
  * permission (spec §58).
@@ -77,7 +108,10 @@ export class SubjectGrantsLoader {
 			}),
 		]);
 
-		const roleIds = await this.collectRoleHierarchy(userRoles.map((userRole) => userRole.role));
+		const roleIds = await collectRoleHierarchy(
+			this.prisma,
+			userRoles.map((userRole) => userRole.role),
+		);
 		const storeGrants = await this.loadStoreGrants(userId);
 
 		const rolePermissions =
@@ -144,7 +178,7 @@ export class SubjectGrantsLoader {
 
 		const grants: SubjectGrant[] = [];
 		for (const membership of memberships) {
-			const roleIds = await this.collectRoleHierarchy([membership.role]);
+			const roleIds = await collectRoleHierarchy(this.prisma, [membership.role]);
 			const rolePermissions = await this.prisma.rolePermission.findMany({
 				where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
 				select: { permission: { select: { action: true, resource: true, conditions: true } } },
@@ -162,33 +196,5 @@ export class SubjectGrantsLoader {
 			}
 		}
 		return grants;
-	}
-
-	/** Walk parent links breadth-first; each level is one query, cycles are ignored. */
-	private async collectRoleHierarchy(start: readonly RoleNode[]): Promise<string[]> {
-		const collected = new Set<string>();
-		let frontier: readonly RoleNode[] = start;
-
-		while (frontier.length > 0) {
-			const parentIds: string[] = [];
-			for (const role of frontier) {
-				if (collected.has(role.id)) {
-					continue;
-				}
-				collected.add(role.id);
-				if (role.parentId !== null && !collected.has(role.parentId)) {
-					parentIds.push(role.parentId);
-				}
-			}
-			if (parentIds.length === 0) {
-				break;
-			}
-			frontier = await this.prisma.role.findMany({
-				where: { id: { in: parentIds }, isActive: true, isDeleted: false },
-				select: { id: true, parentId: true },
-			});
-		}
-
-		return Array.from(collected);
 	}
 }

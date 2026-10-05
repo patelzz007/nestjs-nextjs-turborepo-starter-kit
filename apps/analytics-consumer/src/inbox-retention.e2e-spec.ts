@@ -2,9 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { RETENTION_LOCK_NAMES, runLedgerRetention, type RetentionDeps } from "./inbox-retention";
-import { ANALYTICS_CONSUMER_ID } from "./message-handler";
-import { PgInboxStore } from "./pg-inbox-store";
+import { RETENTION_LOCK_NAMES, runLedgerRetention, type RetentionDeps } from "@workspace/messaging/inbox";
+import { ANALYTICS_CONSUMER_ID, PgInboxStore } from "@workspace/messaging/inbox";
 import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "./test-support/e2e-database";
 
 /**

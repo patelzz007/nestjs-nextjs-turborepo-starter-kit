@@ -52,7 +52,7 @@ export class QueuedStorageTaskDispatcher extends StorageTaskDispatcher {
 		await this.deleteQueue.add("physical-delete", StorageDeleteJobSchema.parse(job), {
 			...QUEUE_JOB_OPTIONS.storageDelete,
 			jobId: `storage-delete-${job.fileId}`,
-			delay: this.config.storagePhysicalDeleteDelayMs,
+			delay: this.config.storage.physicalDeleteDelayMs,
 		});
 	}
 

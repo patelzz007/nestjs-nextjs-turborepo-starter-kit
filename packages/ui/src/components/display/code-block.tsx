@@ -8,12 +8,11 @@
 // packages/ui/README.md.
 import {
 	highlightCode,
-	markdownCodeProps,
-	markdownFences,
 	resolveCodeBlockLanguage,
 	stripNotationComments,
 	toPlainLines,
 	type CodeBlockDiffSpec,
+	type CodeBlockHighlightOptions,
 	type CodeBlockLevelSpec,
 	type CodeBlockLine,
 	type CodeBlockLineActionsRender,
@@ -26,7 +25,6 @@ import {
 import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
-import { z } from "zod";
 
 /* -------------------------------------------------------------------------- */
 /*                                    Labels                                   */
@@ -333,20 +331,16 @@ const LINE_STATE_CLASS = [
 /**
  * Motion is streaming-only and compositor-only: rows keep identity across
  * chunks, so the entry animation fires once per NEW line and a static block
- * never animates. Tokens deliberately do not animate (the plain tail gaining
- * colour remounts them mid-read). Reduced motion disables the row entry.
+ * never animates. Reduced motion disables the row entry.
+ *
+ * Tokens deliberately do not animate. The highlighter runs a chunk behind the
+ * stream and REPLACES the plain-text fallback lines with tokenised ones, which
+ * remounts every token span; a mount-keyed fade would re-flash whole lines
+ * that were already readable. Colour arriving instantly reads as
+ * highlighting; re-fading reads as a glitch.
  */
 const LINE_MOTION_CLASS =
 	"[[data-streaming]_&]:animate-in [[data-streaming]_&]:fade-in-0 [[data-streaming]_&]:slide-in-from-bottom-1 [[data-streaming]_&]:duration-150 [[data-streaming]_&]:ease-out motion-reduce:animate-none";
-
-/**
- * Deliberately no per-token animation. The highlighter runs a chunk behind
- * the stream and REPLACES the plain-text fallback lines with tokenised ones,
- * which remounts every token span; a mount-keyed fade therefore re-flashed
- * whole lines that were already readable, 300ms behind the caret. Colour
- * arriving instantly reads as highlighting; re-fading reads as a glitch.
- */
-const TOKEN_MOTION_CLASS = "";
 
 const LINE_FOCUS_CLASS =
 	"data-[blurred]:opacity-40 data-[blurred]:blur-[1.5px] data-[blurred]:transition-[opacity,filter] group-hover/code-block:data-[blurred]:opacity-100 group-hover/code-block:data-[blurred]:blur-none";
@@ -804,20 +798,9 @@ export type CodeBlockProps = {
 	children?: React.ReactNode | undefined;
 } & Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onSelect">;
 
-/* The highlight effect's presentation spec travels as ONE serialized key (see
-   the effect). This schema reads it back with full types instead of a cast;
-   `null` array members are what JSON makes of a non-finite number. */
-const lineSpecSchema = z.union([z.array(z.number().nullable()).transform((values): number[] => values.filter((value): value is number => value !== null)), z.string()]);
-
-const highlightSpecSchema = z.tuple([
-	z.object({ light: z.string(), dark: z.string() }).nullable(),
-	z.number(),
-	lineSpecSchema.nullable(),
-	z.array(z.union([z.string(), z.object({ word: z.string(), lines: lineSpecSchema.optional() })])).nullable(),
-	lineSpecSchema.nullable(),
-	z.object({ added: lineSpecSchema.optional(), removed: lineSpecSchema.optional() }).nullable(),
-	z.object({ error: lineSpecSchema.optional(), warning: lineSpecSchema.optional(), info: lineSpecSchema.optional() }).nullable(),
-]);
+/* The presentation props the highlight effect reads. They reach it through a
+   ref, keyed by the serialized `specKey` (see the effect). */
+type HighlightSpec = Pick<CodeBlockHighlightOptions, "themes" | "startLine" | "highlightedLines" | "highlightedWords" | "focusedLines" | "diff" | "lineLevels">;
 
 interface HighlightedDocument {
 	source: string;
@@ -909,10 +892,16 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(function Code
 
 	/* Presentation props enter the effect as ONE serialized key: they are
 	   inline literals at most call sites, and reference deps would re-tokenize
-	   per parent render. The effect parses its inputs back out of the key, so
-	   used and depended-on values cannot drift. `transformers` holds functions
-	   and stays a reference dep - hoist it to module scope. */
+	   per parent render. The effect reads the live values from a ref that is
+	   refreshed before it runs, so it always sees the props `specKey` was
+	   built from. `transformers` holds functions and stays a reference dep -
+	   hoist it to module scope. */
 	const specKey = JSON.stringify([themes ?? null, startLine, highlightedLines ?? null, highlightedWords ?? null, focusedLines ?? null, diff ?? null, lineLevels ?? null]);
+	const specRef = React.useRef<HighlightSpec>({ themes, startLine, highlightedLines, highlightedWords, focusedLines, diff, lineLevels });
+	/* Declared before the highlight effect, so it runs first in every commit. */
+	React.useEffect(() => {
+		specRef.current = { themes, startLine, highlightedLines, highlightedWords, focusedLines, diff, lineLevels };
+	});
 
 	const transformersWarnedRef = React.useRef(false);
 	const previousTransformersRef = React.useRef(transformers);
@@ -934,22 +923,12 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(function Code
 	React.useEffect(() => {
 		if (!shouldHighlight) return;
 
-		const parsed = highlightSpecSchema.safeParse(JSON.parse(specKey));
-		if (!parsed.success) return;
-		const [specThemes, specStartLine, specHighlightedLines, specHighlightedWords, specFocusedLines, specDiff, specLineLevels] = parsed.data;
-
 		let active = true;
 		void highlightCode(deferredSource, {
+			...specRef.current,
 			language,
 			instanceKey: contentId,
-			themes: specThemes ?? undefined,
 			transformers,
-			startLine: specStartLine,
-			highlightedLines: specHighlightedLines ?? undefined,
-			highlightedWords: specHighlightedWords ?? undefined,
-			focusedLines: specFocusedLines ?? undefined,
-			diff: specDiff ?? undefined,
-			lineLevels: specLineLevels ?? undefined,
 		}).then((next) => {
 			if (active) {
 				setHighlighted({ source: deferredSource, spec: specKey, language, lines: next });
@@ -1666,7 +1645,6 @@ const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfaceProps>
 					className={cn(
 						"w-max min-w-full py-(--code-block-padding) font-mono text-(length:--code-block-font-size)",
 						TOKEN_COLOR_CLASS,
-						TOKEN_MOTION_CLASS,
 						/* `min-w-0` must beat the `min-w-full` above, or the pre keeps
 						   a floor of 100% of a scroll container that is itself wider
 						   than the viewport, and wrapping still leaves a stray
@@ -2221,9 +2199,6 @@ function useCodeBlockSelection(): CodeBlockSelection {
 	return { selectable, selectedLines, toggleLine, clearSelection };
 }
 
-/* Re-exported so a consumer wires an AI transcript from one import path. */
-export { markdownCodeProps, markdownFences };
-export { ansiToLines, parseUnifiedDiff } from "@workspace/ui/components/display/code-block-highlight";
 export type {
 	CodeBlockDiffSpec,
 	CodeBlockHighlightOptions,
@@ -2233,7 +2208,6 @@ export type {
 	CodeBlockLineActionsRender,
 	CodeBlockLineSpec,
 	CodeBlockLineState,
-	CodeBlockPatchFile,
 	CodeBlockThemes,
 	CodeBlockToken,
 	CodeBlockTransformer,

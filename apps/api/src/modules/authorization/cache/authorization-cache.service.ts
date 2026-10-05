@@ -49,9 +49,9 @@ export class AuthorizationCacheService {
 	private readonly hierarchyTtlMs: number = 15 * 60 * 1000;
 
 	public constructor(config?: TypedConfigService) {
-		this.defaultTtlMs = config?.authorizationCacheTtlMs ?? 5 * 60 * 1000;
+		this.defaultTtlMs = config?.caches.authorizationTtlMs ?? 5 * 60 * 1000;
 		this.store = new BoundedTtlCache<string, CachedAuthorization>({
-			maxEntries: config?.authorizationCacheMaxEntries ?? 10_000,
+			maxEntries: config?.caches.authorizationMaxEntries ?? 10_000,
 			defaultTtlMs: this.defaultTtlMs,
 			capacityPolicy: "evict-oldest",
 		});

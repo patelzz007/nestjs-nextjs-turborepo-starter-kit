@@ -62,10 +62,10 @@ describe("Reference data sync (integration, scratch database)", () => {
 		prisma = new PrismaService(config);
 		prisma.onModuleInit();
 		await prisma.ensureConnected();
+		database.track((): Promise<void> => prisma.onModuleDestroy());
 	}, SCRATCH_SETUP_TIMEOUT_MS);
 
 	afterAll(async () => {
-		await prisma.onModuleDestroy();
 		await database.drop();
 	});
 
@@ -79,10 +79,13 @@ describe("Reference data sync (integration, scratch database)", () => {
 		const report = await runSync();
 
 		expect(report.totalChanges).toBeGreaterThan(0);
-		expect(report.sections.map((entry) => entry.section)).toEqual(["permissions", "system-roles", "role-permissions", "merchant-capabilities"]);
+		expect(report.sections.map((entry) => entry.section)).toEqual(["permissions", "system-roles", "role-permissions", "platform-capabilities", "merchant-capabilities"]);
 		expect(await count("SELECT count(*)::int AS n FROM permissions")).toBe(getPermissionDefinitions().length);
 		expect(await count(`SELECT count(*)::int AS n FROM roles WHERE "isSystem" AND parent_id IS NULL AND NOT is_deleted`)).toBe(SYSTEM_ROLE_CATALOG.length);
-		expect(await count("SELECT count(*)::int AS n FROM capability_definitions")).toBe(MERCHANT_CAPABILITY_CATALOG.length);
+		expect(await count(`SELECT count(*)::int AS n FROM capability_definitions WHERE scope = 'MERCHANT' AND permission_id IS NULL`)).toBe(MERCHANT_CAPABILITY_CATALOG.length);
+		const platform = await count(`SELECT count(*)::int AS n FROM capability_definitions WHERE scope = 'PLATFORM' AND permission_id IS NOT NULL`);
+		expect(platform).toBeGreaterThan(0);
+		expect(await count(`SELECT count(*)::int AS n FROM capability_definitions WHERE scope = 'PLATFORM' AND permission_id IS NULL`)).toBe(0);
 		expect(await count(`SELECT count(*)::int AS n FROM role_permissions rp JOIN roles r ON r.id = rp."roleId" WHERE r.name = 'SuperAdmin' AND NOT rp.is_deleted`)).toBe(
 			getPermissionDefinitions().length,
 		);
@@ -91,7 +94,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 		}
 
 		const audits = (await pool.query("SELECT action, actor_kind, actor_id, detail FROM permission_audit_logs")).rows.map((row) => AuditRow.parse(row));
-		expect(audits).toHaveLength(4);
+		expect(audits).toHaveLength(5);
 		for (const audit of audits) {
 			expect(audit).toMatchObject({ action: "REFERENCE_DATA_SYNCED", actor_kind: "SYSTEM_OPERATION", actor_id: REFERENCE_DATA_SYNC_OPERATION });
 		}
@@ -119,14 +122,27 @@ describe("Reference data sync (integration, scratch database)", () => {
 		await pool.query("UPDATE permissions SET is_deleted = false, deleted_at = NULL WHERE is_deleted");
 	});
 
+	it("leaves an operator-made permission alone: no grant to SuperAdmin, no capability", async () => {
+		await pool.query(
+			`INSERT INTO permissions (id, action, resource, scope, description, "group") VALUES (gen_random_uuid(), 'DELETE', 'REPORT', 'GLOBAL', 'operator-made', 'Reports')`,
+		);
+		const before = await fingerprint();
+
+		const report = await runSync();
+
+		expect(report.totalChanges).toBe(0);
+		expect(await fingerprint()).toBe(before);
+		await pool.query(`DELETE FROM permissions WHERE description = 'operator-made'`);
+	});
+
 	it("converges drift in system rows and leaves operator-created roles, permissions and grants alone", async () => {
 		await pool.query(`INSERT INTO roles (id, name, description) VALUES (gen_random_uuid(), 'Support Lead', 'operator-made')`);
 		await pool.query(`UPDATE roles SET description = 'tampered', parent_id = (SELECT id FROM roles WHERE name = 'SuperAdmin') WHERE name = 'Manager'`);
 		await pool.query(
 			`UPDATE role_permissions SET is_deleted = true, deleted_at = 1 WHERE id = (SELECT rp.id FROM role_permissions rp JOIN roles r ON r.id = rp."roleId" WHERE r.name = 'User' LIMIT 1)`,
 		);
-		await pool.query(`UPDATE capability_definitions SET label = 'tampered' WHERE slug = (SELECT slug FROM capability_definitions LIMIT 1)`);
-		await pool.query(`DELETE FROM permissions WHERE id = (SELECT id FROM permissions ORDER BY id LIMIT 1)`);
+		await pool.query(`UPDATE capability_definitions SET label = 'tampered' WHERE slug = (SELECT slug FROM capability_definitions WHERE scope = 'MERCHANT' LIMIT 1)`);
+		await pool.query(`DELETE FROM permissions WHERE action = 'READ' AND resource = 'USER' AND scope = 'GLOBAL'`);
 
 		const report = await runSync();
 
@@ -135,7 +151,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 				.map((entry) => ({ section: entry.section, changes: entry.change.created + entry.change.updated + entry.change.restored + entry.change.retired }))
 				.filter((entry) => entry.changes > 0)
 				.map((entry) => entry.section),
-		).toEqual(["permissions", "system-roles", "role-permissions", "merchant-capabilities"]);
+		).toEqual(["permissions", "system-roles", "role-permissions", "platform-capabilities", "merchant-capabilities"]);
 		expect(await count(`SELECT count(*)::int AS n FROM roles WHERE name = 'Manager' AND description <> 'tampered' AND parent_id IS NULL`)).toBe(1);
 		expect(await count("SELECT count(*)::int AS n FROM role_permissions WHERE is_deleted")).toBe(0);
 		expect(await count("SELECT count(*)::int AS n FROM capability_definitions WHERE label = 'tampered'")).toBe(0);

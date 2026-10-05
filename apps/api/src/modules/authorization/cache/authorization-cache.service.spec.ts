@@ -7,8 +7,7 @@ import { createTestApiConfig } from "../../../../test/support/test-api-env";
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
-		public readonly authorizationCacheTtlMs = 5 * 60 * 1000;
-		public readonly authorizationCacheMaxEntries = 10_000;
+		public readonly caches = { authorizationTtlMs: 5 * 60 * 1000, authorizationMaxEntries: 10_000 };
 	},
 }));
 

@@ -55,9 +55,9 @@ export class EmailPreviewController {
 		private readonly sender: EmailSenderService,
 	) {
 		this.renderContext = EmailRenderContextSchema.parse({
-			appName: this.config.appName,
-			appUrl: this.config.appUrl,
-			supportEmail: this.config.emailFromAddress,
+			appName: this.config.runtime.appName,
+			appUrl: this.config.clientApps.webUrl,
+			supportEmail: this.config.email.fromAddress,
 		});
 	}
 

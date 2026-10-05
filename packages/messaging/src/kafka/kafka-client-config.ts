@@ -31,6 +31,48 @@ export interface KafkaLogRepeats {
 	readonly windowMs: number;
 }
 
+/** The structured `kafka.client_log` entry one client diagnostic becomes (summary lines add the repeat counts). */
+export interface KafkaClientLogEntry {
+	readonly event: "kafka.client_log";
+	readonly namespace: string | null;
+	readonly facility: string | null;
+	readonly message: string;
+	readonly repeatCount?: number;
+	readonly repeatWindowMs?: number;
+}
+
+/** Writes one structured client log entry at a given level. */
+export type KafkaClientLogWriter = (entry: KafkaClientLogEntry) => void;
+
+/**
+ * Builds a {@link KafkaLogSink} that turns every diagnostic into a
+ * {@link KafkaClientLogEntry} and hands it to the writer of its level —
+ * shared by the API producer (Nest logger) and the analytics consumer (JSON logger).
+ */
+export function kafkaLogSinkFrom(writers: Readonly<Record<keyof KafkaLogSink, KafkaClientLogWriter>>): KafkaLogSink {
+	const entry = (message: string, context: KafkaLogContext): KafkaClientLogEntry => ({
+		event: "kafka.client_log",
+		namespace: context.namespace,
+		facility: context.facility,
+		message,
+		...(context.repeats === null ? {} : { repeatCount: context.repeats.count, repeatWindowMs: context.repeats.windowMs }),
+	});
+	return {
+		error: (message: string, context: KafkaLogContext): void => {
+			writers.error(entry(message, context));
+		},
+		warn: (message: string, context: KafkaLogContext): void => {
+			writers.warn(entry(message, context));
+		},
+		info: (message: string, context: KafkaLogContext): void => {
+			writers.info(entry(message, context));
+		},
+		debug: (message: string, context: KafkaLogContext): void => {
+			writers.debug(entry(message, context));
+		},
+	};
+}
+
 /** The fields librdkafka attaches to a log line that are worth keeping. */
 const KafkaLogExtraSchema = z.object({ fac: z.string().optional() });
 

@@ -17,9 +17,8 @@
 //     (`documents_submitted_at`). Submitted evidence is retained, never deleted.
 // Idempotent: every row is upserted on a stable key; a re-run converges.
 
-import { createHash } from "node:crypto";
-
 import type { Prisma } from "@prisma/client";
+import { DAY_MS } from "@workspace/shared";
 
 import { sha256Hex } from "../../src/common/crypto/sha256";
 import { getApiConfig } from "../../src/config/api-config";
@@ -32,12 +31,12 @@ import { buildFinalStoragePath, buildPublicVariantPath } from "../../src/modules
 import { toStorageObjectLocator } from "../../src/modules/storage/utils/storage-locator.util";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
+import { sha256BytesHex } from "./helpers";
 import { ORGANIZATION_SEED_IDS } from "./organizations";
 import { buildProductSeedId } from "./products";
 import { requireRow } from "./require-row";
 
 const NAMESPACE = "file-seed";
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 export const FILE_SEED_IDS = Object.freeze({
@@ -98,11 +97,7 @@ interface SeedScanRecord {
 }
 
 function daysAgo(days: number): bigint {
-	return BigInt(Date.now() - days * MS_PER_DAY);
-}
-
-function sha256(bytes: Buffer): string {
-	return createHash("sha256").update(bytes).digest("hex");
+	return BigInt(Date.now() - days * DAY_MS);
 }
 
 /** Asks the configured scanner, exactly as the upload pipeline does. */
@@ -137,10 +132,10 @@ function assertNever(value: never): never {
 
 export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	const config = new TypedConfigService(getApiConfig());
-	const provider = config.storageProvider;
-	const container = config.storagePrivateBucket;
+	const provider = config.storage.provider;
+	const container = config.storage.privateContainer;
 	const storage = createStorageAdapter(config, new LocalTransferTokenService());
-	const scanner = createMalwareScanner(config.malwareScanner);
+	const scanner = createMalwareScanner(config.storage.malwareScanner);
 	const locatorFor = (path: string): ReturnType<typeof toStorageObjectLocator> => toStorageObjectLocator(provider, container, path);
 	/** Writes through the configured adapter; an unreachable or missing bucket fails with the fix, not a raw SDK error. */
 	const uploadSeedObject = async (input: Parameters<StorageAdapter["upload"]>[0]): ReturnType<StorageAdapter["upload"]> => {
@@ -175,7 +170,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 			: null;
 		const stored: StoredSeedObject = { storagePath, revision: uploaded.revision, publicPath };
 		const scan = await scanRecordFor(scanner, object, storage, stored, locatorFor);
-		const checksum = sha256(object.bytes);
+		const checksum = sha256BytesHex(object.bytes);
 		const row = {
 			id: object.id,
 			category: object.category,
@@ -238,7 +233,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 		acceptedByUserId: klOwner.id,
 		acceptedAt,
 		documentsSubmittedAt: acceptedAt + BigInt(2 * MS_PER_HOUR),
-		expiresAt: acceptedAt + BigInt(5 * MS_PER_DAY),
+		expiresAt: acceptedAt + BigInt(5 * DAY_MS),
 		createdAt: daysAgo(22),
 		updatedAt: acceptedAt + BigInt(2 * MS_PER_HOUR),
 	} satisfies Prisma.OrganizationInvitationUncheckedCreateInput;

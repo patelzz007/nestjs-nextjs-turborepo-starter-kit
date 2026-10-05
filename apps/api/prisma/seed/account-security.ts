@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { MfaRecoveryRequestStatus, Prisma, SupportAccessGrantStatus, User } from "@prisma/client";
-import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH } from "@workspace/shared";
+import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH, DAY_MS } from "@workspace/shared";
 
 import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
@@ -41,7 +41,6 @@ import { requireRow } from "./require-row";
 const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
 const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
 
 /** TOTP period (RFC 6238 default, as the app verifies). */
 const TOTP_PERIOD_SECONDS = 30;

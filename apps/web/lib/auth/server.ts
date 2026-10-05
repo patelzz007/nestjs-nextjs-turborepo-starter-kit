@@ -20,12 +20,11 @@ export const ServerUserSchema = z.object({
 
 export type ServerUser = z.output<typeof ServerUserSchema>;
 
-/** True when the browser sent a recoverable session (live access or refresh token). */
+/** True when the browser sent a recoverable session (a refresh-token cookie; see `hasRouteSession`). */
 export async function hasServerSession(): Promise<boolean> {
 	const cookieStore = await cookies();
-	const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
-	return hasRouteSession(accessToken, refreshToken, accessToken);
+	return hasRouteSession(refreshToken);
 }
 
 /**
@@ -40,7 +39,7 @@ export async function hasServerAccessSession(): Promise<boolean> {
 	const cookieStore = await cookies();
 	const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
-	return accessToken !== undefined && hasRouteSession(accessToken, refreshToken, accessToken);
+	return accessToken !== undefined && hasRouteSession(refreshToken);
 }
 
 /** Reads the web access-token cookie and decodes sidebar identity for SSR. */

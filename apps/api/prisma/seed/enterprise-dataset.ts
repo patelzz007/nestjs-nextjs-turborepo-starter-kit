@@ -1,4 +1,5 @@
 import type { OrganizationLocationScopeType, OrganizationLocationStatus, OrganizationMembershipRole, PilotCity } from "@prisma/client";
+import { DAY_MS } from "@workspace/shared";
 
 import { deterministicUuid } from "./deterministic-uuid";
 import type { ProductSeedRow } from "./products";
@@ -20,8 +21,6 @@ import { SeededRandom } from "./prng";
 
 /** Anchor for every generated timestamp: 2026-01-01T00:00:00.000Z. */
 export const ENTERPRISE_SEED_EPOCH_MS = 1_767_225_600_000;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Namespace for {@link deterministicUuid} — keeps enterprise ids disjoint from other seeders. */
 const ID_NAMESPACE = "enterprise-seed";

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema } from "../../api/common";
+import { StrictMessageResponseSchema } from "../../api/message";
 
 export const CreateTagSchema = z
 	.object({
@@ -57,11 +58,7 @@ export const TagWithUrlsResponseSchema = TagResponseSchema.extend({
 
 export type TagWithUrlsResponse = z.output<typeof TagWithUrlsResponseSchema>;
 
-export const TagMessageResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const TagMessageResponseSchema = StrictMessageResponseSchema;
 
 export type TagMessageResponse = z.output<typeof TagMessageResponseSchema>;
 

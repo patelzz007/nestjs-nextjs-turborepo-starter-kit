@@ -6,6 +6,9 @@
 		"lib": ["es2022"],
 		"stripInternal": true,
 		"noEmit": true,
+		// Resolve @workspace/* through their `development` export (src/), like every other workspace — never
+		// through an unbuilt or stale dist/ (clean CI checkout). tsconfig.build.json inherits it.
+		"customConditions": ["development"],
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true
 	},

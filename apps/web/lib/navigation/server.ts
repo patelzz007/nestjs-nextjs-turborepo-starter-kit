@@ -1,6 +1,6 @@
 import "server-only";
 
-import { settleServerQuery } from "@/lib/api/server-query-outcome";
+import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { hasServerAccessSession } from "@/lib/auth/server";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import type { Envelope, SessionPermissionsResponse } from "@workspace/shared";

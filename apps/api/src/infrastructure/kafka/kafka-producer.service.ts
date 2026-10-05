@@ -1,1 +1,1 @@
-export { DisabledKafkaProducerService, KafkaHealthIndicator, KafkaProducerService } from "@workspace/messaging/nest";
+export { KafkaHealthIndicator, KafkaProducerService } from "@workspace/messaging/nest";

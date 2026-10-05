@@ -1,22 +1,17 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { createElement } from "react";
 import type { ShikiTransformer } from "shiki";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-	ansiToLines,
 	buildWordDecorations,
 	codeBlockLanguages,
 	codeBlockThemes,
 	DEFAULT_CODE_BLOCK_THEMES,
 	highlightCode,
-	markdownCodeProps,
-	markdownFences,
 	normalizeCode,
 	parseLineSpec,
-	parseUnifiedDiff,
 	preloadCodeBlockHighlighter,
 	resetCodeBlockHighlighter,
 	resolveCodeBlockLanguage,
@@ -27,7 +22,6 @@ import {
 
 /** shiki's first pass loads the engine, a theme pair and a grammar. */
 const SHIKI_TIMEOUT_MS = 30_000;
-const ESC = String.fromCharCode(0x1b);
 
 function lineAt(lines: CodeBlockLine[], index: number): CodeBlockLine {
 	const line = lines[index];
@@ -151,136 +145,6 @@ describe("toPlainLines", () => {
 			{ tokens: [{ content: "b" }], number: 7, text: "b" },
 		]);
 		expect(toPlainLines("x").map((line) => line.number)).toEqual([1]);
-	});
-});
-
-describe("markdownCodeProps", () => {
-	it("reads code and language from react-markdown's pre > code shape", (): void => {
-		const children = createElement("code", { className: "hljs language-tsx" }, "const a = 1\n");
-		expect(markdownCodeProps({ children })).toEqual({ code: "const a = 1", language: "tsx" });
-	});
-
-	it("walks arrays, numbers and nested elements, and reads the pre's own className", (): void => {
-		const children = [createElement("span", { key: "a" }, "x = ", 42), "\n", null, false, createElement("span", { key: "b" }, ["y", undefined])];
-		expect(markdownCodeProps({ className: "language-c++", children })).toEqual({ code: "x = 42\ny", language: "c++" });
-	});
-
-	it("keeps the first language found and tolerates a fence with none", (): void => {
-		const children = createElement("code", { className: "language-js" }, createElement("span", { className: "language-py" }, "a"));
-		expect(markdownCodeProps({ className: "language-go", children }).language).toBe("go");
-		expect(markdownCodeProps({ children: "partial" })).toEqual({ code: "partial", language: undefined });
-		expect(markdownCodeProps({})).toEqual({ code: "", language: undefined });
-	});
-});
-
-describe("markdownFences", () => {
-	it("splits prose and closed fences", (): void => {
-		expect(markdownFences("Intro\n\n```ts\nconst a = 1\n```\nOutro")).toEqual([
-			{ type: "text", content: "Intro", open: false },
-			{ type: "code", content: "const a = 1", language: "ts", open: false },
-			{ type: "text", content: "Outro", open: false },
-		]);
-	});
-
-	it("reports an unterminated trailing fence as open code", (): void => {
-		expect(markdownFences("Here:\n```py\nprint(1)")).toEqual([
-			{ type: "text", content: "Here:", open: false },
-			{ type: "code", content: "print(1)", language: "py", open: true },
-		]);
-		expect(markdownFences("```")).toEqual([{ type: "code", content: "", language: undefined, open: true }]);
-	});
-
-	it("needs a closer at least as long as a ```` opener, of the same character", (): void => {
-		const markdown = "````md\n```js\nx\n```\n~~~~\n````";
-		expect(markdownFences(markdown)).toEqual([{ type: "code", content: "```js\nx\n```\n~~~~", language: "md", open: false }]);
-	});
-
-	it("supports tilde fences and does not close on an info string", (): void => {
-		expect(markdownFences("~~~\na\n```ts\n~~~")).toEqual([{ type: "code", content: "a\n```ts", language: undefined, open: false }]);
-	});
-});
-
-describe("parseUnifiedDiff", () => {
-	const patch = [
-		"diff --git a/src/a.ts b/src/a.ts",
-		"index 1111111..2222222 100644",
-		"--- a/src/a.ts",
-		"+++ b/src/a.ts",
-		"@@ -1,3 +1,3 @@ function main() {",
-		" const a = 1;",
-		"-const b = 2;",
-		"+const b = 3;",
-		" export { a, b };",
-		"diff --git a/old.txt b/old.txt",
-		"deleted file mode 100644",
-		"--- a/old.txt",
-		"+++ /dev/null",
-		"@@ -1 +0,0 @@",
-		"-bye",
-	].join("\r\n");
-
-	it("returns one entry per file with add/remove counts and hunks", (): void => {
-		const files = parseUnifiedDiff(patch);
-		expect(files.map((file) => [file.file, file.added, file.removed])).toEqual([
-			["src/a.ts", 1, 1],
-			["old.txt", 0, 1],
-		]);
-		expect(files[0]?.hunks).toEqual([{ header: "@@ -1,3 +1,3 @@ function main() {", at: 1 }]);
-	});
-
-	it("builds tinted lines with dual old/new gutter labels", (): void => {
-		const [first] = parseUnifiedDiff(patch);
-		const lines = first?.lines ?? [];
-		expect(lines.map((line) => line.text)).toEqual(["function main() {", "const a = 1;", "const b = 2;", "const b = 3;", "export { a, b };"]);
-		expect(lines.map((line) => line.state)).toEqual([{ level: "info" }, undefined, { diff: "remove" }, { diff: "add" }, undefined]);
-		expect(lines.map((line) => line.gutter)).toEqual([" ·  ·", " 1  1", " 2   ", "    2", " 3  3"]);
-		expect(lines.map((line) => line.number)).toEqual([1, 2, 3, 4, 5]);
-		expect(lineAt(lines, 3).tokens).toEqual([{ content: "const b = 3;" }]);
-	});
-
-	it("uses the raw hunk header when it carries no context", (): void => {
-		const second = parseUnifiedDiff(patch)[1];
-		expect(second?.lines[0]?.text).toBe("@@ -1 +0,0 @@");
-	});
-
-	it("ignores text before the first file header", (): void => {
-		expect(parseUnifiedDiff("hello\n\n+not a diff")).toEqual([]);
-	});
-});
-
-describe("ansiToLines", () => {
-	it("maps SGR foregrounds onto palette variables with light and dark fallbacks", (): void => {
-		const [line] = ansiToLines(`${ESC}[31mred${ESC}[0m plain`);
-		expect(line?.text).toBe("red plain");
-		expect(line?.tokens).toEqual([
-			{ content: "red", color: "var(--code-ansi-red, #dc2626)", colorDark: "var(--code-ansi-red, #f87171)", fontStyle: undefined },
-			{ content: " plain", color: undefined, colorDark: undefined, fontStyle: undefined },
-		]);
-	});
-
-	it("handles bright colours, 256-colour, truecolor, font styles and resets", (): void => {
-		const text = `${ESC}[1;94mB${ESC}[22;3;38;5;196mI${ESC}[23;4;38;2;1;2;255mU${ESC}[24;39mN${ESC}[38;5;244mG${ESC}[38;5;20mC${ESC}[38;5;2mS`;
-		const tokens = lineAt(ansiToLines(text, 3), 0).tokens;
-		expect(tokens.map((token) => [token.content, token.color, token.colorDark, token.fontStyle])).toEqual([
-			["B", "var(--code-ansi-bright-blue, #3b82f6)", "var(--code-ansi-bright-blue, #93c5fd)", "bold"],
-			["I", "#ff0000", "#ff0000", "italic"],
-			["U", "#0102ff", "#0102ff", "underline"],
-			["N", undefined, undefined, undefined],
-			["G", "#808080", "#808080", undefined],
-			["C", "#0000d7", "#0000d7", undefined],
-			["S", "#4ade80", "#4ade80", undefined],
-		]);
-	});
-
-	it("strips backgrounds, cursor movement and OSC sequences, and numbers lines", (): void => {
-		const text = `${ESC}[41;48;5;9;48;2;1;2;3mbg${ESC}[2K${ESC}]0;title${String.fromCharCode(7)}\r\nnext${ESC}(B`;
-		const lines = ansiToLines(text, 10);
-		expect(lines.map((line) => [line.number, line.text])).toEqual([
-			[10, "bg"],
-			[11, "next"],
-		]);
-		expect(lineAt(lines, 0).tokens).toEqual([{ content: "bg", color: undefined, colorDark: undefined, fontStyle: undefined }]);
-		expect(lineAt(ansiToLines(`${ESC}[m`), 0).tokens).toEqual([]);
 	});
 });
 

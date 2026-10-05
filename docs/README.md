@@ -28,14 +28,14 @@ the reference product.
 docs/
 ├── user-guide/        operator guide: setup → onboarding → stores/team → rewards → claims → POS → referrals → analytics → admin → security
 ├── technical/         engineering docs
-│   ├── api/           conventions, routes registry, errors, list queries, response contracts
+│   ├── api/           conventions, routes registry, errors, list queries, response contracts, HTTP server (Fastify)
 │   ├── api-reference/ GENERATED — do not edit (pnpm docs:api)
-│   ├── authorization/ kernel, tenancy & RLS, frontend can(), recipes, testing, troubleshooting
+│   ├── authorization/ kernel, RBAC internals, tenancy & RLS, frontend can(), recipes, testing, troubleshooting, dos & don'ts
 │   ├── security/      authentication & MFA, token refresh, database security, encryption & KMS, threat model
 │   ├── storage/       overview, AWS S3 setup, Firebase Storage setup
 │   ├── email/         Resend setup, templates and pipeline
 │   ├── configuration/ API and frontend environment variables
-│   ├── frontend/      routing, admin panel, toasts
+│   ├── frontend/      routing, admin panel, toasts, streams (RxJS)
 │   ├── tooling/       TypeScript, ESLint, dependencies
 │   └── operations/    CI, local infrastructure, observability, multi-tenancy runbook
 ├── adr/               architecture decision records (history — never deleted)

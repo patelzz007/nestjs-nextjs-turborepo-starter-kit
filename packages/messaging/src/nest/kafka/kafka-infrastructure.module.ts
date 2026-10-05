@@ -2,7 +2,7 @@ import { DynamicModule, Module } from "@nestjs/common";
 
 import { type ResolvedMessagingOptions } from "../messaging-options";
 
-import { DisabledKafkaProducerService, KafkaHealthIndicator, KafkaProducerService } from "./kafka-producer.service";
+import { KafkaHealthIndicator, KafkaProducerService } from "./kafka-producer.service";
 
 @Module({})
 export class KafkaInfrastructureModule {}
@@ -12,7 +12,8 @@ export function registerKafkaInfrastructureModule(options: ResolvedMessagingOpti
 		return {
 			module: KafkaInfrastructureModule,
 			global: true,
-			providers: [DisabledKafkaProducerService, { provide: KafkaProducerService, useExisting: DisabledKafkaProducerService }],
+			// Without brokers the producer starts (and stays) "disabled": publish refuses, ping reports it, lifecycle is a no-op.
+			providers: [KafkaProducerService],
 			exports: [KafkaProducerService],
 		};
 	}

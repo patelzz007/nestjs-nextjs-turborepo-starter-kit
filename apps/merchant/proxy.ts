@@ -119,7 +119,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
-	const isAuthenticated = hasRouteSession(accessToken, refreshToken, effectiveAccessToken);
+	const isAuthenticated = hasRouteSession(refreshToken);
 
 	if (isProtectedRouteMatch && !isAuthenticated) {
 		return redirectToLogin(request, pathname, rotatedCookies);

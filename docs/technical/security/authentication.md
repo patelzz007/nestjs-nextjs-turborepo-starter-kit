@@ -31,7 +31,19 @@ every endpoint with a real request/response is in the
   user's `tokenVersion`; the next request with an older token gets `401 TOKEN_VERSION_MISMATCH`.
 - **CSRF:** cookie-authenticated mutations need `X-Mutation-Intent: same-origin` and an allowed
   `Origin` / `Referer` (`CORS_ORIGINS`). Machine routes (POS, webhooks, local upload) opt out with
-  `@SkipMutationIntent()` because they accept no cookies.
+  `@SkipMutationIntent()` because they accept no cookies. Failures are `403 MUTATION_INTENT_REQUIRED`
+  (header missing) or `403 MUTATION_ORIGIN_REJECTED` (origin not allowed — usually an app origin
+  missing from `CORS_ORIGINS`). Use the shared API client, which adds the header; details in
+  [Token refresh](./token-refresh.md).
+- **Per-app login gates** (same credentials, different `X-Client-Type`):
+
+  | App | Who may sign in | Otherwise |
+  | --- | --- | --- |
+  | Admin | SuperAdmins and users holding an `ADMIN_DASHBOARD` permission | `401 INVALID_CREDENTIALS` — the same answer as a wrong password, so the admin login reveals nothing |
+  | Merchant | users with an ACTIVE membership in an organization that has a merchant profile, holders of `MANAGE:MERCHANT_ORG`, or anyone with a **pending, unexpired team invite** for their email (so they can sign in and accept it) | `403 MERCHANT_ACCESS_REQUIRED` |
+  | Web | any active account | — |
+
+  Signing in to one app never signs you in to another: each has its own cookie pair.
 
 ## Restricted and full sessions
 
@@ -75,6 +87,14 @@ more declare `@RequiresFullSession()` / `@EmailVerified()`.
 - Backup codes are single-use. Rotation needs the password plus a TOTP or backup code.
 - `mfaAssuredAt` records the last successful second factor; **step-up** checks require it to be
   within `MFA_STEP_UP_TTL_MS` (default 5 minutes).
+- **Login challenges are single-use.** The second login step is a `TwoFactorLoginChallenge` row
+  (`MfaChallengeService`) referenced by a short-lived signed token: 10 minutes, at most 5 attempts
+  (`maxAttempts`), consumed on success or when the attempts run out — and failures feed the account
+  lockout.
+- Each encrypted secret is bound to its purpose with authenticated data (`totp-pending` during setup,
+  `totp-secret` once enabled), so a ciphertext cannot be replayed in the other context.
+- `MFA_ENROLLMENT_DEADLINE_MS` is the grace period before enrolment becomes mandatory (restricted
+  session afterwards); always set `MFA_ENCRYPTION_KEYS` explicitly in production.
 
 ## MFA recovery
 
@@ -106,6 +126,18 @@ under its own allow-listed system operation (`support_access.*`).
 - ❌ Never put permissions, roles or organization lists in a JWT.
 - ❌ Never add a bypass of the restricted-session rule or of the MFA step-up for convenience.
 - ❌ Never log tokens, codes, secrets or full emails (the logger masks addresses).
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `401 TOKEN_VERSION_MISMATCH` right after a password, 2FA, role or permission change | Expected: older tokens are revoked | The client refreshes or signs in again; never disable the check |
+| Redirect loop between a page and `/auth/…` | A restricted session (email or MFA pending) on a route the proxy does not allow for restricted sessions | Finish verification / enrolment; when adding a setup route, add it to the allow-list in `packages/client/src/lib/auth/edge/restricted-session.ts` |
+| A shared schema "is not defined" in a client after an auth change | Stale `@workspace/shared` build | `pnpm build:shared`, restart dev |
+| Login 2FA code always rejected | Server clock skew, or a reused code (a code is valid once per 30-second step) | Sync the clock; wait for the next code |
+| MFA recovery approved but 2FA still required | `MFA_RECOVERY_DELAY_MS` has not elapsed | Wait for the delay; a job (`TaskScheduleService`, every 10 minutes) then completes the request and removes 2FA |
+| Logged in on web but "not authenticated" on admin | Cookie isolation by design | Sign in on each app |
+| Cookies set but the Next.js proxy cannot read them locally | API and apps run on different ports | `COOKIE_DOMAIN=localhost` in the API and app `.env` files |
 
 ## Known residual risks
 

@@ -8,7 +8,7 @@ import { createTestApiConfig } from "../../../../test/support/test-api-env";
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
-		public readonly mfaEnrollmentDeadlineMs = 7 * 24 * 60 * 60 * 1000;
+		public readonly mfa = { enrollmentDeadlineMs: 7 * 24 * 60 * 60 * 1000 };
 	},
 }));
 

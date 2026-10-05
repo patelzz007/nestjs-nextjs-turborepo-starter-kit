@@ -34,7 +34,7 @@ export class FileScanService {
 			return "SKIPPED";
 		}
 
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
+		const locator = locatorFromStoredFile(file, this.config.storage.provider);
 		if ((await this.storage.headObject(locator)) === null) {
 			return this.finalization.failScan(file, "uploaded object is missing");
 		}

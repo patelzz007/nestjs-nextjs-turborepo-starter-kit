@@ -1,19 +1,23 @@
 import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema } from "../../api/common";
+import { StrictMessageResponseSchema } from "../../api/message";
 
 // ── Scope literals ───────────────────────────────────────────────────────
 
-export const API_KEY_SCOPES: ["read", "write", "delete"] = ["read", "write", "delete"];
-export const API_KEY_RATE_LIMIT_TIERS: ["standard", "pro", "enterprise"] = ["standard", "pro", "enterprise"];
+const ApiKeyScopeSchema = z.enum(["read", "write", "delete"]);
+const ApiKeyRateLimitTierSchema = z.enum(["standard", "pro", "enterprise"]);
+
+export const API_KEY_SCOPES: readonly z.output<typeof ApiKeyScopeSchema>[] = ApiKeyScopeSchema.options;
+export const API_KEY_RATE_LIMIT_TIERS: readonly z.output<typeof ApiKeyRateLimitTierSchema>[] = ApiKeyRateLimitTierSchema.options;
 
 // ── Input Schemas ────────────────────────────────────────────────────────
 
 export const CreateApiKeySchema = z
 	.object({
 		name: z.string().min(1).max(100),
-		scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional().default(["read", "write"]),
-		rateLimitTier: z.enum(API_KEY_RATE_LIMIT_TIERS).optional().default("standard"),
+		scopes: z.array(ApiKeyScopeSchema).min(1).max(3).optional().default(["read", "write"]),
+		rateLimitTier: ApiKeyRateLimitTierSchema.optional().default("standard"),
 		expiresAt: EpochMsSchema.optional(),
 	})
 	.strict();
@@ -24,7 +28,7 @@ export const UpdateApiKeySchema = z
 	.object({
 		name: z.string().min(1).max(100).optional(),
 		isActive: z.boolean().optional(),
-		scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional(),
+		scopes: z.array(ApiKeyScopeSchema).min(1).max(3).optional(),
 		expiresAt: EpochMsSchema.optional(),
 	})
 	.strict();
@@ -35,8 +39,8 @@ export const ApiKeyQuerySchema = z
 	.object({
 		search: z.string().optional(),
 		isActive: z.coerce.boolean().optional(),
-		scope: z.enum(API_KEY_SCOPES).optional(),
-		rateLimitTier: z.enum(API_KEY_RATE_LIMIT_TIERS).optional(),
+		scope: ApiKeyScopeSchema.optional(),
+		rateLimitTier: ApiKeyRateLimitTierSchema.optional(),
 		expired: z.coerce.boolean().optional(),
 		page: z.coerce.number().int().min(1).optional().default(1),
 		limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -60,11 +64,7 @@ export type UsageLogQueryInput = z.output<typeof UsageLogQuerySchema>;
 
 // ── Response Schemas ─────────────────────────────────────────────────────
 
-export const ApiKeyMessageResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const ApiKeyMessageResponseSchema = StrictMessageResponseSchema;
 
 export type ApiKeyMessageResponse = z.output<typeof ApiKeyMessageResponseSchema>;
 

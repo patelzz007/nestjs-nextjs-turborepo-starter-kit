@@ -68,7 +68,7 @@ export class FileService {
 			fileName: parsed.fileName,
 			mimeType: parsed.mimeType,
 		});
-		const locator = toStorageObjectLocator(this.config.storageProvider, this.config.storagePrivateBucket, storagePath);
+		const locator = toStorageObjectLocator(this.config.storage.provider, this.config.storage.privateContainer, storagePath);
 
 		await this.repository.create({
 			id: fileId,
@@ -127,7 +127,7 @@ export class FileService {
 			throw new BadRequestException({ message: "Checksum mismatch", error: "FILE_CHECKSUM_MISMATCH" });
 		}
 
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
+		const locator = locatorFromStoredFile(file, this.config.storage.provider);
 		const head = await this.storage.headObject(locator);
 		if (head === null) {
 			throw new BadRequestException({ message: "Uploaded object not found", error: "FILE_OBJECT_MISSING" });
@@ -171,9 +171,9 @@ export class FileService {
 		}
 
 		const downloadUrl = await this.storage.getSignedDownloadUrl({
-			locator: locatorFromStoredFile(file, this.config.storageProvider),
+			locator: locatorFromStoredFile(file, this.config.storage.provider),
 			fileId: file.id,
-			expiresInSeconds: this.config.storageDownloadTtlSeconds,
+			expiresInSeconds: this.config.storage.downloadTtlSeconds,
 			disposition,
 			fileName: file.originalName,
 		});
@@ -181,7 +181,7 @@ export class FileService {
 			fileId: file.id,
 			status: file.status,
 			downloadUrl,
-			expiresAt: EpochMsSchema.parse(this.config.storageDownloadTtlSeconds * MS_PER_SECOND + Date.now()),
+			expiresAt: EpochMsSchema.parse(this.config.storage.downloadTtlSeconds * MS_PER_SECOND + Date.now()),
 		};
 	}
 
@@ -200,7 +200,7 @@ export class FileService {
 		if (!deleted) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
-		const locator = locatorFromStoredFile(file, this.config.storageProvider);
+		const locator = locatorFromStoredFile(file, this.config.storage.provider);
 		if (isPublicFile(file) && file.publicPath !== null) {
 			await this.withdrawPublicAsset(file, locator);
 		}

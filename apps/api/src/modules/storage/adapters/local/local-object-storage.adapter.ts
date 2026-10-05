@@ -119,7 +119,7 @@ export class LocalObjectStorageAdapter implements ObjectStorage, PublicDelivery 
 			input.expiresInSeconds,
 		);
 		const query = new URLSearchParams({ [LOCAL_DOWNLOAD_TOKEN_PARAM]: token });
-		return `${this.config.apiPublicUrl}${apiPath("/files")}/local-download?${query.toString()}`;
+		return `${this.config.http.publicUrl}${apiPath("/files")}/local-download?${query.toString()}`;
 	}
 
 	private uploadTicket(input: StorageBrowserUploadTicketInput): StorageBrowserUploadTicketResult {
@@ -141,7 +141,7 @@ export class LocalObjectStorageAdapter implements ObjectStorage, PublicDelivery 
 		);
 		return {
 			method: "POST_MULTIPART",
-			uploadUrl: `${this.config.apiPublicUrl}${apiPath("/files")}/${encodeURIComponent(fileId)}/local-upload`,
+			uploadUrl: `${this.config.http.publicUrl}${apiPath("/files")}/${encodeURIComponent(fileId)}/local-upload`,
 			fields: {
 				[LOCAL_UPLOAD_KEY_FIELD]: input.locator.path,
 				[LOCAL_UPLOAD_TOKEN_FIELD]: token,
@@ -169,7 +169,7 @@ export class LocalObjectStorageAdapter implements ObjectStorage, PublicDelivery 
 	 */
 	public publishAsset(input: PublicAssetPublicationInput): Promise<PublicAssetPublicationResult> {
 		return Promise.resolve({
-			publicUrl: `${this.config.apiPublicUrl}${apiPath("/files")}/${encodeURIComponent(input.fileId)}/local-public`,
+			publicUrl: `${this.config.http.publicUrl}${apiPath("/files")}/${encodeURIComponent(input.fileId)}/local-public`,
 			revision: input.locator.revision ?? null,
 		});
 	}

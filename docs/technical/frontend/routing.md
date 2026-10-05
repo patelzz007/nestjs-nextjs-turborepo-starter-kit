@@ -114,7 +114,9 @@ navigation), and it backs up the proxy rather than replacing it. A test scans `a
 when a protected page lacks the call.
 
 A web server page awaits its API calls with `Promise.allSettled` and passes each result to
-`settleServerQuery(result, { label, expected })` (`apps/web/lib/api/server-query-outcome.ts`).
+`settleServerQuery(result, { label, expected })` (`@workspace/client/lib/api/server-query-outcome`,
+shared with merchant, whose `lib/server/server-query-outcome.ts` adds `prefetchedDataOrUndefined`).
+A rejection that is not an `Error` is never treated as expected: it is rethrown with a synthetic `Error` as its cause.
 The page lists the failures it renders on purpose: `unauthenticated` (401, no access cookie) →
 `redirect(loginPath(path))`, `forbidden` (403) → the "Not available for your account" notice,
 `not-found` (404) → `notFound()`. Any other failure (API down, timeout, 5xx, a response that breaks

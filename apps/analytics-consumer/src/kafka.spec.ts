@@ -2,7 +2,7 @@ import { KAFKA_TOPICS } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { assertTopicsExist, buildConsumerConfig, consumerLogSink, MissingKafkaTopicsError, platformTopicSpecs } from "./kafka";
-import type { ConsumerLogEntry, ConsumerLogger } from "./message-handler";
+import type { ConsumerLogEntry, ConsumerLogger } from "@workspace/messaging/inbox";
 
 const MS_PER_DAY = 86_400_000;
 

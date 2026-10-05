@@ -34,7 +34,7 @@ export class RequestContextMiddleware implements NestMiddleware {
 		private readonly requestContext: RequestContextService,
 		config: TypedConfigService,
 	) {
-		this.trustedProxies = new TrustedProxies(config.trustedProxies);
+		this.trustedProxies = new TrustedProxies(config.http.trustedProxies);
 	}
 
 	public use(request: IncomingMessage, response: ServerResponse, next: () => void): void {

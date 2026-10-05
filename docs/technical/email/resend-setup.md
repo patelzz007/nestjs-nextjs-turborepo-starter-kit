@@ -107,7 +107,43 @@ cloudflared tunnel --url http://localhost:8080      # prints https://<random>.tr
 Register `https://<random>.trycloudflare.com/notifications/email-webhook` in Resend and set
 `TRUST_PROXY=loopback` so the per-IP limit sees the real client IP. A quick tunnel URL changes every
 run: recreating the webhook in Resend issues a **new** signing secret — update `.env` and restart.
-For a stable URL create a named Cloudflare tunnel.
+For a stable URL create a named Cloudflare tunnel (below).
+
+**Quick tunnel that survives the terminal — `apps/api/scripts/start-tunnel.py`.** Run
+`python3 apps/api/scripts/start-tunnel.py` from the repo root. It starts `cloudflared` fully
+detached (double fork + `setsid`, logging to `/tmp/cloudflared.log`), waits up to 30 seconds for the
+URL, prints it, and — when `RESEND_API_KEY` is in `apps/api/.env` — **re-points the existing Resend
+webhook** to `<url>/notifications/email-webhook` with a `PATCH`. Updating (never recreating) the
+webhook keeps its signing secret, so `RESEND_WEBHOOK_SECRET` stays valid across restarts. The step is
+non-fatal: without a key, or if Resend is unreachable, it prints the URL to paste by hand. Exit code
+`1` means no URL appeared; read the log. Stop it with `pkill -f 'cloudflared tunnel'`.
+
+> [!WARNING]
+> Resend's update-webhook API takes the URL in the field **`endpoint`**, not `url`. A request with
+> `url` answers 2xx and changes nothing. Use `endpoint` if you ever call the API by hand.
+
+**Named tunnel (stable URL).** One-time: `cloudflared tunnel login`, `cloudflared tunnel create <name>`
+(it prints the tunnel id and writes `~/.cloudflared/<tunnel-id>.json`), and
+`cloudflared tunnel route dns <name> <hostname>` (the zone must be on Cloudflare). Then write
+`~/.cloudflared/config.yml` — it is machine-specific, so it lives in your home directory, never in
+the repository:
+
+```yaml
+tunnel: <tunnel-id>
+credentials-file: /home/<you>/.cloudflared/<tunnel-id>.json
+no-autoupdate: true
+protocol: http2
+
+ingress:
+  - hostname: <hostname>            # e.g. webhooks.example.com
+    service: http://localhost:8080  # the API
+  # Anything that is not the webhook hostname → 404.
+  - service: http_status:404
+```
+
+Run it with `cloudflared tunnel run <name>` (or install it as a service with
+`cloudflared service install`). Register `https://<hostname>/notifications/email-webhook` in Resend
+once.
 
 To test the signature without Resend: `pnpm --filter @workspace/api exec tsx scripts/test-webhook-signature.ts`
 prints signed headers and a body (they expire after 5 minutes; send the body byte-for-byte).

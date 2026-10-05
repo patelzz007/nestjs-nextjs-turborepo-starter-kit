@@ -131,7 +131,7 @@ export class FilesController {
 	}
 
 	private assertProcessingCallbackAuthorized(callbackSecret: string | undefined): void {
-		const expected = this.config.storageProcessingCallbackSecret;
+		const expected = this.config.storage.processingCallbackSecret;
 		// Fail closed in EVERY environment: without STORAGE_PROCESSING_CALLBACK_SECRET
 		// nobody can prove they are the processing worker.
 		if (expected === null) {

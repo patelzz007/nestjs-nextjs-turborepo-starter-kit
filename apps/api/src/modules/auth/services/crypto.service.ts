@@ -10,7 +10,7 @@ export class CryptoService {
 	private readonly saltRounds: number;
 
 	constructor(private readonly config: TypedConfigService) {
-		this.saltRounds = this.config.bcryptSaltRounds;
+		this.saltRounds = this.config.auth.bcryptSaltRounds;
 	}
 
 	/**

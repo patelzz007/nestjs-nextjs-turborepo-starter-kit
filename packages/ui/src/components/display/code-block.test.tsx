@@ -4,7 +4,6 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
-	ansiToLines,
 	CodeBlock,
 	CodeBlockContent,
 	CodeBlockCopyButton,
@@ -16,9 +15,6 @@ import {
 	CodeBlockTitle,
 	CodeBlockWrapToggle,
 	DEFAULT_CODE_BLOCK_LABELS,
-	markdownCodeProps,
-	markdownFences,
-	parseUnifiedDiff,
 	useCodeBlockConfig,
 	useCodeBlockFolding,
 	useCodeBlockSelection,
@@ -126,8 +122,12 @@ describe("CodeBlock rendering", () => {
 	});
 
 	it("renders a patch's own gutter labels and diff state", (): void => {
-		const [file] = parseUnifiedDiff("diff --git a/x b/x\n@@ -1 +1 @@\n-old\n+new");
-		const { container } = render(<CodeBlock labels={LABELS} lines={file?.lines} showLineNumbers />);
+		const lines: CodeBlockLine[] = [
+			{ number: 1, text: "@@ -1 +1 @@", tokens: [{ content: "@@ -1 +1 @@" }], state: { level: "info" }, gutter: " ·  ·" },
+			{ number: 2, text: "old", tokens: [{ content: "old" }], state: { diff: "remove" }, gutter: " 1   " },
+			{ number: 3, text: "new", tokens: [{ content: "new" }], state: { diff: "add" }, gutter: "    1" },
+		];
+		const { container } = render(<CodeBlock labels={LABELS} lines={lines} showLineNumbers />);
 		expect(container.querySelector("[data-slot=code-block]")?.getAttribute("data-has-diff")).toBe("true");
 		expect(row(container, 2).getAttribute("data-diff")).toBe("remove");
 		expect(row(container, 3).getAttribute("data-diff")).toBe("add");
@@ -146,8 +146,11 @@ describe("CodeBlock rendering", () => {
 		expect(row(container, 2).getAttribute("data-blurred")).toBe("true");
 	});
 
-	it("renders ANSI lines and the ghost variant", (): void => {
-		const { container } = render(<CodeBlock labels={LABELS} lines={ansiToLines(`${String.fromCharCode(0x1b)}[32mok`)} variant="ghost" />);
+	it("renders pre-coloured lines and the ghost variant", (): void => {
+		const lines: CodeBlockLine[] = [
+			{ number: 1, text: "ok", tokens: [{ content: "ok", color: "var(--code-ansi-green, #16a34a)", colorDark: "var(--code-ansi-green, #4ade80)" }] },
+		];
+		const { container } = render(<CodeBlock labels={LABELS} lines={lines} variant="ghost" />);
 		expect(container.querySelector("[data-slot=code-block]")?.getAttribute("data-variant")).toBe("ghost");
 		expect(container.querySelector("[data-slot=code-block]")?.className).toContain("[--code-block-bg:transparent]");
 		expect(row(container, 1).querySelector<HTMLElement>("[data-slot=code-block-token]")?.style.getPropertyValue("--cb-c")).toContain("--code-ansi-green");
@@ -806,10 +809,5 @@ describe("Composition", () => {
 			</CodeBlock>,
 		);
 		expect(screen.getByTestId("config").textContent).toBe("abc|yaml|true|Copy code");
-	});
-
-	it("re-exports the markdown helpers for transcripts", (): void => {
-		expect(markdownFences("```ts\na")[0]?.open).toBe(true);
-		expect(markdownCodeProps({ className: "language-ts", children: "a\n" })).toEqual({ code: "a", language: "ts" });
 	});
 });

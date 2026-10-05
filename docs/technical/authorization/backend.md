@@ -364,15 +364,19 @@ The real actor id is written to the audit log (never `"system"`).
 ### 11.1 The RBAC mutation contract
 
 Every role / permission / assignment change goes through `RoleService` / `PermissionService`
-(exposed as `authorization.roles` / `authorization.permissions`; the user proxy is read-only) and
-needs the authenticated actor — there is no actor-less or `"system"` overload:
+(injected directly — both are exported by the global `AuthorizationModule`) and needs the
+authenticated actor — there is no actor-less or `"system"` overload:
 
 ```ts
 // actor = the AuthenticatedUser from @CurrentUser() ({ id, isSuperAdmin })
-await this.authorization.roles.assignToUser(actor, userId, roleId);
-await this.authorization.roles.syncPermissions(actor, roleId, permissionIds);
-await this.authorization.permissions.giveToUser(actor, { userId, permissionId, effect: "ALLOW", expiresAt: undefined });
+await this.roles.assignToUser(actor, userId, roleId);              // RoleService
+await this.roles.syncPermissions(actor, roleId, permissionIds);    // RoleService
+await this.permissions.giveToUser(actor, { userId, permissionId, effect: "ALLOW", expiresAt: undefined }); // PermissionService
 ```
+
+Account provisioning (signup, merchant onboarding, invite registration) is the only other path: it
+assigns the default `User` role with the new account as its own audited actor — see
+[RBAC internals](./rbac.md#automatic-role-provisioning).
 
 1. **One transaction** (`RbacMutationRunner`, system operation `authorization.rbac.mutate`): RBAC
    advisory lock → privilege-escalation checks → the write → post-write invariants → refresh-token

@@ -159,7 +159,7 @@ export function AlertShowcase(): React.JSX.Element {
 				<p className="mt-1 text-xs text-muted-foreground">Severity tiers, keyword confirmation, reason gate, countdown, summary, undo hint, and async loading actions.</p>
 
 				<div className="mt-4 flex flex-wrap gap-3">
-					{/* Destructive with summary + count + undoHint + async loading */}
+					{/* Destructive with summary + undoHint + async loading */}
 					<AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
 						<AlertDialogTrigger render={<Button variant="destructive" />}>Delete users</AlertDialogTrigger>
 						<AlertDialogContent
@@ -168,7 +168,6 @@ export function AlertShowcase(): React.JSX.Element {
 							confirmLoading={confirmLoading}
 							confirmShortcut="⌘⏎"
 							summary={destructiveSummary}
-							count={12}
 							undoHint="You have 5 seconds to undo after confirming."
 							onConfirm={handleConfirm}
 							actionOrder="cancel-first">

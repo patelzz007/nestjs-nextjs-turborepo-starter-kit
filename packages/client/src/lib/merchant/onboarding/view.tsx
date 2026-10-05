@@ -36,14 +36,16 @@ interface WizardStepDefinition {
 	readonly id: WizardPanel;
 	readonly label: string;
 	readonly description: string;
+	/** The panel's heading above the form. */
+	readonly heading: string;
 }
 
 const WIZARD_STEPS: readonly WizardStepDefinition[] = [
-	{ id: "business", label: "Business", description: "Legal name and category" },
-	{ id: "stores", label: "Stores", description: "Primary store and optional locations" },
-	{ id: "registration", label: "Registration", description: "SSM and tax information" },
-	{ id: "documents", label: "Documents", description: "Proof for admin review" },
-	{ id: "account", label: "Owner account", description: "Secure your login" },
+	{ id: "business", label: "Business", description: "Legal name and category", heading: "Tell us about your business" },
+	{ id: "stores", label: "Stores", description: "Primary store and optional locations", heading: "Add your store locations" },
+	{ id: "registration", label: "Registration", description: "SSM and tax information", heading: "Add registration details" },
+	{ id: "documents", label: "Documents", description: "Proof for admin review", heading: "Upload supporting documents" },
+	{ id: "account", label: "Owner account", description: "Secure your login", heading: "Create your owner login" },
 ];
 
 const INITIAL_KYB_VALUES: MerchantKybFieldValues = {
@@ -65,20 +67,31 @@ function formatExpiry(value: number): string {
 	return formatEpochMs(value, "date", PLATFORM_DISPLAY_REGION);
 }
 
-function panelHeading(panel: WizardPanel): string {
-	if (panel === "business") {
-		return "Tell us about your business";
-	}
-	if (panel === "stores") {
-		return "Add your store locations";
-	}
-	if (panel === "registration") {
-		return "Add registration details";
-	}
-	if (panel === "documents") {
-		return "Upload supporting documents";
-	}
-	return "Create your owner login";
+/** The message of a failed parse's first issue, or `fallback` when it has none. */
+function firstIssue(error: { readonly issues: readonly { readonly message: string }[] }, fallback: string): string {
+	return error.issues[0]?.message ?? fallback;
+}
+
+interface OnboardingNoticeProps {
+	readonly title: string;
+	readonly message: string;
+	readonly href: string;
+	readonly linkLabel: string;
+	/** Primary (filled) link instead of the outline one. */
+	readonly isPrimaryLink?: boolean;
+}
+
+/** A terminal page of the flow: a heading, a message and one link back to sign-in. */
+function OnboardingNotice({ title, message, href, linkLabel, isPrimaryLink = false }: OnboardingNoticeProps): JSX.Element {
+	return (
+		<div className="space-y-6 text-center">
+			<h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+			<p className="text-sm text-muted-foreground">{message}</p>
+			<Link href={href} className={isPrimaryLink ? cn(buttonVariants(), "h-11 w-full sm:w-auto") : cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
+				{linkLabel}
+			</Link>
+		</div>
+	);
 }
 
 export interface MerchantOnboardingViewProps {
@@ -183,21 +196,13 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		setWizardPanel(panel);
 	}, []);
 
-	const handleBackToBusiness = useCallback((): void => {
-		advance("business");
-	}, [advance]);
-
-	const handleBackToStores = useCallback((): void => {
-		advance("stores");
-	}, [advance]);
-
-	const handleBackToRegistration = useCallback((): void => {
-		advance("registration");
-	}, [advance]);
-
-	const handleBackToDocuments = useCallback((): void => {
-		advance("documents");
-	}, [advance]);
+	/** Every step's Back goes to the step before it. */
+	const handleBack = useCallback((): void => {
+		const previous = WIZARD_STEPS[wizardIndex - 1];
+		if (previous !== undefined) {
+			advance(previous.id);
+		}
+	}, [advance, wizardIndex]);
 
 	const handleBusinessContinue = useCallback(
 		(event: SyntheticEvent<HTMLFormElement>): void => {
@@ -206,7 +211,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				legalName: values.legalName,
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your business details.");
+				setError(firstIssue(parsed.error, "Check your business details."));
 				return;
 			}
 			advance("stores");
@@ -222,7 +227,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			contactPhone: primaryLocation.contactPhone,
 		});
 		if (!parsedPrimary.success) {
-			setError(parsedPrimary.error.issues[0]?.message ?? "Check your primary store details.");
+			setError(firstIssue(parsedPrimary.error, "Check your primary store details."));
 			return;
 		}
 		for (const location of additionalLocations) {
@@ -232,7 +237,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				contactPhone: location.draft.contactPhone?.trim().length === 0 ? undefined : location.draft.contactPhone,
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your additional store details.");
+				setError(firstIssue(parsed.error, "Check your additional store details."));
 				return;
 			}
 		}
@@ -248,7 +253,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				documentType: values.documentType,
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your registration details.");
+				setError(firstIssue(parsed.error, "Check your registration details."));
 				return;
 			}
 			advance("documents");
@@ -289,7 +294,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				additionalLocations: additionalLocations.map((row) => row.draft),
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your details and try again.");
+				setError(firstIssue(parsed.error, "Check your details and try again."));
 				return;
 			}
 
@@ -332,40 +337,29 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	}
 
 	if (flowStep === "invalid") {
-		return (
-			<div className="space-y-6 text-center">
-				<h2 className="text-xl font-semibold tracking-tight">Invite unavailable</h2>
-				<p className="text-sm text-muted-foreground">{error ?? "This invite link is invalid or has expired."}</p>
-				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
-					Back to sign in
-				</Link>
-			</div>
-		);
+		return <OnboardingNotice title="Invite unavailable" message={error ?? "This invite link is invalid or has expired."} href={loginHref} linkLabel="Back to sign in" />;
 	}
 
 	if (flowStep === "expired") {
 		return (
-			<div className="space-y-6 text-center">
-				<h2 className="text-xl font-semibold tracking-tight">This invite has expired</h2>
-				<p className="text-sm text-muted-foreground">Merchant invites are valid for a limited time. Ask the Reward Hub team to send you a new invite link.</p>
-				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
-					Back to sign in
-				</Link>
-			</div>
+			<OnboardingNotice
+				title="This invite has expired"
+				message="Merchant invites are valid for a limited time. Ask the Reward Hub team to send you a new invite link."
+				href={loginHref}
+				linkLabel="Back to sign in"
+			/>
 		);
 	}
 
 	if (flowStep === "documents-closed") {
 		return (
-			<div className="space-y-6 text-center">
-				<h2 className="text-xl font-semibold tracking-tight">Upload your documents from your account</h2>
-				<p className="text-sm text-muted-foreground">
-					Your application was received, but this link can no longer take documents. Sign in and add them under Settings › Verification.
-				</p>
-				<Link href={loginHref} className={cn(buttonVariants(), "h-11 w-full sm:w-auto")}>
-					Sign in
-				</Link>
-			</div>
+			<OnboardingNotice
+				title="Upload your documents from your account"
+				message="Your application was received, but this link can no longer take documents. Sign in and add them under Settings › Verification."
+				href={loginHref}
+				linkLabel="Sign in"
+				isPrimaryLink
+			/>
 		);
 	}
 
@@ -448,7 +442,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 						<p className="text-xs font-medium text-muted-foreground">
 							Step {wizardIndex + 1} of {WIZARD_STEPS.length}
 						</p>
-						<h3 className="text-lg font-semibold tracking-tight">{panelHeading(wizardPanel)}</h3>
+						<h3 className="text-lg font-semibold tracking-tight">{WIZARD_STEPS[wizardIndex]?.heading}</h3>
 					</div>
 					<div className="flex gap-1" aria-hidden="true">
 						{WIZARD_STEPS.map((step, index) => (
@@ -479,7 +473,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 						onPrimaryLocationChange={setPrimaryLocation}
 						additionalLocations={additionalLocations}
 						onAdditionalLocationsChange={setAdditionalLocations}
-						onBack={handleBackToBusiness}
+						onBack={handleBack}
 						onContinue={handleStoresContinue}
 						error={error}
 					/>
@@ -489,18 +483,13 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 					<MerchantOnboardingRegistrationStep
 						values={values}
 						onRegistrationFieldChange={handleRegistrationFieldChange}
-						onBack={handleBackToStores}
+						onBack={handleBack}
 						onSubmit={handleRegistrationContinue}
 					/>
 				) : null}
 
 				{wizardPanel === "documents" ? (
-					<MerchantOnboardingDocumentsStep
-						documents={values.documents}
-						onDocumentsChange={handleDocumentsChange}
-						onBack={handleBackToRegistration}
-						onSubmit={handleDocumentsContinue}
-					/>
+					<MerchantOnboardingDocumentsStep documents={values.documents} onDocumentsChange={handleDocumentsChange} onBack={handleBack} onSubmit={handleDocumentsContinue} />
 				) : null}
 
 				{wizardPanel === "account" ? (
@@ -513,7 +502,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 						isSubmitting={isSubmitting}
 						onFullNameChange={handleFullNameChange}
 						onPasswordChange={handlePasswordChange}
-						onBack={handleBackToDocuments}
+						onBack={handleBack}
 						onSubmit={handleAccountSubmit}
 					/>
 				) : null}

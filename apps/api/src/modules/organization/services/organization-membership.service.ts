@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { OrganizationLocationScopeType, OrganizationMembershipRole } from "@prisma/client";
@@ -18,6 +18,7 @@ import {
 	MERCHANT_CAPABILITY,
 } from "@workspace/shared";
 
+import { sha256Hex } from "../../../common/crypto/sha256";
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../../common/errors/app-error";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
@@ -65,10 +66,6 @@ export const ORGANIZATION_MEMBERSHIP_ERROR_CODES = {
 
 /** The transaction client a system operation hands its handler. */
 type SystemOperationTransaction = Parameters<Parameters<TenantTransactionService["withSystemOperation"]>[1]>[0];
-
-function sha256Hex(value: string): string {
-	return createHash("sha256").update(value).digest("hex");
-}
 
 /** Allowlisted system operation that reads co-members' profiles into the team roster. */
 export const TEAM_ROSTER_PROFILES_OPERATION = "organization.membership.roster";
@@ -768,7 +765,7 @@ export class OrganizationMembershipService {
 	}
 
 	private buildTeamInviteUrl(token: string): string {
-		const base = this.config.merchantAppUrl.replace(/\/+$/, "");
+		const base = this.config.clientApps.merchantUrl.replace(/\/+$/, "");
 		const params = new URLSearchParams({ token });
 		return `${base}${APP_LINKS.merchant.teamInvite}?${params.toString()}`;
 	}

@@ -12,8 +12,6 @@ import { AuthorizationInvalidationService } from "./cache/authorization-invalida
 import { AuthorizationHealthIndicator } from "./health/authorization.health";
 import { AuthorizationGuard } from "./guards/authorization.guard";
 import { AuthorizationCheckerService } from "./services/authorization-checker.service";
-import { AuthorizationService } from "./services/authorization.service";
-import { AuthRateLimitService } from "./services/auth-rate-limit.service";
 import { ConflictDetectionService } from "./services/conflict-detection.service";
 import { PermissionService } from "./services/permission.service";
 import { RoleService } from "./services/role.service";
@@ -21,7 +19,6 @@ import { UserSessionRevocationService } from "./services/user-session-revocation
 import { PermissionExpiryCleanup } from "./cleanup/permission-expiry.cleanup";
 import { PermissionMigrationService } from "./migration/permission-migration.service";
 import { PermissionRegistrySyncBootstrap } from "./migration/permission-registry-sync.bootstrap";
-import { PolicyRegistry } from "./policies/policy-registry";
 import { AuditLogCleanup } from "./cleanup/audit-log.cleanup";
 import { AuthorizationEventEmitter } from "./events/authorization.events";
 import { CapabilityDefinitionService } from "./services/capability-definition.service";
@@ -36,7 +33,6 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
  * First-class authorization module for NestJS + Fastify + Prisma.
  *
  * Provides:
- * - **AuthorizationService** — Spatie-like fluent facade
  * - **AuthorizationCheckerService** — permission/role evaluation
  * - **RoleService** — CRUD + assignment + hierarchy
  * - **PermissionService** — CRUD + direct user grants
@@ -45,10 +41,8 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
  * - **RbacMutationRunner** — the one transactional path for RBAC writes
  * - **AuthorizationGuard** — global guard
  * - **ConflictDetectionService** — role conflict rules
- * - **PolicyRegistry** — resource-specific policies
  * - **PermissionMigrationService** — code-to-DB sync
  * - **PermissionExpiryCleanup** — background cleanup of expired grants
- * - **AuthRateLimitService** — rate limiting on auth checks
  * - **AuthorizationEventEmitter** — NestJS events for auth changes
  * - **AuthorizationAuditService** — audit logging
  */
@@ -74,17 +68,14 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 		RoleService,
 		PermissionService,
 		UserSessionRevocationService,
-		AuthorizationService,
 		AuthorizationGuard,
 		AuthorizationAuditService,
 		AuthorizationHealthIndicator,
 		ConflictDetectionService,
-		PolicyRegistry,
 		PermissionMigrationService,
 		PermissionRegistrySyncBootstrap,
 		PermissionExpiryCleanup,
 		AuditLogCleanup,
-		AuthRateLimitService,
 		AuthorizationEventEmitter,
 		CapabilityDefinitionService,
 		PrivilegeEscalationService,
@@ -96,15 +87,12 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 		RoleService,
 		PermissionService,
 		UserSessionRevocationService,
-		AuthorizationService,
 		AuthorizationGuard,
 		AuthorizationAuditService,
 		AuthorizationHealthIndicator,
 		ConflictDetectionService,
-		PolicyRegistry,
 		PermissionMigrationService,
 		PermissionExpiryCleanup,
-		AuthRateLimitService,
 		AuthorizationEventEmitter,
 		CapabilityDefinitionService,
 		PrivilegeEscalationService,

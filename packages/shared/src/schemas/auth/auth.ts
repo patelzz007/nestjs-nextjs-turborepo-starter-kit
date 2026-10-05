@@ -8,6 +8,7 @@ import { OrganizationSlugSchema } from "../domain/organization/organization";
 import { VerifyEmailTokenParamSchema } from "../domain/platform/param-schemas";
 import { strongPassword } from "./password";
 import { UserResponseSchema } from "./user";
+import { PlainMessageResponseSchema } from "../api/message";
 
 export { strongPassword } from "./password";
 
@@ -212,45 +213,31 @@ export const LoginClientResponseSchema = z.union([
 
 export type LoginClientResponse = z.output<typeof LoginClientResponseSchema>;
 
-export const SignupResponseSchema = z.object({
-	message: z.string(),
-});
+export const SignupResponseSchema = PlainMessageResponseSchema;
 
 export type SignupResponse = z.output<typeof SignupResponseSchema>;
 
-export const RefreshResponseMessageSchema = z.object({
-	message: z.string(),
-});
+export const RefreshResponseMessageSchema = PlainMessageResponseSchema;
 
 export type RefreshResponseMessage = z.output<typeof RefreshResponseMessageSchema>;
 
-export const LogoutResponseSchema = z.object({
-	message: z.string(),
-});
+export const LogoutResponseSchema = PlainMessageResponseSchema;
 
 export type LogoutResponse = z.output<typeof LogoutResponseSchema>;
 
-export const LogoutAllResponseSchema = z.object({
-	message: z.string(),
-});
+export const LogoutAllResponseSchema = PlainMessageResponseSchema;
 
 export type LogoutAllResponse = z.output<typeof LogoutAllResponseSchema>;
 
-export const ForgotPasswordResponseSchema = z.object({
-	message: z.string(),
-});
+export const ForgotPasswordResponseSchema = PlainMessageResponseSchema;
 
 export type ForgotPasswordResponse = z.output<typeof ForgotPasswordResponseSchema>;
 
-export const ResetPasswordResponseSchema = z.object({
-	message: z.string(),
-});
+export const ResetPasswordResponseSchema = PlainMessageResponseSchema;
 
 export type ResetPasswordResponse = z.output<typeof ResetPasswordResponseSchema>;
 
-export const ResendVerificationResponseSchema = z.object({
-	message: z.string(),
-});
+export const ResendVerificationResponseSchema = PlainMessageResponseSchema;
 
 export type ResendVerificationResponse = z.output<typeof ResendVerificationResponseSchema>;
 
@@ -290,9 +277,7 @@ export const ImpersonateServiceResponseSchema = ImpersonateResponseSchema.extend
 
 export type ImpersonateServiceResponse = z.output<typeof ImpersonateServiceResponseSchema>;
 
-export const StopImpersonationResponseSchema = z.object({
-	message: z.string(),
-});
+export const StopImpersonationResponseSchema = PlainMessageResponseSchema;
 
 export type StopImpersonationResponse = z.output<typeof StopImpersonationResponseSchema>;
 
@@ -318,7 +303,7 @@ export const JwtPayloadSchema = z
 		hasAdminAccess: z.boolean().optional(),
 		isSuperAdmin: z.boolean().optional(),
 		isEmailVerified: z.boolean().optional(),
-		sessionScope: z.enum(["full", "restricted"]).optional(),
+		sessionScope: SessionScopeSchema.optional(),
 	})
 	.loose();
 

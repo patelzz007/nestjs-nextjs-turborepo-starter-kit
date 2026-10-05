@@ -64,6 +64,29 @@ hold even though `99-app-runtime-grants.sql` grants DML on every table:
 `db:apply-security` revokes them in the same transaction as the blanket grant and verifies the live
 catalog; `db:check-rls-manifest` rejects unknown tables and hand-written `REVOKE … FROM app_runtime`.
 
+## How the API connects
+
+`DATABASE_URL` usually names the database owner or a superuser, and **superusers bypass RLS even
+with `FORCE ROW LEVEL SECURITY`**. So the API never queries as that user:
+
+- `PrismaService` is a Prisma 7 client on the `PrismaPg` driver adapter over `RlsPool`
+  (`apps/api/src/prisma/rls-pool.ts`, a `pg.Pool` subclass sized by `DB_POOL_MAX`, default 10).
+- Every checkout runs `applyRlsSession`: `SET ROLE` to the scope's role (`app_runtime`, or a system
+  operation's narrower role) and sets every `app.*` variable from the current RLS context — so a
+  pooled connection never carries the previous request's identity. Inside a transaction,
+  `TenantTransactionService` then sets the same variables transaction-locally (above).
+- A user-scoped checkout in multi-tenant mode with no organization fails fast
+  (`Tenant database access requires organization context`) instead of running unscoped.
+- `schema.prisma` declares only the provider; the Prisma CLI reads the URL from
+  `apps/api/prisma.config.ts`, which loads `apps/api/.env`.
+- `SystemPrismaService` and the seeder connect as the `DATABASE_URL` user **without** a role switch;
+  they are limited to the uses listed in [Tenancy §7](../authorization/tenancy-and-rls.md#7-the-two-database-clients).
+
+**`permission denied for schema public` (`42501`, Prisma `P2039`).** `app_runtime` is a cluster-wide
+role and survives `DROP DATABASE`, but `USAGE` on `public` and the table grants are per database. A
+bare `prisma migrate reset` recreates the schema without them. Re-apply the security layer with
+`pnpm --filter @workspace/api db:apply-security`, and prefer `pnpm db:reset`, which chains it.
+
 ## Golden rules
 
 1. **No RLS policy per application role.** Policies use user id, organization id and store scope —

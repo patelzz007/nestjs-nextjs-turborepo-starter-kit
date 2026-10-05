@@ -1,7 +1,7 @@
 ---
 title: "API Routes — Single Source of Truth"
 tags: ["api", "routes", "contracts", "type-safety", "shared"]
-description: "How every API endpoint path is defined once in api-routes.ts and consumed by contracts, controllers, and the client — with compile-time param enforcement and zero duplication."
+description: "How every API endpoint path is defined once in api-routes.ts and consumed by contracts, controllers, and the client — with zero duplication."
 order: 13
 author: "Platform Team"
 lastUpdated: 1791072000000
@@ -46,36 +46,22 @@ change propagates at compile time.
 // packages/shared/src/api-routes.ts (excerpt)
 export const apiRoutes = {
   rewards: {
-    list: "/rewards",                                                     // static
-    detail: { path: "/rewards/:rewardId", params: ["rewardId"] },          // parameterized
+    list: "/rewards",                                       // static
+    detail: "/rewards/:rewardId",                           // parameterized
   },
   organizations: {
     rewards: {
-      publish: { path: "/orgs/:orgSlug/rewards/:rewardId/publish", params: ["orgSlug", "rewardId"] },
+      publish: "/orgs/:orgSlug/rewards/:rewardId/publish",
     },
   },
 } satisfies Record<string, RouteTree>;
 ```
 
-- Static routes are strings; parameterized routes are `{ path, params }` and `params` lists every
-  `:segment`. The module validates every leaf with zod **at import** (`apiRoutes: Param mismatch …`
-  means a placeholder and `params` disagree).
+- Every leaf is a plain path string; a parameterized segment is a `:param` placeholder. The client
+  router (`endpoints.ts`) fills the placeholders from the contract's validated input, and the
+  controller's `@ZodParams` schema must cover every `:segment`.
 - Paths do **not** contain the version prefix: `apiPath()` adds `/api/v1` on the server and the
   client transport adds the same `API_VERSION_PREFIX` ([architecture §6](../architecture.md#6-api-versioning)).
-
-### `buildRoute(route, params?)` and `buildQuery(base, params)`
-
-```ts
-import { apiRoutes, buildQuery, buildRoute } from "@workspace/shared";
-
-buildRoute(apiRoutes.rewards.list);                                   // "/rewards"
-buildRoute(apiRoutes.rewards.detail, { rewardId: "5ec966d3-…" });     // "/rewards/5ec966d3-…"
-buildRoute(apiRoutes.rewards.detail, {});                             // ❌ compile error; throws at runtime
-buildQuery("/geo/countries", { "filter[iso2]": "MY", limit: 2, search: null }); // "/geo/countries?filter%5Biso2%5D=MY&limit=2"
-```
-
-Numbers are stringified, extra params are ignored, `null` / `undefined` query values are omitted and
-everything is URL-encoded.
 
 ## 3. How each layer consumes it
 
@@ -93,7 +79,7 @@ flowchart LR
 detail: defineContract({
   access: "public",
   method: "GET",
-  path: apiRoutes.rewards.detail.path,
+  path: apiRoutes.rewards.detail,
   input: z.object({ rewardId: UuidParamSchema }).strict(),
   response: singleResponse(RewardResponseSchema),
 }),
@@ -125,7 +111,7 @@ schema.
 
 ## 4. Adding an endpoint
 
-1. Route in `api-routes.ts` (and a case in `api-routes.test.ts`).
+1. Route in `api-routes.ts` (a plain path string; `api-routes.test.ts` checks its shape).
 2. Input and response schemas in `packages/shared/src/schemas/…` (responses are never `.strict()`).
 3. Contract leaf in `contracts/index.ts` (`singleResponse` / `paginatedResponse`).
 4. Client leaf in `endpoints.ts` (`defineQuery` with a `scope`, or `defineMutation`).
@@ -143,8 +129,8 @@ and the API reference.
 
 ## 6. Tests
 
-`packages/shared/src/api-routes.test.ts` covers the tree shape, static and parameterized routes,
-numeric and missing params, query encoding and the import-time validation. The API e2e suite calls
+`packages/shared/src/api-routes.test.ts` covers the tree shape: the core groups exist, and every
+leaf is a non-empty absolute path (static or `:param` template). The API e2e suite calls
 every `apiContract` leaf under `/api/v1` and fails on a 404 (a controller that forgot `apiPath()`).
 
 ```bash
@@ -160,22 +146,15 @@ pnpm --filter @workspace/shared test
    routes (`GET /`, `GET /health`, `GET /health/live`, `GET /health/ready`,
    `GET /health/deep`, `GET /version`, `POST /notifications/email-webhook`).
 
-2. **Static routes are plain strings. Parameterized routes are `{ path, params }` objects.**
-   The `params` array lists every `:paramName` segment in the path — in order.
+2. **Every route is a plain path string.** Parameterized segments are `:paramName`
+   placeholders; the contract's input schema names every one of them.
 
-3. **Contracts reference `apiRoutes` directly.** Use `.path` for parameterized routes,
-   use the string directly for static routes.
+3. **Contracts reference `apiRoutes` directly** (`path: apiRoutes.rewards.detail`).
 
-4. **`buildRoute()` enforces params at compile time.** If a route requires `{ id }`, you
-   **must** pass `{ id }` — TypeScript won't let you forget.
+4. **Tests live alongside the implementation.** `api-routes.test.ts` checks the shape of
+   every leaf.
 
-5. **`buildQuery()` omits null/undefined.** Pass `null` or `undefined` for optional query
-   params — they won't appear in the URL.
-
-6. **Tests live alongside the implementation.** Every route in `api-routes.ts` should have
-   a corresponding test in `api-routes.test.ts`.
-
-7. **The route tree mirrors the contract tree.** `apiRoutes.auth.*` → `apiContract.auth.*`
+5. **The route tree mirrors the contract tree.** `apiRoutes.auth.*` → `apiContract.auth.*`
    → `apiRouter.auth.*`. Same shape, same nesting, same naming.
 
 

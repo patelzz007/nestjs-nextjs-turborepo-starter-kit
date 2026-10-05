@@ -7,7 +7,7 @@ import type { CdnCacheInvalidator } from "../domain/cdn-cache.port";
 
 /** The CloudFront distribution `checkStorageRules` guarantees whenever STORAGE_PROVIDER=s3. */
 export function cloudFrontDistributionId(config: TypedConfigService): string {
-	const distributionId: string | null = config.cloudfrontDistributionId;
+	const distributionId: string | null = config.storage.cloudfrontDistributionId;
 	if (distributionId === null) {
 		throw new Error("STORAGE_CLOUDFRONT_DISTRIBUTION_ID is required when STORAGE_PROVIDER=s3 (checkStorageRules enforces this)");
 	}
@@ -15,13 +15,13 @@ export function cloudFrontDistributionId(config: TypedConfigService): string {
 }
 
 export function createCdnCacheInvalidator(config: TypedConfigService): CdnCacheInvalidator {
-	switch (config.storageProvider) {
+	switch (config.storage.provider) {
 		case "s3":
 			return new CloudFrontCacheInvalidator(createCloudFrontClient(), cloudFrontDistributionId(config));
 		case "firebase":
 		case "local":
 			return new NoCdnCacheInvalidator();
 		default:
-			return assertNever(config.storageProvider, "storage provider");
+			return assertNever(config.storage.provider, "storage provider");
 	}
 }

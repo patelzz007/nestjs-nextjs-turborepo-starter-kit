@@ -27,7 +27,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { AlertCircleIcon, CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, CopyIcon, InfoIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import * as React from "react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 
 import { Button } from "../form/button";
@@ -80,11 +80,6 @@ const alertVariants = cva(
 
 type AlertVariantProps = VariantProps<typeof alertVariants>;
 
-/** CVA's `VariantProps` includes `null` for the whole-config union — normalize it. */
-function resolveVariant<T extends string>(value: T | null | undefined, fallback: T): T {
-	return value ?? fallback;
-}
-
 // ── Default icon map (improvement 4 + feature 5) ────────────────────────────
 
 const ALERT_DEFAULT_ICONS: Readonly<Record<AlertVariant, ReactNode>> = {
@@ -96,20 +91,12 @@ const ALERT_DEFAULT_ICONS: Readonly<Record<AlertVariant, ReactNode>> = {
 	link: <InfoIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />,
 };
 
-/** Module-scope icon lookup — never rebuilt per render (rule 16). */
-function defaultAlertIcon(variant: AlertVariant): ReactNode {
-	return ALERT_DEFAULT_ICONS[variant];
-}
+// ── Shared style constants ──────────────────────────────────────────────────
 
-// ── Pure style helpers ──────────────────────────────────────────────────────
+const ALERT_TITLE_CLASSES = "font-medium text-foreground [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground";
 
-function alertTitleClasses(): string {
-	return "font-medium text-foreground [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground";
-}
-
-function alertDescriptionClasses(): string {
-	return "text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4";
-}
+const ALERT_DESCRIPTION_CLASSES =
+	"text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4";
 
 // ── SSR guard (feature 14: storage-backed dismissal) ────────────────────────
 
@@ -305,26 +292,15 @@ function Alert({
 		};
 	}, [modal, onDismiss]);
 
-	// ── Derived (memoized — rule 16) ────────────────────────────────────────
-	const resolvedVariant = resolveVariant<AlertVariant>(variant, "default");
-	const resolvedSize = resolveVariant<AlertSize>(size, "default");
+	// ── Derived ─────────────────────────────────────────────────────────────
+	// CVA's `VariantProps` includes `null` for the whole-config union — normalize it.
+	const resolvedVariant: AlertVariant = variant ?? "default";
+	const resolvedSize: AlertSize = size ?? "default";
 
-	const resolvedRole = useMemo<AlertRole>(() => {
-		if (roleProp !== undefined) {
-			return roleProp;
-		}
-		// Improvement 3: only destructive alerts interrupt with role="alert".
-		return resolvedVariant === "destructive" ? "alert" : "status";
-	}, [roleProp, resolvedVariant]);
-
-	const resolvedLiveRegion = useMemo<AlertLiveRegion>(() => {
-		if (liveRegion !== undefined) {
-			return liveRegion;
-		}
-		return resolvedRole === "alert" ? "assertive" : "polite";
-	}, [liveRegion, resolvedRole]);
-
-	const resolvedIcon = useMemo<ReactNode>(() => icon ?? defaultAlertIcon(resolvedVariant), [icon, resolvedVariant]);
+	// Improvement 3: only destructive alerts interrupt with role="alert".
+	const resolvedRole: AlertRole = roleProp ?? (resolvedVariant === "destructive" ? "alert" : "status");
+	const resolvedLiveRegion: AlertLiveRegion = liveRegion ?? (resolvedRole === "alert" ? "assertive" : "polite");
+	const resolvedIcon: ReactNode = icon ?? ALERT_DEFAULT_ICONS[resolvedVariant];
 
 	const hasIcon = !hideIcon && (icon !== undefined || resolvedVariant !== "link");
 
@@ -333,7 +309,7 @@ function Alert({
 	const body = (
 		<>
 			{description !== undefined && bodyVisible ? (
-				<p data-slot="alert-description" id={describedBy} className={cn(alertDescriptionClasses(), "mt-0.5")}>
+				<p data-slot="alert-description" id={describedBy} className={cn(ALERT_DESCRIPTION_CLASSES, "mt-0.5")}>
 					{description}
 				</p>
 			) : null}
@@ -351,7 +327,7 @@ function Alert({
 	// ── Header row ─────────────────────────────────────────────────────────
 	const header = (
 		<div data-slot="alert-header" className="flex flex-wrap items-center gap-1.5">
-			{title !== undefined ? <span className={cn(alertTitleClasses(), "flex-1")}>{title}</span> : null}
+			{title !== undefined ? <span className={cn(ALERT_TITLE_CLASSES, "flex-1")}>{title}</span> : null}
 			{countdown !== undefined ? (
 				<span data-slot="alert-countdown" className="shrink-0 text-xs text-muted-foreground tabular-nums">
 					{countdown}
@@ -481,7 +457,7 @@ function AlertTitle({ className, icon, countdown, children, ...props }: AlertTit
 	return (
 		<div data-slot="alert-title" className={cn("flex flex-wrap items-center gap-1.5", className)} {...props}>
 			{icon !== undefined ? <span className="mt-0.5 shrink-0 [&_svg]:size-4">{icon}</span> : null}
-			<span className={cn(alertTitleClasses(), "flex-1")}>{children}</span>
+			<span className={cn(ALERT_TITLE_CLASSES, "flex-1")}>{children}</span>
 			{countdown !== undefined ? (
 				<span data-slot="alert-countdown" className="shrink-0 text-xs text-muted-foreground tabular-nums">
 					{countdown}
@@ -494,7 +470,7 @@ function AlertTitle({ className, icon, countdown, children, ...props }: AlertTit
 // ── Description ─────────────────────────────────────────────────────────────
 
 function AlertDescription({ className, id, ...props }: React.ComponentProps<"div"> & { readonly id?: string }): React.JSX.Element {
-	return <div data-slot="alert-description" id={id} className={cn(alertDescriptionClasses(), className)} {...props} />;
+	return <div data-slot="alert-description" id={id} className={cn(ALERT_DESCRIPTION_CLASSES, className)} {...props} />;
 }
 
 // ── Action ──────────────────────────────────────────────────────────────────

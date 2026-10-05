@@ -54,7 +54,7 @@ apps/api/src/config/
 ├── api-config.schema.ts       ← THE contract: ApiEnvInputSchema (flat, variable-named)
 │                                → cross-field rules → grouped, typed ApiConfig
 ├── api-config.ts              ← parseApiConfig(source) + getApiConfig() (memoized; the ONLY process.env read)
-├── typed-config.service.ts    ← TypedConfigService: named getters over ApiConfig (no fallbacks, no env reads)
+├── typed-config.service.ts    ← TypedConfigService: the ApiConfig groups + derived values (no fallbacks, no env reads)
 ├── tenancy.config.ts          ← TenancyConfigService (backed by TypedConfigService)
 └── config.module.ts           ← @Global: provides TypedConfigService from getApiConfig()
 
@@ -112,7 +112,7 @@ export class InviteService {
 	public constructor(private readonly config: TypedConfigService) {}
 
 	public inviteUrl(token: string): string {
-		return `${this.config.merchantAppUrl}/invite/${token}`;
+		return `${this.config.clientApps.merchantUrl}/invite/${token}`;
 	}
 }
 
@@ -123,9 +123,12 @@ const redisUrl: string | undefined = getApiConfig().messaging.redisUrl;
 const url = process.env.MERCHANT_APP_URL ?? "http://localhost:3003";
 ```
 
+- Code reads a group (`config.email.mode`, `config.auth.bcryptSaltRounds`);
+  `TypedConfigService` only adds getters for values it derives (cookie
+  security, decoded key copies, broker/cache/storage switches).
 - There are **no fallbacks** in getters. Defaults live in the schema, next to
   the rule, and are documented in `.env.example`.
-- Environment checks use `config.isProduction` / `isDevelopment` / `isTest`,
+- Environment checks use `config.runtime.isProduction` / `isDevelopment` / `isTest`,
   never string comparisons.
 - Libraries receive explicit values. `@workspace/messaging` no longer reads
   `REDIS_URL` / `KAFKA_BROKERS` / `RABBITMQ_URL` itself — the API passes them via
@@ -222,8 +225,9 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
    get **no default**. Put a default next to the rule for everything else.
 2. Add a cross-field rule to `checkApiEnvRules` if it depends on another
    variable (always with a `path`, never echoing a value).
-3. Map it into the grouped `ApiConfig` (`toApiConfig`) and add a named getter
-   to `TypedConfigService`.
+3. Map it into the grouped `ApiConfig` (`toApiConfig`) and its group interface.
+   It is then readable as `config.<group>.<name>`; add a `TypedConfigService`
+   getter only if the value is derived.
 4. Document it in `apps/api/.env.example` (`env-example.spec.ts` fails until you do).
 5. Add a TEST-ONLY fixture value to `test/support/test-api-env.ts` if it is required.
 6. Extend `api-config.schema.spec.ts` (missing → named error, default, format).
@@ -237,7 +241,7 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
 | --- | --- |
 | `src/config/api-config.schema.spec.ts` | Fixture parses; every required variable listed by name; no secret defaults; placeholder/short/duplicate secrets; MFA key ring; master key; formats; toggles; cross-field rules; derived values; Swagger policy; cache backend |
 | `src/config/api-config.spec.ts` | Value-free `EnvValidationError`; unrelated OS variables ignored; `getApiConfig()` parses once |
-| `src/config/typed-config.service.spec.ts` | Getters, client-app URLs, key copies, broker/cache/storage switches |
+| `src/config/typed-config.service.spec.ts` | Group accessors, client-app URLs, key copies, broker/cache/storage switches |
 | `src/config/env-example.spec.ts` | `.env.example` documents every schema variable, ships secrets empty, and boots once secrets are filled |
 | `src/eslint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
 | `packages/shared/src/runtime/app-env.test.ts` | Shared building blocks |

@@ -3,11 +3,10 @@ import { setTimeout as delay } from "node:timers/promises";
 import { EnvValidationError, KAFKA_TOPICS } from "@workspace/shared";
 
 import { loadConsumerEnv, type ConsumerEnv } from "./env";
-import { RetentionScheduler } from "./inbox-retention";
+import { RetentionScheduler, createConsumerPool, PgInboxStore } from "@workspace/messaging/inbox";
 import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./kafka";
 import { createConsoleJsonLogger } from "./logger";
-import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type AbortableSleep, type MessageHandlerDeps } from "./message-handler";
-import { createConsumerPool, PgInboxStore } from "./pg-inbox-store";
+import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type AbortableSleep, type MessageHandlerDeps } from "@workspace/messaging/inbox";
 
 const SERVICE_NAME = "analytics-consumer";
 /** Exit code for "the worker cannot start with this configuration". */

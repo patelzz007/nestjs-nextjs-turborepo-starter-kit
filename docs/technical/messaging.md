@@ -101,6 +101,25 @@ Decision record: [ADR 015 — Transactional outbox + consumer inbox](../adr/015-
 | Ordering | Best-effort per partition key | Rows publish in `created_at` order, but a row in retry backoff can be overtaken — consumers must not depend on cross-event order |
 | Broker down | API requests unaffected | Only the outbox row is written in-request; the dispatcher catches up |
 
+### Topics
+
+`KafkaTopicSchema` and `PLATFORM_EVENT_TOPICS` (`packages/shared/src/schemas/infrastructure/kafka.ts`)
+map every event type to one topic:
+
+| Topic | Event types |
+| --- | --- |
+| `platform.auth` | `auth.flow` (signup, login and other auth-flow outcomes) |
+| `platform.sessions` | `session.action` (refresh, logout, revocation) |
+| `platform.impersonation` | `impersonation.action` |
+| `platform.email` | `email.log.updated` |
+| `platform.rewards` | `reward.platform` (reward published, claim expired, …) |
+
+**Adding an event:** add an envelope member to the `PlatformEventEnvelopeSchema` union in that file
+(it also feeds the input and wire-message schemas), map its type in `PLATFORM_EVENT_TOPICS` (a full
+`Record`, so an unmapped type does not compile), give it a partition key in `resolvePartitionKey`
+(`platform-outbox.service.ts`), and enqueue it as below. A new topic is added to `KafkaTopicSchema`
+and provisioned with `kafka:provision-topics` — topics are never auto-created.
+
 ### Which API to call
 
 | Situation | Call |
@@ -183,7 +202,7 @@ Three ledgers would otherwise grow forever. Each is purged by the process that o
 |-------|-----|------------------|---------|-------------------|
 | `platform_resource_idempotency_records` | `IdempotencyRetentionService` (`apps/api/src/platform/idempotency/`) | API, BullMQ queue `idempotency.retention`, job scheduler `idempotency-retention`, hourly | Rows with `expires_at` more than **1 hour** in the past — COMPLETED rows past their 24 h replay window and abandoned IN_PROGRESS rows past their 60 s lease. 500 rows/batch, 60 s budget. | One BullMQ scheduler cluster-wide (`upsertJobScheduler` with a fixed id), so each tick is ONE job on ONE worker; the 60 s budget is far below the 1 h interval. Runs under the registered `idempotency.retention` system operation. |
 | `outbox_events` | `OutboxRetentionService` (`apps/api/src/infrastructure/outbox/`) | API, BullMQ queue `outbox.retention`, job scheduler `outbox-retention`, hourly | `PUBLISHED` rows whose `published_at` is older than **7 days**, and dead-lettered `FAILED` rows whose `updated_at` is older than **30 days** (logged at `warn`: an event nobody replayed). `PENDING` rows are never deleted. 500 rows/batch, 60 s budget per status. | One BullMQ scheduler cluster-wide (fixed id); every batch is a conditional DELETE re-checking status + settle time, so an operator resetting a row to `PENDING` mid-run keeps it. Runs under the registered `outbox.retention` system operation. |
-| `inbox_processed_events` | `runLedgerRetention("inbox_claims")` (`apps/analytics-consumer/src/inbox-retention.ts`) | analytics-consumer, in-process timer: first run 1 min after start, then hourly | The `analytics-warehouse` claims with `processed_at` older than `ANALYTICS_INBOX_RETENTION_DAYS` (default `KAFKA_TOPIC_RETENTION_DAYS` × 2 = **14**; must exceed the topic retention). 1 000 rows/batch, 60 s budget. | Transaction-level advisory lock `pg_try_advisory_xact_lock(hashtextextended('analytics.inbox_retention', 0))` taken inside EACH batch transaction (released by its COMMIT — correct behind PgBouncer transaction pooling). A second instance skips the run; if it takes the lock between two batches the first one stops (`outcome = yielded`). Runs as the `analytics_consumer` role. |
+| `inbox_processed_events` | `runLedgerRetention("inbox_claims")` (`packages/messaging/src/inbox/inbox-retention.ts`) | analytics-consumer, in-process timer: first run 1 min after start, then hourly | The `analytics-warehouse` claims with `processed_at` older than `ANALYTICS_INBOX_RETENTION_DAYS` (default `KAFKA_TOPIC_RETENTION_DAYS` × 2 = **14**; must exceed the topic retention). 1 000 rows/batch, 60 s budget. | Transaction-level advisory lock `pg_try_advisory_xact_lock(hashtextextended('analytics.inbox_retention', 0))` taken inside EACH batch transaction (released by its COMMIT — correct behind PgBouncer transaction pooling). A second instance skips the run; if it takes the lock between two batches the first one stops (`outcome = yielded`). Runs as the `analytics_consumer` role. |
 | `inbox_dead_letters` | `runLedgerRetention("dead_letters")` (same file) | same timer, after the inbox ledger | Parked records with `received_at` older than `ANALYTICS_DEAD_LETTER_RETENTION_DAYS` (default **30**). Same batching. | Same pattern, lock `analytics.dead_letter_retention`. |
 
 **Why the idempotency grace is 1 hour.** An expired record is already equivalent to a missing one — the service takes it over in place — so the grace does not change what a client sees. It keeps the purge clear of a request that is taking over a just-expired row, and absorbs clock skew between API instances (each stamps `expires_at` from its own clock). The DELETE also re-checks `expires_at < cutoff` on the rows it locks, so a row taken over in the meantime (new lease in the future) survives. If the purge removes a row between a request's failed insert and its read, `begin()` simply acquires the key again.
@@ -227,8 +246,19 @@ SELECT consumer, COUNT(*), MIN(processed_at) AS oldest FROM inbox_processed_even
 | `idempotency.retention` | Hourly purge of expired `Idempotency-Key` records (see [Retention](#retention)) |
 | `outbox.retention` | Hourly purge of settled `outbox_events` rows (see [Retention](#retention)) |
 | `storage.scan` | Malware scan of uploaded objects |
+| `storage.cdn-invalidate` | CDN (CloudFront) cache purge after a public file is withdrawn, so the delete request never waits on the CDN (one job per file) |
 
 Job retry defaults: `packages/shared` → `QUEUE_JOB_OPTIONS` (mirrors `@workspace/messaging` presets).
+
+**Adding a queue**
+
+1. Add the name to `QueueNameSchema` / `QUEUE_NAMES` (`packages/shared/src/schemas/infrastructure/queue.ts`).
+   `buildAppMessagingConfig` registers every name — nothing to add there.
+2. Write the `@Processor(QUEUE_NAMES.<name>)` in the **owning feature module** (infrastructure owns
+   names, features own processors), registered in that feature's queue module (e.g. `rewards-queue.module.ts`).
+3. Add the name to Bull Board's `QUEUE_NAMES` list in `compose.yml` so it shows in the dashboard.
+4. Database work in the processor runs under a registered system operation
+   ([RLS](#rls)); add the queue to the table above.
 
 ### Key prefix and isolation (`BULLMQ_PREFIX`)
 

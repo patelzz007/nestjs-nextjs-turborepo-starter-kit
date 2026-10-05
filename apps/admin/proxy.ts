@@ -151,7 +151,7 @@ async function handleRequest(request: NextRequest, attemptRefresh: AdminProxyRef
 		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
-	const isAuthenticated = hasRouteSession(accessToken, refreshToken, effectiveAccessToken);
+	const isAuthenticated = hasRouteSession(refreshToken);
 
 	const payload = effectiveAccessToken ? decodeJwtPayload(effectiveAccessToken) : null;
 	const hasAdminAccess: boolean = payload?.hasAdminAccess === true;

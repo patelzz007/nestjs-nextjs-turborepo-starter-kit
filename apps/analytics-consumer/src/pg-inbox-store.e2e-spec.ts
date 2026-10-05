@@ -3,8 +3,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type KafkaRecord, type MessageHandlerDeps } from "./message-handler";
-import { PgInboxStore } from "./pg-inbox-store";
+import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type KafkaRecord, type MessageHandlerDeps } from "@workspace/messaging/inbox";
+import { PgInboxStore } from "@workspace/messaging/inbox";
 import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "./test-support/e2e-database";
 
 /**

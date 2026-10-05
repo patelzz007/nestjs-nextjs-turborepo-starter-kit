@@ -5,6 +5,9 @@ import { CitySchema } from "./geo-city";
 import { JsonObjectSchema } from "../../runtime/json";
 import { GeoIdSchema } from "./geo-shared";
 
+/** Every geo hierarchy level an import, export or autocomplete hit can name. */
+const GeoEntityTypeSchema = z.enum(["region", "subregion", "country", "state", "city"]);
+
 // ── Autocomplete ──────────────────────────────────────────────────────────
 
 export const GeoAutocompleteQuerySchema = z
@@ -20,7 +23,7 @@ export type GeoAutocompleteQuery = z.output<typeof GeoAutocompleteQuerySchema>;
 export const GeoAutocompleteItemSchema = z.object({
 	id: GeoIdSchema,
 	name: z.string(),
-	entityType: z.enum(["region", "subregion", "country", "state", "city"]),
+	entityType: GeoEntityTypeSchema,
 	countryCode: z.string().nullable().optional(),
 	stateCode: z.string().nullable().optional(),
 	latitude: z.number().nullable().optional(),
@@ -34,7 +37,7 @@ export type GeoAutocompleteItem = z.output<typeof GeoAutocompleteItemSchema>;
 
 export const GeoImportInputSchema = z
 	.object({
-		entity: z.enum(["region", "subregion", "country", "state", "city"]),
+		entity: GeoEntityTypeSchema,
 		data: z.array(JsonObjectSchema).min(1).max(10000),
 		upsert: z.boolean().optional().default(false),
 	})
@@ -55,7 +58,7 @@ export type GeoImportResult = z.output<typeof GeoImportResultSchema>;
 
 export const GeoImportValidateInputSchema = z
 	.object({
-		entity: z.enum(["region", "subregion", "country", "state", "city"]),
+		entity: GeoEntityTypeSchema,
 		data: z.array(JsonObjectSchema).min(1).max(10000),
 	})
 	.strict();

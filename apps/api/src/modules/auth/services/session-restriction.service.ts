@@ -56,7 +56,7 @@ export class SessionRestrictionService {
 			return true;
 		}
 
-		const graceMs: number = this.config.mfaEnrollmentDeadlineMs;
+		const graceMs: number = this.config.mfa.enrollmentDeadlineMs;
 		if (deadline === null && graceMs <= 0) {
 			return true;
 		}

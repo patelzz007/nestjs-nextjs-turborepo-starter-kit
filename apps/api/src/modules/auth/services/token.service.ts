@@ -89,12 +89,12 @@ export class TokenService {
 
 		const [accessToken, refreshToken] = await Promise.all([
 			this.jwtService.signAsync(accessPayload, {
-				secret: this.config.jwtAccessSecret,
-				expiresIn: parseExpiryToSeconds(this.config.jwtAccessExpiry),
+				secret: this.config.auth.jwtAccessSecret,
+				expiresIn: parseExpiryToSeconds(this.config.auth.jwtAccessExpiry),
 			}),
 			this.jwtService.signAsync(refreshPayload, {
-				secret: this.config.jwtRefreshSecret,
-				expiresIn: parseExpiryToSeconds(this.config.jwtRefreshExpiry),
+				secret: this.config.auth.jwtRefreshSecret,
+				expiresIn: parseExpiryToSeconds(this.config.auth.jwtRefreshExpiry),
 			}),
 		]);
 
@@ -131,8 +131,8 @@ export class TokenService {
 		};
 
 		return this.jwtService.signAsync(accessPayload, {
-			secret: this.config.jwtAccessSecret,
-			expiresIn: parseExpiryToSeconds(this.config.jwtAccessExpiry),
+			secret: this.config.auth.jwtAccessSecret,
+			expiresIn: parseExpiryToSeconds(this.config.auth.jwtAccessExpiry),
 		});
 	}
 
@@ -143,7 +143,7 @@ export class TokenService {
 	public async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
 		try {
 			const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
-				secret: this.config.jwtAccessSecret,
+				secret: this.config.auth.jwtAccessSecret,
 			});
 			return AccessTokenPayloadSchema.parse(payload);
 		} catch (error) {
@@ -171,7 +171,7 @@ export class TokenService {
 	public async verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
 		try {
 			const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(token, {
-				secret: this.config.jwtRefreshSecret,
+				secret: this.config.auth.jwtRefreshSecret,
 			});
 			return RefreshTokenPayloadSchema.parse(payload);
 		} catch (error) {
@@ -199,7 +199,7 @@ export class TokenService {
 		return this.jwtService.signAsync(
 			{ sub: email, purpose: "email_verification" },
 			{
-				secret: this.config.emailVerificationSecret,
+				secret: this.config.auth.emailVerificationSecret,
 				expiresIn: EMAIL_VERIFICATION_LINK_TTL_HOURS * SECONDS_PER_HOUR,
 			},
 		);
@@ -212,7 +212,7 @@ export class TokenService {
 		try {
 			const payload: EmailVerificationTokenPayload = EmailVerificationTokenPayloadSchema.parse(
 				await this.jwtService.verifyAsync(token, {
-					secret: this.config.emailVerificationSecret,
+					secret: this.config.auth.emailVerificationSecret,
 				}),
 			);
 			return payload.sub;
@@ -253,7 +253,7 @@ export class TokenService {
 		};
 
 		return this.jwtService.signAsync(payload, {
-			secret: this.config.jwtAccessSecret,
+			secret: this.config.auth.jwtAccessSecret,
 			expiresIn: IMPERSONATION_TOKEN_TTL_SECONDS,
 		});
 	}
@@ -271,7 +271,7 @@ export class TokenService {
 				ipAddress,
 			},
 			{
-				secret: this.config.twoFactorPendingSecret,
+				secret: this.config.auth.twoFactorPendingSecret,
 				expiresIn: 600,
 			},
 		);
@@ -289,7 +289,7 @@ export class TokenService {
 		try {
 			const payload = TwoFactorPendingTokenPayloadSchema.parse(
 				await this.jwtService.verifyAsync(token, {
-					secret: this.config.twoFactorPendingSecret,
+					secret: this.config.auth.twoFactorPendingSecret,
 				}),
 			);
 			return {

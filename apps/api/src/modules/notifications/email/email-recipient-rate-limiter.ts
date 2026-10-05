@@ -43,12 +43,12 @@ export class EmailRecipientRateLimiter {
 		private readonly config: TypedConfigService,
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis | null,
 	) {
-		this.memory = new BoundedTtlCache<string, MemoryWindow>({ maxEntries: config.securityCounterMaxKeys, capacityPolicy: "reject-new" });
+		this.memory = new BoundedTtlCache<string, MemoryWindow>({ maxEntries: config.rateLimits.securityCounterMaxKeys, capacityPolicy: "reject-new" });
 	}
 
 	/** Count one send to `recipient`; false when it would exceed the limit. */
 	public async tryAcquire(recipient: string): Promise<boolean> {
-		const limit: number = this.config.emailRateLimitPerMinute;
+		const limit: number = this.config.email.rateLimitPerMinute;
 		if (limit <= 0) {
 			return true;
 		}

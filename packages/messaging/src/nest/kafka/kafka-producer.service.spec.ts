@@ -7,7 +7,6 @@ import { KAFKA_PLAINTEXT_SECURITY } from "../../kafka/kafka-security";
 import type { MessageEnvelope } from "../../schemas/outbox";
 import type { ResolvedMessagingOptions } from "../messaging-options";
 import {
-	DisabledKafkaProducerService,
 	KAFKA_CLIENT_BACKEND,
 	KAFKA_EVENT_ID_HEADER,
 	KAFKA_EVENT_TYPE_HEADER,
@@ -449,12 +448,14 @@ describe("KafkaProducerService", () => {
 	});
 });
 
-describe("DisabledKafkaProducerService", () => {
+describe("KafkaProducerService without brokers", () => {
 	it("refuses to publish instead of pretending the event was delivered", async () => {
-		const disabled = new DisabledKafkaProducerService();
+		const disabled = new KafkaProducerService(options(undefined));
 
-		await expect(disabled.publish("platform.sessions")).rejects.toBeInstanceOf(KafkaProducerDisabledError);
+		await expect(disabled.publish("platform.sessions", ENVELOPE)).rejects.toBeInstanceOf(KafkaProducerDisabledError);
 		expect(disabled.isEnabled()).toBe(false);
+		expect(disabled.getState()).toBe("disabled");
+		expect(disabled.isConnected()).toBe(false);
 		await expect(disabled.ping()).resolves.toEqual({ reachable: false, reason: "producer disabled" });
 	});
 });

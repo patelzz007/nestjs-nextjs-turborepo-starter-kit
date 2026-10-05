@@ -4,7 +4,14 @@ import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../../api/commo
 import { CanonicalEmailSchema } from "../../api/email-address";
 import { defineListQuery, LIST_MAX_LIMIT, listFilter, ListSearchSchema } from "../../api/list-query";
 import { OrganizationLocationFilterSchema } from "../organization/location-filter";
-import { OrganizationLocationResponseSchema, OrganizationLocationScopeTypeSchema, OrganizationSlugSchema } from "../organization/organization";
+import {
+	OrganizationLifecycleStateSchema,
+	OrganizationLocationResponseSchema,
+	type OrganizationLocationScopeType,
+	OrganizationLocationScopeTypeSchema,
+	OrganizationMembershipRoleSchema,
+	OrganizationSlugSchema,
+} from "../organization/organization";
 import { JsonObjectSchema } from "../../runtime/json";
 import {
 	KybStatusSchema,
@@ -258,39 +265,46 @@ export type RedemptionCheckoutInput = z.output<typeof RedemptionCheckoutSchema>;
 
 // ── Merchant reward CRUD ─────────────────────────────────────────────────
 
-export const RewardLocationScopeFieldsSchema = z
-	.object({
-		locationScopeType: OrganizationLocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
-		locationIds: z.array(z.uuid()).optional().default([]),
-	})
-	.strict()
-	.superRefine((value, ctx) => {
-		if (value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Select at least one store when limiting reward availability",
-				path: ["locationIds"],
-			});
-		}
-	});
+/** The store-availability fields a reward create payload and the reward form both carry. */
+interface RewardLocationScopeValue {
+	readonly locationScopeType?: OrganizationLocationScopeType | undefined;
+	readonly locationIds?: readonly string[] | undefined;
+}
 
-export type RewardLocationScopeFields = z.output<typeof RewardLocationScopeFieldsSchema>;
+/** Refinement shared by the API payload and the form: `SELECTED` availability needs at least one store. */
+function refineLocationScope(value: RewardLocationScopeValue, ctx: z.RefinementCtx): void {
+	if (value.locationScopeType === "SELECTED" && (value.locationIds === undefined || value.locationIds.length === 0)) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Select at least one store when limiting reward availability",
+			path: ["locationIds"],
+		});
+	}
+}
+
+// Field rules shared by the create payload, the update payload and the reward form.
+const RewardTitleSchema = z.string().min(1).max(200);
+const RewardDescriptionSchema = z.string().min(1).max(5000);
+const RewardValueSchema = z.number().nonnegative();
+const RewardTermsSchema = z.string().max(5000);
+const RewardQuantitySchema = z.number().int().min(1);
+const RewardReferralPoolSchema = z.number().int().min(1);
 
 export const MerchantCreateRewardSchema = z
 	.object({
-		title: z.string().min(1).max(200),
-		description: z.string().min(1).max(5000),
+		title: RewardTitleSchema,
+		description: RewardDescriptionSchema,
 		rewardType: RewardTypeSchema,
-		rewardValue: z.number().nonnegative(),
-		termsConditions: z.string().max(5000).optional(),
+		rewardValue: RewardValueSchema,
+		termsConditions: RewardTermsSchema.optional(),
 		category: RewardCategorySchema,
-		quantityTotal: z.number().int().min(1),
+		quantityTotal: RewardQuantitySchema,
 		startDate: EpochMsSchema.optional(),
 		expiryDate: EpochMsSchema,
 		rules: RewardRulesSchema.optional(),
 		referralsEnabled: z.boolean().optional().default(false),
-		referralPoolTotal: z.number().int().min(1).optional(),
-		referrerRewardTitle: z.string().min(1).max(200).optional(),
+		referralPoolTotal: RewardReferralPoolSchema.optional(),
+		referrerRewardTitle: RewardTitleSchema.optional(),
 		saveAsDraft: z.boolean().optional().default(true),
 		locationScopeType: OrganizationLocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
 		locationIds: z.array(z.uuid()).optional().default([]),
@@ -304,13 +318,7 @@ export const MerchantCreateRewardSchema = z
 				path: ["referralPoolTotal"],
 			});
 		}
-		if (value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Select at least one store when limiting reward availability",
-				path: ["locationIds"],
-			});
-		}
+		refineLocationScope(value, ctx);
 	});
 
 export type MerchantCreateRewardInput = z.output<typeof MerchantCreateRewardSchema>;
@@ -320,14 +328,14 @@ const DATE_INPUT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const MerchantRewardFormFieldsSchema = z
 	.object({
 		rewardType: RewardTypeSchema,
-		title: z.string().min(1).max(200),
-		description: z.string().min(1).max(5000),
-		rewardValue: z.number().nonnegative(),
+		title: RewardTitleSchema,
+		description: RewardDescriptionSchema,
+		rewardValue: RewardValueSchema,
 		minPurchase: z.number().nonnegative().optional(),
-		termsConditions: z.string().max(5000).optional(),
+		termsConditions: RewardTermsSchema.optional(),
 		startDate: z.string().regex(DATE_INPUT_PATTERN),
 		expiryDate: z.string().regex(DATE_INPUT_PATTERN),
-		quantityTotal: z.number().int().min(1),
+		quantityTotal: RewardQuantitySchema,
 		maxClaimsPerUser: z.number().int().min(1).max(10),
 		locationScopeType: OrganizationLocationScopeTypeSchema.optional(),
 		locationIds: z.array(z.uuid()).optional(),
@@ -341,13 +349,7 @@ export const MerchantRewardFormFieldsSchema = z
 				path: ["expiryDate"],
 			});
 		}
-		if (value.locationScopeType === "SELECTED" && (value.locationIds === undefined || value.locationIds.length === 0)) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Select at least one store when limiting reward availability",
-				path: ["locationIds"],
-			});
-		}
+		refineLocationScope(value, ctx);
 	});
 
 export type MerchantRewardFormValues = z.output<typeof MerchantRewardFormFieldsSchema>;
@@ -447,17 +449,17 @@ export function mapRewardResponseToFormValues(reward: RewardResponse): MerchantR
 
 export const MerchantUpdateRewardSchema = z
 	.object({
-		title: z.string().min(1).max(200).optional(),
-		description: z.string().min(1).max(5000).optional(),
+		title: RewardTitleSchema.optional(),
+		description: RewardDescriptionSchema.optional(),
 		rewardType: RewardTypeSchema.optional(),
-		rewardValue: z.number().nonnegative().optional(),
-		termsConditions: z.string().max(5000).nullable().optional(),
-		quantityTotal: z.number().int().min(1).optional(),
+		rewardValue: RewardValueSchema.optional(),
+		termsConditions: RewardTermsSchema.nullable().optional(),
+		quantityTotal: RewardQuantitySchema.optional(),
 		startDate: EpochMsSchema.nullable().optional(),
 		expiryDate: EpochMsSchema.optional(),
 		referralsEnabled: z.boolean().optional(),
-		referralPoolTotal: z.number().int().min(1).optional(),
-		referrerRewardTitle: z.string().min(1).max(200).optional(),
+		referralPoolTotal: RewardReferralPoolSchema.optional(),
+		referrerRewardTitle: RewardTitleSchema.optional(),
 		rules: RewardRulesSchema.optional(),
 	})
 	.strict();
@@ -677,9 +679,9 @@ export const OrganizationRewardMembershipResponseSchema = z.object({
 	organizationId: z.uuid(),
 	organizationSlug: OrganizationSlugSchema,
 	displayName: z.string(),
-	role: z.enum(["OWNER", "ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"]),
+	role: OrganizationMembershipRoleSchema,
 	kybStatus: KybStatusSchema,
-	lifecycleState: z.enum(["PROVISIONING", "ACTIVE", "RESTRICTED", "SUSPENDED", "PENDING_DELETION", "DELETED"]),
+	lifecycleState: OrganizationLifecycleStateSchema,
 	createdAt: EpochMsSchema.optional(),
 });
 

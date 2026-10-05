@@ -26,10 +26,10 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnModuleDestroy 
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis | null,
 	) {
 		this.memory = new BoundedTtlCache<string, MemoryRecord>({
-			maxEntries: config.securityCounterMaxKeys,
+			maxEntries: config.rateLimits.securityCounterMaxKeys,
 			capacityPolicy: "reject-new",
 		});
-		this.keyStore = new SecurityKeyStore<string>({ maxKeys: config.securityCounterMaxKeys });
+		this.keyStore = new SecurityKeyStore<string>({ maxKeys: config.rateLimits.securityCounterMaxKeys });
 	}
 
 	public async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string): Promise<ThrottlerStorageRecord> {

@@ -102,6 +102,12 @@ the current page (`lib/navigation/legacy-redirects.ts`, loaded by `next.config.t
 - `(panel)/layout.tsx` → `dashboard-layout.tsx`: sidebar (menu config in
   `apps/admin/lib/navigation/sidebar-menu.json` + icon map), topbar with breadcrumbs + theme toggle + command
   palette (`⌘K`), and the panel content area.
+- The shell lives in the `(panel)` **route-group layout**, so it stays mounted across navigations:
+  sidebar, topbar and their state survive, and only the page segment changes. Inside the group,
+  `loading.tsx` streams a content skeleton, `error.tsx` is the client error boundary ("Try again"),
+  and `[...slug]/page.tsx` + `not-found.tsx` render unknown panel URLs as a 404 **inside** the shell.
+  The root `app/not-found.tsx` covers URLs outside the panel. Both use the shared `NotFoundContent`
+  from `@workspace/ui`.
 - Command palette (`⌘K`): global search across the menu pages. The docs
   site (`apps/docs`) has its own `⌘K` search over a build-time index (`apps/docs/src/scripts/search.ts`).
 

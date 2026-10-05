@@ -4,62 +4,21 @@
 // Every API endpoint path lives here. Contracts (`contracts/index.ts`) and
 // controllers reference this tree instead of hardcoding path strings.
 //
+// Every leaf is a plain path string. Parameterized segments are written as
+// `:param` placeholders; the client router (`endpoints.ts` in @workspace/client)
+// substitutes them from the contract's validated input at request time.
+//
 // Usage:
-//   import { apiRoutes, buildRoute } from "@workspace/shared";
+//   import { apiRoutes } from "@workspace/shared";
 //
-//   // Static route — just a string:
-//   apiRoutes.geo.countries  // "/geo/countries"
-//
-//   // Parameterized route — buildRoute enforces required params at compile time:
-//   buildRoute(apiRoutes.geo.countryDetail, { id: "42" })
-//   // → "/geo/countries/42"
+//   apiRoutes.geo.countries      // "/geo/countries"
+//   apiRoutes.geo.countryDetail  // "/geo/countries/:id"
 
-// ── Route definition types (Zod-validated) ─────────────────────────────────
-
-import { z } from "zod";
-
-/** A parameterized route: has a `path` with `:param` placeholders and a `params` tuple. */
-export const ParamRouteSchema = z
-	.object({
-		path: z.string(),
-		params: z.array(z.string()).min(1),
-	})
-	.strict();
-export type ParamRoute = z.infer<typeof ParamRouteSchema>;
-
-/** A static route is just a plain string (no params). Empty paths are not valid routes. */
-export const StaticRouteSchema = z.string().min(1);
-export type StaticRoute = z.infer<typeof StaticRouteSchema>;
-
-/** A route is either a static string or a parameterized route object. */
-export const RouteDefSchema = z.union([StaticRouteSchema, ParamRouteSchema]);
-export type RouteDef = z.infer<typeof RouteDefSchema>;
-
-/** Nested route tree — leaves are RouteDef, branches are nested groups. */
-export type RouteTree = RouteDef | { readonly [key: string]: RouteTree };
-
-/** A branch of the route tree (a named group of nested routes). */
-type RouteTreeNode = Readonly<Record<string, RouteTree>>;
-
-function isRouteDef(value: RouteTree): value is RouteDef {
-	return RouteDefSchema.safeParse(value).success;
-}
-
-function isRouteTreeNode(value: RouteTree): value is RouteTreeNode {
-	return typeof value === "object" && !Array.isArray(value) && !isRouteDef(value);
-}
-
-/** True when `route` is a parameterized route (has `.params`). */
-export function isParamRoute(route: RouteDef): route is ParamRoute {
-	return ParamRouteSchema.safeParse(route).success;
-}
-
-/** Extract the `path` string from any `RouteDef`. */
-export type RoutePath<T extends RouteDef> = T extends ParamRoute ? T["path"] : T;
+/** Nested route tree — leaves are path strings, branches are named groups. */
+export type RouteTree = string | { readonly [key: string]: RouteTree };
 
 // ── The route tree ─────────────────────────────────────────────────────────
 // Groups mirror the contract tree (auth / email / geo).
-// Static routes are bare strings; parameterized routes are ParamRoute objects.
 
 export const apiRoutes = {
 	// ── Auth ────────────────────────────────────────────────────────────
@@ -79,8 +38,8 @@ export const apiRoutes = {
 		resendVerification: "/auth/resend-verification",
 		verifyEmail: "/auth/verify-email",
 		adminUsers: "/auth/admin/users",
-		adminUserDetail: { path: "/auth/admin/users/:userId", params: ["userId"] },
-		impersonate: { path: "/auth/impersonate/:userId", params: ["userId"] },
+		adminUserDetail: "/auth/admin/users/:userId",
+		impersonate: "/auth/impersonate/:userId",
 		stopImpersonation: "/auth/stop-impersonation",
 		changePassword: "/auth/change-password",
 		loginTwoFactor: "/auth/login/2fa",
@@ -106,8 +65,8 @@ export const apiRoutes = {
 	// ── Email ───────────────────────────────────────────────────────────
 	email: {
 		previewList: "/notifications/email-preview",
-		previewDetail: { path: "/notifications/email-preview/:key", params: ["key"] },
-		previewSend: { path: "/notifications/email-preview/:key/send", params: ["key"] },
+		previewDetail: "/notifications/email-preview/:key",
+		previewSend: "/notifications/email-preview/:key/send",
 		logList: "/notifications/email-log",
 		/** Server-Sent Events stream of email-log changes (`@Sse("events")` on the email-log controller). */
 		logEvents: "/notifications/email-log/events",
@@ -139,21 +98,21 @@ export const apiRoutes = {
 		export: "/geo/export",
 		cascadePreview: "/geo/cascade-preview",
 		regions: "/geo/regions",
-		regionDetail: { path: "/geo/regions/:id", params: ["id"] },
+		regionDetail: "/geo/regions/:id",
 		subregions: "/geo/subregions",
-		subregionDetail: { path: "/geo/subregions/:id", params: ["id"] },
+		subregionDetail: "/geo/subregions/:id",
 		countries: "/geo/countries",
-		countryDetail: { path: "/geo/countries/:id", params: ["id"] },
+		countryDetail: "/geo/countries/:id",
 		states: "/geo/states",
-		stateDetail: { path: "/geo/states/:id", params: ["id"] },
+		stateDetail: "/geo/states/:id",
 		cities: "/geo/cities",
-		cityDetail: { path: "/geo/cities/:id", params: ["id"] },
+		cityDetail: "/geo/cities/:id",
 	},
 
 	// ── Rewards platform (Phase 1) ─────────────────────────────────────
 	rewards: {
 		list: "/rewards",
-		detail: { path: "/rewards/:rewardId", params: ["rewardId"] },
+		detail: "/rewards/:rewardId",
 	},
 	legal: {
 		accept: "/legal/accept",
@@ -164,7 +123,7 @@ export const apiRoutes = {
 		create: "/claims",
 		list: "/claims",
 		analytics: "/claims/analytics",
-		qr: { path: "/claims/:claimId/qr", params: ["claimId"] },
+		qr: "/claims/:claimId/qr",
 	},
 	rewardNotifications: {
 		list: "/reward-notifications",
@@ -179,58 +138,58 @@ export const apiRoutes = {
 	},
 	files: {
 		uploadUrl: "/files/upload-url",
-		complete: { path: "/files/:fileId/complete", params: ["fileId"] },
-		detail: { path: "/files/:fileId", params: ["fileId"] },
-		downloadUrl: { path: "/files/:fileId/download-url", params: ["fileId"] },
-		delete: { path: "/files/:fileId", params: ["fileId"] },
+		complete: "/files/:fileId/complete",
+		detail: "/files/:fileId",
+		downloadUrl: "/files/:fileId/download-url",
+		delete: "/files/:fileId",
 		processingCallback: "/files/processing-callback",
 	},
 	organizations: {
 		membershipsBootstrap: "/orgs/memberships",
-		context: { path: "/orgs/:orgSlug/context", params: ["orgSlug"] },
-		accessRequests: { path: "/orgs/:orgSlug/access-requests", params: ["orgSlug"] },
-		reviewAccessRequest: { path: "/orgs/:orgSlug/access-requests/:requestId/review", params: ["orgSlug", "requestId"] },
-		inviteMember: { path: "/orgs/:orgSlug/members/invite", params: ["orgSlug"] },
-		listMembers: { path: "/orgs/:orgSlug/members", params: ["orgSlug"] },
-		ownMembership: { path: "/orgs/:orgSlug/members/me", params: ["orgSlug"] },
-		listMemberInvites: { path: "/orgs/:orgSlug/members/invites", params: ["orgSlug"] },
-		revokeMemberInvite: { path: "/orgs/:orgSlug/members/invites/:inviteId/revoke", params: ["orgSlug", "inviteId"] },
-		removeMemberFromStore: { path: "/orgs/:orgSlug/members/:membershipId/stores/:locationId/remove", params: ["orgSlug", "membershipId", "locationId"] },
+		context: "/orgs/:orgSlug/context",
+		accessRequests: "/orgs/:orgSlug/access-requests",
+		reviewAccessRequest: "/orgs/:orgSlug/access-requests/:requestId/review",
+		inviteMember: "/orgs/:orgSlug/members/invite",
+		listMembers: "/orgs/:orgSlug/members",
+		ownMembership: "/orgs/:orgSlug/members/me",
+		listMemberInvites: "/orgs/:orgSlug/members/invites",
+		revokeMemberInvite: "/orgs/:orgSlug/members/invites/:inviteId/revoke",
+		removeMemberFromStore: "/orgs/:orgSlug/members/:membershipId/stores/:locationId/remove",
 		teamInvites: {
 			validate: "/orgs/invites/validate",
 			accept: "/orgs/invites/accept",
 			registerAndAccept: "/orgs/invites/register-and-accept",
 		},
-		memberships: { path: "/orgs/:orgSlug/memberships", params: ["orgSlug"] },
-		kyb: { path: "/orgs/:orgSlug/kyb", params: ["orgSlug"] },
-		kybDocumentDownload: { path: "/orgs/:orgSlug/kyb/documents/:documentId/download", params: ["orgSlug", "documentId"] },
+		memberships: "/orgs/:orgSlug/memberships",
+		kyb: "/orgs/:orgSlug/kyb",
+		kybDocumentDownload: "/orgs/:orgSlug/kyb/documents/:documentId/download",
 		rewards: {
-			list: { path: "/orgs/:orgSlug/rewards", params: ["orgSlug"] },
-			create: { path: "/orgs/:orgSlug/rewards", params: ["orgSlug"] },
-			get: { path: "/orgs/:orgSlug/rewards/:rewardId", params: ["orgSlug", "rewardId"] },
-			update: { path: "/orgs/:orgSlug/rewards/:rewardId", params: ["orgSlug", "rewardId"] },
-			publish: { path: "/orgs/:orgSlug/rewards/:rewardId/publish", params: ["orgSlug", "rewardId"] },
+			list: "/orgs/:orgSlug/rewards",
+			create: "/orgs/:orgSlug/rewards",
+			get: "/orgs/:orgSlug/rewards/:rewardId",
+			update: "/orgs/:orgSlug/rewards/:rewardId",
+			publish: "/orgs/:orgSlug/rewards/:rewardId/publish",
 		},
 		terminals: {
-			list: { path: "/orgs/:orgSlug/terminals", params: ["orgSlug"] },
-			create: { path: "/orgs/:orgSlug/terminals", params: ["orgSlug"] },
-			summary: { path: "/orgs/:orgSlug/terminals/summary", params: ["orgSlug"] },
-			get: { path: "/orgs/:orgSlug/terminals/:id", params: ["orgSlug", "id"] },
-			pairingCode: { path: "/orgs/:orgSlug/terminals/:id/pairing-code", params: ["orgSlug", "id"] },
-			remove: { path: "/orgs/:orgSlug/terminals/:id", params: ["orgSlug", "id"] },
-			settings: { path: "/orgs/:orgSlug/terminals/settings", params: ["orgSlug"] },
+			list: "/orgs/:orgSlug/terminals",
+			create: "/orgs/:orgSlug/terminals",
+			summary: "/orgs/:orgSlug/terminals/summary",
+			get: "/orgs/:orgSlug/terminals/:id",
+			pairingCode: "/orgs/:orgSlug/terminals/:id/pairing-code",
+			remove: "/orgs/:orgSlug/terminals/:id",
+			settings: "/orgs/:orgSlug/terminals/settings",
 		},
 		apiKeys: {
-			list: { path: "/orgs/:orgSlug/api-keys", params: ["orgSlug"] },
-			create: { path: "/orgs/:orgSlug/api-keys", params: ["orgSlug"] },
-			revoke: { path: "/orgs/:orgSlug/api-keys/:keyId/revoke", params: ["orgSlug", "keyId"] },
+			list: "/orgs/:orgSlug/api-keys",
+			create: "/orgs/:orgSlug/api-keys",
+			revoke: "/orgs/:orgSlug/api-keys/:keyId/revoke",
 		},
-		redemptions: { path: "/orgs/:orgSlug/redemptions", params: ["orgSlug"] },
-		analytics: { path: "/orgs/:orgSlug/analytics", params: ["orgSlug"] },
+		redemptions: "/orgs/:orgSlug/redemptions",
+		analytics: "/orgs/:orgSlug/analytics",
 		locations: {
-			create: { path: "/orgs/:orgSlug/locations", params: ["orgSlug"] },
-			update: { path: "/orgs/:orgSlug/locations/:locationId", params: ["orgSlug", "locationId"] },
-			close: { path: "/orgs/:orgSlug/locations/:locationId/close", params: ["orgSlug", "locationId"] },
+			create: "/orgs/:orgSlug/locations",
+			update: "/orgs/:orgSlug/locations/:locationId",
+			close: "/orgs/:orgSlug/locations/:locationId/close",
 		},
 		onboarding: {
 			validate: "/orgs/onboarding/validate",
@@ -248,164 +207,45 @@ export const apiRoutes = {
 	},
 	supportAccess: {
 		request: "/support-access/request",
-		approve: { path: "/support-access/:grantId/approve", params: ["grantId"] },
-		revoke: { path: "/support-access/:grantId/revoke", params: ["grantId"] },
+		approve: "/support-access/:grantId/approve",
+		revoke: "/support-access/:grantId/revoke",
 	},
 	rewardsAdmin: {
 		invites: "/admin/invites",
 		invitesPreviewEmail: "/admin/invites/preview-email",
 		rewardsPending: "/admin/rewards/pending",
 		merchants: "/admin/merchants",
-		organizationDetail: { path: "/admin/merchants/:organizationId", params: ["organizationId"] },
-		rewardApprove: { path: "/admin/rewards/:rewardId/approve", params: ["rewardId"] },
-		rewardReject: { path: "/admin/rewards/:rewardId/reject", params: ["rewardId"] },
-		organizationKyb: { path: "/admin/merchants/:organizationId/kyb", params: ["organizationId"] },
+		organizationDetail: "/admin/merchants/:organizationId",
+		rewardApprove: "/admin/rewards/:rewardId/approve",
+		rewardReject: "/admin/rewards/:rewardId/reject",
+		organizationKyb: "/admin/merchants/:organizationId/kyb",
 		locationRequests: "/admin/location-requests",
-		organizationLocationCreate: { path: "/admin/merchants/:organizationId/locations", params: ["organizationId"] },
-		organizationLocationReview: { path: "/admin/merchants/:organizationId/locations/:locationId/review", params: ["organizationId", "locationId"] },
-		organizationKybDocumentDownload: {
-			path: "/admin/merchants/:organizationId/documents/:documentId/download",
-			params: ["organizationId", "documentId"],
-		},
+		organizationLocationCreate: "/admin/merchants/:organizationId/locations",
+		organizationLocationReview: "/admin/merchants/:organizationId/locations/:locationId/review",
+		organizationKybDocumentDownload: "/admin/merchants/:organizationId/documents/:documentId/download",
 		salesAnalytics: "/admin/analytics/sales",
 	},
 	sampleCategory: {
 		list: "/sample-category",
-		detail: { path: "/sample-category/:id", params: ["id"] },
+		detail: "/sample-category/:id",
 		create: "/sample-category",
 		bulkCreate: "/sample-category/bulk",
 		bulkDelete: "/sample-category/bulk-delete",
-		update: { path: "/sample-category/:id", params: ["id"] },
-		delete: { path: "/sample-category/:id", params: ["id"] },
-		restore: { path: "/sample-category/:id/restore", params: ["id"] },
+		update: "/sample-category/:id",
+		delete: "/sample-category/:id",
+		restore: "/sample-category/:id/restore",
 	},
 	product: {
 		list: "/product",
-		detail: { path: "/product/:id", params: ["id"] },
+		detail: "/product/:id",
 		create: "/product",
 		bulkCreate: "/product/bulk",
 		bulkDelete: "/product/bulk-delete",
-		update: { path: "/product/:id", params: ["id"] },
-		delete: { path: "/product/:id", params: ["id"] },
-		restore: { path: "/product/:id/restore", params: ["id"] },
+		update: "/product/:id",
+		delete: "/product/:id",
+		restore: "/product/:id/restore",
 	},
 } satisfies Record<string, RouteTree>;
 
 /** The full route tree — exported for type-level access. */
 export type ApiRoutes = typeof apiRoutes;
-
-// ── Runtime validation (runs once at module load) ──────────────────────────
-// Walks every leaf in the route tree and validates it against RouteDefSchema.
-// For parameterized routes, also checks that :param placeholders match params[].
-// If any route is malformed, the module fails to import.
-
-/** Collect all unique param names from a path string. */
-function extractPlaceholders(path: string): string[] {
-	const params: string[] = [];
-	for (const segment of path.split("/")) {
-		if (segment.startsWith(":")) {
-			params.push(segment.slice(1));
-		}
-	}
-	return [...new Set(params)];
-}
-
-/** Validate a single route leaf against the Zod schema + placeholder consistency. */
-function validateLeaf(routeName: string, value: RouteDef): void {
-	const result = RouteDefSchema.safeParse(value);
-	if (!result.success) {
-		throw new Error(`apiRoutes: Invalid route "${routeName}" — ${result.error.message}`);
-	}
-	// Re-parse through ParamRouteSchema — safeParse returns narrowed ParamRoute on success.
-	const paramResult = ParamRouteSchema.safeParse(result.data);
-	if (paramResult.success) {
-		const paramRoute: ParamRoute = paramResult.data;
-		const placeholders: string[] = extractPlaceholders(paramRoute.path);
-		const paramSet: Set<string> = new Set<string>(paramRoute.params);
-		if (placeholders.length !== paramSet.size || !placeholders.every((p) => paramSet.has(p))) {
-			throw new Error(`apiRoutes: Param mismatch in "${routeName}" — path placeholders [${placeholders.join(", ")}] do not match params [${paramRoute.params.join(", ")}]`);
-		}
-	}
-}
-
-/** Walk the route tree and validate every leaf (supports nested groups). */
-function validateRoutes(): void {
-	function walk(node: RouteTreeNode, prefix: string): void {
-		for (const [name, value] of Object.entries(node)) {
-			const routeName = prefix.length > 0 ? `${prefix}.${name}` : name;
-			if (isRouteDef(value)) {
-				validateLeaf(routeName, value);
-			} else if (isRouteTreeNode(value)) {
-				walk(value, routeName);
-			} else {
-				throw new Error(`apiRoutes: Invalid route node "${routeName}"`);
-			}
-		}
-	}
-	walk(apiRoutes, "");
-}
-
-// ⚠️ RUNTIME VALIDATION — runs once at module load.
-// If you see "apiRoutes: invalid route" in your logs, a route definition in this file is malformed.
-// See docs/technical/api/routes.md for the route schema and how to fix it.
-validateRoutes();
-
-// ── buildRoute() — compile-time param enforcement ──────────────────────────
-// Resolves a route definition to a concrete URL string.
-// For static routes: just returns the path.
-// For parameterized routes: replaces :param placeholders with provided values.
-// Missing required params throw at runtime. Extra params are silently ignored.
-// See docs/technical/api/routes.md §2 (`buildRoute` / `buildQuery`) for the full API reference.
-
-/**
- * Resolve a route definition to a concrete URL string.
- *
- * Static routes (plain strings) are returned as-is:
- *   buildRoute(apiRoutes.geo.countries)  // "/geo/countries"
- *
- * Parameterized routes require all params:
- *   buildRoute(apiRoutes.geo.countryDetail, { id: "42" })
- *   // → "/geo/countries/42"
- */
-export function buildRoute<T extends RouteDef>(route: T, ...args: T extends ParamRoute ? [params: Record<T["params"][number], string | number>] : []): string {
-	// Static route — return as-is.
-	if (!isParamRoute(route)) {
-		return route;
-	}
-
-	// Parameterized route — substitute each :param placeholder.
-	const params: Record<string, string | number> | undefined = args[0];
-	let resolved: string = route.path;
-	for (const paramName of route.params) {
-		const value: string | number | undefined = params?.[paramName];
-		if (value === undefined) {
-			throw new Error(`Missing required parameter: ${paramName}`);
-		}
-		resolved = resolved.replace(`:${paramName}`, String(value));
-	}
-	return resolved;
-}
-
-// ── Query-string builder ───────────────────────────────────────────────────
-
-/** A value that can appear in a query string (null/undefined = omit). */
-export type QueryValue = string | number | boolean;
-
-/**
- * Append query parameters to a base path. Null/undefined values are omitted.
- *
- *   buildQuery("/geo/countries", { search: "united", limit: 10 })
- *   // → "/geo/countries?search=united&limit=10"
- */
-export function buildQuery(base: string, params: Record<string, QueryValue | null | undefined>): string {
-	const parts: string[] = [];
-	for (const [key, value] of Object.entries(params)) {
-		if (value !== null && value !== undefined) {
-			parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-		}
-	}
-	if (parts.length === 0) {
-		return base;
-	}
-	return `${base}?${parts.join("&")}`;
-}

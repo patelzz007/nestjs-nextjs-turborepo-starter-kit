@@ -108,15 +108,12 @@ through `MessagingModuleOptions`:
 ## Core schemas (framework-agnostic)
 
 ```typescript
-import {
-  OutboxEnqueueInputSchema,
-  MessageEnvelopeSchema,
-  DEFAULT_QUEUE_JOB_OPTIONS,
-  EmptyQueuePayloadSchema,
-} from "@workspace/messaging";
+import { MessageEnvelopeSchema, EmptyQueuePayloadSchema } from "@workspace/messaging";
 ```
 
-Use these for transactional outbox tables and Kafka payloads in any app.
+Use these for Kafka payloads and payload-less BullMQ scheduler jobs in any app. The
+transactional outbox row schemas (`OutboxEventRecordSchema`, `OutboxEventStatusSchema`) live
+in `@workspace/shared` next to the Kafka topic catalog.
 
 `MessageEnvelopeSchema` requires `eventId` (uuid): the producer-assigned, stable id of the event — in the transactional outbox pattern it is the outbox row id. A message republished after a crash keeps the same `eventId`, so consumers dedupe on it in an inbox table (`INSERT … ON CONFLICT DO NOTHING` in the same transaction as their side effect). See [ADR 015](../../docs/adr/015-transactional-outbox-and-inbox.md).
 

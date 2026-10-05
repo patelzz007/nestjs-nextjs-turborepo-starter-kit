@@ -83,7 +83,7 @@ export class MfaChallengeService {
 		};
 
 		return this.jwtService.signAsync(payload, {
-			secret: this.config.twoFactorPendingSecret,
+			secret: this.config.auth.twoFactorPendingSecret,
 			expiresIn: CHALLENGE_JWT_EXPIRY_SECONDS,
 		});
 	}
@@ -92,7 +92,7 @@ export class MfaChallengeService {
 		try {
 			const payload = TwoFactorChallengeRefPayloadSchema.parse(
 				await this.jwtService.verifyAsync(token, {
-					secret: this.config.twoFactorPendingSecret,
+					secret: this.config.auth.twoFactorPendingSecret,
 				}),
 			);
 

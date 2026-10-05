@@ -60,7 +60,7 @@ describe("MfaRecoveryService", () => {
 				MfaRecoveryService,
 				{ provide: PrismaService, useValue: prisma },
 				{ provide: MfaRecoveryRepository, useValue: recoveries },
-				{ provide: TypedConfigService, useValue: { mfaRecoveryDelayMs: RECOVERY_DELAY_MS } },
+				{ provide: TypedConfigService, useValue: { mfa: { recoveryDelayMs: RECOVERY_DELAY_MS } } },
 				{ provide: EmailService, useValue: emailService },
 				{ provide: AuthorizationInvalidationService, useValue: invalidation },
 				{ provide: LogService, useValue: { info: vi.fn(), warn: vi.fn() } },

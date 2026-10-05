@@ -115,7 +115,7 @@ export class SessionsService {
 		const now: number = Date.now();
 		const { sessionScope, mfaAssuredAt } = this.sessionRestriction.resolveSessionTokens(user, now);
 
-		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
+		const expiryMs = parseExpiryToMilliseconds(this.config.auth.jwtRefreshExpiry);
 		const expiresAt: EpochMs = epochMs(now + expiryMs);
 
 		const tokens = await this.tokenService.generateSessionTokens(flatUser, storedToken.id, {

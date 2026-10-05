@@ -282,8 +282,10 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	const isVerifyingLogin = verifyLoginMutation.isPending;
 	const invitedEmail = preview?.email ?? "";
 	const signedInEmail = user?.email ?? "";
-	const emailMatchesInvite = isAuthenticated && preview !== null && signedInEmail.toLowerCase() === invitedEmail.toLowerCase();
-	const signedInWrongAccount = isAuthenticated && preview !== null && signedInEmail.toLowerCase() !== invitedEmail.toLowerCase();
+	const isSignedInWithPreview = isAuthenticated && preview !== null;
+	const signedInEmailIsInvited = signedInEmail.toLowerCase() === invitedEmail.toLowerCase();
+	const emailMatchesInvite = isSignedInWithPreview && signedInEmailIsInvited;
+	const signedInWrongAccount = isSignedInWithPreview && !signedInEmailIsInvited;
 	const showLoginVerificationForm = loginVerificationId !== null;
 	const showCreateAccountForm = preview !== null && !preview.hasExistingAccount && !authLoading && !isAuthenticated && !showLoginVerificationForm;
 	const showSignInAction = preview !== null && preview.hasExistingAccount && !authLoading && !isAuthenticated;
@@ -424,13 +426,9 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 							<Button type="button" className="w-full sm:w-auto" onClick={handleAccept} disabled={isAccepting} loading={isAccepting}>
 								{isAccepting ? "Joining team…" : "Accept invitation"}
 							</Button>
-						) : showSignInAction ? (
+						) : showSignInAction || signedInWrongAccount ? (
 							<Link href={loginHref} className={cn(buttonVariants(), "w-full sm:w-auto")}>
-								Sign in to accept
-							</Link>
-						) : signedInWrongAccount ? (
-							<Link href={loginHref} className={cn(buttonVariants(), "w-full sm:w-auto")}>
-								Sign in with invited email
+								{showSignInAction ? "Sign in to accept" : "Sign in with invited email"}
 							</Link>
 						) : null
 					) : null}

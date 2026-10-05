@@ -52,7 +52,7 @@ export type RewardListSortField = (typeof rewardListQuery.sortable)[number];
 // The route contract: method + path + input + RESPONSE, shared by the API and the typed client.
 export const rewardContract = {
   list: defineContract({ method: 'GET', path: apiRoutes.rewards.list, input: RewardListQuerySchema, response: paginatedResponse(RewardSchema) }),
-  publish: defineContract({ method: 'POST', path: apiRoutes.rewards.publish.path, input: z.object({ id: RewardIdSchema }).strict(), response: singleResponse(RewardSchema) }),
+  publish: defineContract({ method: 'POST', path: apiRoutes.rewards.publish, input: z.object({ id: RewardIdSchema }).strict(), response: singleResponse(RewardSchema) }),
 };
 ```
 

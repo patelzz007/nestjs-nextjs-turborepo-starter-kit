@@ -94,9 +94,9 @@ export class RewardsAdminService {
 			expiresInDays: INVITE_TTL_DAYS,
 		});
 		const context = EmailRenderContextSchema.parse({
-			appName: this.config.appName,
-			appUrl: this.config.appUrl,
-			supportEmail: this.config.emailFromAddress,
+			appName: this.config.runtime.appName,
+			appUrl: this.config.clientApps.webUrl,
+			supportEmail: this.config.email.fromAddress,
 		});
 		return buildEmailPreviewFromTemplate(entry, template, context, input.email);
 	}
@@ -188,7 +188,7 @@ export class RewardsAdminService {
 	}
 
 	private buildMerchantInviteUrl(token: string): string {
-		const base = this.config.merchantAppUrl.replace(/\/+$/, "");
+		const base = this.config.clientApps.merchantUrl.replace(/\/+$/, "");
 		const params = new URLSearchParams({ token });
 		return `${base}${APP_LINKS.merchant.onboarding}?${params.toString()}`;
 	}

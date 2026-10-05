@@ -74,19 +74,18 @@ export function isAccessTokenExpired(accessToken: string, skewMs: number = REFRE
 }
 
 /**
- * True when the request should be treated as authenticated for route gating.
- * A stale access-token cookie alone is not enough — it would pass the proxy,
- * paint the panel, then 401 on the first API call and client-redirect to login
- * (the visible "/" → login flicker). A refresh token without a live access
- * token is still recoverable (the proxy refresh block runs first).
+ * True when the request should be treated as authenticated for route gating,
+ * which is exactly when a refresh-token cookie is present. The access token
+ * deliberately does not take part:
+ *
+ * - a live-looking access token without a refresh token is an orphaned cookie
+ *   (partial logout / post-revocation), not a recoverable session;
+ * - a stale or missing access token with a refresh token is recoverable (the
+ *   proxy refresh block runs first), while a stale access token alone would
+ *   pass the proxy, paint the panel, then 401 on the first API call (the
+ *   visible "/" → login flicker).
  */
-export function hasRouteSession(accessToken: string | undefined, refreshToken: string | undefined, effectiveAccessToken: string | undefined = accessToken): boolean {
-	const token: string | undefined = effectiveAccessToken ?? accessToken;
-	if (token !== undefined && !isAccessTokenExpired(token)) {
-		// A live-looking access token without a refresh token is an orphaned cookie
-		// (partial logout / post-revocation) — not a recoverable session.
-		return refreshToken !== undefined;
-	}
+export function hasRouteSession(refreshToken: string | undefined): boolean {
 	return refreshToken !== undefined;
 }
 
@@ -127,7 +126,7 @@ export function shouldAttemptProxyRefresh(context: ProxyRefreshTriggerContext): 
 		return false;
 	}
 
-	if (context.isAuthRoute && refreshToken !== undefined && hasRouteSession(accessToken, refreshToken, accessToken)) {
+	if (context.isAuthRoute && hasRouteSession(refreshToken)) {
 		return true;
 	}
 
@@ -142,13 +141,7 @@ export function shouldAttemptProxyRefresh(context: ProxyRefreshTriggerContext): 
 	return isAccessTokenExpired(accessToken);
 }
 
-export const ProxySessionRefreshInputSchema = z.object({
-	accessToken: z.string().optional(),
-	refreshToken: z.string().optional(),
-	isDocumentNavigation: z.boolean(),
-	isAuthRoute: z.boolean(),
-	isPublicRoute: z.boolean(),
-	tokenAuthRoute: z.boolean().default(false),
+export const ProxySessionRefreshInputSchema = ProxyRefreshTriggerContextSchema.extend({
 	accessTokenCookieName: z.string(),
 	refreshTokenCookieName: z.string(),
 	app: AuthClientTypeSchema,
@@ -173,41 +166,28 @@ export type ProxySessionRefreshOutput = z.output<typeof ProxySessionRefreshOutpu
  * token was rejected (401/403) so the caller can clear cookies / redirect.
  */
 export async function resolveProxySessionRefresh(input: ProxySessionRefreshInput): Promise<ProxySessionRefreshOutput> {
-	const triggerContext: ProxyRefreshTriggerContext = {
-		accessToken: input.accessToken,
-		refreshToken: input.refreshToken,
-		isDocumentNavigation: input.isDocumentNavigation,
-		isAuthRoute: input.isAuthRoute,
-		isPublicRoute: input.isPublicRoute,
-		tokenAuthRoute: input.tokenAuthRoute,
-	};
-
 	let rotatedCookies: string[] = [];
 	let effectiveAccessToken: string | undefined = input.accessToken;
 	let sessionDead = false;
 
-	if (!shouldAttemptProxyRefresh(triggerContext) || input.refreshToken === undefined) {
+	// The input carries every trigger-context field, so it is the trigger context.
+	if (!shouldAttemptProxyRefresh(input) || input.refreshToken === undefined) {
 		return { rotatedCookies, effectiveAccessToken, sessionDead };
 	}
 
 	const refreshStartedAt: number = Date.now();
 	const result: ProxyRefreshResult = await input.attemptRefresh(input.refreshToken, {
-		bypassCooldown: triggerContext.isAuthRoute,
+		bypassCooldown: input.isAuthRoute,
 	});
 	const elapsedMs: number = Date.now() - refreshStartedAt;
+	const log = (outcome: ProxyRefreshOutcome, rotatedCookieCount: number, errorDetail?: string): void => {
+		logProxyRefresh({ app: input.app, pathname: input.pathname, status: result.status, elapsedMs, outcome, rotatedCookieCount, errorDetail });
+	};
 
 	if (result.ok) {
 		const hasBothCookies = hasRotatedAuthCookies(result.setCookies, input.accessTokenCookieName, input.refreshTokenCookieName);
 		if (!hasBothCookies) {
-			logProxyRefresh({
-				app: input.app,
-				pathname: input.pathname,
-				status: result.status,
-				elapsedMs,
-				outcome: "transient-failure",
-				rotatedCookieCount: result.setCookies.length,
-				errorDetail: "refresh response missing rotated auth cookies",
-			});
+			log("transient-failure", result.setCookies.length, "refresh response missing rotated auth cookies");
 			return { rotatedCookies, effectiveAccessToken, sessionDead };
 		}
 
@@ -216,43 +196,14 @@ export async function resolveProxySessionRefresh(input: ProxySessionRefreshInput
 		if (newAccessToken !== undefined) {
 			effectiveAccessToken = newAccessToken;
 		}
-		logProxyRefresh({
-			app: input.app,
-			pathname: input.pathname,
-			status: result.status,
-			elapsedMs,
-			outcome: "refreshed",
-			rotatedCookieCount: result.setCookies.length,
-		});
+		log("refreshed", result.setCookies.length);
 	} else if (result.status === 401 || result.status === 403) {
 		sessionDead = true;
-		logProxyRefresh({
-			app: input.app,
-			pathname: input.pathname,
-			status: result.status,
-			elapsedMs,
-			outcome: "dead-session",
-			rotatedCookieCount: 0,
-		});
+		log("dead-session", 0);
 	} else if (result.skipped === true) {
-		logProxyRefresh({
-			app: input.app,
-			pathname: input.pathname,
-			status: result.status,
-			elapsedMs,
-			outcome: "cooldown-active",
-			rotatedCookieCount: 0,
-		});
+		log("cooldown-active", 0);
 	} else {
-		logProxyRefresh({
-			app: input.app,
-			pathname: input.pathname,
-			status: result.status,
-			elapsedMs,
-			outcome: "transient-failure",
-			rotatedCookieCount: 0,
-			errorDetail: result.errorDetail,
-		});
+		log("transient-failure", 0, result.errorDetail);
 	}
 
 	return { rotatedCookies, effectiveAccessToken, sessionDead };

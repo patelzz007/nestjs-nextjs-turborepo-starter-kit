@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createServerCaller, type ServerCaller } from "@workspace/client/lib/api/server-api";
+import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { UuidParamSchema, type Envelope, type OrganizationContextResponse, type OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -10,7 +11,6 @@ import { organizationLocationCookieName } from "@/lib/org/location";
 import { isCanonicalOrganizationSlug, resolveOrganizationSlugFromContext } from "@/lib/org/resolve-slug";
 import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
 import { ROUTES } from "@/lib/routes";
-import { settleServerQuery } from "@/lib/server/server-query-outcome";
 
 export type MerchantServerCaller = ServerCaller;
 

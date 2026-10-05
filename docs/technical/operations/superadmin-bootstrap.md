@@ -47,16 +47,20 @@ pnpm --filter @workspace/api admin:bootstrap-superadmin -- --email ops@example.c
 ## Loading the reference data
 
 `db:sync-reference-data` loads exactly what the application assumes exists: the permission catalog, the
-six system roles (`isSystem`, flat) with their role-permission matrix, and the merchant capability
-catalog. It is **production-safe**: no users, tenants or demo data, no seed guard involved, and it
+six system roles (`isSystem`, flat) with their role-permission matrix, and the capability catalogs (PLATFORM
+capabilities derived from and linked to their permission via `permission_id`, MERCHANT capabilities without a
+link because tenant policies authorize them). It is **production-safe**: no users, tenants or demo data, no seed guard involved, and it
 only ever adds or corrects rows defined by the code (it never deletes anything an operator created, such
 as custom roles or permissions). Put it in every deploy, right after `pnpm db:deploy`.
 
 - **Idempotent and diff-based.** It compares the database with the catalog and writes only differences. A
   run that finds nothing to change writes nothing at all, not even an audit row (it prints "nothing was
   written").
+- **Registry only.** The role-permission matrix and the PLATFORM capabilities cover the permissions the code
+  defines; permissions an operator created or retired are never granted to a role or turned into a capability
+  here (the API's boot sync still derives capabilities for every permission).
 - **One transaction per section** (`permissions`, `system-roles`, `role-permissions`,
-  `merchant-capabilities`), each under the allowlisted system operation `reference_data.sync`. A failed
+  `platform-capabilities`, `merchant-capabilities`), each under the allowlisted system operation `reference_data.sync`. A failed
   section rolls back alone and a re-run continues.
 - **Audited.** Every section that changed something writes one `REFERENCE_DATA_SYNCED` row in
   `permission_audit_logs` in the same transaction (`actor_kind = SYSTEM_OPERATION`,

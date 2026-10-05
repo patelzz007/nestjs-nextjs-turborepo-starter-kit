@@ -34,7 +34,7 @@ import { createStorageAdapter, type StorageAdapter } from "./factory/storage-ada
 		},
 		{
 			provide: MALWARE_SCANNER,
-			useFactory: (config: TypedConfigService): MalwareScanner => createMalwareScanner(config.malwareScanner),
+			useFactory: (config: TypedConfigService): MalwareScanner => createMalwareScanner(config.storage.malwareScanner),
 			inject: [TypedConfigService],
 		},
 		{

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadMerchantServerContext, loadOrganizationContext } from "@/lib/merchant-server-api";
-import { UnexpectedServerQueryError } from "@/lib/server/server-query-outcome";
+import { UnexpectedServerQueryError } from "@workspace/client/lib/api/server-query-outcome";
 import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
 
 // The real SSR caller runs against a stubbed `fetch`, so these tests cover how

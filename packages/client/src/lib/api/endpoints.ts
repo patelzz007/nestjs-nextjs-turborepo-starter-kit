@@ -198,6 +198,73 @@ export function eachRouterEntry<R extends object>(router: R, visit: <K extends k
 	}
 }
 
+/** The nodes {@link mapRouterTree} bound: some keys of `R`, each mapped to a node. */
+type MappedRouterTreeNodes<R extends object, TNode extends object> = { [K in keyof R]?: TNode };
+
+/** What {@link mapRouterTree} returns: the bound nodes, plus every key it settled (bound or skipped on purpose). */
+export interface MappedRouterTree<R extends object, TNode extends object> {
+	readonly nodes: MappedRouterTreeNodes<R, TNode>;
+	readonly settledKeys: ReadonlySet<string>;
+}
+
+/** How {@link mapRouterTree} binds each entry of a router tree. */
+export interface RouterTreeMapper<TNode extends object> {
+	/** A procedure leaf → its binding, or `undefined` to leave the key out (the server caller skips mutations). */
+	readonly leaf: (def: ErasedProcedureDef) => TNode | undefined;
+	/** A nested router → its binding; the caller recurses, since each tree kind binds subtrees its own way. */
+	readonly router: (subtree: RouterTree) => TNode;
+}
+
+const INVALID_ROUTER_NODE_MESSAGE = "Invalid router node — expected a procedure leaf or nested router.";
+
+/**
+ * Walks a router tree and binds every entry through `mapper` — the one walker
+ * behind the browser caller, the React client router and the SSR caller. A
+ * value that is neither a procedure leaf nor a nested router throws. Narrow
+ * the result to the caller's tree type with {@link assertCompleteRouterTree}.
+ */
+export function mapRouterTree<R extends object, TNode extends object>(router: R, mapper: RouterTreeMapper<TNode>): MappedRouterTree<R, TNode> {
+	const nodes: MappedRouterTreeNodes<R, TNode> = {};
+	const settledKeys = new Set<string>();
+
+	eachRouterEntry(router, (key, value) => {
+		if (typeof value !== "object" || value === null) {
+			throw new Error(INVALID_ROUTER_NODE_MESSAGE);
+		}
+		let node: TNode | undefined;
+		if (isErasedProcedureDef(value)) {
+			node = mapper.leaf(value);
+		} else if (isRouterSubtree(value)) {
+			node = mapper.router(value);
+		} else {
+			throw new Error(INVALID_ROUTER_NODE_MESSAGE);
+		}
+		if (node !== undefined) {
+			nodes[key] = node;
+		}
+		settledKeys.add(key);
+	});
+
+	return { nodes, settledKeys };
+}
+
+/**
+ * The one completeness guard of every mapped router tree: throws unless every
+ * own key of `router` was settled by {@link mapRouterTree}, and otherwise
+ * narrows the bound nodes to the caller's tree type `TTree`.
+ */
+export function assertCompleteRouterTree<R extends object, TTree>(
+	router: R,
+	nodes: MappedRouterTreeNodes<R, object> | TTree,
+	settledKeys: ReadonlySet<string>,
+): asserts nodes is TTree {
+	eachRouterEntry(router, (key) => {
+		if (!settledKeys.has(key)) {
+			throw new Error("Failed to build router tree — one or more router entries were not bound.");
+		}
+	});
+}
+
 /** Prefixes a query key with the version when a leaf opts out of the default — v2 keys can never collide with v1 cache entries. */
 function versionedKey(version: ApiVersion | undefined, base: QueryKey): QueryKey {
 	return version === undefined ? base : [version, ...base];

@@ -11,7 +11,6 @@ export { BullMqHealthIndicator, BullMqInfrastructureModule, registerBullMqInfras
 export { BullMqWorkerDrainService } from "./bullmq/bullmq-worker-drain.service";
 export { KafkaInfrastructureModule, registerKafkaInfrastructureModule } from "./kafka/kafka-infrastructure.module";
 export {
-	DisabledKafkaProducerService,
 	KAFKA_CLIENT_BACKEND,
 	KAFKA_EVENT_ID_HEADER,
 	KAFKA_EVENT_TYPE_HEADER,

@@ -14,9 +14,10 @@ import { type NestApplicationOptions } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { LogController } from "fastify";
-import { MUTATION_INTENT_HEADER, apiDocsPath } from "@workspace/shared";
+import { apiDocsPath } from "@workspace/shared";
 
 import { AppModule, ObserveInstrument } from "../app.module";
+import { buildCorsOptions } from "./cors-options";
 import { registerFastifyHooks } from "./register-fastify-hooks";
 import { registerFastifyPlugins } from "./register-fastify-plugins";
 import type { ApiConfig, ApiDocsPolicy } from "../config/api-config.schema";
@@ -30,7 +31,6 @@ import { registerGracefulShutdown } from "../common/lifecycle/graceful-shutdown"
 import { BullMqWorkerDrainService } from "@workspace/messaging/nest";
 import { HealthService } from "../modules/health/health.service";
 import { LogService } from "../modules/logs/logs.service";
-import { IDEMPOTENCY_KEY_HEADER } from "../platform/idempotency/idempotency.constants";
 
 /** 1 MiB request body cap. */
 const BODY_LIMIT_BYTES = 1024 * 1024;
@@ -123,15 +123,7 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	await registerFastifyPlugins(app, { isDev }, app.get(TypedConfigService));
 
 	// CORS (plugins must be registered before the routes they affect).
-	app.enableCors({
-		origin: [...config.http.corsOrigins],
-		credentials: true,
-		methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-		// `Idempotency-Key` lets browser clients opt into safe retries on
-		// @Idempotent() endpoints (platform/idempotency). It is not
-		// CORS-safelisted, so it must be allowed explicitly.
-		allowedHeaders: ["Content-Type", "X-Client-Type", "X-Merchant-Org-Id", MUTATION_INTENT_HEADER, "Accept", IDEMPOTENCY_KEY_HEADER],
-	});
+	app.enableCors(buildCorsOptions(config));
 
 	registerFastifyHooks(app);
 

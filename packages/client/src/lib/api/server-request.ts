@@ -35,7 +35,7 @@ import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
 import { ApiResponseContractError, parseResponseText, type ApiResponseContractIssue } from "./response-contract";
-import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type ErasedQueryDef, type MutationDef, type QueryDef, type RouterTree } from "./endpoints";
+import { assertCompleteRouterTree, mapRouterTree, resolveRequest, type MutationDef, type QueryDef, type RouterTree } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -389,69 +389,19 @@ export function createServerQueryLeaf<Input extends SerializableInput, Resp exte
 	};
 }
 
-/** Erased build-time shape — widened so each router key can accept any branch variant. */
-type ServerCallerTreeBuild<R extends object> = {
-	[K in keyof R]?: ServerQueryLeaf<SerializableInput, DataValue> | ServerCallerTree<RouterTree>;
-};
-
-type ServerCallerNode = { readonly kind: "query"; readonly def: ErasedQueryDef } | { readonly kind: "mutation" } | { readonly kind: "router"; readonly router: RouterTree };
-
-function classifyRouterNode(value: object): ServerCallerNode {
-	if (isErasedProcedureDef(value)) {
-		return value.kind === "query" ? { kind: "query", def: value } : { kind: "mutation" };
-	}
-	if (isRouterSubtree(value)) {
-		return { kind: "router", router: value };
-	}
-	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
-}
-
-/** Every non-mutation entry of `router` was bound (`boundKeys`) — narrows the build to the complete caller. */
-function isCompleteServerCaller<R extends object>(
-	router: R,
-	candidate: ServerCallerTreeBuild<R> | ServerCallerTree<R>,
-	boundKeys: ReadonlySet<string>,
-): candidate is ServerCallerTree<R> {
-	let complete = true;
-	eachRouterEntry(router, (key, value) => {
-		const isMutation: boolean = typeof value === "object" && value !== null && classifyRouterNode(value).kind === "mutation";
-		if (!isMutation && !boundKeys.has(key)) {
-			complete = false;
-		}
-	});
-	return complete;
-}
-
-function buildServerCallerTree<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {
-	const out: ServerCallerTreeBuild<R> = {};
-	const boundKeys = new Set<string>();
-
-	eachRouterEntry(router, (key, value) => {
-		if (typeof value !== "object" || value === null) {
-			throw new Error("Invalid router node — expected a procedure leaf or nested router.");
-		}
-		const node: ServerCallerNode = classifyRouterNode(value);
-		if (node.kind === "query") {
-			out[key] = createServerQueryLeaf(context, node.def);
-			boundKeys.add(key);
-		} else if (node.kind === "router") {
-			out[key] = buildServerCallerTree(node.router, context);
-			boundKeys.add(key);
-		}
-		// Mutations are not bound: the server caller is read-only.
-	});
-
-	if (!isCompleteServerCaller(router, out, boundKeys)) {
-		throw new Error("Failed to build server caller — one or more router entries were not bound.");
-	}
-
-	return out;
-}
+/** One bound entry of the SSR caller: a query leaf or a nested caller. */
+type ServerCallerNode = ServerQueryLeaf<SerializableInput, DataValue> | ServerCallerTree<RouterTree>;
 
 /**
  * Walks a router tree and binds every QUERY leaf to a tRPC-style SSR caller.
  * `server.auth.me.query(undefined)` — no manual path/method wiring.
  */
 export function createServerCallerForRouter<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {
-	return buildServerCallerTree(router, context);
+	const { nodes, settledKeys } = mapRouterTree<R, ServerCallerNode>(router, {
+		// Mutations are not bound: the server caller is read-only.
+		leaf: (def): ServerCallerNode | undefined => (def.kind === "query" ? createServerQueryLeaf(context, def) : undefined),
+		router: (subtree): ServerCallerNode => createServerCallerForRouter(subtree, context),
+	});
+	assertCompleteRouterTree<R, ServerCallerTree<R>>(router, nodes, settledKeys);
+	return nodes;
 }

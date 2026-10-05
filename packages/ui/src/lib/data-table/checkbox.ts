@@ -39,11 +39,6 @@ export interface DataTableCheckboxConfig<TData extends RowData = RowData> {
 
 export interface ResolveDataTableCheckboxInput<TData extends RowData> {
 	readonly checkbox?: boolean | DataTableCheckboxConfig<TData> | undefined;
-	readonly enableBulkSelection: boolean;
-	readonly bulkActions: DataTableBulkAction<TData>[];
-	readonly exportable: boolean;
-	readonly exportFilename?: string | undefined;
-	readonly exportableColumns?: string[] | undefined;
 	readonly labels: DataTableLabels;
 	readonly deleteSelectedIcon: React.ReactNode;
 }
@@ -61,65 +56,25 @@ function includesExportFormat(formats: readonly DataTableExportFormat[], format:
 	return formats.includes(format);
 }
 
-function resolveExportFormats(exportOption: boolean | readonly DataTableExportFormat[] | undefined, exportable: boolean): readonly DataTableExportFormat[] {
-	if (!exportable) {
-		return [];
-	}
-	if (exportOption === true || exportOption === undefined) {
+function resolveExportFormats(exportOption: boolean | readonly DataTableExportFormat[] | undefined): readonly DataTableExportFormat[] {
+	if (exportOption === true) {
 		return DATA_TABLE_EXPORT_FORMATS;
 	}
 	if (Array.isArray(exportOption)) {
-		if (exportOption.length === 0) {
-			return [];
-		}
 		return exportOption.filter((format): format is DataTableExportFormat => exportFormatSchema.safeParse(format).success);
 	}
 	return [];
 }
 
-function parseCheckboxConfig<TData extends RowData>(checkbox: boolean | DataTableCheckboxConfig<TData>): DataTableCheckboxConfig<TData> {
-	if (checkbox === true || checkbox === false) {
-		return {};
-	}
-	return checkbox;
-}
-
-/** Normalises the `checkbox` prop (and legacy bulk/export props) into one config. */
+/** Normalises the `checkbox` prop into one selection / bulk-action / export config. */
 export function resolveDataTableCheckboxConfig<TData extends RowData>(input: ResolveDataTableCheckboxInput<TData>): ResolvedDataTableCheckboxConfig<TData> {
-	const {
-		checkbox,
-		enableBulkSelection: legacyEnableBulkSelection,
-		bulkActions: legacyBulkActions,
-		exportable: legacyExportable,
-		exportFilename: legacyExportFilename,
-		exportableColumns: legacyExportableColumns,
-		labels,
-		deleteSelectedIcon,
-	} = input;
+	const { checkbox, labels, deleteSelectedIcon } = input;
 
-	if (checkbox === false) {
-		return {
-			enableBulkSelection: false,
-			bulkActions: [],
-			exportable: false,
-			exportFormats: [],
-			exportFilename: legacyExportFilename,
-			exportableColumns: legacyExportableColumns,
-		};
+	if (checkbox === undefined || checkbox === false) {
+		return { enableBulkSelection: false, bulkActions: [], exportable: false, exportFormats: [] };
 	}
 
-	if (checkbox === undefined) {
-		return {
-			enableBulkSelection: legacyEnableBulkSelection,
-			bulkActions: legacyBulkActions,
-			exportable: legacyExportable,
-			exportFormats: legacyExportable ? DATA_TABLE_EXPORT_FORMATS : [],
-			exportFilename: legacyExportFilename,
-			exportableColumns: legacyExportableColumns,
-		};
-	}
-
-	const checkboxConfig = parseCheckboxConfig(checkbox);
+	const checkboxConfig: DataTableCheckboxConfig<TData> = checkbox === true ? {} : checkbox;
 	const resolvedBulkActions: DataTableBulkAction<TData>[] = [];
 
 	const onDeleteAll = checkboxConfig.onDeleteAll;
@@ -137,21 +92,15 @@ export function resolveDataTableCheckboxConfig<TData extends RowData>(input: Res
 		resolvedBulkActions.push(...checkboxConfig.bulkActions);
 	}
 
-	if (checkbox === true) {
-		resolvedBulkActions.push(...legacyBulkActions);
-	}
-
-	const exportFromCheckbox = checkboxConfig.export;
-	const resolvedExportable = exportFromCheckbox !== undefined ? exportFromCheckbox !== false : legacyExportable;
-	const resolvedExportFormats = resolveExportFormats(exportFromCheckbox, resolvedExportable);
+	const exportOption = checkboxConfig.export;
 
 	return {
 		enableBulkSelection: true,
 		bulkActions: resolvedBulkActions,
-		exportable: resolvedExportable,
-		exportFormats: resolvedExportFormats,
-		exportFilename: checkboxConfig.exportFilename ?? legacyExportFilename,
-		exportableColumns: checkboxConfig.exportableColumns ?? legacyExportableColumns,
+		exportable: exportOption !== undefined && exportOption !== false,
+		exportFormats: resolveExportFormats(exportOption),
+		exportFilename: checkboxConfig.exportFilename,
+		exportableColumns: checkboxConfig.exportableColumns,
 	};
 }
 

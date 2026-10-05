@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../api/common";
+import { AclEffectSchema } from "../../../authorization/policy-dsl.schema";
 
 export const AssignRoleToUserSchema = z
 	.object({
@@ -28,7 +29,7 @@ export const AssignPermissionToUserSchema = z
 		expiresAt: EpochMsSchema.optional().meta({
 			description: "Optional epoch-ms timestamp when the grant expires",
 		}),
-		effect: z.enum(["ALLOW", "DENY"]).optional().meta({
+		effect: AclEffectSchema.optional().meta({
 			description: "ALLOW grants the permission; DENY revokes it even when a role grants it (default ALLOW)",
 		}),
 	})

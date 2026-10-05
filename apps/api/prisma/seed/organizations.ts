@@ -12,6 +12,7 @@ import { prisma } from "./client";
 import { seedLifecycleCorrelationId } from "./lifecycle-correlation";
 import { upsertLiveSeedMembership } from "./memberships";
 import { deterministicUuid } from "./deterministic-uuid";
+import { daysFromNow } from "./helpers";
 import { defaultTenantPolicySeedIds, platformGuardrailSeedIds } from "./policy-seed-ids";
 import { seedTenantEncryptionKeys } from "./tenant-encryption";
 import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
@@ -26,10 +27,6 @@ export const ORGANIZATION_SEED_SLUGS = Object.freeze({
 	kl: "brew-bean-kl",
 	mlk: "jonker-street-kitchen",
 });
-
-function msFromNow(days: number): number {
-	return Date.now() + days * 24 * 60 * 60 * 1000;
-}
 
 /** The organizations the `development` scenario owns — the ONLY tenants its cleanup touches. */
 export const SEED_ORGANIZATION_IDS: readonly string[] = [ORGANIZATION_SEED_IDS.klOrganization, ORGANIZATION_SEED_IDS.mlkOrganization];
@@ -438,7 +435,7 @@ export async function seedOrganizationsAndMerchants(
 			locationScopeType: "ALL_LOCATIONS",
 			status: "PENDING",
 			createdByAdminId: adminUser.id,
-			expiresAt: BigInt(msFromNow(7)),
+			expiresAt: BigInt(daysFromNow(7)),
 		},
 	});
 
@@ -453,7 +450,7 @@ export async function seedOrganizationsAndMerchants(
 			locationScopeType: "SELECTED",
 			status: "PENDING",
 			createdByAdminId: klOwner.id,
-			expiresAt: BigInt(msFromNow(7)),
+			expiresAt: BigInt(daysFromNow(7)),
 			locationScopes: {
 				create: {
 					organizationId: klOrganization.id,

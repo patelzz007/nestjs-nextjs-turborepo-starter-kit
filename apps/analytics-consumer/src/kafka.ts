@@ -1,9 +1,16 @@
 import { KafkaJS } from "@confluentinc/kafka-javascript";
-import { AggregatingKafkaLogSink, buildKafkaClientConfig, type KafkaLogContext, type KafkaLogSink, type KafkaTopicSpec } from "@workspace/messaging/kafka";
+import {
+	AggregatingKafkaLogSink,
+	buildKafkaClientConfig,
+	kafkaLogSinkFrom,
+	type KafkaClientLogEntry,
+	type KafkaLogSink,
+	type KafkaTopicSpec,
+} from "@workspace/messaging/kafka";
 import { KAFKA_TOPICS, type KafkaTopic } from "@workspace/shared";
 
 import type { ConsumerStartPosition, KafkaConnectionSettings } from "./env";
-import type { ConsumerLogEntry, ConsumerLogger } from "./message-handler";
+import type { ConsumerLogger } from "@workspace/messaging/inbox";
 
 const MS_PER_DAY: number = 24 * 60 * 60 * 1000;
 
@@ -12,27 +19,20 @@ const CLIENT_LOG_LEVEL: KafkaJS.logLevel = KafkaJS.logLevel.WARN;
 
 /** One JSON entry per client diagnostic; an aggregated retry storm's summary adds `repeatCount` / `repeatWindowMs`. */
 export function consumerLogSink(logger: ConsumerLogger): KafkaLogSink {
-	const entry = (message: string, context: KafkaLogContext): ConsumerLogEntry => ({
-		event: "kafka.client_log",
-		namespace: context.namespace,
-		facility: context.facility,
-		message,
-		...(context.repeats === null ? {} : { repeatCount: context.repeats.count, repeatWindowMs: context.repeats.windowMs }),
+	return kafkaLogSinkFrom({
+		error: (entry: KafkaClientLogEntry): void => {
+			logger.error({ ...entry });
+		},
+		warn: (entry: KafkaClientLogEntry): void => {
+			logger.warn({ ...entry });
+		},
+		info: (entry: KafkaClientLogEntry): void => {
+			logger.info({ ...entry });
+		},
+		debug: (entry: KafkaClientLogEntry): void => {
+			logger.info({ ...entry });
+		},
 	});
-	return {
-		error: (message: string, context: KafkaLogContext): void => {
-			logger.error(entry(message, context));
-		},
-		warn: (message: string, context: KafkaLogContext): void => {
-			logger.warn(entry(message, context));
-		},
-		info: (message: string, context: KafkaLogContext): void => {
-			logger.info(entry(message, context));
-		},
-		debug: (message: string, context: KafkaLogContext): void => {
-			logger.info(entry(message, context));
-		},
-	};
 }
 
 /** A Kafka client and the log aggregation it owns. */

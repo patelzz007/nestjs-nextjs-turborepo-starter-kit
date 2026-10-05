@@ -27,9 +27,9 @@ export class AccessTokenStateService {
 		private readonly prisma: PrismaService,
 		config: TypedConfigService,
 	) {
-		this.ttlMs = config.accessTokenStateCacheTtlMs;
+		this.ttlMs = config.caches.accessTokenStateTtlMs;
 		this.store = new BoundedTtlCache<string, AccessTokenAccountState>({
-			maxEntries: config.accessTokenStateCacheMaxEntries,
+			maxEntries: config.caches.accessTokenStateMaxEntries,
 			defaultTtlMs: this.ttlMs,
 			capacityPolicy: "evict-oldest",
 		});

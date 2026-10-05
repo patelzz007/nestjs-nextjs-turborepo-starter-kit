@@ -116,10 +116,11 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 | I want to… | Read |
 |---|---|
 | Understand how the backend decides allow / deny | [Backend: the Authorization Kernel](./backend.md) |
+| Understand where roles and permissions come from, how they inherit, and how caches are invalidated | [RBAC internals](./rbac.md) |
 | Understand organizations, stores, locations and RLS | [Tenancy, stores and RLS](./tenancy-and-rls.md) |
 | Show / hide things in the UI | [Frontend authorization](./frontend.md) |
 | Do a concrete task ("add a permission", "protect an endpoint") | [Recipes](./recipes.md) |
-| Know the rules before opening a PR | [Dos and don'ts](../dos-and-donts.md) |
+| Know the rules before opening a PR | [Authorization dos and don'ts](./dos-and-donts.md) (repo-wide: [Dos and don'ts](../dos-and-donts.md)) |
 | Write or run authorization tests | [Testing](./testing.md) |
 | Fix "why am I getting 403?" or a failing reset | [Troubleshooting & FAQ](./troubleshooting.md) |
 | See exactly what changed in the authorization overhaul | [Change log](./changelog.md) |

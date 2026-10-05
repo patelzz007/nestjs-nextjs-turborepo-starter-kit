@@ -2,10 +2,18 @@ import type { Permission, Prisma, Role, RolePermission } from "@prisma/client";
 import { getPermissionDefinitions, nowEpochMs } from "@workspace/shared";
 
 import { MERCHANT_CAPABILITY_CATALOG } from "./merchant-capability-catalog";
+import { derivePlatformCapabilityRows } from "./platform-capability-rows";
 import { NO_CHANGE, type ReferenceDataSection, type SectionChange } from "./reference-data.types";
 import { SYSTEM_ROLE_CATALOG, type PermissionSelector, type SystemRoleDefinition } from "./system-role-catalog";
 
 type Tx = Prisma.TransactionClient;
+
+/** `action:resource:scope` of every permission the code defines. */
+function registryPermissionKeys(): ReadonlySet<string> {
+	return new Set(
+		getPermissionDefinitions().map((definition) => permissionKey({ action: definition.action, resource: definition.resource, scope: definition.scope ?? "GLOBAL" })),
+	);
+}
 
 function permissionKey(permission: { readonly action: string; readonly resource: string; readonly scope: string }): string {
 	return `${permission.action}:${permission.resource}:${permission.scope}`;
@@ -78,8 +86,11 @@ export class RolePermissionMatrixSection implements ReferenceDataSection {
 
 	public async sync(tx: Tx): Promise<SectionChange> {
 		const roles: Role[] = await tx.role.findMany({ where: { isDeleted: false, name: { in: SYSTEM_ROLE_CATALOG.map((role) => role.name) } } });
-		// Soft-deleted permissions stay in the matrix: deleting a permission is its own state and never churns the role grants (the authorization read path ignores deleted permissions).
-		const catalog: Permission[] = await tx.permission.findMany();
+		// The matrix covers the code's registry only. Permissions an operator created (or retired) are not ours:
+		// their grants are neither added nor withdrawn here. A soft-deleted registry permission keeps its grants.
+		const registry: ReadonlySet<string> = registryPermissionKeys();
+		const catalog: Permission[] = (await tx.permission.findMany()).filter((permission: Permission): boolean => registry.has(permissionKey(permission)));
+		const catalogIds: ReadonlySet<string> = new Set(catalog.map((permission: Permission): string => permission.id));
 		const rows: RolePermission[] = await tx.rolePermission.findMany({ where: { roleId: { in: roles.map((role: Role): string => role.id) } } });
 		const now: number = nowEpochMs();
 		const missing: Prisma.RolePermissionCreateManyInput[] = [];
@@ -101,7 +112,7 @@ export class RolePermissionMatrixSection implements ReferenceDataSection {
 				}
 			}
 			for (const row of own) {
-				if (!row.isDeleted && !desired.has(row.permissionId)) {
+				if (!row.isDeleted && catalogIds.has(row.permissionId) && !desired.has(row.permissionId)) {
 					toRetire.push(row.id);
 				}
 			}
@@ -159,7 +170,49 @@ export class MerchantCapabilitySection implements ReferenceDataSection {
 	}
 }
 
+/**
+ * The PLATFORM capability definitions, derived from the permission catalog and linked to their permission
+ * (`permission_id`). The API also syncs them at boot; both go through {@link derivePlatformCapabilityRows}.
+ */
+export class PlatformCapabilitySection implements ReferenceDataSection {
+	public readonly name = "platform-capabilities";
+
+	public async sync(tx: Tx): Promise<SectionChange> {
+		const existing = new Map((await tx.capabilityDefinition.findMany()).map((row) => [row.slug, row]));
+		const now: number = nowEpochMs();
+		let created = 0;
+		let updated = 0;
+
+		for (const entry of await derivePlatformCapabilityRows(tx, registryPermissionKeys())) {
+			const row = existing.get(entry.slug);
+			const data = {
+				scope: "PLATFORM",
+				label: entry.label,
+				description: entry.description,
+				groupName: entry.groupName,
+				isSystem: entry.isSystem,
+				permissionId: entry.permissionId,
+			} satisfies Prisma.CapabilityDefinitionUncheckedUpdateInput;
+			if (row === undefined) {
+				await tx.capabilityDefinition.create({ data: { slug: entry.slug, ...data } });
+				created += 1;
+			} else if (
+				row.scope !== data.scope ||
+				row.label !== data.label ||
+				row.description !== data.description ||
+				row.groupName !== data.groupName ||
+				row.isSystem !== data.isSystem ||
+				row.permissionId !== data.permissionId
+			) {
+				await tx.capabilityDefinition.update({ where: { id: row.id }, data: { ...data, updatedAt: now } });
+				updated += 1;
+			}
+		}
+		return { ...NO_CHANGE, created, updated };
+	}
+}
+
 /** Every section, in dependency order (grants need the roles and permissions committed first). The single list the seed and the command share. */
 export function createReferenceDataSections(): readonly ReferenceDataSection[] {
-	return [new PermissionCatalogSection(), new SystemRoleSection(), new RolePermissionMatrixSection(), new MerchantCapabilitySection()];
+	return [new PermissionCatalogSection(), new SystemRoleSection(), new RolePermissionMatrixSection(), new PlatformCapabilitySection(), new MerchantCapabilitySection()];
 }

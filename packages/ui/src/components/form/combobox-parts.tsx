@@ -5,11 +5,13 @@ import { Button } from "@workspace/ui/components/form/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@workspace/ui/components/form/input-group";
 import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
 import { comboboxInputGroupVariants, resolveCollectionItemActiveClasses, resolveCollectionItemDensityClasses } from "@workspace/ui/lib/form/field-variants";
+import { assignRef } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { CheckIcon, ChevronDownIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, PlusIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { useCallback, useMemo } from "react";
 
+import { CollectionEmptyAction, CollectionItemLabel, CollectionLoading, CollectionOverflowPill, useCappedChildren } from "./collection-shared";
 import { comboboxListMaxHeightStyle, extractStringChild, useComboboxContext } from "./combobox-context";
 
 // ── Value ───────────────────────────────────────────────────────────────────
@@ -104,11 +106,7 @@ export const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputPro
 	const setRefs = useCallback(
 		(node: HTMLInputElement | null): void => {
 			context.registerInput(node);
-			if (typeof ref === "function") {
-				ref(node);
-			} else if (ref !== null) {
-				ref.current = node;
-			}
+			assignRef(ref, node);
 		},
 		[context, ref],
 	);
@@ -201,12 +199,7 @@ export interface ComboboxLoadingProps {
 }
 
 export function ComboboxLoading({ label, className }: ComboboxLoadingProps): React.JSX.Element {
-	return (
-		<div data-slot="combobox-loading" role="status" aria-busy="true" className={cn("flex w-full items-center gap-2 px-2 py-2 text-sm text-muted-foreground", className)}>
-			<Loader2Icon className="pointer-events-none size-4 shrink-0 animate-spin" />
-			<span>{label}</span>
-		</div>
-	);
+	return <CollectionLoading slot="combobox-loading" label={label} className={className} />;
 }
 
 // ── Item ────────────────────────────────────────────────────────────────────
@@ -233,14 +226,7 @@ export const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(
 	return (
 		<ComboboxPrimitive.Item ref={ref} data-slot="combobox-item" className={resolveItemClassName} {...props}>
 			<span className="min-w-0 flex-1 truncate">
-				{description !== undefined ? (
-					<span className="flex min-w-0 flex-col">
-						<span className="truncate">{children}</span>
-						<span className="truncate text-xs text-muted-foreground">{description}</span>
-					</span>
-				) : (
-					<span className="block truncate">{children}</span>
-				)}
+				<CollectionItemLabel description={description}>{children}</CollectionItemLabel>
 			</span>
 			<ComboboxPrimitive.ItemIndicator
 				render={<span data-slot="combobox-item-indicator" className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />}>
@@ -291,12 +277,7 @@ export const ComboboxEmpty = React.forwardRef<HTMLDivElement, ComboboxEmptyProps
 			className={cn("hidden w-full flex-col items-center gap-1.5 py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex", className)}
 			{...props}>
 			<span>{text}</span>
-			{hasAction ? (
-				<Button type="button" variant="link" size="sm" data-slot="combobox-empty-action" onClick={onAction} className="h-auto gap-1 p-0 text-xs no-underline hover:underline">
-					<PlusIcon className="pointer-events-none size-3.5" />
-					{actionLabel}
-				</Button>
-			) : null}
+			{hasAction ? <CollectionEmptyAction slot="combobox-empty-action" label={actionLabel} onAction={onAction} /> : null}
 		</ComboboxPrimitive.Empty>
 	);
 });
@@ -330,19 +311,8 @@ export const ComboboxChips = React.forwardRef<HTMLDivElement, ComboboxChipsProps
 	// The Root owns the cap (feature 9); a per-instance prop can override it.
 	const maxChips = maxChipsProp ?? context.maxChips;
 
-	// Feature 9: cap the visible chips. `React.Children.toArray` keeps keys, so
-	// the remaining chips stay selected — only their visuals are hidden. The
-	// overflow count derives from the *same* toArray length so fragments and
-	// keyed children never skew the "+N more" number.
-	const allChildren = useMemo(() => React.Children.toArray(children), [children]);
-	const visibleChildren = useMemo(() => {
-		if (maxChips === undefined || allChildren.length <= maxChips) {
-			return allChildren;
-		}
-		return allChildren.slice(0, maxChips);
-	}, [allChildren, maxChips]);
-
-	const hiddenCount = allChildren.length - visibleChildren.length;
+	// Feature 9: cap the visible chips.
+	const { visibleChildren, hiddenCount } = useCappedChildren(children, maxChips);
 
 	return (
 		<ComboboxPrimitive.Chips
@@ -358,15 +328,7 @@ export const ComboboxChips = React.forwardRef<HTMLDivElement, ComboboxChipsProps
 			)}
 			{...props}>
 			{visibleChildren}
-			{hiddenCount > 0 ? (
-				<span
-					data-slot="combobox-chips-overflow"
-					aria-label={overflowLabel}
-					title={overflowLabel}
-					className="flex h-[calc(--spacing(5.5))] w-fit items-center justify-center rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-muted-foreground">
-					+{hiddenCount}
-				</span>
-			) : null}
+			<CollectionOverflowPill slot="combobox-chips-overflow" label={overflowLabel} hiddenCount={hiddenCount} />
 		</ComboboxPrimitive.Chips>
 	);
 });
@@ -431,11 +393,7 @@ export const ComboboxChipsInput = React.forwardRef<HTMLInputElement, ComboboxPri
 	const setRefs = useCallback(
 		(node: HTMLInputElement | null): void => {
 			context.registerInput(node);
-			if (typeof ref === "function") {
-				ref(node);
-			} else if (ref !== null) {
-				ref.current = node;
-			}
+			assignRef(ref, node);
 		},
 		[context, ref],
 	);

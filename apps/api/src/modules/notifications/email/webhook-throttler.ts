@@ -17,7 +17,7 @@ import type { TypedConfigService } from "../../../config/typed-config.service";
  * throttlers = the guard passes everything).
  */
 export function webhookThrottlerOptionsFactory(config: TypedConfigService): ThrottlerModuleOptions {
-	const limitPerMinute: number = config.webhookRateLimitPerMinute;
+	const limitPerMinute: number = config.email.webhookRateLimitPerMinute;
 	return {
 		errorMessage: "Too many webhook requests — this endpoint is rate-limited per IP (WEBHOOK_RATE_LIMIT_PER_MINUTE). Try again shortly.",
 		getTracker: (req: Record<string, string>): string => throttleTrackerFor(req),

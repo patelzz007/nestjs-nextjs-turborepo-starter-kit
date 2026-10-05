@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PlainMessageResponseSchema } from "../api/message";
 
 /** Digits in a TOTP code from an authenticator app. */
 export const TOTP_CODE_LENGTH = 6;
@@ -103,9 +104,7 @@ export const VerifyBackupCodeLoginSchema = z
 
 export type VerifyBackupCodeLoginInput = z.output<typeof VerifyBackupCodeLoginSchema>;
 
-export const TwoFactorMessageResponseSchema = z.object({
-	message: z.string(),
-});
+export const TwoFactorMessageResponseSchema = PlainMessageResponseSchema;
 
 export type TwoFactorMessageResponse = z.output<typeof TwoFactorMessageResponseSchema>;
 

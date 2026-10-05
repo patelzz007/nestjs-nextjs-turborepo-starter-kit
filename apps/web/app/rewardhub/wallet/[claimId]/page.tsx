@@ -1,7 +1,7 @@
 import { FeatureUnavailableNotice } from "@/components/auth/access-fallback";
 import { AccessGate } from "@/components/auth/access-gate";
 import { ClaimQrView } from "@/components/rewardhub/claims/qr-view";
-import { settleServerQuery } from "@/lib/api/server-query-outcome";
+import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { guardWebPage } from "@/lib/auth/page-guard";
 import { loginPath, walletClaimPath } from "@/lib/routes";
 import { createWebServerCaller } from "@/lib/web-server-api";

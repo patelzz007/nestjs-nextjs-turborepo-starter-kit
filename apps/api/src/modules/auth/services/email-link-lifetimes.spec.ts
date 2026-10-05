@@ -72,7 +72,7 @@ describe("email-link lifetimes come from the shared constants", () => {
 
 		const template = z.instanceof(AdminAlertEmailTemplate).parse(sent.at(0));
 		const link = new URL(z.string().parse(template.props.action?.url));
-		expect(link.origin).toBe(new URL(config.adminAppUrl).origin);
+		expect(link.origin).toBe(new URL(config.clientApps.adminUrl).origin);
 		expect(`${link.pathname}${link.search}`).toBe(APP_LINKS.admin.mfaRecoveryPendingQueue);
 		expect(link.searchParams.get("filter[status]")).toBe("PENDING");
 	});

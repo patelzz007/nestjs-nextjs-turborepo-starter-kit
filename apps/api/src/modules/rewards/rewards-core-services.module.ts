@@ -16,7 +16,7 @@ import { RewardsPersistenceModule } from "./rewards-persistence.module";
 /** The reward code HMAC hasher, built once from the validated `REWARD_CODE_HASH_KEYS` key ring. */
 const REWARD_CODE_HASHER_PROVIDER: Provider = {
 	provide: RewardCodeHasher,
-	useFactory: (config: TypedConfigService): RewardCodeHasher => new RewardCodeHasher(config.rewardCodeHashKeys),
+	useFactory: (config: TypedConfigService): RewardCodeHasher => new RewardCodeHasher(config.encryption.rewardCodeHashKeys),
 	inject: [TypedConfigService],
 };
 

@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma, RefreshToken } from "@prisma/client";
 
-import { epochMs, nowEpochMs, type EpochMs, type PaginationInput } from "@workspace/shared";
+import { epochMs, nowEpochMs, type EpochMs } from "@workspace/shared";
 
-import { BaseRepository } from "../../../platform/persistence/base.repository";
-import type { ListOrder } from "../../../platform/persistence/list-query/list-order";
-import type { EmptyMutationInput } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { REFRESH_SUPERSEDED_GRACE_MS } from "../constants/refresh-token-rotation.constants";
 
@@ -16,38 +13,6 @@ export interface RefreshTokenSession {
 	readonly createdAt: EpochMs;
 	readonly expiresAt: EpochMs;
 }
-
-function toDomain(row: RefreshToken): RefreshToken {
-	return row;
-}
-
-function toCreateInput(_input: EmptyMutationInput): Prisma.RefreshTokenCreateInput {
-	throw new Error("RefreshTokenRepository.create is not supported");
-}
-
-function toUpdateInput(_input: EmptyMutationInput): Prisma.RefreshTokenUpdateManyMutationInput {
-	throw new Error("RefreshTokenRepository.update via ports is not supported");
-}
-
-const RefreshTokenRepositoryPorts = {
-	toDomain,
-	toCreateInput,
-	toUpdateInput,
-	buildListWhere: (_query: PaginationInput): Prisma.RefreshTokenWhereInput => ({
-		isDeleted: false,
-		expiresAt: { gte: Date.now() },
-	}),
-	// Internal read (no HTTP list query): newest first, offset pages only.
-	buildListOrder: (): ListOrder<Prisma.RefreshTokenOrderByWithRelationInput> => ({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], isDefault: true }),
-	andWhere: (left: Prisma.RefreshTokenWhereInput, right: Prisma.RefreshTokenWhereInput): Prisma.RefreshTokenWhereInput => ({ AND: [left, right] }),
-	buildFindByIdWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
-	buildLiveWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
-	buildUniqueWhere: (id: string): Prisma.RefreshTokenWhereUniqueInput => ({ id }),
-	buildUpdateWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
-	stampUpdate: (data: Prisma.RefreshTokenUpdateManyMutationInput): Prisma.RefreshTokenUpdateManyMutationInput => ({ ...data, updatedAt: nowEpochMs() }),
-	stampSoftDelete: (): Prisma.RefreshTokenUpdateManyMutationInput => ({ isDeleted: true, deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.RefreshTokenUpdateManyMutationInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
-};
 
 /**
  * Outcome of {@link RefreshTokenRepository.rotateTokenIfHashMatches}:
@@ -62,21 +27,8 @@ const RefreshTokenRepositoryPorts = {
 export type RotateTokenResult = "rotated" | "superseded" | "reused" | "missing";
 
 @Injectable()
-export class RefreshTokenRepository extends BaseRepository<
-	RefreshToken,
-	EmptyMutationInput,
-	EmptyMutationInput,
-	PaginationInput,
-	RefreshToken,
-	Prisma.RefreshTokenWhereInput,
-	Prisma.RefreshTokenOrderByWithRelationInput,
-	Prisma.RefreshTokenCreateInput,
-	Prisma.RefreshTokenUpdateManyMutationInput,
-	Prisma.RefreshTokenWhereUniqueInput
-> {
-	public constructor(prisma: PrismaService) {
-		super(prisma, RefreshTokenRepositoryPorts, (db: Prisma.TransactionClient) => db.refreshToken, { softDelete: true });
-	}
+export class RefreshTokenRepository {
+	public constructor(private readonly prisma: PrismaService) {}
 
 	public async findByIdIncludingDeleted(id: string): Promise<RefreshToken | null> {
 		return this.prisma.refreshToken.findUnique({ where: { id } });

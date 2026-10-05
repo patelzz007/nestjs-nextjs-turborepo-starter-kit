@@ -56,7 +56,7 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 		private readonly auditTrail: AuditTrailService,
 		config: TypedConfigService,
 	) {
-		this.exposeInternalErrors = config.isDevelopment;
+		this.exposeInternalErrors = config.runtime.isDevelopment;
 	}
 
 	/**

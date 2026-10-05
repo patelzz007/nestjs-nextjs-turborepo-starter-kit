@@ -40,7 +40,7 @@ const LEGACY_PILOT_KEK_VERSION = 1;
  */
 const LEGACY_KEK_MATERIAL: Readonly<Record<TenantKmsProvider, (config: TypedConfigService) => Buffer | null>> = {
 	local: (config: TypedConfigService): Buffer | null =>
-		config.tenantEncryptionMasterKeyVersion === LEGACY_PILOT_KEK_VERSION
+		config.encryption.tenantMasterKeyVersion === LEGACY_PILOT_KEK_VERSION
 			? config.tenantEncryptionMasterKey
 			: (config.tenantEncryptionPreviousMasterKeys.get(LEGACY_PILOT_KEK_VERSION) ?? null),
 };
@@ -52,9 +52,9 @@ const LEGACY_KEK_MATERIAL: Readonly<Record<TenantKmsProvider, (config: TypedConf
  * unchanged. Returns false when the provider cannot reproduce a legacy row (nothing is written).
  */
 async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: TypedConfigService, key: TenantEncryptionKey, actorUserId: string): Promise<boolean> {
-	const material: Buffer | null = LEGACY_KEK_MATERIAL[config.tenantKmsProvider](config);
+	const material: Buffer | null = LEGACY_KEK_MATERIAL[config.encryption.tenantKmsProvider](config);
 	if (material === null) {
-		seedLog(`⚠️  Tenant key ${key.id} not rotated: the ${config.tenantKmsProvider} provider holds no legacy KEK material`);
+		seedLog(`⚠️  Tenant key ${key.id} not rotated: the ${config.encryption.tenantKmsProvider} provider holds no legacy KEK material`);
 		return false;
 	}
 	const dataKey: Buffer = await kms.unwrapDataKey(key);

@@ -4,7 +4,7 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import type { Envelope, RewardResponse } from "@workspace/shared";
 import { notFound } from "next/navigation";
 
-import { settleServerQuery } from "@/lib/api/server-query-outcome";
+import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
 import { createWebServerCaller } from "@/lib/web-server-api";
 
 /**

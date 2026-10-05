@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { PolicyConditionsSchema, type PolicyConditions } from "@workspace/shared";
+import { PolicyConditionsSchema, type PolicyConditions, DAY_MS } from "@workspace/shared";
 
 import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -7,7 +7,6 @@ import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
 import { buildProductSeedId } from "./products";
 import { REWARD_SEED_IDS } from "./rewards";
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const ACL_NAMESPACE = "kernel-seed-acl";
 const POLICY_NAMESPACE = "kernel-seed-policy";
 /** The seeded product the location-scoped ACL targets (a `PRODUCT` / `UPDATE` check is what `FileAuthorizationService` runs for product images). */
@@ -69,8 +68,8 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 	};
 	const sameOrganizationInventory: PolicyConditions = { condition: { field: "inventory.organizationId", operator: "equals", valueRef: "$user.organizationId" } };
 	const paymentCap = (limit: number): PolicyConditions => ({ condition: { field: "payment.amount", operator: "less_than_or_equals", value: limit } });
-	const publishedAt = now - 30 * MS_PER_DAY;
-	const supersededPublishedAt = now - 90 * MS_PER_DAY;
+	const publishedAt = now - 30 * DAY_MS;
+	const supersededPublishedAt = now - 90 * DAY_MS;
 
 	const acls: WithId<Prisma.ResourceAclUncheckedCreateInput>[] = [
 		acl("admin-delete-users", {
@@ -116,7 +115,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			effect: "DENY",
 			reason: "Manager role explicitly denied from updating payments",
 			assignedBy: actors.adminUserId,
-			expiresAt: now + 365 * MS_PER_DAY,
+			expiresAt: now + 365 * DAY_MS,
 		}),
 		{
 			id: KERNEL_SEED_IDS.productScopedAcl,
@@ -132,7 +131,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			conditions: conditions(archivedProduct),
 			reason: "The Bukit Beruang cashier may not edit this product (or its images) once it is archived",
 			assignedBy: actors.adminUserId,
-			expiresAt: now + 180 * MS_PER_DAY,
+			expiresAt: now + 180 * DAY_MS,
 		},
 		{
 			id: KERNEL_SEED_IDS.retiredAcl,
@@ -147,7 +146,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			reason: "Retired exception: payment read access for the audit window that has ended",
 			assignedBy: actors.adminUserId,
 			isDeleted: true,
-			deletedAt: now - 7 * MS_PER_DAY,
+			deletedAt: now - 7 * DAY_MS,
 		},
 	];
 
@@ -231,7 +230,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			publishedAt: supersededPublishedAt,
 			publishedBy: actors.adminUserId,
 			isDeleted: true,
-			deletedAt: now - 14 * MS_PER_DAY,
+			deletedAt: now - 14 * DAY_MS,
 		},
 	];
 

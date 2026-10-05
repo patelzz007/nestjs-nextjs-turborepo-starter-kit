@@ -11,11 +11,11 @@ import { z } from "zod";
  */
 
 /** SASL mechanisms the Confluent client supports with a username/password. */
-export const KAFKA_SASL_MECHANISMS: ["plain", "scram-sha-256", "scram-sha-512"] = ["plain", "scram-sha-256", "scram-sha-512"];
-
-export const KafkaSaslMechanismSchema = z.enum(KAFKA_SASL_MECHANISMS);
+export const KafkaSaslMechanismSchema = z.enum(["plain", "scram-sha-256", "scram-sha-512"]);
 
 export type KafkaSaslMechanism = z.output<typeof KafkaSaslMechanismSchema>;
+
+export const KAFKA_SASL_MECHANISMS: readonly KafkaSaslMechanism[] = KafkaSaslMechanismSchema.options;
 
 /** SASL username/password credentials. */
 export interface KafkaSaslCredentials {

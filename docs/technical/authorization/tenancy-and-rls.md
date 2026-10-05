@@ -265,10 +265,11 @@ together — `db:reset` already resets and migrates.
 
 ## 6. Migrations added by the authorization work
 
-| Migration | What it adds |
-|---|---|
-| (in the current `…_init`) | `user_permissions.effect` (`AclEffect`, default `ALLOW`) |
-| `20261001090000_stores_and_store_scope` | `StoreStatus` enum, `STORE` value on `PermissionResource` and `PermissionScope`, tables `stores` and `store_memberships` with indexes and foreign keys |
+The authorization tables (`user_permissions.effect`, `stores`, `store_memberships`, the `STORE` value
+of `PermissionResource` / `PermissionScope`, `resource_acls`, `policy_definitions`,
+`authorization_audits`) are part of the single baseline migration `20261004152638_init`
+(`apps/api/prisma/migrations-baseline.json` records why the history was regenerated). New changes are
+generated forward from `schema.prisma` ([Database](../database.md)).
 
 ---
 
@@ -284,3 +285,64 @@ together — `db:reset` already resets and migrates.
 > certainly need a named system operation (`runWithSystemRlsContext` /
 > `TenantTransactionService.withSystemOperation`) instead — that keeps the bypass explicit,
 > allowlisted and auditable.
+
+---
+
+## 8. Policy profiles and SQL helpers
+
+Every Prisma table appears in exactly one **profile** of `RLS_MANIFEST_PROFILES`
+(`apps/api/prisma/rls/manifest-index.ts`). A profile names the *shape* of the data, so a new table
+copies a known policy instead of inventing one; `db:check-rls-manifest` fails on a table that is in
+no profile.
+
+| Profile | Use when the row… | Policy primitive |
+|---|---|---|
+| `ownership` | belongs to one user | `app_owns(user_id)` |
+| `user_identity` | is the `users` row itself | `app_owns(id)` — the user's own row |
+| `rbac_catalog` | is the global role / permission / policy catalogue | open `SELECT`; writes through system operations |
+| `organization_tenant` | belongs to an organization, no branch scope | `app_tenant_organization_member_of(organization_id)` |
+| `organization_location` | belongs to an organization **and** a location (terminals, API keys) | `app_tenant_row_org_location_access(organization_id, location_id)` |
+| `reward_user` | is a customer's claim, sale, referral or notification | `app_owns(user_id)` for the customer, plus read policies for the reward's organization |
+| `bypass_only` | is written by jobs or platform audit (outbox, inbox, `audit_logs`, `authorization_audits`, …) | `app_rls_bypass()` only |
+| `geo_reference`, `product_catalog`, `url_analytics`, `file_derived`, `authorization_simulation` | special-purpose tables | see the policies in `prisma/rls.sql` |
+
+SQL helpers (all `STABLE`, granted to `app_runtime`; each returns `true` for a legitimate bypass and
+`false` — never "allow all" — when the session variables are missing):
+
+| Helper | File | True when |
+|---|---|---|
+| `app_rls_bypass()` | `00-app-helpers.sql` | `app.rls_bypass` is set **and** an allow-listed `app.system_operation` is named |
+| `app_current_user_id()`, `app_current_organization_id()` | `00-app-helpers.sql` | return the session values, `NULL` when unset |
+| `app_owns(owner_id)` | `00-app-helpers.sql` | the row's owner is the session user |
+| `app_organization_member_of(org)` | `01-acl-location-access.sql` | the user has an ACTIVE membership in `org`, whatever the session organization (ReBAC) |
+| `app_tenant_organization_member_of(org)` | `01-acl-location-access.sql` | the session organization **is** `org` and the user is an ACTIVE member — prefer this for new tables |
+| `app_tenant_org_member(org)` | `01-acl-location-access.sql` | either of the two above (older reward tables) |
+| `app_tenant_has_location_access(loc)` | `01-acl-location-access.sql` | the location belongs to the session organization and the membership has an `ALL_LOCATIONS` scope row or a `SELECTED` row for it |
+| `app_tenant_row_org_location_access(org, loc)` | `01-acl-location-access.sql` | the row's organization is the session organization and the user has scope for the row's location |
+| `app_api_key_org_access(org)`, `app_api_key_store_access(org, store)`, `app_api_key_reward_access(reward)` | `40-api-key-principal.sql` | the [API-key principal](#41-the-merchant-api-key-principal) owns the row |
+
+Membership helpers that read `organization_memberships` are `SECURITY DEFINER` with a pinned
+`search_path`, because a plain function would recurse through that table's own policies. Keep
+`SECURITY DEFINER` to such lookups.
+
+The standard location-scoped policy, idempotent so `db:apply-security` can re-run it:
+
+```sql
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS orders_tenant_acl ON public.orders;
+CREATE POLICY orders_tenant_acl ON public.orders
+  FOR ALL TO app_runtime
+  USING (app_tenant_row_org_location_access(organization_id, location_id))
+  WITH CHECK (app_tenant_row_org_location_access(organization_id, location_id));
+```
+
+- Name policies `<table>_<purpose>` so they can be found and dropped idempotently.
+- Use `FOR ALL` only when reads and writes follow the same rule; split `SELECT` / `INSERT` /
+  `UPDATE` otherwise (e.g. public catalogue rows).
+- A new SQL file is `prisma/rls/NN-<name>.sql`, registered in `RLS_APPLY_ORDER`
+  (`apps/api/scripts/rls-apply-plan.ts`); the plan rejects unregistered files and helpers used
+  before the file that defines them. Never put RLS into `migrations/*/migration.sql`.
+- Folder-level reference: `apps/api/prisma/rls/README.md`.
+

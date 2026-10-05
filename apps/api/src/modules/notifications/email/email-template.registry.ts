@@ -1,4 +1,26 @@
-import { EmailPreviewPropValueSchema, EmailTemplateMetaSchema, EmailPreviewSchema, type EmailPreview, type EmailTemplateKey, type EmailTemplateMeta } from "@workspace/shared";
+import {
+	AccountLockedEmailPropsSchema,
+	AdminAlertEmailPropsSchema,
+	ApiKeyCreatedEmailPropsSchema,
+	EmailPreviewPropValueSchema,
+	EmailPreviewSchema,
+	EmailTemplateMetaSchema,
+	LoginVerificationEmailPropsSchema,
+	MerchantInviteEmailPropsSchema,
+	PasswordChangedEmailPropsSchema,
+	PasswordResetEmailPropsSchema,
+	ReferrerRewardCreditedEmailPropsSchema,
+	RewardClaimOtpEmailPropsSchema,
+	SecurityAlertEmailPropsSchema,
+	TeamMemberInviteEmailPropsSchema,
+	TwoFactorStatusEmailPropsSchema,
+	VerificationEmailPropsSchema,
+	WelcomeEmailPropsSchema,
+	type EmailJobPropValue,
+	type EmailPreview,
+	type EmailTemplateKey,
+	type EmailTemplateMeta,
+} from "@workspace/shared";
 
 import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template";
 import type { EmailRenderContext } from "./base/email-render-context";
@@ -18,7 +40,10 @@ import { TwoFactorEnabledEmailTemplate } from "./templates/two-factor-enabled-em
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
 import { WelcomeEmailTemplate } from "./templates/welcome-email.template";
 
-/** Static metadata + a sample-props factory for one template. */
+/** A queued job's JSON-safe template props (see `serializeEmailTemplateProps`). */
+export type EmailJobProps = Record<string, EmailJobPropValue>;
+
+/** Static metadata, a sample-props factory and the queued-job rebuild for one template. */
 export interface EmailTemplateEntry {
 	/** Registry key — must match `EmailTemplateKeySchema`. */
 	readonly key: EmailTemplateKey;
@@ -30,126 +55,147 @@ export interface EmailTemplateEntry {
 	readonly sampleTo: string;
 	/** Builds a template instance with representative props. */
 	readonly build: () => BaseEmailTemplate<BaseEmailProps>;
+	/** Rebuilds the template from a queued job payload, re-validating the props through the template's schema. */
+	readonly fromJobData: (props: EmailJobProps) => BaseEmailTemplate<BaseEmailProps>;
 }
 
-/** Helper: register a template in one line instead of five. */
-function registerTemplate(key: EmailTemplateKey, label: string, description: string, sampleTo: string, build: () => BaseEmailTemplate<BaseEmailProps>): EmailTemplateEntry {
-	return { key, label, description, sampleTo, build };
+/** A concrete template class: constructible from its props, with static sample props. */
+interface EmailTemplateClass<TProps extends BaseEmailProps> {
+	new (props: TProps): BaseEmailTemplate<TProps>;
+	readonly sampleProps: TProps;
+}
+
+/** The zod props schema of a template, as far as rebuilding a queued job needs it. */
+interface EmailTemplatePropsParser<TProps extends BaseEmailProps> {
+	parse(props: EmailJobProps): TProps;
+}
+
+/** Register a template: its metadata, its class and the schema its queued props are re-validated with. */
+function registerTemplate<TProps extends BaseEmailProps>(
+	key: EmailTemplateKey,
+	label: string,
+	description: string,
+	Template: EmailTemplateClass<TProps>,
+	propsSchema: EmailTemplatePropsParser<TProps>,
+): EmailTemplateEntry {
+	return {
+		key,
+		label,
+		description,
+		sampleTo: Template.sampleProps.to,
+		build: (): BaseEmailTemplate<BaseEmailProps> => new Template(Template.sampleProps),
+		fromJobData: (props: EmailJobProps): BaseEmailTemplate<BaseEmailProps> => new Template(propsSchema.parse(props)),
+	};
 }
 
 /**
- * Single source of truth for "which templates exist". The registry is keyed
- * by the shared `EmailTemplateKeySchema` — the completeness test in
+ * Single source of truth for "which templates exist" — drives the admin
+ * preview AND the rebuild of queued email jobs. The registry is keyed by the
+ * shared `EmailTemplateKeySchema` — the completeness test in
  * `email-template.registry.spec.ts` fails if a key is added to the schema
  * without a registry entry (and vice versa).
  *
- * To add a new template: add the class import above, then add one line below.
+ * To add a new template: add the class import above, then add one entry below.
  */
 export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTemplateEntry>> = {
 	verification: registerTemplate(
 		"verification",
 		"Email Verification",
 		"Sent after signup to prove the user owns the inbox.",
-		VerificationEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new VerificationEmailTemplate(VerificationEmailTemplate.sampleProps),
+		VerificationEmailTemplate,
+		VerificationEmailPropsSchema,
 	),
 	"password-reset": registerTemplate(
 		"password-reset",
 		"Password Reset",
 		"Sent when a user requests a password reset.",
-		PasswordResetEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new PasswordResetEmailTemplate(PasswordResetEmailTemplate.sampleProps),
+		PasswordResetEmailTemplate,
+		PasswordResetEmailPropsSchema,
 	),
 	"password-changed": registerTemplate(
 		"password-changed",
 		"Password Changed",
 		"Sent after an authenticated password change.",
-		PasswordChangedEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new PasswordChangedEmailTemplate(PasswordChangedEmailTemplate.sampleProps),
+		PasswordChangedEmailTemplate,
+		PasswordChangedEmailPropsSchema,
 	),
 	"account-locked": registerTemplate(
 		"account-locked",
 		"Account Locked",
 		"Sent after brute-force lockout with the remaining duration.",
-		AccountLockedEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new AccountLockedEmailTemplate(AccountLockedEmailTemplate.sampleProps),
+		AccountLockedEmailTemplate,
+		AccountLockedEmailPropsSchema,
 	),
-	welcome: registerTemplate(
-		"welcome",
-		"Welcome",
-		"One-time onboarding email after email verification.",
-		WelcomeEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new WelcomeEmailTemplate(WelcomeEmailTemplate.sampleProps),
-	),
+	welcome: registerTemplate("welcome", "Welcome", "One-time onboarding email after email verification.", WelcomeEmailTemplate, WelcomeEmailPropsSchema),
 	"security-alert": registerTemplate(
 		"security-alert",
 		"Security Alert",
 		"New-device / new-location sign-in alert.",
-		SecurityAlertEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new SecurityAlertEmailTemplate(SecurityAlertEmailTemplate.sampleProps),
+		SecurityAlertEmailTemplate,
+		SecurityAlertEmailPropsSchema,
 	),
 	"two-factor-enabled": registerTemplate(
 		"two-factor-enabled",
 		"2FA Enabled",
 		"Sent when a user enables authenticator-based 2FA.",
-		TwoFactorEnabledEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new TwoFactorEnabledEmailTemplate(TwoFactorEnabledEmailTemplate.sampleProps),
+		TwoFactorEnabledEmailTemplate,
+		TwoFactorStatusEmailPropsSchema,
 	),
 	"two-factor-disabled": registerTemplate(
 		"two-factor-disabled",
 		"2FA Disabled",
 		"Sent when a user disables authenticator-based 2FA.",
-		TwoFactorDisabledEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new TwoFactorDisabledEmailTemplate(TwoFactorDisabledEmailTemplate.sampleProps),
+		TwoFactorDisabledEmailTemplate,
+		TwoFactorStatusEmailPropsSchema,
 	),
 	"login-verification": registerTemplate(
 		"login-verification",
 		"Login Verification",
 		"OTP sent when signing in from an unrecognized device.",
-		LoginVerificationEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new LoginVerificationEmailTemplate(LoginVerificationEmailTemplate.sampleProps),
+		LoginVerificationEmailTemplate,
+		LoginVerificationEmailPropsSchema,
 	),
 	"admin-alert": registerTemplate(
 		"admin-alert",
 		"Admin Alert",
 		"Ops alert for admins (webhook failure, quota breach, …).",
-		AdminAlertEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new AdminAlertEmailTemplate(AdminAlertEmailTemplate.sampleProps),
+		AdminAlertEmailTemplate,
+		AdminAlertEmailPropsSchema,
 	),
 	"api-key-created": registerTemplate(
 		"api-key-created",
 		"API Key Created",
 		"Confirms a new API key was created (never contains the secret).",
-		ApiKeyCreatedEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new ApiKeyCreatedEmailTemplate(ApiKeyCreatedEmailTemplate.sampleProps),
+		ApiKeyCreatedEmailTemplate,
+		ApiKeyCreatedEmailPropsSchema,
 	),
 	"reward-claim-otp": registerTemplate(
 		"reward-claim-otp",
 		"Reward Claim OTP",
 		"6-digit claim code sent by email when SMS is unavailable.",
-		RewardClaimOtpEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new RewardClaimOtpEmailTemplate(RewardClaimOtpEmailTemplate.sampleProps),
+		RewardClaimOtpEmailTemplate,
+		RewardClaimOtpEmailPropsSchema,
 	),
 	"referrer-reward-credited": registerTemplate(
 		"referrer-reward-credited",
 		"Referrer Reward Credited",
 		"Sent when a referee redeems and the referrer earns R′.",
-		ReferrerRewardCreditedEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new ReferrerRewardCreditedEmailTemplate(ReferrerRewardCreditedEmailTemplate.sampleProps),
+		ReferrerRewardCreditedEmailTemplate,
+		ReferrerRewardCreditedEmailPropsSchema,
 	),
 	"merchant-invite": registerTemplate(
 		"merchant-invite",
 		"Merchant Invite",
 		"Onboarding invite sent when an admin creates a merchant invite.",
-		MerchantInviteEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new MerchantInviteEmailTemplate(MerchantInviteEmailTemplate.sampleProps),
+		MerchantInviteEmailTemplate,
+		MerchantInviteEmailPropsSchema,
 	),
 	"team-member-invite": registerTemplate(
 		"team-member-invite",
 		"Team Member Invite",
 		"Invitation sent when an organization owner or admin invites a colleague.",
-		TeamMemberInviteEmailTemplate.sampleProps.to,
-		(): BaseEmailTemplate<BaseEmailProps> => new TeamMemberInviteEmailTemplate(TeamMemberInviteEmailTemplate.sampleProps),
+		TeamMemberInviteEmailTemplate,
+		TeamMemberInviteEmailPropsSchema,
 	),
 };
 

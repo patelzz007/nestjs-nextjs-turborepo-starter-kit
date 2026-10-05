@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { strongPassword } from "./password";
+import { PlainMessageResponseSchema } from "../api/message";
 
 export const ChangePasswordSchema = z
 	.object({
@@ -20,8 +21,6 @@ export const ChangePasswordSchema = z
 
 export type ChangePasswordInput = z.output<typeof ChangePasswordSchema>;
 
-export const ChangePasswordResponseSchema = z.object({
-	message: z.string(),
-});
+export const ChangePasswordResponseSchema = PlainMessageResponseSchema;
 
 export type ChangePasswordResponse = z.output<typeof ChangePasswordResponseSchema>;
