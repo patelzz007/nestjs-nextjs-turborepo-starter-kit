@@ -7,7 +7,9 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { Inter, Playfair_Display, Rubik } from "next/font/google";
+import { inter } from "@workspace/ui/fonts/inter";
+import { playfairDisplayItalic } from "@workspace/ui/fonts/playfair-display-italic";
+import { rubik } from "@workspace/ui/fonts/rubik";
 
 import { WebAuthorizationProvider } from "@/components/auth/web-authorization-provider";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
@@ -21,23 +23,6 @@ import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-pr
 import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
 import { Toaster } from "@workspace/ui/components/toast";
 import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
-
-const inter = Inter({
-	subsets: ["latin"],
-	variable: "--font-sans",
-});
-
-const playfair = Playfair_Display({
-	subsets: ["latin"],
-	variable: "--font-heading",
-	style: ["italic"],
-});
-
-const rubik = Rubik({
-	subsets: ["latin"],
-	weight: ["400", "500"],
-	variable: "--font-sidebar",
-});
 
 export const metadata: Metadata = {
 	title: "Reward Hub",
@@ -58,7 +43,9 @@ export default async function RootLayout({
 	const initialSessionPermissions = await loadWebInitialSessionPermissions(sessionActive);
 
 	return (
-		<AppDocumentShell htmlClassName={cn("font-sans antialiased", inter.variable, playfair.variable, bricolageGrotesque.variable, rubik.variable)} bodyClassName="web-app">
+		<AppDocumentShell
+			htmlClassName={cn("font-sans antialiased", inter.variable, playfairDisplayItalic.variable, bricolageGrotesque.variable, rubik.variable)}
+			bodyClassName="web-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
 				<QueryProvider>

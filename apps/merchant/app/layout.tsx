@@ -10,27 +10,12 @@ import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-pr
 import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
 import { Toaster } from "@workspace/ui/components/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { Fira_Sans, JetBrains_Mono, Rubik } from "next/font/google";
+import { firaSans } from "@workspace/ui/fonts/fira-sans";
+import { jetbrainsMono } from "@workspace/ui/fonts/jetbrains-mono";
+import { rubik } from "@workspace/ui/fonts/rubik";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import * as React from "react";
-
-const firaSans = Fira_Sans({
-	subsets: ["latin"],
-	weight: ["400", "500", "600", "700"],
-	variable: "--font-sans",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-	subsets: ["latin"],
-	variable: "--font-mono",
-});
-
-const rubik = Rubik({
-	subsets: ["latin"],
-	weight: ["400", "500"],
-	variable: "--font-sidebar",
-});
 
 export const metadata: Metadata = {
 	title: "Merchant Portal",

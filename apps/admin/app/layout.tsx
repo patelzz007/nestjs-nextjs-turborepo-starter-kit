@@ -7,31 +7,16 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { Geist, Geist_Mono, JetBrains_Mono, Rubik } from "next/font/google";
+import { geist } from "@workspace/ui/fonts/geist";
+import { geistMono } from "@workspace/ui/fonts/geist-mono";
+import { jetbrainsMonoHeading } from "@workspace/ui/fonts/jetbrains-mono-heading";
+import { rubik } from "@workspace/ui/fonts/rubik";
 
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
 import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
-
-const jetbrainsMonoHeading = JetBrains_Mono({
-	subsets: ["latin"],
-	variable: "--font-heading",
-});
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
-
-const fontMono = Geist_Mono({
-	subsets: ["latin"],
-	variable: "--font-mono",
-});
-
-const rubik = Rubik({
-	subsets: ["latin"],
-	weight: ["400", "500"],
-	variable: "--font-sidebar",
-});
 
 export const metadata: Metadata = {
 	title: "Reward Hub Admin",
@@ -47,7 +32,7 @@ export default function RootLayout({
 }>): React.JSX.Element {
 	return (
 		<AppDocumentShell
-			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable, rubik.variable)}
+			htmlClassName={cn("antialiased", geistMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable, rubik.variable)}
 			bodyClassName="admin-app">
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />

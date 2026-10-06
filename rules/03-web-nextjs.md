@@ -313,11 +313,18 @@ import Image from 'next/image';
 // shift as the font swaps in
 <link href="https://fonts.googleapis.com/css?family=Inter" rel="stylesheet" />
 
-// ✅ DO — next/font, which self-hosts and inlines font loading with no
-// layout shift and no external request at runtime
-import { Inter } from 'next/font/google';
-const inter = Inter({ subsets: ['latin'] });
+// ❌ DON'T — next/font/google either: it downloads the font from Google at
+// BUILD time, so a Google outage or an unexpected response from Google's CDN
+// breaks `next build` (this has failed CI before)
+
+// ✅ DO — import a shared face from @workspace/ui/fonts/*. Each module wraps
+// next/font/local around a pinned @fontsource(-variable) package, so the build
+// needs no network, and the font is still self-hosted with no layout shift
+import { inter } from '@workspace/ui/fonts/inter';
+<html className={inter.variable}>
 ```
+
+To add a new face, add the `@fontsource-variable/<name>` package (or `@fontsource/<name>` when no variable cut exists) to `packages/ui`, then create `packages/ui/src/fonts/<name>.ts` following the existing modules there. `next/font` needs literal options, so a face used under two CSS variables gets one module per variable (see `jetbrains-mono.ts` / `jetbrains-mono-heading.ts`).
 
 ## Middleware
 
