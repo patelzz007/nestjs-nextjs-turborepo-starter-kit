@@ -164,6 +164,9 @@ CREATE TYPE "AuditOutcome" AS ENUM ('SUCCEEDED', 'FAILED');
 CREATE TYPE "AuditAuthMethod" AS ENUM ('BEARER_TOKEN', 'SESSION_COOKIE', 'REFRESH_COOKIE', 'API_KEY');
 
 -- CreateEnum
+CREATE TYPE "IpAddressScope" AS ENUM ('PUBLIC', 'PRIVATE', 'LOOPBACK', 'LINK_LOCAL', 'SHARED', 'DOCUMENTATION', 'MULTICAST', 'RESERVED');
+
+-- CreateEnum
 CREATE TYPE "IdempotencyRecordStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED');
 
 -- CreateTable
@@ -1617,6 +1620,18 @@ CREATE TABLE "audit_logs" (
     "location_id" VARCHAR(64),
     "ip_address" VARCHAR(64),
     "user_agent" VARCHAR(512),
+    "browser_name" VARCHAR(64),
+    "browser_version" VARCHAR(32),
+    "os_name" VARCHAR(64),
+    "os_version" VARCHAR(32),
+    "device_type" "DeviceType",
+    "device_model" VARCHAR(64),
+    "ip_version" SMALLINT,
+    "ip_scope" "IpAddressScope",
+    "geo_country" VARCHAR(2),
+    "geo_region" VARCHAR(64),
+    "geo_city" VARCHAR(128),
+    "geo_time_zone" VARCHAR(64),
     "client_type" VARCHAR(32),
     "http_version" VARCHAR(8),
     "host" VARCHAR(255),
@@ -2383,7 +2398,25 @@ CREATE INDEX "audit_logs_impersonator_user_id_occurred_at_idx" ON "audit_logs"("
 CREATE INDEX "audit_logs_outcome_occurred_at_idx" ON "audit_logs"("outcome", "occurred_at");
 
 -- CreateIndex
+CREATE INDEX "audit_logs_device_type_occurred_at_idx" ON "audit_logs"("device_type", "occurred_at");
+
+-- CreateIndex
 CREATE INDEX "audit_logs_correlation_id_idx" ON "audit_logs"("correlation_id");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_path_trgm_idx" ON "audit_logs" USING GIN ("path" gin_trgm_ops);
+
+-- CreateIndex
+CREATE INDEX "audit_logs_endpoint_trgm_idx" ON "audit_logs" USING GIN ("endpoint" gin_trgm_ops);
+
+-- CreateIndex
+CREATE INDEX "audit_logs_error_code_trgm_idx" ON "audit_logs" USING GIN ("error_code" gin_trgm_ops);
+
+-- CreateIndex
+CREATE INDEX "audit_logs_ip_address_trgm_idx" ON "audit_logs" USING GIN ("ip_address" gin_trgm_ops);
+
+-- CreateIndex
+CREATE INDEX "audit_logs_user_agent_trgm_idx" ON "audit_logs" USING GIN ("user_agent" gin_trgm_ops);
 
 -- CreateIndex
 CREATE INDEX "audit_logs_occurred_at_idx" ON "audit_logs"("occurred_at");
