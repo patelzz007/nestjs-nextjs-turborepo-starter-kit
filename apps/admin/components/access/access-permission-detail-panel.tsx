@@ -8,10 +8,10 @@ import {
 	permissionActionSummary,
 } from "@/lib/permissions/permission-action-style";
 import { PermissionActionSchema, type PermissionAction } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Separator } from "@workspace/ui/components/display/separator";
-import { ScrollArea } from "@workspace/ui/components/navigation/scroll-area";
+import { Badge, type BadgeVariant } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Separator } from "@workspace/ui/components/separator";
+import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { FolderTree, KeyRound, Layers3, ShieldCheck } from "lucide-react";
 import * as React from "react";
@@ -63,7 +63,7 @@ const DetailField = React.forwardRef<HTMLDivElement, DetailFieldProps>(function 
 
 interface RelatedActionButtonProps {
 	readonly action: string;
-	readonly variant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
+	readonly variant: BadgeVariant;
 	readonly onSelect: (action: string) => void;
 }
 

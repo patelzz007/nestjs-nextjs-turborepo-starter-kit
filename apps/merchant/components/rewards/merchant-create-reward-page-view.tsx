@@ -16,11 +16,11 @@ import {
 	type RewardCategory,
 	type RewardType,
 } from "@workspace/shared";
-import { Card, CardContent } from "@workspace/ui/components/display/card";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { Button } from "@workspace/ui/components/form/button";
-import { Label } from "@workspace/ui/components/form/label";
-import { Switch } from "@workspace/ui/components/form/switch";
+import { Card, CardContent } from "@workspace/ui/components/card";
+import { toastMessage } from "@workspace/ui/components/toast";
+import { Button } from "@workspace/ui/components/button";
+import { Label } from "@workspace/ui/components/label";
+import { Switch } from "@workspace/ui/components/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addDays, format } from "date-fns";
 import { ArrowLeft, Loader2, Save } from "lucide-react";

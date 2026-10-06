@@ -8,21 +8,21 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { MFA_RECOVERY_PAGE_SIZE_OPTIONS, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "@/lib/url-state/mfa-recovery";
-import { createDataTableLabels } from "@/lib/data-table/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { MfaRecoveryReviewPanel } from "@/components/security/mfa-recovery-review-panel";
 import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-status-badge";
 import { useAuth } from "@workspace/client/lib/auth";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
@@ -33,6 +33,12 @@ const STATUS_FILTER_LABELS: Readonly<Record<MfaRecoveryRecordStatus, string>> = 
 	APPROVED: "Approved",
 	DENIED: "Denied",
 	COMPLETED: "Completed",
+};
+
+/** Only the strings that differ from the kit pack's `dataTable` copy. */
+const MFA_RECOVERY_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
+	actionsMenuTitle: "Recovery request actions",
+	openRowMenu: "Open recovery request row menu",
 };
 
 export interface MfaRecoveryQueueProps {
@@ -115,15 +121,6 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 	);
 
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("mfa-recovery-requests.csv", ["userFullName", "userEmail", "status", "requestedAt"]), []);
-
-	const tableLabels = React.useMemo(
-		() =>
-			createDataTableLabels({
-				actionsMenuTitle: "Recovery request actions",
-				openRowMenu: "Open recovery request row menu",
-			}),
-		[],
-	);
 
 	const handleRowClick = React.useCallback(
 		(row: AdminMfaRecoveryRequest): void => {
@@ -217,7 +214,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 					<DataTable
 						columns={columns}
 						data={rows}
-						labels={tableLabels}
+						labels={MFA_RECOVERY_TABLE_LABELS}
 						actions={actions}
 						checkbox={checkbox}
 						enableColumnVisibility

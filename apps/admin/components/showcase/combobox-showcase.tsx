@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import {
 	Combobox,
 	ComboboxChip,
@@ -16,8 +16,8 @@ import {
 	ComboboxLabel,
 	ComboboxList,
 	ComboboxValue,
-} from "@workspace/ui/components/form/combobox";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+} from "@workspace/ui/components/combobox";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
 

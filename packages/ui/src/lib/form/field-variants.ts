@@ -197,14 +197,13 @@ export const menuItemIndicatorDensityClasses = "min-h-9 py-2 ps-2.5 pe-8";
 export const menuItemLeadingIndicatorDensityClasses = "min-h-9 py-2 ps-8 pe-2.5";
 
 /** Active surface colors for highlighted / selected collection rows (Select, Combobox). */
-export const collectionItemActiveSurfaceClasses =
-	"bg-slate-800 text-white [&_svg]:text-white [&_.text-muted-foreground]:text-white/80 dark:bg-white dark:text-slate-800 dark:[&_svg]:text-slate-800 dark:[&_.text-muted-foreground]:text-slate-800/80";
+export const collectionItemActiveSurfaceClasses = "bg-invert text-invert-foreground [&_svg]:text-invert-foreground [&_.text-muted-foreground]:text-invert-foreground/80";
 
 /** Active surface for destructive collection rows. */
 export const collectionItemDestructiveActiveSurfaceClasses = "bg-destructive/10 text-destructive";
 
 /** Active surface colors for focused / checked menu rows. */
-export const menuItemActiveSurfaceClasses = "bg-slate-800 text-white [&_svg]:text-white dark:bg-white dark:text-slate-800 dark:[&_svg]:text-slate-800";
+export const menuItemActiveSurfaceClasses = "bg-invert text-invert-foreground [&_svg]:text-invert-foreground";
 
 /** Active surface for destructive menu rows. */
 export const menuItemDestructiveActiveSurfaceClasses = "bg-destructive/10 text-destructive";
@@ -243,4 +242,4 @@ export function resolveMenuItemActiveClasses(state: MenuItemActiveState, variant
 
 /** Open submenu trigger state in menus. */
 export const menuItemOpenClasses =
-	"data-popup-open:bg-slate-800 data-popup-open:text-white data-popup-open:**:text-white data-open:bg-slate-800 data-open:text-white data-open:**:text-white dark:data-popup-open:bg-white dark:data-popup-open:text-slate-800 dark:data-popup-open:**:text-slate-800 dark:data-open:bg-white dark:data-open:text-slate-800 dark:data-open:**:text-slate-800";
+	"data-popup-open:bg-invert data-popup-open:text-invert-foreground data-popup-open:**:text-invert-foreground data-open:bg-invert data-open:text-invert-foreground data-open:**:text-invert-foreground";

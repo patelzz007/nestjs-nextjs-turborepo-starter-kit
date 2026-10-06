@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Props for one hydrated code block, serialised into the page at build time
  * and parsed back in the browser. The schema mirrors `CodeBlockLine` from
- * `@workspace/ui/components/display/code-block-highlight`, so what the build
+ * `@workspace/ui/components/code-block-highlight`, so what the build
  * highlighted is exactly what React hydrates. Each schema mirrors its type's
  * optionality under `exactOptionalPropertyTypes` (ADR 018): token and line
  * fields are `key?: T | undefined` (`.optional()`), line-state fields are

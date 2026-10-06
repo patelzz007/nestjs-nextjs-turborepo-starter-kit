@@ -1,5 +1,5 @@
 import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import * as React from "react";
 
 import { loadWebDemoAccounts } from "@/lib/auth/demo-accounts";
@@ -29,12 +29,7 @@ export default async function WebLoginPage(): Promise<React.JSX.Element> {
 			features={["Browse rewards by city and category", "Claim offers with OTP verification", "Redeem in-store with QR codes"]}
 			title="Sign in"
 			subtitle="Access your claimed rewards and account"
-			copyright="Reward Hub"
-			labels={{
-				mobileBack: "Back",
-				toggleThemeAria: "Toggle theme",
-				rightsReserved: "All rights reserved.",
-			}}>
+			copyright="Reward Hub">
 			<LoginForm
 				{...(demoAccounts.length > 0 ? { demoAccounts } : {})}
 				redirectPath={ROUTES.rewardHub.browse}

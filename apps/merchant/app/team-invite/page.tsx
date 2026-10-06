@@ -16,15 +16,15 @@ import {
 	type OrganizationMembershipRole,
 	type OrganizationTeamInvitePreview,
 } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { PasswordInput } from "@workspace/ui/components/form/password-input";
-import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-strength-meter";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { PasswordInput } from "@workspace/ui/components/password-input";
+import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { ArrowLeft, Loader2, Mail, MapPin, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";

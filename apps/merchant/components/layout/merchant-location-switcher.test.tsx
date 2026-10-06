@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,6 +32,7 @@ function renderSwitcher(ui: React.ReactElement, context: OrganizationContextResp
 				{ui}
 			</TenantContextProvider>
 		</TestQueryClientProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

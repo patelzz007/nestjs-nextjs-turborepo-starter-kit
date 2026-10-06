@@ -2,8 +2,8 @@
 
 import { resolveLocationShortLabel } from "@/lib/org/location-display";
 import { useMerchantLocation, useTenantContextCommands, type TenantContextCommands } from "@/features/tenant-context/facade";
-import { Button } from "@workspace/ui/components/form/button";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@workspace/ui/components/form/select";
+import { Button } from "@workspace/ui/components/button";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@workspace/ui/components/select";
 import { MapPin } from "lucide-react";
 import * as React from "react";
 

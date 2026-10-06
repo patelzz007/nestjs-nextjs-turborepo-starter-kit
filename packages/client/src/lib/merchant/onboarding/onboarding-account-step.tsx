@@ -1,11 +1,11 @@
 "use client";
 
 import type { MerchantOnboardingInvitePreview } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { PasswordInput } from "@workspace/ui/components/form/password-input";
-import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-strength-meter";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { PasswordInput } from "@workspace/ui/components/password-input";
+import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
 import type { ChangeEvent, JSX, SyntheticEvent } from "react";
 
 import type { PasswordStrengthResult } from "../../auth/password";

@@ -11,7 +11,7 @@ import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type OrganizationLocationResponse } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import Link from "next/link";
 import * as React from "react";
 

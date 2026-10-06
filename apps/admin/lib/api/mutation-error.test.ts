@@ -1,5 +1,5 @@
 import { ApiError } from "@workspace/client/lib/api/api-request";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveMutationErrorMessage, STANDARD_MUTATION_ERROR_MESSAGES, toastMutationError, UNKNOWN_MUTATION_ERROR_MESSAGE } from "@/lib/api/mutation-error";

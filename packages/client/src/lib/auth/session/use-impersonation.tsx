@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, type AlertDialogLabels } from "@workspace/ui/components/overlay/alert-dialog";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
+import { toastMessage } from "@workspace/ui/components/toast";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { useCallback, useState, type JSX } from "react";
 
 import { catchCaught } from "../../caught";
@@ -34,8 +34,8 @@ export interface ImpersonationControls {
 	readonly confirmDialog: JSX.Element;
 }
 
-const IMPERSONATION_DIALOG_LABELS: AlertDialogLabels = {
-	...SHOWCASE_ALERT_DIALOG_LABELS,
+/** This dialog's own wording; every other string comes from the app's UI kit labels. */
+const IMPERSONATION_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = {
 	confirm: "Impersonate",
 	loading: "Starting…",
 };

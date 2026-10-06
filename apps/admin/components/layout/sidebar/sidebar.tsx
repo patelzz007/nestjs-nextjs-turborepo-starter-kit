@@ -1,10 +1,11 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
-import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/navigation/panel-sidebar-nav";
-import type { PanelSidebarLinkProps } from "@workspace/ui/components/navigation/panel-sidebar-nav-item";
-import { SidebarFooter, SidebarHeader } from "@workspace/ui/components/navigation/sidebar";
+import { Button } from "@workspace/ui/components/button";
+import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
+import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
+import { SidebarFooter, SidebarHeader } from "@workspace/ui/components/sidebar";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import type { SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { AlertCircle, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +14,7 @@ import * as React from "react";
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
-import type { AdminSidebarLabels } from "@/lib/sidebar-labels";
+import type { AdminShellLabels } from "@/lib/sidebar-labels";
 
 export interface SidebarProps {
 	readonly user: SidebarUser;
@@ -22,7 +23,10 @@ export interface SidebarProps {
 	readonly view: SidebarView;
 	/** The current pathname — pinned rows' active state and keeping the current page in view. */
 	readonly pathname: string;
-	readonly labels: AdminSidebarLabels;
+	/** The panel nav strings that differ from the kit pack for admin. */
+	readonly navLabels?: UiKitLabelsOverride<"panelSidebarNav"> | undefined;
+	/** The admin shell's own copy (log-out button). */
+	readonly shellLabels: AdminShellLabels;
 	readonly searchQuery: string;
 	readonly onSearchQueryChange: (query: string) => void;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
@@ -50,7 +54,8 @@ export function AdminSidebarPanel({
 	footerActions = [],
 	view,
 	pathname,
-	labels,
+	navLabels,
+	shellLabels,
 	searchQuery,
 	onSearchQueryChange,
 	expandedItems,
@@ -88,7 +93,7 @@ export function AdminSidebarPanel({
 				pinnedItems={pinnedItems}
 				onMoveSectionUp={onMoveSectionUp}
 				onMoveSectionDown={onMoveSectionDown}
-				labels={labels}
+				labels={navLabels}
 			/>
 			<SidebarFooter className="border-t border-sidebar-border bg-sidebar-accent/10">
 				{footerActions.length > 0 ? (
@@ -115,7 +120,7 @@ export function AdminSidebarPanel({
 					renderLink={renderAdminLink}
 					renderIcon={renderAdminIcon}
 					searchQuery={searchQuery}
-					labels={labels}
+					labels={navLabels}
 				/>
 
 				<div className="flex items-center justify-between px-2 py-2">
@@ -138,13 +143,13 @@ export function AdminSidebarPanel({
 						size="icon-xs"
 						onClick={onLogout}
 						className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-						aria-label={labels.logoutAriaLabel}
-						title={labels.logoutTitle}>
+						aria-label={shellLabels.logoutAriaLabel}
+						title={shellLabels.logoutTitle}>
 						<LogOut className="h-3.5 w-3.5" aria-hidden="true" />
 					</Button>
 				</div>
 			</SidebarFooter>
-			<PanelSidebarRouteAnnouncer pageLabel={pageLabel} labels={labels} />
+			<PanelSidebarRouteAnnouncer pageLabel={pageLabel} labels={navLabels} />
 		</>
 	);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createBreadcrumbContext } from "@workspace/ui/components/navigation/breadcrumb-context";
+import { createBreadcrumbContext } from "@workspace/ui/components/breadcrumb-context";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 

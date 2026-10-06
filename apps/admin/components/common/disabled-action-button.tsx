@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/overlay/tooltip";
+import { Button } from "@workspace/ui/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 

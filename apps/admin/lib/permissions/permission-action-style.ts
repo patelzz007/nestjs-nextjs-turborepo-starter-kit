@@ -1,7 +1,6 @@
 import type { PermissionAction } from "@workspace/shared";
+import type { BadgeVariant } from "@workspace/ui/components/badge";
 import { Eye, List, Pencil, Plus, Settings, Shield, Trash2, type LucideIcon } from "lucide-react";
-
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
 
 const PERMISSION_ACTION_ICONS: Record<PermissionAction, LucideIcon> = {
 	CREATE: Plus,
@@ -16,7 +15,7 @@ const PERMISSION_ACTION_BADGE_VARIANTS: Record<PermissionAction, BadgeVariant> =
 	CREATE: "default",
 	READ: "outline",
 	UPDATE: "secondary",
-	DELETE: "destructive",
+	DELETE: "destructive-light",
 	LIST: "outline",
 	MANAGE: "default",
 };

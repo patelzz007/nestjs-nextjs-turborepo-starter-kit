@@ -8,7 +8,7 @@ import { WebShellBreadcrumb } from "@/components/layout/web-shell-breadcrumb";
 import { RewardHubTopbar } from "@/components/layout/reward-hub-topbar";
 import { useAuthUser } from "@workspace/client/lib/auth";
 import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
-import { AppPanelShell } from "@workspace/ui/components/navigation/app-panel-shell";
+import { AppPanelShell } from "@workspace/ui/components/app-panel-shell";
 import { WEB_COMMAND_PALETTE_DEVTOOLS_NAME, WEB_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { WEB_SIDEBAR_DEVTOOLS_NAME, WEB_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";

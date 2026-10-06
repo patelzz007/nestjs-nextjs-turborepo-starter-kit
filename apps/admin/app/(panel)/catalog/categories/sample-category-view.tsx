@@ -1,6 +1,6 @@
 "use client";
 
-import { createDataTableLabels } from "@/lib/data-table/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
 import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
@@ -19,28 +19,32 @@ import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@work
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { PERMISSION, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import { buttonVariants } from "@workspace/ui/components/button";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
 import { formatDateTime } from "@/lib/format/dates";
 
-const labels = createDataTableLabels({
+const CATEGORY_SEARCH_PLACEHOLDER = "Search categories...";
+const CATEGORY_SEARCH_ARIA_LABEL = "Search Categories";
+
+/** Only the strings that differ from the kit pack's `dataTable` copy. */
+const CATEGORY_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
 	actionsMenuTitle: "Category actions",
 	openRowMenu: "Open category row menu",
-	searchPlaceholder: "Search categories...",
-	searchAriaLabel: "Search Categories",
-});
+	searchPlaceholder: CATEGORY_SEARCH_PLACEHOLDER,
+	searchAriaLabel: CATEGORY_SEARCH_ARIA_LABEL,
+};
 
 export interface SampleCategoryViewProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -317,7 +321,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 	const searchToolbar = useMemo(
 		(): React.JSX.Element => (
 			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
+				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={CATEGORY_SEARCH_PLACEHOLDER} ariaLabel={CATEGORY_SEARCH_ARIA_LABEL} />
 			</div>
 		),
 		[searchDraft, setSearchDraft],
@@ -347,7 +351,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 					<DataTable
 						data={rows}
 						columns={columns}
-						labels={labels}
+						labels={CATEGORY_TABLE_LABELS}
 						actions={actions}
 						checkbox={checkbox}
 						enableColumnVisibility

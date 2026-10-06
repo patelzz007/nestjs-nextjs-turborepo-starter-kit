@@ -4,15 +4,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-	Breadcrumb,
-	BreadcrumbEllipsis,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@workspace/ui/components/navigation/breadcrumb";
+import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@workspace/ui/components/breadcrumb";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 
 afterEach(() => {
 	cleanup();
@@ -24,9 +18,10 @@ describe("Breadcrumb primitives", () => {
 			<Breadcrumb ariaLabel="You are here">
 				<BreadcrumbList />
 			</Breadcrumb>,
+			{ wrapper: UiKitTestProviders },
 		);
 		expect(screen.getByLabelText("You are here")).toBeTruthy();
-		expect(screen.queryByLabelText("breadcrumb")).toBeNull();
+		expect(screen.queryByLabelText(UI_KIT_LABELS_EN.breadcrumb.ariaLabel)).toBeNull();
 	});
 
 	it("defaults the aria-label to breadcrumb", () => {
@@ -34,8 +29,9 @@ describe("Breadcrumb primitives", () => {
 			<Breadcrumb>
 				<BreadcrumbList />
 			</Breadcrumb>,
+			{ wrapper: UiKitTestProviders },
 		);
-		expect(screen.getByLabelText("breadcrumb")).toBeTruthy();
+		expect(screen.getByLabelText(UI_KIT_LABELS_EN.breadcrumb.ariaLabel)).toBeTruthy();
 	});
 
 	it("applies the scrollable single-line and sm size variants on the list (improvements 3/8)", () => {
@@ -43,6 +39,7 @@ describe("Breadcrumb primitives", () => {
 			<BreadcrumbList size="sm" scrollable>
 				<BreadcrumbItem>x</BreadcrumbItem>
 			</BreadcrumbList>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const list = container.querySelector("[data-slot=breadcrumb-list]");
 		expect(list?.className).toContain("overflow-x-auto");
@@ -55,6 +52,7 @@ describe("Breadcrumb primitives", () => {
 			<BreadcrumbList>
 				<BreadcrumbItem>x</BreadcrumbItem>
 			</BreadcrumbList>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const list = container.querySelector("[data-slot=breadcrumb-list]");
 		expect(list?.className).toContain("flex-wrap");
@@ -63,13 +61,13 @@ describe("Breadcrumb primitives", () => {
 
 	it("forwards refs on the link (rule 20)", () => {
 		const ref = createRef<HTMLAnchorElement>();
-		render(<BreadcrumbLink ref={ref} href="/x" />);
+		render(<BreadcrumbLink ref={ref} href="/x" />, { wrapper: UiKitTestProviders });
 		expect(ref.current).not.toBeNull();
 		expect(ref.current?.tagName).toBe("A");
 	});
 
 	it("renders the current page as a non-focusable span with aria-current (improvement 2)", () => {
-		render(<BreadcrumbPage>General</BreadcrumbPage>);
+		render(<BreadcrumbPage>General</BreadcrumbPage>, { wrapper: UiKitTestProviders });
 		const page = screen.getByText("General").closest("[data-slot=breadcrumb-page]");
 		expect(page?.getAttribute("aria-current")).toBe("page");
 		// NOT focusable: no tabindex, no role="link".
@@ -79,16 +77,16 @@ describe("Breadcrumb primitives", () => {
 	});
 
 	it("renders a default chevron separator and accepts custom children (improvement 6)", () => {
-		const { container } = render(<BreadcrumbSeparator />);
+		const { container } = render(<BreadcrumbSeparator />, { wrapper: UiKitTestProviders });
 		expect(container.querySelector("[data-slot=breadcrumb-separator] svg")).toBeTruthy();
 
 		cleanup();
-		render(<BreadcrumbSeparator>{">"}</BreadcrumbSeparator>);
+		render(<BreadcrumbSeparator>{">"}</BreadcrumbSeparator>, { wrapper: UiKitTestProviders });
 		expect(screen.getByText(">")).toBeTruthy();
 	});
 
 	it("renders an sr-only label on the ellipsis that can be localized (improvement 12)", () => {
-		const { container } = render(<BreadcrumbEllipsis label="Show more" />);
+		const { container } = render(<BreadcrumbEllipsis label="Show more" />, { wrapper: UiKitTestProviders });
 		expect(screen.getByText("Show more")).toBeTruthy();
 		expect(container.querySelector("[data-slot=breadcrumb-ellipsis]")).toBeTruthy();
 	});

@@ -7,9 +7,9 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-status-badge";
 import { useSuperAdminStatus } from "@/lib/session/super-admin";
-import { Button } from "@workspace/ui/components/form/button";
-import { Label } from "@workspace/ui/components/form/label";
-import { Textarea } from "@workspace/ui/components/form/textarea";
+import { Button } from "@workspace/ui/components/button";
+import { Label } from "@workspace/ui/components/label";
+import { Textarea } from "@workspace/ui/components/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 

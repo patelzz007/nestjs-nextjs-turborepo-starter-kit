@@ -1,7 +1,7 @@
 "use client";
 
-import type { Action } from "@workspace/ui/components/display/data-table";
-import { Button } from "@workspace/ui/components/form/button";
+import type { Action } from "@workspace/ui/components/data-table";
+import { Button } from "@workspace/ui/components/button";
 import type { RowData } from "@tanstack/react-table";
 import * as React from "react";
 

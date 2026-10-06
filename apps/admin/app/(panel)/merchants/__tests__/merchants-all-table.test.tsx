@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
 
 import MerchantsAllTable from "../merchants-all-table";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const { merchantsQuery } = vi.hoisted(() => ({ merchantsQuery: vi.fn() }));
 
@@ -63,7 +64,7 @@ afterEach((): void => {
 describe("MerchantsAllTable URL state", () => {
 	it("queries the URL's search and status filters", () => {
 		window.history.replaceState(null, "", `${PATH}?search=cafe&filter[kybStatus]=PENDING&filter[status]=ACTIVE&page=2`);
-		render(table());
+		render(table(), { wrapper: UiKitTestProviders });
 
 		expect(merchantsQuery).toHaveBeenLastCalledWith(
 			{ page: 2, limit: 20, search: "cafe", filter: { kybStatus: { eq: "PENDING" }, status: { eq: "ACTIVE" } } },
@@ -77,7 +78,7 @@ describe("MerchantsAllTable URL state", () => {
 		vi.useFakeTimers();
 		window.history.replaceState(null, "", `${PATH}?page=3&filter[kybStatus]=PENDING`);
 		const replaceState = vi.spyOn(window.history, "replaceState");
-		render(table());
+		render(table(), { wrapper: UiKitTestProviders });
 
 		fireEvent.change(screen.getByDisplayValue(""), { target: { value: "sunrise" } });
 		act((): void => {
@@ -90,7 +91,7 @@ describe("MerchantsAllTable URL state", () => {
 
 	it("resyncs the search box when the URL changes (back/forward)", () => {
 		window.history.replaceState(null, "", `${PATH}?search=cafe`);
-		const view = render(table());
+		const view = render(table(), { wrapper: UiKitTestProviders });
 		window.history.replaceState(null, "", PATH);
 		view.rerender(table());
 

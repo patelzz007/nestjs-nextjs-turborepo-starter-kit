@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useCallback, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, toAccordionValues, type AccordionRef } from "@workspace/ui/components/navigation/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, toAccordionValues, type AccordionRef } from "@workspace/ui/components/accordion";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {

@@ -1,7 +1,7 @@
 "use client";
 
-import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockLanguage, CodeBlockTitle, DEFAULT_CODE_BLOCK_LABELS } from "@workspace/ui/components/display/code-block";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/navigation/tabs";
+import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockLanguage, CodeBlockTitle } from "@workspace/ui/components/code-block";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { posEndpointUrl } from "@/lib/pos/pos-endpoint-url";
 import { apiRoutes, DEFAULT_SALE_CURRENCY, MAX_CHECKOUT_REWARDS } from "@workspace/shared";
 import { Link2, Lock, QrCode, ReceiptText, RefreshCcw, ScanLine } from "lucide-react";
@@ -176,7 +176,7 @@ interface GuideSnippetProps {
 
 function GuideSnippet({ code, title }: GuideSnippetProps): React.JSX.Element {
 	return (
-		<CodeBlock code={code} language="bash" labels={DEFAULT_CODE_BLOCK_LABELS} label={title} className="mt-2">
+		<CodeBlock code={code} language="bash" label={title} className="mt-2">
 			<CodeBlockHeader>
 				<CodeBlockTitle>{title}</CodeBlockTitle>
 				<CodeBlockLanguage>bash</CodeBlockLanguage>

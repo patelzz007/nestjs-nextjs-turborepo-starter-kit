@@ -1,14 +1,8 @@
 "use client";
 
 import { ADMIN_RESOURCE_DELETE_DIALOG_LABELS } from "@/lib/resource-delete-dialog-labels";
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogMedia,
-	AlertDialogTitle,
-	type AlertDialogLabels,
-} from "@workspace/ui/components/overlay/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { Trash2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
@@ -24,7 +18,7 @@ export interface UseResourceDeleteDialogResult {
 	readonly resourceDeleteDialog: React.JSX.Element;
 }
 
-export function useResourceDeleteDialog(labels: AlertDialogLabels = ADMIN_RESOURCE_DELETE_DIALOG_LABELS): UseResourceDeleteDialogResult {
+export function useResourceDeleteDialog(labels: UiKitLabelsOverride<"alertDialog"> = ADMIN_RESOURCE_DELETE_DIALOG_LABELS): UseResourceDeleteDialogResult {
 	const [open, setOpen] = useState<boolean>(false);
 	const [confirmLoading, setConfirmLoading] = useState<boolean>(false);
 	const [dialogState, setDialogState] = useState<ResourceDeleteRequest | null>(null);

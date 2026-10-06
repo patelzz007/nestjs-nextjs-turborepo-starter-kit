@@ -1,6 +1,6 @@
 import { RewardCategoryVisual } from "@/components/rewardhub/detail/category-visual";
 import type { RewardResponse } from "@workspace/shared";
-import { EntityAvatar } from "@workspace/ui/components/display/entity-avatar";
+import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 

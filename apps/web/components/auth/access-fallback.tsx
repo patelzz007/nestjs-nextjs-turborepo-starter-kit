@@ -1,5 +1,5 @@
 import { WebEmptyState } from "@/components/web-ui/empty-state";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Lock, LogIn } from "lucide-react";
 import Link from "next/link";

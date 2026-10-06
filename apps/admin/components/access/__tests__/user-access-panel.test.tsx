@@ -6,10 +6,11 @@ import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { AdminUserDetailSchema, PERMISSION, PermissionListItemSchema, RoleListItemSchema, type CapabilitySlug } from "@workspace/shared";
 import * as React from "react";
 import { ApiError } from "@workspace/client/lib/api/api-request";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { UserAccessPanel } from "@/components/access/user-access-panel";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 interface MutationStub {
 	readonly mutate: () => void;
@@ -88,6 +89,7 @@ function renderPanel(capabilities: readonly CapabilitySlug[], queryClient: Query
 				<UserAccessPanel userId={USER.id} user={USER} rolesCatalog={ROLES} permissionsCatalog={PERMISSIONS} />
 			</CapabilitiesProvider>
 		</QueryClientProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { MERCHANT_KYB_MAX_DOCUMENT_COUNT } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 

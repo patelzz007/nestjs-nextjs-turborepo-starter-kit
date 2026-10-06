@@ -19,7 +19,9 @@ import {
 	comboboxChipLabelSchema,
 	comboboxSizeSchema,
 	type ComboboxRef,
-} from "@workspace/ui/components/form/combobox";
+} from "@workspace/ui/components/combobox";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 
 /** Named render-prop for the create-new row (rule 16: no inline arrows in props). */
 function createLabel(query: string): string {
@@ -51,6 +53,7 @@ describe("Combobox", () => {
 			<Combobox>
 				<ComboboxInput placeholder="Pick a country…" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const input = screen.getByPlaceholderText("Pick a country…");
 		expect(input).toBeTruthy();
@@ -77,7 +80,7 @@ describe("Combobox", () => {
 			);
 		}
 
-		render(<RefHarness />);
+		render(<RefHarness />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Focus combobox" }));
 		expect(document.activeElement).toBe(screen.getByPlaceholderText("Target"));
 	});
@@ -91,6 +94,7 @@ describe("Combobox", () => {
 					<ComboboxChip>A</ComboboxChip>
 				</ComboboxChips>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		// The InputGroup carries the size override.
 		expect(container.querySelector("[data-slot='input-group']")?.className).toContain("h-8");
@@ -107,6 +111,7 @@ describe("Combobox", () => {
 					<ComboboxList loadingLabel="Fetching options…" />
 				</ComboboxContent>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const loading = document.querySelector("[data-slot='combobox-loading']");
 		expect(loading).toBeTruthy();
@@ -129,7 +134,7 @@ describe("Combobox", () => {
 				</Combobox>
 			);
 		}
-		render(<SelectionHarness />);
+		render(<SelectionHarness />, { wrapper: UiKitTestProviders });
 		// The open popup renders the items (portal → query the document).
 		const items = Array.from(document.querySelectorAll("[data-slot='combobox-item']"));
 		expect(items.length).toBe(2);
@@ -154,6 +159,7 @@ describe("Combobox", () => {
 					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		expect(screen.getByText("PostgreSQL 16")).toBeTruthy();
 		expect(screen.getByText("Database")).toBeTruthy();
@@ -170,12 +176,13 @@ describe("Combobox", () => {
 					<ComboboxChip>D</ComboboxChip>
 				</ComboboxChips>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const chips = Array.from(container.querySelectorAll("[data-slot='combobox-chip']"));
 		expect(chips.length).toBe(2);
 		const overflow = container.querySelector("[data-slot='combobox-chips-overflow']");
 		expect(overflow?.textContent).toBe("+2");
-		expect(overflow?.getAttribute("aria-label")).toBe("More selected options");
+		expect(overflow?.getAttribute("aria-label")).toBe(UI_KIT_LABELS_EN.combobox.moreSelected);
 	});
 
 	it("derives a per-chip remove aria-label from the label text (improvement 10)", () => {
@@ -186,6 +193,7 @@ describe("Combobox", () => {
 					<ComboboxChip>React</ComboboxChip>
 				</ComboboxChips>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const remove = container.querySelector("[data-slot='combobox-chip-remove']");
 		expect(remove?.getAttribute("aria-label")).toBe("Remove React");
@@ -199,6 +207,7 @@ describe("Combobox", () => {
 					<ComboboxChip removeLabel="Deselect this tag">React</ComboboxChip>
 				</ComboboxChips>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const remove = container.querySelector("[data-slot='combobox-chip-remove']");
 		expect(remove?.getAttribute("aria-label")).toBe("Deselect this tag");
@@ -212,10 +221,11 @@ describe("Combobox", () => {
 			<Combobox defaultValue="alpha">
 				<ComboboxInput showClear placeholder="Clearable" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const clear = container.querySelector("[data-slot='combobox-clear']");
 		expect(clear).not.toBeNull();
-		expect(clear?.getAttribute("aria-label")).toBe("Clear selection");
+		expect(clear?.getAttribute("aria-label")).toBe(UI_KIT_LABELS_EN.combobox.clearSelection);
 	});
 
 	it("renders the create-new row and fires onCreate with the query (feature 2)", () => {
@@ -226,6 +236,7 @@ describe("Combobox", () => {
 				<ComboboxInput placeholder="Search" />
 				<ComboboxCreate query="new-tag" createLabel={createLabel} onCreate={onCreate} />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const createRow = screen.getByRole("button", { name: 'Create "new-tag"' });
 		fireEvent.click(createRow);
@@ -235,9 +246,9 @@ describe("Combobox", () => {
 	it("renders a clear-all button with a label (feature 12)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		const onClearAll = vi.fn();
-		const { container } = render(<ComboboxClearAll onClick={onClearAll} />);
+		const { container } = render(<ComboboxClearAll onClick={onClearAll} />, { wrapper: UiKitTestProviders });
 		const button = container.querySelector("[data-slot='combobox-clear-all']");
-		expect(button?.getAttribute("aria-label")).toBe("Clear all");
+		expect(button?.getAttribute("aria-label")).toBe(UI_KIT_LABELS_EN.combobox.clearAll);
 		if (button !== null) {
 			fireEvent.click(button);
 		}
@@ -250,6 +261,7 @@ describe("Combobox", () => {
 			<Combobox>
 				<ComboboxInput disabled placeholder="Locked" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const input = container.querySelector("[data-slot='input-group-control']");
 		expect(input?.getAttribute("disabled")).not.toBeNull();
@@ -267,6 +279,7 @@ describe("Combobox", () => {
 					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		// The empty node carries the message (it's `hidden` until the content is
 		// `data-empty`, so assert on the slot rather than a visible-text query).
@@ -280,6 +293,7 @@ describe("Combobox", () => {
 			<Combobox shortcut="⌘K">
 				<ComboboxInput placeholder="Shortcut target" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		fireEvent.keyDown(window, { key: "k", metaKey: true });
 		expect(document.activeElement).toBe(screen.getByPlaceholderText("Shortcut target"));
@@ -291,6 +305,7 @@ describe("Combobox", () => {
 			<Combobox shortcut="⌘K">
 				<ComboboxInput placeholder="Shortcut target" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		fireEvent.keyDown(window, { key: "j", metaKey: true });
 		expect(document.activeElement).not.toBe(screen.getByPlaceholderText("Shortcut target"));
@@ -312,6 +327,7 @@ describe("Combobox", () => {
 					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const items = Array.from(document.querySelectorAll("[data-slot='combobox-item']"));
 		const first = items[0];
@@ -337,6 +353,7 @@ describe("Combobox", () => {
 			<Combobox debounceMs={250} onInputValueChange={onInput}>
 				<ComboboxInput placeholder="Debounced" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const input = screen.getByPlaceholderText("Debounced");
 		fireEvent.change(input, { target: { value: "re" } });
@@ -365,6 +382,7 @@ describe("Combobox", () => {
 					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const action = document.querySelector("[data-slot='combobox-empty-action']");
 		expect(action?.textContent).toContain('Create "new-tag"');
@@ -392,12 +410,12 @@ describe("Combobox", () => {
 			);
 		}
 
-		const { unmount } = render(<PersistedComboboxHarness />);
+		const { unmount } = render(<PersistedComboboxHarness />, { wrapper: UiKitTestProviders });
 		const input = screen.getByPlaceholderText("Persisted");
 		fireEvent.change(input, { target: { value: "draft-query" } });
 		expect(window.sessionStorage.getItem(storageKey)).toBe("draft-query");
 		unmount();
-		render(<PersistedComboboxHarness />);
+		render(<PersistedComboboxHarness />, { wrapper: UiKitTestProviders });
 		expect(screen.getByDisplayValue("draft-query")).toBeTruthy();
 		window.sessionStorage.removeItem(storageKey);
 	});
@@ -408,6 +426,7 @@ describe("Combobox", () => {
 			<Combobox multiple defaultValue={["a", "b"]}>
 				<ComboboxInput placeholder="Pick" />
 			</Combobox>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const region = document.querySelector("[data-slot='combobox-live-region']");
 		expect(region?.textContent).toBe("2 selected");
@@ -464,7 +483,7 @@ describe("Combobox", () => {
 			);
 		}
 
-		render(<RemoteHarness />);
+		render(<RemoteHarness />, { wrapper: UiKitTestProviders });
 		const input = screen.getByPlaceholderText("Search languages…");
 
 		// 1) Type a search and let the (mocked) remote layer resolve it.
@@ -574,7 +593,7 @@ describe("Combobox", () => {
 			);
 		}
 
-		render(<ResetHarness />);
+		render(<ResetHarness />, { wrapper: UiKitTestProviders });
 		const input = screen.getByPlaceholderText("Search…");
 
 		// 1) Open → the default option set loads (TypeScript, JavaScript, Python).

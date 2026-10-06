@@ -4,7 +4,6 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { AnalyticsExportMenu } from "@workspace/client/lib/analytics/analytics-export-menu";
 import { AnalyticsKpiGrid } from "@workspace/client/lib/analytics/analytics-kpi-grid";
 import {
-	ANALYTICS_CHART_LABELS,
 	analyticsDisplayRegion,
 	analyticsFormatters,
 	bucketFormatters,
@@ -33,10 +32,10 @@ import {
 	type AnalyticsExportFormat,
 	type Envelope,
 } from "@workspace/shared";
-import { AnalyticsPanel, type ChartFrameState } from "@workspace/ui/components/analytics/analytics-panel";
-import { RankedBarList } from "@workspace/ui/components/analytics/ranked-bar-list";
-import { TimeSeriesChart } from "@workspace/ui/components/analytics/time-series-chart";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
+import { AnalyticsPanel, type ChartFrameState } from "@workspace/ui/components/analytics-panel";
+import { RankedBarList } from "@workspace/ui/components/ranked-bar-list";
+import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
+import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
@@ -152,7 +151,6 @@ export function PlatformAnalyticsSections({ dashboard, status }: PlatformAnalyti
 						formatAxisValue={formatters.moneyCompact}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						axisWidth={MONEY_AXIS_WIDTH_PX}
 						state={breakdownState(sales.isEmpty, NO_SALES_MESSAGE)}
 					/>
@@ -167,7 +165,6 @@ export function PlatformAnalyticsSections({ dashboard, status }: PlatformAnalyti
 						formatAxisValue={formatters.count}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						state={breakdownState(bills.isEmpty, NO_SALES_MESSAGE)}
 					/>
 				</AnalyticsPanel>
@@ -181,7 +178,6 @@ export function PlatformAnalyticsSections({ dashboard, status }: PlatformAnalyti
 						formatAxisValue={formatters.count}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						state={breakdownState(engagement.isEmpty, "No claims or redemptions in this range.")}
 					/>
 				</AnalyticsPanel>
@@ -195,7 +191,6 @@ export function PlatformAnalyticsSections({ dashboard, status }: PlatformAnalyti
 						formatAxisValue={formatters.count}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						state={breakdownState(customers.isEmpty, "No paying customers in this range.")}
 					/>
 				</AnalyticsPanel>

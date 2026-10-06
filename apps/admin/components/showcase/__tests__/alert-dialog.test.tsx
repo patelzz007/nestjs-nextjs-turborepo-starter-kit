@@ -4,15 +4,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { useCallback, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-	type AlertDialogLabels,
-} from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogTrigger } from "@workspace/ui/components/alert-dialog";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {
@@ -27,6 +22,8 @@ class ResizeObserverStub {
 	}
 }
 
+const DELETE_CONFIRM_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Delete" };
+
 /** Controlled harness so tests can assert open/close + confirm wiring. */
 function ControlledHarness({
 	onConfirm,
@@ -35,7 +32,7 @@ function ControlledHarness({
 	delaySeconds,
 	confirmLoading,
 	severity,
-	labels = SHOWCASE_ALERT_DIALOG_LABELS,
+	labels,
 }: {
 	readonly onConfirm?: () => void;
 	readonly requireConfirmation?: string;
@@ -43,7 +40,7 @@ function ControlledHarness({
 	readonly delaySeconds?: number;
 	readonly confirmLoading?: boolean;
 	readonly severity?: "info" | "warning" | "critical";
-	readonly labels?: AlertDialogLabels;
+	readonly labels?: UiKitLabelsOverride<"alertDialog">;
 }): React.JSX.Element {
 	const [open, setOpen] = useState<boolean>(false);
 	const [confirmationValue, setConfirmationValue] = useState<string>("");
@@ -83,26 +80,26 @@ afterEach(() => {
 describe("AlertDialog", () => {
 	it("opens on trigger click and renders title + description (improvement 5 wiring)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		render(<ControlledHarness />);
+		render(<ControlledHarness />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		expect(screen.getByText("Are you sure?")).toBeTruthy();
 		expect(screen.getByText("This action is permanent.")).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: UI_KIT_LABELS_EN.alertDialog.cancel })).toBeTruthy();
 		expect(screen.getByRole("button", { name: /Confirm/ })).toBeTruthy();
 	});
 
 	it("cancel closes the dialog (improvement 11 focus return path)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		render(<ControlledHarness />);
+		render(<ControlledHarness />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
-		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+		fireEvent.click(screen.getByRole("button", { name: UI_KIT_LABELS_EN.alertDialog.cancel }));
 		expect(screen.queryByText("Are you sure?")).toBeNull();
 	});
 
 	it("fires onConfirm when the confirm action is pressed (feature 16)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		const onConfirm = vi.fn();
-		render(<ControlledHarness onConfirm={onConfirm} />);
+		render(<ControlledHarness onConfirm={onConfirm} />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		fireEvent.click(screen.getByRole("button", { name: /Confirm/ }));
 		expect(onConfirm).toHaveBeenCalledTimes(1);
@@ -110,7 +107,7 @@ describe("AlertDialog", () => {
 
 	it("disables confirm until the keyword is typed (feature 3)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		render(<ControlledHarness requireConfirmation="delete" />);
+		render(<ControlledHarness requireConfirmation="delete" />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		const confirm = screen.getByRole("button", { name: /Confirm/ });
 		expect(confirm.getAttribute("disabled")).not.toBeNull();
@@ -120,18 +117,18 @@ describe("AlertDialog", () => {
 
 	it("disables confirm until a reason is typed (feature 9)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		render(<ControlledHarness requireReason />);
+		render(<ControlledHarness requireReason />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		const confirm = screen.getByRole("button", { name: /Confirm/ });
 		expect(confirm.getAttribute("disabled")).not.toBeNull();
-		fireEvent.change(screen.getByPlaceholderText(SHOWCASE_ALERT_DIALOG_LABELS.reasonPlaceholder), { target: { value: "because" } });
+		fireEvent.change(screen.getByPlaceholderText(UI_KIT_LABELS_EN.alertDialog.reasonPlaceholder), { target: { value: "because" } });
 		expect(screen.getByRole("button", { name: /Confirm/ }).getAttribute("disabled")).toBeNull();
 	});
 
 	it("gates confirm behind a countdown (feature 4)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		vi.useFakeTimers();
-		render(<ControlledHarness delaySeconds={3} />);
+		render(<ControlledHarness delaySeconds={3} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		});
@@ -149,7 +146,7 @@ describe("AlertDialog", () => {
 				<AlertDialogTrigger render={<button type="button">Open</button>} />
 				<AlertDialogContent
 					severity="critical"
-					labels={{ ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Delete" }}
+					labels={DELETE_CONFIRM_LABELS}
 					summary={[
 						{ label: "Users", value: "12" },
 						{ label: "Sessions", value: "34" },
@@ -157,6 +154,7 @@ describe("AlertDialog", () => {
 					<AlertDialogTitle>Delete users?</AlertDialogTitle>
 				</AlertDialogContent>
 			</AlertDialog>,
+			{ wrapper: UiKitTestProviders },
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Open" }));
 		expect(screen.getByRole("table")).toBeTruthy();
@@ -168,10 +166,11 @@ describe("AlertDialog", () => {
 		render(
 			<AlertDialog>
 				<AlertDialogTrigger render={<button type="button">Open</button>} />
-				<AlertDialogContent severity="critical" labels={{ ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Delete" }} undoHint="You can undo for 5 seconds.">
+				<AlertDialogContent severity="critical" labels={DELETE_CONFIRM_LABELS} undoHint="You can undo for 5 seconds.">
 					<AlertDialogTitle>Delete?</AlertDialogTitle>
 				</AlertDialogContent>
 			</AlertDialog>,
+			{ wrapper: UiKitTestProviders },
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Open" }));
 		expect(screen.getByText("You can undo for 5 seconds.")).toBeTruthy();
@@ -179,7 +178,7 @@ describe("AlertDialog", () => {
 
 	it("shows a loading spinner on the confirm button (feature 2)", async () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		render(<ControlledHarness confirmLoading />);
+		render(<ControlledHarness confirmLoading />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: /Working/ })).toBeTruthy();

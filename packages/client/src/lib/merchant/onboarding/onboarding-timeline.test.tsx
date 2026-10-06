@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { currentStepIndex, MerchantOnboardingCompactProgress, MerchantOnboardingTimeline, onboardingStepStatus, type OnboardingTimelineStep } from "./onboarding-timeline";
+import { currentStepIndex, isOnboardingStepDisabled, MerchantOnboardingCompactProgress, MerchantOnboardingTimeline, type OnboardingTimelineStep } from "./onboarding-timeline";
 
 type StepId = "alpha" | "beta" | "gamma";
 
@@ -16,13 +16,13 @@ afterEach((): void => {
 	cleanup();
 });
 
-describe("onboardingStepStatus", () => {
-	it("marks earlier steps complete, the current one current and later ones upcoming", (): void => {
-		expect([0, 1, 2].map((index) => onboardingStepStatus(index, 1))).toEqual(["complete", "current", "upcoming"]);
+describe("isOnboardingStepDisabled", () => {
+	it("allows earlier steps and the current one, never a later one", (): void => {
+		expect([0, 1, 2].map((index) => isOnboardingStepDisabled(index, 1, false))).toEqual([false, false, true]);
 	});
 
-	it("has no complete steps on the first step", (): void => {
-		expect([0, 1, 2].map((index) => onboardingStepStatus(index, 0))).toEqual(["current", "upcoming", "upcoming"]);
+	it("locks every step but the current one while navigation is disabled", (): void => {
+		expect([0, 1, 2].map((index) => isOnboardingStepDisabled(index, 1, true))).toEqual([true, false, true]);
 	});
 });
 
@@ -36,13 +36,18 @@ describe("currentStepIndex", () => {
 	});
 });
 
+function stepStates(): (string | undefined)[] {
+	return Array.from(document.querySelectorAll<HTMLElement>('[data-slot="stepper-item"]')).map((item) => item.dataset.state);
+}
+
 describe("MerchantOnboardingTimeline", () => {
-	it("lists every step with its description and marks the current one", (): void => {
+	it("lists every step with its description and marks progress through them", (): void => {
 		render(<MerchantOnboardingTimeline steps={STEPS} currentStepId="beta" onStepSelect={vi.fn<(stepId: StepId) => void>()} />);
-		const items = within(screen.getByRole("list", { name: "Application steps" })).getAllByRole("listitem");
-		expect(items).toHaveLength(STEPS.length);
+		const nav = screen.getByRole("tablist", { name: "Application steps" });
+		expect(within(nav).getAllByRole("tab")).toHaveLength(STEPS.length);
 		expect(screen.getByText("Third step")).toBeTruthy();
-		expect(items.map((item) => item.getAttribute("aria-current"))).toEqual([null, "step", null]);
+		expect(stepStates()).toEqual(["completed", "active", "inactive"]);
+		expect(screen.getByRole("tab", { name: /Beta/ }).getAttribute("aria-selected")).toBe("true");
 	});
 
 	it("reports progress as the share of completed steps", (): void => {
@@ -52,39 +57,39 @@ describe("MerchantOnboardingTimeline", () => {
 		expect(progress.getAttribute("aria-valuemax")).toBe(String(STEPS.length));
 	});
 
-	it("only lets the user go back to completed steps", (): void => {
+	it("goes back to a completed step but never forward", (): void => {
 		const handleStepSelect = vi.fn<(stepId: StepId) => void>();
 		render(<MerchantOnboardingTimeline steps={STEPS} currentStepId="beta" onStepSelect={handleStepSelect} />);
-		const buttons = screen.getAllByRole("button");
-		expect(buttons).toHaveLength(1);
-		const [backToAlpha] = buttons;
-		expect(backToAlpha?.textContent).toContain("Alpha");
-		if (backToAlpha !== undefined) {
-			fireEvent.click(backToAlpha);
-		}
+		const gamma = screen.getByRole("tab", { name: /Gamma/ });
+		expect(gamma.hasAttribute("disabled")).toBe(true);
+		fireEvent.click(gamma);
+		fireEvent.click(screen.getByRole("tab", { name: /Beta/ }));
+		expect(handleStepSelect).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByRole("tab", { name: /Alpha/ }));
 		expect(handleStepSelect).toHaveBeenCalledExactlyOnceWith("alpha");
 	});
 
 	it("locks going back while navigation is disabled", (): void => {
 		const handleStepSelect = vi.fn<(stepId: StepId) => void>();
 		render(<MerchantOnboardingTimeline steps={STEPS} currentStepId="gamma" onStepSelect={handleStepSelect} isNavigationDisabled />);
-		const buttons = screen.getAllByRole("button");
-		expect(buttons.every((button) => button.hasAttribute("disabled"))).toBe(true);
-		for (const button of buttons) {
-			fireEvent.click(button);
+		for (const name of [/Alpha/, /Beta/]) {
+			const tab = screen.getByRole("tab", { name });
+			expect(tab.hasAttribute("disabled")).toBe(true);
+			fireEvent.click(tab);
 		}
 		expect(handleStepSelect).not.toHaveBeenCalled();
 	});
 });
 
 describe("MerchantOnboardingCompactProgress", () => {
-	it("renders a horizontal, non-interactive step list with named steps", (): void => {
-		render(<MerchantOnboardingCompactProgress steps={STEPS} currentStepId="beta" />);
-		const list = screen.getByRole("list", { name: "Application steps" });
-		expect(list.dataset.orientation).toBe("horizontal");
-		expect(screen.queryAllByRole("button")).toHaveLength(0);
-		expect(screen.getByText("Alpha (completed)")).toBeTruthy();
-		expect(screen.getByText("Beta (current step)")).toBeTruthy();
-		expect(screen.getByText("Gamma")).toBeTruthy();
+	it("renders the same steps horizontally, names kept for assistive technology", (): void => {
+		render(<MerchantOnboardingCompactProgress steps={STEPS} currentStepId="beta" onStepSelect={vi.fn<(stepId: StepId) => void>()} />);
+		const nav = screen.getByRole("tablist", { name: "Application steps" });
+		expect(nav.dataset.orientation).toBe("horizontal");
+		expect(
+			within(nav)
+				.getAllByRole("tab")
+				.map((tab) => tab.textContent),
+		).toEqual(["AlphaFirst step", "2BetaSecond step", "3GammaThird step"]);
 	});
 });

@@ -3,6 +3,9 @@
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import * as React from "react";
 
+/** Pressing this key (no modifiers, outside a text field) flips light/dark. */
+const THEME_TOGGLE_HOTKEY = "d";
+
 /**
  * Shared theme provider for web, admin, and merchant.
  *
@@ -63,7 +66,7 @@ function ThemeHotkey(): null {
 
 			// Defensive: some synthetic / polyfilled events reach the listener
 			// without a populated `key` — treat them as a no-op instead of crashing.
-			if (event.key?.toLowerCase() !== "d") {
+			if (event.key?.toLowerCase() !== THEME_TOGGLE_HOTKEY) {
 				return;
 			}
 

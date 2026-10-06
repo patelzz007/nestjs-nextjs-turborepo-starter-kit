@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { API_VERSION_PREFIX, PosPairTerminalSchema } from "@workspace/shared";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -44,7 +45,7 @@ describe("buildPairTerminalSnippet", () => {
 
 describe("PairTerminalSnippet", () => {
 	it("titles the snippet with the route the till calls", () => {
-		render(<PairTerminalSnippet apiBaseUrl={API} />);
+		render(<PairTerminalSnippet apiBaseUrl={API} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText(PAIR_TERMINAL_SNIPPET_TITLE)).toBeTruthy();
 		expect(PAIR_TERMINAL_SNIPPET_TITLE).toBe("POST /pos/terminals/pair");

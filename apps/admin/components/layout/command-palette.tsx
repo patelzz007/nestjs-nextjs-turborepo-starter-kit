@@ -5,7 +5,7 @@ import { SEARCH_ALIAS_MAP } from "@/lib/palette/search";
 import { useAuthorizedSearchableItems, useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import { ROUTES } from "@/lib/routes";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
-import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
+import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { CircleUserRound, LayoutDashboard, Settings, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";

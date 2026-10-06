@@ -3,7 +3,7 @@
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { Envelope, HttpAuditLogDetail } from "@workspace/shared";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";

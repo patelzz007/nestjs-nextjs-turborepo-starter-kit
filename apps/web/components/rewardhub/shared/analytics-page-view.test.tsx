@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import type { CustomerAnalyticsDashboard, Envelope } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,7 +56,7 @@ function spaced(value: string | null | undefined): string {
 }
 
 function renderView(props: Partial<RewardHubAnalyticsPageViewProps> = {}): () => void {
-	const { rerender } = render(<RewardHubAnalyticsPageView nowMs={NOW_MS} {...props} />);
+	const { rerender } = render(<RewardHubAnalyticsPageView nowMs={NOW_MS} {...props} />, { wrapper: UiKitTestProviders });
 	// The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself).
 	return (): void => {
 		rerender(<RewardHubAnalyticsPageView nowMs={NOW_MS} {...props} />);
@@ -122,7 +124,7 @@ describe("RewardHubAnalyticsPageView", () => {
 			within(screen.getByRole("table", { name: "Your top shops over time" }))
 				.getAllByRole("columnheader")
 				.map((header) => header.textContent),
-		).toEqual(["Period", "Teh Tarik House", "Brew & Bean"]);
+		).toEqual([UI_KIT_LABELS_EN.timeSeriesChart.period, "Teh Tarik House", "Brew & Bean"]);
 		expect(within(screen.getByRole("list", { name: "Shops ranked by your spending" })).getAllByRole("listitem")).toHaveLength(2);
 		expect(spaced(within(screen.getByRole("list", { name: "Shop categories ranked by your spending" })).getAllByRole("listitem")[0]?.textContent)).toContain("Beverage");
 		// Customers see their own activity only — there is nothing to export.
@@ -133,7 +135,7 @@ describe("RewardHubAnalyticsPageView", () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		const refresh = renderView();
 
-		await chooseFilter("Date range", "Last 7 days");
+		await chooseFilter(UI_KIT_LABELS_EN.analyticsRangePicker.range, "Last 7 days");
 		refresh();
 
 		expect(window.location.search).toBe("?range=last7Days");

@@ -1,8 +1,8 @@
 "use client";
 
 import type { MerchantBusinessCategory } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Label } from "@workspace/ui/components/form/label";
+import { Button } from "@workspace/ui/components/button";
+import { Label } from "@workspace/ui/components/label";
 import type { JSX, SyntheticEvent } from "react";
 
 import { MerchantKybBusinessFields, type MerchantKybBusinessFieldName, type MerchantKybFieldValues } from "../kyb/fields";

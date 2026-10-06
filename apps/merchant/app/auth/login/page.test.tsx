@@ -16,7 +16,7 @@ const { loginForm, serverEnvMock } = vi.hoisted(() => ({
 
 // The client form is replaced by a probe: this suite checks what the server hands it.
 vi.mock("@workspace/client/lib/auth/forms/login-form", () => ({ LoginForm: loginForm }));
-vi.mock("@workspace/ui/components/layout/auth-layout", () => ({
+vi.mock("@workspace/ui/components/auth-layout", () => ({
 	AuthLayout: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <>{children}</>,
 }));
 vi.mock("@/lib/env/env.server", () => ({ serverEnv: serverEnvMock }));

@@ -235,7 +235,7 @@ public surface and is not allowed (see [ESLint → Import boundaries](./eslint.m
 So in `apps/web` you can write:
 
 ```ts
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { LoginInput } from "@workspace/shared";
 ```

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import type { ChangePasswordInput, ChangePasswordResponse, Envelope } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -53,7 +54,7 @@ afterEach(() => {
 
 describe("ChangePasswordForm validation", () => {
 	it("requires the current password", async () => {
-		render(<ChangePasswordForm />);
+		render(<ChangePasswordForm />, { wrapper: UiKitTestProviders });
 
 		submitChange({ ...VALID, currentPassword: "" });
 
@@ -62,7 +63,7 @@ describe("ChangePasswordForm validation", () => {
 	});
 
 	it("rejects a weak new password with the shared strong-password rule", async () => {
-		render(<ChangePasswordForm />);
+		render(<ChangePasswordForm />, { wrapper: UiKitTestProviders });
 
 		submitChange({ ...VALID, newPassword: "newsecure@456", confirmPassword: "newsecure@456" });
 
@@ -71,7 +72,7 @@ describe("ChangePasswordForm validation", () => {
 	});
 
 	it("rejects a confirmation that does not match", async () => {
-		render(<ChangePasswordForm />);
+		render(<ChangePasswordForm />, { wrapper: UiKitTestProviders });
 
 		submitChange({ ...VALID, confirmPassword: "NewSecure@457" });
 
@@ -80,7 +81,7 @@ describe("ChangePasswordForm validation", () => {
 	});
 
 	it("rejects a new password equal to the current one", async () => {
-		render(<ChangePasswordForm />);
+		render(<ChangePasswordForm />, { wrapper: UiKitTestProviders });
 
 		submitChange({ currentPassword: "SameSecure@1", newPassword: "SameSecure@1", confirmPassword: "SameSecure@1" });
 
@@ -92,7 +93,7 @@ describe("ChangePasswordForm validation", () => {
 describe("ChangePasswordForm submit", () => {
 	it("changes the password, shows the API's message, clears the fields and reports success", async () => {
 		mocks.changePassword.mockResolvedValue(envelopeFixture({ message: "Password changed. Other sessions were signed out." }));
-		render(<ChangePasswordForm onSuccess={mocks.onSuccess} />);
+		render(<ChangePasswordForm onSuccess={mocks.onSuccess} />, { wrapper: UiKitTestProviders });
 
 		submitChange(VALID);
 
@@ -106,7 +107,7 @@ describe("ChangePasswordForm submit", () => {
 
 	it("shows the friendly message of a rejected current password and does not report success", async () => {
 		mocks.changePassword.mockRejectedValue(new ApiError({ message: "Invalid credentials", error: "INVALID_CREDENTIALS", statusCode: 401 }));
-		render(<ChangePasswordForm onSuccess={mocks.onSuccess} />);
+		render(<ChangePasswordForm onSuccess={mocks.onSuccess} />, { wrapper: UiKitTestProviders });
 
 		submitChange(VALID);
 

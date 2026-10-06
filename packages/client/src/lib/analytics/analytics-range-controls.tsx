@@ -11,7 +11,7 @@
 // being picked (a draft, committed to the URL by Apply — like `useUrlDraft`).
 
 import { MAX_ANALYTICS_RANGE_DAYS, PLATFORM_DISPLAY_REGION, type AnalyticsInterval } from "@workspace/shared";
-import { AnalyticsRangePicker, type CustomDays } from "@workspace/ui/components/analytics/analytics-range-picker";
+import { AnalyticsRangePicker, type CustomDays } from "@workspace/ui/components/analytics-range-picker";
 import * as React from "react";
 
 import { useUrlState } from "../url-state/use-url-state";
@@ -24,14 +24,7 @@ import {
 	type LocalDateRange,
 	type ResolvedAnalyticsRange,
 } from "./analytics-range";
-import {
-	analyticsDisplayRegion,
-	ANALYTICS_INTERVAL_OPTIONS,
-	ANALYTICS_RANGE_PICKER_LABELS,
-	ANALYTICS_RANGE_PRESET_OPTIONS,
-	formatAnalyticsRangeLabel,
-	formatCustomDays,
-} from "./analytics-presentation";
+import { analyticsDisplayRegion, ANALYTICS_INTERVAL_OPTIONS, ANALYTICS_RANGE_PRESET_OPTIONS, formatAnalyticsRangeLabel, formatCustomDays } from "./analytics-presentation";
 
 /** The dashboard's range and the commands that change it (each writes the URL). */
 export interface AnalyticsRangeController {
@@ -130,7 +123,6 @@ export function AnalyticsRangeControls({ controller, disabled = false, className
 			interval={range.interval}
 			onIntervalChange={selectInterval}
 			rangeLabel={formatAnalyticsRangeLabel(range.fromMs, range.toMs, analyticsDisplayRegion(range.timeZone))}
-			labels={ANALYTICS_RANGE_PICKER_LABELS}
 			disabled={disabled}
 		/>
 	);

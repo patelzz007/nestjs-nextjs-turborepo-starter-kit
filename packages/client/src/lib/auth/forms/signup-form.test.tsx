@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import type { Envelope, SignupInput, SignupResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -48,7 +49,7 @@ afterEach(() => {
 
 describe("SignupForm validation", () => {
 	it("rejects an invalid email", async () => {
-		render(<SignupForm />);
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
 
 		submitSignup({ ...VALID, email: "jane-at-example" });
 
@@ -57,7 +58,7 @@ describe("SignupForm validation", () => {
 	});
 
 	it("rejects a weak password with the shared strong-password rule", async () => {
-		render(<SignupForm />);
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
 
 		submitSignup({ ...VALID, password: "short" });
 
@@ -66,7 +67,7 @@ describe("SignupForm validation", () => {
 	});
 
 	it("rejects a password without a special character", async () => {
-		render(<SignupForm />);
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
 
 		submitSignup({ ...VALID, password: "StrongPass1" });
 
@@ -75,7 +76,7 @@ describe("SignupForm validation", () => {
 	});
 
 	it("rejects a one-character full name", async () => {
-		render(<SignupForm />);
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
 
 		submitSignup({ ...VALID, fullName: "J" });
 
@@ -87,7 +88,7 @@ describe("SignupForm validation", () => {
 describe("SignupForm submit", () => {
 	it("creates the account with the validated details and shows the check-your-email message", async () => {
 		mocks.signup.mockResolvedValue(envelopeFixture({ message: "Account created" }));
-		render(<SignupForm loginHref="/sign-in" />);
+		render(<SignupForm loginHref="/sign-in" />, { wrapper: UiKitTestProviders });
 
 		submitSignup(VALID);
 
@@ -99,7 +100,7 @@ describe("SignupForm submit", () => {
 
 	it("shows the API error and keeps the form when signup fails", async () => {
 		mocks.signup.mockRejectedValue(new ApiError({ message: "An account with this email already exists", statusCode: 409 }));
-		render(<SignupForm />);
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
 
 		submitSignup(VALID);
 
@@ -111,7 +112,7 @@ describe("SignupForm submit", () => {
 	});
 
 	it("links to sign-in from the form", () => {
-		render(<SignupForm />);
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/auth/login");
 	});

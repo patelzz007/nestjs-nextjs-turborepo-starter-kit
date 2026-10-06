@@ -14,16 +14,16 @@
 // features actually provide.
 // ============================================================
 
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { z } from "zod";
 
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
+import { Badge } from "@workspace/ui/components/badge";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { DataTable, type Action, type DataTableCheckboxConfig, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type DataTableCheckboxConfig, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import type { DataTableCellScalar } from "@workspace/ui/lib/data-table/prefs";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleDashed, Copy, Eye, Pencil, Trash2 } from "lucide-react";
@@ -117,6 +117,12 @@ function StatusBadge({ status }: { readonly status: string }): React.JSX.Element
 }
 
 // ── The showcase — owns all smart data and wires it into the shared table ──
+
+/** Only the strings that differ from the kit pack's `dataTable` copy. */
+const SHOWCASE_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
+	actionsMenuTitle: "Section actions",
+	openRowMenu: "Open section row menu",
+};
 
 export function DataTableShowcase(): React.JSX.Element {
 	// Inline edits and row reorders are DATA mutations — the smart layer owns
@@ -328,15 +334,6 @@ export function DataTableShowcase(): React.JSX.Element {
 		[],
 	);
 
-	const dataTableLabels = useMemo(
-		(): DataTableLabels =>
-			createDataTableLabels({
-				actionsMenuTitle: "Section actions",
-				openRowMenu: "Open section row menu",
-			}),
-		[],
-	);
-
 	return (
 		<DataTable
 			data={rows}
@@ -346,7 +343,7 @@ export function DataTableShowcase(): React.JSX.Element {
 			searchKeys={["header", "reviewer"]}
 			filters={filters}
 			actions={actions}
-			labels={dataTableLabels}
+			labels={SHOWCASE_TABLE_LABELS}
 			checkbox={checkbox}
 			enableColumnVisibility
 			enableColumnPinning

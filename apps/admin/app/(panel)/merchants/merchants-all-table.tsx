@@ -1,7 +1,7 @@
 "use client";
 
 import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
-import { createDataTableLabels } from "@/lib/data-table/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
@@ -18,9 +18,9 @@ import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/c
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { useCanStartImpersonation } from "@/lib/session/super-admin";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
@@ -30,6 +30,15 @@ import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 import { pilotCityLabel } from "@/lib/format/pilot-city";
 import { enumFilterOptions, KYB_STATUS_LABELS, MERCHANT_ORG_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
+
+const MERCHANT_SEARCH_PLACEHOLDER = "Search name or email…";
+
+/** Only the strings that differ from the kit pack's `dataTable` copy. */
+const MERCHANT_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
+	actionsMenuTitle: "Merchant actions",
+	openRowMenu: "Open merchant row menu",
+	searchPlaceholder: MERCHANT_SEARCH_PLACEHOLDER,
+};
 
 export interface MerchantsAllTableProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -186,16 +195,6 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		];
 	}, []);
 
-	const tableLabels = React.useMemo(
-		() =>
-			createDataTableLabels({
-				actionsMenuTitle: "Merchant actions",
-				openRowMenu: "Open merchant row menu",
-				searchPlaceholder: "Search name or email…",
-			}),
-		[],
-	);
-
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
 			if (filterKey === "kybStatus") {
@@ -235,8 +234,8 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]), []);
 
 	const toolbarContent = React.useMemo(
-		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
-		[searchDraft, setSearchDraft, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
+		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={MERCHANT_SEARCH_PLACEHOLDER} />,
+		[searchDraft, setSearchDraft],
 	);
 
 	return (
@@ -255,7 +254,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 					<DataTable
 						columns={columns}
 						data={rows}
-						labels={tableLabels}
+						labels={MERCHANT_TABLE_LABELS}
 						actions={actions}
 						checkbox={checkbox}
 						enableColumnVisibility

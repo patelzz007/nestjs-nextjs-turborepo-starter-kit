@@ -1,15 +1,15 @@
 "use client";
 
 import type { MerchantTerminalSettings } from "@workspace/shared";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { Button } from "@workspace/ui/components/form/button";
-import { Switch } from "@workspace/ui/components/form/switch";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Button } from "@workspace/ui/components/button";
+import { Switch } from "@workspace/ui/components/switch";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { AlertTriangle, RotateCw, ShieldCheck } from "lucide-react";
 import * as React from "react";
 
-const REQUIRE_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Turn on", loading: "Saving…" };
+const REQUIRE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Turn on", loading: "Saving…" };
 
 export interface TerminalSettingsCardProps {
 	/** `undefined` until the settings load. */

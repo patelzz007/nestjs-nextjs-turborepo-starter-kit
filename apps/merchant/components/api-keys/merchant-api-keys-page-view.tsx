@@ -30,15 +30,15 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { MERCHANT_CAPABILITY, type Envelope, type MerchantApiKeySummary } from "@workspace/shared";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { Ban, KeyRound, ShieldCheck, Store } from "lucide-react";
 import * as React from "react";
 
 const DEFAULT_TERMINAL_NAME = "POS Terminal";
 const CREATE_KEY_FAILED_MESSAGE = "The key could not be created. Try again.";
 const REVOKE_KEY_FAILED_MESSAGE = "The key could not be revoked. Try again.";
-const REVOKE_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Revoke key", loading: "Revoking…" };
+const REVOKE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Revoke key", loading: "Revoking…" };
 
 /** Everything the server prefetched for the page, as the API answered it (real envelopes — never synthesized meta). */
 export interface ApiKeysPagePrefetch {

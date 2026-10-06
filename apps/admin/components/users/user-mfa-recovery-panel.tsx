@@ -3,7 +3,7 @@
 import { readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import Link from "next/link";
 import * as React from "react";
 

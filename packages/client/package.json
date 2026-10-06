@@ -46,6 +46,7 @@
 		"./lib/analytics/analytics-range": "./src/lib/analytics/analytics-range.ts",
 		"./lib/analytics/analytics-range-controls": "./src/lib/analytics/analytics-range-controls.tsx",
 		"./lib/api/api-request": "./src/lib/api/api-request.ts",
+		"./lib/i18n/ui-kit-language": "./src/lib/i18n/ui-kit-language.ts",
 		"./lib/api/config": "./src/lib/api/config.ts",
 		"./lib/api/download": "./src/lib/api/download.ts",
 		"./lib/api/endpoints": "./src/lib/api/endpoints.ts",

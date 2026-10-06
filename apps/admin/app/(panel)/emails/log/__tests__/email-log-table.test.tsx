@@ -5,6 +5,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import EmailLogView from "../email-log-table";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const { logQuery } = vi.hoisted(() => ({ logQuery: vi.fn() }));
 
@@ -70,7 +71,7 @@ afterEach((): void => {
 describe("EmailLogView URL state", () => {
 	it("queries the URL's status filter, sort and page with the log's page size", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[status]=failed&sort=to&page=2`);
-		render(<EmailLogView />);
+		render(<EmailLogView />, { wrapper: UiKitTestProviders });
 
 		expect(logQuery).toHaveBeenLastCalledWith({ page: 2, limit: 25, sort: "to", filter: { status: { eq: "failed" } } }, expect.anything());
 		expect(screen.getByRole("combobox", { name: "Status" }).textContent).toContain("Failed");
@@ -78,7 +79,7 @@ describe("EmailLogView URL state", () => {
 
 	it("pushes the next page (offset — no cursor in the response) to the URL", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<EmailLogView />);
+		render(<EmailLogView />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 

@@ -7,9 +7,10 @@
 // never shown as signed out), so the notice is informational and non-blocking.
 "use client";
 
-import { Alert } from "@workspace/ui/components/feedback/alert";
-import { Button } from "@workspace/ui/components/form/button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
+import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { TriangleAlert } from "lucide-react";
 import * as React from "react";
 
 import { useAuthCommands, useSessionCheckStatus } from "../../features/auth/facade";
@@ -32,22 +33,20 @@ export function SessionCheckNotice({ className }: SessionCheckNoticeProps): Reac
 	return (
 		<div role="status" aria-live="polite" data-slot="session-check-notice" className={cn("shrink-0", className)}>
 			{check.status === "ok" ? null : (
-				<Alert
-					variant="warning"
-					size="sm"
-					role="none"
-					liveRegion="off"
-					className="rounded-none border-x-0 border-t-0 shadow-none"
-					title={check.status === "retrying" ? "Can't reach the server — retrying…" : "Can't reach the server"}
-					description={
-						check.status === "retrying"
+				<Alert variant="warning" size="sm" role="none" className="rounded-none border-x-0 border-t-0">
+					<TriangleAlert aria-hidden="true" />
+					<AlertTitle>{check.status === "retrying" ? "Can't reach the server — retrying…" : "Can't reach the server"}</AlertTitle>
+					<AlertDescription>
+						{check.status === "retrying"
 							? "We couldn't verify your session. This won't sign you out."
-							: "We couldn't verify your session. We'll try again when your connection is back, or you can try now."
-					}>
+							: "We couldn't verify your session. We'll try again when your connection is back, or you can try now."}
+					</AlertDescription>
 					{check.status === "paused" ? (
-						<Button type="button" size="sm" variant="outline" className="mt-2" onClick={recheckSession}>
-							Try again
-						</Button>
+						<AlertAction>
+							<Button type="button" size="sm" variant="outline" onClick={recheckSession}>
+								Try again
+							</Button>
+						</AlertAction>
 					) : null}
 				</Alert>
 			)}

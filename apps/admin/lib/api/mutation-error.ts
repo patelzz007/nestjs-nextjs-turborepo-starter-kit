@@ -13,7 +13,7 @@
 
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { ApiErrorCodes, StandardApiErrorCodeSchema, type ApiErrorCode, type StandardApiErrorCode } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 
 /** Messages for domain error codes a specific mutation can return (`{ ROLE_ALREADY_ASSIGNED: "…" }`). */
 export type MutationErrorMessages = Readonly<Partial<Record<ApiErrorCode, string>>>;

@@ -4,6 +4,8 @@
 	--z-toast: 60;
 	--z-sidebar: 10;
 	--z-sidebar-rail: 20;
+	/* Sticky in-flow headers (e.g. an accordion trigger pinned to its scroller). */
+	--z-sticky: 10;
 	--sidebar-width: 20rem;
 	--sidebar-width-mobile: 20rem;
 	--sidebar-width-icon: 3rem;
@@ -15,12 +17,36 @@
 	--panel-content-max-width: var(--max-width-10xl);
 	--text-sidebar-caption: 0.6875rem;
 	--text-sidebar-section: 0.8125rem;
+	--text-badge-xs: 0.6rem;
+	--text-badge-sm: 0.625rem;
+	/* App-shell chrome type: <kbd> shortcut hints, uppercase overline group labels,
+	   the smallest meta text (palette footer keys, section badges) and scope chips. */
+	--text-kbd: 0.625rem;
+	--text-overline: 0.625rem;
+	--text-micro: 0.5625rem;
+	--text-chip: 0.6875rem;
+	--text-toast-countdown: 0.625rem;
+	/* Calendar weekday header and week-number column (between text-xs and text-sm). */
+	--text-calendar-caption: 0.8rem;
+	/* Pulls a <kbd> hint flush with the input-group edge. */
+	--input-group-kbd-nudge: -0.15rem;
+	/* Overlay motion curves — popup/stack springs (drawer, navigation menu, toast). */
+	--ease-overlay-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-drawer-backdrop: cubic-bezier(0.32, 0.72, 0, 1);
+	--ease-drawer-content: cubic-bezier(0.45, 1.005, 0, 1.005);
+	/* Emphasized enter (decelerate) / exit (accelerate) — floating affordances like the message-scroller jump button. */
+	--ease-emphasized-enter: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-emphasized-exit: cubic-bezier(0.7, 0, 0.84, 0);
+	/* Stroke of the dashed chart-tooltip series indicator (between border and border-2). */
+	--chart-indicator-dashed-width: 1.5px;
 	--switch-height: 18.4px;
 	--switch-width: 32px;
 	--switch-height-sm: 14px;
 	--switch-width-sm: 24px;
 	--switch-thumb-size: 16px;
 	--switch-thumb-size-sm: 12px;
+	/* Gap the checked thumb keeps from the track's end edge. */
+	--switch-thumb-inset: 2px;
 	--auth-panel: oklch(0.21 0.034 264.665);
 	--auth-panel-muted: oklch(0.554 0.046 257.417);
 	--auth-panel-foreground: oklch(0.985 0 0);
@@ -30,6 +56,9 @@
 	--print-border: oklch(0.928 0.006 264.531);
 	--print-header-bg: oklch(0.967 0.003 264.542);
 	--print-row-alt: oklch(0.985 0.002 247.839);
+	/* QR codes stay pure black on white in every theme — scanners need maximum contrast (never overridden in .dark). */
+	--qr-background: oklch(1 0 0);
+	--qr-foreground: oklch(0 0 0);
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.141 0.005 285.823);
 	--popover: oklch(1 0 0);
@@ -50,6 +79,22 @@
 	--success-soft: oklch(0.92 0.05 149);
 	--warning-soft: oklch(0.94 0.05 84);
 	--info-soft: oklch(0.92 0.04 250);
+	/*
+	 * ReUI status contract (badge, alert): `<status>-foreground` is the text
+	 * colour on a light `<status>` tint — aliased to the tone palette, so it
+	 * inherits its AA contrast and its dark-theme values. `invert` is the
+	 * theme's own foreground/background swapped. `status-foreground` is the
+	 * text on a solid status fill, the same in both themes.
+	 */
+	--success-foreground: var(--tone-green);
+	--warning-foreground: var(--tone-yellow);
+	--info-foreground: var(--tone-blue);
+	--destructive-foreground: var(--tone-red);
+	--invert: var(--foreground);
+	--invert-foreground: var(--background);
+	--status-foreground: oklch(0.985 0 0);
+	/* Modal backdrop tint — black in both themes, so a backdrop dims the page in dark mode too. */
+	--scrim: oklch(0 0 0);
 	/*
 	 * Tone palette — categorical chips and badges (method, status, device…).
 	 * Each tone is a text colour on its own soft fill; every pair meets WCAG AA
@@ -174,6 +219,7 @@
 	--z-index-toast: var(--z-toast);
 	--z-index-sidebar: var(--z-sidebar);
 	--z-index-sidebar-rail: var(--z-sidebar-rail);
+	--z-index-sticky: var(--z-sticky);
 	--sidebar-width: var(--sidebar-width);
 	--sidebar-width-mobile: var(--sidebar-width-mobile);
 	--sidebar-width-icon: var(--sidebar-width-icon);
@@ -190,6 +236,8 @@
 	--color-print-border: var(--print-border);
 	--color-print-header-bg: var(--print-header-bg);
 	--color-print-row-alt: var(--print-row-alt);
+	--color-qr-background: var(--qr-background);
+	--color-qr-foreground: var(--qr-foreground);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -212,6 +260,14 @@
 	--color-success-soft: var(--success-soft);
 	--color-warning-soft: var(--warning-soft);
 	--color-info-soft: var(--info-soft);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-info-foreground: var(--info-foreground);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-invert: var(--invert);
+	--color-invert-foreground: var(--invert-foreground);
+	--color-status-foreground: var(--status-foreground);
+	--color-scrim: var(--scrim);
 	--color-tone-green: var(--tone-green);
 	--color-tone-green-soft: var(--tone-green-soft);
 	--color-tone-blue: var(--tone-blue);

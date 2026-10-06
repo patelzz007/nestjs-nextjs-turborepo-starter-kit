@@ -2,7 +2,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";

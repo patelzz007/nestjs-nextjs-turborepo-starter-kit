@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Button } from "@workspace/ui/components/form/button";
-import { Field, FieldContent, FieldError, FieldLabel } from "@workspace/ui/components/form/field";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Button } from "@workspace/ui/components/button";
+import { Field, FieldContent, FieldError, FieldLabel } from "@workspace/ui/components/field";
 import {
 	Select,
 	SelectArrow,
@@ -19,8 +19,8 @@ import {
 	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
-} from "@workspace/ui/components/form/select";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+} from "@workspace/ui/components/select";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { useCallback, useState } from "react";
 import { Controller, useForm, type ControllerFieldState, type ControllerRenderProps } from "react-hook-form";

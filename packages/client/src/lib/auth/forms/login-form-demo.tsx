@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { useCallback, type JSX } from "react";
 
 import type { DemoAccount } from "./login-form-types";

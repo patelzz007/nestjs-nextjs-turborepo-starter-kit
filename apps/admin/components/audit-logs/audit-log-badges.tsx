@@ -7,7 +7,7 @@ import {
 	type HttpAuditLogSummary,
 	type IpAddressScope,
 } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { Bot, CircleCheck, CircleHelp, CircleX, Monitor, ShieldAlert, Smartphone, Tablet, type LucideIcon } from "lucide-react";
 import type * as React from "react";
 

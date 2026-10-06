@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import {
 	BACKUP_CODE_CHARSET,
 	BACKUP_CODE_COUNT,
@@ -75,7 +76,7 @@ const SAVED_CODES_LABEL = "I saved my backup codes in a secure place";
 async function startSetup(): Promise<TwoFactorSetupResponse> {
 	const setup = setupResponseFixture();
 	mocks.twoFactorSetup.mockResolvedValue(envelopeFixture(setup));
-	render(<SecuritySettingsPanel />);
+	render(<SecuritySettingsPanel />, { wrapper: UiKitTestProviders });
 	fireEvent.click(screen.getByRole("button", { name: SETUP_BUTTON }));
 	await screen.findByRole("img", { name: "2FA QR code" });
 	return setup;
@@ -100,7 +101,7 @@ afterEach(() => {
 
 describe("SecuritySettingsPanel two-factor setup", () => {
 	it("starts setup with the POST mutation on click — never by reading it as a query", async () => {
-		render(<SecuritySettingsPanel />);
+		render(<SecuritySettingsPanel />, { wrapper: UiKitTestProviders });
 
 		// Nothing is generated just by viewing the page: no QR until the member asks for one.
 		expect(screen.queryByRole("img", { name: "2FA QR code" })).toBeNull();
@@ -128,7 +129,7 @@ describe("SecuritySettingsPanel two-factor setup", () => {
 
 	it("shows the error when setup fails and renders no QR code", async () => {
 		mocks.twoFactorSetup.mockRejectedValue(new ApiError({ message: "Two-factor authentication is already enabled", statusCode: 409 }));
-		render(<SecuritySettingsPanel />);
+		render(<SecuritySettingsPanel />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: SETUP_BUTTON }));
 

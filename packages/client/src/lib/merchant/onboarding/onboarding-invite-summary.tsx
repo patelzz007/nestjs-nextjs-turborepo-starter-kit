@@ -1,7 +1,7 @@
 "use client";
 
-import { EntityAvatar } from "@workspace/ui/components/display/entity-avatar";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { CalendarClock, Mail, MapPin, type LucideIcon } from "lucide-react";
 import type { JSX } from "react";

@@ -1,6 +1,6 @@
 import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
 import { EmailAddressSchema } from "@workspace/shared";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import * as React from "react";
 
 import { MerchantAuthLogo } from "@/app/auth/merchant-auth-logo";
@@ -39,12 +39,7 @@ export default async function MerchantLoginPage({ searchParams }: MerchantLoginP
 			features={["Draft and publish rewards", "Track redemptions in real time", "Manage POS API keys securely"]}
 			title="Merchant login"
 			subtitle="Sign in with your store account"
-			copyright="Reward Hub"
-			labels={{
-				mobileBack: "Back",
-				toggleThemeAria: "Toggle theme",
-				rightsReserved: "All rights reserved.",
-			}}>
+			copyright="Reward Hub">
 			<LoginForm
 				mode="merchant"
 				{...(demoAccounts.length > 0 ? { demoAccounts } : {})}

@@ -10,7 +10,6 @@ import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
-import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
@@ -18,14 +17,14 @@ import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, use
 import { resolveActiveOrganizationMembership } from "@/lib/session/server-capabilities";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
-import { breadcrumbPageLabel } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { PanelSidebarHeader } from "@workspace/ui/components/navigation/panel-sidebar-header";
-import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/navigation/panel-sidebar-nav";
-import type { PanelSidebarLinkProps } from "@workspace/ui/components/navigation/panel-sidebar-nav-item";
-import { SidebarFooter } from "@workspace/ui/components/navigation/sidebar";
+import { Badge } from "@workspace/ui/components/badge";
+import { Label } from "@workspace/ui/components/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
+import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
+import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
+import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
+import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
@@ -123,7 +122,6 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				pinnedItems={pinnedItems}
 				onMoveSectionUp={moveSectionUp}
 				onMoveSectionDown={moveSectionDown}
-				labels={MERCHANT_SIDEBAR_LABELS}
 				unavailableTitle={enrollmentDisabledTooltip}
 				notice={
 					<>
@@ -197,7 +195,6 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 					renderLink={renderMerchantLink}
 					renderIcon={renderMerchantMenuIcon}
 					searchQuery={searchQuery}
-					labels={MERCHANT_SIDEBAR_LABELS}
 					unavailableTitle={enrollmentDisabledTooltip}
 				/>
 
@@ -206,7 +203,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				</div>
 			</SidebarFooter>
 
-			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} labels={MERCHANT_SIDEBAR_LABELS} />
+			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} />
 		</div>
 	);
 }

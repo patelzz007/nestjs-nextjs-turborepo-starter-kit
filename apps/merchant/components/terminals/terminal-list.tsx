@@ -3,11 +3,12 @@
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { describeTerminalStatus, pairingActionLabel, type TerminalStatusTone } from "@/lib/terminals/terminal-summary";
 import { PLATFORM_DISPLAY_REGION, type MerchantTerminalSummary } from "@workspace/shared";
-import { CodeBlockCopyButton } from "@workspace/ui/components/display/code-block";
-import { RelativeTime } from "@workspace/ui/components/display/relative-time";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { Button } from "@workspace/ui/components/form/button";
+import { CodeBlockCopyButton } from "@workspace/ui/components/code-block";
+import { RelativeTime } from "@workspace/ui/components/relative-time";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { AlertTriangle, Clock, MapPin, MonitorSmartphone, Plus, RotateCw } from "lucide-react";
 import * as React from "react";
 
@@ -158,6 +159,10 @@ function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRem
 	const status = describeTerminalStatus(terminal.status);
 	const pairLabel = pairingActionLabel(terminal.status);
 	const isBusy = isIssuingCode || isRemoving;
+	const copyIdLabels = React.useMemo(
+		(): UiKitLabelsOverride<"codeBlock"> => ({ copy: `Copy terminal ID of ${terminal.name}`, copied: `Copied terminal ID of ${terminal.name}` }),
+		[terminal.name],
+	);
 
 	const handlePair = React.useCallback((): void => {
 		onPairRequest(terminal);
@@ -184,11 +189,7 @@ function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRem
 			<div className="flex min-w-0 items-center gap-1">
 				<span className="text-sm text-muted-foreground lg:sr-only">Terminal ID: </span>
 				<code className="truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">{terminal.terminalId}</code>
-				<CodeBlockCopyButton
-					value={terminal.terminalId}
-					position="inline"
-					labels={{ copy: `Copy terminal ID of ${terminal.name}`, copied: `Copied terminal ID of ${terminal.name}` }}
-				/>
+				<CodeBlockCopyButton value={terminal.terminalId} position="inline" labels={copyIdLabels} />
 			</div>
 			<p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
 				<MapPin className="size-3.5 shrink-0" aria-hidden="true" />

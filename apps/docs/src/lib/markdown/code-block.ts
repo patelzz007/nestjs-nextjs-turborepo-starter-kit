@@ -1,4 +1,4 @@
-import { highlightCode, resolveCodeBlockLanguage, type CodeBlockLine } from "@workspace/ui/components/display/code-block-highlight";
+import { highlightCode, resolveCodeBlockLanguage, type CodeBlockLine } from "@workspace/ui/components/code-block-highlight";
 import type { Element, Root } from "hast";
 import type { Raw } from "mdast-util-to-hast";
 import { visit } from "unist-util-visit";

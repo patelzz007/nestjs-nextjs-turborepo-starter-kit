@@ -10,20 +10,27 @@ export interface AppDocumentShellProps {
 	readonly children: React.ReactNode;
 }
 
+/** BCP 47 tag used when the app does not pass `lang`. */
+const DEFAULT_DOCUMENT_LANG = "en";
+
 /**
- * Root `<html>` / `<body>` wrapper for Next.js app layouts.
+ * Root `<html>` / `<body>` wrapper for Next.js app layouts. The ref reaches
+ * the `<html>` element.
  *
  * Both elements use `suppressHydrationWarning` because:
  * - `next-themes` mutates the `<html>` class before hydration.
  * - Browser extensions (ColorZilla, Grammarly, password managers, etc.) inject
  *   attributes onto `<body>` that are absent from the server HTML.
  */
-export function AppDocumentShell({ lang = "en", htmlClassName, bodyClassName, htmlProps, bodyProps, children }: AppDocumentShellProps): React.JSX.Element {
+export const AppDocumentShell = React.forwardRef<HTMLHtmlElement, AppDocumentShellProps>(function AppDocumentShell(
+	{ lang = DEFAULT_DOCUMENT_LANG, htmlClassName, bodyClassName, htmlProps, bodyProps, children },
+	ref,
+): React.JSX.Element {
 	return (
-		<html lang={lang} suppressHydrationWarning className={cn(htmlClassName)} {...htmlProps}>
+		<html ref={ref} lang={lang} suppressHydrationWarning className={cn(htmlClassName)} {...htmlProps}>
 			<body className={cn(bodyClassName)} suppressHydrationWarning {...bodyProps}>
 				{children}
 			</body>
 		</html>
 	);
-}
+});

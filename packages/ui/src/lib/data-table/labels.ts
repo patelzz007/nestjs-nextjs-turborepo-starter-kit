@@ -1,4 +1,4 @@
-/** User-visible copy for DataTable affordances (rule 11 — parent supplies all strings). */
+/** User-visible copy for DataTable affordances — the `dataTable` family of `UiKitLabels`. */
 export interface DataTableLabels {
 	readonly actionsMenuTitle: string;
 	readonly openRowMenu: string;

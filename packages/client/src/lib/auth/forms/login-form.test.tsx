@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import {
 	APP_LINKS,
 	BACKUP_CODE_LENGTH,
@@ -96,7 +97,7 @@ function submitCredentials(): void {
 
 async function reachTwoFactorStep(): Promise<void> {
 	mocks.login.mockResolvedValue(twoFactorPendingAnswer());
-	render(<LoginForm />);
+	render(<LoginForm />, { wrapper: UiKitTestProviders });
 	submitCredentials();
 	await screen.findByLabelText("Authenticator code");
 }
@@ -112,19 +113,19 @@ afterEach(() => {
 
 describe("LoginForm forgot-password link", () => {
 	it("links to the shared forgot-password page by default", () => {
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("link", { name: "Forgot password?" }).getAttribute("href")).toBe(APP_LINKS.auth.forgotPassword);
 	});
 
 	it("uses the given destination", () => {
-		render(<LoginForm forgotPasswordHref="/help/password" />);
+		render(<LoginForm forgotPasswordHref="/help/password" />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("link", { name: "Forgot password?" }).getAttribute("href")).toBe("/help/password");
 	});
 
 	it("is hidden for an app without a password-reset flow (null)", () => {
-		render(<LoginForm forgotPasswordHref={null} />);
+		render(<LoginForm forgotPasswordHref={null} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.queryByRole("link", { name: "Forgot password?" })).toBeNull();
 		expect(screen.getByLabelText("Password")).toBeDefined();
@@ -133,7 +134,7 @@ describe("LoginForm forgot-password link", () => {
 
 describe("LoginForm social login", () => {
 	it("offers no social-login buttons (there is no provider integration)", () => {
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		expect(screen.queryByRole("button", { name: /google/i })).toBeNull();
 		expect(screen.queryByRole("button", { name: /github/i })).toBeNull();
@@ -144,7 +145,7 @@ describe("LoginForm social login", () => {
 describe("LoginForm password sign-in", () => {
 	it("submits the typed email and password to the login mutation", async () => {
 		mocks.login.mockResolvedValue(successAnswer());
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -157,7 +158,7 @@ describe("LoginForm password sign-in", () => {
 	it("signs the user in with the response envelope's meta and navigates to the redirect", async () => {
 		const user = userFixture({ id: "user-42" });
 		mocks.login.mockResolvedValue(successAnswer(user));
-		render(<LoginForm redirectPath="/dashboard" />);
+		render(<LoginForm redirectPath="/dashboard" />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -170,7 +171,7 @@ describe("LoginForm password sign-in", () => {
 
 	it("navigates to /hello by default for the web app", async () => {
 		mocks.login.mockResolvedValue(successAnswer());
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -181,7 +182,7 @@ describe("LoginForm password sign-in", () => {
 
 	it("shows the friendly message for an INVALID_CREDENTIALS API error and stays signed out", async () => {
 		mocks.login.mockRejectedValue(new ApiError({ message: "Invalid credentials", error: "INVALID_CREDENTIALS", statusCode: 401 }));
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -195,7 +196,7 @@ describe("LoginForm password sign-in", () => {
 describe("LoginForm admin mode", () => {
 	it("uses the admin login endpoint and rejects an account without admin access", async () => {
 		mocks.adminLogin.mockResolvedValue(successAnswer(userFixture({ hasAdminAccess: false })));
-		render(<LoginForm mode="admin" />);
+		render(<LoginForm mode="admin" />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -209,7 +210,7 @@ describe("LoginForm admin mode", () => {
 	it("signs in an account with admin access and navigates to the admin root", async () => {
 		const admin = userFixture({ hasAdminAccess: true });
 		mocks.adminLogin.mockResolvedValue(successAnswer(admin));
-		render(<LoginForm mode="admin" />);
+		render(<LoginForm mode="admin" />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -342,7 +343,7 @@ describe("LoginForm email-verification step", () => {
 			envelopeFixture<LoginClientResponse>({ requiresVerification: true, verificationId: VERIFICATION_ID, message: "Check your email" }, LOGIN_META),
 		);
 		mocks.verifyLogin.mockResolvedValue(successAnswer(user));
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 		const codeInput = await screen.findByLabelText<HTMLInputElement>("Verification code");
@@ -363,7 +364,7 @@ describe("LoginForm email-verification step", () => {
 		mocks.login.mockResolvedValue(
 			envelopeFixture<LoginClientResponse>({ requiresVerification: true, verificationId: VERIFICATION_ID, message: "Check your email" }, LOGIN_META),
 		);
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 		fireEvent.change(await screen.findByLabelText("Verification code"), { target: { value: "123" } });
@@ -382,7 +383,7 @@ describe("LoginForm restricted enrollment", () => {
 		mocks.login.mockResolvedValue(
 			envelopeFixture<LoginClientResponse>({ requiresEnrollment: true, enrollmentReason: "email_verification", message: "Verify your email to continue", user }, LOGIN_META),
 		);
-		render(<LoginForm />);
+		render(<LoginForm />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 
@@ -401,7 +402,7 @@ describe("LoginForm restricted enrollment", () => {
 				LOGIN_META,
 			),
 		);
-		render(<LoginForm mode="merchant" />);
+		render(<LoginForm mode="merchant" />, { wrapper: UiKitTestProviders });
 
 		submitCredentials();
 

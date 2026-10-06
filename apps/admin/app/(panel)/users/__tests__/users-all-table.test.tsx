@@ -9,6 +9,7 @@ import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
 import { USERS_TABLE_URL_STATE } from "@/lib/url-state/users";
 
 import UsersAllTable from "../users-all-table";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** Only the user fields the table renders. */
 interface UserRowStub {
@@ -87,7 +88,7 @@ afterEach((): void => {
 describe("UsersAllTable URL state", () => {
 	it("queries exactly what the URL asks for and shows it in the controls", () => {
 		setUrl(`${PATH}?page=2&sort=-email&search=jane&filter[status]=locked`);
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		expect(usersQuery).toHaveBeenLastCalledWith(
 			{ page: 2, limit: 20, sort: "-email", search: "jane", filter: { status: { eq: "locked" } } },
@@ -99,7 +100,7 @@ describe("UsersAllTable URL state", () => {
 
 	it("ignores invalid params instead of sending them", () => {
 		setUrl(`${PATH}?page=-1&sort=passwordHash&filter[status]=root&limit=7`);
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		expect(usersQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.anything());
 	});
@@ -109,7 +110,7 @@ describe("UsersAllTable URL state", () => {
 		setUrl(`${PATH}?page=3`);
 		const replaceState = vi.spyOn(window.history, "replaceState");
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		fireEvent.change(screen.getByDisplayValue(""), { target: { value: "  bob " } });
 		expect(replaceState).not.toHaveBeenCalled();
@@ -124,7 +125,7 @@ describe("UsersAllTable URL state", () => {
 
 	it("restores search, sort and page from the URL on back/forward", () => {
 		setUrl(`${PATH}?search=jane`);
-		const view = render(<UsersAllTable />);
+		const view = render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 		expect(screen.getByDisplayValue("jane")).toBeDefined();
 
 		setUrl(`${PATH}?page=4&search=bob&sort=fullName`);
@@ -137,7 +138,7 @@ describe("UsersAllTable URL state", () => {
 	it("pushes a status filter change and resets to page 1", async () => {
 		setUrl(`${PATH}?page=3`);
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		const trigger = screen.getByRole("combobox", { name: "Account status" });
 		fireEvent.pointerDown(trigger, { pointerType: "mouse", button: 0 });
@@ -157,7 +158,7 @@ describe("UsersAllTable URL state", () => {
 	it("pushes a sort change and resets to page 1", () => {
 		setUrl(`${PATH}?page=3`);
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByText("Name"));
 
@@ -167,7 +168,7 @@ describe("UsersAllTable URL state", () => {
 
 	it("pushes the next page with the response's keyset cursor (default order)", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
@@ -177,7 +178,7 @@ describe("UsersAllTable URL state", () => {
 
 	it("pages by offset only when a custom sort is active", () => {
 		setUrl(`${PATH}?sort=email`);
-		render(<UsersAllTable />);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
@@ -188,7 +189,7 @@ describe("UsersAllTable URL state", () => {
 		setUrl(`${PATH}?page=2`);
 		const envelope: Envelope<AdminUserDetail[]> = { success: true, data: [], meta: pageMeta({ page: 2 }) };
 		const prefetchedFor = USERS_TABLE_URL_STATE.serialize(USERS_TABLE_URL_STATE.parse(new URLSearchParams("page=2")));
-		const view = render(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />);
+		const view = render(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />, { wrapper: UiKitTestProviders });
 		expect(usersQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ initialData: envelope }));
 
 		setUrl(`${PATH}?page=3`);

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { APP_LINKS, type Envelope, type MessageResponse, type ResetPasswordInput, type ValidateResetTokenInput, type ValidateResetTokenResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,7 +43,7 @@ const INVALID_LINK_TEXT = "This password reset link is invalid or has expired.";
 
 async function renderValidForm(loginHref: string = APP_LINKS.auth.login): Promise<void> {
 	mocks.validateResetToken.mockResolvedValue(envelopeFixture({ valid: true }));
-	render(<ResetPasswordForm token={TOKEN} loginHref={loginHref} />);
+	render(<ResetPasswordForm token={TOKEN} loginHref={loginHref} />, { wrapper: UiKitTestProviders });
 	await screen.findByLabelText("New password");
 }
 
@@ -66,7 +67,7 @@ afterEach(() => {
 
 describe("ResetPasswordForm token validation", () => {
 	it("shows the invalid-link state for an empty token without asking the API", () => {
-		render(<ResetPasswordForm token="" />);
+		render(<ResetPasswordForm token="" />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText(INVALID_LINK_TEXT)).toBeDefined();
 		expect(screen.getByRole("link", { name: "Request a new reset link" }).getAttribute("href")).toBe(APP_LINKS.auth.forgotPassword);
@@ -75,7 +76,7 @@ describe("ResetPasswordForm token validation", () => {
 
 	it("validates the token, showing a pending state until the API answers", async () => {
 		mocks.validateResetToken.mockResolvedValue(envelopeFixture({ valid: true }));
-		render(<ResetPasswordForm token={TOKEN} />);
+		render(<ResetPasswordForm token={TOKEN} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("Validating reset link...")).toBeDefined();
 		expect(await screen.findByLabelText("New password")).toBeDefined();
@@ -84,7 +85,7 @@ describe("ResetPasswordForm token validation", () => {
 
 	it("shows the invalid-link state when the API says the token is not valid", async () => {
 		mocks.validateResetToken.mockResolvedValue(envelopeFixture({ valid: false }));
-		render(<ResetPasswordForm token={TOKEN} forgotPasswordHref="/help/reset" />);
+		render(<ResetPasswordForm token={TOKEN} forgotPasswordHref="/help/reset" />, { wrapper: UiKitTestProviders });
 
 		expect(await screen.findByText(INVALID_LINK_TEXT)).toBeDefined();
 		expect(screen.getByRole("link", { name: "Request a new reset link" }).getAttribute("href")).toBe("/help/reset");
@@ -93,7 +94,7 @@ describe("ResetPasswordForm token validation", () => {
 
 	it("treats a failed token check as an invalid link", async () => {
 		mocks.validateResetToken.mockRejectedValue(new ApiError({ message: "Server error", statusCode: 500 }));
-		render(<ResetPasswordForm token={TOKEN} />);
+		render(<ResetPasswordForm token={TOKEN} />, { wrapper: UiKitTestProviders });
 
 		expect(await screen.findByText(INVALID_LINK_TEXT)).toBeDefined();
 	});

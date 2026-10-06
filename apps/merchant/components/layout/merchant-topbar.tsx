@@ -12,10 +12,10 @@ import { useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade"
 import { useAuth, isRestrictedAuthUser } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
-import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
-import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
-import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
-import { Button } from "@workspace/ui/components/form/button";
+import { AppShellProfileDropdown } from "@workspace/ui/components/app-shell-profile-dropdown";
+import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/app-shell-topbar";
+import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
+import { Button } from "@workspace/ui/components/button";
 import { CircleUser, Gift, KeyRound, LayoutDashboard, Settings } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";

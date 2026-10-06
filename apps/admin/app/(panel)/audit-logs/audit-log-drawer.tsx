@@ -2,8 +2,8 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import type { HttpAuditLogDetail } from "@workspace/shared";
-import { buttonVariants } from "@workspace/ui/components/form/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@workspace/ui/components/overlay/sheet";
+import { buttonVariants } from "@workspace/ui/components/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@workspace/ui/components/sheet";
 import { ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";

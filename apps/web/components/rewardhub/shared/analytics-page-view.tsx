@@ -17,7 +17,6 @@ import { ROUTES } from "@/lib/routes";
 import { keepPreviousData } from "@tanstack/react-query";
 import { AnalyticsKpiGrid } from "@workspace/client/lib/analytics/analytics-kpi-grid";
 import {
-	ANALYTICS_CHART_LABELS,
 	analyticsDisplayRegion,
 	analyticsFormatters,
 	bucketFormatters,
@@ -42,12 +41,12 @@ import {
 	type CustomerAnalyticsDashboard,
 	type Envelope,
 } from "@workspace/shared";
-import { AnalyticsPanel } from "@workspace/ui/components/analytics/analytics-panel";
-import { RankedBarList } from "@workspace/ui/components/analytics/ranked-bar-list";
-import { ShareBar } from "@workspace/ui/components/analytics/share-bar";
-import { TimeSeriesChart } from "@workspace/ui/components/analytics/time-series-chart";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { AnalyticsPanel } from "@workspace/ui/components/analytics-panel";
+import { RankedBarList } from "@workspace/ui/components/ranked-bar-list";
+import { ShareBar } from "@workspace/ui/components/share-bar";
+import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
+import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
@@ -166,7 +165,6 @@ export function CustomerActivitySections({ dashboard, status }: CustomerActivity
 						formatAxisValue={formatters.moneyCompact}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						axisWidth={MONEY_AXIS_WIDTH_PX}
 						state={toChartFrameState(status, spending.isEmpty, NO_SPENDING_MESSAGE)}
 					/>
@@ -181,7 +179,6 @@ export function CustomerActivitySections({ dashboard, status }: CustomerActivity
 						formatAxisValue={formatters.count}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						state={toChartFrameState(status, engagement.isEmpty, "You didn't claim or redeem a reward in this range.")}
 					/>
 				</AnalyticsPanel>
@@ -217,7 +214,6 @@ export function CustomerActivitySections({ dashboard, status }: CustomerActivity
 						formatAxisValue={formatters.moneyCompact}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						axisWidth={MONEY_AXIS_WIDTH_PX}
 						state={toChartFrameState(status, shopTrend.isEmpty, NO_SPENDING_MESSAGE)}
 					/>

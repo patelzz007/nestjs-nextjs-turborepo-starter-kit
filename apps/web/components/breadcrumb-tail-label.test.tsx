@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -47,14 +48,14 @@ function trailText(): string | null {
 describe("WebBreadcrumbTailLabel", () => {
 	it("names the final crumb after the entity when the label is known at first render", () => {
 		pathnameMock.mockReturnValue(rewardDetailPath("reward-1"));
-		render(<Page label="Free coffee" showLabel />);
+		render(<Page label="Free coffee" showLabel />, { wrapper: UiKitTestProviders });
 
 		expect(trailText()).toBe("Browse Rewards › Free coffee");
 	});
 
 	it("keeps the generic label while the entity name is unknown, then applies it", () => {
 		pathnameMock.mockReturnValue(rewardDetailPath("reward-1"));
-		const { rerender } = render(<Page label={undefined} showLabel />);
+		const { rerender } = render(<Page label={undefined} showLabel />, { wrapper: UiKitTestProviders });
 		expect(trailText()).toBe("Browse Rewards › Reward");
 
 		rerender(<Page label="Free coffee" showLabel />);
@@ -63,14 +64,14 @@ describe("WebBreadcrumbTailLabel", () => {
 
 	it("ignores a blank label", () => {
 		pathnameMock.mockReturnValue(rewardDetailPath("reward-1"));
-		render(<Page label="   " showLabel />);
+		render(<Page label="   " showLabel />, { wrapper: UiKitTestProviders });
 
 		expect(trailText()).toBe("Browse Rewards › Reward");
 	});
 
 	it("restores the route-derived trail when the page unmounts", () => {
 		pathnameMock.mockReturnValue(rewardDetailPath("reward-1"));
-		const { rerender } = render(<Page label="Free coffee" showLabel />);
+		const { rerender } = render(<Page label="Free coffee" showLabel />, { wrapper: UiKitTestProviders });
 
 		rerender(<Page label="Free coffee" showLabel={false} />);
 		expect(trailText()).toBe("Browse Rewards › Reward");
@@ -78,7 +79,7 @@ describe("WebBreadcrumbTailLabel", () => {
 
 	it("never carries a label over to the next page", () => {
 		pathnameMock.mockReturnValue(rewardDetailPath("reward-1"));
-		const { rerender } = render(<Page label="Free coffee" showLabel />);
+		const { rerender } = render(<Page label="Free coffee" showLabel />, { wrapper: UiKitTestProviders });
 
 		pathnameMock.mockReturnValue(ROUTES.rewardHub.wallet);
 		act(() => {

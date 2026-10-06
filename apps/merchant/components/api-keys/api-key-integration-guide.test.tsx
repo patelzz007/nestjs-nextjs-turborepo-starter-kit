@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { API_VERSION_PREFIX, RedemptionCheckoutSchema } from "@workspace/shared";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -37,7 +38,7 @@ describe("POS integration snippets", () => {
 
 describe("ApiKeyIntegrationGuide", () => {
 	it("lists the three POS steps and switches between the example requests", () => {
-		render(<ApiKeyIntegrationGuide apiBaseUrl={API} terminalsHref={TERMINALS_HREF} />);
+		render(<ApiKeyIntegrationGuide apiBaseUrl={API} terminalsHref={TERMINALS_HREF} />, { wrapper: UiKitTestProviders });
 		const guide = screen.getByRole("region", { name: "Connect a terminal" });
 
 		expect(within(guide).getAllByRole("listitem").length).toBeGreaterThanOrEqual(3);
@@ -48,7 +49,7 @@ describe("ApiKeyIntegrationGuide", () => {
 	});
 
 	it("starts by pairing the till on the POS terminals page, keeping manual keys for server-to-server use", () => {
-		render(<ApiKeyIntegrationGuide apiBaseUrl={API} terminalsHref={TERMINALS_HREF} />);
+		render(<ApiKeyIntegrationGuide apiBaseUrl={API} terminalsHref={TERMINALS_HREF} />, { wrapper: UiKitTestProviders });
 		const guide = screen.getByRole("region", { name: "Connect a terminal" });
 
 		expect(within(guide).getByText("Pair the till")).toBeTruthy();

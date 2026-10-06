@@ -1,6 +1,6 @@
 "use client";
 
-import { KpiStatCard } from "@workspace/ui/components/analytics/kpi-stat-card";
+import { KpiStatCard } from "@workspace/ui/components/kpi-stat-card";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 

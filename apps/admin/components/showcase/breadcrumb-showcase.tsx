@@ -1,10 +1,10 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
+import { Button } from "@workspace/ui/components/button";
+import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { BreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
 import { Activity, FileText, Home, LayoutDashboard, Settings, Shield, SlidersHorizontal, Users } from "lucide-react";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { useCallback, useState } from "react";
 

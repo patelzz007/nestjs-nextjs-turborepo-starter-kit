@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import type { JSX, SyntheticEvent } from "react";
 
 import { MerchantKybDocumentUpload } from "../kyb/document-upload";

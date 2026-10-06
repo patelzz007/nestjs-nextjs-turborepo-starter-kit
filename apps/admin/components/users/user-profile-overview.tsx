@@ -1,7 +1,7 @@
 "use client";
 
 import type { AdminUserDetail } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import * as React from "react";
 

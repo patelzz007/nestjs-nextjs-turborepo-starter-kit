@@ -87,13 +87,6 @@ export function parseInput(input: string): ParsedInput {
 	return { scope: "all", query: trimmed };
 }
 
-export const scopeConfig: Readonly<Record<ScopeType, { readonly label: string; readonly color: string }>> = {
-	all: { label: "", color: "" },
-	commands: { label: "Commands", color: "bg-blue-500/12 text-blue-600 dark:text-blue-400" },
-	files: { label: "Pages", color: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400" },
-	settings: { label: "Settings", color: "bg-violet-500/12 text-violet-600 dark:text-violet-400" },
-};
-
 export function matchesQuery(itemTitle: string, itemBreadcrumb: readonly string[], rawQuery: string, aliasMap: Readonly<Record<string, readonly string[]>> = {}): boolean {
 	const searchText = `${itemTitle} ${itemBreadcrumb.join(" ")}`.toLowerCase();
 	const q = rawQuery.toLowerCase().trim();

@@ -2,10 +2,10 @@
 
 import { useMerchantLocation } from "@/features/tenant-context/facade";
 import type { MerchantRewardFormValues, OrganizationLocationScopeType } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Checkbox } from "@workspace/ui/components/form/checkbox";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Checkbox } from "@workspace/ui/components/checkbox";
+import { Label } from "@workspace/ui/components/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { MapPin } from "lucide-react";
 import * as React from "react";
 import type { Control, FieldErrors, UseFormSetValue } from "react-hook-form";

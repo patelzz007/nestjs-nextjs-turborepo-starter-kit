@@ -8,16 +8,15 @@ import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capab
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
-import { WEB_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuth } from "@workspace/client/lib/auth";
-import { breadcrumbPageLabel } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { PanelSidebarHeader } from "@workspace/ui/components/navigation/panel-sidebar-header";
-import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer } from "@workspace/ui/components/navigation/panel-sidebar-nav";
-import type { PanelSidebarLinkProps } from "@workspace/ui/components/navigation/panel-sidebar-nav-item";
-import { SidebarFooter } from "@workspace/ui/components/navigation/sidebar";
+import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
+import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
+import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer } from "@workspace/ui/components/panel-sidebar-nav";
+import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
+import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { AlertCircle, Gift } from "lucide-react";
@@ -83,7 +82,6 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 				pinnedItems={pinnedItems}
 				onMoveSectionUp={moveSectionUp}
 				onMoveSectionDown={moveSectionDown}
-				labels={WEB_SIDEBAR_LABELS}
 			/>
 
 			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
@@ -114,7 +112,6 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 					renderLink={renderWebLink}
 					renderIcon={renderWebMenuIcon}
 					searchQuery={searchQuery}
-					labels={WEB_SIDEBAR_LABELS}
 				/>
 
 				<div className={view.bottomItems.length > 0 ? "px-2 pt-2" : "px-2 pb-2"}>
@@ -122,7 +119,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 				</div>
 			</SidebarFooter>
 
-			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} labels={WEB_SIDEBAR_LABELS} />
+			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} />
 		</div>
 	);
 }

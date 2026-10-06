@@ -20,11 +20,11 @@ vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: (): void => undefined }),
 }));
 
-vi.mock("@workspace/ui/components/navigation/shell-theme-toggle", () => ({
+vi.mock("@workspace/ui/components/shell-theme-toggle", () => ({
 	ShellThemeToggle: (): null => null,
 }));
 
-vi.mock("@workspace/ui/components/navigation/app-shell-profile-dropdown", () => ({
+vi.mock("@workspace/ui/components/app-shell-profile-dropdown", () => ({
 	AppShellProfileDropdown: ({ name }: { readonly name: string }): React.JSX.Element => <button type="button">{name}</button>,
 }));
 

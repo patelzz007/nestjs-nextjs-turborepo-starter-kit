@@ -34,6 +34,7 @@ import {
 	withDatabaseName,
 	withoutQuery,
 } from "./lib/ci-local-plan.mjs";
+import { describeOccupiedPorts, findOccupiedPorts } from "./lib/port-preflight.mjs";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const API_ENV_FILE = path.join(REPO_ROOT, "apps/api/.env");
@@ -153,8 +154,14 @@ async function runBrowserJob(results) {
 		return;
 	}
 	const database = throwawayDatabaseUrl(developerUrl, THROWAWAY_BROWSER_SUFFIX);
-	await onMaintenanceDatabase(developerUrl, [`DROP DATABASE IF EXISTS "${database.database}" WITH (FORCE)`, `CREATE DATABASE "${database.database}"`]);
 	const job = browserJob({ databaseUrl: database.url });
+	// Before the (slow) build: a server that cannot bind its port would leave the suites running against whatever holds it.
+	const occupied = await findOccupiedPorts(job.servers);
+	if (occupied.length > 0) {
+		results.push({ job: "Browser e2e", id: "browser:ports", ok: false, note: describeOccupiedPorts(occupied) });
+		return;
+	}
+	await onMaintenanceDatabase(developerUrl, [`DROP DATABASE IF EXISTS "${database.database}" WITH (FORCE)`, `CREATE DATABASE "${database.database}"`]);
 	const servers = [];
 	try {
 		for (const step of job.setup) {

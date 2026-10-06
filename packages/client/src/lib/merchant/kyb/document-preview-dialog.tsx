@@ -1,8 +1,8 @@
 "use client";
 
 import type { DocumentMimeType } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
+import { Button } from "@workspace/ui/components/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
 import * as React from "react";
 
 import { isKybDocumentPreviewable, openExternalDocument, triggerBrowserDownload } from "./document-utils";

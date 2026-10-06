@@ -8,9 +8,9 @@ import { toastMutationError } from "@/lib/api/mutation-error";
 import { PERMISSION, type CheckPermissionInput, type CheckPermissionResponse, type Envelope, type PermissionListResponse, type RoleListResponse } from "@workspace/shared";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/navigation/tabs";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import * as React from "react";
 
 export interface AccessControlPanelProps {
@@ -120,7 +120,7 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 											<p className="font-medium">{role.name}</p>
 											{role.description !== null ? <p className="text-xs text-muted-foreground">{role.description}</p> : null}
 										</div>
-										<Badge variant={role.isActive ? "outline" : "destructive"}>{role.isActive ? "Active" : "Inactive"}</Badge>
+										<Badge variant={role.isActive ? "outline" : "destructive-light"}>{role.isActive ? "Active" : "Inactive"}</Badge>
 									</div>
 								))}
 							</CardContent>

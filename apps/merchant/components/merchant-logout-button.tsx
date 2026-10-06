@@ -1,7 +1,7 @@
 "use client";
 
 import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { LogOut } from "lucide-react";
 import * as React from "react";
 

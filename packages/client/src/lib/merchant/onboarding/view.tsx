@@ -11,7 +11,7 @@ import {
 	PILOT_CITY_LABELS,
 	PLATFORM_DISPLAY_REGION,
 } from "@workspace/shared";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { CircleCheck } from "lucide-react";
@@ -406,7 +406,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			<section aria-labelledby="merchant-onboarding-step-heading" className={cn(ONBOARDING_PANEL_CLASS_NAME, "relative z-20 bg-card p-5 sm:p-6")}>
 				<header className="mb-6 space-y-5 border-b border-border/70 pb-5">
 					<div className="lg:hidden">
-						<MerchantOnboardingCompactProgress steps={WIZARD_STEPS} currentStepId={wizardPanel} />
+						<MerchantOnboardingCompactProgress steps={WIZARD_STEPS} currentStepId={wizardPanel} onStepSelect={advance} isNavigationDisabled={isSubmitting} />
 					</div>
 					<div className="space-y-1">
 						<p className="text-xs font-medium text-primary">

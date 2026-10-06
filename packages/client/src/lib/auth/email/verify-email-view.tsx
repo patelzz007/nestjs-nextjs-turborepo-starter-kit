@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@workspace/ui/lib/core/utils";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { APP_LINKS } from "@workspace/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

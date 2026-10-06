@@ -6,7 +6,9 @@ import { MerchantRootProvider } from "@/lib/session/root-provider";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
-import { Toaster } from "@workspace/ui/components/feedback/toast";
+import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
+import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
+import { Toaster } from "@workspace/ui/components/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Fira_Sans, JetBrains_Mono, Rubik } from "next/font/google";
 import type { Metadata } from "next";
@@ -45,14 +47,16 @@ export default function RootLayout({ children }: { readonly children: React.Reac
 			htmlClassName={cn("font-sans antialiased", firaSans.variable, jetbrainsMono.variable, bricolageGrotesque.variable, rubik.variable)}
 			bodyClassName="merchant-app">
 			<ReduxDevToolsGuard />
-			<QueryProvider>
-				<MerchantRootProvider>
-					<ThemeProvider>
-						{children}
-						<Toaster position="top-right" />
-					</ThemeProvider>
-				</MerchantRootProvider>
-			</QueryProvider>
+			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
+				<QueryProvider>
+					<MerchantRootProvider>
+						<ThemeProvider>
+							{children}
+							<Toaster position="top-right" />
+						</ThemeProvider>
+					</MerchantRootProvider>
+				</QueryProvider>
+			</UiKitLanguageProvider>
 		</AppDocumentShell>
 	);
 }

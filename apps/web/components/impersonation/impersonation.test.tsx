@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { PERMISSION } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,7 +70,7 @@ const CUSTOMER: AuthUserStub = { id: "user-1", isSuperAdmin: false };
 const IMPERSONATION_GRANTS = [PERMISSION.USER.LIST, PERMISSION.USER.CREATE];
 
 function renderWithSession(session: WebSessionState, node: React.ReactNode): void {
-	render(<WebSessionTestProvider session={session}>{node}</WebSessionTestProvider>);
+	render(<WebSessionTestProvider session={session}>{node}</WebSessionTestProvider>, { wrapper: UiKitTestProviders });
 }
 
 beforeEach(() => {

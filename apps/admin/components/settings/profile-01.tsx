@@ -1,7 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
-import { Button } from "@workspace/ui/components/form/button";
+import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
+import { Button } from "@workspace/ui/components/button";
 import { CircleUserRound, LogOut, Settings, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";

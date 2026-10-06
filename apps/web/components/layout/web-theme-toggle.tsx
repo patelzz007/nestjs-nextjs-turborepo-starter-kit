@@ -1,6 +1,6 @@
 "use client";
 
-import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
+import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import * as React from "react";
 
 /** Light/dark toggle for the consumer web app. */

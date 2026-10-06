@@ -3,12 +3,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { EmailPreviewSchema, PERMISSION, type AdminCreateMerchantInviteInput, type CapabilitySlug, type EmailPreview } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import MerchantInvitesPage from "../page";
 import MerchantInvitesPanel from "../merchant-invites-panel";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 interface MutationCallbacks<TResponse> {
 	readonly onSuccess?: (response: TResponse) => void;
@@ -67,6 +68,7 @@ function renderPanel(capabilities: readonly CapabilitySlug[] = [PERMISSION.MERCH
 		<CapabilitiesProvider capabilities={capabilities}>
 			<MerchantInvitesPanel />
 		</CapabilitiesProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

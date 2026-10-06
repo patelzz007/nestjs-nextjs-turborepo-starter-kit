@@ -1,10 +1,10 @@
 "use client";
 
 import { ResetPasswordSchema, APP_LINKS } from "@workspace/shared";
-import { FormShell } from "@workspace/ui/components/form/form-shell";
-import { Label } from "@workspace/ui/components/form/label";
-import { PasswordInput } from "@workspace/ui/components/form/password-input";
-import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-strength-meter";
+import { FormShell } from "@workspace/ui/components/form-shell";
+import { Label } from "@workspace/ui/components/label";
+import { PasswordInput } from "@workspace/ui/components/password-input";
+import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";

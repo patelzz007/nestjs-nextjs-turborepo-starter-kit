@@ -6,6 +6,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const META: ApiResponseMeta = { correlationId: "corr-impersonate", timestamp: epochMs(1_786_300_000_000) };
 
@@ -89,6 +90,7 @@ function renderButton(user: AdminUserDetail): void {
 		<QueryClientProvider client={new QueryClient()}>
 			<ImpersonateUserButton targetUser={user} />
 		</QueryClientProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

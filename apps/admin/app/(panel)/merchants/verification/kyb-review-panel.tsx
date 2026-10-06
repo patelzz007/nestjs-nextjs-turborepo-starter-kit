@@ -20,13 +20,13 @@ import type {
 } from "@workspace/shared";
 import { EpochMsSchema, JsonPrimitiveSchema, MerchantOrgResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
 import { z } from "zod";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { buttonVariants } from "@workspace/ui/components/form/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Label } from "@workspace/ui/components/form/label";
-import { Separator } from "@workspace/ui/components/display/separator";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { Badge } from "@workspace/ui/components/badge";
+import { buttonVariants } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Label } from "@workspace/ui/components/label";
+import { Separator } from "@workspace/ui/components/separator";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Clock, MapPin, User } from "lucide-react";
@@ -92,12 +92,12 @@ function formatJsonFieldValue(value: JsonObject[string] | undefined): string {
 	return JSON.stringify(value);
 }
 
-function kybStatusVariant(status: KybStatus): "default" | "secondary" | "outline" | "destructive" {
+function kybStatusVariant(status: KybStatus): "default" | "secondary" | "outline" | "destructive-light" {
 	if (status === "APPROVED") {
 		return "default";
 	}
 	if (status === "REJECTED" || status === "ACTION_REQUIRED") {
-		return "destructive";
+		return "destructive-light";
 	}
 	return "outline";
 }
@@ -115,12 +115,12 @@ function locationStatusLabel(status: OrganizationLocationStatus): string {
 	return "Active";
 }
 
-function locationStatusVariant(status: OrganizationLocationStatus): "default" | "secondary" | "outline" | "destructive" {
+function locationStatusVariant(status: OrganizationLocationStatus): "default" | "secondary" | "outline" | "destructive-light" {
 	if (status === "ACTIVE") {
 		return "default";
 	}
 	if (status === "REJECTED") {
-		return "destructive";
+		return "destructive-light";
 	}
 	if (status === "PENDING_APPROVAL") {
 		return "outline";

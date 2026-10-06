@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Input } from "@workspace/ui/components/form/input";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, type AccordionItemStatus, type AccordionRef } from "@workspace/ui/components/navigation/accordion";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Input } from "@workspace/ui/components/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, type AccordionItemStatus, type AccordionRef } from "@workspace/ui/components/accordion";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import * as React from "react";
 import { useCallback, useMemo, useRef, useState } from "react";

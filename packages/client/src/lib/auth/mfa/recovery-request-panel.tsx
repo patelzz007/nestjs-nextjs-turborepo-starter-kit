@@ -2,9 +2,9 @@
 
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
-import { Button } from "@workspace/ui/components/form/button";
-import { Label } from "@workspace/ui/components/form/label";
-import { Textarea } from "@workspace/ui/components/form/textarea";
+import { Button } from "@workspace/ui/components/button";
+import { Label } from "@workspace/ui/components/label";
+import { Textarea } from "@workspace/ui/components/textarea";
 import { useCallback, useState, type JSX } from "react";
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";

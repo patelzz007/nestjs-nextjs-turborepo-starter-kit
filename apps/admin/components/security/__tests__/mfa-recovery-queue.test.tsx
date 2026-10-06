@@ -5,6 +5,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MfaRecoveryQueue } from "@/components/security/mfa-recovery-queue";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** Only the request fields the queue renders. */
 interface RecoveryRowStub {
@@ -57,7 +58,7 @@ afterEach((): void => {
 
 describe("MfaRecoveryQueue URL state", () => {
 	it("lists every status for a bare URL and reviews nothing until a request is chosen", () => {
-		render(<MfaRecoveryQueue />);
+		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
 
 		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.anything());
 		expect(screen.queryByText(/^Reviewing /)).toBeNull();
@@ -65,14 +66,14 @@ describe("MfaRecoveryQueue URL state", () => {
 
 	it("filters by the status the URL names", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[status]=PENDING`);
-		render(<MfaRecoveryQueue />);
+		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
 
 		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20, filter: { status: { eq: "PENDING" } } }, expect.anything());
 	});
 
 	it("never substitutes another request when ?requestId= is not on this page", () => {
 		window.history.replaceState(null, "", `${PATH}?requestId=3f2a8c3e-7a53-4f5c-9d0a-0d6a6b8f2c99`);
-		render(<MfaRecoveryQueue />);
+		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
 
 		expect(screen.queryByText(/^Reviewing /)).toBeNull();
 		expect(screen.getByRole("status").textContent).toContain("The linked request is not in this view");
@@ -80,14 +81,14 @@ describe("MfaRecoveryQueue URL state", () => {
 
 	it("reviews the request named by ?requestId=", () => {
 		window.history.replaceState(null, "", `${PATH}?requestId=${SECOND_ID}`);
-		render(<MfaRecoveryQueue />);
+		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("Reviewing bob@example.com")).toBeDefined();
 	});
 
 	it("pushes a clicked row as the selection and follows it", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		const view = render(<MfaRecoveryQueue />);
+		const view = render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByText("Bob Roe"));
 

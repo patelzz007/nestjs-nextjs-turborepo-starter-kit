@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { CreateSampleCategoryInput } from "@workspace/shared";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import Link from "next/link";
 import * as React from "react";
 

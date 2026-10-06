@@ -4,9 +4,9 @@ import Link from "next/link";
 import * as React from "react";
 
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { BreadcrumbTrail as SharedBreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { BreadcrumbTrail as SharedBreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { useIsDesktop } from "@workspace/ui/hooks/use-mobile";
 
 /** Consumer shell breadcrumb — reads trail from context and renders the shared trail. */

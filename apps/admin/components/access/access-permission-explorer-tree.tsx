@@ -5,10 +5,15 @@ import { isRedundantResourceLabel } from "@/lib/permissions/permission-label-uti
 import type { PermissionTreeGroupNode, PermissionTreeLeaf, PermissionTreeResourceNode } from "@/lib/permissions/build-permission-tree";
 import { AccessPermissionDetailPanel, type AccessPermissionDetailItem } from "@/components/access/access-permission-detail-panel";
 import { PermissionActionSchema, type PermissionAction } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
-import { TreeBranch, TreeLeaf, TreeView } from "@workspace/ui/components/navigation/tree-view";
-import { ChevronsDownUp, ChevronsUpDown, Search, X } from "lucide-react";
+import { hotkeysCoreFeature, selectionFeature, syncDataLoaderFeature, type ItemInstance } from "@headless-tree/core";
+import { useTree } from "@headless-tree/react";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { ScrollArea } from "@workspace/ui/components/scroll-area";
+import { Tree, TreeItem, TreeItemLabel } from "@workspace/ui/components/tree";
+import { cn } from "@workspace/ui/lib/core/utils";
+import { ChevronsDownUp, ChevronsUpDown, Folder, FolderOpen, Search, X } from "lucide-react";
 import * as React from "react";
 
 export interface AccessPermissionExplorerTreeProps {
@@ -103,132 +108,139 @@ function buildSelectedPermission(permission: PermissionTreeLeaf, groupName: stri
 	};
 }
 
-interface ExplorerPermissionLeafProps {
-	readonly permission: PermissionTreeLeaf;
-	readonly groupName: string;
-	readonly groups: readonly PermissionTreeGroupNode[];
-	readonly selectedId: string | null;
-	readonly onSelect: (permission: SelectedPermissionState) => void;
+// ── Tree model: group → resource → action, as headless-tree items ─────────────
+
+const ROOT_ID = "root";
+/** Pixels each tree level is indented by. */
+const TREE_INDENT_PX = 16;
+
+type ExplorerNode =
+	| { readonly kind: "root"; readonly children: readonly string[] }
+	| { readonly kind: "group"; readonly name: string; readonly count: number; readonly children: readonly string[] }
+	| { readonly kind: "resource"; readonly name: string; readonly count: number; readonly children: readonly string[] }
+	| { readonly kind: "permission"; readonly permission: PermissionTreeLeaf; readonly groupName: string };
+
+/** Stands in for an id that left the data between a rebuild and a read. */
+const MISSING_NODE: ExplorerNode = { kind: "root", children: [] };
+
+function groupId(group: string): string {
+	return `group:${group}`;
 }
 
-function ExplorerPermissionLeaf({ permission, groupName, groups, selectedId, onSelect }: ExplorerPermissionLeafProps): React.JSX.Element {
-	const parsedAction = parsePermissionAction(permission.action);
-	const ActionIcon = parsedAction !== null ? permissionActionIcon(parsedAction) : permissionActionFallbackIcon();
-	const iconClassName = parsedAction !== null ? permissionActionIconClassName(parsedAction) : "text-muted-foreground";
-
-	const handleSelect = React.useCallback((): void => {
-		onSelect(buildSelectedPermission(permission, groupName, groups));
-	}, [groupName, groups, onSelect, permission]);
-
-	return (
-		<TreeLeaf
-			name={permission.action}
-			icon={ActionIcon}
-			iconClassName={iconClassName}
-			mono
-			hint={permission.description}
-			state={selectedId === permission.id ? "selected" : "default"}
-			onSelect={handleSelect}
-		/>
-	);
+function resourceId(group: string, resource: string): string {
+	return `${groupId(group)}:${resource}`;
 }
 
-interface ExplorerPermissionResourceProps {
-	readonly resourceNode: PermissionTreeResourceNode;
-	readonly groupName: string;
-	readonly groups: readonly PermissionTreeGroupNode[];
-	readonly resourceBranchKey: string;
-	readonly isOpen: boolean;
-	readonly onBranchOpenChange: (branchKey: string, open: boolean) => void;
-	readonly selectedId: string | null;
-	readonly onSelect: (permission: SelectedPermissionState) => void;
+function permissionId(permission: PermissionTreeLeaf): string {
+	return `permission:${permission.id}`;
 }
 
-function ExplorerPermissionResource({
-	resourceNode,
-	groupName,
-	groups,
-	resourceBranchKey,
-	isOpen,
-	onBranchOpenChange,
-	selectedId,
-	onSelect,
-}: ExplorerPermissionResourceProps): React.JSX.Element {
-	const handleOpenChange = React.useCallback(
-		(open: boolean): void => {
-			onBranchOpenChange(resourceBranchKey, open);
-		},
-		[onBranchOpenChange, resourceBranchKey],
-	);
+function buildExplorerNodes(groups: readonly PermissionTreeGroupNode[]): ReadonlyMap<string, ExplorerNode> {
+	const nodes = new Map<string, ExplorerNode>();
+	const addPermissions = (permissions: readonly PermissionTreeLeaf[], groupName: string): readonly string[] =>
+		permissions.map((permission) => {
+			const id = permissionId(permission);
+			nodes.set(id, { kind: "permission", permission, groupName });
+			return id;
+		});
 
-	return (
-		<TreeBranch name={resourceNode.resource} open={isOpen} onOpenChange={handleOpenChange} count={resourceNode.permissions.length} className="font-mono text-xs">
-			{resourceNode.permissions.map((permission) => (
-				<ExplorerPermissionLeaf key={permission.id} permission={permission} groupName={groupName} groups={groups} selectedId={selectedId} onSelect={onSelect} />
-			))}
-		</TreeBranch>
-	);
-}
-
-interface ExplorerPermissionGroupProps {
-	readonly groupNode: PermissionTreeGroupNode;
-	readonly groups: readonly PermissionTreeGroupNode[];
-	readonly isBranchOpen: (branchKey: string) => boolean;
-	readonly onBranchOpenChange: (branchKey: string, open: boolean) => void;
-	readonly selectedId: string | null;
-	readonly onSelect: (permission: SelectedPermissionState) => void;
-}
-
-function ExplorerPermissionGroup({ groupNode, groups, isBranchOpen, onBranchOpenChange, selectedId, onSelect }: ExplorerPermissionGroupProps): React.JSX.Element {
-	const branchKey = `group:${groupNode.group}`;
-	const display: PermissionTreeDisplay = resolveGroupDisplay(groupNode);
-
-	const handleOpenChange = React.useCallback(
-		(open: boolean): void => {
-			onBranchOpenChange(branchKey, open);
-		},
-		[branchKey, onBranchOpenChange],
-	);
-
-	return (
-		<TreeBranch name={groupNode.group} open={isBranchOpen(branchKey)} onOpenChange={handleOpenChange} count={countPermissionsInGroup(groupNode)}>
-			{display.kind === "flat"
-				? display.permissions.map((permission) => (
-						<ExplorerPermissionLeaf key={permission.id} permission={permission} groupName={groupNode.group} groups={groups} selectedId={selectedId} onSelect={onSelect} />
-					))
+	const groupIds = groups.map((groupNode) => {
+		const display = resolveGroupDisplay(groupNode);
+		const children =
+			display.kind === "flat"
+				? addPermissions(display.permissions, groupNode.group)
 				: display.resources.map((resourceNode) => {
-						const resourceBranchKey = `${branchKey}:${resourceNode.resource}`;
-						return (
-							<ExplorerPermissionResource
-								key={resourceBranchKey}
-								resourceNode={resourceNode}
-								groupName={groupNode.group}
-								groups={groups}
-								resourceBranchKey={resourceBranchKey}
-								isOpen={isBranchOpen(resourceBranchKey)}
-								onBranchOpenChange={onBranchOpenChange}
-								selectedId={selectedId}
-								onSelect={onSelect}
-							/>
-						);
-					})}
-		</TreeBranch>
-	);
+						const id = resourceId(groupNode.group, resourceNode.resource);
+						nodes.set(id, {
+							kind: "resource",
+							name: resourceNode.resource,
+							count: resourceNode.permissions.length,
+							children: addPermissions(resourceNode.permissions, groupNode.group),
+						});
+						return id;
+					});
+		const id = groupId(groupNode.group);
+		nodes.set(id, { kind: "group", name: groupNode.group, count: countPermissionsInGroup(groupNode), children });
+		return id;
+	});
+
+	nodes.set(ROOT_ID, { kind: "root", children: groupIds });
+	return nodes;
 }
 
-function collectBranchKeys(groups: readonly PermissionTreeGroupNode[]): readonly string[] {
-	const keys: string[] = [];
+/** Every folder id (groups and nested resources) — what "expand all" opens. */
+function collectBranchIds(groups: readonly PermissionTreeGroupNode[]): string[] {
+	const ids: string[] = [];
 	for (const groupNode of groups) {
-		const groupKey = `group:${groupNode.group}`;
-		keys.push(groupKey);
+		ids.push(groupId(groupNode.group));
 		const display = resolveGroupDisplay(groupNode);
 		if (display.kind === "nested") {
 			for (const resourceNode of display.resources) {
-				keys.push(`${groupKey}:${resourceNode.resource}`);
+				ids.push(resourceId(groupNode.group, resourceNode.resource));
 			}
 		}
 	}
-	return keys;
+	return ids;
+}
+
+function nodeChildren(node: ExplorerNode | undefined): string[] {
+	return node === undefined || node.kind === "permission" ? [] : [...node.children];
+}
+
+function nodeName(node: ExplorerNode): string {
+	switch (node.kind) {
+		case "root":
+			return "";
+		case "group":
+		case "resource":
+			return node.name;
+		case "permission":
+			return node.permission.action;
+	}
+}
+
+/**
+ * The action's icon element. The icon components are module-level constants
+ * looked up by action, so their identity is stable across renders.
+ */
+function actionIconElement(action: PermissionAction | null): React.JSX.Element {
+	const ActionIcon = action !== null ? permissionActionIcon(action) : permissionActionFallbackIcon();
+	const iconClassName = action !== null ? permissionActionIconClassName(action) : "text-muted-foreground";
+	return <ActionIcon className={cn("size-4", iconClassName)} aria-hidden="true" />;
+}
+
+interface ExplorerTreeRowProps {
+	readonly item: ItemInstance<ExplorerNode>;
+}
+
+/** One row: a folder (group or resource) with its permission count, or an action leaf. */
+function ExplorerTreeRow({ item }: ExplorerTreeRowProps): React.JSX.Element {
+	const node = item.getItemData();
+
+	if (node.kind === "permission") {
+		return (
+			<TreeItem item={item} title={node.permission.description ?? undefined}>
+				<TreeItemLabel className="gap-2">
+					{actionIconElement(parsePermissionAction(node.permission.action))}
+					<span className="min-w-0 flex-1 truncate font-mono text-xs tracking-wide">{node.permission.action}</span>
+				</TreeItemLabel>
+			</TreeItem>
+		);
+	}
+
+	const FolderIcon = item.isExpanded() ? FolderOpen : Folder;
+	const count = node.kind === "root" ? 0 : node.count;
+	return (
+		<TreeItem item={item}>
+			<TreeItemLabel className="gap-2 font-medium">
+				<FolderIcon className="size-4 text-primary" aria-hidden="true" />
+				<span className={cn("min-w-0 flex-1 truncate", node.kind === "resource" && "font-mono text-xs")}>{item.getItemName()}</span>
+				<Badge variant="secondary" size="sm" className="tabular-nums">
+					{String(count)}
+				</Badge>
+			</TreeItemLabel>
+		</TreeItem>
+	);
 }
 
 /**
@@ -240,47 +252,70 @@ export const AccessPermissionExplorerTree = React.forwardRef<HTMLDivElement, Acc
 ): React.JSX.Element {
 	const [query, setQuery] = React.useState("");
 	const [selectedPermission, setSelectedPermission] = React.useState<SelectedPermissionState | null>(null);
-	const [branchOpenState, setBranchOpenState] = React.useState<Readonly<Record<string, boolean>>>({});
+	const [expandedItems, setExpandedItems] = React.useState<string[]>(() => (defaultOpen ? collectBranchIds(groups) : []));
+	const [focusedItem, setFocusedItem] = React.useState<string | null>(null);
 
 	const filteredGroups = React.useMemo(() => filterGroups(groups, query), [groups, query]);
 	const totalCount = React.useMemo(() => groups.reduce((total, groupNode) => total + countPermissionsInGroup(groupNode), 0), [groups]);
 	const visibleCount = React.useMemo(() => filteredGroups.reduce((total, groupNode) => total + countPermissionsInGroup(groupNode), 0), [filteredGroups]);
-	const branchKeys = React.useMemo(() => collectBranchKeys(filteredGroups), [filteredGroups]);
+	const nodes = React.useMemo(() => buildExplorerNodes(filteredGroups), [filteredGroups]);
+	const selectedItems = React.useMemo(() => (selectedPermission === null ? [] : [`permission:${selectedPermission.id}`]), [selectedPermission]);
 
-	const isBranchOpen = React.useCallback(
-		(branchKey: string): boolean => {
-			const stored = branchOpenState[branchKey];
-			if (stored !== undefined) {
-				return stored;
+	// Selecting a folder only expands it; only an action row changes the detail panel.
+	const handleSelectedItemsChange = React.useCallback(
+		(update: string[] | ((previous: string[]) => string[])): void => {
+			const next = update instanceof Function ? update(selectedItems) : update;
+			for (const id of [...next].reverse()) {
+				const node = nodes.get(id);
+				if (node?.kind === "permission") {
+					setSelectedPermission(buildSelectedPermission(node.permission, node.groupName, groups));
+					return;
+				}
 			}
-			return query.trim().length > 0 ? true : defaultOpen;
 		},
-		[branchOpenState, defaultOpen, query],
+		[groups, nodes, selectedItems],
 	);
 
-	const handleBranchOpenChange = React.useCallback((branchKey: string, open: boolean): void => {
-		setBranchOpenState((current) => ({ ...current, [branchKey]: open }));
-	}, []);
+	const tree = useTree<ExplorerNode>({
+		rootItemId: ROOT_ID,
+		indent: TREE_INDENT_PX,
+		getItemName: (item) => nodeName(item.getItemData()),
+		isItemFolder: (item) => item.getItemData().kind !== "permission",
+		dataLoader: {
+			getItem: (itemId) => nodes.get(itemId) ?? MISSING_NODE,
+			getChildren: (itemId) => nodeChildren(nodes.get(itemId)),
+		},
+		state: { expandedItems, selectedItems, focusedItem },
+		setExpandedItems,
+		setSelectedItems: handleSelectedItemsChange,
+		setFocusedItem,
+		features: [syncDataLoaderFeature, selectionFeature, hotkeysCoreFeature],
+	});
+
+	// The loader reads `nodes`; rebuild the item cache whenever the (filtered) data changes.
+	React.useEffect((): void => {
+		tree.rebuildTree();
+	}, [nodes, tree]);
 
 	const handleExpandAll = React.useCallback((): void => {
-		const nextState: Record<string, boolean> = {};
-		for (const key of branchKeys) {
-			nextState[key] = true;
-		}
-		setBranchOpenState(nextState);
-	}, [branchKeys]);
+		setExpandedItems(collectBranchIds(filteredGroups));
+	}, [filteredGroups]);
 
 	const handleCollapseAll = React.useCallback((): void => {
-		const nextState: Record<string, boolean> = {};
-		for (const key of branchKeys) {
-			nextState[key] = false;
-		}
-		setBranchOpenState(nextState);
-	}, [branchKeys]);
-
-	const handleQueryChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setQuery(event.target.value);
+		setExpandedItems([]);
 	}, []);
+
+	// A search opens every branch that still has matches, so they are visible at once.
+	const handleQueryChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			const nextQuery = event.target.value;
+			setQuery(nextQuery);
+			if (nextQuery.trim().length > 0) {
+				setExpandedItems(collectBranchIds(filterGroups(groups, nextQuery)));
+			}
+		},
+		[groups],
+	);
 
 	const handleClearQuery = React.useCallback((): void => {
 		setQuery("");
@@ -346,23 +381,17 @@ export const AccessPermissionExplorerTree = React.forwardRef<HTMLDivElement, Acc
 			</div>
 
 			<div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-				<TreeView scrollable aria-label="Permission catalog" heightClassName="h-[min(36rem,65vh)]">
+				<ScrollArea className="h-[min(36rem,65vh)] rounded-lg border border-border bg-muted/20">
 					{filteredGroups.length === 0 ? (
 						<p className="px-2 py-8 text-center text-sm text-muted-foreground">No permissions match your search.</p>
 					) : (
-						filteredGroups.map((groupNode) => (
-							<ExplorerPermissionGroup
-								key={groupNode.group}
-								groupNode={groupNode}
-								groups={groups}
-								isBranchOpen={isBranchOpen}
-								onBranchOpenChange={handleBranchOpenChange}
-								selectedId={selectedPermission?.id ?? null}
-								onSelect={setSelectedPermission}
-							/>
-						))
+						<Tree tree={tree} indent={TREE_INDENT_PX} aria-label="Permission catalog" className="p-2">
+							{tree.getItems().map((item) => (
+								<ExplorerTreeRow key={item.getId()} item={item} />
+							))}
+						</Tree>
 					)}
-				</TreeView>
+				</ScrollArea>
 
 				<div className="lg:sticky lg:top-4 lg:self-start">
 					<AccessPermissionDetailPanel

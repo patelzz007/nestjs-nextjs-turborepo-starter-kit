@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 /** Keep the chrome out of the way — the test only cares about gated children. */
-vi.mock("@workspace/ui/components/navigation/app-shell-topbar", () => ({
+vi.mock("@workspace/ui/components/app-shell-topbar", () => ({
 	AppShellTopbar: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <header>{children}</header>,
 	useCommandPaletteShortcut: (): void => undefined,
 }));
@@ -28,7 +28,7 @@ vi.mock("@/components/layout/web-notifications-dropdown", () => ({
 	WebNotificationsDropdown: (): null => null,
 }));
 
-vi.mock("@workspace/ui/components/navigation/shell-theme-toggle", () => ({
+vi.mock("@workspace/ui/components/shell-theme-toggle", () => ({
 	ShellThemeToggle: (): null => null,
 }));
 

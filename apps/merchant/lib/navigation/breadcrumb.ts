@@ -1,6 +1,6 @@
 import { FileText, LayoutDashboard, type LucideIcon } from "lucide-react";
 
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
+import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 import { resolveSidebarMenuTrail, withTrailTailLabel, type SidebarTrailPage } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 import { identitySidebarResolveHref, type SidebarResolveHref } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 

@@ -2,8 +2,8 @@
 
 import { useForm } from "@tanstack/react-form";
 import { KybStatusSchema, type JsonObject, type KybStatus } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Button } from "@workspace/ui/components/form/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Button } from "@workspace/ui/components/button";
 import { Check, ShieldCheck, X } from "lucide-react";
 import * as React from "react";
 

@@ -22,6 +22,8 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
+		"@headless-tree/core": "^1.7.0",
+		"@headless-tree/react": "^1.7.0",
 		"@shadcn/react": "^0.3.1",
 		"@tanstack/react-table": "^9.2.4",
 		"@workspace/shared": "workspace:*",
@@ -74,14 +76,9 @@
 		"./lib/*": "./src/lib/*.ts",
 		"./lib/*.tsx": "./src/lib/*.tsx",
 		"./lib/*.ts": "./src/lib/*.ts",
+		"./components/code-block-highlight": "./src/components/code-block-highlight.ts",
 		"./components/*": "./src/components/*.tsx",
-		"./components/form/*": "./src/components/form/*.tsx",
-		"./components/overlay/*": "./src/components/overlay/*.tsx",
-		"./components/navigation/*": "./src/components/navigation/*.tsx",
-		"./components/feedback/*": "./src/components/feedback/*.tsx",
-		"./components/chat/*": "./src/components/chat/*.tsx",
-		"./components/display/code-block-highlight": "./src/components/display/code-block-highlight.ts",
-		"./components/display/*": "./src/components/display/*.tsx",
+		"./testing/*": "./src/testing/*.tsx",
 		"./hooks/*": "./src/hooks/*.ts",
 		"./fonts/*": "./src/fonts/*.ts"
 	}

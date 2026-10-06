@@ -3,11 +3,12 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { PERMISSION, type CapabilitySlug, type CheckPermissionInput } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AccessControlPanel from "../access-control-panel";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 interface ListQueryStub {
 	readonly useQuery: () => { readonly data: { readonly data: { readonly items: readonly [] } }; readonly isError: boolean };
@@ -60,6 +61,7 @@ function renderPanel(capabilities: readonly CapabilitySlug[]): void {
 		<CapabilitiesProvider capabilities={capabilities}>
 			<AccessControlPanel />
 		</CapabilitiesProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

@@ -2,9 +2,9 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { CreateProductInput } from "@workspace/shared";
-import { FieldError } from "@workspace/ui/components/form/field";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
-import { Label } from "@workspace/ui/components/form/label";
+import { FieldError } from "@workspace/ui/components/field";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { Label } from "@workspace/ui/components/label";
 import Link from "next/link";
 import * as React from "react";
 

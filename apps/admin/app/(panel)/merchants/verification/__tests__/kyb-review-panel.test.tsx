@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PENDING_KYB_MERCHANTS_QUERY } from "@/lib/merchants/kyb-review";
 
 import KybReviewPanel from "../kyb-review-panel";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** Only the merchant-detail fields the panel renders. */
 interface MerchantDetailStub {
@@ -160,7 +161,7 @@ function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient
 }
 
 function renderPanel(capabilities: readonly CapabilitySlug[]): ReturnType<typeof render> {
-	return render(panel(capabilities));
+	return render(panel(capabilities), { wrapper: UiKitTestProviders });
 }
 
 beforeEach(() => {
@@ -234,7 +235,7 @@ describe("KybReviewPanel KYB update invalidation", () => {
 		queryClient.setQueryData(apiRouter.rewardsAdmin.listOrganizations.queryKey(ALL_MERCHANTS_QUERY), null);
 		queryClient.setQueryData(apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: SELECTED_ORG_ID }), null);
 		queryClient.setQueryData(apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: OTHER_ORG_ID }), null);
-		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient));
+		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient), { wrapper: UiKitTestProviders });
 
 		const options: UpdateKybOptionsStub | undefined = updateKybOptions.mock.lastCall?.at(0);
 		await options?.onSuccess?.(null, { organizationId: SELECTED_ORG_ID });

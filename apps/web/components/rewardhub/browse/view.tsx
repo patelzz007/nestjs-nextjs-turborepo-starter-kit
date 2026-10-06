@@ -10,7 +10,7 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
 import { PILOT_CITY_LABELS, PilotCitySchema, RewardCategorySchema, type Envelope, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { AlertTriangle, Gift, MapPin, Search, Sparkles } from "lucide-react";
 import * as React from "react";
 import { LANDING_SECTION_IDS, ROUTE_PREFIXES } from "@/lib/routes";

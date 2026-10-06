@@ -1,6 +1,6 @@
 "use client";
 
-import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/form/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";
 import { LayoutGrid, List } from "lucide-react";
 import * as React from "react";
 

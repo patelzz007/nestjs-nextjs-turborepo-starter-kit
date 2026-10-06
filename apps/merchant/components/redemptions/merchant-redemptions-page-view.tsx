@@ -17,8 +17,8 @@ import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
 import { formatEpochMs, toIsoTimestamp } from "@workspace/ui/lib/format/date-time";
 import { CalendarClock, Receipt, ScanLine } from "lucide-react";
 import * as React from "react";

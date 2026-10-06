@@ -2,11 +2,11 @@
 
 import { isRedundantResourceLabel } from "@/lib/permissions/permission-label-utils";
 import type { PermissionTreeGroupNode, PermissionTreeLeaf, PermissionTreeResourceNode } from "@/lib/permissions/build-permission-tree";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
-import { Checkbox } from "@workspace/ui/components/form/checkbox";
-import { Label } from "@workspace/ui/components/form/label";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@workspace/ui/components/navigation/collapsible";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Checkbox } from "@workspace/ui/components/checkbox";
+import { Label } from "@workspace/ui/components/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@workspace/ui/components/collapsible";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ChevronRight, FolderTree, Layers3 } from "lucide-react";
 import * as React from "react";

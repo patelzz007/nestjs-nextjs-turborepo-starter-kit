@@ -1,6 +1,6 @@
 "use client";
 
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { useEffect, useRef } from "react";
 
 import { consumeEmailVerifiedToast } from "./verified-toast";

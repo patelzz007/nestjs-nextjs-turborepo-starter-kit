@@ -5,7 +5,7 @@ import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import { ApiErrorCodes, type CreateSampleCategoryInput, type Envelope, type SampleCategory } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 

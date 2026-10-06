@@ -1,17 +1,17 @@
 "use client";
 
 import type { MerchantKybDocumentRecord } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
 
 import { formatKybDocumentSize, isKybDocumentAccessible, KYB_SCAN_STATUS_PRESENTATION, type KybScanStatusPresentation } from "./document-utils";
 
 /** Badge style per presentation tone. */
-const TONE_BADGE_VARIANT: Readonly<Record<KybScanStatusPresentation["tone"], "outline" | "secondary" | "destructive">> = {
+const TONE_BADGE_VARIANT: Readonly<Record<KybScanStatusPresentation["tone"], "outline" | "secondary" | "destructive-light">> = {
 	neutral: "outline",
 	warning: "secondary",
-	danger: "destructive",
+	danger: "destructive-light",
 };
 
 interface MerchantKybStoredDocumentItemProps {

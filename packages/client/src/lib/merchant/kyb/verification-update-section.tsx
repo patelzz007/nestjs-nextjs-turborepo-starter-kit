@@ -1,8 +1,8 @@
 "use client";
 
 import type { MerchantKybDocumentRecord, MerchantKybProfileResponse } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { FormShell } from "@workspace/ui/components/form/form-shell";
+import { Button } from "@workspace/ui/components/button";
+import { FormShell } from "@workspace/ui/components/form-shell";
 import type { JSX, SyntheticEvent } from "react";
 
 import { MerchantOnboardingStepper, type MerchantOnboardingStep } from "../onboarding/stepper";

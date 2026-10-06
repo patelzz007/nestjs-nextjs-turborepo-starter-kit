@@ -4,6 +4,7 @@ import { ApiPaginatedMetaSchema, HttpAuditLogSummarySchema, type HttpAuditLogSum
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuditLogView from "../audit-log-table";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const { listQuery, detailQuery } = vi.hoisted(() => ({ listQuery: vi.fn(), detailQuery: vi.fn() }));
 
@@ -85,7 +86,7 @@ afterEach((): void => {
 
 describe("AuditLogView", () => {
 	it("renders who did what, when, from which device and where, and how it ended", () => {
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getAllByText("/api/v1/auth/profile").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("Mobile").length).toBeGreaterThan(0);
@@ -103,7 +104,7 @@ describe("AuditLogView", () => {
 
 	it("queries the URL's filters, sort and page with the audit log's page size", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[outcome]=FAILED&filter[method]=PATCH&sort=-responseStatus&page=2`);
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith(
 			{ page: 2, limit: 50, sort: "-responseStatus", filter: { outcome: { eq: "FAILED" }, method: { eq: "PATCH" } } },
@@ -114,7 +115,7 @@ describe("AuditLogView", () => {
 
 	it("shows an id filter from a detail-page link as a chip, and removes it on request", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[actorUserId]=${ACTOR_ID}`);
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, filter: { actorUserId: { eq: ACTOR_ID } } }, expect.anything());
 
@@ -124,7 +125,7 @@ describe("AuditLogView", () => {
 	});
 
 	it("opens the clicked row's record in the drawer, through the URL (?record=)", () => {
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getAllByText("/api/v1/auth/profile")[0] ?? document.body);
 
@@ -134,7 +135,7 @@ describe("AuditLogView", () => {
 
 	it("opens the drawer from a shared link, without touching the table's query", () => {
 		window.history.replaceState(null, "", `${PATH}?page=2&record=${RECORD_ID}`);
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		expect(detailQuery).toHaveBeenLastCalledWith({ id: RECORD_ID }, { enabled: true });
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 2, limit: 50 }, expect.anything());
@@ -143,14 +144,14 @@ describe("AuditLogView", () => {
 
 	it("queries the device and address-class filters", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[deviceType]=BOT&filter[ipScope]=PUBLIC`);
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, filter: { deviceType: { eq: "BOT" }, ipScope: { eq: "PUBLIC" } } }, expect.anything());
 	});
 
 	it("pushes the next page to the URL", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
@@ -160,7 +161,7 @@ describe("AuditLogView", () => {
 
 	it("explains a failed load instead of showing an empty table", () => {
 		listQuery.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, error: new Error("403"), refetch: (): Promise<void> => Promise.resolve() });
-		render(<AuditLogView />);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText(/Failed to load the audit log/)).toBeTruthy();
 	});

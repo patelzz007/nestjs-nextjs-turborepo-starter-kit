@@ -114,7 +114,7 @@ the current page (`lib/navigation/legacy-redirects.ts`, loaded by `next.config.t
 
 ### Panel sidebars (web, merchant, admin)
 
-All three panels share one sidebar implementation in `packages/ui/src/components/navigation/`
+All three panels share one sidebar implementation in `packages/ui/src/components/`
 (`panel-sidebar-nav*.tsx`): `PanelSidebarNav` (search box + a `<nav>` landmark with pinned pages and
 sections), `PanelSidebarFooterNav` (bottom items, a second named `<nav>`), `PanelSidebarNavItem` and
 `PanelSidebarRouteAnnouncer`. Each app passes its menu view, labels, icon renderers and a bare link

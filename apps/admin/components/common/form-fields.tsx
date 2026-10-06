@@ -1,11 +1,11 @@
 "use client";
 
-import { FieldError } from "@workspace/ui/components/form/field";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
-import { Switch } from "@workspace/ui/components/form/switch";
-import { Textarea } from "@workspace/ui/components/form/textarea";
+import { FieldError } from "@workspace/ui/components/field";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Switch } from "@workspace/ui/components/switch";
+import { Textarea } from "@workspace/ui/components/textarea";
 import * as React from "react";
 
 // ============================================

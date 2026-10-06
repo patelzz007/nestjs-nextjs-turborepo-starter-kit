@@ -1,7 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/display/avatar";
-import { Button } from "@workspace/ui/components/form/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
+import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
 
 export interface ProfileAvatarFieldProps {

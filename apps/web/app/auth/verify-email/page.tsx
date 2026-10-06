@@ -2,7 +2,7 @@
 
 import { ROUTES } from "@/lib/routes";
 import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
 
@@ -34,8 +34,7 @@ export default function WebVerifyEmailPage(): JSX.Element {
 			features={["One-click verification", "Secure token-based link", "Expires after 24 hours"]}
 			title="Verify email"
 			subtitle="We're confirming your email address"
-			copyright="Reward Hub"
-			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}>
+			copyright="Reward Hub">
 			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
 				<VerifyEmailContent />
 			</Suspense>

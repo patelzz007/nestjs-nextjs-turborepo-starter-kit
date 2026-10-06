@@ -2,7 +2,7 @@ import "@workspace/ui/globals.css";
 import "./admin-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
-import { Toaster } from "@workspace/ui/components/feedback/toast";
+import { Toaster } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
@@ -12,6 +12,8 @@ import { Geist, Geist_Mono, JetBrains_Mono, Rubik } from "next/font/google";
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
+import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
+import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],
@@ -49,14 +51,16 @@ export default function RootLayout({
 			bodyClassName="admin-app">
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />
-			<QueryProvider>
-				<AdminClientAuthWrapper>
-					<ThemeProvider>
-						{children}
-						<Toaster />
-					</ThemeProvider>
-				</AdminClientAuthWrapper>
-			</QueryProvider>
+			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
+				<QueryProvider>
+					<AdminClientAuthWrapper>
+						<ThemeProvider>
+							{children}
+							<Toaster />
+						</ThemeProvider>
+					</AdminClientAuthWrapper>
+				</QueryProvider>
+			</UiKitLanguageProvider>
 		</AppDocumentShell>
 	);
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { MERCHANT_NOTIFICATIONS_DATA, type MerchantNotificationItem } from "@/lib/session/notifications";
-import { Button } from "@workspace/ui/components/form/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/overlay/dropdown-menu";
-import { AppShellNotificationBell } from "@workspace/ui/components/navigation/app-shell-notification-bell";
+import { Button } from "@workspace/ui/components/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
+import { AppShellNotificationBell } from "@workspace/ui/components/app-shell-notification-bell";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Bell } from "lucide-react";
 import * as React from "react";

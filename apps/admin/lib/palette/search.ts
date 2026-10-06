@@ -1,11 +1,11 @@
 import { flattenMenuItems } from "@/lib/navigation/searchable-menu-items";
 import type { CompiledSidebarMenuData } from "@/lib/navigation/sidebar";
-import { findSuggestion, matchesQuery as matchesQueryBase, parseInput, ParsedInputSchema, ScopeTypeSchema, scopeConfig } from "@workspace/ui/lib/palette/search";
+import { findSuggestion, matchesQuery as matchesQueryBase, parseInput, ParsedInputSchema, ScopeTypeSchema } from "@workspace/ui/lib/palette/search";
 import type { ParsedInput, ScopeType } from "@workspace/ui/lib/palette/search";
 import type { PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
 
 export type { PaletteSearchableItem, ParsedInput, ScopeType };
-export { findSuggestion, parseInput, scopeConfig, ScopeTypeSchema, ParsedInputSchema };
+export { findSuggestion, parseInput, ScopeTypeSchema, ParsedInputSchema };
 
 /** Alias map — alternate search terms for admin demo menu items. */
 export const SEARCH_ALIAS_MAP: Readonly<Record<string, readonly string[]>> = {

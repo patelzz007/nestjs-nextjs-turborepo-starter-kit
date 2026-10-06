@@ -16,19 +16,19 @@ function readLibSource(relativePath: string): string {
 /** Ban raw Tailwind z-50 in overlay/navigation/feedback layers — use z-overlay / z-popover / z-toast. */
 describe("UI kit token contract (rule 22)", () => {
 	const overlaySources: readonly string[] = [
-		"components/overlay/dialog.tsx",
-		"components/overlay/sheet.tsx",
-		"components/overlay/drawer.tsx",
-		"components/overlay/alert-dialog.tsx",
-		"components/overlay/popover.tsx",
-		"components/overlay/dropdown-menu.tsx",
-		"components/overlay/context-menu.tsx",
-		"components/overlay/hover-card.tsx",
-		"components/overlay/tooltip.tsx",
-		"components/feedback/toast.tsx",
-		"components/feedback/alert.tsx",
-		"components/form/select.tsx",
-		"components/form/combobox.tsx",
+		"components/dialog.tsx",
+		"components/sheet.tsx",
+		"components/drawer.tsx",
+		"components/alert-dialog.tsx",
+		"components/popover.tsx",
+		"components/dropdown-menu.tsx",
+		"components/context-menu.tsx",
+		"components/hover-card.tsx",
+		"components/tooltip.tsx",
+		"components/toast.tsx",
+		"components/alert.tsx",
+		"components/select.tsx",
+		"components/combobox.tsx",
 	];
 
 	it("does not use raw z-50 in overlay/popover sources", (): void => {
@@ -42,31 +42,98 @@ describe("UI kit token contract (rule 22)", () => {
 /** Interactive roots listed in P2 must forward refs (rule 20). */
 describe("UI kit forwardRef contract (rule 20)", () => {
 	const forwardRefSources: readonly string[] = [
-		"components/feedback/spinner.tsx",
-		"components/feedback/skeleton.tsx",
-		"components/feedback/progress.tsx",
-		"components/display/table.tsx",
-		"components/display/kbd.tsx",
-		"components/navigation/tabs.tsx",
-		"components/navigation/scroll-area.tsx",
-		"components/navigation/pagination.tsx",
-		"components/navigation/stepper.tsx",
-		"components/navigation/sidebar-parts.tsx",
-		"components/form/lockout-countdown.tsx",
-		"components/layout/auth-layout.tsx",
-		"components/feedback/message.tsx",
-		"components/feedback/not-found-content.tsx",
-		"components/form/button.tsx",
-		"components/form/input.tsx",
-		"components/form/select-parts.tsx",
-		"components/form/combobox-parts.tsx",
-		"components/overlay/popover.tsx",
-		"components/overlay/sheet.tsx",
-		"components/overlay/command.tsx",
-		"components/overlay/menubar.tsx",
-		"components/display/calendar.tsx",
-		"components/display/chart.tsx",
-		"components/display/data-table.tsx",
+		"components/spinner.tsx",
+		"components/skeleton.tsx",
+		"components/progress.tsx",
+		"components/table.tsx",
+		"components/kbd.tsx",
+		"components/tabs.tsx",
+		"components/scroll-area.tsx",
+		"components/pagination.tsx",
+		"components/stepper.tsx",
+		"components/sidebar-parts.tsx",
+		"components/accordion.tsx",
+		"components/accordion-parts.tsx",
+		"components/app-command-palette.tsx",
+		"components/app-command-palette-parts.tsx",
+		"components/app-document-shell.tsx",
+		"components/app-panel-shell.tsx",
+		"components/app-shell-notification-bell.tsx",
+		"components/app-shell-profile-dropdown.tsx",
+		"components/app-shell-topbar.tsx",
+		"components/breadcrumb.tsx",
+		"components/breadcrumb-trail.tsx",
+		"components/carousel.tsx",
+		"components/collapsible.tsx",
+		"components/panel-shell-content.tsx",
+		"components/panel-sidebar-header.tsx",
+		"components/panel-sidebar-nav-item.tsx",
+		"components/panel-sidebar-nav.tsx",
+		"components/panel-sidebar-search.tsx",
+		"components/panel-sidebar-section-header.tsx",
+		"components/resizable.tsx",
+		"components/scroll-to-top.tsx",
+		"components/shell-theme-toggle.tsx",
+		"components/sidebar-context.tsx",
+		"components/lockout-countdown.tsx",
+		"components/auth-layout.tsx",
+		"components/message.tsx",
+		"components/not-found-content.tsx",
+		"components/button.tsx",
+		"components/input.tsx",
+		"components/select-parts.tsx",
+		"components/combobox-parts.tsx",
+		"components/popover.tsx",
+		"components/sheet.tsx",
+		"components/command.tsx",
+		"components/menubar.tsx",
+		"components/alert-dialog.tsx",
+		"components/context-menu.tsx",
+		"components/dialog.tsx",
+		"components/drawer.tsx",
+		"components/dropdown-menu.tsx",
+		"components/hover-card.tsx",
+		"components/navigation-menu.tsx",
+		"components/toast.tsx",
+		"components/tooltip.tsx",
+		"components/calendar.tsx",
+		"components/chart.tsx",
+		"components/chart-marks.tsx",
+		"components/analytics-page-header.tsx",
+		"components/analytics-panel.tsx",
+		"components/aspect-ratio.tsx",
+		"components/attachment.tsx",
+		"components/avatar.tsx",
+		"components/bubble.tsx",
+		"components/card.tsx",
+		"components/empty.tsx",
+		"components/entity-avatar.tsx",
+		"components/kpi-stat-card.tsx",
+		"components/marker.tsx",
+		"components/message-scroller.tsx",
+		"components/qr-code.tsx",
+		"components/ranked-bar-list.tsx",
+		"components/relative-time.tsx",
+		"components/separator.tsx",
+		"components/share-bar.tsx",
+		"components/data-table.tsx",
+		"components/button-group.tsx",
+		"components/checkbox.tsx",
+		"components/collection-shared.tsx",
+		"components/date-picker.tsx",
+		"components/field.tsx",
+		"components/form-shell.tsx",
+		"components/input-group.tsx",
+		"components/input-otp.tsx",
+		"components/label.tsx",
+		"components/password-input.tsx",
+		"components/password-strength-meter.tsx",
+		"components/radio-group.tsx",
+		"components/slider.tsx",
+		"components/switch.tsx",
+		"components/textarea.tsx",
+		"components/toggle.tsx",
+		"components/toggle-group.tsx",
 	];
 
 	it("exports forwardRef components for P2 priority roots", (): void => {
@@ -80,15 +147,17 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 describe("UI kit CVA state contract (rule 23)", () => {
 	const cvaStateSources: readonly string[] = [
 		"lib/form/field-variants.ts",
-		"components/form/button.tsx",
-		"components/form/input.tsx",
-		"components/form/textarea.tsx",
-		"components/form/checkbox.tsx",
-		"components/form/switch.tsx",
-		"components/form/slider.tsx",
-		"components/form/select-parts.tsx",
-		"components/form/combobox-parts.tsx",
-		"components/feedback/spinner.tsx",
+		"components/button.tsx",
+		"components/input.tsx",
+		"components/textarea.tsx",
+		"components/checkbox.tsx",
+		"components/switch.tsx",
+		"components/slider.tsx",
+		"components/select-parts.tsx",
+		"components/combobox-parts.tsx",
+		"components/spinner.tsx",
+		"components/radio-group.tsx",
+		"components/toggle.tsx",
 	];
 
 	it("defines CVA state variants on form primitives", (): void => {
@@ -118,10 +187,9 @@ describe("UI kit boundary types (rules 1–3)", () => {
 		"lib/data-table/export.ts",
 		"lib/sidebar/labels.ts",
 		"lib/sidebar/storage.ts",
-		"lib/form/alert-dialog-labels.ts",
-		"components/overlay/alert-dialog.tsx",
-		"components/form/combobox.tsx",
-		"components/display/data-table.tsx",
+		"components/alert-dialog.tsx",
+		"components/combobox.tsx",
+		"components/data-table.tsx",
 	];
 
 	it("does not use unknown, never, or assumeType in boundary modules", (): void => {
@@ -136,29 +204,30 @@ describe("UI kit boundary types (rules 1–3)", () => {
 
 describe("UI kit inline prop contract (rule 16)", () => {
 	it("data-table does not spread conditional inline object props", (): void => {
-		const source = readComponentSource("components/display/data-table.tsx");
+		const source = readComponentSource("components/data-table.tsx");
 		expect(source.includes("...(onRowClick"), "data-table must not spread conditional onRowClick props").toBe(false);
 		expect(source.includes("...(draggable"), "data-table must not spread conditional draggable props").toBe(false);
 	});
 });
 
 describe("UI kit sidebar contract (rules 9–11, 20, 22, 23)", () => {
-	it("requires labels and avoids hardcoded toggle copy", (): void => {
-		const source = readComponentSource("components/navigation/sidebar-context.tsx");
-		expect(source.includes("labels: SidebarLabels"), "SidebarProvider must require labels").toBe(true);
+	it("reads its copy from the sidebar label family and avoids hardcoded toggle copy", (): void => {
+		const source = readComponentSource("components/sidebar-context.tsx");
+		expect(source.includes('useUiKitLabels("sidebar", labelsOverride)'), "SidebarProvider must read the sidebar family (with its labels override)").toBe(true);
+		expect(source.includes("labels: SidebarLabels"), "SidebarContext must expose the resolved sidebar labels").toBe(true);
 		expect(source.includes("Toggle Sidebar"), "sidebar must not hardcode toggle label").toBe(false);
 	});
 
 	it("uses z-sidebar tokens instead of raw z-10/z-20", (): void => {
-		const source = readComponentSource("components/navigation/sidebar-parts.tsx");
+		const source = readComponentSource("components/sidebar-parts.tsx");
 		expect(source.includes("z-10"), "sidebar must not use z-10").toBe(false);
 		expect(source.includes("z-20"), "sidebar must not use z-20").toBe(false);
 		expect(source.includes("z-sidebar"), "sidebar must use z-sidebar token").toBe(true);
 	});
 
 	it("forwards refs on layout controls", (): void => {
-		const contextSource = readComponentSource("components/navigation/sidebar-context.tsx");
-		const partsSource = readComponentSource("components/navigation/sidebar-parts.tsx");
+		const contextSource = readComponentSource("components/sidebar-context.tsx");
+		const partsSource = readComponentSource("components/sidebar-parts.tsx");
 		expect(contextSource.includes("badges: Readonly<Record<string, string | number>>"), "SidebarContext must expose badges map").toBe(true);
 		expect(partsSource.includes("itemId?: string"), "SidebarMenuBadge must support itemId from context").toBe(true);
 		expect(partsSource.includes("SidebarTrigger = React.forwardRef"), "SidebarTrigger must forwardRef").toBe(true);
@@ -173,7 +242,7 @@ describe("UI kit sidebar contract (rules 9–11, 20, 22, 23)", () => {
 
 describe("UI kit session storage contract (rule 9)", () => {
 	it("combobox does not read sessionStorage directly", (): void => {
-		const source = readComponentSource("components/form/combobox.tsx");
+		const source = readComponentSource("components/combobox.tsx");
 		expect(source.includes("sessionStorage.getItem"), "combobox must not read sessionStorage").toBe(false);
 		expect(source.includes("sessionStorage.setItem"), "combobox must not write sessionStorage").toBe(false);
 	});

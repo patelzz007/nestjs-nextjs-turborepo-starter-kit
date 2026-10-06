@@ -13,10 +13,10 @@ import {
 	type EmailPreview,
 	type PilotCity,
 } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { Button } from "@workspace/ui/components/form/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Badge } from "@workspace/ui/components/badge";
+import { toastMessage } from "@workspace/ui/components/toast";
+import { Button } from "@workspace/ui/components/button";
 import { Copy, Eye, Send } from "lucide-react";
 import * as React from "react";
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	BROWSER_READINESS_URLS,
+	LOCAL_APP_PORTS,
 	BROWSER_SUITE_ENV,
 	browserJob,
 	CI_BUILD_ENV,
@@ -148,6 +149,19 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 			expect(WORKFLOW).toContain(`${name}: ${value}`);
 			expect(job.suites.find((step) => step.id === "browser:admin-suite")?.env?.[name]).toBe(value);
 		}
+	});
+
+	it("binds every server to the port its readiness URL polls, for the port preflight", () => {
+		expect(job.servers.map((server) => [server.id, server.port])).toEqual([
+			["browser:api", LOCAL_APP_PORTS.api],
+			["browser:web", LOCAL_APP_PORTS.web],
+			["browser:admin", LOCAL_APP_PORTS.admin],
+		]);
+		expect(job.servers.find((server) => server.id === "browser:api")?.env?.PORT).toBe(String(LOCAL_APP_PORTS.api));
+		for (const server of job.servers.filter((candidate) => candidate.id !== "browser:api")) {
+			expect(server.args.slice(-2)).toEqual(["--port", String(server.port)]);
+		}
+		expect(BROWSER_READINESS_URLS.map((url) => Number(new URL(url).port))).toEqual(job.servers.map((server) => server.port));
 	});
 
 	it("migrates, seeds and serves the API from its own throwaway database", () => {

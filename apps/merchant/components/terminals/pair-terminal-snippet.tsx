@@ -1,7 +1,7 @@
 "use client";
 
 import { posEndpointUrl } from "@/lib/pos/pos-endpoint-url";
-import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockLanguage, CodeBlockTitle, DEFAULT_CODE_BLOCK_LABELS } from "@workspace/ui/components/display/code-block";
+import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockLanguage, CodeBlockTitle } from "@workspace/ui/components/code-block";
 import { apiRoutes } from "@workspace/shared";
 import * as React from "react";
 
@@ -33,7 +33,7 @@ export function PairTerminalSnippet({ apiBaseUrl, pairingCode, className }: Pair
 	const code = React.useMemo((): string => buildPairTerminalSnippet(apiBaseUrl, pairingCode), [apiBaseUrl, pairingCode]);
 
 	return (
-		<CodeBlock code={code} language="bash" labels={DEFAULT_CODE_BLOCK_LABELS} label={PAIR_TERMINAL_SNIPPET_TITLE} className={className}>
+		<CodeBlock code={code} language="bash" label={PAIR_TERMINAL_SNIPPET_TITLE} className={className}>
 			<CodeBlockHeader>
 				<CodeBlockTitle>{PAIR_TERMINAL_SNIPPET_TITLE}</CodeBlockTitle>
 				<CodeBlockLanguage>bash</CodeBlockLanguage>

@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-import { NotFoundContent } from "@workspace/ui/components/feedback/not-found-content";
+import { NotFoundContent } from "@workspace/ui/components/not-found-content";
 import { ROUTES } from "@/lib/routes";
 
 /**

@@ -20,7 +20,6 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { AnalyticsExportMenu } from "@workspace/client/lib/analytics/analytics-export-menu";
 import { AnalyticsKpiGrid } from "@workspace/client/lib/analytics/analytics-kpi-grid";
 import {
-	ANALYTICS_CHART_LABELS,
 	analyticsDisplayRegion,
 	analyticsFormatters,
 	bucketFormatters,
@@ -49,12 +48,12 @@ import {
 	type Envelope,
 	type MerchantAnalyticsDashboard,
 } from "@workspace/shared";
-import { AnalyticsPanel } from "@workspace/ui/components/analytics/analytics-panel";
-import { RankedBarList } from "@workspace/ui/components/analytics/ranked-bar-list";
-import { ShareBar } from "@workspace/ui/components/analytics/share-bar";
-import { TimeSeriesChart } from "@workspace/ui/components/analytics/time-series-chart";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { AnalyticsPanel } from "@workspace/ui/components/analytics-panel";
+import { RankedBarList } from "@workspace/ui/components/ranked-bar-list";
+import { ShareBar } from "@workspace/ui/components/share-bar";
+import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
+import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
@@ -207,7 +206,6 @@ export function MerchantAnalyticsSections({ dashboard, status, timeZone }: Merch
 						formatAxisValue={formatters.moneyCompact}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						axisWidth={MONEY_AXIS_WIDTH_PX}
 						state={toChartFrameState(status, sales.isEmpty, NO_SALES_MESSAGE)}
 					/>
@@ -222,7 +220,6 @@ export function MerchantAnalyticsSections({ dashboard, status, timeZone }: Merch
 						formatAxisValue={formatters.count}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						state={toChartFrameState(status, bills.isEmpty, NO_SALES_MESSAGE)}
 					/>
 				</AnalyticsPanel>
@@ -236,7 +233,6 @@ export function MerchantAnalyticsSections({ dashboard, status, timeZone }: Merch
 						formatAxisValue={formatters.moneyCompact}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						axisWidth={MONEY_AXIS_WIDTH_PX}
 						state={toChartFrameState(status, averageBill.isEmpty, NO_SALES_MESSAGE)}
 					/>
@@ -251,7 +247,6 @@ export function MerchantAnalyticsSections({ dashboard, status, timeZone }: Merch
 						formatAxisValue={formatters.count}
 						formatBucketTick={buckets.tick}
 						formatBucketLabel={buckets.label}
-						labels={ANALYTICS_CHART_LABELS}
 						state={toChartFrameState(status, engagement.isEmpty, "No claims or redemptions in this range.")}
 					/>
 				</AnalyticsPanel>

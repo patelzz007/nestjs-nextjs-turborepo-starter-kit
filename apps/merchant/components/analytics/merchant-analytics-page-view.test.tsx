@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { apiDownloads, ApiDownloadError, type DownloadedFile } from "@workspace/client/lib/api/download";
 import type { Envelope, MerchantAnalyticsDashboard } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantAnalyticsPageView, type MerchantAnalyticsPageViewProps } from "@/components/analytics/merchant-analytics-page-view";
@@ -167,7 +168,7 @@ describe("MerchantAnalyticsPageView data", () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		const refresh = renderView();
 
-		await chooseFilter("Date range", "This month");
+		await chooseFilter(UI_KIT_LABELS_EN.analyticsRangePicker.range, "This month");
 		refresh();
 
 		expect(window.location.search).toBe("?range=thisMonth");

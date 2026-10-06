@@ -1,8 +1,8 @@
 "use client";
 
 import type { PilotCity, RewardCategory } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { MapPin, Search, X } from "lucide-react";
 import * as React from "react";

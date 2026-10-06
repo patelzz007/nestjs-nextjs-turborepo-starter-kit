@@ -1,27 +1,27 @@
-import type { PanelSidebarNavLabels } from "@workspace/ui/lib/sidebar/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 
-/** Admin sidebar copy — the shared panel nav labels plus the admin shell's own (rule 11: the parent supplies every string). */
-export interface AdminSidebarLabels extends PanelSidebarNavLabels {
-	readonly logoutAriaLabel: string;
-	readonly logoutTitle: string;
-	readonly skipToContent: string;
-}
-
-export const ADMIN_SIDEBAR_LABELS: AdminSidebarLabels = {
-	navigationAriaLabel: "Main navigation",
-	secondaryNavigationAriaLabel: "Account",
-	searchPlaceholder: "Search menu…",
+/**
+ * Admin's wording for the shared panel sidebar nav — only the strings that
+ * differ from the kit pack's `panelSidebarNav` copy (the rest comes from the
+ * `UiKitLanguageProvider` mounted in the root layout).
+ */
+export const ADMIN_PANEL_SIDEBAR_NAV_LABELS: UiKitLabelsOverride<"panelSidebarNav"> = {
 	searchAriaLabel: "Search menu",
 	clearSearchAriaLabel: "Clear search",
 	noResultsTitle: "No menu items found",
-	noResultsDescription: "Try a different search term",
-	pinnedSectionTitle: "Pinned",
-	moveSectionUpTitle: "Move section up (Alt+↑)",
-	moveSectionDownTitle: "Move section down (Alt+↓)",
-	moveSectionUpAriaLabel: (sectionTitle: string): string => `Move ${sectionTitle} section up`,
-	moveSectionDownAriaLabel: (sectionTitle: string): string => `Move ${sectionTitle} section down`,
-	itemUnavailableTitle: "This feature is currently unavailable",
-	routeAnnouncement: (pageLabel: string): string => `Navigated to ${pageLabel}`,
+};
+
+/** Copy the admin shell renders itself (not a kit component), so the kit pack has no entry for it. */
+export interface AdminShellLabels {
+	/** Accessible name of the sidebar footer's log-out button. */
+	readonly logoutAriaLabel: string;
+	/** Tooltip of the sidebar footer's log-out button. */
+	readonly logoutTitle: string;
+	/** Text of the skip link that jumps past the sidebar to the main content. */
+	readonly skipToContent: string;
+}
+
+export const ADMIN_SHELL_LABELS: AdminShellLabels = {
 	logoutAriaLabel: "Log out",
 	logoutTitle: "Log out",
 	skipToContent: "Skip to content",

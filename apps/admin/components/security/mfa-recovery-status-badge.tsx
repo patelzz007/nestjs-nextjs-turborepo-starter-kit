@@ -1,7 +1,7 @@
 "use client";
 
 import type { MfaRecoveryRecordStatus } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import * as React from "react";
 
 const STATUS_LABELS: Record<MfaRecoveryRecordStatus, string> = {
@@ -11,10 +11,10 @@ const STATUS_LABELS: Record<MfaRecoveryRecordStatus, string> = {
 	COMPLETED: "Completed",
 };
 
-const STATUS_VARIANTS: Record<MfaRecoveryRecordStatus, "default" | "secondary" | "destructive" | "outline"> = {
+const STATUS_VARIANTS: Record<MfaRecoveryRecordStatus, "default" | "secondary" | "destructive-light" | "outline"> = {
 	PENDING: "default",
 	APPROVED: "secondary",
-	DENIED: "destructive",
+	DENIED: "destructive-light",
 	COMPLETED: "outline",
 };
 

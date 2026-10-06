@@ -1,6 +1,6 @@
 "use client";
 
-import { createDataTableLabels } from "@/lib/data-table/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
 import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
@@ -19,30 +19,34 @@ import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@work
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { PERMISSION, productListQuery, type Envelope, type Product } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
-import { buttonVariants } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
+import { buttonVariants } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
 import { formatCatalogAmount } from "@/lib/format/numbers";
 import { formatDateTime } from "@/lib/format/dates";
 
-const labels = createDataTableLabels({
+const PRODUCT_SEARCH_PLACEHOLDER = "Search products...";
+const PRODUCT_SEARCH_ARIA_LABEL = "Search Products";
+
+/** Only the strings that differ from the kit pack's `dataTable` copy. */
+const PRODUCT_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
 	actionsMenuTitle: "Product actions",
 	openRowMenu: "Open product row menu",
-	searchPlaceholder: "Search products...",
-	searchAriaLabel: "Search Products",
-});
+	searchPlaceholder: PRODUCT_SEARCH_PLACEHOLDER,
+	searchAriaLabel: PRODUCT_SEARCH_ARIA_LABEL,
+};
 
 export interface ProductViewProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -407,7 +411,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 	const searchToolbar = useMemo(
 		(): React.JSX.Element => (
 			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
+				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={PRODUCT_SEARCH_PLACEHOLDER} ariaLabel={PRODUCT_SEARCH_ARIA_LABEL} />
 				{textFilterToolbar}
 			</div>
 		),
@@ -438,7 +442,7 @@ export default function ProductView({ initialPage }: ProductViewProps): React.JS
 					<DataTable
 						data={rows}
 						columns={columns}
-						labels={labels}
+						labels={PRODUCT_TABLE_LABELS}
 						actions={actions}
 						checkbox={checkbox}
 						enableColumnVisibility

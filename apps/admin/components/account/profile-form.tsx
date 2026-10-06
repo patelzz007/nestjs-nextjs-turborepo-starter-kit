@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { OwnProfileEditableFieldsSchema, type OwnProfileEditableFields } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
 
 import { TextField, useFormSubmitHandler } from "@/components/common/form-fields";

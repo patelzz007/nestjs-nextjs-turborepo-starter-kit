@@ -3,8 +3,8 @@
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
 import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ArrowUpRight, Clock } from "lucide-react";
@@ -44,7 +44,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.rewardHub
 						</Badge>
 						<Badge variant="outline">{rewardTypeLabel(reward.rewardType)}</Badge>
 						{isLowStock && !isSoldOut ? <Badge className="border-transparent bg-warning-soft text-warning">Almost gone</Badge> : null}
-						{isSoldOut ? <Badge variant="destructive">Sold out</Badge> : null}
+						{isSoldOut ? <Badge variant="destructive-light">Sold out</Badge> : null}
 					</div>
 				</div>
 			</div>

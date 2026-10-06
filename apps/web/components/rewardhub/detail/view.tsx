@@ -9,8 +9,8 @@ import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { Envelope, RewardResponse } from "@workspace/shared";
 import { getRewardClaimBlockReason, rewardClaimBlockMessage, epochMs, PLATFORM_DISPLAY_REGION } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import Link from "next/link";
@@ -97,8 +97,8 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 						{reward.category}
 					</Badge>
 					<Badge variant="outline">{reward.rewardType.replace("_", " ")}</Badge>
-					{isSoldOut ? <Badge variant="destructive">Sold out</Badge> : null}
-					{claimBlockReason === "expired" ? <Badge variant="destructive">Expired</Badge> : null}
+					{isSoldOut ? <Badge variant="destructive-light">Sold out</Badge> : null}
+					{claimBlockReason === "expired" ? <Badge variant="destructive-light">Expired</Badge> : null}
 				</div>
 				<p className="mt-4 text-sm text-muted-foreground">
 					<span className="font-medium text-foreground">{reward.quantityRemaining}</span> remaining · Expires{" "}

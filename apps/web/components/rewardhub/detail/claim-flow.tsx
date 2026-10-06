@@ -2,9 +2,9 @@
 
 import { formatClaimApiError } from "@/lib/rewards/claim-errors";
 import { useAuth } from "@workspace/client/lib/auth";
-import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { walletClaimPath } from "@/lib/routes";

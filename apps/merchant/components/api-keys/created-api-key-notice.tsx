@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
-import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockTitle, DEFAULT_CODE_BLOCK_LABELS } from "@workspace/ui/components/display/code-block";
+import { Button } from "@workspace/ui/components/button";
+import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockTitle } from "@workspace/ui/components/code-block";
 import { ShieldAlert } from "lucide-react";
 import * as React from "react";
 
@@ -27,7 +27,7 @@ export function CreatedApiKeyNotice({ keyName, secret, onDismiss }: CreatedApiKe
 						Copy “{keyName}” now — it won&apos;t be shown again
 					</h2>
 					<p className="mt-1 text-sm text-muted-foreground">Store it in the terminal&apos;s configuration. If it&apos;s lost, revoke it and create a new one.</p>
-					<CodeBlock code={secret} language="text" highlight={false} labels={DEFAULT_CODE_BLOCK_LABELS} label="New API key" className="mt-4">
+					<CodeBlock code={secret} language="text" highlight={false} label="New API key" className="mt-4">
 						<CodeBlockHeader>
 							<CodeBlockTitle>API key</CodeBlockTitle>
 							<div className="ms-auto flex items-center gap-1">

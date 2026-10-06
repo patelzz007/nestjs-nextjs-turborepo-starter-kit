@@ -3,7 +3,7 @@
 import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
 import { Can } from "@workspace/client/lib/auth/can";
 import type { CapabilitySlug } from "@workspace/shared";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Eye, ShieldAlert } from "lucide-react";
 import * as React from "react";
 

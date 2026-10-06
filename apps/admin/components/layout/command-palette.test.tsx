@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
+import type { AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import type { PaletteRecentSearch, PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
 import { CommandPaletteStoreProvider, commandPaletteStorageKey } from "@workspace/client/lib/features/command-palette/facade";
 import * as React from "react";
@@ -66,7 +66,7 @@ function StubAppCommandPalette({ searchableItems, quickActions, recentSearches, 
 	);
 }
 
-vi.mock("@workspace/ui/components/navigation/app-command-palette", () => ({
+vi.mock("@workspace/ui/components/app-command-palette", () => ({
 	AppCommandPalette: StubAppCommandPalette,
 }));
 

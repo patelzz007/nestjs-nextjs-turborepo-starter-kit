@@ -1,9 +1,9 @@
 "use client";
 
 import type { MerchantKybPendingDocument } from "./pending-document";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { Textarea } from "@workspace/ui/components/form/textarea";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { Textarea } from "@workspace/ui/components/textarea";
 import * as React from "react";
 
 import { MerchantKybDocumentUpload } from "./document-upload";

@@ -26,12 +26,12 @@ flowchart LR
 
 | Layer | Where | Knows about |
 | --- | --- | --- |
-| Primitives (dumb) | `packages/ui/src/components/analytics/` | Nothing about the API: formatted strings, numbers, colour slots, callbacks |
+| Primitives (dumb) | `packages/ui/src/components/` | Nothing about the API: formatted strings, numbers, colour slots, callbacks |
 | Formatters | `packages/ui/src/lib/format/` — `formatEpochMsRange`, `formatBucket`, `formatPercent`, `formatPercentChange`, plus the existing money / count helpers | Locale, currency and time zone, always passed in |
 | Range + presentation (shared smart layer) | `packages/client/src/lib/analytics/` | The dashboard contracts, the URL, the download helper |
 | Pages (smart) | each app's `components/analytics/…` and `lib/analytics/…` | Which KPIs, charts and breakdowns that audience sees |
 
-### Primitives (`@workspace/ui/components/analytics/*`)
+### Primitives (`@workspace/ui/components/*`)
 
 | Component | Use it for | Notes |
 | --- | --- | --- |
@@ -39,7 +39,7 @@ flowchart LR
 | `TimeSeriesChart` | A series over time: `kind` = `line`, `area`, `bar` or `stackedBar` | One y-axis only (never dual-axis). ≥ 2 series get a legend (a line key, dashed for the second line); tooltip lists every series at the bucket, value first, with the bucket's full range; partial buckets are shaded, explained under the chart and marked in the tooltip and table; every value is also in a "Show as table" disclosure. Keyboard: recharts' accessibility layer (focus the plot, arrow keys move the tooltip). Animations off under `prefers-reduced-motion`. `state` swaps the plot for loading / empty / error (with retry) at the same height. Generic over the series keys. |
 | `RankedBarList` | A ranked breakdown (top merchants, stores, rewards, categories, cities) | Text carries every value; the bar is decorative. One series → one colour (slot 1) for every bar. |
 | `ShareBar` | Part-to-whole with a handful of parts (redemption method) | One stacked horizontal bar with 2px surface gaps and a legend list stating name, value and share. |
-| `AnalyticsRangePicker` | The filter row: preset, custom days + Apply, interval, the range in effect | Built from the shared kit only: preset and interval are `DropdownMenu` radio groups (trigger named by its label and current choice; arrow keys, type-ahead, Escape); custom days are picked in the shared `Calendar` (range mode, in a `Popover`) with later days and over-long spans disabled. The caller validates and passes `customError`, which disables Apply and is tied to the calendar trigger with `aria-describedby`. The range label is a polite live region. |
+| `AnalyticsRangePicker` | The filter row: preset, custom days + Apply, interval, the range in effect | Built from the shared kit only: preset and interval are `DropdownMenu` radio groups (trigger named by its label and current choice; arrow keys, type-ahead, Escape); custom days are picked in the shared `Calendar` (range mode, in a `Popover`) with later days and over-long spans disabled. The caller validates and passes `customError`, which disables Apply and is tied to the calendar trigger with `aria-describedby`. The range label is a polite live region. The calendar's open state is controllable (`calendarOpen` / `onCalendarOpenChange`, closed after a successful Apply); left uncontrolled, the picker manages it. |
 | `AnalyticsPanel`, `ChartStateFrame` | A titled section (`<section aria-labelledby>`) and the loading / empty / error frame | `CHART_READY` / `CHART_LOADING` constants for the common states. |
 
 Every primitive forwards its ref (`TimeSeriesChart` and `AnalyticsRangePicker` are generic, so
@@ -139,7 +139,7 @@ encodings apply there and also cover colour-blind readers and grayscale print.
 
 ## Testing
 
-- Primitives: `packages/ui/src/components/analytics/*.test.tsx` — states, roles and names, the
+- Primitives: `packages/ui/src/components/*.test.tsx` — states, roles and names, the
   table twin, keyboard (Enter submits the custom range), ref forwarding. jsdom has no
   `matchMedia`: stub it before rendering a `TimeSeriesChart`.
 - Range and presets: `packages/client/src/lib/analytics/analytics-range.test.ts` (month, quarter,

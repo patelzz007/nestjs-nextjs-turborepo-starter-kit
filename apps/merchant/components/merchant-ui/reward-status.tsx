@@ -1,5 +1,5 @@
 import type { RewardStatus } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 

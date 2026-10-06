@@ -1,7 +1,7 @@
 "use client";
 
 import { adminUserListQuery, AdminUserStatusSchema, type AdminUserDetail, type Envelope } from "@workspace/shared";
-import { createDataTableLabels } from "@/lib/data-table/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
@@ -14,9 +14,9 @@ import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { toUsersListQuery, USERS_PAGE_SIZE_OPTIONS, USERS_TABLE_URL_STATE } from "@/lib/url-state/users";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import Link from "next/link";
@@ -25,6 +25,15 @@ import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
 import { ADMIN_USER_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enum-filter-options";
+
+const USER_SEARCH_PLACEHOLDER = "Search name or email…";
+
+/** Only the strings that differ from the kit pack's `dataTable` copy. */
+const USER_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
+	actionsMenuTitle: "User actions",
+	openRowMenu: "Open user row menu",
+	searchPlaceholder: USER_SEARCH_PLACEHOLDER,
+};
 
 export interface UsersAllTableProps {
 	/** The page the server prefetched for the URL it rendered. */
@@ -171,16 +180,6 @@ export default function UsersAllTable({
 		];
 	}, []);
 
-	const tableLabels = React.useMemo(
-		() =>
-			createDataTableLabels({
-				actionsMenuTitle: "User actions",
-				openRowMenu: "Open user row menu",
-				searchPlaceholder: "Search name or email…",
-			}),
-		[],
-	);
-
 	const handleManualColumnFilterChange = React.useCallback(
 		(filterKey: string, value: string | null): void => {
 			if (filterKey === "status") {
@@ -206,8 +205,8 @@ export default function UsersAllTable({
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("users.csv", ["fullName", "email"]), []);
 
 	const toolbarContent = React.useMemo(
-		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
-		[searchDraft, setSearchDraft, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
+		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={USER_SEARCH_PLACEHOLDER} />,
+		[searchDraft, setSearchDraft],
 	);
 
 	return (
@@ -225,7 +224,7 @@ export default function UsersAllTable({
 					<DataTable
 						columns={columns}
 						data={rows}
-						labels={tableLabels}
+						labels={USER_TABLE_LABELS}
 						actions={actions}
 						checkbox={checkbox}
 						enableColumnVisibility

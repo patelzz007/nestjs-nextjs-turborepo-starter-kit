@@ -17,8 +17,8 @@ import {
 	type MerchantBusinessCategory,
 	type PilotCity,
 } from "@workspace/shared";
-import type { RankedBarItem } from "@workspace/ui/components/analytics/ranked-bar-list";
-import type { TimeSeriesDefinition } from "@workspace/ui/components/analytics/time-series-chart";
+import type { RankedBarItem } from "@workspace/ui/components/ranked-bar-list";
+import type { TimeSeriesDefinition } from "@workspace/ui/components/time-series-chart";
 import { Receipt, ShoppingBag, Store, Ticket, TicketCheck, TrendingUp, UserPlus, UserRound, Users, Wallet } from "lucide-react";
 
 type AdminKpiKey = keyof AdminDashboardTotals;

@@ -5,7 +5,7 @@ import { MerchantRewardListRow } from "@/components/rewards/merchant-reward-list
 import { RewardsViewToggle, type RewardsViewToggleLabels } from "@workspace/client/lib/features/ui-preferences/rewards-view-toggle";
 import { useRewardsViewMode, useUiPreferencesCommands, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import type { RewardResponse } from "@workspace/shared";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import * as React from "react";
 
 const VIEW_TOGGLE_LABELS: RewardsViewToggleLabels = { group: "Rewards layout", grid: "Grid view", list: "List view" };

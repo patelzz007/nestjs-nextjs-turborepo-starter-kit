@@ -3,7 +3,7 @@
 import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
 import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
 
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 

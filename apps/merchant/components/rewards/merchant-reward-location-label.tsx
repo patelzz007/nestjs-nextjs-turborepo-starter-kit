@@ -1,7 +1,7 @@
 "use client";
 
 import type { RewardResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { MapPin } from "lucide-react";
 import * as React from "react";
 

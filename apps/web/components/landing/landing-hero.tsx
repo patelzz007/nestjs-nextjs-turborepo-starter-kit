@@ -1,7 +1,7 @@
 import { RewardCategoryVisual } from "@/components/rewardhub/detail/category-visual";
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
 import type { FeaturedOffer } from "@/lib/rewards/featured-offers";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";

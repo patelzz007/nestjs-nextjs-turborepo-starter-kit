@@ -3,8 +3,8 @@
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
 import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ArrowUpRight } from "lucide-react";
@@ -54,7 +54,7 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.reward
 						<Badge className="hidden shrink-0 border-transparent bg-warning-soft px-1.5 py-0 text-[10px] text-warning sm:inline-flex">Low</Badge>
 					) : null}
 					{isSoldOut ? (
-						<Badge variant="destructive" className="shrink-0 px-1.5 py-0 text-[10px]">
+						<Badge variant="destructive-light" className="shrink-0 px-1.5 py-0 text-[10px]">
 							Sold out
 						</Badge>
 					) : null}

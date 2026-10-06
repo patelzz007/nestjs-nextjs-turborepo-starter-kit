@@ -24,6 +24,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GEO_URL_STATE, type GeoTab, type GeoTabPage } from "@/lib/url-state/geography";
 
 import GeoView from "../geo-table";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 type GeoListEnvelope = Envelope<DataValue[]>;
 
@@ -186,11 +187,14 @@ function withRealQueryCache(): void {
 	citiesQuery.mockImplementation(cachedGeoListHook("cities"));
 }
 
+/** The view under the providers the app's root layout mounts (query cache + kit labels), so server rendering sees them too. */
 function cachedView(initialPage: PrefetchedQuery<GeoTabPage>): React.JSX.Element {
 	return (
-		<QueryProvider>
-			<GeoView initialPage={initialPage} />
-		</QueryProvider>
+		<UiKitTestProviders>
+			<QueryProvider>
+				<GeoView initialPage={initialPage} />
+			</QueryProvider>
+		</UiKitTestProviders>
 	);
 }
 
@@ -220,7 +224,7 @@ describe("GeoView stats", () => {
 		};
 		statsQuery.mockReturnValue({ data: statsEnvelope });
 
-		render(<GeoView initialStats={statsEnvelope} />);
+		render(<GeoView initialStats={statsEnvelope} />, { wrapper: UiKitTestProviders });
 
 		expect(statsQuery).toHaveBeenCalledWith({}, { initialData: statsEnvelope, initialDataUpdatedAt: statsEnvelope.meta.timestamp });
 		expect(screen.getByText("Subregions")).toBeDefined();
@@ -230,7 +234,7 @@ describe("GeoView stats", () => {
 describe("GeoView URL state", () => {
 	it("fetches only the active tab, with the URL's sort, search and country filter", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=states&sort=-stateCode&search=sel&filter[countryCode]=MY`);
-		render(<GeoView />);
+		render(<GeoView />, { wrapper: UiKitTestProviders });
 
 		expect(statesQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20, search: "sel", filter: { countryCode: { eq: "MY" } } }, expect.objectContaining({ enabled: true }));
 		expect(countriesQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ enabled: false }));
@@ -244,7 +248,7 @@ describe("GeoView URL state", () => {
 	it("pushes a tab change and clears the previous tab's list params", () => {
 		window.history.replaceState(null, "", `${PATH}?page=3&sort=name&search=ma`);
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<GeoView />);
+		render(<GeoView />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /Cities/ }));
 
@@ -254,7 +258,7 @@ describe("GeoView URL state", () => {
 
 	it("follows the URL's tab on back/forward", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=cities`);
-		const view = render(<GeoView />);
+		const view = render(<GeoView />, { wrapper: UiKitTestProviders });
 		window.history.replaceState(null, "", PATH);
 		view.rerender(<GeoView />);
 
@@ -266,7 +270,7 @@ describe("GeoView server-prefetched page", () => {
 	it("seeds only the active tab's query, and only while the URL is in the state the server fetched", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=states&page=2`);
 		const initialPage: PrefetchedQuery<GeoTabPage> = { stateKey: serverStateKey("tab=states&page=2"), data: { tab: "states", envelope: STATES_ENVELOPE } };
-		const view = render(<GeoView initialPage={initialPage} />);
+		const view = render(<GeoView initialPage={initialPage} />, { wrapper: UiKitTestProviders });
 
 		expect(statesQuery).toHaveBeenLastCalledWith({ page: 2, limit: 20 }, expect.objectContaining({ enabled: true, initialData: STATES_ENVELOPE }));
 		expect(countriesQuery).toHaveBeenLastCalledWith(expect.anything(), expect.not.objectContaining({ initialData: STATES_ENVELOPE }));
@@ -279,7 +283,7 @@ describe("GeoView server-prefetched page", () => {
 	});
 
 	it("fetches a newly selected tab on the client, never seeding it with another tab's page", () => {
-		const view = render(<GeoView initialPage={COUNTRIES_PREFETCH} />);
+		const view = render(<GeoView initialPage={COUNTRIES_PREFETCH} />, { wrapper: UiKitTestProviders });
 		expect(countriesQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.objectContaining({ enabled: true, initialData: COUNTRIES_ENVELOPE }));
 
 		fireEvent.click(screen.getByRole("button", { name: /Cities/ }));
@@ -360,7 +364,7 @@ describe("GeoView rows", () => {
 
 	it("shows a country's iso2 and active flag", () => {
 		countriesQuery.mockReturnValue(listResult(COUNTRIES_ENVELOPE));
-		render(<GeoView />);
+		render(<GeoView />, { wrapper: UiKitTestProviders });
 
 		const row = screen.getByRole("row", { name: /Malaysia/ });
 		expect(within(row).getByText("MY")).toBeDefined();
@@ -370,7 +374,7 @@ describe("GeoView rows", () => {
 	it("shows a state's own iso2 as its state code and a missing coordinate as a dash", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=states`);
 		statesQuery.mockReturnValue(listResult(pageEnvelope([SELANGOR])));
-		render(<GeoView />);
+		render(<GeoView />, { wrapper: UiKitTestProviders });
 
 		const row = screen.getByRole("row", { name: /Selangor/ });
 		expect(within(row).getByText("10")).toBeDefined();
@@ -380,7 +384,7 @@ describe("GeoView rows", () => {
 	it("shows a city's state code and its coordinates to four decimals", () => {
 		window.history.replaceState(null, "", `${PATH}?tab=cities`);
 		citiesQuery.mockReturnValue(listResult(pageEnvelope([KUALA_LUMPUR])));
-		render(<GeoView />);
+		render(<GeoView />, { wrapper: UiKitTestProviders });
 
 		const row = screen.getByRole("row", { name: /Kuala Lumpur/ });
 		expect(within(row).getByText("14")).toBeDefined();

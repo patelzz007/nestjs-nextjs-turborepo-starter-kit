@@ -5,13 +5,28 @@
  * keep it in step with the workflow whenever a job changes.
  */
 
+/**
+ * The ports the apps listen on in CI (ci.yml). The one definition every URL,
+ * server command and the browser job's port preflight derive from.
+ */
+export const LOCAL_APP_PORTS = { api: 8080, web: 3000, admin: 3001, merchant: 3003 };
+
+/**
+ * @param {number} port
+ * @param {string} [path]
+ * @returns {string}
+ */
+export function localUrl(port, path = "") {
+	return `http://localhost:${String(port)}${path}`;
+}
+
 /** Public, non-secret build-time config the CI `build` job sets (ci.yml → jobs.build.env). */
 export const CI_BUILD_ENV = {
-	NEXT_PUBLIC_API_URL: "http://localhost:8080",
-	NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-	NEXT_PUBLIC_WEB_URL: "http://localhost:3000",
-	NEXT_PUBLIC_ADMIN_URL: "http://localhost:3001",
-	NEXT_PUBLIC_MERCHANT_URL: "http://localhost:3003",
+	NEXT_PUBLIC_API_URL: localUrl(LOCAL_APP_PORTS.api),
+	NEXT_PUBLIC_APP_URL: localUrl(LOCAL_APP_PORTS.web),
+	NEXT_PUBLIC_WEB_URL: localUrl(LOCAL_APP_PORTS.web),
+	NEXT_PUBLIC_ADMIN_URL: localUrl(LOCAL_APP_PORTS.admin),
+	NEXT_PUBLIC_MERCHANT_URL: localUrl(LOCAL_APP_PORTS.merchant),
 };
 
 /** Suffixes of the throwaway databases the e2e steps create and drop (CI uses fresh service containers). */
@@ -21,14 +36,14 @@ export const THROWAWAY_BROWSER_SUFFIX = "_ci_local_browser";
 
 /** The browser suites' config (ci.yml → jobs.browser-e2e.env). The admin login is the PUBLIC seed account. */
 export const BROWSER_SUITE_ENV = {
-	WEB_E2E_BASE_URL: "http://localhost:3000",
-	ADMIN_E2E_BASE_URL: "http://localhost:3001",
+	WEB_E2E_BASE_URL: localUrl(LOCAL_APP_PORTS.web),
+	ADMIN_E2E_BASE_URL: localUrl(LOCAL_APP_PORTS.admin),
 	ADMIN_E2E_EMAIL: "superadmin@example.com",
 	ADMIN_E2E_PASSWORD: "SuperAdmin@123",
 };
 
 /** Readiness URLs the browser job waits on (API readiness probe, web, admin login). */
-export const BROWSER_READINESS_URLS = ["http://localhost:8080/health/ready", "http://localhost:3000/", "http://localhost:3001/auth/login"];
+export const BROWSER_READINESS_URLS = [localUrl(LOCAL_APP_PORTS.api, "/health/ready"), localUrl(LOCAL_APP_PORTS.web, "/"), localUrl(LOCAL_APP_PORTS.admin, "/auth/login")];
 /** Budget for the three servers to become ready. */
 export const BROWSER_READINESS_TIMEOUT_MS = 120_000;
 
@@ -157,9 +172,10 @@ export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl
  * The `browser-e2e` job: build, migrate + seed a fresh database, start the API,
  * web and admin in the background (`servers`), wait for readiness, then run
  * both Playwright suites (`suites`). `setup` runs before the servers start.
+ * Each server carries the `port` it binds, for the port preflight.
  *
  * @param {{ databaseUrl: string }} urls
- * @returns {{ setup: Step[], servers: Step[], suites: Step[] }}
+ * @returns {{ setup: Step[], servers: (Step & { port: number })[], suites: Step[] }}
  */
 export function browserJob({ databaseUrl }) {
 	const job = "Browser e2e";
@@ -178,9 +194,28 @@ export function browserJob({ databaseUrl }) {
 			{ id: "browser:install", job, command: "pnpm", args: ["exec", "playwright", "install", "chromium"] },
 		],
 		servers: [
-			{ id: "browser:api", job, command: "pnpm", args: ["--filter", "@workspace/api", "start"], env: api },
-			{ id: "browser:web", job, command: "pnpm", args: ["--filter", "@workspace/web", "exec", "next", "start", "--port", "3000"] },
-			{ id: "browser:admin", job, command: "pnpm", args: ["--filter", "@workspace/admin", "exec", "next", "start", "--port", "3001"] },
+			{
+				id: "browser:api",
+				job,
+				command: "pnpm",
+				args: ["--filter", "@workspace/api", "start"],
+				env: { ...api, PORT: String(LOCAL_APP_PORTS.api) },
+				port: LOCAL_APP_PORTS.api,
+			},
+			{
+				id: "browser:web",
+				job,
+				command: "pnpm",
+				args: ["--filter", "@workspace/web", "exec", "next", "start", "--port", String(LOCAL_APP_PORTS.web)],
+				port: LOCAL_APP_PORTS.web,
+			},
+			{
+				id: "browser:admin",
+				job,
+				command: "pnpm",
+				args: ["--filter", "@workspace/admin", "exec", "next", "start", "--port", String(LOCAL_APP_PORTS.admin)],
+				port: LOCAL_APP_PORTS.admin,
+			},
 		],
 		suites: [
 			{

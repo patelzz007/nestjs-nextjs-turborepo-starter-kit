@@ -6,8 +6,8 @@ import { AVATAR_ACCEPT, AVATAR_MAX_MEBIBYTES } from "@workspace/client/lib/auth/
 import { useOwnProfile, useUpdateOwnProfile } from "@workspace/client/lib/auth/profile/use-own-profile";
 import { useRemoveProfileAvatar, useUploadProfileAvatar } from "@workspace/client/lib/auth/profile/use-profile-avatar";
 import { ApiErrorCodes, OWN_PROFILE_ERROR_CODES, type Envelope, type OwnProfile, type OwnProfileEditableFields } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import * as React from "react";
 

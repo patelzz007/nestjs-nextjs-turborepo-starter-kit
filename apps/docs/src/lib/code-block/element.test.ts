@@ -1,3 +1,4 @@
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -25,5 +26,11 @@ describe("docsCodeBlockElement", () => {
 		expect(classes).toContain(CODE_BLOCK_TYPE_CLASS);
 		// tailwind-merge drops the component's own size token, so only one font-size token remains.
 		expect(classes.filter((name) => name.startsWith("[--code-block-font-size:"))).toEqual(["[--code-block-font-size:var(--type-code-block-size)]"]);
+	});
+
+	it("speaks the kit's English label pack, supplied by the island's own provider", () => {
+		const html = renderToStaticMarkup(docsCodeBlockElement(PROPS));
+		expect(html).toContain(`aria-label="${UI_KIT_LABELS_EN.codeBlock.copy}"`);
+		expect(html).toContain(`>${UI_KIT_LABELS_EN.codeBlock.wrap}</button>`);
 	});
 });

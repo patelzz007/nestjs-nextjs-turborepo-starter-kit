@@ -11,6 +11,7 @@ import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
 
 import ProductDetailView from "../product-detail-view";
 import ProductView from "../product-view";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** The mutation options the view passes — captured so a test can complete a delete. */
 interface DeleteMutationOptionsStub {
@@ -105,6 +106,7 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 		<QueryClientProvider client={queryClient}>
 			<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
 		</QueryClientProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

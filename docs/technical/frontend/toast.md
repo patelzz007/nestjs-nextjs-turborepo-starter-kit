@@ -19,7 +19,7 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 >
 > **Ground truth** (verified 2026-08-18):
 >
-> - Component: `packages/ui/src/components/feedback/toast.tsx` (~900 lines)
+> - Component: `packages/ui/src/components/toast.tsx` (~900 lines)
 > - Mounted in: `apps/admin/app/layout.tsx` (one `<Toaster />` per manager). The docs site (`apps/docs`) is a static Astro build and has no toasts.
 > - Call sites: ~80 across `apps/admin` (settings, emails, showcases, geo)
 > - Showcase + tests: `apps/admin/components/showcase/toast-showcase.tsx`, `apps/admin/components/showcase/__tests__/toast.test.tsx`
@@ -31,7 +31,7 @@ manager renders a duplicate viewport):
 
 ```tsx
 // apps/admin/app/layout.tsx
-import { Toaster } from "@workspace/ui/components/feedback/toast";
+import { Toaster } from "@workspace/ui/components/toast";
 
 <QueryProvider>
 	<ClientAuthWrapper>
@@ -46,7 +46,7 @@ import { Toaster } from "@workspace/ui/components/feedback/toast";
 Then fire toasts from anywhere (module-level import — no provider needed):
 
 ```tsx
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 
 toastMessage.success({ title: "Backup completed", description: "475 KB · checksum e755cd…" });
 toastMessage.error({ title: "Delete failed", description: "Backup is still running." });
@@ -175,7 +175,7 @@ import { toast } from "sonner";
 toast.success("Backup completed", { description: size });
 
 // after (Toast & Toastr)
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 toastMessage.success({ title: "Backup completed", description: size });
 ```
 

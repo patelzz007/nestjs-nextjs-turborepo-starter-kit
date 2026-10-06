@@ -2,12 +2,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { apiDownloads, ApiDownloadError, type DownloadedFile } from "@workspace/client/lib/api/download";
 import { createApiSuccessEnvelopeSchema, AdminAnalyticsDashboardSchema, type AdminAnalyticsDashboard, type Envelope } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlatformAnalyticsDashboard } from "@/components/analytics/platform-analytics-dashboard";
 import { buildAdminDashboard } from "@/test/analytics-dashboard-fixtures";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** Only the query fields the dashboard reads. */
 interface DashboardQueryStub {
@@ -60,7 +61,7 @@ function spaced(value: string | null): string {
 }
 
 function renderDashboard(props: Partial<React.ComponentProps<typeof PlatformAnalyticsDashboard>> = {}): () => void {
-	const { rerender } = render(<PlatformAnalyticsDashboard nowMs={NOW_MS} {...props} />);
+	const { rerender } = render(<PlatformAnalyticsDashboard nowMs={NOW_MS} {...props} />, { wrapper: UiKitTestProviders });
 	// The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself).
 	return (): void => {
 		rerender(<PlatformAnalyticsDashboard nowMs={NOW_MS} {...props} />);

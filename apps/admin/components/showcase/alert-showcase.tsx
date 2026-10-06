@@ -1,36 +1,29 @@
 "use client";
 
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogMedia,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-	type AlertDialogLabels,
-} from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
-import { Alert, AlertAction } from "@workspace/ui/components/feedback/alert";
-import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { UserRoundPenIcon } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger } from "@workspace/ui/components/alert-dialog";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { Alert, AlertAction, AlertDescription, AlertTitle, type AlertVariant } from "@workspace/ui/components/alert";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { CircleCheck, CircleX, Info, TriangleAlert, UserRoundPenIcon, type LucideIcon } from "lucide-react";
 import * as React from "react";
 import { useCallback, useState } from "react";
 
 // ── Data lives here in the smart component (rules 9/10) ─────────────────────
 
 interface AlertDemoEntry {
-	readonly variant: "default" | "success" | "warning" | "destructive" | "info";
+	readonly variant: AlertVariant;
+	readonly icon: LucideIcon;
 	readonly title: string;
 	readonly description: string;
 }
 
 const alertEntries: readonly AlertDemoEntry[] = [
-	{ variant: "info", title: "Heads up", description: "Scheduled maintenance starts at 02:00 UTC — expect brief API blips." },
-	{ variant: "success", title: "Deploy complete", description: "v2.14.0 is live on production. 12 migrations applied cleanly." },
-	{ variant: "warning", title: "Storage at 82%", description: "The media bucket is filling up. Purge stale exports or bump the plan." },
-	{ variant: "destructive", title: "Refresh failed", description: "The proxy could not reach the auth service. Sessions were kept as-is." },
+	{ variant: "info", icon: Info, title: "Heads up", description: "Scheduled maintenance starts at 02:00 UTC — expect brief API blips." },
+	{ variant: "success", icon: CircleCheck, title: "Deploy complete", description: "v2.14.0 is live on production. 12 migrations applied cleanly." },
+	{ variant: "warning", icon: TriangleAlert, title: "Storage at 82%", description: "The media bucket is filling up. Purge stale exports or bump the plan." },
+	{ variant: "destructive", icon: CircleX, title: "Refresh failed", description: "The proxy could not reach the auth service. Sessions were kept as-is." },
 ];
 
 const destructiveSummary: readonly { readonly label: string; readonly value: string }[] = [
@@ -39,6 +32,12 @@ const destructiveSummary: readonly { readonly label: string; readonly value: str
 	{ label: "Refresh tokens", value: "12" },
 ];
 
+// Each dialog's own wording; every other string comes from the app's UI kit labels.
+const deleteDialogLabels: UiKitLabelsOverride<"alertDialog"> = { confirm: "Delete users", loading: "Deleting…" };
+const resetDialogLabels: UiKitLabelsOverride<"alertDialog"> = { confirm: "Reset database" };
+const lockDialogLabels: UiKitLabelsOverride<"alertDialog"> = { confirm: "Lock account" };
+const saveDialogLabels: UiKitLabelsOverride<"alertDialog"> = { confirm: "Save changes" };
+
 export function AlertShowcase(): React.JSX.Element {
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 	const [confirmLoading, setConfirmLoading] = useState<boolean>(false);
@@ -46,54 +45,41 @@ export function AlertShowcase(): React.JSX.Element {
 	const [confirmationValue, setConfirmationValue] = useState<string>("");
 	const [reasonValue, setReasonValue] = useState<string>("");
 
-	const deleteDialogLabels: AlertDialogLabels = {
-		...SHOWCASE_ALERT_DIALOG_LABELS,
-		confirm: "Delete users",
-		loading: "Deleting…",
-	};
-
-	const resetDialogLabels: AlertDialogLabels = {
-		...SHOWCASE_ALERT_DIALOG_LABELS,
-		confirm: "Reset database",
-	};
-
-	const lockDialogLabels: AlertDialogLabels = {
-		...SHOWCASE_ALERT_DIALOG_LABELS,
-		confirm: "Lock account",
-	};
-
-	const saveDialogLabels: AlertDialogLabels = {
-		...SHOWCASE_ALERT_DIALOG_LABELS,
-		confirm: "Save changes",
-	};
-
 	const handleDismiss = useCallback((key: string): void => {
 		setDismissedKeys((current) => (current.includes(key) ? current : [...current, key]));
 	}, []);
 
-	const handleEntryDismiss = useCallback(
-		(entry: AlertDemoEntry): void => {
-			handleDismiss(entry.variant);
+	const handleEntryDismissClick = useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const key = event.currentTarget.dataset.alertKey;
+			if (key !== undefined) {
+				handleDismiss(key);
+			}
 		},
 		[handleDismiss],
 	);
 
+	// Dismissal is the parent's state: a dismissed entry is simply not rendered.
 	const renderEntry = useCallback(
-		(entry: AlertDemoEntry): React.JSX.Element => {
+		(entry: AlertDemoEntry): React.JSX.Element | null => {
+			if (dismissedKeys.includes(entry.variant)) {
+				return null;
+			}
+			const Icon = entry.icon;
 			return (
-				<Alert
-					key={entry.variant}
-					variant={entry.variant}
-					title={entry.title}
-					description={entry.description}
-					dismissible
-					onDismiss={function (): void {
-						handleEntryDismiss(entry);
-					}}
-				/>
+				<Alert key={entry.variant} variant={entry.variant} role={entry.variant === "destructive" ? "alert" : "status"}>
+					<Icon aria-hidden="true" />
+					<AlertTitle>{entry.title}</AlertTitle>
+					<AlertDescription>{entry.description}</AlertDescription>
+					<AlertAction>
+						<Button type="button" variant="ghost" size="sm" data-alert-key={entry.variant} onClick={handleEntryDismissClick}>
+							Dismiss
+						</Button>
+					</AlertAction>
+				</Alert>
 			);
 		},
-		[handleEntryDismiss],
+		[dismissedKeys, handleEntryDismissClick],
 	);
 
 	const handleConfirm = useCallback((): void => {
@@ -109,9 +95,9 @@ export function AlertShowcase(): React.JSX.Element {
 			{/* ── Alert gallery ─────────────────────────────────────────────── */}
 			<section aria-labelledby="alert-gallery-title" className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs sm:p-6">
 				<h2 id="alert-gallery-title" className="text-sm font-medium">
-					Alert &amp; AlertBox
+					Alert
 				</h2>
-				<p className="mt-1 text-xs text-muted-foreground">Variants, dismissible, collapsible, progress, copy-details and error lists — all data flows from this page.</p>
+				<p className="mt-1 text-xs text-muted-foreground">ReUI variants and composition; dismissal is page state — all data flows from this page.</p>
 
 				<div className="mt-4 grid gap-3">{alertEntries.map(renderEntry)}</div>
 
@@ -121,33 +107,21 @@ export function AlertShowcase(): React.JSX.Element {
 					</p>
 				) : null}
 
-				{/* Collapsible + progress + copy-details + errors demo */}
+				{/* Composition without an icon, the compact size and the invert variant */}
 				<div className="mt-4 grid gap-3 lg:grid-cols-2">
-					<Alert
-						variant="warning"
-						collapsible
-						defaultOpen
-						title="Deployment checklist"
-						description="Three steps still need attention before the release window opens."
-						errors={["Staging env parity differs on NEXT_PUBLIC_SESSION_POLL_MS", "CDN purge queue has 2 stale routes", "SSL certificate expires in 7 days"]}
-					/>
-					<Alert
-						variant="success"
-						title="Upload in progress"
-						description="media/live-demo.mp4 is uploading…"
-						progress={64}
-						countdown="2m 11s left"
-						details='{"file":"media/live-demo.mp4","bytes":48239111,"progress":64}'
-					/>
-				</div>
-
-				{/* Small / interactive / print-hidden variants */}
-				<div className="mt-4 flex flex-wrap gap-2">
-					<Alert size="sm" variant="info" title="Compact banner (size=sm)" className="min-w-56 flex-1" />
-					<Alert interactive variant="default" title="Interactive — hover lifts the tile" className="min-w-56 flex-1">
-						<AlertAction>Inspect</AlertAction>
+					<Alert variant="default" role="status">
+						<AlertTitle>No icon</AlertTitle>
+						<AlertDescription>The title and description take the full width when the alert has no leading icon.</AlertDescription>
 					</Alert>
-					<Alert printHidden variant="info" title="Hidden when printing" className="min-w-56 flex-1" />
+					<Alert variant="invert" role="status">
+						<Info aria-hidden="true" />
+						<AlertTitle>Invert</AlertTitle>
+						<AlertDescription>High-emphasis notices in the inverted theme colours.</AlertDescription>
+					</Alert>
+					<Alert variant="info" size="sm" role="status">
+						<Info aria-hidden="true" />
+						<AlertTitle>Compact banner (size=sm)</AlertTitle>
+					</Alert>
 				</div>
 			</section>
 

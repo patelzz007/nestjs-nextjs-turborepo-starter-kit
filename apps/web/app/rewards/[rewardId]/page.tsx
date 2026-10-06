@@ -2,7 +2,7 @@ import { LandingShell } from "@/components/landing/landing-shell";
 import { RewardDetailView } from "@/components/rewardhub/detail/view";
 import { landingSectionPath, LANDING_SECTION_IDS } from "@/lib/routes";
 import { loadRewardDetail } from "@/lib/rewards/reward-detail-server";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";

@@ -1,8 +1,8 @@
 "use client";
 
 import type { FileCategory, FileRecord } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Label } from "@workspace/ui/components/form/label";
+import { Button } from "@workspace/ui/components/button";
+import { Label } from "@workspace/ui/components/label";
 import * as React from "react";
 
 import type { ApiClient } from "../api/use-api";

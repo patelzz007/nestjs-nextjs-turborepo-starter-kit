@@ -3,7 +3,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
-import { preloadCodeBlockHighlighter } from "@workspace/ui/components/display/code-block-highlight";
+import { preloadCodeBlockHighlighter } from "@workspace/ui/components/code-block-highlight";
 import { defineConfig, fontProviders } from "astro/config";
 
 import { rehypeCodeBlock } from "./src/lib/markdown/code-block";

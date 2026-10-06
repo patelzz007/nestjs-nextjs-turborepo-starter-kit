@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AnalyticsKpiGrid } from "./analytics-kpi-grid";
@@ -16,7 +17,7 @@ const KPIS: readonly KpiView<"sales" | "bills">[] = [
 
 describe("AnalyticsKpiGrid", () => {
 	it("renders one card per KPI inside a named group, with the comparison period", () => {
-		render(<AnalyticsKpiGrid kpis={KPIS} comparisonLabel="vs 1 – 30 Sep 2026" label="Sales" />);
+		render(<AnalyticsKpiGrid kpis={KPIS} comparisonLabel="vs 1 – 30 Sep 2026" label="Sales" />, { wrapper: UiKitTestProviders });
 
 		const group = within(screen.getByRole("group", { name: "Sales" }));
 		expect(group.getByText("RM 10.00")).toBeTruthy();

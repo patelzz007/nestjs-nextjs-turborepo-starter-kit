@@ -30,10 +30,10 @@ import {
 	type MerchantTerminalSettings,
 	type MerchantTerminalSummary,
 } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { Button } from "@workspace/ui/components/form/button";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
+import { toastMessage } from "@workspace/ui/components/toast";
+import { Button } from "@workspace/ui/components/button";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { CheckCircle2, Hourglass, Plus, RefreshCw, Store, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -41,8 +41,8 @@ import * as React from "react";
 export const PAIRING_STATUS_POLL_INTERVAL_MS = 3000;
 
 const CREATE_TERMINAL_FAILED_MESSAGE = "The terminal could not be added. Try again.";
-const REMOVE_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Remove terminal", loading: "Removing…" };
-const REPAIR_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Issue new code", loading: "Issuing…" };
+const REMOVE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Remove terminal", loading: "Removing…" };
+const REPAIR_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Issue new code", loading: "Issuing…" };
 
 /** Shown instead of a number that is still loading or cannot be counted from one page. */
 const UNKNOWN_STAT_VALUE = "—";

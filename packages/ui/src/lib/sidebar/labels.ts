@@ -1,21 +1,20 @@
-/** User-visible copy for sidebar affordances (rule 11 — parent supplies all strings). */
+/**
+ * Copy interfaces of the sidebar label families (`sidebar`, `panelSidebarNav`
+ * in `UiKitLabels`). The strings themselves live in the language packs
+ * (`lib/labels/en.ts`, …); components read them with `useUiKitLabels`.
+ */
+
+/** User-visible copy for sidebar affordances: the toggle and the mobile sheet's title/description. */
 export interface SidebarLabels {
 	readonly toggleSidebar: string;
 	readonly mobileTitle: string;
 	readonly mobileDescription: string;
 }
 
-export const DEFAULT_SIDEBAR_LABELS: SidebarLabels = {
-	toggleSidebar: "Toggle sidebar",
-	mobileTitle: "Sidebar",
-	mobileDescription: "Displays the mobile sidebar.",
-};
-
 /**
  * Copy for a panel sidebar's navigation (search box, empty state, pinned
  * group, section reorder controls, unavailable items and the route
- * announcement). Each app supplies its own — the components render no text
- * of their own.
+ * announcement) — the `panelSidebarNav` family.
  */
 export interface PanelSidebarNavLabels {
 	/** Accessible name of the main `<nav>` landmark (e.g. "Main navigation"). */

@@ -3,7 +3,7 @@ import { guardOrgPage } from "@/lib/org/org-page-guard";
 import { orgRoutes } from "@/lib/routes";
 import { MerchantKybVerificationView } from "@workspace/client/lib/merchant/kyb/verification-view";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
+import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import Link from "next/link";
 import * as React from "react";
 

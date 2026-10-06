@@ -14,9 +14,9 @@ import {
 	type MerchantBusinessCategory,
 	type RewardClaimStatus,
 } from "@workspace/shared";
-import type { RankedBarItem } from "@workspace/ui/components/analytics/ranked-bar-list";
-import type { ShareSegment } from "@workspace/ui/components/analytics/share-bar";
-import type { TimeSeriesDefinition, TimeSeriesPoint } from "@workspace/ui/components/analytics/time-series-chart";
+import type { RankedBarItem } from "@workspace/ui/components/ranked-bar-list";
+import type { ShareSegment } from "@workspace/ui/components/share-bar";
+import type { TimeSeriesDefinition, TimeSeriesPoint } from "@workspace/ui/components/time-series-chart";
 import { categoricalChartSlot, type ChartColorSlot } from "@workspace/ui/lib/charts/chart-colors";
 import { Gift, Receipt, Share2, ShoppingBag, Store, Ticket, TicketCheck, TrendingUp, UserCheck, Wallet } from "lucide-react";
 

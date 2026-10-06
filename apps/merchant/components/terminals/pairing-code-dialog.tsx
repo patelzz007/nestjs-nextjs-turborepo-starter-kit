@@ -3,10 +3,11 @@
 import { PairTerminalSnippet } from "@/components/terminals/pair-terminal-snippet";
 import { formatSecondsLeft, groupPairingCode, secondsUntil } from "@/lib/terminals/terminal-summary";
 import { nowEpochMs, POS_PAIRING_CODE_TTL_MS, type MerchantTerminalPairing } from "@workspace/shared";
-import { CodeBlockCopyButton } from "@workspace/ui/components/display/code-block";
-import { Button } from "@workspace/ui/components/form/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
+import { CodeBlockCopyButton } from "@workspace/ui/components/code-block";
+import { Button } from "@workspace/ui/components/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
 import { cn } from "@workspace/ui/lib/core/utils";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { CheckCircle2, Hourglass, Loader2, RefreshCw } from "lucide-react";
 import * as React from "react";
 
@@ -15,6 +16,9 @@ const COUNTDOWN_TICK_MS = 1000;
 const MS_PER_SECOND = 1000;
 const FULL_PERCENT = 100;
 const PAIRING_CODE_TTL_SECONDS = POS_PAIRING_CODE_TTL_MS / MS_PER_SECOND;
+
+/** The copy button names what it copies; the rest of the code-block wording comes from the app's UI kit labels. */
+const PAIRING_CODE_COPY_LABELS: UiKitLabelsOverride<"codeBlock"> = { copy: "Copy pairing code", copied: "Pairing code copied" };
 
 type PairingPhase = "waiting" | "expired" | "paired";
 
@@ -108,7 +112,7 @@ function PairingCodeContent({ pairing, isPaired, apiBaseUrl, onNewCode, isIssuin
 								)}>
 								{groupPairingCode(pairing.pairingCode)}
 							</p>
-							<CodeBlockCopyButton value={pairing.pairingCode} position="inline" labels={{ copy: "Copy pairing code", copied: "Pairing code copied" }} />
+							<CodeBlockCopyButton value={pairing.pairingCode} position="inline" labels={PAIRING_CODE_COPY_LABELS} />
 						</div>
 						<div aria-hidden="true" className="mx-auto mt-4 h-1 max-w-xs overflow-hidden rounded-full bg-muted">
 							<div

@@ -1,7 +1,7 @@
 "use client";
 
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 

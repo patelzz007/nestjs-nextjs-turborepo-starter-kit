@@ -1,7 +1,7 @@
 import { FileText, Home, type LucideIcon } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
+import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 
 import {
 	resolveSidebarMenuTrail,

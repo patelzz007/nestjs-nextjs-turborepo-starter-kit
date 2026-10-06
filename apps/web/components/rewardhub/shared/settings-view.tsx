@@ -1,7 +1,7 @@
 "use client";
 
 import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
+import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import * as React from "react";
 
 /** Reward Hub account security settings. */

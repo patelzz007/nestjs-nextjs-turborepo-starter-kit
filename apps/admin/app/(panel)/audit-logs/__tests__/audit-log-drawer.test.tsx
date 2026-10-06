@@ -4,6 +4,7 @@ import { HttpAuditLogDetailSchema, type HttpAuditLogDetail } from "@workspace/sh
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuditLogDrawer } from "../audit-log-drawer";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const { detailQuery } = vi.hoisted(() => ({ detailQuery: vi.fn() }));
 
@@ -76,14 +77,14 @@ afterEach((): void => {
 
 describe("AuditLogDrawer", () => {
 	it("is closed — and fetches nothing — without a selected record", () => {
-		render(<AuditLogDrawer recordId={undefined} onClose={vi.fn()} />);
+		render(<AuditLogDrawer recordId={undefined} onClose={vi.fn()} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.queryByRole("dialog")).toBeNull();
 		expect(detailQuery).toHaveBeenLastCalledWith({ id: "" }, { enabled: false });
 	});
 
 	it("fetches and shows the selected record, with a link to its own page", () => {
-		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />);
+		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />, { wrapper: UiKitTestProviders });
 
 		expect(detailQuery).toHaveBeenLastCalledWith({ id: RECORD_ID }, { enabled: true });
 		expect(screen.getByRole("dialog")).toBeTruthy();
@@ -95,21 +96,21 @@ describe("AuditLogDrawer", () => {
 
 	it("shows progress while the record loads", () => {
 		detailQuery.mockReturnValue({ data: undefined, isLoading: true });
-		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />);
+		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("Loading audit record…")).toBeTruthy();
 	});
 
 	it("says so when the record cannot be loaded", () => {
 		detailQuery.mockReturnValue({ data: undefined, isLoading: false });
-		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />);
+		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("Could not load this audit record.")).toBeTruthy();
 	});
 
 	it("closes through its close button", () => {
 		const onClose = vi.fn();
-		render(<AuditLogDrawer recordId={RECORD_ID} onClose={onClose} />);
+		render(<AuditLogDrawer recordId={RECORD_ID} onClose={onClose} />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: "Close audit record" }));
 

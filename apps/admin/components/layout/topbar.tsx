@@ -1,10 +1,10 @@
 "use client";
 
-import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
-import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
-import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
-import { Button } from "@workspace/ui/components/form/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/overlay/dropdown-menu";
+import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/app-shell-topbar";
+import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
+import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
+import { Button } from "@workspace/ui/components/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { Leaf, Settings } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";

@@ -9,7 +9,8 @@ import { z } from "zod";
 import { ADMIN_SIDEBAR_STORAGE_KEY, compileMenu, SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSidebarView, type SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import type { SearchableMenuItem } from "@/lib/navigation/searchable-menu-items";
-import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
+import { ADMIN_PANEL_SIDEBAR_NAV_LABELS, ADMIN_SHELL_LABELS } from "@/lib/sidebar-labels";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import type { CompiledSidebarMenuData, SidebarMenuData } from "@/lib/navigation/sidebar";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import {
@@ -23,10 +24,10 @@ import {
 import { PERMISSION } from "@workspace/shared";
 
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
-import { PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS } from "@workspace/ui/components/navigation/panel-sidebar-search";
-import { SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
-import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar/labels";
+import { PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS } from "@workspace/ui/components/panel-sidebar-search";
+import { SidebarProvider } from "@workspace/ui/components/sidebar";
 import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const { pathnameMock, setOpenMobileMock } = vi.hoisted(() => ({
 	pathnameMock: vi.fn<() => string>(),
@@ -35,8 +36,8 @@ const { pathnameMock, setOpenMobileMock } = vi.hoisted(() => ({
 
 let harnessIsMobile = false;
 
-vi.mock("@workspace/ui/components/navigation/sidebar", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("@workspace/ui/components/navigation/sidebar")>();
+vi.mock("@workspace/ui/components/sidebar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@workspace/ui/components/sidebar")>();
 	const useSidebarActual = actual.useSidebar;
 	return {
 		...actual,
@@ -145,14 +146,15 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 	);
 
 	return (
-		<SidebarProvider labels={DEFAULT_SIDEBAR_LABELS} storage={createNoopSidebarStorage()}>
+		<SidebarProvider storage={createNoopSidebarStorage()}>
 			<AdminSidebarPanel
 				user={{ name: "Ada Lovelace", email: "ada@example.com" }}
 				onLogout={onLogout ?? vi.fn()}
 				footerActions={[{ icon: AlertCircle, label: "Report issue", onClick: onReportIssue ?? vi.fn() }]}
 				view={view}
 				pathname={pathname}
-				labels={ADMIN_SIDEBAR_LABELS}
+				navLabels={ADMIN_PANEL_SIDEBAR_NAV_LABELS}
+				shellLabels={ADMIN_SHELL_LABELS}
 				searchQuery={searchQuery}
 				onSearchQueryChange={setSearchQuery}
 				expandedItems={expandedItems}
@@ -199,7 +201,7 @@ function sidebarTree(props: HarnessProps): React.JSX.Element {
 
 /** A fresh sidebar store per render (as in the app: one per mounted shell). */
 function renderSidebar(props: HarnessProps): ReturnType<typeof render> {
-	return render(sidebarTree(props));
+	return render(sidebarTree(props), { wrapper: UiKitTestProviders });
 }
 
 /** Types into the sidebar search and lets its debounce commit the text to the store. */
@@ -261,7 +263,7 @@ describe("Sidebar", () => {
 			pinnedItems: [{ id: "main-settings-general", title: "General", url: "/settings/general", section: "Main", breadcrumb: ["Settings", "General"] }],
 		});
 		searchFor("settings");
-		expect(screen.getByText("Pinned")).toBeTruthy();
+		expect(screen.getByText(UI_KIT_LABELS_EN.panelSidebarNav.pinnedSectionTitle)).toBeTruthy();
 		expect(screen.getAllByRole("link", { name: "General" }).length).toBeGreaterThan(0);
 	});
 
@@ -271,8 +273,8 @@ describe("Sidebar", () => {
 		expect(screen.getByText("Docs")).toBeTruthy();
 		expect(link("Overview")).toBeTruthy();
 		// Two named navigation landmarks: the menu, and the footer's bottom items.
-		expect(screen.getByRole("navigation", { name: "Main navigation" }).contains(link("Overview"))).toBe(true);
-		expect(screen.getByRole("navigation", { name: "Account" }).contains(link("Support"))).toBe(true);
+		expect(screen.getByRole("navigation", { name: UI_KIT_LABELS_EN.panelSidebarNav.navigationAriaLabel }).contains(link("Overview"))).toBe(true);
+		expect(screen.getByRole("navigation", { name: UI_KIT_LABELS_EN.panelSidebarNav.secondaryNavigationAriaLabel }).contains(link("Support"))).toBe(true);
 		// Footer action + user identity.
 		expect(screen.getByRole("button", { name: "Report issue" })).toBeTruthy();
 		expect(screen.getByText("ada@example.com")).toBeTruthy();
@@ -338,7 +340,7 @@ describe("Sidebar", () => {
 		renderSidebar({ pathname: "/" });
 		const analytics = screen.getByRole("button", { name: "Analytics" });
 		expect(analytics.getAttribute("aria-disabled")).toBe("true");
-		expect(analytics.getAttribute("title")).toBe(ADMIN_SIDEBAR_LABELS.itemUnavailableTitle);
+		expect(analytics.getAttribute("title")).toBe(UI_KIT_LABELS_EN.panelSidebarNav.itemUnavailableTitle);
 		fireEvent.click(analytics);
 		expect(analytics.getAttribute("aria-expanded")).toBe("false");
 	});

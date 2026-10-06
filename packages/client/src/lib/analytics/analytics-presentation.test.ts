@@ -6,7 +6,7 @@ import {
 	type DisplayRegion,
 	type MerchantDashboardPoint,
 } from "@workspace/shared";
-import type { TimeSeriesDefinition } from "@workspace/ui/components/analytics/time-series-chart";
+import type { TimeSeriesDefinition } from "@workspace/ui/components/time-series-chart";
 import { describe, expect, it, vi } from "vitest";
 
 import {

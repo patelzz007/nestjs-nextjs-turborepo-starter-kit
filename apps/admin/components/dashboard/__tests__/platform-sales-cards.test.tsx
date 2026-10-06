@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
 import { ROUTES } from "@/lib/routes";
 import { buildAdminDashboard } from "@/test/analytics-dashboard-fixtures";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 /** Only the query fields the cards read. */
 interface DashboardQueryStub {
@@ -31,6 +32,7 @@ function renderCards(capabilities: readonly CapabilitySlug[]): void {
 		<CapabilitiesProvider capabilities={capabilities}>
 			<PlatformSalesCards />
 		</CapabilitiesProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 

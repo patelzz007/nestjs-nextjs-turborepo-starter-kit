@@ -1,7 +1,7 @@
 import { FileText } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
+import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 
 import { findDeepestNavMatch, longestSharedPrefix, replaceLastTrailItem, segmentsOfPath, updateLastTrailItem, type NavTreeShape } from "./breadcrumb-tree";
 

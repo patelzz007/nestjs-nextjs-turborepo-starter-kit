@@ -2,9 +2,11 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Toaster, createToastManager, createToastMessage, toastA11yProps, toastPositionSchema, toastTypeSchema } from "@workspace/ui/components/feedback/toast";
+import { Toaster, createToastManager, createToastMessage, toastA11yProps, toastPositionSchema, toastTypeSchema } from "@workspace/ui/components/toast";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 // ── jsdom fidelity shim ────────────────────────────────────────────────────
 // The window-blur/focus test dispatches `window.dispatchEvent(new Event("focus"))`.
@@ -56,7 +58,7 @@ describe("Toast", () => {
 	it("renders a toast from the imperative manager with title + description (features 1/2)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.success({ title: "Deploy complete", description: "v2.14.0 is live." });
 		});
@@ -67,7 +69,7 @@ describe("Toast", () => {
 	it("renders the per-type icon (improvement 2 icon map)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.error({ title: "Refresh failed" });
 		});
@@ -82,7 +84,7 @@ describe("Toast", () => {
 	it("dismisses a toast when its close button is clicked (improvement 4 closeLabel)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.info({ title: "Maintenance window" });
 		});
@@ -92,7 +94,7 @@ describe("Toast", () => {
 		// instead of `getByRole("button", { name: "Close toast" })`.
 		const closeButton = document.querySelector("[data-slot='toast-close']");
 		expect(closeButton).not.toBeNull();
-		expect(closeButton?.getAttribute("aria-label")).toBe("Close toast");
+		expect(closeButton?.getAttribute("aria-label")).toBe(UI_KIT_LABELS_EN.toast.close);
 		if (closeButton !== null) {
 			fireEvent.click(closeButton);
 		}
@@ -102,7 +104,7 @@ describe("Toast", () => {
 	it("dismisses all toasts (feature 7)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.info({ title: "One" });
 			message.warning({ title: "Two" });
@@ -120,7 +122,7 @@ describe("Toast", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
 		vi.useFakeTimers();
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.success({ title: "Auto", timeout: 1000 });
 		});
@@ -134,7 +136,7 @@ describe("Toast", () => {
 	it("renders a progress bar from typed data (feature 12)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.loading({ title: "Backup", timeout: 0, data: { progress: 40 } });
 		});
@@ -147,7 +149,7 @@ describe("Toast", () => {
 	it("drains an auto-dismiss countdown over the timeout (feature 6/12)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.success({ title: "Countdown", timeout: 4000 });
 		});
@@ -165,7 +167,7 @@ describe("Toast", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
 		vi.useFakeTimers();
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			// A long timeout keeps base-ui's own dismiss timer out of the picture,
 			// so this test isolates the label ticker's pause behavior.
@@ -224,7 +226,7 @@ describe("Toast", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
 		vi.useFakeTimers();
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.success({ title: "First", timeout: 60000 });
 			message.success({ title: "Second", timeout: 60000 });
@@ -264,7 +266,7 @@ describe("Toast", () => {
 	it("renders SOFT-SOLID cards + colored icons per type (opaque, not glassy)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.success({ title: "Green" });
 			message.error({ title: "Red" });
@@ -285,7 +287,7 @@ describe("Toast", () => {
 	it("renders an action button and fires its onClick (feature 5)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		const onAction = vi.fn();
 		act(() => {
 			message.warning({
@@ -301,7 +303,7 @@ describe("Toast", () => {
 	it("flips a loading toast to success via update (feature 8)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		// Capture the id through an outer `let` — React 19's `act()` returns a
 		// Thenable for the callback's value, so `const id = act(() => …)` would
 		// hand a Promise (not the string id) to `message.update`.
@@ -319,7 +321,7 @@ describe("Toast", () => {
 	it("resolves a promise toast to its success state (feature 18)", async () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} />);
+		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
 		const deferred = new Promise<void>((resolve) => {
 			window.setTimeout(resolve, 50);
 		});
@@ -337,8 +339,8 @@ describe("Toast", () => {
 	}, 5000);
 
 	it("toastA11yProps maps type to role/priority (improvement 10)", () => {
-		expect(toastA11yProps("error")).toEqual({ role: "alert", priority: "high", label: "Error" });
-		expect(toastA11yProps("success")).toEqual({ role: "status", priority: "low", label: "Notification" });
+		expect(toastA11yProps("error", UI_KIT_LABELS_EN.toast)).toEqual({ role: "alert", priority: "high", label: UI_KIT_LABELS_EN.toast.errorAnnouncement });
+		expect(toastA11yProps("success", UI_KIT_LABELS_EN.toast)).toEqual({ role: "status", priority: "low", label: UI_KIT_LABELS_EN.toast.notificationAnnouncement });
 	});
 
 	it("exports zod schemas for type + position (improvement 1/5, rule 13)", () => {
@@ -351,7 +353,7 @@ describe("Toast", () => {
 	it("anchors the viewport + card per the position prop (feature 11)", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
-		render(<Toaster toastManager={manager} position="top-left" />);
+		render(<Toaster toastManager={manager} position="top-left" />, { wrapper: UiKitTestProviders });
 		act(() => {
 			message.success({ title: "Anchored" });
 		});

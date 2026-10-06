@@ -131,7 +131,10 @@ This repo’s `compose.yml` is app-agnostic except Bull Board’s `QUEUE_NAMES` 
 2. **Queue names are configured, not hardcoded** — pass `queueNames: [...]`.
 3. **Kafka topics are strings** — app validates with its own Zod enums.
 4. **Disabled never fakes success** — an `undefined` connection setting disables that broker without crashing boot, and any attempt to use it (e.g. `publish()`) fails with a typed error instead of pretending it worked.
-6. **Topics are provisioned, not auto-created** — use `provisionKafkaTopics` (the repo runs it via `pnpm --filter @workspace/analytics-consumer kafka:provision-topics`).
+6. **Topics are provisioned, not auto-created** — use `provisionKafkaTopics` (the repo runs it via `pnpm --filter @workspace/analytics-consumer kafka:provision-topics`). It returns only once every topic it created has a leader on each partition
+   (polling within the given timeout; `KafkaTopicNotReadyError` otherwise): `createTopics` is acknowledged
+   before leader election finishes, so producing straight after a bare `createTopics` can fail with
+   "Unknown topic or partition".
 5. **No environment reads** — connection settings arrive through options, validated by the app.
 
 ---

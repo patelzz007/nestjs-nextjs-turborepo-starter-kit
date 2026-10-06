@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { AdminOrganizationLocationReviewSchema, type AdminOrganizationLocationReviewInput } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { Check, X } from "lucide-react";
 import * as React from "react";
 import { z } from "zod";

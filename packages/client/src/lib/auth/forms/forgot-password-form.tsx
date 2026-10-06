@@ -2,10 +2,10 @@
 
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ForgotPasswordSchema, type ForgotPasswordInput, APP_LINKS } from "@workspace/shared";
-import { buttonVariants } from "@workspace/ui/components/form/button";
-import { FormShell } from "@workspace/ui/components/form/form-shell";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
+import { buttonVariants } from "@workspace/ui/components/button";
+import { FormShell } from "@workspace/ui/components/form-shell";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
 import Link from "next/link";
 import { useCallback, useState, type JSX } from "react";
 

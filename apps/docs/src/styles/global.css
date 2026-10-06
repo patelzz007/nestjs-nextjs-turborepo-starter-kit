@@ -16,9 +16,9 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* Shared components from @workspace/ui rendered into the docs (Tailwind must scan their classes). */
-@source "../../../../packages/ui/src/components/display/code-block.tsx";
-@source "../../../../packages/ui/src/components/display/code-block-highlight.ts";
-@source "../../../../packages/ui/src/components/form/button.tsx";
+@source "../../../../packages/ui/src/components/code-block.tsx";
+@source "../../../../packages/ui/src/components/code-block-highlight.ts";
+@source "../../../../packages/ui/src/components/button.tsx";
 
 :root {
 	/* Accent */

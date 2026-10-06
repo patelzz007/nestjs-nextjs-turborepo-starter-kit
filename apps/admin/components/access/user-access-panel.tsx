@@ -9,10 +9,10 @@ import { AccessRestrictedNotice } from "@/components/common/access-restricted-no
 import { AccessHierarchyRow } from "@/components/access/access-hierarchy";
 import { AccessPermissionTree } from "@/components/access/access-permission-tree";
 import { UserDetailButton } from "@/components/users/user-detail-button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectEmpty, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/navigation/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Label } from "@workspace/ui/components/label";
+import { Select, SelectContent, SelectEmpty, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { useQueryClient } from "@tanstack/react-query";
 import { Shield } from "lucide-react";
 import * as React from "react";

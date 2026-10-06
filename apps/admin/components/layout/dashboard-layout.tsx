@@ -1,13 +1,12 @@
 "use client";
 
-import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
-import { breadcrumbPageLabel, type BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { PanelShellContent } from "@workspace/ui/components/navigation/panel-shell-content";
-import { Sidebar, SidebarInset, SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
-import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar/labels";
+import { BreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
+import { breadcrumbPageLabel, type BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { PanelShellContent } from "@workspace/ui/components/panel-shell-content";
+import { Sidebar, SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
 import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { Button } from "@workspace/ui/components/form/button";
+import { toastMessage } from "@workspace/ui/components/toast";
+import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,11 +24,11 @@ import { useSuperAdminStatus } from "@/lib/session/super-admin";
 import { RouteAuthorizationGuard } from "@/components/access/route-authorization-guard";
 import { AuthorizedNavigationProvider, useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import { withAccessibleLinks } from "@/lib/navigation/breadcrumb";
-import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
+import { ADMIN_PANEL_SIDEBAR_NAV_LABELS, ADMIN_SHELL_LABELS } from "@/lib/sidebar-labels";
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
+import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
@@ -185,9 +184,9 @@ export function DashboardLayout({
 	return (
 		<CapabilitiesProvider capabilities={capabilities}>
 			<AuthorizedNavigationProvider searchableItems={searchableItems} canAccessRoute={canAccessPath}>
-				<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} labels={DEFAULT_SIDEBAR_LABELS} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
+				<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
 					<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
-						{ADMIN_SIDEBAR_LABELS.skipToContent}
+						{ADMIN_SHELL_LABELS.skipToContent}
 					</Button>
 					<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-card">
 						<AdminSidebarPanel
@@ -196,7 +195,8 @@ export function DashboardLayout({
 							footerActions={footerActions}
 							view={view}
 							pathname={pathname}
-							labels={ADMIN_SIDEBAR_LABELS}
+							navLabels={ADMIN_PANEL_SIDEBAR_NAV_LABELS}
+							shellLabels={ADMIN_SHELL_LABELS}
 							searchQuery={searchQuery}
 							onSearchQueryChange={setSearchQuery}
 							expandedItems={expandedItems}

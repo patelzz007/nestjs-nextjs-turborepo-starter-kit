@@ -1,8 +1,8 @@
 "use client";
 
 import type { EmailPreview } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";

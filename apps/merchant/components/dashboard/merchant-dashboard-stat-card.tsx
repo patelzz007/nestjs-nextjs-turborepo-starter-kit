@@ -1,7 +1,7 @@
 "use client";
 
-import { Card, CardContent } from "@workspace/ui/components/display/card";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { Card, CardContent } from "@workspace/ui/components/card";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 import * as React from "react";

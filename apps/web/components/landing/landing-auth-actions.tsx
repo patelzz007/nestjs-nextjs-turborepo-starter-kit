@@ -2,10 +2,10 @@
 
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { useAuthCommands, useAuthUser } from "@workspace/client/lib/auth";
-import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
-import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
-import { buttonVariants } from "@workspace/ui/components/form/button";
-import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { AppShellProfileDropdown } from "@workspace/ui/components/app-shell-profile-dropdown";
+import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
+import { buttonVariants } from "@workspace/ui/components/button";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Gift, LayoutDashboard, LogIn, Ticket } from "lucide-react";
 import Link from "next/link";

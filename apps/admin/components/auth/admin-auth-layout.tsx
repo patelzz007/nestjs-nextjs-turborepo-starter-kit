@@ -1,4 +1,4 @@
-import { AuthLayout, type AuthLayoutLabels } from "@workspace/ui/components/layout/auth-layout";
+import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { KeyRound, MailCheck, ShieldCheck, type LucideIcon } from "lucide-react";
 import type * as React from "react";
 
@@ -6,12 +6,6 @@ import { ROUTES } from "@/lib/routes";
 
 /** Product name shown in the brand panel and the copyright line of every admin auth page. */
 export const ADMIN_AUTH_BRAND_NAME = "Admin Panel";
-
-const ADMIN_AUTH_LABELS: AuthLayoutLabels = {
-	mobileBack: "Back",
-	toggleThemeAria: "Toggle theme",
-	rightsReserved: "All rights reserved.",
-};
 
 /** The brand-panel icon of each auth page. */
 export type AdminAuthIcon = "shield" | "key" | "mail";
@@ -35,7 +29,7 @@ export interface AdminAuthLayoutProps {
 
 /**
  * The admin app's auth-page frame: the shared split-screen `AuthLayout` with
- * the admin branding, labels and back link filled in once, so the four auth
+ * the admin branding and back link filled in once, so the four auth
  * pages only state what differs (icon, copy, form).
  */
 export function AdminAuthLayout({ icon, tagline, features, title, subtitle, showBackToLogin = false, children }: AdminAuthLayoutProps): React.JSX.Element {
@@ -49,7 +43,6 @@ export function AdminAuthLayout({ icon, tagline, features, title, subtitle, show
 			title={title}
 			subtitle={subtitle}
 			copyright={ADMIN_AUTH_BRAND_NAME}
-			labels={ADMIN_AUTH_LABELS}
 			{...(showBackToLogin ? { showBackButton: true, backHref: ROUTES.auth.login, backLabel: "Back to sign in" } : {})}>
 			{children}
 		</AuthLayout>

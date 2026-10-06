@@ -1,7 +1,7 @@
 "use client";
 
 import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-password-form";
-import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
 
@@ -34,7 +34,6 @@ export default function MerchantResetPasswordPage(): JSX.Element {
 			title="Create new password"
 			subtitle="Your new password must be different from previous passwords"
 			copyright="Reward Hub"
-			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}
 			showBackButton
 			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">

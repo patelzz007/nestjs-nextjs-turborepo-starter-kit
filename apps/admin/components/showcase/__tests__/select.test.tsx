@@ -21,7 +21,9 @@ import {
 	SelectValue,
 	selectA11yProps,
 	type SelectRef,
-} from "@workspace/ui/components/form/select";
+} from "@workspace/ui/components/select";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 
 /** Value→label map used across the value/label and RHF-clear tests (rule 16: stable function). */
 function labelOf(value: string): string {
@@ -72,7 +74,7 @@ function SingleSelectHarness({ onValueChange }: { readonly onValueChange?: (valu
 describe("Select", () => {
 	it("renders the trigger with the placeholder (improvement 20 / rule 9)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		render(<SingleSelectHarness />);
+		render(<SingleSelectHarness />, { wrapper: UiKitTestProviders });
 		expect(screen.getByRole("combobox", { name: "Pick a language" })).toBeTruthy();
 		expect(screen.getByText("Choose…")).toBeTruthy();
 	});
@@ -102,7 +104,7 @@ describe("Select", () => {
 			);
 		}
 
-		render(<RefHarness />);
+		render(<RefHarness />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("button", { name: "Focus select" }));
 		expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "Target" }));
 	});
@@ -118,6 +120,7 @@ describe("Select", () => {
 					<SelectItem value="a">Option A</SelectItem>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const trigger = screen.getByRole("combobox", { name: "Compact" });
 		expect(trigger.getAttribute("data-size")).toBe("sm");
@@ -134,6 +137,7 @@ describe("Select", () => {
 					<SelectItem value="a">Option A</SelectItem>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		expect(screen.getByRole("status")).toBeTruthy();
 		expect(screen.getByText("Fetching teams…")).toBeTruthy();
@@ -151,6 +155,7 @@ describe("Select", () => {
 					<SelectEmpty text="No roles match" actionLabel="Create role" onAction={onAction} />
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		expect(screen.getByText("No roles match")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Create role" }));
@@ -168,6 +173,7 @@ describe("Select", () => {
 					<SelectItem value="a">Option A</SelectItem>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const trigger = screen.getByRole("combobox", { name: "Shortcut select" });
 		// Not open yet.
@@ -183,7 +189,7 @@ describe("Select", () => {
 
 	it("announces the selection in an sr-only live region (feature 8)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		const { container } = render(<SingleSelectHarness />);
+		const { container } = render(<SingleSelectHarness />, { wrapper: UiKitTestProviders });
 
 		act(() => {
 			fireEvent.click(screen.getByRole("combobox", { name: "Pick a language" }));
@@ -217,7 +223,7 @@ describe("Select", () => {
 			);
 		}
 
-		render(<LabelHarness />);
+		render(<LabelHarness />, { wrapper: UiKitTestProviders });
 		act(() => {
 			fireEvent.click(screen.getByRole("combobox", { name: "Label select" }));
 		});
@@ -252,8 +258,8 @@ describe("Select", () => {
 			);
 		}
 
-		render(<ClearHarness />);
-		const clear = screen.getByRole("button", { name: "Clear selection" });
+		render(<ClearHarness />, { wrapper: UiKitTestProviders });
+		const clear = screen.getByRole("button", { name: UI_KIT_LABELS_EN.select.clearSelection });
 		act(() => {
 			fireEvent.click(clear);
 		});
@@ -278,6 +284,7 @@ describe("Select", () => {
 					</SelectGroup>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		expect(screen.getByText("Engineering")).toBeTruthy();
 		expect(screen.getByText("Platform")).toBeTruthy();
@@ -295,6 +302,7 @@ describe("Select", () => {
 					<SelectItem value="a">Option A</SelectItem>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		expect(screen.getByRole("combobox", { name: "Disabled select" }).getAttribute("disabled")).not.toBeNull();
 	});
@@ -317,6 +325,7 @@ describe("Select", () => {
 					<SelectItem value="a">Option A</SelectItem>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		const trigger = screen.getByRole("combobox", { name: "Invalid select" });
 		expect(trigger.getAttribute("aria-invalid")).toBe("true");
@@ -353,7 +362,7 @@ describe("Select", () => {
 			);
 		}
 
-		render(<MultiHarness />);
+		render(<MultiHarness />, { wrapper: UiKitTestProviders });
 		const chips = screen.getAllByText("platform");
 		expect(chips.length).toBeGreaterThan(0);
 		expect(document.querySelector('[data-slot="select-chip"]')).toBeTruthy();
@@ -382,6 +391,7 @@ describe("Select", () => {
 					<SelectItem value="a">Alpha</SelectItem>
 				</SelectContent>
 			</Select>,
+			{ wrapper: UiKitTestProviders },
 		);
 		// Scope to the chips row (the popup is also mounted with defaultOpen, and
 		// its “Alpha” item would otherwise collide with the chip's text).
@@ -394,8 +404,8 @@ describe("Select", () => {
 	it("clears every selection via SelectClearAll (multi)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		const onClearAll = vi.fn();
-		render(<SelectClearAll onClearAll={onClearAll} />);
-		fireEvent.click(screen.getByRole("button", { name: "Clear all selections" }));
+		render(<SelectClearAll onClearAll={onClearAll} />, { wrapper: UiKitTestProviders });
+		fireEvent.click(screen.getByRole("button", { name: UI_KIT_LABELS_EN.select.clearAll }));
 		expect(onClearAll).toHaveBeenCalledTimes(1);
 	});
 
@@ -424,9 +434,9 @@ describe("Select", () => {
 			);
 		}
 
-		render(<ClearHarness />);
+		render(<ClearHarness />, { wrapper: UiKitTestProviders });
 		const trigger = screen.getByRole("combobox", { name: "Language" });
-		const clear = screen.getByRole("button", { name: "Clear selection" });
+		const clear = screen.getByRole("button", { name: UI_KIT_LABELS_EN.select.clearSelection });
 
 		// Clicking the clear runs the smart component's handler and does NOT
 		// open the popup (the shared stop-propagation handlers contain the event).
@@ -436,7 +446,7 @@ describe("Select", () => {
 			fireEvent.click(clear);
 		});
 		expect(trigger.getAttribute("aria-expanded")).toBe("false");
-		expect(screen.queryByRole("button", { name: "Clear selection" })).toBeNull();
+		expect(screen.queryByRole("button", { name: UI_KIT_LABELS_EN.select.clearSelection })).toBeNull();
 		expect(document.querySelector('[data-slot="select-value"]')?.textContent).toBe("Pick a language…");
 	});
 });

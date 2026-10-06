@@ -105,11 +105,15 @@ apps/docs/
   to change any of it.
 - **Typography** — see [Typography](#typography) below.
 - **Code blocks** — every fence renders the shared `CodeBlock` from `@workspace/ui` (the full
-  ReUI port, `packages/ui/src/components/display/code-block.tsx`). `src/lib/markdown/code-block.ts`
+  ReUI port, `packages/ui/src/components/code-block.tsx`). `src/lib/markdown/code-block.ts`
   highlights each fence at build time with the component's own `highlightCode` (Shiki,
   github-light + github-dark), renders it to HTML and embeds its props; `src/scripts/code-blocks.ts`
   then hydrates it with React (only on pages that have code) so copy, wrap, folding and
-  "Show more" work. Two build details matter:
+  "Show more" work. Each block is its own React island with no app root above it, so
+  `src/lib/code-block/element.ts` wraps it in the kit's `UiKitLabelsProvider` with the English
+  pack (`UI_KIT_LABELS_EN`) — the docs declare no copy of their own. The fence glue stays
+  hast-based: ReUI's `markdownCodeProps` / `markdownFences` read react-markdown props and raw
+  markdown strings, not the rehype tree this pipeline works on. Two build details matter:
   - `astro.config.ts` awaits `preloadCodeBlockHighlighter()`. Astro closes the module runner
     that loaded the config, so lazy grammar imports during rendering would fail and every block
     would silently render uncoloured; the build now throws if that ever happens.

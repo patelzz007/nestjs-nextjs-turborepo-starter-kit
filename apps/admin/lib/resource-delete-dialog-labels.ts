@@ -1,9 +1,7 @@
-import type { AlertDialogLabels } from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 
-/** Default destructive-confirm copy for admin resource deletes. */
-export const ADMIN_RESOURCE_DELETE_DIALOG_LABELS: AlertDialogLabels = {
-	...SHOWCASE_ALERT_DIALOG_LABELS,
+/** The destructive-confirm wording of admin resource deletes; every other dialog string comes from the app's UI kit labels. */
+export const ADMIN_RESOURCE_DELETE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = {
 	confirm: "Delete",
 	loading: "Deleting…",
 };

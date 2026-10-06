@@ -19,9 +19,9 @@ import {
 	type RewardResponse,
 	type RewardType,
 } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { Button } from "@workspace/ui/components/form/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { toastMessage } from "@workspace/ui/components/toast";
+import { Button } from "@workspace/ui/components/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { orgRoutes } from "@/lib/routes";
 import { ArrowLeft, BarChart3, Loader2, Save } from "lucide-react";

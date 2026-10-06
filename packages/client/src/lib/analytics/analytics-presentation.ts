@@ -19,10 +19,10 @@ import {
 	type DisplayRegion,
 	type SaleCurrency,
 } from "@workspace/shared";
-import { CHART_LOADING, CHART_READY, type ChartFrameState } from "@workspace/ui/components/analytics/analytics-panel";
-import type { KpiChange } from "@workspace/ui/components/analytics/kpi-stat-card";
-import type { PickerOption, AnalyticsRangePickerLabels } from "@workspace/ui/components/analytics/analytics-range-picker";
-import type { TimeSeriesChartLabels, TimeSeriesDefinition, TimeSeriesPoint } from "@workspace/ui/components/analytics/time-series-chart";
+import { CHART_LOADING, CHART_READY, type ChartFrameState } from "@workspace/ui/components/analytics-panel";
+import type { KpiChange } from "@workspace/ui/components/kpi-stat-card";
+import type { PickerOption } from "@workspace/ui/components/analytics-range-picker";
+import type { TimeSeriesDefinition, TimeSeriesPoint } from "@workspace/ui/components/time-series-chart";
 import { formatBucket, formatEpochMsRange } from "@workspace/ui/lib/format/date-time";
 import { formatMinorUnits, formatMinorUnitsCompact } from "@workspace/ui/lib/format/money";
 import { formatCount, formatPercent, formatPercentChange } from "@workspace/ui/lib/format/number";
@@ -49,14 +49,6 @@ export const ANALYTICS_INTERVAL_OPTIONS: readonly PickerOption<AnalyticsInterval
 	{ value: "month", label: "Month" },
 ];
 
-export const ANALYTICS_RANGE_PICKER_LABELS: AnalyticsRangePickerLabels = {
-	range: "Date range",
-	customDays: "Days",
-	pickDays: "Pick the first and last day",
-	apply: "Apply",
-	interval: "Group by",
-};
-
 /** Calendar-day dates, written without a zone: the days a person picked ARE the report's days. */
 const PICKED_DAY_REGION_ZONE = "UTC";
 
@@ -76,13 +68,6 @@ export function formatCustomDays(days: { readonly from: string; readonly to: str
 	const toMs = to.success ? startOfLocalDateInTimeZone(addLocalDays(to.data, 1), PICKED_DAY_REGION_ZONE) : fromMs + 1;
 	return formatEpochMsRange(fromMs, toMs, region);
 }
-
-export const ANALYTICS_CHART_LABELS: TimeSeriesChartLabels = {
-	partial: "partial",
-	partialNote: "Shaded periods are cut off by the start or end of the range, so they cover fewer days.",
-	showTable: "Show as table",
-	period: "Period",
-};
 
 /** Shown instead of a percentage when the previous period had nothing to compare with. */
 export const NO_PREVIOUS_PERIOD_LABEL = "No data in the previous period";

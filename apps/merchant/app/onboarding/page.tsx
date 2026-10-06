@@ -3,7 +3,7 @@
 import { ROUTES } from "@/lib/routes";
 import { MerchantOnboardingView, MerchantOnboardingViewSkeleton } from "@workspace/client/lib/merchant/onboarding/view";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Moon, Store, Sun } from "lucide-react";

@@ -15,9 +15,9 @@ import {
 	type OrganizationContextResponse,
 	type RewardRedemptionMethod,
 } from "@workspace/shared";
-import type { RankedBarItem } from "@workspace/ui/components/analytics/ranked-bar-list";
-import type { ShareSegment } from "@workspace/ui/components/analytics/share-bar";
-import type { TimeSeriesDefinition } from "@workspace/ui/components/analytics/time-series-chart";
+import type { RankedBarItem } from "@workspace/ui/components/ranked-bar-list";
+import type { ShareSegment } from "@workspace/ui/components/share-bar";
+import type { TimeSeriesDefinition } from "@workspace/ui/components/time-series-chart";
 import type { ChartColorSlot } from "@workspace/ui/lib/charts/chart-colors";
 import { Receipt, ShoppingBag, Ticket, TicketCheck, TrendingUp, Users, Wallet } from "lucide-react";
 

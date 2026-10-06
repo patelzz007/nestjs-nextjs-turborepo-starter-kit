@@ -7,8 +7,8 @@ import { OrganizationLocationList } from "@/components/org/organization-location
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type KybStatus, type OrganizationContextResponse, type OrganizationLifecycleState, type OrganizationMembershipRole } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowRight, BarChart3, Building2, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
@@ -38,22 +38,22 @@ const KYB_LABELS: Record<KybStatus, string> = {
 	REJECTED: "Rejected",
 };
 
-function lifecycleBadgeVariant(state: OrganizationLifecycleState): "default" | "secondary" | "outline" | "destructive" {
+function lifecycleBadgeVariant(state: OrganizationLifecycleState): "default" | "secondary" | "outline" | "destructive-light" {
 	if (state === "ACTIVE") {
 		return "default";
 	}
 	if (state === "SUSPENDED" || state === "DELETED" || state === "PENDING_DELETION") {
-		return "destructive";
+		return "destructive-light";
 	}
 	return "outline";
 }
 
-function kybBadgeVariant(status: KybStatus): "default" | "secondary" | "outline" | "destructive" {
+function kybBadgeVariant(status: KybStatus): "default" | "secondary" | "outline" | "destructive-light" {
 	if (status === "APPROVED") {
 		return "default";
 	}
 	if (status === "REJECTED" || status === "ACTION_REQUIRED") {
-		return "destructive";
+		return "destructive-light";
 	}
 	return "outline";
 }

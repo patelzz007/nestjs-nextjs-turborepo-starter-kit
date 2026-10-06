@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +13,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 const PATH = "/analytics";
+/** The picker's chrome comes from the UI kit's English pack (`UiKitTestProviders`). */
+const PICKER_LABELS = UI_KIT_LABELS_EN.analyticsRangePicker;
 /** 5 Oct 2026 12:00 UTC. */
 const NOW = Date.UTC(2026, 9, 5, 12);
 
@@ -29,7 +33,7 @@ function Controls(): React.JSX.Element {
 
 /** The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself). */
 function renderControls(): () => void {
-	const { rerender } = render(<Controls />);
+	const { rerender } = render(<Controls />, { wrapper: UiKitTestProviders });
 	return (): void => {
 		rerender(<Controls />);
 	};
@@ -93,50 +97,50 @@ describe("AnalyticsRangeControls", () => {
 	it("shows the range in effect and the derived interval", (): void => {
 		renderControls();
 
-		expect(menuTrigger("Date range").textContent).toBe("Last 30 days");
-		expect(menuTrigger("Group by").textContent).toBe("Day");
+		expect(menuTrigger(PICKER_LABELS.range).textContent).toBe("Last 30 days");
+		expect(menuTrigger(PICKER_LABELS.interval).textContent).toBe("Day");
 		expect(screen.getByRole("status").textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026 · UTC");
 	});
 
 	it("puts a picked preset in the URL", async (): Promise<void> => {
 		const refresh = renderControls();
 
-		await choose("Date range", "Year to date");
+		await choose(PICKER_LABELS.range, "Year to date");
 		refresh();
 
 		expect(currentQuery()).toBe("?range=yearToDate");
-		expect(menuTrigger("Group by").textContent).toBe("Month");
+		expect(menuTrigger(PICKER_LABELS.interval).textContent).toBe("Month");
 	});
 
 	it("picks custom days in the calendar, refuses an incomplete pick, and applies a valid range", async (): Promise<void> => {
 		const refresh = renderControls();
 
-		await choose("Date range", "Custom range");
+		await choose(PICKER_LABELS.range, "Custom range");
 		// The URL does not change until Apply; the calendar starts at the days in effect.
 		expect(currentQuery()).toBe("");
-		const days = screen.getByRole("button", { name: /^Days / });
+		const days = screen.getByRole("button", { name: new RegExp(`^${PICKER_LABELS.customDays} `) });
 		expect(days.textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026");
 
 		fireEvent.click(days);
 		// A new pick starts over: the first click sets the first day only.
 		fireEvent.click(await screen.findByRole("button", { name: /September 14th, 2026/ }));
 		expect(screen.getByRole("alert").textContent).toBe("Choose both a start and an end date");
-		expect(screen.getByRole<HTMLButtonElement>("button", { name: "Apply" }).disabled).toBe(true);
+		expect(screen.getByRole<HTMLButtonElement>("button", { name: PICKER_LABELS.apply }).disabled).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: /September 20th, 2026/ }));
 		fireEvent.click(screen.getByRole("button", { name: /next month/i }));
 		// Days after today (5 Oct, UTC) cannot be picked.
 		expect(screen.getByRole("button", { name: /October 6th, 2026/ }).hasAttribute("disabled")).toBe(true);
-		fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+		fireEvent.click(screen.getByRole("button", { name: PICKER_LABELS.apply }));
 		refresh();
 
 		expect(currentQuery()).toBe("?range=custom&from=2026-09-14&to=2026-09-20");
-		expect(menuTrigger("Date range").textContent).toBe("Custom range");
+		expect(menuTrigger(PICKER_LABELS.range).textContent).toBe("Custom range");
 	});
 
 	it("puts a picked interval in the URL, by keyboard", async (): Promise<void> => {
 		renderControls();
 
-		const trigger = menuTrigger("Group by");
+		const trigger = menuTrigger(PICKER_LABELS.interval);
 		trigger.focus();
 		fireEvent.keyDown(trigger, { key: "ArrowDown" });
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Week" }));

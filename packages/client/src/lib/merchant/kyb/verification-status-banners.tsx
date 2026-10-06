@@ -1,7 +1,7 @@
 "use client";
 
 import type { MerchantKybProfileResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import type { JSX } from "react";
 
 import { kybStatusVariant } from "./verification-profile-utils";

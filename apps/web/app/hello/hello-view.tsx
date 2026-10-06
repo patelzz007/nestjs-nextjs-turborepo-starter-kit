@@ -8,7 +8,7 @@ import { useCallback, useState, type JSX } from "react";
 
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { BreadcrumbTrail } from "@/components/breadcrumb-trail";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";

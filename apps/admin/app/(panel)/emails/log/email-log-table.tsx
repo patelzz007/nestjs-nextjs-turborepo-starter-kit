@@ -15,13 +15,12 @@ import { EMAIL_LOG_PAGE_SIZE_OPTIONS, EMAIL_LOG_URL_STATE, toEmailLogListQuery }
 import { useEmailLogLive } from "@/lib/notifications/email-log-live";
 import type { LiveState } from "@/lib/notifications/reconnecting-event-stream";
 import { formatDateTime } from "@/lib/format/dates";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table/labels";
+import { Badge, type BadgeVariant } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
@@ -31,15 +30,13 @@ import { EMAIL_LOG_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enu
 // ── Status presentation ───────────────────────────────────────────────────
 
 /** Visual treatment per lifecycle status — colors stay token-driven. */
-const STATUS_META: Readonly<
-	Record<EmailLogStatus, { readonly label: string; readonly variant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link"; readonly icon: React.ReactNode }>
-> = {
+const STATUS_META: Readonly<Record<EmailLogStatus, { readonly label: string; readonly variant: BadgeVariant; readonly icon: React.ReactNode }>> = {
 	pending: { label: "Pending", variant: "outline", icon: <Mail className="size-3" /> },
 	sent: { label: "Sent", variant: "secondary", icon: <Mail className="size-3" /> },
 	delivered: { label: "Delivered", variant: "default", icon: <CircleCheck className="size-3" /> },
-	bounced: { label: "Bounced", variant: "destructive", icon: <CircleX className="size-3" /> },
-	complained: { label: "Complained", variant: "destructive", icon: <CircleX className="size-3" /> },
-	failed: { label: "Failed", variant: "destructive", icon: <TriangleAlert className="size-3" /> },
+	bounced: { label: "Bounced", variant: "destructive-light", icon: <CircleX className="size-3" /> },
+	complained: { label: "Complained", variant: "destructive-light", icon: <CircleX className="size-3" /> },
+	failed: { label: "Failed", variant: "destructive-light", icon: <TriangleAlert className="size-3" /> },
 };
 
 /**
@@ -292,7 +289,6 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 				</CardHeader>
 				<CardContent>
 					<DataTable
-						labels={ADMIN_DATA_TABLE_LABELS}
 						data={rows}
 						columns={columns}
 						searchKeys={[]}

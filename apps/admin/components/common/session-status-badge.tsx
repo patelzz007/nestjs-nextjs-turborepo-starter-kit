@@ -2,7 +2,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { useObservable } from "@workspace/ui/hooks/use-observable";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { SessionStatus } from "@workspace/shared";
@@ -100,7 +100,7 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 
 	if (status === "error") {
 		return (
-			<Badge variant="destructive" className="gap-1.5 px-2.5 py-1" aria-label="Session status: error">
+			<Badge variant="destructive-light" className="gap-1.5 px-2.5 py-1" aria-label="Session status: error">
 				<ShieldX className="size-3" />
 				{/* Compact still shows the REAL message — the 401 case ("Session
 				    expired — please log in again") must stay distinguishable from a

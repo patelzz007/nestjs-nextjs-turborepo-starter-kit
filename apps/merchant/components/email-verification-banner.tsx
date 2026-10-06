@@ -4,7 +4,7 @@ import { useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { Mail, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";

@@ -11,7 +11,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
 import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type RewardResponse, type RewardStatus } from "@workspace/shared";
-import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatCount } from "@workspace/ui/lib/format/number";
 import { AlertCircle, Gift, Plus, Sparkles, Ticket } from "lucide-react";

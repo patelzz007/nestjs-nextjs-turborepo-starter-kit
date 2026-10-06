@@ -3,8 +3,8 @@
 import { orgRoutes } from "@/lib/routes";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import type { JSX } from "react";

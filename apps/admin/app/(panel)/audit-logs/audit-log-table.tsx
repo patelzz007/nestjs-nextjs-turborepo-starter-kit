@@ -16,9 +16,9 @@ import {
 	type Envelope,
 	type HttpAuditLogSummary,
 } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Loader2, RefreshCw, X } from "lucide-react";
@@ -42,7 +42,6 @@ import {
 	enumFilterOptions,
 	IP_ADDRESS_SCOPE_LABELS,
 } from "@/lib/data-table/enum-filter-options";
-import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table/labels";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
@@ -366,7 +365,6 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 				</CardHeader>
 				<CardContent>
 					<DataTable
-						labels={ADMIN_DATA_TABLE_LABELS}
 						data={rows}
 						columns={columns}
 						searchKeys={[]}

@@ -2,7 +2,6 @@
 
 import { AnalyticsKpiGrid } from "@workspace/client/lib/analytics/analytics-kpi-grid";
 import {
-	ANALYTICS_CHART_LABELS,
 	analyticsDisplayRegion,
 	analyticsFormatters,
 	bucketFormatters,
@@ -16,9 +15,9 @@ import {
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
 import { DEFAULT_SALE_CURRENCY, PERMISSION, PLATFORM_DISPLAY_REGION, UTC_TIME_ZONE, type AdminAnalyticsDashboardQuery } from "@workspace/shared";
-import { AnalyticsPanel } from "@workspace/ui/components/analytics/analytics-panel";
-import { TimeSeriesChart } from "@workspace/ui/components/analytics/time-series-chart";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { AnalyticsPanel } from "@workspace/ui/components/analytics-panel";
+import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -79,7 +78,6 @@ function PlatformSalesCardsContent(): React.JSX.Element {
 					formatAxisValue={formatters.moneyCompact}
 					formatBucketTick={buckets.tick}
 					formatBucketLabel={buckets.label}
-					labels={ANALYTICS_CHART_LABELS}
 					axisWidth={MONEY_AXIS_WIDTH_PX}
 					state={toChartFrameState(status, sales.isEmpty, "No paid bills in the last 30 days.")}
 				/>

@@ -583,7 +583,7 @@ stale results.
 To verify a rule works as expected (remember: run from inside the workspace):
 
 ```bash
-cd packages/ui && npx eslint src/components/form/button.tsx
+cd packages/ui && npx eslint src/components/button.tsx
 ```
 
 ---

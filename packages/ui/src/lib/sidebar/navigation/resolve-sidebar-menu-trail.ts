@@ -1,4 +1,4 @@
-import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
+import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 import {
 	findDeepestNavMatch,
 	longestSharedSegmentPrefix,

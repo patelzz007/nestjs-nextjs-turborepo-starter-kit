@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/form/button";
-import { Toaster, toastMessage, type ToastPosition } from "@workspace/ui/components/feedback/toast";
+import { Button } from "@workspace/ui/components/button";
+import { Toaster, toastMessage, type ToastPosition } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 

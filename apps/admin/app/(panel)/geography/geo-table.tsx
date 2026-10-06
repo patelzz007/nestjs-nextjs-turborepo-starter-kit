@@ -1,6 +1,6 @@
 "use client";
 
-import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { formatCoordinate, formatCoordinatePair, formatCount } from "@/lib/format/numbers";
@@ -24,11 +24,11 @@ import {
 	type GeoTabPage,
 } from "@/lib/url-state/geography";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
-import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
-import { Input } from "@workspace/ui/components/form/input";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { DataTable, type DataTableFeatures } from "@workspace/ui/components/data-table";
+import { Input } from "@workspace/ui/components/input";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -227,10 +227,10 @@ const GEO_COLUMNS: Readonly<Record<GeoTab, ColumnDef<DataTableFeatures, GeoRow>[
 	],
 };
 
-const GEO_LABELS: Readonly<Record<GeoTab, DataTableLabels>> = {
-	countries: createDataTableLabels({ actionsMenuTitle: "Country actions", openRowMenu: "Open country row menu" }),
-	states: createDataTableLabels({ actionsMenuTitle: "State actions", openRowMenu: "Open state row menu" }),
-	cities: createDataTableLabels({ actionsMenuTitle: "City actions", openRowMenu: "Open city row menu" }),
+const GEO_LABELS: Readonly<Record<GeoTab, UiKitLabelsOverride<"dataTable">>> = {
+	countries: { actionsMenuTitle: "Country actions", openRowMenu: "Open country row menu" },
+	states: { actionsMenuTitle: "State actions", openRowMenu: "Open state row menu" },
+	cities: { actionsMenuTitle: "City actions", openRowMenu: "Open city row menu" },
 };
 
 const GEO_SORT: Readonly<Record<GeoTab, { readonly sortSpec: ListSortSpec<string>; readonly sortAliases: SortColumnAliases<string> }>> = {

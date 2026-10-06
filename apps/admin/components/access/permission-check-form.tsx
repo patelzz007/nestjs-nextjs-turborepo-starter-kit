@@ -10,7 +10,7 @@ import {
 	type PermissionAction,
 	type PermissionResource,
 } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { Button } from "@workspace/ui/components/button";
 import { ShieldCheck, ShieldX } from "lucide-react";
 import * as React from "react";
 

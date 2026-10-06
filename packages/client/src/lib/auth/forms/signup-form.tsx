@@ -1,11 +1,11 @@
 "use client";
 
 import { SignupSchema } from "@workspace/shared";
-import { FormShell } from "@workspace/ui/components/form/form-shell";
-import { Input } from "@workspace/ui/components/form/input";
-import { Label } from "@workspace/ui/components/form/label";
-import { PasswordInput } from "@workspace/ui/components/form/password-input";
-import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-strength-meter";
+import { FormShell } from "@workspace/ui/components/form-shell";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { PasswordInput } from "@workspace/ui/components/password-input";
+import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
 import Link from "next/link";
 import { useCallback, useMemo, useState, type JSX } from "react";
 

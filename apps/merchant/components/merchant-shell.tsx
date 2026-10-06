@@ -14,7 +14,7 @@ import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { useSwitchOrganization } from "@/lib/org/use-switch-organization";
 import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
 import type { Envelope, OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { AppPanelShell } from "@workspace/ui/components/navigation/app-panel-shell";
+import { AppPanelShell } from "@workspace/ui/components/app-panel-shell";
 import { MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME, MERCHANT_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
 import { MERCHANT_SIDEBAR_DEVTOOLS_NAME, MERCHANT_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";

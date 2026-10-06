@@ -2,7 +2,7 @@
 
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import type { OrganizationLocationResponse, OrganizationLocationScopeType, OrganizationLocationStatus } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { MapPin, Phone } from "lucide-react";
 import * as React from "react";
 
@@ -32,12 +32,12 @@ function locationStatusLabel(status: OrganizationLocationStatus): string {
 	return "Active";
 }
 
-function locationStatusVariant(status: OrganizationLocationStatus): "default" | "secondary" | "outline" | "destructive" {
+function locationStatusVariant(status: OrganizationLocationStatus): "default" | "secondary" | "outline" | "destructive-light" {
 	if (status === "ACTIVE") {
 		return "default";
 	}
 	if (status === "REJECTED") {
-		return "destructive";
+		return "destructive-light";
 	}
 	if (status === "PENDING_APPROVAL") {
 		return "outline";

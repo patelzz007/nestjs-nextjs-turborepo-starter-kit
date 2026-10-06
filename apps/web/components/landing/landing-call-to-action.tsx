@@ -1,4 +1,4 @@
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";

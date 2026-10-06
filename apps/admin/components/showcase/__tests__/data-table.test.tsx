@@ -11,12 +11,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { DataTable, sanitizeExportCell, type DataTableFeatures, type DataTableServerPagination } from "@workspace/ui/components/display/data-table";
+import { DataTable, sanitizeExportCell, type DataTableFeatures, type DataTableServerPagination } from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table/labels";
-
 import { DataTableShowcase } from "../data-table-showcase";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 
 // ── Test harness data (mirrors the showcase's row shape) ───────────────────
 
@@ -63,7 +63,7 @@ afterEach(() => {
 
 describe("DataTable (shared, TanStack Table v9)", () => {
 	it("renders the first page of rows with the default page size of 10", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} />);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} />, { wrapper: UiKitTestProviders });
 
 		// 1 header row + 10 body rows (page size 10).
 		expect(screen.getAllByRole("row")).toHaveLength(11);
@@ -77,7 +77,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("navigates to the next page through the v9 pagination API", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} />);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 		expect(screen.getByText(/Showing 11 to 12 of 12 results/)).toBeTruthy();
@@ -87,9 +87,9 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("filters rows through the global search over searchKeys", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} searchKeys={["header"]} />);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} searchKeys={["header"]} />, { wrapper: UiKitTestProviders });
 
-		const search = screen.getByPlaceholderText("Search...");
+		const search = screen.getByPlaceholderText(UI_KIT_LABELS_EN.dataTable.searchPlaceholder);
 		fireEvent.change(search, { target: { value: "Section 11" } });
 
 		// Only the matching row survives the filter.
@@ -101,13 +101,13 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("propagates the header select-all to every visible row checkbox", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} checkbox />);
+		render(<DataTable data={makeRows(5)} columns={demoColumns} checkbox />, { wrapper: UiKitTestProviders });
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectAllAriaLabel }));
 
 		// The per-row granular subscription flips every visible row checkbox to
 		// checked — this is the regression guard for the v9 row-caching trap.
-		const rowCheckboxes = screen.getAllByRole("checkbox", { name: "Select row" });
+		const rowCheckboxes = screen.getAllByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectRowAriaLabel });
 		expect(rowCheckboxes.length).toBe(5);
 		for (const box of rowCheckboxes) {
 			expect(box.getAttribute("aria-checked")).toBe("true");
@@ -124,10 +124,10 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
 		const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation((): void => undefined);
 		try {
-			render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} checkbox={{ export: true, exportFilename: "sections.csv" }} />);
+			render(<DataTable data={makeRows(5)} columns={demoColumns} checkbox={{ export: true, exportFilename: "sections.csv" }} />, { wrapper: UiKitTestProviders });
 
 			// Select rows 1 and 3 only.
-			const rowCheckboxes = screen.getAllByRole("checkbox", { name: "Select row" });
+			const rowCheckboxes = screen.getAllByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectRowAriaLabel });
 			if (rowCheckboxes[0] !== undefined) {
 				fireEvent.click(rowCheckboxes[0]);
 			}
@@ -136,8 +136,8 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 			}
 
 			// Open the export menu and pick JSON.
-			fireEvent.click(screen.getByText("Export"));
-			fireEvent.click(screen.getByText("JSON"));
+			fireEvent.click(screen.getByText(UI_KIT_LABELS_EN.dataTable.export));
+			fireEvent.click(screen.getByText(UI_KIT_LABELS_EN.dataTable.exportJson));
 
 			await waitFor(() => {
 				expect(createObjectURL).toHaveBeenCalled();
@@ -164,7 +164,6 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	it("enables row selection through the checkbox prop", () => {
 		render(
 			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
 				data={makeRows(5)}
 				columns={demoColumns}
 				checkbox={{
@@ -173,18 +172,18 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 					exportFilename: "sections.csv",
 				}}
 			/>,
+			{ wrapper: UiKitTestProviders },
 		);
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectAllAriaLabel }));
 
-		expect(screen.getByText("Delete selected")).toBeTruthy();
-		expect(screen.getByText("Export")).toBeTruthy();
+		expect(screen.getByText(UI_KIT_LABELS_EN.dataTable.deleteSelected)).toBeTruthy();
+		expect(screen.getByText(UI_KIT_LABELS_EN.dataTable.export)).toBeTruthy();
 	});
 
 	it("shows the selection summary for export-only checkbox tables", () => {
 		render(
 			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
 				data={makeRows(12)}
 				columns={demoColumns}
 				checkbox={{
@@ -192,25 +191,21 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 					exportFilename: "sections.csv",
 				}}
 			/>,
+			{ wrapper: UiKitTestProviders },
 		);
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectAllAriaLabel }));
 
 		expect(screen.getByText(/10 rows selected/)).toBeTruthy();
 		expect(screen.queryByText("Delete selected")).toBeNull();
 	});
 
 	it("selects a single row through row.toggleSelected()", () => {
-		render(
-			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(12)}
-				columns={demoColumns}
-				checkbox={{ bulkActions: [{ key: "delete", label: "Delete", onClick: (): void => undefined }] }}
-			/>,
-		);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} checkbox={{ bulkActions: [{ key: "delete", label: "Delete", onClick: (): void => undefined }] }} />, {
+			wrapper: UiKitTestProviders,
+		});
 
-		const rowCheckboxes = screen.getAllByRole("checkbox", { name: "Select row" });
+		const rowCheckboxes = screen.getAllByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectRowAriaLabel });
 		const firstRowCheckbox = rowCheckboxes[0];
 		expect(firstRowCheckbox).toBeDefined();
 		if (firstRowCheckbox !== undefined) {
@@ -222,16 +217,11 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("selects all page rows through toggleAllPageRowsSelected()", () => {
-		render(
-			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(12)}
-				columns={demoColumns}
-				checkbox={{ bulkActions: [{ key: "delete", label: "Delete", onClick: (): void => undefined }] }}
-			/>,
-		);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} checkbox={{ bulkActions: [{ key: "delete", label: "Delete", onClick: (): void => undefined }] }} />, {
+			wrapper: UiKitTestProviders,
+		});
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectAllAriaLabel }));
 
 		// Only the 10 rows on the current page are selected.
 		expect(screen.getByText(/10 rows selected/)).toBeTruthy();
@@ -241,7 +231,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("server pagination mode does not slice rows client-side", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(10)} columns={demoColumns} pagination={createServerPagination({ totalCount: 50, pageSize: 10 })} />);
+		render(<DataTable data={makeRows(10)} columns={demoColumns} pagination={createServerPagination({ totalCount: 50, pageSize: 10 })} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getAllByText(/^Section \d+$/)).toHaveLength(10);
 		expect(screen.getByText(/Showing 1 to 10 of 50 results/)).toBeTruthy();
@@ -249,24 +239,24 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("renders the empty state when there are no rows", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={[]} columns={demoColumns} />);
+		render(<DataTable data={[]} columns={demoColumns} />, { wrapper: UiKitTestProviders });
 
-		expect(screen.getByText("No data available")).toBeTruthy();
+		expect(screen.getByText(UI_KIT_LABELS_EN.dataTable.noDataTitle)).toBeTruthy();
 	});
 
 	it("hides the export toolbar when not enabled", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} />);
+		render(<DataTable data={makeRows(5)} columns={demoColumns} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.queryByText("Export")).toBeNull();
-		expect(screen.queryByPlaceholderText("Search...")).toBeNull();
+		expect(screen.queryByPlaceholderText(UI_KIT_LABELS_EN.dataTable.searchPlaceholder)).toBeNull();
 	});
 
 	it("debounces the global search when searchDebounceMs is set", () => {
 		vi.useFakeTimers();
 		try {
-			render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} searchKeys={["header"]} searchDebounceMs={150} />);
+			render(<DataTable data={makeRows(12)} columns={demoColumns} searchKeys={["header"]} searchDebounceMs={150} />, { wrapper: UiKitTestProviders });
 
-			const search = screen.getByPlaceholderText("Search...");
+			const search = screen.getByPlaceholderText(UI_KIT_LABELS_EN.dataTable.searchPlaceholder);
 			fireEvent.change(search, { target: { value: "Section 11" } });
 
 			// Inside the debounce window nothing has been filtered yet.
@@ -286,14 +276,14 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("clears the search through the in-input clear button", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} searchKeys={["header"]} />);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} searchKeys={["header"]} />, { wrapper: UiKitTestProviders });
 
-		const search = screen.getByPlaceholderText("Search...");
+		const search = screen.getByPlaceholderText(UI_KIT_LABELS_EN.dataTable.searchPlaceholder);
 		fireEvent.change(search, { target: { value: "Section 11" } });
 		expect(screen.getByText("Section 11")).toBeTruthy();
 		expect(screen.queryByText("Section 1")).toBeNull();
 
-		fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+		fireEvent.click(screen.getByRole("button", { name: UI_KIT_LABELS_EN.dataTable.clearSearchAriaLabel }));
 
 		// The input is reset and the first page of rows is back.
 		expect(screen.getByPlaceholderText<HTMLInputElement>("Search...").value).toBe("");
@@ -309,7 +299,6 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	it("hides the client-side search when server pagination is active", () => {
 		render(
 			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
 				data={makeRows(10)}
 				columns={demoColumns}
 				pagination={createServerPagination()}
@@ -317,15 +306,16 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 				filters={[{ key: "status", label: "Status", options: [] }]}
 				onManualColumnFilterChange={noopManualColumnFilterChange}
 			/>,
+			{ wrapper: UiKitTestProviders },
 		);
 
-		expect(screen.queryByPlaceholderText("Search...")).toBeNull();
+		expect(screen.queryByPlaceholderText(UI_KIT_LABELS_EN.dataTable.searchPlaceholder)).toBeNull();
 		expect(screen.getByText("Status")).toBeTruthy();
 	});
 
 	it("server pagination notifies the parent on page change", () => {
 		const onPageChange = vi.fn();
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(10)} columns={demoColumns} pagination={createServerPagination({ totalCount: 50, onPageChange })} />);
+		render(<DataTable data={makeRows(10)} columns={demoColumns} pagination={createServerPagination({ totalCount: 50, onPageChange })} />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 		expect(onPageChange).toHaveBeenCalledWith(1, 10);
@@ -336,7 +326,6 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		const onManualColumnFilterChange = vi.fn();
 		render(
 			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
 				data={makeRows(10)}
 				columns={demoColumns}
 				pagination={createServerPagination({ totalCount: 50, pageIndex: 2, onPageChange })}
@@ -350,19 +339,20 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 				manualColumnFilters={{ status: "all" }}
 				onManualColumnFilterChange={onManualColumnFilterChange}
 			/>,
+			{ wrapper: UiKitTestProviders },
 		);
 
 		expect(screen.getByRole("combobox", { name: "Status" })).toBeTruthy();
 	});
 
 	it("changes the client page size through the page-size select", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} pageSizeOptions={[5, 10, 20]} />);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} pageSizeOptions={[5, 10, 20]} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText(/Showing 1 to 10 of 12 results/)).toBeTruthy();
 	});
 
 	it("renders skeleton rows while isLoading instead of the data", () => {
-		const { container } = render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} isLoading skeletonRows={4} />);
+		const { container } = render(<DataTable data={makeRows(12)} columns={demoColumns} isLoading skeletonRows={4} />, { wrapper: UiKitTestProviders });
 
 		// Skeleton placeholders (shimmer) are present; real rows are not.
 		expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
@@ -370,7 +360,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("renders the error state instead of the table when error is set", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} error="Failed to load sections" />);
+		render(<DataTable data={makeRows(12)} columns={demoColumns} error="Failed to load sections" />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("Failed to load sections")).toBeTruthy();
 		expect(screen.queryByText("Section 1")).toBeNull();
@@ -391,7 +381,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("cycles the sort through asc → desc → none when sortCycle is set", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} sortCycle="asc-desc-none" />);
+		render(<DataTable data={makeRows(5)} columns={demoColumns} sortCycle="asc-desc-none" />, { wrapper: UiKitTestProviders });
 
 		const idHeader = screen.getByText("ID");
 
@@ -415,7 +405,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("virtualizes long lists when virtualizeRows is enabled", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(200)} columns={demoColumns} pageSize={200} virtualizeRows virtualRowHeight={48} maxHeight={200} />);
+		render(<DataTable data={makeRows(200)} columns={demoColumns} pageSize={200} virtualizeRows virtualRowHeight={48} maxHeight={200} />, { wrapper: UiKitTestProviders });
 
 		// Only the visible band (+ overscan) is in the DOM, not all 200 rows.
 		const renderedRows = screen.getAllByRole("row");
@@ -428,16 +418,8 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 	it("resets the virtual scroll offset when sorting", () => {
 		const { container } = render(
-			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(200)}
-				columns={demoColumns}
-				pageSize={200}
-				virtualizeRows
-				virtualRowHeight={48}
-				maxHeight={200}
-				sortCycle="asc-desc-none"
-			/>,
+			<DataTable data={makeRows(200)} columns={demoColumns} pageSize={200} virtualizeRows virtualRowHeight={48} maxHeight={200} sortCycle="asc-desc-none" />,
+			{ wrapper: UiKitTestProviders },
 		);
 
 		const scrollContainer = container.querySelector(".overflow-auto");
@@ -456,9 +438,9 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("resets the virtual scroll offset when paginating", () => {
-		const { container } = render(
-			<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(200)} columns={demoColumns} virtualizeRows virtualRowHeight={48} maxHeight={200} />,
-		);
+		const { container } = render(<DataTable data={makeRows(200)} columns={demoColumns} virtualizeRows virtualRowHeight={48} maxHeight={200} />, {
+			wrapper: UiKitTestProviders,
+		});
 
 		const scrollContainer = container.querySelector(".overflow-auto");
 		expect(scrollContainer).not.toBeNull();
@@ -478,7 +460,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 	it("edits a cell inline and reports the full row original", () => {
 		const onCellEdit = vi.fn((_rowIndex: number, _columnId: string, _value: string | number | boolean | null, _row: DemoRow): void => undefined);
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} editable editableColumns={["header"]} onCellEdit={onCellEdit} />);
+		render(<DataTable data={makeRows(5)} columns={demoColumns} editable editableColumns={["header"]} onCellEdit={onCellEdit} />, { wrapper: UiKitTestProviders });
 
 		// Double-click the first header cell to open the inline editor.
 		fireEvent.doubleClick(screen.getByText("Section 1"));
@@ -500,7 +482,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 	it("reports the visible rows when a row is dragged and dropped", () => {
 		const onRowReorder = vi.fn((_fromIndex: number, _toIndex: number, _rows: DemoRow[]): void => undefined);
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(5)} columns={demoColumns} draggable onRowReorder={onRowReorder} />);
+		render(<DataTable data={makeRows(5)} columns={demoColumns} draggable onRowReorder={onRowReorder} />, { wrapper: UiKitTestProviders });
 
 		const rows = screen.getAllByRole("row");
 		const firstRow = rows[1];
@@ -544,7 +526,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 describe("DataTableShowcase", () => {
 	it("renders the demo table with its smart configuration", () => {
-		render(<DataTableShowcase />);
+		render(<DataTableShowcase />, { wrapper: UiKitTestProviders });
 
 		// Smart-layer title/description + a demo row. Row cells render in BOTH
 		// the desktop table and the mobile card view (jsdom doesn't apply the
@@ -554,8 +536,8 @@ describe("DataTableShowcase", () => {
 		expect(screen.getAllByText("Eddie Lake").length).toBeGreaterThan(0);
 
 		// Export + Columns toggles are enabled by the showcase.
-		expect(screen.getByText("Export")).toBeTruthy();
-		expect(screen.getByText("Columns")).toBeTruthy();
+		expect(screen.getByText(UI_KIT_LABELS_EN.dataTable.export)).toBeTruthy();
+		expect(screen.getByText(UI_KIT_LABELS_EN.dataTable.columnsToggle)).toBeTruthy();
 
 		// Column filters (status + type) render as selects.
 		expect(screen.getAllByText("Status").length).toBeGreaterThan(0);
@@ -563,7 +545,7 @@ describe("DataTableShowcase", () => {
 	});
 
 	it("opens the row action menu from the actions column", () => {
-		render(<DataTableShowcase />);
+		render(<DataTableShowcase />, { wrapper: UiKitTestProviders });
 
 		const openMenuButton = screen.getAllByRole("button", { name: "Open section row menu" })[0];
 		expect(openMenuButton).toBeDefined();

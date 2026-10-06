@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { apiContract, type AdminAnalyticsExportQuery, type AnalyticsExportFormat, type EpochMs } from "@workspace/shared";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
+import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiDownloadError, defineDownload, type DownloadDef, type DownloadedFile } from "../api/download";
