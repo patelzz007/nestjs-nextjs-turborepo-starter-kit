@@ -8,11 +8,13 @@ import {
 	MerchantOnboardingCompleteFieldsSchema,
 	OrganizationLocationDraftSchema,
 	OrganizationPrimaryLocationDraftSchema,
+	PILOT_CITY_LABELS,
 	PLATFORM_DISPLAY_REGION,
 } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
 
@@ -25,6 +27,8 @@ import { MerchantOnboardingBusinessStep, type BusinessFieldName } from "./onboar
 import { MerchantOnboardingDocumentsStep } from "./onboarding-documents-step";
 import { MerchantOnboardingRegistrationStep } from "./onboarding-registration-step";
 import { MerchantOnboardingStoresStep, type OnboardingLocationDraftRow } from "./onboarding-stores-step";
+import { MerchantOnboardingInviteSummary, MerchantOnboardingSkeleton, ONBOARDING_PANEL_CLASS_NAME } from "./onboarding-invite-summary";
+import { MerchantOnboardingCompactProgress, MerchantOnboardingTimeline } from "./onboarding-timeline";
 import { catchCaught } from "../../caught";
 import { classifyOnboardingFailure, type OnboardingFailure } from "./onboarding-outcome";
 import { runOnboardingSubmission } from "./onboarding-submission";
@@ -59,10 +63,6 @@ const INITIAL_KYB_VALUES: MerchantKybFieldValues = {
 	documents: [],
 };
 
-function formatPilotCity(city: string): string {
-	return city.replaceAll("_", " ");
-}
-
 function formatExpiry(value: number): string {
 	return formatEpochMs(value, "date", PLATFORM_DISPLAY_REGION);
 }
@@ -84,7 +84,7 @@ interface OnboardingNoticeProps {
 /** A terminal page of the flow: a heading, a message and one link back to sign-in. */
 function OnboardingNotice({ title, message, href, linkLabel, isPrimaryLink = false }: OnboardingNoticeProps): JSX.Element {
 	return (
-		<div className="space-y-6 text-center">
+		<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "mx-auto w-full max-w-lg space-y-4 p-6 text-center sm:p-8")}>
 			<h2 className="text-xl font-semibold tracking-tight">{title}</h2>
 			<p className="text-sm text-muted-foreground">{message}</p>
 			<Link href={href} className={isPrimaryLink ? cn(buttonVariants(), "h-11 w-full sm:w-auto") : cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
@@ -92,6 +92,11 @@ function OnboardingNotice({ title, message, href, linkLabel, isPrimaryLink = fal
 			</Link>
 		</div>
 	);
+}
+
+/** The wizard's loading placeholder — for the page's own Suspense fallback as well as the view's. */
+export function MerchantOnboardingViewSkeleton(): JSX.Element {
+	return <MerchantOnboardingSkeleton stepCount={WIZARD_STEPS.length} />;
 }
 
 export interface MerchantOnboardingViewProps {
@@ -328,12 +333,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	);
 
 	if (flowStep === "loading") {
-		return (
-			<div className="flex min-h-80 flex-col items-center justify-center gap-3 text-center">
-				<div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden="true" />
-				<p className="text-sm text-muted-foreground">Verifying your invite…</p>
-			</div>
-		);
+		return <MerchantOnboardingViewSkeleton />;
 	}
 
 	if (flowStep === "invalid") {
@@ -365,11 +365,9 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 	if (flowStep === "success") {
 		return (
-			<div className="space-y-6 text-center">
+			<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "mx-auto w-full max-w-lg space-y-6 p-6 text-center sm:p-8")}>
 				<div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-primary/15 text-primary" aria-hidden="true">
-					<svg className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-						<path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-					</svg>
+					<CircleCheck className="size-8" />
 				</div>
 				<div className="space-y-2">
 					<h2 className="text-2xl font-semibold tracking-tight">Submitted for review</h2>
@@ -386,70 +384,41 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	}
 
 	if (invite === null) {
-		return <p className="text-center text-sm text-muted-foreground">Loading invite details…</p>;
+		return <MerchantOnboardingViewSkeleton />;
 	}
 
+	const currentStep = WIZARD_STEPS[wizardIndex];
+
 	return (
-		<div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-10">
-			<aside className="space-y-5 lg:sticky lg:top-8 lg:self-start">
-				<div className="space-y-1">
-					<p className="text-xs font-medium tracking-wide text-primary uppercase">Merchant application</p>
-					<h2 className="text-2xl font-semibold tracking-tight">{invite.businessName}</h2>
-					<p className="text-sm text-muted-foreground">Complete one application for account setup and admin approval.</p>
+		<div className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-8">
+			<aside className="space-y-4 lg:sticky lg:top-8 lg:self-start" aria-label="Application summary">
+				<MerchantOnboardingInviteSummary
+					businessName={invite.businessName}
+					email={invite.email}
+					city={PILOT_CITY_LABELS[invite.city]}
+					expiresOn={formatExpiry(invite.expiresAt)}
+				/>
+				<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "hidden p-5 lg:block")}>
+					<MerchantOnboardingTimeline steps={WIZARD_STEPS} currentStepId={wizardPanel} onStepSelect={advance} isNavigationDisabled={isSubmitting} />
 				</div>
-				<dl className="space-y-3 rounded-2xl border border-border/80 bg-card/80 p-4 shadow-xs">
-					<div>
-						<dt className="text-xs font-medium text-muted-foreground">Work email</dt>
-						<dd className="mt-0.5 text-sm font-medium">{invite.email}</dd>
-					</div>
-					<div className="grid grid-cols-2 gap-3">
-						<div>
-							<dt className="text-xs font-medium text-muted-foreground">Pilot city</dt>
-							<dd className="mt-0.5 text-sm font-medium">{formatPilotCity(invite.city)}</dd>
-						</div>
-						<div>
-							<dt className="text-xs font-medium text-muted-foreground">Invite expires</dt>
-							<dd className="mt-0.5 text-sm font-medium">{formatExpiry(invite.expiresAt)}</dd>
-						</div>
-					</div>
-				</dl>
-				<ol className="space-y-3" aria-label="Application progress">
-					{WIZARD_STEPS.map((step, index) => {
-						const isActive = step.id === wizardPanel;
-						const isComplete = index < wizardIndex;
-						return (
-							<li key={step.id} className="flex items-start gap-3">
-								<span
-									className={cn(
-										"mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-										isComplete ? "bg-primary text-primary-foreground" : isActive ? "bg-primary/15 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground",
-									)}>
-									{isComplete ? "✓" : index + 1}
-								</span>
-								<div>
-									<p className={cn("text-sm font-medium", isActive ? "text-foreground" : "text-muted-foreground")}>{step.label}</p>
-									<p className="text-xs text-muted-foreground">{step.description}</p>
-								</div>
-							</li>
-						);
-					})}
-				</ol>
 			</aside>
 
-			<section className="relative z-20 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-				<div className="mb-6 flex items-center justify-between gap-3">
-					<div>
-						<p className="text-xs font-medium text-muted-foreground">
+			<section aria-labelledby="merchant-onboarding-step-heading" className={cn(ONBOARDING_PANEL_CLASS_NAME, "relative z-20 bg-card p-5 sm:p-6")}>
+				<header className="mb-6 space-y-5 border-b border-border/70 pb-5">
+					<div className="lg:hidden">
+						<MerchantOnboardingCompactProgress steps={WIZARD_STEPS} currentStepId={wizardPanel} />
+					</div>
+					<div className="space-y-1">
+						<p className="text-xs font-medium text-primary">
 							Step {wizardIndex + 1} of {WIZARD_STEPS.length}
+							<span className="text-muted-foreground"> · {currentStep?.label}</span>
 						</p>
-						<h3 className="text-lg font-semibold tracking-tight">{WIZARD_STEPS[wizardIndex]?.heading}</h3>
+						<h2 id="merchant-onboarding-step-heading" className="text-xl font-semibold tracking-tight">
+							{currentStep?.heading}
+						</h2>
+						<p className="text-sm text-muted-foreground">{currentStep?.description}</p>
 					</div>
-					<div className="flex gap-1" aria-hidden="true">
-						{WIZARD_STEPS.map((step, index) => (
-							<span key={step.id} className={cn("h-1.5 w-5 rounded-full", index <= wizardIndex ? "bg-primary" : "bg-muted")} />
-						))}
-					</div>
-				</div>
+				</header>
 
 				{error !== null ? (
 					<div role="alert" className="mb-5 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive">

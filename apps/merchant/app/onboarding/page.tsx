@@ -1,12 +1,12 @@
 "use client";
 
 import { ROUTES } from "@/lib/routes";
-import { MerchantOnboardingView } from "@workspace/client/lib/merchant/onboarding/view";
+import { MerchantOnboardingView, MerchantOnboardingViewSkeleton } from "@workspace/client/lib/merchant/onboarding/view";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Store, Sun } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState, type JSX } from "react";
 
@@ -40,8 +40,12 @@ function OnboardingContent(): JSX.Element {
 
 	if (token === null || token.length === 0) {
 		return (
-			<div className="mx-auto max-w-lg rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-center text-sm text-destructive">
-				This onboarding link is missing a token. Open the invite email again or ask your platform admin to resend it.
+			<div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border border-destructive/20 bg-card/90 shadow-xs backdrop-blur-sm">
+				<div className="h-1 bg-destructive/40" aria-hidden="true" />
+				<div className="space-y-2 p-6 sm:p-8">
+					<h2 className="text-xl font-semibold tracking-tight">Invalid onboarding link</h2>
+					<p className="text-sm text-muted-foreground">This onboarding link is missing a token. Open the invite email again or ask your platform admin to resend it.</p>
+				</div>
 			</div>
 		);
 	}
@@ -60,9 +64,7 @@ export default function MerchantOnboardingPage(): JSX.Element {
 				<header className="mb-8 flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
 						<div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-							<svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-								<path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-							</svg>
+							<Store className="size-5" aria-hidden="true" />
 						</div>
 						<div>
 							<p className="text-sm font-semibold text-foreground">Reward Hub</p>
@@ -77,25 +79,20 @@ export default function MerchantOnboardingPage(): JSX.Element {
 					</div>
 				</header>
 
-				<main className="flex flex-1 flex-col justify-center overflow-visible pb-8">
-					<div className="mb-8 space-y-2 text-center lg:text-left">
-						<h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Set up your store</h1>
-						<p className="mx-auto max-w-2xl text-sm text-muted-foreground lg:mx-0">
+				<main className="flex flex-1 flex-col overflow-visible pb-8 lg:pt-4">
+					<div className="mb-8 space-y-2">
+						<h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Set up your store</h1>
+						<p className="max-w-2xl text-sm text-muted-foreground">
 							Complete your business application, upload verification documents, and create the owner account for this location.
 						</p>
 					</div>
 
-					<Suspense
-						fallback={
-							<div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-border bg-card/80">
-								<p className="text-sm text-muted-foreground">Loading…</p>
-							</div>
-						}>
+					<Suspense fallback={<MerchantOnboardingViewSkeleton />}>
 						<OnboardingContent />
 					</Suspense>
 				</main>
 
-				<footer className="pt-4 text-center text-xs text-muted-foreground lg:text-left">&copy; {new Date().getFullYear()} Reward Hub. All rights reserved.</footer>
+				<footer className="pt-4 text-center text-xs text-muted-foreground sm:text-left">&copy; {new Date().getFullYear()} Reward Hub. All rights reserved.</footer>
 			</div>
 		</div>
 	);

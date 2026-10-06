@@ -50,6 +50,7 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/navigation/tabs.tsx",
 		"components/navigation/scroll-area.tsx",
 		"components/navigation/pagination.tsx",
+		"components/navigation/stepper.tsx",
 		"components/navigation/sidebar-parts.tsx",
 		"components/form/lockout-countdown.tsx",
 		"components/layout/auth-layout.tsx",

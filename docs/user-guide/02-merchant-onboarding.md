@@ -42,16 +42,21 @@ flowchart TD
 
 ## For the merchant owner: onboarding
 
-The onboarding form has four steps — **Business**, **Registration**, **Documents**, **Owner
-account** — and is submitted once:
+The onboarding form has five steps — **Business**, **Stores**, **Registration**, **Documents**,
+**Owner account** — and is submitted once:
 
-- **Business:** category (cafe, restaurant, retail, wellness, entertainment, food, beverage), the
-  registered legal name, the primary store's name, address and phone. More stores can be added
-  later.
+- **Business:** category (cafe, restaurant, retail, wellness, entertainment, food, beverage) and
+  the registered legal name.
+- **Stores:** the primary store's name, address and phone, plus any additional locations. More
+  stores can also be added later from **Settings → Locations**.
 - **Registration:** SSM / registration number, tax id and the type of the main document.
 - **Documents:** at least one PDF or image (JPEG, PNG, WebP), up to 25 MB each.
 - **Owner account:** your name and password. If the email already has an account, enter that
   account's password instead.
+
+A timeline beside the form shows your progress and every step. Select a completed step to go
+back and change it; your answers are kept until you submit, as long as the tab stays open. On a
+phone the timeline is condensed into a row of numbered marks above the form.
 
 When you press **Submit**, the platform creates your organization, your owner membership and your
 primary store in one step, uploads the documents directly to storage and submits the
