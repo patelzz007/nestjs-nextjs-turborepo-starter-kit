@@ -10,9 +10,8 @@ import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-pr
 import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
 import { Toaster } from "@workspace/ui/components/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { firaSans } from "@workspace/ui/fonts/fira-sans";
-import { jetbrainsMono } from "@workspace/ui/fonts/jetbrains-mono";
-import { rubik } from "@workspace/ui/fonts/rubik";
+import { geistMono } from "@workspace/ui/fonts/geist-mono";
+import { geistSans } from "@workspace/ui/fonts/geist-sans";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import * as React from "react";
@@ -28,9 +27,7 @@ export const dynamic = "force-dynamic";
 
 export default function RootLayout({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 	return (
-		<AppDocumentShell
-			htmlClassName={cn("font-sans antialiased", firaSans.variable, jetbrainsMono.variable, bricolageGrotesque.variable, rubik.variable)}
-			bodyClassName="merchant-app">
+		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="merchant-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
 				<QueryProvider>

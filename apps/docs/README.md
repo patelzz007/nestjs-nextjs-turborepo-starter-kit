@@ -90,20 +90,22 @@ apps/docs/
     ├── components/ layouts/   # .astro markup — header, sidebar + mobile drawer (shared NavTree), TOC, cards, pager, search
     ├── pages/                 # routes: /, /docs, /docs/[...slug], /blog, /images/…, /search-index.json, /feed.xml
     ├── scripts/               # progressive enhancement: theme, drawer, search, TOC scroll spy, copy, mermaid
-    └── styles/global.css      # every colour, size and weight is a token (light + dark); colours mirror packages/ui tokens.css
+    └── styles/global.css      # every colour, size and weight is a token (light + dark); colours map onto packages/ui palette.css
 ```
 
 - **Search** — `/search-index.json` is generated at build time (one entry per guide and per
   h2/h3 heading, plus blog posts). The `⌘K` / `Ctrl K` / `/` dialog downloads it on first open,
   validates it with zod, and ranks matches in the browser (`src/lib/search.ts`). If the corpus
   ever grows past a few MB, swap in a chunked index such as Pagefind.
-- **Look** — layout modelled on docs.apidog.com; colours are the product's shared palette
-  (`packages/ui/src/styles/tokens.css`, the `--palette-*` primitives) mirrored as hex: white
-  surfaces, slate-cast grey text (`#20242a`), `#e0e3e8` borders, and the one slate accent
-  (`#24344a`, `#b2bfd1` in dark mode) for links, the active state, bars and fills, plus a soft
-  glow at the top of the page. Text in the accent colour uses `--brand-text`, which keeps WCAG AA
-  contrast (≥ 4.5:1) in both themes. The tokens at the top of `global.css` are the only place
-  to change any of it.
+- **Look** — layout modelled on docs.apidog.com; colours are the product's shared palette:
+  `global.css` imports `@workspace/ui/styles/palette.css` (the `--palette-*` primitives) and maps
+  its own names onto them, so the docs and the apps cannot drift. Light: white reading surfaces,
+  the cool "ink" grey text scale (`neutral-900` / `700` / `600`), `neutral-200` borders and the one
+  slate accent (`brand-800`; `brand-300` in dark mode) for links, the active state, bars and fills,
+  plus a soft glow at the top of the page. Dark: the apps' cool ink surface (`ink-900`). Text in
+  the accent colour uses `--brand-text`; `src/styles/theme-contrast.test.ts` holds every text pair
+  to WCAG AA (≥ 4.5:1) in both themes. Callout and card-tile hues are docs-only and stay literal.
+  The tokens at the top of `global.css` are the only place to change any of it.
 - **Typography** — see [Typography](#typography) below.
 - **Code blocks** — every fence renders the shared `CodeBlock` from `@workspace/ui` (the full
   ReUI port, `packages/ui/src/components/code-block.tsx`). `src/lib/markdown/code-block.ts`
@@ -131,32 +133,31 @@ apps/docs/
 
 | Role             | Face                  | Size / line height / weight                         |
 | ---------------- | --------------------- | --------------------------------------------------- |
-| Body copy        | IBM Plex Sans         | 16px / 1.65 / 400, at most `70ch` per line          |
-| Page title (h1)  | IBM Plex Sans         | 36px (30px on phones) / 1.2 / 700, tracked −0.022em |
-| h2 · h3 · h4     | IBM Plex Sans         | 24 · 20 · 18px / 1.2–1.35 / 600                     |
-| Chrome           | IBM Plex Sans         | 14px / 1.5 — nav tree, TOC, metadata, tables, controls; 12px for tags and hints |
-| Code             | JetBrains Mono        | 0.875em inline (follows the text around it), 14px in code blocks, ligatures off |
+| Body copy        | Geist                 | 16px / 1.65 / 400, at most `70ch` per line          |
+| Page title (h1)  | Bricolage Grotesque   | 36px (30px on phones) / 1.2 / 700, tracked −0.022em |
+| h2 · h3 · h4     | Bricolage Grotesque   | 24 · 20 · 18px / 1.2–1.35 / 600                     |
+| Card titles      | Bricolage Grotesque   | 20px / 1.35 / 600                                   |
+| Chrome           | Geist                 | 14px / 1.5 — nav tree, TOC, metadata, tables, controls; 12px for tags and hints |
+| Code             | Geist Mono            | 0.875em inline (follows the text around it), 14px in code blocks, ligatures off |
 
-- **Why these faces** — the "Developer Mono" pairing that the ui-ux-pro-max typography search
-  (`.claude/skills/ui-ux-pro-max`, query "technical documentation developer") recommends for
-  documentation and developer tools: IBM Plex Sans is a sturdy, open UI/prose face with clear
-  `Il1` / `0O` shapes, and JetBrains Mono is drawn for reading code (tall x-height, distinct
-  punctuation). The sizes follow the same tool's UX rules: 16px minimum body text, line height
+- **Same faces as the apps** — the docs use the product's type system (`rules/07-ui-system.md`,
+  "Typography"): Bricolage Grotesque for headings (`--type-family-heading`), Geist for
+  everything else, Geist Mono for code.
+- **Why these faces** — Geist is a neutral UI/prose sans with a modern geometric tone; Geist Mono
+  matches it for code and IDs. The sizes follow the ui-ux-pro-max UX rules: 16px minimum body text, line height
   1.5–1.75, 65–75 characters per line, one consistent scale (12 · 14 · 16 · 18 · 20 · 24 · 30 · 36px).
 - **Code ligatures are off** — readers copy what they see, so `!==`, `=>` and `>=` must look like
   the characters they type.
-- **Self-hosted** — the font files come from the `@fontsource-variable/ibm-plex-sans` and
-  `@fontsource-variable/jetbrains-mono` packages and are served from this site (no Google Fonts
+- **Self-hosted** — the font files come from the `@fontsource-variable/bricolage-grotesque`,
+  `@fontsource-variable/geist` and `@fontsource-variable/geist-mono` packages and are served from this site (no Google Fonts
   request, so no third-party tracking and no extra DNS/TLS handshake). The Astro Fonts API
   (`fonts` in `astro.config.ts`, `<Font>` in `src/layouts/BaseLayout.astro`) emits the
-  `@font-face` rules with `font-display: swap`, preloads the upright IBM Plex Sans file, and
+  `@font-face` rules with `font-display: swap`, preloads the upright Geist file, and
   generates metric-matched fallback faces (Arial / Courier New with `size-adjust` and
   ascent/descent overrides) so text does not jump when the web font arrives.
-- **Latin only, variable weights** — one variable file per style (≈45 kB upright, ≈49 kB italic
-  for Plex; ≈40 kB / ≈43 kB for JetBrains Mono) covers every weight. Characters outside the Latin
-  subset (box-drawing lines, most arrows, emoji) come from the fallback fonts; in code blocks on
-  macOS and Windows that is Courier New, whose 0.6em advance equals JetBrains Mono's, so ASCII
-  diagrams stay aligned.
+- **Latin only, variable weights** — one variable file per style (≈29 kB upright, ≈30 kB italic
+  for Geist; ≈23 kB / ≈25 kB for Geist Mono) covers every weight. Characters outside the Latin
+  subset (box-drawing lines, most arrows, emoji) come from the fallback fonts.
 - **Tokens** — every size, weight, line height and letter spacing is a `--type-*` token at the top
   of `src/styles/global.css`. Use them; never write a raw `font-size` / `font-weight` in a rule.
   Fenced code blocks take their size from `--type-code-block-size` (passed to the shared

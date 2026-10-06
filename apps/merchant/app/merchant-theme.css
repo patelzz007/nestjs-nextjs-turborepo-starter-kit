@@ -1,9 +1,11 @@
 /* Merchant portal — green brand; layout chrome. */
 
 /*
- * Merchant portal brand — only brand tokens are re-mapped (onto the shared `--palette-green-*`
- * scale); neutrals, surfaces and borders stay shared (packages/ui tokens.css). Light: a
- * solid green pill; dark: the shared neutral nav, with green kept for buttons, focus and charts.
+ * Merchant portal brand (emerald) — only brand and sidebar tokens are re-mapped (onto the shared
+ * `--palette-green-*` scale; APP_BRAND_TOKENS in packages/ui color-contrast.ts); page and card
+ * surfaces, borders and text stay shared (packages/ui tokens.css). Light: a solid green active-nav
+ * pill on the neutral canvas sidebar. Dark: the same neutral ink surface as the page,
+ * with a solid green active pill and green kept for buttons, focus and charts.
  */
 :root:not(.dark) .merchant-app {
 	--primary: var(--palette-green-600);
@@ -32,12 +34,17 @@
 	--primary: var(--palette-green-600);
 	--primary-foreground: var(--palette-neutral-0);
 	--ring: var(--palette-green-400);
+	--sidebar-primary: var(--palette-green-600);
+	--sidebar-primary-foreground: var(--palette-neutral-0);
 	--sidebar-ring: var(--palette-green-400);
+	--sidebar-active: var(--palette-green-600);
+	--sidebar-active-foreground: var(--palette-neutral-0);
+	--sidebar-active-border: var(--palette-green-600);
 	--chart-1: var(--palette-green-400);
 	--chart-2: var(--palette-warm-300);
 	--chart-3: var(--palette-green-300);
 	--chart-4: var(--palette-warm-500);
-	--chart-5: var(--palette-night-400);
+	--chart-5: var(--palette-ink-400);
 	/* The auth screens' brand panel keeps the app's hue in dark mode too. */
 	--auth-panel: var(--palette-green-950);
 	--auth-panel-muted: var(--palette-green-300);
@@ -71,11 +78,11 @@ html:has(body.merchant-app) {
 	mask-image: radial-gradient(ellipse 95% 85% at 50% 38%, black 8%, transparent 72%);
 }
 
-/* Solid panel chrome — sidebar, topbar and canvas share one surface (white in light, dark in dark), divided by --sidebar-border. No frosted tint. */
+/* Solid panel chrome — the topbar matches the canvas in light, the page surface in dark (`--topbar`), divided by --sidebar-border. No frosted tint. */
 .merchant-app .panel-shell-topbar {
 	height: 4rem;
 	flex-shrink: 0;
-	background: var(--background);
+	background: var(--topbar);
 	border-bottom: 1px solid var(--sidebar-border);
 	backdrop-filter: none;
 	-webkit-backdrop-filter: none;

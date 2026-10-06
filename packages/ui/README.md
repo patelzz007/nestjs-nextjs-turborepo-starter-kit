@@ -21,7 +21,7 @@ Import global styles once in your app layout:
 import "@workspace/ui/globals.css";
 ```
 
-Tokens live in `src/styles/tokens.css`. Z-index layers:
+Colour primitives live in `src/styles/palette.css`; semantic tokens (and everything else below) in `src/styles/tokens.css` — see "Palette", "Reward tiers", "Elevation and radius" and "Typography" in `rules/07-ui-system.md`. Z-index layers:
 
 - `z-overlay` — modal / dialog / sheet backdrops
 - `z-popover` — dropdowns, selects, tooltips

@@ -22,7 +22,7 @@ export const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(function
 	ref,
 ): React.JSX.Element {
 	return (
-		<div ref={ref} data-slot="stat-card" className={cn("rounded-xl border border-border bg-card p-4 shadow-xs", className)} {...props}>
+		<div ref={ref} data-slot="stat-card" className={cn("rounded-lg border border-border bg-card p-4 shadow-sm inset-shadow-edge", className)} {...props}>
 			<div className="flex items-start justify-between gap-3">
 				<div className="min-w-0 space-y-2">
 					<p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>

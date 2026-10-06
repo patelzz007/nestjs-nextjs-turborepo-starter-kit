@@ -39,10 +39,27 @@ const COMPLIANT_TONES: readonly [string, string][] = ["green", "blue", "yellow",
 	[`--tone-${tone}-soft`, "#ffffff"],
 ]);
 
+/** Surface text, every reward tier and the reward pairs, all compliant (black on white) — so a test can break one on purpose. */
+const COMPLIANT_REWARDS_AND_SURFACES: readonly [string, string][] = [
+	...["bronze", "silver", "gold", "platinum"].flatMap((tier): [string, string][] => [
+		[`--tier-${tier}`, "#000000"],
+		[`--tier-${tier}-soft`, "#ffffff"],
+	]),
+	["--reward", "#000000"],
+	["--reward-soft", "#ffffff"],
+	["--reward-solid", "#ffffff"],
+	["--reward-solid-foreground", "#000000"],
+	["--foreground", "#000000"],
+	["--topbar", "#ffffff"],
+	["--card-foreground", "#000000"],
+	["--popover-foreground", "#000000"],
+];
+
 describe("findContrastViolations", () => {
 	it("names each pairing below its minimum", () => {
 		const theme = new Map<string, string>([
 			...COMPLIANT_TONES,
+			...COMPLIANT_REWARDS_AND_SURFACES,
 			["--background", "#ffffff"],
 			["--card", "#ffffff"],
 			["--popover", "#ffffff"],
@@ -75,6 +92,7 @@ describe("findContrastViolations", () => {
 	it("holds every tone of the palette to text contrast on its own soft fill", () => {
 		const theme = new Map<string, string>([
 			...COMPLIANT_TONES,
+			...COMPLIANT_REWARDS_AND_SURFACES,
 			["--tone-yellow", "#dddd00"],
 			["--background", "#ffffff"],
 			["--card", "#ffffff"],
@@ -108,6 +126,7 @@ describe("findContrastViolations", () => {
 	it("holds sidebar nav labels to text contrast on the chrome, a hovered row and the active pill", () => {
 		const theme = new Map<string, string>([
 			...COMPLIANT_TONES,
+			...COMPLIANT_REWARDS_AND_SURFACES,
 			["--background", "#ffffff"],
 			["--card", "#ffffff"],
 			["--popover", "#ffffff"],
@@ -137,6 +156,43 @@ describe("findContrastViolations", () => {
 			expect.stringMatching(/^--sidebar-foreground on --sidebar: /u),
 			expect.stringMatching(/^--sidebar-foreground on --sidebar-accent: /u),
 			expect.stringMatching(/^--sidebar-primary-foreground on --sidebar-primary: /u),
+		]);
+	});
+
+	it("holds every reward tier to text contrast on its own soft fill, and the celebratory reward fill to its text", () => {
+		const theme = new Map<string, string>([
+			...COMPLIANT_TONES,
+			...COMPLIANT_REWARDS_AND_SURFACES,
+			["--tier-platinum", "#dddddd"],
+			["--reward-solid-foreground", "#eeeeee"],
+			["--background", "#ffffff"],
+			["--card", "#ffffff"],
+			["--popover", "#ffffff"],
+			["--muted", "#ffffff"],
+			["--sidebar", "#ffffff"],
+			["--sidebar-accent", "#ffffff"],
+			["--ring", "#000000"],
+			["--sidebar-ring", "#000000"],
+			["--chart-1", "#000000"],
+			["--chart-2", "#000000"],
+			["--chart-3", "#000000"],
+			["--chart-4", "#000000"],
+			["--chart-5", "#000000"],
+			["--search-mark-bg", "#000000"],
+			["--search-mark-fg", "#ffffff"],
+			["--muted-foreground", "#000000"],
+			["--sidebar-foreground", "#000000"],
+			["--sidebar-primary", "#000000"],
+			["--sidebar-primary-foreground", "#ffffff"],
+			["--sidebar-active", "#ffffff"],
+			["--sidebar-active-foreground", "#000000"],
+		]);
+
+		const violations = findContrastViolations(theme);
+
+		expect(violations).toEqual([
+			expect.stringMatching(/^--tier-platinum on --tier-platinum-soft: /u),
+			expect.stringMatching(/^--reward-solid-foreground on --reward-solid: /u),
 		]);
 	});
 });

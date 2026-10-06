@@ -1,18 +1,23 @@
 @import "tailwindcss";
+@import "@workspace/ui/styles/palette.css";
 
 /*
- * Docs theme — the product's shared palette (packages/ui tokens.css, the
- * `--palette-*` primitives) mirrored as hex: white surfaces, a slate-cast grey
- * text scale (#20242a / #454b53 / #5e646c), #e0e3e8 borders, and the one slate
- * accent (#24344a) for links, the active state and a soft glow at the top of
- * every page. Dark mode is one deep neutral surface (#161616, pure grey) with
- * #f5f5f5 text and slate #b2bfd1 links.
+ * Docs theme — the product's shared palette (packages/ui palette.css, the
+ * `--palette-*` primitives), mapped onto the docs' own semantic names, so the
+ * docs and the apps can never drift apart. Light: white reading surfaces, the
+ * cool "ink" grey text scale (neutral-900 / 700 / 600) and the one slate
+ * accent (brand-800) for links, the active state and a soft glow at the top of
+ * every page. Dark: the apps' cool ink surface (ink-850) with ink-50 text and
+ * slate brand-300 links. Callout and card-tile hues are docs-only and stay
+ * literal below.
  * Every colour, size and weight is a token so light and dark stay in sync and
- * the type scale stays coherent — change them here, never in components.
+ * the type scale stays coherent — change them here, never in components;
+ * theme-contrast.test.ts holds the text pairs to WCAG AA in both themes.
  *
- * Typography: IBM Plex Sans (UI + prose) and JetBrains Mono (code), self-hosted
- * through the Astro Fonts API (astro.config.ts → `<Font>` in BaseLayout.astro).
- * See "Typography" in README.md for the scale and the reasoning behind it.
+ * Typography: the apps' type system — Bricolage Grotesque (headings), Geist
+ * (UI + prose) and Geist Mono (code), self-hosted through the Astro
+ * Fonts API (astro.config.ts → `<Font>` in BaseLayout.astro). See
+ * "Typography" in README.md for the scale and the reasoning behind it.
  */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -24,42 +29,36 @@
 
 :root {
 	/* Accent */
-	--brand: #24344a;
-	--brand-hover: #172537;
-	--brand-soft: #f2f5fb;
-	/* Hairline around the active nav item — none in light mode; the apps' `--sidebar-active-border` in dark. */
+	--brand: var(--palette-brand-800);
+	--brand-hover: var(--palette-brand-900);
+	--brand-soft: var(--palette-brand-50);
+	/* Hairline around the active nav item — none in light mode; a step above the surface in dark. */
 	--brand-border: transparent;
-	--brand-glow: rgb(81 100 128 / 0.12);
-	/*
-	 * Brand as TEXT (links, active nav/TOC items) — >= 4.5:1 (WCAG AA) on --bg
-	 * and on --brand-soft (9.0:1 and 8.1:1).
-	 */
-	--brand-text: #394b65;
-	--brand-text-hover: #24344a;
-	/*
-	 * Brand as a FILL behind white text (primary buttons, the skip link) —
-	 * white on it is 12.7:1, hover 15.6:1.
-	 */
-	--brand-solid: #24344a;
-	--brand-solid-hover: #172537;
-	--on-brand-solid: #fff;
+	--brand-glow: color-mix(in oklch, var(--palette-brand-500) 14%, transparent);
+	/* Brand as TEXT (links, active nav/TOC items) — >= 4.5:1 (WCAG AA) on --bg and on --brand-soft. */
+	--brand-text: var(--palette-brand-700);
+	--brand-text-hover: var(--palette-brand-800);
+	/* Brand as a FILL behind white text (primary buttons, the skip link). */
+	--brand-solid: var(--palette-brand-800);
+	--brand-solid-hover: var(--palette-brand-900);
+	--on-brand-solid: var(--palette-neutral-0);
 	/* Surfaces */
-	--bg: #ffffff;
-	--surface: #ffffff;
-	--surface-muted: #f9fafb;
-	--hover: #f3f5f7;
+	--bg: var(--palette-neutral-0);
+	--surface: var(--palette-neutral-0);
+	--surface-muted: var(--palette-neutral-25);
+	--hover: var(--palette-neutral-100);
 	/* Text */
-	--text: #20242a;
-	--text-secondary: #454b53;
-	--muted: #5e646c;
-	--faint: #a0a5ac;
+	--text: var(--palette-neutral-900);
+	--text-secondary: var(--palette-neutral-700);
+	--muted: var(--palette-neutral-600);
+	--faint: var(--palette-neutral-400);
 	/* Lines */
-	--border: #e0e3e8;
-	--border-strong: #c8ccd2;
+	--border: var(--palette-neutral-200);
+	--border-strong: var(--palette-neutral-300);
 	/* Indentation guide of the navigation tree */
-	--tree-line: #c8ccd2;
+	--tree-line: var(--palette-neutral-300);
 	/* Inline code */
-	--code-inline-bg: rgb(86 87 88 / 0.04);
+	--code-inline-bg: color-mix(in oklch, var(--palette-neutral-900) 4%, transparent);
 	/* Callouts (tip / success = green, the apidog "tip") */
 	--info: #2e90fa;
 	--info-bg: #f5faff;
@@ -81,9 +80,10 @@
 	--tile-5: #f79009;
 	--tile-6: #15b79e;
 	--mark: #fef0c7;
-	--overlay: rgb(19 22 28 / 0.45);
-	--shadow-card: 0 2px 4px -2px rgb(206 210 209 / 0.1), 0 4px 8px -2px rgb(206 210 209 / 0.1);
-	--shadow-pop: 0 20px 24px -4px rgb(16 24 40 / 0.08), 0 8px 8px -4px rgb(16 24 40 / 0.03);
+	--overlay: color-mix(in oklch, var(--palette-neutral-900) 45%, transparent);
+	/* Ink-tinted, like the apps' light-theme shadows. */
+	--shadow-card: 0 2px 4px -2px oklch(0.24 0.02 258 / 0.06), 0 4px 8px -2px oklch(0.24 0.02 258 / 0.06);
+	--shadow-pop: 0 20px 24px -4px oklch(0.24 0.02 258 / 0.1), 0 8px 8px -4px oklch(0.24 0.02 258 / 0.04);
 	/* Base tokens the @workspace/ui components read directly (shadcn names). */
 	--primary: var(--brand);
 	--card: var(--surface);
@@ -125,34 +125,35 @@
 	--type-code-size: 0.875em;
 	/* Fenced code blocks (the @workspace/ui CodeBlock, see src/lib/code-block/element.ts). */
 	--type-code-block-size: 0.875rem;
+	/* Headings use the display face; falls back to the UI face if the `<Font>` tag is ever missing. */
+	--type-family-heading: var(--font-bricolage-grotesque, var(--font-geist-sans, system-ui, sans-serif));
 	color-scheme: light;
 }
 
-/* Dark — the apps' deep neutral surface (packages/ui tokens.css `--palette-night-*`). */
+/* Dark — the apps' cool ink surface (packages/ui palette.css `--palette-ink-*`). */
 [data-theme="dark"] {
-	--brand: #b2bfd1;
-	--brand-hover: #ced8e6;
-	--brand-soft: #262626;
-	--brand-border: #383838;
-	--brand-glow: rgb(178 191 209 / 0.1);
-	--brand-text: #b2bfd1;
-	--brand-text-hover: #ced8e6;
-	/* White on these: 8.8:1 and 12.7:1 (WCAG AA). */
-	--brand-solid: #394b65;
-	--brand-solid-hover: #24344a;
-	--on-brand-solid: #fff;
-	--bg: #161616;
-	--surface: #161616;
-	--surface-muted: #1e1e1e;
-	--hover: #262626;
-	--text: #f5f5f5;
-	--text-secondary: #d7d7d7;
-	--muted: #a4a4a4;
-	--faint: #7a7a7a;
-	--border: #2f2f2f;
-	--border-strong: #424242;
-	--tree-line: #424242;
-	--code-inline-bg: rgb(230 231 233 / 0.04);
+	--brand: var(--palette-brand-300);
+	--brand-hover: var(--palette-brand-200);
+	--brand-soft: var(--palette-ink-750);
+	--brand-border: var(--palette-ink-650);
+	--brand-glow: color-mix(in oklch, var(--palette-brand-300) 10%, transparent);
+	--brand-text: var(--palette-brand-300);
+	--brand-text-hover: var(--palette-brand-200);
+	--brand-solid: var(--palette-brand-700);
+	--brand-solid-hover: var(--palette-brand-800);
+	--on-brand-solid: var(--palette-neutral-0);
+	--bg: var(--palette-ink-850);
+	--surface: var(--palette-ink-850);
+	--surface-muted: var(--palette-ink-800);
+	--hover: var(--palette-ink-750);
+	--text: var(--palette-ink-50);
+	--text-secondary: var(--palette-ink-200);
+	--muted: var(--palette-ink-400);
+	--faint: var(--palette-ink-500);
+	--border: var(--palette-ink-650);
+	--border-strong: var(--palette-ink-600);
+	--tree-line: var(--palette-ink-650);
+	--code-inline-bg: color-mix(in oklch, var(--palette-ink-50) 4%, transparent);
 	--info-bg: #1f3245;
 	--info-border: #28415c;
 	--success-bg: #1f3530;
@@ -206,8 +207,8 @@
 	--font-button: var(--font-sans);
 	--radius-lg: 12px;
 	/* Set by `<Font>` (BaseLayout.astro); the second value only applies if that tag is ever missing. */
-	--font-sans: var(--font-ibm-plex-sans, system-ui, sans-serif);
-	--font-mono: var(--font-jetbrains-mono, ui-monospace, monospace);
+	--font-sans: var(--font-geist-sans, system-ui, sans-serif);
+	--font-mono: var(--font-geist-mono, ui-monospace, monospace);
 }
 
 /*
@@ -259,8 +260,7 @@
 	/*
 	 * Code ligatures off: in documentation the reader copies what they see, so
 	 * `!==`, `=>` and `>=` must look like the characters they type, not like
-	 * ≢ / ⇒ / ≥. (`none` also turns off JetBrains Mono's contextual alternates,
-	 * which is where its code ligatures live.)
+	 * ≢ / ⇒ / ≥.
 	 */
 	:where(code, kbd, pre, samp, [data-slot="code-block"]) {
 		font-variant-ligatures: none;
@@ -341,8 +341,8 @@
 		width: 28px;
 		height: 28px;
 		border-radius: 8px;
-		background: var(--brand);
-		color: #fff;
+		background: var(--brand-solid);
+		color: var(--on-brand-solid);
 	}
 
 	.header-search {
@@ -814,6 +814,7 @@
 	.page-title {
 		margin: 0;
 		color: var(--text);
+		font-family: var(--type-family-heading);
 		font-size: var(--type-size-3xl);
 		font-weight: var(--type-weight-bold);
 		line-height: var(--type-leading-tight);
@@ -910,6 +911,7 @@
 	.prose :where(h2, h3, h4) {
 		position: relative;
 		color: var(--text);
+		font-family: var(--type-family-heading);
 		font-weight: var(--type-weight-semibold);
 		scroll-margin-top: calc(var(--header-height) + 24px);
 		text-wrap: balance;
@@ -1360,6 +1362,7 @@
 	.card-section__title {
 		margin: 0 0 16px;
 		color: var(--text);
+		font-family: var(--type-family-heading);
 		font-size: var(--type-size-2xl);
 		font-weight: var(--type-weight-semibold);
 		line-height: var(--type-leading-tight);
@@ -1423,6 +1426,7 @@
 
 	.guide-card__title {
 		margin: 0;
+		font-family: var(--type-family-heading);
 		font-size: var(--type-size-xl);
 		font-weight: var(--type-weight-semibold);
 		line-height: var(--type-leading-snug);
@@ -1705,6 +1709,7 @@
 	.not-found__code {
 		margin: 0;
 		color: var(--text);
+		font-family: var(--type-family-heading);
 		font-size: var(--type-size-4xl);
 		font-weight: var(--type-weight-bold);
 		line-height: var(--type-leading-tight);

@@ -320,11 +320,11 @@ import Image from 'next/image';
 // ✅ DO — import a shared face from @workspace/ui/fonts/*. Each module wraps
 // next/font/local around a pinned @fontsource(-variable) package, so the build
 // needs no network, and the font is still self-hosted with no layout shift
-import { inter } from '@workspace/ui/fonts/inter';
-<html className={inter.variable}>
+import { geistSans } from '@workspace/ui/fonts/geist-sans';
+<html className={geistSans.variable}>
 ```
 
-To add a new face, add the `@fontsource-variable/<name>` package (or `@fontsource/<name>` when no variable cut exists) to `packages/ui`, then create `packages/ui/src/fonts/<name>.ts` following the existing modules there. `next/font` needs literal options, so a face used under two CSS variables gets one module per variable (see `jetbrains-mono.ts` / `jetbrains-mono-heading.ts`).
+To add a new face, add the `@fontsource-variable/<name>` package (or `@fontsource/<name>` when no variable cut exists) to `packages/ui`, then create `packages/ui/src/fonts/<name>.ts` following the existing modules there. `next/font` needs literal options, so a face used under two CSS variables gets one module per variable. Every app uses the same three faces — Bricolage Grotesque (headings), Geist (UI and body) and Geist Mono (code); see "Typography" in `rules/07-ui-system.md` before adding another.
 
 ## Middleware
 

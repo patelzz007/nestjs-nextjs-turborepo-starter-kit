@@ -7,10 +7,8 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { geist } from "@workspace/ui/fonts/geist";
 import { geistMono } from "@workspace/ui/fonts/geist-mono";
-import { jetbrainsMonoHeading } from "@workspace/ui/fonts/jetbrains-mono-heading";
-import { rubik } from "@workspace/ui/fonts/rubik";
+import { geistSans } from "@workspace/ui/fonts/geist-sans";
 
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
@@ -31,9 +29,7 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>): React.JSX.Element {
 	return (
-		<AppDocumentShell
-			htmlClassName={cn("antialiased", geistMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable, rubik.variable)}
-			bodyClassName="admin-app">
+		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="admin-app">
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>

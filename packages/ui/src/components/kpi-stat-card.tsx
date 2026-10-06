@@ -107,7 +107,7 @@ export const KpiStatCard = React.forwardRef<HTMLDivElement, KpiStatCardProps>(fu
 	const directionLabels = useUiKitLabels("kpiDirection", directionLabelsOverride);
 	const showSkeleton = isLoading || value === undefined;
 	return (
-		<Card ref={ref} size="sm" aria-busy={showSkeleton} className={cn("border-border/80 bg-card shadow-xs", className)} {...props}>
+		<Card ref={ref} size="sm" aria-busy={showSkeleton} className={cn("border-border/80 bg-card", className)} {...props}>
 			<CardContent className="flex flex-col gap-2">
 				<div className="flex items-center justify-between gap-2">
 					<p className="text-sm font-medium text-muted-foreground">{label}</p>

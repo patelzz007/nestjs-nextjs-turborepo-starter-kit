@@ -53,10 +53,11 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 		<meta name="theme-color" content="#ffffff" />
 		<!--
 			Self-hosted fonts (configured in astro.config.ts). Only the upright body face is
-			preloaded: it paints nearly every glyph above the fold. Italic and code load on use.
+			preloaded: it paints nearly every glyph above the fold. Headings, italic and code load on use.
 		-->
-		<Font cssVariable="--font-ibm-plex-sans" preload={[{ style: "normal" }]} />
-		<Font cssVariable="--font-jetbrains-mono" />
+		<Font cssVariable="--font-bricolage-grotesque" />
+		<Font cssVariable="--font-geist-sans" preload={[{ style: "normal" }]} />
+		<Font cssVariable="--font-geist-mono" />
 		<!-- Applies the saved / OS theme before first paint (keep the key in sync with src/scripts/theme.ts). -->
 		<script is:inline>
 			(function () {

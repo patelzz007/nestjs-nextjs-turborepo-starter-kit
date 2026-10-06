@@ -227,44 +227,93 @@ Use one icon library consistently (as already noted) and treat icons as decorati
 
 ## Palette — primitives, semantic tokens, one accent
 
-All colour is defined ONCE in `packages/ui/src/styles/tokens.css`, in two layers:
+All colour is defined ONCE in `packages/ui`, in two layers and two files:
 
-1. **Primitives** — `--palette-neutral-0…950` (slate-cast greys, the light theme),
-   `--palette-night-50…950` (pure greys, the dark theme), `--palette-brand-50…950` (slate, admin and
-   docs), `--palette-blue-*` (web) and `--palette-green-*` (merchant) and `--palette-warm-*` (kopi amber, the charts' counter-colour). Raw scales only.
-2. **Semantic tokens** — `--background`, `--primary`, `--border`, `--sidebar-*`, `--chart-*`, … each
-   mapped onto a primitive step per theme (`:root` / `.dark`).
+1. **Primitives** — `packages/ui/src/styles/palette.css`. Raw scales only, every neutral carrying
+   the same faint cool "ink" cast (hue 258): `--palette-neutral-0…900` (the light theme: 0 = card
+   white, 50 = the tinted canvas, 100 = in-card fills, 600 = secondary text, 900 = ink text),
+   `--palette-ink-50…950` (the dark theme, by elevation), `--palette-brand-*` (slate — admin, docs and
+   the kit's default accent), `--palette-blue-*` (web, sapphire), `--palette-green-*` (merchant,
+   emerald) and `--palette-warm-*` (kopi amber, the charts' counter-colour). Each accent scale has
+   `960` / `975` steps — the deep sidebar tones of the dark theme.
+2. **Semantic tokens** — `packages/ui/src/styles/tokens.css`: `--background`, `--primary`,
+   `--border`, `--sidebar-*`, `--chart-*`, `--tier-*`, … each mapped onto a primitive step per theme
+   (`:root` / `.dark`). `globals.css` imports `palette.css` first, then `tokens.css`.
 
 Components read **semantic tokens only**, never `--palette-*` — the mapping is what lets light and
 dark (and a future rebrand) change in one place. App themes (`apps/*/app/*-theme.css`) may re-map
-**brand tokens only** (`APP_BRAND_TOKENS` in `lib/core/color-contrast.ts`) onto their hue — web is
-blue, merchant green, admin uses the shared slate — and never neutrals, surfaces or borders; each
-app's theme test enforces that and proves the layered theme's contrast. The docs site (`apps/docs/src/styles/global.css`) mirrors it as hex —
-change both together. Every text pair meets WCAG AA and every ring / chart series meets 3:1
-(`tokens-contrast.test.ts`).
+**brand and sidebar tokens only** (`APP_BRAND_TOKENS` in `lib/core/color-contrast.ts`) onto their hue —
+web is blue, merchant green, admin uses the shared slate — and never page/card surfaces, borders or
+text; each app's theme test enforces that and proves the layered theme's contrast. The docs site
+(`apps/docs/src/styles/global.css`) imports `@workspace/ui/styles/palette.css` and maps its own
+names onto the same primitives, so it cannot drift (`apps/docs/src/styles/theme-contrast.test.ts`).
+Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`tokens-contrast.test.ts`).
 
-- **Brand colour is reserved for meaning** — primary actions, links, focus rings, the light-mode
-  active nav pill and the lead chart series. In dark mode the active nav row is a soft neutral
-  filled pill (no outline) in every app; the brand stays on buttons, focus and charts. Hover rows stay neutral. Status
-  (success / warning / destructive / info) and the categorical tone palette are separate tokens —
-  never use the accent to signal state.
+To rebrand a product built on this kit: change the accent scale(s) in `palette.css`, then re-run
+`pnpm run test` — the contrast tests tell you which steps need nudging.
 
-## Shell surfaces — white in light mode, elevation in dark mode
+- **Brand colour is reserved for meaning** — primary actions, links, focus rings, the active nav
+  row and the lead chart series. Hover rows stay neutral. Status (success / warning / destructive /
+  info) and the categorical tone palette are separate tokens — never use the accent to signal state.
+
+## Reward tiers — the only rewards-specific tokens
+
+`--tier-bronze`, `--tier-silver`, `--tier-gold` and `--tier-platinum` are text colours, each on its
+own `--tier-X-soft` fill (Tailwind: `text-tier-gold bg-tier-gold-soft`). Use them for tier badges,
+membership cards and tier progress — never for status. Platinum carries a lavender cast so it never
+reads as a second silver. `--reward` / `--reward-soft` (an alias of gold) is the generic "points"
+colour; `--reward-solid` with `--reward-solid-foreground` text is the celebratory fill for "you
+earned it" moments — use it sparingly, one per screen. A product that isn't about rewards simply
+never reads these tokens. Every pair is held to WCAG AA in both themes by `tokens-contrast.test.ts`.
+
+## Shell surfaces — layered in light mode, cool ink in dark mode
 
 Panel shells (admin, web, merchant):
 
-- **Light mode** — one white surface (`neutral-0`) for the sidebar, topbar, page and cards. Structure
-  comes from borders: the darker `--sidebar-border` (`neutral-300`) on the shell dividers — sidebar
-  edge, topbar, sidebar header — and the lighter `--border` on cards.
-- **Dark mode** — elevation by lightness: the sidebar is darkest (`night-950`, `#151515`), the page and
-  topbar sit above it (`night-900`, `#1d1d1d`), cards lift off the page (`night-800`, `#2b2b2b`) with
-  `#393939` borders, and popovers and menus float above cards (`night-750`). Fills inside a card
-  (tags, progress tracks, hover rows) sit a step above the card.
+- **Light mode** — layered. The page, sidebar and topbar share one faintly cool canvas (`--background`,
+  `--sidebar`, `--topbar` → `neutral-50`). Cards and popovers are white (`neutral-0`) and lift off it.
+  Shell dividers use `--sidebar-border` (`neutral-300`); cards use `--border` (`neutral-200`) plus a soft shadow. The sidebar is neutral in every
+  app; the active nav row is a solid accent pill (`--sidebar-active`: slate on admin, blue on web,
+  green on merchant) with white text, and the icon chip (`--sidebar-primary`) matches the pill so
+  the row reads as one shape.
+- **Dark mode** — cool ink, elevation by lightness: the sidebar, page and topbar share one neutral
+  surface (`ink-850`). Cards lift off it (`ink-750`), popovers and menus float above cards (`ink-700`).
+  Borders and shell dividers use a darker step (`ink-600` on shell chrome; `ink-650` on cards). The active nav row is a solid accent pill
+  (slate on admin; blue or green in web / merchant themes); hover rows use `ink-750` on the sidebar.
 
 Paint the sidebar with `bg-sidebar` (the `Sidebar` primitive already does) — never `bg-card` or a
-one-off colour. Sidebar text pairs (`--sidebar-foreground` on `--sidebar` / `--sidebar-accent`,
-`--sidebar-primary-foreground` on `--sidebar-primary`, `--muted-foreground` on `--sidebar`) are
-enforced by `tokens-contrast.test.ts`.
+one-off colour; paint a topbar with `var(--topbar)`. Sidebar text pairs (`--sidebar-foreground` on
+`--sidebar` / `--sidebar-accent`, `--sidebar-primary-foreground` on `--sidebar-primary`,
+`--muted-foreground` on `--sidebar`) are enforced by `tokens-contrast.test.ts` and, for the tinted
+sidebars, by each app's theme test.
+
+## Elevation and radius
+
+- **Shadows** — Tailwind's `shadow-2xs … shadow-2xl` scale is redefined in `tokens.css` to read two
+  theme colours, `--shadow-ambient` and `--shadow-key`. Light mode: soft, ink-tinted (never a grey
+  `rgba(0,0,0,.1)`). Dark mode: near-invisible on small shadows (depth comes from lightness), deep on
+  floating layers (`shadow-md` and up — popovers, menus, dialogs). `shadow-<color>/N` modifiers still
+  work. Cards use `shadow-sm inset-shadow-edge`; `inset-shadow-edge` is the faint top-edge highlight
+  cards get in dark mode (transparent in light).
+- **Radius follows hierarchy** — `rounded-sm` 4px (tags), `rounded-md` 6px (controls: buttons, inputs,
+  menu rows), `rounded-lg` 10px (cards, popovers), `rounded-xl` 14px (dialogs, sheets),
+  `rounded-full` (pills, avatars). Pick by what the element is, not by taste.
+
+## Typography
+
+One type system for every app and the docs site:
+
+| Role | Face | Token / class |
+|---|---|---|
+| Headings and large reward figures | Bricolage Grotesque | `--font-heading` (`font-heading`) |
+| UI, body, buttons | Geist | `--font-sans` (`font-sans`; `--font-button` aliases it) |
+| Sidebar navigation | Bricolage Grotesque | `--font-sidebar` (`font-[family-name:var(--font-sidebar)]` on nav rows; aliases `--font-heading`) |
+| Code, IDs, keyboard hints | Geist Mono | `--font-mono` (`font-mono`) |
+
+The faces live in `packages/ui/src/fonts/` (`bricolage-grotesque.ts`, `geist-sans.ts`,
+`geist-mono.ts`); each app's root `layout.tsx` adds all three `.variable` classes to `<html>`.
+The docs load the same files through the Astro Fonts API. Do not add a fourth family per app — if a
+screen needs emphasis, use weight, size and the display face, not another typeface.
 
 ## Status badges and icon tiles — meaning, not colour
 

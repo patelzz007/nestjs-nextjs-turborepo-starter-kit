@@ -44,9 +44,9 @@ const REPO_ROOT: string = fileURLToPath(new URL("../../", import.meta.url));
  * metric-matched fallback face (size-adjust / ascent / descent overrides) so the
  * swap does not shift the layout. `<Font>` in BaseLayout.astro renders them.
  *
- * Why these faces (see "Typography" in README.md): IBM Plex Sans for UI and
- * prose, JetBrains Mono for code — the "Developer Mono" pairing for technical
- * documentation.
+ * Why these faces (see "Typography" in README.md): the product apps' type
+ * system — Bricolage Grotesque for headings, Geist for UI and prose,
+ * Geist Mono for code.
  */
 const FONT_FILES = "@fontsource-variable";
 const SANS_FALLBACKS: string[] = ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"];
@@ -67,25 +67,34 @@ export default defineConfig({
 	fonts: [
 		{
 			provider: fontProviders.local(),
-			name: "IBM Plex Sans",
-			cssVariable: "--font-ibm-plex-sans",
+			name: "Bricolage Grotesque",
+			cssVariable: "--font-bricolage-grotesque",
+			fallbacks: SANS_FALLBACKS,
+			options: {
+				variants: [{ src: [`${FONT_FILES}/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2`], weight: "200 800", style: "normal" }],
+			},
+		},
+		{
+			provider: fontProviders.local(),
+			name: "Geist",
+			cssVariable: "--font-geist-sans",
 			fallbacks: SANS_FALLBACKS,
 			options: {
 				variants: [
-					{ src: [`${FONT_FILES}/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2`], weight: "100 700", style: "normal" },
-					{ src: [`${FONT_FILES}/ibm-plex-sans/files/ibm-plex-sans-latin-wght-italic.woff2`], weight: "100 700", style: "italic" },
+					{ src: [`${FONT_FILES}/geist/files/geist-latin-wght-normal.woff2`], weight: "100 900", style: "normal" },
+					{ src: [`${FONT_FILES}/geist/files/geist-latin-wght-italic.woff2`], weight: "100 900", style: "italic" },
 				],
 			},
 		},
 		{
 			provider: fontProviders.local(),
-			name: "JetBrains Mono",
-			cssVariable: "--font-jetbrains-mono",
+			name: "Geist Mono",
+			cssVariable: "--font-geist-mono",
 			fallbacks: MONO_FALLBACKS,
 			options: {
 				variants: [
-					{ src: [`${FONT_FILES}/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2`], weight: "100 800", style: "normal" },
-					{ src: [`${FONT_FILES}/jetbrains-mono/files/jetbrains-mono-latin-wght-italic.woff2`], weight: "100 800", style: "italic" },
+					{ src: [`${FONT_FILES}/geist-mono/files/geist-mono-latin-wght-normal.woff2`], weight: "100 900", style: "normal" },
+					{ src: [`${FONT_FILES}/geist-mono/files/geist-mono-latin-wght-italic.woff2`], weight: "100 900", style: "italic" },
 				],
 			},
 		},

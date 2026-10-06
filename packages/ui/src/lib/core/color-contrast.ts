@@ -90,13 +90,17 @@ export function readCustomProperties(css: string, selector: string, fallback: Re
 
 /**
  * The tokens an app theme may re-map to carry its brand hue — actions, focus, the active nav item,
- * charts, the search highlight and the auth panel. Neutrals, surfaces, borders and text are shared
- * by every app and never overridden.
+ * charts, the search highlight, the auth panel, and the sidebar's own surfaces (in dark mode each
+ * app's sidebar is a deep panel tinted with its accent). Page and card surfaces, borders and text
+ * are shared by every app and never overridden.
  */
 export const APP_BRAND_TOKENS: readonly string[] = [
 	"--primary",
 	"--primary-foreground",
 	"--ring",
+	"--sidebar",
+	"--sidebar-accent",
+	"--sidebar-border",
 	"--sidebar-primary",
 	"--sidebar-primary-foreground",
 	"--sidebar-ring",
@@ -125,6 +129,15 @@ const MUTED_TEXT_SURFACES: readonly string[] = ["--background", "--card", "--mut
 const SIDEBAR_TEXT_SURFACES: readonly string[] = ["--sidebar", "--sidebar-accent"];
 /** The tone palette: each `--tone-X` is text on its own `--tone-X-soft` fill (Badge tone variants). */
 const TONES: readonly string[] = ["green", "blue", "yellow", "red", "orange", "teal", "violet"];
+/** Reward tiers: each `--tier-X` is text on its own `--tier-X-soft` fill (tier badges, membership cards). */
+const TIERS: readonly string[] = ["bronze", "silver", "gold", "platinum"];
+/** Body text on each surface it is set on. */
+const SURFACE_TEXT: readonly (readonly [string, string])[] = [
+	["--foreground", "--background"],
+	["--foreground", "--topbar"],
+	["--card-foreground", "--card"],
+	["--popover-foreground", "--popover"],
+];
 
 interface TokenPairing {
 	readonly foreground: string;
@@ -145,6 +158,10 @@ const THEME_PAIRINGS: readonly TokenPairing[] = [
 	{ foreground: "--sidebar-primary-foreground", background: "--sidebar-primary", minimum: MIN_TEXT_CONTRAST },
 	{ foreground: "--sidebar-active-foreground", background: "--sidebar-active", minimum: MIN_TEXT_CONTRAST },
 	...TONES.map((tone): TokenPairing => ({ foreground: `--tone-${tone}`, background: `--tone-${tone}-soft`, minimum: MIN_TEXT_CONTRAST })),
+	...SURFACE_TEXT.map(([foreground, background]): TokenPairing => ({ foreground, background, minimum: MIN_TEXT_CONTRAST })),
+	...TIERS.map((tier): TokenPairing => ({ foreground: `--tier-${tier}`, background: `--tier-${tier}-soft`, minimum: MIN_TEXT_CONTRAST })),
+	{ foreground: "--reward", background: "--reward-soft", minimum: MIN_TEXT_CONTRAST },
+	{ foreground: "--reward-solid-foreground", background: "--reward-solid", minimum: MIN_TEXT_CONTRAST },
 ];
 
 function themeToken(theme: ReadonlyMap<string, string>, name: string): string {

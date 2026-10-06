@@ -7,9 +7,8 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { inter } from "@workspace/ui/fonts/inter";
-import { playfairDisplayItalic } from "@workspace/ui/fonts/playfair-display-italic";
-import { rubik } from "@workspace/ui/fonts/rubik";
+import { geistMono } from "@workspace/ui/fonts/geist-mono";
+import { geistSans } from "@workspace/ui/fonts/geist-sans";
 
 import { WebAuthorizationProvider } from "@/components/auth/web-authorization-provider";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
@@ -43,9 +42,7 @@ export default async function RootLayout({
 	const initialSessionPermissions = await loadWebInitialSessionPermissions(sessionActive);
 
 	return (
-		<AppDocumentShell
-			htmlClassName={cn("font-sans antialiased", inter.variable, playfairDisplayItalic.variable, bricolageGrotesque.variable, rubik.variable)}
-			bodyClassName="web-app">
+		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="web-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
 				<QueryProvider>

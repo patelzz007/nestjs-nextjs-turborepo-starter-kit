@@ -6,10 +6,12 @@ import { APP_BRAND_TOKENS, findContrastViolations, readCustomProperties } from "
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
+const PALETTE_CSS = readFileSync(require.resolve("@workspace/ui/styles/palette.css"), "utf8");
 const BASE_CSS = readFileSync(require.resolve("@workspace/ui/styles/tokens.css"), "utf8");
 const THEME_CSS = readFileSync(new URL("./web-theme.css", import.meta.url), "utf8");
 
-const BASE_LIGHT = readCustomProperties(BASE_CSS, ":root");
+const PALETTE = readCustomProperties(PALETTE_CSS, ":root");
+const BASE_LIGHT = readCustomProperties(BASE_CSS, ":root", PALETTE);
 const BASE_DARK = readCustomProperties(BASE_CSS, ".dark", BASE_LIGHT);
 
 /** The web theme's brand overrides layered on the shared tokens, as the cascade applies them. */
@@ -20,7 +22,7 @@ const DARK = readCustomProperties(THEME_CSS, ".dark .web-app", BASE_DARK);
 const DECLARED_TOKENS = [...THEME_CSS.matchAll(/^\s*(--[\w-]+)\s*:/gmu)].map((match) => match[1] ?? "");
 
 describe("web theme", () => {
-	it("re-maps brand tokens only — neutrals, surfaces and borders stay shared", () => {
+	it("re-maps brand and sidebar tokens only — page and card surfaces, borders and text stay shared", () => {
 		expect(DECLARED_TOKENS.filter((token) => !APP_BRAND_TOKENS.includes(token))).toEqual([]);
 	});
 
