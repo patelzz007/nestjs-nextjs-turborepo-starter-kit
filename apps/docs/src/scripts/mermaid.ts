@@ -1,12 +1,12 @@
 import { currentTheme, THEME_CHANGE_EVENT } from "./theme";
 
-/** Mermaid palette matched to the site's lavender accent (light theme). */
+/** Mermaid palette matched to the site's slate accent and text (light theme; mirrors global.css). */
 const LIGHT_THEME_VARIABLES: Readonly<Record<string, string>> = {
-	primaryColor: "#f3eefe",
-	primaryBorderColor: "#9373ee",
-	primaryTextColor: "#1a1922",
-	lineColor: "#7a57e6",
-	secondaryColor: "#fbf9ff",
+	primaryColor: "#f2f5fb",
+	primaryBorderColor: "#516480",
+	primaryTextColor: "#20242a",
+	lineColor: "#394b65",
+	secondaryColor: "#f9fafb",
 	tertiaryColor: "#ffffff",
 	fontFamily: "inherit",
 };

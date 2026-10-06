@@ -1,4 +1,89 @@
 :root {
+	/*
+	 * ─── Palette primitives ────────────────────────────────────────────────
+	 * The raw colour scales. Components NEVER read these — they read the
+	 * semantic tokens below (`--background`, `--primary`, …), which map onto
+	 * these steps per theme. A rebrand edits a scale here, nothing else.
+	 *
+	 * - neutral: cool slate-cast greys (hue 257), 0 = white … 950 = ink — the
+	 *   light theme's greys (white on every surface).
+	 * - night: pure greys (no tint) for the dark theme, by elevation — a
+	 *   #151515 sidebar, a #1d1d1d page, #2b2b2b cards lifted off it, #333333
+	 *   popovers, #393939 borders and in-card fills; #f5f5f5 headings, #d1d1d1
+	 *   sidebar text and #a4a4a4 secondary text.
+	 * - brand: slate. 800 is the light-theme accent (#24344a, 12.7:1 white on
+	 *   it); dark mode uses 100 for primary buttons and 700 for the active nav
+	 *   pill. Reserved for meaning — primary actions, links, focus, the active
+	 *   nav item, the lead chart series.
+	 * - warm: kopi amber, only as the charts' warm counter-colour to slate.
+	 * - blue / green: app brand hues — the consumer app (web) is blue, the
+	 *   merchant portal green. Each app re-maps only its brand tokens onto its
+	 *   hue (each app's `app/<name>-theme.css`); the neutrals stay shared.
+	 */
+	--palette-neutral-0: oklch(1 0 0);
+	--palette-neutral-25: oklch(0.985 0.002 257);
+	--palette-neutral-50: oklch(0.968 0.004 257);
+	--palette-neutral-100: oklch(0.948 0.005 257);
+	--palette-neutral-200: oklch(0.915 0.007 257);
+	--palette-neutral-300: oklch(0.845 0.009 257);
+	--palette-neutral-400: oklch(0.72 0.012 257);
+	--palette-neutral-500: oklch(0.58 0.014 257);
+	--palette-neutral-600: oklch(0.5 0.015 257);
+	--palette-neutral-700: oklch(0.41 0.015 257);
+	--palette-neutral-800: oklch(0.33 0.014 257);
+	--palette-neutral-850: oklch(0.29 0.013 257);
+	--palette-neutral-900: oklch(0.26 0.012 257);
+	--palette-neutral-925: oklch(0.235 0.011 257);
+	--palette-neutral-950: oklch(0.2 0.012 257);
+	--palette-brand-50: oklch(0.97 0.008 257);
+	--palette-brand-100: oklch(0.94 0.014 257);
+	--palette-brand-200: oklch(0.88 0.022 257);
+	--palette-brand-300: oklch(0.8 0.03 257);
+	--palette-brand-400: oklch(0.71 0.038 257);
+	--palette-brand-500: oklch(0.6 0.045 257);
+	--palette-brand-600: oklch(0.5 0.05 257);
+	--palette-brand-700: oklch(0.41 0.05 257);
+	--palette-brand-800: oklch(0.32 0.045 257);
+	--palette-brand-900: oklch(0.26 0.04 257);
+	--palette-brand-950: oklch(0.21 0.035 257);
+	--palette-warm-300: oklch(0.8 0.12 72);
+	--palette-warm-500: oklch(0.62 0.13 62);
+	--palette-warm-700: oklch(0.48 0.1 52);
+	--palette-night-50: oklch(0.97 0 0);
+	--palette-night-100: oklch(0.93 0 0);
+	--palette-night-200: oklch(0.86 0 0);
+	--palette-night-300: oklch(0.78 0 0);
+	--palette-night-400: oklch(0.72 0 0);
+	--palette-night-500: oklch(0.55 0 0);
+	--palette-night-650: oklch(0.385 0 0);
+	--palette-night-700: oklch(0.345 0 0);
+	--palette-night-750: oklch(0.32 0 0);
+	--palette-night-800: oklch(0.289 0 0);
+	--palette-night-850: oklch(0.26 0 0);
+	--palette-night-900: oklch(0.23 0 0);
+	--palette-night-950: oklch(0.195 0 0);
+	--palette-blue-50: oklch(0.97 0.014 264);
+	--palette-blue-100: oklch(0.94 0.03 264);
+	--palette-blue-200: oklch(0.88 0.06 264);
+	--palette-blue-300: oklch(0.8 0.1 264);
+	--palette-blue-400: oklch(0.71 0.14 264);
+	--palette-blue-500: oklch(0.62 0.18 264);
+	--palette-blue-600: oklch(0.52 0.19 264);
+	--palette-blue-700: oklch(0.45 0.17 264);
+	--palette-blue-800: oklch(0.38 0.14 264);
+	--palette-blue-900: oklch(0.3 0.1 264);
+	--palette-blue-950: oklch(0.24 0.07 264);
+	--palette-green-50: oklch(0.97 0.02 145);
+	--palette-green-100: oklch(0.94 0.045 145);
+	--palette-green-200: oklch(0.88 0.08 145);
+	--palette-green-300: oklch(0.8 0.12 145);
+	--palette-green-400: oklch(0.72 0.15 145);
+	--palette-green-500: oklch(0.62 0.16 145);
+	--palette-green-600: oklch(0.52 0.16 145);
+	--palette-green-700: oklch(0.45 0.14 145);
+	--palette-green-800: oklch(0.38 0.11 145);
+	--palette-green-900: oklch(0.3 0.08 145);
+	--palette-green-950: oklch(0.24 0.055 145);
 	--z-overlay: 50;
 	--z-popover: 50;
 	--z-toast: 60;
@@ -47,11 +132,11 @@
 	--switch-thumb-size-sm: 12px;
 	/* Gap the checked thumb keeps from the track's end edge. */
 	--switch-thumb-inset: 2px;
-	--auth-panel: oklch(0.21 0.034 264.665);
-	--auth-panel-muted: oklch(0.554 0.046 257.417);
-	--auth-panel-foreground: oklch(0.985 0 0);
-	--auth-brand-from: oklch(0.546 0.245 262.881);
-	--auth-brand-to: oklch(0.488 0.243 264.376);
+	--auth-panel: var(--palette-brand-950);
+	--auth-panel-muted: var(--palette-brand-300);
+	--auth-panel-foreground: var(--palette-neutral-0);
+	--auth-brand-from: var(--palette-brand-600);
+	--auth-brand-to: var(--palette-brand-800);
 	--print-foreground: oklch(0.21 0.034 264.665);
 	--print-border: oklch(0.928 0.006 264.531);
 	--print-header-bg: oklch(0.967 0.003 264.542);
@@ -59,18 +144,18 @@
 	/* QR codes stay pure black on white in every theme — scanners need maximum contrast (never overridden in .dark). */
 	--qr-background: oklch(1 0 0);
 	--qr-foreground: oklch(0 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.141 0.005 285.823);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.141 0.005 285.823);
-	--primary: oklch(0.21 0.006 285.885);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.967 0.001 286.375);
-	--secondary-foreground: oklch(0.21 0.006 285.885);
-	--muted: oklch(0.967 0.001 286.375);
-	--muted-foreground: oklch(0.53 0.016 285.938);
-	--accent: oklch(0.967 0.001 286.375);
-	--accent-foreground: oklch(0.21 0.006 285.885);
+	--card: var(--palette-neutral-0);
+	--card-foreground: var(--palette-neutral-900);
+	--popover: var(--palette-neutral-0);
+	--popover-foreground: var(--palette-neutral-900);
+	--primary: var(--palette-brand-800);
+	--primary-foreground: var(--palette-neutral-0);
+	--secondary: var(--palette-neutral-50);
+	--secondary-foreground: var(--palette-neutral-900);
+	--muted: var(--palette-neutral-50);
+	--muted-foreground: var(--palette-neutral-600);
+	--accent: var(--palette-neutral-50);
+	--accent-foreground: var(--palette-neutral-900);
 	--destructive: oklch(0.577 0.245 27.325);
 	--success: oklch(0.627 0.17 149.214);
 	--warning: oklch(0.723 0.148 71.953);
@@ -114,63 +199,77 @@
 	--tone-teal-soft: oklch(0.95 0.04 185);
 	--tone-violet: oklch(0.47 0.18 295);
 	--tone-violet-soft: oklch(0.95 0.04 295);
-	--border: oklch(0.92 0.004 286.32);
-	--input: oklch(0.92 0.004 286.32);
+	--border: var(--palette-neutral-200);
+	--input: var(--palette-neutral-300);
 	/* Non-text contrast (WCAG 1.4.11, ≥ 3:1 on every surface — tokens-contrast.test.ts). */
-	--ring: oklch(0.552 0.016 285.938);
+	--ring: var(--palette-brand-600);
 	/*
-	 * Neutral chart ramp (the admin panel's black-and-white scheme; apps with a
-	 * brand palette override it). Slot 1 — the primary series — has the most
-	 * contrast, and slots 1↔2 (the pair two-series charts use) are a wide
-	 * lightness step apart. Gray cannot carry identity alone: the chart
-	 * primitives add a dash + marker (lines) and a hatch (bars) per slot —
-	 * lib/charts/chart-encodings.ts. Validated with the dataviz ordinal checks.
+	 * Chart series — deep slate, a kopi-amber counter-colour, mid slate, deep
+	 * amber and grey. Slots 1↔2 (the pair two-series
+	 * charts use) differ in hue, not just lightness. Every slot is ≥ 3:1 on
+	 * cards and popovers; the chart primitives still add a dash + marker
+	 * (lines) and a hatch (bars) per slot so colour never carries identity
+	 * alone — lib/charts/chart-encodings.ts.
 	 */
-	--chart-1: oklch(0.22 0.006 286);
-	--chart-2: oklch(0.4 0.01 286);
-	--chart-3: oklch(0.49 0.01 286);
-	--chart-4: oklch(0.56 0.01 286);
-	--chart-5: oklch(0.63 0.008 286);
+	--chart-1: var(--palette-brand-800);
+	--chart-2: var(--palette-warm-500);
+	--chart-3: var(--palette-brand-500);
+	--chart-4: var(--palette-warm-700);
+	--chart-5: var(--palette-neutral-600);
 	--radius: 0.625rem;
-	--sidebar: #f9fafb;
-	--sidebar-foreground: oklch(0.141 0.005 285.823);
-	--sidebar-primary: oklch(0.279 0.041 260.031); /* slate-800 — active nav pill */
-	--sidebar-primary-foreground: oklch(1 0 0); /* white */
-	--sidebar-accent: oklch(0.93 0.006 286.375);
-	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-	--sidebar-border: oklch(0.82 0.004 286.32);
-	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--sidebar: var(--palette-neutral-0);
+	--sidebar-foreground: var(--palette-neutral-900);
+	--sidebar-primary: var(--palette-brand-800);
+	--sidebar-primary-foreground: var(--palette-neutral-0);
+	--sidebar-accent: var(--palette-neutral-50);
+	--sidebar-accent-foreground: var(--palette-neutral-900);
+	--sidebar-border: var(--palette-neutral-300);
+	--sidebar-ring: var(--palette-brand-600);
+	/*
+	 * Active nav row. Light: a solid slate pill — the row, its hairline and its
+	 * icon chip (`--sidebar-primary`) are all brand-800, so they read as one
+	 * shape with white text. Dark mode re-maps these to a navy wash with a light
+	 * chip (see `.dark`).
+	 */
+	--sidebar-active: var(--palette-brand-800);
+	--sidebar-active-foreground: var(--palette-neutral-0);
+	--sidebar-active-border: var(--palette-brand-800);
 	/* The match highlight stands out from the sidebar (≥ 3:1) and its text reads on it (≥ 4.5:1). */
-	--search-mark-bg: oklch(0.52 0.16 260);
-	--search-mark-fg: oklch(1 0 0);
-	--background: oklch(0.985 0.002 247.839);
-	--foreground: oklch(0.141 0.005 285.823);
+	--search-mark-bg: var(--palette-brand-600);
+	--search-mark-fg: var(--palette-neutral-0);
+	--background: var(--palette-neutral-0);
+	--foreground: var(--palette-neutral-900);
 }
 
 /*
- * Dark mode — a soft, low-glare charcoal (GitHub "dimmed"-style), never near
- * black: background #22272e, raised surfaces a step lighter, off-white text.
- * Every text pair meets WCAG AA (muted text ≥ 4.6:1 on muted panels), and
- * the focus ring, chart series and search highlight meet the 3:1 non-text
- * minimum on every surface (enforced by tokens-contrast.test.ts).
- * The neutrals live HERE only; app themes (`*-theme.css`) override brand
- * colours (primary, ring, charts), not these surfaces.
+ * Dark mode — pure greys with elevation by lightness: the sidebar is darkest
+ * (night-950, #151515); the page and topbar sit above it (night-900, #1d1d1d);
+ * cards lift off the page (night-800, #2b2b2b); popovers and menus float above
+ * cards (night-750). Fills inside a card (tags, tracks, hover rows) and the
+ * #393939 borders sit a step above the card. Headings are near-white #f5f5f5,
+ * secondary text #a4a4a4. The active nav row is a soft #2b2b2b pill, no outline.
+ * Colour is kept for primary actions, links, focus, status and charts.
+ * Every text pair meets WCAG AA, and the focus ring, chart series and search
+ * highlight meet the 3:1 non-text minimum on every surface
+ * (tokens-contrast.test.ts). Every colour lives HERE only, as semantic tokens
+ * mapped onto the palette primitives; app themes (`*-theme.css`) re-map only
+ * their brand tokens (each app's theme test enforces it).
  */
 .dark {
-	--background: oklch(0.271 0.015 256.8);
-	--foreground: oklch(0.881 0.013 244.3);
-	--card: oklch(0.307 0.017 255.6);
-	--card-foreground: oklch(0.881 0.013 244.3);
-	--popover: oklch(0.319 0.017 255.6);
-	--popover-foreground: oklch(0.881 0.013 244.3);
-	--primary: oklch(0.92 0.004 286.32);
-	--primary-foreground: oklch(0.21 0.006 285.885);
-	--secondary: oklch(0.346 0.02 257.3);
-	--secondary-foreground: oklch(0.881 0.013 244.3);
-	--muted: oklch(0.346 0.02 257.3);
-	--muted-foreground: oklch(0.722 0.024 248.2);
-	--accent: oklch(0.346 0.02 257.3);
-	--accent-foreground: oklch(0.881 0.013 244.3);
+	--background: var(--palette-night-900);
+	--foreground: var(--palette-night-50);
+	--card: var(--palette-night-800);
+	--card-foreground: var(--palette-night-50);
+	--popover: var(--palette-night-750);
+	--popover-foreground: var(--palette-night-50);
+	--primary: var(--palette-brand-100);
+	--primary-foreground: var(--palette-brand-950);
+	--secondary: var(--palette-night-700);
+	--secondary-foreground: var(--palette-night-50);
+	--muted: var(--palette-night-700);
+	--muted-foreground: var(--palette-night-400);
+	--accent: var(--palette-night-700);
+	--accent-foreground: var(--palette-night-50);
 	--destructive: oklch(0.704 0.191 22.216);
 	--success: oklch(0.723 0.219 149.579);
 	--warning: oklch(0.828 0.189 84.429);
@@ -193,24 +292,28 @@
 	--tone-teal-soft: oklch(0.34 0.05 190);
 	--tone-violet: oklch(0.85 0.09 295);
 	--tone-violet-soft: oklch(0.35 0.08 295);
-	--border: oklch(0.387 0.022 256.4);
-	--input: oklch(0.428 0.023 255.6);
-	--ring: oklch(0.7 0.02 270);
-	--chart-1: oklch(0.95 0.004 270);
-	--chart-2: oklch(0.78 0.01 270);
-	--chart-3: oklch(0.715 0.012 270);
-	--chart-4: oklch(0.65 0.012 270);
-	--chart-5: oklch(0.585 0.012 270);
-	--sidebar: oklch(0.291 0.017 255.7);
-	--sidebar-foreground: oklch(0.881 0.013 244.3);
-	--sidebar-primary: oklch(1 0 0);
-	--sidebar-primary-foreground: oklch(0.279 0.041 260.031);
-	--sidebar-accent: oklch(0.346 0.02 257.3);
-	--sidebar-accent-foreground: oklch(0.881 0.013 244.3);
-	--sidebar-border: oklch(0.387 0.022 256.4);
-	--sidebar-ring: oklch(0.7 0.02 270);
-	--search-mark-bg: oklch(0.8 0.12 85);
-	--search-mark-fg: oklch(0.25 0.03 260);
+	--border: var(--palette-night-700);
+	--input: var(--palette-night-650);
+	--ring: var(--palette-brand-300);
+	--chart-1: var(--palette-brand-200);
+	--chart-2: var(--palette-warm-300);
+	--chart-3: var(--palette-brand-400);
+	--chart-4: var(--palette-warm-500);
+	--chart-5: var(--palette-night-400);
+	--sidebar: var(--palette-night-950);
+	--sidebar-foreground: var(--palette-night-200);
+	--sidebar-primary: var(--palette-night-800);
+	--sidebar-primary-foreground: var(--palette-night-50);
+	--sidebar-accent: var(--palette-night-850);
+	--sidebar-accent-foreground: var(--palette-night-50);
+	--sidebar-border: var(--palette-night-700);
+	--sidebar-ring: var(--palette-brand-300);
+	/* Active nav row: a soft filled pill, no outline; the icon chip matches the pill, so it reads as one shape. */
+	--sidebar-active: var(--palette-night-800);
+	--sidebar-active-foreground: var(--palette-night-50);
+	--sidebar-active-border: var(--palette-night-800);
+	--search-mark-bg: var(--palette-warm-300);
+	--search-mark-fg: var(--palette-night-950);
 }
 
 @theme inline {
@@ -305,6 +408,9 @@
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-active: var(--sidebar-active);
+	--color-sidebar-active-foreground: var(--sidebar-active-foreground);
+	--color-sidebar-active-border: var(--sidebar-active-border);
 	--font-sans: var(--font-sans);
 	--font-heading: var(--font-heading);
 }

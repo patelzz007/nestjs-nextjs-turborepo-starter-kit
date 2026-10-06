@@ -1,10 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Docs theme, matched to the apidog documentation look (values measured from
- * docs.apidog.com): a cool slate text scale (#344054 / #475467 / #667085) on
- * white, hairline #f2f4f7 borders, a single violet accent (#9373ee) used for
- * links and the active state, and a soft violet glow at the top of every page.
+ * Docs theme — the product's shared palette (packages/ui tokens.css, the
+ * `--palette-*` primitives) mirrored as hex: white surfaces, a slate-cast grey
+ * text scale (#20242a / #454b53 / #5e646c), #e0e3e8 borders, and the one slate
+ * accent (#24344a) for links, the active state and a soft glow at the top of
+ * every page. Dark mode is one deep neutral surface (#161616, pure grey) with
+ * #f5f5f5 text and slate #b2bfd1 links.
  * Every colour, size and weight is a token so light and dark stay in sync and
  * the type scale stays coherent — change them here, never in components.
  *
@@ -22,39 +24,40 @@
 
 :root {
 	/* Accent */
-	--brand: #9373ee;
-	--brand-hover: #7f5ee6;
-	--brand-soft: #f3eefe;
-	--brand-glow: rgb(147 115 238 / 0.24);
+	--brand: #24344a;
+	--brand-hover: #172537;
+	--brand-soft: #f2f5fb;
+	/* Hairline around the active nav item — none in light mode; the apps' `--sidebar-active-border` in dark. */
+	--brand-border: transparent;
+	--brand-glow: rgb(81 100 128 / 0.12);
 	/*
-	 * Brand as TEXT (links, active nav/TOC items). The accent itself is 3.5:1 on
-	 * white — fine for bars, borders and fills, too light for 14–16px text. These
-	 * keep the same hue at >= 4.5:1 (WCAG AA) on --bg and on --brand-soft.
+	 * Brand as TEXT (links, active nav/TOC items) — >= 4.5:1 (WCAG AA) on --bg
+	 * and on --brand-soft (9.0:1 and 8.1:1).
 	 */
-	--brand-text: #6f4bdf;
-	--brand-text-hover: #5f3dc4;
+	--brand-text: #394b65;
+	--brand-text-hover: #24344a;
 	/*
-	 * Brand as a FILL behind white text (primary buttons, the skip link). White on
-	 * --brand is only 3.5:1; these shades keep >= 4.5:1 (5.6:1, hover 7.1:1).
+	 * Brand as a FILL behind white text (primary buttons, the skip link) —
+	 * white on it is 12.7:1, hover 15.6:1.
 	 */
-	--brand-solid: #6f4bdf;
-	--brand-solid-hover: #5f3dc4;
+	--brand-solid: #24344a;
+	--brand-solid-hover: #172537;
 	--on-brand-solid: #fff;
 	/* Surfaces */
 	--bg: #ffffff;
 	--surface: #ffffff;
 	--surface-muted: #f9fafb;
-	--hover: #f9fafb;
+	--hover: #f3f5f7;
 	/* Text */
-	--text: #344054;
-	--text-secondary: #475467;
-	--muted: #667085;
-	--faint: #98a2b3;
+	--text: #20242a;
+	--text-secondary: #454b53;
+	--muted: #5e646c;
+	--faint: #a0a5ac;
 	/* Lines */
-	--border: #f2f4f7;
-	--border-strong: #eaecf0;
+	--border: #e0e3e8;
+	--border-strong: #c8ccd2;
 	/* Indentation guide of the navigation tree */
-	--tree-line: #d0d5dd;
+	--tree-line: #c8ccd2;
 	/* Inline code */
 	--code-inline-bg: rgb(86 87 88 / 0.04);
 	/* Callouts (tip / success = green, the apidog "tip") */
@@ -72,13 +75,13 @@
 	--error-border: #fee4e2;
 	/* Card icon tiles */
 	--tile-1: #17b26a;
-	--tile-2: #9373ee;
+	--tile-2: #516480;
 	--tile-3: #f63d68;
 	--tile-4: #2e90fa;
 	--tile-5: #f79009;
 	--tile-6: #15b79e;
 	--mark: #fef0c7;
-	--overlay: rgb(16 24 40 / 0.45);
+	--overlay: rgb(19 22 28 / 0.45);
 	--shadow-card: 0 2px 4px -2px rgb(206 210 209 / 0.1), 0 4px 8px -2px rgb(206 210 209 / 0.1);
 	--shadow-pop: 0 20px 24px -4px rgb(16 24 40 / 0.08), 0 8px 8px -4px rgb(16 24 40 / 0.03);
 	/* Base tokens the @workspace/ui components read directly (shadcn names). */
@@ -125,29 +128,30 @@
 	color-scheme: light;
 }
 
-/* Dark — the same soft, low-glare charcoal as the apps (packages/ui tokens.css), never near black. */
+/* Dark — the apps' deep neutral surface (packages/ui tokens.css `--palette-night-*`). */
 [data-theme="dark"] {
-	--brand: #8276c9;
-	--brand-hover: #a197e0;
-	--brand-soft: #302d4a;
-	--brand-glow: rgb(130 118 201 / 0.18);
-	--brand-text: #aaa1e6;
-	--brand-text-hover: #c2bbef;
-	/* White on these: 5.35:1 and 6.6:1 (WCAG AA). */
-	--brand-solid: #6a5cc2;
-	--brand-solid-hover: #5b4db8;
+	--brand: #b2bfd1;
+	--brand-hover: #ced8e6;
+	--brand-soft: #262626;
+	--brand-border: #383838;
+	--brand-glow: rgb(178 191 209 / 0.1);
+	--brand-text: #b2bfd1;
+	--brand-text-hover: #ced8e6;
+	/* White on these: 8.8:1 and 12.7:1 (WCAG AA). */
+	--brand-solid: #394b65;
+	--brand-solid-hover: #24344a;
 	--on-brand-solid: #fff;
-	--bg: #22272e;
-	--surface: #262c34;
-	--surface-muted: #2d333b;
-	--hover: #2d333b;
-	--text: #cdd5dd;
-	--text-secondary: #9aa7b4;
-	--muted: #8b97a3;
-	--faint: #6e7a86;
-	--border: #353c46;
-	--border-strong: #3d4550;
-	--tree-line: #4a5260;
+	--bg: #161616;
+	--surface: #161616;
+	--surface-muted: #1e1e1e;
+	--hover: #262626;
+	--text: #f5f5f5;
+	--text-secondary: #d7d7d7;
+	--muted: #a4a4a4;
+	--faint: #7a7a7a;
+	--border: #2f2f2f;
+	--border-strong: #424242;
+	--tree-line: #424242;
 	--code-inline-bg: rgb(230 231 233 / 0.04);
 	--info-bg: #1f3245;
 	--info-border: #28415c;
@@ -158,7 +162,7 @@
 	--error-bg: #3d2629;
 	--error-border: #552c31;
 	--mark: rgb(247 144 9 / 0.3);
-	--overlay: rgb(0 0 0 / 0.5);
+	--overlay: rgb(0 0 0 / 0.6);
 	--shadow-card: none;
 	--shadow-pop: 0 20px 24px -4px rgb(0 0 0 / 0.5);
 	color-scheme: dark;
@@ -575,8 +579,10 @@
 		background: var(--hover);
 	}
 
+	/* The active page: a soft wash, plus a hairline in dark mode like the apps' sidebar. */
 	.nav-node.is-active {
 		background: var(--brand-soft);
+		box-shadow: inset 0 0 0 1px var(--brand-border);
 		color: var(--brand-text);
 		font-weight: var(--type-weight-medium);
 	}
