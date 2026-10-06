@@ -116,10 +116,13 @@ describe("AuthorizationGuard", () => {
 		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a", locationId: "loc-forged" } });
 		const { context } = contextFor(accessToken());
 
-		const tenant: RequestTenant | undefined = await requestContext.run({ correlationId: "corr-ctx", ip: undefined, userAgent: undefined }, async () => {
-			await createGuard().canActivate(context);
-			return requestContext.current()?.tenant;
-		});
+		const tenant: RequestTenant | undefined = await requestContext.run(
+			{ correlationId: "corr-ctx", ip: undefined, userAgent: undefined, edgeLocation: undefined },
+			async () => {
+				await createGuard().canActivate(context);
+				return requestContext.current()?.tenant;
+			},
+		);
 
 		// Only the VERIFIED ids — a requested-but-unproven location never reaches the context.
 		expect(tenant).toEqual({ organizationId: "org-a", storeId: undefined, locationId: undefined });
@@ -128,7 +131,7 @@ describe("AuthorizationGuard", () => {
 	it("audits decisions with the request context's correlation id, not a raw header", async () => {
 		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
 
-		await requestContext.run({ correlationId: "corr-from-context", ip: undefined, userAgent: undefined }, () => createGuard().canActivate(context));
+		await requestContext.run({ correlationId: "corr-from-context", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => createGuard().canActivate(context));
 
 		expect(mocks.authorize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ requestId: "corr-from-context" }));
 	});

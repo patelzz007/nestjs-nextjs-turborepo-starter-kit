@@ -14,6 +14,7 @@ import {
 
 import { ZodResponse } from "../../common/decorators/zod-response.decorators";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
+import { HEALTH_PROBE_PATHS } from "../../common/http/probe-routes";
 // @Public() is metadata-only (no DI) — HealthModule must NOT import AuthModule.
 // The global AuthGuard reads the public marker via Reflector and skips these
 // routes. Do not "fix" this into a module import.
@@ -53,7 +54,7 @@ export class HealthController {
 	}
 
 	@Public()
-	@Get("health/live")
+	@Get(HEALTH_PROBE_PATHS.liveness)
 	@ApiOperation({ summary: "Liveness probe — process is up (never touches the database)" })
 	@ZodResponse(LivenessResponseSchema, { description: "The process is alive" })
 	public getLiveness(): LivenessResponse {
@@ -61,7 +62,7 @@ export class HealthController {
 	}
 
 	@Public()
-	@Get("health/ready")
+	@Get(HEALTH_PROBE_PATHS.readiness)
 	@ApiOperation({ summary: "Readiness probe — startup finished, database and critical dependencies reachable" })
 	@ZodResponse(ReadinessResponseSchema, { description: "The instance can serve traffic" })
 	@ApiResponse({ status: 503, type: ApiErrorResponseDto, description: "Not ready — `error.details.checks` lists every probe" })
@@ -71,7 +72,7 @@ export class HealthController {
 
 	/** @deprecated Use `GET /health/live` (liveness) or `GET /health/ready` (readiness). Kept for existing uptime monitors. */
 	@Public()
-	@Get("health")
+	@Get(HEALTH_PROBE_PATHS.legacy)
 	@ApiOperation({ summary: "Health check (includes DB status) — deprecated alias, prefer /health/live and /health/ready", deprecated: true })
 	@ZodResponse(HealthResponseSchema, { description: "Current service health status" })
 	public async getHealth(): Promise<HealthResponse> {

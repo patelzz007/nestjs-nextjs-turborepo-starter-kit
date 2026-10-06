@@ -103,6 +103,11 @@
 			"color": "purple",
 			"items": [
 				{
+					"title": "Audit log",
+					"url": "/audit-logs",
+					"icon": "History"
+				},
+				{
 					"title": "Catalog",
 					"url": "/catalog",
 					"icon": "Layers",

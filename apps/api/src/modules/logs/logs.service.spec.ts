@@ -98,7 +98,7 @@ describe("LogService", () => {
 			const logger = contextualService();
 			const spy = vi.spyOn(Logger.prototype, "log");
 
-			requestContext.run({ correlationId: "corr-log-1", ip: "127.0.0.1", userAgent: "vitest" }, () => {
+			requestContext.run({ correlationId: "corr-log-1", ip: "127.0.0.1", userAgent: "vitest", edgeLocation: undefined }, () => {
 				logger.info("order created");
 			});
 
@@ -109,8 +109,8 @@ describe("LogService", () => {
 			const logger = contextualService();
 			const spy = vi.spyOn(Logger.prototype, "warn");
 
-			requestContext.run({ correlationId: "corr-log-2", ip: undefined, userAgent: undefined }, () => {
-				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: "admin-1" });
+			requestContext.run({ correlationId: "corr-log-2", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => {
+				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 				requestContext.bindTenant({ organizationId: "org-9" });
 				logger.warn("quota near limit", { metadata: { remaining: 3 } });
 			});
@@ -125,8 +125,8 @@ describe("LogService", () => {
 			const logger = contextualService();
 			const spy = vi.spyOn(Logger.prototype, "log");
 
-			requestContext.run({ correlationId: "corr-log-3", ip: undefined, userAgent: undefined }, () => {
-				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: undefined });
+			requestContext.run({ correlationId: "corr-log-3", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => {
+				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 				logger.info("acting for", { userId: "user-8" });
 			});
 

@@ -27,7 +27,7 @@ const NOW = Date.UTC(2026, 9, 5, 12);
 const FROM = EpochMsSchema.parse(Date.UTC(2026, 7, 31, 16));
 const TO = EpochMsSchema.parse(Date.UTC(2026, 8, 30, 16));
 const ACTOR: MerchantActor = { kind: "user", userId: "user-1", organizationId: "org-1", orgSlug: "brew" };
-const SEED = { correlationId: "corr-export", ip: "203.0.113.9", userAgent: "vitest" };
+const SEED = { correlationId: "corr-export", ip: "203.0.113.9", userAgent: "vitest", edgeLocation: undefined };
 
 const RANGE = {
 	from: FROM,

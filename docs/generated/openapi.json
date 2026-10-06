@@ -1876,6 +1876,1413 @@
         ]
       }
     },
+    "/api/v1/admin/audit-logs": {
+      "get": {
+        "description": "Request metadata only — open one record for its redacted payloads.",
+        "operationId": "AuditLogsController_list",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt, responseStatus, method, endpoint. Default: -occurredAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt, responseStatus, method, endpoint. Default: -occurredAt",
+              "example": "-occurredAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: outcome, method, authMethod, responseStatus, endpoint, errorCode, actorUserId, impersonatorUserId, organizationId, apiKeyId, ipAddress, ipScope, deviceType, browserName, osName, geoCountry, correlationId, occurredAt",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: outcome, method, authMethod, responseStatus, endpoint, errorCode, actorUserId, impersonatorUserId, organizationId, apiKeyId, ipAddress, ipScope, deviceType, browserName, osName, geoCountry, correlationId, occurredAt",
+              "properties": {
+                "actorUserId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isNull": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                "apiKeyId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "authMethod": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "BEARER_TOKEN",
+                        "SESSION_COOKIE",
+                        "REFRESH_COOKIE",
+                        "API_KEY"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "BEARER_TOKEN",
+                          "SESSION_COOKIE",
+                          "REFRESH_COOKIE",
+                          "API_KEY"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "isNull": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                "browserName": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "correlationId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "deviceType": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "DESKTOP",
+                        "MOBILE",
+                        "TABLET",
+                        "BOT",
+                        "UNKNOWN"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "DESKTOP",
+                          "MOBILE",
+                          "TABLET",
+                          "BOT",
+                          "UNKNOWN"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "isNull": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                "endpoint": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contains": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "startsWith": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "errorCode": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "geoCountry": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "isNull": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                "impersonatorUserId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isNull": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                },
+                "ipAddress": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "startsWith": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "ipScope": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "PUBLIC",
+                        "PRIVATE",
+                        "LOOPBACK",
+                        "LINK_LOCAL",
+                        "SHARED",
+                        "DOCUMENTATION",
+                        "MULTICAST",
+                        "RESERVED"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "PUBLIC",
+                          "PRIVATE",
+                          "LOOPBACK",
+                          "LINK_LOCAL",
+                          "SHARED",
+                          "DOCUMENTATION",
+                          "MULTICAST",
+                          "RESERVED"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "method": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "HEAD",
+                        "OPTIONS"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "GET",
+                          "POST",
+                          "PUT",
+                          "PATCH",
+                          "DELETE",
+                          "HEAD",
+                          "OPTIONS"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "occurredAt": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "gte": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "lte": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                },
+                "organizationId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "osName": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "outcome": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "SUCCEEDED",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "SUCCEEDED",
+                          "FAILED"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "responseStatus": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "type": "number"
+                    },
+                    "gte": {
+                      "type": "number"
+                    },
+                    "lte": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          },
+          {
+            "description": "Case-insensitive free-text search over the resource's search columns",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "description": "Case-insensitive free-text search over the resource's search columns",
+              "example": "john",
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "properties": {
+                          "actor": {
+                            "nullable": true,
+                            "properties": {
+                              "email": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "fullName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "id": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "email",
+                              "fullName"
+                            ],
+                            "type": "object"
+                          },
+                          "apiKeyId": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "authMethod": {
+                            "enum": [
+                              "BEARER_TOKEN",
+                              "SESSION_COOKIE",
+                              "REFRESH_COOKIE",
+                              "API_KEY"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "browserName": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "browserVersion": {
+                            "maxLength": 32,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "clientType": {
+                            "maxLength": 32,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "completedAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "correlationId": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "deviceModel": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "deviceType": {
+                            "enum": [
+                              "DESKTOP",
+                              "MOBILE",
+                              "TABLET",
+                              "BOT",
+                              "UNKNOWN"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "durationMs": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "endpoint": {
+                            "maxLength": 512,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "errorCode": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "geoCity": {
+                            "maxLength": 128,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "geoCountry": {
+                            "maxLength": 2,
+                            "minLength": 2,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "geoRegion": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "geoTimeZone": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "impersonator": {
+                            "nullable": true,
+                            "properties": {
+                              "email": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "fullName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "id": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "email",
+                              "fullName"
+                            ],
+                            "type": "object"
+                          },
+                          "ipAddress": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "ipScope": {
+                            "enum": [
+                              "PUBLIC",
+                              "PRIVATE",
+                              "LOOPBACK",
+                              "LINK_LOCAL",
+                              "SHARED",
+                              "DOCUMENTATION",
+                              "MULTICAST",
+                              "RESERVED"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "ipVersion": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  4
+                                ],
+                                "type": "number"
+                              },
+                              {
+                                "enum": [
+                                  6
+                                ],
+                                "type": "number"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "locationId": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "method": {
+                            "maxLength": 10,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "organization": {
+                            "nullable": true,
+                            "properties": {
+                              "id": {
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "name": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "type": "object"
+                          },
+                          "osName": {
+                            "maxLength": 64,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "osVersion": {
+                            "maxLength": 32,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "enum": [
+                              "SUCCEEDED",
+                              "FAILED"
+                            ],
+                            "type": "string"
+                          },
+                          "path": {
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "responseStatus": {
+                            "maximum": 599,
+                            "minimum": 100,
+                            "type": "integer"
+                          },
+                          "storeId": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "terminalId": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "userAgent": {
+                            "maxLength": 512,
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "correlationId",
+                          "occurredAt",
+                          "completedAt",
+                          "durationMs",
+                          "method",
+                          "endpoint",
+                          "path",
+                          "outcome",
+                          "responseStatus",
+                          "errorCode",
+                          "authMethod",
+                          "actor",
+                          "impersonator",
+                          "apiKeyId",
+                          "terminalId",
+                          "organization",
+                          "storeId",
+                          "locationId",
+                          "ipAddress",
+                          "userAgent",
+                          "browserName",
+                          "browserVersion",
+                          "osName",
+                          "osVersion",
+                          "deviceType",
+                          "deviceModel",
+                          "ipVersion",
+                          "ipScope",
+                          "geoCountry",
+                          "geoRegion",
+                          "geoCity",
+                          "geoTimeZone",
+                          "clientType"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated audit records; pagination is in `meta`"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "List audit records (newest first)",
+        "tags": [
+          "Audit Log"
+        ]
+      }
+    },
+    "/api/v1/admin/audit-logs/{id}": {
+      "get": {
+        "description": "Includes the redacted request params, request body and response body.",
+        "operationId": "AuditLogsController_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "acceptLanguage": {
+                          "maxLength": 256,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "actor": {
+                          "nullable": true,
+                          "properties": {
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "fullName": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "id": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "email",
+                            "fullName"
+                          ],
+                          "type": "object"
+                        },
+                        "apiKeyId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "authMethod": {
+                          "enum": [
+                            "BEARER_TOKEN",
+                            "SESSION_COOKIE",
+                            "REFRESH_COOKIE",
+                            "API_KEY"
+                          ],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "browserName": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "browserVersion": {
+                          "maxLength": 32,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "clientType": {
+                          "maxLength": 32,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "completedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "correlationId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "deviceModel": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "deviceType": {
+                          "enum": [
+                            "DESKTOP",
+                            "MOBILE",
+                            "TABLET",
+                            "BOT",
+                            "UNKNOWN"
+                          ],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "durationMs": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "endpoint": {
+                          "maxLength": 512,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "errorCode": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "geoCity": {
+                          "maxLength": 128,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "geoCountry": {
+                          "maxLength": 2,
+                          "minLength": 2,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "geoRegion": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "geoTimeZone": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "host": {
+                          "maxLength": 255,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "httpVersion": {
+                          "maxLength": 8,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "idempotencyKey": {
+                          "maxLength": 255,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "impersonationSessionId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "impersonator": {
+                          "nullable": true,
+                          "properties": {
+                            "email": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "fullName": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "id": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "email",
+                            "fullName"
+                          ],
+                          "type": "object"
+                        },
+                        "ipAddress": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "ipScope": {
+                          "enum": [
+                            "PUBLIC",
+                            "PRIVATE",
+                            "LOOPBACK",
+                            "LINK_LOCAL",
+                            "SHARED",
+                            "DOCUMENTATION",
+                            "MULTICAST",
+                            "RESERVED"
+                          ],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "ipVersion": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                4
+                              ],
+                              "type": "number"
+                            },
+                            {
+                              "enum": [
+                                6
+                              ],
+                              "type": "number"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "locationId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "method": {
+                          "maxLength": 10,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "occurredAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "organization": {
+                          "nullable": true,
+                          "properties": {
+                            "id": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "type": "object"
+                        },
+                        "origin": {
+                          "maxLength": 512,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "osName": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "osVersion": {
+                          "maxLength": 32,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "outcome": {
+                          "enum": [
+                            "SUCCEEDED",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "path": {
+                          "maxLength": 2048,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "referer": {
+                          "maxLength": 2048,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "requestBody": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ZodSchema_9fe5a417ff5a"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "requestBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "requestContentType": {
+                          "maxLength": 256,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "requestParams": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ZodSchema_9fe5a417ff5a"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "responseBody": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ZodSchema_9fe5a417ff5a"
+                            }
+                          ],
+                          "nullable": true
+                        },
+                        "responseStatus": {
+                          "maximum": 599,
+                          "minimum": 100,
+                          "type": "integer"
+                        },
+                        "storeId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "systemOperations": {
+                          "items": {
+                            "maxLength": 100,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "terminalId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "traceId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "userAgent": {
+                          "maxLength": 512,
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "correlationId",
+                        "occurredAt",
+                        "completedAt",
+                        "durationMs",
+                        "method",
+                        "endpoint",
+                        "path",
+                        "outcome",
+                        "responseStatus",
+                        "errorCode",
+                        "authMethod",
+                        "actor",
+                        "impersonator",
+                        "apiKeyId",
+                        "terminalId",
+                        "organization",
+                        "storeId",
+                        "locationId",
+                        "ipAddress",
+                        "userAgent",
+                        "browserName",
+                        "browserVersion",
+                        "osName",
+                        "osVersion",
+                        "deviceType",
+                        "deviceModel",
+                        "ipVersion",
+                        "ipScope",
+                        "geoCountry",
+                        "geoRegion",
+                        "geoCity",
+                        "geoTimeZone",
+                        "clientType",
+                        "traceId",
+                        "impersonationSessionId",
+                        "httpVersion",
+                        "host",
+                        "origin",
+                        "referer",
+                        "acceptLanguage",
+                        "requestContentType",
+                        "requestBytes",
+                        "idempotencyKey",
+                        "requestParams",
+                        "requestBody",
+                        "responseBody",
+                        "systemOperations",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The complete audit record"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Get one complete audit record",
+        "tags": [
+          "Audit Log"
+        ]
+      }
+    },
     "/api/v1/admin/invites": {
       "post": {
         "operationId": "RewardsAdminInvitesController_createInvite",

@@ -314,7 +314,7 @@ describe("Analytics exports (e2e)", () => {
 	});
 
 	describe("rate limit", () => {
-		it(`lets one user start ${String(ANALYTICS_EXPORT_RATE_LIMIT)} exports per window, then answers 429 with Retry-After (nothing exported, nothing audited)`, async () => {
+		it(`lets one user start ${String(ANALYTICS_EXPORT_RATE_LIMIT)} exports per window, then answers 429 with Retry-After (nothing exported; the refusal itself is audited)`, async () => {
 			const klOwner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 			const range = `from=${String(FROM)}&to=${String(FROM + DAY_MS)}&format=csv`;
 			for (let attempt = 0; attempt < ANALYTICS_EXPORT_RATE_LIMIT; attempt += 1) {
@@ -325,7 +325,10 @@ describe("Analytics exports (e2e)", () => {
 			expect(refused.statusCode).toBe(429);
 			expect(errorCode(refused)).toBe("ANALYTICS_EXPORT_RATE_LIMITED");
 			expect(Number(refused.headers["retry-after"])).toBeGreaterThan(0);
-			expect(await auditRowsOf(refused)).toEqual([]);
+			// Every request is audited: the refusal is one FAILED 429 row — no export summary, nothing released.
+			const refusalRows = await auditRowsOf(refused);
+			expect(refusalRows).toHaveLength(1);
+			expect(refusalRows[0]).toMatchObject({ method: "GET", outcome: "FAILED", response_status: 429 });
 
 			// Another user's budget is untouched.
 			expect((await merchantExport(owner, range)).statusCode).toBe(200);

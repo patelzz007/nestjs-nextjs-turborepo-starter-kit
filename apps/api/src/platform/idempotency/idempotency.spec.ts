@@ -269,7 +269,7 @@ class FakeAuthGuard implements CanActivate {
 			requestContext.bindApiKey({ apiKeyId, organizationId: organizationId ?? "org-pos", terminalId: "T-1", locationId: null });
 			return true;
 		}
-		requestContext.bindPrincipal({ userId: "user-1", impersonatorId: undefined });
+		requestContext.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 		requestContext.bindTenant({ organizationId });
 		return true;
 	}
@@ -317,7 +317,7 @@ describe("@Idempotent() over HTTP (global interceptor)", () => {
 			.getInstance()
 			.addHook("onRequest", (_request, _reply, done): void => {
 				correlationCounter += 1;
-				requestContext.run({ correlationId: `corr-${String(correlationCounter)}`, ip: undefined, userAgent: undefined }, done);
+				requestContext.run({ correlationId: `corr-${String(correlationCounter)}`, ip: undefined, userAgent: undefined, edgeLocation: undefined }, done);
 			});
 		await app.init();
 		await app.getHttpAdapter().getInstance().ready();

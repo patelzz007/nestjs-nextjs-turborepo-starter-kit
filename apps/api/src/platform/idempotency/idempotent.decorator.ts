@@ -1,7 +1,8 @@
 import { applyDecorators, SetMetadata } from "@nestjs/common";
 import { ApiHeader } from "@nestjs/swagger";
+import { IDEMPOTENCY_KEY_HEADER } from "@workspace/shared";
 
-import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENT_OPTIONS_METADATA, type IdempotentOptions } from "./idempotency.constants";
+import { IDEMPOTENT_OPTIONS_METADATA, type IdempotentOptions } from "./idempotency.constants";
 
 /**
  * Make a non-idempotent endpoint (typically a `POST` create) safe to retry

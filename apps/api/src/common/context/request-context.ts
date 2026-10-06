@@ -20,9 +20,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { IncomingMessage } from "node:http";
 
 import { Injectable } from "@nestjs/common";
-import { nowEpochMs } from "@workspace/shared";
+import { nowEpochMs, type AuditAuthMethod } from "@workspace/shared";
 
 import type { SystemOperation } from "../../prisma/system-operation.registry";
+import type { RequestEdgeLocation } from "../http/edge-location";
 import { correlationIdFor } from "./correlation-id";
 
 /** Server-verified tenant scope of the request. Absent ids were not requested or not proven. */
@@ -32,11 +33,18 @@ export interface RequestTenant {
 	readonly locationId: string | undefined;
 }
 
+/** How a USER principal authenticated (machine callers are `API_KEY`, recorded from {@link RequestApiKeyPrincipal}). */
+export type RequestPrincipalAuthMethod = Extract<AuditAuthMethod, "BEARER_TOKEN" | "SESSION_COOKIE" | "REFRESH_COOKIE">;
+
 /** Who the request acts as, once authentication has run. */
 export interface RequestPrincipal {
 	readonly userId: string;
 	/** The real (super-admin) user behind an impersonation session. */
 	readonly impersonatorId: string | undefined;
+	/** The server-side impersonation session the token belongs to (impersonation tokens only). */
+	readonly impersonationSessionId: string | undefined;
+	/** Which credential authenticated the request. */
+	readonly authMethod: RequestPrincipalAuthMethod;
 }
 
 /**
@@ -63,6 +71,8 @@ export interface RequestContext {
 	readonly traceId: string;
 	readonly ip: string | undefined;
 	readonly userAgent: string | undefined;
+	/** Where the CDN edge located the client — only when a trusted proxy forwarded the request. */
+	readonly edgeLocation: RequestEdgeLocation | undefined;
 	readonly principal: RequestPrincipal | undefined;
 	readonly apiKey: RequestApiKeyPrincipal | undefined;
 	readonly tenant: RequestTenant;
@@ -71,11 +81,12 @@ export interface RequestContext {
 	/** When the request arrived (epoch ms) — the audit entry's `occurredAt`. */
 	readonly receivedAtEpochMs: number;
 	/**
-	 * True once the handler appended this request's audit entry inside its own
-	 * transaction (`AuditTrailService.recordInTransaction`); the audit
+	 * True once this request's audit entry was written by the handler itself —
+	 * inside its own transaction (`AuditTrailService.recordInTransaction`) or
+	 * as a sensitive-read summary (`recordSensitiveRead`); the audit
 	 * interceptor then does not write a second success entry.
 	 */
-	readonly isAuditRecordedInTransaction: boolean;
+	readonly isAuditRecorded: boolean;
 }
 
 /** Fields known at request start (before authentication). */
@@ -83,6 +94,7 @@ export interface RequestContextSeed {
 	readonly correlationId: string;
 	readonly ip: string | undefined;
 	readonly userAgent: string | undefined;
+	readonly edgeLocation: RequestEdgeLocation | undefined;
 }
 
 /** Structured, log-safe identifiers of the current request (never secrets, never PII beyond ids). */
@@ -120,12 +132,13 @@ export class RequestContextService {
 			traceId: seed.correlationId,
 			ip: seed.ip,
 			userAgent: seed.userAgent,
+			edgeLocation: seed.edgeLocation,
 			principal: undefined,
 			apiKey: undefined,
 			tenant: EMPTY_TENANT,
 			systemOperations: [],
 			receivedAtEpochMs: nowEpochMs(),
-			isAuditRecordedInTransaction: false,
+			isAuditRecorded: false,
 		};
 		return requestContextStorage.run({ current: context }, callback);
 	}
@@ -170,9 +183,9 @@ export class RequestContextService {
 		);
 	}
 
-	/** Marks the request's audit entry as written inside the handler's transaction. No-op outside a request. */
-	public markAuditRecordedInTransaction(): void {
-		this.update((context: RequestContext): RequestContext => ({ ...context, isAuditRecordedInTransaction: true }));
+	/** Marks the request's audit entry as already written by the handler. No-op outside a request. */
+	public markAuditRecorded(): void {
+		this.update((context: RequestContext): RequestContext => ({ ...context, isAuditRecorded: true }));
 	}
 
 	/** Records the server-verified tenant (after AuthorizationGuard). No-op outside a request. */

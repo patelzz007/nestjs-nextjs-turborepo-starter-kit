@@ -1,9 +1,8 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
-import { CLIENT_TYPE_HEADER, MUTATION_INTENT_HEADER } from "@workspace/shared";
+import { CLIENT_TYPE_HEADER, IDEMPOTENCY_KEY_HEADER, MUTATION_INTENT_HEADER } from "@workspace/shared";
 
 import type { ApiConfig } from "../config/api-config.schema";
-import { IDEMPOTENCY_KEY_HEADER } from "../platform/idempotency/idempotency.constants";
 
 /** The options `NestFastifyApplication.enableCors` accepts (Fastify's own CORS options). */
 export type ApiCorsOptions = NonNullable<Parameters<NestFastifyApplication["enableCors"]>[0]>;

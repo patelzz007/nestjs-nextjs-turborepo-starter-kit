@@ -2385,3 +2385,183 @@ Response `200 OK` (application/json):
   }
 }
 ```
+
+### GET /api/v1/admin/audit-logs
+
+List audit records (newest first)
+
+Request metadata only — open one record for its redacted payloads.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:AUDIT_LOG`.
+- Operation id `AuditLogsController_list` · [source](../../../apps/api/src/modules/audit-logs/audit-logs.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt, responseStatus, method, endpoint. Default: -occurredAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: outcome, method, authMethod, responseStatus, endpoint, errorCode, actorUserId, impersonatorUserId, organizationId, apiKeyId, ipAddress, ipScope, deviceType, browserName, osName, geoCountry, correlationId, occurredAt |
+| `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+
+**Response 200 OK** — Paginated audit records; pagination is in `meta`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].actor` | object \| null | yes |  |
+| `data[].actor.email` | string \| null | yes |  |
+| `data[].actor.fullName` | string \| null | yes |  |
+| `data[].actor.id` | string | yes | length 1–64 |
+| `data[].apiKeyId` | string \| null | yes | length 1–64 |
+| `data[].authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "API_KEY" \| null | yes |  |
+| `data[].browserName` | string \| null | yes | at most 64 characters |
+| `data[].browserVersion` | string \| null | yes | at most 32 characters |
+| `data[].clientType` | string \| null | yes | at most 32 characters |
+| `data[].completedAt` | integer | yes |  |
+| `data[].correlationId` | string | yes | length 1–64 |
+| `data[].deviceModel` | string \| null | yes | at most 64 characters |
+| `data[].deviceType` | "DESKTOP" \| "MOBILE" \| "TABLET" \| "BOT" \| "UNKNOWN" \| null | yes |  |
+| `data[].durationMs` | integer | yes |  |
+| `data[].endpoint` | string | yes | length 1–512 |
+| `data[].errorCode` | string \| null | yes | at most 64 characters |
+| `data[].geoCity` | string \| null | yes | at most 128 characters |
+| `data[].geoCountry` | string \| null | yes | exactly 2 characters |
+| `data[].geoRegion` | string \| null | yes | at most 64 characters |
+| `data[].geoTimeZone` | string \| null | yes | at most 64 characters |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].impersonator` | object \| null | yes |  |
+| `data[].impersonator.email` | string \| null | yes |  |
+| `data[].impersonator.fullName` | string \| null | yes |  |
+| `data[].impersonator.id` | string | yes | length 1–64 |
+| `data[].ipAddress` | string \| null | yes | at most 64 characters |
+| `data[].ipScope` | "PUBLIC" \| "PRIVATE" \| "LOOPBACK" \| "LINK_LOCAL" \| "SHARED" \| "DOCUMENTATION" \| "MULTICAST" \| "RESERVED" \| null | yes |  |
+| `data[].ipVersion` | 4 \| 6 \| null | yes |  |
+| `data[].locationId` | string \| null | yes | length 1–64 |
+| `data[].method` | string | yes | length 1–10 |
+| `data[].occurredAt` | integer | yes |  |
+| `data[].organization` | object \| null | yes |  |
+| `data[].organization.id` | string | yes | length 1–64 |
+| `data[].organization.name` | string \| null | yes |  |
+| `data[].osName` | string \| null | yes | at most 64 characters |
+| `data[].osVersion` | string \| null | yes | at most 32 characters |
+| `data[].outcome` | "SUCCEEDED" \| "FAILED" | yes |  |
+| `data[].path` | string | yes | length 1–2048 |
+| `data[].responseStatus` | integer | yes | range 100–599 |
+| `data[].storeId` | string \| null | yes | length 1–64 |
+| `data[].terminalId` | string \| null | yes | length 1–64 |
+| `data[].userAgent` | string \| null | yes | at most 512 characters |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/audit-logs/{id}
+
+Get one complete audit record
+
+Includes the redacted request params, request body and response body.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `READ:AUDIT_LOG`.
+- Operation id `AuditLogsController_get` · [source](../../../apps/api/src/modules/audit-logs/audit-logs.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | path | string (uuid) | yes |  |
+
+**Response 200 OK** — The complete audit record
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.acceptLanguage` | string \| null | yes | at most 256 characters |
+| `data.actor` | object \| null | yes |  |
+| `data.actor.email` | string \| null | yes |  |
+| `data.actor.fullName` | string \| null | yes |  |
+| `data.actor.id` | string | yes | length 1–64 |
+| `data.apiKeyId` | string \| null | yes | length 1–64 |
+| `data.authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "API_KEY" \| null | yes |  |
+| `data.browserName` | string \| null | yes | at most 64 characters |
+| `data.browserVersion` | string \| null | yes | at most 32 characters |
+| `data.clientType` | string \| null | yes | at most 32 characters |
+| `data.completedAt` | integer | yes |  |
+| `data.correlationId` | string | yes | length 1–64 |
+| `data.createdAt` | integer | yes |  |
+| `data.deviceModel` | string \| null | yes | at most 64 characters |
+| `data.deviceType` | "DESKTOP" \| "MOBILE" \| "TABLET" \| "BOT" \| "UNKNOWN" \| null | yes |  |
+| `data.durationMs` | integer | yes |  |
+| `data.endpoint` | string | yes | length 1–512 |
+| `data.errorCode` | string \| null | yes | at most 64 characters |
+| `data.geoCity` | string \| null | yes | at most 128 characters |
+| `data.geoCountry` | string \| null | yes | exactly 2 characters |
+| `data.geoRegion` | string \| null | yes | at most 64 characters |
+| `data.geoTimeZone` | string \| null | yes | at most 64 characters |
+| `data.host` | string \| null | yes | at most 255 characters |
+| `data.httpVersion` | string \| null | yes | at most 8 characters |
+| `data.id` | string (uuid) | yes |  |
+| `data.idempotencyKey` | string \| null | yes | at most 255 characters |
+| `data.impersonationSessionId` | string \| null | yes | length 1–64 |
+| `data.impersonator` | object \| null | yes |  |
+| `data.impersonator.email` | string \| null | yes |  |
+| `data.impersonator.fullName` | string \| null | yes |  |
+| `data.impersonator.id` | string | yes | length 1–64 |
+| `data.ipAddress` | string \| null | yes | at most 64 characters |
+| `data.ipScope` | "PUBLIC" \| "PRIVATE" \| "LOOPBACK" \| "LINK_LOCAL" \| "SHARED" \| "DOCUMENTATION" \| "MULTICAST" \| "RESERVED" \| null | yes |  |
+| `data.ipVersion` | 4 \| 6 \| null | yes |  |
+| `data.locationId` | string \| null | yes | length 1–64 |
+| `data.method` | string | yes | length 1–10 |
+| `data.occurredAt` | integer | yes |  |
+| `data.organization` | object \| null | yes |  |
+| `data.organization.id` | string | yes | length 1–64 |
+| `data.organization.name` | string \| null | yes |  |
+| `data.origin` | string \| null | yes | at most 512 characters |
+| `data.osName` | string \| null | yes | at most 64 characters |
+| `data.osVersion` | string \| null | yes | at most 32 characters |
+| `data.outcome` | "SUCCEEDED" \| "FAILED" | yes |  |
+| `data.path` | string | yes | length 1–2048 |
+| `data.referer` | string \| null | yes | at most 2048 characters |
+| `data.requestBody` | any JSON \| null | yes |  |
+| `data.requestBytes` | integer \| null | yes |  |
+| `data.requestContentType` | string \| null | yes | at most 256 characters |
+| `data.requestParams` | any JSON \| null | yes |  |
+| `data.responseBody` | any JSON \| null | yes |  |
+| `data.responseStatus` | integer | yes | range 100–599 |
+| `data.storeId` | string \| null | yes | length 1–64 |
+| `data.systemOperations` | string[] | yes |  |
+| `data.terminalId` | string \| null | yes | length 1–64 |
+| `data.traceId` | string \| null | yes | length 1–64 |
+| `data.userAgent` | string \| null | yes | at most 512 characters |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.

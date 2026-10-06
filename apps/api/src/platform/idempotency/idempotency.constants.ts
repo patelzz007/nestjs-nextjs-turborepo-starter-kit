@@ -1,6 +1,3 @@
-/** Request header carrying the client-generated idempotency key (IETF draft-ietf-httpapi-idempotency-key-header). */
-export const IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
-
 /** Response header set to `true` when the body is a stored replay rather than a fresh execution. */
 export const IDEMPOTENT_REPLAYED_HEADER = "Idempotent-Replayed";
 

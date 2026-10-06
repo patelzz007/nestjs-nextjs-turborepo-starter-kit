@@ -387,8 +387,16 @@ export type {
 	VerificationEmailProps,
 	WelcomeEmailProps,
 } from "./email/email-templates";
-export { AudienceTypeSchema, DeviceTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/platform/enums";
-export type { AudienceType, DeviceType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/platform/enums";
+export {
+	AudienceTypeSchema,
+	DeviceTypeSchema,
+	IpAddressScopeSchema,
+	PermissionActionSchema,
+	PermissionResourceSchema,
+	PlanSchema,
+	RedirectTypeSchema,
+} from "./domain/platform/enums";
+export type { AudienceType, DeviceType, IpAddressScope, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/platform/enums";
 export { EmailTemplateKeyParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/platform/param-schemas";
 export type { EmailTemplateKeyParam, UuidParam, VerifyEmailTokenParam } from "./domain/platform/param-schemas";
 
@@ -449,6 +457,30 @@ export type {
 	LogStats,
 	LogStatsQuery,
 } from "./domain/platform/logs";
+export {
+	AuditAuthMethodSchema,
+	AuditHttpMethodSchema,
+	AuditLogOrganizationSchema,
+	AuditLogUserSchema,
+	AuditOutcomeSchema,
+	HttpAuditLogDetailSchema,
+	HttpAuditLogIdParamSchema,
+	HttpAuditLogListQuerySchema,
+	HttpAuditLogSummarySchema,
+	httpAuditLogListQuery,
+} from "./domain/platform/http-audit-log";
+export type {
+	AuditAuthMethod,
+	AuditHttpMethod,
+	AuditLogOrganization,
+	AuditLogUser,
+	AuditOutcome,
+	HttpAuditLogDetail,
+	HttpAuditLogIdParam,
+	HttpAuditLogListQuery,
+	HttpAuditLogListSortField,
+	HttpAuditLogSummary,
+} from "./domain/platform/http-audit-log";
 export { ErrorResponseSchema, MessageResponseSchema, OkResponseSchema, SuccessAckResponseSchema } from "./api/message";
 export type { ErrorResponse, MessageResponse, OkResponse, SuccessAckResponse } from "./api/message";
 export { PaginationSchema } from "./api/pagination";

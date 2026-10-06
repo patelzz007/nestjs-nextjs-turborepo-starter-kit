@@ -58,7 +58,7 @@ async function scopeFor(request: TestHttpRequest, options: ScopeOptions = {}): P
 	const requestContext = new RequestContextService();
 	const interceptor = await interceptorFor(requestContext, options.env);
 	const context = createHttpContext(request, options.rlsBypass === true ? { [RLS_BYPASS_KEY]: true } : {});
-	return requestContext.run({ correlationId: "corr-rls", ip: undefined, userAgent: undefined }, () => {
+	return requestContext.run({ correlationId: "corr-rls", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => {
 		if (options.verifiedTenant !== undefined) {
 			requestContext.bindTenant(options.verifiedTenant);
 		}
@@ -127,7 +127,7 @@ describe("RlsInterceptor", () => {
 		const interceptor = await interceptorFor(requestContext);
 		const context = createHttpContext(testRequest({ user: accessToken({ isSuperAdmin: true }) }), {});
 
-		const recorded = await requestContext.run({ correlationId: "corr-rls-audit", ip: undefined, userAgent: undefined }, async () => {
+		const recorded = await requestContext.run({ correlationId: "corr-rls-audit", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
 			await firstValueFrom(interceptor.intercept(context, captureScope));
 			return requestContext.current()?.systemOperations;
 		});
@@ -140,7 +140,7 @@ describe("RlsInterceptor", () => {
 		const interceptor = await interceptorFor(requestContext);
 		const context = createHttpContext(testRequest({ user: accessToken() }), {});
 
-		const recorded = await requestContext.run({ correlationId: "corr-rls-none", ip: undefined, userAgent: undefined }, async () => {
+		const recorded = await requestContext.run({ correlationId: "corr-rls-none", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
 			await firstValueFrom(interceptor.intercept(context, captureScope));
 			return requestContext.current()?.systemOperations;
 		});

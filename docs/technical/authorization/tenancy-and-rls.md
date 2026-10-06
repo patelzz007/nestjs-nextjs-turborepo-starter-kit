@@ -154,7 +154,7 @@ names **one** purpose and the role it runs as. The database enforces it too:
 | Group | Operations |
 |---|---|
 | HTTP request phases | `request.pre_handler`, `route.rls_bypass`, `platform.superadmin`, `platform.staff_single_tenant` |
-| Platform | `audit.http_request.record`, `http.idempotency`, `idempotency.retention`, `outbox.publish`, `outbox.enqueue`, `outbox.retention`, `tenant.enumerate`, `geo.reference_data.write` |
+| Platform | `audit.http_request.record`, `audit.http_request.read`, `http.idempotency`, `idempotency.retention`, `outbox.publish`, `outbox.enqueue`, `outbox.retention`, `tenant.enumerate`, `geo.reference_data.write` |
 | Queues / cron (one per job) | `queue.email.send`, `queue.storage.*`, `queue.rewards.auto_publish`, `queue.claims.*`, `maintenance.*` |
 | Organization, invitations, locations, encryption, support access, policy | one name per purpose, e.g. `organization.invitation.create`, `encryption.tenant_key.unwrap`, `support_access.verify`, `policy.publish` |
 | Account security / bootstrap | `auth.profile.update`, `auth.mfa_recovery.*`, `auth.superadmin.bootstrap` and `reference_data.sync` (CLI/seed only; [runbook](../operations/superadmin-bootstrap.md)) — `auth.superadmin.bootstrap` (CLI only: the first SuperAdmin, [runbook](../operations/superadmin-bootstrap.md)) |

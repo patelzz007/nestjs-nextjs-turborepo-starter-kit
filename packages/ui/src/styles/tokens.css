@@ -50,6 +50,25 @@
 	--success-soft: oklch(0.92 0.05 149);
 	--warning-soft: oklch(0.94 0.05 84);
 	--info-soft: oklch(0.92 0.04 250);
+	/*
+	 * Tone palette — categorical chips and badges (method, status, device…).
+	 * Each tone is a text colour on its own soft fill; every pair meets WCAG AA
+	 * text contrast (4.5:1) in both themes (tokens-contrast.test.ts).
+	 */
+	--tone-green: oklch(0.44 0.12 150);
+	--tone-green-soft: oklch(0.95 0.05 150);
+	--tone-blue: oklch(0.46 0.16 258);
+	--tone-blue-soft: oklch(0.94 0.04 250);
+	--tone-yellow: oklch(0.46 0.1 80);
+	--tone-yellow-soft: oklch(0.96 0.08 98);
+	--tone-red: oklch(0.49 0.19 27);
+	--tone-red-soft: oklch(0.94 0.04 25);
+	--tone-orange: oklch(0.49 0.14 48);
+	--tone-orange-soft: oklch(0.95 0.05 60);
+	--tone-teal: oklch(0.45 0.08 190);
+	--tone-teal-soft: oklch(0.95 0.04 185);
+	--tone-violet: oklch(0.47 0.18 295);
+	--tone-violet-soft: oklch(0.95 0.04 295);
 	--border: oklch(0.92 0.004 286.32);
 	--input: oklch(0.92 0.004 286.32);
 	/* Non-text contrast (WCAG 1.4.11, ≥ 3:1 on every surface — tokens-contrast.test.ts). */
@@ -115,6 +134,20 @@
 	--success-soft: oklch(0.33 0.05 149);
 	--warning-soft: oklch(0.34 0.05 84);
 	--info-soft: oklch(0.33 0.05 250);
+	--tone-green: oklch(0.86 0.13 150);
+	--tone-green-soft: oklch(0.34 0.06 150);
+	--tone-blue: oklch(0.84 0.09 250);
+	--tone-blue-soft: oklch(0.34 0.07 255);
+	--tone-yellow: oklch(0.89 0.13 95);
+	--tone-yellow-soft: oklch(0.36 0.06 90);
+	--tone-red: oklch(0.84 0.09 22);
+	--tone-red-soft: oklch(0.35 0.08 25);
+	--tone-orange: oklch(0.86 0.1 60);
+	--tone-orange-soft: oklch(0.36 0.07 50);
+	--tone-teal: oklch(0.87 0.09 185);
+	--tone-teal-soft: oklch(0.34 0.05 190);
+	--tone-violet: oklch(0.85 0.09 295);
+	--tone-violet-soft: oklch(0.35 0.08 295);
 	--border: oklch(0.387 0.022 256.4);
 	--input: oklch(0.428 0.023 255.6);
 	--ring: oklch(0.7 0.02 270);
@@ -179,6 +212,20 @@
 	--color-success-soft: var(--success-soft);
 	--color-warning-soft: var(--warning-soft);
 	--color-info-soft: var(--info-soft);
+	--color-tone-green: var(--tone-green);
+	--color-tone-green-soft: var(--tone-green-soft);
+	--color-tone-blue: var(--tone-blue);
+	--color-tone-blue-soft: var(--tone-blue-soft);
+	--color-tone-yellow: var(--tone-yellow);
+	--color-tone-yellow-soft: var(--tone-yellow-soft);
+	--color-tone-red: var(--tone-red);
+	--color-tone-red-soft: var(--tone-red-soft);
+	--color-tone-orange: var(--tone-orange);
+	--color-tone-orange-soft: var(--tone-orange-soft);
+	--color-tone-teal: var(--tone-teal);
+	--color-tone-teal-soft: var(--tone-teal-soft);
+	--color-tone-violet: var(--tone-violet);
+	--color-tone-violet-soft: var(--tone-violet-soft);
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);

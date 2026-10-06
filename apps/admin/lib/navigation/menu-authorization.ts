@@ -21,6 +21,8 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.emails.templates, { permissions: [PERMISSION.EMAIL.READ] }],
 	// GET /notifications/email-log (LIST EMAIL)
 	[ROUTES.emails.log, { permissions: [PERMISSION.EMAIL.LIST] }],
+	// GET /admin/audit-logs (LIST AUDIT_LOG)
+	[ROUTES.auditLogs.list, { permissions: [PERMISSION.AUDIT_LOG.LIST] }],
 	// GET /geo/stats, /geo/countries… (READ GEO)
 	[ROUTES.geography.index, { permissions: [PERMISSION.GEO.READ] }],
 	// GET /admin/merchants (LIST MERCHANT_ORG). The "Merchants" section shares

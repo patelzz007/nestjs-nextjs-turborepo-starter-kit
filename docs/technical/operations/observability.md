@@ -3,7 +3,7 @@ title: "Observability: logs, health and audit"
 description: "Correlation ids, the log level, structured logging, health probes (live, ready, deep), memory leak detection, NestJS Observe and the HTTP audit log."
 order: 52
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791244800000
 coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
 tags: ["operations", "logging", "health", "observability"]
 ---
@@ -89,11 +89,23 @@ service.
 
 ## Audit log
 
-Every state-changing HTTP request writes exactly one append-only row to `audit_logs`: user,
-impersonator, organization, epoch-ms time, method and route, sanitized request and response,
-outcome, IP, user agent / device and the system operations used. `app_runtime` cannot `UPDATE` or
-`DELETE` it, and rows are **kept forever** ([ADR 025](../../adr/025-global-http-audit-log.md)).
-Read it through `GET /api/v1/admin/audit` (`READ:AUDIT_LOG`).
+Every HTTP request — reads included, successful or refused — writes exactly one append-only row
+to `audit_logs` (only the automated health probes `/health/live`, `/health/ready`, `/health` and SSE
+streams are exempt): user, impersonator and impersonation session, credential (session cookie /
+bearer token / refresh cookie / API key), organization, epoch-ms time and duration, method and
+route, sanitized request and response, outcome, IP with its version and address class (public,
+private, loopback, carrier NAT …), user agent parsed into browser / OS / device type / model,
+the client's country / region / city / time zone from the CDN edge (trusted proxies only), client
+app, Origin / Referer / Accept-Language, host, HTTP version, request size, idempotency key, trace
+id and the system operations used. Exports and the audit viewer store a summary of what they
+released instead of the data. `app_runtime` cannot
+`UPDATE` or `DELETE` it, and rows are **kept forever** ([ADR 025](../../adr/025-global-http-audit-log.md)).
+
+Read it in the admin panel under **Platform → Audit log** (`/audit-logs`), or through
+`GET /api/v1/admin/audit-logs` (`LIST:AUDIT_LOG`) and `GET /api/v1/admin/audit-logs/:id`
+(`READ:AUDIT_LOG`, payloads included). `GET /api/v1/admin/audit` is a different, narrower trail:
+the RBAC change log (`permission_audit_logs`). To follow one request across both trails, the
+logs and the domain audit tables, filter by its correlation id.
 
 ## Queues
 

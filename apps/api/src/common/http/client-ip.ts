@@ -103,7 +103,7 @@ export const TrustProxyEnvSchema = z
 	);
 
 /** Normalize a socket / header address for matching (`::ffff:a.b.c.d` → `a.b.c.d`). */
-function normalizeAddress(address: string): string {
+export function normalizeAddress(address: string): string {
 	const trimmed: string = address.trim();
 	const unmapped: string = trimmed.toLowerCase().startsWith(IPV4_MAPPED_PREFIX) ? trimmed.slice(IPV4_MAPPED_PREFIX.length) : trimmed;
 	return isIP(unmapped) === IPV4_FAMILY ? unmapped : trimmed;

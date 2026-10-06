@@ -50,7 +50,7 @@ function requestWith(headers: Record<string, string>, cookies: Record<string, st
 
 /** Runs `activate` inside a fresh request context and returns the principal it left behind. */
 async function principalAfter(activate: () => Promise<boolean>): Promise<RequestPrincipal | undefined> {
-	return requestContext.run({ correlationId: "corr-auth", ip: undefined, userAgent: undefined }, async () => {
+	return requestContext.run({ correlationId: "corr-auth", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
 		await activate();
 		return requestContext.current()?.principal;
 	});
@@ -77,14 +77,19 @@ beforeEach(() => {
 describe("AuthGuard → request context", () => {
 	const guard = createAuthGuard();
 
-	it("binds the authenticated user as the principal", async () => {
+	it("binds the authenticated user as the principal, authenticated by a bearer token", async () => {
 		const token: string = await jwt.signAsync(accessToken({ sub: "user-42", id: "user-42" }), { secret: config.auth.jwtAccessSecret });
 		const context = createHttpContext(requestWith({ authorization: `Bearer ${token}` }));
 
-		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "user-42", impersonatorId: undefined });
+		expect(await principalAfter(() => guard.canActivate(context))).toEqual({
+			userId: "user-42",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "BEARER_TOKEN",
+		});
 	});
 
-	it("records the real super-admin behind an impersonation session", async () => {
+	it("records the real super-admin and the impersonation session behind an impersonation token", async () => {
 		const token: string = await jwt.signAsync(
 			accessToken({ sub: "target-1", id: "target-1", isImpersonating: true, originalUserId: "admin-1", impersonationSessionId: "session-1" }),
 			{
@@ -93,27 +98,42 @@ describe("AuthGuard → request context", () => {
 		);
 		const context = createHttpContext(requestWith({ authorization: `Bearer ${token}` }));
 
-		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "target-1", impersonatorId: "admin-1" });
+		expect(await principalAfter(() => guard.canActivate(context))).toEqual({
+			userId: "target-1",
+			impersonatorId: "admin-1",
+			impersonationSessionId: "session-1",
+			authMethod: "BEARER_TOKEN",
+		});
 	});
 
 	it("falls back to the session cookie when the bearer header is blank", async () => {
 		const token: string = await jwt.signAsync(accessToken({ sub: "user-7", id: "user-7" }), { secret: config.auth.jwtAccessSecret });
 		const context = createHttpContext(requestWith({ authorization: "Bearer " }, { accessToken: token }));
 
-		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "user-7", impersonatorId: undefined });
+		expect(await principalAfter(() => guard.canActivate(context))).toEqual({
+			userId: "user-7",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+		});
 	});
 
 	it("reads the admin cookie when X-Client-Type is admin (what Swagger UI sends by default)", async () => {
 		const token: string = await jwt.signAsync(accessToken({ sub: "admin-3", id: "admin-3" }), { secret: config.auth.jwtAccessSecret });
 		const context = createHttpContext(requestWith({ "x-client-type": "admin" }, { adminAccessToken: token }));
 
-		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "admin-3", impersonatorId: undefined });
+		expect(await principalAfter(() => guard.canActivate(context))).toEqual({
+			userId: "admin-3",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+		});
 	});
 
 	it("binds nothing when authentication fails", async () => {
 		const context = createHttpContext(requestWith({ authorization: "Bearer not-a-jwt" }));
 
-		const principal = await requestContext.run({ correlationId: "corr-auth-fail", ip: undefined, userAgent: undefined }, async () => {
+		const principal = await requestContext.run({ correlationId: "corr-auth-fail", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
 			await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
 			return requestContext.current()?.principal;
 		});
@@ -179,14 +199,19 @@ describe("AuthGuard → revocation state", () => {
 describe("RefreshTokenGuard → request context", () => {
 	const guard = new RefreshTokenGuard(tokens, requestContext);
 
-	it("binds the refresh-token subject as the principal", async () => {
+	it("binds the refresh-token subject as the principal, authenticated by the refresh cookie", async () => {
 		const token: string = await jwt.signAsync(
 			{ sub: "user-9", email: "u@example.com", jti: "jti-1", tokenType: "refresh" },
 			{ secret: config.auth.jwtRefreshSecret, expiresIn: REFRESH_TOKEN_TTL_SECONDS },
 		);
 		const context = createHttpContext(requestWith({}, { refreshToken: token }));
 
-		expect(await principalAfter(() => guard.canActivate(context))).toEqual({ userId: "user-9", impersonatorId: undefined });
+		expect(await principalAfter(() => guard.canActivate(context))).toEqual({
+			userId: "user-9",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "REFRESH_COOKIE",
+		});
 	});
 });
 

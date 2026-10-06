@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { RequestContextService } from "../../../common/context/request-context";
 import { AnalyticsExportCallerMissingError, AnalyticsExportRateLimitGuard, AnalyticsExportRateLimitedError, exportCallerKey } from "./analytics-export-rate-limit.guard";
 
-const SEED = { correlationId: "corr-rate", ip: "203.0.113.5", userAgent: "vitest" };
+const SEED = { correlationId: "corr-rate", ip: "203.0.113.5", userAgent: "vitest", edgeLocation: undefined };
 
 /** An in-memory throttler store: hits per key within one window. */
 class CountingStorage implements ThrottlerStorage {
@@ -25,7 +25,7 @@ describe("exportCallerKey", () => {
 	it("keys by the authenticated user, else by the API key — never by IP", () => {
 		const context = new RequestContextService();
 		context.run(SEED, () => {
-			context.bindPrincipal({ userId: "user-1", impersonatorId: undefined });
+			context.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 			expect(exportCallerKey(context.current())).toBe("user:user-1");
 		});
 		context.run(SEED, () => {
@@ -43,7 +43,7 @@ describe("AnalyticsExportRateLimitGuard", () => {
 		const guard = new AnalyticsExportRateLimitGuard(storage, context);
 
 		await context.run(SEED, async () => {
-			context.bindPrincipal({ userId: "user-1", impersonatorId: undefined });
+			context.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 			for (let attempt = 0; attempt < ANALYTICS_EXPORT_RATE_LIMIT; attempt += 1) {
 				await expect(guard.canActivate()).resolves.toBe(true);
 			}
@@ -64,7 +64,7 @@ describe("AnalyticsExportRateLimitGuard", () => {
 		storage.hits.set("analytics-export:user:busy", ANALYTICS_EXPORT_RATE_LIMIT);
 
 		await context.run(SEED, async () => {
-			context.bindPrincipal({ userId: "other", impersonatorId: undefined });
+			context.bindPrincipal({ userId: "other", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 			await expect(guard.canActivate()).resolves.toBe(true);
 		});
 	});

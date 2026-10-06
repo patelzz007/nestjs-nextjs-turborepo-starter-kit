@@ -1,6 +1,6 @@
 import { Injectable, Logger, type CallHandler, type ExecutionContext, type NestInterceptor } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { JsonValueSchema, nowEpochMs, type DataValue, type JsonValue } from "@workspace/shared";
+import { IDEMPOTENCY_KEY_HEADER, JsonValueSchema, nowEpochMs, type DataValue, type JsonValue } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { catchError, concatMap, defer, from, of, throwError, type Observable } from "rxjs";
 import { z } from "zod";
@@ -18,7 +18,7 @@ import {
 	type IdempotencyKey,
 	type ParsedRequestBody,
 } from "./idempotency-request";
-import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENT_OPTIONS_METADATA, IDEMPOTENT_REPLAYED_HEADER, type IdempotentOptions } from "./idempotency.constants";
+import { IDEMPOTENT_OPTIONS_METADATA, IDEMPOTENT_REPLAYED_HEADER, type IdempotentOptions } from "./idempotency.constants";
 import { IdempotencyKeyRequiredError, IdempotencyResponseNotStorableError } from "./idempotency.errors";
 
 /** What the interceptor needs to talk to the ledger for one request. */

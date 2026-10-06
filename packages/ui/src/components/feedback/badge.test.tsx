@@ -16,6 +16,16 @@ describe("Badge", () => {
 		expect(badge.className).toContain("text-destructive");
 	});
 
+	it.each(["green", "blue", "yellow", "red", "orange", "teal", "violet"] satisfies ("green" | "blue" | "yellow" | "red" | "orange" | "teal" | "violet")[])(
+		"applies the %s tone: its soft fill and its text colour",
+		(tone): void => {
+			render(<Badge variant={tone}>{tone}</Badge>);
+			const badge = screen.getByText(tone);
+			expect(badge.className).toContain(`bg-tone-${tone}-soft`);
+			expect(badge.className).toContain(`text-tone-${tone}`);
+		},
+	);
+
 	it("accepts a custom className alongside variants", (): void => {
 		render(<Badge className="uppercase">Tag</Badge>);
 		expect(screen.getByText("Tag").className).toContain("uppercase");

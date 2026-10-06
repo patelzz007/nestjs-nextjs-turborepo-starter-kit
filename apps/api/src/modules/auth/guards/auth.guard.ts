@@ -98,6 +98,8 @@ export class AuthGuard implements CanActivate {
 		this.requestContext.bindPrincipal({
 			userId: payload.sub,
 			impersonatorId: payload.isImpersonating === true ? payload.originalUserId : undefined,
+			impersonationSessionId: payload.isImpersonating === true ? payload.impersonationSessionId : undefined,
+			authMethod: bearer === undefined ? "SESSION_COOKIE" : "BEARER_TOKEN",
 		});
 		return true;
 	}

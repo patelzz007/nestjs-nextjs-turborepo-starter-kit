@@ -1,8 +1,8 @@
 import { HttpStatus } from "@nestjs/common";
-import { ApiErrorCodes } from "@workspace/shared";
+import { ApiErrorCodes, IDEMPOTENCY_KEY_HEADER } from "@workspace/shared";
 
 import { AppError, AuthenticationError, ConflictError, ValidationError } from "../../common/errors/app-error";
-import { IDEMPOTENCY_IN_PROGRESS_RETRY_AFTER_SECONDS, IDEMPOTENCY_KEY_HEADER } from "./idempotency.constants";
+import { IDEMPOTENCY_IN_PROGRESS_RETRY_AFTER_SECONDS } from "./idempotency.constants";
 
 /** 400 — the endpoint is `@Idempotent({ required: true })` and the header is missing. */
 export class IdempotencyKeyRequiredError extends ValidationError {

@@ -67,6 +67,8 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 		],
 	],
 	[ROUTES.emails.log, [{ endpoint: "GET /notifications/email-log", permission: PERMISSION.EMAIL.LIST }]],
+	[ROUTES.auditLogs.list, [{ endpoint: "GET /admin/audit-logs", permission: PERMISSION.AUDIT_LOG.LIST }]],
+	[ROUTE_PATTERNS.auditLogs.detail, [{ endpoint: "GET /admin/audit-logs/:id", permission: PERMISSION.AUDIT_LOG.READ }]],
 	[ROUTES.geography.index, [{ endpoint: "GET /geo/stats + the active tab's list", permission: PERMISSION.GEO.READ }]],
 	[ROUTES.merchants.list, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	// Nothing on load: the preview (POST /admin/invites/preview-email) and the send need the page's own MANAGE.

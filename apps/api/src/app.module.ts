@@ -15,6 +15,7 @@ import { JobsModule } from "./infrastructure/jobs/jobs.module";
 import { OutboxModule } from "./infrastructure/outbox/outbox.module";
 import { AppMessagingModule } from "./messaging/app-messaging.module";
 import { AuthorizationAdminModule } from "./modules/authorization/admin/authorization-admin.module";
+import { AuditLogsModule } from "./modules/audit-logs/audit-logs.module";
 import { AuthorizationModule } from "./modules/authorization/authorization.module";
 import { AuthorizationGuard } from "./modules/authorization/guards/authorization.guard";
 import { ApiKeysModule } from "./modules/api-keys/api-keys.module";
@@ -74,6 +75,7 @@ if (observeConfig !== null) {
 		OutboxModule,
 		AuthorizationModule,
 		AuthorizationAdminModule,
+		AuditLogsModule,
 		ScheduleModule.forRoot(),
 		LogsModule,
 		HealthModule,

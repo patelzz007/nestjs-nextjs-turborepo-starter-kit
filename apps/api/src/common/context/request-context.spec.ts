@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { RequestContextService, type RequestContextSeed } from "./request-context";
 
-const SEED: RequestContextSeed = { correlationId: "corr-ctx-1", ip: "203.0.113.7", userAgent: "vitest" };
+const SEED: RequestContextSeed = { correlationId: "corr-ctx-1", ip: "203.0.113.7", userAgent: "vitest", edgeLocation: undefined };
 
 describe("RequestContextService", () => {
 	const service = new RequestContextService();
@@ -28,18 +28,19 @@ describe("RequestContextService", () => {
 			traceId: "corr-ctx-1",
 			ip: "203.0.113.7",
 			userAgent: "vitest",
+			edgeLocation: undefined,
 			principal: undefined,
 			apiKey: undefined,
 			tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
 			systemOperations: [],
-			isAuditRecordedInTransaction: false,
+			isAuditRecorded: false,
 		});
 	});
 
 	it("marks the audit entry as written in the handler's transaction", () => {
 		const marked = service.run(SEED, () => {
-			service.markAuditRecordedInTransaction();
-			return service.current()?.isAuditRecordedInTransaction;
+			service.markAuditRecorded();
+			return service.current()?.isAuditRecorded;
 		});
 
 		expect(marked).toBe(true);
@@ -92,11 +93,11 @@ describe("RequestContextService", () => {
 				await new Promise<void>((resolve): void => {
 					setTimeout(resolve, 2);
 				});
-				service.bindPrincipal({ userId: "user-a", impersonatorId: undefined });
+				service.bindPrincipal({ userId: "user-a", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 				return service.current();
 			}),
 			service.run({ ...SEED, correlationId: "corr-b" }, async () => {
-				service.bindPrincipal({ userId: "user-b", impersonatorId: undefined });
+				service.bindPrincipal({ userId: "user-b", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 				await Promise.resolve();
 				return service.current();
 			}),
@@ -109,20 +110,20 @@ describe("RequestContextService", () => {
 	it("publishes the principal and verified tenant to everything that runs afterwards in the request", () => {
 		const snapshots = service.run(SEED, () => {
 			const beforeAuth = service.current();
-			service.bindPrincipal({ userId: "user-1", impersonatorId: "admin-1" });
+			service.bindPrincipal({ userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 			service.bindTenant({ organizationId: "org-1", locationId: "loc-1" });
 			return { beforeAuth, afterTenancy: service.current(), log: service.logFields() };
 		});
 
 		// Snapshots are immutable: the pre-auth snapshot is unchanged.
 		expect(snapshots.beforeAuth?.principal).toBeUndefined();
-		expect(snapshots.afterTenancy?.principal).toEqual({ userId: "user-1", impersonatorId: "admin-1" });
+		expect(snapshots.afterTenancy?.principal).toEqual({ userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 		expect(snapshots.afterTenancy?.tenant).toEqual({ organizationId: "org-1", storeId: undefined, locationId: "loc-1" });
 		expect(snapshots.log).toEqual({ correlationId: "corr-ctx-1", userId: "user-1", impersonatorId: "admin-1", organizationId: "org-1" });
 	});
 
 	it("ignores enrichment outside a request instead of creating a context", () => {
-		service.bindPrincipal({ userId: "user-1", impersonatorId: undefined });
+		service.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 		service.bindTenant({ organizationId: "org-1" });
 
 		expect(service.current()).toBeUndefined();

@@ -50,7 +50,7 @@ export class RefreshTokenGuard implements CanActivate {
 		try {
 			const payload: RefreshTokenPayload = await this.tokenService.verifyRefreshToken(token);
 			request.user = payload;
-			this.requestContext.bindPrincipal({ userId: payload.sub, impersonatorId: undefined });
+			this.requestContext.bindPrincipal({ userId: payload.sub, impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "REFRESH_COOKIE" });
 			return true;
 		} catch {
 			throw new UnauthorizedException({

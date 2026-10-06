@@ -52,7 +52,7 @@ describe("ApiKeyAuthGuard key scope", () => {
 
 	it("binds the authenticated key as the request's principal (idempotency scope, audit trail)", async () => {
 		const requestContext = new RequestContextService();
-		const bound = await requestContext.run({ correlationId: "corr-key", ip: undefined, userAgent: undefined }, async () => {
+		const bound = await requestContext.run({ correlationId: "corr-key", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
 			await callOrganizationRoute("INTEGRATION");
 			return requestContext.current()?.apiKey;
 		});

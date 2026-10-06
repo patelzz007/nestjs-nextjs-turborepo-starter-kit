@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { RequestContext } from "../../common/context/request-context";
+import type { RequestContext, RequestPrincipal } from "../../common/context/request-context";
 import { AppError } from "../../common/errors/app-error";
 import { IDEMPOTENCY_SCOPE_MAX_LENGTH } from "./idempotency.constants";
 import { IdempotencyPrincipalRequiredError, IdempotencyUnsupportedContentTypeError } from "./idempotency.errors";
@@ -114,17 +114,18 @@ function contextWith(overrides: Partial<RequestContext>): RequestContext {
 		traceId: "corr-1",
 		ip: undefined,
 		userAgent: undefined,
+		edgeLocation: undefined,
 		principal: undefined,
 		apiKey: undefined,
 		tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: 0,
-		isAuditRecordedInTransaction: false,
+		isAuditRecorded: false,
 		...overrides,
 	};
 }
 
-const USER_1 = { userId: "user-1", impersonatorId: undefined };
+const USER_1: RequestPrincipal = { userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" };
 
 describe("buildIdempotencyScope", () => {
 	it("namespaces keys by principal, verified tenant, method and route template", () => {
@@ -135,9 +136,13 @@ describe("buildIdempotencyScope", () => {
 		);
 
 		expect(scope).toBe("http:user:user-1|org:org-a:store:-:loc:-|POST /api/v1/product");
-		expect(buildIdempotencyScope(contextWith({ principal: { userId: "user-2", impersonatorId: undefined } }), "POST", "/api/v1/product")).not.toBe(
-			buildIdempotencyScope(contextWith({ principal: USER_1 }), "POST", "/api/v1/product"),
-		);
+		expect(
+			buildIdempotencyScope(
+				contextWith({ principal: { userId: "user-2", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" } }),
+				"POST",
+				"/api/v1/product",
+			),
+		).not.toBe(buildIdempotencyScope(contextWith({ principal: USER_1 }), "POST", "/api/v1/product"));
 	});
 
 	it("never lets the same user replay one organization's response in another organization", () => {
@@ -157,7 +162,11 @@ describe("buildIdempotencyScope", () => {
 
 	it("separates an impersonated session from the user's own session", () => {
 		const own: string = buildIdempotencyScope(contextWith({ principal: USER_1 }), "POST", "/x");
-		const impersonated: string = buildIdempotencyScope(contextWith({ principal: { userId: "user-1", impersonatorId: "admin-1" } }), "POST", "/x");
+		const impersonated: string = buildIdempotencyScope(
+			contextWith({ principal: { userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" } }),
+			"POST",
+			"/x",
+		);
 
 		expect(impersonated).not.toBe(own);
 	});

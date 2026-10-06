@@ -93,6 +93,8 @@ const RING_SURFACES: readonly string[] = ["--background", "--card", "--popover",
 const CHART_SERIES: readonly string[] = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"];
 const CHART_SURFACES: readonly string[] = ["--card", "--popover"];
 const MUTED_TEXT_SURFACES: readonly string[] = ["--background", "--card", "--muted"];
+/** The tone palette: each `--tone-X` is text on its own `--tone-X-soft` fill (Badge tone variants). */
+const TONES: readonly string[] = ["green", "blue", "yellow", "red", "orange", "teal", "violet"];
 
 interface TokenPairing {
 	readonly foreground: string;
@@ -109,6 +111,7 @@ const THEME_PAIRINGS: readonly TokenPairing[] = [
 	{ foreground: "--search-mark-bg", background: "--sidebar", minimum: MIN_NON_TEXT_CONTRAST },
 	{ foreground: "--search-mark-fg", background: "--search-mark-bg", minimum: MIN_TEXT_CONTRAST },
 	...MUTED_TEXT_SURFACES.map((background): TokenPairing => ({ foreground: "--muted-foreground", background, minimum: MIN_TEXT_CONTRAST })),
+	...TONES.map((tone): TokenPairing => ({ foreground: `--tone-${tone}`, background: `--tone-${tone}-soft`, minimum: MIN_TEXT_CONTRAST })),
 ];
 
 function themeToken(theme: ReadonlyMap<string, string>, name: string): string {

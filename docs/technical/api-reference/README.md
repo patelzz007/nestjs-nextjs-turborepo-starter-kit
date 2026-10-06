@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (216 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (218 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 216 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 218 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 > [!NOTE]
 > This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
@@ -22,7 +22,7 @@ Every endpoint of `apps/api` — 216 operations, 214 with a sample captured from
 | Page | Endpoints | Covers |
 | --- | --- | --- |
 | [Auth, sessions and account security](./auth-and-sessions.md) | 37 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
-| [Roles, permissions, policies and audit](./access-control.md) | 31 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
+| [Roles, permissions, policies and audit](./access-control.md) | 33 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 15 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
 | [Merchant organizations (portal API)](./merchant-organizations.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
 | [Customer rewards and claims](./customer-rewards.md) | 12 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
@@ -75,6 +75,8 @@ Every endpoint of `apps/api` — 216 operations, 214 with a sample captured from
 | POST | [`/api/v1/support-access/{grantId}/revoke`](./auth-and-sessions.md#post-apiv1support-accessgrantidrevoke) |  |
 | POST | [`/api/v1/support-access/request`](./auth-and-sessions.md#post-apiv1support-accessrequest) |  |
 | GET | [`/api/v1/admin/audit`](./access-control.md#get-apiv1adminaudit) |  |
+| GET | [`/api/v1/admin/audit-logs`](./access-control.md#get-apiv1adminaudit-logs) | List audit records (newest first) |
+| GET | [`/api/v1/admin/audit-logs/{id}`](./access-control.md#get-apiv1adminaudit-logsid) | Get one complete audit record |
 | GET | [`/api/v1/admin/permissions`](./access-control.md#get-apiv1adminpermissions) |  |
 | POST | [`/api/v1/admin/permissions`](./access-control.md#post-apiv1adminpermissions) |  |
 | GET | [`/api/v1/admin/permissions/{id}`](./access-control.md#get-apiv1adminpermissionsid) |  |

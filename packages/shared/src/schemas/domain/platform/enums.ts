@@ -55,6 +55,12 @@ export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 export const DeviceTypeSchema = z.enum(["DESKTOP", "MOBILE", "TABLET", "BOT", "UNKNOWN"]);
 export type DeviceType = z.output<typeof DeviceTypeSchema>;
 
+// ── IP Address Scope ──────────────────────────────────────────────────────
+
+/** Address class of a client IP (mirrors the Prisma enum `IpAddressScope`). */
+export const IpAddressScopeSchema = z.enum(["PUBLIC", "PRIVATE", "LOOPBACK", "LINK_LOCAL", "SHARED", "DOCUMENTATION", "MULTICAST", "RESERVED"]);
+export type IpAddressScope = z.output<typeof IpAddressScopeSchema>;
+
 // ── Redirect Type ─────────────────────────────────────────────────────────
 
 export const RedirectTypeSchema = z.enum(["PERMANENT", "TEMPORARY"]);

@@ -16,6 +16,14 @@ const badgeVariants = cva(
 				outline: "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-foreground",
 				ghost: "text-foreground hover:bg-muted hover:text-foreground dark:hover:bg-muted/60",
 				link: "text-primary underline-offset-4 hover:underline",
+				// Tone palette (tokens.css): categorical chips — a soft fill with AA-contrast text in both themes.
+				green: "bg-tone-green-soft text-tone-green [a]:hover:bg-tone-green-soft/80",
+				blue: "bg-tone-blue-soft text-tone-blue [a]:hover:bg-tone-blue-soft/80",
+				yellow: "bg-tone-yellow-soft text-tone-yellow [a]:hover:bg-tone-yellow-soft/80",
+				red: "bg-tone-red-soft text-tone-red [a]:hover:bg-tone-red-soft/80",
+				orange: "bg-tone-orange-soft text-tone-orange [a]:hover:bg-tone-orange-soft/80",
+				teal: "bg-tone-teal-soft text-tone-teal [a]:hover:bg-tone-teal-soft/80",
+				violet: "bg-tone-violet-soft text-tone-violet [a]:hover:bg-tone-violet-soft/80",
 			},
 		},
 		defaultVariants: {

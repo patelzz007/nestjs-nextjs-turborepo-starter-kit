@@ -63,6 +63,7 @@ import {
 } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema, AdminUserDetailSchema, SessionPermissionsResponseSchema, UserResponseSchema } from "../schemas/auth/user";
 import { UuidParamSchema } from "../schemas/domain/platform/param-schemas";
+import { HttpAuditLogDetailSchema, HttpAuditLogIdParamSchema, HttpAuditLogListQuerySchema, HttpAuditLogSummarySchema } from "../schemas/domain/platform/http-audit-log";
 import { EmailLogListQuerySchema, EmailLogEntrySchema, EmailPreviewListResponseSchema, EmailPreviewSchema, EmailSendResultSchema } from "../schemas/email/email";
 import { CapabilityCatalogQuerySchema, CapabilityCatalogResponseSchema } from "../schemas/domain/rbac/capabilities";
 import {
@@ -277,6 +278,7 @@ export type SerializableInput = Readonly<Record<string, DataValue | undefined>> 
 // Re-exported here for the public `@workspace/shared`
 // surface; anything that only needs the constants can import `./versioning`.
 export * from "./versioning";
+export * from "./idempotency";
 export * from "./mutation-intent";
 export * from "./client-session";
 export { contractPathParam } from "./path-param";
@@ -584,6 +586,14 @@ export const apiContract = {
 				response: singleResponse(RbacMessageResponseSchema),
 			}),
 		},
+	},
+
+	// ── Global HTTP audit trail ─────────────────────────────────────────
+	// Read-only admin viewer over `audit_logs` (ADR 025). Every read is
+	// itself recorded as a sensitive read.
+	auditLogs: {
+		list: defineContract({ method: "GET", path: apiRoutes.auditLogs.list, input: HttpAuditLogListQuerySchema, response: paginatedResponse(HttpAuditLogSummarySchema) }),
+		detail: defineContract({ method: "GET", path: apiRoutes.auditLogs.detail, input: HttpAuditLogIdParamSchema, response: singleResponse(HttpAuditLogDetailSchema) }),
 	},
 
 	// ── Email templates & delivery logs ────────────────────────────────

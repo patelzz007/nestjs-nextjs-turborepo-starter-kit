@@ -89,6 +89,12 @@ export const apiRoutes = {
 		},
 	},
 
+	// ── Global HTTP audit trail (admin viewer) ───────────────────────────
+	auditLogs: {
+		list: "/admin/audit-logs",
+		detail: "/admin/audit-logs/:id",
+	},
+
 	// ── Geo ────────────────────────────────────────────────────────────
 	geo: {
 		stats: "/geo/stats",

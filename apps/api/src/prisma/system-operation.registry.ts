@@ -46,6 +46,7 @@ export const SystemOperationSchema = z.enum([
 	"platform.staff_single_tenant",
 	// ── Platform infrastructure ──────────────────────────────────────────
 	"audit.http_request.record",
+	"audit.http_request.read",
 	"http.idempotency",
 	"idempotency.retention",
 	"outbox.publish",
@@ -149,6 +150,9 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	"platform.staff_single_tenant": runtime("Admin staff request scope in single-tenant mode"),
 
 	"audit.http_request.record": runtime("Append the global HTTP audit entry of a state-changing request (bypass-only audit_logs table)"),
+	"audit.http_request.read": runtime(
+		"Read the bypass-only audit_logs table (and the actor / organization names its rows reference) for the admin audit viewer — only after the AUDIT_LOG permission check",
+	),
 	"http.idempotency": runtime("Acquire, replay, complete and release Idempotency-Key records (bypass-only idempotency table)"),
 	"idempotency.retention": runtime("Purge Idempotency-Key records expired past their retention grace"),
 	"outbox.publish": runtime("Outbox dispatcher: claim, publish and advance outbox rows"),

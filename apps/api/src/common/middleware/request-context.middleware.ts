@@ -6,6 +6,7 @@ import { TypedConfigService } from "../../config/typed-config.service";
 import { CORRELATION_ID_HEADER, correlationIdFor } from "../context/correlation-id";
 import { RequestContextService } from "../context/request-context";
 import { resolveClientIp, TrustedProxies } from "../http/client-ip";
+import { readEdgeLocation, type RequestEdgeLocation } from "../http/edge-location";
 import { readFirstHeader } from "../utils/http-headers";
 
 /** Longest User-Agent kept in the context (and in audit rows). */
@@ -45,8 +46,15 @@ export class RequestContextMiddleware implements NestMiddleware {
 				correlationId,
 				ip: resolveClientIp(request.socket.remoteAddress, readFirstHeader(request.headers["x-forwarded-for"]), this.trustedProxies),
 				userAgent: readUserAgent(request),
+				edgeLocation: this.edgeLocationOf(request),
 			},
 			next,
 		);
+	}
+
+	/** The CDN's geo headers — read only from a trusted proxy, so a direct client cannot claim a location. */
+	private edgeLocationOf(request: IncomingMessage): RequestEdgeLocation | undefined {
+		const peer: string | undefined = request.socket.remoteAddress;
+		return peer !== undefined && this.trustedProxies.isTrusted(peer) ? readEdgeLocation(request.headers) : undefined;
 	}
 }

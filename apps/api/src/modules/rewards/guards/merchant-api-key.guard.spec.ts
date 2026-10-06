@@ -74,7 +74,7 @@ describe("MerchantApiKeyGuard", () => {
 		mocks.findTerminal.mockResolvedValue(null);
 		const requestContext = new RequestContextService();
 
-		const bound = await requestContext.run({ correlationId: "corr-pos", ip: undefined, userAgent: undefined }, async () => {
+		const bound = await requestContext.run({ correlationId: "corr-pos", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
 			await guard().canActivate(createHttpContext(request("NEW-TILL")));
 			return requestContext.current()?.apiKey;
 		});

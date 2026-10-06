@@ -80,6 +80,13 @@ export interface GeographyRoutes {
 	readonly index: string;
 }
 
+export interface AuditLogsRoutes {
+	/** The audit trail table — every state-changing request and sensitive read. */
+	readonly list: string;
+	/** One complete audit record (payloads included). */
+	readonly detail: RouteBuilder;
+}
+
 export interface CatalogRoutes {
 	/** Section prefix — redirects to `products.list`. */
 	readonly index: string;
@@ -110,6 +117,7 @@ export interface AdminRoutes {
 	readonly rewards: RewardsRoutes;
 	readonly emails: EmailsRoutes;
 	readonly geography: GeographyRoutes;
+	readonly auditLogs: AuditLogsRoutes;
 	readonly catalog: CatalogRoutes;
 	readonly settings: SettingsRoutes;
 	readonly account: AccountRoutes;
@@ -150,6 +158,8 @@ export const MERCHANT_VERIFICATION_ORGANIZATION_PARAM = "organizationId";
 export const EMAIL_TEMPLATE_KEY_PARAM = "key";
 /** The request selected in a review queue (MFA recovery, store location requests). */
 export const REVIEW_REQUEST_PARAM = "requestId";
+/** The audit record open in the audit log's drawer (`/audit-logs?record=`). */
+export const AUDIT_LOG_RECORD_PARAM = "record";
 /** The active tab of the geography browser (`/geography?tab=states`). */
 export const GEOGRAPHY_TAB_PARAM = "tab";
 
@@ -160,6 +170,7 @@ const MERCHANT_VERIFICATION = `${MERCHANTS}/verification`;
 const REWARDS = "/rewards";
 const EMAILS = "/emails";
 const EMAIL_TEMPLATES = `${EMAILS}/templates`;
+const AUDIT_LOGS = "/audit-logs";
 const CATALOG = "/catalog";
 const SETTINGS = "/settings";
 const ACCOUNT = "/account";
@@ -200,6 +211,10 @@ export const ROUTES: AdminRoutes = {
 	geography: {
 		index: "/geography",
 	},
+	auditLogs: {
+		list: AUDIT_LOGS,
+		detail: (id: string): string => childPath(AUDIT_LOGS, id),
+	},
 	catalog: {
 		index: CATALOG,
 		products: crudRoutes(`${CATALOG}/products`),
@@ -224,6 +239,7 @@ export interface CrudRoutePatterns {
 
 export interface AdminRoutePatterns {
 	readonly users: { readonly detail: string };
+	readonly auditLogs: { readonly detail: string };
 	readonly catalog: {
 		readonly products: CrudRoutePatterns;
 		readonly categories: CrudRoutePatterns;
@@ -245,6 +261,7 @@ function crudRoutePatterns(list: string): CrudRoutePatterns {
  */
 export const ROUTE_PATTERNS: AdminRoutePatterns = {
 	users: { detail: `${USERS}/${routeParam(ID_PARAM)}` },
+	auditLogs: { detail: `${AUDIT_LOGS}/${routeParam(ID_PARAM)}` },
 	catalog: {
 		products: crudRoutePatterns(ROUTES.catalog.products.list),
 		categories: crudRoutePatterns(ROUTES.catalog.categories.list),

@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 
-import { ApiErrorCodes, type JsonValue } from "@workspace/shared";
+import { ApiErrorCodes, IDEMPOTENCY_KEY_HEADER, type JsonValue } from "@workspace/shared";
 import { z } from "zod";
 
 import type { RequestContext } from "../../common/context/request-context";
 import { ValidationError } from "../../common/errors/app-error";
-import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENCY_SCOPE_MAX_LENGTH } from "./idempotency.constants";
+import { IDEMPOTENCY_SCOPE_MAX_LENGTH } from "./idempotency.constants";
 import { IdempotencyPrincipalRequiredError, IdempotencyUnsupportedContentTypeError } from "./idempotency.errors";
 
 /** Key length bounds — long enough for a UUID/ULID, bounded to the `VarChar(128)` column. */

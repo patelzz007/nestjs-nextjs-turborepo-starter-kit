@@ -111,7 +111,7 @@ describe("PlatformOutboxService.enqueueInTransaction", () => {
 		const correlation = new RequestContextService();
 		const service = createService(correlation);
 
-		await correlation.run({ correlationId: "corr-42", ip: undefined, userAgent: undefined }, async () =>
+		await correlation.run({ correlationId: "corr-42", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () =>
 			store.transaction(async (tx) => service.enqueueInTransaction(tx, LOGOUT_EVENT)),
 		);
 
@@ -125,7 +125,7 @@ describe("PlatformOutboxService.enqueueInTransaction", () => {
 		const service = createService(correlation);
 		const oversized = "c".repeat(500);
 
-		await correlation.run({ correlationId: oversized, ip: undefined, userAgent: undefined }, async () =>
+		await correlation.run({ correlationId: oversized, ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () =>
 			store.transaction(async (tx) => service.enqueueInTransaction(tx, LOGOUT_EVENT)),
 		);
 

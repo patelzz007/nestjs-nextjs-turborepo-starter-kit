@@ -4,7 +4,7 @@ tags: ["admin", "nextjs", "auth", "data-fetching", "ssr"]
 description: "Guide to the admin app at localhost:3001 — route map, proxy-based auth with isolated cookies, the dashboard layout/sidebar/command palette, the useApi + server-api + prefetchPage data-fetching stack, SSR page conventions, and env vars."
 order: 21
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791244800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -37,6 +37,7 @@ Conventions and the shared rules: [Routing](./routing.md). Paths come from `apps
 | `/rewards/review` (`/rewards` redirects) | Rewards awaiting review |
 | `/emails/templates`, `/emails/log` (`/emails` redirects) | Email template previews (`?key=`) + delivery log |
 | `/geography` | Geographic reference data |
+| `/audit-logs`, `/audit-logs/[id]` | The global HTTP audit trail (`LIST:AUDIT_LOG` / `READ:AUDIT_LOG`): filterable table (outcome, method, credential, device, address class, trigram-indexed search; actor / organization / correlation id from a record's links — all in the URL) with colour-coded chips. Clicking a row opens the complete record in a drawer (`?record=`, shareable); `/audit-logs/[id]` is the same record as its own page (`components/audit-logs/audit-log-record.tsx` renders both). Every view is itself audited by the API |
 | `/catalog/products`, `/catalog/categories` (`/new`, `/[id]`, `/[id]/edit`; `/catalog` redirects) | Example CRUD resources |
 | `/settings/access` (`/settings` redirects to it) | Platform settings: roles, permissions, permission checker |
 | `/account/profile` | The signed-in admin's own profile: avatar + name, edited with `PATCH /auth/profile` (server-prefetched `GET /auth/profile`, TanStack Form on the shared `OwnProfileEditableFieldsSchema`, read-only while impersonating). Open to every signed-in admin; listed in `page-api-coverage.test.ts` as an own-record call |
@@ -131,6 +132,16 @@ element (`renderLink`).
 - Money and counts in charts and tables go through `formatMinorUnits` / `formatCount`
   (`packages/ui/README.md`, "Formatting dates, counts and money") — never raw minor units or the
   browser's default `toLocaleString()`.
+
+### Colour: the tone palette
+
+Categorical chips (HTTP method, status class, credential, device, address class …) use the
+`Badge` tone variants `green`, `blue`, `yellow`, `red`, `orange`, `teal` and `violet`
+(`<Badge variant="teal">`). Each is a `--tone-X` text colour on its `--tone-X-soft` fill, defined
+for light and dark in `packages/ui/src/styles/tokens.css`, and every pair is held to WCAG AA text
+contrast by `tokens-contrast.test.ts`. Pick tones from a typed `Record<Value, BadgeVariant>` (see
+`components/audit-logs/audit-log-badges.tsx`) — never raw Tailwind palette classes — so a new
+value cannot ship uncoloured and a theme can retune every chip at once.
 
 ## Data fetching
 

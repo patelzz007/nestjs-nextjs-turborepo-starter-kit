@@ -1,10 +1,14 @@
+import type { Prisma } from "@prisma/client";
 import { API_VERSION_PREFIX, apiRoutes, OWN_PROFILE_ERROR_CODES, OwnProfileSchema, type JsonValue } from "@workspace/shared";
 
 import { toAuditLogCreateInput } from "../../src/common/audit/audit-log.mapper";
 import { toAuditPayload } from "../../src/common/audit/http-audit-entry";
+import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../../src/modules/auth/constants/impersonation.constants";
+import { ImpersonationAuditAction } from "../../src/modules/auth/repositories/impersonation-session.repository";
 import { PROFILE_UPDATE_DURING_IMPERSONATION_MESSAGE } from "../../src/modules/auth/profile/own-profile.errors";
 import { OWN_PROFILE_UPDATE_OPERATION } from "../../src/modules/auth/profile/own-profile.service";
 import { prisma } from "./client";
+import { deterministicUuid } from "./deterministic-uuid";
 import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT } from "./http-audit";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +21,9 @@ import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT } from "./http-audit";
 //     `auth.profile.update`, response = the profile at version 1);
 //   - a SuperAdmin impersonating them tried to edit the profile and was
 //     refused: a FAILED 403 `PROFILE_UPDATE_DURING_IMPERSONATION` row carrying
-//     the impersonator's id, and no change to the profile.
+//     the impersonator's id and the impersonation session it ran under, and no
+//     change to the profile. The session (started a minute before, stopped a
+//     minute after) and its START / STOP rows are seeded with it.
 // Idempotent: the version is SET (not incremented) on the account's natural key
 // (email), and the audit rows are upserted by their deterministic ids with an
 // empty update (append-only, like the app).
@@ -33,6 +39,11 @@ const EDITED_PROFILE_VERSION = 1;
 const PROFILE_PATH = `${API_VERSION_PREFIX}${apiRoutes.auth.profile}`;
 const HTTP_OK = 200;
 const HTTP_FORBIDDEN = 403;
+
+const OWN_PROFILE_NAMESPACE = "seed.own_profile";
+const MS_PER_SECOND = 1_000;
+/** The impersonation started this long before the refused edit and was stopped this long after it. */
+const IMPERSONATION_MARGIN_MS = 60_000;
 
 export interface OwnProfileSeedActors {
 	readonly superAdminId: string;
@@ -62,6 +73,7 @@ export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promi
 		updatedAt: Number(customer.updatedAt),
 	});
 
+	const impersonationSessionId: string = deterministicUuid(OWN_PROFILE_NAMESPACE, "impersonation-session");
 	const rows = [
 		entry(OWN_PROFILE_EDIT_REQUEST, {
 			method: "PATCH",
@@ -97,11 +109,45 @@ export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promi
 				error: { code: OWN_PROFILE_ERROR_CODES.PROFILE_UPDATE_DURING_IMPERSONATION, message: PROFILE_UPDATE_DURING_IMPERSONATION_MESSAGE },
 			}),
 			systemOperations: [],
+			impersonationSessionId,
 		}),
 	];
+
+	const impersonatedEdit = rows.find(({ row }) => row.impersonationSessionId === impersonationSessionId);
+	if (impersonatedEdit !== undefined) {
+		await seedImpersonationSession(impersonationSessionId, actors.superAdminId, customer.id, impersonatedEdit.row.occurredAt);
+	}
 
 	for (const { id, row } of rows) {
 		await prisma.auditLog.upsert({ where: { id }, create: { id, ...toAuditLogCreateInput(row) }, update: {} });
 	}
 	return { editedProfiles: 1, auditRows: rows.length };
+}
+
+/** The impersonation session the refused edit ran under, as `POST /auth/impersonate` + stop leave it. */
+async function seedImpersonationSession(sessionId: string, superAdminId: string, targetUserId: string, requestAt: number): Promise<void> {
+	const startedAt: number = requestAt - IMPERSONATION_MARGIN_MS;
+	const endedAt: number = requestAt + IMPERSONATION_MARGIN_MS;
+	const session = {
+		impersonatorId: superAdminId,
+		targetUserId,
+		startedAt,
+		expiresAt: startedAt + IMPERSONATION_TOKEN_TTL_SECONDS * MS_PER_SECOND,
+		endedAt,
+		endedBy: superAdminId,
+		endReason: "STOPPED",
+		ipAddress: null,
+		userAgent: null,
+		createdAt: startedAt,
+		updatedAt: endedAt,
+	} satisfies Omit<Prisma.ImpersonationSessionUncheckedCreateInput, "id">;
+	await prisma.impersonationSession.upsert({ where: { id: sessionId }, create: { id: sessionId, ...session }, update: session });
+	for (const [action, at] of [
+		[ImpersonationAuditAction.START, startedAt],
+		[ImpersonationAuditAction.STOP, endedAt],
+	] satisfies [string, number][]) {
+		const id: string = deterministicUuid(OWN_PROFILE_NAMESPACE, `impersonation-audit-${action}`);
+		const row = { impersonatorId: superAdminId, targetUserId, sessionId, action, ipAddress: null, userAgent: null, createdAt: at };
+		await prisma.impersonationAuditLog.upsert({ where: { id }, create: { id, ...row }, update: {} });
+	}
 }

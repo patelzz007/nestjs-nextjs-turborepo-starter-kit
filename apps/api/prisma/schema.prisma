@@ -2573,9 +2573,41 @@ enum AuditOutcome {
   FAILED
 }
 
+/// How the caller of one audited HTTP request authenticated (NULL on the row = anonymous).
+enum AuditAuthMethod {
+  /// An access token sent as `Authorization: Bearer` (API clients, Swagger UI).
+  BEARER_TOKEN
+  /// The access-token cookie of a frontend session (web / admin / merchant cookie set).
+  SESSION_COOKIE
+  /// The refresh-token cookie (`/auth/refresh`, logout).
+  REFRESH_COOKIE
+  /// A machine API key (merchant POS terminals).
+  API_KEY
+}
+
+/// What kind of address an audited request came from (IANA special-purpose registries).
+enum IpAddressScope {
+  /// Globally routable — a real client on the internet.
+  PUBLIC
+  /// RFC 1918 / RFC 4193 private network (10/8, 172.16/12, 192.168/16, fc00::/7).
+  PRIVATE
+  /// The machine itself (127/8, ::1).
+  LOOPBACK
+  /// Link-local (169.254/16, fe80::/10).
+  LINK_LOCAL
+  /// Carrier-grade NAT shared address space (100.64/10, RFC 6598).
+  SHARED
+  /// Documentation / benchmarking ranges (192.0.2/24, 198.51.100/24, 203.0.113/24, 198.18/15, 2001:db8::/32).
+  DOCUMENTATION
+  /// Multicast (224/4, ff00::/8).
+  MULTICAST
+  /// Any other IANA-reserved range (0/8, 240/4, 255.255.255.255, ::).
+  RESERVED
+}
+
 /// Global HTTP audit trail (rules/10 → "Audit logging", docs/adr/025-global-http-audit-log.md):
-/// exactly one append-only row per state-changing request (POST/PUT/PATCH/DELETE), successful
-/// or failed, written by `AuditLogInterceptor` (success) / `GlobalExceptionFilter` (failure) under
+/// exactly one append-only row per HTTP request (every method — reads included; only the health
+/// probes and SSE streams are exempt), successful or failed, written by `AuditLogInterceptor` (success) / `GlobalExceptionFilter` (failure) under
 /// the `audit.http_request.record` system operation — or inside the handler's own transaction
 /// when the handler opts in (`AuditTrailService.recordInTransaction`). Bodies are redacted
 /// (common/logging/redaction.ts) and size-capped before they are stored.
@@ -2585,45 +2617,103 @@ enum AuditOutcome {
 /// The organization is the tenant in this platform, so there is no separate tenant column.
 /// RLS: INSERT only under a named system operation (or by the acting user inside their own
 /// transaction); SELECT bypass-only; UPDATE/DELETE revoked from app_runtime (append-only).
-/// Not a business entity: never soft-deleted, never updated. Seed: intentionally empty.
+/// Read by the admin audit viewer (`GET /admin/audit-logs`) under `audit.http_request.read`,
+/// after the AUDIT_LOG permission check. Request-metadata columns added after the table was
+/// created (trace id onwards) are NULL on rows written before them.
+/// Not a business entity: never soft-deleted, never updated. Seed: prisma/seed/http-audit.ts.
 model AuditLog {
-  id                 String       @id @default(uuid())
-  correlationId      String       @map("correlation_id") @db.VarChar(64)
+  id                     String           @id @default(uuid())
+  correlationId          String           @map("correlation_id") @db.VarChar(64)
+  /// Distributed trace id (equal to `correlationId` until W3C trace context is propagated).
+  traceId                String?          @map("trace_id") @db.VarChar(64)
   /// Request start (epoch ms).
-  occurredAt         BigInt       @map("occurred_at")
+  occurredAt             BigInt           @map("occurred_at")
   /// When the outcome was known (epoch ms).
-  completedAt        BigInt       @map("completed_at")
-  method             String       @db.VarChar(10)
+  completedAt            BigInt           @map("completed_at")
+  method                 String           @db.VarChar(10)
   /// Route template (`/api/v1/geo/regions/:id`) — groups requests by endpoint.
-  endpoint           String       @db.VarChar(512)
+  endpoint               String           @db.VarChar(512)
   /// Concrete request URL with sensitive query parameters redacted.
-  path               String       @db.VarChar(2048)
-  outcome            AuditOutcome
-  responseStatus     Int          @map("response_status")
+  path                   String           @db.VarChar(2048)
+  outcome                AuditOutcome
+  responseStatus         Int              @map("response_status")
   /// Machine error code (`errorCode` of the error envelope) for FAILED rows.
-  errorCode          String?      @map("error_code") @db.VarChar(64)
-  actorUserId        String?      @map("actor_user_id") @db.VarChar(64)
+  errorCode              String?          @map("error_code") @db.VarChar(64)
+  actorUserId            String?          @map("actor_user_id") @db.VarChar(64)
   /// The real (super-admin) user behind an impersonation session.
-  impersonatorUserId String?      @map("impersonator_user_id") @db.VarChar(64)
-  apiKeyId           String?      @map("api_key_id") @db.VarChar(64)
-  terminalId         String?      @map("terminal_id") @db.VarChar(64)
-  organizationId     String?      @map("organization_id") @db.VarChar(64)
-  storeId            String?      @map("store_id") @db.VarChar(64)
-  locationId         String?      @map("location_id") @db.VarChar(64)
-  ipAddress          String?      @map("ip_address") @db.VarChar(64)
+  impersonatorUserId     String?          @map("impersonator_user_id") @db.VarChar(64)
+  /// The server-side impersonation session (`impersonation_sessions.id`) the request ran under.
+  impersonationSessionId String?          @map("impersonation_session_id") @db.VarChar(64)
+  /// How the caller authenticated; NULL for an anonymous request.
+  authMethod             AuditAuthMethod? @map("auth_method")
+  apiKeyId               String?          @map("api_key_id") @db.VarChar(64)
+  terminalId             String?          @map("terminal_id") @db.VarChar(64)
+  organizationId         String?          @map("organization_id") @db.VarChar(64)
+  storeId                String?          @map("store_id") @db.VarChar(64)
+  locationId             String?          @map("location_id") @db.VarChar(64)
+  ipAddress              String?          @map("ip_address") @db.VarChar(64)
   /// The calling device (User-Agent, bounded).
-  userAgent          String?      @map("user_agent") @db.VarChar(512)
+  userAgent              String?          @map("user_agent") @db.VarChar(512)
+  /// Browser / HTTP client parsed from the User-Agent (`Chrome`, `Safari`, `curl`).
+  browserName            String?          @map("browser_name") @db.VarChar(64)
+  browserVersion         String?          @map("browser_version") @db.VarChar(32)
+  /// Operating system parsed from the User-Agent (`macOS`, `Android`).
+  osName                 String?          @map("os_name") @db.VarChar(64)
+  osVersion              String?          @map("os_version") @db.VarChar(32)
+  /// Device class parsed from the User-Agent.
+  deviceType             DeviceType?      @map("device_type")
+  /// Device model when the User-Agent names one (`iPhone`, `Pixel 8`, `SM-S918B`).
+  deviceModel            String?          @map("device_model") @db.VarChar(64)
+  /// 4 or 6.
+  ipVersion              Int?             @map("ip_version") @db.SmallInt
+  /// Address class of `ipAddress` (public, private, loopback, …).
+  ipScope                IpAddressScope?  @map("ip_scope")
+  /// ISO 3166-1 alpha-2 country of the client, from the CDN edge's geo headers (trusted proxies only).
+  geoCountry             String?          @map("geo_country") @db.VarChar(2)
+  /// Region / subdivision from the CDN edge (`14`, `Selangor`).
+  geoRegion              String?          @map("geo_region") @db.VarChar(64)
+  /// City from the CDN edge.
+  geoCity                String?          @map("geo_city") @db.VarChar(128)
+  /// IANA time zone from the CDN edge (`Asia/Kuala_Lumpur`).
+  geoTimeZone            String?          @map("geo_time_zone") @db.VarChar(64)
+  /// The frontend the caller CLAIMS to be (`X-Client-Type`, bounded, unverified — e.g. web / admin / merchant).
+  clientType             String?          @map("client_type") @db.VarChar(32)
+  /// HTTP protocol version of the connection (`1.1`, `2.0`).
+  httpVersion            String?          @map("http_version") @db.VarChar(8)
+  /// `Host` the request was addressed to.
+  host                   String?          @db.VarChar(255)
+  /// `Origin` header (browser requests).
+  origin                 String?          @db.VarChar(512)
+  /// `Referer` header, with sensitive query parameters redacted.
+  referer                String?          @db.VarChar(2048)
+  /// `Accept-Language` header.
+  acceptLanguage         String?          @map("accept_language") @db.VarChar(256)
+  /// `Content-Type` of the request body.
+  requestContentType     String?          @map("request_content_type") @db.VarChar(256)
+  /// Declared request body size (`Content-Length`, bytes).
+  requestBytes           Int?             @map("request_bytes")
+  /// `Idempotency-Key` header the request carried (joins the idempotency record).
+  idempotencyKey         String?          @map("idempotency_key") @db.VarChar(255)
   /// Route params + query string (redacted).
-  requestParams      Json?        @map("request_params")
-  requestBody        Json?        @map("request_body")
-  responseBody       Json?        @map("response_body")
+  requestParams          Json?            @map("request_params")
+  requestBody            Json?            @map("request_body")
+  responseBody           Json?            @map("response_body")
   /// Allowlisted system operations (RLS bypasses) the request ran, in first-use order.
-  systemOperations   String[]     @map("system_operations")
-  createdAt          BigInt       @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  systemOperations       String[]         @map("system_operations")
+  createdAt              BigInt           @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
 
   @@index([organizationId, occurredAt])
   @@index([actorUserId, occurredAt])
+  @@index([impersonatorUserId, occurredAt])
+  @@index([outcome, occurredAt])
+  @@index([deviceType, occurredAt])
   @@index([correlationId])
+  /// Trigram GIN indexes serve the viewer's case-insensitive `?search=` (ILIKE '%…%') without a scan.
+  @@index([path(ops: raw("gin_trgm_ops"))], map: "audit_logs_path_trgm_idx", type: Gin)
+  @@index([endpoint(ops: raw("gin_trgm_ops"))], map: "audit_logs_endpoint_trgm_idx", type: Gin)
+  @@index([errorCode(ops: raw("gin_trgm_ops"))], map: "audit_logs_error_code_trgm_idx", type: Gin)
+  @@index([ipAddress(ops: raw("gin_trgm_ops"))], map: "audit_logs_ip_address_trgm_idx", type: Gin)
+  @@index([userAgent(ops: raw("gin_trgm_ops"))], map: "audit_logs_user_agent_trgm_idx", type: Gin)
   @@index([occurredAt])
   @@map("audit_logs")
 }

@@ -121,6 +121,8 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/users/mfa-recovery", SUPER_ADMIN],
 	// @RequirePermission API routes.
 	["/analytics", needs(PERMISSION.ANALYTICS.READ)],
+	["/audit-logs", needs(PERMISSION.AUDIT_LOG.LIST)],
+	["/audit-logs/[id]", needs(PERMISSION.AUDIT_LOG.READ)],
 	["/catalog/products", needs(PERMISSION.PRODUCT.LIST)],
 	["/catalog/products/new", needsAll(PERMISSION.PRODUCT.CREATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ)],
 	["/catalog/products/[id]", needs(PERMISSION.PRODUCT.READ)],

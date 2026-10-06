@@ -9,7 +9,8 @@ import { correlationIdFor } from "../context/correlation-id";
 import type { PreSerializationPayload } from "../utils/serialize-pre-serialization-value";
 import { AuditContextMissingError, AuditLogWriteError } from "./audit-log.errors";
 import { AuditLogRepository, type AuditLogWriter } from "./audit-log.repository";
-import { buildHttpAuditEntry, isAuditedMethod, type HttpAuditEntry, type HttpAuditOutcome } from "./http-audit-entry";
+import { readUserAgent } from "../middleware/request-context.middleware";
+import { buildHttpAuditEntry, isAuditedRoute, type HttpAuditEntry, type HttpAuditOutcome } from "./http-audit-entry";
 
 /** The audited request the interceptor is currently running a handler for. */
 export interface AuditedRequestScope {
@@ -29,7 +30,7 @@ export interface AuditFailure {
  * The request context, or — for a failure raised before the context
  * middleware ran (malformed body, oversized payload) — the facts known about
  * the raw request: the SAME correlation id Fastify's `genReqId` used, the
- * socket address, and no principal.
+ * socket address, the User-Agent, and no principal.
  */
 function contextOrDetached(context: RequestContext | undefined, request: FastifyRequest): RequestContext {
 	if (context !== undefined) {
@@ -39,19 +40,21 @@ function contextOrDetached(context: RequestContext | undefined, request: Fastify
 		correlationId: correlationIdFor(request.raw),
 		traceId: correlationIdFor(request.raw),
 		ip: request.ip,
-		userAgent: undefined,
+		userAgent: readUserAgent(request.raw),
+		edgeLocation: undefined,
 		principal: undefined,
 		apiKey: undefined,
 		tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: nowEpochMs(),
-		isAuditRecordedInTransaction: false,
+		isAuditRecorded: false,
 	};
 }
 
 /**
  * The global HTTP audit trail (docs/adr/025-global-http-audit-log.md): exactly
- * one append-only `audit_logs` row per state-changing request.
+ * one append-only `audit_logs` row per HTTP request — reads included; only the
+ * automated health probes are exempt.
  *
  * - success → written by `AuditLogInterceptor` after the handler (and the
  *   response contract) succeeded. If the write fails the request FAILS with
@@ -63,6 +66,9 @@ function contextOrDetached(context: RequestContext | undefined, request: Fastify
  * - same transaction → a handler whose state change runs in a system-operation
  *   transaction can call {@link recordInTransaction}; the row then commits or
  *   rolls back WITH the change, and the interceptor does not write it again.
+ * - sensitive read → a handler releasing data in bulk (an export, the audit
+ *   viewer) calls {@link recordSensitiveRead} with a summary of what it
+ *   released; that summary replaces the full response body as the row.
  */
 @Injectable()
 export class AuditTrailService {
@@ -81,7 +87,7 @@ export class AuditTrailService {
 
 	/** Success path (interceptor). Throws {@link AuditLogWriteError} when the row cannot be written. */
 	public async recordSuccess(request: FastifyRequest, status: number, responseBody: PreSerializationPayload): Promise<void> {
-		if (!isAuditedMethod(request.method) || this.requestContext.current()?.isAuditRecordedInTransaction === true) {
+		if (!isAuditedRoute(request.routeOptions.url) || this.requestContext.current()?.isAuditRecorded === true) {
 			return;
 		}
 		const entry: HttpAuditEntry = this.entryFor(request, { outcome: "SUCCEEDED", status, responseBody });
@@ -112,11 +118,13 @@ export class AuditTrailService {
 			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", entry, error: cause.message });
 			throw new AuditLogWriteError(cause);
 		}
+		// This summary IS the request's audit row: the interceptor must not add the full response as a second one.
+		this.requestContext.markAuditRecorded();
 	}
 
 	/** Failure path (exception filter). Never throws: the original failure must reach the client. */
 	public async recordFailure(request: FastifyRequest, failure: AuditFailure): Promise<void> {
-		if (!isAuditedMethod(request.method)) {
+		if (!isAuditedRoute(request.routeOptions.url)) {
 			return;
 		}
 		const entry: HttpAuditEntry = this.entryFor(request, { outcome: "FAILED", ...failure });
@@ -141,7 +149,7 @@ export class AuditTrailService {
 			throw new AuditContextMissingError();
 		}
 		await this.repository.appendInTransaction(tx, this.entryFor(scope.request, { outcome: "SUCCEEDED", status: scope.successStatus, responseBody: result }));
-		this.requestContext.markAuditRecordedInTransaction();
+		this.requestContext.markAuditRecorded();
 	}
 
 	private entryFor(request: FastifyRequest, outcome: HttpAuditOutcome): HttpAuditEntry {

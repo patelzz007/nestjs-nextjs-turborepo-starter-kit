@@ -8,7 +8,7 @@ import { captureFastifyRequest } from "../../../test/support/fastify-request";
 import { RequestContextService } from "../context/request-context";
 import { AuditContextMissingError, AuditLogWriteError } from "./audit-log.errors";
 
-const SEED = { correlationId: "corr-trail", ip: "203.0.113.1", userAgent: "vitest" };
+const SEED = { correlationId: "corr-trail", ip: "203.0.113.1", userAgent: "vitest", edgeLocation: undefined };
 
 describe("AuditTrailService", () => {
 	const requestContext = new RequestContextService();

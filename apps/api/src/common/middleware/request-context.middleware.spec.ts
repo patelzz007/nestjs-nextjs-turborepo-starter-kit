@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { IncomingMessage } from "node:http";
+import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
 
 import { Controller, Get, Injectable, Module, Post, type CanActivate, type MiddlewareConsumer, type NestModule } from "@nestjs/common";
@@ -8,7 +8,7 @@ import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fa
 import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createTestTypedConfig } from "../../../test/support/test-api-env";
+import { createTestTypedConfig, TEST_E2E_PROXY } from "../../../test/support/test-api-env";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { RequestContextService, type RequestContext } from "../context/request-context";
 import { MAX_USER_AGENT_LENGTH, readUserAgent, RequestContextMiddleware } from "./request-context.middleware";
@@ -22,7 +22,7 @@ class ContextProbeGuard implements CanActivate {
 	public async canActivate(): Promise<boolean> {
 		await Promise.resolve();
 		observed.guard = requestContext.current();
-		requestContext.bindPrincipal({ userId: "user-guard", impersonatorId: undefined });
+		requestContext.bindPrincipal({ userId: "user-guard", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 		return true;
 	}
 }
@@ -84,7 +84,7 @@ describe("RequestContextMiddleware (Fastify integration)", () => {
 		expect(response.json()).toEqual({ correlationId: "corr-mw-1" });
 		expect(response.headers["x-correlation-id"]).toBe("corr-mw-1");
 		expect(observed.guard).toMatchObject({ correlationId: "corr-mw-1", traceId: "corr-mw-1", userAgent: "probe-agent", principal: undefined });
-		expect(observed.handler?.principal).toEqual({ userId: "user-guard", impersonatorId: undefined });
+		expect(observed.handler?.principal).toEqual({ userId: "user-guard", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 	});
 
 	it("keeps the context across body parsing (POST with a JSON body)", async () => {
@@ -122,5 +122,45 @@ describe("readUserAgent", () => {
 	it("bounds the stored User-Agent", () => {
 		expect(readUserAgent(rawRequest({ "user-agent": "u".repeat(MAX_USER_AGENT_LENGTH + 100) }, "10.0.0.9"))).toHaveLength(MAX_USER_AGENT_LENGTH);
 		expect(readUserAgent(rawRequest({}, "10.0.0.9"))).toBeUndefined();
+	});
+});
+
+describe("RequestContextMiddleware — CDN edge location", () => {
+	const CLOUDFRONT_GEO: Record<string, string> = {
+		"cloudfront-viewer-country": "MY",
+		"cloudfront-viewer-city": "Kuala Lumpur",
+		"cloudfront-viewer-time-zone": "Asia/Kuala_Lumpur",
+	};
+
+	/** Runs the middleware for one raw request and returns the context the next handler saw. */
+	function contextAfter(middleware: RequestContextMiddleware, raw: IncomingMessage): RequestContext | undefined {
+		let seen: RequestContext | undefined;
+		middleware.use(raw, new ServerResponse(raw), (): void => {
+			seen = requestContext.current();
+		});
+		return seen;
+	}
+
+	it("records the location a trusted proxy (the CDN) forwarded", () => {
+		const middleware = new RequestContextMiddleware(requestContext, createTestTypedConfig(TEST_E2E_PROXY));
+
+		expect(contextAfter(middleware, rawRequest(CLOUDFRONT_GEO, "127.0.0.1"))?.edgeLocation).toEqual({
+			country: "MY",
+			region: undefined,
+			city: "Kuala Lumpur",
+			timeZone: "Asia/Kuala_Lumpur",
+		});
+	});
+
+	it("ignores geo headers a client sent directly — a caller cannot claim a location", () => {
+		const middleware = new RequestContextMiddleware(requestContext, createTestTypedConfig(TEST_E2E_PROXY));
+
+		expect(contextAfter(middleware, rawRequest(CLOUDFRONT_GEO, "203.0.113.50"))?.edgeLocation).toBeUndefined();
+	});
+
+	it("ignores geo headers entirely when no proxy is trusted (the default)", () => {
+		const middleware = new RequestContextMiddleware(requestContext, createTestTypedConfig());
+
+		expect(contextAfter(middleware, rawRequest(CLOUDFRONT_GEO, "127.0.0.1"))?.edgeLocation).toBeUndefined();
 	});
 });

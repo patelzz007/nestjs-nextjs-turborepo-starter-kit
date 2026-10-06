@@ -129,6 +129,8 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	},
 	// POST /sample-category (CREATE)
 	{ prefix: ROUTES.catalog.categories.create, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.CREATE] } },
+	// GET /admin/audit-logs/:id (READ AUDIT_LOG) — one complete record, payloads included.
+	{ prefix: ROUTE_PATTERNS.auditLogs.detail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ] } },
 	// GET /product/:id, GET /sample-category/:id (READ)
 	{ prefix: ROUTE_PATTERNS.catalog.products.detail, authorization: { permissions: [PERMISSION.PRODUCT.READ] } },
 	{ prefix: ROUTE_PATTERNS.catalog.categories.detail, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ] } },

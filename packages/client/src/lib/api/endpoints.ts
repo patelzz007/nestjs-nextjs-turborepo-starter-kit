@@ -489,6 +489,12 @@ export const apiRouter = {
 		},
 	},
 
+	// ── Global HTTP audit trail (admin viewer) ────────────────────────────────
+	auditLogs: {
+		list: defineQuery(apiContract.auditLogs.list, { scope: (): QueryKey => ["audit-logs", "list"] }),
+		detail: defineQuery(apiContract.auditLogs.detail, { scope: ({ id }: { readonly id: string }): QueryKey => ["audit-logs", "detail", id] }),
+	},
+
 	// ── Email template preview procedures ─────────────────────────────────────
 	email: {
 		previewList: defineQuery(apiContract.email.previewList, { scope: (): QueryKey => ["email", "preview-list"] }),

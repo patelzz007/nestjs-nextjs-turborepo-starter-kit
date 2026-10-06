@@ -33,9 +33,16 @@ describe("color contrast", () => {
 	});
 });
 
+/** Every tone of the palette as black text on a white fill — compliant, so a test can break one on purpose. */
+const COMPLIANT_TONES: readonly [string, string][] = ["green", "blue", "yellow", "red", "orange", "teal", "violet"].flatMap((tone): [string, string][] => [
+	[`--tone-${tone}`, "#000000"],
+	[`--tone-${tone}-soft`, "#ffffff"],
+]);
+
 describe("findContrastViolations", () => {
 	it("names each pairing below its minimum", () => {
 		const theme = new Map<string, string>([
+			...COMPLIANT_TONES,
 			["--background", "#ffffff"],
 			["--card", "#ffffff"],
 			["--popover", "#ffffff"],
@@ -58,5 +65,33 @@ describe("findContrastViolations", () => {
 
 		expect(violations).toHaveLength(5);
 		expect(violations.every((line) => line.startsWith("--ring on "))).toBe(true);
+	});
+
+	it("holds every tone of the palette to text contrast on its own soft fill", () => {
+		const theme = new Map<string, string>([
+			...COMPLIANT_TONES,
+			["--tone-yellow", "#dddd00"],
+			["--background", "#ffffff"],
+			["--card", "#ffffff"],
+			["--popover", "#ffffff"],
+			["--muted", "#ffffff"],
+			["--sidebar", "#ffffff"],
+			["--sidebar-accent", "#ffffff"],
+			["--ring", "#000000"],
+			["--sidebar-ring", "#000000"],
+			["--chart-1", "#000000"],
+			["--chart-2", "#000000"],
+			["--chart-3", "#000000"],
+			["--chart-4", "#000000"],
+			["--chart-5", "#000000"],
+			["--search-mark-bg", "#000000"],
+			["--search-mark-fg", "#ffffff"],
+			["--muted-foreground", "#000000"],
+		]);
+
+		const violations = findContrastViolations(theme);
+
+		expect(violations).toHaveLength(1);
+		expect(violations[0]).toMatch(/^--tone-yellow on --tone-yellow-soft: /u);
 	});
 });

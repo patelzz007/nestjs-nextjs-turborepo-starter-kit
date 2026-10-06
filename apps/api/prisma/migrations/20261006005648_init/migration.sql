@@ -161,6 +161,9 @@ CREATE TYPE "InboxDeadLetterReason" AS ENUM ('EMPTY_MESSAGE', 'MALFORMED_JSON', 
 CREATE TYPE "AuditOutcome" AS ENUM ('SUCCEEDED', 'FAILED');
 
 -- CreateEnum
+CREATE TYPE "AuditAuthMethod" AS ENUM ('BEARER_TOKEN', 'SESSION_COOKIE', 'REFRESH_COOKIE', 'API_KEY');
+
+-- CreateEnum
 CREATE TYPE "IdempotencyRecordStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED');
 
 -- CreateTable
@@ -1594,6 +1597,7 @@ CREATE TABLE "analytics_events" (
 CREATE TABLE "audit_logs" (
     "id" TEXT NOT NULL,
     "correlation_id" VARCHAR(64) NOT NULL,
+    "trace_id" VARCHAR(64),
     "occurred_at" BIGINT NOT NULL,
     "completed_at" BIGINT NOT NULL,
     "method" VARCHAR(10) NOT NULL,
@@ -1604,6 +1608,8 @@ CREATE TABLE "audit_logs" (
     "error_code" VARCHAR(64),
     "actor_user_id" VARCHAR(64),
     "impersonator_user_id" VARCHAR(64),
+    "impersonation_session_id" VARCHAR(64),
+    "auth_method" "AuditAuthMethod",
     "api_key_id" VARCHAR(64),
     "terminal_id" VARCHAR(64),
     "organization_id" VARCHAR(64),
@@ -1611,6 +1617,15 @@ CREATE TABLE "audit_logs" (
     "location_id" VARCHAR(64),
     "ip_address" VARCHAR(64),
     "user_agent" VARCHAR(512),
+    "client_type" VARCHAR(32),
+    "http_version" VARCHAR(8),
+    "host" VARCHAR(255),
+    "origin" VARCHAR(512),
+    "referer" VARCHAR(2048),
+    "accept_language" VARCHAR(256),
+    "request_content_type" VARCHAR(256),
+    "request_bytes" INTEGER,
+    "idempotency_key" VARCHAR(255),
     "request_params" JSONB,
     "request_body" JSONB,
     "response_body" JSONB,
@@ -2360,6 +2375,12 @@ CREATE INDEX "audit_logs_organization_id_occurred_at_idx" ON "audit_logs"("organ
 
 -- CreateIndex
 CREATE INDEX "audit_logs_actor_user_id_occurred_at_idx" ON "audit_logs"("actor_user_id", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_impersonator_user_id_occurred_at_idx" ON "audit_logs"("impersonator_user_id", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_outcome_occurred_at_idx" ON "audit_logs"("outcome", "occurred_at");
 
 -- CreateIndex
 CREATE INDEX "audit_logs_correlation_id_idx" ON "audit_logs"("correlation_id");

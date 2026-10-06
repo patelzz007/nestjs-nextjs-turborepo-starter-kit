@@ -36,8 +36,8 @@ describe("AuthorizationAuditService", () => {
 		const create = vi.spyOn(db.permissionAuditLog, "create").mockResolvedValue(row());
 		const requestContext = new RequestContextService();
 
-		await requestContext.run({ correlationId: "corr-1", ip: "203.0.113.7", userAgent: "vitest" }, async () => {
-			requestContext.bindPrincipal({ userId: "admin-1", impersonatorId: "root-1" });
+		await requestContext.run({ correlationId: "corr-1", ip: "203.0.113.7", userAgent: "vitest", edgeLocation: undefined }, async () => {
+			requestContext.bindPrincipal({ userId: "admin-1", impersonatorId: "root-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
 			await new AuthorizationAuditService(requestContext).record(
 				{ action: "ROLE_ASSIGNED", actor: { kind: "USER", userId: "admin-1" }, targetUserId: "user-2", targetRoleId: "role-1" },
 				db,

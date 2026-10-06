@@ -171,6 +171,12 @@ the client IP is the first address in `X-Forwarded-For`, read right to left,
 that is not a trusted proxy. `1`/`true` (trust everyone) is rejected at boot.
 `cf-connecting-ip` is never read. One resolver (`common/http/client-ip.ts`)
 feeds `request.ip`, rate-limit trackers, sessions and the audit log.
+`TRUST_PROXY` also gates the client's **location** in the audit log: the CDN
+geo headers (CloudFront `CloudFront-Viewer-Country` / `-City` / `-Time-Zone`,
+Cloudflare `CF-IPCountry` / `CF-IPCity`, Vercel `X-Vercel-IP-*`) are read only
+when the TCP peer is a trusted proxy (`common/http/edge-location.ts`), so list
+your CDN / load balancer there to get country, region, city and time zone on
+every audit row ([ADR 025](../../adr/025-global-http-audit-log.md)).
 
 Toggles: the historical `0`/`1` switches (`SECURITY_HARDENING_ENABLED`, `SWAGGER_ENABLED`, `OBSERVE_ENABLED`) accept
 `0`, `1`, `true`, `false`; the `true`/`false` flags (`MEMORY_MONITORING`,

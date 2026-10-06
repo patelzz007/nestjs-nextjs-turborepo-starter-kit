@@ -1,8 +1,8 @@
 import type { IdempotencyRecordStatus } from "@prisma/client";
-import { API_VERSION_PREFIX } from "@workspace/shared";
+import { API_VERSION_PREFIX, apiRoutes } from "@workspace/shared";
 
 import { toAuditLogCreateInput } from "../../src/common/audit/audit-log.mapper";
-import { toAuditPayload, type HttpAuditEntry } from "../../src/common/audit/http-audit-entry";
+import { auditDeviceFields, auditNetworkFields, toAuditPayload, UNMATCHED_ENDPOINT, type HttpAuditEntry } from "../../src/common/audit/http-audit-entry";
 import type { RequestContext } from "../../src/common/context/request-context";
 import { buildIdempotencyScope, hashIdempotentRequest } from "../../src/platform/idempotency/idempotency-request";
 import { IDEMPOTENCY_RETENTION_MS } from "../../src/platform/idempotency/idempotency.constants";
@@ -19,7 +19,10 @@ import { ORGANIZATION_SEED_IDS } from "./organizations";
 //   - `audit_logs` rows built with the app's payload redaction
 //     (`toAuditPayload`: secrets → [REDACTED], personal data masked) and the
 //     app's row mapping (`toAuditLogCreateInput`) — one success with the
-//     system operations it ran, one failed login, one idempotent create.
+//     system operations it ran, one failed login, one idempotent create,
+//     one session refresh (refresh cookie), one bearer-token validation
+//     failure and one audit-viewer sensitive read (GET), so every request
+//     metadata column and every auth method has demo data.
 // Deterministic ids and timestamps; upserted by id with an empty update, so
 // re-seeding never rewrites an audit row (append-only, like the app).
 // ---------------------------------------------------------------------------
@@ -36,6 +39,24 @@ const SEED_AUDIT_DURATION_MS = 42;
 const SEED_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
 /** RFC 5737 documentation address. */
 const SEED_CLIENT_IP = "203.0.113.24";
+/** The API host the demo requests were addressed to (RFC 2606 reserved domain). */
+const SEED_API_HOST = "api.example.com";
+/** The admin panel the demo browser requests came from. */
+const SEED_ADMIN_ORIGIN = "https://admin.example.com";
+const SEED_ACCEPT_LANGUAGE = "en-GB,en;q=0.9";
+const SEED_HTTP_VERSION = "1.1";
+const SEED_JSON_CONTENT_TYPE = "application/json";
+/**
+ * Where the CDN edge located the demo admin (browser rows): the seeded deployment
+ * sits behind CloudFront, whose viewer headers the API reads from trusted proxies.
+ */
+const SEED_EDGE_LOCATION = { geoCountry: "MY", geoRegion: "Kuala Lumpur", geoCity: "Kuala Lumpur", geoTimeZone: "Asia/Kuala_Lumpur" };
+/** Every geo column NULL — no CDN in front (POS terminals on the merchant LAN, anonymous probes). */
+const NO_EDGE_LOCATION = { geoCountry: null, geoRegion: null, geoCity: null, geoTimeZone: null };
+const SEED_IPHONE_USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+const SEED_CRAWLER_USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+/** An IPv6 documentation address (RFC 3849) for the mobile visit. */
+const SEED_MOBILE_CLIENT_IP = "2001:db8::24";
 
 /** Name of the demo city that is seeded already soft-deleted. */
 export const SOFT_DELETED_DEMO_CITY_NAME = "Retired Demo City (soft-deleted)";
@@ -70,6 +91,14 @@ export interface HttpAuditSeedSummary {
 const SEED_IDEMPOTENT_PRODUCT_BODY = { name: "Seed Demo Mug", sku: "SEED-MUG-001", price: 12 };
 const SEED_IDEMPOTENCY_KEY = "seed-demo-product-create-0001";
 
+/** Demo request numbers of the auth-method / sensitive-read rows (each number is used once across the seed modules). */
+const SESSION_REFRESH_REQUEST = 20;
+const BEARER_VALIDATION_FAILURE_REQUEST = 21;
+const AUDIT_VIEWER_READ_REQUEST = 22;
+const PAGE_READ_REQUEST = 23;
+const MOBILE_PROFILE_READ_REQUEST = 24;
+const CRAWLER_UNKNOWN_ROUTE_REQUEST = 25;
+
 /**
  * The completed `Idempotency-Key` record of the demo product create, built
  * with the app's own scope + fingerprint functions (so a replay of exactly
@@ -81,12 +110,13 @@ async function ensureIdempotencyRecord(adminId: string, row: HttpAuditEntry, res
 		traceId: row.correlationId,
 		ip: undefined,
 		userAgent: undefined,
-		principal: { userId: adminId, impersonatorId: undefined },
+		edgeLocation: undefined,
+		principal: { userId: adminId, impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" },
 		apiKey: undefined,
 		tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: row.occurredAt,
-		isAuditRecordedInTransaction: false,
+		isAuditRecorded: false,
 	};
 	const scope: string = buildIdempotencyScope(context, row.method, row.endpoint);
 	const requestHash: string = hashIdempotentRequest({ method: row.method, url: row.path, body: { kind: "json", value: SEED_IDEMPOTENT_PRODUCT_BODY } });
@@ -134,24 +164,79 @@ async function ensureSoftDeletedDemoCity(superAdminId: string, deletedAt: number
 	return city.id;
 }
 
+/** Request-metadata columns `entry()` fills with a browser-session default; a row overrides what differs. */
+type SeedRequestMetadata = Pick<
+	HttpAuditEntry,
+	| "ipAddress"
+	| "userAgent"
+	| "geoCountry"
+	| "geoRegion"
+	| "geoCity"
+	| "geoTimeZone"
+	| "impersonationSessionId"
+	| "authMethod"
+	| "clientType"
+	| "httpVersion"
+	| "host"
+	| "origin"
+	| "referer"
+	| "acceptLanguage"
+	| "requestContentType"
+	| "requestBytes"
+	| "idempotencyKey"
+>;
+
+/** Columns the API derives from the User-Agent and the address — the seed derives them the same way. */
+type DerivedClientFields = "browserName" | "browserVersion" | "osName" | "osVersion" | "deviceType" | "deviceModel" | "ipVersion" | "ipScope";
+
+/** The fields each seeded row states itself (the rest come from the demo clock and client). */
+export type SeedAuditFields = Omit<HttpAuditEntry, "correlationId" | "traceId" | "occurredAt" | "completedAt" | DerivedClientFields | keyof SeedRequestMetadata> &
+	Partial<SeedRequestMetadata>;
+
+/**
+ * Defaults for the request-metadata columns: a user request is an admin-panel
+ * browser session (cookie auth, Origin / Referer of the panel); an API-key
+ * request is a POS terminal (no browser headers); anything else is anonymous.
+ */
+function defaultRequestMetadata(fields: SeedAuditFields): SeedRequestMetadata {
+	const isBrowser: boolean = fields.actorUserId !== null;
+	const body: string | null = fields.requestBody === null ? null : JSON.stringify(fields.requestBody);
+	return {
+		ipAddress: SEED_CLIENT_IP,
+		userAgent: SEED_USER_AGENT,
+		...(isBrowser ? SEED_EDGE_LOCATION : NO_EDGE_LOCATION),
+		impersonationSessionId: null,
+		authMethod: isBrowser ? "SESSION_COOKIE" : fields.apiKeyId === null ? null : "API_KEY",
+		clientType: isBrowser ? "admin" : null,
+		httpVersion: SEED_HTTP_VERSION,
+		host: SEED_API_HOST,
+		origin: isBrowser ? SEED_ADMIN_ORIGIN : null,
+		referer: isBrowser ? `${SEED_ADMIN_ORIGIN}/` : null,
+		acceptLanguage: isBrowser ? SEED_ACCEPT_LANGUAGE : null,
+		requestContentType: body === null ? null : SEED_JSON_CONTENT_TYPE,
+		requestBytes: body === null ? null : Buffer.byteLength(body, "utf8"),
+		idempotencyKey: null,
+	};
+}
+
 /**
  * One demo request's audit row: the deterministic id, correlation id, clock and
  * client of request #`index` (each number is used once across the seed modules).
  */
-export function entry(
-	index: number,
-	fields: Omit<HttpAuditEntry, "correlationId" | "occurredAt" | "completedAt" | "ipAddress" | "userAgent">,
-): { readonly id: string; readonly row: HttpAuditEntry } {
+export function entry(index: number, fields: SeedAuditFields): { readonly id: string; readonly row: HttpAuditEntry } {
 	const occurredAt: number = SEED_AUDIT_BASE_EPOCH_MS + index * SEED_AUDIT_STEP_MS;
+	const correlationId = `seed-${deterministicUuid(`${HTTP_AUDIT_NAMESPACE}.correlation`, String(index))}`;
+	const stated = { ...defaultRequestMetadata(fields), ...fields };
 	return {
 		id: deterministicUuid(HTTP_AUDIT_NAMESPACE, String(index)),
 		row: {
-			...fields,
-			correlationId: `seed-${deterministicUuid(`${HTTP_AUDIT_NAMESPACE}.correlation`, String(index))}`,
+			...stated,
+			...auditDeviceFields(stated.userAgent),
+			...auditNetworkFields(stated.ipAddress),
+			correlationId,
+			traceId: correlationId,
 			occurredAt,
 			completedAt: occurredAt + SEED_AUDIT_DURATION_MS,
-			ipAddress: SEED_CLIENT_IP,
-			userAgent: SEED_USER_AGENT,
 		},
 	};
 }
@@ -198,6 +283,126 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 			requestBody: toAuditPayload({ email: "admin@example.com", password: "wrong-password" }),
 			responseBody: toAuditPayload({ success: false, error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } }),
 			systemOperations: [],
+			// Anonymous (no credential yet), but sent by the admin panel's login form.
+			clientType: "admin",
+			origin: SEED_ADMIN_ORIGIN,
+			referer: `${SEED_ADMIN_ORIGIN}/auth/login`,
+			acceptLanguage: SEED_ACCEPT_LANGUAGE,
+		}),
+		entry(SESSION_REFRESH_REQUEST, {
+			method: "POST",
+			endpoint: `${API_VERSION_PREFIX}${apiRoutes.auth.refresh}`,
+			path: `${API_VERSION_PREFIX}${apiRoutes.auth.refresh}`,
+			outcome: "SUCCEEDED",
+			responseStatus: 200,
+			errorCode: null,
+			actorUserId: actors.adminId,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: {} }),
+			requestBody: null,
+			responseBody: toAuditPayload({ success: true, data: { message: "Tokens refreshed" } }),
+			systemOperations: [],
+			authMethod: "REFRESH_COOKIE",
+		}),
+		entry(BEARER_VALIDATION_FAILURE_REQUEST, {
+			method: "POST",
+			endpoint: `${API_VERSION_PREFIX}/product`,
+			path: `${API_VERSION_PREFIX}/product`,
+			outcome: "FAILED",
+			responseStatus: 400,
+			errorCode: "VALIDATION_ERROR",
+			actorUserId: actors.adminId,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: {} }),
+			requestBody: toAuditPayload({ name: "", sku: "SEED-MUG-002", price: -1 }),
+			responseBody: toAuditPayload({ success: false, error: { code: "VALIDATION_ERROR", message: "Request validation failed" } }),
+			systemOperations: [],
+			// A script calling the API with a bearer token: no browser headers.
+			authMethod: "BEARER_TOKEN",
+			clientType: null,
+			origin: null,
+			referer: null,
+			acceptLanguage: null,
+		}),
+		entry(AUDIT_VIEWER_READ_REQUEST, {
+			method: "GET",
+			endpoint: `${API_VERSION_PREFIX}${apiRoutes.auditLogs.list}`,
+			path: `${API_VERSION_PREFIX}${apiRoutes.auditLogs.list}?filter%5Boutcome%5D%5Beq%5D=FAILED`,
+			outcome: "SUCCEEDED",
+			responseStatus: 200,
+			errorCode: null,
+			actorUserId: actors.adminId,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: { "filter[outcome][eq]": "FAILED" } }),
+			requestBody: null,
+			// A sensitive read stores what was released, never the data itself.
+			responseBody: toAuditPayload({ auditLogView: { view: "list", returned: 2, total: 2, page: 1 } }),
+			systemOperations: ["audit.http_request.read", "audit.http_request.record"],
+			referer: `${SEED_ADMIN_ORIGIN}/audit-logs`,
+		}),
+		// Every read is audited, not only sensitive ones: an ordinary admin page load…
+		entry(PAGE_READ_REQUEST, {
+			method: "GET",
+			endpoint: `${API_VERSION_PREFIX}${apiRoutes.geo.stats}`,
+			path: `${API_VERSION_PREFIX}${apiRoutes.geo.stats}`,
+			outcome: "SUCCEEDED",
+			responseStatus: 200,
+			errorCode: null,
+			actorUserId: actors.adminId,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: {} }),
+			requestBody: null,
+			responseBody: toAuditPayload({ success: true, data: { regions: 6, subregions: 22, countries: 250, states: 5_000, cities: 150_000 } }),
+			systemOperations: ["audit.http_request.record"],
+			referer: `${SEED_ADMIN_ORIGIN}/geography`,
+		}),
+		// …a customer reading their profile on an iPhone (IPv6)…
+		entry(MOBILE_PROFILE_READ_REQUEST, {
+			method: "GET",
+			endpoint: `${API_VERSION_PREFIX}${apiRoutes.auth.profile}`,
+			path: `${API_VERSION_PREFIX}${apiRoutes.auth.profile}`,
+			outcome: "SUCCEEDED",
+			responseStatus: 200,
+			errorCode: null,
+			actorUserId: actors.userId,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: {} }),
+			requestBody: null,
+			responseBody: toAuditPayload({ success: true, data: { email: "user@example.com", fullName: "Demo Customer", version: 1 } }),
+			systemOperations: ["audit.http_request.record"],
+			userAgent: SEED_IPHONE_USER_AGENT,
+			ipAddress: SEED_MOBILE_CLIENT_IP,
+			clientType: "web",
+			origin: "https://app.example.com",
+			referer: "https://app.example.com/account",
+		}),
+		// …and a crawler probing a route that does not exist (anonymous, unmatched → 404).
+		entry(CRAWLER_UNKNOWN_ROUTE_REQUEST, {
+			method: "GET",
+			endpoint: UNMATCHED_ENDPOINT,
+			path: "/wp-login.php",
+			outcome: "FAILED",
+			responseStatus: 404,
+			errorCode: "NOT_FOUND",
+			actorUserId: null,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: {} }),
+			requestBody: null,
+			responseBody: toAuditPayload({ success: false, error: { code: "NOT_FOUND", message: "Route not found" } }),
+			systemOperations: [],
+			userAgent: SEED_CRAWLER_USER_AGENT,
 		}),
 		entry(2, {
 			method: "POST",
@@ -214,6 +419,7 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 			requestBody: toAuditPayload(SEED_IDEMPOTENT_PRODUCT_BODY),
 			responseBody: toAuditPayload({ success: true, data: { name: "Seed Demo Mug", sku: "SEED-MUG-001" } }),
 			systemOperations: ["http.idempotency", "audit.http_request.record"],
+			idempotencyKey: SEED_IDEMPOTENCY_KEY,
 		}),
 	];
 
@@ -247,7 +453,7 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 	for (const { id, row } of rows) {
 		await prisma.auditLog.upsert({ where: { id }, create: { id, ...toAuditLogCreateInput(row) }, update: {} });
 	}
-	const idempotentCreate = rows[2];
+	const idempotentCreate = rows.find(({ row }) => row.idempotencyKey === SEED_IDEMPOTENCY_KEY);
 	if (idempotentCreate !== undefined) {
 		await ensureIdempotencyRecord(actors.adminId, idempotentCreate.row, {
 			success: true,

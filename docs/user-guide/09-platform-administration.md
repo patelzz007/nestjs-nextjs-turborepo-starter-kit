@@ -3,7 +3,7 @@ title: "9. Platform administration"
 description: "Users, roles and permissions, the audit log, email templates and log, geography and catalog data in the admin panel."
 order: 10
 author: "Product & Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791244800000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 tags: ["user-guide", "admin", "rbac", "audit"]
 ---
@@ -48,10 +48,32 @@ their own draft).
 
 ## Audit log
 
-Every state-changing request is recorded once, append-only and kept forever: who (user, and the
-impersonating admin if any), organization, endpoint, request and response, IP, device and time
-([ADR 025](../adr/025-global-http-audit-log.md)). Platform admins with `READ:AUDIT_LOG` can list
-and filter it.
+Every request to the API — reads included, whether it succeeded or was refused — is recorded
+once, append-only and kept forever ([ADR 025](../adr/025-global-http-audit-log.md)). Only the
+automated health checks are left out. Open **Platform → Audit log** to see it.
+Admins, Managers and SuperAdmins can open it (`LIST:AUDIT_LOG` for the table, `READ:AUDIT_LOG` for
+a record).
+
+- **The table** shows, newest first: time and duration, method and endpoint, outcome and HTTP
+  status (with the error code of a refused request), the user (and the SuperAdmin behind an
+  impersonation), organization, device (desktop / mobile / tablet / bot, browser and OS), IP
+  address with its class (public, private network, carrier NAT …), country and city, and the
+  credential — colour-coded. Filter by outcome, method, credential, device or address class, or
+  search a path, endpoint, error code, IP address, User-Agent or correlation id. Filters live in
+  the address bar, so you can share a filtered view.
+- **Click a row** to open its full record in a side drawer; **Open full page** gives the record
+  its own link.
+- **Location** (country, region, city, time zone) comes from the CDN in front of the API. When
+  the API is not behind one (local development, a direct connection), it is empty.
+- **A record** adds everything else: the impersonation session, API key and POS terminal, store
+  and location, user agent, client app, Origin, Referer, Accept-Language, host, HTTP version,
+  request size, idempotency key, correlation and trace ids, the row-level-security bypasses the
+  request used, and the route params, request body and response body. Click an actor,
+  organization or correlation id to see every other record for it.
+- Secrets read `[REDACTED]` and personal data is masked: they are removed **before** a record is
+  stored, so nobody — including you — can see them.
+- Looking at the audit log is itself recorded, so you can always answer "who looked at this?" —
+  the record shows what was viewed, not the data itself.
 
 ## Emails
 
