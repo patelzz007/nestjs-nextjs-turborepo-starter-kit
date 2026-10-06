@@ -4,31 +4,31 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "dotenv -e .env -- tsx watch src/main.ts",
+		"dev": "dotenv run -q -- tsx watch src/main.ts",
 		"start": "tsx src/main.ts",
-		"db:provision-login": "dotenv -e .env -- tsx src/cli/provision-db-login.ts",
-		"kafka:provision-topics": "dotenv -e .env -- tsx src/cli/provision-kafka-topics.ts",
+		"db:provision-login": "dotenv run -q -- tsx src/cli/provision-db-login.ts",
+		"kafka:provision-topics": "dotenv run -q -- tsx src/cli/provision-kafka-topics.ts",
 		"lint": "eslint --max-warnings=0",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run --config vitest.config.ts",
-		"test:e2e": "dotenv -e .env -- vitest run --config vitest.config.e2e.ts"
+		"test:e2e": "dotenv run -q -- vitest run --config vitest.config.e2e.ts"
 	},
 	"dependencies": {
 		"@confluentinc/kafka-javascript": "1.10.1",
 		"@workspace/messaging": "workspace:*",
 		"@workspace/shared": "workspace:*",
-		"pg": "^8.23.0",
-		"zod": "4.6.2"
+		"pg": "^8.23.1",
+		"zod": "4.6.5"
 	},
 	"devDependencies": {
-		"@types/node": "^26.4.1",
+		"@types/node": "^26.6.4",
 		"@types/pg": "^8.23.1",
 		"@workspace/eslint-config": "workspace:^",
 		"@workspace/typescript-config": "workspace:*",
-		"dotenv-cli": "^11.0.0",
+		"dotenv": "^18.0.5",
 		"eslint": "^9.39.5",
-		"tsx": "^4.23.13",
-		"typescript": "6.0.2",
-		"vitest": "^5.0.0"
+		"tsx": "^4.23.15",
+		"typescript": "6.0.3",
+		"vitest": "^5.0.3"
 	}
 }

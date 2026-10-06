@@ -63,7 +63,7 @@ Both the API producer and the analytics consumer use **`@confluentinc/kafka-java
 
 ## Analytics consumer
 
-`apps/analytics-consumer` reads only its own environment (`apps/analytics-consumer/.env` locally via `dotenv -e .env`, the deployment env in production) — never `apps/api/.env`, never the API's secrets. Every variable is listed in `apps/analytics-consumer/.env.example`; the important ones:
+`apps/analytics-consumer` reads only its own environment (`apps/analytics-consumer/.env` locally via `dotenv run`, the deployment env in production) — never `apps/api/.env`, never the API's secrets. Every variable is listed in `apps/analytics-consumer/.env.example`; the important ones:
 
 | Variable | Default | Meaning |
 |----------|---------|---------|

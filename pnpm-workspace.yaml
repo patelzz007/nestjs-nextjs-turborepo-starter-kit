@@ -30,10 +30,6 @@ allowBuilds:
 # the entry is well-formed; the weekly `dependency-review` workflow reports it
 # once that date arrives (it never blocks a push).
 minimumReleaseAge: 1440
-minimumReleaseAgeExclude:
-  # Security fix GHSA-ch52-4w7c-c8xp (published 2026-10-04, see the astro override below).
-  # Delete this entry on or after 2026-10-05, once 4.3.0 is past the cooldown.
-  - http-cache-semantics@4.3.0
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7
@@ -42,7 +38,7 @@ minimumReleaseAgeExclude:
 packageExtensions:
   "@darraghor/eslint-plugin-nestjs-typed":
     dependencies:
-      typescript: "6.0.2"
+      typescript: "6.0.3"
 
 # ── Dependency overrides ──────────────────────────────────────────────────
 # Force ONE version of @types/pg for the whole tree. @prisma/adapter-pg ships
@@ -51,8 +47,8 @@ packageExtensions:
 # is two structurally different types and `new PrismaPg(pool)` fails TS2345
 # (e.g. the `connect` event overload added in 8.20.4 vs 8.20.3).
 overrides:
-  "@types/pg": "8.20.4"
-  typescript: "6.0.2"
+  "@types/pg": "8.23.1"
+  typescript: "6.0.3"
   # One fastify for the app and @nestjs/platform-fastify (the adapter's request/
   # reply types must be the same declarations the app imports). 5.12.5 is the
   # first release with the GHSA-4mh8-r7rc-xpvc fix (HTTP/2 trailer DoS).
@@ -62,20 +58,25 @@ overrides:
   # packages. Remove each override once a Prisma release ships the patched dep.
   "@prisma/config>deepmerge-ts": "8.0.2" # GHSA: deepmerge-ts <8.0.0
   "prisma>mysql2": "3.24.5" # GHSA: mysql2 <3.23.1 (MySQL driver, unused with Postgres)
-  # @google-cloud/storage and google-gax (via firebase-admin) still depend on uuid ^9; their
-  # callers only use `require("uuid").v4()`, which uuid 11 (CJS + ESM) keeps.
-  # packages/tooling/tests/dependency-overrides.test.mjs loads uuid from each parent's
-  # install and calls v4() the way they do, so a breaking override fails the tests.
-  "teeny-request>uuid": "11.1.1" # GHSA: uuid <11.1.1
-  "gaxios>uuid": "11.1.1"
-  "google-gax>uuid": "11.1.1"
-  # astro@7.3.5 (latest) depends on http-cache-semantics ^4.2.0 but its lockfile resolution
-  # stayed on 4.2.0; 4.3.0 is in astro's own range. Remove once a fresh resolution picks >=4.3.0.
-  "astro>http-cache-semantics": "4.3.0" # GHSA-ch52-4w7c-c8xp: http-cache-semantics <=4.2.0
+  # gaxios@6 (via firebase-admin@14 → @google-cloud/storage@8 → google-auth-library@9) still
+  # depends on uuid ^9; it only uses `require("uuid").v4()`, which uuid 11 (CJS + ESM) keeps.
+  # packages/tooling/tests/dependency-overrides.test.mjs loads uuid from the parent's
+  # install and calls v4() the way it does, so a breaking override fails the tests.
+  # (google-gax and teeny-request dropped uuid in the versions firebase-admin@14 pulls.)
+  "gaxios>uuid": "11.1.1" # GHSA: uuid <11.1.1
+  # concurrently@10.0.5 (latest, root dev tooling) pins shell-quote 1.9.0 exactly and only calls
+  # `quote()`; 1.12.0 is semver-compatible. dependency-overrides.test.mjs calls quote() through
+  # concurrently's install. Remove once a concurrently release depends on shell-quote >=1.11.0.
+  "concurrently>shell-quote": "1.12.0" # GHSA-pqg4-j6r4-53mv: shell-quote >=1.8.4 <1.11.0
 
-# typescript-eslint@8.x does not support TypeScript 7.0 (no compiler API).
-# Keep the whole workspace on TS 6.0.2 until TS 7.1 + typescript-eslint support
-# land. See https://github.com/typescript-eslint/typescript-eslint/issues/10940
+# ── Majors held back (re-checked 2026-10-06; re-check on every dependency sweep) ──
+# typescript 7: typescript-eslint@8.71 peers `typescript >=4.8.4 <6.1.0` (TS 7 has
+# no compiler API). Keep the whole workspace on TS 6.0.x until TS 7.1 +
+# typescript-eslint support land. See https://github.com/typescript-eslint/typescript-eslint/issues/10940
+# eslint / @eslint/js 10: eslint-plugin-react@7.37, eslint-plugin-import@2.32 and
+# eslint-plugin-jsx-a11y@6.10 peer `eslint` only up to ^9. Stay on 9.39.x until they support 10.
+# prisma 8: npm's `latest` tag points at a release candidate (8.0.0-rc.x) while
+# @prisma/client latest is 7.10.0. Stay on 7.10.x until 8.0.0 ships as a stable release.
 
 # nestjs-zod@5.5.0 (latest) has not yet widened its peer ranges to Nest 12.
 # It is exercised end to end by the API unit + e2e suites on Nest 12; remove

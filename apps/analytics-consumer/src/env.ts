@@ -9,7 +9,7 @@
 //
 // The consumer owns its configuration: it reads ONLY the variables declared
 // below, from its own environment (apps/analytics-consumer/.env in local
-// development via `dotenv -e .env`, the deployment's env in production). It
+// development via `dotenv run`, the deployment's env in production). It
 // never loads the API's .env, and never sees the API's secrets.
 
 import type { DbPoolSettings, ProcessingRetrySettings } from "@workspace/messaging/inbox";

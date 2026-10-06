@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white" alt="Node 20+" /></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D22.12-339933?logo=node.js&logoColor=white" alt="Node 22.12+" /></a>
   <a href="https://pnpm.io"><img src="https://img.shields.io/badge/pnpm-11-F69220?logo=pnpm&logoColor=white" alt="pnpm 11" /></a>
   <a href="https://turbo.build"><img src="https://img.shields.io/badge/Turborepo-2.10-EF4444?logo=turborepo&logoColor=white" alt="Turborepo" /></a>
 </p>
@@ -88,7 +88,7 @@ packages/
 
 ## Quick start
 
-**Prerequisites:** Node 20.19+ (CI uses the 24 LTS line), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) and Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ, Bull Board and Mailpit — see [local infrastructure](./docs/technical/operations/local-infrastructure.md)).
+**Prerequisites:** Node 22.12+ (CI uses the 24 LTS line), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) and Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ, Bull Board and Mailpit — see [local infrastructure](./docs/technical/operations/local-infrastructure.md)).
 
 ```bash
 # Install dependencies + build shared workspace package

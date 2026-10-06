@@ -138,7 +138,7 @@ The guard (`packages/tooling/scripts/check-migration-history.mjs`, rules in `scr
 
 | Tool | Where the version comes from |
 | --- | --- |
-| Node.js | `NODE_VERSION` in `ci.yml` (currently the `24` LTS line). `engines.node` (`>=20.19`) is only the floor. |
+| Node.js | `NODE_VERSION` in `ci.yml` (currently the `24` LTS line). `engines.node` (`>=22.12`) is only the floor. |
 | pnpm | `packageManager` in the root `package.json`, read by `pnpm/action-setup`. |
 | PostgreSQL | `postgres:18.6` — keep `ci.yml` and `compose.yml` on the same tag. |
 

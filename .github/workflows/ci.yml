@@ -25,7 +25,7 @@ defaults:
     shell: bash
 
 env:
-  # Node.js LTS line used by CI. engines.node (>=20.19) is the floor; CI pins the
+  # Node.js LTS line used by CI. engines.node (>=22.12) is the floor; CI pins the
   # line it is verified on. Bump deliberately, together with docs/getting-started.md.
   NODE_VERSION: "24"
   TURBO_TELEMETRY_DISABLED: "1"

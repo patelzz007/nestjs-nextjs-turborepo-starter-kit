@@ -29,12 +29,14 @@ describe("initMermaid", () => {
 	});
 
 	it("renders diagrams with the light palette, then re-renders on theme change", async () => {
+		// Mermaid 12 changed the default layout engine and look; both themes pin the classic dagre rendering.
+		const classicRendering = { layout: "dagre", look: "classic" };
 		const { initMermaid } = await import("./mermaid");
 		initMermaid();
 		await vi.waitFor(() => {
 			expect(mermaidApi.run).toHaveBeenCalledTimes(1);
 		});
-		expect(mermaidApi.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: "base", securityLevel: "strict" }));
+		expect(mermaidApi.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: "base", securityLevel: "strict", ...classicRendering }));
 		const block = document.querySelector<HTMLElement>("pre.mermaid");
 		expect(block?.dataset.source).toBe("graph TD; A-->B");
 
@@ -45,7 +47,7 @@ describe("initMermaid", () => {
 		await vi.waitFor(() => {
 			expect(mermaidApi.run).toHaveBeenCalledTimes(2);
 		});
-		expect(mermaidApi.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: "dark" }));
+		expect(mermaidApi.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: "dark", ...classicRendering }));
 		expect(block?.textContent).toBe("graph TD; A-->B");
 	});
 

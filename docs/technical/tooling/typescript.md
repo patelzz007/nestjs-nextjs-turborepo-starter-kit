@@ -322,30 +322,25 @@ case: `import { TokenExpiredError } from "jsonwebtoken"` crashes at runtime, so
 destructures the class from it. If you add a new CJS dependency, prefer default
 imports and destructure from there.
 
-### TypeScript 7 + the TS6 shims (for JS-API tooling)
+### Why the repo stays on TypeScript 6 (not 7)
 
-The repo runs **TypeScript 7.0** (the Go-native compiler) for `tsc` in the web
-apps and packages — but TS7 ships **no JS compiler API** (no `ts.sys`, no
-`createProgram`), which breaks every JS-API consumer. Two workspaces therefore
-run the **last JS-based release (TypeScript 6.0.2)** side-by-side:
+TypeScript 7.0 (the Go-native compiler) ships **no JS compiler API** (no
+`ts.sys`, no `createProgram`), which breaks every JS-API consumer — above all
+typescript-eslint, whose 8.x line peers `typescript >=4.8.4 <6.1.0`. The whole
+workspace therefore runs the **last JS-based line, TypeScript 6.0.x** (currently
+`6.0.3`):
 
-- `@workspace/eslint-config` declares `"typescript": "6.0.2"` — so
-  typescript-eslint (resolved through eslint-config) gets the classic compiler
-  API it needs.
-- `@workspace/api` declares the same `"typescript": "6.0.2"` for the same
-  reason: `tsc --noEmit` typechecks the API and typescript-eslint lints it.
-  (Compilation itself is the **SWC** builder — `nest-cli.json` → `builder: swc`
-  — which does not invoke tsc and does not type-check, so it is TS-version
-  agnostic.)
-- `pnpm-workspace.yaml` uses `packageExtensions` to inject `typescript: 6.0.2`
-  into `@darraghor/eslint-plugin-nestjs-typed` (which imports `typescript`
-  directly). Without it, the plugin would resolve the hoisted TS7 and crash.
-- `.syncpackrc.json` exempts `@workspace/eslint-config` and `@workspace/api` from
-  the exact-version group so the 6.0.2 vs 7.0.2 difference doesn't count as
-  dependency drift.
+- Every workspace declares the same exact `"typescript": "6.0.3"` (syncpack
+  enforces one exact version — see `docs/technical/tooling/dependencies.md`).
+- `pnpm-workspace.yaml` `overrides.typescript` forces that version for the whole
+  tree, so no transitive dependency can pull TS7 in.
+- `pnpm-workspace.yaml` `packageExtensions` injects the same version into
+  `@darraghor/eslint-plugin-nestjs-typed`, which imports `typescript` without
+  declaring it.
 
-Note: the lockfile legitimately contains **two** `typescript` versions
-(`6.0.2` in the shimmed workspaces, `7.0.2` everywhere else) — that's expected.
+The lockfile contains exactly **one** `typescript` version. Move to TS7 only once
+typescript-eslint supports it; the held-majors note in `pnpm-workspace.yaml`
+records the blocker.
 After a `pnpm install`, re-run `pnpm db:generate` if Prisma's generated client
 types ever look missing (the reinstall can wipe `node_modules/.prisma`).
 

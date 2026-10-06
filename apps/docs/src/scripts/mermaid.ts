@@ -32,6 +32,10 @@ export function initMermaid(): void {
 		mermaid.initialize({
 			startOnLoad: false,
 			securityLevel: "strict",
+			// Mermaid 12 changed the default layout engine and look; pin the
+			// classic dagre rendering the docs' diagrams were written for.
+			layout: "dagre",
+			look: "classic",
 			theme: dark ? "dark" : "base",
 			themeVariables: dark ? { fontFamily: "inherit" } : { ...LIGHT_THEME_VARIABLES },
 		});

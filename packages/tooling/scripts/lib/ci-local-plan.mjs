@@ -42,6 +42,16 @@ export const BROWSER_SUITE_ENV = {
 	ADMIN_E2E_PASSWORD: "SuperAdmin@123",
 };
 
+/**
+ * API runtime config the browser job's API server needs from CI's API env
+ * (.github/actions/write-api-ci-env). Without it the API falls back to the
+ * developer's apps/api/.env, whose login verification emails a code the
+ * admin suite's seed login cannot read.
+ */
+export const BROWSER_API_ENV = {
+	LOGIN_VERIFICATION_MODE: "disabled",
+};
+
 /** Readiness URLs the browser job waits on (API readiness probe, web, admin login). */
 export const BROWSER_READINESS_URLS = [localUrl(LOCAL_APP_PORTS.api, "/health/ready"), localUrl(LOCAL_APP_PORTS.web, "/"), localUrl(LOCAL_APP_PORTS.admin, "/auth/login")];
 /** Budget for the three servers to become ready. */
@@ -199,7 +209,7 @@ export function browserJob({ databaseUrl }) {
 				job,
 				command: "pnpm",
 				args: ["--filter", "@workspace/api", "start"],
-				env: { ...api, PORT: String(LOCAL_APP_PORTS.api) },
+				env: { ...api, ...BROWSER_API_ENV, PORT: String(LOCAL_APP_PORTS.api) },
 				port: LOCAL_APP_PORTS.api,
 			},
 			{

@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+	BROWSER_API_ENV,
 	BROWSER_READINESS_URLS,
 	LOCAL_APP_PORTS,
 	BROWSER_SUITE_ENV,
@@ -18,6 +19,7 @@ import {
 } from "./ci-local-plan.mjs";
 
 const WORKFLOW = readFileSync(path.resolve(import.meta.dirname, "../../../../.github/workflows/ci.yml"), "utf8");
+const API_CI_ENV_ACTION = readFileSync(path.resolve(import.meta.dirname, "../../../../.github/actions/write-api-ci-env/action.yml"), "utf8");
 
 describe("throwawayDatabaseUrl", () => {
 	it("derives a sibling database on the same server, keeping credentials and query", () => {
@@ -149,6 +151,15 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 			expect(WORKFLOW).toContain(`${name}: ${value}`);
 			expect(job.suites.find((step) => step.id === "browser:admin-suite")?.env?.[name]).toBe(value);
 		}
+	});
+
+	it("serves the API with the workflow's API env, not the developer's login verification", () => {
+		const apiServer = job.servers.find((server) => server.id === "browser:api");
+		for (const [name, value] of Object.entries(BROWSER_API_ENV)) {
+			expect(API_CI_ENV_ACTION).toContain(`${name}=${value}`);
+			expect(apiServer?.env?.[name]).toBe(value);
+		}
+		expect(BROWSER_API_ENV.LOGIN_VERIFICATION_MODE).toBe("disabled");
 	});
 
 	it("binds every server to the port its readiness URL polls, for the port preflight", () => {

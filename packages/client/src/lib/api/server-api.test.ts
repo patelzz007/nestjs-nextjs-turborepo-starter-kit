@@ -264,16 +264,34 @@ describe("timeouts", () => {
 		cookiesMock.mockReturnValue(cookieStoreWithAccess("access-token"));
 	});
 
-	/** A fetch that never answers until its signal aborts — then rejects with the signal's reason, like the platform fetch. */
+	/**
+	 * A fetch that never answers until its signal aborts — then rejects with the signal's reason, like the platform fetch.
+	 * Also like the platform fetch, a signal that is ALREADY aborted rejects at once: an attempt can start after the
+	 * deadline fired (both timers overdue in one timer phase under load), and its signal never emits `abort` again.
+	 */
 	function hangingFetch(): FetchImpl {
 		return (_input, init): Promise<Response> =>
 			new Promise((_resolve, reject): void => {
-				init?.signal?.addEventListener("abort", (): void => {
-					const reason: Error | undefined = init.signal?.reason instanceof Error ? init.signal.reason : undefined;
+				const signal: AbortSignal | null | undefined = init?.signal;
+				const rejectWithReason = (): void => {
+					const reason: Error | undefined = signal?.reason instanceof Error ? signal.reason : undefined;
 					reject(reason ?? new DOMException("aborted", "AbortError"));
-				});
+				};
+				if (signal?.aborted === true) {
+					rejectWithReason();
+					return;
+				}
+				signal?.addEventListener("abort", rejectWithReason, { once: true });
 			});
 	}
+
+	it("rejects at once, without a request hanging, when an attempt starts on an already-aborted signal", async () => {
+		const fetchMock = vi.fn<FetchImpl>(hangingFetch());
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock, retries: 10 })));
+
+		await expect(server.stats.query({}, { signal: AbortSignal.abort() })).rejects.toThrow("aborted");
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
 
 	it("retries an attempt that timed out, within the overall deadline", async () => {
 		const fetchMock = vi.fn<FetchImpl>(hangingFetch()).mockImplementationOnce(hangingFetch()).mockResolvedValueOnce(jsonResponse(OK_BODY));
