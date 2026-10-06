@@ -225,14 +225,62 @@ Use one icon library consistently (as already noted) and treat icons as decorati
 <button onClick={onDelete} aria-label="Delete order"><TrashIcon aria-hidden="true" /></button>
 ```
 
-## Dark-mode palette — soft charcoal, never near-black
+## Palette — primitives, semantic tokens, one accent
 
-The dark neutrals (background, cards, popovers, muted surfaces, borders, text) are defined ONCE in
-`packages/ui/src/styles/tokens.css` (`.dark`): a low-glare charcoal (`#22272e`-family) with raised
-surfaces a step lighter and off-white text — every text pair meets WCAG AA. App themes
-(`apps/*/app/*-theme.css`) override **brand colours only** in dark mode (primary, ring, charts) and
-scope their light neutrals to `:root:not(.dark)`, so they can't shadow the shared dark surfaces.
-The docs site (`apps/docs`) mirrors the same family as hex. Never introduce a near-black surface.
+All colour is defined ONCE in `packages/ui/src/styles/tokens.css`, in two layers:
+
+1. **Primitives** — `--palette-neutral-0…950` (slate-cast greys, the light theme),
+   `--palette-night-50…950` (pure greys, the dark theme), `--palette-brand-50…950` (slate, admin and
+   docs), `--palette-blue-*` (web) and `--palette-green-*` (merchant) and `--palette-warm-*` (kopi amber, the charts' counter-colour). Raw scales only.
+2. **Semantic tokens** — `--background`, `--primary`, `--border`, `--sidebar-*`, `--chart-*`, … each
+   mapped onto a primitive step per theme (`:root` / `.dark`).
+
+Components read **semantic tokens only**, never `--palette-*` — the mapping is what lets light and
+dark (and a future rebrand) change in one place. App themes (`apps/*/app/*-theme.css`) may re-map
+**brand tokens only** (`APP_BRAND_TOKENS` in `lib/core/color-contrast.ts`) onto their hue — web is
+blue, merchant green, admin uses the shared slate — and never neutrals, surfaces or borders; each
+app's theme test enforces that and proves the layered theme's contrast. The docs site (`apps/docs/src/styles/global.css`) mirrors it as hex —
+change both together. Every text pair meets WCAG AA and every ring / chart series meets 3:1
+(`tokens-contrast.test.ts`).
+
+- **Brand colour is reserved for meaning** — primary actions, links, focus rings, the light-mode
+  active nav pill and the lead chart series. In dark mode the active nav row is a soft neutral
+  filled pill (no outline) in every app; the brand stays on buttons, focus and charts. Hover rows stay neutral. Status
+  (success / warning / destructive / info) and the categorical tone palette are separate tokens —
+  never use the accent to signal state.
+
+## Shell surfaces — white in light mode, elevation in dark mode
+
+Panel shells (admin, web, merchant):
+
+- **Light mode** — one white surface (`neutral-0`) for the sidebar, topbar, page and cards. Structure
+  comes from borders: the darker `--sidebar-border` (`neutral-300`) on the shell dividers — sidebar
+  edge, topbar, sidebar header — and the lighter `--border` on cards.
+- **Dark mode** — elevation by lightness: the sidebar is darkest (`night-950`, `#151515`), the page and
+  topbar sit above it (`night-900`, `#1d1d1d`), cards lift off the page (`night-800`, `#2b2b2b`) with
+  `#393939` borders, and popovers and menus float above cards (`night-750`). Fills inside a card
+  (tags, progress tracks, hover rows) sit a step above the card.
+
+Paint the sidebar with `bg-sidebar` (the `Sidebar` primitive already does) — never `bg-card` or a
+one-off colour. Sidebar text pairs (`--sidebar-foreground` on `--sidebar` / `--sidebar-accent`,
+`--sidebar-primary-foreground` on `--sidebar-primary`, `--muted-foreground` on `--sidebar`) are
+enforced by `tokens-contrast.test.ts`.
+
+## Status badges and icon tiles — meaning, not colour
+
+- **Status pills** use `StatusBadge` (`@workspace/ui/components/status-badge`) with a `StatusTone` —
+  `success` (live, usable, approved), `warning` (waiting on someone: a review, an action), `danger`
+  (failed, rejected, blocked), `info` (in progress), `neutral` (settled), `muted` (inactive, finished).
+  A feature declares one `Record<TheStatus, StatusTone>` (and its labels — never render a raw enum
+  value); it never picks badge variants or Tailwind colours itself. Restyling every status in every app
+  is a change to `STATUS_TONE_BADGE_VARIANT` alone.
+- **Icons beside a stat or a navigation item** sit in an `IconTile` (`@workspace/ui/components/icon-tile`)
+  whose `tone` follows what the item is about, consistently across apps: money and active things
+  `green`, places `blue`, people and access `violet`, verification and time `teal`, waiting `yellow`,
+  ended or blocked `red`, the app's main count `brand`. `StatCard` and `KpiStatCard` (`iconTone`) take
+  the tone directly; `KpiDefinition.iconTone` carries it from an analytics definition.
+- Never mark a card with a coloured edge stripe (`border-l-4 …`): emphasis comes from the content — a
+  toned status badge, the primary action.
 
 ## Dark mode toggle implementation
 
