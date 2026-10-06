@@ -1,5 +1,6 @@
 import type { DocumentMimeType, KybDocumentScanStatus, MerchantKybDocumentRecord, MerchantKybProfileResponse } from "@workspace/shared";
 import { JsonObjectSchema, JsonPrimitiveSchema } from "@workspace/shared";
+import type { StatusTone } from "@workspace/ui/components/status-badge";
 
 export function readProfileKybDocuments(profile: MerchantKybProfileResponse): MerchantKybDocumentRecord[] {
 	return profile.documents;
@@ -54,8 +55,8 @@ export interface KybScanStatusPresentation {
 	readonly label: string;
 	/** Whether the document may be viewed / downloaded. */
 	readonly accessible: boolean;
-	/** `warning` marks an accessible document the member should know about (it was not malware-checked). */
-	readonly tone: "neutral" | "warning" | "danger";
+	/** What the status means: `warning` marks an accessible document the member should know about (it was not malware-checked). */
+	readonly tone: StatusTone;
 }
 
 /**
@@ -66,8 +67,8 @@ export interface KybScanStatusPresentation {
  * - INFECTED / SCAN_FAILED: never served; the member re-uploads.
  */
 export const KYB_SCAN_STATUS_PRESENTATION: Readonly<Record<KybDocumentScanStatus, KybScanStatusPresentation>> = {
-	SCANNING: { label: "Scanning", accessible: false, tone: "neutral" },
-	CLEAN: { label: "Ready", accessible: true, tone: "neutral" },
+	SCANNING: { label: "Scanning", accessible: false, tone: "info" },
+	CLEAN: { label: "Ready", accessible: true, tone: "success" },
 	NOT_SCANNED: { label: "Not malware-checked", accessible: true, tone: "warning" },
 	INFECTED: { label: "Action required", accessible: false, tone: "danger" },
 	SCAN_FAILED: { label: "Scan failed – re-upload", accessible: false, tone: "danger" },

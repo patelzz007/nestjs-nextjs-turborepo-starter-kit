@@ -7,7 +7,7 @@ import { CreatedApiKeyNotice } from "@/components/api-keys/created-api-key-notic
 import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
+import { StatCard } from "@workspace/ui/components/stat-card";
 import { API_KEY_COUNT_PAGE_SIZE, DEFAULT_API_KEY_FILTER, summarizeApiKeys, toApiKeyListQuery, type ApiKeyFilter, type ApiKeyStats } from "@/lib/api-keys/api-key-summary";
 import {
 	CREATE_API_KEY_FIELD_ERRORS,
@@ -250,15 +250,17 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 			{createdKey === null ? null : <CreatedApiKeyNotice keyName={createdKey.name} secret={createdKey.secret} onDismiss={handleDismissCreated} />}
 
 			<div className="grid gap-4 sm:grid-cols-3">
-				<MerchantStatCard
+				<StatCard
 					label="Active keys"
+					tone="green"
 					value={stats === undefined ? "—" : String(stats.active)}
 					hint="Can validate redemptions now"
 					icon={<KeyRound className="size-5" aria-hidden="true" />}
 				/>
-				<MerchantStatCard label={STORES_COVERED_LABEL} value={storesCard.value} hint={storesCard.hint} icon={<Store className="size-5" aria-hidden="true" />} />
-				<MerchantStatCard
+				<StatCard label={STORES_COVERED_LABEL} tone="blue" value={storesCard.value} hint={storesCard.hint} icon={<Store className="size-5" aria-hidden="true" />} />
+				<StatCard
 					label="Revoked"
+					tone="red"
 					value={stats === undefined ? "—" : String(stats.revoked)}
 					hint="Kept for your records"
 					icon={<Ban className="size-5" aria-hidden="true" />}

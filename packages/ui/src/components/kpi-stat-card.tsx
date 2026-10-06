@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@workspace/ui/components/card";
+import { IconTile, type IconTileTone } from "@workspace/ui/components/icon-tile";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -62,6 +63,8 @@ export interface KpiStatCardProps extends Omit<React.HTMLAttributes<HTMLDivEleme
 	/** What the change is measured against, e.g. "vs previous 30 days". */
 	readonly comparisonLabel?: string | undefined;
 	readonly icon?: LucideIcon | undefined;
+	/** The icon tile's colour — by what the KPI is about. Default neutral. */
+	readonly iconTone?: IconTileTone | undefined;
 	readonly isLoading?: boolean;
 	/** Per-usage overrides of the `kpiDirection` copy from `UiKitLabelsProvider`. */
 	readonly directionLabels?: UiKitLabelsOverride<"kpiDirection"> | undefined;
@@ -98,7 +101,7 @@ function KpiChangeLine({
  * its own state. Data-agnostic: every string arrives formatted.
  */
 export const KpiStatCard = React.forwardRef<HTMLDivElement, KpiStatCardProps>(function KpiStatCard(
-	{ label, value, change, comparisonLabel, icon: Icon, isLoading = false, directionLabels: directionLabelsOverride, className, ...props },
+	{ label, value, change, comparisonLabel, icon: Icon, iconTone = "neutral", isLoading = false, directionLabels: directionLabelsOverride, className, ...props },
 	ref,
 ): React.JSX.Element {
 	const directionLabels = useUiKitLabels("kpiDirection", directionLabelsOverride);
@@ -108,7 +111,11 @@ export const KpiStatCard = React.forwardRef<HTMLDivElement, KpiStatCardProps>(fu
 			<CardContent className="flex flex-col gap-2">
 				<div className="flex items-center justify-between gap-2">
 					<p className="text-sm font-medium text-muted-foreground">{label}</p>
-					{Icon === undefined ? null : <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+					{Icon === undefined ? null : (
+						<IconTile tone={iconTone} size="sm">
+							<Icon />
+						</IconTile>
+					)}
 				</div>
 				{showSkeleton ? (
 					<>

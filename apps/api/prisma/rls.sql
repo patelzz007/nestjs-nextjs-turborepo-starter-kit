@@ -471,7 +471,28 @@ CREATE POLICY organization_kyb_files_org ON public.organization_kyb_files
   USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
   WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
--- Published consumer rewards are marketplace-readable; org members see all org rewards.
+-- The session's user holds a (non-deleted) claim on the reward. A claim is the
+-- user's own record, so the reward it names stays readable to them after the
+-- reward stops being public (expired, disabled, archived, soft-deleted) — the
+-- wallet and claim history must still show what was claimed. SECURITY DEFINER
+-- so it reads reward_claims without re-entering that table's policies, one of
+-- which (reward_claims_merchant_read) reads rewards — a policy cycle Postgres
+-- rejects. Fail-closed: no user in the session, no access.
+CREATE OR REPLACE FUNCTION app_holds_reward_claim(reward_id text) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT app_current_user_id() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.reward_claims c
+      WHERE c.reward_id = app_holds_reward_claim.reward_id
+        AND c.user_id = app_current_user_id()
+        AND c.is_deleted = false
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION app_holds_reward_claim(text) TO app_runtime;
+
+-- Published consumer rewards are marketplace-readable; org members see all org
+-- rewards; a claim holder sees the reward they claimed, whatever its state now.
 DROP POLICY IF EXISTS rewards_read ON public.rewards;
 CREATE POLICY rewards_read ON public.rewards
   FOR SELECT
@@ -483,6 +504,7 @@ CREATE POLICY rewards_read ON public.rewards
       AND reward_kind = 'CONSUMER'
       AND status = 'PUBLISHED'
     )
+    OR app_holds_reward_claim(id)
   );
 
 DROP POLICY IF EXISTS rewards_write ON public.rewards;

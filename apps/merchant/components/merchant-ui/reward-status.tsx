@@ -1,5 +1,5 @@
 import type { RewardStatus } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
+import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
@@ -11,12 +11,13 @@ const STATUS_LABELS: Record<RewardStatus, string> = {
 	DISABLED: "Disabled",
 };
 
-const STATUS_CLASS: Record<RewardStatus, string> = {
-	DRAFT: "border-border bg-muted text-muted-foreground",
-	PENDING_REVIEW: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-	PUBLISHED: "border-primary/40 bg-primary/10 text-primary",
-	EXPIRED: "border-border bg-muted text-muted-foreground",
-	DISABLED: "border-destructive/30 bg-destructive/10 text-destructive",
+/** What each reward status means: live is good news, a review is waiting, disabled is blocked; drafts and ended rewards recede. */
+const STATUS_TONE: Record<RewardStatus, StatusTone> = {
+	DRAFT: "muted",
+	PENDING_REVIEW: "warning",
+	PUBLISHED: "success",
+	EXPIRED: "muted",
+	DISABLED: "danger",
 };
 
 export interface MerchantRewardStatusBadgeProps {
@@ -26,9 +27,9 @@ export interface MerchantRewardStatusBadgeProps {
 
 export function MerchantRewardStatusBadge({ status, className }: MerchantRewardStatusBadgeProps): React.JSX.Element {
 	return (
-		<Badge variant="outline" className={cn("font-medium", STATUS_CLASS[status], className)}>
+		<StatusBadge tone={STATUS_TONE[status]} className={cn("font-medium", className)}>
 			{STATUS_LABELS[status]}
-		</Badge>
+		</StatusBadge>
 	);
 }
 

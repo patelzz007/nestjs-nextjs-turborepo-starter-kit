@@ -34,16 +34,16 @@ export function reportTimeZone(context: OrganizationContextResponse | undefined)
 type MerchantKpiKey = keyof MerchantDashboardTotals;
 
 export const MERCHANT_SALES_KPIS: readonly KpiDefinition<MerchantKpiKey>[] = [
-	{ key: "salesMinor", label: "Sales", format: "money", icon: Wallet },
-	{ key: "bills", label: "Bills", format: "count", icon: Receipt },
-	{ key: "averageBillMinor", label: "Average bill", format: "money", icon: ShoppingBag },
-	{ key: "customers", label: "Customers", format: "count", icon: Users },
+	{ key: "salesMinor", label: "Sales", format: "money", icon: Wallet, iconTone: "green" },
+	{ key: "bills", label: "Bills", format: "count", icon: Receipt, iconTone: "teal" },
+	{ key: "averageBillMinor", label: "Average bill", format: "money", icon: ShoppingBag, iconTone: "orange" },
+	{ key: "customers", label: "Customers", format: "count", icon: Users, iconTone: "violet" },
 ];
 
 export const MERCHANT_REWARD_KPIS: readonly KpiDefinition<MerchantKpiKey>[] = [
-	{ key: "claims", label: "Claims", format: "count", icon: Ticket },
-	{ key: "redemptions", label: "Redemptions", format: "count", icon: TicketCheck },
-	{ key: "conversionRate", label: "Conversion rate", format: "percent", icon: TrendingUp },
+	{ key: "claims", label: "Claims", format: "count", icon: Ticket, iconTone: "brand" },
+	{ key: "redemptions", label: "Redemptions", format: "count", icon: TicketCheck, iconTone: "green" },
+	{ key: "conversionRate", label: "Conversion rate", format: "percent", icon: TrendingUp, iconTone: "orange" },
 ];
 
 export const MERCHANT_SALES_SERIES: readonly TimeSeriesDefinition<"salesMinor">[] = [{ key: "salesMinor", label: "Sales", color: "chart-1" }];

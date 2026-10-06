@@ -20,7 +20,7 @@ export function AnalyticsKpiGrid<TKey extends string>({ kpis, comparisonLabel, l
 	return (
 		<div role="group" aria-label={label} className={cn("grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4", className)}>
 			{kpis.map((kpi) => (
-				<KpiStatCard key={kpi.key} label={kpi.label} icon={kpi.icon} value={kpi.value} change={kpi.change} comparisonLabel={comparisonLabel} />
+				<KpiStatCard key={kpi.key} label={kpi.label} icon={kpi.icon} iconTone={kpi.iconTone} value={kpi.value} change={kpi.change} comparisonLabel={comparisonLabel} />
 			))}
 		</div>
 	);

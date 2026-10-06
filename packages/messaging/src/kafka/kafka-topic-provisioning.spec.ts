@@ -1,4 +1,4 @@
-import type { KafkaJS } from "@confluentinc/kafka-javascript";
+import { KafkaJS } from "@confluentinc/kafka-javascript";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -16,6 +16,16 @@ const SEVEN_DAYS_MS = 604_800_000;
 const POLL_INTERVAL_MS = 100;
 /** `leader` of a partition whose leader election has not finished. */
 const NO_LEADER = -1;
+
+/** What a broker whose metadata has not caught up yet answers a read for a just-created topic with. */
+function unknownTopicError(): Error {
+	return Object.assign(new Error("Broker: Unknown topic or partition"), { code: KafkaJS.ErrorCodes.ERR_UNKNOWN_TOPIC_OR_PART });
+}
+
+/** Any other broker failure. */
+function brokerDownError(): Error {
+	return Object.assign(new Error("Local: All broker connections are down"), { code: KafkaJS.ErrorCodes.ERR__ALL_BROKERS_DOWN });
+}
 
 /** Advances only when slept on — waiting costs no real time. */
 class FakeClock implements KafkaProvisioningClock {
@@ -47,6 +57,8 @@ class FakeTopicAdmin implements KafkaTopicAdmin {
 		private readonly _dropOnCreate = false,
 		/** How many metadata reads report a just-created topic's partitions without a leader. */
 		private _leaderlessReads = 0,
+		/** Errors the next metadata reads reject with, one per read, before reads succeed. */
+		private readonly _rejectedReads: Error[] = [],
 	) {}
 
 	public fetchCount = 0;
@@ -67,6 +79,10 @@ class FakeTopicAdmin implements KafkaTopicAdmin {
 
 	public fetchTopicMetadata(options?: { readonly topics?: string[] }): Promise<KafkaJS.ITopicMetadata[]> {
 		this.fetchCount += 1;
+		const rejection = this._rejectedReads.shift();
+		if (rejection !== undefined) {
+			return Promise.reject(rejection);
+		}
 		const leader = this._leaderlessReads > 0 ? NO_LEADER : 1;
 		this._leaderlessReads = Math.max(0, this._leaderlessReads - 1);
 		const names = options?.topics ?? [...this._topics.keys()];
@@ -167,6 +183,46 @@ describe("provisionKafkaTopics", () => {
 
 		await expect(failure).rejects.toBeInstanceOf(KafkaTopicNotReadyError);
 		await expect(failure).rejects.toMatchObject({ topics: ["platform.auth"] });
+	});
+
+	it("keeps polling while the broker does not know a just-created topic yet, then returns once it is ready", async () => {
+		const unknownReads = 2;
+		const admin = new FakeTopicAdmin(new Map(), false, 0, Array.from({ length: unknownReads }, unknownTopicError));
+		const clock = new FakeClock();
+
+		await expect(provisionKafkaTopics(admin, [spec("platform.auth")], TIMEOUT_MS, { clock, pollIntervalMs: POLL_INTERVAL_MS })).resolves.toEqual({
+			created: ["platform.auth"],
+			alreadyPresent: [],
+		});
+		expect(admin.fetchCount).toBe(unknownReads + 1);
+		expect(clock.sleeps).toEqual([POLL_INTERVAL_MS, POLL_INTERVAL_MS]);
+	});
+
+	it("reports a just-created topic the broker never learns of as not ready at the timeout", async () => {
+		const readsUntilTimeout = TIMEOUT_MS / POLL_INTERVAL_MS + 1;
+		const admin = new FakeTopicAdmin(new Map(), false, 0, Array.from({ length: readsUntilTimeout }, unknownTopicError));
+		const clock = new FakeClock();
+
+		const failure = provisionKafkaTopics(admin, [spec("platform.auth")], TIMEOUT_MS, { clock, pollIntervalMs: POLL_INTERVAL_MS });
+
+		await expect(failure).rejects.toBeInstanceOf(KafkaTopicNotReadyError);
+		await expect(failure).rejects.toMatchObject({ topics: ["platform.auth"] });
+	});
+
+	it("does not mask an unknown-topic error when it created nothing — an existing topic the broker cannot find is a real failure", async () => {
+		const admin = new FakeTopicAdmin(new Map([["platform.auth", { partitions: 6, replicationFactor: 3 }]]), false, 0, [unknownTopicError()]);
+		const clock = new FakeClock();
+
+		await expect(provisionKafkaTopics(admin, [spec("platform.auth")], TIMEOUT_MS, { clock })).rejects.toMatchObject({ code: KafkaJS.ErrorCodes.ERR_UNKNOWN_TOPIC_OR_PART });
+		expect(clock.sleeps).toEqual([]);
+	});
+
+	it("propagates any other broker error at once instead of polling through it", async () => {
+		const admin = new FakeTopicAdmin(new Map(), false, 0, [brokerDownError()]);
+		const clock = new FakeClock();
+
+		await expect(provisionKafkaTopics(admin, [spec("platform.auth")], TIMEOUT_MS, { clock })).rejects.toMatchObject({ code: KafkaJS.ErrorCodes.ERR__ALL_BROKERS_DOWN });
+		expect(clock.sleeps).toEqual([]);
 	});
 
 	it("does not wait on topics that already existed", async () => {

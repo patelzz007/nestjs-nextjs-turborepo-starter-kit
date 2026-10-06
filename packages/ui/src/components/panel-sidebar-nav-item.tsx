@@ -4,8 +4,13 @@ import { SidebarMenu, SidebarMenuBadge, SidebarMenuItem } from "@workspace/ui/co
 import { highlightText } from "@workspace/ui/lib/core/highlight-text";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { SidebarMenuItemLike } from "@workspace/ui/lib/sidebar/menu-view";
-import { panelSidebarNavChevronVariants, panelSidebarNavIconVariants, panelSidebarNavItemVariants } from "@workspace/ui/lib/sidebar/panel-nav-variants";
-import { ChevronRight } from "lucide-react";
+import {
+	panelSidebarNavChevronVariants,
+	panelSidebarNavIconVariants,
+	panelSidebarNavItemVariants,
+	panelSidebarNavUnavailableIconClassName,
+} from "@workspace/ui/lib/sidebar/panel-nav-variants";
+import { ChevronRight, LockIcon } from "lucide-react";
 import * as React from "react";
 
 const SIDEBAR_MARK_CLASS = "search-mark rounded-sm px-0.5 font-semibold";
@@ -145,13 +150,18 @@ export const PanelSidebarNavItem = React.forwardRef<HTMLLIElement, PanelSidebarN
 				data-active={isActive ? true : undefined}
 				title={isDisabled ? unavailableTitle : item.title}>
 				{label}
-				<ChevronRight className={panelSidebarNavChevronVariants({ expanded: isExpanded, state: navState })} aria-hidden="true" />
+				{isDisabled ? (
+					<LockIcon data-slot="panel-sidebar-nav-unavailable" className={panelSidebarNavUnavailableIconClassName} aria-hidden="true" />
+				) : (
+					<ChevronRight className={panelSidebarNavChevronVariants({ expanded: isExpanded, state: navState })} aria-hidden="true" />
+				)}
 			</button>
 		);
 	} else if (isDisabled || item.url === "#") {
 		row = (
 			<span role="link" aria-disabled="true" aria-describedby={descriptionId} tabIndex={0} className={rowClassName} title={unavailableTitle}>
 				{label}
+				<LockIcon data-slot="panel-sidebar-nav-unavailable" className={panelSidebarNavUnavailableIconClassName} aria-hidden="true" />
 				<span id={descriptionId} hidden>
 					{unavailableTitle}
 				</span>
@@ -177,7 +187,7 @@ export const PanelSidebarNavItem = React.forwardRef<HTMLLIElement, PanelSidebarN
 				{depth === 0 ? <SidebarMenuBadge itemId={item.id} /> : null}
 				{hasChildren ? (
 					<PanelSidebarNavCollapse open={isExpanded}>
-						<SidebarMenu id={groupId} role="group" aria-label={item.title} className="ml-5 gap-0.5 border-l border-sidebar-border/80 pl-2">
+						<SidebarMenu id={groupId} role="group" aria-label={item.title} className="ml-5 w-auto gap-0.5 border-l border-sidebar-border/80 pl-2">
 							{children.map((child) => (
 								<PanelSidebarNavItem
 									key={child.id}

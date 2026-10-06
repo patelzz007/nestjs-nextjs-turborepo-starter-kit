@@ -193,6 +193,12 @@ describe("highlightCode (real shiki)", () => {
 	it(
 		"reuses unchanged line objects across passes of the same instance",
 		async (): Promise<void> => {
+			// Warm the engine first, under a different instance key (so the reuse cache under test starts
+			// empty). On a cold engine the grammar's regexes compile inside the first tokenization, and on a
+			// slow runner that can exceed shiki's `tokenizeTimeLimit`, which emits the rest of the line as one
+			// token — the first pass then legitimately differs from the second and is (correctly) not reused.
+			await highlightCode("const a = 1;\nconst b = 2;", { language: "typescript", instanceKey: "warm-up" });
+
 			const first = await highlightCode("const a = 1;\nconst b", { language: "typescript", instanceKey: "stream" });
 			const second = await highlightCode("const a = 1;\nconst b = 2;", { language: "typescript", instanceKey: "stream" });
 			expect(second[0]).toBe(first[0]);

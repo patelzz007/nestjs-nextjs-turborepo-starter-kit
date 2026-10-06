@@ -88,11 +88,41 @@ export function readCustomProperties(css: string, selector: string, fallback: Re
 	return properties;
 }
 
+/**
+ * The tokens an app theme may re-map to carry its brand hue — actions, focus, the active nav item,
+ * charts, the search highlight and the auth panel. Neutrals, surfaces, borders and text are shared
+ * by every app and never overridden.
+ */
+export const APP_BRAND_TOKENS: readonly string[] = [
+	"--primary",
+	"--primary-foreground",
+	"--ring",
+	"--sidebar-primary",
+	"--sidebar-primary-foreground",
+	"--sidebar-ring",
+	"--sidebar-active",
+	"--sidebar-active-foreground",
+	"--sidebar-active-border",
+	"--search-mark-bg",
+	"--search-mark-fg",
+	"--chart-1",
+	"--chart-2",
+	"--chart-3",
+	"--chart-4",
+	"--chart-5",
+	"--auth-panel",
+	"--auth-panel-muted",
+	"--auth-brand-from",
+	"--auth-brand-to",
+];
+
 /** Surfaces a focus ring or a chart can sit on. */
 const RING_SURFACES: readonly string[] = ["--background", "--card", "--popover", "--muted", "--sidebar"];
 const CHART_SERIES: readonly string[] = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"];
 const CHART_SURFACES: readonly string[] = ["--card", "--popover"];
-const MUTED_TEXT_SURFACES: readonly string[] = ["--background", "--card", "--muted"];
+const MUTED_TEXT_SURFACES: readonly string[] = ["--background", "--card", "--muted", "--sidebar"];
+/** Surfaces sidebar nav labels sit on — the chrome itself and a hovered row. */
+const SIDEBAR_TEXT_SURFACES: readonly string[] = ["--sidebar", "--sidebar-accent"];
 /** The tone palette: each `--tone-X` is text on its own `--tone-X-soft` fill (Badge tone variants). */
 const TONES: readonly string[] = ["green", "blue", "yellow", "red", "orange", "teal", "violet"];
 
@@ -111,6 +141,9 @@ const THEME_PAIRINGS: readonly TokenPairing[] = [
 	{ foreground: "--search-mark-bg", background: "--sidebar", minimum: MIN_NON_TEXT_CONTRAST },
 	{ foreground: "--search-mark-fg", background: "--search-mark-bg", minimum: MIN_TEXT_CONTRAST },
 	...MUTED_TEXT_SURFACES.map((background): TokenPairing => ({ foreground: "--muted-foreground", background, minimum: MIN_TEXT_CONTRAST })),
+	...SIDEBAR_TEXT_SURFACES.map((background): TokenPairing => ({ foreground: "--sidebar-foreground", background, minimum: MIN_TEXT_CONTRAST })),
+	{ foreground: "--sidebar-primary-foreground", background: "--sidebar-primary", minimum: MIN_TEXT_CONTRAST },
+	{ foreground: "--sidebar-active-foreground", background: "--sidebar-active", minimum: MIN_TEXT_CONTRAST },
 	...TONES.map((tone): TokenPairing => ({ foreground: `--tone-${tone}`, background: `--tone-${tone}-soft`, minimum: MIN_TEXT_CONTRAST })),
 ];
 

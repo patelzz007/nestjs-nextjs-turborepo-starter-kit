@@ -1,18 +1,11 @@
 "use client";
 
 import type { MerchantKybDocumentRecord } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
+import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
 
 import { formatKybDocumentSize, isKybDocumentAccessible, KYB_SCAN_STATUS_PRESENTATION, type KybScanStatusPresentation } from "./document-utils";
-
-/** Badge style per presentation tone. */
-const TONE_BADGE_VARIANT: Readonly<Record<KybScanStatusPresentation["tone"], "outline" | "secondary" | "destructive-light">> = {
-	neutral: "outline",
-	warning: "secondary",
-	danger: "destructive-light",
-};
 
 interface MerchantKybStoredDocumentItemProps {
 	readonly document: MerchantKybDocumentRecord;
@@ -44,7 +37,7 @@ function MerchantKybStoredDocumentItem({ document, onView, onDownload, onViewSou
 				<p className="text-xs text-muted-foreground">{formatKybDocumentSize(document.sizeBytes)}</p>
 			</div>
 			<div className="flex flex-wrap items-center gap-2">
-				<Badge variant={TONE_BADGE_VARIANT[presentation.tone]}>{presentation.label}</Badge>
+				<StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
 				{canAccess && onView !== undefined ? (
 					<Button type="button" variant="outline" size="sm" onClick={handleView}>
 						View

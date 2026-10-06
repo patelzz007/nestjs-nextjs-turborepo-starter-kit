@@ -6,17 +6,18 @@ import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/u
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
-import { WebStatCard } from "@/components/web-ui/stat-card";
+import { StatCard } from "@workspace/ui/components/stat-card";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import { PLATFORM_DISPLAY_REGION, type Envelope, type RewardClaimResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
+import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { AlertTriangle, ChevronLeft, ChevronRight, Gift, QrCode, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { claimStatusBadge } from "@/lib/rewards/claim-status-badge";
 import { ROUTES, walletClaimPath } from "@/lib/routes";
 import { toReadyToRedeemCountQuery, toWalletClaimsListQuery, WALLET_CLAIMS_URL_STATE } from "@/lib/url-state/wallet-claims";
 
@@ -74,8 +75,8 @@ export function MyClaimsPageView({ initialPage, initialReadyCount }: MyClaimsPag
 			<WebPageHeader title="My rewards" description="Active claims ready for redemption at the merchant." />
 
 			<div className="grid gap-4 sm:grid-cols-2">
-				<WebStatCard label="Total claims" value={totalClaims} hint="On this account" icon={<Ticket className="size-4" aria-hidden="true" />} />
-				<WebStatCard label="Ready to redeem" value={readyToRedeem} hint="Show QR at checkout" icon={<QrCode className="size-4" aria-hidden="true" />} />
+				<StatCard label="Total claims" tone="brand" value={totalClaims} hint="On this account" icon={<Ticket className="size-4" aria-hidden="true" />} />
+				<StatCard label="Ready to redeem" tone="green" value={readyToRedeem} hint="Show QR at checkout" icon={<QrCode className="size-4" aria-hidden="true" />} />
 			</div>
 
 			{isLoading ? (
@@ -104,24 +105,27 @@ export function MyClaimsPageView({ initialPage, initialReadyCount }: MyClaimsPag
 				/>
 			) : (
 				<div className="space-y-3">
-					{claims.map((claim) => (
-						<WebSurfacePanel key={claim.id} accent={claim.status === "PENDING"} className="px-5 py-4">
-							<div className="flex flex-wrap items-center justify-between gap-4">
-								<div className="min-w-0 space-y-1">
-									<p className="font-medium text-foreground">{claim.rewardTitle}</p>
-									<p className="text-sm text-muted-foreground">Claimed {formatEpochMs(claim.claimedAt, "dateTime", PLATFORM_DISPLAY_REGION)}</p>
+					{claims.map((claim) => {
+						const statusBadge = claimStatusBadge(claim.status);
+						return (
+							<WebSurfacePanel key={claim.id} className="px-5 py-4">
+								<div className="flex flex-wrap items-center justify-between gap-4">
+									<div className="min-w-0 space-y-1">
+										<p className="font-medium text-foreground">{claim.rewardTitle}</p>
+										<p className="text-sm text-muted-foreground">Claimed {formatEpochMs(claim.claimedAt, "dateTime", PLATFORM_DISPLAY_REGION)}</p>
+									</div>
+									<div className="flex items-center gap-2">
+										<StatusBadge tone={statusBadge.tone}>{statusBadge.label}</StatusBadge>
+										{claim.status === "PENDING" ? (
+											<Link href={walletClaimPath(claim.id)} className={cn(buttonVariants())}>
+												Show QR
+											</Link>
+										) : null}
+									</div>
 								</div>
-								<div className="flex items-center gap-2">
-									<Badge variant="outline">{claim.status}</Badge>
-									{claim.status === "PENDING" ? (
-										<Link href={walletClaimPath(claim.id)} className={cn(buttonVariants())}>
-											Show QR
-										</Link>
-									) : null}
-								</div>
-							</div>
-						</WebSurfacePanel>
-					))}
+							</WebSurfacePanel>
+						);
+					})}
 					{hasPrevious || hasNext ? (
 						<nav aria-label="Wallet pages" className="flex items-center justify-between gap-3 border-t border-border pt-4">
 							<Button type="button" variant="outline" disabled={!hasPrevious} onClick={handlePrevious} className="gap-1.5">

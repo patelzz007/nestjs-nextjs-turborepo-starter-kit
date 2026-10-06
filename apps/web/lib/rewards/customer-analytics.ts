@@ -23,22 +23,22 @@ import { Gift, Receipt, Share2, ShoppingBag, Store, Ticket, TicketCheck, Trendin
 type CustomerKpiKey = keyof CustomerDashboardTotals;
 
 export const CUSTOMER_SPENDING_KPIS: readonly KpiDefinition<CustomerKpiKey>[] = [
-	{ key: "spentMinor", label: "Total spent", format: "money", icon: Wallet },
-	{ key: "visits", label: "Shop visits", format: "count", icon: Receipt },
-	{ key: "averageBillMinor", label: "Average bill", format: "money", icon: ShoppingBag },
-	{ key: "merchants", label: "Shops visited", format: "count", icon: Store },
+	{ key: "spentMinor", label: "Total spent", format: "money", icon: Wallet, iconTone: "green" },
+	{ key: "visits", label: "Shop visits", format: "count", icon: Receipt, iconTone: "teal" },
+	{ key: "averageBillMinor", label: "Average bill", format: "money", icon: ShoppingBag, iconTone: "orange" },
+	{ key: "merchants", label: "Shops visited", format: "count", icon: Store, iconTone: "blue" },
 ];
 
 export const CUSTOMER_REWARD_KPIS: readonly KpiDefinition<CustomerKpiKey>[] = [
-	{ key: "claims", label: "Rewards claimed", format: "count", icon: Ticket },
-	{ key: "redemptions", label: "Rewards redeemed", format: "count", icon: TicketCheck },
-	{ key: "conversionRate", label: "Redemption rate", format: "percent", icon: TrendingUp },
+	{ key: "claims", label: "Rewards claimed", format: "count", icon: Ticket, iconTone: "brand" },
+	{ key: "redemptions", label: "Rewards redeemed", format: "count", icon: TicketCheck, iconTone: "green" },
+	{ key: "conversionRate", label: "Redemption rate", format: "percent", icon: TrendingUp, iconTone: "orange" },
 ];
 
 export const CUSTOMER_REFERRAL_KPIS: readonly KpiDefinition<CustomerKpiKey>[] = [
-	{ key: "referralsSent", label: "Referrals sent", format: "count", icon: Share2 },
-	{ key: "referralsCredited", label: "Referrals credited", format: "count", icon: UserCheck },
-	{ key: "referralRewardsEarned", label: "Rewards earned", format: "count", icon: Gift },
+	{ key: "referralsSent", label: "Referrals sent", format: "count", icon: Share2, iconTone: "blue" },
+	{ key: "referralsCredited", label: "Referrals credited", format: "count", icon: UserCheck, iconTone: "violet" },
+	{ key: "referralRewardsEarned", label: "Rewards earned", format: "count", icon: Gift, iconTone: "brand" },
 ];
 
 /** How each claim status is named and coloured (fixed per status, never by rank). */

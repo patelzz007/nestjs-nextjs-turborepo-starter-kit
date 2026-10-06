@@ -66,7 +66,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 	const userInitials = displayName !== null ? getUserInitials(displayName) : "?";
 
 	return (
-		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
+		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
 			<PanelSidebarHeader title={filteredMenu.header.title} subtitle={filteredMenu.header.subtitle} icon={<Gift className="size-4 text-primary" aria-hidden="true" />} />
 
 			<PanelSidebarNav

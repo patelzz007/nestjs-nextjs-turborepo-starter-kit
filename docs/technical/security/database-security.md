@@ -37,6 +37,19 @@ the queries ([ADR 010](../../adr/010-rls-transaction-contract.md)). Helpers
 (`app_current_user_id()`, `app_current_organization_id()`, …) return `NULL` when unset, and
 policies treat `NULL` as **no access** — missing context fails closed.
 
+## Rows readable through something the user owns
+
+A row a user owns can keep another row readable to them after it stops being public. `rewards_read`
+lets anyone read a **published** consumer reward, the reward's organization members read all of its
+rewards, and — through `app_holds_reward_claim(reward_id)` — **a user who holds a claim reads the
+reward they claimed, whatever its state now** (expired, disabled, archived, soft-deleted), so the
+wallet and claim history can still name it. Nobody else gains access: a user with no claim, or a
+session with no user, still sees only published rewards (`test/rls-hardening.e2e-spec.ts`).
+
+A helper like this that reads another RLS table is `SECURITY DEFINER` with a pinned `search_path`:
+policies on the two tables reference each other (`reward_claims_merchant_read` reads `rewards`), and
+Postgres rejects a policy cycle. The helper must stay fail-closed on a missing `app.current_user_id`.
+
 ## System operations (the only bypass)
 
 `apps/api/src/prisma/system-operation.registry.ts` is the closed allow-list of work that may bypass

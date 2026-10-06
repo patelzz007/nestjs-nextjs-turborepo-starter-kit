@@ -4,9 +4,13 @@ import * as React from "react";
 export interface WebSurfacePanelProps {
 	readonly children: React.ReactNode;
 	readonly className?: string;
-	readonly accent?: boolean;
 }
 
-export function WebSurfacePanel({ children, className, accent = false }: WebSurfacePanelProps): React.JSX.Element {
-	return <div className={cn("rounded-xl border border-border bg-card shadow-xs", accent ? "border-l-4 border-l-primary" : undefined, className)}>{children}</div>;
+/**
+ * A neutral card surface. It carries no emphasis of its own (no accent stripe):
+ * what matters inside it is signalled by its content — a status badge's tone,
+ * the primary action — so every panel in the app reads as one family.
+ */
+export function WebSurfacePanel({ children, className }: WebSurfacePanelProps): React.JSX.Element {
+	return <div className={cn("rounded-xl border border-border bg-card shadow-xs", className)}>{children}</div>;
 }

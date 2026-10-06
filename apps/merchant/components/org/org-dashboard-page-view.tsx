@@ -1,27 +1,21 @@
 "use client";
 
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
-import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
+import { StatCard } from "@workspace/ui/components/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
-import { MERCHANT_CAPABILITY, type KybStatus, type OrganizationContextResponse, type OrganizationLifecycleState, type OrganizationMembershipRole } from "@workspace/shared";
+import { KYB_STATUS_DISPLAY, ORGANIZATION_LIFECYCLE_DISPLAY } from "@/lib/org/organization-status";
+import { MERCHANT_CAPABILITY, type OrganizationContextResponse, type OrganizationMembershipRole } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
+import { IconTile, type IconTileTone } from "@workspace/ui/components/icon-tile";
+import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowRight, BarChart3, Building2, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-
-const LIFECYCLE_LABELS: Record<OrganizationLifecycleState, string> = {
-	PROVISIONING: "Provisioning",
-	ACTIVE: "Active",
-	RESTRICTED: "Restricted",
-	SUSPENDED: "Suspended",
-	PENDING_DELETION: "Pending deletion",
-	DELETED: "Deleted",
-};
 
 const ROLE_LABELS: Record<OrganizationMembershipRole, string> = {
 	OWNER: "Owner",
@@ -31,63 +25,30 @@ const ROLE_LABELS: Record<OrganizationMembershipRole, string> = {
 	CASHIER: "Cashier",
 };
 
-const KYB_LABELS: Record<KybStatus, string> = {
-	PENDING: "Pending review",
-	ACTION_REQUIRED: "Action required",
-	APPROVED: "Approved",
-	REJECTED: "Rejected",
-};
-
-function lifecycleBadgeVariant(state: OrganizationLifecycleState): "default" | "secondary" | "outline" | "destructive-light" {
-	if (state === "ACTIVE") {
-		return "default";
-	}
-	if (state === "SUSPENDED" || state === "DELETED" || state === "PENDING_DELETION") {
-		return "destructive-light";
-	}
-	return "outline";
-}
-
-function kybBadgeVariant(status: KybStatus): "default" | "secondary" | "outline" | "destructive-light" {
-	if (status === "APPROVED") {
-		return "default";
-	}
-	if (status === "REJECTED" || status === "ACTION_REQUIRED") {
-		return "destructive-light";
-	}
-	return "outline";
-}
-
 interface OrgNavLinkProps {
 	readonly href: string;
 	readonly title: string;
 	readonly description: string;
 	readonly icon: React.ReactNode;
+	/** The icon tile's colour — by what the destination is about, so the list scans by meaning. */
+	readonly tone: IconTileTone;
 	readonly external?: boolean;
 }
 
-function OrgNavLink({ href, title, description, icon, external = false }: OrgNavLinkProps): React.JSX.Element {
+function OrgNavLink({ href, title, description, icon, tone, external = false }: OrgNavLinkProps): React.JSX.Element {
 	return (
 		<Link
 			href={href}
-			className="group flex items-start gap-4 rounded-xl border border-border bg-background/60 p-4 transition-colors hover:border-info/40 hover:bg-info-soft/30">
-			<div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-info">{icon}</div>
+			className="group flex items-start gap-4 rounded-xl border border-border bg-card p-4 shadow-xs transition-colors hover:border-foreground/20 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+			<IconTile tone={tone}>{icon}</IconTile>
 			<div className="min-w-0 flex-1 space-y-1">
-				<div className="flex items-center gap-2">
-					<p className="font-medium text-foreground transition-colors group-hover:text-info">{title}</p>
-					{external ? (
-						<Badge variant="secondary" className="shrink-0 text-[10px] tracking-wide uppercase">
-							Merchant home
-						</Badge>
-					) : (
-						<Badge variant="outline" className="shrink-0 text-[10px] tracking-wide uppercase">
-							Org route
-						</Badge>
-					)}
+				<div className="flex flex-wrap items-center gap-2">
+					<p className="font-medium text-foreground">{title}</p>
+					{external ? <span className="text-xs text-muted-foreground">Merchant home</span> : null}
 				</div>
 				<p className="text-sm text-muted-foreground">{description}</p>
 			</div>
-			<ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-info" aria-hidden="true" />
+			<ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
 		</Link>
 	);
 }
@@ -120,28 +81,26 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 
 	return (
 		<div className="space-y-8">
-			<MerchantSurfacePanel accent className="overflow-hidden">
-				<div className="border-b border-border bg-info-soft/40 px-5 py-4 sm:px-6">
-					<div className="flex flex-wrap items-start justify-between gap-4">
-						<div className="space-y-2">
-							<p className="text-xs font-semibold tracking-[0.16em] text-info uppercase">Organization workspace</p>
-							<div className="flex flex-wrap items-center gap-3">
-								<div className="flex size-12 items-center justify-center rounded-xl border border-border bg-card text-info shadow-xs">
-									<Building2 className="size-6" aria-hidden="true" />
-								</div>
-								<div>
-									<h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{displayName}</h1>
-									<p className="mt-1 font-mono text-sm text-muted-foreground">/orgs/{orgSlug}/dashboard</p>
-								</div>
-							</div>
+			<MerchantSurfacePanel className="overflow-hidden">
+				<div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
+					<div className="flex min-w-0 items-center gap-4">
+						<div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+							<Building2 className="size-6" aria-hidden="true" />
 						</div>
-						<div className="flex flex-wrap gap-2">
-							{lifecycleState !== undefined ? <Badge variant={lifecycleBadgeVariant(lifecycleState)}>{LIFECYCLE_LABELS[lifecycleState]}</Badge> : null}
-							<Badge variant="secondary">URL tenant</Badge>
+						<div className="min-w-0">
+							<p className="text-sm text-muted-foreground">Organization workspace</p>
+							<h1 className="truncate text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{displayName}</h1>
+							<p className="mt-1 truncate font-mono text-xs text-muted-foreground">/orgs/{orgSlug}/dashboard</p>
 						</div>
 					</div>
+					<div className="flex flex-wrap gap-2">
+						{lifecycleState !== undefined ? (
+							<StatusBadge tone={ORGANIZATION_LIFECYCLE_DISPLAY[lifecycleState].tone}>{ORGANIZATION_LIFECYCLE_DISPLAY[lifecycleState].label}</StatusBadge>
+						) : null}
+						<Badge variant="secondary">URL tenant</Badge>
+					</div>
 				</div>
-				<div className="space-y-3 px-5 py-4 text-sm text-muted-foreground sm:px-6">
+				<div className="space-y-3 border-t border-border px-5 py-4 text-sm text-muted-foreground sm:px-6">
 					<p>
 						<strong className="font-medium text-foreground">You are here:</strong> organization identity, membership, and admin routes scoped to{" "}
 						<span className="font-mono text-foreground">{orgSlug}</span>.
@@ -163,26 +122,30 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 			) : null}
 
 			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				<MerchantStatCard
+				<StatCard
 					label="Your role"
+					tone="violet"
 					value={membershipRole !== undefined ? ROLE_LABELS[membershipRole] : "—"}
 					hint="Membership in this organization"
 					icon={<ShieldCheck className="size-5" aria-hidden="true" />}
 				/>
-				<MerchantStatCard
+				<StatCard
 					label="Locations"
+					tone="blue"
 					value={String(locationCount)}
 					hint={primaryLocation !== undefined ? `Primary: ${primaryLocation.name}` : "No locations yet"}
 					icon={<MapPin className="size-5" aria-hidden="true" />}
 				/>
-				<MerchantStatCard
+				<StatCard
 					label="KYB status"
-					value={kybStatus !== undefined ? KYB_LABELS[kybStatus] : "—"}
+					tone="teal"
+					value={kybStatus !== undefined ? KYB_STATUS_DISPLAY[kybStatus].label : "—"}
 					hint="Business verification for this org"
 					icon={<ShieldCheck className="size-5" aria-hidden="true" />}
 				/>
-				<MerchantStatCard
+				<StatCard
 					label="Policy version"
+					tone="orange"
 					value={policyVersion !== undefined ? String(policyVersion) : "—"}
 					hint="Active authorization policy revision"
 					icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
@@ -202,6 +165,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							<OrgNavLink
 								href={orgRoutes(orgSlug).settings.locations}
 								title="Store locations"
+								tone="blue"
 								description="View every store site under this organization and your location access scope."
 								icon={<MapPin className="size-5" aria-hidden="true" />}
 							/>
@@ -210,6 +174,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							<OrgNavLink
 								href={orgRoutes(orgSlug).settings.team}
 								title="Team & access"
+								tone="violet"
 								description="Invite members, manage roles, and review access requests."
 								icon={<Users className="size-5" aria-hidden="true" />}
 							/>
@@ -218,6 +183,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							<OrgNavLink
 								href={orgRoutes(orgSlug).settings.verification}
 								title="Business verification"
+								tone="teal"
 								description="Submit or update KYB documents for this organization."
 								icon={<ShieldCheck className="size-5" aria-hidden="true" />}
 							/>
@@ -235,6 +201,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							<OrgNavLink
 								href={orgRoutes(orgSlug).rewards.list}
 								title="Rewards"
+								tone="brand"
 								description="Claims, redemptions, conversion metrics, and active campaigns."
 								icon={<Gift className="size-5" aria-hidden="true" />}
 							/>
@@ -243,6 +210,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							<OrgNavLink
 								href={orgRoutes(orgSlug).analytics}
 								title="Analytics"
+								tone="orange"
 								description="Performance trends and top-performing rewards."
 								icon={<BarChart3 className="size-5" aria-hidden="true" />}
 							/>
@@ -251,6 +219,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							<OrgNavLink
 								href={orgRoutes(orgSlug).redemptions}
 								title="Redemptions log"
+								tone="green"
 								description="Recent POS scans and redemption confirmations."
 								icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
 							/>
@@ -269,7 +238,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							</p>
 						</div>
 						<Can permission={MERCHANT_CAPABILITY.viewLocations}>
-							<Link href={orgRoutes(orgSlug).settings.locations} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2 bg-transparent")}>
+							<Link href={orgRoutes(orgSlug).settings.locations} className={cn(buttonVariants({ size: "sm" }), "gap-2")}>
 								<MapPin className="size-4" aria-hidden="true" />
 								{canManageLocations ? "Manage locations" : "View locations"}
 							</Link>
@@ -312,7 +281,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							{kybStatus !== undefined ? (
 								<div className="flex flex-wrap items-center gap-2">
 									<span className="text-sm text-muted-foreground">Verification:</span>
-									<Badge variant={kybBadgeVariant(kybStatus)}>{KYB_LABELS[kybStatus]}</Badge>
+									<StatusBadge tone={KYB_STATUS_DISPLAY[kybStatus].tone}>{KYB_STATUS_DISPLAY[kybStatus].label}</StatusBadge>
 								</div>
 							) : null}
 						</div>

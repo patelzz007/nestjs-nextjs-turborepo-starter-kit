@@ -1,4 +1,5 @@
-import type { KafkaJS } from "@confluentinc/kafka-javascript";
+import { KafkaJS } from "@confluentinc/kafka-javascript";
+import { z } from "zod";
 
 /**
  * Explicit topic provisioning. Clients in this repo never auto-create topics
@@ -97,6 +98,23 @@ export interface KafkaTopicProvisioningOptions {
 /** The partition error code a healthy partition reports. */
 const KAFKA_NO_ERROR = 0;
 
+/** The broker error code for a topic it does not (yet) know. */
+const KAFKA_UNKNOWN_TOPIC_OR_PARTITION: number = KafkaJS.ErrorCodes.ERR_UNKNOWN_TOPIC_OR_PART;
+
+/** The broker error code a Kafka client error carries. */
+const KafkaErrorCodeSchema = z.object({ code: z.number() });
+
+/**
+ * Whether an admin call failed because the broker does not know a topic yet.
+ * Right after `createTopics`, a broker whose metadata has not caught up with the
+ * controller answers a metadata read for the new topic with this error instead
+ * of returning it.
+ */
+function isUnknownTopicError(error: Error): boolean {
+	const parsed = KafkaErrorCodeSchema.safeParse(error);
+	return parsed.success && parsed.data.code === KAFKA_UNKNOWN_TOPIC_OR_PARTITION;
+}
+
 /** Thrown when the broker does not report metadata for a topic that should now exist. */
 export class KafkaTopicMissingError extends Error {
 	public constructor(public readonly topics: readonly string[]) {
@@ -137,8 +155,12 @@ function byTopicName(metadata: readonly KafkaJS.ITopicMetadata[]): ReadonlyMap<s
 /**
  * Reads the metadata of `topics` until every topic in `created` is ready or the
  * deadline passes. `createTopics` returns once the controller accepts the
- * request — before the new partitions have leaders — so a producer that sends
- * right after provisioning would otherwise race the leader election.
+ * request — before the new partitions have leaders, and before every broker's
+ * metadata even knows the topic — so a producer that sends right after
+ * provisioning would otherwise race the leader election. A read the broker
+ * rejects with "unknown topic or partition" while topics this run created are
+ * still propagating counts as "not ready yet"; at the deadline it surfaces as
+ * `KafkaTopicNotReadyError`. Every other error propagates at once.
  */
 async function fetchMetadataOnceReady(
 	admin: KafkaTopicAdmin,
@@ -150,10 +172,23 @@ async function fetchMetadataOnceReady(
 ): Promise<ReadonlyMap<string, KafkaJS.ITopicMetadata>> {
 	const deadline = clock.now() + timeoutMs;
 	for (;;) {
-		const metadata = byTopicName(await admin.fetchTopicMetadata({ topics: [...topics], timeout: timeoutMs }));
-		const ready = created.every((topic: string): boolean => isTopicReady(metadata.get(topic)));
-		if (ready || clock.now() >= deadline) {
-			return metadata;
+		let metadata: ReadonlyMap<string, KafkaJS.ITopicMetadata> | null = null;
+		try {
+			metadata = byTopicName(await admin.fetchTopicMetadata({ topics: [...topics], timeout: timeoutMs }));
+		} catch (error) {
+			const propagating = created.length > 0 && error instanceof Error && isUnknownTopicError(error);
+			if (!propagating) {
+				throw error;
+			}
+			if (clock.now() >= deadline) {
+				throw new KafkaTopicNotReadyError(created);
+			}
+		}
+		if (metadata !== null) {
+			const ready = created.every((topic: string): boolean => isTopicReady(metadata.get(topic)));
+			if (ready || clock.now() >= deadline) {
+				return metadata;
+			}
 		}
 		await clock.sleep(pollIntervalMs);
 	}

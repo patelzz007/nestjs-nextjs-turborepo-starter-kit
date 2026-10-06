@@ -188,7 +188,7 @@ export function DashboardLayout({
 					<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
 						{ADMIN_SHELL_LABELS.skipToContent}
 					</Button>
-					<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-card">
+					<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-sidebar">
 						<AdminSidebarPanel
 							user={user}
 							onLogout={onLogout}

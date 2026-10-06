@@ -24,22 +24,22 @@ import { Receipt, ShoppingBag, Store, Ticket, TicketCheck, TrendingUp, UserPlus,
 type AdminKpiKey = keyof AdminDashboardTotals;
 
 export const ADMIN_SALES_KPIS: readonly KpiDefinition<AdminKpiKey>[] = [
-	{ key: "salesMinor", label: "Sales", format: "money", icon: Wallet },
-	{ key: "bills", label: "Bills", format: "count", icon: Receipt },
-	{ key: "averageBillMinor", label: "Average bill", format: "money", icon: ShoppingBag },
-	{ key: "activeMerchants", label: "Active merchants", format: "count", icon: Store },
+	{ key: "salesMinor", label: "Sales", format: "money", icon: Wallet, iconTone: "green" },
+	{ key: "bills", label: "Bills", format: "count", icon: Receipt, iconTone: "teal" },
+	{ key: "averageBillMinor", label: "Average bill", format: "money", icon: ShoppingBag, iconTone: "orange" },
+	{ key: "activeMerchants", label: "Active merchants", format: "count", icon: Store, iconTone: "blue" },
 ];
 
 export const ADMIN_CUSTOMER_KPIS: readonly KpiDefinition<AdminKpiKey>[] = [
-	{ key: "customers", label: "Customers", format: "count", icon: Users },
-	{ key: "newCustomers", label: "New customers", format: "count", icon: UserPlus },
-	{ key: "returningCustomers", label: "Returning customers", format: "count", icon: UserRound },
+	{ key: "customers", label: "Customers", format: "count", icon: Users, iconTone: "violet" },
+	{ key: "newCustomers", label: "New customers", format: "count", icon: UserPlus, iconTone: "violet" },
+	{ key: "returningCustomers", label: "Returning customers", format: "count", icon: UserRound, iconTone: "violet" },
 ];
 
 export const ADMIN_REWARD_KPIS: readonly KpiDefinition<AdminKpiKey>[] = [
-	{ key: "claims", label: "Claims", format: "count", icon: Ticket },
-	{ key: "redemptions", label: "Redemptions", format: "count", icon: TicketCheck },
-	{ key: "conversionRate", label: "Conversion rate", format: "percent", icon: TrendingUp },
+	{ key: "claims", label: "Claims", format: "count", icon: Ticket, iconTone: "brand" },
+	{ key: "redemptions", label: "Redemptions", format: "count", icon: TicketCheck, iconTone: "green" },
+	{ key: "conversionRate", label: "Conversion rate", format: "percent", icon: TrendingUp, iconTone: "orange" },
 ];
 
 export const ADMIN_SALES_SERIES: readonly TimeSeriesDefinition<"salesMinor">[] = [{ key: "salesMinor", label: "Sales", color: "chart-1" }];

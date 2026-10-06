@@ -56,7 +56,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 				← My Wallet
 			</Link>
 
-			<WebSurfacePanel accent className="p-5 sm:p-6">
+			<WebSurfacePanel className="p-5 sm:p-6">
 				<div className="mb-6 flex flex-col items-center gap-3 text-center">
 					<QrCode value={qr.qrPayload} size={220} label="Reward redemption QR code" />
 					<p className="text-sm text-muted-foreground">Position this code within the scanner at the till</p>

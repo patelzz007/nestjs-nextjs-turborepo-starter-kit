@@ -73,7 +73,7 @@ export const AppPanelShell = React.forwardRef<HTMLDivElement, AppPanelShellProps
 				labels={sidebarLabels}
 				storage={PANEL_SIDEBAR_STORAGE}
 				badges={sidebarBadges}>
-				<Sidebar collapsible="offcanvas" className={cn("panel-shell-sidebar border-e border-sidebar-border bg-card", sidebarClassName)}>
+				<Sidebar collapsible="offcanvas" className={cn("panel-shell-sidebar border-e border-sidebar-border bg-sidebar", sidebarClassName)}>
 					{sidebar}
 				</Sidebar>
 				<SidebarInset className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">

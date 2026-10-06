@@ -106,7 +106,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 				</p>
 			</WebSurfacePanel>
 
-			<WebSurfacePanel accent className="p-5 sm:p-6">
+			<WebSurfacePanel className="p-5 sm:p-6">
 				<h2 className="text-base font-semibold">Claim this reward</h2>
 				<div className="mt-4 space-y-4">
 					{message !== null ? <p className="rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-muted-foreground">{message}</p> : null}

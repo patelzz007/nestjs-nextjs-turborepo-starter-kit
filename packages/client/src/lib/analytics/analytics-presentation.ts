@@ -20,6 +20,7 @@ import {
 	type SaleCurrency,
 } from "@workspace/shared";
 import { CHART_LOADING, CHART_READY, type ChartFrameState } from "@workspace/ui/components/analytics-panel";
+import type { IconTileTone } from "@workspace/ui/components/icon-tile";
 import type { KpiChange } from "@workspace/ui/components/kpi-stat-card";
 import type { PickerOption } from "@workspace/ui/components/analytics-range-picker";
 import type { TimeSeriesDefinition, TimeSeriesPoint } from "@workspace/ui/components/time-series-chart";
@@ -185,6 +186,8 @@ export interface KpiDefinition<TKey extends string> {
 	readonly label: string;
 	readonly format: KpiValueFormat;
 	readonly icon?: LucideIcon;
+	/** The icon tile's colour — by what the KPI is about (money, people, places…). Default neutral. */
+	readonly iconTone?: IconTileTone;
 	/** Default `higherIsBetter`. */
 	readonly polarity?: KpiPolarity;
 }
@@ -194,6 +197,7 @@ export interface KpiView<TKey extends string> {
 	readonly key: TKey;
 	readonly label: string;
 	readonly icon: LucideIcon | undefined;
+	readonly iconTone: IconTileTone | undefined;
 	readonly value: string | undefined;
 	readonly change: KpiChange | undefined;
 }
@@ -243,6 +247,7 @@ export function toKpiViews<TKey extends string>(
 			key: definition.key,
 			label: definition.label,
 			icon: definition.icon,
+			iconTone: definition.iconTone,
 			value: total === undefined ? undefined : formatKpiValue(total.value, definition.format, formatters),
 			change: total === undefined ? undefined : toKpiChange(total, definition.polarity ?? "higherIsBetter", formatters.locale),
 		};

@@ -90,18 +90,19 @@ apps/docs/
     ├── components/ layouts/   # .astro markup — header, sidebar + mobile drawer (shared NavTree), TOC, cards, pager, search
     ├── pages/                 # routes: /, /docs, /docs/[...slug], /blog, /images/…, /search-index.json, /feed.xml
     ├── scripts/               # progressive enhancement: theme, drawer, search, TOC scroll spy, copy, mermaid
-    └── styles/global.css      # every colour, size and weight is a token (light + dark), matched to docs.apidog.com
+    └── styles/global.css      # every colour, size and weight is a token (light + dark); colours mirror packages/ui tokens.css
 ```
 
 - **Search** — `/search-index.json` is generated at build time (one entry per guide and per
   h2/h3 heading, plus blog posts). The `⌘K` / `Ctrl K` / `/` dialog downloads it on first open,
   validates it with zod, and ranks matches in the browser (`src/lib/search.ts`). If the corpus
   ever grows past a few MB, swap in a chunked index such as Pagefind.
-- **Look** — modelled on docs.apidog.com: body text in `#344054`, hairline `#f2f4f7` borders,
-  one violet accent (`#9373ee`) for bars, borders and fills, ReUI-style code blocks, and a soft
-  violet glow at the top of the page. Text in the accent colour (links, the active nav / TOC
-  item) uses `--brand-text`, a darker (light theme) / lighter (dark theme) shade of the same hue
-  that keeps WCAG AA contrast (≥ 4.5:1). The tokens at the top of `global.css` are the only place
+- **Look** — layout modelled on docs.apidog.com; colours are the product's shared palette
+  (`packages/ui/src/styles/tokens.css`, the `--palette-*` primitives) mirrored as hex: white
+  surfaces, slate-cast grey text (`#20242a`), `#e0e3e8` borders, and the one slate accent
+  (`#24344a`, `#b2bfd1` in dark mode) for links, the active state, bars and fills, plus a soft
+  glow at the top of the page. Text in the accent colour uses `--brand-text`, which keeps WCAG AA
+  contrast (≥ 4.5:1) in both themes. The tokens at the top of `global.css` are the only place
   to change any of it.
 - **Typography** — see [Typography](#typography) below.
 - **Code blocks** — every fence renders the shared `CodeBlock` from `@workspace/ui` (the full

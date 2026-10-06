@@ -161,8 +161,14 @@ describe("toKpiViews", () => {
 
 	it("has no value or change while loading", () => {
 		expect(toKpiViews([{ key: "bills", label: "Bills", format: "count" }], undefined, formatters)).toEqual([
-			{ key: "bills", label: "Bills", icon: undefined, value: undefined, change: undefined },
+			{ key: "bills", label: "Bills", icon: undefined, iconTone: undefined, value: undefined, change: undefined },
 		]);
+	});
+
+	it("carries each definition's icon tone onto its view", () => {
+		const [view] = toKpiViews([{ key: "bills", label: "Bills", format: "count", iconTone: "teal" }], undefined, formatters);
+
+		expect(view?.iconTone).toBe("teal");
 	});
 });
 

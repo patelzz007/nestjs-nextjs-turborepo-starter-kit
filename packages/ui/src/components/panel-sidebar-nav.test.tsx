@@ -169,6 +169,17 @@ describe("PanelSidebarNav", () => {
 		expect(onToggleExpand).toHaveBeenCalledWith("settings");
 	});
 
+	it("sizes an indented nested group to the space beside its indent, so its rows are never clipped", () => {
+		render(<Harness pathname="/" />, { wrapper: UiKitTestProviders });
+
+		const settings = screen.getByRole("button", { name: "Settings" });
+		const group = document.getElementById(settings.getAttribute("aria-controls") ?? "");
+		// `w-full` plus the `ml-5` indent overflows the collapse wrapper, which clips the active pill's right corners.
+		expect(group?.classList.contains("ml-5")).toBe(true);
+		expect(group?.classList.contains("w-auto")).toBe(true);
+		expect(group?.classList.contains("w-full")).toBe(false);
+	});
+
 	it("announces a disabled item as an unavailable link that never navigates", () => {
 		render(<Harness pathname="/" />, { wrapper: UiKitTestProviders });
 
@@ -176,6 +187,14 @@ describe("PanelSidebarNav", () => {
 		expect(billing.getAttribute("aria-disabled")).toBe("true");
 		expect(billing.hasAttribute("href")).toBe(false);
 		expect(billing.getAttribute("title")).toBe(EN.itemUnavailableTitle);
+	});
+
+	it("marks only unavailable items with a decorative lock — a cue that does not rely on colour", () => {
+		render(<Harness pathname="/" />, { wrapper: UiKitTestProviders });
+
+		const billingLock = screen.getByRole("link", { name: "Billing" }).querySelector('[data-slot="panel-sidebar-nav-unavailable"]');
+		expect(billingLock?.getAttribute("aria-hidden")).toBe("true");
+		expect(screen.getByRole("link", { name: "Home" }).querySelector('[data-slot="panel-sidebar-nav-unavailable"]')).toBeNull();
 	});
 
 	it("closes the mobile drawer when a link is followed, and leaves the desktop rail alone", () => {

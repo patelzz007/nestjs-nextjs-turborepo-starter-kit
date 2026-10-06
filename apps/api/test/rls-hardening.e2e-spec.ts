@@ -21,6 +21,9 @@ async function withRlsSession(pool: Pool, input: RlsSessionInput, run: (client: 
 		await client.query("SELECT set_config('app.current_organization_id', $1, false)", [input.organizationId]);
 		await run(client);
 	} finally {
+		// The role and the app.* settings are session-level: reset them before the connection goes
+		// back to the pool, or the next `pool.query` silently runs as app_runtime under this user.
+		await client.query("DISCARD ALL");
 		client.release();
 	}
 }
@@ -109,6 +112,71 @@ describe("RLS hardening (integration)", () => {
 			} finally {
 				await client.query("ROLLBACK");
 			}
+		});
+	});
+
+	describe("a reward that is no longer public", () => {
+		interface ClaimedHiddenReward {
+			readonly rewardId: string;
+			readonly holderId: string;
+			readonly outsiderId: string;
+		}
+
+		/** The lookup row — the outsider subquery yields NULL when every user claimed the reward or belongs to its organization. */
+		interface ClaimedHiddenRewardRow extends Omit<ClaimedHiddenReward, "outsiderId"> {
+			readonly outsiderId: string | null;
+		}
+
+		/**
+		 * A consumer reward that is no longer PUBLISHED, one user holding a claim on it and one user who
+		 * neither claimed it nor belongs to its organization — read with the connection's own (owner)
+		 * privileges, outside any RLS session. The seed always provides one (ended rewards with claims).
+		 */
+		async function findClaimedHiddenReward(): Promise<ClaimedHiddenReward> {
+			const result = await pool.query<ClaimedHiddenRewardRow>(
+				`SELECT r.id AS "rewardId", c.user_id AS "holderId", (
+            SELECT u.id FROM public.users u
+            WHERE NOT EXISTS (SELECT 1 FROM public.reward_claims oc WHERE oc.reward_id = r.id AND oc.user_id = u.id)
+              AND NOT EXISTS (SELECT 1 FROM public.organization_memberships m WHERE m.organization_id = r.organization_id AND m.user_id = u.id)
+            ORDER BY u.id LIMIT 1
+          ) AS "outsiderId"
+         FROM public.reward_claims c
+         JOIN public.rewards r ON r.id = c.reward_id
+         WHERE r.reward_kind = 'CONSUMER' AND r.status <> 'PUBLISHED' AND c.is_deleted = false
+           AND NOT EXISTS (SELECT 1 FROM public.organization_memberships m WHERE m.organization_id = r.organization_id AND m.user_id = c.user_id)
+         ORDER BY r.id, c.user_id
+         LIMIT 1`,
+			);
+			const row = result.rows[0];
+			const outsiderId = row?.outsiderId ?? null;
+			if (row === undefined || outsiderId === null) {
+				throw new Error("Seed data has no claimed, no-longer-public consumer reward with an outsider user");
+			}
+			return { rewardId: row.rewardId, holderId: row.holderId, outsiderId };
+		}
+
+		it("stays readable to the user who claimed it, so their wallet can still name it", async () => {
+			const { rewardId, holderId } = await findClaimedHiddenReward();
+			await withRlsSession(pool, { userId: holderId, organizationId: "", bypass: false }, async (client) => {
+				const result = await client.query<{ title: string }>(`SELECT title FROM public.rewards WHERE id = $1`, [rewardId]);
+				expect(result.rowCount).toBe(1);
+			});
+		});
+
+		it("stays hidden from a user who never claimed it", async () => {
+			const { rewardId, outsiderId } = await findClaimedHiddenReward();
+			await withRlsSession(pool, { userId: outsiderId, organizationId: "", bypass: false }, async (client) => {
+				const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1`, [rewardId]);
+				expect(result.rowCount).toBe(0);
+			});
+		});
+
+		it("stays hidden from a session with no user at all (fail-closed)", async () => {
+			const { rewardId } = await findClaimedHiddenReward();
+			await withRlsSession(pool, { userId: "", organizationId: "", bypass: false }, async (client) => {
+				const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1`, [rewardId]);
+				expect(result.rowCount).toBe(0);
+			});
 		});
 	});
 

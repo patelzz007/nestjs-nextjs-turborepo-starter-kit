@@ -59,6 +59,11 @@ describe("findContrastViolations", () => {
 			["--search-mark-bg", "#000000"],
 			["--search-mark-fg", "#ffffff"],
 			["--muted-foreground", "#000000"],
+			["--sidebar-foreground", "#000000"],
+			["--sidebar-primary", "#000000"],
+			["--sidebar-primary-foreground", "#ffffff"],
+			["--sidebar-active", "#ffffff"],
+			["--sidebar-active-foreground", "#000000"],
 		]);
 
 		const violations = findContrastViolations(theme);
@@ -87,11 +92,51 @@ describe("findContrastViolations", () => {
 			["--search-mark-bg", "#000000"],
 			["--search-mark-fg", "#ffffff"],
 			["--muted-foreground", "#000000"],
+			["--sidebar-foreground", "#000000"],
+			["--sidebar-primary", "#000000"],
+			["--sidebar-primary-foreground", "#ffffff"],
+			["--sidebar-active", "#ffffff"],
+			["--sidebar-active-foreground", "#000000"],
 		]);
 
 		const violations = findContrastViolations(theme);
 
 		expect(violations).toHaveLength(1);
 		expect(violations[0]).toMatch(/^--tone-yellow on --tone-yellow-soft: /u);
+	});
+
+	it("holds sidebar nav labels to text contrast on the chrome, a hovered row and the active pill", () => {
+		const theme = new Map<string, string>([
+			...COMPLIANT_TONES,
+			["--background", "#ffffff"],
+			["--card", "#ffffff"],
+			["--popover", "#ffffff"],
+			["--muted", "#ffffff"],
+			["--sidebar", "#ffffff"],
+			["--sidebar-accent", "#ffffff"],
+			["--ring", "#000000"],
+			["--sidebar-ring", "#000000"],
+			["--chart-1", "#000000"],
+			["--chart-2", "#000000"],
+			["--chart-3", "#000000"],
+			["--chart-4", "#000000"],
+			["--chart-5", "#000000"],
+			["--search-mark-bg", "#000000"],
+			["--search-mark-fg", "#ffffff"],
+			["--muted-foreground", "#000000"],
+			["--sidebar-foreground", "#aaaaaa"],
+			["--sidebar-primary", "#000000"],
+			["--sidebar-primary-foreground", "#333333"],
+			["--sidebar-active", "#ffffff"],
+			["--sidebar-active-foreground", "#000000"],
+		]);
+
+		const violations = findContrastViolations(theme);
+
+		expect(violations).toEqual([
+			expect.stringMatching(/^--sidebar-foreground on --sidebar: /u),
+			expect.stringMatching(/^--sidebar-foreground on --sidebar-accent: /u),
+			expect.stringMatching(/^--sidebar-primary-foreground on --sidebar-primary: /u),
+		]);
 	});
 });

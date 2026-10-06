@@ -3,7 +3,7 @@
 import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
+import { StatCard } from "@workspace/ui/components/stat-card";
 import { AddTerminalDialog, type TerminalStoreOption } from "@/components/terminals/add-terminal-dialog";
 import { PairingCodeDialog } from "@/components/terminals/pairing-code-dialog";
 import { TerminalList } from "@/components/terminals/terminal-list";
@@ -300,20 +300,23 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 			<MerchantLocationScopeBanner filteredNote="Only this store's tills are listed and counted." allStoresNote="Listing the tills of every store you can access." />
 
 			<div className="grid gap-4 sm:grid-cols-3">
-				<MerchantStatCard
+				<StatCard
 					label="Active"
+					tone="green"
 					value={statValue(statsState, "active")}
 					hint={statHint(statsState, "Paired and ready to redeem")}
 					icon={<CheckCircle2 className="size-5" aria-hidden="true" />}
 				/>
-				<MerchantStatCard
+				<StatCard
 					label="Awaiting pairing"
+					tone="yellow"
 					value={statValue(statsState, "awaitingPairing")}
 					hint={statHint(statsState, "Code issued, till not paired yet")}
 					icon={<Hourglass className="size-5" aria-hidden="true" />}
 				/>
-				<MerchantStatCard
+				<StatCard
 					label="Stores covered"
+					tone="blue"
 					value={statValue(statsState, "storesCovered")}
 					hint={statHint(statsState, "With at least one active till")}
 					icon={<Store className="size-5" aria-hidden="true" />}

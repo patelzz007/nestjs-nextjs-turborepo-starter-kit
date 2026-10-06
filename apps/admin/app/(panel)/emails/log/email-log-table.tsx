@@ -15,7 +15,7 @@ import { EMAIL_LOG_PAGE_SIZE_OPTIONS, EMAIL_LOG_URL_STATE, toEmailLogListQuery }
 import { useEmailLogLive } from "@/lib/notifications/email-log-live";
 import type { LiveState } from "@/lib/notifications/reconnecting-event-stream";
 import { formatDateTime } from "@/lib/format/dates";
-import { Badge, type BadgeVariant } from "@workspace/ui/components/badge";
+import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
@@ -29,14 +29,14 @@ import { EMAIL_LOG_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enu
 
 // ── Status presentation ───────────────────────────────────────────────────
 
-/** Visual treatment per lifecycle status — colors stay token-driven. */
-const STATUS_META: Readonly<Record<EmailLogStatus, { readonly label: string; readonly variant: BadgeVariant; readonly icon: React.ReactNode }>> = {
-	pending: { label: "Pending", variant: "outline", icon: <Mail className="size-3" /> },
-	sent: { label: "Sent", variant: "secondary", icon: <Mail className="size-3" /> },
-	delivered: { label: "Delivered", variant: "default", icon: <CircleCheck className="size-3" /> },
-	bounced: { label: "Bounced", variant: "destructive-light", icon: <CircleX className="size-3" /> },
-	complained: { label: "Complained", variant: "destructive-light", icon: <CircleX className="size-3" /> },
-	failed: { label: "Failed", variant: "destructive-light", icon: <TriangleAlert className="size-3" /> },
+/** What each delivery status means (the shared `StatusTone`), with its label and icon. */
+const STATUS_META: Readonly<Record<EmailLogStatus, { readonly label: string; readonly tone: StatusTone; readonly icon: React.ReactNode }>> = {
+	pending: { label: "Pending", tone: "muted", icon: <Mail className="size-3" /> },
+	sent: { label: "Sent", tone: "info", icon: <Mail className="size-3" /> },
+	delivered: { label: "Delivered", tone: "success", icon: <CircleCheck className="size-3" /> },
+	bounced: { label: "Bounced", tone: "danger", icon: <CircleX className="size-3" /> },
+	complained: { label: "Complained", tone: "danger", icon: <CircleX className="size-3" /> },
+	failed: { label: "Failed", tone: "danger", icon: <TriangleAlert className="size-3" /> },
 };
 
 /**
@@ -44,13 +44,13 @@ const STATUS_META: Readonly<Record<EmailLogStatus, { readonly label: string; rea
  * was deliberately removed from the system, so the badge never claims anyone
  * "opened" an email — it just shows where the delivery stands.
  */
-function StatusBadge({ entry }: { readonly entry: EmailLogEntry }): React.JSX.Element {
+function EmailStatusBadge({ entry }: { readonly entry: EmailLogEntry }): React.JSX.Element {
 	const meta = STATUS_META[entry.status];
 	return (
-		<Badge variant={meta.variant} className="gap-1">
+		<StatusBadge tone={meta.tone} className="gap-1">
 			{meta.icon}
 			{meta.label}
-		</Badge>
+		</StatusBadge>
 	);
 }
 
@@ -204,7 +204,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 				enableSorting: true,
 				cell: ({ row }): React.JSX.Element => (
 					<div className="flex flex-wrap items-center gap-2">
-						<StatusBadge entry={row.original} />
+						<EmailStatusBadge entry={row.original} />
 						{row.original.error !== undefined && row.original.error !== null ? (
 							<span title={row.original.error} className="max-w-48 truncate text-xs text-destructive">
 								{row.original.error}
@@ -229,7 +229,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 				item={item}
 				title={item.subject}
 				subtitle={item.to}
-				badge={<StatusBadge entry={item} />}
+				badge={<EmailStatusBadge entry={item} />}
 				fields={[
 					{ label: "Template", value: item.templateKey },
 					{ label: "Sent at", value: formatTime(item.createdAt) },

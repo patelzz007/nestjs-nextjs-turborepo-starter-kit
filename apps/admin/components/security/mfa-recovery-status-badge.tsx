@@ -1,7 +1,7 @@
 "use client";
 
 import type { MfaRecoveryRecordStatus } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
+import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
 import * as React from "react";
 
 const STATUS_LABELS: Record<MfaRecoveryRecordStatus, string> = {
@@ -11,11 +11,12 @@ const STATUS_LABELS: Record<MfaRecoveryRecordStatus, string> = {
 	COMPLETED: "Completed",
 };
 
-const STATUS_VARIANTS: Record<MfaRecoveryRecordStatus, "default" | "secondary" | "destructive-light" | "outline"> = {
-	PENDING: "default",
-	APPROVED: "secondary",
-	DENIED: "destructive-light",
-	COMPLETED: "outline",
+/** A request waiting on an admin is the one to act on (`warning`); a denial is blocked; a finished request recedes. */
+const STATUS_TONE: Record<MfaRecoveryRecordStatus, StatusTone> = {
+	PENDING: "warning",
+	APPROVED: "success",
+	DENIED: "danger",
+	COMPLETED: "muted",
 };
 
 export interface MfaRecoveryStatusBadgeProps {
@@ -24,8 +25,8 @@ export interface MfaRecoveryStatusBadgeProps {
 
 export const MfaRecoveryStatusBadge = React.forwardRef<HTMLSpanElement, MfaRecoveryStatusBadgeProps>(function MfaRecoveryStatusBadge({ status }, ref): React.JSX.Element {
 	return (
-		<Badge ref={ref} variant={STATUS_VARIANTS[status]} className="text-xs">
+		<StatusBadge ref={ref} tone={STATUS_TONE[status]} className="text-xs">
 			{STATUS_LABELS[status]}
-		</Badge>
+		</StatusBadge>
 	);
 });

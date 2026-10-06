@@ -4,7 +4,7 @@ import { MerchantCapabilityGate } from "@/components/access/merchant-capability-
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
+import { StatCard } from "@workspace/ui/components/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { RedemptionsPager } from "@/components/redemptions/redemptions-pager";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
@@ -87,14 +87,16 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today
 			<MerchantLocationScopeBanner filteredNote="Redemptions at this store only." allStoresNote="Showing redemptions across every store you can access." />
 
 			<div className="grid gap-4 sm:grid-cols-2">
-				<MerchantStatCard
+				<StatCard
 					label="Showing"
+					tone="brand"
 					value={String(rows.length)}
 					hint={isFirstPage ? "Latest page of activity" : `Page ${String(urlState.page)} of activity`}
 					icon={<Receipt className="size-4" aria-hidden="true" />}
 				/>
-				<MerchantStatCard
+				<StatCard
 					label="Today"
+					tone="teal"
 					value={todayValue}
 					hint={todayQuery.isError ? "Couldn't load today's count" : "Redeemed since midnight, store time"}
 					icon={<CalendarClock className="size-4" aria-hidden="true" />}

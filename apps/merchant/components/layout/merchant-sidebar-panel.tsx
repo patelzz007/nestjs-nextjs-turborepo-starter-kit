@@ -102,7 +102,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const formatStoreValue = React.useCallback((slug: string): string => memberships.find((row) => row.organizationSlug === slug)?.displayName ?? slug, [memberships]);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
+		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
 			<PanelSidebarHeader
 				title={MERCHANT_SIDEBAR_MENU.header.title}
 				subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle}
