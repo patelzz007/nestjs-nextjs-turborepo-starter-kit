@@ -352,7 +352,7 @@ describe("toast parts forward refs and take their copy from labels", () => {
 		render(<ToastCountdownLabel ref={ref} remainingMs={3200} format={formatSecondsLeft} />);
 		const label = screen.getByText("4s left");
 		expect(ref.current).toBe(label);
-		expect(label.className).toContain("text-[length:var(--text-toast-countdown)]");
+		expect(label.className).toContain("--text-toast-countdown");
 	});
 
 	it("ToastIcon forwards its ref to the icon wrapper", (): void => {

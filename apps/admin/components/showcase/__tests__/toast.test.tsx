@@ -263,7 +263,7 @@ describe("Toast", () => {
 		expect(labels()).toEqual(["Dismisses in 58s", "Dismisses in 58s"]);
 	});
 
-	it("renders SOFT-SOLID cards + colored icons per type (opaque, not glassy)", () => {
+	it("renders opaque tone-soft surfaces + borders per type", () => {
 		const manager = createToastManager();
 		const message = createToastMessage(manager);
 		render(<Toaster toastManager={manager} />, { wrapper: UiKitTestProviders });
@@ -273,15 +273,14 @@ describe("Toast", () => {
 		});
 		// Newest toast is first (store prepends).
 		const cards = Array.from(document.querySelectorAll("[data-slot='toast']"));
-		// Opaque soft-solid token backgrounds — no `/NN` alpha modifier, so nothing
-		// bleeds through, but pale enough to be gentle (not a heavy solid block).
-		expect(cards[0]?.className).toContain("bg-destructive-soft");
-		expect(cards[0]?.className).not.toContain("bg-destructive/");
-		expect(cards[1]?.className).toContain("bg-success-soft");
-		expect(cards[1]?.className).not.toContain("bg-success/");
+		expect(cards[0]?.className).toContain("bg-tone-red-soft");
+		expect(cards[0]?.className).toContain("border-tone-red/30");
+		expect(cards[0]?.className).toContain("text-foreground");
+		expect(cards[1]?.className).toContain("bg-tone-green-soft");
+		expect(cards[1]?.className).toContain("border-tone-green/30");
 		const icons = Array.from(document.querySelectorAll("[data-slot='toast-icon'] svg"));
-		expect(icons[0]?.getAttribute("class")).toContain("text-destructive");
-		expect(icons[1]?.getAttribute("class")).toContain("text-success");
+		expect(icons[0]?.getAttribute("class")).toContain("text-tone-red");
+		expect(icons[1]?.getAttribute("class")).toContain("text-tone-green");
 	});
 
 	it("renders an action button and fires its onClick (feature 5)", () => {

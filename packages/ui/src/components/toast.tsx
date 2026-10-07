@@ -29,7 +29,7 @@ import { z } from "zod";
 //   - imperative manager (`toast.add/close/update/promise`), multi-manager
 //     isolation via `createToastManager` + `toastMessage` typed helpers
 //   - swipe-to-dismiss + auto-dismiss timeout (base-ui native)
-//   - per-type token colors (green/yellow/red/blue cards, borders and icons)
+//   - per-type opaque tone-soft surfaces + icon + countdown tint
 //   - auto-dismiss countdown bar draining over the remaining time (default 5s),
 //     with a ticking "Dismisses in Xs" label that freezes on hover/focus ANYWHERE
 //     in the stack + window blur — mirroring base-ui's viewport-wide timer pause
@@ -100,29 +100,41 @@ const TOAST_TYPE_ICONS: Readonly<Record<ToastType, React.ComponentType<{ readonl
 };
 
 interface ToastTypeStyles {
-	/** Icon tint — matches the card tint (token-driven, no hardcoded hex). */
+	/** Glyph tint — tone palette (AA on the matching soft fill). */
 	readonly icon: string;
-	/** Card background/border/text — green/yellow/red/blue per type. */
+	/** Opaque soft fill + full border — categorical tones, neutral body copy. */
 	readonly card: string;
-	/** Countdown-bar tint (drains over the auto-dismiss timeout). */
+	/** Countdown-bar fill (drains over the auto-dismiss timeout). */
 	readonly countdown: string;
 }
 
-/** Single source of truth for per-type styling (icon, card, countdown).
- *
- * Cards are SOFT-SOLID: fully opaque `bg-{color}-soft` (a pale pastel in
- * light mode, a deep tint in dark mode) with the full-saturation color for
- * text/icons/border. This avoids BOTH extremes — translucent tints (glassy,
- * content bleeds through) and heavy solid `bg-{color}` cards with near-black
- * text (harsh, eye-straining). The soft pattern is the shadcn-style standard:
- * readable, gentle, professional in both themes. The countdown bar reuses the
- * per-type color at 60% so it reads against its own soft card. */
+/** Opaque tone-soft cards (not alpha washes, not neon `text-success` on `*-soft`). */
 const TOAST_TYPE_STYLES: Readonly<Record<ToastType, ToastTypeStyles>> = {
-	success: { icon: "text-success", card: "border-success/40 bg-success-soft text-success", countdown: "bg-success/60" },
-	warning: { icon: "text-warning", card: "border-warning/40 bg-warning-soft text-warning", countdown: "bg-warning/60" },
-	error: { icon: "text-destructive", card: "border-destructive/40 bg-destructive-soft text-destructive", countdown: "bg-destructive/60" },
-	info: { icon: "text-info", card: "border-info/40 bg-info-soft text-info", countdown: "bg-info/60" },
-	loading: { icon: "", card: "bg-popover text-popover-foreground", countdown: "bg-foreground/25" },
+	success: {
+		icon: "text-tone-green",
+		card: "border-tone-green/30 bg-tone-green-soft text-foreground shadow-lg dark:border-tone-green/40",
+		countdown: "bg-tone-green/55",
+	},
+	warning: {
+		icon: "text-tone-yellow",
+		card: "border-tone-yellow/30 bg-tone-yellow-soft text-foreground shadow-lg dark:border-tone-yellow/40",
+		countdown: "bg-tone-yellow/55",
+	},
+	error: {
+		icon: "text-tone-red",
+		card: "border-tone-red/30 bg-tone-red-soft text-foreground shadow-lg dark:border-tone-red/40",
+		countdown: "bg-tone-red/55",
+	},
+	info: {
+		icon: "text-tone-blue",
+		card: "border-tone-blue/30 bg-tone-blue-soft text-foreground shadow-lg dark:border-tone-blue/40",
+		countdown: "bg-tone-blue/55",
+	},
+	loading: {
+		icon: "text-muted-foreground",
+		card: "border-border bg-muted text-foreground shadow-lg",
+		countdown: "bg-foreground/25",
+	},
 };
 
 /** aria-live priority per type (improvement 10: errors interrupt, notices don't). */
@@ -349,7 +361,7 @@ const Toast = React.forwardRef<HTMLDivElement, ToastPrimitive.Root.Props>(functi
 			// bottom stacks downward (overridable via props for custom setups).
 			swipeDirection={TOAST_EDGE_SWIPE[edge]}
 			className={cn(
-				"pointer-events-auto absolute z-[calc(1000-var(--toast-index))] w-full rounded-2xl border bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+				"pointer-events-auto absolute z-[calc(1000-var(--toast-index))] w-full rounded-xl border bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
 				// Anchor the card to the viewport's vertical edge so it grows INTO the
 				// screen (bottom = upward, top = downward) instead of past it.
 				fromTop ? "top-0" : "bottom-0",
@@ -401,7 +413,9 @@ const ToastDescription = React.forwardRef<HTMLParagraphElement, ToastPrimitive.D
 
 // Default render targets hoisted to module scope so each render reuses one element.
 const TOAST_ACTION_BUTTON = <Button variant="outline" size="sm" />;
-const TOAST_CLOSE_BUTTON = <Button variant="ghost" size="icon-lg" />;
+const TOAST_CLOSE_BUTTON = (
+	<Button variant="ghost" size="icon-lg" className="hover:bg-transparent hover:text-inherit aria-expanded:bg-transparent dark:hover:bg-transparent" />
+);
 
 const ToastAction = React.forwardRef<HTMLButtonElement, ToastPrimitive.Action.Props>(function ToastAction(
 	{ className, render = TOAST_ACTION_BUTTON, ...props },
@@ -426,10 +440,7 @@ const ToastClose = React.forwardRef<HTMLButtonElement, ToastCloseProps>(function
 			data-slot="toast-close"
 			aria-label={closeLabel ?? labels.close}
 			render={render}
-			className={cn(
-				"relative min-h-11 min-w-11 shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground sm:min-h-0 sm:min-w-0",
-				className,
-			)}
+			className={cn("relative min-h-11 min-w-11 shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] sm:min-h-0 sm:min-w-0", className)}
 			{...props}>
 			{children ?? <XIcon aria-hidden="true" />}
 		</ToastPrimitive.Close>
@@ -482,7 +493,7 @@ const ToastProgress = React.forwardRef<HTMLDivElement, ToastProgressProps>(funct
 			aria-valuemin={PROGRESS_MIN}
 			aria-valuemax={PROGRESS_MAX}
 			aria-valuenow={clamped}
-			className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-4 overflow-hidden rounded-b-2xl", className)}
+			className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-4 overflow-hidden rounded-b-xl", className)}
 			{...props}>
 			<div className="absolute inset-x-0 bottom-0 h-1 bg-muted">
 				<div className="h-full bg-primary transition-[width] duration-300" style={barStyle} />
@@ -515,7 +526,7 @@ const ToastCountdown = React.forwardRef<HTMLDivElement, ToastCountdownProps>(fun
 		// 1rem-tall clipping wrapper: a 16px radius on the 4px bar would be clamped to 4px
 		// and overflow the card's rounded corners, so the wrapper (radius matches the card)
 		// clips the bar to the exact corner curve. The top 12px is transparent padding.
-		<div ref={ref} data-slot="toast-countdown" aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4 overflow-hidden rounded-b-2xl" {...props}>
+		<div ref={ref} data-slot="toast-countdown" aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-4 overflow-hidden rounded-b-xl" {...props}>
 			<div className="absolute inset-x-0 bottom-0 h-1 bg-muted/60">
 				<div
 					className={cn(
@@ -629,7 +640,7 @@ const ToastCountdownLabel = React.forwardRef<HTMLSpanElement, ToastCountdownLabe
 		<span
 			ref={ref}
 			data-slot="toast-countdown-label"
-			className={cn("text-[length:var(--text-toast-countdown)] leading-none text-muted-foreground tabular-nums", className)}
+			className={cn("text-(length:--text-toast-countdown) leading-none text-muted-foreground tabular-nums", className)}
 			{...props}>
 			{format(seconds)}
 		</span>
@@ -697,21 +708,14 @@ const ToastRow = memo(function ToastRow({ toastItem }: ToastRowProps): React.JSX
 				<ToastIcon type={type} icon={data?.icon} />
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
 					<ToastTitle>{toastItem.title}</ToastTitle>
-					{toastItem.description !== undefined ? (
-						// On soft colored cards the title carries the color; the description
-						// stays a muted neutral so hierarchy holds (loading keeps its default).
-						<ToastDescription className={type !== undefined ? "text-foreground/70" : undefined}>{toastItem.description}</ToastDescription>
-					) : null}
+					{toastItem.description !== undefined ? <ToastDescription>{toastItem.description}</ToastDescription> : null}
 					{showCountdown ? <ToastCountdownLabel remainingMs={remainingMs} format={labels.countdown} /> : null}
 				</div>
 				{/* Render the action bare — base-ui auto-merges `toast.actionProps` into the
 				    button props itself (props array `[elementProps, toast.actionProps, ...]`).
 				    Spreading them here as well would merge `onClick` twice and double-fire. */}
 				{toastItem.actionProps !== undefined ? <ToastAction /> : null}
-				{/* The close button inherits the card's foreground (solid colored cards —
-				    the default muted/foreground swap would clash) with a touch opacity;
-				    loading keeps its default styling on the popover card. */}
-				<ToastClose className={type !== undefined ? "text-inherit opacity-70 hover:text-inherit hover:opacity-100" : undefined} />
+				<ToastClose />
 			</ToastContent>
 			{data?.progress !== undefined ? (
 				<ToastProgress value={data.progress} />
