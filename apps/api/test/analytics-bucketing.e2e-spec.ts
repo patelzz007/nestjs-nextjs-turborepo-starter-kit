@@ -1,6 +1,7 @@
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { z } from "zod";
 
 import type { AnalyticsWindow } from "../src/modules/rewards/analytics/analytics-scope";
@@ -95,7 +96,7 @@ describe("Analytics buckets in Postgres (e2e)", () => {
 		const result = await buckets({ fromMs: from, toMs: from + 366 * DAY_MS, timeZone: "UTC", interval: "day" });
 
 		expect(result).toHaveLength(367);
-		expect(result.at(0)?.[2]).toBe(true);
-		expect(result.at(-1)?.[2]).toBe(true);
+		expect(result[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.third]).toBe(true);
+		expect(result.at(-1)?.[LIST_SLOT_INDEX.third]).toBe(true);
 	});
 });

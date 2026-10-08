@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { MINOR_UNITS_PER_MAJOR, RewardRulesSchema, type RewardRules } from "@workspace/shared";
+import { LIST_SLOT_INDEX, MINOR_UNITS_PER_MAJOR, RewardRulesSchema, type RewardRules } from "@workspace/shared";
 
 /** A reward's stored `rules` JSON does not match `RewardRulesSchema` — an integrity fault, never read as "no rules". */
 export class RewardRulesInvalidError extends Error {
@@ -30,7 +30,7 @@ export interface StoredRewardRules {
 export function toStoredRewardRules(rules: RewardRules): StoredRewardRules {
 	const { minSpendMyr, ...rest } = rules;
 	// Every other rule, as-is (absent optional rules are dropped, never stored as null).
-	const remaining: Prisma.InputJsonObject = Object.fromEntries(Object.entries(rest).filter((entry): entry is [string, number] => entry[1] !== undefined));
+	const remaining: Prisma.InputJsonObject = Object.fromEntries(Object.entries(rest).filter((entry): entry is [string, number] => entry[LIST_SLOT_INDEX.second] !== undefined));
 	return {
 		rules: Object.keys(remaining).length === 0 ? Prisma.DbNull : remaining,
 		minSpendMinor: minSpendMyr === undefined ? null : minSpendMyrToMinor(minSpendMyr),

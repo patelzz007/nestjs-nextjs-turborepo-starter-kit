@@ -1,5 +1,5 @@
 import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
-import { EmailAddressSchema } from "@workspace/shared";
+import { EmailAddressSchema, isStringPrimitive } from "@workspace/shared";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import * as React from "react";
 
@@ -14,7 +14,7 @@ export interface MerchantLoginPageProps {
 
 /** The single value of a query parameter (`undefined` when absent or repeated). */
 function singleParam(value: string | string[] | undefined): string | undefined {
-	return typeof value === "string" ? value : undefined;
+	return isStringPrimitive(value) ? value : undefined;
 }
 
 /**

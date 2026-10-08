@@ -1,4 +1,5 @@
 import { ConflictException, GoneException, NotFoundException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import type { MerchantOnboardingCompleteFieldsInput } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,10 +119,10 @@ describe("MerchantOnboardingService", () => {
 
 			expect(invites.claimPendingOnboardingInviteInTx).toHaveBeenCalledWith(tx, INVITE_ID, USER_ID, NOW);
 			expect(provisioning.ensureOwnerMembershipInTx).toHaveBeenCalledWith(tx, ORG_ID, USER_ID);
-			expect(organizations.updateMerchantProfileSubmissionInTx.mock.lastCall?.[0]).toBe(tx);
-			expect(locations.finalizeOnboardingLocationsInTx.mock.lastCall?.[0]).toBe(tx);
+			expect(organizations.updateMerchantProfileSubmissionInTx.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(tx);
+			expect(locations.finalizeOnboardingLocationsInTx.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(tx);
 			expect(provisioning.activateAfterOnboardingInTx).toHaveBeenCalledWith(tx, ORG_ID, USER_ID);
-			expect(audit.create.mock.lastCall?.[1]).toBe(tx);
+			expect(audit.create.mock.lastCall?.[LIST_SLOT_INDEX.second]).toBe(tx);
 		});
 
 		it("a replayed or concurrent completion loses the claim: 409 and no further step runs", async () => {

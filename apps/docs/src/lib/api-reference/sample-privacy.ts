@@ -7,7 +7,7 @@
 /** Domains reserved for documentation (RFC 2606) and the seed's demo organizations. */
 const TEMPLATE_EMAIL_DOMAIN_PATTERNS: readonly RegExp[] = [/^example\.(com|org|net)$/, /\.example$/, /\.demo$/, /^localhost$/];
 
-const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;
+const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@(?<domain>[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;
 
 function isTemplateDomain(domain: string): boolean {
 	const lowerCased: string = domain.toLowerCase();
@@ -18,9 +18,10 @@ function isTemplateDomain(domain: string): boolean {
 export function findNonTemplateEmailAddresses(text: string): string[] {
 	const found = new Set<string>();
 	for (const match of text.matchAll(EMAIL_PATTERN)) {
-		const domain: string | undefined = match[1];
+		const [address] = match;
+		const domain: string | undefined = match.groups?.domain;
 		if (domain !== undefined && !isTemplateDomain(domain)) {
-			found.add(match[0]);
+			found.add(address);
 		}
 	}
 	return [...found].sort();

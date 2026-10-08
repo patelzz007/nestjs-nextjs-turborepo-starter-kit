@@ -89,6 +89,8 @@ Typecheck, build, and the rest of the pipeline still run in CI (`rules/13-ci-cd-
 | Need a concrete, copy-the-shape example of a compliant feature (contract → DB → policy → repo → service → controller → web) | `24-golden-reference-implementations.md` |
 | Rapid pre-commit self-review (scan ❌/✅ pairs by area) | `25-anti-pattern-catalog.md` |
 | New to the repo / need the big-picture mental model | `26-junior-onboarding-guide.md` |
+| Named list positions instead of `[0]` / `[1]` (destructuring, `LIST_SLOT_INDEX`, named capture groups) | `27-array-index-readability.md` |
+| Zod trust boundaries; the runtime `typeof` / `Array.isArray` are banned everywhere | `28-runtime-validation.md` |
 | Unfamiliar term or naming question | `22-glossary.md` |
 | Wrapping up any task | `18-definition-of-done.md`, then `14-documentation.md` |
 
@@ -96,7 +98,7 @@ Typecheck, build, and the rest of the pipeline still run in CI (`rules/13-ci-cd-
 
 - No `any`, `unknown`, `never` (outside exhaustiveness checks), `z.any()`, `z.unknown()`, `z.never()`.
 - No `as` casts, no `as const` — use typed tuples. No magic numbers or unexplained constants.
-- Avoid `typeof` as domain validation — zod is the runtime contract, shared by frontend, backend, and Swagger alike.
+- No runtime `typeof` / `Array.isArray` — zod is the runtime contract, shared by frontend, backend, and Swagger alike (`rules/28`). No numeric-literal indices like `items[0]` (`rules/27`).
 - **Never trust the frontend.** Validate independently and completely on the server, every time, regardless of what the client already checked. Validate on the client too, for user experience — using the same shared schema, never a second set of rules.
 - Generics are priority 0, but only where they preserve real, reusable type information — see `00-non-negotiables.md`'s "no speculative abstractions" section for where that stops.
 - Explicit return types and access modifiers everywhere.

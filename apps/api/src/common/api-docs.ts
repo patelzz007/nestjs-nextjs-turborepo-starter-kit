@@ -76,7 +76,8 @@ const OPERATION_METHODS: readonly (keyof Pick<PathItemObject, "get" | "put" | "p
 
 /** What Nest metadata is read from — a route handler. */
 type RouteHandler = Parameters<Reflector["get"]>[1];
-const RouteHandlerSchema = z.custom<RouteHandler>((value) => typeof value === "function", "route handler function");
+const CallableSchema = z.function();
+const RouteHandlerSchema = z.custom<RouteHandler>((value) => CallableSchema.safeParse(value).success, "route handler function");
 
 /**
  * Build the OpenAPI document for `app` — the ONE builder used by bootstrap

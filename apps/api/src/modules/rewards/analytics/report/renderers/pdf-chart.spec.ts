@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import type { AnalyticsReportChart } from "../analytics-report";
 import { CHART_MAX_X_LABELS, drawChart, labelledIndices, niceAxis, type ChartCanvas, type ChartStyle } from "./pdf-chart";
@@ -53,6 +54,9 @@ const STYLE: ChartStyle = {
 };
 const AREA = { x: 0, y: 0, width: 400, height: 200 };
 
+/** A recorded `rect x y width height` call; the last field is the bar height. */
+const RECT_HEIGHT_PATTERN = /^rect \S+ \S+ \S+ (?<height>\S+)$/;
+
 function chartOf(kind: AnalyticsReportChart["kind"], series: readonly (readonly number[])[]): AnalyticsReportChart {
 	return {
 		title: "Chart",
@@ -92,8 +96,8 @@ describe("drawChart", () => {
 		const bars = canvas.calls.filter((call) => call.startsWith("rect"));
 		expect(bars).toHaveLength(2);
 		// 8 is the top of the axis: the second bar is the full plot height, the first a quarter of it.
-		const heights = bars.map((bar) => Number(bar.split(" ")[4]));
-		expect(heights[1]).toBeCloseTo((heights[0] ?? 0) * 4, 5);
+		const heights = bars.map((bar) => Number(RECT_HEIGHT_PATTERN.exec(bar)?.groups?.height));
+		expect(heights[LIST_SLOT_INDEX.second]).toBeCloseTo((heights[LIST_SLOT_INDEX.first] ?? 0) * 4, 5);
 		expect(canvas.texts).toContain("Chart");
 		expect(canvas.texts).toEqual(expect.arrayContaining(["b0", "b1", "0", "8"]));
 	});

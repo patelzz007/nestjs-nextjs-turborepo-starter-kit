@@ -1,7 +1,13 @@
 "use client";
 
 import type { FileDownloadDisposition, MerchantKybDocumentRecord, MerchantKybProfileResponse } from "@workspace/shared";
-import { MERCHANT_KYB_MAX_DOCUMENT_COUNT, MerchantKybBusinessFieldsSchema, MerchantKybRegistrationFieldsSchema, MerchantKybSubmissionFormSchema } from "@workspace/shared";
+import {
+	LIST_SLOT_INDEX,
+	MERCHANT_KYB_MAX_DOCUMENT_COUNT,
+	MerchantKybBusinessFieldsSchema,
+	MerchantKybRegistrationFieldsSchema,
+	MerchantKybSubmissionFormSchema,
+} from "@workspace/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -184,7 +190,7 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 				contactPhone: values.contactPhone,
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your business details and try again.");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your business details and try again.");
 				return;
 			}
 
@@ -204,7 +210,7 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 				documentType: values.documentType,
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your registration details and try again.");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your registration details and try again.");
 				return;
 			}
 
@@ -238,7 +244,7 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 				documentType: values.documentType,
 			});
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your business details and try again.");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your business details and try again.");
 				return;
 			}
 

@@ -1,4 +1,5 @@
 import { FileText, Home, type LucideIcon } from "lucide-react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
@@ -260,8 +261,8 @@ describe("withTrailTailLabel", () => {
 			"Free coffee",
 		);
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Browse", "Free coffee"]);
-		expect(trail[1]?.icon).toBe(FileText);
-		expect(trail[1]?.href).toBeUndefined();
+		expect(trail[LIST_SLOT_INDEX.second]?.icon).toBe(FileText);
+		expect(trail[LIST_SLOT_INDEX.second]?.href).toBeUndefined();
 	});
 
 	it("creates a single crumb for an empty trail", () => {

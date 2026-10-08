@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { Prisma, type Role, type UserRole } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
@@ -93,7 +94,7 @@ let lockTail: Promise<void> = Promise.resolve();
 function installAdvisoryLock(world: World): void {
 	mocks.executeRaw.mockImplementation(async (strings: TemplateStringsArray, ...values: string[]): Promise<number> => {
 		const scope = transactionScope.getStore();
-		if (scope !== undefined && strings.join("?").includes("pg_advisory_xact_lock") && values[0] === SUPERADMIN_BOOTSTRAP_LOCK_KEY) {
+		if (scope !== undefined && strings.join("?").includes("pg_advisory_xact_lock") && values[LIST_SLOT_INDEX.first] === SUPERADMIN_BOOTSTRAP_LOCK_KEY) {
 			const previous: Promise<void> = lockTail;
 			lockTail = new Promise<void>((resolve: () => void): void => {
 				scope.release = resolve;
@@ -184,7 +185,7 @@ describe("SuperAdminBootstrapService", () => {
 
 		expect(outcome).toEqual({ userId: "user-1", email: "root@acme.test", fullName: "Root Admin" });
 		expect(hash).toHaveBeenCalledWith(PASSWORD);
-		expect(createSuperAdmin.mock.lastCall?.[0]).toEqual({
+		expect(createSuperAdmin.mock.lastCall?.[LIST_SLOT_INDEX.first]).toEqual({
 			email: "root@acme.test",
 			fullName: "Root Admin",
 			passwordHash: "bcrypt-hash-of-password",
@@ -204,7 +205,7 @@ describe("SuperAdminBootstrapService", () => {
 			expect.any(Function),
 		);
 		expect(world.steps).toEqual(["lock", "create"]);
-		expect(mocks.executeRaw.mock.calls[0]?.[0].join("?")).toContain("pg_advisory_xact_lock");
+		expect(mocks.executeRaw.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first].join("?")).toContain("pg_advisory_xact_lock");
 	});
 
 	it("assigns the SuperAdmin role and records both audit rows with the system operation as the actor and the operator in the detail", async () => {
@@ -213,7 +214,7 @@ describe("SuperAdminBootstrapService", () => {
 		await service.bootstrap(REQUEST);
 
 		expect(assignRole).toHaveBeenCalledWith("user-1", ROLE_ID, SUPERADMIN_BOOTSTRAP_OPERATION, expect.anything());
-		const rows = mocks.auditCreate.mock.calls.map((call) => call[0].data);
+		const rows = mocks.auditCreate.mock.calls.map((call) => call[LIST_SLOT_INDEX.first].data);
 		expect(rows.map((row) => row.action)).toEqual(["SUPER_ADMIN_BOOTSTRAPPED", "ROLE_ASSIGNED_AT_PROVISIONING"]);
 		for (const row of rows) {
 			expect(row).toMatchObject({ actorKind: "SYSTEM_OPERATION", actorId: SUPERADMIN_BOOTSTRAP_OPERATION, targetUserId: "user-1", targetRoleId: ROLE_ID });
@@ -261,7 +262,7 @@ describe("SuperAdminBootstrapService", () => {
 
 		await service.bootstrap(REQUEST);
 
-		expect(hash.mock.invocationCallOrder[0]).toBeLessThan(withSystemOperation.mock.invocationCallOrder[0] ?? 0);
+		expect(hash.mock.invocationCallOrder[LIST_SLOT_INDEX.first]).toBeLessThan(withSystemOperation.mock.invocationCallOrder[LIST_SLOT_INDEX.first] ?? 0);
 	});
 
 	it("lets exactly one of two concurrent runs succeed: the loser waits on the lock, then sees the winner and refuses", async () => {
@@ -275,7 +276,7 @@ describe("SuperAdminBootstrapService", () => {
 		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
 		const rejected = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
 		expect(rejected).toHaveLength(1);
-		expect(rejected[0]?.reason).toBeInstanceOf(SuperAdminAlreadyExistsError);
+		expect(rejected[LIST_SLOT_INDEX.first]?.reason).toBeInstanceOf(SuperAdminAlreadyExistsError);
 		expect(world.superAdmins).toHaveLength(1);
 		expect(mocks.auditCreate).toHaveBeenCalledTimes(2);
 	});

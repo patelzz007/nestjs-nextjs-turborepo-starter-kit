@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { OrganizationLocation } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -203,7 +204,7 @@ describe("OrganizationLocationService", () => {
 			additionalLocations: [],
 		});
 
-		expect(calls[0]).toBe("lock");
+		expect(calls[LIST_SLOT_INDEX.first]).toBe("lock");
 		expect(tx.organizationLocation.create.mock.lastCall).toMatchObject([
 			{
 				data: { organizationId: ORG_ID, isPrimary: true, status: "ACTIVE", addressText: "1 Jalan Telawi, Bangsar", city: "KUALA_LUMPUR" },
@@ -221,7 +222,7 @@ describe("OrganizationLocationService", () => {
 			const result = await service.closeMerchantLocation(USER_ID, "brew", LOCATION_ID, CLOSE_INPUT);
 
 			expect(tenantTx.withSystemOperation).toHaveBeenCalledTimes(1);
-			expect(calls[0]).toBe("lock");
+			expect(calls[LIST_SLOT_INDEX.first]).toBe("lock");
 			expect(tx.organizationLocation.updateMany.mock.lastCall).toMatchObject([
 				{
 					where: { id: LOCATION_ID, organizationId: ORG_ID, isDeleted: false, isPrimary: false },

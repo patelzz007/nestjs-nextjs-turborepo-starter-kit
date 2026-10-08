@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { CompiledSidebarMenuData, SidebarMenuData } from "../sidebar/sidebar-menu-schema";
-import { PERMISSION } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION } from "@workspace/shared";
 
 import { SidebarMenuDataSchema } from "../sidebar/sidebar-menu-schema";
 import { evaluateSidebarAuthorization, filterCompiledSidebarMenu, filterSidebarMenuData } from "./filter-sidebar-menu-by-capabilities";
@@ -50,7 +50,7 @@ describe("filterSidebarMenuData (raw)", () => {
 
 		const result = filterSidebarMenuData(menu, NONE);
 
-		expect(result.sections[0]?.items.map((item) => item.title)).toEqual(["Home"]);
+		expect(result.sections[LIST_SLOT_INDEX.first]?.items.map((item) => item.title)).toEqual(["Home"]);
 	});
 
 	it("removes unauthorized leaves", () => {
@@ -83,7 +83,7 @@ describe("filterSidebarMenuData (raw)", () => {
 		});
 
 		const result = filterSidebarMenuData(menu, ONLY_A);
-		const parent = result.sections[0]?.items[0];
+		const parent = result.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first];
 
 		expect(parent?.title).toBe("Users");
 		expect(parent?.children?.map((child) => child.title)).toEqual(["All Users"]);
@@ -127,10 +127,10 @@ describe("filterSidebarMenuData (raw)", () => {
 		});
 
 		const withBoth = filterSidebarMenuData(menu, A_AND_B);
-		expect(withBoth.sections[0]?.items.map((item) => item.title)).toEqual(["Sensitive", "Either"]);
+		expect(withBoth.sections[LIST_SLOT_INDEX.first]?.items.map((item) => item.title)).toEqual(["Sensitive", "Either"]);
 
 		const withOne = filterSidebarMenuData(menu, ONLY_A);
-		expect(withOne.sections[0]?.items.map((item) => item.title)).toEqual(["Either"]);
+		expect(withOne.sections[LIST_SLOT_INDEX.first]?.items.map((item) => item.title)).toEqual(["Either"]);
 	});
 
 	it("supports mode any — at least one permission (spec 18)", () => {
@@ -143,7 +143,7 @@ describe("filterSidebarMenuData (raw)", () => {
 			],
 		});
 
-		expect(filterSidebarMenuData(menu, ONLY_B).sections[0]?.items).toHaveLength(1);
+		expect(filterSidebarMenuData(menu, ONLY_B).sections[LIST_SLOT_INDEX.first]?.items).toHaveLength(1);
 		expect(filterSidebarMenuData(menu, NONE).sections).toHaveLength(0);
 	});
 
@@ -165,7 +165,7 @@ describe("filterSidebarMenuData (raw)", () => {
 		});
 
 		const granted = filterSidebarMenuData(menu, ONLY_A);
-		expect(granted.sections[0]?.items[0]?.children?.[0]?.children?.[0]?.title).toBe("Deeper");
+		expect(granted.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first]?.children?.[LIST_SLOT_INDEX.first]?.children?.[LIST_SLOT_INDEX.first]?.title).toBe("Deeper");
 
 		const denied = filterSidebarMenuData(menu, NONE);
 		expect(denied.sections).toHaveLength(0);
@@ -191,13 +191,13 @@ describe("filterSidebarMenuData (raw)", () => {
 		// Has A but not B: the cascade gate passes for the parent, the override
 		// denies the child — the authorized parent survives as an accessible leaf (spec 79).
 		const onlyA = filterSidebarMenuData(menu, ONLY_A);
-		const hub = onlyA.sections[0]?.items[0];
+		const hub = onlyA.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first];
 		expect(hub?.title).toBe("Hub");
 		expect(hub?.children).toHaveLength(0);
 
 		// Has both: parent gate and override gate both pass.
 		const both = filterSidebarMenuData(menu, A_AND_B);
-		expect(both.sections[0]?.items[0]?.children?.[0]?.title).toBe("Override");
+		expect(both.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first]?.children?.[LIST_SLOT_INDEX.first]?.title).toBe("Override");
 	});
 
 	it("keeps disabled items that are authorized — disabled is a UX state, not authorization (spec 25)", () => {
@@ -207,7 +207,7 @@ describe("filterSidebarMenuData (raw)", () => {
 
 		const result = filterSidebarMenuData(menu, NONE);
 
-		expect(result.sections[0]?.items[0]?.disabled).toBe(true);
+		expect(result.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first]?.disabled).toBe(true);
 	});
 
 	it("filters six nested levels with one recursive pass (spec 103)", () => {
@@ -254,10 +254,10 @@ describe("filterSidebarMenuData (raw)", () => {
 
 		const path = (result: ReturnType<typeof filterSidebarMenuData>): string[] => {
 			const titles: string[] = [];
-			let node = result.sections[0]?.items[0];
+			let node = result.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first];
 			while (node !== undefined) {
 				titles.push(node.title);
-				node = node.children?.[0];
+				node = node.children?.[LIST_SLOT_INDEX.first];
 			}
 			return titles;
 		};
@@ -313,10 +313,10 @@ describe("filterCompiledSidebarMenu (compiled)", () => {
 
 		const result = filterCompiledSidebarMenu(menu, ONLY_A);
 
-		expect(result.sections[0]?.items.map((item) => item.id)).toEqual(["main-home", "main-secret"]);
+		expect(result.sections[LIST_SLOT_INDEX.first]?.items.map((item) => item.id)).toEqual(["main-home", "main-secret"]);
 
 		const denied = filterCompiledSidebarMenu(menu, NONE);
-		expect(denied.sections[0]?.items.map((item) => item.id)).toEqual(["main-home"]);
+		expect(denied.sections[LIST_SLOT_INDEX.first]?.items.map((item) => item.id)).toEqual(["main-home"]);
 	});
 
 	it("supports authorization all/any modes on compiled items", () => {
@@ -396,7 +396,7 @@ describe("authorization + feature flags", () => {
 		});
 
 		expect(filterSidebarMenuData(menu, FULL).sections).toHaveLength(0);
-		expect(filterSidebarMenuData(menu, FULL, { enabledFeatureFlags: ["beta"] }).sections[0]?.items[0]?.children).toHaveLength(1);
+		expect(filterSidebarMenuData(menu, FULL, { enabledFeatureFlags: ["beta"] }).sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first]?.children).toHaveLength(1);
 	});
 
 	it("denies the whole subtree when a cascading requirement fails, even if a child is authorized on its own", () => {

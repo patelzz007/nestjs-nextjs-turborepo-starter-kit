@@ -1,11 +1,20 @@
 "use client";
 
+import { keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { EmailTemplateKeySchema, PERMISSION, type Envelope, type EmailPreview, type EmailPreviewListResponse, type EmailTemplateMeta } from "@workspace/shared";
+import {
+	LIST_SLOT_INDEX,
+	EmailTemplateKeySchema,
+	PERMISSION,
+	type Envelope,
+	type EmailPreview,
+	type EmailPreviewListResponse,
+	type EmailTemplateMeta,
+} from "@workspace/shared";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { EMAIL_TEMPLATES_URL_STATE } from "@/lib/url-state/selection";
 import { Badge } from "@workspace/ui/components/badge";
@@ -34,26 +43,35 @@ function TemplateIndexRow({
 	template,
 	active,
 	onSelect,
+	onIntent,
 }: {
 	readonly template: EmailTemplateMeta;
 	readonly active: boolean;
 	readonly onSelect: (key: string) => void;
+	/** The pointer or keyboard focus reached the row — warm its preview before the click. */
+	readonly onIntent: (key: string) => void;
 }): React.JSX.Element {
 	const handleSelect = React.useCallback((): void => {
 		onSelect(template.key);
 	}, [template.key, onSelect]);
+	const handleIntent = React.useCallback((): void => {
+		onIntent(template.key);
+	}, [template.key, onIntent]);
 
 	return (
 		<Button
 			type="button"
 			variant="nav"
 			onClick={handleSelect}
+			onPointerEnter={handleIntent}
+			onFocus={handleIntent}
+			aria-current={active ? "true" : undefined}
 			className={cn(
-				"h-auto justify-start rounded-md px-3 py-2.5 text-left transition-colors",
+				"h-auto w-full flex-col items-start gap-0.5 rounded-md px-3 py-2.5 text-left whitespace-normal transition-colors",
 				active ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "hover:bg-accent hover:text-accent-foreground",
 			)}>
-			<p className={cn("text-sm font-medium", active ? "text-primary-foreground" : "text-foreground")}>{template.label}</p>
-			<p className={cn("mt-0.5 line-clamp-2 text-xs", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{template.description}</p>
+			<span className={cn("text-sm font-medium", active ? "text-primary-foreground" : "text-foreground")}>{template.label}</span>
+			<span className={cn("text-xs leading-snug font-normal", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{template.description}</span>
 		</Button>
 	);
 }
@@ -121,7 +139,7 @@ export default function EmailPreviewPage({
 	// Effective key: an explicit selection wins; otherwise fall back to the
 	// first template. Deriving (instead of an effect that calls setState)
 	// keeps the render pure and satisfies the React Compiler's rules.
-	const effectiveKey: string = selectedKey ?? templates[0]?.key ?? "";
+	const effectiveKey: string = selectedKey ?? templates[LIST_SLOT_INDEX.first]?.key ?? "";
 
 	// The preview mode belongs to the template it was picked for: selecting
 	// another template (by click or by back/forward) starts on "preview" again.
@@ -138,23 +156,42 @@ export default function EmailPreviewPage({
 		return initialDetail;
 	}, [effectiveKey, initialDetail]);
 
+	// Previews are rendered from fixed sample props, so a fetched one never goes stale. While the
+	// next one loads, the current one stays on screen (`keepPreviousData`) — the preview never blanks
+	// or remounts — and hovering or focusing a row usually has it cached before the click.
 	const detailQuery = api.email.previewDetail.useQuery(
 		{ key: effectiveKey },
 		{
 			enabled: effectiveKey.length > 0,
 			...initialDataOption(detailInitialData),
+			placeholderData: keepPreviousData,
 			staleTime: Number.POSITIVE_INFINITY,
 			refetchOnWindowFocus: false,
 			refetchOnReconnect: false,
 		},
+	);
+	const prefetchDetail = api.email.previewDetail.usePrefetch({ staleTime: Number.POSITIVE_INFINITY });
+	const handleRowIntent = React.useCallback(
+		(key: string): void => {
+			const parsed = EmailTemplateKeySchema.safeParse(key);
+			if (parsed.success) {
+				prefetchDetail({ key: parsed.data });
+			}
+		},
+		[prefetchDetail],
 	);
 
 	// Send-test mutation — fires the selected template's sample props through
 	// the real sender. In dev `EMAIL_TEST_TO` redirects it to the developer.
 	const sendMutation = api.email.previewSend.useMutation();
 
-	const preview: EmailPreview | undefined = detailQuery.data?.data.key === effectiveKey ? detailQuery.data.data : undefined;
-	const isDetailPending = effectiveKey.length > 0 && preview === undefined && (detailQuery.isLoading || detailQuery.isPending);
+	// What is on screen: the selected template's preview, or the previous one while it loads.
+	const shownPreview: EmailPreview | undefined = detailQuery.data?.data;
+	// The selected template's own preview — what Copy and Send act on.
+	const preview: EmailPreview | undefined = shownPreview?.key === effectiveKey ? shownPreview : undefined;
+	const isSwitching = effectiveKey.length > 0 && preview === undefined;
+	// The header comes from the already-loaded list, so it switches at once with the selection.
+	const selectedMeta: EmailTemplateMeta | undefined = templates.find((template) => template.key === effectiveKey);
 
 	const handleSelectTemplate = React.useCallback(
 		(key: string): void => {
@@ -263,7 +300,7 @@ export default function EmailPreviewPage({
 					</CardHeader>
 					<CardContent className="space-y-1 p-2">
 						{templates.map((template) => (
-							<TemplateIndexRow key={template.key} template={template} active={template.key === effectiveKey} onSelect={handleSelectTemplate} />
+							<TemplateIndexRow key={template.key} template={template} active={template.key === effectiveKey} onSelect={handleSelectTemplate} onIntent={handleRowIntent} />
 						))}
 					</CardContent>
 				</Card>
@@ -275,16 +312,17 @@ export default function EmailPreviewPage({
 					) : (
 						<Card>
 							<CardHeader className="flex flex-wrap items-center justify-between gap-3 space-y-0 pb-4">
-								{preview !== undefined ? (
-									<div>
+								{selectedMeta !== undefined ? (
+									<div className="min-w-0">
 										<div className="flex items-center gap-2">
-											<CardTitle className="text-lg">{preview.label}</CardTitle>
+											<CardTitle className="text-lg">{selectedMeta.label}</CardTitle>
 											<Badge variant="outline" className="font-mono text-[10px]">
-												{preview.key}
+												{selectedMeta.key}
 											</Badge>
 										</div>
-										<CardDescription className="mt-1">
-											To: {preview.to} · Subject: {preview.subject}
+										<CardDescription className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+											<span>To {selectedMeta.sampleTo}</span>
+											<span>Subject: {selectedMeta.sampleSubject}</span>
 										</CardDescription>
 									</div>
 								) : (
@@ -316,29 +354,32 @@ export default function EmailPreviewPage({
 									)}
 								</div>
 							</CardHeader>
-							<CardContent className="relative min-h-[40vh]">
-								{isDetailPending ? (
-									<div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
-										<Loader2 className="size-5 animate-spin text-muted-foreground" />
+							<CardContent className="relative min-h-[40vh]" aria-busy={isSwitching}>
+								{isSwitching && shownPreview !== undefined ? (
+									<div className="absolute top-3 right-9 z-10 flex items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1 text-xs text-muted-foreground shadow-sm">
+										<Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+										Rendering…
 									</div>
 								) : null}
-								{preview !== undefined ? (
-									<>
+								{shownPreview === undefined ? (
+									<Skeleton className="h-180 w-full rounded-lg" />
+								) : (
+									<div className={cn("transition-opacity duration-150 motion-reduce:transition-none", isSwitching && "opacity-60")}>
 										<div className={cn("h-180 w-full", mode !== "preview" && "hidden")} aria-hidden={mode !== "preview"}>
-											<iframe title={`${preview.label} preview`} srcDoc={preview.html} sandbox="" className="h-full w-full rounded-lg border bg-background" />
+											<iframe title={`${shownPreview.label} preview`} srcDoc={shownPreview.html} sandbox="" className="h-full w-full rounded-lg border bg-background" />
 										</div>
 										<div className={cn("space-y-2", mode !== "html" && "hidden")} aria-hidden={mode !== "html"}>
 											<div className="flex items-center gap-2 border-b pb-2 text-xs text-muted-foreground">
 												<FileCode2 className="size-3.5" />
 												Rendered HTML document — open in your mail client or copy to test.
 											</div>
-											<pre className="max-h-180 overflow-auto rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground">{preview.html}</pre>
+											<pre className="max-h-180 overflow-auto rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground">{shownPreview.html}</pre>
 										</div>
 										<div className={cn(mode !== "text" && "hidden")} aria-hidden={mode !== "text"}>
-											<pre className="max-h-180 overflow-auto rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground">{preview.text}</pre>
+											<pre className="max-h-180 overflow-auto rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground">{shownPreview.text}</pre>
 										</div>
-									</>
-								) : null}
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					)}

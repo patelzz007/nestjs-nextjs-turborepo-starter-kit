@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthorizationPolicyDraft, AuthorizationPolicyScope, AuthorizationPolicySimulation } from "@prisma/client";
-import { nowEpochMs, type EpochMs, type OrganizationMembershipRole, type PolicyBuilderPayload } from "@workspace/shared";
+import { LIST_SLOT_INDEX, nowEpochMs, type EpochMs, type OrganizationMembershipRole, type PolicyBuilderPayload } from "@workspace/shared";
 import { randomUUID } from "node:crypto";
 
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
@@ -309,8 +309,8 @@ describe("PolicyControlPlaneService", () => {
 			expect(draft?.organizationId).toBe(ORG_A);
 			expect(draft?.createdById).toBe(AUTHOR.userId);
 			expect(repository.state.audits).toEqual([expect.objectContaining({ draftId, action: "policy.draft.created", actorUserId: AUTHOR.userId })]);
-			expect(repository.state.audits[0]).toMatchObject({ organizationId: ORG_A, resourceType: "AuthorizationPolicyDraft", policyVersionIds: [] });
-			expect(repository.state.audits[0]?.details).toMatchObject({ scope: "TENANT", name: "Tenant policy" });
+			expect(repository.state.audits[LIST_SLOT_INDEX.first]).toMatchObject({ organizationId: ORG_A, resourceType: "AuthorizationPolicyDraft", policyVersionIds: [] });
+			expect(repository.state.audits[LIST_SLOT_INDEX.first]?.details).toMatchObject({ scope: "TENANT", name: "Tenant policy" });
 		});
 
 		it("stores a platform-scope draft without an organization", async () => {
@@ -351,7 +351,7 @@ describe("PolicyControlPlaneService", () => {
 			expect(result.decisionChanges.every((change) => change.userId === CASHIER_A && change.before === "Allow" && change.after === "Deny")).toBe(true);
 			expect(repository.principalPageRequests).toEqual([{ organizationId: ORG_A, take: SIMULATION_PAGE_SIZE }]);
 			expect(repository.state.simulations).toEqual([expect.objectContaining({ id: result.simulationId, draftId, passed: true, actorUserId: APPROVER.userId })]);
-			expect(repository.state.simulations[0]?.baselineFingerprint).toMatch(/^[0-9a-f]{64}$/);
+			expect(repository.state.simulations[LIST_SLOT_INDEX.first]?.baselineFingerprint).toMatch(/^[0-9a-f]{64}$/);
 			expect(repository.state.audits.at(-1)).toMatchObject({ action: "policy.draft.simulated", actorUserId: APPROVER.userId });
 		});
 

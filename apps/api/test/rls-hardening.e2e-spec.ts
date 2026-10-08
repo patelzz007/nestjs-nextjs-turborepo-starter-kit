@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from "pg";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
@@ -45,7 +46,7 @@ describe("RLS hardening (integration)", () => {
 		for (const table of tables) {
 			await withRlsSession(pool, { userId: "user@example.com", organizationId: "", bypass: false }, async (client) => {
 				const result = await client.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM public.${table}`);
-				expect(result.rows[0]?.count).toBe(0);
+				expect(result.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
 			});
 		}
 	});
@@ -147,7 +148,7 @@ describe("RLS hardening (integration)", () => {
          ORDER BY r.id, c.user_id
          LIMIT 1`,
 			);
-			const row = result.rows[0];
+			const row = result.rows[LIST_SLOT_INDEX.first];
 			const outsiderId = row?.outsiderId ?? null;
 			if (row === undefined || outsiderId === null) {
 				throw new Error("Seed data has no claimed, no-longer-public consumer reward with an outsider user");

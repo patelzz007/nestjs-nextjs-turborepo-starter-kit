@@ -1,3 +1,4 @@
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { z } from "zod";
 
 import type { PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
@@ -35,10 +36,10 @@ function levenshteinDistance(a: string, b: string): number {
 	const dpRows: number[][] = [];
 	for (let idx = 0; idx <= m; idx++) {
 		const row = new Array<number>(n + 1);
-		row[0] = idx;
+		row[LIST_SLOT_INDEX.first] = idx;
 		dpRows.push(row);
 	}
-	const firstRow = dpRows[0];
+	const firstRow = dpRows[LIST_SLOT_INDEX.first];
 	if (firstRow !== undefined) {
 		for (let jdx = 0; jdx <= n; jdx++) {
 			firstRow[jdx] = jdx;
@@ -99,9 +100,7 @@ export function matchesQuery(itemTitle: string, itemBreadcrumb: readonly string[
 		return true;
 	}
 
-	for (const entry of Object.entries(aliasMap)) {
-		const alias = entry[0];
-		const targets = entry[1];
+	for (const [alias, targets] of Object.entries(aliasMap)) {
 		if (alias.includes(q) && targets.some((t) => itemTitle.toLowerCase().includes(t.toLowerCase()))) {
 			return true;
 		}

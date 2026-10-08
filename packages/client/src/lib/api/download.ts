@@ -10,7 +10,7 @@
 // the silent-refresh pipeline once, and an error answer becomes a typed
 // `ApiDownloadError` (code, status, Retry-After) — never a corrupt file.
 
-import { apiContract, type ApiFileContractDef, type ApiVersion, type SerializableInput } from "@workspace/shared";
+import { apiContract, isStringPrimitive, type ApiFileContractDef, type ApiVersion, type SerializableInput } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
 import {
@@ -115,7 +115,7 @@ export function fileNameFromContentDisposition(header: string | null): string | 
 	if (header === null) {
 		return null;
 	}
-	const extended = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header)?.[1];
+	const extended = /filename\*\s*=\s*UTF-8''(?<name>[^;]+)/i.exec(header)?.groups?.name;
 	if (extended !== undefined) {
 		try {
 			return decodeURIComponent(extended.trim());
@@ -123,17 +123,18 @@ export function fileNameFromContentDisposition(header: string | null): string | 
 			// Malformed percent-encoding — fall back to the plain parameter.
 		}
 	}
-	const quoted = /filename\s*=\s*"([^"]*)"/i.exec(header)?.[1];
+	const quoted = /filename\s*=\s*"(?<name>[^"]*)"/i.exec(header)?.groups?.name;
 	if (quoted !== undefined && quoted.length > 0) {
 		return quoted;
 	}
-	const bare = /filename\s*=\s*([^;\s]+)/i.exec(header)?.[1];
+	const bare = /filename\s*=\s*(?<name>[^;\s]+)/i.exec(header)?.groups?.name;
 	return bare ?? null;
 }
 
 /** The media type of a `Content-Type` header without its parameters (`text/csv; charset=utf-8` → `text/csv`). */
 function mediaTypeOf(contentType: string): string {
-	return (contentType.split(";")[0] ?? "").trim().toLowerCase();
+	const [mediaType] = contentType.split(";");
+	return (mediaType ?? "").trim().toLowerCase();
 }
 
 function toDownloadError(error: ApiErrorPayload, status: number, retryAfterHeader: string | null): ApiDownloadError {
@@ -156,13 +157,13 @@ function toDownloadError(error: ApiErrorPayload, status: number, retryAfterHeade
 		});
 	}
 	if (status === NO_HTTP_RESPONSE_STATUS) {
-		const message = typeof error === "string" ? error : error.message;
+		const message = isStringPrimitive(error) ? error : error.message;
 		return new ApiDownloadError({ code: message === REQUEST_ABORTED_ERROR ? "ABORTED" : "NETWORK_ERROR", statusCode: status, message });
 	}
 	return new ApiDownloadError({
 		code: status === 401 ? "UNAUTHORIZED" : "DOWNLOAD_FAILED",
 		statusCode: status,
-		message: typeof error === "string" ? error : error.message,
+		message: isStringPrimitive(error) ? error : error.message,
 		retryAfterSeconds: headerRetryAfter,
 	});
 }
@@ -195,11 +196,12 @@ export async function fetchDownload<Input extends SerializableInput>(
 			});
 			if (!response.ok) {
 				retryAfterHeader = response.headers.get("retry-after");
-				return { ok: false, status: response.status, data: null, error: await readErrorPayload(response) };
+				return { kind: "httpError", ok: false, status: response.status, data: null, error: await readErrorPayload(response) };
 			}
 			const contentType = response.headers.get("content-type") ?? "";
 			if (!acceptedTypes.has(mediaTypeOf(contentType))) {
 				return {
+					kind: "contract",
 					ok: false,
 					status: response.status,
 					data: null,
@@ -211,12 +213,12 @@ export async function fetchDownload<Input extends SerializableInput>(
 				};
 			}
 			const fileName = fileNameFromContentDisposition(response.headers.get("content-disposition")) ?? options.fallbackFileName ?? "download";
-			return { ok: true, status: response.status, data: { blob: await response.blob(), fileName, contentType } };
+			return { kind: "success", ok: true, status: response.status, data: { blob: await response.blob(), fileName, contentType } };
 		} catch (error) {
 			if (error instanceof DOMException && error.name === "AbortError") {
-				return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR };
+				return { kind: "aborted", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR };
 			}
-			return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: error instanceof Error ? error : new Error(String(error)) };
+			return { kind: "network", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: error instanceof Error ? error : new Error(String(error)) };
 		}
 	};
 

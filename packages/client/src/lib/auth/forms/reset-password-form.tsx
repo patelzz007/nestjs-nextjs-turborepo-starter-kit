@@ -1,6 +1,6 @@
 "use client";
 
-import { ResetPasswordSchema, APP_LINKS } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ResetPasswordSchema, APP_LINKS } from "@workspace/shared";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
@@ -73,7 +73,7 @@ export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, for
 
 			const parsed = ResetPasswordSchema.safeParse({ token, password });
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Invalid password");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Invalid password");
 				setIsLoading(false);
 				return;
 			}

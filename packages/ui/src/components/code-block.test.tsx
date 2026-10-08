@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render as renderUnwrapped, screen, waitFor, type RenderOptions, type RenderResult } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
@@ -360,7 +361,7 @@ describe("CodeBlockCopyButton", () => {
 			expect(screen.getByRole("button").getAttribute("data-copy-failed")).toBe("true");
 		});
 		expect(onCopyError).toHaveBeenCalledTimes(1);
-		expect(onCopyError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+		expect(onCopyError.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toBeInstanceOf(Error);
 	});
 
 	it("does nothing without a clipboard or without text", (): void => {
@@ -684,7 +685,7 @@ describe("CodeBlockDownloadButton", () => {
 
 		expect(onDownload).toHaveBeenCalledWith("code.py");
 		expect(click).toHaveBeenCalledTimes(1);
-		const blob = createObjectURL.mock.calls[0]?.[0];
+		const blob = createObjectURL.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first];
 		expect(await blob?.text()).toBe("x = 1");
 		await waitFor(
 			(): void => {
@@ -824,7 +825,7 @@ describe("Composition", () => {
 		);
 		const surfaces = container.querySelectorAll("[data-slot=code-block-content]");
 		expect(surfaces).toHaveLength(1);
-		expect(screen.getByTestId("scroll-area").contains(surfaces[0] ?? null)).toBe(true);
+		expect(screen.getByTestId("scroll-area").contains(surfaces[LIST_SLOT_INDEX.first] ?? null)).toBe(true);
 		expect(viewport(container).className).toContain("custom");
 		expect(viewport(container).className).not.toContain("overflow-auto");
 	});
@@ -887,8 +888,8 @@ describe("Markdown helpers", () => {
 		);
 		const blocks = container.querySelectorAll<HTMLElement>("[data-slot=code-block]");
 		expect(blocks).toHaveLength(2);
-		expect(blocks[0]?.hasAttribute("data-streaming")).toBe(false);
-		expect(blocks[1]?.hasAttribute("data-streaming")).toBe(true);
+		expect(blocks[LIST_SLOT_INDEX.first]?.hasAttribute("data-streaming")).toBe(false);
+		expect(blocks[LIST_SLOT_INDEX.second]?.hasAttribute("data-streaming")).toBe(true);
 		expect(container.querySelectorAll("p")).toHaveLength(2);
 	});
 });

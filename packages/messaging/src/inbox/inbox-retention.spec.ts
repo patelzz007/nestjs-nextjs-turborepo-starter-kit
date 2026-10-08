@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import {
 	RETENTION_INITIAL_DELAY_MS,
@@ -117,7 +118,7 @@ describe("runLedgerRetention", () => {
 
 		expect(outcome).toMatchObject({ kind: "completed", ledger: "inbox_claims", deleted: 3, batches: 1, stoppedBy: "drained", cutoffEpochMs: INBOX_CUTOFF_MS });
 		expect(store.rows.inbox_claims).toEqual(recent);
-		expect(store.calls[0]).toMatchObject({ consumer: CONSUMER });
+		expect(store.calls[LIST_SLOT_INDEX.first]).toMatchObject({ consumer: CONSUMER });
 	});
 
 	it("purges parked messages past the dead-letter window (they are no longer kept forever)", async () => {
@@ -152,7 +153,10 @@ describe("runLedgerRetention", () => {
 		expect(outcome).toMatchObject({ kind: "completed", deleted: RETENTION_PURGE_BATCH_SIZE * 2, batches: 2, stoppedBy: "time_budget" });
 		expect(store.rows.inbox_claims).toHaveLength(RETENTION_PURGE_BATCH_SIZE * 3);
 		expect(logger.lines).toHaveLength(1);
-		expect(logger.lines[0]).toMatchObject({ level: "warn", entry: { event: "analytics.retention_summary", ledger: "inbox_claims", stoppedBy: "time_budget" } });
+		expect(logger.lines[LIST_SLOT_INDEX.first]).toMatchObject({
+			level: "warn",
+			entry: { event: "analytics.retention_summary", ledger: "inbox_claims", stoppedBy: "time_budget" },
+		});
 	});
 
 	it("skips without deleting when another instance holds the lock on the first batch", async () => {

@@ -1,4 +1,5 @@
 import { ConflictException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import type { RewardClaim } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -79,7 +80,7 @@ describe("ClaimService.createClaim", () => {
 
 		const created = await service.createClaim(USER, { rewardId: REWARD, phone: PHONE });
 
-		const [input] = claims.createReservedClaim.mock.calls[0] ?? [];
+		const [input] = claims.createReservedClaim.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 		expect(input).toMatchObject({ userId: USER, rewardId: REWARD, maxClaimsPerUser: 2, attributionToken: "ref-token", phone: PHONE, claimedAt: NOW });
 		expect(input?.backupCodeHash).toBe(HASHER.hash(created.backupCode));
 	});

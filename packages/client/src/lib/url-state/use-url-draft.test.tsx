@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { trimUrlDraft, useUrlDraft, type UrlDraft } from "./use-url-draft";
@@ -40,7 +41,7 @@ describe("trimUrlDraft", () => {
 describe("useUrlDraft", () => {
 	it("starts from the URL value and does not commit it back", () => {
 		const { result, onCommit } = setup("jane");
-		expect(result.current[0]).toBe("jane");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("jane");
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS * 2);
 		});
@@ -50,11 +51,11 @@ describe("useUrlDraft", () => {
 	it("commits the normalized draft once the user stops typing", () => {
 		const { result, onCommit } = setup("");
 		act((): void => {
-			result.current[1]("j");
+			result.current[LIST_SLOT_INDEX.second]("j");
 		});
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS - 1);
-			result.current[1]("jane ");
+			result.current[LIST_SLOT_INDEX.second]("jane ");
 		});
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS - 1);
@@ -65,13 +66,13 @@ describe("useUrlDraft", () => {
 		});
 		expect(onCommit).toHaveBeenCalledTimes(1);
 		expect(onCommit).toHaveBeenCalledWith("jane");
-		expect(result.current[0]).toBe("jane ");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("jane ");
 	});
 
 	it("does not commit a draft that only differs from the URL by whitespace", () => {
 		const { result, onCommit } = setup("jane");
 		act((): void => {
-			result.current[1]("jane  ");
+			result.current[LIST_SLOT_INDEX.second]("jane  ");
 		});
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS);
@@ -82,17 +83,17 @@ describe("useUrlDraft", () => {
 	it("keeps text typed after a commit when the URL echoes that commit", () => {
 		const { result, onCommit, rerender } = setup("");
 		act((): void => {
-			result.current[1]("jan");
+			result.current[LIST_SLOT_INDEX.second]("jan");
 		});
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS);
 		});
 		expect(onCommit).toHaveBeenCalledWith("jan");
 		act((): void => {
-			result.current[1]("jane");
+			result.current[LIST_SLOT_INDEX.second]("jane");
 		});
 		rerender({ value: "jan" });
-		expect(result.current[0]).toBe("jane");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("jane");
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS);
 		});
@@ -102,15 +103,15 @@ describe("useUrlDraft", () => {
 	it("replaces the draft when the URL changes from outside (back/forward, clear filters)", () => {
 		const { result, onCommit, rerender } = setup("jane");
 		act((): void => {
-			result.current[1]("janet");
+			result.current[LIST_SLOT_INDEX.second]("janet");
 		});
 		rerender({ value: "" });
-		expect(result.current[0]).toBe("");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("");
 		act((): void => {
 			vi.advanceTimersByTime(DELAY_MS);
 		});
 		expect(onCommit).not.toHaveBeenCalled();
 		rerender({ value: "bob" });
-		expect(result.current[0]).toBe("bob");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("bob");
 	});
 });

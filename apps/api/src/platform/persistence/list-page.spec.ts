@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { fetchListPage, keysetPagePosition, mapListResult, toPaginatedServiceResult, type ListPageSpec } from "./list-page";
@@ -103,7 +104,10 @@ describe("fetchListPage", () => {
 			InvalidListCursorError,
 		);
 		await expect(
-			fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: KEYSET.encode(ROWS[0] ?? { id: "x", createdAt: EPOCH }) }, buildSpec({ order: { orderBy: [], isDefault: false } })),
+			fetchListPage(
+				{ page: 1, limit: PAGE_SIZE, cursor: KEYSET.encode(ROWS[LIST_SLOT_INDEX.first] ?? { id: "x", createdAt: EPOCH }) },
+				buildSpec({ order: { orderBy: [], isDefault: false } }),
+			),
 		).rejects.toBeInstanceOf(InvalidListCursorError);
 		await expect(fetchListPage({ page: 1, limit: PAGE_SIZE, cursor: "abc" }, buildSpec({ keyset: undefined }))).rejects.toBeInstanceOf(CursorPaginationUnsupportedError);
 	});

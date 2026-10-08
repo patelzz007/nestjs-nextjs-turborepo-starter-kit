@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -38,7 +39,7 @@ describe("provisionConsumerLogin (integration)", () => {
 
 	it("refuses to re-purpose the admin connection's own role", async () => {
 		const self = await admin.query<{ name: string }>("SELECT current_user AS name");
-		const name = self.rows[0]?.name ?? "";
+		const name = self.rows[LIST_SLOT_INDEX.first]?.name ?? "";
 
 		await expect(provisionConsumerLogin(admin, { roleName: name, password: randomBytes(PASSWORD_BYTES).toString("hex") })).rejects.toBeInstanceOf(
 			ConsumerLoginProvisioningError,

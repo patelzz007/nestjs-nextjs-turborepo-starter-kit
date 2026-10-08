@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -79,7 +80,7 @@ describe("API key RLS principal (e2e)", () => {
 
 	async function count(client: PoolClient, sql: string, values: readonly string[]): Promise<number> {
 		const result = await client.query<{ n: number }>(sql, [...values]);
-		return result.rows[0]?.n ?? 0;
+		return result.rows[LIST_SLOT_INDEX.first]?.n ?? 0;
 	}
 
 	async function createKey(organizationId: string, locationId: string | null): Promise<string> {
@@ -134,7 +135,7 @@ describe("API key RLS principal (e2e)", () => {
 	beforeAll(async () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
 		const users = await asBypass((client) => client.query<{ id: string }>(`SELECT id FROM public.users WHERE email = 'alice.johnson@example.com'`));
-		customerId = String(users.rows[0]?.id);
+		customerId = String(users.rows[LIST_SLOT_INDEX.first]?.id);
 		const now = Date.now();
 		// DRAFT: a published consumer reward is public marketplace data, readable by any session.
 		const fixtureRewards: readonly (readonly ["kl" | "mlk", string])[] = [

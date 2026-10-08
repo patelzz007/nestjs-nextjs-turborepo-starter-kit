@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { averageBillMinor, buildWeeklySalesSeries, buildWeeklyTimeSeries, resolveAnalyticsPeriod } from "./rewards-analytics.util";
 
@@ -63,7 +64,7 @@ describe("weekly buckets in the merchant's time zone", () => {
 		const claims = buildWeeklyTimeSeries(period, [mondayOneAm], []);
 
 		expect(series.map((week) => week.date)).toEqual([KL_MONDAY, KL_MONDAY + 7 * DAY_MS]);
-		expect(series[0]).toMatchObject({ date: KL_MONDAY, salesMinor: 900, bills: 1 });
-		expect(claims[0]).toMatchObject({ date: KL_MONDAY, claims: 1 });
+		expect(series[LIST_SLOT_INDEX.first]).toMatchObject({ date: KL_MONDAY, salesMinor: 900, bills: 1 });
+		expect(claims[LIST_SLOT_INDEX.first]).toMatchObject({ date: KL_MONDAY, claims: 1 });
 	});
 });

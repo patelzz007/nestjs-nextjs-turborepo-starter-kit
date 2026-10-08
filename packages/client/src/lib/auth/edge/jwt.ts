@@ -22,7 +22,8 @@ export function decodeJwtPayload(token: string): JwtPayload | null {
 		const parts: string[] = token.split(".");
 		if (parts.length !== 3) return null;
 
-		const payload: string | undefined = parts[1];
+		// header.payload.signature
+		const [, payload] = parts;
 		if (!payload) return null;
 
 		// Convert URL-safe base64url to standard base64

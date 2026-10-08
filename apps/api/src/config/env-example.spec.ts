@@ -15,10 +15,10 @@ const EXAMPLE_PATH: string = fileURLToPath(new URL("../../.env.example", import.
 const exampleText: string = readFileSync(EXAMPLE_PATH, "utf8");
 
 /** `KEY=` assignments, active or commented out (`# KEY=value`). */
-const DOCUMENTED_KEY_PATTERN = /^#?\s*([A-Z][A-Z0-9_]*)=/gm;
+const DOCUMENTED_KEY_PATTERN = /^#?\s*(?<key>[A-Z][A-Z0-9_]*)=/gm;
 
 function documentedKeys(): Set<string> {
-	return new Set([...exampleText.matchAll(DOCUMENTED_KEY_PATTERN)].map((match: RegExpExecArray): string => match[1] ?? ""));
+	return new Set([...exampleText.matchAll(DOCUMENTED_KEY_PATTERN)].map((match: RegExpExecArray): string => match.groups?.key ?? ""));
 }
 
 describe("apps/api/.env.example", () => {

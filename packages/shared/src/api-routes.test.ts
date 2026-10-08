@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
+
+import { isStringPrimitive } from "./lib/runtime-narrowing";
 
 import { apiRoutes, type RouteTree } from "./api-routes";
 
@@ -8,10 +11,10 @@ const REQUIRED_ROUTE_GROUPS: readonly string[] = ["auth", "email", "geo"];
 
 /** Every leaf path in the tree, flattened depth-first. */
 function collectLeaves(node: RouteTree): string[] {
-	if (typeof node === "string") {
+	if (isStringPrimitive(node)) {
 		return [node];
 	}
-	return Object.values(node).flatMap(collectLeaves);
+	return Object.values(node).flatMap((child: RouteTree) => collectLeaves(child));
 }
 
 describe("apiRoutes", () => {
@@ -25,7 +28,7 @@ describe("apiRoutes", () => {
 	});
 
 	it("static routes are plain strings", () => {
-		expect(typeof apiRoutes.geo.countries).toBe("string");
+		expect(z.string().safeParse(apiRoutes.geo.countries).success).toBe(true);
 		expect(apiRoutes.geo.countries).toBe("/geo/countries");
 	});
 

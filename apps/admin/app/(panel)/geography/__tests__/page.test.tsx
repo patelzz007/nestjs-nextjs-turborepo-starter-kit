@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { epochMs, type ApiPaginatedMeta, type DataValue, type Envelope, type GeoStats } from "@workspace/shared";
+import { LIST_SLOT_INDEX, epochMs, type ApiPaginatedMeta, type DataValue, type Envelope, type GeoStats } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GEO_URL_STATE } from "@/lib/url-state/geography";
@@ -62,7 +62,7 @@ async function renderPage(query: string): Promise<void> {
 
 /** The props the page handed the client table. */
 function viewProps(): GeoViewProps | undefined {
-	return geoView.mock.lastCall?.[0];
+	return geoView.mock.lastCall?.[LIST_SLOT_INDEX.first];
 }
 
 /** The key the client table derives from the same address bar (it reads `useSearchParams()`). */

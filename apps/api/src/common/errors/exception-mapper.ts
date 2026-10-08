@@ -4,6 +4,8 @@ import {
 	ApiErrorCodes,
 	ApiErrorCodeSchema,
 	ApiValidationIssueSchema,
+	isArrayValue,
+	isStringPrimitive,
 	JsonValueSchema,
 	type ApiErrorCode,
 	type ApiErrorDetails,
@@ -95,7 +97,7 @@ function mapHttpException(exception: HttpException, options: ExceptionMappingOpt
 	const fallbackCode: ApiErrorCode = standardCodeForStatus(httpStatus);
 	const response: string | object = exception.getResponse();
 
-	if (typeof response === "string") {
+	if (isStringPrimitive(response)) {
 		return finalizeHttpMessage(httpStatus, fallbackCode, response, undefined, options);
 	}
 
@@ -107,12 +109,12 @@ function mapHttpException(exception: HttpException, options: ExceptionMappingOpt
 	const details: Record<string, JsonValue> = collectExtraDetails(body.data);
 	const domainCode = ApiErrorCodeSchema.safeParse(body.data.error);
 	let code: ApiErrorCode = domainCode.success ? domainCode.data : fallbackCode;
-	let message: string = typeof body.data.message === "string" ? body.data.message : exception.message;
+	let message: string = isStringPrimitive(body.data.message) ? body.data.message : exception.message;
 
 	if (body.data.errors !== undefined) {
 		details.issues = toIssueDetails(body.data.errors);
 		code = domainCode.success ? domainCode.data : ApiErrorCodes.VALIDATION_ERROR;
-	} else if (Array.isArray(body.data.message)) {
+	} else if (isArrayValue(body.data.message)) {
 		// Nest's built-in pipes report a list of messages without paths.
 		details.issues = toIssueDetails(body.data.message.map((issueMessage: string): ApiValidationIssue => ({ path: "root", message: issueMessage, code: "invalid" })));
 		code = domainCode.success ? domainCode.data : ApiErrorCodes.VALIDATION_ERROR;

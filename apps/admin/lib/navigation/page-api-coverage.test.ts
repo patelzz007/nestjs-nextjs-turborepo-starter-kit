@@ -71,8 +71,8 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 	[ROUTE_PATTERNS.auditLogs.detail, [{ endpoint: "GET /admin/audit-logs/:id", permission: PERMISSION.AUDIT_LOG.READ }]],
 	[ROUTES.geography.index, [{ endpoint: "GET /geo/stats + the active tab's list", permission: PERMISSION.GEO.READ }]],
 	[ROUTES.merchants.list, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
-	// Nothing on load: the preview (POST /admin/invites/preview-email) and the send need the page's own MANAGE.
-	[ROUTES.merchants.invites, []],
+	// The live email preview renders on load; the send (POST /admin/invites) needs the same MANAGE.
+	[ROUTES.merchants.invites, [{ endpoint: "GET /admin/invites/preview-email", permission: PERMISSION.MERCHANT_ORG.MANAGE }]],
 	[ROUTES.merchants.verification, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	[ROUTES.merchants.storeRequests, [{ endpoint: "GET /admin/organizations/location-requests", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	[ROUTES.rewards.review, [{ endpoint: "GET /admin/rewards/pending", permission: PERMISSION.REWARD.MANAGE }]],

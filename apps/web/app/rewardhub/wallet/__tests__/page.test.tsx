@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type * as ServerApi from "@workspace/client/lib/api/server-api";
 import type { Envelope, RewardClaimListQuery, RewardClaimResponse } from "@workspace/shared";
 import * as React from "react";
@@ -95,7 +96,7 @@ describe("RewardHubWalletPage (server)", () => {
 
 		expect(claimsList).toHaveBeenCalledWith({ page: 2, limit: WALLET_CLAIMS_PAGE_SIZE });
 		expect(claimsList).toHaveBeenCalledWith({ page: 1, limit: 1, filter: { status: { eq: "PENDING" } } });
-		expect(walletView.mock.lastCall?.[0]).toEqual({
+		expect(walletView.mock.lastCall?.[LIST_SLOT_INDEX.first]).toEqual({
 			initialPage: { stateKey: WALLET_CLAIMS_URL_STATE.serialize(WALLET_CLAIMS_URL_STATE.parse({ page: "2" })), data: PAGE_ONE },
 			initialReadyCount: READY_COUNT,
 		});

@@ -1,6 +1,6 @@
 "use client";
 
-import { MERCHANT_KYB_MAX_DOCUMENT_COUNT } from "@workspace/shared";
+import { LIST_SLOT_INDEX, MERCHANT_KYB_MAX_DOCUMENT_COUNT } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
@@ -71,12 +71,12 @@ function collectValidatedDocuments(files: readonly File[], existingCount: number
 	}
 
 	if (added.length === 0 && errors.length > 0) {
-		return { added: [], error: errors[0] ?? "Unable to upload documents." };
+		return { added: [], error: errors[LIST_SLOT_INDEX.first] ?? "Unable to upload documents." };
 	}
 
 	return {
 		added,
-		error: errors.length > 0 ? (errors[0] ?? null) : null,
+		error: errors.length > 0 ? (errors[LIST_SLOT_INDEX.first] ?? null) : null,
 	};
 }
 

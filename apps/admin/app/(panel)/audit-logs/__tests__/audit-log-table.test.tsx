@@ -127,7 +127,8 @@ describe("AuditLogView", () => {
 	it("opens the clicked row's record in the drawer, through the URL (?record=)", () => {
 		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
-		fireEvent.click(screen.getAllByText("/api/v1/auth/profile")[0] ?? document.body);
+		const [firstProfileCell] = screen.getAllByText("/api/v1/auth/profile");
+		fireEvent.click(firstProfileCell ?? document.body);
 
 		// The mocked useSearchParams does not re-render on history changes; the next test covers the open drawer.
 		expect(window.location.search).toBe(`?record=${RECORD_ID}`);

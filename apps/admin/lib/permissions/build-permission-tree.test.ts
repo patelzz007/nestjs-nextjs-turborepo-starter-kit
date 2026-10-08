@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { buildPermissionTree } from "@/lib/permissions/build-permission-tree";
 import { isRedundantResourceLabel } from "@/lib/permissions/permission-label-utils";
@@ -13,8 +14,8 @@ describe("buildPermissionTree", () => {
 		]);
 
 		expect(tree.map((node) => node.group)).toEqual(["Admin Dashboard", "Uncategorized", "User Management"]);
-		expect(tree[2]?.resources.map((node) => node.resource)).toEqual(["USER"]);
-		expect(tree[2]?.resources[0]?.permissions.map((leaf) => leaf.action)).toEqual(["READ", "UPDATE"]);
+		expect(tree[LIST_SLOT_INDEX.third]?.resources.map((node) => node.resource)).toEqual(["USER"]);
+		expect(tree[LIST_SLOT_INDEX.third]?.resources[LIST_SLOT_INDEX.first]?.permissions.map((leaf) => leaf.action)).toEqual(["READ", "UPDATE"]);
 	});
 });
 

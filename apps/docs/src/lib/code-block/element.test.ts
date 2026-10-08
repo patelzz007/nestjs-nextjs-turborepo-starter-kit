@@ -16,8 +16,8 @@ const PROPS: DocsCodeBlockProps = {
 
 /** The class list of the CodeBlock root (`data-slot="code-block"`). */
 function rootClasses(html: string): readonly string[] {
-	const match = /<div[^>]*data-slot="code-block"[^>]*class="([^"]*)"|<div[^>]*class="([^"]*)"[^>]*data-slot="code-block"/.exec(html);
-	return (match?.[1] ?? match?.[2] ?? "").split(" ");
+	const match = /<div[^>]*data-slot="code-block"[^>]*class="(?<after>[^"]*)"|<div[^>]*class="(?<before>[^"]*)"[^>]*data-slot="code-block"/.exec(html);
+	return (match?.groups?.after ?? match?.groups?.before ?? "").split(" ");
 }
 
 describe("docsCodeBlockElement", () => {

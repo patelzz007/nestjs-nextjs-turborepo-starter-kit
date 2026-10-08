@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import {
 	Combobox,
 	ComboboxChip,
@@ -270,8 +271,8 @@ export function ComboboxShowcase(): React.JSX.Element {
 						<ComboboxContent>
 							<ComboboxList>
 								{groupedTeams.map((group) => (
-									<ComboboxGroup key={group[0]?.value}>
-										<ComboboxLabel>{group[0]?.group}</ComboboxLabel>
+									<ComboboxGroup key={group[LIST_SLOT_INDEX.first]?.value}>
+										<ComboboxLabel>{group[LIST_SLOT_INDEX.first]?.group}</ComboboxLabel>
 										{group.map((option) => (
 											<ComboboxItem key={option.value} value={option.value} {...(option.group !== undefined ? { description: option.group } : {})}>
 												{option.label}

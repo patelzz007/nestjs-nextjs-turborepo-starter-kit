@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "../../../lib/named-list-index";
 
 import { AuthorizationCheckResultSchema, AuthorizationCheckSchema, AuthorizationDecisionsResponseSchema } from "../../../authorization/decisions.schema";
 import { AuthorizationResultSchema } from "../../../authorization/policy-dsl.schema";
@@ -68,7 +69,7 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 			rolePermissions: [{ permission: { id: PERMISSION_ID, action: "READ", resource: "USER", description: null, group: null, conditions: { secret: true } } }],
 		});
 		expect(parsed).not.toHaveProperty("internalNote");
-		expect(parsed.rolePermissions?.[0]?.permission).toEqual({ id: PERMISSION_ID, action: "READ", resource: "USER", description: null, group: null });
+		expect(parsed.rolePermissions?.[LIST_SLOT_INDEX.first]?.permission).toEqual({ id: PERMISSION_ID, action: "READ", resource: "USER", description: null, group: null });
 	});
 
 	it("answers a role detail with the role and never with null (a missing role is a 404)", () => {

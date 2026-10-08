@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import pg from "pg";
 
@@ -116,7 +117,7 @@ export class PgInboxStore implements InboxStore, RetentionStore {
 	public purgeBatch(ledger: RetentionLedger, consumer: string, cutoffEpochMs: number, batchSize: number): Promise<LockedBatch> {
 		return this.withTransaction(async (client): Promise<LockedBatch> => {
 			const lock = await client.query<{ locked: boolean }>("SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked", [RETENTION_LOCK_NAMES[ledger]]);
-			if (lock.rows[0]?.locked !== true) {
+			if (lock.rows[LIST_SLOT_INDEX.first]?.locked !== true) {
 				return { acquired: false };
 			}
 			const result = await client.query(PURGE_SQL[ledger], [consumer, cutoffEpochMs, batchSize]);

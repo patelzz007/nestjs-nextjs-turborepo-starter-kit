@@ -18,7 +18,7 @@ export class AccountLockedEmailTemplate extends BaseEmailTemplate<AccountLockedE
 	public readonly propsSchema = AccountLockedEmailPropsSchema;
 	public readonly subject: string = "Your account was temporarily locked";
 	protected readonly accent: EmailAccent = "red";
-	protected readonly eyebrow: string = "Security Notice";
+	protected readonly eyebrow: string = "Security notice";
 	protected readonly heading: string = "Account temporarily locked";
 
 	public getPreviewText(context: EmailRenderContext): string {

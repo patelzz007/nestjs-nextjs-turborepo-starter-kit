@@ -16,6 +16,7 @@
  */
 
 import type { Element, ElementContent, Properties, Root } from "hast";
+import { isArrayValue, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
 import type { ReactNode } from "react";
 import type { DecorationItem, HighlighterCore, LanguageInput, ShikiTransformer, ThemeInput } from "shiki";
 import { z } from "zod";
@@ -251,7 +252,7 @@ export function resolveCodeBlockLanguage(language?: string): string | undefined 
 /*                                Pure helpers                                 */
 /* -------------------------------------------------------------------------- */
 
-const LINE_RANGE_RE = /^(\d+)\s*-\s*(\d+)$/;
+const LINE_RANGE_RE = /^(?<start>\d+)\s*-\s*(?<end>\d+)$/;
 const LINE_SINGLE_RE = /^\d+$/;
 
 /**
@@ -266,7 +267,7 @@ export function parseLineSpec(spec?: CodeBlockLineSpec): Set<number> {
 	const out = new Set<number>();
 	if (!spec) return out;
 
-	if (Array.isArray(spec)) {
+	if (!isStringPrimitive(spec)) {
 		for (const value of spec) {
 			if (Number.isInteger(value) && value > 0) out.add(value);
 		}
@@ -279,8 +280,8 @@ export function parseLineSpec(spec?: CodeBlockLineSpec): Set<number> {
 
 		const range = LINE_RANGE_RE.exec(trimmed);
 		if (range) {
-			const start = Number(range[1]);
-			const end = Number(range[2]);
+			const start = Number(range.groups?.start);
+			const end = Number(range.groups?.end);
 			if (start > 0 && end >= start) {
 				for (let line = start; line <= end; line += 1) out.add(line);
 			}
@@ -337,9 +338,9 @@ export function buildWordDecorations(code: string, words?: CodeBlockWordSpec[]):
 	const out: CodeBlockWordDecoration[] = [];
 
 	for (const entry of words) {
-		const word = typeof entry === "string" ? entry : entry.word;
+		const word = isStringPrimitive(entry) ? entry : entry.word;
 		if (!word) continue;
-		const limit = typeof entry === "string" ? undefined : parseLineSpec(entry.lines);
+		const limit = isStringPrimitive(entry) ? undefined : parseLineSpec(entry.lines);
 
 		let from = code.indexOf(word);
 		while (from !== -1) {
@@ -432,7 +433,7 @@ const MarkdownCodeNodeSchema: z.ZodType<MarkdownCodeNode> = z.lazy(() =>
 		.catch(null),
 );
 
-const MARKDOWN_LANGUAGE_CLASS_RE = /(?:^|\s)language-([\w+#-]+)/;
+const MARKDOWN_LANGUAGE_CLASS_RE = /(?:^|\s)language-(?<language>[\w+#-]+)/;
 const MARKDOWN_TRAILING_NEWLINE_RE = /\n$/;
 
 /** What react-markdown hands a `pre` override, as far as `markdownCodeProps` reads it. */
@@ -459,21 +460,20 @@ export function markdownCodeProps(props: MarkdownPreProps): MarkdownCodeProps {
 
 	const readClassName = (value: string | undefined): void => {
 		if (value === undefined || language !== undefined) return;
-		const match = MARKDOWN_LANGUAGE_CLASS_RE.exec(value);
-		if (match) language = match[1];
+		language = MARKDOWN_LANGUAGE_CLASS_RE.exec(value)?.groups?.language;
 	};
 
 	const walk = (node: MarkdownCodeNode): void => {
 		if (node === null || node === undefined || node === false || node === true) return;
-		if (typeof node === "string") {
+		if (isStringPrimitive(node)) {
 			code += node;
 			return;
 		}
-		if (typeof node === "number") {
+		if (isNumberPrimitive(node)) {
 			code += String(node);
 			return;
 		}
-		if (Array.isArray(node)) {
+		if (isArrayValue(node)) {
 			for (const child of node) walk(child);
 			return;
 		}
@@ -498,7 +498,7 @@ export interface CodeBlockMarkdownPart {
 
 /* CommonMark fences: three or more backticks OR tildes, then an optional
    info word. */
-const MARKDOWN_FENCE_RE = /^\s*(`{3,}|~{3,})([\w+#-]*)\s*$/;
+const MARKDOWN_FENCE_RE = /^\s*(?<delimiter>`{3,}|~{3,})(?<info>[\w+#-]*)\s*$/;
 
 /**
  * Splits markdown into prose and fenced code, for transcripts that render a
@@ -528,8 +528,8 @@ export function markdownFences(markdown: string): CodeBlockMarkdownPart[] {
 
 	for (const line of markdown.split("\n")) {
 		const fence = MARKDOWN_FENCE_RE.exec(line);
-		const delimiter = fence?.[1] ?? "";
-		const info = fence?.[2] ?? "";
+		const delimiter = fence?.groups?.delimiter ?? "";
+		const info = fence?.groups?.info ?? "";
 
 		if (fence && !inFence) {
 			flushText();
@@ -635,7 +635,7 @@ const FONT_STYLE_BY_DECLARATION: Record<string, CodeBlockFontStyle> = {
 
 /** Splits shiki's inline `style` string into the fields a token carries. */
 function readTokenStyle(style: Properties[string]): CodeBlockTokenStyle {
-	if (typeof style !== "string") return {};
+	if (!isStringPrimitive(style)) return {};
 
 	const out: CodeBlockTokenStyle = {};
 	for (const declaration of style.split(";")) {
@@ -665,8 +665,8 @@ function readTokenStyle(style: Properties[string]): CodeBlockTokenStyle {
  */
 function classListOf(node: Element): string[] {
 	const value = node.properties.class ?? node.properties.className;
-	if (Array.isArray(value)) return value.map(String);
-	if (typeof value === "string") return value.split(/\s+/).filter(Boolean);
+	if (isArrayValue(value)) return value.map(String);
+	if (isStringPrimitive(value)) return value.split(/\s+/).filter(Boolean);
 	return [];
 }
 

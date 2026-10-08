@@ -1,5 +1,6 @@
 "use client";
 
+import { isArrayValue } from "@workspace/shared";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import * as React from "react";
 import { useContext } from "react";
@@ -80,7 +81,7 @@ export function useSelectLabels(): SelectLabels {
  * matches what the trigger shows (the label, never the raw value).
  */
 export function describeSelection<Value>(value: Value | Value[] | null, itemToStringLabel: ((itemValue: Value) => string) | undefined, labels: SelectLabels): string {
-	if (Array.isArray(value)) {
+	if (isArrayValue(value)) {
 		const joined = value.map((item) => itemToStringLabel?.(item) ?? String(item)).join(SELECTION_LABEL_SEPARATOR);
 		return labels.selectedMany(value.length, joined);
 	}

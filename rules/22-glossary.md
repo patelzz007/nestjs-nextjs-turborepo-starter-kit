@@ -63,3 +63,21 @@ A shared vocabulary for this codebase's domain and architectural terms, per `14-
 **Blocking finding** (in code review) — an issue that must be resolved before a PR can merge, as opposed to a non-blocking suggestion. See `16-code-review-checklist.md`.
 
 **ADR (Architecture Decision Record)** — a short, numbered document in `docs/adr/` capturing a meaningful architectural decision, its alternatives, and its consequences. See `14-documentation.md`.
+
+## Domain terms
+
+**Client type**:
+The kind of app a request comes from: `web`, `admin`, `merchant` or `mobile`. It decides how the session's tokens travel, never what the caller is allowed to do.
+_Avoid_: client, platform, app type
+
+**Mobile app**:
+The iOS and Android app built with Expo, served by the same API as the web apps under the `mobile` client type.
+_Avoid_: native app, Expo app, the app
+
+**Device session**:
+One signed-in device's session, which can be signed out on its own ("this device") or together with all others ("everywhere").
+_Avoid_: login, token, connection
+
+**Minimum supported app version**:
+The oldest mobile app version the API still serves; anything older must update before it can be used.
+_Avoid_: min version, force update, kill switch

@@ -146,8 +146,7 @@ export function iconSvg(name: IconName, size = 16, className = ""): string {
 	const children = node
 		.map(([tag, attributes]) => {
 			const attrs = Object.entries(attributes)
-				.filter((entry): entry is [string, string | number] => entry[1] !== undefined)
-				.map(([key, value]) => `${key}="${escapeAttribute(String(value))}"`)
+				.flatMap(([key, value]) => (value === undefined ? [] : [`${key}="${escapeAttribute(String(value))}"`]))
 				.join(" ");
 			return `<${tag} ${attrs}/>`;
 		})

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { hasGlobalConstructor } from "@workspace/shared";
 import { useIsClient } from "@workspace/ui/hooks/use-is-client";
 import { cn } from "@workspace/ui/lib/core/utils";
 
@@ -44,12 +45,12 @@ export function LazySection({ height, children, rootMargin = "300px 0px" }: Lazy
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const [hasIntersected, setHasIntersected] = React.useState(false);
 	const isClient = useIsClient();
-	const lacksIntersectionObserver = isClient && typeof IntersectionObserver === "undefined";
+	const lacksIntersectionObserver = isClient && !hasGlobalConstructor("IntersectionObserver");
 	const visible = hasIntersected || lacksIntersectionObserver;
 
 	React.useEffect(() => {
 		const node = containerRef.current;
-		if (node === null || visible || typeof IntersectionObserver === "undefined") {
+		if (node === null || visible || !hasGlobalConstructor("IntersectionObserver")) {
 			return undefined;
 		}
 

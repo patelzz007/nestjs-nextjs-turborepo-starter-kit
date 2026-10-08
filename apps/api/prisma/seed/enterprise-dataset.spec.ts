@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import {
 	buildEnterpriseDataset,
@@ -68,17 +69,17 @@ describe("buildEnterpriseDataset", () => {
 	it("has exactly one primary location, which is ACTIVE", () => {
 		const primaries = build(5).locations.filter((location) => location.isPrimary);
 		expect(primaries).toHaveLength(1);
-		expect(primaries[0]?.status).toBe("ACTIVE");
+		expect(primaries[LIST_SLOT_INDEX.first]?.status).toBe("ACTIVE");
 	});
 
 	it("marks every 10th location as pending approval", () => {
 		const statuses = build(5).locations.map((location) => location.status);
-		expect(statuses[9]).toBe("PENDING_APPROVAL");
+		expect(statuses[LIST_SLOT_INDEX.tenth]).toBe("PENDING_APPROVAL");
 		expect(statuses.filter((status) => status === "PENDING_APPROVAL")).toHaveLength(1);
 	});
 
 	it("makes member 0 the OWNER with the documented email and all-locations scope", () => {
-		const owner = build(5).members[0];
+		const owner = build(5).members[LIST_SLOT_INDEX.first];
 		expect(owner?.email).toBe(ENTERPRISE_OWNER_EMAIL);
 		expect(owner?.role).toBe("OWNER");
 		expect(owner?.scope.scopeType).toBe("ALL_LOCATIONS");

@@ -1,4 +1,5 @@
 import type { PermissionAuditLog } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RequestContextService } from "../../../common/context/request-context";
@@ -68,7 +69,7 @@ describe("AuthorizationAuditService", () => {
 			db,
 		);
 
-		expect(create.mock.lastCall?.[0]?.data).toMatchObject({
+		expect(create.mock.lastCall?.[LIST_SLOT_INDEX.first]?.data).toMatchObject({
 			actorKind: "SYSTEM_OPERATION",
 			actorId: "maintenance.permission_expiry",
 			correlationId: null,

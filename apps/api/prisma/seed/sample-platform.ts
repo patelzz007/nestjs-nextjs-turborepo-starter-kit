@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -42,7 +43,7 @@ const DEPARTMENT_NAMES: [
 function departmentNameAt(index: number): string {
 	const candidate = DEPARTMENT_NAMES[index % DEPARTMENT_NAMES.length];
 	const parsed = z.string().safeParse(candidate);
-	return parsed.success ? parsed.data : DEPARTMENT_NAMES[0];
+	return parsed.success ? parsed.data : DEPARTMENT_NAMES[LIST_SLOT_INDEX.first];
 }
 
 export interface SamplePlatformSeedSummary {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import type { HeapSample } from "./heap-growth-detector";
 import { NodePostGcHeapProbe } from "./post-gc-heap-probe";
@@ -43,7 +44,7 @@ describe("NodePostGcHeapProbe", () => {
 			stopWitness();
 
 			expect(countAtStop).toBeGreaterThan(0);
-			expect(samples[0]?.heapUsedBytes).toBeGreaterThan(0);
+			expect(samples[LIST_SLOT_INDEX.first]?.heapUsedBytes).toBeGreaterThan(0);
 			expect(witnessed.length).toBeGreaterThan(witnessedAtStop + 1);
 			expect(samples).toHaveLength(countAtStop);
 		},

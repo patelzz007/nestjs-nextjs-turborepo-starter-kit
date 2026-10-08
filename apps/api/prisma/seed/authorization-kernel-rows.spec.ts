@@ -1,4 +1,5 @@
 import type { PolicyDefinition, ResourceAcl } from "@prisma/client";
+import { isArrayValue, isJsonPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -19,21 +20,22 @@ const JsonSchema = z.json();
 type Json = z.output<typeof JsonSchema>;
 type Row = Record<string, Json>;
 
+/** A JSON node that is neither a scalar nor a list is a record. */
 function isRecord(value: Json | undefined): value is Row {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
+	return value !== undefined && !isJsonPrimitive(value) && !isArrayValue(value);
 }
 
 /** A just-enough evaluator for the `where` shapes the kernel uses: equality, null, `in`, `gt`, `has`, `AND` / `OR`. */
 function matches(row: Row, where: Row): boolean {
 	return Object.entries(where).every(([key, expected]) => {
-		if (key === "AND") return Array.isArray(expected) && expected.every((part) => isRecord(part) && matches(row, part));
-		if (key === "OR") return Array.isArray(expected) && expected.some((part) => isRecord(part) && matches(row, part));
+		if (key === "AND") return isArrayValue(expected) && expected.every((part) => isRecord(part) && matches(row, part));
+		if (key === "OR") return isArrayValue(expected) && expected.some((part) => isRecord(part) && matches(row, part));
 		const actual = row[key];
 		if (isRecord(expected)) {
 			const { in: inList, gt, has } = expected;
-			if (inList !== undefined) return Array.isArray(inList) && actual !== undefined && inList.includes(actual);
-			if (gt !== undefined) return typeof actual === "number" && typeof gt === "number" && actual > gt;
-			if (has !== undefined) return Array.isArray(actual) && actual.includes(has);
+			if (inList !== undefined) return isArrayValue(inList) && actual !== undefined && inList.includes(actual);
+			if (gt !== undefined) return isNumberPrimitive(actual) && isNumberPrimitive(gt) && actual > gt;
+			if (has !== undefined) return isArrayValue(actual) && actual.includes(has);
 		}
 		return actual === expected;
 	});
@@ -65,11 +67,11 @@ function aclModel(row: Row): ResourceAcl {
 	const base = AclModelSchema.parse(row);
 	const number = (column: string): bigint | null => {
 		const value = row[column];
-		return typeof value === "number" ? BigInt(value) : null;
+		return isNumberPrimitive(value) ? BigInt(value) : null;
 	};
 	const text = (column: string): string | null => {
 		const value = row[column];
-		return typeof value === "string" ? value : null;
+		return isStringPrimitive(value) ? value : null;
 	};
 	return {
 		id: base.id,
@@ -97,21 +99,21 @@ function policyModel(row: Row): PolicyDefinition {
 	const base = PolicyModelSchema.parse(row);
 	const number = (column: string): bigint | null => {
 		const value = row[column];
-		return typeof value === "number" ? BigInt(value) : null;
+		return isNumberPrimitive(value) ? BigInt(value) : null;
 	};
 	const text = (column: string): string | null => {
 		const value = row[column];
-		return typeof value === "string" ? value : null;
+		return isStringPrimitive(value) ? value : null;
 	};
 	const strings = (column: string): string[] => {
 		const value = row[column];
-		return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+		return isArrayValue(value) ? value.filter((item): item is string => isStringPrimitive(item)) : [];
 	};
 	return {
 		id: base.id,
 		name: text("name") ?? "",
 		description: text("description"),
-		version: typeof row.version === "number" ? row.version : 1,
+		version: isNumberPrimitive(row.version) ? row.version : 1,
 		effect: row.effect === "DENY" ? "DENY" : "ALLOW",
 		scope: "GLOBAL",
 		actions: strings("actions"),
@@ -200,7 +202,7 @@ describe("seeded kernel rows are matched by the kernel services", () => {
 			const byPolicy: Record<string, string> = {};
 			for (const step of result.evaluation) {
 				const policyId = step.details?.policyId;
-				if (typeof policyId === "string") byPolicy[policyId] = step.effect;
+				if (isStringPrimitive(policyId)) byPolicy[policyId] = step.effect;
 			}
 			return byPolicy;
 		};

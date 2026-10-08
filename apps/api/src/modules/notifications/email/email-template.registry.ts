@@ -53,6 +53,8 @@ export interface EmailTemplateEntry {
 	readonly description: string;
 	/** Sample `to` used by the admin preview list (never sent). */
 	readonly sampleTo: string;
+	/** The subject line with the sample props (some subjects interpolate props, e.g. the admin alert's title). */
+	readonly sampleSubject: string;
 	/** Builds a template instance with representative props. */
 	readonly build: () => BaseEmailTemplate<BaseEmailProps>;
 	/** Rebuilds the template from a queued job payload, re-validating the props through the template's schema. */
@@ -83,6 +85,7 @@ function registerTemplate<TProps extends BaseEmailProps>(
 		label,
 		description,
 		sampleTo: Template.sampleProps.to,
+		sampleSubject: new Template(Template.sampleProps).subject,
 		build: (): BaseEmailTemplate<BaseEmailProps> => new Template(Template.sampleProps),
 		fromJobData: (props: EmailJobProps): BaseEmailTemplate<BaseEmailProps> => new Template(propsSchema.parse(props)),
 	};
@@ -207,6 +210,7 @@ export function listTemplateMeta(): EmailTemplateMeta[] {
 			label: entry.label,
 			description: entry.description,
 			sampleTo: entry.sampleTo,
+			sampleSubject: entry.sampleSubject,
 		}),
 	);
 }

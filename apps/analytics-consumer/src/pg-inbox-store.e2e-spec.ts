@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -58,7 +59,7 @@ describe("PgInboxStore as the analytics_consumer role (integration)", () => {
 
 	async function count(sql: string, values: readonly string[]): Promise<number> {
 		const result = await database.admin.query<{ count: number }>(sql, [...values]);
-		return result.rows[0]?.count ?? 0;
+		return result.rows[LIST_SLOT_INDEX.first]?.count ?? 0;
 	}
 
 	async function parkedRows(): Promise<z.output<typeof ParkedRowSchema>[]> {

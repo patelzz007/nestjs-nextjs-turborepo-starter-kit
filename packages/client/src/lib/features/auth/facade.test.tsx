@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { epochMs, type ApiResponseMeta, type AuthClientType, type DataValue } from "@workspace/shared";
+import { LIST_SLOT_INDEX, epochMs, type ApiResponseMeta, type AuthClientType, type DataValue } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -979,7 +979,7 @@ describe("auth facade — the API is unreachable", () => {
 	const RETRY_DELAYS_MS: readonly number[] = Array.from(Array(SESSION_CHECK_MAX_RETRIES).keys(), (index: number): number =>
 		sessionCheckRetryDelayMs(index + 1, (): number => LOWEST_RANDOM),
 	);
-	const FIRST_RETRY_MS = RETRY_DELAYS_MS[0] ?? 0;
+	const FIRST_RETRY_MS = RETRY_DELAYS_MS[LIST_SLOT_INDEX.first] ?? 0;
 	/** Longer than the whole retry series. */
 	const LONG_WAIT_MS = 10 * 60_000;
 	const UNAVAILABLE_STATUS = 503;
@@ -1140,11 +1140,11 @@ describe("auth facade — the API is unreachable", () => {
 		routes.me = serviceUnavailable;
 		const { result } = renderAuth(RETURNING_MEMBER);
 		await settle();
-		await settle(RETRY_DELAYS_MS[0]);
+		await settle(RETRY_DELAYS_MS[LIST_SLOT_INDEX.first]);
 		expect(result.current.check).toEqual({ status: "retrying", reason: "server-error", failedAttempts: 2 });
 
 		routes.me = (): Response => envelopeResponse(userFixture());
-		await settle(RETRY_DELAYS_MS[1]);
+		await settle(RETRY_DELAYS_MS[LIST_SLOT_INDEX.second]);
 		expect(result.current.check).toEqual({ status: "ok" });
 
 		routes.me = serviceUnavailable;

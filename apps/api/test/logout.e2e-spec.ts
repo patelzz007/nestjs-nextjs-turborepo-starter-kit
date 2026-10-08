@@ -1,5 +1,5 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { API_VERSION_PREFIX } from "@workspace/shared";
+import { API_VERSION_PREFIX, isArrayValue } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createE2eApp, extractCookie, login, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
@@ -17,7 +17,7 @@ const SUPER_ADMIN_PASSWORD = "SuperAdmin@123";
 
 /** A Set-Cookie header that deletes `name` (empty value, already expired). */
 function clearsCookie(setCookie: string | string[] | undefined, name: string): boolean {
-	const headers: readonly string[] = setCookie === undefined ? [] : Array.isArray(setCookie) ? setCookie : [setCookie];
+	const headers: readonly string[] = setCookie === undefined ? [] : isArrayValue(setCookie) ? setCookie : [setCookie];
 	return headers.some((header: string): boolean => header.startsWith(`${name}=;`) && /(Max-Age=0|Expires=Thu, 01 Jan 1970)/i.test(header));
 }
 

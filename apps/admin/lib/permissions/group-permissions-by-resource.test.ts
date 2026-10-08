@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { groupPermissionsByResource } from "@/lib/permissions/group-permissions-by-resource";
 
@@ -11,6 +12,6 @@ describe("groupPermissionsByResource", () => {
 		]);
 
 		expect(groups.map((group) => group.resource)).toEqual(["ADMIN_DASHBOARD", "USER"]);
-		expect(groups[1]?.permissions.map((perm) => perm.action)).toEqual(["READ", "UPDATE"]);
+		expect(groups[LIST_SLOT_INDEX.second]?.permissions.map((perm) => perm.action)).toEqual(["READ", "UPDATE"]);
 	});
 });

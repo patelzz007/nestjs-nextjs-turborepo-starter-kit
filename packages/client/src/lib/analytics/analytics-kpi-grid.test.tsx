@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { Wallet } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -32,6 +33,6 @@ describe("AnalyticsKpiGrid", () => {
 
 		const tiles = container.querySelectorAll('[data-slot="icon-tile"]');
 		expect(tiles).toHaveLength(1);
-		expect(tiles[0]?.getAttribute("data-tone")).toBe("green");
+		expect(tiles[LIST_SLOT_INDEX.first]?.getAttribute("data-tone")).toBe("green");
 	});
 });

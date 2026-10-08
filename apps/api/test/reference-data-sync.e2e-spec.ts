@@ -2,7 +2,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { getPermissionDefinitions } from "@workspace/shared";
+import { LIST_SLOT_INDEX, getPermissionDefinitions } from "@workspace/shared";
 
 import { RequestContextService } from "../src/common/context/request-context";
 import type { TypedConfigService } from "../src/config/typed-config.service";
@@ -48,11 +48,11 @@ describe("Reference data sync (integration, scratch database)", () => {
 	}
 
 	async function count(sql: string): Promise<number> {
-		return NumberRow.parse((await pool.query(sql)).rows[0]).n;
+		return NumberRow.parse((await pool.query(sql)).rows[LIST_SLOT_INDEX.first]).n;
 	}
 
 	async function fingerprint(): Promise<string> {
-		return FingerprintRow.parse((await pool.query(FINGERPRINT_SQL)).rows[0]).fingerprint;
+		return FingerprintRow.parse((await pool.query(FINGERPRINT_SQL)).rows[LIST_SLOT_INDEX.first]).fingerprint;
 	}
 
 	beforeAll(async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PERMISSION } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION } from "@workspace/shared";
 
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { resolvePinnedMenuItems } from "@/lib/navigation/pinned-items";
@@ -11,7 +11,7 @@ const SEARCHABLE_ITEMS = buildSearchableItems(filterCompiledSidebarMenu(SIDEBAR_
 
 describe("resolvePinnedMenuItems", () => {
 	it("resolves pinned URLs against the same searchable index as the command palette", () => {
-		const sample = SEARCHABLE_ITEMS[0];
+		const sample = SEARCHABLE_ITEMS[LIST_SLOT_INDEX.first];
 		expect(sample).toBeDefined();
 		if (sample === undefined) {
 			return;
@@ -19,12 +19,12 @@ describe("resolvePinnedMenuItems", () => {
 
 		const resolved = resolvePinnedMenuItems([sample.url, "/not-in-menu"], SEARCHABLE_ITEMS);
 		expect(resolved).toHaveLength(1);
-		expect(resolved[0]?.url).toBe(sample.url);
-		expect(resolved[0]?.title).toBe(sample.title);
+		expect(resolved[LIST_SLOT_INDEX.first]?.url).toBe(sample.url);
+		expect(resolved[LIST_SLOT_INDEX.first]?.title).toBe(sample.title);
 	});
 
 	it("dedupes duplicate pinned URLs", () => {
-		const sample = SEARCHABLE_ITEMS[0];
+		const sample = SEARCHABLE_ITEMS[LIST_SLOT_INDEX.first];
 		expect(sample).toBeDefined();
 		if (sample === undefined) {
 			return;
@@ -35,8 +35,8 @@ describe("resolvePinnedMenuItems", () => {
 	});
 
 	it("preserves pin order from the store", () => {
-		const first = SEARCHABLE_ITEMS[0];
-		const second = SEARCHABLE_ITEMS[1];
+		const first = SEARCHABLE_ITEMS[LIST_SLOT_INDEX.first];
+		const second = SEARCHABLE_ITEMS[LIST_SLOT_INDEX.second];
 		expect(first).toBeDefined();
 		expect(second).toBeDefined();
 		if (first === undefined || second === undefined) {

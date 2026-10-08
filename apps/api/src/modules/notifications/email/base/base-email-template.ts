@@ -12,7 +12,8 @@ export type { BaseEmailProps, CtaConfig, EmailAccent };
 export interface EmailDarkTheme {
 	readonly canvas: string;
 	readonly card: string;
-	readonly border: string;
+	/** Hairline between rows (details ledger). */
+	readonly divider: string;
 	readonly heading: string;
 	readonly text: string;
 	readonly muted: string;
@@ -25,7 +26,8 @@ export interface EmailTheme {
 	readonly brandOnDark: string;
 	readonly canvas: string;
 	readonly card: string;
-	readonly border: string;
+	/** Hairline between rows (details ledger) — the only line inside the card. */
+	readonly divider: string;
 	readonly heading: string;
 	readonly text: string;
 	readonly muted: string;
@@ -43,21 +45,21 @@ export const EMAIL_THEME: EmailTheme = {
 	brand: "#2d5ed4",
 	/** Brand primary on dark backgrounds (web dark `--primary`). */
 	brandOnDark: "#6594fa",
-	/** Page background behind the card. */
-	canvas: "#f3f6fb",
+	/** Page background behind the card — the apps' light canvas (`--palette-neutral-50`). */
+	canvas: "#f1f4f9",
 	card: "#ffffff",
-	border: "#e2e8f0",
+	divider: "#e6eaf0",
 	heading: "#0f172a",
 	text: "#334155",
 	muted: "#64748b",
 	subtle: "#94a3b8",
-	/** Soft panel background (details card, link block). */
-	panel: "#f8fafc",
+	/** Soft panel background (details ledger, link fallback, code tiles) — the apps' sidebar step (`--palette-neutral-40`). */
+	panel: "#f5f7fb",
 	/** Dark-mode equivalents (applied via `prefers-color-scheme`). */
 	dark: {
 		canvas: "#091018",
 		card: "#0f1923",
-		border: "#1f2c3b",
+		divider: "#1f2c3b",
 		heading: "#edf2f8",
 		text: "#c7d2de",
 		muted: "#97a7b7",
@@ -69,29 +71,30 @@ export const EMAIL_THEME: EmailTheme = {
 	maxWidthPx: 600,
 };
 
-/** Colors used by the shell and building blocks for one accent (tone). */
+/**
+ * Colors used by the shell and building blocks for one accent (tone). Tone is carried by
+ * colour and fill only — never by bars, stripes or borders.
+ */
 export interface AccentPalette {
-	/** Accent bar along the top of the card + eyebrow text. */
+	/** The tone dot beside the eyebrow. */
 	readonly solid: string;
-	/** Soft tint background (eyebrow pill, highlight, callout). */
+	/** Soft tint background (highlight, callout, step numbers). */
 	readonly tint: string;
-	/** Text on the tint. */
+	/** Text on the tint, and the eyebrow. */
 	readonly onTint: string;
-	/** Border of tinted panels. */
-	readonly tintBorder: string;
 }
 
 export const ACCENT_PALETTES: Readonly<Record<EmailAccent, AccentPalette>> = {
 	/** Brand — neutral account / product messages. */
-	indigo: { solid: EMAIL_THEME.brand, tint: "#eef3fd", onTint: "#1e40af", tintBorder: "#c9d8f8" },
+	indigo: { solid: EMAIL_THEME.brand, tint: "#eef3fd", onTint: "#1e40af" },
 	/** Success — completed, welcome, rewards earned. */
-	green: { solid: "#16a34a", tint: "#effaf3", onTint: "#166534", tintBorder: "#bbf7d0" },
+	green: { solid: "#16a34a", tint: "#effaf3", onTint: "#166534" },
 	/** Warning — a security-relevant change worth a look. */
-	amber: { solid: "#d97706", tint: "#fffbeb", onTint: "#92400e", tintBorder: "#fde68a" },
+	amber: { solid: "#d97706", tint: "#fffbeb", onTint: "#92400e" },
 	/** Danger — locked accounts, suspicious activity. */
-	red: { solid: "#dc2626", tint: "#fef2f2", onTint: "#991b1b", tintBorder: "#fecaca" },
+	red: { solid: "#dc2626", tint: "#fef2f2", onTint: "#991b1b" },
 	/** Info — codes, invitations, integrations. */
-	sky: { solid: "#0284c7", tint: "#f0f9ff", onTint: "#075985", tintBorder: "#bae6fd" },
+	sky: { solid: "#0284c7", tint: "#f0f9ff", onTint: "#075985" },
 };
 
 /** One row of a {@link BaseEmailTemplate.detailsCard}. */
@@ -148,10 +151,10 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 	/** Email subject line (≤ ~78 chars, no ALL-CAPS — spam-score discipline). */
 	public abstract readonly subject: string;
 
-	/** Tone of the message — colors the accent bar, eyebrow and tinted blocks. */
+	/** Tone of the message — colors the eyebrow's dot and text, and the tinted blocks. */
 	protected abstract readonly accent: EmailAccent;
 
-	/** Small label above the heading (e.g. "Email verification"). */
+	/** Short, sentence-case label above the heading (e.g. "Email verification") — what kind of message this is. */
 	protected abstract readonly eyebrow: string;
 
 	/** Large heading inside the email body. */
@@ -233,21 +236,22 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 		return `<a href="${this.escape(href)}" class="email-link" style="color: ${EMAIL_THEME.brand}; font-weight: 600; text-decoration: underline;">${this.escape(label)}</a>`;
 	}
 
-	/** Label / value rows in a soft panel — device, location, key name, role… */
+	/** Label / value facts — device, location, key name, role… — as a quiet ledger: a soft panel, hairlines between rows, no box. */
 	protected detailsCard(rows: readonly EmailDetailRow[]): string {
 		const body: string = rows
-			.map(
-				(row: EmailDetailRow, index: number): string => `
+			.map((row: EmailDetailRow, index: number): string => {
+				const divider: string = index === 0 ? "" : `border-top: 1px solid ${EMAIL_THEME.divider};`;
+				return `
               <tr>
-                <td class="email-muted" style="padding: ${index === 0 ? "0" : "10px"} 0 0 0; width: 38%; vertical-align: top; color: ${EMAIL_THEME.muted}; font-size: 13px; line-height: 1.5;">${this.escape(row.label)}</td>
-                <td class="email-heading" style="padding: ${index === 0 ? "0" : "10px"} 0 0 12px; vertical-align: top; color: ${EMAIL_THEME.heading}; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;">${this.escape(row.value)}</td>
-              </tr>`,
-			)
+                <td class="email-muted email-divider" style="${divider} padding: 11px 0; width: 38%; vertical-align: top; color: ${EMAIL_THEME.muted}; font-size: 13px; line-height: 1.5;">${this.escape(row.label)}</td>
+                <td class="email-heading email-divider" style="${divider} padding: 11px 0 11px 12px; vertical-align: top; color: ${EMAIL_THEME.heading}; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;">${this.escape(row.value)}</td>
+              </tr>`;
+			})
 			.join("");
 		return `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 4px 0 20px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 4px 0 24px 0;">
           <tr>
-            <td class="email-panel" style="background: ${EMAIL_THEME.panel}; border: 1px solid ${EMAIL_THEME.border}; border-radius: 12px; padding: 16px 18px;">
+            <td class="email-panel" style="background: ${EMAIL_THEME.panel}; border-radius: 10px; padding: 5px 18px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${body}
               </table>
             </td>
@@ -263,20 +267,20 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 		return `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 4px 0 20px 0;">
           <tr>
-            <td class="email-tint" align="center" style="background: ${palette.tint}; border: 1px solid ${palette.tintBorder}; border-radius: 12px; padding: 20px 22px; text-align: center;">
+            <td class="email-tint" align="center" style="background: ${palette.tint}; border-radius: 10px; padding: 22px 24px; text-align: center;">
               <p style="margin: 0; color: ${palette.onTint}; font-size: 19px; font-weight: 700; line-height: 1.35;">${this.escape(title)}</p>${subtitleHtml}
             </td>
           </tr>
         </table>`;
 	}
 
-	/** A tinted note with a leading bar — guidance the reader should not miss. */
+	/** A tinted note — guidance the reader should not miss ("Wasn't you?"). Fill only, no bar. */
 	protected callout(title: string, body: string): string {
 		const palette: AccentPalette = this.palette;
 		return `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 4px 0 20px 0;">
           <tr>
-            <td class="email-tint" style="background: ${palette.tint}; border-left: 4px solid ${palette.solid}; border-radius: 8px; padding: 14px 16px;">
+            <td class="email-tint" style="background: ${palette.tint}; border-radius: 10px; padding: 16px 18px;">
               <p style="margin: 0 0 4px 0; color: ${palette.onTint}; font-size: 14px; font-weight: 700; line-height: 1.4;">${this.escape(title)}</p>
               <p style="margin: 0; color: ${palette.onTint}; font-size: 13px; line-height: 1.55;">${this.escape(body)}</p>
             </td>
@@ -291,7 +295,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 				(item: EmailStep, index: number): string => `
           <tr>
             <td style="width: 36px; padding: 0 0 14px 0; vertical-align: top;">
-              <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" style="width: 26px; height: 26px; border-radius: 13px; background: ${EMAIL_THEME.brand}; color: #ffffff; font-size: 13px; font-weight: 700; line-height: 26px; text-align: center;">${String(index + 1)}</td></tr></table>
+              <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" style="width: 26px; height: 26px; border-radius: 13px; background: ${this.palette.tint}; color: ${this.palette.onTint}; font-size: 13px; font-weight: 700; line-height: 26px; text-align: center;">${String(index + 1)}</td></tr></table>
             </td>
             <td style="padding: 2px 0 14px 4px; vertical-align: top;">
               <p class="email-heading" style="margin: 0; color: ${EMAIL_THEME.heading}; font-size: 15px; font-weight: 600; line-height: 1.4;">${this.escape(item.title)}</p>
@@ -312,7 +316,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 		const tiles: string = characters
 			.map(
 				(character: string): string =>
-					`<td class="email-otp-tile" align="center" style="width: 44px; height: 54px; background: ${EMAIL_THEME.panel}; border: 1px solid ${EMAIL_THEME.border}; border-radius: 10px; font-family: ${EMAIL_THEME.monoStack}; font-size: 26px; font-weight: 700; color: ${EMAIL_THEME.heading}; text-align: center;">${this.escape(character)}</td><td style="width: 8px;"></td>`,
+					`<td class="email-otp-tile" align="center" style="width: 44px; height: 54px; background: ${EMAIL_THEME.panel}; border-radius: 10px; font-family: ${EMAIL_THEME.monoStack}; font-size: 26px; font-weight: 700; color: ${EMAIL_THEME.heading}; text-align: center;">${this.escape(character)}</td><td style="width: 8px;"></td>`,
 			)
 			.join("");
 		return `
@@ -326,8 +330,8 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 		return `
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 8px 0 24px 0;">
           <tr>
-            <td class="email-cta" style="background: ${EMAIL_THEME.brand}; border-radius: 10px;">
-              <a href="${this.escape(cta.href)}" style="display: inline-block; padding: 14px 28px; font-family: ${EMAIL_THEME.fontStack}; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px;">${this.escape(cta.label)} &rarr;</a>
+            <td class="email-cta" style="background: ${EMAIL_THEME.brand}; border-radius: 8px;">
+              <a href="${this.escape(cta.href)}" style="display: inline-block; padding: 13px 26px; font-family: ${EMAIL_THEME.fontStack}; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">${this.escape(cta.label)}</a>
             </td>
           </tr>
         </table>`;
@@ -343,7 +347,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 	protected linkBlock(href: string): string {
 		return `
         <p class="email-muted" style="margin: 0 0 6px 0; color: ${EMAIL_THEME.muted}; font-size: 12px; line-height: 1.5;">Button not working? Paste this link into your browser:</p>
-        <p class="email-panel" style="margin: 0 0 20px 0; background: ${EMAIL_THEME.panel}; border: 1px solid ${EMAIL_THEME.border}; border-radius: 8px; padding: 10px 12px; font-family: ${EMAIL_THEME.monoStack}; font-size: 12px; line-height: 1.5; color: ${EMAIL_THEME.text}; word-break: break-all;">${this.escape(href)}</p>`;
+        <p class="email-panel" style="margin: 0 0 20px 0; background: ${EMAIL_THEME.panel}; border-radius: 8px; padding: 10px 12px; font-family: ${EMAIL_THEME.monoStack}; font-size: 12px; line-height: 1.5; color: ${EMAIL_THEME.text}; word-break: break-all;">${this.escape(href)}</p>`;
 	}
 
 	// ── Shell ────────────────────────────────────────────────────────────
@@ -356,7 +360,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 		const theme: EmailTheme = EMAIL_THEME;
 		const monogram: string = this.escape(context.appName.trim().charAt(0).toUpperCase());
 		const supportLine: string = context.supportEmail
-			? `<p class="email-muted" style="margin: 4px 0 0 0;">Questions? Reach us at <a href="mailto:${this.escape(context.supportEmail)}" style="color: ${theme.muted}; text-decoration: underline;">${this.escape(context.supportEmail)}</a></p>`
+			? `<p style="margin: 4px 0 0 0;">Questions? Reach us at <a href="mailto:${this.escape(context.supportEmail)}" style="color: ${theme.subtle}; text-decoration: underline;">${this.escape(context.supportEmail)}</a></p>`
 			: "";
 
 		return `<!DOCTYPE html>
@@ -370,17 +374,18 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
   <title>${this.escape(this.subject)}</title>
   <style>
     @media (max-width: 620px) {
-      .email-card-inner { padding: 28px 22px 24px 22px !important; }
+      .email-card-inner { padding: 30px 22px 26px 22px !important; }
       .email-h1 { font-size: 22px !important; }
     }
     @media (prefers-color-scheme: dark) {
       .email-body, .email-canvas { background-color: ${theme.dark.canvas} !important; }
-      .email-card { background-color: ${theme.dark.card} !important; border-color: ${theme.dark.border} !important; }
+      .email-card { background-color: ${theme.dark.card} !important; }
       .email-heading, .email-h1, .email-brand-name { color: ${theme.dark.heading} !important; }
       .email-text { color: ${theme.dark.text} !important; }
       .email-muted, .email-footer { color: ${theme.dark.muted} !important; }
-      .email-panel, .email-otp-tile { background-color: ${theme.dark.panel} !important; border-color: ${theme.dark.border} !important; color: ${theme.dark.heading} !important; }
-      .email-rule { border-top-color: ${theme.dark.border} !important; }
+      .email-eyebrow { color: ${theme.dark.muted} !important; }
+      .email-panel, .email-otp-tile { background-color: ${theme.dark.panel} !important; color: ${theme.dark.heading} !important; }
+      .email-divider { border-top-color: ${theme.dark.divider} !important; }
       .email-link { color: ${theme.brandOnDark} !important; }
     }
   </style>
@@ -395,26 +400,21 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
             <td style="padding: 0 4px 18px 4px;">
               <table role="presentation" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="width: 34px; height: 34px; border-radius: 9px; background: ${theme.brand}; color: #ffffff; font-size: 17px; font-weight: 700; line-height: 34px; text-align: center;">${monogram}</td>
+                  <td align="center" style="width: 34px; height: 34px; border-radius: 8px; background: ${theme.brand}; color: #ffffff; font-size: 17px; font-weight: 700; line-height: 34px; text-align: center;">${monogram}</td>
                   <td class="email-brand-name" style="padding-left: 10px; color: ${theme.heading}; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;">${this.escape(context.appName)}</td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td class="email-card" style="background: ${theme.card}; border: 1px solid ${theme.border}; border-radius: 16px; overflow: hidden;">
+            <td class="email-card" style="background: ${theme.card}; border-radius: 14px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr><td style="height: 4px; line-height: 4px; font-size: 0; background: ${palette.solid};">&nbsp;</td></tr>
                 <tr>
-                  <td class="email-card-inner" style="padding: 36px 40px 32px 40px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 14px 0;">
-                      <tr><td style="background: ${palette.tint}; border-radius: 999px; padding: 5px 12px; color: ${palette.onTint}; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">${this.escape(this.eyebrow)}</td></tr>
-                    </table>
-                    <h1 class="email-h1" style="margin: 0 0 18px 0; color: ${theme.heading}; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em;">${this.escape(this.heading)}</h1>
+                  <td class="email-card-inner" style="padding: 40px 44px 36px 44px;">
+                    <p class="email-eyebrow" style="margin: 0 0 12px 0; color: ${palette.onTint}; font-size: 13px; font-weight: 600; line-height: 20px;"><span style="display: inline-block; width: 8px; height: 8px; margin: 0 8px 1px 0; border-radius: 4px; background: ${palette.solid}; vertical-align: middle;"></span>${this.escape(this.eyebrow)}</p>
+                    <h1 class="email-h1" style="margin: 0 0 20px 0; color: ${theme.heading}; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em;">${this.escape(this.heading)}</h1>
                     ${this.renderBodyHtml(context)}
                     ${cta !== null && this.ctaPlacement === "after-body" ? this.ctaButton(cta) : ""}
-                    <hr class="email-rule" style="border: none; border-top: 1px solid ${theme.border}; margin: 8px 0 18px 0;">
-                    <p class="email-muted" style="margin: 0; color: ${theme.muted}; font-size: 12px; line-height: 1.6;">Sent by ${this.escape(context.appName)} · <a href="${this.escape(context.appUrl)}" style="color: ${theme.muted}; text-decoration: underline;">${this.escape(context.appUrl.replace(/^https?:\/\//, ""))}</a></p>
                   </td>
                 </tr>
               </table>
@@ -422,7 +422,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
           </tr>
           <tr>
             <td class="email-footer" align="center" style="padding: 20px 16px 0 16px; color: ${theme.subtle}; font-size: 12px; line-height: 1.6; text-align: center;">
-              <p style="margin: 0;">You're receiving this because you have an account with ${this.escape(context.appName)}.</p>
+              <p style="margin: 0;">You're receiving this because you have an account with <a href="${this.escape(context.appUrl)}" style="color: ${theme.subtle}; text-decoration: underline;">${this.escape(context.appName)}</a>.</p>
               ${supportLine}
               <p style="margin: 4px 0 0 0;">&copy; ${String(year)} ${this.escape(context.appName)}. All rights reserved.</p>
             </td>

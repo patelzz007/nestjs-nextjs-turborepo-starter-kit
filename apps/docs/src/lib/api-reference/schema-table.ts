@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { JsonSchema, JsonValue } from "./openapi";
 
 /**
@@ -32,8 +34,12 @@ export function resolveSchema(schema: JsonSchema, registry: SchemaRegistry): Jso
 	return target === undefined ? schema : resolveSchema(target, registry);
 }
 
+/** An enum member that renders quoted (strings) rather than as JSON. */
+const STRING_MEMBER_SCHEMA = z.string();
+
 function formatValue(value: JsonValue): string {
-	return typeof value === "string" ? `"${value}"` : JSON.stringify(value);
+	const asString = STRING_MEMBER_SCHEMA.safeParse(value);
+	return asString.success ? `"${asString.data}"` : JSON.stringify(value);
 }
 
 /** A short, human type label: `string (uuid)`, `"A" \| "B"`, `object[]`, `integer \| null`. */
@@ -50,7 +56,7 @@ export function typeLabel(schema: JsonSchema, registry: SchemaRegistry): string 
 	} else if (resolved.type === "array") {
 		label = `${resolved.items === undefined ? "any" : typeLabel(resolved.items, registry)}[]`;
 	} else if (resolved.type !== undefined) {
-		const type = typeof resolved.type === "string" ? resolved.type : resolved.type.join(" | ");
+		const type = [resolved.type].flat().join(" | ");
 		label = resolved.format === undefined ? type : `${type} (${resolved.format})`;
 	} else if (resolved.properties !== undefined) {
 		label = "object";

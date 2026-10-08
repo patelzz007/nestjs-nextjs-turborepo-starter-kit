@@ -34,8 +34,9 @@ describe("toCategoryItems / toCityItems", () => {
 	it("describe each breakdown row with merchants, bills and share", () => {
 		const dashboard = buildAdminDashboard({ byCity: [{ city: null, salesMinor: 1_000_000, bills: 1, merchants: 1 }] });
 
-		expect(spaced(toCategoryItems(dashboard, FORMATTERS)[0]?.detail)).toBe("1 merchant · 1,200 bills · 75% of sales");
-		const city = toCityItems(dashboard, FORMATTERS)[0];
+		const [category] = toCategoryItems(dashboard, FORMATTERS);
+		expect(spaced(category?.detail)).toBe("1 merchant · 1,200 bills · 75% of sales");
+		const [city] = toCityItems(dashboard, FORMATTERS);
 		expect(city?.label).toBe(UNKNOWN_CITY_LABEL);
 		expect(city?.key).toBe("unknown");
 		expect(spaced(city?.detail)).toBe("1 merchant · 1 bill · 100% of sales");

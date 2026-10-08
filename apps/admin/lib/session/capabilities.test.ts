@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, renderHook } from "@testing-library/react";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
-import { createApiSuccessEnvelopeSchema, PERMISSION, SessionPermissionsResponseSchema, type Envelope, type SessionPermissionsResponse } from "@workspace/shared";
+import {
+	LIST_SLOT_INDEX,
+	createApiSuccessEnvelopeSchema,
+	PERMISSION,
+	SessionPermissionsResponseSchema,
+	type Envelope,
+	type SessionPermissionsResponse,
+} from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
@@ -76,7 +83,7 @@ describe("useSessionPermissionsQuery", () => {
 
 		renderHook(() => useSessionPermissionsQuery(PRELOADED_ENVELOPE));
 
-		const options = useQueryMock.mock.calls[0]?.[1];
+		const options = useQueryMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second];
 		expect(options?.initialData).toBe(PRELOADED_ENVELOPE);
 		expect(options?.initialDataUpdatedAt).toBe(PRELOADED_AT_MS);
 		expect(options?.refetchOnWindowFocus).toBe(true);

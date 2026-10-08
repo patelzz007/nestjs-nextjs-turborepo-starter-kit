@@ -2,6 +2,7 @@
 
 import type { MerchantBusinessCategory, MerchantOnboardingInvitePreview, OrganizationPrimaryLocationDraft } from "@workspace/shared";
 import {
+	LIST_SLOT_INDEX,
 	MERCHANT_KYB_MAX_DOCUMENT_COUNT,
 	MerchantKybRegistrationFieldsSchema,
 	MerchantOnboardingBusinessFieldsSchema,
@@ -69,7 +70,7 @@ function formatExpiry(value: number): string {
 
 /** The message of a failed parse's first issue, or `fallback` when it has none. */
 function firstIssue(error: { readonly issues: readonly { readonly message: string }[] }, fallback: string): string {
-	return error.issues[0]?.message ?? fallback;
+	return error.issues[LIST_SLOT_INDEX.first]?.message ?? fallback;
 }
 
 interface OnboardingNoticeProps {

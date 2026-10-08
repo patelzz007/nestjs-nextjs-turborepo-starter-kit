@@ -33,6 +33,7 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { isBrowserRuntime } from "@workspace/shared";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import { matchesShortcut, parseShortcut } from "@workspace/ui/lib/core/shortcut";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
@@ -42,11 +43,6 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState 
 import { describeSelection, SelectContext, type SelectContextValue, type SelectSize } from "./select-context";
 
 // ── SSR guard ──────────────────────────────────────────────────────────────
-
-/** True when running in a browser — `window` is undefined during SSR. */
-function isBrowser(): boolean {
-	return typeof window !== "undefined";
-}
 
 // ── Imperative ref API (rule 20, improvement 1) ─────────────────────────────
 
@@ -172,7 +168,7 @@ function Select<Value, Multiple extends boolean | undefined = false>({
 	// popup and focuses the trigger. Effects never run during SSR, and the
 	// listener is removed on unmount — no leaked global handlers.
 	useEffect(() => {
-		if (!isBrowser() || shortcut === undefined) {
+		if (!isBrowserRuntime() || shortcut === undefined) {
 			return;
 		}
 		const spec = parseShortcut(shortcut);

@@ -3,36 +3,12 @@
 import { ROUTES } from "@/lib/routes";
 import { MerchantOnboardingView, MerchantOnboardingViewSkeleton } from "@workspace/client/lib/merchant/onboarding/view";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { Button, buttonVariants } from "@workspace/ui/components/button";
-import { useTheme } from "next-themes";
+import { buttonVariants } from "@workspace/ui/components/button";
+import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import Link from "next/link";
-import { Moon, Store, Sun } from "lucide-react";
+import { Store } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState, type JSX } from "react";
-
-function OnboardingThemeToggle(): JSX.Element {
-	const { resolvedTheme, setTheme } = useTheme();
-	const [mounted, setMounted] = useState(false);
-
-	useEffect((): (() => void) => {
-		const frame = window.requestAnimationFrame((): void => {
-			setMounted(true);
-		});
-		return (): void => {
-			window.cancelAnimationFrame(frame);
-		};
-	}, []);
-
-	const handleToggle = useCallback((): void => {
-		setTheme(resolvedTheme === "dark" ? "light" : "dark");
-	}, [resolvedTheme, setTheme]);
-
-	return (
-		<Button variant="ghost" size="icon" onClick={handleToggle} aria-label="Toggle theme" className="rounded-full">
-			{mounted ? resolvedTheme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" /> : <Sun className="size-5 opacity-0" aria-hidden="true" />}
-		</Button>
-	);
-}
+import { Suspense, type JSX } from "react";
 
 function OnboardingContent(): JSX.Element {
 	const searchParams = useSearchParams();
@@ -75,7 +51,7 @@ export default function MerchantOnboardingPage(): JSX.Element {
 						<Link href={ROUTES.auth.login} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}>
 							Sign in
 						</Link>
-						<OnboardingThemeToggle />
+						<ShellThemeToggle />
 					</div>
 				</header>
 

@@ -28,7 +28,7 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 
 | Area | Pages |
 | --- | --- |
-| Basics | [Getting started](./getting-started.md) · [Architecture](./architecture.md) · [Dos and don'ts](./dos-and-donts.md) · [Adding a feature](./adding-a-feature.md) |
+| Basics | [Getting started](./getting-started.md) · [Architecture](./architecture.md) · [Dos and don'ts](./dos-and-donts.md) · [Adding a feature](./adding-a-feature.md) · [**Starter kit production roadmap**](./starter-kit-production-roadmap.md) |
 | API | [Conventions](./api/README.md) · [**Reference (generated)**](./api-reference/README.md) · [Routes registry](./api/routes.md) · [Errors](./api/errors.md) · [List queries](./api/list-queries.md) · [Response contracts](./api/response-contracts.md) · [Analytics dashboards and exports](./api/analytics.md) · [HTTP server (Fastify)](./api/http-server.md) · [POS integration](./pos-integration.md) |
 | Configuration | [API environment](./configuration/api.md) · [Frontend environment](./configuration/frontend.md) |
 | Data | [Database, migrations and seed](./database.md) · [Messaging, jobs, outbox](./messaging.md) |

@@ -1,7 +1,8 @@
+import { isFunctionValue } from "@workspace/shared";
 import type * as React from "react";
 
 function isRefCallback<T>(ref: React.Ref<T>): ref is React.RefCallback<T> {
-	return typeof ref === "function";
+	return isFunctionValue(ref);
 }
 
 /** Assign a DOM node to a React ref (callback or object). */

@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { ApiError } from "@workspace/client/lib/api/api-request";
-import { PERMISSION, type CapabilitySlug, type CheckPermissionInput } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type CheckPermissionInput } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -129,7 +129,7 @@ describe("AccessControlPanel permission checker", () => {
 	it("surfaces a failed check as an error toast", () => {
 		const errorToast = vi.spyOn(toastMessage, "error").mockImplementation(() => "toast-id");
 		renderPanel([PERMISSION.PERMISSION.READ]);
-		checkOptions[0]?.onError?.(new ApiError({ error: "NOT_FOUND", message: "User not found", statusCode: 404 }));
+		checkOptions[LIST_SLOT_INDEX.first]?.onError?.(new ApiError({ error: "NOT_FOUND", message: "User not found", statusCode: 404 }));
 
 		expect(errorToast).toHaveBeenCalledWith({ title: "Could not check the permission", description: "User not found" });
 	});

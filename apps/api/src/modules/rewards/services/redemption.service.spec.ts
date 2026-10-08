@@ -1,4 +1,5 @@
 import { ConflictException, HttpException, HttpStatus, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Prisma } from "@prisma/client";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -230,10 +231,10 @@ describe("RedemptionService", () => {
 			expect(outbox.enqueueInTransaction).toHaveBeenCalledWith(TX, expect.objectContaining({ type: "reward.platform" }));
 			expect(referrals.creditReferrerForRedemption).toHaveBeenCalledWith(TX, expect.objectContaining({ rewardId: `reward-of-${CLAIM_A}`, refereeUserId: CUSTOMER, now: NOW }));
 			// The referrer's new claim codes are stored as keyed hashes, never plain SHA-256.
-			const [, creditInput] = referrals.creditReferrerForRedemption.mock.calls[0] ?? [];
+			const [, creditInput] = referrals.creditReferrerForRedemption.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 			expect(creditInput?.redemptionTokenHash).toMatch(/^v1:[0-9a-f]{64}$/u);
 			expect(notifications.deliver).toHaveBeenCalledWith("referral-1");
-			const [lineInput] = sales.checkoutInTransaction.mock.calls[0] ?? [];
+			const [lineInput] = sales.checkoutInTransaction.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 			expect(lineInput?.lines).toEqual([{ claimId: CLAIM_A, rewardId: `reward-of-${CLAIM_A}`, redemptionMethod: "SCAN" }]);
 		});
 

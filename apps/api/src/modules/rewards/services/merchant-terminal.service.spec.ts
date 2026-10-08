@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { Test } from "@nestjs/testing";
-import { MERCHANT_CAPABILITY, MerchantTerminalListQuerySchema, PosPairingCodeSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, MERCHANT_CAPABILITY, MerchantTerminalListQuerySchema, PosPairingCodeSchema } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -136,7 +136,7 @@ describe("MerchantTerminalService", () => {
 		const pairing = await service.create(USER_ID, ORG_SLUG, { name: "Front counter", locationId: LOCATION_ID });
 
 		expect(PosPairingCodeSchema.safeParse(pairing.pairingCode).success).toBe(true);
-		const [input] = terminals.create.mock.calls[0] ?? [];
+		const [input] = terminals.create.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 		// Stored as its keyed hash (`REWARD_CODE_HASH_KEYS`), never the code or a plain SHA-256.
 		expect(input?.pairingCodeHash).toBe(HASHER.hash(pairing.pairingCode));
 		expect(JSON.stringify(input)).not.toContain(pairing.pairingCode);
@@ -182,7 +182,7 @@ describe("MerchantTerminalService", () => {
 
 		await service.issuePairingCode(USER_ID, ORG_SLUG, "terminal-row-1");
 
-		const [, input] = terminals.setPairingCode.mock.calls[0] ?? [];
+		const [, input] = terminals.setPairingCode.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 		expect(input?.issuedByUserId).toBe(USER_ID);
 		expect(input?.issuedAt).toBeGreaterThan(0);
 		expect(Object.keys(input ?? {}).toSorted()).toEqual(["issuedAt", "issuedByUserId", "pairingCodeExpiresAt", "pairingCodeHash"]);
@@ -212,7 +212,7 @@ describe("MerchantTerminalService", () => {
 
 	it("registers a till under the merchant's own terminal id and answers 409 when a live till already uses it", async () => {
 		await service.create(USER_ID, ORG_SLUG, { name: "Till", locationId: LOCATION_ID, terminalId: "KL-REGISTER-07" });
-		expect(terminals.create.mock.calls[0]?.[0].terminalId).toBe("KL-REGISTER-07");
+		expect(terminals.create.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first].terminalId).toBe("KL-REGISTER-07");
 		expect(terminals.terminalIdExists).not.toHaveBeenCalled();
 
 		terminals.create.mockRejectedValueOnce(

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { useCallback, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -139,11 +140,11 @@ describe("Combobox", () => {
 		const items = Array.from(document.querySelectorAll("[data-slot='combobox-item']"));
 		expect(items.length).toBe(2);
 		// Clicking the other item selects it — the indicator follows the value.
-		const otherItem = items[1];
+		const otherItem = items[LIST_SLOT_INDEX.second];
 		if (otherItem !== undefined) {
 			fireEvent.click(otherItem);
 		}
-		expect(items[1]?.querySelector("svg")).toBeTruthy();
+		expect(items[LIST_SLOT_INDEX.second]?.querySelector("svg")).toBeTruthy();
 	});
 
 	it("renders a two-line item when `description` is provided (feature 13)", () => {
@@ -330,11 +331,11 @@ describe("Combobox", () => {
 			{ wrapper: UiKitTestProviders },
 		);
 		const items = Array.from(document.querySelectorAll("[data-slot='combobox-item']"));
-		const first = items[0];
+		const first = items[LIST_SLOT_INDEX.first];
 		if (first !== undefined) {
 			fireEvent.click(first);
 		}
-		const second = items[1];
+		const second = items[LIST_SLOT_INDEX.second];
 		if (second !== undefined) {
 			fireEvent.click(second);
 		}

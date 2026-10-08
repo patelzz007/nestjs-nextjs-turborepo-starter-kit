@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type * as ServerApi from "@workspace/client/lib/api/server-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,7 +62,7 @@ describe("WalletClaimPage (server)", () => {
 
 		expect(guardWebPage).toHaveBeenCalledWith(walletClaimPath(CLAIM_ID));
 		expect(qrQuery).toHaveBeenCalledWith({ claimId: CLAIM_ID });
-		expect(qrView.mock.lastCall?.[0]).toEqual({ claimId: CLAIM_ID, initialQr: testEnvelope(QR) });
+		expect(qrView.mock.lastCall?.[LIST_SLOT_INDEX.first]).toEqual({ claimId: CLAIM_ID, initialQr: testEnvelope(QR) });
 	});
 
 	it("renders not-found for a malformed claim id without calling the API", async () => {

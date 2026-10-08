@@ -1,5 +1,6 @@
 "use client";
 
+import { isNumberPrimitive } from "@workspace/shared";
 import { ChartStateFrame, CHART_READY, type ChartFrameState } from "@workspace/ui/components/analytics-panel";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@workspace/ui/components/chart";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
@@ -163,7 +164,7 @@ function shortLabel(label: string): string {
 /** Names a line at its last point — a direct label, so a reader never matches grays or hues to the legend. */
 function endLabelRenderer(label: string, lastIndex: number): (props: LabelRenderProps) => React.ReactElement | null {
 	return function EndLabel({ x, y, index }: LabelRenderProps): React.ReactElement | null {
-		if (index !== lastIndex || typeof x !== "number" || typeof y !== "number") {
+		if (index !== lastIndex || !isNumberPrimitive(x) || !isNumberPrimitive(y)) {
 			return null;
 		}
 		return (

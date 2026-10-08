@@ -27,7 +27,7 @@ const LEGACY_DOCS_PATH = "/docs";
 
 /** True for every URL the Swagger mount serves (UI, document, assets, legacy redirect). */
 export function isApiDocsRequest(url: string): boolean {
-	const path: string = url.split("?")[0] ?? url;
+	const [path = url] = url.split("?");
 	const docsPath: string = apiDocsPath();
 	return [docsPath, LEGACY_DOCS_PATH].some((prefix: string): boolean => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}-`));
 }

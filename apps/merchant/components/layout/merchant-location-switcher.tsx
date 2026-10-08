@@ -1,6 +1,7 @@
 "use client";
 
 import { resolveLocationShortLabel } from "@/lib/org/location-display";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { useMerchantLocation, useTenantContextCommands, type TenantContextCommands } from "@/features/tenant-context/facade";
 import { Button } from "@workspace/ui/components/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@workspace/ui/components/select";
@@ -69,7 +70,7 @@ export function MerchantLocationSwitcher(): React.JSX.Element | null {
 		return null;
 	}
 
-	const singleLocation = activeLocation ?? accessibleLocations[0];
+	const singleLocation = activeLocation ?? accessibleLocations[LIST_SLOT_INDEX.first];
 
 	if (!canSelectAllLocations && accessibleLocations.length === 1 && singleLocation !== undefined) {
 		const shortLabel = resolveLocationShortLabel(singleLocation);

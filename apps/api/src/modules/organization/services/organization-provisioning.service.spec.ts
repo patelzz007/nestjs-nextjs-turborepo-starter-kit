@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { Test } from "@nestjs/testing";
 import { Prisma } from "@prisma/client";
@@ -87,7 +88,7 @@ describe("OrganizationProvisioningService", () => {
 		it("creates the organization from the validated input with NO address-less primary location", async () => {
 			const result = await service.provisionFromPlatformInvite(ADMIN_ID, PLATFORM_INVITE);
 
-			expect(tx.organization.create.mock.lastCall?.[0]).toMatchObject({
+			expect(tx.organization.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
 				data: {
 					slug: "brew-bean",
 					displayName: "Brew & Bean",
@@ -96,7 +97,7 @@ describe("OrganizationProvisioningService", () => {
 					entitlements: { create: { planCode: ORGANIZATION_DEFAULT_PLAN.planCode } },
 				},
 			});
-			expect(tx.organization.create.mock.lastCall?.[0]).not.toHaveProperty("data.locations");
+			expect(tx.organization.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).not.toHaveProperty("data.locations");
 			expect(result.organizationId).toBe(ORG_ID);
 			expect(result.inviteToken).toMatch(/^[0-9a-f]{64}$/);
 		});
@@ -104,10 +105,10 @@ describe("OrganizationProvisioningService", () => {
 		it("publishes the default tenant policy as an explicit platform-template approval — never self-approved — and audits it", async () => {
 			await service.provisionFromPlatformInvite(ADMIN_ID, PLATFORM_INVITE);
 
-			expect(tx.authorizationPolicyDraft.create.mock.lastCall?.[0]).toMatchObject({
+			expect(tx.authorizationPolicyDraft.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
 				data: { createdById: ADMIN_ID, approvedById: null, approvalKind: "PLATFORM_DEFAULT_TEMPLATE", status: "PUBLISHED" },
 			});
-			expect(tx.authorizationAudit.upsert.mock.lastCall?.[0]).toMatchObject({
+			expect(tx.authorizationAudit.upsert.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
 				update: {},
 				create: { actorId: ADMIN_ID, organizationId: ORG_ID, action: DEFAULT_TENANT_POLICY_AUDIT_ACTION, resourceId: "draft-1", policyIds: ["version-1"] },
 			});
@@ -116,7 +117,9 @@ describe("OrganizationProvisioningService", () => {
 		it("stores only the token hash and audits in the provisioning transaction with the admin actor and the seeded policy version", async () => {
 			const result = await service.provisionFromPlatformInvite(ADMIN_ID, PLATFORM_INVITE);
 
-			expect(tx.organizationInvitation.create.mock.lastCall?.[0]).toMatchObject({ data: { tokenHash: createHash("sha256").update(result.inviteToken).digest("hex") } });
+			expect(tx.organizationInvitation.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
+				data: { tokenHash: createHash("sha256").update(result.inviteToken).digest("hex") },
+			});
 			expect(tx.authorizationPolicyVersion.create).toHaveBeenCalled();
 			expect(tx.organizationAuditLog.create.mock.lastCall).toMatchObject([
 				{
@@ -128,7 +131,7 @@ describe("OrganizationProvisioningService", () => {
 		it("records the PROVISIONING lifecycle event with the transaction's correlation id", async () => {
 			await service.provisionFromPlatformInvite(ADMIN_ID, PLATFORM_INVITE);
 
-			expect(tx.organization.create.mock.lastCall?.[0]).not.toHaveProperty("data.lifecycleEvents");
+			expect(tx.organization.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).not.toHaveProperty("data.lifecycleEvents");
 			expect(tx.organizationLifecycleEvent.create).toHaveBeenCalledWith({
 				data: {
 					organizationId: ORG_ID,
@@ -155,8 +158,8 @@ describe("OrganizationProvisioningService", () => {
 		it("leaves the business category empty (no 'retail' placeholder) and creates no location", async () => {
 			await service.provisionFromRewardHubAdminInvite(ADMIN_ID, { email: "owner@brew.example", businessName: "Brew & Bean", city: "KUALA_LUMPUR" });
 
-			expect(tx.organization.create.mock.lastCall?.[0]).toMatchObject({ data: { merchantProfile: { create: { category: null } } } });
-			expect(tx.organization.create.mock.lastCall?.[0]).not.toHaveProperty("data.locations");
+			expect(tx.organization.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ data: { merchantProfile: { create: { category: null } } } });
+			expect(tx.organization.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).not.toHaveProperty("data.locations");
 			expect(tx.organizationAuditLog.create.mock.lastCall).toMatchObject([{ data: { actorUserId: ADMIN_ID, policyVersion: SEEDED_POLICY_VERSION } }]);
 			expect(tx.organizationLifecycleEvent.create.mock.lastCall).toMatchObject([
 				{ data: { organizationId: ORG_ID, toState: "PROVISIONING", correlationId: TRANSACTION_CORRELATION_ID } },

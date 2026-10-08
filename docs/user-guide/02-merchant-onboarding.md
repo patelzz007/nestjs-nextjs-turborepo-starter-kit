@@ -34,9 +34,10 @@ flowchart TD
 
 ## For the platform admin: sending the invite
 
-1. **Merchants → Invites → Invite merchant.** Enter the business name, the pilot city
-   (Kuala Lumpur or Melaka) and the owner's email. **Preview email** shows exactly what will be
-   sent.
+1. **Merchants → Invites.** Enter the owner's email, the business name and the pilot city
+   (Kuala Lumpur or Melaka). The email preview beside the form updates as you type and shows
+   exactly what will be sent; switch it to phone width to check the mobile layout. **Send invite**
+   is enabled once the email and business name are valid.
 2. The owner receives a link to the merchant portal (`/onboarding?token=…`). It is valid for
    **7 days** and works once.
 
@@ -108,7 +109,7 @@ changed by a scan.
 
 | Step | API |
 | --- | --- |
-| Invite / preview | `POST /api/v1/admin/invites`, `POST /api/v1/admin/invites/preview-email` |
+| Invite / preview | `POST /api/v1/admin/invites`, `GET /api/v1/admin/invites/preview-email` |
 | Check the link | `POST /api/v1/orgs/onboarding/validate` |
 | Create organization + owner | `POST /api/v1/orgs/onboarding/complete` |
 | Upload documents | `POST /api/v1/orgs/onboarding/documents/upload-url(s)` → upload to storage → `…/upload-complete(-batch)` → `…/status` → `…/submit` |

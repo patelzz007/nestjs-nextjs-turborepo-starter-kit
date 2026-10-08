@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from "pg";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { RequestContextService } from "../src/common/context/request-context";
@@ -56,22 +57,22 @@ describe("System operations are enforced by the database (integration)", () => {
 		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "" }, async (client) => {
 			const outbox = await client.query<{ count: number }>("SELECT count(*)::int AS count FROM public.outbox_events");
 			const bypass = await client.query<{ bypass: boolean }>("SELECT app_rls_bypass() AS bypass");
-			expect(bypass.rows[0]?.bypass).toBe(false);
-			expect(outbox.rows[0]?.count).toBe(0);
+			expect(bypass.rows[LIST_SLOT_INDEX.first]?.bypass).toBe(false);
+			expect(outbox.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
 		});
 	});
 
 	it("honours a bypass that names its operation", async () => {
 		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "outbox.publish" }, async (client) => {
 			const bypass = await client.query<{ bypass: boolean }>("SELECT app_rls_bypass() AS bypass");
-			expect(bypass.rows[0]?.bypass).toBe(true);
+			expect(bypass.rows[LIST_SLOT_INDEX.first]?.bypass).toBe(true);
 		});
 	});
 
 	it("gives the enumerator role organizations, and nothing else", async () => {
 		await inSession("app_enumerator", { "app.rls_bypass": "true", "app.system_operation": "tenant.enumerate" }, async (client) => {
 			const orgs = await client.query<{ count: number }>("SELECT count(*)::int AS count FROM public.organizations");
-			expect(orgs.rows[0]?.count).toBeGreaterThan(0);
+			expect(orgs.rows[LIST_SLOT_INDEX.first]?.count).toBeGreaterThan(0);
 			await expect(client.query("SELECT id FROM public.users LIMIT 1")).rejects.toThrow(/permission denied/);
 		});
 		await inSession("app_enumerator", { "app.rls_bypass": "true", "app.system_operation": "tenant.enumerate" }, async (client) => {

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { LoginViewProps } from "../login-view";
@@ -16,7 +17,7 @@ vi.mock("@/lib/env/env.server", () => ({ serverEnv: serverEnvMock }));
 
 async function renderPage(query: Record<string, string | string[] | undefined>): Promise<LoginViewProps | undefined> {
 	render(await AdminLoginPage({ searchParams: Promise.resolve(query) }));
-	return loginView.mock.lastCall?.[0];
+	return loginView.mock.lastCall?.[LIST_SLOT_INDEX.first];
 }
 
 afterEach(() => {

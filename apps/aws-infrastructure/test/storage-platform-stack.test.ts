@@ -25,7 +25,8 @@ function synth(context: Readonly<Record<string, string>> = {}): Template {
 const PolicyStatementSchema = z.object({
 	Sid: z.string(),
 	Effect: z.string(),
-	Action: z.union([z.string(), z.array(z.string())]),
+	// IAM allows one action as a bare string; normalize to the list form.
+	Action: z.union([z.string().transform((action: string): string[] => [action]), z.array(z.string())]),
 	Resource: z.json(),
 });
 type PolicyStatement = z.output<typeof PolicyStatementSchema>;
@@ -46,7 +47,7 @@ function statementWithSid(statements: readonly PolicyStatement[], sid: string): 
 }
 
 function actionsOf(statement: PolicyStatement): string[] {
-	return typeof statement.Action === "string" ? [statement.Action] : statement.Action;
+	return statement.Action;
 }
 
 describe("StoragePlatformStack", () => {
@@ -141,10 +142,12 @@ describe("StoragePlatformStack", () => {
 
 			expect(actionsOf(statement)).toEqual(["cloudfront:CreateInvalidation"]);
 			expect(distributionIds).toHaveLength(1);
+			const [firstDistributionRef] = distributionIds;
+			const distributionRef = z.string().safeParse(firstDistributionRef);
 			const resource = JSON.stringify(statement.Resource);
 			expect(resource).toContain(":cloudfront::");
 			expect(resource).toContain(":distribution/");
-			expect(resource).toContain(`{"Ref":"${distributionIds[0] ?? ""}"}`);
+			expect(resource).toContain(`{"Ref":"${distributionRef.success ? distributionRef.data : ""}"}`);
 			expect(resource).not.toContain("*");
 		});
 

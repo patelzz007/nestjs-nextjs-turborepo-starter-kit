@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { API_VERSION_PREFIX, apiRoutes, HttpAuditLogDetailSchema, HttpAuditLogSummarySchema, JsonValueSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, API_VERSION_PREFIX, apiRoutes, HttpAuditLogDetailSchema, HttpAuditLogSummarySchema, JsonValueSchema } from "@workspace/shared";
 import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -149,8 +149,8 @@ describe("Global HTTP audit trail (e2e)", () => {
 
 		const rows = await auditRowsFor(response);
 		expect(rows).toHaveLength(1);
-		expect(rows[0]).toMatchObject({ outcome: "FAILED", responseStatus: 403, actorUserId: await userId("admin@example.com") });
-		expect(rows[0]?.errorCode).not.toBeNull();
+		expect(rows[LIST_SLOT_INDEX.first]).toMatchObject({ outcome: "FAILED", responseStatus: 403, actorUserId: await userId("admin@example.com") });
+		expect(rows[LIST_SLOT_INDEX.first]?.errorCode).not.toBeNull();
 	});
 
 	it("records a validation failure", async () => {
@@ -172,7 +172,7 @@ describe("Global HTTP audit trail (e2e)", () => {
 
 		const rows = await auditRowsFor(response);
 		expect(rows).toHaveLength(1);
-		expect(rows[0]).toMatchObject({ method: "GET", outcome: "SUCCEEDED", responseStatus: 200, actorUserId: await userId("superadmin@example.com") });
+		expect(rows[LIST_SLOT_INDEX.first]).toMatchObject({ method: "GET", outcome: "SUCCEEDED", responseStatus: 200, actorUserId: await userId("superadmin@example.com") });
 	});
 
 	it("does not audit the automated health probes", async () => {
@@ -265,7 +265,7 @@ describe("Global HTTP audit trail (e2e)", () => {
 
 		const rows = await auditRowsFor(response);
 		expect(rows).toHaveLength(1);
-		expect(rows[0]).toMatchObject({
+		expect(rows[LIST_SLOT_INDEX.first]).toMatchObject({
 			method: "GET",
 			endpoint: AUDIT_LOGS_URL,
 			outcome: "SUCCEEDED",
@@ -274,7 +274,7 @@ describe("Global HTTP audit trail (e2e)", () => {
 			userAgent: USER_AGENT,
 			responseBody: { auditLogView: { view: "list", returned: 5 } },
 		});
-		expect(rows[0]?.systemOperations).toEqual(expect.arrayContaining(["audit.http_request.read"]));
+		expect(rows[LIST_SLOT_INDEX.first]?.systemOperations).toEqual(expect.arrayContaining(["audit.http_request.read"]));
 	});
 
 	it("refuses the audit trail to a session without admin-panel access", async () => {

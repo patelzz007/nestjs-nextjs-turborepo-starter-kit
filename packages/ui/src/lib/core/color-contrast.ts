@@ -13,8 +13,8 @@ export const MIN_NON_TEXT_CONTRAST = 3;
 /** WCAG relative-luminance offset for flare (the 0.05 in `(L1 + 0.05) / (L2 + 0.05)`). */
 const LUMINANCE_FLARE = 0.05;
 
-const OKLCH_PATTERN = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)$/u;
-const HEX_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/iu;
+const OKLCH_PATTERN = /^oklch\(\s*(?<lightness>[\d.]+)\s+(?<chroma>[\d.]+)\s+(?<hue>[\d.]+)\s*\)$/u;
+const HEX_PATTERN = /^#(?<red>[0-9a-f]{2})(?<green>[0-9a-f]{2})(?<blue>[0-9a-f]{2})$/iu;
 const HEX_RADIX = 16;
 const BYTE_MAX = 255;
 const DEGREES_PER_HALF_TURN = 180;
@@ -54,11 +54,11 @@ function srgbChannelToLinear(byte: number): number {
 export function relativeLuminance(color: string): number {
 	const oklch = OKLCH_PATTERN.exec(color.trim());
 	if (oklch !== null) {
-		return oklchLuminance(ChannelSchema.parse(oklch[1]), ChannelSchema.parse(oklch[2]), ChannelSchema.parse(oklch[3]));
+		return oklchLuminance(ChannelSchema.parse(oklch.groups?.lightness), ChannelSchema.parse(oklch.groups?.chroma), ChannelSchema.parse(oklch.groups?.hue));
 	}
 	const hex = HEX_PATTERN.exec(color.trim());
 	if (hex !== null) {
-		const [red, green, blue] = [hex[1], hex[2], hex[3]].map((pair) => srgbChannelToLinear(Number.parseInt(pair ?? "", HEX_RADIX)));
+		const [red, green, blue] = [hex.groups?.red, hex.groups?.green, hex.groups?.blue].map((pair) => srgbChannelToLinear(Number.parseInt(pair ?? "", HEX_RADIX)));
 		return luminanceOfLinear(red ?? 0, green ?? 0, blue ?? 0);
 	}
 	throw new Error(`Unsupported colour notation: ${color}`);
@@ -73,7 +73,7 @@ export function contrastRatio(first: string, second: string): number {
 /** The custom properties declared directly in `selector { … }` of a stylesheet, `var(--x)` references resolved against `fallback`. */
 export function readCustomProperties(css: string, selector: string, fallback: ReadonlyMap<string, string> = new Map()): ReadonlyMap<string, string> {
 	const escaped = selector.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-	const block = new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`, "u").exec(css)?.[1];
+	const block = new RegExp(`(?:^|\\n)${escaped}\\s*\\{(?<body>[^}]*)\\}`, "u").exec(css)?.groups?.body;
 	if (block === undefined) {
 		throw new Error(`No "${selector}" block in the stylesheet`);
 	}
@@ -81,7 +81,7 @@ export function readCustomProperties(css: string, selector: string, fallback: Re
 	for (const match of block.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/gu)) {
 		const [, name, rawValue] = match;
 		if (name !== undefined && rawValue !== undefined) {
-			const reference = /^var\((--[\w-]+)\)$/u.exec(rawValue.trim())?.[1];
+			const reference = /^var\((?<name>--[\w-]+)\)$/u.exec(rawValue.trim())?.groups?.name;
 			properties.set(name, reference !== undefined ? (properties.get(reference) ?? rawValue.trim()) : rawValue.trim());
 		}
 	}

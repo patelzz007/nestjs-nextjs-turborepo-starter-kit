@@ -7,9 +7,9 @@ import { readContextString } from "./cdk-context.util.js";
 /** `arn:aws:iam::<12-digit account>:role/<path/name>` (any AWS partition). */
 const IAM_ROLE_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:role\/[\w+=,.@/-]{1,512}$/;
 /** `arn:aws:iam::<account>:oidc-provider/<issuer host/path>`; the issuer is captured. */
-const OIDC_PROVIDER_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:oidc-provider\/([a-z0-9.-]+(?:\/[\w.-]+)*)$/;
+const OIDC_PROVIDER_ARN_PATTERN = /^arn:aws[a-z-]*:iam::\d{12}:oidc-provider\/(?<issuer>[a-z0-9.-]+(?:\/[\w.-]+)*)$/;
 /** Kubernetes `namespace:service-account` (DNS-1123 labels / subdomains). */
-const SERVICE_ACCOUNT_PATTERN = /^([a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?):([a-z0-9](?:[-.a-z0-9]{0,251}[a-z0-9])?)$/;
+const SERVICE_ACCOUNT_PATTERN = /^(?<namespace>[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?):(?<name>[a-z0-9](?:[-.a-z0-9]{0,251}[a-z0-9])?)$/;
 
 /** Audience the AWS STS web-identity exchange requires in an IRSA token. */
 const STS_AUDIENCE = "sts.amazonaws.com";
@@ -79,7 +79,7 @@ export function readApiRoleTrust(node: Node): ApiRoleTrust {
 }
 
 function oidcIssuerOf(oidcProviderArn: string): string {
-	const issuer = OIDC_PROVIDER_ARN_PATTERN.exec(oidcProviderArn)?.[1];
+	const issuer = OIDC_PROVIDER_ARN_PATTERN.exec(oidcProviderArn)?.groups?.issuer;
 	if (issuer === undefined) {
 		throw new InvalidApiRoleTrustError("apiTrustOidcProviderArn has no issuer");
 	}
@@ -89,8 +89,8 @@ function oidcIssuerOf(oidcProviderArn: string): string {
 /** `namespace:name` → the `sub` claim EKS puts in the service account's token. */
 function kubernetesServiceAccountSubject(serviceAccount: string): string {
 	const match = SERVICE_ACCOUNT_PATTERN.exec(serviceAccount);
-	const namespace = match?.[1];
-	const name = match?.[2];
+	const namespace = match?.groups?.namespace;
+	const name = match?.groups?.name;
 	if (namespace === undefined || name === undefined) {
 		throw new InvalidApiRoleTrustError("apiTrustServiceAccount must be <namespace>:<service-account>");
 	}

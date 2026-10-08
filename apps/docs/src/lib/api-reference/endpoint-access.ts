@@ -47,8 +47,12 @@ interface DecoratorSet {
 	readonly decorators: readonly string[];
 }
 
-const CLASS_PATTERN = /^(?:export\s+)?class\s+(\w+)/;
-const METHOD_PATTERN = /^\s+(?:public\s+)?(?:async\s+)?(\w+)\s*\(/;
+const CLASS_PATTERN = /^(?:export\s+)?class\s+(?<name>\w+)/;
+const METHOD_PATTERN = /^\s+(?:public\s+)?(?:async\s+)?(?<name>\w+)\s*\(/;
+const STRING_ARGUMENT_PATTERN = /"(?<value>[^"]*)"/g;
+const ACTION_ARGUMENT_PATTERN = /action:\s*"(?<action>\w+)"/;
+const RESOURCE_ARGUMENT_PATTERN = /resource:\s*"(?<resource>\w+)"/;
+const DESCRIPTION_ARGUMENT_PATTERN = /description:\s*"(?<description>[^"]*)"/;
 const DECORATOR_START = /^\s*@\w+/;
 const MS_PER_SECOND = 1000;
 
@@ -85,18 +89,18 @@ function scanControllers(source: string): Map<string, { readonly classDecorators
 			index += 1;
 			continue;
 		}
-		const classMatch = CLASS_PATTERN.exec(line);
-		if (classMatch?.[1] !== undefined) {
+		const className = CLASS_PATTERN.exec(line)?.groups?.name;
+		if (className !== undefined) {
 			const methods = new Map<string, DecoratorSet>();
-			classes.set(classMatch[1], { classDecorators: pending, methods });
+			classes.set(className, { classDecorators: pending, methods });
 			current = { methods };
 			pending = [];
 			index += 1;
 			continue;
 		}
-		const methodMatch = METHOD_PATTERN.exec(line);
-		if (methodMatch?.[1] !== undefined && current !== undefined && pending.length > 0 && methodMatch[1] !== "constructor") {
-			current.methods.set(methodMatch[1], { decorators: pending });
+		const methodName = METHOD_PATTERN.exec(line)?.groups?.name;
+		if (methodName !== undefined && current !== undefined && pending.length > 0 && methodName !== "constructor") {
+			current.methods.set(methodName, { decorators: pending });
 			pending = [];
 		}
 		index += 1;
@@ -105,7 +109,7 @@ function scanControllers(source: string): Map<string, { readonly classDecorators
 }
 
 function stringArguments(decorator: string): readonly string[] {
-	return [...decorator.matchAll(/"([^"]*)"/g)].map((match) => match[1] ?? "");
+	return [...decorator.matchAll(STRING_ARGUMENT_PATTERN)].map((match) => match.groups?.value ?? "");
 }
 
 /** `{ strict: { ttl: 60000, limit: 5 } }` → "5 per 60 s per client IP (strict limiter)". */
@@ -134,9 +138,9 @@ function toAccess(sourceFile: string, decorators: readonly string[]): EndpointAc
 	const policies = decorators
 		.filter((decorator) => decorator.startsWith("@Authorize("))
 		.map((decorator) => {
-			const action = /action:\s*"(\w+)"/.exec(decorator)?.[1] ?? "?";
-			const resource = /resource:\s*"(\w+)"/.exec(decorator)?.[1] ?? "?";
-			const description = /description:\s*"([^"]*)"/.exec(decorator)?.[1];
+			const action = ACTION_ARGUMENT_PATTERN.exec(decorator)?.groups?.action ?? "?";
+			const resource = RESOURCE_ARGUMENT_PATTERN.exec(decorator)?.groups?.resource ?? "?";
+			const description = DESCRIPTION_ARGUMENT_PATTERN.exec(decorator)?.groups?.description;
 			const self = /resourceId:\s*self\(\)/.test(decorator) ? " (own record only)" : "";
 			return `${action}:${resource}${self}${description === undefined ? "" : ` — ${description}`}`;
 		});

@@ -1,6 +1,7 @@
 "use client";
 
 import { Label } from "@workspace/ui/components/label";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Separator } from "@workspace/ui/components/separator";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -152,7 +153,7 @@ const FieldError = forwardRef<
 		const uniqueErrors = [...new Map(errors.map((error) => [error?.message, error])).values()];
 
 		if (uniqueErrors.length === 1) {
-			return uniqueErrors[0]?.message;
+			return uniqueErrors[LIST_SLOT_INDEX.first]?.message;
 		}
 
 		return <ul className="ms-4 flex list-disc flex-col gap-1">{uniqueErrors.map((error) => error?.message && <li key={error.message}>{error.message}</li>)}</ul>;

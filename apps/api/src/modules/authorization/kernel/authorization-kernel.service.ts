@@ -15,7 +15,7 @@ import type {
 	ResourceCapabilityMap,
 	RowScopeAlternative,
 } from "@workspace/shared";
-import { PermissionPairSchema, withResourceCapability } from "@workspace/shared";
+import { isStringPrimitive, PermissionPairSchema, withResourceCapability } from "@workspace/shared";
 
 import { AuthorizationException } from "../exceptions/authorization.exception";
 import { AclService } from "./acl.service";
@@ -61,7 +61,7 @@ function denyAllRows(): AuthorizationRowFilter {
 
 function readStringAttribute(attributes: AuthorizationAttributes | undefined, key: string): string | undefined {
 	const value = attributes?.[key];
-	return typeof value === "string" ? value : undefined;
+	return isStringPrimitive(value) ? value : undefined;
 }
 
 interface ScopeOutcome {

@@ -1,4 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -132,10 +133,10 @@ describe("MerchantRewardService maintenance events (transactional outbox)", () =
 
 		await service.expireReferrerClaims();
 
-		expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(REWARD_TX);
+		expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(REWARD_TX);
 		// `metadata` is compared exactly (it was a plain object inside the old objectContaining).
-		expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { event: "reward.claim_expired" } });
-		expect(outbox.enqueueInTransaction.mock.lastCall?.[1].payload).toHaveProperty("metadata", { claimId: CLAIM_ID, isReferrerCredit: true });
+		expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({ payload: { event: "reward.claim_expired" } });
+		expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second].payload).toHaveProperty("metadata", { claimId: CLAIM_ID, isReferrerCredit: true });
 	});
 });
 

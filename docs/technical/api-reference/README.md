@@ -111,7 +111,7 @@ Every endpoint of `apps/api` — 218 operations, 214 with a sample captured from
 | GET | [`/api/v1/admin/analytics/export`](./platform-admin.md#get-apiv1adminanalyticsexport) | Download the platform analytics report (csv \| xlsx \| pdf) for a date range |
 | GET | [`/api/v1/admin/analytics/sales`](./platform-admin.md#get-apiv1adminanalyticssales) | Platform-wide sales: paid POS bills, compared with the previous period, plus top merchants |
 | POST | [`/api/v1/admin/invites`](./platform-admin.md#post-apiv1admininvites) | Create merchant invite |
-| POST | [`/api/v1/admin/invites/preview-email`](./platform-admin.md#post-apiv1admininvitespreview-email) | Preview merchant invite email with form data (does not send) |
+| GET | [`/api/v1/admin/invites/preview-email`](./platform-admin.md#get-apiv1admininvitespreview-email) | Preview merchant invite email (does not send) |
 | GET | [`/api/v1/admin/location-requests`](./platform-admin.md#get-apiv1adminlocation-requests) | List pending organization store location requests |
 | GET | [`/api/v1/admin/merchants`](./platform-admin.md#get-apiv1adminmerchants) | List merchant organizations |
 | GET | [`/api/v1/admin/merchants/{organizationId}`](./platform-admin.md#get-apiv1adminmerchantsorganizationid) | Get merchant organization detail for KYB review |

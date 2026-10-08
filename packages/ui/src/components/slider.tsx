@@ -1,3 +1,4 @@
+import { isArrayValue } from "@workspace/shared";
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
 import { sliderVariants } from "@workspace/ui/lib/form/field-variants";
@@ -15,7 +16,7 @@ const SINGLE_THUMB_COUNT = 1;
 /** One thumb per value: arrays render `length` thumbs, a scalar renders one, nothing renders a range. */
 function resolveThumbCount(value: SliderPrimitive.Root.Props["value"], defaultValue: SliderPrimitive.Root.Props["defaultValue"]): number {
 	const source = value ?? defaultValue;
-	if (Array.isArray(source)) {
+	if (isArrayValue(source)) {
 		return source.length;
 	}
 	return source === undefined ? RANGE_THUMB_COUNT : SINGLE_THUMB_COUNT;

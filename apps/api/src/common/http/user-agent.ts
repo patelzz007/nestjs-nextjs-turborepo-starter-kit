@@ -30,48 +30,48 @@ const MODEL_MAX_LENGTH = 64;
 
 interface NamedPattern {
 	readonly name: string;
-	/** Group 1, when present, is the version. */
+	/** The `version` named group, when present, is the version. */
 	readonly pattern: RegExp;
 }
 
-/** Crawlers, link unfurlers and monitors: the device is a bot. Group 1 = name, group 2 = version. */
+/** Crawlers, link unfurlers and monitors: the device is a bot. Named groups: `name`, `version`. */
 const BOT_PATTERN =
-	/\b((?:google|bing|yandex|duckduck|baidu|apple|petal|ahrefs|semrush|mj12|dot|gpt|claude|cc|amazon|facebook|twitter|linkedin|slack|discord|telegram|pinterest)?(?:bot|spider|crawler)[\w-]*|facebookexternalhit|Slurp|Bytespider|HeadlessChrome|Lighthouse|Pingdom\w*|UptimeRobot|StatusCake|WhatsApp)(?:\/([\w.]+))?/i;
+	/\b(?<name>(?:google|bing|yandex|duckduck|baidu|apple|petal|ahrefs|semrush|mj12|dot|gpt|claude|cc|amazon|facebook|twitter|linkedin|slack|discord|telegram|pinterest)?(?:bot|spider|crawler)[\w-]*|facebookexternalhit|Slurp|Bytespider|HeadlessChrome|Lighthouse|Pingdom\w*|UptimeRobot|StatusCake|WhatsApp)(?:\/(?<version>[\w.]+))?/i;
 
 /** Non-browser HTTP clients (scripts, SDKs, API tools). Matched at the START of the string. */
 const HTTP_CLIENTS: readonly NamedPattern[] = [
-	{ name: "curl", pattern: /^curl\/([\d.]+)/i },
-	{ name: "Wget", pattern: /^Wget\/([\d.]+)/i },
-	{ name: "Postman", pattern: /^PostmanRuntime\/([\d.]+)/ },
-	{ name: "Insomnia", pattern: /^insomnia\/([\d.]+)/i },
-	{ name: "HTTPie", pattern: /^HTTPie\/([\d.]+)/i },
-	{ name: "Python Requests", pattern: /^python-requests\/([\d.]+)/i },
-	{ name: "Python HTTPX", pattern: /^python-httpx\/([\d.]+)/i },
-	{ name: "Python urllib", pattern: /^Python-urllib\/([\d.]+)/i },
-	{ name: "axios", pattern: /^axios\/([\d.]+)/i },
-	{ name: "node-fetch", pattern: /^node-fetch(?:\/([\d.]+))?/i },
-	{ name: "undici", pattern: /^undici(?:\/([\d.]+))?/i },
-	{ name: "Node.js", pattern: /^node(?:\/v?([\d.]+))?$/i },
-	{ name: "Go HTTP client", pattern: /^Go-http-client\/([\d.]+)/ },
-	{ name: "Java HTTP client", pattern: /^Java(?:-http-client)?\/([\d.]+)/ },
-	{ name: "Apache HttpClient", pattern: /^Apache-HttpClient\/([\d.]+)/ },
-	{ name: "Dart", pattern: /^Dart\/([\d.]+)/ },
+	{ name: "curl", pattern: /^curl\/(?<version>[\d.]+)/i },
+	{ name: "Wget", pattern: /^Wget\/(?<version>[\d.]+)/i },
+	{ name: "Postman", pattern: /^PostmanRuntime\/(?<version>[\d.]+)/ },
+	{ name: "Insomnia", pattern: /^insomnia\/(?<version>[\d.]+)/i },
+	{ name: "HTTPie", pattern: /^HTTPie\/(?<version>[\d.]+)/i },
+	{ name: "Python Requests", pattern: /^python-requests\/(?<version>[\d.]+)/i },
+	{ name: "Python HTTPX", pattern: /^python-httpx\/(?<version>[\d.]+)/i },
+	{ name: "Python urllib", pattern: /^Python-urllib\/(?<version>[\d.]+)/i },
+	{ name: "axios", pattern: /^axios\/(?<version>[\d.]+)/i },
+	{ name: "node-fetch", pattern: /^node-fetch(?:\/(?<version>[\d.]+))?/i },
+	{ name: "undici", pattern: /^undici(?:\/(?<version>[\d.]+))?/i },
+	{ name: "Node.js", pattern: /^node(?:\/v?(?<version>[\d.]+))?$/i },
+	{ name: "Go HTTP client", pattern: /^Go-http-client\/(?<version>[\d.]+)/ },
+	{ name: "Java HTTP client", pattern: /^Java(?:-http-client)?\/(?<version>[\d.]+)/ },
+	{ name: "Apache HttpClient", pattern: /^Apache-HttpClient\/(?<version>[\d.]+)/ },
+	{ name: "Dart", pattern: /^Dart\/(?<version>[\d.]+)/ },
 ];
 
 /** Browsers, most specific first. */
 const BROWSERS: readonly NamedPattern[] = [
-	{ name: "Edge", pattern: /\bEdg(?:e|A|iOS)?\/([\d.]+)/ },
-	{ name: "Opera", pattern: /\b(?:OPR|OPT|Opera)\/([\d.]+)/ },
-	{ name: "Samsung Internet", pattern: /\bSamsungBrowser\/([\d.]+)/ },
-	{ name: "Vivaldi", pattern: /\bVivaldi\/([\d.]+)/ },
-	{ name: "Yandex Browser", pattern: /\bYaBrowser\/([\d.]+)/ },
-	{ name: "UC Browser", pattern: /\bUCBrowser\/([\d.]+)/ },
-	{ name: "Instagram", pattern: /\bInstagram ([\d.]+)/ },
-	{ name: "Facebook", pattern: /\bFB(?:AV|_IAB)\/([\d.]+)/ },
-	{ name: "Firefox", pattern: /\b(?:Firefox|FxiOS)\/([\d.]+)/ },
-	{ name: "Chrome", pattern: /\b(?:Chrome|CriOS|Chromium)\/([\d.]+)/ },
-	{ name: "Internet Explorer", pattern: /\b(?:MSIE |Trident\/.*rv:)([\d.]+)/ },
-	{ name: "Safari", pattern: /\bVersion\/([\d.]+)(?: Mobile\/\w+)? Safari\// },
+	{ name: "Edge", pattern: /\bEdg(?:e|A|iOS)?\/(?<version>[\d.]+)/ },
+	{ name: "Opera", pattern: /\b(?:OPR|OPT|Opera)\/(?<version>[\d.]+)/ },
+	{ name: "Samsung Internet", pattern: /\bSamsungBrowser\/(?<version>[\d.]+)/ },
+	{ name: "Vivaldi", pattern: /\bVivaldi\/(?<version>[\d.]+)/ },
+	{ name: "Yandex Browser", pattern: /\bYaBrowser\/(?<version>[\d.]+)/ },
+	{ name: "UC Browser", pattern: /\bUCBrowser\/(?<version>[\d.]+)/ },
+	{ name: "Instagram", pattern: /\bInstagram (?<version>[\d.]+)/ },
+	{ name: "Facebook", pattern: /\bFB(?:AV|_IAB)\/(?<version>[\d.]+)/ },
+	{ name: "Firefox", pattern: /\b(?:Firefox|FxiOS)\/(?<version>[\d.]+)/ },
+	{ name: "Chrome", pattern: /\b(?:Chrome|CriOS|Chromium)\/(?<version>[\d.]+)/ },
+	{ name: "Internet Explorer", pattern: /\b(?:MSIE |Trident\/.*rv:)(?<version>[\d.]+)/ },
+	{ name: "Safari", pattern: /\bVersion\/(?<version>[\d.]+)(?: Mobile\/\w+)? Safari\// },
 ];
 
 /** `Windows NT x.y` → the marketing version (Windows 11 still reports 10.0). */
@@ -102,7 +102,7 @@ function firstMatch(patterns: readonly NamedPattern[], userAgent: string): { rea
 	for (const { name, pattern } of patterns) {
 		const match: RegExpExecArray | null = pattern.exec(userAgent);
 		if (match !== null) {
-			return { name, version: bounded(match[1], VERSION_MAX_LENGTH) };
+			return { name, version: bounded(match.groups?.version, VERSION_MAX_LENGTH) };
 		}
 	}
 	return null;
@@ -117,12 +117,12 @@ interface ParsedOs {
 }
 
 function parseOs(userAgent: string): ParsedOs | null {
-	const apple = /\((iPhone|iPad|iPod)\b[^)]*?\bOS (\d+(?:_\d+)*)/.exec(userAgent);
+	const apple = /\((?<model>iPhone|iPad|iPod)\b[^)]*?\bOS (?<version>\d+(?:_\d+)*)/.exec(userAgent);
 	if (apple !== null) {
-		const model: string = apple[1] ?? "iPhone";
+		const model: string = apple.groups?.model ?? "iPhone";
 		return {
 			name: model === "iPad" ? "iPadOS" : "iOS",
-			version: bounded(dotted(apple[2]), VERSION_MAX_LENGTH),
+			version: bounded(dotted(apple.groups?.version), VERSION_MAX_LENGTH),
 			model,
 			isMobile: model !== "iPad",
 			isTablet: model === "iPad",
@@ -132,14 +132,14 @@ function parseOs(userAgent: string): ParsedOs | null {
 	if (/\bCFNetwork\/[\d.]+ Darwin\//.test(userAgent)) {
 		return { name: "iOS", version: null, model: null, isMobile: true, isTablet: false };
 	}
-	const android = /\bAndroid (\d+(?:\.\d+)*)/.exec(userAgent);
+	const android = /\bAndroid (?<version>\d+(?:\.\d+)*)/.exec(userAgent);
 	if (android !== null) {
-		const modelMatch = /\bAndroid [\d.]+;(?: [a-z]{2}[-_][A-Za-z]{2};)? ([^;)]+?)(?: Build\/[^;)]*)?\)/.exec(userAgent);
-		const model: string | undefined = modelMatch?.[1];
+		const modelMatch = /\bAndroid [\d.]+;(?: [a-z]{2}[-_][A-Za-z]{2};)? (?<model>[^;)]+?)(?: Build\/[^;)]*)?\)/.exec(userAgent);
+		const model: string | undefined = modelMatch?.groups?.model;
 		const isMobile: boolean = /\bMobile\b/.test(userAgent);
 		return {
 			name: "Android",
-			version: bounded(android[1], VERSION_MAX_LENGTH),
+			version: bounded(android.groups?.version, VERSION_MAX_LENGTH),
 			model: model === REDUCED_ANDROID_MODEL ? null : bounded(model, MODEL_MAX_LENGTH),
 			isMobile,
 			isTablet: !isMobile,
@@ -149,18 +149,18 @@ function parseOs(userAgent: string): ParsedOs | null {
 	if (/^okhttp\//i.test(userAgent)) {
 		return { name: "Android", version: null, model: null, isMobile: true, isTablet: false };
 	}
-	const windows = /\bWindows NT (\d+\.\d+)/.exec(userAgent);
+	const windows = /\bWindows NT (?<version>\d+\.\d+)/.exec(userAgent);
 	if (windows !== null) {
-		const raw: string = windows[1] ?? "";
+		const raw: string = windows.groups?.version ?? "";
 		return { name: "Windows", version: WINDOWS_VERSIONS[raw] ?? raw, model: null, isMobile: false, isTablet: false };
 	}
-	const mac = /\bMac OS X (\d+(?:[_.]\d+)*)/.exec(userAgent);
+	const mac = /\bMac OS X (?<version>\d+(?:[_.]\d+)*)/.exec(userAgent);
 	if (mac !== null) {
-		return { name: "macOS", version: bounded(dotted(mac[1]), VERSION_MAX_LENGTH), model: null, isMobile: false, isTablet: false };
+		return { name: "macOS", version: bounded(dotted(mac.groups?.version), VERSION_MAX_LENGTH), model: null, isMobile: false, isTablet: false };
 	}
-	const chromeOs = /\bCrOS \S+ (\d+(?:\.\d+)*)/.exec(userAgent);
+	const chromeOs = /\bCrOS \S+ (?<version>\d+(?:\.\d+)*)/.exec(userAgent);
 	if (chromeOs !== null) {
-		return { name: "ChromeOS", version: bounded(chromeOs[1], VERSION_MAX_LENGTH), model: null, isMobile: false, isTablet: false };
+		return { name: "ChromeOS", version: bounded(chromeOs.groups?.version, VERSION_MAX_LENGTH), model: null, isMobile: false, isTablet: false };
 	}
 	if (/\bUbuntu\b/.test(userAgent)) {
 		return { name: "Ubuntu", version: null, model: null, isMobile: false, isTablet: false };
@@ -188,8 +188,8 @@ export function parseUserAgent(userAgent: string | null | undefined): ParsedUser
 	if (bot !== null) {
 		const os: ParsedOs | null = parseOs(ua);
 		return {
-			browserName: bounded(bot[1], NAME_MAX_LENGTH),
-			browserVersion: bounded(bot[2], VERSION_MAX_LENGTH),
+			browserName: bounded(bot.groups?.name, NAME_MAX_LENGTH),
+			browserVersion: bounded(bot.groups?.version, VERSION_MAX_LENGTH),
 			osName: os?.name ?? null,
 			osVersion: os?.version ?? null,
 			deviceType: "BOT",

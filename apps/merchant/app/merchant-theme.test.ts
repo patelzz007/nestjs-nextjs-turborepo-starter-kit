@@ -19,7 +19,7 @@ const LIGHT = readCustomProperties(THEME_CSS, ":root:not(.dark) .merchant-app", 
 const DARK = readCustomProperties(THEME_CSS, ".dark .merchant-app", BASE_DARK);
 
 /** Every custom property the stylesheet declares (`--name:`), as opposed to one it reads (`var(--name)`). */
-const DECLARED_TOKENS = [...THEME_CSS.matchAll(/^\s*(--[\w-]+)\s*:/gmu)].map((match) => match[1] ?? "");
+const DECLARED_TOKENS = [...THEME_CSS.matchAll(/^\s*(?<token>--[\w-]+)\s*:/gmu)].map((match) => match.groups?.token ?? "");
 
 describe("merchant theme", () => {
 	it("re-maps brand and sidebar tokens only — page and card surfaces, borders and text stay shared", () => {

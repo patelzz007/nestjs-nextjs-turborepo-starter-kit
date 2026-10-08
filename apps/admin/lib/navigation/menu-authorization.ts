@@ -30,7 +30,7 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.merchants.list, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
 	// GET /admin/rewards/pending (MANAGE REWARD)
 	[ROUTES.rewards.review, { permissions: [PERMISSION.REWARD.MANAGE] }],
-	// POST /admin/invites, /admin/invites/preview-email (MANAGE MERCHANT_ORG)
+	// GET /admin/invites/preview-email (live preview), POST /admin/invites (MANAGE MERCHANT_ORG)
 	[ROUTES.merchants.invites, { permissions: [PERMISSION.MERCHANT_ORG.MANAGE] }],
 	// GET /admin/merchants/:id (LIST MERCHANT_ORG)
 	[ROUTES.merchants.verification, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],

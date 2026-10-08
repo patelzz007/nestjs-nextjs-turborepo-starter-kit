@@ -5,6 +5,7 @@
 import type { Readable } from "node:stream";
 import { inflateSync } from "node:zlib";
 
+import { isStringPrimitive } from "@workspace/shared";
 import { strFromU8, unzipSync } from "fflate";
 
 /** Collects a stream into one buffer. */
@@ -12,7 +13,7 @@ export function readAll(stream: Readable): Promise<Buffer> {
 	return new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
 		stream.on("data", (chunk: Buffer | string) => {
-			chunks.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk);
+			chunks.push(isStringPrimitive(chunk) ? Buffer.from(chunk, "utf8") : chunk);
 		});
 		stream.on("end", () => {
 			resolve(Buffer.concat(chunks));
@@ -31,11 +32,12 @@ interface PdfObject {
 function pdfObjects(pdf: Buffer): Map<number, PdfObject> {
 	const text = pdf.toString("latin1");
 	const objects = new Map<number, PdfObject>();
-	for (const match of text.matchAll(/(\d+) 0 obj\b([\s\S]*?)endobj/g)) {
-		const body = match[2] ?? "";
+	for (const match of text.matchAll(/(?<id>\d+) 0 obj\b(?<body>[\s\S]*?)endobj/g)) {
+		const id = Number(match.groups?.id);
+		const body = match.groups?.body ?? "";
 		const streamAt = body.indexOf("stream");
 		if (streamAt === -1) {
-			objects.set(Number(match[1]), { dictionary: body, stream: null });
+			objects.set(id, { dictionary: body, stream: null });
 			continue;
 		}
 		const dictionary = body.slice(0, streamAt);
@@ -47,7 +49,7 @@ function pdfObjects(pdf: Buffer): Map<number, PdfObject> {
 		} catch {
 			stream = raw;
 		}
-		objects.set(Number(match[1]), { dictionary, stream });
+		objects.set(id, { dictionary, stream });
 	}
 	return objects;
 }
@@ -56,15 +58,15 @@ function pdfObjects(pdf: Buffer): Map<number, PdfObject> {
 function parseToUnicode(cmap: string): Map<number, string> {
 	const decodeUtf16 = (hex: string): string => Buffer.from(hex.replace(/\s+/g, ""), "hex").swap16().toString("utf16le");
 	const map = new Map<number, string>();
-	for (const range of cmap.matchAll(/<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*\[([^\]]*)\]/g)) {
-		const first = Number.parseInt(range[1] ?? "0", 16);
-		[...(range[3] ?? "").matchAll(/<([0-9a-fA-F\s]*)>/g)].forEach((entry, offset) => {
-			map.set(first + offset, decodeUtf16(entry[1] ?? ""));
+	for (const range of cmap.matchAll(/<(?<start>[0-9a-fA-F]+)>\s*<(?<end>[0-9a-fA-F]+)>\s*\[(?<targets>[^\]]*)\]/g)) {
+		const first = Number.parseInt(range.groups?.start ?? "0", 16);
+		[...(range.groups?.targets ?? "").matchAll(/<(?<hex>[0-9a-fA-F\s]*)>/g)].forEach((entry, offset) => {
+			map.set(first + offset, decodeUtf16(entry.groups?.hex ?? ""));
 		});
 	}
-	for (const block of cmap.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) {
-		for (const pair of (block[1] ?? "").matchAll(/<([0-9a-fA-F]+)>\s*<([0-9a-fA-F\s]+)>/g)) {
-			map.set(Number.parseInt(pair[1] ?? "0", 16), decodeUtf16(pair[2] ?? ""));
+	for (const block of cmap.matchAll(/beginbfchar(?<pairs>[\s\S]*?)endbfchar/g)) {
+		for (const pair of (block.groups?.pairs ?? "").matchAll(/<(?<code>[0-9a-fA-F]+)>\s*<(?<text>[0-9a-fA-F\s]+)>/g)) {
+			map.set(Number.parseInt(pair.groups?.code ?? "0", 16), decodeUtf16(pair.groups?.text ?? ""));
 		}
 	}
 	return map;
@@ -80,24 +82,25 @@ function parseToUnicode(cmap: string): Map<number, string> {
 export function pdfTextRuns(pdf: Buffer): string[] {
 	const objects = pdfObjects(pdf);
 	const fonts = new Map<string, Map<number, string> | null>();
-	for (const match of pdf.toString("latin1").matchAll(/\/(F\d+) (\d+) 0 R/g)) {
-		const font = objects.get(Number(match[2]));
-		const toUnicode = /\/ToUnicode (\d+) 0 R/.exec(font?.dictionary ?? "")?.[1];
+	for (const match of pdf.toString("latin1").matchAll(/\/(?<fontName>F\d+) (?<objectId>\d+) 0 R/g)) {
+		const font = objects.get(Number(match.groups?.objectId));
+		const toUnicode = /\/ToUnicode (?<objectId>\d+) 0 R/.exec(font?.dictionary ?? "")?.groups?.objectId;
 		const cmap = toUnicode === undefined ? undefined : objects.get(Number(toUnicode))?.stream;
-		fonts.set(match[1] ?? "", cmap === undefined || cmap === null ? null : parseToUnicode(cmap));
+		fonts.set(match.groups?.fontName ?? "", cmap === undefined || cmap === null ? null : parseToUnicode(cmap));
 	}
-	const contentIds = new Set([...pdf.toString("latin1").matchAll(/\/Contents (\d+) 0 R/g)].map((match) => Number(match[1])));
+	const contentIds = new Set([...pdf.toString("latin1").matchAll(/\/Contents (?<objectId>\d+) 0 R/g)].map((match) => Number(match.groups?.objectId)));
 	const runs: string[] = [];
 	for (const [id, object] of objects) {
 		if (object.stream === null || !contentIds.has(id)) continue;
 		let font: Map<number, string> | null = null;
-		for (const match of object.stream.matchAll(/\/(F\d+)\s+[\d.]+\s+Tf|\[([^\]]*)\]\s*TJ|<([0-9a-fA-F]*)>\s*Tj/g)) {
-			if (match[1] !== undefined) {
-				font = fonts.get(match[1]) ?? null;
+		for (const match of object.stream.matchAll(/\/(?<fontName>F\d+)\s+[\d.]+\s+Tf|\[(?<array>[^\]]*)\]\s*TJ|<(?<hex>[0-9a-fA-F]*)>\s*Tj/g)) {
+			const fontName: string | undefined = match.groups?.fontName;
+			if (fontName !== undefined) {
+				font = fonts.get(fontName) ?? null;
 				continue;
 			}
-			const operand = match[2] ?? `<${match[3] ?? ""}>`;
-			const hex = [...operand.matchAll(/<([0-9a-fA-F]*)>/g)].map((chunk) => chunk[1] ?? "").join("");
+			const operand = match.groups?.array ?? `<${match.groups?.hex ?? ""}>`;
+			const hex = [...operand.matchAll(/<(?<hex>[0-9a-fA-F]*)>/g)].map((chunk) => chunk.groups?.hex ?? "").join("");
 			if (font === null) {
 				runs.push(Buffer.from(hex, "hex").toString("latin1"));
 				continue;

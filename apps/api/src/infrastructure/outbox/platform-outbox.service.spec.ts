@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PlatformEventEnvelopeSchema, type PlatformEventInput } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PlatformEventEnvelopeSchema, type PlatformEventInput } from "@workspace/shared";
 
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { RequestContextService } from "../../common/context/request-context";
@@ -115,9 +115,9 @@ describe("PlatformOutboxService.enqueueInTransaction", () => {
 			store.transaction(async (tx) => service.enqueueInTransaction(tx, LOGOUT_EVENT)),
 		);
 
-		const envelope = PlatformEventEnvelopeSchema.parse(store.committed[0]?.payload);
+		const envelope = PlatformEventEnvelopeSchema.parse(store.committed[LIST_SLOT_INDEX.first]?.payload);
 		expect(envelope).toMatchObject({ type: "session.action", correlationId: "corr-42", payload: LOGOUT_EVENT.payload });
-		expect(store.committed[0]?.correlationId).toBe("corr-42");
+		expect(store.committed[LIST_SLOT_INDEX.first]?.correlationId).toBe("corr-42");
 	});
 
 	it("clamps an over-long client correlation id so the insert can never fail the domain transaction", async () => {
@@ -129,7 +129,7 @@ describe("PlatformOutboxService.enqueueInTransaction", () => {
 			store.transaction(async (tx) => service.enqueueInTransaction(tx, LOGOUT_EVENT)),
 		);
 
-		expect(store.committed[0]?.correlationId).toHaveLength(64);
+		expect(store.committed[LIST_SLOT_INDEX.first]?.correlationId).toHaveLength(64);
 	});
 
 	it("rejects an event whose payload violates its schema before writing anything", async () => {

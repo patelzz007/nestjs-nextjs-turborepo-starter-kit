@@ -7,11 +7,10 @@ export function getUserInitials(name: string): string {
 	if (parts.length === 0) {
 		return "?";
 	}
+	const [first] = parts;
 	if (parts.length === 1) {
-		const first = parts[0];
 		return first !== undefined ? first.slice(0, 2).toUpperCase() : "?";
 	}
-	const first = parts[0];
 	const last = parts[parts.length - 1];
 	const firstChar = first !== undefined && first.length > 0 ? first.charAt(0) : "";
 	const lastChar = last !== undefined && last.length > 0 ? last.charAt(0) : "";

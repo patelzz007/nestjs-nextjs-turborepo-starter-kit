@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 import type { AuthorizationAttributes, AuthorizationContext, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
+import { isFunctionValue, isStringPrimitive } from "@workspace/shared";
 
 import { readFirstHeader } from "../../../common/utils/http-headers";
 import { RequestContextService } from "../../../common/context/request-context";
@@ -18,7 +19,7 @@ import {
 	type RequiredPermissionsMetadata,
 	type RequiredRolesMetadata,
 } from "../constants/authorization.constants";
-import { AUTHORIZE_KEY, readRouteParam, type AuthorizationRequirement } from "../decorators/authorize.decorator";
+import { AUTHORIZE_KEY, readRouteParam, type AuthorizationRequirement, type ResourceAttributesExtractor } from "../decorators/authorize.decorator";
 import { AuthorizationException } from "../exceptions/authorization.exception";
 import { AuthorizationAuditKernelService, type AuthorizationAuditMetadata } from "../kernel/authorization-audit-kernel.service";
 import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
@@ -29,6 +30,11 @@ interface RouteRequirements {
 	readonly permissions?: RequiredPermissionsMetadata | undefined;
 	readonly roles?: RequiredRolesMetadata | undefined;
 	readonly authorize?: AuthorizationRequirement | undefined;
+}
+
+/** A requirement's `attributes` is either static values or an extractor called per request. */
+function isAttributesExtractor(attributes: AuthorizationAttributes | ResourceAttributesExtractor): attributes is ResourceAttributesExtractor {
+	return isFunctionValue(attributes);
 }
 
 function hasRequirements(requirements: RouteRequirements): boolean {
@@ -184,7 +190,7 @@ export class AuthorizationGuard implements CanActivate {
 	): Promise<void> {
 		let resourceId: string | undefined;
 		if (requirement.resourceId !== undefined) {
-			const resolved = typeof requirement.resourceId === "string" ? readRouteParam(context, requirement.resourceId) : requirement.resourceId(context);
+			const resolved = isStringPrimitive(requirement.resourceId) ? readRouteParam(context, requirement.resourceId) : requirement.resourceId(context);
 			// A declared but unresolvable target is never widened to a global check.
 			if (resolved === null) {
 				throw new AuthorizationException();
@@ -192,7 +198,7 @@ export class AuthorizationGuard implements CanActivate {
 			resourceId = resolved;
 		}
 
-		const declared = requirement.attributes === undefined ? {} : typeof requirement.attributes === "function" ? requirement.attributes(context) : requirement.attributes;
+		const declared = requirement.attributes === undefined ? {} : isAttributesExtractor(requirement.attributes) ? requirement.attributes(context) : requirement.attributes;
 		// Tenant attributes come last so a body-supplied value can never override the routed tenant.
 		const attributes: AuthorizationAttributes = { ...declared, ...tenantAttributes };
 

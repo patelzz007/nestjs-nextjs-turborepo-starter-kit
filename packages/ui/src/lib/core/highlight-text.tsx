@@ -16,17 +16,18 @@ export function highlightText(text: string, query: string, markClassName: string
 
 	while ((match = regex.exec(text)) !== null) {
 		const matchIndex = match.index;
+		const [matchedText] = match;
 		if (matchIndex > lastIndex) {
 			nodes.push(<React.Fragment key={keyCounter}>{text.slice(lastIndex, matchIndex)}</React.Fragment>);
 			keyCounter += 1;
 		}
 		nodes.push(
 			<mark key={keyCounter} className={markClassName}>
-				{match[0]}
+				{matchedText}
 			</mark>,
 		);
 		keyCounter += 1;
-		lastIndex = matchIndex + match[0].length;
+		lastIndex = matchIndex + matchedText.length;
 	}
 
 	if (lastIndex < text.length) {

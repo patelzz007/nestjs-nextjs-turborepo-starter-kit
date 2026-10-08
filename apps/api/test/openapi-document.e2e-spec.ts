@@ -21,7 +21,7 @@ import { RouteParamtypes } from "@nestjs/common/enums/route-paramtypes.enum.js";
 import { MetadataScanner, ModulesContainer } from "@nestjs/core";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import type { OpenAPIObject, OperationObject, ParameterObject, PathItemObject, ReferenceObject, RequestBodyObject, ResponseObject, SchemaObject } from "@nestjs/swagger";
-import { API_VERSION, ApiAccessSchema, apiContract, apiVersionPrefix } from "@workspace/shared";
+import { API_VERSION, ApiAccessSchema, apiContract, apiVersionPrefix, isFunctionValue } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -109,7 +109,8 @@ function collectRequestInputs(app: NestFastifyApplication): ReadonlyMap<string, 
 			for (const methodName of scanner.getAllMethodNames(instance)) {
 				const routeArguments = z.record(z.string(), z.object({}).loose()).parse(Reflect.getMetadata(ROUTE_ARGS_METADATA, instance.constructor, methodName) ?? {});
 				for (const [key, raw] of Object.entries(routeArguments)) {
-					const source: RequestInputArgument["source"] | undefined = SOURCE_BY_PARAMTYPE.get(Number(key.split(":", 1)[0]));
+					const [paramType] = key.split(":", 1);
+					const source: RequestInputArgument["source"] | undefined = SOURCE_BY_PARAMTYPE.get(Number(paramType));
 					if (source === undefined) continue;
 					const argument = RouteArgumentSchema.parse(raw);
 					const operationId = `${controller}_${methodName}`;
@@ -142,7 +143,10 @@ interface RouteHandler {
 	readonly httpCode: number | undefined;
 }
 
-const HandlerFunctionSchema = z.custom<ResponseContractTarget>((value) => typeof value === "function", "route handler function");
+const HandlerFunctionSchema = z.custom<ResponseContractTarget>(
+	(value) => isFunctionValue(value === null || value === undefined ? value : Object(value) === value ? value : null),
+	"route handler function",
+);
 
 /** Every HTTP route handler of every registered controller, keyed by operationId. */
 function collectRouteHandlers(app: NestFastifyApplication): ReadonlyMap<string, RouteHandler> {
@@ -312,8 +316,8 @@ describe("OpenAPI document (e2e)", () => {
 			for (const input of handlerInputs) {
 				if (input.source !== "path" || input.name !== undefined || input.schema === undefined) continue;
 				const keys: ReadonlySet<string> = new Set(objectKeys(input.schema));
-				for (const match of located.path.matchAll(/\{([^}]+)\}/g)) {
-					const segment: string | undefined = match[1];
+				for (const match of located.path.matchAll(/\{(?<segment>[^}]+)\}/g)) {
+					const segment: string | undefined = match.groups?.segment;
 					if (segment !== undefined && !keys.has(segment)) uncovered.push(`${located.label}: "${segment}"`);
 				}
 			}
@@ -335,8 +339,8 @@ describe("OpenAPI document (e2e)", () => {
 		const missing: string[] = [];
 		for (const located of operations.values()) {
 			const documented: ReadonlySet<string> = documentedParameters(located.operation, "path");
-			for (const match of located.path.matchAll(/\{([^}]+)\}/g)) {
-				const name: string | undefined = match[1];
+			for (const match of located.path.matchAll(/\{(?<name>[^}]+)\}/g)) {
+				const name: string | undefined = match.groups?.name;
 				if (name !== undefined && !documented.has(name)) missing.push(`${located.label}: "${name}"`);
 			}
 		}
@@ -389,8 +393,8 @@ describe("OpenAPI document (e2e)", () => {
 	it("leaves no dangling $ref and no nestjs-zod internal markers in the document", () => {
 		const serialized: string = JSON.stringify(document);
 		const schemas: Readonly<Record<string, SchemaObject | ReferenceObject>> = document.components?.schemas ?? {};
-		const dangling: string[] = [...serialized.matchAll(/"#\/components\/schemas\/([^"]+)"/g)]
-			.map((match: RegExpExecArray): string => match[1] ?? "")
+		const dangling: string[] = [...serialized.matchAll(/"#\/components\/schemas\/(?<name>[^"]+)"/g)]
+			.map((match: RegExpExecArray): string => match.groups?.name ?? "")
 			.filter((name: string): boolean => !(name in schemas));
 		expect([...new Set(dangling)]).toEqual([]);
 		expect(serialized).not.toContain("x-nestjs_zod");

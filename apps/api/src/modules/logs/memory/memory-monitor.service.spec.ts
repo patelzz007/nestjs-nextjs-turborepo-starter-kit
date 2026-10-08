@@ -1,4 +1,5 @@
 import { Logger } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
@@ -51,7 +52,7 @@ function monitor(probe: ManualHeapProbe, memoryMonitoring: "true" | "false" = "t
 }
 
 function leakWarnings(warn: MockInstance<Logger["warn"]>): string[] {
-	return warn.mock.calls.map((call): string => String(call[0])).filter((line: string): boolean => line.includes("memory.leak_suspected"));
+	return warn.mock.calls.map((call): string => String(call[LIST_SLOT_INDEX.first])).filter((line: string): boolean => line.includes("memory.leak_suspected"));
 }
 
 describe("MemoryMonitorService", () => {
@@ -96,7 +97,7 @@ describe("MemoryMonitorService", () => {
 
 		const warnings = leakWarnings(warn);
 		expect(warnings).toHaveLength(2);
-		expect(JSON.parse(warnings[0] ?? "{}")).toMatchObject({ event: "memory.leak_suspected", thresholdMb: 32, windowMs: WINDOW_MS });
+		expect(JSON.parse(warnings[LIST_SLOT_INDEX.first] ?? "{}")).toMatchObject({ event: "memory.leak_suspected", thresholdMb: 32, windowMs: WINDOW_MS });
 		service.onModuleDestroy();
 	});
 

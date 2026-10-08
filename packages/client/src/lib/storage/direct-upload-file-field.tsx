@@ -1,6 +1,7 @@
 "use client";
 
 import type { FileCategory, FileRecord } from "@workspace/shared";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Label } from "@workspace/ui/components/label";
 import * as React from "react";
@@ -45,7 +46,7 @@ export function DirectUploadFileField({
 	const handleSelected = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
 			setError(null);
-			const file = event.target.files?.[0];
+			const file = event.target.files?.[LIST_SLOT_INDEX.first];
 			event.target.value = "";
 			if (file === undefined) {
 				return;

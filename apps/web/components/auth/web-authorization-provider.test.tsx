@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
-import { PERMISSION, type SessionPermissionsResponse } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, type SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -78,7 +78,7 @@ function renderProvider(sessionActive: boolean, initialSessionPermissions?: Sess
 }
 
 function lastQueryOptions(): PermissionsQueryOptions | undefined {
-	return permissionsUseQuery.mock.lastCall?.[1];
+	return permissionsUseQuery.mock.lastCall?.[LIST_SLOT_INDEX.second];
 }
 
 beforeEach(() => {

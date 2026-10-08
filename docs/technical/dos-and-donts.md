@@ -31,7 +31,8 @@ A one-page checklist. Each line links to the rule that explains *why*; the ruleb
 | `any`, `unknown`, `never` (outside exhaustiveness checks) | Concrete or zod-inferred types, generics that carry real information |
 | `z.any()`, `z.unknown()`, `z.never()`, argument-less `z.custom()` | A precise schema |
 | `value as Type`, `as const`, `value!` | `safeParse`, type guards, `satisfies`, typed tuples, a `requireRow()`-style helper |
-| `typeof x === "string"` as domain validation | The shared zod schema |
+| The runtime `typeof` operator / `Array.isArray` (banned by ESLint) | The shared zod schema, or a zod-backed guard (`isStringPrimitive`, `isArrayValue`, …) for a union you already hold |
+| `items[0]` / `match[1]` (banned by ESLint) | Destructuring, `LIST_SLOT_INDEX.first`, or a named capture group (`match.groups?.year`) |
 | Magic numbers / unexplained constants | Named constants (`const MS_PER_DAY = …`) |
 | Missing return types or access modifiers | Explicit everywhere (lint-enforced) |
 

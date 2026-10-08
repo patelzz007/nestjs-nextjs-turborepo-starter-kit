@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LazySection } from "@/components/common/lazy-section";
@@ -31,7 +32,7 @@ describe("LazySection", () => {
 		expect(screen.queryByText("Section body")).toBeNull();
 
 		act(() => {
-			callbacks[0]?.([{ isIntersecting: true }]);
+			callbacks[LIST_SLOT_INDEX.first]?.([{ isIntersecting: true }]);
 		});
 		expect(screen.getByText("Section body")).toBeTruthy();
 		expect(disconnect).toHaveBeenCalled();

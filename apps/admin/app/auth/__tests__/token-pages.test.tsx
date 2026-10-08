@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AdminForgotPasswordPage from "../forgot-password/page";
@@ -26,7 +27,7 @@ afterEach(() => {
 describe("token auth pages", () => {
 	it("binds the reset form to the emailed token", async () => {
 		render(await AdminResetPasswordPage({ searchParams: Promise.resolve({ token: "reset-token" }) }), { wrapper: UiKitTestProviders });
-		expect(resetPasswordForm.mock.lastCall?.[0].token).toBe("reset-token");
+		expect(resetPasswordForm.mock.lastCall?.[LIST_SLOT_INDEX.first].token).toBe("reset-token");
 	});
 
 	it("shows the invalid-link notice for a reset link without a token", async () => {
@@ -37,7 +38,7 @@ describe("token auth pages", () => {
 
 	it("binds the verify view to the emailed token and states the shared link lifetime", async () => {
 		render(await AdminVerifyEmailPage({ searchParams: Promise.resolve({ token: "verify-token" }) }), { wrapper: UiKitTestProviders });
-		expect(verifyEmailView.mock.lastCall?.[0].token).toBe("verify-token");
+		expect(verifyEmailView.mock.lastCall?.[LIST_SLOT_INDEX.first].token).toBe("verify-token");
 		expect(screen.getByText("Expires after 24 hours")).toBeDefined();
 	});
 

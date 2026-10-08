@@ -2,6 +2,7 @@ import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	API_VERSION_PREFIX,
+	isArrayValue,
 	ApiErrorResponseSchema,
 	ApiVersionManifestSchema,
 	HealthResponseSchema,
@@ -84,7 +85,7 @@ describe("App (e2e)", () => {
 		const response = await app.inject({ method: "GET", url: "/" });
 
 		expect(response.statusCode).toBe(200);
-		expect(typeof parseSuccessEnvelope(response, StringValueSchema).data).toBe("string");
+		expect(parseSuccessEnvelope(response, StringValueSchema).data).toEqual(expect.any(String));
 	});
 
 	it("GET /api/v1/auth/me without a token returns a 401", async () => {
@@ -184,6 +185,6 @@ describe("App (e2e)", () => {
 		expect(body.current).toBe("v1");
 		expect(body.prefix).toBe("/api/v1");
 		expect(body.docs).toBe("/v1/docs");
-		expect(Array.isArray(body.supported)).toBe(true);
+		expect(isArrayValue(body.supported)).toBe(true);
 	});
 });

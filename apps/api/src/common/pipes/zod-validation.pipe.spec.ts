@@ -2,7 +2,17 @@ import { BadRequestException } from "@nestjs/common";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 
-import { AdminKybUpdateSchema, AssignRoleToUserSchema, AdminUserListQuerySchema, apiContract, JsonValueSchema, type JsonValue } from "@workspace/shared";
+import {
+	AdminKybUpdateSchema,
+	AssignRoleToUserSchema,
+	AdminUserListQuerySchema,
+	apiContract,
+	isArrayValue,
+	isJsonPrimitive,
+	isStringPrimitive,
+	JsonValueSchema,
+	type JsonValue,
+} from "@workspace/shared";
 import { toJSONSchema } from "zod/v4";
 
 import { collectSchemas } from "../ajv-warmup";
@@ -87,15 +97,15 @@ describe("ZodValidationPipe (compiled ajv)", () => {
 	it("has a registered validator for every JSON Schema format the apiContract emits", () => {
 		const emitted = new Set<string>();
 		const collectFormats = (node: JsonValue): void => {
-			if (Array.isArray(node)) {
+			if (isArrayValue(node)) {
 				node.forEach(collectFormats);
 				return;
 			}
-			if (node === null || typeof node !== "object") {
+			if (isJsonPrimitive(node)) {
 				return;
 			}
 			const format = node.format;
-			if (typeof format === "string") {
+			if (isStringPrimitive(format)) {
 				emitted.add(format);
 			}
 			Object.values(node).forEach(collectFormats);

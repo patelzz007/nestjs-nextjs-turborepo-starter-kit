@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
-import { KybDocumentScanStatusSchema, PERMISSION, type CapabilitySlug, type KybDocumentScanStatus } from "@workspace/shared";
+import { LIST_SLOT_INDEX, KybDocumentScanStatusSchema, PERMISSION, type CapabilitySlug, type KybDocumentScanStatus } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -267,7 +267,7 @@ describe("KybReviewPanel decision form", () => {
 		await clickAndSettle(screen.getByRole("button", { name: "Reject" }));
 
 		expect(updateKybMutate).toHaveBeenCalledTimes(1);
-		expect(updateKybMutate.mock.lastCall?.[0]).toMatchObject({
+		expect(updateKybMutate.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
 			organizationId: SELECTED_ORG_ID,
 			kybStatus: "REJECTED",
 			kybFields: { rejectionReason: "SSM certificate is expired" },

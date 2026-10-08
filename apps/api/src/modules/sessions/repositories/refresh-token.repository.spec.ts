@@ -1,4 +1,4 @@
-import { epochMs } from "@workspace/shared";
+import { LIST_SLOT_INDEX, epochMs } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -113,7 +113,7 @@ describe("RefreshTokenRepository", () => {
 
 			await expect(repository().revokeLiveToken("rt-1", "user-1", withinTransaction)).resolves.toBe(true);
 
-			expect(mocks.updateManyArgs[0]).toMatchObject({ where: { id: "rt-1", userId: "user-1", isDeleted: false }, data: { isDeleted: true } });
+			expect(mocks.updateManyArgs[LIST_SLOT_INDEX.first]).toMatchObject({ where: { id: "rt-1", userId: "user-1", isDeleted: false }, data: { isDeleted: true } });
 			expect(withinTransaction).toHaveBeenCalledTimes(1);
 		});
 

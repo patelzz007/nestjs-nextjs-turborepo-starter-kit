@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@workspace/ui/lib/core/utils";
-import { ForgotPasswordSchema, type ForgotPasswordInput, APP_LINKS } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ForgotPasswordSchema, type ForgotPasswordInput, APP_LINKS } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Input } from "@workspace/ui/components/input";
@@ -37,7 +37,7 @@ export function ForgotPasswordForm({ loginHref = APP_LINKS.auth.login }: ForgotP
 
 			const parsed = ForgotPasswordSchema.safeParse({ email });
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Invalid email address");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Invalid email address");
 				setIsLoading(false);
 				return;
 			}

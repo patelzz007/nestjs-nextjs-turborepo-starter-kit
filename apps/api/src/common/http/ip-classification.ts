@@ -9,7 +9,7 @@
 
 import { BlockList, isIP } from "node:net";
 
-import type { IpAddressScope } from "@workspace/shared";
+import { LIST_SLOT_INDEX, type IpAddressScope } from "@workspace/shared";
 
 import { normalizeAddress } from "./client-ip";
 
@@ -66,5 +66,5 @@ export function classifyIpAddress(address: string): IpClassification | null {
 	const version: IpVersion = family === IPV4_FAMILY ? IPV4_FAMILY : IPV6_FAMILY;
 	const type = version === IPV4_FAMILY ? "ipv4" : "ipv6";
 	const match = COMPILED_RANGES.find(([, list]): boolean => list.check(normalized, type));
-	return { version, scope: match?.[0] ?? "PUBLIC" };
+	return { version, scope: match?.[LIST_SLOT_INDEX.first] ?? "PUBLIC" };
 }

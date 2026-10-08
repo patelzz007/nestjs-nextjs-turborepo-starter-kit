@@ -1,6 +1,7 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
+import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import * as React from "react";
 
 /** Pressing this key (no modifiers, outside a text field) flips light/dark. */
@@ -52,7 +53,7 @@ interface ThemeHotkeyKeyDownEvent {
 }
 
 function ThemeHotkey(): null {
-	const { resolvedTheme, setTheme } = useTheme();
+	const { toggleTheme } = useThemeToggle();
 
 	React.useEffect(() => {
 		function onKeyDown(event: ThemeHotkeyKeyDownEvent): void {
@@ -74,14 +75,14 @@ function ThemeHotkey(): null {
 				return;
 			}
 
-			setTheme(resolvedTheme === "dark" ? "light" : "dark");
+			toggleTheme();
 		}
 
 		window.addEventListener("keydown", onKeyDown);
 		return (): void => {
 			window.removeEventListener("keydown", onKeyDown);
 		};
-	}, [resolvedTheme, setTheme]);
+	}, [toggleTheme]);
 
 	return null;
 }

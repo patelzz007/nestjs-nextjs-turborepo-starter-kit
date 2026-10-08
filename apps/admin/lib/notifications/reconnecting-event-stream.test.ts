@@ -1,4 +1,5 @@
 import type { RefreshResult } from "@workspace/client/lib/api/api-request";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -104,8 +105,8 @@ describe("ReconnectingEventStream", () => {
 	it("reports open and forwards every message", () => {
 		const { stream, sources, states, onMessage } = harness([]);
 		stream.start();
-		sources[0]?.emit("open", EVENT_SOURCE_OPEN);
-		sources[0]?.emit("message", EVENT_SOURCE_OPEN);
+		sources[LIST_SLOT_INDEX.first]?.emit("open", EVENT_SOURCE_OPEN);
+		sources[LIST_SLOT_INDEX.first]?.emit("message", EVENT_SOURCE_OPEN);
 
 		expect(states).toEqual(["connecting", "open"]);
 		expect(onMessage).toHaveBeenCalledTimes(1);
@@ -114,7 +115,7 @@ describe("ReconnectingEventStream", () => {
 	it("leaves a dropped connection to the browser's own retry", () => {
 		const { stream, sources, scheduler, states } = harness([]);
 		stream.start();
-		sources[0]?.emit("error", EVENT_SOURCE_CONNECTING);
+		sources[LIST_SLOT_INDEX.first]?.emit("error", EVENT_SOURCE_CONNECTING);
 
 		expect(states.at(-1)).toBe("connecting");
 		expect(sources).toHaveLength(1);
@@ -124,30 +125,30 @@ describe("ReconnectingEventStream", () => {
 	it("refreshes the session and reconnects after a terminal close (e.g. a 401)", async () => {
 		const { stream, sources, scheduler, states } = harness(["ok"]);
 		stream.start();
-		sources[0]?.emit("error", EVENT_SOURCE_CLOSED);
+		sources[LIST_SLOT_INDEX.first]?.emit("error", EVENT_SOURCE_CLOSED);
 		await settle();
 
-		expect(sources[0]?.isClosed).toBe(true);
+		expect(sources[LIST_SLOT_INDEX.first]?.isClosed).toBe(true);
 		expect(scheduler.pending.map((entry) => entry.delayMs)).toEqual([1_000]);
 		scheduler.runNext();
 		expect(sources).toHaveLength(2);
-		sources[1]?.emit("open", EVENT_SOURCE_OPEN);
+		sources[LIST_SLOT_INDEX.second]?.emit("open", EVENT_SOURCE_OPEN);
 		expect(states.at(-1)).toBe("open");
 	});
 
 	it("backs off on repeated failures and resets after a successful open", async () => {
 		const { stream, sources, scheduler } = harness(["transient", "transient", "ok"]);
 		stream.start();
-		sources[0]?.emit("error", EVENT_SOURCE_CLOSED);
+		sources[LIST_SLOT_INDEX.first]?.emit("error", EVENT_SOURCE_CLOSED);
 		await settle();
 		scheduler.runNext();
-		sources[1]?.emit("error", EVENT_SOURCE_CLOSED);
+		sources[LIST_SLOT_INDEX.second]?.emit("error", EVENT_SOURCE_CLOSED);
 		await settle();
 
 		expect(scheduler.pending.map((entry) => entry.delayMs)).toEqual([2_000]);
 		scheduler.runNext();
-		sources[2]?.emit("open", EVENT_SOURCE_OPEN);
-		sources[2]?.emit("error", EVENT_SOURCE_CLOSED);
+		sources[LIST_SLOT_INDEX.third]?.emit("open", EVENT_SOURCE_OPEN);
+		sources[LIST_SLOT_INDEX.third]?.emit("error", EVENT_SOURCE_CLOSED);
 		await settle();
 		expect(scheduler.pending.map((entry) => entry.delayMs)).toEqual([1_000]);
 	});
@@ -155,7 +156,7 @@ describe("ReconnectingEventStream", () => {
 	it("stops for good once the session has expired", async () => {
 		const { stream, sources, scheduler, states } = harness(["expired"]);
 		stream.start();
-		sources[0]?.emit("error", EVENT_SOURCE_CLOSED);
+		sources[LIST_SLOT_INDEX.first]?.emit("error", EVENT_SOURCE_CLOSED);
 		await settle();
 
 		expect(states.at(-1)).toBe("closed");
@@ -165,7 +166,7 @@ describe("ReconnectingEventStream", () => {
 	it("never reconnects after stop()", async () => {
 		const { stream, sources, scheduler } = harness(["ok"]);
 		stream.start();
-		sources[0]?.emit("error", EVENT_SOURCE_CLOSED);
+		sources[LIST_SLOT_INDEX.first]?.emit("error", EVENT_SOURCE_CLOSED);
 		stream.stop();
 		await settle();
 

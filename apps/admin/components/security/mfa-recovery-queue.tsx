@@ -19,7 +19,6 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
@@ -187,15 +186,6 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 				id: "requestedAt",
 				header: "Requested",
 				cell: ({ row }) => <span className="text-sm">{formatDateTimeWithSeconds(row.original.requestedAt)}</span>,
-			},
-			{
-				id: "actions",
-				header: "",
-				cell: ({ row }) => (
-					<Link href={ROUTES.users.detail(row.original.userId)} className="text-sm text-primary underline-offset-4 hover:underline">
-						View user
-					</Link>
-				),
 			},
 		];
 	}, []);

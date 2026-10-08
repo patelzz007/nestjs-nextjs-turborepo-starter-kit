@@ -1,4 +1,5 @@
 import { KafkaJS } from "@confluentinc/kafka-javascript";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Logger } from "@nestjs/common";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -193,7 +194,7 @@ describe("KafkaProducerService", () => {
 
 			await producer.publish("platform.sessions", ENVELOPE);
 
-			expect(kafka.sent[0]?.messages[0]?.key).toBe("corr-1");
+			expect(kafka.sent[LIST_SLOT_INDEX.first]?.messages[LIST_SLOT_INDEX.first]?.key).toBe("corr-1");
 		});
 
 		it("refuses an envelope without a uuid eventId (consumers could not dedupe it)", async () => {
@@ -291,7 +292,7 @@ describe("KafkaProducerService", () => {
 		it("pins the client to WARN, so the library's own INFO lines ('Producer connected') are not logged", async () => {
 			await connectedProducer();
 
-			expect(kafka.clientConfigs[0]?.kafkaJS?.logLevel).toBe(KafkaJS.logLevel.WARN);
+			expect(kafka.clientConfigs[LIST_SLOT_INDEX.first]?.kafkaJS?.logLevel).toBe(KafkaJS.logLevel.WARN);
 		});
 
 		it("logs a repeated connection error once, then its repeat count when the client shuts down", async () => {
@@ -330,7 +331,7 @@ describe("KafkaProducerService", () => {
 			await producer.onModuleDestroy();
 
 			expect(error).toHaveBeenCalledTimes(2);
-			expect(String(error.mock.lastCall?.[0])).toContain('"repeatCount":1');
+			expect(String(error.mock.lastCall?.[LIST_SLOT_INDEX.first])).toContain('"repeatCount":1');
 		});
 	});
 

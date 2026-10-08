@@ -926,7 +926,11 @@ async function captureMerchantAdmin(context) {
 	);
 
 	const inviteBody = { email: "nyonya.house@melaka-rewards.demo", businessName: "Nyonya House Melaka", city: "MELAKA" };
-	await capture("RewardsAdminInvitesController_previewInviteEmail", admin, { method: "POST", path: api("/admin/invites/preview-email"), body: inviteBody });
+	await capture("RewardsAdminInvitesController_previewInviteEmail", admin, {
+		method: "GET",
+		path: api("/admin/invites/preview-email"),
+		query: { businessName: inviteBody.businessName, city: inviteBody.city },
+	});
 	const offset = logOffset();
 	await capture("RewardsAdminInvitesController_createInvite", admin, { method: "POST", path: api("/admin/invites"), body: inviteBody });
 	context.onboardingToken = await nextFromLog(/onboarding\?token=([\w.-]+)/g, offset);

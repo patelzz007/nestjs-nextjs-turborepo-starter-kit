@@ -46,7 +46,7 @@ import type {
 	UpdateStateInput,
 	UpdateSubregionInput,
 } from "@workspace/shared";
-import { ApiErrorCodes, cityListQuery, countryListQuery, regionListQuery, stateListQuery, subregionListQuery } from "@workspace/shared";
+import { ApiErrorCodes, cityListQuery, countryListQuery, isStringPrimitive, regionListQuery, stateListQuery, subregionListQuery } from "@workspace/shared";
 import type { Prisma } from "@prisma/client";
 
 import { NotFoundError, ValidationError } from "../../../common/errors/app-error";
@@ -445,7 +445,7 @@ type ParsedImportRow = { readonly ok: true; readonly value: GeoImportRow } | { r
 function issuesOf(error: z.ZodError): GeoRowIssue[] {
 	return error.issues.map((issue): GeoRowIssue => {
 		const [first] = issue.path;
-		return { field: typeof first === "string" ? first : null, message: issue.message };
+		return { field: isStringPrimitive(first) ? first : null, message: issue.message };
 	});
 }
 

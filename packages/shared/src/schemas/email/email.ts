@@ -48,6 +48,8 @@ export const EmailTemplateMetaSchema = z.object({
 	label: z.string().min(1),
 	description: z.string().min(1),
 	sampleTo: z.email(),
+	/** The subject line rendered with the sample props — what the preview shows, known before it loads. */
+	sampleSubject: z.string().min(1),
 });
 
 export type EmailTemplateMeta = z.output<typeof EmailTemplateMetaSchema>;

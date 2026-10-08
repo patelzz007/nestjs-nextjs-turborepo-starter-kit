@@ -1,8 +1,7 @@
 import type { ColumnDef, RowData } from "@tanstack/react-table";
 
+import { DATA_TABLE_UTILITY_COLUMN_IDS, resolveDataTableColumnId } from "./column-ids";
 import { DataTableCellScalarSchema, parseDataTableCellValue, readDataTableRowField, toDataTableCellString, type DataTableCellInput } from "./prefs";
-
-const UTILITY_COLUMNS: readonly string[] = ["select", "actions", "drag"];
 
 /** Display string for a typed row field at export boundaries. */
 function rowFieldDisplayString(row: object, key: string): string {
@@ -46,22 +45,12 @@ export function sanitizeExportCell(value: DataTableCellInput): string {
 /** Builds export column list, excluding utility columns (select/drag/actions). */
 export function buildExportColumns<TFeatures extends object, TData extends RowData>(
 	columns: ColumnDef<TFeatures, TData>[],
-	extra: readonly string[] = UTILITY_COLUMNS,
+	extra: readonly string[] = DATA_TABLE_UTILITY_COLUMN_IDS,
 ): ColumnDef<TFeatures, TData>[] {
 	return columns.filter((col) => {
-		const key = "id" in col ? col.id : "accessorKey" in col ? String(col.accessorKey) : undefined;
+		const key = resolveDataTableColumnId(col);
 		return key !== undefined && !extra.includes(key);
 	});
-}
-
-function resolveColumnKey<TFeatures extends object, TData extends RowData>(col: ColumnDef<TFeatures, TData>): string | undefined {
-	if ("id" in col) {
-		return col.id;
-	}
-	if ("accessorKey" in col) {
-		return String(col.accessorKey);
-	}
-	return undefined;
 }
 
 export function exportToCSV<TFeatures extends object, TData extends RowData>(data: TData[], columns: ColumnDef<TFeatures, TData>[], filename = "export.csv"): void {
@@ -70,7 +59,7 @@ export function exportToCSV<TFeatures extends object, TData extends RowData>(dat
 	}
 
 	const exportColumns = buildExportColumns(columns);
-	const headers = exportColumns.map((col): string | undefined => resolveColumnKey(col)).filter((id): id is string => id !== undefined);
+	const headers = exportColumns.map((col): string | undefined => resolveDataTableColumnId(col)).filter((id): id is string => id !== undefined);
 
 	const csvRows = [headers.map((header) => escapeCsvField(header)).join(",")];
 	for (const row of data) {
@@ -88,7 +77,7 @@ export function exportToJSON<TFeatures extends object, TData extends RowData>(ro
 	const jsonData = rows.map((row) => {
 		const obj: Record<string, string | number | boolean | null> = {};
 		for (const col of exportColumns) {
-			const key = resolveColumnKey(col);
+			const key = resolveDataTableColumnId(col);
 			if (key !== undefined) {
 				const value = readDataTableRowField(row, key);
 				const scalar = DataTableCellScalarSchema.safeParse(value);
@@ -109,7 +98,7 @@ function escapeXml(value: string): string {
 /** Emits a SpreadsheetML 2003 document (`.xls`) Excel opens natively. */
 export function exportToSpreadsheet<TFeatures extends object, TData extends RowData>(rows: TData[], columns: ColumnDef<TFeatures, TData>[], filename: string): void {
 	const exportColumns = buildExportColumns(columns);
-	const headers = exportColumns.map((col): string | undefined => resolveColumnKey(col)).filter((id): id is string => id !== undefined);
+	const headers = exportColumns.map((col): string | undefined => resolveDataTableColumnId(col)).filter((id): id is string => id !== undefined);
 
 	const rowXml = (values: readonly string[]): string =>
 		`<Row>${values.map((value) => `<Cell><Data ss:Type="String">${escapeXml(sanitizeExportCell(value))}</Data></Cell>`).join("")}</Row>`;
@@ -131,7 +120,7 @@ export function exportToSpreadsheet<TFeatures extends object, TData extends RowD
 /** Exports rows as a print-ready PDF via a hidden iframe print dialog. */
 export function exportToPDF<TFeatures extends object, TData extends RowData>(rows: TData[], columns: ColumnDef<TFeatures, TData>[], filename: string): void {
 	const exportColumns = buildExportColumns(columns);
-	const headers = exportColumns.map((col): string | undefined => resolveColumnKey(col)).filter((id): id is string => id !== undefined);
+	const headers = exportColumns.map((col): string | undefined => resolveDataTableColumnId(col)).filter((id): id is string => id !== undefined);
 
 	const escapeHtml = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

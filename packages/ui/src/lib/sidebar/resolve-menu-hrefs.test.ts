@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { identitySidebarResolveHref, withResolvedSidebarMenuUrls } from "./resolve-menu-hrefs";
 
@@ -35,8 +36,8 @@ describe("resolve-menu-hrefs", () => {
 			resolveHref,
 		);
 
-		expect(resolved.sections[0]?.items[0]?.url).toBe("/tenant/dashboard");
-		expect(resolved.sections[0]?.items[1]?.url).toBe("/tenant/rewards");
-		expect(resolved.sections[0]?.items[1]?.children?.[0]?.url).toBe("/tenant/rewards/new");
+		expect(resolved.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.first]?.url).toBe("/tenant/dashboard");
+		expect(resolved.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.second]?.url).toBe("/tenant/rewards");
+		expect(resolved.sections[LIST_SLOT_INDEX.first]?.items[LIST_SLOT_INDEX.second]?.children?.[LIST_SLOT_INDEX.first]?.url).toBe("/tenant/rewards/new");
 	});
 });

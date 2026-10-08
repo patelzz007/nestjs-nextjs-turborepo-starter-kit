@@ -37,7 +37,8 @@ describe("searchIndex", () => {
 	it("returns an excerpt around body-only matches", () => {
 		const [hit] = searchIndex(index, "webhooks", 10);
 		expect(hit?.excerpt).toBe("Resend webhooks and templates");
-		expect(searchIndex(index, "email", 10)[0]?.excerpt).toBe("");
+		const [emailHit] = searchIndex(index, "email", 10);
+		expect(emailHit?.excerpt).toBe("");
 	});
 
 	it("honours the limit and ignores empty queries", () => {
@@ -48,7 +49,8 @@ describe("searchIndex", () => {
 
 	it("validates the index payload", () => {
 		expect(SearchIndexSchema.safeParse(index).success).toBe(true);
-		expect(SearchIndexSchema.safeParse([{ ...index[0], kind: "blog" }]).success).toBe(false);
+		const [firstEntry] = index;
+		expect(SearchIndexSchema.safeParse([{ ...firstEntry, kind: "blog" }]).success).toBe(false);
 	});
 });
 

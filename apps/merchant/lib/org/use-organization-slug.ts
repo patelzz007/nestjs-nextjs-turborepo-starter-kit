@@ -1,5 +1,6 @@
 "use client";
 
+import { isStringPrimitive } from "@workspace/shared";
 import { useParams } from "next/navigation";
 
 /** Name of the dynamic segment under `app/orgs/` that carries the tenant. */
@@ -14,5 +15,5 @@ export const ORG_SLUG_ROUTE_PARAM = "orgSlug";
  */
 export function useOrganizationSlug(): string | undefined {
 	const segment = useParams()[ORG_SLUG_ROUTE_PARAM];
-	return typeof segment === "string" && segment.length > 0 ? segment : undefined;
+	return isStringPrimitive(segment) && segment.length > 0 ? segment : undefined;
 }

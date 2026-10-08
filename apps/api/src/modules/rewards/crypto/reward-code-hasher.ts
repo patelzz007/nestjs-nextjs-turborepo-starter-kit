@@ -27,7 +27,7 @@ export class RewardCodeHasher {
 	public constructor(keyRing: Readonly<Record<number, string>>) {
 		this.keys = Object.entries(keyRing)
 			.map(([version, key]): [number, Buffer] => [Number(version), Buffer.from(key, "base64")])
-			.sort((left, right) => right[0] - left[0]);
+			.sort(([leftVersion], [rightVersion]) => rightVersion - leftVersion);
 		if (this.keys.length === 0) {
 			throw new RewardCodeHashKeyRingEmptyError();
 		}
@@ -39,7 +39,8 @@ export class RewardCodeHasher {
 		if (current === undefined) {
 			throw new RewardCodeHashKeyRingEmptyError();
 		}
-		return this.digest(current[0], current[1], code);
+		const [version, key] = current;
+		return this.digest(version, key, code);
 	}
 
 	/** Every stored form `code` may have, newest version first — match a column with `IN (...)`. */

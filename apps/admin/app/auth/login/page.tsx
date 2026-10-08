@@ -1,3 +1,5 @@
+import { isStringPrimitive } from "@workspace/shared";
+
 import { loadAdminDemoAccounts } from "@/lib/auth/demo-accounts";
 import { resolveAdminRedirectTarget } from "@/lib/auth-routes";
 import { clientEnv } from "@/lib/env/env.client";
@@ -20,7 +22,7 @@ export interface AdminLoginPageProps {
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps): Promise<React.JSX.Element> {
 	const params = await searchParams;
 	const rawRedirect = params[LOGIN_REDIRECT_PARAM];
-	const redirectPath: string = resolveAdminRedirectTarget(typeof rawRedirect === "string" ? rawRedirect : undefined, clientEnv.NEXT_PUBLIC_ADMIN_URL);
+	const redirectPath: string = resolveAdminRedirectTarget(isStringPrimitive(rawRedirect) ? rawRedirect : undefined, clientEnv.NEXT_PUBLIC_ADMIN_URL);
 
 	return <LoginView redirectPath={redirectPath} webBaseUrl={clientEnv.NEXT_PUBLIC_WEB_URL} demoAccounts={await loadAdminDemoAccounts()} />;
 }

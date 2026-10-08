@@ -14,10 +14,10 @@
 // Only `no-session` may end a session. An unreachable API never does — the
 // tab keeps what it knew and the facade retries with backoff (policy below).
 
-import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
+import { assertNever, type Envelope, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
 import { z } from "zod";
 
-import { isDeadSessionError, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR, type ApiFailure, type ApiResponse, type RefreshResult } from "../../api/api-request";
+import { isDeadSessionError, type ApiFailure, type ApiResponse, type RefreshResult } from "../../api/api-request";
 import { ApiResponseContractError, type ApiResponseContractIssue } from "../../api/response-contract";
 
 // ── Policy ──────────────────────────────────────────────────────────────────
@@ -144,20 +144,34 @@ function unavailable(reason: SessionCheckFailureReason): SessionCheckResult {
  * - Everything else gives no verdict.
  */
 export function classifySessionFailure(failure: ApiFailure): SessionResponseClass {
-	if (failure.error instanceof ApiResponseContractError) {
-		return unavailable("contract-violation");
+	switch (failure.kind) {
+		case "contract":
+			return unavailable("contract-violation");
+		case "network":
+			return unavailable("network");
+		case "aborted":
+			return unavailable("aborted");
+		// Both are 401s the refresh pipeline has already handled; read them like any other 401.
+		case "sessionUnavailable":
+		case "unauthorized":
+			return isDeadSessionError(failure.error) ? NO_SESSION : EXPIRED_ACCESS_TOKEN;
+		case "httpError":
+			return classifyHttpStatus(failure.status, failure.error);
+		default:
+			return assertNever(failure, "API failure kind");
 	}
-	if (failure.status === HTTP_UNAUTHORIZED) {
-		return isDeadSessionError(failure.error) ? NO_SESSION : EXPIRED_ACCESS_TOKEN;
+}
+
+/** A non-2xx answer, by status. */
+function classifyHttpStatus(status: number, error: ApiFailure["error"]): SessionResponseClass {
+	if (status === HTTP_UNAUTHORIZED) {
+		return isDeadSessionError(error) ? NO_SESSION : EXPIRED_ACCESS_TOKEN;
 	}
-	if (failure.status === HTTP_TOO_MANY_REQUESTS) {
+	if (status === HTTP_TOO_MANY_REQUESTS) {
 		return unavailable("rate-limited");
 	}
-	if (failure.status >= HTTP_SERVER_ERROR) {
+	if (status >= HTTP_SERVER_ERROR) {
 		return unavailable("server-error");
-	}
-	if (failure.status === NO_HTTP_RESPONSE_STATUS) {
-		return unavailable(failure.error === REQUEST_ABORTED_ERROR ? "aborted" : "network");
 	}
 	return unavailable("unexpected-status");
 }
@@ -194,7 +208,7 @@ function problemOf(endpoint: SessionCheckEndpoint, response: ApiResponse<Envelop
 	if (response.ok) {
 		return null;
 	}
-	if (response.error instanceof ApiResponseContractError) {
+	if (response.kind === "contract" && response.error instanceof ApiResponseContractError) {
 		return { kind: "contract-violation", endpoint, status: response.status, issues: response.error.issues };
 	}
 	const failure = classifySessionFailure(response);

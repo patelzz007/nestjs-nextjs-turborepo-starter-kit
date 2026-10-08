@@ -3,8 +3,9 @@
  * (palette.css, imported before this file by globals.css) or is a tuned
  * semantic value (status, tone, tier). Components read only these tokens.
  *
- * Light theme — layered: a faintly cool canvas (`--background`, neutral-50)
- * shared by the page, sidebar and topbar; white cards and popovers lift off it. Cards and
+ * Light theme — layered: a cool #F1F4F9 canvas (`--background`, neutral-50)
+ * shared by the page and topbar; the sidebar sits a half step lighter
+ * (neutral-40, same cool cast) so the navigation reads as its own panel yet blends in; white cards and popovers lift off it. Cards and
  * popovers carry one soft ink-tinted shadow (`--shadow-*`, below), never a
  * grey `rgba(0,0,0,.1)`. The active nav row is a soft accent wash with
  * solid accent pill on the active nav row (slate here; web blue and merchant green in their themes).
@@ -176,7 +177,8 @@
 	 * `rounded-full` for pills and avatars.
 	 */
 	--radius: 0.625rem;
-	--sidebar: var(--palette-neutral-50);
+	/* A half step lighter than the canvas — noticeable, but it blends with the content. */
+	--sidebar: var(--palette-neutral-40);
 	--sidebar-foreground: var(--palette-neutral-800);
 	--sidebar-primary: var(--palette-brand-800);
 	--sidebar-primary-foreground: var(--palette-neutral-0);

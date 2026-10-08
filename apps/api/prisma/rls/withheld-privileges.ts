@@ -99,5 +99,5 @@ const HAND_WRITTEN_APP_RUNTIME_REVOKE = /^\s*REVOKE\s+[^;]*?\s+ON\s+(?:TABLE\s+)
  * {@link APP_RUNTIME_WITHHELD_PRIVILEGES} instead.
  */
 export function findHandWrittenAppRuntimeRevokes(rlsSqlWithoutComments: string): string[] {
-	return [...rlsSqlWithoutComments.matchAll(HAND_WRITTEN_APP_RUNTIME_REVOKE)].map((match: RegExpMatchArray) => match[0].trim());
+	return [...rlsSqlWithoutComments.matchAll(HAND_WRITTEN_APP_RUNTIME_REVOKE)].map(([statement]: RegExpMatchArray) => statement.trim());
 }

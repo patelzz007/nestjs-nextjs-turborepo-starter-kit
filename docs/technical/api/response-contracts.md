@@ -130,11 +130,35 @@ response body is parsed — for the browser transport (`api-request.ts`) and the
 
 ```ts
 const result = await api.product.detail.fetch({ id });
-if (!result.ok && result.error instanceof ApiResponseContractError) {
-	// API/client version drift or an API bug — not a user error. result.status is the real HTTP status;
-	// result.error.issues lists the failing paths (no values).
+switch (result.kind) {
+	case "success":
+		return result.data;
+	case "contract":
+		// API/client version drift or an API bug — not a user error. result.status is the real HTTP status;
+		// for JSON, result.error is an ApiResponseContractError whose .issues lists the failing paths (no values).
+		break;
+	case "httpError":
+	case "network":
+	case "aborted":
+	case "sessionUnavailable":
+	case "unauthorized":
+		break;
 }
 ```
+
+Every transport result is an `ApiResponse<T>`: a discriminated union on `kind`, built with
+`ToDiscoUnion` (`@workspace/shared`). `ok`, `status`, `data` and `error` keep their meaning, so
+`if (result.ok)` still narrows; `kind` names the case:
+
+| `kind` | `ok` | `status` | `error` |
+| --- | --- | --- | --- |
+| `success` | `true` | the 2xx status | — (`data` is the parsed envelope) |
+| `httpError` | `false` | the non-2xx status | the API's error body (`ApiError`) or its text |
+| `contract` | `false` | the real status | `ApiResponseContractError` (JSON) / `ApiDownloadError` (file of the wrong type) |
+| `network` | `false` | `0` | the thrown error |
+| `aborted` | `false` | `0` | `"aborted"` |
+| `sessionUnavailable` | `false` | `401` | `SessionRefreshUnavailableError` — the refresh got no verdict; the session stands |
+| `unauthorized` | `false` | `401` | `"Unauthorized"` — the session ended and `onUnauthorized` ran |
 
 SSR prefetches classify it as `{ kind: "schema", message: "<path>: <issue>" }`.
 

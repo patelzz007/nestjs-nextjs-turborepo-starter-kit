@@ -21,6 +21,7 @@ const TEXT_PAIRINGS: readonly (readonly [string, string])[] = [
 	["--muted", "--surface-muted"],
 	["--brand-text", "--bg"],
 	["--brand-text", "--brand-soft"],
+	["--brand-text", "--nav-active-bg"],
 	["--brand-text-hover", "--bg"],
 	["--on-brand-solid", "--brand-solid"],
 	["--on-brand-solid", "--brand-solid-hover"],

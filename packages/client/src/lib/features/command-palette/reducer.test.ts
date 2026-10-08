@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { commandPaletteActions } from "./actions";
 import { commandPaletteReducer } from "./reducer";
@@ -35,7 +36,7 @@ describe("commandPaletteReducer", () => {
 		);
 
 		expect(recorded.recentSearches).toHaveLength(MAX_RECENT_SEARCHES);
-		expect(recorded.recentSearches[0]).toEqual(page(MAX_RECENT_SEARCHES + 1));
+		expect(recorded.recentSearches[LIST_SLOT_INDEX.first]).toEqual(page(MAX_RECENT_SEARCHES + 1));
 		expect(recorded.recentSearches.map((entry) => entry.url)).not.toContain(page(1).url);
 	});
 

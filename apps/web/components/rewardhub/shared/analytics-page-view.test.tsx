@@ -69,6 +69,18 @@ function lastCall(): readonly [input: object, options?: DashboardQueryOptions | 
 	return call;
 }
 
+/** The range input of the latest dashboard query. */
+function lastInput(): object {
+	const [input] = lastCall();
+	return input;
+}
+
+/** The query options of the latest dashboard query. */
+function lastOptions(): DashboardQueryOptions | undefined {
+	const [, options] = lastCall();
+	return options;
+}
+
 /** Opens a labelled filter menu and picks an option (the shared DropdownMenu). */
 async function chooseFilter(label: string, option: string): Promise<void> {
 	fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label} `) }));
@@ -98,7 +110,7 @@ describe("RewardHubAnalyticsPageView", () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		renderView();
 
-		expect(lastCall()[0]).toEqual({ from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day" });
+		expect(lastInput()).toEqual({ from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day" });
 		expect(screen.getByRole("heading", { name: "My Activity" })).toBeTruthy();
 
 		const spending = within(screen.getByRole("group", { name: "Your spending" }));
@@ -126,7 +138,8 @@ describe("RewardHubAnalyticsPageView", () => {
 				.map((header) => header.textContent),
 		).toEqual([UI_KIT_LABELS_EN.timeSeriesChart.period, "Teh Tarik House", "Brew & Bean"]);
 		expect(within(screen.getByRole("list", { name: "Shops ranked by your spending" })).getAllByRole("listitem")).toHaveLength(2);
-		expect(spaced(within(screen.getByRole("list", { name: "Shop categories ranked by your spending" })).getAllByRole("listitem")[0]?.textContent)).toContain("Beverage");
+		const [topCategory] = within(screen.getByRole("list", { name: "Shop categories ranked by your spending" })).getAllByRole("listitem");
+		expect(spaced(topCategory?.textContent)).toContain("Beverage");
 		// Customers see their own activity only — there is nothing to export.
 		expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
 	});
@@ -139,17 +152,17 @@ describe("RewardHubAnalyticsPageView", () => {
 		refresh();
 
 		expect(window.location.search).toBe("?range=last7Days");
-		expect(lastCall()[0]).toEqual({ from: Date.UTC(2026, 8, 29), to: DEFAULT_TO, interval: "day" });
+		expect(lastInput()).toEqual({ from: Date.UTC(2026, 8, 29), to: DEFAULT_TO, interval: "day" });
 	});
 
 	it("seeds the first render with the server's answer for the same range only", () => {
 		const data = testEnvelope(buildCustomerDashboard());
 		renderView({ initialDashboard: { stateKey: `${String(DEFAULT_FROM)}|${String(DEFAULT_TO)}|day|`, data } });
-		expect(lastCall()[1]?.initialData).toEqual(data);
+		expect(lastOptions()?.initialData).toEqual(data);
 		cleanup();
 
 		renderView({ initialDashboard: { stateKey: "another-range", data } });
-		expect(lastCall()[1]?.initialData).toBeUndefined();
+		expect(lastOptions()?.initialData).toBeUndefined();
 	});
 
 	it("guides a customer with no spending to the rewards", () => {

@@ -106,6 +106,6 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 
 /** The page an operation lives on: the page of its first tag. */
 export function pageForTags(tags: readonly string[]): ReferencePage | undefined {
-	const first = tags[0];
+	const [first] = tags;
 	return first === undefined ? undefined : REFERENCE_PAGES.find((page) => page.tags.includes(first));
 }

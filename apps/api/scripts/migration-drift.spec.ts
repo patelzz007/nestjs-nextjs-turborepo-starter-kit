@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import {
 	MIGRATE_DIFF_EXIT_DRIFT,
@@ -80,7 +81,7 @@ describe("migration drift check", () => {
 		it("refuses to use the application database as the shadow, because Prisma wipes the shadow on every run", () => {
 			const result = MigrationDriftEnvSchema.safeParse({ DATABASE_URL: APP_DB, SHADOW_DATABASE_URL: "postgres://other:creds@localhost/app" });
 			expect(result.success).toBe(false);
-			expect(result.error?.issues[0]?.message).toMatch(/separate, throwaway database/);
+			expect(result.error?.issues[LIST_SLOT_INDEX.first]?.message).toMatch(/separate, throwaway database/);
 		});
 	});
 });

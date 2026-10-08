@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { isArrayValue } from "../../lib/runtime-narrowing";
+
 import {
 	defineListQuery,
 	flattenQueryParams,
@@ -42,7 +44,7 @@ function parseQueryString(queryString: string): ReturnType<typeof TestListQueryS
 	const raw: Record<string, string | string[]> = {};
 	for (const [key, value] of new URLSearchParams(queryString)) {
 		const existing = raw[key];
-		raw[key] = existing === undefined ? value : [...(Array.isArray(existing) ? existing : [existing]), value];
+		raw[key] = existing === undefined ? value : [...(isArrayValue(existing) ? existing : [existing]), value];
 	}
 	const nested = nestBracketQueryParams(raw);
 	if (!nested.success) {

@@ -79,7 +79,7 @@ describe("auditLogListHref", () => {
 	});
 
 	it("round-trips: the linked URL parses back to the same filter", () => {
-		const query: string = auditLogListHref({ actorUserId: ACTOR_ID }).split("?")[1] ?? "";
+		const [, query = ""] = auditLogListHref({ actorUserId: ACTOR_ID }).split("?");
 
 		expect(AUDIT_LOG_URL_STATE.parse(new URLSearchParams(query)).actorUserId).toBe(ACTOR_ID);
 	});

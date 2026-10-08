@@ -1,4 +1,4 @@
-import { KAFKA_TOPICS } from "@workspace/shared";
+import { LIST_SLOT_INDEX, KAFKA_TOPICS } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { assertTopicsExist, buildConsumerConfig, consumerLogSink, MissingKafkaTopicsError, platformTopicSpecs } from "./kafka";
@@ -27,7 +27,7 @@ describe("platformTopicSpecs", () => {
 		const specs = platformTopicSpecs(6, 3, 7);
 
 		expect(specs.map((spec) => spec.topic)).toEqual(KAFKA_TOPICS);
-		expect(specs[0]).toEqual({ topic: KAFKA_TOPICS[0], partitions: 6, replicationFactor: 3, retentionMs: 7 * MS_PER_DAY });
+		expect(specs[LIST_SLOT_INDEX.first]).toEqual({ topic: KAFKA_TOPICS[LIST_SLOT_INDEX.first], partitions: 6, replicationFactor: 3, retentionMs: 7 * MS_PER_DAY });
 	});
 });
 

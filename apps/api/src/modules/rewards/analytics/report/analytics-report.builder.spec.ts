@@ -1,4 +1,4 @@
-import { EpochMsSchema, type AdminAnalyticsDashboard, type MerchantAnalyticsDashboard } from "@workspace/shared";
+import { LIST_SLOT_INDEX, EpochMsSchema, type AdminAnalyticsDashboard, type MerchantAnalyticsDashboard } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { reportRowCounts } from "./analytics-report";
@@ -65,7 +65,7 @@ describe("buildMerchantReport", () => {
 				{ kind: "text", value: "" },
 			],
 		]);
-		expect(report.tables.find((table) => table.key === "redemptionMethods")?.rows.map((row) => row[0])).toEqual([
+		expect(report.tables.find((table) => table.key === "redemptionMethods")?.rows.map((row) => row[LIST_SLOT_INDEX.first])).toEqual([
 			{ kind: "text", value: "QR code scan" },
 			{ kind: "text", value: "Backup code" },
 		]);
@@ -109,8 +109,8 @@ describe("buildPlatformReport", () => {
 		expect(report).toMatchObject({ subjectName: PLATFORM_REPORT_SUBJECT_NAME, subjectKey: "platform" });
 		expect(report.tables.map((table) => table.key)).toEqual(["series", "topMerchants", "categories", "cities"]);
 		expect(report.kpis.map((kpi) => kpi.label)).toEqual(expect.arrayContaining(["New customers", "Returning customers", "Active merchants"]));
-		expect(report.tables.find((table) => table.key === "topMerchants")?.rows[0]?.[1]).toEqual({ kind: "text", value: "Other" });
-		expect(report.tables.find((table) => table.key === "categories")?.rows[0]?.[0]).toEqual({ kind: "text", value: "Café" });
-		expect(report.tables.find((table) => table.key === "cities")?.rows[0]?.[0]).toEqual({ kind: "text", value: UNKNOWN_CITY_LABEL });
+		expect(report.tables.find((table) => table.key === "topMerchants")?.rows[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]).toEqual({ kind: "text", value: "Other" });
+		expect(report.tables.find((table) => table.key === "categories")?.rows[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toEqual({ kind: "text", value: "Café" });
+		expect(report.tables.find((table) => table.key === "cities")?.rows[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toEqual({ kind: "text", value: UNKNOWN_CITY_LABEL });
 	});
 });

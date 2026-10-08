@@ -9,6 +9,7 @@ import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
+	LIST_SLOT_INDEX,
 	OrganizationMemberInviteFieldsSchema,
 	OrganizationMemberInviteSchema,
 	type OrganizationLocationResponse,
@@ -244,7 +245,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 
 			const parsed = OrganizationMemberInviteSchema.safeParse(values);
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Enter a valid email and role.");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Enter a valid email and role.");
 				return;
 			}
 

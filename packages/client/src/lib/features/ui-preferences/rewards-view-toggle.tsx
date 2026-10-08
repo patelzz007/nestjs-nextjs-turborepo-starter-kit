@@ -1,6 +1,7 @@
 "use client";
 
 import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { LayoutGrid, List } from "lucide-react";
 import * as React from "react";
 
@@ -27,7 +28,7 @@ export interface RewardsViewToggleProps {
 export function RewardsViewToggle({ viewMode, onViewModeChange, labels }: RewardsViewToggleProps): React.JSX.Element {
 	const handleValueChange = React.useCallback(
 		(values: readonly string[]): void => {
-			const parsed = RewardsViewModeSchema.safeParse(values[0]);
+			const parsed = RewardsViewModeSchema.safeParse(values[LIST_SLOT_INDEX.first]);
 			if (parsed.success) {
 				onViewModeChange(parsed.data);
 			}

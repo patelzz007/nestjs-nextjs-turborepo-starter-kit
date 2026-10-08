@@ -25,6 +25,7 @@ import {
 	type CodeBlockWordSpec,
 } from "@workspace/ui/components/code-block-highlight";
 import { Button } from "@workspace/ui/components/button";
+import { hasGlobalValue, isBrowserRuntime, isNumberPrimitive, LIST_SLOT_INDEX } from "@workspace/shared";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
@@ -141,7 +142,7 @@ const CodeBlockActionsContext = React.createContext<CodeBlockActionsRegistry | n
 
 /* Next still server-renders "use client" files, and a bare useLayoutEffect
    logs on every SSR pass. Same alias the event calendar ships. */
-const useIsoLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+const useIsoLayoutEffect = isBrowserRuntime() ? React.useLayoutEffect : React.useEffect;
 
 function useInternalConfig(part: string): CodeBlockConfigValue {
 	const context = React.useContext(CodeBlockConfigContext);
@@ -376,10 +377,10 @@ export interface CodeBlockFoldRegion {
 	end: number;
 }
 
-const INDENT_RE = /^[ \t]*/;
+const INDENT_RE = /^(?<indent>[ \t]*)/;
 
 function indentOf(text: string): number {
-	return (INDENT_RE.exec(text)?.[0] ?? "").replace(/\t/g, "  ").length;
+	return (INDENT_RE.exec(text)?.groups?.indent ?? "").replace(/\t/g, "  ").length;
 }
 
 function isBlank(text: string): boolean {
@@ -958,7 +959,7 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(function Code
 		[wrapProp, onWrapChange],
 	);
 
-	const collapsible = typeof maxLines === "number" && lines.length > maxLines;
+	const collapsible = isNumberPrimitive(maxLines) && lines.length > maxLines;
 	const [internalExpanded, setInternalExpanded] = React.useState(defaultExpanded);
 	const expanded = expandedProp ?? internalExpanded;
 	const setExpanded = React.useCallback(
@@ -1507,7 +1508,7 @@ const CodeBlockSurface = React.forwardRef<HTMLDivElement, CodeBlockSurfaceProps>
 			   where it silently vanished. */
 			let next: number;
 			if (event.key === "Home") {
-				next = lines[0]?.number ?? startLine;
+				next = lines[LIST_SLOT_INDEX.first]?.number ?? startLine;
 			} else if (event.key === "End") {
 				next = lines.at(-1)?.number ?? startLine;
 			} else {
@@ -1845,7 +1846,7 @@ const CodeBlockCopyButton = React.forwardRef<HTMLElement, CodeBlockCopyButtonPro
 		if (!payload) return;
 		/* Widened on purpose: the DOM typings promise a clipboard, but insecure
 		   origins and non-browser DOMs have none. */
-		const clipboard: Clipboard | undefined = typeof navigator === "undefined" ? undefined : navigator.clipboard;
+		const clipboard: Clipboard | undefined = hasGlobalValue("navigator") ? navigator.clipboard : undefined;
 		if (!clipboard) return;
 
 		/* Rejection is routine: a denied permission, or a document that lost
@@ -2061,7 +2062,7 @@ const CodeBlockDownloadButton = React.forwardRef<HTMLElement, CodeBlockDownloadB
 
 	const handleClick = React.useCallback((): void => {
 		const payload = stripNotationComments(value ?? documentText(blockDocument));
-		if (!payload || typeof window === "undefined") return;
+		if (!payload || !isBrowserRuntime()) return;
 
 		const name = filename ?? `code.${extensionFor(resolvedLanguage)}`;
 		const url = URL.createObjectURL(new Blob([payload], { type: "text/plain;charset=utf-8" }));

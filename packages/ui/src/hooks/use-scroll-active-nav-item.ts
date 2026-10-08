@@ -1,13 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { z } from "zod";
 
 /** The current page's row in a panel sidebar (`PanelSidebarNavItem` marks it). */
 const ACTIVE_NAV_ITEM_SELECTOR = '[aria-current="page"]';
 
+/** An element whose DOM implements the Web Animations API (jsdom and older engines do not). */
+const AnimatableElementSchema = z.object({ getAnimations: z.instanceof(Function) });
+
 /** Every CSS transition/animation running inside `container` once pending style changes apply. */
 function runningAnimations(container: HTMLElement): readonly Animation[] {
-	return typeof container.getAnimations === "function" ? container.getAnimations({ subtree: true }) : [];
+	return AnimatableElementSchema.safeParse(container).success ? container.getAnimations({ subtree: true }) : [];
 }
 
 /**

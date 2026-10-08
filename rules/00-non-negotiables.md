@@ -198,7 +198,9 @@ type User = z.infer<typeof UserSchema>;
 
 The failure mode the "DON'T" example invites is subtle and easy to miss in review: someone adds a field to `UserSchema` for a new feature, the runtime validation now accepts it, but the hand-written `interface User` doesn't have it — so TypeScript won't let you *use* the field anywhere, even though it's genuinely present at runtime. Or worse, the reverse: someone adds a field to the `interface` but not the schema, so the compiler thinks the field is always there, but at runtime it's `undefined` because nothing ever validated its presence. Full detail on zod as the API/contract layer: `05-contracts-zod-api.md`.
 
-### Do not use `typeof` as a substitute for domain validation
+### No runtime `typeof` — zod does the type checking
+
+> **Full guide:** `rules/28-runtime-validation.md` (trust zones, parse-once-per-boundary, ESLint bans). The runtime `typeof` operator and `Array.isArray` are banned by ESLint in every TypeScript file — use zod at the boundary and `z.infer<>` inward.
 
 ```ts
 // ❌ DON'T — ad hoc, incomplete, and invisible to anyone reading the type
@@ -216,7 +218,7 @@ function processPayment(input: unknown): void {
 }
 ```
 
-`typeof x === 'string'` inside a function that's just doing an internal, same-module implementation detail (not validating external/untrusted data) is fine — the rule is about not using `typeof` as your *validation strategy* for data crossing a boundary, not a blanket ban on the `typeof` operator existing anywhere in the codebase.
+There are no exceptions, schema files and environment probes included. To branch on a union you already hold, use the zod-backed guards in `@workspace/shared` (`isStringPrimitive`, `isArrayValue`, …); for SSR / feature detection use `isBrowserRuntime()` / `hasGlobalValue()` / `hasGlobalConstructor()` (see `rules/28-runtime-validation.md`).
 
 ## Tuples instead of `as const`
 
@@ -551,6 +553,19 @@ type Event =
   | { type: 'order.cancelled'; payload: { orderId: OrderId; reason: string } };
 ```
 
+### Build a discriminated union from its variants with `ToDiscoUnion`
+
+Write each variant once, as `name → its own fields`, and let `ToDiscoUnion` (`@workspace/shared`) add the discriminant — `type` by default, or the key the union already uses:
+
+```ts
+type State = ToDiscoUnion<{ loading: object; error: { message: string }; complete: { name: string } }>;
+// { readonly type: "loading" } | { readonly type: "error"; message: string } | { readonly type: "complete"; name: string }
+
+type ApiResponse<T> = ToDiscoUnion<{ success: { ok: true; status: number; data: T }; network: { ok: false; … } }, "kind">;
+```
+
+Variant names are type keys, so they follow `naming-convention` (camelCase). A union whose existing tags are not camelCase (e.g. `PrefetchFailure`'s `"no-cookie"`) stays written out by hand rather than renaming tags callers depend on.
+
 ### Don't use index signatures where a known, finite set of keys exists
 
 ```ts
@@ -697,7 +712,8 @@ Types
 - Is there a function/method without an explicit return type, or a class member without an access modifier?
 - Is there a string/number literal that has a meaning (status, role, limit, timeout, retry count, port, size)?
 - Did I hand-write a type that a zod schema could have produced?
-- Did I use `typeof`/`in`/`Array.isArray` to validate data that came from outside this function?
+- Did I use the runtime `typeof`, `in` or `Array.isArray` anywhere? (Banned — a zod schema, or a zod-backed guard from `@workspace/shared` for a union I already hold.)
+- Did I index a list with a numeric literal (`items[0]`, `match[1]`)? (Banned — destructure, `LIST_SLOT_INDEX`, or named capture groups; `rules/27`.)
 
 Boundaries
 - Does every place data enters the system parse it through a schema first?

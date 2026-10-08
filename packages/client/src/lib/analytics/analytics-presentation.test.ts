@@ -1,4 +1,5 @@
 import {
+	LIST_SLOT_INDEX,
 	AnalyticsReportRangeSchema,
 	MerchantDashboardPointSchema,
 	type AnalyticsComparison,
@@ -155,8 +156,8 @@ describe("toKpiViews", () => {
 			["Bills", "1,200"],
 			["Conversion", "87.8%"],
 		]);
-		expect(views[1]?.change).toEqual({ status: "noPrevious", label: NO_PREVIOUS_PERIOD_LABEL });
-		expect(views[2]?.change).toEqual({ status: "change", direction: "down", sentiment: "negative", label: "-2.4%" });
+		expect(views[LIST_SLOT_INDEX.second]?.change).toEqual({ status: "noPrevious", label: NO_PREVIOUS_PERIOD_LABEL });
+		expect(views[LIST_SLOT_INDEX.third]?.change).toEqual({ status: "change", direction: "down", sentiment: "negative", label: "-2.4%" });
 	});
 
 	it("has no value or change while loading", () => {

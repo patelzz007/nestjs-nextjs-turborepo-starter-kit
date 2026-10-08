@@ -13,6 +13,18 @@
 	}
 }
 
+/*
+ * Light ↔ dark reveal (lib/core/theme-transition.ts). While a theme switch runs, the
+ * root's view transition drops its default cross-fade: the old theme's snapshot holds
+ * still and the new one is clipped open from the toggle by a WAAPI animation. Scoped to
+ * `[data-theme-transition]`, so any other view transition keeps the browser default.
+ */
+:root[data-theme-transition]::view-transition-old(root),
+:root[data-theme-transition]::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
 @layer base {
 	input::placeholder,
 	textarea::placeholder {

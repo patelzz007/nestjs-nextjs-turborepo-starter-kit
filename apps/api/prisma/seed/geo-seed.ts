@@ -22,6 +22,8 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { isArrayValue, isJsonPrimitive } from "@workspace/shared";
+
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 
@@ -44,12 +46,13 @@ async function fetchData(endpoint: string): Promise<readonly GeoRow[]> {
 	return parsed.data;
 }
 
+/** A JSON node that is neither a scalar nor a list is a row object. */
 function isGeoRow(val: GeoJsonValue | undefined): val is GeoRow {
-	return typeof val === "object" && val !== null && !Array.isArray(val);
+	return val !== undefined && !isJsonPrimitive(val) && !isArrayValue(val);
 }
 
 function rowList(val: GeoJsonValue | undefined): readonly GeoRow[] | undefined {
-	if (!Array.isArray(val)) return undefined;
+	if (!isArrayValue(val)) return undefined;
 	return val.filter(isGeoRow);
 }
 

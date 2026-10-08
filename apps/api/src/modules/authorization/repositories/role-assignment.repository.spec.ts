@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { createTestPrisma } from "../../../../test/support/test-service-graph";
 import { RoleAssignmentRepository } from "./role-assignment.repository";
@@ -51,15 +52,15 @@ describe("RoleAssignmentRepository sync", () => {
 		await new RoleAssignmentRepository().syncUserRoles("user-1", ["role-a", "role-b"], "admin-1", createTestPrisma());
 
 		expect(mocks.calls.map((call) => `${call.model}.${call.op}`)).toEqual(["userRole.updateMany", "userRole.updateMany", "userRole.createMany"]);
-		expect(mocks.calls[0]?.args).toEqual({
+		expect(mocks.calls[LIST_SLOT_INDEX.first]?.args).toEqual({
 			where: { userId: "user-1", isDeleted: false, roleId: { notIn: ["role-a", "role-b"] } },
 			data: { isDeleted: true, deletedAt: NOW, updatedAt: NOW },
 		});
-		expect(mocks.calls[1]?.args).toEqual({
+		expect(mocks.calls[LIST_SLOT_INDEX.second]?.args).toEqual({
 			where: { userId: "user-1", roleId: { in: ["role-a", "role-b"] }, isDeleted: true },
 			data: { isDeleted: false, deletedAt: null, assignedBy: "admin-1", assignedAt: NOW, updatedAt: NOW },
 		});
-		expect(mocks.calls[2]?.args).toEqual({
+		expect(mocks.calls[LIST_SLOT_INDEX.third]?.args).toEqual({
 			data: [
 				{ userId: "user-1", roleId: "role-a", assignedBy: "admin-1" },
 				{ userId: "user-1", roleId: "role-b", assignedBy: "admin-1" },
@@ -71,7 +72,7 @@ describe("RoleAssignmentRepository sync", () => {
 	it("revives existing role permissions and stamps the assigning actor", async () => {
 		await new RoleAssignmentRepository().syncRolePermissions("role-1", ["perm-a"], "admin-1", createTestPrisma());
 
-		expect(mocks.calls[1]).toEqual({
+		expect(mocks.calls[LIST_SLOT_INDEX.second]).toEqual({
 			model: "rolePermission",
 			op: "updateMany",
 			args: {
@@ -85,16 +86,16 @@ describe("RoleAssignmentRepository sync", () => {
 		await new RoleAssignmentRepository().syncUserAllowGrants("user-1", ["perm-a"], "admin-1", createTestPrisma());
 
 		const updates = mocks.calls.filter((call) => call.op === "updateMany");
-		expect(updates[0]?.args).toEqual({
+		expect(updates[LIST_SLOT_INDEX.first]?.args).toEqual({
 			where: { userId: "user-1", isDeleted: false, effect: "ALLOW", permissionId: { notIn: ["perm-a"] } },
 			data: { isDeleted: true, deletedAt: NOW, updatedAt: NOW },
 		});
 		// Only soft-deleted rows are revived (as ALLOW); a live DENY row is never rewritten.
-		expect(updates[1]?.args).toEqual({
+		expect(updates[LIST_SLOT_INDEX.second]?.args).toEqual({
 			where: { userId: "user-1", permissionId: { in: ["perm-a"] }, isDeleted: true },
 			data: { isDeleted: false, deletedAt: null, effect: "ALLOW", expiresAt: null, assignedBy: "admin-1", assignedAt: NOW, updatedAt: NOW },
 		});
-		expect(updates[2]?.args).toEqual({
+		expect(updates[LIST_SLOT_INDEX.third]?.args).toEqual({
 			where: { userId: "user-1", permissionId: { in: ["perm-a"] }, isDeleted: false, effect: "ALLOW" },
 			data: { expiresAt: null, updatedAt: NOW },
 		});

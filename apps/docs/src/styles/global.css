@@ -34,6 +34,13 @@
 	--brand-soft: var(--palette-brand-50);
 	/* Hairline around the active nav item — none in light mode; a step above the surface in dark. */
 	--brand-border: transparent;
+	/* The active nav row: a white pill lifted off the #F1F4F9 canvas, like the cards (a soft wash would vanish on it). */
+	/* The sidebar panel: a half step lighter than the canvas (neutral-40, like the apps), with a hairline edge. */
+	--sidebar-bg: var(--palette-neutral-40);
+	--sidebar-edge: var(--palette-neutral-200);
+	--nav-active-bg: var(--palette-neutral-0);
+	--nav-active-ring: var(--palette-neutral-200);
+	--nav-active-shadow: var(--shadow-card);
 	--brand-glow: color-mix(in oklch, var(--palette-brand-500) 14%, transparent);
 	/* Brand as TEXT (links, active nav/TOC items) — >= 4.5:1 (WCAG AA) on --bg and on --brand-soft. */
 	--brand-text: var(--palette-brand-700);
@@ -42,8 +49,8 @@
 	--brand-solid: var(--palette-brand-800);
 	--brand-solid-hover: var(--palette-brand-900);
 	--on-brand-solid: var(--palette-neutral-0);
-	/* Surfaces */
-	--bg: var(--palette-neutral-0);
+	/* Surfaces — the same #F1F4F9 canvas as the apps (neutral-50); cards, search and dialogs stay white on it. */
+	--bg: var(--palette-neutral-50);
 	--surface: var(--palette-neutral-0);
 	--surface-muted: var(--palette-neutral-25);
 	--hover: var(--palette-neutral-100);
@@ -136,6 +143,11 @@
 	--brand-hover: var(--palette-brand-200);
 	--brand-soft: var(--palette-ink-750);
 	--brand-border: var(--palette-ink-650);
+	--sidebar-bg: var(--palette-ink-850);
+	--sidebar-edge: transparent;
+	--nav-active-bg: var(--brand-soft);
+	--nav-active-ring: var(--brand-border);
+	--nav-active-shadow: none;
 	--brand-glow: color-mix(in oklch, var(--palette-brand-300) 10%, transparent);
 	--brand-text: var(--palette-brand-300);
 	--brand-text-hover: var(--palette-brand-200);
@@ -268,6 +280,13 @@
 
 	::selection {
 		background: var(--brand-soft);
+	}
+
+	/* Light ↔ dark reveal (@workspace/ui/lib/core/theme-transition): no default cross-fade while a theme switch runs. */
+	:root[data-theme-transition]::view-transition-old(root),
+	:root[data-theme-transition]::view-transition-new(root) {
+		animation: none;
+		mix-blend-mode: normal;
 	}
 
 	:focus-visible {
@@ -507,6 +526,8 @@
 			overflow-y: auto;
 			overscroll-behavior: contain;
 			padding: 20px 8px 48px;
+			border-right: 1px solid var(--sidebar-edge);
+			background: var(--sidebar-bg);
 			scrollbar-width: thin;
 		}
 	}
@@ -579,10 +600,12 @@
 		background: var(--hover);
 	}
 
-	/* The active page: a soft wash, plus a hairline in dark mode like the apps' sidebar. */
+	/* The active page: a white pill lifted off the canvas in light mode; a soft wash plus a hairline in dark mode, like the apps' sidebar. */
 	.nav-node.is-active {
-		background: var(--brand-soft);
-		box-shadow: inset 0 0 0 1px var(--brand-border);
+		background: var(--nav-active-bg);
+		box-shadow:
+			inset 0 0 0 1px var(--nav-active-ring),
+			var(--nav-active-shadow);
 		color: var(--brand-text);
 		font-weight: var(--type-weight-medium);
 	}

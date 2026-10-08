@@ -5,7 +5,7 @@ import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { Gift, SunMoon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
@@ -17,7 +17,7 @@ export interface CommandPaletteProps {
 
 export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }: CommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
-	const { setTheme, resolvedTheme } = useTheme();
+	const { toggleTheme } = useThemeToggle();
 	const canAccessPath = useCanAccessWebPath();
 	// Same route table as the guard and the sidebar: never offer a page the session cannot open.
 	const searchableItems = React.useMemo(() => accessiblePaletteItems(canAccessPath), [canAccessPath]);
@@ -31,7 +31,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 	}, [externalSetOpen]);
 
 	const quickActions = React.useMemo((): readonly AppCommandPaletteQuickAction[] => {
-		const toggleTheme: AppCommandPaletteQuickAction = {
+		const toggleThemeAction: AppCommandPaletteQuickAction = {
 			id: "toggle-theme",
 			title: "Toggle theme",
 			description: "Switch between light and dark mode",
@@ -40,14 +40,14 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			keywords: ["dark", "light", "mode", "theme"],
 			run: (): void => {
 				closePalette();
-				setTheme(resolvedTheme === "dark" ? "light" : "dark");
+				toggleTheme();
 			},
 		};
 		if (!canAccessPath(ROUTES.rewardHub.browse)) {
-			return [toggleTheme];
+			return [toggleThemeAction];
 		}
 		return [
-			toggleTheme,
+			toggleThemeAction,
 			{
 				id: "browse-rewards",
 				title: "Browse rewards",
@@ -61,7 +61,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 				},
 			},
 		];
-	}, [canAccessPath, closePalette, resolvedTheme, router, setTheme]);
+	}, [canAccessPath, closePalette, router, toggleTheme]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {

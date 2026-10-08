@@ -57,9 +57,9 @@ import { z } from "zod";
 // inferred type stays `ComponentType<{ className? }>` so JSX usage typechecks
 // cleanly (zod 4's `z.function(...)` infers unknown-based types that are not
 // JSX-renderable, so it can't be used here).
-const BreadcrumbIconSchema = z.custom<React.ComponentType<{ readonly className?: string }>>(
-	(value): boolean => typeof value === "function" || (typeof value === "object" && value !== null && "render" in value && typeof value.render === "function"),
-);
+const BreadcrumbIconShapeSchema = z.union([z.instanceof(Function), z.object({ render: z.instanceof(Function) })]);
+
+const BreadcrumbIconSchema = z.custom<React.ComponentType<{ readonly className?: string }>>((value): boolean => BreadcrumbIconShapeSchema.safeParse(value).success);
 
 /**
  * A single breadcrumb crumb.

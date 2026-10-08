@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "../lib/named-list-index";
 
 import { EnvValidationError, NextAppServerEnvSchema, parseEnvOrThrow } from "./app-env";
 import { INVALID_ENV_EXIT_CODE, loadEnvOrExit, type ExitProcess, type LoadEnvOrExitOptions } from "./fail-fast-env";
@@ -50,7 +51,7 @@ describe("loadEnvOrExit", () => {
 		expect(exit).toHaveBeenCalledTimes(1);
 		expect(exit).toHaveBeenCalledWith(INVALID_ENV_EXIT_CODE);
 		expect(reportError).toHaveBeenCalledTimes(1);
-		const message: string = reportError.mock.calls[0]?.[0] ?? "";
+		const message: string = reportError.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first] ?? "";
 		expect(message).toContain(`Invalid environment configuration for ${SCOPE}:`);
 		expect(message).toContain("COOKIE_DOMAIN: must be a bare host name");
 		expect(message).toContain("Values are never printed.");

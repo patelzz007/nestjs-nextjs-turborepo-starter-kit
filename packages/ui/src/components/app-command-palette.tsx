@@ -292,9 +292,7 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 			return result;
 		}
 
-		for (const entry of Object.entries(groupedItems)) {
-			const section = entry[0];
-			const items = entry[1];
+		for (const [section, items] of Object.entries(groupedItems)) {
 			let matched = items;
 
 			if (scope === "settings") {

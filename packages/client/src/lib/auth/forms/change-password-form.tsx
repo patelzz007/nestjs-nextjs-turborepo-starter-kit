@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangePasswordSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ChangePasswordSchema } from "@workspace/shared";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
@@ -48,7 +48,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps): JSX.
 
 			const parsed = ChangePasswordSchema.safeParse({ currentPassword, newPassword, confirmPassword });
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Invalid password details");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Invalid password details");
 				setIsLoading(false);
 				return;
 			}

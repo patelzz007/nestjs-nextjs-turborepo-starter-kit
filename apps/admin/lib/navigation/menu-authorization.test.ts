@@ -1,5 +1,5 @@
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
-import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
@@ -45,11 +45,11 @@ describe("applyMenuAuthorization", () => {
 
 	it("attaches the mapped requirement by URL, including nested children", () => {
 		const applied = applyMenuAuthorization(menu, ADMIN_MENU_AUTHORIZATION);
-		const [geo, parent] = applied.sections[0]?.items ?? [];
+		const [geo, parent] = applied.sections[LIST_SLOT_INDEX.first]?.items ?? [];
 		expect(geo?.authorization?.permissions).toEqual([PERMISSION.GEO.READ]);
 		expect(parent?.authorization).toBeUndefined();
-		expect(parent?.children?.[0]?.authorization?.permissions).toEqual([PERMISSION.PRODUCT.LIST]);
-		expect(applied.bottomItems[0]?.authorization).toBeUndefined();
+		expect(parent?.children?.[LIST_SLOT_INDEX.first]?.authorization?.permissions).toEqual([PERMISSION.PRODUCT.LIST]);
+		expect(applied.bottomItems[LIST_SLOT_INDEX.first]?.authorization).toBeUndefined();
 	});
 });
 

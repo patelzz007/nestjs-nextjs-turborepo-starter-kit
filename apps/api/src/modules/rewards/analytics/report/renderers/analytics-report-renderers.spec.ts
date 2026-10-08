@@ -1,4 +1,4 @@
-import { ANALYTICS_EXPORT_CONTENT_TYPES, AnalyticsExportFormatSchema, type AnalyticsExportFormat } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ANALYTICS_EXPORT_CONTENT_TYPES, AnalyticsExportFormatSchema, type AnalyticsExportFormat } from "@workspace/shared";
 import readXlsxFile from "read-excel-file/node";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -181,7 +181,7 @@ describe("every renderer, in all five report languages", () => {
 			sheets
 				.at(1)
 				?.data.slice(1)
-				.map((row) => row[0]),
+				.map((row) => row[LIST_SLOT_INDEX.first]),
 		).toEqual(Object.values(MULTILINGUAL));
 	});
 

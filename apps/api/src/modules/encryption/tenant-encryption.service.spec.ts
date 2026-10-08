@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { TenantEncryptionKey } from "@prisma/client";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
@@ -140,7 +141,7 @@ describe("TenantEncryptionService", () => {
 		expect(await encryption.decrypt(ORG, ciphertext, ACTOR, "kyb.review")).toBe("4111 1111 1111 1111");
 		expect(onlyRow().kmsKeyId).toBe(localKekId(1));
 		expect(db.auditRows.map((row) => row.data.action)).toEqual([TENANT_KEY_AUDIT_ACTIONS.created, TENANT_KEY_AUDIT_ACTIONS.decrypted]);
-		expect(db.auditRows[1]?.data).toMatchObject({
+		expect(db.auditRows[LIST_SLOT_INDEX.second]?.data).toMatchObject({
 			organizationId: ORG,
 			actorUserId: ACTOR,
 			policyVersion: POLICY_VERSION,
@@ -231,7 +232,7 @@ describe("TenantEncryptionService", () => {
 		const envelope = parseGcmEnvelope(envelopeText);
 
 		const flipped = Buffer.from(envelope.data);
-		flipped[0] = (flipped[0] ?? 0) ^ 1;
+		flipped[LIST_SLOT_INDEX.first] = (flipped[LIST_SLOT_INDEX.first] ?? 0) ^ 1;
 		await expect(encryption.decrypt(ORG, `${version}:${formatGcmEnvelope({ ...envelope, data: flipped })}`, ACTOR, "test")).rejects.toBeInstanceOf(GcmEnvelopeError);
 
 		const truncated = envelope.tag.subarray(0, GCM_AUTH_TAG_BYTES / 4);

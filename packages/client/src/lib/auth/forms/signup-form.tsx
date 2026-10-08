@@ -1,6 +1,6 @@
 "use client";
 
-import { SignupSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, SignupSchema } from "@workspace/shared";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -49,7 +49,7 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 
 			const parsed = SignupSchema.safeParse({ fullName, email, password });
 			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Invalid signup details");
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Invalid signup details");
 				setIsLoading(false);
 				return;
 			}

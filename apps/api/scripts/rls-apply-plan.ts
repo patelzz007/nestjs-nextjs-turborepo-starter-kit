@@ -40,13 +40,13 @@ export interface RlsPlanFile {
 }
 
 /** `CREATE [OR REPLACE] FUNCTION [schema.]name(` — records where a helper is defined. */
-const HELPER_DEFINE_PATTERN = /\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)\s*\(/gi;
+const HELPER_DEFINE_PATTERN = /\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:[a-z_][a-z0-9_]*\.)?(?<name>[a-z_][a-z0-9_]*)\s*\(/gi;
 
 /** Any `app_*(` call — the RLS helper namespace (policies, function bodies, GRANTs). */
-const HELPER_CALL_PATTERN = /\b(app_[a-z0-9_]+)\s*\(/g;
+const HELPER_CALL_PATTERN = /\bapp_[a-z0-9_]+\s*\(/g;
 
 /** `CREATE ROLE name` — records where a role is created. */
-const ROLE_DEFINE_PATTERN = /\bCREATE\s+ROLE\s+([a-z_][a-z0-9_]*)/gi;
+const ROLE_DEFINE_PATTERN = /\bCREATE\s+ROLE\s+(?<name>[a-z_][a-z0-9_]*)/gi;
 
 interface RoleToken {
 	readonly kind: "define" | "use";
@@ -105,7 +105,7 @@ export function stripSqlComments(sql: string): string {
 		// Dollar-quoted body ($$ … $$ or $tag$ … $tag$) — keep verbatim.
 		const dollar = /^\$[A-Za-z_0-9]*\$/.exec(sql.slice(i, i + 64));
 		if (dollar !== null) {
-			const tag = dollar[0];
+			const [tag] = dollar;
 			const close = sql.indexOf(tag, i + tag.length);
 			i = close === -1 ? sql.length : close + tag.length;
 			continue;
@@ -140,14 +140,15 @@ function collectHelperTokens(sql: string): HelperToken[] {
 	const tokens: HelperToken[] = [];
 
 	for (const match of code.matchAll(HELPER_DEFINE_PATTERN)) {
-		const helperName = match[1];
+		const helperName = match.groups?.name;
 		if (helperName !== undefined) {
 			tokens.push({ kind: "define", name: helperName.toLowerCase(), offset: match.index });
 		}
 	}
 
 	for (const match of code.matchAll(HELPER_CALL_PATTERN)) {
-		tokens.push({ kind: "use", name: match[0].replace("(", "").toLowerCase(), offset: match.index });
+		const [call] = match;
+		tokens.push({ kind: "use", name: call.replace("(", "").toLowerCase(), offset: match.index });
 	}
 
 	// At the same offset (a `CREATE FUNCTION app_foo(` header matches both
@@ -205,12 +206,13 @@ function collectRoleTokens(sql: string, roleNames: ReadonlySet<string>): RoleTok
 	const definitionOffsets = new Set<number>();
 
 	for (const match of code.matchAll(ROLE_DEFINE_PATTERN)) {
-		const rawName = match[1];
+		const rawName = match.groups?.name;
 		if (rawName === undefined) {
 			continue;
 		}
 		const name = rawName.toLowerCase();
-		const nameOffset = match.index + match[0].length - name.length;
+		const [definition] = match;
+		const nameOffset = match.index + definition.length - name.length;
 		definitionOffsets.add(nameOffset);
 		tokens.push({ kind: "define", name, offset: match.index });
 	}
@@ -238,7 +240,7 @@ export function assertRlsRoleDependencies(files: readonly RlsPlanFile[]): void {
 	const roleNames = new Set<string>();
 	for (const file of files) {
 		for (const match of stripSqlComments(file.sql).matchAll(ROLE_DEFINE_PATTERN)) {
-			const roleName = match[1];
+			const roleName = match.groups?.name;
 			if (roleName !== undefined) {
 				roleNames.add(roleName.toLowerCase());
 			}

@@ -7,7 +7,7 @@ import { ROUTES } from "@/lib/routes";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { CircleUserRound, LayoutDashboard, Settings, SunMoon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -35,7 +35,7 @@ function renderMenuIcon(iconName: string | undefined, className: string): React.
 
 export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }: CommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
-	const { setTheme, resolvedTheme } = useTheme();
+	const { toggleTheme } = useThemeToggle();
 	const searchableItems = useAuthorizedSearchableItems();
 	const canAccessRoute = useCanAccessRoute();
 
@@ -63,7 +63,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 					keywords: ["dark", "light", "mode", "theme"],
 					run: (): void => {
 						closePalette();
-						setTheme(resolvedTheme === "dark" ? "light" : "dark");
+						toggleTheme();
 					},
 				},
 			},
@@ -112,7 +112,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 		];
 		// Navigation actions obey the route guard's rules, like the searchable items.
 		return actions.filter((entry) => entry.href === undefined || canAccessRoute(entry.href)).map((entry) => entry.action);
-	}, [canAccessRoute, closePalette, router, resolvedTheme, setTheme]);
+	}, [canAccessRoute, closePalette, router, toggleTheme]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {

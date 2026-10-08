@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -62,7 +63,7 @@ describe("organization_terminals live-only terminal id uniqueness (integration)"
 				`SELECT COUNT(*)::int AS count FROM public.organization_terminals WHERE organization_id = $1 AND terminal_id = $2 AND is_deleted = false`,
 				[ORGANIZATION_SEED_IDS.klOrganization, terminalId],
 			);
-			expect(live.rows[0]?.count).toBe(1);
+			expect(live.rows[LIST_SLOT_INDEX.first]?.count).toBe(1);
 		});
 	});
 

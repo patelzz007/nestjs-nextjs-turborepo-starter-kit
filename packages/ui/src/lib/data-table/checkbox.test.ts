@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { resolveDataTableCheckboxConfig } from "@workspace/ui/lib/data-table/checkbox";
 import type { DataTableLabels } from "@workspace/ui/lib/data-table/labels";
@@ -100,8 +101,8 @@ describe("resolveDataTableCheckboxConfig", () => {
 
 		expect(resolved.enableBulkSelection).toBe(true);
 		expect(resolved.bulkActions).toHaveLength(1);
-		expect(resolved.bulkActions[0]?.key).toBe("delete-selected");
-		expect(resolved.bulkActions[0]?.label).toBe("Delete selected");
+		expect(resolved.bulkActions[LIST_SLOT_INDEX.first]?.key).toBe("delete-selected");
+		expect(resolved.bulkActions[LIST_SLOT_INDEX.first]?.label).toBe("Delete selected");
 		expect(resolved.exportable).toBe(true);
 		expect(resolved.exportFormats).toEqual(["csv", "json"]);
 		expect(resolved.exportFilename).toBe("rows.csv");

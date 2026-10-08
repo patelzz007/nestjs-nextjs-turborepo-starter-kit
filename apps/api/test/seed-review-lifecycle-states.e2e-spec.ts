@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
@@ -102,10 +103,10 @@ describe("Seeded review and lifecycle states (integration)", () => {
 			[ORGANIZATION_SEED_IDS.mlkOrganization],
 		);
 		expect(revised.rows.map((row) => row.version)).toEqual([1, 2]);
-		expect(revised.rows[0]?.supersededAt).not.toBeNull();
-		expect(revised.rows[1]?.supersededAt).toBeNull();
-		expect(revised.rows[1]?.sqlPredicate).toContain(ORGANIZATION_SEED_IDS.mlkOrganization);
-		expect(revised.rows[1]?.approvedById).not.toBeNull();
+		expect(revised.rows[LIST_SLOT_INDEX.first]?.supersededAt).not.toBeNull();
+		expect(revised.rows[LIST_SLOT_INDEX.second]?.supersededAt).toBeNull();
+		expect(revised.rows[LIST_SLOT_INDEX.second]?.sqlPredicate).toContain(ORGANIZATION_SEED_IDS.mlkOrganization);
+		expect(revised.rows[LIST_SLOT_INDEX.second]?.approvedById).not.toBeNull();
 	});
 
 	it("stamps and audits a re-wrapped tenant data key", async () => {

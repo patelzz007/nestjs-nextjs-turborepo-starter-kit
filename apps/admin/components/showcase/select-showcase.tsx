@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Button } from "@workspace/ui/components/button";
 import { Field, FieldContent, FieldError, FieldLabel } from "@workspace/ui/components/field";
@@ -317,8 +318,8 @@ export function SelectShowcase(): React.JSX.Element {
 						</SelectTrigger>
 						<SelectContent>
 							{groupedTeams.map((group) => (
-								<SelectGroup key={group[0]?.group}>
-									<SelectLabel>{group[0]?.group}</SelectLabel>
+								<SelectGroup key={group[LIST_SLOT_INDEX.first]?.group}>
+									<SelectLabel>{group[LIST_SLOT_INDEX.first]?.group}</SelectLabel>
 									{group.map((option) => (
 										<SelectItem key={option.value} value={option.value}>
 											{option.label}

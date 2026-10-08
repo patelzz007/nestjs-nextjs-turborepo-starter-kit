@@ -226,7 +226,7 @@ describe("geo endpoints answer with their response contracts (e2e, real Postgres
 	it("GET /geo/countries?include= keeps the included relations, with numeric coordinates", async () => {
 		const country = await smallCountry();
 		expect(country.iso2).toBe(SMALL_COUNTRY_ISO2);
-		expect(typeof country.latitude).toBe("number");
+		expect(country.latitude).toEqual(expect.any(Number));
 		expect(country.regionRelation?.name).toBe(country.region);
 		expect(country.states?.length).toBeGreaterThan(0);
 	});
@@ -248,7 +248,7 @@ describe("geo endpoints answer with their response contracts (e2e, real Postgres
 		}
 		const cityDetail = parseSuccessEnvelope(await get(`/cities/${String(city.id)}`), CitySchema).data;
 		expect(cityDetail).toEqual(city);
-		expect(typeof cityDetail.latitude).toBe("number");
+		expect(cityDetail.latitude).toEqual(expect.any(Number));
 	});
 
 	it("GET /geo/export returns the city rows of the matching country", async () => {

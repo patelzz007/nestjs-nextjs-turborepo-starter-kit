@@ -1,6 +1,7 @@
 "use client";
 
 import { readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -42,7 +43,12 @@ export function resolveUserMfaRecoveryState(latest: AdminMfaRecoveryRequest | un
 function UserMfaRecoveryHistory({ userId }: { readonly userId: string }): React.JSX.Element {
 	const { api } = useAuth();
 	const requestsQuery = api.auth.adminMfaRecoveryRequests.useQuery({ ...LATEST_REQUEST_PAGE, filter: { userId: { eq: userId } } });
-	const state = resolveUserMfaRecoveryState(requestsQuery.data?.data[0], readPaginatedTotal(requestsQuery.data?.meta), requestsQuery.isError, requestsQuery.isLoading);
+	const state = resolveUserMfaRecoveryState(
+		requestsQuery.data?.data[LIST_SLOT_INDEX.first],
+		readPaginatedTotal(requestsQuery.data?.meta),
+		requestsQuery.isError,
+		requestsQuery.isLoading,
+	);
 
 	const { refetch } = requestsQuery;
 	const handleReviewed = React.useCallback((): void => {

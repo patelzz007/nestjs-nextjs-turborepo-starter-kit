@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import * as React from "react";
 
@@ -35,7 +36,7 @@ export function ProfileAvatarField({ avatarUrl, initials, accept, hint, isBusy, 
 
 	const handleChange = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
-			const file: File | undefined = event.target.files?.[0];
+			const file: File | undefined = event.target.files?.[LIST_SLOT_INDEX.first];
 			// Reset so picking the same file again still fires a change.
 			event.target.value = "";
 			if (file !== undefined) {

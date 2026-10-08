@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing";
-import { PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -115,7 +115,7 @@ describe("password credential changes invalidate cached state on every instance 
 
 		await passwordReset.forgotPassword({ email: "user@example.com" });
 
-		expect(prisma.passwordResetToken.create.mock.lastCall?.[0]).toMatchObject({
+		expect(prisma.passwordResetToken.create.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
 			data: { userId: USER_ID, expiresAt: now + PASSWORD_RESET_LINK_TTL_HOURS * MS_PER_HOUR },
 		});
 		vi.restoreAllMocks();

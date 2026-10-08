@@ -191,7 +191,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 			const tier = k < 5 ? baseTier : cycle(allTiers, k);
 			const active = k < 12 ? isActive : false; // last few are inactive
 			const hasExpiry = k >= 10 && k < 14;
-			const firstName = fullName.split(" ")[0] ?? fullName;
+			const [firstName = fullName] = fullName.split(" ");
 			const name =
 				k % 4 === 0
 					? `${firstName} — API Key ${String(k + 1)}`

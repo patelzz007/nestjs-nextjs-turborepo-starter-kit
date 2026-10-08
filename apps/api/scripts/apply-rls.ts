@@ -181,7 +181,8 @@ export async function applyRowLevelSecurity(): Promise<void> {
 }
 
 function isApplyRlsCliEntry(): boolean {
-	const entry = process.argv[1];
+	// argv = [node binary, script path, ...args]
+	const [, entry] = process.argv;
 	if (entry === undefined || entry.length === 0) {
 		return false;
 	}

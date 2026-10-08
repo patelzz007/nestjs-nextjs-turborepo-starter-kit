@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { RewardListQuerySchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, RewardListQuerySchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { RewardRepository, type RewardWithOrganization } from "./reward.repository";
@@ -59,26 +59,26 @@ describe("RewardRepository merchant logo include", () => {
 		await createRepository().findPublishedConsumerWithOrganization(REWARD_ID);
 
 		expect(mocks.findFirst).toHaveBeenCalledTimes(1);
-		expect(mocks.findFirst.mock.calls[0]?.[0].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
+		expect(mocks.findFirst.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
 	});
 
 	it("loads the READY logo with every marketplace page row in the same query", async () => {
 		await createRepository().listMarketplace(RewardListQuerySchema.parse({}));
 
 		expect(mocks.findMany).toHaveBeenCalledTimes(1);
-		expect(mocks.findMany.mock.calls[0]?.[0].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
+		expect(mocks.findMany.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
 	});
 
 	it("loads the READY logo for the merchant's own reward list", async () => {
 		await createRepository().listConsumerByOrganization(ORGANIZATION_ID, ALL_LOCATIONS_SCOPE);
 
-		expect(mocks.findMany.mock.calls[0]?.[0].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
+		expect(mocks.findMany.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first].include?.organization).toEqual(EXPECTED_ORGANIZATION_INCLUDE);
 	});
 
 	it("lists only the rewards offered at a store-limited member's stores (organization-wide ones included)", async () => {
 		await createRepository().listConsumerByOrganization(ORGANIZATION_ID, selectedLocationsScope([STORE_ID]));
 
-		expect(mocks.findMany.mock.calls[0]?.[0].where).toEqual({
+		expect(mocks.findMany.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first].where).toEqual({
 			AND: [
 				{ organizationId: ORGANIZATION_ID, isDeleted: false, rewardKind: "CONSUMER" },
 				{ OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { locationId: { in: [STORE_ID] } } } }] },

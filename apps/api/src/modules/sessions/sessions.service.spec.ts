@@ -1,4 +1,5 @@
 import { UnauthorizedException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Test } from "@nestjs/testing";
@@ -213,8 +214,8 @@ describe("SessionsService", () => {
 			await service.refreshToken(userId, "raw-refresh-jwt", refreshTokenJti);
 
 			expect(outbox.enqueueInTransaction).toHaveBeenCalledTimes(1);
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(DOMAIN_TX);
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({
 				type: "session.action",
 				payload: { action: "refresh", userId, status: "succeeded", error: null },
 			});
@@ -230,7 +231,9 @@ describe("SessionsService", () => {
 			await expect(service.refreshToken(userId, "raw-refresh-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "REFRESH_TOKEN_SUPERSEDED" } });
 
 			expect(outbox.enqueueInTransaction).not.toHaveBeenCalled();
-			expect(outbox.recordTelemetry.mock.lastCall?.[0]).toMatchObject({ payload: { action: "refresh", status: "failed", error: "REFRESH_TOKEN_SUPERSEDED" } });
+			expect(outbox.recordTelemetry.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
+				payload: { action: "refresh", status: "failed", error: "REFRESH_TOKEN_SUPERSEDED" },
+			});
 		});
 
 		it("keeps the 401 even when recording the rejection telemetry fails", async () => {
@@ -251,8 +254,8 @@ describe("SessionsService", () => {
 			await expect(service.refreshToken(userId, "stolen-refresh-jwt", refreshTokenJti)).rejects.toMatchObject({ response: { error: "TOKEN_THEFT_DETECTED" } });
 
 			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, "refresh_token_reuse", expect.any(Function));
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { status: "failed", error: "TOKEN_THEFT_DETECTED" } });
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(DOMAIN_TX);
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({ payload: { status: "failed", error: "TOKEN_THEFT_DETECTED" } });
 		});
 
 		it("does not write the theft event when the revocation transaction fails (rolled back together)", async () => {
@@ -270,8 +273,8 @@ describe("SessionsService", () => {
 			await service.logoutDevice(userId, refreshTokenJti);
 
 			expect(repository.revokeLiveToken).toHaveBeenCalledWith(refreshTokenJti, userId, expect.any(Function));
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { action: "logout-device", status: "succeeded" } });
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(DOMAIN_TX);
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({ payload: { action: "logout-device", status: "succeeded" } });
 			expect(outbox.recordTelemetry).not.toHaveBeenCalled();
 		});
 
@@ -282,15 +285,15 @@ describe("SessionsService", () => {
 
 			expect(repository.revokeLiveToken).toHaveBeenCalledWith(refreshTokenJti, userId, expect.any(Function));
 			expect(outbox.enqueueInTransaction).not.toHaveBeenCalled();
-			expect(outbox.recordTelemetry.mock.lastCall?.[0]).toMatchObject({ payload: { action: "logout-device" } });
+			expect(outbox.recordTelemetry.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ payload: { action: "logout-device" } });
 		});
 
 		it("writes the logout-all event inside the revoke-all transaction", async () => {
 			await service.logoutAllDevices(userId);
 
 			expect(sessionRevocation.revokeAllSessionsForUser).toHaveBeenCalledWith(userId, "logout_all_devices", expect.any(Function));
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[0]).toBe(DOMAIN_TX);
-			expect(outbox.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { action: "logout-all", status: "succeeded" } });
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(DOMAIN_TX);
+			expect(outbox.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({ payload: { action: "logout-all", status: "succeeded" } });
 		});
 	});
 

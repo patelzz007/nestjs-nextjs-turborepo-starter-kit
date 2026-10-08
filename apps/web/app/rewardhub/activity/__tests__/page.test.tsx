@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type * as ServerApi from "@workspace/client/lib/api/server-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -75,7 +76,7 @@ describe("RewardHubActivityPage (server)", () => {
 		const from = Date.UTC(2026, 8, 6);
 		const to = Date.UTC(2026, 9, 6);
 		expect(analyticsQuery).toHaveBeenCalledWith({ from, to, interval: "day" });
-		expect(analyticsView.mock.lastCall?.[0]).toEqual({
+		expect(analyticsView.mock.lastCall?.[LIST_SLOT_INDEX.first]).toEqual({
 			nowMs: NOW_MS,
 			initialDashboard: { stateKey: `${String(from)}|${String(to)}|day|`, data: testEnvelope(ANALYTICS) },
 		});

@@ -9,8 +9,10 @@
 	 * Every neutral carries the same faint cool cast (hue 258, "ink"), so light
 	 * and dark read as one family and every brand accent sits on it cleanly.
 	 *
-	 * - neutral: the light theme. 0 = card white, 50 = the tinted canvas (page,
-	 *   sidebar, topbar), 100 = fills inside a card / nav hover, 200/300 = borders/inputs,
+	 * - neutral: the light theme. 0 = card white, 40 = the sidebar panel (a half step
+	 *   above the canvas, same cool cast), 50 = the cool
+	 *   #F1F4F9 canvas (page, topbar), 100 = nav / ghost hover on that canvas and fills inside a
+	 *   card (one clear step below the canvas), 200/300 = borders/inputs,
 	 *   600 = secondary text, 900 = ink text.
 	 * - ink: the dark theme, by elevation — 950 the deepest chrome, 900 the
 	 *   page, 800 cards, 750 popovers, 700/650 borders and in-card fills,
@@ -24,8 +26,9 @@
 	 */
 	--palette-neutral-0: oklch(1 0 0);
 	--palette-neutral-25: oklch(0.985 0.003 258);
-	--palette-neutral-50: oklch(0.975 0.004 258);
-	--palette-neutral-100: oklch(0.955 0.006 258);
+	--palette-neutral-40: #f5f7fb;
+	--palette-neutral-50: #f1f4f9;
+	--palette-neutral-100: oklch(0.935 0.009 258);
 	--palette-neutral-200: oklch(0.915 0.008 258);
 	--palette-neutral-300: oklch(0.86 0.01 258);
 	--palette-neutral-400: oklch(0.72 0.013 258);

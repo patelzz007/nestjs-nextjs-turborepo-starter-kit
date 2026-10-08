@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import { MfaRecoveryRequestStatus } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -104,7 +105,7 @@ describe("MfaRecoveryService", () => {
 		const response = await service.adminApprove(REVIEWER, { requestId: REQUEST_ID, action: "approve", notes: "verified by phone" });
 
 		expect(response.status).toBe("APPROVED");
-		const call = recoveries.review.mock.lastCall?.[0];
+		const call = recoveries.review.mock.lastCall?.[LIST_SLOT_INDEX.first];
 		expect(call).toMatchObject({ requestId: REQUEST_ID, reviewerId: REVIEWER, decision: "APPROVED", notes: "verified by phone" });
 		expect((call?.scheduledUnlockAt ?? 0) - (call?.reviewedAt ?? 0)).toBe(RECOVERY_DELAY_MS);
 	});

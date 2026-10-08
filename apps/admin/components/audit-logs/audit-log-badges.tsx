@@ -101,7 +101,8 @@ export function AuditIpScopeBadge({ scope }: { readonly scope: IpAddressScope })
 
 /** `Chrome 129 · macOS 10.15.7` — what the User-Agent says, or `null` when it says nothing. */
 export function describeClientSoftware(entry: Pick<HttpAuditLogSummary, "browserName" | "browserVersion" | "osName" | "osVersion">): string | null {
-	const browser: string | null = entry.browserName === null ? null : [entry.browserName, entry.browserVersion?.split(".")[0]].filter(Boolean).join(" ");
+	const [browserMajorVersion] = entry.browserVersion?.split(".") ?? [];
+	const browser: string | null = entry.browserName === null ? null : [entry.browserName, browserMajorVersion].filter(Boolean).join(" ");
 	const os: string | null = entry.osName === null ? null : [entry.osName, entry.osVersion].filter(Boolean).join(" ");
 	const parts: string[] = [browser, os].filter((part): part is string => part !== null);
 	return parts.length === 0 ? null : parts.join(" · ");

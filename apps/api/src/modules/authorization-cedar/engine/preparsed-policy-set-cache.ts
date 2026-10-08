@@ -82,8 +82,9 @@ export class PreparsedPolicySetCache {
 		if (oldest === undefined) {
 			throw new Error("Preparsed policy-set cache has no slot to reuse");
 		}
-		this.slotsByBundle.delete(oldest[0]);
-		return oldest[1];
+		const [bundleKey, slot] = oldest;
+		this.slotsByBundle.delete(bundleKey);
+		return slot;
 	}
 }
 

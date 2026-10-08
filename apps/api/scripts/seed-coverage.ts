@@ -104,11 +104,11 @@ export function schemaTablesFromDmmf(models: readonly DmmfModelShape[]): SchemaT
 	}));
 }
 
-const SCHEMA_MODEL_DECLARATION = /^model\s+(\w+)\s*\{/gm;
+const SCHEMA_MODEL_DECLARATION = /^model\s+(?<model>\w+)\s*\{/gm;
 
 /** Model names declared in `schema.prisma` — compared with the DMMF to detect a stale generated client. */
 export function listSchemaFileModelNames(schemaContent: string): string[] {
-	return [...schemaContent.matchAll(SCHEMA_MODEL_DECLARATION)].flatMap((match: RegExpExecArray): string[] => (match[1] === undefined ? [] : [match[1]]));
+	return [...schemaContent.matchAll(SCHEMA_MODEL_DECLARATION)].flatMap((match: RegExpExecArray): string[] => (match.groups?.model === undefined ? [] : [match.groups.model]));
 }
 
 // ── Schema ↔ catalog reconciliation ─────────────────────────────────────────

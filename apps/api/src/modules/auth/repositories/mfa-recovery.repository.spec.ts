@@ -1,4 +1,5 @@
 import { MfaRecoveryRequestStatus } from "@prisma/client";
+import { isStringPrimitive, LIST_SLOT_INDEX } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RequestContextService } from "../../../common/context/request-context";
@@ -36,7 +37,7 @@ const db = vi.hoisted((): FakeDatabase => ({
 }));
 
 function matchesStatus(row: RequestRow, status: MfaRecoveryRequestStatus | { readonly in: readonly MfaRecoveryRequestStatus[] }): boolean {
-	return typeof status === "string" ? row.status === status : status.in.includes(row.status);
+	return isStringPrimitive(status) ? row.status === status : status.in.includes(row.status);
 }
 
 /** A transaction client over the in-memory rows: enough Prisma surface for the repository. */
@@ -149,9 +150,9 @@ describe("MfaRecoveryRepository", () => {
 			const result = await repository().openRequest(REQUESTER, "lost phone", NOW);
 
 			expect(result.kind).toBe("opened");
-			expect(db.writes[0]).toMatchObject({ model: "lock" });
+			expect(db.writes[LIST_SLOT_INDEX.first]).toMatchObject({ model: "lock" });
 			expect(auditRows()).toHaveLength(1);
-			expect(auditRows()[0]).toMatchObject({
+			expect(auditRows()[LIST_SLOT_INDEX.first]).toMatchObject({
 				args: { data: { requestId: "req-1", subjectUserId: REQUESTER, action: "mfa_recovery.requested", actorUserId: REQUESTER, toStatus: "PENDING" } },
 			});
 			expect(db.systemOperations).toEqual(["auth.mfa_recovery.request"]);
@@ -191,7 +192,9 @@ describe("MfaRecoveryRepository", () => {
 			expect(result.kind).toBe("reviewed");
 			expect(db.writes.find((write) => write.model === "mfaRecoveryRequest")).toMatchObject({ args: { where: { id: "req-1", status: "PENDING" } } });
 			expect(auditRows()).toHaveLength(1);
-			expect(auditRows()[0]).toMatchObject({ args: { data: { action: "mfa_recovery.approved", actorUserId: REVIEWER, requestId: "req-1", subjectUserId: REQUESTER } } });
+			expect(auditRows()[LIST_SLOT_INDEX.first]).toMatchObject({
+				args: { data: { action: "mfa_recovery.approved", actorUserId: REVIEWER, requestId: "req-1", subjectUserId: REQUESTER } },
+			});
 			expect(db.systemOperations).toEqual(["auth.mfa_recovery.review"]);
 		});
 
@@ -224,7 +227,7 @@ describe("MfaRecoveryRepository", () => {
 			expect(db.writes.some((write) => write.model === "backupCode" && write.op !== "updateMany")).toBe(false);
 			expect(db.writes.find((write) => write.model === "user")).toMatchObject({ args: { data: { twoFactorEnabled: false, tokenVersion: { increment: 1 } } } });
 			expect(auditRows()).toHaveLength(1);
-			expect(auditRows()[0]).toMatchObject({ args: { data: { action: "mfa_recovery.completed", actorUserId: REVIEWER } } });
+			expect(auditRows()[LIST_SLOT_INDEX.first]).toMatchObject({ args: { data: { action: "mfa_recovery.completed", actorUserId: REVIEWER } } });
 		});
 
 		it("does nothing when another worker already completed the request", async () => {

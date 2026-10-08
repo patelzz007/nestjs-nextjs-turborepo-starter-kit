@@ -12,7 +12,7 @@ import { toastMessage } from "@workspace/ui/components/toast";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
 import { SunMoon, Ticket } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -23,7 +23,7 @@ export interface MerchantCommandPaletteProps {
 
 export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSetOpen }: MerchantCommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
-	const { setTheme, resolvedTheme } = useTheme();
+	const { toggleTheme } = useThemeToggle();
 	const { can } = useAuthorization();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
 	const organizationSlug = useOrganizationSlug();
@@ -50,7 +50,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 				keywords: ["dark", "light", "mode", "theme"],
 				run: (): void => {
 					closePalette();
-					setTheme(resolvedTheme === "dark" ? "light" : "dark");
+					toggleTheme();
 				},
 			},
 		];
@@ -71,7 +71,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 		}
 
 		return actions;
-	}, [can, closePalette, isEnrollmentLocked, resolvedTheme, rewardsPath, router, setTheme]);
+	}, [can, closePalette, isEnrollmentLocked, rewardsPath, router, toggleTheme]);
 
 	const searchableItems = React.useMemo(() => {
 		const items = buildMerchantPaletteItems(can);

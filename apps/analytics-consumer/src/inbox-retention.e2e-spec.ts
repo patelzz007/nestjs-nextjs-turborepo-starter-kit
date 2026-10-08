@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -117,6 +118,6 @@ describe("Retention (integration)", () => {
 			"SELECT COUNT(*)::int AS count FROM pg_locks WHERE locktype = 'advisory' AND objid = (hashtextextended($1, 0) & 4294967295)::bigint::oid",
 			[RETENTION_LOCK_NAMES.dead_letters],
 		);
-		expect(locks.rows[0]?.count).toBe(0);
+		expect(locks.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
 	});
 });

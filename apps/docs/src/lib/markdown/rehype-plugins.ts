@@ -1,4 +1,5 @@
 import type { Element, ElementContent, Root } from "hast";
+import { z } from "zod";
 import { visit } from "unist-util-visit";
 
 /**
@@ -7,19 +8,21 @@ import { visit } from "unist-util-visit";
  */
 
 const ANCHORED_HEADINGS: ReadonlySet<string> = new Set(["h2", "h3", "h4"]);
+/** A hast string property (`id`, `href`); other property shapes are ignored. */
+const STRING_PROPERTY_SCHEMA = z.string();
 
 /** Appends a hover "#" permalink to h2–h4 headings that have an id. */
 export function rehypeHeadingAnchors(): (tree: Root) => void {
 	return (tree: Root): void => {
 		visit(tree, "element", (node: Element) => {
-			const id = node.properties.id;
-			if (!ANCHORED_HEADINGS.has(node.tagName) || typeof id !== "string") {
+			const id = STRING_PROPERTY_SCHEMA.safeParse(node.properties.id);
+			if (!ANCHORED_HEADINGS.has(node.tagName) || !id.success) {
 				return;
 			}
 			const anchor: ElementContent = {
 				type: "element",
 				tagName: "a",
-				properties: { className: ["heading-anchor"], href: `#${id}`, ariaLabel: "Link to this section" },
+				properties: { className: ["heading-anchor"], href: `#${id.data}`, ariaLabel: "Link to this section" },
 				children: [{ type: "text", value: "#" }],
 			};
 			node.children.push(anchor);
@@ -36,8 +39,8 @@ export function isExternalHref(href: string): boolean {
 export function rehypeExternalLinks(): (tree: Root) => void {
 	return (tree: Root): void => {
 		visit(tree, "element", (node: Element) => {
-			const href = node.properties.href;
-			if (node.tagName !== "a" || typeof href !== "string" || !isExternalHref(href)) {
+			const href = STRING_PROPERTY_SCHEMA.safeParse(node.properties.href);
+			if (node.tagName !== "a" || !href.success || !isExternalHref(href.data)) {
 				return;
 			}
 			node.properties.target = "_blank";

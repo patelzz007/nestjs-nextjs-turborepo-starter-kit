@@ -222,3 +222,47 @@ export class ReportsController {
 		expect(lintController("").map((message) => message.ruleId)).toContain(RULE);
 	});
 });
+
+describe("base config: runtime type checks belong to zod (rules/28)", () => {
+	it.each([
+		["a typeof comparison on a variable", 'if (typeof value === "string") run();'],
+		["a typeof comparison on a member expression", 'if (typeof item.checked !== "boolean") run();'],
+		["a typeof on the right-hand side", 'if ("number" === typeof count) run();'],
+		["a typeof switch", "switch (typeof value) { default: break; }"],
+		["a stored typeof result", "const kind = typeof value;"],
+		["an environment probe", 'const isServer = typeof window === "undefined";'],
+	])("flags %s", (_what, code) => {
+		expect(restrictedSyntaxMessages(code)).toEqual([expect.stringContaining("runtime `typeof` operator is banned")]);
+	});
+
+	it("allows type-position typeof (z.infer, ReturnType)", () => {
+		expect(restrictedSyntaxMessages("export type Order = z.infer<typeof OrderSchema>;")).toEqual([]);
+		expect(restrictedSyntaxMessages("let spy: MockInstance<typeof console.error>;")).toEqual([]);
+	});
+
+	it("flags Array.isArray and Object.prototype.toString tag sniffing", () => {
+		expect(restrictedSyntaxMessages("if (Array.isArray(value)) run();")).toEqual([expect.stringContaining("`Array.isArray` is banned")]);
+		expect(restrictedSyntaxMessages("const tag = Object.prototype.toString.call(value);")).toEqual([expect.stringContaining("tag sniffing")]);
+	});
+});
+
+describe("base config: numeric-literal index access (rules/27)", () => {
+	it.each([
+		["a plain index", "const first = items[0];"],
+		["an optional index", "const second = items?.[1];"],
+		["an index on a call result", 'const head = text.split(",")[0];'],
+		["an index assignment", "row[0] = 1;"],
+	])("flags %s", (_what, code) => {
+		expect(restrictedSyntaxMessages(code)).toEqual([expect.stringContaining("Numeric-literal index access")]);
+	});
+
+	it.each([
+		["a named slot", "const first = items[LIST_SLOT_INDEX.first];"],
+		["destructuring", "const [first] = items;"],
+		["a loop variable", "const item = items[index];"],
+		["a string key", 'const value = record["0"];'],
+		["a named capture group", "const year = match.groups?.year;"],
+	])("allows %s", (_what, code) => {
+		expect(restrictedSyntaxMessages(code)).toEqual([]);
+	});
+});

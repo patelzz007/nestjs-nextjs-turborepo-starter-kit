@@ -2,7 +2,16 @@ import type { Envelope, SessionPermissionsResponse, UserResponse } from "@worksp
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import { ApiError, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR, type ApiFailure, type ApiResponse, type RefreshResult } from "../../api/api-request";
+import {
+	ApiError,
+	NO_HTTP_RESPONSE_STATUS,
+	REQUEST_ABORTED_ERROR,
+	SessionRefreshUnavailableError,
+	type ApiErrorPayload,
+	type ApiFailure,
+	type ApiResponse,
+	type RefreshResult,
+} from "../../api/api-request";
 import { ApiResponseContractError } from "../../api/response-contract";
 import {
 	checkSession,
@@ -23,8 +32,24 @@ import {
 
 const ME_URL = "http://api.test/api/v1/auth/me";
 
-function failure(status: number, error: ApiFailure["error"] = new Error("failed")): ApiFailure {
-	return { ok: false, status, data: null, error };
+/** The API answered `status` (non-2xx). */
+function failure(status: number, error: ApiErrorPayload = new Error("failed")): ApiFailure {
+	return { kind: "httpError", ok: false, status, data: null, error };
+}
+
+/** No HTTP answer at all. */
+function networkFailure(error: ApiErrorPayload = new TypeError("fetch failed")): ApiFailure {
+	return { kind: "network", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error };
+}
+
+/** The request was aborted. */
+function abortedFailure(): ApiFailure {
+	return { kind: "aborted", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR };
+}
+
+/** A 2xx answer whose body broke the response contract. */
+function contractFailure(status: number): ApiFailure {
+	return { kind: "contract", ok: false, status, data: null, error: contractError(status) };
 }
 
 function apiError(status: number, code: string): ApiError {
@@ -36,11 +61,11 @@ function contractError(status: number): ApiResponseContractError {
 }
 
 function meAnswer(profile: Envelope<UserResponse>): ApiResponse<Envelope<UserResponse>> {
-	return { ok: true, status: 200, data: profile };
+	return { kind: "success", ok: true, status: 200, data: profile };
 }
 
 function permissionsAnswer(permissions: Envelope<SessionPermissionsResponse>): ApiResponse<Envelope<SessionPermissionsResponse>> {
-	return { ok: true, status: 200, data: permissions };
+	return { kind: "success", ok: true, status: 200, data: permissions };
 }
 
 function responses(me: SessionCheckResponses["me"], permissions: SessionCheckResponses["permissions"] = failure(401)): SessionCheckResponses {
@@ -63,9 +88,15 @@ describe("classifySessionFailure", () => {
 		["a 502 from the gateway", failure(502), { kind: "unavailable", reason: "server-error" }],
 		["a 503 during a deploy", failure(503), { kind: "unavailable", reason: "server-error" }],
 		["a 504", failure(504), { kind: "unavailable", reason: "server-error" }],
-		["a network error", failure(NO_HTTP_RESPONSE_STATUS, new TypeError("fetch failed")), { kind: "unavailable", reason: "network" }],
-		["an aborted request", failure(NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR), { kind: "unavailable", reason: "aborted" }],
-		["a 2xx body the contract rejects", failure(200, contractError(200)), { kind: "unavailable", reason: "contract-violation" }],
+		["a network error", networkFailure(), { kind: "unavailable", reason: "network" }],
+		["an aborted request", abortedFailure(), { kind: "unavailable", reason: "aborted" }],
+		["a 2xx body the contract rejects", contractFailure(200), { kind: "unavailable", reason: "contract-violation" }],
+		[
+			"a 401 whose refresh got no verdict",
+			{ kind: "sessionUnavailable", ok: false, status: 401, data: null, error: new SessionRefreshUnavailableError() },
+			{ kind: "expired-access-token" },
+		],
+		["a 401 that already ended the session", { kind: "unauthorized", ok: false, status: 401, data: null, error: "Unauthorized" }, { kind: "expired-access-token" }],
 	];
 
 	it.each(cases)("classifies %s", (_label: string, input: ApiFailure, expected: SessionResponseClass) => {
@@ -91,7 +122,7 @@ describe("classifySessionResponses", () => {
 		const profile = envelopeFixture(userFixture());
 
 		expect(classifySessionResponses(responses(meAnswer(profile), failure(503)))).toEqual({ kind: "valid", profile, permissions: null });
-		expect(classifySessionResponses(responses(meAnswer(profile), failure(NO_HTTP_RESPONSE_STATUS, new TypeError("fetch failed"))))).toEqual({
+		expect(classifySessionResponses(responses(meAnswer(profile), networkFailure()))).toEqual({
 			kind: "valid",
 			profile,
 			permissions: null,
@@ -99,7 +130,7 @@ describe("classifySessionResponses", () => {
 	});
 
 	it("never reads a malformed /auth/me as signed in", () => {
-		expect(classifySessionResponses(responses(failure(200, contractError(200)), permissionsAnswer(envelopeFixture(sessionPermissionsFixture()))))).toEqual({
+		expect(classifySessionResponses(responses(contractFailure(200), permissionsAnswer(envelopeFixture(sessionPermissionsFixture()))))).toEqual({
 			kind: "unavailable",
 			reason: "contract-violation",
 		});
@@ -115,7 +146,7 @@ describe("classifySessionResponses", () => {
 
 describe("findSessionCheckProblems", () => {
 	it("reports contract violations and unexpected statuses of either endpoint, with the issue list and never the body", () => {
-		const problems = findSessionCheckProblems(responses(failure(200, contractError(200)), failure(403)));
+		const problems = findSessionCheckProblems(responses(contractFailure(200), failure(403)));
 
 		expect(problems).toEqual([
 			{ kind: "contract-violation", endpoint: "me", status: 200, issues: [{ path: "data.id", message: "Invalid input" }] },
@@ -124,7 +155,7 @@ describe("findSessionCheckProblems", () => {
 	});
 
 	it("reports nothing for an outage, a 401 or a success — they are expected", () => {
-		expect(findSessionCheckProblems(responses(failure(503), failure(NO_HTTP_RESPONSE_STATUS)))).toEqual([]);
+		expect(findSessionCheckProblems(responses(failure(503), networkFailure()))).toEqual([]);
 		expect(findSessionCheckProblems(responses(failure(401), failure(429)))).toEqual([]);
 		expect(findSessionCheckProblems(responses(meAnswer(envelopeFixture(userFixture())), permissionsAnswer(envelopeFixture(sessionPermissionsFixture()))))).toEqual([]);
 	});
@@ -298,7 +329,7 @@ describe("checkSession", () => {
 	});
 
 	it("reports a contract violation and gives no verdict", async () => {
-		const { dependencies, problems } = harness([responses(failure(200, contractError(200)))]);
+		const { dependencies, problems } = harness([responses(contractFailure(200))]);
 
 		await expect(checkSession(dependencies, new AbortController().signal)).resolves.toEqual({ kind: "unavailable", reason: "contract-violation" });
 		expect(problems).toEqual([{ kind: "contract-violation", endpoint: "me", status: 200, issues: [{ path: "data.id", message: "Invalid input" }] }]);

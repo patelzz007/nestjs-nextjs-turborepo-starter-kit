@@ -1,5 +1,5 @@
 import type { Permission, PermissionAuditLog, Role } from "@prisma/client";
-import { AuditLogQuerySchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, AuditLogQuerySchema } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RequestContextService } from "../../../../common/context/request-context";
@@ -164,9 +164,13 @@ describe("RolePermissionPreviewRepository", () => {
 
 		await new RolePermissionPreviewRepository().findEffectiveRoleSet(["r-editor"], prisma);
 
-		expect(findRoles.mock.calls[0]?.[0]?.where).toEqual({ id: { in: ["r-editor"] }, isDeleted: false, isActive: true });
-		expect(findRoles.mock.calls[1]?.[0]?.where).toEqual({ id: { in: ["r-viewer"] }, isDeleted: false, isActive: true });
-		expect(findRolePermissions.mock.lastCall?.[0]?.where).toEqual({ roleId: { in: ["r-editor", "r-viewer"] }, isDeleted: false, permission: { isDeleted: false } });
+		expect(findRoles.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]?.where).toEqual({ id: { in: ["r-editor"] }, isDeleted: false, isActive: true });
+		expect(findRoles.mock.calls[LIST_SLOT_INDEX.second]?.[LIST_SLOT_INDEX.first]?.where).toEqual({ id: { in: ["r-viewer"] }, isDeleted: false, isActive: true });
+		expect(findRolePermissions.mock.lastCall?.[LIST_SLOT_INDEX.first]?.where).toEqual({
+			roleId: { in: ["r-editor", "r-viewer"] },
+			isDeleted: false,
+			permission: { isDeleted: false },
+		});
 	});
 });
 

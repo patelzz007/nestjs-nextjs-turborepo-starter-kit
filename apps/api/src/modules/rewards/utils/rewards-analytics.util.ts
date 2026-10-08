@@ -79,7 +79,9 @@ export function buildWeeklyTimeSeries(
 		}
 	}
 
-	return [...buckets.entries()].sort((left, right) => left[0] - right[0]).map(([date, counts]) => ({ date, claims: counts.claims, redemptions: counts.redemptions }));
+	return [...buckets.entries()]
+		.sort(([leftDate], [rightDate]) => leftDate - rightDate)
+		.map(([date, counts]) => ({ date, claims: counts.claims, redemptions: counts.redemptions }));
 }
 
 /** Mean bill in minor units (0 when there were no bills). */

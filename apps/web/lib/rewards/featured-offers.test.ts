@@ -1,4 +1,4 @@
-import { RewardResponseSchema, type RewardResponse } from "@workspace/shared";
+import { LIST_SLOT_INDEX, RewardResponseSchema, type RewardResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { FEATURED_OFFER_LIMIT, selectFeaturedOffers, selectMerchantNames } from "@/lib/rewards/featured-offers";
@@ -63,7 +63,7 @@ describe("selectFeaturedOffers", () => {
 		const featured = selectFeaturedOffers([later, soonest], NOW);
 
 		expect(featured.map((offer) => offer.title)).toEqual(["Soonest", "Later"]);
-		expect(featured[0]).toEqual({
+		expect(featured[LIST_SLOT_INDEX.first]).toEqual({
 			id: soonest.id,
 			title: "Soonest",
 			merchantName: "Brew & Bean KL",

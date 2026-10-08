@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -81,7 +82,7 @@ function hashName(name: string): number {
 /** The monogram tint for a name — deterministic, case- and surrounding-whitespace-insensitive. */
 export function getEntityAvatarTone(name: string): EntityAvatarTone {
 	// The modulo keeps the index in range, so the fallback is never reached.
-	return ENTITY_AVATAR_TONES[hashName(name) % ENTITY_AVATAR_TONES.length] ?? ENTITY_AVATAR_TONES[0];
+	return ENTITY_AVATAR_TONES[hashName(name) % ENTITY_AVATAR_TONES.length] ?? ENTITY_AVATAR_TONES[LIST_SLOT_INDEX.first];
 }
 
 export interface EntityAvatarProps extends Omit<React.ComponentPropsWithoutRef<"span">, "children">, VariantProps<typeof entityAvatarVariants> {

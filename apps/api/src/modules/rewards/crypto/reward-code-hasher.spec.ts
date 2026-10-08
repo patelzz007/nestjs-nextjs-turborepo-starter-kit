@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { RewardCodeHasher, RewardCodeHashKeyRingEmptyError } from "./reward-code-hasher";
 
@@ -23,7 +24,7 @@ describe("RewardCodeHasher", () => {
 		const afterRotation = new RewardCodeHasher({ 1: KEY_1, 2: KEY_2 });
 
 		expect(afterRotation.lookupCandidates(CODE)).toContain(before);
-		expect(afterRotation.lookupCandidates(CODE)[0]).toBe(afterRotation.hash(CODE));
+		expect(afterRotation.lookupCandidates(CODE)[LIST_SLOT_INDEX.first]).toBe(afterRotation.hash(CODE));
 	});
 
 	it("refuses an empty key ring", () => {

@@ -40,7 +40,8 @@ export function routeParam(name: string): string {
 
 /** The path part of an href, without query string or fragment. */
 function pathOf(href: string): string {
-	return href.split(PATH_TERMINATOR_PATTERN)[0] ?? href;
+	const [path] = href.split(PATH_TERMINATOR_PATTERN);
+	return path ?? href;
 }
 
 /**

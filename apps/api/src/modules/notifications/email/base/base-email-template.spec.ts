@@ -147,12 +147,24 @@ describe("BaseEmailTemplate building blocks", () => {
 	});
 
 	it("renders an in-body CTA exactly once (the shell does not add a second), and keeps it in the plain-text twin", () => {
-		expect(html.match(/>Go now &rarr;</g)).toHaveLength(1);
+		expect(html.match(/>Go now</g)).toHaveLength(1);
 		expect(new BlocksTemplate({ to: "a@b.com" }).renderText(context)).toContain("Action: Go now");
 	});
 
-	it("keeps the card at the standard 600px email width with the tone's accent bar", () => {
+	it("keeps the card at the standard 600px email width and shows the tone as a dot, not a bar", () => {
 		expect(html).toContain("max-width: 600px");
-		expect(html).toContain("background: #dc2626;");
+		expect(html).toContain("border-radius: 4px; background: #dc2626; vertical-align: middle;");
+	});
+
+	it("draws no decorative borders: no accent bar, no side stripes, no boxed panels", () => {
+		expect(html).not.toMatch(/border-left|border-right|border-bottom/);
+		expect(html).not.toMatch(/border: ?1px/);
+		// The only line in the card is the hairline between ledger rows.
+		expect(html.match(/border-top: 1px/g) ?? []).toHaveLength(0);
+	});
+
+	it("keeps the eyebrow in sentence case and the button free of decoration", () => {
+		expect(html).not.toContain("text-transform: uppercase");
+		expect(html).not.toContain("&rarr;");
 	});
 });

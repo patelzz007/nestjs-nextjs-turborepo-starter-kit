@@ -1,4 +1,4 @@
-import { EnvValidationError } from "@workspace/shared";
+import { LIST_SLOT_INDEX, EnvValidationError } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { SINGLE_TENANT_SEED_ORGANIZATION_ID } from "../../prisma/seed/organization-seed-ids";
@@ -125,14 +125,14 @@ describe("API env schema", () => {
 			const short = "short-secret-value";
 			const error = captureEnvError({ JWT_ACCESS_SECRET: short });
 
-			expect(error.issues[0]?.problem).toMatch(/at least 32 characters/);
+			expect(error.issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/at least 32 characters/);
 			expect(error.message).not.toContain(short);
 		});
 
 		it("rejects the .env.example placeholder even though it is long enough", () => {
 			const error = captureEnvError({ JWT_REFRESH_SECRET: "change-me-run-pnpm-secrets-generate" });
 
-			expect(error.issues[0]?.problem).toMatch(/placeholder/);
+			expect(error.issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/placeholder/);
 		});
 
 		it("requires the four signing secrets to differ", () => {
@@ -159,14 +159,14 @@ describe("API env schema", () => {
 			const config = parse({ MFA_ENCRYPTION_KEYS: JSON.stringify({ 1: KEY_32_BYTES, 2: Buffer.alloc(32, 3).toString("base64") }) });
 
 			expect(Object.keys(config.mfa.encryptionKeys)).toEqual(["1", "2"]);
-			expect(config.mfa.encryptionKeys[2]).toBe(Buffer.alloc(32, 3).toString("base64"));
+			expect(config.mfa.encryptionKeys[LIST_SLOT_INDEX.third]).toBe(Buffer.alloc(32, 3).toString("base64"));
 		});
 
 		it("rejects non-JSON, an empty ring, bad versions and keys that are not 32 bytes — without printing the key", () => {
 			const wrongLength = Buffer.alloc(128, 4).toString("base64");
 
-			expect(captureEnvError({ MFA_ENCRYPTION_KEYS: "not json" }).issues[0]?.problem).toMatch(/JSON object/);
-			expect(captureEnvError({ MFA_ENCRYPTION_KEYS: "{}" }).issues[0]?.problem).toMatch(/at least one key version/);
+			expect(captureEnvError({ MFA_ENCRYPTION_KEYS: "not json" }).issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/JSON object/);
+			expect(captureEnvError({ MFA_ENCRYPTION_KEYS: "{}" }).issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/at least one key version/);
 			expect(captureEnvError({ MFA_ENCRYPTION_KEYS: JSON.stringify({ zero: KEY_32_BYTES }) }).variables).toEqual(["MFA_ENCRYPTION_KEYS.zero"]);
 			const lengthError = captureEnvError({ MFA_ENCRYPTION_KEYS: JSON.stringify({ 1: wrongLength }) });
 			expect(lengthError.issues).toEqual([{ variable: "MFA_ENCRYPTION_KEYS.1", problem: "must decode to exactly 32 bytes (generate with: openssl rand -base64 32)" }]);
@@ -223,9 +223,9 @@ describe("API env schema", () => {
 			const sixteenBytes = Buffer.alloc(16, 9).toString("base64");
 
 			const formatError = captureEnvError({ TENANT_ENCRYPTION_MASTER_KEY: notBase64 });
-			expect(formatError.issues[0]?.problem).toMatch(/standard base64/);
+			expect(formatError.issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/standard base64/);
 			expect(formatError.message).not.toContain(notBase64);
-			expect(captureEnvError({ TENANT_ENCRYPTION_MASTER_KEY: sixteenBytes }).issues[0]?.problem).toMatch(/exactly 32 bytes/);
+			expect(captureEnvError({ TENANT_ENCRYPTION_MASTER_KEY: sixteenBytes }).issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/exactly 32 bytes/);
 		});
 	});
 

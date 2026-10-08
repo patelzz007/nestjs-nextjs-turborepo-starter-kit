@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PolicyDefinition, Prisma } from "@prisma/client";
-import { PolicyConditionsSchema, type AuthorizationRequest, type PolicyOperator, type PolicyValue } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PolicyConditionsSchema, type AuthorizationRequest, type PolicyOperator, type PolicyValue } from "@workspace/shared";
 
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { applyPolicyOperator, matchesPolicyRule, PolicyEngineService } from "../policy-engine.service";
@@ -123,7 +123,7 @@ describe("PolicyEngineService", () => {
 		);
 
 		expect(mocks.policyFindMany).toHaveBeenCalledTimes(1);
-		expect(mocks.policyFindMany.mock.lastCall?.[0].where?.AND).toEqual([
+		expect(mocks.policyFindMany.mock.lastCall?.[LIST_SLOT_INDEX.first].where?.AND).toEqual([
 			{ OR: [{ organizationId: null }, { organizationId: "org-a" }] },
 			{ OR: [{ locationId: null }, { locationId: "loc-1" }] },
 		]);

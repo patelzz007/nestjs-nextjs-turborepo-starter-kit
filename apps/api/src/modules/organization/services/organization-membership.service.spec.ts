@@ -1,7 +1,7 @@
 import { ForbiddenException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Prisma } from "@prisma/client";
-import { MERCHANT_CAPABILITY, ReviewOrganizationAccessRequestSchema, type OrganizationMemberInviteInput } from "@workspace/shared";
+import { LIST_SLOT_INDEX, MERCHANT_CAPABILITY, ReviewOrganizationAccessRequestSchema, type OrganizationMemberInviteInput } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthorizationError, ConflictError, NotFoundError } from "../../../common/errors/app-error";
@@ -316,9 +316,9 @@ describe("OrganizationMembershipService", () => {
 			await service.inviteMember(OWNER_ACTOR, "Brew", inviteInput);
 
 			const inviteUrl: string = JSON.stringify(emailSender.send.mock.lastCall);
-			const token = /token=([0-9a-f]+)/.exec(inviteUrl)?.[1] ?? "";
+			const token = /token=(?<token>[0-9a-f]+)/.exec(inviteUrl)?.groups?.token ?? "";
 			expect(token).toMatch(/^[0-9a-f]{64}$/);
-			const written = stdout.mock.calls.map((call) => String(call[0])).join("");
+			const written = stdout.mock.calls.map((call) => String(call[LIST_SLOT_INDEX.first])).join("");
 			expect(written).not.toContain(token);
 			expect(JSON.stringify(logService.warn.mock.calls)).not.toContain(token);
 		});
@@ -392,7 +392,7 @@ describe("OrganizationMembershipService", () => {
 					data: { status: "ACCEPTED", acceptedByUserId: REQUESTER_ID },
 				},
 			]);
-			expect(tx.organizationInvitation.updateMany.mock.lastCall?.[0]).toHaveProperty("where.expiresAt.gt");
+			expect(tx.organizationInvitation.updateMany.mock.lastCall?.[LIST_SLOT_INDEX.first]).toHaveProperty("where.expiresAt.gt");
 			expect(tx.organizationMembership.create.mock.lastCall).toMatchObject([
 				{
 					data: {
@@ -467,7 +467,11 @@ describe("OrganizationMembershipService", () => {
 		it("run under the actor's real policy version (not 0)", async () => {
 			await service.listMembers(OWNER_ACTOR);
 
-			expect(tenantTx.withTenantTransaction.mock.lastCall?.[0]).toMatchObject({ policyVersion: ACTOR_POLICY_VERSION, userId: ACTOR_ID, organizationId: ORG_ID });
+			expect(tenantTx.withTenantTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
+				policyVersion: ACTOR_POLICY_VERSION,
+				userId: ACTOR_ID,
+				organizationId: ORG_ID,
+			});
 		});
 	});
 });

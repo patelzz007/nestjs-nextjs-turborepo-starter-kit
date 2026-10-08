@@ -1,4 +1,4 @@
-import type { DataValue } from "@workspace/shared";
+import { isArrayValue, isJsonPrimitive, type DataValue } from "@workspace/shared";
 
 // ── Centralized secret redaction (docs/technical/operations/observability.md → "Redaction") ─────────
 //
@@ -102,7 +102,7 @@ export function isSensitiveFieldName(key: string): boolean {
 }
 
 function redactNode(value: DataValue | undefined, ancestors: Set<DataValue>): DataValue | undefined {
-	if (value === null || value === undefined || typeof value !== "object") {
+	if (value === null || value === undefined || isJsonPrimitive(value)) {
 		return value;
 	}
 	if (ancestors.has(value)) {
@@ -110,7 +110,7 @@ function redactNode(value: DataValue | undefined, ancestors: Set<DataValue>): Da
 	}
 	ancestors.add(value);
 	try {
-		if (Array.isArray(value)) {
+		if (isArrayValue(value)) {
 			return value.map((item: DataValue): DataValue => redactNode(item, ancestors) ?? null);
 		}
 		const result: Record<string, DataValue | undefined> = {};

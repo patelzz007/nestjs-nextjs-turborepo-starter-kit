@@ -66,18 +66,26 @@ below (headless Chrome, light mode):
 | ![Welcome](../../images/email/welcome.png) | ![Verification](../../images/email/verification.png) | ![Login verification](../../images/email/login-verification.png) |
 | ![Password reset](../../images/email/password-reset.png) | ![Account locked](../../images/email/account-locked.png) | ![Security alert](../../images/email/security-alert.png) |
 | ![API key created](../../images/email/api-key-created.png) | ![Team member invite](../../images/email/team-member-invite.png) | ![Admin alert](../../images/email/admin-alert.png) |
+| ![Merchant invite](../../images/email/merchant-invite.png) | ![Password changed](../../images/email/password-changed.png) | ![Two-factor enabled](../../images/email/two-factor-enabled.png) |
+| ![Two-factor disabled](../../images/email/two-factor-disabled.png) | ![Reward claim code](../../images/email/reward-claim-otp.png) | ![Referrer reward credited](../../images/email/referrer-reward-credited.png) |
 
 ## Design: one shell, one set of building blocks
 
 Every email renders through `BaseEmailTemplate` (`base/base-email-template.ts`), so templates only
 supply content:
 
-- **Shell:** brand row above a 600 px card, a 4 px accent bar in the template's tone, an eyebrow
-  pill, the heading, the body and a footer. Table layout with inline styles for every mail client;
-  a `prefers-color-scheme: dark` block and a ≤ 620 px mobile block override them.
+- **Shell:** a brand row above a 600 px white card on the apps' `#F1F4F9` canvas, then the eyebrow
+  (a tone dot and a short sentence-case label), the heading, the body, and a footer below the card.
+  Table layout with inline styles for every mail client; a `prefers-color-scheme: dark` block and a
+  ≤ 620 px mobile block override them.
+- **No decorative lines.** The card has no border and no accent bar; tinted blocks have no borders
+  or side stripes; the only line in a card is the hairline between details rows. Tone is carried by
+  colour and fill alone. Eyebrows are sentence case (never ALL CAPS), and buttons carry their label
+  only (no trailing arrow). The base template's tests enforce these.
 - **Tokens:** `EMAIL_THEME` mirrors the web brand theme (`apps/web/app/web-theme.css`) as hex —
   mail clients support neither `oklch()` nor CSS variables. **Change both together.**
-- **Tone:** each template sets `accent`, which picks a palette in `ACCENT_PALETTES`: `indigo`
+- **Tone:** each template sets `accent`, which picks a palette in `ACCENT_PALETTES` (the eyebrow's dot
+  and text, and the tinted blocks): `indigo`
   (brand: account, product), `green` (success), `amber` (a security change worth a look), `red`
   (danger), `sky` (codes, invites). The call-to-action button is always the brand colour.
 - **Building blocks** — compose bodies from these protected helpers instead of hand-written inline
@@ -86,7 +94,7 @@ supply content:
   | Block | Use for |
   | --- | --- |
   | `paragraph(html)`, `note(html)` | Body copy and small muted notes; interpolate data only via `strong()`, `link()` or `escape()` |
-  | `detailsCard(rows)` | Label / value facts (device, location, role, expiry) |
+  | `detailsCard(rows)` | Label / value facts (device, location, role, expiry), as a quiet ledger |
   | `highlight(title, subtitle?)` | The one thing the reader must notice |
   | `callout(title, body)` | Guidance in the tone's colour ("Wasn't you?") |
   | `steps(items)` | A numbered how-to |

@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { API_VERSION_PREFIX, ApiErrorResponseSchema, RewardClaimQrResponseSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, API_VERSION_PREFIX, ApiErrorResponseSchema, RewardClaimQrResponseSchema } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
@@ -21,7 +21,7 @@ describe("Access hardening (e2e)", () => {
 		await clearPendingTeamInviteForEmail(pool, ORGANIZATION_SEED_IDS.klOrganization, "user@example.com");
 		const result = await pool.query<{ id: string }>(`SELECT id FROM public.organization_api_keys WHERE organization_id = $1 LIMIT 1`, [ORGANIZATION_SEED_IDS.mlkOrganization]);
 		await pool.end();
-		const keyId = result.rows[0]?.id;
+		const keyId = result.rows[LIST_SLOT_INDEX.first]?.id;
 		if (keyId === undefined) {
 			throw new Error("Seed data missing MLK organization API key — run pnpm db:seed");
 		}

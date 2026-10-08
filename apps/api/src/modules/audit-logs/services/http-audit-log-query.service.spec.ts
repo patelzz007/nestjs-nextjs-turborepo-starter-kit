@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing";
 import type { AuditLog } from "@prisma/client";
-import { HttpAuditLogListQuerySchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, HttpAuditLogListQuerySchema } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { captureFastifyRequest } from "../../../../test/support/fastify-request";
@@ -122,7 +122,7 @@ describe("HttpAuditLogQueryService", () => {
 			expect(repository.findUsers).toHaveBeenCalledWith([ACTOR_ID], tx);
 			expect(repository.findOrganizations).toHaveBeenCalledWith([ORGANIZATION_ID], tx);
 			expect(page).toMatchObject({ total: 1, limit: LIST_QUERY.limit });
-			expect(page.items[0]).toMatchObject({
+			expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({
 				id: RECORD_ID,
 				actor: { id: ACTOR_ID, email: "admin@example.com", fullName: "Admin" },
 				organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
@@ -134,7 +134,7 @@ describe("HttpAuditLogQueryService", () => {
 			await service.list(VIEWER_ID, LIST_QUERY, await captureFastifyRequest({ headers: {} }));
 
 			expect(audit.append).toHaveBeenCalledTimes(1);
-			expect(audit.append.mock.calls[0]?.[0]).toMatchObject({
+			expect(audit.append.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toMatchObject({
 				outcome: "SUCCEEDED",
 				responseStatus: 200,
 				responseBody: { auditLogView: { view: "list", returned: 1, total: 1, page: 1 } },
@@ -159,7 +159,7 @@ describe("HttpAuditLogQueryService", () => {
 		it("records which record was opened", async () => {
 			await service.getById(VIEWER_ID, RECORD_ID, await captureFastifyRequest({ headers: {} }));
 
-			expect(audit.append.mock.calls[0]?.[0]).toMatchObject({
+			expect(audit.append.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toMatchObject({
 				responseBody: { auditLogView: { view: "detail", auditLogId: RECORD_ID, correlationId: "corr-1" } },
 			});
 		});

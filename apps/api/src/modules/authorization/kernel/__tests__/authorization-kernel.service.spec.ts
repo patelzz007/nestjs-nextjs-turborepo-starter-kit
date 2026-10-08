@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResourceAcl } from "@prisma/client";
 import {
+	LIST_SLOT_INDEX,
 	AuthorizationRowFilterSchema,
 	type AuthorizationContext,
 	type AuthorizationRequest,
@@ -167,7 +168,7 @@ describe("AuthorizationKernelService", () => {
 			const result = await createKernel().explain(request({ action: "ASSUME" }));
 
 			expect(result.decision).toBe("DENY");
-			expect(result.evaluation[0]).toEqual(expect.objectContaining({ source: "validation" }));
+			expect(result.evaluation[LIST_SLOT_INDEX.first]).toEqual(expect.objectContaining({ source: "validation" }));
 		});
 
 		it("allows a GLOBAL role grant", async () => {

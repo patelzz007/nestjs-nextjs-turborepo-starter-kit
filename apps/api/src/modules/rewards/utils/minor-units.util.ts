@@ -1,3 +1,5 @@
+import { isNumberPrimitive } from "@workspace/shared";
+
 /** A money amount read from a 64-bit column exceeds what JSON can carry exactly (Number.MAX_SAFE_INTEGER). */
 export class MinorUnitsOverflowError extends Error {
 	public constructor(value: bigint) {
@@ -13,7 +15,7 @@ export class MinorUnitsOverflowError extends Error {
  * amount beyond that fails loudly instead of being silently rounded.
  */
 export function minorUnitsToNumber(value: bigint | number): number {
-	if (typeof value === "number") {
+	if (isNumberPrimitive(value)) {
 		return value;
 	}
 	if (value > BigInt(Number.MAX_SAFE_INTEGER) || value < BigInt(Number.MIN_SAFE_INTEGER)) {

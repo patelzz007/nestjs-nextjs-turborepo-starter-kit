@@ -1,4 +1,4 @@
-import { FastifyQuerySchema, HttpHeaderValueSchema, ReplyHeaderValueSchema, type FastifyQuery } from "@workspace/shared";
+import { isArrayValue, LIST_SLOT_INDEX, FastifyQuerySchema, HttpHeaderValueSchema, ReplyHeaderValueSchema, type FastifyQuery } from "@workspace/shared";
 
 /** Returns the first non-empty header value, if present. */
 export function readFirstHeader(value: string | string[] | undefined): string | undefined {
@@ -9,8 +9,8 @@ export function readFirstHeader(value: string | string[] | undefined): string | 
 	if (!parsed.success) {
 		return undefined;
 	}
-	if (Array.isArray(parsed.data)) {
-		const first: string = parsed.data[0] ?? "";
+	if (isArrayValue(parsed.data)) {
+		const first: string = parsed.data[LIST_SLOT_INDEX.first] ?? "";
 		return first.length > 0 ? first : undefined;
 	}
 	return parsed.data.length > 0 ? parsed.data : undefined;
@@ -34,7 +34,7 @@ export function readReplyHeader(value: string | number | string[] | undefined): 
 	if (!parsed.success) {
 		return undefined;
 	}
-	if (Array.isArray(parsed.data)) {
+	if (isArrayValue(parsed.data)) {
 		return readFirstHeader(parsed.data);
 	}
 	return String(parsed.data);

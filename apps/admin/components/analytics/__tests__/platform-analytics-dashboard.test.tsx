@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { apiDownloads, ApiDownloadError, type DownloadedFile } from "@workspace/client/lib/api/download";
-import { createApiSuccessEnvelopeSchema, AdminAnalyticsDashboardSchema, type AdminAnalyticsDashboard, type Envelope } from "@workspace/shared";
+import { LIST_SLOT_INDEX, createApiSuccessEnvelopeSchema, AdminAnalyticsDashboardSchema, type AdminAnalyticsDashboard, type Envelope } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -71,7 +71,7 @@ function renderDashboard(props: Partial<React.ComponentProps<typeof PlatformAnal
 function lastQueryInput(): object {
 	const call = mocks.dashboardQuery.mock.lastCall;
 	if (call === undefined) throw new Error("the dashboard was never queried");
-	return call[0];
+	return call[LIST_SLOT_INDEX.first];
 }
 
 /** Opens a labelled filter menu and picks an option (the shared DropdownMenu). */
@@ -120,8 +120,8 @@ describe("PlatformAnalyticsDashboard", () => {
 			expect(screen.getByRole("table", { name: chart })).toBeTruthy();
 		}
 		const merchants = within(screen.getByRole("list", { name: "Merchants ranked by sales" })).getAllByRole("listitem");
-		expect(spaced(merchants[0]?.textContent ?? null)).toContain("Sunrise Café");
-		expect(spaced(merchants[0]?.textContent ?? null)).toContain("Café · 1,200 bills · avg RM 6.25 · 75% of sales");
+		expect(spaced(merchants[LIST_SLOT_INDEX.first]?.textContent ?? null)).toContain("Sunrise Café");
+		expect(spaced(merchants[LIST_SLOT_INDEX.first]?.textContent ?? null)).toContain("Café · 1,200 bills · avg RM 6.25 · 75% of sales");
 		expect(spaced(within(screen.getByRole("list", { name: "Cities ranked by sales" })).getByRole("listitem").textContent)).toContain("Kuala Lumpur");
 	});
 
@@ -130,13 +130,13 @@ describe("PlatformAnalyticsDashboard", () => {
 		mocks.dashboardQuery.mockReturnValue(queryResult({ data: prefetched }));
 		const refresh = renderDashboard({ initialDashboard: { stateKey: DEFAULT_KEY, data: prefetched } });
 
-		expect(mocks.dashboardQuery.mock.lastCall?.[1]).toMatchObject({ initialData: prefetched });
+		expect(mocks.dashboardQuery.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({ initialData: prefetched });
 
 		await chooseFilter("Date range", "Last month");
 		refresh();
 
 		expect(lastQueryInput()).toEqual({ from: Date.UTC(2026, 8, 1), to: Date.UTC(2026, 9, 1), interval: "day" });
-		expect(mocks.dashboardQuery.mock.lastCall?.[1]).not.toHaveProperty("initialData");
+		expect(mocks.dashboardQuery.mock.lastCall?.[LIST_SLOT_INDEX.second]).not.toHaveProperty("initialData");
 	});
 
 	it("reads and writes the range in the URL, so a shared link opens the same view", async (): Promise<void> => {
@@ -189,9 +189,9 @@ describe("PlatformAnalyticsDashboard", () => {
 
 		const alerts = screen.getAllByRole("alert");
 		expect(alerts.length).toBeGreaterThan(0);
-		expect(alerts[0]?.textContent).toContain("Service unavailable");
+		expect(alerts[LIST_SLOT_INDEX.first]?.textContent).toContain("Service unavailable");
 		act((): void => {
-			fireEvent.click(within(alerts[0] ?? document.body).getByRole("button", { name: "Try again" }));
+			fireEvent.click(within(alerts[LIST_SLOT_INDEX.first] ?? document.body).getByRole("button", { name: "Try again" }));
 		});
 		expect(mocks.refetch).toHaveBeenCalledTimes(1);
 	});

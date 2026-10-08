@@ -10,6 +10,8 @@ import { HttpStatus } from "@nestjs/common";
 import {
 	CLIENT_TYPE_HEADER,
 	IDEMPOTENCY_KEY_HEADER,
+	isArrayValue,
+	isJsonPrimitive,
 	JsonValueSchema,
 	type AuditAuthMethod,
 	type AuditOutcome,
@@ -167,10 +169,10 @@ function maskEmail(value: string): string {
 }
 
 function maskPersonalData(value: JsonValue): JsonValue {
-	if (value === null || typeof value !== "object") {
+	if (isJsonPrimitive(value)) {
 		return value;
 	}
-	if (Array.isArray(value)) {
+	if (isArrayValue(value)) {
 		return value.map((item: JsonValue): JsonValue => maskPersonalData(item));
 	}
 	const entries: [string, JsonValue][] = Object.entries(value).flatMap(([key, child]): [string, JsonValue][] => {
@@ -223,7 +225,8 @@ function requestBodyPayload(request: FastifyRequest): JsonValue | null {
 		return null;
 	}
 	const contentType: string | null = readFirstHeader(request.headers["content-type"]) ?? null;
-	const mediaType: string | undefined = contentType?.split(";")[0]?.trim().toLowerCase();
+	const [rawMediaType] = contentType?.split(";") ?? [];
+	const mediaType: string | undefined = rawMediaType?.trim().toLowerCase();
 	const json = mediaType !== undefined && JSON_MEDIA_TYPE.test(mediaType) ? JsonValueSchema.safeParse(request.body) : undefined;
 	if (json?.success === true) {
 		return toAuditPayload(json.data);

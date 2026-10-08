@@ -20,6 +20,7 @@
 // server-side (`manual`) mode.
 // ============================================================
 
+import { isNumberPrimitive } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
@@ -90,6 +91,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
+import { assertUniqueDataTableColumnIds, DATA_TABLE_UTILITY_COLUMN_ID } from "@workspace/ui/lib/data-table/column-ids";
 import { DESKTOP_MEDIA_QUERY } from "@workspace/ui/hooks/use-mobile";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table/export";
@@ -935,6 +937,7 @@ const BulkActionButton = memoGeneric(function BulkActionButton<TData extends Row
 		// row-selection reset always runs after the action settles.
 		void Promise.resolve(action.onClick(selectedRows, selectionContext)).then(onDone);
 	}, [action, selectedRows, selectionContext, onDone]);
+	const [shortLabel] = action.label.split(" ");
 
 	return (
 		<Button
@@ -947,7 +950,7 @@ const BulkActionButton = memoGeneric(function BulkActionButton<TData extends Row
 			)}>
 			{action.icon}
 			<span className="hidden sm:inline">{action.label}</span>
-			<span className="sm:hidden">{action.label.split(" ")[0]}</span>
+			<span className="sm:hidden">{shortLabel}</span>
 		</Button>
 	);
 });
@@ -1613,7 +1616,7 @@ export function DataTable<TData extends RowData>({
 				}
 				if ("accessorKey" in column) {
 					const accessorKey = column.accessorKey;
-					if (typeof accessorKey === "number") {
+					if (isNumberPrimitive(accessorKey)) {
 						return accessorKey.toString();
 					}
 					return accessorKey;
@@ -1720,7 +1723,7 @@ export function DataTable<TData extends RowData>({
 		// Drag handle column (NEW FEATURE 8)
 		if (draggable) {
 			cols.push({
-				id: "drag",
+				id: DATA_TABLE_UTILITY_COLUMN_ID.drag,
 				header: "",
 				cell: () => <DragHandleCell />,
 				enableSorting: false,
@@ -1735,7 +1738,7 @@ export function DataTable<TData extends RowData>({
 		// Selection checkbox column
 		if (resolvedEnableBulkSelection) {
 			cols.push({
-				id: "select",
+				id: DATA_TABLE_UTILITY_COLUMN_ID.select,
 				header: ({ table }) => <SelectAllCheckbox table={table} onAnyDeselect={handleAnyDeselect} labels={labels} />,
 				cell: ({ row, table }) => <SelectRowCheckbox row={row} table={table} onAnyDeselect={handleAnyDeselect} labels={labels} />,
 				enableSorting: false,
@@ -1752,7 +1755,7 @@ export function DataTable<TData extends RowData>({
 		// Actions column
 		if (actions.length > 0) {
 			cols.push({
-				id: "actions",
+				id: DATA_TABLE_UTILITY_COLUMN_ID.actions,
 				header: labels.actionsColumnHeader,
 				cell: ({ row }) => <RowActionsMenu row={row} actions={actions} labels={labels} />,
 				enableSorting: false,
@@ -1764,6 +1767,8 @@ export function DataTable<TData extends RowData>({
 			});
 		}
 
+		// A caller's column must not reuse a utility id or another column's id: React would key two cells per row alike.
+		assertUniqueDataTableColumnIds(cols);
 		return cols;
 	}, [initialColumns, actions, labels, resolvedEnableBulkSelection, draggable, handleAnyDeselect]);
 

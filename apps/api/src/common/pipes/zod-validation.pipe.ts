@@ -5,6 +5,7 @@ import { toJSONSchema, url } from "zod/v4";
 
 import {
 	EmailAddressSchema,
+	isArrayValue,
 	JsonObjectSchema,
 	JsonPrimitiveSchema,
 	JsonRecordSchema,
@@ -208,7 +209,7 @@ function readAjvParam(params: Record<string, JsonValue>, key: string): string {
 
 function readAjvParamList(params: Record<string, JsonValue>, key: string): string {
 	const value = params[key];
-	if (!Array.isArray(value)) {
+	if (!isArrayValue(value)) {
 		return "unknown";
 	}
 	return value

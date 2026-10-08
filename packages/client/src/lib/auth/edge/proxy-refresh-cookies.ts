@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 export const ParsedCookieSchema = z.object({
 	name: z.string(),
@@ -16,7 +17,7 @@ export type ParsedCookie = z.output<typeof ParsedCookieSchema>;
 
 export function parseSetCookie(header: string): ParsedCookie | null {
 	const segments: readonly string[] = header.split(";").map((segment: string): string => segment.trim());
-	const first: string | undefined = segments[0];
+	const first: string | undefined = segments[LIST_SLOT_INDEX.first];
 	if (first === undefined) return null;
 	const eq: number = first.indexOf("=");
 	if (eq <= 0) return null;

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { fileURLToPath } from "node:url";
 
 import { createElement, Fragment } from "react";
@@ -201,8 +202,8 @@ describe("highlightCode (real shiki)", () => {
 
 			const first = await highlightCode("const a = 1;\nconst b", { language: "typescript", instanceKey: "stream" });
 			const second = await highlightCode("const a = 1;\nconst b = 2;", { language: "typescript", instanceKey: "stream" });
-			expect(second[0]).toBe(first[0]);
-			expect(second[1]).not.toBe(first[1]);
+			expect(second[LIST_SLOT_INDEX.first]).toBe(first[LIST_SLOT_INDEX.first]);
+			expect(second[LIST_SLOT_INDEX.second]).not.toBe(first[LIST_SLOT_INDEX.second]);
 		},
 		SHIKI_TIMEOUT_MS,
 	);

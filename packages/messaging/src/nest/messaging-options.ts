@@ -1,4 +1,5 @@
 import { DEFAULT_KAFKA_CONNECT_BACKOFF, KafkaConnectBackoffPolicySchema, type KafkaConnectBackoffPolicy } from "../kafka/kafka-connect-backoff";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { KafkaSecurityOptions } from "../kafka/kafka-security";
 
 /**
@@ -66,6 +67,6 @@ export function resolveMessagingOptions(options: MessagingModuleOptions): Resolv
 		kafkaDeliveryTimeoutMs: options.kafkaDeliveryTimeoutMs,
 		kafkaConnectBackoff: KafkaConnectBackoffPolicySchema.parse(options.kafkaConnectBackoff ?? DEFAULT_KAFKA_CONNECT_BACKOFF),
 		rabbitmqUrl: options.rabbitmqUrl !== undefined && options.rabbitmqUrl.length > 0 ? options.rabbitmqUrl : undefined,
-		healthQueueName: options.healthQueueName ?? options.queueNames[0],
+		healthQueueName: options.healthQueueName ?? options.queueNames[LIST_SLOT_INDEX.first],
 	};
 }

@@ -15,7 +15,7 @@
 //   test/openapi-artifact.e2e-spec.ts             # fails when it is stale
 
 import type { OpenAPIObject } from "@nestjs/swagger";
-import { JsonValueSchema, type JsonValue } from "@workspace/shared";
+import { isArrayValue, isJsonPrimitive, JsonValueSchema, type JsonValue } from "@workspace/shared";
 
 /** Repository-relative path of the committed artifact. */
 export const OPENAPI_ARTIFACT_PATH = "docs/generated/openapi.json";
@@ -25,10 +25,10 @@ const ARTIFACT_INDENT = 2;
 
 /** A copy of `value` whose objects list their keys in sorted order, at every depth. */
 export function sortJsonKeys(value: JsonValue): JsonValue {
-	if (Array.isArray(value)) {
+	if (isArrayValue(value)) {
 		return value.map((entry: JsonValue): JsonValue => sortJsonKeys(entry));
 	}
-	if (value === null || typeof value !== "object") {
+	if (isJsonPrimitive(value)) {
 		return value;
 	}
 	const sorted: Record<string, JsonValue> = {};

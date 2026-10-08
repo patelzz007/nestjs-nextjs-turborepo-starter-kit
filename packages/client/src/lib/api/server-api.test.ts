@@ -15,7 +15,7 @@ import {
 	type PrefetchLogEvent,
 	type ServerApiConfig,
 } from "./server-api";
-import { singleResponse } from "@workspace/shared";
+import { LIST_SLOT_INDEX, singleResponse } from "@workspace/shared";
 
 import { headersOf, type FetchImpl } from "../test-utils";
 import { apiRouter, defineMutation, defineQuery, resolveRequest } from "./endpoints";
@@ -186,7 +186,7 @@ describe("createServerCallerForRouter", () => {
 
 		await server.stats.query({});
 
-		const headers = headersOf(fetchMock.mock.calls[0]?.[1] ?? {});
+		const headers = headersOf(fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second] ?? {});
 		expect(headers.Cookie).toBe("adminAccessToken=access-token");
 		expect(headers["X-Client-Type"]).toBe("admin");
 		expect(headers["user-agent"]).toBe("vitest");
@@ -254,7 +254,7 @@ describe("prefetch outcomes are logged, never swallowed", () => {
 		await expect(server.stats.query({})).rejects.toThrow("HTTP 401");
 
 		expect(warn).toHaveBeenCalledTimes(1);
-		expect(warn.mock.calls[0]?.[0]).toContain("HTTP 500");
+		expect(warn.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toContain("HTTP 500");
 		warn.mockRestore();
 	});
 });
@@ -324,7 +324,7 @@ describe("timeouts", () => {
 
 		await expect(server.stats.query({})).rejects.toThrow("timeout");
 		expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(2);
-		expect(events[0]?.outcome).toEqual({ ok: false, failure: { kind: "timeout" } });
+		expect(events[LIST_SLOT_INDEX.first]?.outcome).toEqual({ ok: false, failure: { kind: "timeout" } });
 	});
 });
 
@@ -346,7 +346,7 @@ describe("server queries without a session cookie", () => {
 		const server = createServerCallerForRouter({ stats: publicEndpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));
 
 		await expect(server.stats.query({})).resolves.toEqual(OK_BODY);
-		const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
+		const headers = new Headers(fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]?.headers);
 		expect(headers.has("cookie")).toBe(false);
 		expect(headers.get("x-client-type")).toBe("admin");
 	});

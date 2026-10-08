@@ -5,7 +5,7 @@ import fastifyCookie from "@fastify/cookie";
 import fastifyMultipart from "@fastify/multipart";
 import { Test, type TestingModule, type TestingModuleBuilder } from "@nestjs/testing";
 import { Pool } from "pg";
-import { API_VERSION_PREFIX, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, ApiSuccessResponseSchema, type ApiResponseMeta } from "@workspace/shared";
+import { API_VERSION_PREFIX, isArrayValue, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, ApiSuccessResponseSchema, type ApiResponseMeta } from "@workspace/shared";
 import { type z } from "zod";
 
 import { AppModule } from "../src/app.module";
@@ -123,7 +123,7 @@ export function extractCookie(setCookieHeader: string | string[] | undefined, na
 	if (setCookieHeader === undefined) {
 		return undefined;
 	}
-	const headers: readonly string[] = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+	const headers: readonly string[] = isArrayValue(setCookieHeader) ? setCookieHeader : [setCookieHeader];
 	for (const header of headers) {
 		const [pair] = header.split(";");
 		if (pair === undefined) {

@@ -8,6 +8,7 @@ import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginVerificationPending
 import { passwordStrength } from "@workspace/client/lib/auth/password";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
+	LIST_SLOT_INDEX,
 	OrganizationTeamInviteRegisterAcceptSchema,
 	PLATFORM_DISPLAY_REGION,
 	type ApiResponseMeta,
@@ -72,12 +73,12 @@ function organizationInitials(displayName: string): string {
 	if (words.length === 0) return "?";
 
 	if (words.length === 1) {
-		const word = words[0] ?? "";
+		const word = words[LIST_SLOT_INDEX.first] ?? "";
 		return word.length > 0 ? word.slice(0, 2).toUpperCase() : "?";
 	}
 
-	const firstInitial = words[0]?.charAt(0) ?? "";
-	const secondInitial = words[1]?.charAt(0) ?? "";
+	const firstInitial = words[LIST_SLOT_INDEX.first]?.charAt(0) ?? "";
+	const secondInitial = words[LIST_SLOT_INDEX.second]?.charAt(0) ?? "";
 	return `${firstInitial}${secondInitial}`.toUpperCase();
 }
 
@@ -232,7 +233,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 				password,
 			});
 			if (!parsed.success) {
-				setFormError(parsed.error.issues[0]?.message ?? "Check your account details.");
+				setFormError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your account details.");
 				return;
 			}
 

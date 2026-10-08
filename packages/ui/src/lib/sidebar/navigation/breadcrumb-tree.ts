@@ -52,7 +52,9 @@ export function sharesPathSegmentRoot(menuUrl: string, pathname: string): boolea
 	if (menuSegments.length === 0 || pathSegments.length === 0) {
 		return false;
 	}
-	return menuSegments[0] === pathSegments[0];
+	const [menuRoot] = menuSegments;
+	const [pathRoot] = pathSegments;
+	return menuRoot === pathRoot;
 }
 
 /** How a nav tree's URL path and child nodes are read, whatever the node type. */

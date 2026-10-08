@@ -3430,47 +3430,35 @@
       }
     },
     "/api/v1/admin/invites/preview-email": {
-      "post": {
+      "get": {
+        "description": "Renders the invite email for a business name and pilot city, for a live preview while the invite is composed. The template's sample business name stands in when none is given. The recipient is not an input: the email body never shows it.",
         "operationId": "RewardsAdminInvitesController_previewInviteEmail",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "businessName": {
-                    "maxLength": 200,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "city": {
-                    "enum": [
-                      "KUALA_LUMPUR",
-                      "MELAKA"
-                    ],
-                    "type": "string"
-                  },
-                  "email": {
-                    "format": "email",
-                    "maxLength": 100,
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "email",
-                  "businessName",
-                  "city"
-                ],
-                "type": "object"
-              }
+        "parameters": [
+          {
+            "in": "query",
+            "name": "businessName",
+            "required": false,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "in": "query",
+            "name": "city",
+            "required": true,
+            "schema": {
+              "enum": [
+                "KUALA_LUMPUR",
+                "MELAKA"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -3633,7 +3621,7 @@
             "clientType": []
           }
         ],
-        "summary": "Preview merchant invite email with form data (does not send)",
+        "summary": "Preview merchant invite email (does not send)",
         "tags": [
           "Rewards Admin"
         ]
@@ -30551,6 +30539,10 @@
                                 "minLength": 1,
                                 "type": "string"
                               },
+                              "sampleSubject": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
                               "sampleTo": {
                                 "format": "email",
                                 "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
@@ -30561,7 +30553,8 @@
                               "key",
                               "label",
                               "description",
-                              "sampleTo"
+                              "sampleTo",
+                              "sampleSubject"
                             ],
                             "type": "object"
                           },

@@ -3,7 +3,7 @@ title: "Architecture decision records"
 description: "One line per decision with its status. ADRs are history: superseded ones stay, marked and linked forward."
 order: 1
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791417600000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 tags: ["adr", "architecture", "decisions"]
 ---
@@ -44,6 +44,11 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [026](./026-kernel-first-authorization.md) | One in-house authorization kernel behind one global guard | Accepted |
 | [027](./027-fastify-http-adapter.md) | Fastify as the API's HTTP adapter | Accepted |
 | [028](./028-epoch-millisecond-timestamps.md) | Epoch-millisecond timestamps everywhere | Accepted |
+| [029](./029-mobile-client-body-token-transport.md) | Mobile is a client type with body-delivered tokens | Accepted — not implemented yet |
+| [030](./030-shared-design-token-source.md) | One platform-neutral design token source | Accepted — not implemented yet |
+| [031](./031-jest-expo-for-mobile-tests.md) | jest-expo for the mobile app's tests | Accepted — not implemented yet |
+| [032](./032-uniwind-for-mobile-styling.md) | Uniwind (free) for mobile styling | Accepted — not implemented yet |
+| [033](./033-mobile-forced-upgrade.md) | Minimum supported mobile app version (forced upgrade) | Accepted — not implemented yet |
 | [RabbitMQ](./rabbitmq-placeholder.md) | RabbitMQ as infrastructure placeholder only | Accepted |
 
 ## Pending decisions

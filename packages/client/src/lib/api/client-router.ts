@@ -5,19 +5,27 @@
 import {
 	useQuery as rqUseQuery,
 	useMutation as rqUseMutation,
+	useQueryClient,
 	type UseQueryOptions,
 	type UseQueryResult,
 	type UseMutationOptions,
 	type UseMutationResult,
 } from "@tanstack/react-query";
 import type { DataValue, SerializableInput } from "@workspace/shared";
+import { useCallback } from "react";
 
 import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse, type ProcedureCallOptions } from "./api-request";
 import { assertCompleteRouterTree, mapRouterTree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
 
-/** A GET procedure on the client — `.useQuery()` / `.fetch()` / `.fetchOrThrow()`. */
+/** A GET procedure on the client — `.useQuery()` / `.usePrefetch()` / `.fetch()` / `.fetchOrThrow()`. */
 export interface ClientQueryProcedure<Input, Resp> {
 	useQuery(input: Input, queryOptions?: Omit<UseQueryOptions<Resp, Error, Resp>, "queryKey" | "queryFn">): UseQueryResult<Resp>;
+	/**
+	 * A stable callback that warms the cache for `input` — call it on hover or focus, before the
+	 * person commits, so the matching `useQuery` renders at once instead of loading. Same query key
+	 * and fetcher as `useQuery`; an entry fresher than `staleTime` is not fetched again.
+	 */
+	usePrefetch(prefetchOptions?: { readonly staleTime?: number }): (input: Input) => void;
 	fetch(input: Input, options?: ProcedureCallOptions): Promise<ApiResponse<Resp>>;
 	fetchOrThrow(input: Input, options?: ProcedureCallOptions): Promise<Resp>;
 }
@@ -45,6 +53,24 @@ export function createQueryProcedure<Input extends SerializableInput, Resp exten
 				queryFn: ({ signal }): Promise<Resp> => caller.fetchOrThrow(input, { signal }),
 				...queryOptions,
 			});
+		},
+		usePrefetch: (prefetchOptions?): ((input: Input) => void) => {
+			const queryClient = useQueryClient();
+			const staleTime = prefetchOptions?.staleTime;
+			return useCallback(
+				(input: Input): void => {
+					queryClient
+						.query({
+							queryKey: def.queryKey(input),
+							queryFn: ({ signal }): Promise<Resp> => caller.fetchOrThrow(input, { signal }),
+							...(staleTime === undefined ? {} : { staleTime }),
+						})
+						.catch((): void => {
+							// A prefetch is a best-effort warm-up: a failure leaves `useQuery` to fetch, and report, on its own.
+						});
+				},
+				[queryClient, staleTime],
+			);
 		},
 		fetch: (input: Input, options?: ProcedureCallOptions): Promise<ApiResponse<Resp>> => caller.fetch(input, options),
 		fetchOrThrow: (input: Input, options?: ProcedureCallOptions): Promise<Resp> => caller.fetchOrThrow(input, options),

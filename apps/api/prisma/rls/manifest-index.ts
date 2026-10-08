@@ -153,8 +153,8 @@ export function parsePrismaSchemaModels(schemaContent: string): PrismaTableModel
 		const bodyEnd = block.indexOf("\n}");
 		const body = bodyEnd === -1 ? block : block.slice(0, bodyEnd);
 
-		const mapMatch = /@@map\("([^"]+)"\)/.exec(body);
-		const tableName = mapMatch?.[1];
+		const mapMatch = /@@map\("(?<tableName>[^"]+)"\)/.exec(body);
+		const tableName = mapMatch?.groups?.tableName;
 		if (tableName === undefined) {
 			continue;
 		}
@@ -178,9 +178,9 @@ export function parsePrismaSchemaModels(schemaContent: string): PrismaTableModel
 export function collectRlsEnabledTableNames(rlsSqlContent: string): Set<string> {
 	const tables = new Set<string>();
 
-	const arrayPattern = /FOREACH\s+\w+\s+IN\s+ARRAY\s+ARRAY\[([\s\S]*?)\]/g;
+	const arrayPattern = /FOREACH\s+\w+\s+IN\s+ARRAY\s+ARRAY\[(?<inner>[\s\S]*?)\]/g;
 	for (const match of rlsSqlContent.matchAll(arrayPattern)) {
-		const inner = match[1];
+		const inner = match.groups?.inner;
 		if (inner === undefined) {
 			continue;
 		}
@@ -192,17 +192,17 @@ export function collectRlsEnabledTableNames(rlsSqlContent: string): Set<string> 
 		}
 	}
 
-	const alterPattern = /ALTER TABLE(?: IF EXISTS)? public\.(\w+) ENABLE ROW LEVEL SECURITY/g;
+	const alterPattern = /ALTER TABLE(?: IF EXISTS)? public\.(?<tableName>\w+) ENABLE ROW LEVEL SECURITY/g;
 	for (const match of rlsSqlContent.matchAll(alterPattern)) {
-		const tableName = match[1];
+		const tableName = match.groups?.tableName;
 		if (tableName !== undefined) {
 			tables.add(tableName);
 		}
 	}
 
-	const alterUnqualified = /ALTER TABLE (\w+) ENABLE ROW LEVEL SECURITY/g;
+	const alterUnqualified = /ALTER TABLE (?<tableName>\w+) ENABLE ROW LEVEL SECURITY/g;
 	for (const match of rlsSqlContent.matchAll(alterUnqualified)) {
-		const tableName = match[1];
+		const tableName = match.groups?.tableName;
 		if (tableName !== undefined) {
 			tables.add(tableName);
 		}

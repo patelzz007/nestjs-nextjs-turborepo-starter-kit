@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../prisma/prisma.service";
@@ -54,7 +55,7 @@ describe("IdempotencyRecordRepository", () => {
 			});
 
 			await expect(repository.tryAcquire(KEY, LEASE, NOW + 1, NOW)).resolves.toBe(true);
-			const args = create.mock.lastCall?.[0];
+			const args = create.mock.lastCall?.[LIST_SLOT_INDEX.first];
 			expect(Object.keys(args ?? {})).toEqual(["data"]);
 			expect(args?.data).toMatchObject({ ...KEY, requestHash: "h1", leaseToken: LEASE.token, status: "IN_PROGRESS", expiresAt: BigInt(NOW + 1) });
 		});
@@ -104,7 +105,7 @@ describe("IdempotencyRecordRepository", () => {
 			const updateMany = vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 1 });
 
 			await expect(repository.takeOverExpired(KEY, TAKEOVER_LEASE, NOW + 1, NOW)).resolves.toBe(true);
-			const args = updateMany.mock.lastCall?.[0];
+			const args = updateMany.mock.lastCall?.[LIST_SLOT_INDEX.first];
 			expect(Object.keys(args ?? {})).toEqual(["where", "data"]);
 			expect(args?.where).toEqual({ ...KEY, expiresAt: { lte: BigInt(NOW) } });
 			expect(args?.data).toMatchObject({ requestHash: "h2", leaseToken: TAKEOVER_LEASE.token, status: "IN_PROGRESS", expiresAt: BigInt(NOW + 1) });
@@ -121,7 +122,7 @@ describe("IdempotencyRecordRepository", () => {
 			const updateMany = vi.spyOn(prisma.platformResourceIdempotencyRecord, "updateMany").mockResolvedValue({ count: 1 });
 
 			await expect(repository.complete(KEY, LEASE, { body: { id: "p-1" } }, NOW + 5, NOW)).resolves.toBe(true);
-			const args = updateMany.mock.lastCall?.[0];
+			const args = updateMany.mock.lastCall?.[LIST_SLOT_INDEX.first];
 			expect(Object.keys(args ?? {})).toEqual(["where", "data"]);
 			expect(args?.where).toEqual({ ...KEY, leaseToken: LEASE.token, requestHash: "h1", status: "IN_PROGRESS", expiresAt: { gt: BigInt(NOW) } });
 			expect(args?.data).toMatchObject({ status: "COMPLETED", expiresAt: BigInt(NOW + 5) });

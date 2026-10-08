@@ -4,7 +4,7 @@ import { permissionActionFallbackIcon, permissionActionIcon, permissionActionIco
 import { isRedundantResourceLabel } from "@/lib/permissions/permission-label-utils";
 import type { PermissionTreeGroupNode, PermissionTreeLeaf, PermissionTreeResourceNode } from "@/lib/permissions/build-permission-tree";
 import { AccessPermissionDetailPanel, type AccessPermissionDetailItem } from "@/components/access/access-permission-detail-panel";
-import { PermissionActionSchema, type PermissionAction } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PermissionActionSchema, type PermissionAction } from "@workspace/shared";
 import { hotkeysCoreFeature, selectionFeature, syncDataLoaderFeature, type ItemInstance } from "@headless-tree/core";
 import { useTree } from "@headless-tree/react";
 import { Badge } from "@workspace/ui/components/badge";
@@ -31,7 +31,7 @@ interface SelectedPermissionState extends AccessPermissionDetailItem {
 
 function resolveGroupDisplay(groupNode: PermissionTreeGroupNode): PermissionTreeDisplay {
 	if (groupNode.resources.length === 1) {
-		const onlyResource: PermissionTreeResourceNode | undefined = groupNode.resources[0];
+		const onlyResource: PermissionTreeResourceNode | undefined = groupNode.resources[LIST_SLOT_INDEX.first];
 		if (onlyResource !== undefined) {
 			const redundant: boolean = isRedundantResourceLabel(groupNode.group, onlyResource.resource);
 			if (redundant) {

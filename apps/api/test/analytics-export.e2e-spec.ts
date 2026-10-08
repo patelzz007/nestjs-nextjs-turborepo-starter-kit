@@ -7,7 +7,7 @@ import { Pool } from "pg";
 import readXlsxFile from "read-excel-file/node";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { ANALYTICS_EXPORT_CONTENT_TYPES, ANALYTICS_EXPORT_RATE_LIMIT, API_VERSION_PREFIX, ApiErrorResponseSchema, JsonValueSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ANALYTICS_EXPORT_CONTENT_TYPES, ANALYTICS_EXPORT_RATE_LIMIT, API_VERSION_PREFIX, ApiErrorResponseSchema, JsonValueSchema } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { sha256Hex } from "../src/common/crypto/sha256";
@@ -279,7 +279,7 @@ describe("Analytics exports (e2e)", () => {
 			expect(csv.statusCode, csv.body).toBe(200);
 			expect(csv.rawPayload.toString("utf8")).toContain("糕点配咖啡 — 八折优惠");
 			const xlsx = await merchantExport(owner, `${range}&format=xlsx`);
-			const rewards = (await readXlsxFile(xlsx.rawPayload)).find((sheet) => sheet.sheet === "Rewards")?.data.map((row) => row[0]);
+			const rewards = (await readXlsxFile(xlsx.rawPayload)).find((sheet) => sheet.sheet === "Rewards")?.data.map((row) => row[LIST_SLOT_INDEX.first]);
 			expect(rewards).toEqual(expect.arrayContaining(["குடும்ப இரவு உணவுடன் இலவச இனிப்பு", "सप्ताहांत ब्रंच के साथ मुफ़्त पेय"]));
 		});
 	});
@@ -328,7 +328,7 @@ describe("Analytics exports (e2e)", () => {
 			// Every request is audited: the refusal is one FAILED 429 row — no export summary, nothing released.
 			const refusalRows = await auditRowsOf(refused);
 			expect(refusalRows).toHaveLength(1);
-			expect(refusalRows[0]).toMatchObject({ method: "GET", outcome: "FAILED", response_status: 429 });
+			expect(refusalRows[LIST_SLOT_INDEX.first]).toMatchObject({ method: "GET", outcome: "FAILED", response_status: 429 });
 
 			// Another user's budget is untouched.
 			expect((await merchantExport(owner, range)).statusCode).toBe(200);

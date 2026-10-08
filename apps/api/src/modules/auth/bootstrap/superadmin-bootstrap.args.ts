@@ -56,8 +56,9 @@ export function parseBootstrapArgs(rawArgv: readonly string[]): BootstrapCommand
 		FORBIDDEN_PASSWORD_FLAGS.some((flag: string): boolean => arg === flag || arg.startsWith(`${flag}=`)),
 	);
 	if (forbidden !== undefined) {
+		const [forbiddenFlag = forbidden] = forbidden.split("=");
 		throw new BootstrapUsageError(
-			`The password cannot be passed on the command line (${forbidden.split("=")[0] ?? forbidden}): it would appear in shell history and the process list. Use the prompt, or ${BOOTSTRAP_FLAGS.passwordStdin}.`,
+			`The password cannot be passed on the command line (${forbiddenFlag}): it would appear in shell history and the process list. Use the prompt, or ${BOOTSTRAP_FLAGS.passwordStdin}.`,
 		);
 	}
 

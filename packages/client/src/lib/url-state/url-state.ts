@@ -20,6 +20,7 @@
 // This module is framework-free and server-safe (no "use client").
 
 import { z } from "zod";
+import { isStringPrimitive, LIST_SLOT_INDEX } from "@workspace/shared";
 
 /** A value one URL search param holds once parsed. */
 export type UrlParamValue = string | number | boolean | undefined;
@@ -87,10 +88,10 @@ export function readSearchParam(source: UrlSearchSource, key: string): string | 
 		return source.get(key) ?? undefined;
 	}
 	const value: string | readonly string[] | undefined = source[key];
-	if (value === undefined || typeof value === "string") {
+	if (value === undefined || isStringPrimitive(value)) {
 		return value;
 	}
-	return value[0];
+	return value[LIST_SLOT_INDEX.first];
 }
 
 /** A mutable copy of `source` as `URLSearchParams` (repeated keys preserved). */
@@ -104,7 +105,7 @@ export function toUrlSearchParams(source: UrlSearchSource | undefined): URLSearc
 	const params = new URLSearchParams();
 	for (const [key, value] of Object.entries(source)) {
 		if (value === undefined) continue;
-		const values: readonly string[] = typeof value === "string" ? [value] : value;
+		const values: readonly string[] = isStringPrimitive(value) ? [value] : value;
 		for (const item of values) {
 			params.append(key, item);
 		}
@@ -130,7 +131,7 @@ export function isSameQuery(left: string, right: string): boolean {
 /** A parsed value → its URL text, or `undefined` when it should not appear in the URL. */
 function formatParamValue(value: UrlParamValue): string | undefined {
 	if (value === undefined) return undefined;
-	if (typeof value === "string") return value.length > 0 ? value : undefined;
+	if (isStringPrimitive(value)) return value.length > 0 ? value : undefined;
 	return String(value);
 }
 

@@ -72,6 +72,18 @@ function lastCall(): readonly [input: object, options?: DashboardQueryOptions | 
 	return call;
 }
 
+/** The range/scope input of the latest dashboard query. */
+function lastInput(): object {
+	const [input] = lastCall();
+	return input;
+}
+
+/** The query options of the latest dashboard query. */
+function lastOptions(): DashboardQueryOptions | undefined {
+	const [, options] = lastCall();
+	return options;
+}
+
 /** Opens a labelled filter menu and picks an option (the shared DropdownMenu). */
 async function chooseFilter(label: string, option: string): Promise<void> {
 	fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label} `) }));
@@ -120,7 +132,7 @@ describe("MerchantAnalyticsPageView data", () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		renderView();
 
-		expect(lastCall()[0]).toEqual({ orgSlug: TEST_ORG_SLUG, from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day", locationId: undefined });
+		expect(lastInput()).toEqual({ orgSlug: TEST_ORG_SLUG, from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day", locationId: undefined });
 		// The range and the zone its days are cut in.
 		expect(screen.getAllByRole("status").map((status) => spaced(status.textContent))).toContain("6 Sept – 5 Oct 2026 · Asia/Kuala_Lumpur");
 
@@ -132,7 +144,8 @@ describe("MerchantAnalyticsPageView data", () => {
 		for (const chart of ["Sales over time", "Bills over time", "Average bill", "Claims and redemptions"]) {
 			expect(screen.getByRole("table", { name: chart })).toBeTruthy();
 		}
-		expect(spaced(within(screen.getByRole("list", { name: "Stores ranked by sales" })).getAllByRole("listitem")[0]?.textContent)).toContain("Bangsar");
+		const [topStore] = within(screen.getByRole("list", { name: "Stores ranked by sales" })).getAllByRole("listitem");
+		expect(spaced(topStore?.textContent)).toContain("Bangsar");
 		expect(within(screen.getByRole("list", { name: "Rewards ranked by claims" })).getAllByRole("listitem")).toHaveLength(2);
 		expect(
 			within(screen.getByRole("list", { name: "Redemptions by method" }))
@@ -146,7 +159,7 @@ describe("MerchantAnalyticsPageView data", () => {
 		mocks.download.mockResolvedValue({ blob: new Blob(["x"]), fileName: "analytics_acme-coffee.csv", contentType: "text/csv" } satisfies DownloadedFile);
 		renderView({}, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_B.id) });
 
-		expect(lastCall()[0]).toMatchObject({ locationId: STORE_B.id });
+		expect(lastInput()).toMatchObject({ locationId: STORE_B.id });
 
 		fireEvent.click(screen.getByRole("button", { name: "Export" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
@@ -172,7 +185,7 @@ describe("MerchantAnalyticsPageView data", () => {
 		refresh();
 
 		expect(window.location.search).toBe("?range=thisMonth");
-		expect(lastCall()[0]).toMatchObject({ from: Date.UTC(2026, 9, 1) - KL_OFFSET_MS, to: DEFAULT_TO, interval: "day" });
+		expect(lastInput()).toMatchObject({ from: Date.UTC(2026, 9, 1) - KL_OFFSET_MS, to: DEFAULT_TO, interval: "day" });
 	});
 
 	it("shows a timeout as a toast that suggests a shorter range", async () => {
@@ -199,14 +212,14 @@ describe("MerchantAnalyticsPageView server prefetch (no double fetch)", () => {
 		const data = testEnvelope(buildMerchantDashboard());
 		renderView({ initialDashboard: { stateKey: KEY_ALL_STORES, data } }, { role: "CASHIER", tenantContext: twoStoreSeed(null) });
 
-		expect(lastCall()[1]?.initialData).toEqual(data);
+		expect(lastOptions()?.initialData).toEqual(data);
 	});
 
 	it("never seeds another store's numbers under the client's key", () => {
 		const data = testEnvelope(buildMerchantDashboard());
 		renderView({ initialDashboard: { stateKey: KEY_ALL_STORES, data } }, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_B.id) });
 
-		expect(lastCall()[1]?.initialData).toBeUndefined();
+		expect(lastOptions()?.initialData).toBeUndefined();
 	});
 });
 

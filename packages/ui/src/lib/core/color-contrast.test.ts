@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { contrastRatio, findContrastViolations, readCustomProperties, relativeLuminance } from "./color-contrast";
 
@@ -120,7 +121,7 @@ describe("findContrastViolations", () => {
 		const violations = findContrastViolations(theme);
 
 		expect(violations).toHaveLength(1);
-		expect(violations[0]).toMatch(/^--tone-yellow on --tone-yellow-soft: /u);
+		expect(violations[LIST_SLOT_INDEX.first]).toMatch(/^--tone-yellow on --tone-yellow-soft: /u);
 	});
 
 	it("holds sidebar nav labels to text contrast on the chrome, a hovered row and the active pill", () => {

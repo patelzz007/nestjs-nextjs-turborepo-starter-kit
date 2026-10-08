@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const EDGE_DIR: string = dirname(fileURLToPath(import.meta.url));
-const RELATIVE_IMPORT = /from\s+"(\.{1,2}\/[^"]+)"/g;
+const RELATIVE_IMPORT = /from\s+"(?<specifier>\.{1,2}\/[^"]+)"/g;
 const SOURCE_EXTENSIONS: readonly string[] = [".ts", ".tsx"];
 
 function resolveSource(fromFile: string, specifier: string): string {
@@ -23,7 +23,7 @@ function reachableSources(entry: string, seen: Set<string> = new Set<string>()):
 	if (seen.has(entry)) return seen;
 	seen.add(entry);
 	for (const match of readFileSync(entry, "utf8").matchAll(RELATIVE_IMPORT)) {
-		const specifier: string | undefined = match[1];
+		const specifier: string | undefined = match.groups?.specifier;
 		if (specifier !== undefined) reachableSources(resolveSource(entry, specifier), seen);
 	}
 	return seen;

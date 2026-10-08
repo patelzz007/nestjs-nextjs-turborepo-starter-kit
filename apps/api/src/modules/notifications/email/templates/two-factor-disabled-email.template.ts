@@ -13,7 +13,7 @@ export class TwoFactorDisabledEmailTemplate extends BaseEmailTemplate<TwoFactorS
 	public readonly propsSchema = TwoFactorStatusEmailPropsSchema;
 	public readonly subject: string = "Two-factor authentication disabled";
 	protected readonly accent: EmailAccent = "amber";
-	protected readonly eyebrow: string = "Security Notice";
+	protected readonly eyebrow: string = "Security notice";
 	protected readonly heading: string = "2FA was turned off";
 
 	public getPreviewText(context: EmailRenderContext): string {

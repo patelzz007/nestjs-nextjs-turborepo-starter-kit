@@ -5,7 +5,7 @@ import { TenantKekUnavailableError, type TenantKeyManagementPort, type WrappedDa
 
 /** Key ids issued by the local provider: `local-dev-kek/v<version>`. */
 export const LOCAL_KEK_ID_PREFIX = "local-dev-kek/v";
-const LOCAL_KEK_ID_PATTERN = /^local-dev-kek\/v([1-9]\d*)$/;
+const LOCAL_KEK_ID_PATTERN = /^local-dev-kek\/v(?<version>[1-9]\d*)$/;
 
 /**
  * Key id written by the pre-versioning pilot implementation. Those DEKs were
@@ -61,10 +61,11 @@ export class LocalDevelopmentKeyManagementService implements TenantKeyManagement
 			return this.unwrapLegacyPilot(envelope);
 		}
 		const match = LOCAL_KEK_ID_PATTERN.exec(wrapped.kmsKeyId);
-		if (match?.[1] === undefined) {
+		const version: string | undefined = match?.groups?.version;
+		if (version === undefined) {
 			throw new TenantKekUnavailableError(wrapped.kmsKeyId);
 		}
-		return gcmDecrypt(this.requireKey(Number(match[1]), wrapped.kmsKeyId), envelope);
+		return gcmDecrypt(this.requireKey(Number(version), wrapped.kmsKeyId), envelope);
 	}
 
 	private unwrapLegacyPilot(envelope: ReturnType<typeof parseGcmEnvelope>): Buffer {

@@ -1,4 +1,5 @@
 import type { PermissionAuditLog } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { RequestContextService } from "../../../common/context/request-context";
@@ -116,7 +117,7 @@ describe("RbacMutationRunner", () => {
 		expect(result).toBe("ok");
 		expect(mocks.steps).toEqual(["begin", "lock", "write", "revoke", "audit", "commit", "invalidate"]);
 		expect(withSystemOperation).toHaveBeenCalledWith({ operation: "authorization.rbac.mutate", reason: "Assign role to user", actorUserId: "admin-1" }, expect.any(Function));
-		expect(mocks.auditCreate.mock.lastCall?.[0].data).toMatchObject({
+		expect(mocks.auditCreate.mock.lastCall?.[LIST_SLOT_INDEX.first].data).toMatchObject({
 			action: "ROLE_ASSIGNED",
 			actorKind: "USER",
 			actorId: "admin-1",
@@ -190,7 +191,7 @@ describe("RbacMutationRunner", () => {
 		expect(result).toBe(2);
 		expect(mocks.steps).toEqual(["begin", "lock", "write", "revoke", "audit", "audit", "commit", "invalidate"]);
 		expect(withSystemOperation).toHaveBeenCalledWith({ operation: "maintenance.permission_expiry", reason: "Expire grants", actorUserId: null }, expect.any(Function));
-		expect(mocks.auditCreate.mock.calls.map((call) => call[0].data)).toEqual([
+		expect(mocks.auditCreate.mock.calls.map((call) => call[LIST_SLOT_INDEX.first].data)).toEqual([
 			expect.objectContaining({ actorKind: "SYSTEM_OPERATION", actorId: "maintenance.permission_expiry", targetUserId: "user-1" }),
 			expect.objectContaining({ actorKind: "SYSTEM_OPERATION", actorId: "maintenance.permission_expiry", targetUserId: "user-2" }),
 		]);

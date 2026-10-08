@@ -1,3 +1,5 @@
+import { isBrowserRuntime } from "@workspace/shared";
+
 import { parseDataTablePersistedPrefs, parseDataTablePrefsPatch, type DataTablePersistedPrefs, type DataTablePersistedPrefsPatch } from "./prefs";
 
 /** Injectable persistence boundary — smart parents can supply memory, session, or custom storage. */
@@ -8,18 +10,13 @@ export interface DataTableStorageAdapter {
 
 const STORAGE_PREFIX = "datatable:v1:";
 
-/** True when running in a browser — `window` is undefined during SSR. */
-function isBrowserEnvironment(): boolean {
-	return typeof window !== "undefined";
-}
-
 /** Default adapter backed by `window.localStorage` (browser only). */
 export function createLocalStorageDataTableStorage(namespace = "default"): DataTableStorageAdapter {
 	const prefix = `${STORAGE_PREFIX}${namespace}:`;
 
 	return {
 		read(key: string): DataTablePersistedPrefs | null {
-			if (!isBrowserEnvironment()) {
+			if (!isBrowserRuntime()) {
 				return null;
 			}
 			const saved = window.localStorage.getItem(`${prefix}${key}`);
@@ -29,7 +26,7 @@ export function createLocalStorageDataTableStorage(namespace = "default"): DataT
 			return parseDataTablePersistedPrefs(saved);
 		},
 		write(key: string, patch: DataTablePersistedPrefsPatch): void {
-			if (!isBrowserEnvironment()) {
+			if (!isBrowserRuntime()) {
 				return;
 			}
 			const validatedPatch = parseDataTablePrefsPatch(patch);

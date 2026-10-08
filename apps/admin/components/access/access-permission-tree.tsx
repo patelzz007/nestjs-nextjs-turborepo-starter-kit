@@ -1,6 +1,7 @@
 "use client";
 
 import { isRedundantResourceLabel } from "@/lib/permissions/permission-label-utils";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { PermissionTreeGroupNode, PermissionTreeLeaf, PermissionTreeResourceNode } from "@/lib/permissions/build-permission-tree";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
@@ -31,7 +32,7 @@ type PermissionTreeDisplay =
 
 function resolveGroupDisplay(groupNode: PermissionTreeGroupNode): PermissionTreeDisplay {
 	if (groupNode.resources.length === 1) {
-		const onlyResource: PermissionTreeResourceNode | undefined = groupNode.resources[0];
+		const onlyResource: PermissionTreeResourceNode | undefined = groupNode.resources[LIST_SLOT_INDEX.first];
 		if (onlyResource !== undefined) {
 			const redundant: boolean = isRedundantResourceLabel(groupNode.group, onlyResource.resource);
 			if (redundant) {

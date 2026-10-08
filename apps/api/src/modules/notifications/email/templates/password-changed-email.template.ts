@@ -13,7 +13,7 @@ export class PasswordChangedEmailTemplate extends BaseEmailTemplate<PasswordChan
 	public readonly propsSchema = PasswordChangedEmailPropsSchema;
 	public readonly subject: string = "Your password was changed";
 	protected readonly accent: EmailAccent = "amber";
-	protected readonly eyebrow: string = "Security Notice";
+	protected readonly eyebrow: string = "Security notice";
 	protected readonly heading: string = "Password updated";
 
 	public getPreviewText(context: EmailRenderContext): string {

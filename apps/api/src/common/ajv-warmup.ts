@@ -5,7 +5,7 @@
  * This function walks the apiContract tree and warms up every input schema so
  * the first request to each endpoint doesn't pay the compilation cost.
  */
-import { apiContract } from "@workspace/shared";
+import { apiContract, isArrayValue } from "@workspace/shared";
 import { ZodValidationPipe } from "./pipes/zod-validation.pipe";
 import { Logger } from "@nestjs/common";
 import type { z as ZodV4 } from "zod/v4";
@@ -46,9 +46,9 @@ export function collectSchemas(obj: ContractTreeValue, schemas: ZodV4.ZodType[] 
 			schemas.push(value);
 			continue;
 		}
-		if (Array.isArray(value)) {
+		if (isArrayValue(value)) {
 			for (const item of value) {
-				if (item !== null && isObjectLike(item) && !isZodSchema(item)) {
+				if (isObjectLike(item) && !isZodSchema(item)) {
 					collectSchemas(item, schemas);
 				}
 			}

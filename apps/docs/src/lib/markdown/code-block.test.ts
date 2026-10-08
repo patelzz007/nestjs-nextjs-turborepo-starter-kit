@@ -19,10 +19,16 @@ function fence(source: string, language: string, meta?: string): Element {
 	return { type: "element", tagName: "pre", properties: {}, children: [codeElement(source, language.length === 0 ? [] : [`language-${language}`], meta)] };
 }
 
+/** The text of an island's first code line. */
+function firstLineText(props: ReturnType<typeof parseProps>): string | undefined {
+	const [firstLine] = props.lines;
+	return firstLine?.text;
+}
+
 /** The props JSON embedded in an island's markup. */
 function islandProps(html: string): ReturnType<typeof parseProps> {
-	const match = /<script type="application\/json" data-code-block-props>([\s\S]*?)<\/script>/.exec(html);
-	return parseProps(match?.[1] ?? "");
+	const match = /<script type="application\/json" data-code-block-props>(?<json>[\s\S]*?)<\/script>/.exec(html);
+	return parseProps(match?.groups?.json ?? "");
 }
 
 describe("fence helpers", () => {
@@ -46,8 +52,9 @@ describe("codeBlockProps", () => {
 		expect(props.language).toBe("ts");
 		expect(props.showLineNumbers).toBe(true);
 		expect(props.lines).toHaveLength(2);
-		expect(props.lines[1]?.state?.highlighted).toBe(true);
-		const keyword = props.lines[0]?.tokens.find((token) => token.content === "const");
+		const [firstLine, secondLine] = props.lines;
+		expect(secondLine?.state?.highlighted).toBe(true);
+		const keyword = firstLine?.tokens.find((token) => token.content === "const");
 		expect(keyword?.color).toBeDefined();
 		expect(keyword?.colorDark).toBeDefined();
 		expect(keyword?.color).not.toBe(keyword?.colorDark);
@@ -81,8 +88,8 @@ describe("rehypeCodeBlock", () => {
 		const tree: Root = { type: "root", children: [paragraph, fence("pnpm dev\n", "bash", 'title="Terminal"')] };
 		await rehypeCodeBlock()(tree);
 
-		expect(tree.children[0]).toBe(paragraph);
-		const block = tree.children[1];
+		const [first, block] = tree.children;
+		expect(first).toBe(paragraph);
 		const html = block?.type === "raw" ? block.value : "";
 		expect(html).toContain('<div class="code-block-island"><div data-code-block-root>');
 		expect(html).toContain('data-slot="code-block"');
@@ -94,7 +101,7 @@ describe("rehypeCodeBlock", () => {
 	it("handles several fences in order", async () => {
 		const tree: Root = { type: "root", children: [fence("one\n", ""), fence("two\n", "")] };
 		await rehypeCodeBlock()(tree);
-		const texts = tree.children.map((child) => (child.type === "raw" ? islandProps(child.value).lines[0]?.text : null));
+		const texts = tree.children.map((child) => (child.type === "raw" ? firstLineText(islandProps(child.value)) : null));
 		expect(texts).toEqual(["one", "two"]);
 	});
 });

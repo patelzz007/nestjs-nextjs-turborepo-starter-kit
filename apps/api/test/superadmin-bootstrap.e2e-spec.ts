@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Readable } from "node:stream";
 
 import * as bcrypt from "bcrypt";
@@ -59,7 +60,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	}
 
 	async function count(sql: string): Promise<number> {
-		return CountRowSchema.parse((await scratch.query(sql)).rows[0]).count;
+		return CountRowSchema.parse((await scratch.query(sql)).rows[LIST_SLOT_INDEX.first]).count;
 	}
 
 	async function insertSuperAdminRole(): Promise<string> {
@@ -104,7 +105,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 					`SELECT id, email, "fullName" AS full_name, "passwordHash" AS password_hash, "isActive" AS is_active, "isSuperAdmin" AS is_super_admin, is_deleted, email_verified_at::text, mfa_enrollment_deadline::text, two_factor_enabled FROM users WHERE id = $1`,
 					[outcome.userId],
 				)
-			).rows[0],
+			).rows[LIST_SLOT_INDEX.first],
 		);
 		expect(user).toMatchObject({ email: "root@acme.test", full_name: "Root Admin", is_active: true, is_super_admin: true, is_deleted: false, two_factor_enabled: false });
 		expect(user.password_hash).not.toContain(PASSWORD);
@@ -134,7 +135,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 					`SELECT id, email, "fullName" AS full_name, "passwordHash" AS password_hash, "isActive" AS is_active, "isSuperAdmin" AS is_super_admin, is_deleted, email_verified_at::text, mfa_enrollment_deadline::text, two_factor_enabled FROM users WHERE id = $1`,
 					[outcome.userId],
 				)
-			).rows[0],
+			).rows[LIST_SLOT_INDEX.first],
 		);
 		const login: UserLogin = {
 			id: row.id,

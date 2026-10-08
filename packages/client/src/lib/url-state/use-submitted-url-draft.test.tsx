@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { UrlDraft } from "./use-url-draft";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -20,28 +21,28 @@ afterEach((): void => {
 
 describe("useSubmittedUrlDraft", () => {
 	it("starts from the URL value, or empty when the param is absent", () => {
-		expect(setup("latte").result.current[0]).toBe("latte");
-		expect(setup(undefined).result.current[0]).toBe("");
+		expect(setup("latte").result.current[LIST_SLOT_INDEX.first]).toBe("latte");
+		expect(setup(undefined).result.current[LIST_SLOT_INDEX.first]).toBe("");
 	});
 
 	it("keeps what the user types while the URL is unchanged", () => {
 		const { result, rerender } = setup("latte");
 		act((): void => {
-			result.current[1]("latte art");
+			result.current[LIST_SLOT_INDEX.second]("latte art");
 		});
 		rerender({ value: "latte" });
-		expect(result.current[0]).toBe("latte art");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("latte art");
 	});
 
 	it("resets to the URL value when the URL changes (submit echo, back/forward, clear)", () => {
 		const { result, rerender } = setup("latte");
 		act((): void => {
-			result.current[1]("  spa ");
+			result.current[LIST_SLOT_INDEX.second]("  spa ");
 		});
 		rerender({ value: "spa" });
-		expect(result.current[0]).toBe("spa");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("spa");
 
 		rerender({ value: undefined });
-		expect(result.current[0]).toBe("");
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("");
 	});
 });

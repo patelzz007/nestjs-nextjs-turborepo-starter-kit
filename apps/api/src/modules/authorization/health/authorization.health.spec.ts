@@ -1,4 +1,5 @@
 import type { Role } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
@@ -51,7 +52,7 @@ describe("AuthorizationHealthIndicator", () => {
 		const findMany = vi.spyOn(prisma.role, "findMany").mockResolvedValue([]);
 		await new AuthorizationHealthIndicator(prisma).isHealthy();
 
-		const where = findMany.mock.calls[0]?.[0]?.where;
+		const where = findMany.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]?.where;
 		expect(where?.isSystem).toBe(true);
 		expect(where?.isDeleted).toBe(false);
 	});

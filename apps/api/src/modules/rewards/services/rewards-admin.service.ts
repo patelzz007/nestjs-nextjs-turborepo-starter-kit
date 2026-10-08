@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 
 import type {
 	AdminCreateMerchantInviteInput,
+	AdminMerchantInvitePreviewQuery,
 	AdminKybUpdateInput,
 	AdminMerchantDetailResponse,
 	AdminMerchantListQuery,
@@ -11,7 +12,7 @@ import type {
 	PaginatedServiceResult,
 	RewardResponse,
 } from "@workspace/shared";
-import { EmailPreview, EmailRenderContextSchema, EpochMsSchema, APP_LINKS } from "@workspace/shared";
+import { LIST_SLOT_INDEX, EmailPreview, EmailRenderContextSchema, EpochMsSchema, APP_LINKS, PILOT_CITY_LABELS } from "@workspace/shared";
 
 import { parsePrismaInputJson } from "../../../common/utils/prisma-json";
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -56,7 +57,7 @@ export class RewardsAdminService {
 			new MerchantInviteEmailTemplate({
 				to: input.email,
 				businessName: input.businessName,
-				cityLabel: this.formatPilotCityLabel(input.city),
+				cityLabel: PILOT_CITY_LABELS[input.city],
 				inviteUrl,
 				expiresInDays: INVITE_TTL_DAYS,
 			}),
@@ -83,13 +84,18 @@ export class RewardsAdminService {
 		};
 	}
 
-	public previewMerchantInviteEmail(input: AdminCreateMerchantInviteInput): EmailPreview {
+	/**
+	 * Renders the invite email for a live preview. The template's sample stands in for a
+	 * business name not typed yet, and for the recipient — which the email body never shows.
+	 */
+	public previewMerchantInviteEmail(input: AdminMerchantInvitePreviewQuery): EmailPreview {
 		const entry = EMAIL_TEMPLATE_REGISTRY["merchant-invite"];
 		const inviteUrl = this.buildMerchantInviteUrl(INVITE_PREVIEW_TOKEN);
+		const sample = MerchantInviteEmailTemplate.sampleProps;
 		const template = new MerchantInviteEmailTemplate({
-			to: input.email,
-			businessName: input.businessName,
-			cityLabel: this.formatPilotCityLabel(input.city),
+			to: sample.to,
+			businessName: input.businessName ?? sample.businessName,
+			cityLabel: PILOT_CITY_LABELS[input.city],
 			inviteUrl,
 			expiresInDays: INVITE_TTL_DAYS,
 		});
@@ -98,7 +104,7 @@ export class RewardsAdminService {
 			appUrl: this.config.clientApps.webUrl,
 			supportEmail: this.config.email.fromAddress,
 		});
-		return buildEmailPreviewFromTemplate(entry, template, context, input.email);
+		return buildEmailPreviewFromTemplate(entry, template, context, sample.to);
 	}
 
 	public async getMerchantDetail(organizationId: string): Promise<AdminMerchantDetailResponse> {
@@ -119,7 +125,7 @@ export class RewardsAdminService {
 
 		const items = result.items.map((row) => {
 			const base = mapOrganizationToAdminResponse({ ...row, merchantProfile: row.merchantProfile });
-			return { ...base, ownerUserId: row.memberships[0]?.userId ?? null };
+			return { ...base, ownerUserId: row.memberships[LIST_SLOT_INDEX.first]?.userId ?? null };
 		});
 
 		return toPaginatedServiceResult({ ...result, items }, query);
@@ -191,10 +197,6 @@ export class RewardsAdminService {
 		const base = this.config.clientApps.merchantUrl.replace(/\/+$/, "");
 		const params = new URLSearchParams({ token });
 		return `${base}${APP_LINKS.merchant.onboarding}?${params.toString()}`;
-	}
-
-	private formatPilotCityLabel(city: string): string {
-		return city.replaceAll("_", " ");
 	}
 
 	private async findPendingConsumerReward(rewardId: string): Promise<{

@@ -13,6 +13,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isFunctionValue } from "@workspace/shared";
 import { computeRouteState } from "@workspace/ui/lib/sidebar/menu-view";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -120,7 +121,9 @@ interface RouteGroup {
 	readonly [name: string]: RouteNode;
 }
 
-const RouteBuilderSchema = z.custom<RouteBuilder>((value) => typeof value === "function", { message: "Expected a route builder function" });
+const RouteBuilderSchema = z.custom<RouteBuilder>((value) => isFunctionValue(value === null || value === undefined ? value : Object(value) === value ? value : null), {
+	message: "Expected a route builder function",
+});
 
 /** Parses `ROUTES` generically, so a route added to it is covered without editing this test. */
 const RouteGroupSchema: z.ZodType<RouteGroup> = z.lazy(() => z.record(z.string(), z.union([z.string(), RouteBuilderSchema, RouteGroupSchema])));

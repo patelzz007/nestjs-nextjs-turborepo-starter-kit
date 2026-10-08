@@ -33,29 +33,33 @@ const META = DocsMetaSchema.parse({
 
 describe("buildNavSections", () => {
 	const sections = buildNavSections(META, GUIDES);
+	const [basicsSection, toolingSection, moreGuidesSection] = sections;
 
 	it("groups listed guides under their separators, in meta order", () => {
 		expect(sections.map((section) => section.title)).toEqual(["Engineering Basics", "Tooling & DX", MORE_GUIDES_SECTION]);
-		expect(sections[0]?.items.map((item) => item.id)).toEqual(["getting-started", "README"]);
+		expect(basicsSection?.items.map((item) => item.id)).toEqual(["getting-started", "README"]);
 	});
 
 	it("skips unknown ids, duplicates and empty sections", () => {
-		expect(sections[1]?.items.map((item) => item.id)).toEqual(["prisma"]);
+		expect(toolingSection?.items.map((item) => item.id)).toEqual(["prisma"]);
 	});
 
 	it("lists unlisted guides alphabetically but hides superseded ones", () => {
-		expect(sections[2]?.items.map((item) => item.id)).toEqual(["alpha", "zeta"]);
+		expect(moreGuidesSection?.items.map((item) => item.id)).toEqual(["alpha", "zeta"]);
 	});
 
 	it("assigns hrefs and icons", () => {
-		expect(sections[0]?.items[1]).toMatchObject({ href: "/docs/README", icon: "bookOpen" });
-		expect(sections[0]?.icon).toBe("rocket");
-		expect(sections[2]?.items[0]?.icon).toBe("fileText");
+		const [, readmeItem] = basicsSection?.items ?? [];
+		const [firstMoreGuide] = moreGuidesSection?.items ?? [];
+		expect(readmeItem).toMatchObject({ href: "/docs/README", icon: "bookOpen" });
+		expect(basicsSection?.icon).toBe("rocket");
+		expect(firstMoreGuide?.icon).toBe("fileText");
 	});
 
 	it("puts guides before the first separator into a default section", () => {
 		const loose = buildNavSections(DocsMetaSchema.parse({ pages: ["prisma"] }), [guide("prisma", "Prisma")]);
-		expect(loose[0]?.title).toBe("Guides");
+		const [defaultSection] = loose;
+		expect(defaultSection?.title).toBe("Guides");
 	});
 });
 

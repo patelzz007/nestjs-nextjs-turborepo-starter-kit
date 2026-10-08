@@ -7,7 +7,7 @@ import { OrganizationLocationList } from "@/components/org/organization-location
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
 import { KYB_STATUS_DISPLAY, ORGANIZATION_LIFECYCLE_DISPLAY } from "@/lib/org/organization-status";
-import { MERCHANT_CAPABILITY, type OrganizationContextResponse, type OrganizationMembershipRole } from "@workspace/shared";
+import { LIST_SLOT_INDEX, MERCHANT_CAPABILITY, type OrganizationContextResponse, type OrganizationMembershipRole } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { IconTile, type IconTileTone } from "@workspace/ui/components/icon-tile";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
@@ -77,7 +77,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 	const locationCount = context?.locations.length ?? 0;
 	const policyVersion = context?.policyVersion;
 	const kybStatus = context?.merchantProfile?.kybStatus;
-	const primaryLocation = context?.locations.find((location) => location.isPrimary) ?? context?.locations[0];
+	const primaryLocation = context?.locations.find((location) => location.isPrimary) ?? context?.locations[LIST_SLOT_INDEX.first];
 
 	return (
 		<div className="space-y-8">

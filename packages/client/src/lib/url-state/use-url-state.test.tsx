@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -43,14 +44,14 @@ describe("useUrlState", () => {
 	it("parses the current URL (invalid params fall back to defaults)", () => {
 		setUrl(`${PATH}?page=3&sort=-name&filter[status]=nope`);
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
-		expect(result.current[0]).toEqual({ ...TABLE_URL_STATE.defaults, page: 3, sort: "-name" });
+		expect(result.current[LIST_SLOT_INDEX.first]).toEqual({ ...TABLE_URL_STATE.defaults, page: 3, sort: "-name" });
 	});
 
 	it("pushes a history entry for a discrete change, omitting defaults", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
 		act((): void => {
-			result.current[1]({ status: "locked", page: 2 });
+			result.current[LIST_SLOT_INDEX.second]({ status: "locked", page: 2 });
 		});
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(currentUrl()).toBe(`${PATH}?page=2&filter[status]=locked`);
@@ -61,7 +62,7 @@ describe("useUrlState", () => {
 		const replaceState = vi.spyOn(window.history, "replaceState");
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
 		act((): void => {
-			result.current[1]({ sort: "name" }, { history: "replace" });
+			result.current[LIST_SLOT_INDEX.second]({ sort: "name" }, { history: "replace" });
 		});
 		expect(pushState).not.toHaveBeenCalled();
 		expect(replaceState).toHaveBeenCalledTimes(1);
@@ -73,8 +74,8 @@ describe("useUrlState", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
 		act((): void => {
-			result.current[1]({ page: 2 });
-			result.current[1]({ limit: 20 });
+			result.current[LIST_SLOT_INDEX.second]({ page: 2 });
+			result.current[LIST_SLOT_INDEX.second]({ limit: 20 });
 		});
 		expect(pushState).not.toHaveBeenCalled();
 	});
@@ -85,8 +86,8 @@ describe("useUrlState", () => {
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
 		act((): void => {
 			// A filter change resets to page 1, then the table asks for page 1 again.
-			result.current[1]({ status: "active", page: 1, cursor: undefined });
-			result.current[1]({ page: 1 });
+			result.current[LIST_SLOT_INDEX.second]({ status: "active", page: 1, cursor: undefined });
+			result.current[LIST_SLOT_INDEX.second]({ page: 1 });
 		});
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(currentUrl()).toBe(`${PATH}?filter[status]=active`);
@@ -96,7 +97,7 @@ describe("useUrlState", () => {
 		setUrl(`${PATH}?tab=states#top`);
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
 		act((): void => {
-			result.current[1]({ page: 2 });
+			result.current[LIST_SLOT_INDEX.second]({ page: 2 });
 		});
 		expect(currentUrl()).toBe(`${PATH}?tab=states&page=2#top`);
 	});
@@ -105,7 +106,7 @@ describe("useUrlState", () => {
 		setUrl(`${PATH}?page=2&limit=10`);
 		const { result } = renderHook(() => useUrlState(TABLE_URL_STATE));
 		act((): void => {
-			result.current[1]({ page: 1, limit: 20 });
+			result.current[LIST_SLOT_INDEX.second]({ page: 1, limit: 20 });
 		});
 		expect(currentUrl()).toBe(PATH);
 	});
@@ -113,16 +114,16 @@ describe("useUrlState", () => {
 	it("re-derives state when the URL changes (back/forward), with no copy to resync", () => {
 		setUrl(`${PATH}?page=2`);
 		const { result, rerender } = renderHook(() => useUrlState(TABLE_URL_STATE));
-		expect(result.current[0].page).toBe(2);
+		expect(result.current[LIST_SLOT_INDEX.first].page).toBe(2);
 		setUrl(`${PATH}?page=5&filter[status]=locked`);
 		rerender();
-		expect(result.current[0]).toEqual({ ...TABLE_URL_STATE.defaults, page: 5, status: "locked" });
+		expect(result.current[LIST_SLOT_INDEX.first]).toEqual({ ...TABLE_URL_STATE.defaults, page: 5, status: "locked" });
 	});
 
 	it("returns a stable updater across renders", () => {
 		const { result, rerender } = renderHook(() => useUrlState(TABLE_URL_STATE));
-		const first = result.current[1];
+		const first = result.current[LIST_SLOT_INDEX.second];
 		rerender();
-		expect(result.current[1]).toBe(first);
+		expect(result.current[LIST_SLOT_INDEX.second]).toBe(first);
 	});
 });

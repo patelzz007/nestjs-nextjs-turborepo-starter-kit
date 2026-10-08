@@ -15,7 +15,8 @@ describe("rehypeHeadingAnchors", () => {
 	it("appends a permalink to h2-h4 headings with an id", () => {
 		const heading = element("h2", { id: "setup" }, [{ type: "text", value: "Setup" }]);
 		rehypeHeadingAnchors()(rootOf([heading]));
-		expect(heading.children[1]).toMatchObject({ tagName: "a", properties: { href: "#setup", className: ["heading-anchor"] } });
+		const [, permalink] = heading.children;
+		expect(permalink).toMatchObject({ tagName: "a", properties: { href: "#setup", className: ["heading-anchor"] } });
 	});
 
 	it("skips h1 and headings without an id", () => {
@@ -46,6 +47,7 @@ describe("rehypeTableWrapper", () => {
 	it("wraps tables in a scroll container", () => {
 		const root = rootOf([element("table", {})]);
 		rehypeTableWrapper()(root);
-		expect(root.children[0]).toMatchObject({ tagName: "div", properties: { className: ["table-wrapper"] } });
+		const [wrapper] = root.children;
+		expect(wrapper).toMatchObject({ tagName: "div", properties: { className: ["table-wrapper"] } });
 	});
 });

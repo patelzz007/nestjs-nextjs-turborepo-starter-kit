@@ -50,14 +50,11 @@ import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels
 import * as React from "react";
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
+import { isArrayValue, isBrowserRuntime } from "@workspace/shared";
+
 import { ComboboxContext, type ComboboxContextValue, type ComboboxSize } from "./combobox-context";
 
 // ── SSR guard ──────────────────────────────────────────────────────────────
-
-/** True when running in a browser — `window` is undefined during SSR. */
-function isBrowser(): boolean {
-	return typeof window !== "undefined";
-}
 
 // ── Imperative ref API (rule 20, improvement 1) ─────────────────────────────
 
@@ -79,7 +76,7 @@ type ComboboxValueChange<Value, Multiple extends boolean | undefined = false> = 
 
 /** How many options a combobox value selects: an array's length, one for a single value, none for `null`/`undefined`. */
 export function countSelection<Value>(value: Value | readonly Value[] | null | undefined): number {
-	if (Array.isArray(value)) {
+	if (isArrayValue(value)) {
 		return value.length;
 	}
 	return value === null || value === undefined ? 0 : 1;
@@ -171,7 +168,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 	// Typed with the exact base-ui signature so the generics stay in sync.
 	const handleValueChange: ComboboxValueChange<Value, Multiple> = useCallback(
 		(value, details) => {
-			if (maxSelected !== undefined && Array.isArray(value) && value.length > maxSelected) {
+			if (maxSelected !== undefined && isArrayValue(value) && value.length > maxSelected) {
 				details.cancel();
 				onMaxSelectedReached?.(maxSelected);
 				return;
@@ -253,7 +250,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 	// popup and focuses the input. Effects never run during SSR, and the
 	// listener is removed on unmount — no leaked global handlers.
 	useEffect(() => {
-		if (!isBrowser() || shortcut === undefined) {
+		if (!isBrowserRuntime() || shortcut === undefined) {
 			return;
 		}
 		const spec = parseShortcut(shortcut);

@@ -1,4 +1,5 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { isBrowserRuntime } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { AlertCircleIcon, CheckIcon, Loader2Icon } from "lucide-react";
@@ -200,14 +201,9 @@ export function createImperativeChangeDetails(): AccordionPrimitive.Root.ChangeE
 	};
 }
 
-/** True when running in a browser — `window` is undefined during SSR. */
-export function isBrowser(): boolean {
-	return typeof window !== "undefined";
-}
-
 /** Reads persisted open items from sessionStorage (feature 10). SSR-safe. */
 export function readPersistedAccordion(key: string): string[] | undefined {
-	if (!isBrowser()) {
+	if (!isBrowserRuntime()) {
 		return undefined;
 	}
 	try {

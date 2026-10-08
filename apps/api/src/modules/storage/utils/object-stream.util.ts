@@ -10,8 +10,9 @@ export type StreamChunk = z.output<typeof StreamChunkSchema>;
 
 /** Normalizes one validated chunk from a byte stream (string chunks are encoded as UTF-8). */
 export function streamChunkToBuffer(chunk: StreamChunk): Buffer {
-	if (typeof chunk === "string") {
-		return Buffer.from(chunk, "utf8");
+	const asString = z.string().safeParse(chunk);
+	if (asString.success) {
+		return Buffer.from(asString.data, "utf8");
 	}
 	return Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
 }

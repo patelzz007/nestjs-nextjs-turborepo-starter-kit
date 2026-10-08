@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import type { JsonValue, KafkaTopic, PlatformEventMessage } from "@workspace/shared";
 
@@ -202,7 +203,11 @@ describe("OutboxDispatcher", () => {
 
 		expect(summary).toEqual({ claimed: 2, published: 2, retried: 0, deadLettered: 0, released: 0 });
 		expect(publisher.published.map(({ message }) => message.eventId)).toEqual([EVENT_A, EVENT_B]);
-		expect(publisher.published[0]).toMatchObject({ topic: "platform.sessions", partitionKey: USER_ID, message: { type: "session.action", correlationId: "corr-1" } });
+		expect(publisher.published[LIST_SLOT_INDEX.first]).toMatchObject({
+			topic: "platform.sessions",
+			partitionKey: USER_ID,
+			message: { type: "session.action", correlationId: "corr-1" },
+		});
 		expect(store.get(EVENT_A).status).toBe("PUBLISHED");
 		expect(logger.events()).toContain("outbox.published");
 	});

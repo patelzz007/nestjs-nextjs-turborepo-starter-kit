@@ -1,4 +1,5 @@
 import { ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { isStringPrimitive, LIST_SLOT_INDEX } from "@workspace/shared";
 import { SupportAccessGrantStatus } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -49,7 +50,7 @@ interface FakeDatabase {
 const db = vi.hoisted((): FakeDatabase => ({ grants: new Map<string, GrantRow>(), liveOwners: new Set<string>(), membershipQueries: [], auditRows: [], operations: [] }));
 
 function statusMatches(row: GrantRow, status: GrantUpdateWhere["status"]): boolean {
-	return typeof status === "string" ? row.status === status : status.in.includes(row.status);
+	return isStringPrimitive(status) ? row.status === status : status.in.includes(row.status);
 }
 
 /** Whether `row` satisfies the conditional-update `where` (each optional clause only when present). */
@@ -167,7 +168,7 @@ describe("SupportAccessService", () => {
 			await createService().tenantApprove("grant-1", OWNER_ID);
 
 			expect(db.grants.get("grant-1")).toMatchObject({ status: "ACTIVE", tenantApprovedById: OWNER_ID });
-			expect(db.membershipQueries[0]).toMatchObject({ organizationId: ORG_ID, userId: OWNER_ID, role: "OWNER", status: "ACTIVE", isDeleted: false });
+			expect(db.membershipQueries[LIST_SLOT_INDEX.first]).toMatchObject({ organizationId: ORG_ID, userId: OWNER_ID, role: "OWNER", status: "ACTIVE", isDeleted: false });
 			expect(db.auditRows).toEqual([
 				expect.objectContaining({
 					organizationId: ORG_ID,
@@ -185,7 +186,7 @@ describe("SupportAccessService", () => {
 
 			await expect(createService().tenantApprove("grant-1", OWNER_ID)).rejects.toBeInstanceOf(ForbiddenException);
 
-			expect(db.membershipQueries[0]).toMatchObject({ organizationId: OTHER_ORG_ID });
+			expect(db.membershipQueries[LIST_SLOT_INDEX.first]).toMatchObject({ organizationId: OTHER_ORG_ID });
 			expect(db.grants.get("grant-1")?.status).toBe("PENDING_TENANT_APPROVAL");
 			expect(db.auditRows).toEqual([]);
 		});
@@ -195,7 +196,7 @@ describe("SupportAccessService", () => {
 			db.liveOwners.clear();
 
 			await expect(createService().tenantApprove("grant-1", OWNER_ID)).rejects.toMatchObject({ response: { error: "SUPPORT_ACCESS_APPROVER_NOT_OWNER" } });
-			expect(db.membershipQueries[0]).toMatchObject({ isDeleted: false, user: { isActive: true, isDeleted: false } });
+			expect(db.membershipQueries[LIST_SLOT_INDEX.first]).toMatchObject({ isDeleted: false, user: { isActive: true, isDeleted: false } });
 		});
 
 		it.each(["REVOKED", "ACTIVE", "EXPIRED", "DENIED"] satisfies SupportAccessGrantStatus[])(

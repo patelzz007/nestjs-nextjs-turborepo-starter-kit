@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { API_VERSION_PREFIX, ApiPaginatedMetaSchema, ProductSchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, API_VERSION_PREFIX, ApiPaginatedMetaSchema, ProductSchema } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -127,7 +127,7 @@ describe("List query grammar on GET /product (e2e, real Postgres)", () => {
 		const body = await listOk(
 			`search=${marker}&filter[price][gte]=${String(SHARED_PRICE)}&filter[price][lte]=${String(HIGHER_PRICE)}&filter[brand][contains]=acm&filter[isActive]=true`,
 		);
-		expect(new Set(body.data.map((product) => product.id))).toEqual(new Set([fixtures[0]?.id, fixtures[1]?.id]));
+		expect(new Set(body.data.map((product) => product.id))).toEqual(new Set([fixtures[LIST_SLOT_INDEX.first]?.id, fixtures[LIST_SLOT_INDEX.second]?.id]));
 		expect(body.meta.total).toBe(2);
 	});
 
@@ -135,7 +135,7 @@ describe("List query grammar on GET /product (e2e, real Postgres)", () => {
 		const inList = await listOk(`search=${marker}&filter[price][gte]=${String(HIGHER_PRICE)}&filter[categoryId][in]=${categoryId}`);
 		expect(inList.meta.total).toBe(2);
 		const withoutBrand = await listOk(`search=${marker}&filter[brand][isNull]=true`);
-		expect(withoutBrand.data.map((product) => product.id)).toEqual([fixtures[2]?.id]);
+		expect(withoutBrand.data.map((product) => product.id)).toEqual([fixtures[LIST_SLOT_INDEX.third]?.id]);
 	});
 
 	it("keyset pages in the default order (createdAt desc, id desc) never skip or repeat rows that share a timestamp", async () => {

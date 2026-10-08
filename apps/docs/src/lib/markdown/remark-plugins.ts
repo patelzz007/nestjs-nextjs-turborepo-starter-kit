@@ -85,7 +85,7 @@ export function collectText(node: MdastNodeLike): string {
 	return node.children === undefined ? "" : node.children.map(collectText).join("");
 }
 
-const MARKER_PATTERN = /^\[!(NOTE|INFO|TIP|SUCCESS|WARNING|CAUTION|IMPORTANT|ERROR|DANGER)\]\s*/i;
+const MARKER_PATTERN = /^\[!(?<kind>NOTE|INFO|TIP|SUCCESS|WARNING|CAUTION|IMPORTANT|ERROR|DANGER)\]\s*/i;
 
 /** Removes the `[!KIND]` marker from the quote's first text node (dropping an emptied paragraph). */
 function stripMarker(node: Blockquote): void {
@@ -120,7 +120,7 @@ export function remarkCallouts(): (tree: Root) => void {
 	return (tree: Root): void => {
 		visit(tree, "blockquote", (node: Blockquote) => {
 			const text = node.children.map(collectText).join("");
-			const marker = MARKER_PATTERN.exec(text)?.[1]?.toLowerCase();
+			const marker = MARKER_PATTERN.exec(text)?.groups?.kind?.toLowerCase();
 			const kind: QuoteKind = marker === undefined ? detectQuoteKind(text) : (QUOTE_MARKER_KINDS[marker] ?? "info");
 
 			if (marker !== undefined) {
@@ -179,14 +179,14 @@ function glossaryNode(term: string, definition: string): Emphasis {
 export function splitGlossaryTerms(value: string, entries: readonly GlossaryEntry[] = GLOSSARY_TERMS): readonly PhrasingContent[] {
 	const sorted = [...entries].sort((a, b) => b.term.length - a.term.length);
 	const alternation = sorted.map((entry) => escapeRegExp(entry.term)).join("|");
-	const pattern = new RegExp(`(^|[^A-Za-z0-9])(${alternation})(?=$|[^A-Za-z0-9])`, "g");
+	const pattern = new RegExp(`(?<prefix>^|[^A-Za-z0-9])(?<term>${alternation})(?=$|[^A-Za-z0-9])`, "g");
 	const definitions = new Map(sorted.map((entry) => [entry.term, entry.definition]));
 
 	const pieces: PhrasingContent[] = [];
 	let cursor = 0;
 	for (const match of value.matchAll(pattern)) {
-		const prefix = match[1] ?? "";
-		const term = match[2] ?? "";
+		const prefix = match.groups?.prefix ?? "";
+		const term = match.groups?.term ?? "";
 		const start = match.index + prefix.length;
 		if (start > cursor) {
 			pieces.push({ type: "text", value: value.slice(cursor, start) } satisfies Text);
@@ -336,7 +336,7 @@ export function remarkMermaid(): (tree: Root) => void {
 
 // ─── Task markers ───────────────────────────────────────────────────────────
 
-const TASK_MARKER_PATTERN = /^\[(x| )\]\s?(.*)$/s;
+const TASK_MARKER_PATTERN = /^\[(?<state>x| )\]\s?(?<label>.*)$/s;
 const TASK_DONE = "✓";
 const TASK_PENDING = "☐";
 
@@ -346,12 +346,12 @@ export function replaceTaskMarker(text: string): string | null {
 	if (match === null) {
 		return null;
 	}
-	const marker = match[1] === "x" ? TASK_DONE : TASK_PENDING;
-	return `${marker} ${match[2] ?? ""}`;
+	const marker = match.groups?.state === "x" ? TASK_DONE : TASK_PENDING;
+	return `${marker} ${match.groups?.label ?? ""}`;
 }
 
 function startsWithTaskMarker(paragraph: Paragraph): boolean {
-	const first = paragraph.children[0];
+	const [first] = paragraph.children;
 	return first?.type === "text" && (first.value.startsWith(TASK_DONE) || first.value.startsWith(TASK_PENDING) || TASK_MARKER_PATTERN.test(first.value));
 }
 
@@ -363,7 +363,7 @@ function startsWithTaskMarker(paragraph: Paragraph): boolean {
 export function remarkTaskMarkers(): (tree: Root) => void {
 	return (tree: Root): void => {
 		visit(tree, "tableCell", (cell: TableCell) => {
-			const first = cell.children[0];
+			const [first] = cell.children;
 			if (first?.type !== "text") {
 				return;
 			}
@@ -374,16 +374,17 @@ export function remarkTaskMarkers(): (tree: Root) => void {
 		});
 
 		visit(tree, "listItem", (item: ListItem) => {
-			if (typeof item.checked !== "boolean") {
+			const checked = item.checked;
+			if (checked === null || checked === undefined) {
 				return;
 			}
-			const marker = item.checked ? TASK_DONE : TASK_PENDING;
+			const marker = checked ? TASK_DONE : TASK_PENDING;
 			item.checked = null;
-			const first = item.children[0];
+			const [first] = item.children;
 			if (first?.type !== "paragraph" || startsWithTaskMarker(first)) {
 				return;
 			}
-			const lead = first.children[0];
+			const [lead] = first.children;
 			if (lead?.type === "text") {
 				lead.value = `${marker} ${lead.value}`;
 			} else {

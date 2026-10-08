@@ -6,8 +6,10 @@
 // invalidate an in-flight refresh in another.
 // ============================================
 
-import { isServer } from "../../is-server";
+import { hasGlobalConstructor } from "@workspace/shared";
 import { z } from "zod";
+
+import { isServer } from "../../is-server";
 
 /**
  * Cross-tab auth events. Only state *changes* are broadcast — never tokens.
@@ -42,7 +44,7 @@ export interface AuthChannel {
  * environments without BroadcastChannel everything degrades to no-ops.
  */
 export function createAuthChannel(name: string): AuthChannel {
-	if (isServer || typeof BroadcastChannel === "undefined") {
+	if (isServer || !hasGlobalConstructor("BroadcastChannel")) {
 		return {
 			name,
 			post: (): void => undefined,

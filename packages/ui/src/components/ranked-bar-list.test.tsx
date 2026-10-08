@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -33,10 +34,10 @@ describe("RankedBarList", () => {
 		const list = screen.getByRole("list", { name: "Merchants ranked by sales" });
 		const rows = within(list).getAllByRole("listitem");
 		expect(rows).toHaveLength(2);
-		expect(rows[0]?.textContent).toContain("Brew & Bean");
-		expect(rows[0]?.textContent).toContain("RM 20.00");
-		expect(rows[0]?.textContent).toContain("8 bills");
-		expect(rows[1]?.textContent).toContain("RM 5.00");
+		expect(rows[LIST_SLOT_INDEX.first]?.textContent).toContain("Brew & Bean");
+		expect(rows[LIST_SLOT_INDEX.first]?.textContent).toContain("RM 20.00");
+		expect(rows[LIST_SLOT_INDEX.first]?.textContent).toContain("8 bills");
+		expect(rows[LIST_SLOT_INDEX.second]?.textContent).toContain("RM 5.00");
 	});
 
 	it("orders lightness by rank when the order is the point, and keeps one strength otherwise", (): void => {

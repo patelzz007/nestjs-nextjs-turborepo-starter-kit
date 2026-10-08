@@ -2,6 +2,7 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import {
 	HealthResponseSchema,
+	isBigIntPrimitive,
 	LivenessResponseSchema,
 	nowEpochMs,
 	ReadinessResponseSchema,
@@ -32,7 +33,7 @@ export function toModuleHealthDetails(report: ModuleHealthReport): Record<string
 	return Object.fromEntries(
 		Object.entries(report).map(([key, value]: readonly [string, ModuleHealthReportValue]): readonly [string, ModuleHealthDetailValue] => [
 			key,
-			typeof value === "bigint" ? Number(value) : value,
+			isBigIntPrimitive(value) ? Number(value) : value,
 		]),
 	);
 }

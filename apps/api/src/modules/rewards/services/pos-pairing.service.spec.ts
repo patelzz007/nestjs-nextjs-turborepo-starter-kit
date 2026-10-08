@@ -1,4 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import type { OrganizationLifecycleState } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -105,7 +106,7 @@ describe("PosPairingService", () => {
 		const paired = await service.pair({ pairingCode: CODE });
 
 		expect(terminals.consumePairingCode).toHaveBeenCalledWith(HASHER.lookupCandidates(CODE), expect.any(Number), TX);
-		const [keyInput] = apiKeys.create.mock.calls[0] ?? [];
+		const [keyInput] = apiKeys.create.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 		// The key is minted in the name of the member who issued THIS code (not the terminal's creator) and may only call POS routes.
 		expect(keyInput).toMatchObject({ organizationId: "org-1", locationId: "location-1", name: "Front counter", createdByUserId: "manager-2", scope: "POS" });
 		expect(audit.create).toHaveBeenCalledWith(expect.objectContaining({ action: "pos.terminal_paired", actorUserId: "manager-2" }), TX);

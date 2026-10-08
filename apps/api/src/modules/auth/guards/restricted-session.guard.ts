@@ -91,7 +91,7 @@ export class RestrictedSessionGuard implements CanActivate {
 
 	private isAllowlistedRoute(request: FastifyRequest): boolean {
 		const method: string = request.method.toUpperCase();
-		const path: string = request.url.split("?")[0] ?? request.url;
+		const [path = request.url] = request.url.split("?");
 
 		if (method === "GET" && path.includes("/merchant/kyb/documents/") && path.endsWith("/download")) {
 			return true;

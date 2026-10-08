@@ -10,7 +10,7 @@ import type {
 	PolicyRule,
 	PolicyValue,
 } from "@workspace/shared";
-import { PolicyConditionsSchema } from "@workspace/shared";
+import { isArrayValue, isNumberPrimitive, isStringPrimitive, PolicyConditionsSchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -48,18 +48,18 @@ function readSubjectField(subject: AuthorizationContext, key: string): Authoriza
 }
 
 function isScalarMember(value: AuthorizationAttributeValue): value is string | number {
-	return typeof value === "string" || typeof value === "number";
+	return isStringPrimitive(value) || isNumberPrimitive(value);
 }
 
 function compareNumbers(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue, compare: (left: number, right: number) => boolean): boolean {
-	if (typeof fieldValue !== "number" || typeof compareValue !== "number") {
+	if (!isNumberPrimitive(fieldValue) || !isNumberPrimitive(compareValue)) {
 		return false;
 	}
 	return compare(fieldValue, compareValue);
 }
 
 function compareStrings(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue, compare: (left: string, right: string) => boolean): boolean {
-	if (typeof fieldValue !== "string" || typeof compareValue !== "string") {
+	if (!isStringPrimitive(fieldValue) || !isStringPrimitive(compareValue)) {
 		return false;
 	}
 	return compare(fieldValue, compareValue);
@@ -67,14 +67,14 @@ function compareStrings(fieldValue: AuthorizationAttributeValue, compareValue: P
 
 /** Array membership, or substring when both sides are strings. */
 function containsValue(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue): boolean {
-	if (Array.isArray(fieldValue) && isScalarMember(compareValue)) {
+	if (isArrayValue(fieldValue) && isScalarMember(compareValue)) {
 		return fieldValue.some((member) => member === compareValue);
 	}
 	return compareStrings(fieldValue, compareValue, (left, right) => left.includes(right));
 }
 
 function inList(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue): boolean {
-	if (!Array.isArray(compareValue) || !isScalarMember(fieldValue)) {
+	if (!isArrayValue(compareValue) || !isScalarMember(fieldValue)) {
 		return false;
 	}
 	return compareValue.some((member) => member === fieldValue);
@@ -93,11 +93,11 @@ export function applyPolicyOperator(operator: PolicyOperator, fieldValue: Author
 		case "in":
 			return inList(fieldValue, compareValue);
 		case "not_in":
-			return Array.isArray(compareValue) && isScalarMember(fieldValue) && !inList(fieldValue, compareValue);
+			return isArrayValue(compareValue) && isScalarMember(fieldValue) && !inList(fieldValue, compareValue);
 		case "contains":
 			return containsValue(fieldValue, compareValue);
 		case "not_contains":
-			return (typeof fieldValue === "string" || Array.isArray(fieldValue)) && !containsValue(fieldValue, compareValue);
+			return (isStringPrimitive(fieldValue) || isArrayValue(fieldValue)) && !containsValue(fieldValue, compareValue);
 		case "starts_with":
 			return compareStrings(fieldValue, compareValue, (left, right) => left.startsWith(right));
 		case "ends_with":

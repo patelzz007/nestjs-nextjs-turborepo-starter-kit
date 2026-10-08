@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { RequestContextService } from "../../../common/context/request-context";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
@@ -78,8 +79,8 @@ describe("PermissionExpiryCleanup", () => {
 		expect(mocks.findExpiredOverrides).toHaveBeenCalledWith(NOW, expect.anything());
 		expect(mocks.expireOverrides).toHaveBeenCalledWith(["up-1", "up-2", "up-3"], NOW, expect.anything());
 		expect(mocks.runs).toHaveLength(1);
-		expect(mocks.runs[0]?.operation).toBe(PERMISSION_EXPIRY_OPERATION);
-		expect(mocks.runs[0]?.outcome).toEqual({
+		expect(mocks.runs[LIST_SLOT_INDEX.first]?.operation).toBe(PERMISSION_EXPIRY_OPERATION);
+		expect(mocks.runs[LIST_SLOT_INDEX.first]?.outcome).toEqual({
 			result: 3,
 			audits: [
 				{ action: "PERMISSION_EXPIRED", targetUserId: "user-1", permissionId: "perm-a", detail: JSON.stringify({ effect: "ALLOW", expiredAt: NOW }) },
@@ -95,7 +96,7 @@ describe("PermissionExpiryCleanup", () => {
 
 		await job().handleExpiryCleanup();
 
-		expect(mocks.runs[0]?.outcome).toEqual({ result: 0, audits: [], affectedUserIds: [] });
+		expect(mocks.runs[LIST_SLOT_INDEX.first]?.outcome).toEqual({ result: 0, audits: [], affectedUserIds: [] });
 	});
 
 	it("propagates a failure instead of logging and continuing", async () => {

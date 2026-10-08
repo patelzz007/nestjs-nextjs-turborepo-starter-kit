@@ -1,4 +1,5 @@
 import type { EndpointAccess } from "./endpoint-access";
+import { z } from "zod";
 import { isCapturedSample, listEndpoints, type ApiSamplesFile, type CapturedSample, type Endpoint, type JsonSchema, type OpenApiDocument, type Parameter } from "./openapi";
 import { pageForTags, REFERENCE_PAGES, type ReferencePage } from "./pages";
 import { resolveSchema, schemaRows, typeLabel, type FieldRow, type SchemaRegistry } from "./schema-table";
@@ -41,7 +42,13 @@ const JSON_MEDIA_TYPE = "application/json";
 /** Envelope keys every JSON success response carries (documented once, on the index page). */
 const ENVELOPE_META_KEYS: ReadonlySet<string> = new Set(["correlationId", "timestamp"]);
 /** `409 IDEMPOTENCY_KEY_REUSED`-style status + code pairs quoted in operation descriptions. */
-const STATUS_CODE_IN_TEXT = /\b([45]\d\d) ([A-Z][A-Z0-9_]{2,})\b/g;
+const STATUS_CODE_IN_TEXT = /\b(?<status>[45]\d\d) (?<code>[A-Z][A-Z0-9_]{2,})\b/g;
+/** A JSON object request body (the only body shape that can carry a multipart marker key). */
+const JSON_OBJECT_BODY_SCHEMA = z.record(z.string(), z.json());
+/** A plain-text response body (rendered as `text`, not JSON). */
+const TEXT_BODY_SCHEMA = z.string();
+/** Separates a policy name from its explanation in an access description. */
+const POLICY_DESCRIPTION_SEPARATOR = " — ";
 
 /** Same anchor rules as GitHub and the docs link checker (`scripts/check-links.mjs`). */
 export function headingAnchor(text: string): string {
@@ -119,8 +126,10 @@ export function accessLines(endpoint: Endpoint, access: EndpointAccess | undefin
 	if (access.superAdminOnly) lines.push("**SuperAdmin only.**");
 	if (access.adminAccessOnly) lines.push("**Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).");
 	for (const permission of access.permissions) lines.push(`**Permission** ${code(permission)}.`);
-	for (const policy of access.policies)
-		lines.push(`**Policy** ${code(policy.split(" — ")[0] ?? policy)}${policy.includes(" — ") ? ` — ${policy.split(" — ").slice(1).join(" — ")}` : ""}.`);
+	for (const policy of access.policies) {
+		const [policyName = policy, ...explanation] = policy.split(POLICY_DESCRIPTION_SEPARATOR);
+		lines.push(`**Policy** ${code(policyName)}${explanation.length > 0 ? `${POLICY_DESCRIPTION_SEPARATOR}${explanation.join(POLICY_DESCRIPTION_SEPARATOR)}` : ""}.`);
+	}
 	if (endpoint.path.includes("/orgs/{orgSlug}") && !access.isPublic) {
 		lines.push(
 			"**Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).",
@@ -153,7 +162,7 @@ function errorRows(endpoint: Endpoint, access: EndpointAccess | undefined): read
 		rows.push(`| ${status} | — | ${cell(response.description)} |`);
 	}
 	for (const match of `${endpoint.operation.summary ?? ""} ${endpoint.operation.description ?? ""}`.matchAll(STATUS_CODE_IN_TEXT)) {
-		rows.push(`| ${match[1] ?? ""} | ${code(match[2] ?? "")} | Stated in the endpoint description. |`);
+		rows.push(`| ${match.groups?.status ?? ""} | ${code(match.groups?.code ?? "")} | Stated in the endpoint description. |`);
 	}
 	const hasInput = endpoint.operation.parameters.length > 0 || endpoint.operation.requestBody !== undefined;
 	if (hasInput) rows.push("| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |");
@@ -178,12 +187,18 @@ interface SuccessResponse {
 	readonly mediaTypes: readonly string[];
 }
 
+/** The tag an operation is filed under on its page: its first OpenAPI tag (see {@link pageForTags}). */
+function pageTagOf(endpoint: Endpoint): string | undefined {
+	const [tag] = endpoint.operation.tags;
+	return tag;
+}
+
 function successResponse(endpoint: Endpoint): SuccessResponse | undefined {
 	const entry = Object.entries(endpoint.operation.responses).find(([status]) => SUCCESS_STATUS.test(status));
 	if (entry === undefined) return undefined;
 	const [status, response] = entry;
 	const mediaTypes = Object.keys(response.content ?? {});
-	const mediaType = mediaTypes[0];
+	const [mediaType] = mediaTypes;
 	const schema = mediaType === undefined ? undefined : response.content?.[mediaType]?.schema;
 	return { status, description: response.description, schema, mediaType, mediaTypes };
 }
@@ -218,7 +233,8 @@ function sampleRequest(sample: CapturedSample): string {
 	for (const [name, value] of Object.entries(sample.request.headers)) lines.push(`${name}: ${value}`);
 	const body = sample.request.body;
 	if (body !== undefined) {
-		const isMultipart = typeof body === "object" && body !== null && !Array.isArray(body) && "multipart/form-data" in body;
+		const bodyRecord = JSON_OBJECT_BODY_SCHEMA.safeParse(body);
+		const isMultipart = bodyRecord.success && "multipart/form-data" in bodyRecord.data;
 		lines.push(`Content-Type: ${isMultipart ? "multipart/form-data" : JSON_MEDIA_TYPE}`, "", JSON.stringify(body, null, 2));
 	}
 	return lines.join("\n");
@@ -236,8 +252,9 @@ function renderSample(endpoint: Endpoint, inputs: ApiReferenceInputs): string {
 	const parts = [`**Example** — called as ${sample.as}${sample.note === undefined ? "." : `. ${sample.note}`}`, "", "```http", sampleRequest(sample), "```", ""];
 	parts.push(`Response \`${String(sample.response.status)} ${statusText}\`${sample.response.contentType.length > 0 ? ` (${sample.response.contentType})` : ""}:`, "");
 	const body = sample.response.body;
-	if (typeof body === "string") {
-		parts.push("```text", body, "```", "");
+	const textBody = TEXT_BODY_SCHEMA.safeParse(body);
+	if (textBody.success) {
+		parts.push("```text", textBody.data, "```", "");
 	} else {
 		parts.push("```json", JSON.stringify(body, null, 2), "```", "");
 	}
@@ -259,7 +276,7 @@ function renderEndpoint(endpoint: Endpoint, inputs: ApiReferenceInputs): string 
 	const parameters = operation.parameters.filter((parameter) => parameter.in !== "cookie");
 	if (parameters.length > 0) parts.push("**Parameters**", "", parameterTable(parameters, registry));
 
-	const requestMediaType = Object.keys(operation.requestBody?.content ?? {})[0];
+	const [requestMediaType] = Object.keys(operation.requestBody?.content ?? {});
 	const requestSchema = requestMediaType === undefined ? undefined : operation.requestBody?.content[requestMediaType]?.schema;
 	if (requestSchema !== undefined) {
 		parts.push(
@@ -308,7 +325,7 @@ function renderPage(page: ReferencePage, endpoints: readonly Endpoint[], inputs:
 		"",
 	);
 	for (const tag of page.tags) {
-		const tagged = endpoints.filter((endpoint) => endpoint.operation.tags[0] === tag);
+		const tagged = endpoints.filter((endpoint) => pageTagOf(endpoint) === tag);
 		if (tagged.length === 0) continue;
 		parts.push(`## ${tag}`, "");
 		for (const endpoint of tagged) parts.push(renderEndpoint(endpoint, inputs));

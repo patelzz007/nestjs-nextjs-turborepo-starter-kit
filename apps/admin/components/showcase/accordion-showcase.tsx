@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@workspace/ui/components/button";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Input } from "@workspace/ui/components/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, type AccordionItemStatus, type AccordionRef } from "@workspace/ui/components/accordion";
@@ -58,7 +59,7 @@ export function AccordionShowcase({ faqItems, statusItems, reorderItems, variant
 	}, []);
 
 	const orderedItems = useMemo(() => [...reorderItems].sort((a, b) => order.indexOf(a.value) - order.indexOf(b.value)), [reorderItems, order]);
-	const firstOrderedValue = order[0];
+	const firstOrderedValue = order[LIST_SLOT_INDEX.first];
 
 	return (
 		<div className="grid gap-4 px-4 py-4 lg:grid-cols-2 lg:px-6">

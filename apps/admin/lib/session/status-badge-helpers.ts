@@ -1,7 +1,7 @@
 import { type Observable, type SchedulerLike, from, fromEvent, of, filter, switchMap, timer } from "rxjs";
 
 import { ApiError } from "@workspace/client/lib/api/use-api";
-import type { SessionStatus } from "@workspace/shared";
+import { hasGlobalValue, type SessionStatus } from "@workspace/shared";
 
 import type { SessionState } from "./status-badge";
 
@@ -78,11 +78,11 @@ export function sameSessionState(a: SessionState, b: SessionState): boolean {
 }
 
 export function isDocumentVisible(): boolean {
-	if (typeof document === "undefined") return true;
+	if (!hasGlobalValue("document")) return true;
 	return document.visibilityState === "visible";
 }
 
 export function defaultVisibilitySource(): Observable<Event> {
-	const target: EventTarget = typeof document === "undefined" ? new EventTarget() : document;
+	const target: EventTarget = hasGlobalValue("document") ? document : new EventTarget();
 	return fromEvent(target, "visibilitychange");
 }

@@ -7,6 +7,7 @@
 // case means a fresh EnvValidationError class, so failures are matched by message.
 
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { ADMIN_ENV_SCOPE } from "./lib/env/env.schema";
 
@@ -60,7 +61,7 @@ describe("instrumentation register()", () => {
 
 		expect(exitSpy).toHaveBeenCalledWith(1);
 		expect(errorSpy).toHaveBeenCalledTimes(1);
-		const message = String(errorSpy.mock.calls[0]?.[0]);
+		const message = String(errorSpy.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]);
 		expect(message).toContain(`Invalid environment configuration for ${ADMIN_ENV_SCOPE.server}:`);
 		expect(message).toContain("COOKIE_DOMAIN:");
 		expect(message).not.toContain(LEAKY_COOKIE_DOMAIN);

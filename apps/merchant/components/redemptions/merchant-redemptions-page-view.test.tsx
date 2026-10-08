@@ -110,7 +110,8 @@ describe("MerchantRedemptionsPageView authorization", () => {
 describe("MerchantRedemptionsPageView paging (URL state)", () => {
 	/** The latest LIST request (the "today" count is a separate request). */
 	function lastInput(): RedemptionsInput | undefined {
-		return redemptionsQuery.mock.calls.filter(([input]) => !isDayCountInput(input)).at(-1)?.[0];
+		const [input] = redemptionsQuery.mock.calls.filter(([candidate]) => !isDayCountInput(candidate)).at(-1) ?? [];
+		return input;
 	}
 
 	it("requests the page the URL names, for the selected store", () => {

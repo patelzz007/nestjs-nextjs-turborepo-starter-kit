@@ -65,7 +65,8 @@ export function listAppPageFiles(): readonly AppPageFile[] {
 
 /** The pathname of an internal href — query string and fragment removed. */
 export function pathnameOf(href: string): string {
-	return href.split(/[?#]/)[0] ?? href;
+	const [pathname = href] = href.split(/[?#]/);
+	return pathname;
 }
 
 function segmentsOf(pathname: string): readonly string[] {

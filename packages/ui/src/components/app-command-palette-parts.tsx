@@ -294,9 +294,7 @@ export const AppCommandPaletteNavigationSection = React.forwardRef<HTMLDivElemen
 				</div>
 			) : null}
 
-			{Object.entries(filteredGroups).map((groupEntry) => {
-				const section = groupEntry[0];
-				const items = groupEntry[1];
+			{Object.entries(filteredGroups).map(([section, items]) => {
 				const isCollapsed = collapsedSections.has(section);
 
 				return (

@@ -12,9 +12,9 @@ import { parseApiConfig } from "./api-config";
 const WORKFLOW_PATH: string = fileURLToPath(new URL("../../../../.github/actions/write-api-ci-env/action.yml", import.meta.url));
 
 /** The heredoc the e2e job writes: `cat > apps/api/.env <<EOF … EOF`. */
-const ENV_HEREDOC_PATTERN = /cat > apps\/api\/\.env <<EOF\n([\s\S]*?)\n\s*EOF/;
+const ENV_HEREDOC_PATTERN = /cat > apps\/api\/\.env <<EOF\n(?<body>[\s\S]*?)\n\s*EOF/;
 /** Shell expansions such as `${jwt_access}` inside the heredoc. */
-const SHELL_VARIABLE_PATTERN = /\$\{(\w+)\}/g;
+const SHELL_VARIABLE_PATTERN = /\$\{(?<name>\w+)\}/g;
 /** Length of each generated secret, in bytes (the job uses `openssl rand`). */
 const SECRET_BYTES = 32;
 
@@ -34,7 +34,7 @@ const SHELL_VARIABLES: Readonly<Record<string, string>> = {
 };
 
 function workflowEnv(): Record<string, string> {
-	const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.[1];
+	const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.groups?.body;
 	if (heredoc === undefined) {
 		throw new Error("The write-api-ci-env action no longer writes apps/api/.env with a heredoc — update this test.");
 	}
@@ -56,9 +56,9 @@ describe(".github/actions/write-api-ci-env — CI API env", () => {
 	});
 
 	it("only references shell variables the job defines", () => {
-		const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.[1] ?? "";
+		const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.groups?.body ?? "";
 		const unknown = [...heredoc.matchAll(SHELL_VARIABLE_PATTERN)]
-			.map((match: RegExpExecArray): string => match[1] ?? "")
+			.map((match: RegExpExecArray): string => match.groups?.name ?? "")
 			.filter((name: string): boolean => !(name in SHELL_VARIABLES));
 		expect(unknown).toEqual([]);
 	});

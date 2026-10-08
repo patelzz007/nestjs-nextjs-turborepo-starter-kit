@@ -29,7 +29,11 @@ describe("EmailSendResultSchema", () => {
 
 describe("EmailTemplateMetaSchema", () => {
 	it("strips unknown keys", () => {
-		const meta = { key: "welcome", label: "Welcome", description: "Sent after signup", sampleTo: "jane@example.com" };
+		const meta = { key: "welcome", label: "Welcome", description: "Sent after signup", sampleTo: "jane@example.com", sampleSubject: "Welcome aboard" };
 		expect(EmailTemplateMetaSchema.parse({ ...meta, extra: true })).toEqual(meta);
+	});
+
+	it("requires the sample subject the preview header shows before the preview loads", () => {
+		expect(EmailTemplateMetaSchema.safeParse({ key: "welcome", label: "Welcome", description: "Sent after signup", sampleTo: "jane@example.com" }).success).toBe(false);
 	});
 });

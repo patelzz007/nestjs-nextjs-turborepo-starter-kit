@@ -21,6 +21,7 @@ import "server-only";
 //   are absent from the server caller's type and runtime tree.
 
 import {
+	LIST_SLOT_INDEX,
 	apiVersionPrefix,
 	AUTH_COOKIE_NAMES,
 	clientTypeHeader,
@@ -139,6 +140,11 @@ export interface PrefetchLogEvent {
 	readonly outcome: PrefetchOutcome;
 }
 
+/**
+ * Why a server-side prefetch failed, tagged by `kind`. Written out by hand rather than with
+ * `ToDiscoUnion`: its `"no-cookie"` tag is not a camelCase type key (naming-convention), and
+ * renaming it would change the shape callers and logs rely on.
+ */
 export type PrefetchFailure =
 	| { readonly kind: "no-cookie" }
 	| { readonly kind: "unreachable"; readonly cause: string }
@@ -253,11 +259,11 @@ export function classifyError(error: Error | undefined): PrefetchFailure {
 	if (error instanceof PrefetchTimeoutError) return { kind: "timeout" };
 	if (error instanceof PrefetchAbortError) return { kind: "aborted" };
 	if (error instanceof ApiResponseContractError) {
-		const firstIssue: ApiResponseContractIssue | undefined = error.issues[0];
+		const firstIssue: ApiResponseContractIssue | undefined = error.issues[LIST_SLOT_INDEX.first];
 		return { kind: "schema", message: firstIssue === undefined ? error.message : `${firstIssue.path}: ${firstIssue.message}` };
 	}
 	if (error instanceof z.ZodError) {
-		const firstIssue: { readonly path: readonly PropertyKey[] } | undefined = error.issues[0];
+		const firstIssue: { readonly path: readonly PropertyKey[] } | undefined = error.issues[LIST_SLOT_INDEX.first];
 		const path: string = firstIssue === undefined ? "" : firstIssue.path.map((segment: PropertyKey): string => String(segment)).join(".");
 		return { kind: "schema", message: path.length > 0 ? `${path}: ${error.message}` : error.message };
 	}

@@ -4,7 +4,7 @@ import { HttpAdapterHost, Reflector } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import type { OpenAPIObject, OperationObject, ReferenceObject, ResponseObject, SchemaObject } from "@nestjs/swagger";
 import { Test } from "@nestjs/testing";
-import { ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, type PaginatedServiceResult } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, type PaginatedServiceResult } from "@workspace/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -229,7 +229,7 @@ describe("Zod response decorators", () => {
 			expect(errorLog).toHaveBeenCalledTimes(1);
 			const metadata = z
 				.object({ errorName: z.string(), errorMessage: z.string() })
-				.parse(z.object({ metadata: z.looseObject({}) }).parse(errorLog.mock.calls[0]?.[1]).metadata);
+				.parse(z.object({ metadata: z.looseObject({}) }).parse(errorLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]).metadata);
 			expect(metadata.errorName).toBe("ResponseContractViolationError");
 			expect(metadata.errorMessage).toContain("ProbeController.broken");
 			expect(metadata.errorMessage).toContain("email");
@@ -241,7 +241,9 @@ describe("Zod response decorators", () => {
 
 			expect(response.statusCode).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
 			expect(handlerRuns).toBe(0);
-			expect(z.object({ metadata: z.object({ errorName: z.string() }).loose() }).parse(errorLog.mock.calls[0]?.[1]).metadata.errorName).toBe("MissingResponseContractError");
+			expect(
+				z.object({ metadata: z.object({ errorName: z.string() }).loose() }).parse(errorLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]).metadata.errorName,
+			).toBe("MissingResponseContractError");
 		});
 	});
 

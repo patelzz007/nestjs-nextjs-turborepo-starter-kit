@@ -1,4 +1,5 @@
 import { Subscription, type SchedulerAction, type SchedulerLike } from "rxjs";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 /**
  * Virtual-time scheduler for tests (the RxJS replacement for the removed
@@ -72,7 +73,7 @@ export class VirtualTimeScheduler implements SchedulerLike {
 
 	/** Run every action scheduled at or before `frame`, in order. */
 	public advanceTo(frame: number): void {
-		while (this._queue.length > 0 && (this._queue[0]?.frame ?? Infinity) <= frame) {
+		while (this._queue.length > 0 && (this._queue[LIST_SLOT_INDEX.first]?.frame ?? Infinity) <= frame) {
 			const entry = this._queue.shift();
 			if (entry === undefined) break;
 			this._current = entry.frame;
@@ -95,7 +96,7 @@ export class VirtualTimeScheduler implements SchedulerLike {
 	 */
 	public flush(): void {
 		this.advanceTo(TEST_MAX_FRAME);
-		const next = this._queue[0];
+		const next = this._queue[LIST_SLOT_INDEX.first];
 		if (next !== undefined) {
 			throw new Error(`VirtualTimeScheduler.flush: ${String(this._queue.length)} action(s) pending past frame ${String(next.frame)}`);
 		}

@@ -1,5 +1,6 @@
 "use client";
 
+import { isNumberPrimitive } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
@@ -219,7 +220,7 @@ const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContent
 											</div>
 											{item.value != null ? (
 												<span className="font-mono font-medium text-foreground tabular-nums">
-													{typeof item.value === "number" ? formatTooltipNumber(item.value, valueFormatter) : String(item.value)}
+													{isNumberPrimitive(item.value) ? formatTooltipNumber(item.value, valueFormatter) : String(item.value)}
 												</span>
 											) : null}
 										</div>

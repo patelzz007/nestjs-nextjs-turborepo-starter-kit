@@ -99,8 +99,8 @@ describe("zodToOpenApi", () => {
 		const serialized: string = JSON.stringify(first);
 		expect(serialized).not.toContain("#/definitions/");
 		expect(serialized).not.toContain("__schema");
-		for (const match of serialized.matchAll(/"#\/components\/schemas\/([^"]+)"/g)) {
-			expect(names).toContain(match[1]);
+		for (const match of serialized.matchAll(/"#\/components\/schemas\/(?<name>[^"]+)"/g)) {
+			expect(names).toContain(match.groups?.name);
 		}
 	});
 

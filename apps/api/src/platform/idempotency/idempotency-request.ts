@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { ApiErrorCodes, IDEMPOTENCY_KEY_HEADER, type JsonValue } from "@workspace/shared";
+import { ApiErrorCodes, IDEMPOTENCY_KEY_HEADER, isArrayValue, isJsonPrimitive, type JsonValue } from "@workspace/shared";
 import { z } from "zod";
 
 import type { RequestContext } from "../../common/context/request-context";
@@ -53,10 +53,10 @@ export function parseIdempotencyKeyHeader(raw: string | readonly string[] | unde
  * semantically identical payloads (`{a,b}` vs `{b,a}`) hash identically.
  */
 export function canonicalJson(value: JsonValue): string {
-	if (value === null || typeof value !== "object") {
+	if (isJsonPrimitive(value)) {
 		return JSON.stringify(value);
 	}
-	if (Array.isArray(value)) {
+	if (isArrayValue(value)) {
 		return `[${value.map((item: JsonValue): string => canonicalJson(item)).join(",")}]`;
 	}
 	const entries: string[] = Object.keys(value)
@@ -102,7 +102,8 @@ export interface IdempotentRequestBodySource {
  * make two different uploads look identical and replay the wrong response.
  */
 export function readIdempotentRequestBody(source: IdempotentRequestBodySource): IdempotentRequestBody {
-	const mediaType: string | undefined = source.contentType?.split(";")[0]?.trim().toLowerCase();
+	const [rawMediaType] = source.contentType?.split(";") ?? [];
+	const mediaType: string | undefined = rawMediaType?.trim().toLowerCase();
 	if (mediaType !== undefined && mediaType.length > 0 && !JSON_MEDIA_TYPE.test(mediaType)) {
 		throw new IdempotencyUnsupportedContentTypeError();
 	}

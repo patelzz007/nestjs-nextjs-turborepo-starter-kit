@@ -1,4 +1,5 @@
 import type { StoredFile } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -67,7 +68,7 @@ describe("MerchantKybDocumentService.reconcileOrgKybStatusInTx", () => {
 		await service.reconcileOrgKybStatusInTx(fake.tx, ORG_ID);
 
 		expect(fake.lockProfile).toHaveBeenCalled();
-		expect(fake.updateProfile.mock.lastCall?.[0]).toMatchObject({ where: { organizationId: ORG_ID }, data: { kybStatus: "ACTION_REQUIRED" } });
+		expect(fake.updateProfile.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ where: { organizationId: ORG_ID }, data: { kybStatus: "ACTION_REQUIRED" } });
 	});
 
 	it("returns an ACTION_REQUIRED review to PENDING once every document is clean", async () => {
@@ -76,7 +77,7 @@ describe("MerchantKybDocumentService.reconcileOrgKybStatusInTx", () => {
 
 		await service.reconcileOrgKybStatusInTx(fake.tx, ORG_ID);
 
-		expect(fake.updateProfile.mock.lastCall?.[0]).toMatchObject({ data: { kybStatus: "PENDING" } });
+		expect(fake.updateProfile.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ data: { kybStatus: "PENDING" } });
 	});
 
 	it("leaves the review alone while a document is still scanning", async () => {

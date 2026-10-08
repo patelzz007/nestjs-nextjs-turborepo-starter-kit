@@ -1,4 +1,5 @@
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
@@ -35,7 +36,7 @@ const ENABLED_ITEMS: readonly CompiledSidebarMenuItem[] = MENU_ENTRIES.map((entr
 function itemIdFor(url: string): string {
 	const matches = ENABLED_ITEMS.filter((item) => item.url === url);
 	expect(matches).toHaveLength(1);
-	return matches[0]?.id ?? "";
+	return matches[LIST_SLOT_INDEX.first]?.id ?? "";
 }
 
 /** Ids of the highlighted items for `pathname`, computed by the shared algorithm the sidebar panel renders with. */

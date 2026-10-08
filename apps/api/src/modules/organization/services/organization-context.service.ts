@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { epochMs, IanaTimeZoneSchema, UuidParamSchema, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
+import { LIST_SLOT_INDEX, epochMs, IanaTimeZoneSchema, UuidParamSchema, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
@@ -69,7 +69,7 @@ export class OrganizationContextService {
 				}),
 		);
 
-		const membership = row?.memberships[0];
+		const membership = row?.memberships[LIST_SLOT_INDEX.first];
 		if (row === null || membership === undefined) {
 			throw new NotFoundException();
 		}
@@ -109,7 +109,7 @@ export class OrganizationContextService {
 					throw new NotFoundException();
 				}
 
-				const primary = org.locations.find((l) => l.isPrimary) ?? org.locations[0];
+				const primary = org.locations.find((l) => l.isPrimary) ?? org.locations[LIST_SLOT_INDEX.first];
 
 				return {
 					organization: {

@@ -13,7 +13,7 @@ import {
 	type OnRefresh,
 	type OnUnauthorized,
 } from "./use-api";
-import { DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
+import { LIST_SLOT_INDEX, DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
 import { apiRouter, defineMutation, defineQuery } from "./endpoints";
 import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
 import { ApiResponseContractError } from "./response-contract";
@@ -174,6 +174,7 @@ describe("useApi 401 pipeline", () => {
 		expect(onUnauthorized).toHaveBeenCalledTimes(1);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(response.ok).toBe(false);
+		expect(response.kind).toBe("unauthorized");
 		if (!response.ok) expect(response.error).toBe("Unauthorized");
 	});
 
@@ -194,6 +195,7 @@ describe("useApi 401 pipeline", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(response.ok).toBe(false);
 		expect(response.status).toBe(401);
+		expect(response.kind).toBe("sessionUnavailable");
 		if (!response.ok) expect(response.error).toBeInstanceOf(SessionRefreshUnavailableError);
 	});
 
@@ -223,6 +225,7 @@ describe("useApi 401 pipeline", () => {
 		expect(onRefresh).toHaveBeenCalledTimes(1);
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(onUnauthorized).toHaveBeenCalledTimes(1);
+		expect(response.kind).toBe("unauthorized");
 		if (!response.ok) expect(response.error).toBe("Unauthorized");
 	});
 
@@ -268,7 +271,7 @@ describe("useApi 401 pipeline", () => {
 
 		await session.fetch(undefined);
 
-		const init = fetchMock.mock.calls[0]?.[1];
+		const init = fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second];
 		expect(init?.headers).toMatchObject({ "X-Client-Type": "admin" });
 	});
 
@@ -284,7 +287,7 @@ describe("useApi 401 pipeline", () => {
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "merchant", onUnauthorized, onRefresh));
 		await result.current.auth.sessionStatus.fetch(undefined);
 
-		const init = fetchMock.mock.calls[0]?.[1];
+		const init = fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second];
 		expect(init?.headers).toMatchObject({ "X-Client-Type": "merchant" });
 	});
 
@@ -297,7 +300,7 @@ describe("useApi 401 pipeline", () => {
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, "web", vi.fn<OnUnauthorized>(), vi.fn<OnRefresh>().mockResolvedValue("ok")));
 		await result.current.auth.sessionStatus.fetch(undefined);
 
-		expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-Client-Type": "web" });
+		expect(fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]?.headers).toMatchObject({ "X-Client-Type": "web" });
 	});
 
 	it("never lets a procedure's own headers drop the mutation-intent or client-type headers", async () => {

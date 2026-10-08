@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIST_SLOT_INDEX } from "../../../lib/named-list-index";
 
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../../api/common";
 import { CanonicalEmailSchema } from "../../api/email-address";
@@ -369,9 +370,9 @@ export function parseRewardDateInputToEpochMs(dateInput: string): EpochMs {
 	if (segments.length < 3) {
 		return EpochMsSchema.parse(Number.NaN);
 	}
-	const year = Number(segments[0]);
-	const month = Number(segments[1]);
-	const day = Number(segments[2]);
+	const year = Number(segments[LIST_SLOT_INDEX.first]);
+	const month = Number(segments[LIST_SLOT_INDEX.second]);
+	const day = Number(segments[LIST_SLOT_INDEX.third]);
 	return EpochMsSchema.parse(Date.UTC(year, month - 1, day));
 }
 
@@ -611,6 +612,16 @@ export const AdminCreateMerchantInviteSchema = z
 	.strict();
 
 export type AdminCreateMerchantInviteInput = z.output<typeof AdminCreateMerchantInviteSchema>;
+
+/**
+ * Live preview of the merchant invite email (`GET /admin/invites/preview-email`): only
+ * what shapes the rendered email. The business name is optional — the template's sample
+ * name stands in until the admin types one. The recipient is not part of it: the email's
+ * body never shows it, and as a GET it would otherwise land in request logs and caches.
+ */
+export const AdminMerchantInvitePreviewQuerySchema = AdminCreateMerchantInviteSchema.pick({ businessName: true, city: true }).partial({ businessName: true });
+
+export type AdminMerchantInvitePreviewQuery = z.output<typeof AdminMerchantInvitePreviewQuerySchema>;
 
 export const AdminRejectRewardSchema = z
 	.object({

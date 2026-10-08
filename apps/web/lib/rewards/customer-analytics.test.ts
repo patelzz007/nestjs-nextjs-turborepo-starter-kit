@@ -1,4 +1,5 @@
 import { analyticsFormatters } from "@workspace/client/lib/analytics/analytics-presentation";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { MAX_SHOP_TREND_SERIES, spendCategoryLabel, toClaimStatusSegments, toCategoryItems, toShopItems, toShopTrend } from "@/lib/rewards/customer-analytics";
@@ -51,7 +52,7 @@ describe("toShopTrend", () => {
 
 	it(`keeps at most ${String(MAX_SHOP_TREND_SERIES)} shops and is empty without spending`, () => {
 		const base = buildCustomerDashboard();
-		const shop = base.spendingByMerchant[0];
+		const shop = base.spendingByMerchant[LIST_SLOT_INDEX.first];
 		if (shop === undefined) throw new Error("fixture missing");
 		const many = buildCustomerDashboard({
 			spendingByMerchant: ["a", "b", "c", "d", "e"].map((suffix, index) => ({

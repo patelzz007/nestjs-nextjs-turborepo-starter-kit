@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -75,7 +76,7 @@ describe("TimeSeriesChart", () => {
 		expect(screen.getAllByText("Claims").length).toBeGreaterThan(0);
 		cleanup();
 
-		renderChart({ series: [SERIES[0] ?? { key: "claims", label: "Claims", color: "chart-1" }] });
+		renderChart({ series: [SERIES[LIST_SLOT_INDEX.first] ?? { key: "claims", label: "Claims", color: "chart-1" }] });
 		expect(screen.queryByRole("list")).toBeNull();
 	});
 
@@ -112,8 +113,8 @@ describe("TimeSeriesChart", () => {
 			{ wrapper: UiKitTestProviders },
 		);
 		const fills = [...bars.container.querySelectorAll("ul [data-slot-key] > rect")].map((rect) => rect.getAttribute("fill") ?? "");
-		expect(fills[0]).toBe("var(--chart-1)");
-		expect(fills[1]).toMatch(/^url\(#.+-legend-pattern-chart-2\)$/);
+		expect(fills[LIST_SLOT_INDEX.first]).toBe("var(--chart-1)");
+		expect(fills[LIST_SLOT_INDEX.second]).toMatch(/^url\(#.+-legend-pattern-chart-2\)$/);
 	});
 
 	it("puts every value in a table, formatted, with partial buckets marked", (): void => {
@@ -163,7 +164,7 @@ describe("SeriesTooltip", () => {
 	});
 
 	it("lists every series at the bucket, value first, and names a partial bucket", (): void => {
-		const point = POINTS[1];
+		const point = POINTS[LIST_SLOT_INDEX.second];
 		if (point === undefined) throw new Error("fixture missing");
 		render(<SeriesTooltip point={point} series={SERIES} formatValue={formatValue} bucketLabel="2 Oct 2026" partialLabel={LABELS.partial} />);
 

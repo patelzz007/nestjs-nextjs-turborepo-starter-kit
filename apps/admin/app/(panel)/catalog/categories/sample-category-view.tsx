@@ -18,7 +18,7 @@ import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import { PERMISSION, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
@@ -174,7 +174,7 @@ export default function SampleCategoryView({ initialPage }: SampleCategoryViewPr
 				onConfirm: async (): Promise<void> => {
 					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingCategories);
 					if (rowsToDelete.length === 1) {
-						const onlyRow = rowsToDelete[0];
+						const onlyRow = rowsToDelete[LIST_SLOT_INDEX.first];
 						if (onlyRow !== undefined) {
 							await deleteMutation.mutateAsync({ id: onlyRow.id });
 						}

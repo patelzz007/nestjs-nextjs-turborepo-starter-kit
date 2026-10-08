@@ -16,6 +16,7 @@
 // the app env modules build the source record and hand it in.
 
 import { z } from "zod";
+import { LIST_SLOT_INDEX } from "../lib/named-list-index";
 
 // ── Field schemas ──────────────────────────────────────────────────────────
 
@@ -251,7 +252,7 @@ function toEnvIssues(issue: z.core.$ZodIssue, source: Readonly<Record<string, st
 		return issue.keys.map((key: string): EnvIssue => ({ variable: key, problem: "is not declared in this env schema" }));
 	}
 	const variable: string = issue.path.length === 0 ? "(env)" : issue.path.map(String).join(".");
-	const rootKey: string = issue.path.length === 0 ? "" : String(issue.path[0]);
+	const rootKey: string = issue.path.length === 0 ? "" : String(issue.path[LIST_SLOT_INDEX.first]);
 	const rawValue: string | undefined = source[rootKey];
 	if (rawValue === undefined) {
 		// A cross-field rule (`superRefine`) explains a conditional requirement

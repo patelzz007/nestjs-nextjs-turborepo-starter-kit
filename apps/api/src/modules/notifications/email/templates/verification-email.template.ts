@@ -19,7 +19,7 @@ export class VerificationEmailTemplate extends BaseEmailTemplate<VerificationEma
 	public readonly propsSchema = VerificationEmailPropsSchema;
 	public readonly subject: string = "Verify your email address";
 	protected readonly accent: EmailAccent = "green";
-	protected readonly eyebrow: string = "Email Verification";
+	protected readonly eyebrow: string = "Email verification";
 	protected readonly heading: string = "Thanks for joining!";
 
 	public getPreviewText(context: EmailRenderContext): string {

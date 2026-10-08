@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { LoginFormProps } from "@workspace/client/lib/auth/forms/login-form";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -22,7 +23,7 @@ vi.mock("@/lib/env/env.server", () => ({ serverEnv: serverEnvMock }));
 
 async function renderPage(): Promise<LoginFormProps | undefined> {
 	render(await WebLoginPage());
-	return loginForm.mock.lastCall?.[0];
+	return loginForm.mock.lastCall?.[LIST_SLOT_INDEX.first];
 }
 
 afterEach((): void => {

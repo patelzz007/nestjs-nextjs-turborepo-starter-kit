@@ -48,7 +48,7 @@ export interface NavSection {
 
 export const MORE_GUIDES_SECTION = "More Guides";
 const HIDDEN_TAG = "superseded";
-const SEPARATOR_PATTERN = /^---\s*(.+?)\s*---$/;
+const SEPARATOR_PATTERN = /^---\s*(?<title>.+?)\s*---$/;
 
 /** Public URL of a guide. Ids keep their case (`README`, `ADDING-A-FEATURE`). */
 export function docHref(id: string): string {
@@ -69,7 +69,7 @@ export function buildNavSections(meta: DocsMeta, guides: readonly GuideSummary[]
 	for (const entry of meta.pages) {
 		const separator = SEPARATOR_PATTERN.exec(entry);
 		if (separator !== null) {
-			current = { title: separator[1] ?? "", items: [] };
+			current = { title: separator.groups?.title ?? "", items: [] };
 			sections.push(current);
 			continue;
 		}

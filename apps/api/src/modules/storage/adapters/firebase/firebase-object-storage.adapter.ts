@@ -223,7 +223,8 @@ function createBucketFileAdapter(app: App, locator: StorageObjectLocator): GcsBu
 		copyTo: async (destination): Promise<GcsBucketFile> => {
 			const destinationNative = getStorage(app).bucket(destination.container).file(destination.path);
 			const [copiedNative] = await nativeFile.copy(destinationNative);
-			return createBucketFileAdapter(app, { ...destination, revision: revisionFromMetadata((await copiedNative.getMetadata())[0]) });
+			const [copiedMetadata] = await copiedNative.getMetadata();
+			return createBucketFileAdapter(app, { ...destination, revision: revisionFromMetadata(copiedMetadata) });
 		},
 		getSignedUrl: (config): Promise<[string]> => nativeFile.getSignedUrl(config),
 		setMetadata: async (metadata): Promise<void> => {

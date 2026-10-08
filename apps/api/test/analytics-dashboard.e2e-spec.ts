@@ -4,6 +4,7 @@ import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+	LIST_SLOT_INDEX,
 	AdminAnalyticsDashboardSchema,
 	API_VERSION_PREFIX,
 	ApiErrorResponseSchema,
@@ -309,7 +310,7 @@ describe("Analytics dashboards (e2e)", () => {
 			expect(dashboard.spendingByMerchant).toEqual([
 				expect.objectContaining({ organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, totalMinor: 7_000, visits: 3, category: "restaurant" }),
 			]);
-			expect(dashboard.spendingByMerchant[0]?.series.map((point) => point.totalMinor)).toEqual([3_000, 4_000, 0]);
+			expect(dashboard.spendingByMerchant[LIST_SLOT_INDEX.first]?.series.map((point) => point.totalMinor)).toEqual([3_000, 4_000, 0]);
 			expect(dashboard.spendingByCategory.map((category) => category.series.length)).toEqual([dashboard.series.length]);
 		});
 

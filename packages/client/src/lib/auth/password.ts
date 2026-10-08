@@ -7,6 +7,7 @@
 // the server's validation never disagree.
 
 import { z } from "zod";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 /** 0–4 score tiers — the type is derived from the schema (rule 5). */
 export const PasswordScoreSchema = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
@@ -59,7 +60,7 @@ function labelForScore(score: PasswordScore): string {
 			return entry.label;
 		}
 	}
-	return LABELS[0]?.label ?? "Very weak";
+	return LABELS[LIST_SLOT_INDEX.first]?.label ?? "Very weak";
 }
 
 /**

@@ -13,16 +13,16 @@ import { StringValueSchema } from "@workspace/shared";
  * @example parseExpiryToMilliseconds("7d")  // 604800000
  */
 export const parseExpiryToMilliseconds = (expiry: string): number => {
-	const groups: RegExpMatchArray | null = /^(\d+)([smhd])?$/.exec(expiry);
-	if (groups === null) {
+	const match: RegExpMatchArray | null = /^(?<value>\d+)(?<unit>[smhd])?$/.exec(expiry);
+	if (match === null) {
 		throw new Error(`Invalid expiry format: "${expiry}". Expected format: <number><s|m|h|d> (e.g. "15m", "7d")`);
 	}
 
-	const valueStr: string | undefined = groups[1];
+	const valueStr: string | undefined = match.groups?.value;
 	if (valueStr === undefined) {
 		throw new Error(`Invalid expiry format: "${expiry}". Expected format: <number><s|m|h|d> (e.g. "15m", "7d")`);
 	}
-	const unitParsed = StringValueSchema.safeParse(groups[2]);
+	const unitParsed = StringValueSchema.safeParse(match.groups?.unit);
 	const unit: string = unitParsed.success ? unitParsed.data : "m";
 
 	const value: number = Number.parseInt(valueStr, 10);

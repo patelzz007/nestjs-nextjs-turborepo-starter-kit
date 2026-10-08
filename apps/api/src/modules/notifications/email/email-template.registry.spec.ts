@@ -38,6 +38,12 @@ describe("EmailTemplateRegistry", () => {
 		}
 	});
 
+	it("lists each template's sample subject exactly as its preview renders it, so the admin header never waits for the preview", () => {
+		for (const entry of listTemplateMeta()) {
+			expect(entry.sampleSubject).toBe(buildEmailPreview(entry.key, context).subject);
+		}
+	});
+
 	it("rejects an out-of-schema key at the route-param schema boundary", () => {
 		// The controller validates the param with EmailTemplateKeyParamSchema
 		// before calling buildEmailPreview — the zod enum is the boundary.

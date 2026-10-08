@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { TEST_RESPONSE_META, testEnvelope } from "@/test-support/envelope";
-import { epochMs, UserResponseSchema, type Envelope, type UserResponse } from "@workspace/shared";
+import { LIST_SLOT_INDEX, epochMs, UserResponseSchema, type Envelope, type UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import HelloView from "./hello-view";
@@ -59,7 +59,7 @@ const SERVER_PROFILE: Envelope<UserResponse> = testEnvelope(
 );
 
 function lastMeOptions(): MeQueryOptions | undefined {
-	return meUseQuery.mock.lastCall?.[1];
+	return meUseQuery.mock.lastCall?.[LIST_SLOT_INDEX.second];
 }
 
 beforeEach((): void => {

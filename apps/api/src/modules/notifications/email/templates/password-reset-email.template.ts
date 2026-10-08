@@ -19,7 +19,7 @@ export class PasswordResetEmailTemplate extends BaseEmailTemplate<PasswordResetE
 	public readonly propsSchema = PasswordResetEmailPropsSchema;
 	public readonly subject: string = "Reset your password";
 	protected readonly accent: EmailAccent = "indigo";
-	protected readonly eyebrow: string = "Password Reset";
+	protected readonly eyebrow: string = "Password reset";
 	protected readonly heading: string = "Let's get you back in";
 
 	public getPreviewText(context: EmailRenderContext): string {

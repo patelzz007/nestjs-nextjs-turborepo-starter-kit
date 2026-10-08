@@ -5,6 +5,7 @@
 			"@/*": ["./src/*"]
 		},
 		"types": ["node"],
+		"customConditions": ["development"],
 		// The shared ESLint config enforces dot access (`dataset.theme`); the rest of the monorepo leaves this off too.
 		"noPropertyAccessFromIndexSignature": false
 	},

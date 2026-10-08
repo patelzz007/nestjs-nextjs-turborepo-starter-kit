@@ -15,7 +15,7 @@ import { TenantEncryptionKeyRepository, type TenantEncryptionKeyDbClient } from 
 /** First data-key version of an organization. */
 const INITIAL_DATA_KEY_VERSION = 1;
 /** Data-key version prefix of a tenant ciphertext: `<keyVersion>:<iv>:<tag>:<data>`. */
-const CIPHERTEXT_PATTERN = /^([1-9]\d*):(.+)$/;
+const CIPHERTEXT_PATTERN = /^(?<keyVersion>[1-9]\d*):(?<envelope>.+)$/;
 /** Keys re-wrapped per page (one read transaction per page, one write transaction per key). */
 export const REWRAP_PAGE_SIZE = 100;
 
@@ -129,11 +129,13 @@ export class TenantEncryptionService {
 	/** Decrypts and authenticates; the decrypt is audited (with its purpose) before key material is used. */
 	public async decrypt(organizationId: string, payload: string, actorUserId: string, purpose: string): Promise<string> {
 		const match = CIPHERTEXT_PATTERN.exec(payload);
-		if (match?.[1] === undefined || match[2] === undefined) {
+		const keyVersionText: string | undefined = match?.groups?.keyVersion;
+		const envelopeText: string | undefined = match?.groups?.envelope;
+		if (keyVersionText === undefined || envelopeText === undefined) {
 			throw new TenantCiphertextError("Malformed tenant ciphertext: expected <keyVersion>:<iv>:<tag>:<ciphertext>");
 		}
-		const keyVersion = Number(match[1]);
-		const envelope = parseGcmEnvelope(match[2]);
+		const keyVersion = Number(keyVersionText);
+		const envelope = parseGcmEnvelope(envelopeText);
 		const policyVersion: number = await this.cedar.getActivePolicyVersion(organizationId);
 
 		const row: TenantEncryptionKey = await this.system("encryption.tenant_key.unwrap", "Audit and read the tenant key for decrypt", actorUserId, async (db) => {

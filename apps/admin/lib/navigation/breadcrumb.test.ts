@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { resolveAdminTrail, withAccessibleLinks } from "@/lib/navigation/breadcrumb";
 
@@ -6,7 +7,7 @@ describe("resolveAdminTrail", () => {
 	it("resolves a top-level menu item to a single current-page crumb", () => {
 		const trail = resolveAdminTrail("/analytics");
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Analytics"]);
-		expect(trail[0]?.href).toBeUndefined();
+		expect(trail[LIST_SLOT_INDEX.first]?.href).toBeUndefined();
 	});
 
 	it("resolves a nested route as parent crumb + current page", () => {
@@ -40,7 +41,7 @@ describe("resolveAdminTrail", () => {
 	it("treats the dashboard root as a current-page Overview crumb (no self link)", () => {
 		const trail = resolveAdminTrail("/");
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Overview"]);
-		expect(trail[0]?.href).toBeUndefined();
+		expect(trail[LIST_SLOT_INDEX.first]?.href).toBeUndefined();
 	});
 
 	it("resolves platform resources from the sidebar menu", () => {
@@ -68,7 +69,7 @@ describe("resolveAdminTrail", () => {
 	it("falls back to a linked Overview crumb for unknown routes", () => {
 		const trail = resolveAdminTrail("/unknown/route");
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Overview"]);
-		expect(trail[0]?.href).toBe("/");
+		expect(trail[LIST_SLOT_INDEX.first]?.href).toBe("/");
 	});
 
 	it("handles a trailing slash on a known route", () => {
@@ -80,7 +81,7 @@ describe("resolveAdminTrail", () => {
 		const trail = resolveAdminTrail("/users-x");
 		// No menu item starts with `/users-x` — falls back to Overview.
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Overview"]);
-		expect(trail[0]?.href).toBe("/");
+		expect(trail[LIST_SLOT_INDEX.first]?.href).toBe("/");
 	});
 
 	it("renders unknown dynamic segments as humanized current-page crumbs", () => {

@@ -2,6 +2,8 @@ import type { RowData } from "@tanstack/react-table";
 import type * as React from "react";
 import { z } from "zod";
 
+import { isArrayValue } from "@workspace/shared";
+
 import type { DataTableLabels } from "@workspace/ui/lib/data-table/labels";
 
 /** Supported export formats for the checkbox selection toolbar. */
@@ -60,7 +62,7 @@ function resolveExportFormats(exportOption: boolean | readonly DataTableExportFo
 	if (exportOption === true) {
 		return DATA_TABLE_EXPORT_FORMATS;
 	}
-	if (Array.isArray(exportOption)) {
+	if (isArrayValue(exportOption)) {
 		return exportOption.filter((format): format is DataTableExportFormat => exportFormatSchema.safeParse(format).success);
 	}
 	return [];

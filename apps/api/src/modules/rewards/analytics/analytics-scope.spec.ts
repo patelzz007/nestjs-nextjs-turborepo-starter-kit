@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
+import { isArrayValue, isBooleanPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
+
 import { ALL_LOCATIONS_SCOPE, selectedLocationsScope } from "../types/merchant-location-scope";
 import { allOf, claimConditions, claimSource, redemptionConditions, salesConditions, withinRange, type AnalyticsScope } from "./analytics-scope";
 
@@ -12,7 +14,7 @@ function sqlOf(conditions: Parameters<typeof allOf>[0]): { readonly text: string
 	return {
 		text: sql.sql,
 		values: sql.values.map((value) =>
-			Array.isArray(value) ? value.map(String) : typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : null,
+			isArrayValue(value) ? value.map(String) : isStringPrimitive(value) || isNumberPrimitive(value) || isBooleanPrimitive(value) ? value : null,
 		),
 	};
 }

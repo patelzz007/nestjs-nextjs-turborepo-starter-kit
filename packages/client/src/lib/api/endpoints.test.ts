@@ -3,12 +3,13 @@ import type { QueryKey } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { apiRouter, isErasedProcedureDef, isRouterSubtree, resolveRequest, type ErasedQueryDef } from "./endpoints";
+import { apiRouter, isErasedProcedureDef, isRouterSubtree, mapRouterTree, resolveRequest, type ErasedQueryDef, type RouterTreeMapper } from "./endpoints";
 
 /** A router node: every value of the router tree is an object (a procedure def or a nested router). */
+const RouterNodeShapeSchema = z.object({});
 const RouterNodesSchema = z.record(
 	z.string(),
-	z.custom<object>((value): value is object => typeof value === "object" && value !== null),
+	z.custom<object>((value): value is object => RouterNodeShapeSchema.safeParse(value).success),
 );
 
 /** Every query def of the router, with its dotted name. */
@@ -209,5 +210,30 @@ describe("mutations", () => {
 	it("start a 2FA enrollment with a POST (it stores a pending secret)", () => {
 		expect(apiRouter.auth.twoFactorSetup.kind).toBe("mutation");
 		expect(apiRouter.auth.twoFactorSetup.method).toBe("POST");
+	});
+});
+
+describe("mapRouterTree", () => {
+	/** Binds a leaf to its path and a subtree to a marker, so the test sees which branch each key took. */
+	const MAPPER: RouterTreeMapper<{ readonly bound: string }> = {
+		leaf: (def) => ({ bound: `leaf:${def.path}` }),
+		router: () => ({ bound: "router" }),
+	};
+	const leaf = apiRouter.organizations.updateOwnMembership;
+
+	it("binds procedure leaves and nested routers, and settles every key", () => {
+		const mapped = mapRouterTree({ update: leaf, nested: { update: leaf } }, MAPPER);
+		expect(mapped.nodes).toEqual({ update: { bound: `leaf:${leaf.path}` }, nested: { bound: "router" } });
+		expect([...mapped.settledKeys]).toEqual(["update", "nested"]);
+	});
+
+	it.each([
+		["a string", "not-a-node"],
+		["a number", 42],
+		["null", null],
+		["a function", (): string => "not-a-node"],
+		["an array (its index keys would become route names)", [leaf]],
+	])("throws for %s instead of treating it as a router", (_what, node) => {
+		expect(() => mapRouterTree({ broken: node }, MAPPER)).toThrow("Invalid router node");
 	});
 });

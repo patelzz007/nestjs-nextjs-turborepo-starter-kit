@@ -26,8 +26,14 @@ function run(root: Root, plugin: () => (tree: Root) => void): Root {
 	return root;
 }
 
+/** The leading entry of a node list; `undefined` when the list is empty or absent. */
+function leading<T>(items: readonly T[] | undefined): T | undefined {
+	const [first] = items ?? [];
+	return first;
+}
+
 function firstChild(root: Root): RootContent {
-	const node = root.children[0];
+	const node = leading(root.children);
 	if (node === undefined) {
 		throw new Error("expected a first child");
 	}
@@ -62,8 +68,8 @@ describe("callouts", () => {
 			throw new Error("expected blockquote");
 		}
 		const [title, body] = node.children;
-		expect(title?.type === "paragraph" ? title.children[0] : undefined).toEqual({ type: "text", value: "Warning" });
-		expect(body?.type === "paragraph" ? body.children[0] : undefined).toEqual({ type: "text", value: "Watch the salt rounds" });
+		expect(title?.type === "paragraph" ? leading(title.children) : undefined).toEqual({ type: "text", value: "Warning" });
+		expect(body?.type === "paragraph" ? leading(body.children) : undefined).toEqual({ type: "text", value: "Watch the salt rounds" });
 	});
 
 	it("drops a marker-only paragraph", () => {
@@ -93,7 +99,8 @@ describe("glossary", () => {
 	it("wraps whole-word terms and keeps the surrounding text", () => {
 		const pieces = splitGlossaryTerms("Uses RBAC and RLS, not RBACX.");
 		expect(pieces.map((piece) => piece.type)).toEqual(["text", "emphasis", "text", "emphasis", "text"]);
-		expect(pieces[1]).toMatchObject({ data: { hName: "abbr" } });
+		const [, abbreviation] = pieces;
+		expect(abbreviation).toMatchObject({ data: { hName: "abbr" } });
 	});
 
 	it("leaves text without terms untouched", () => {
@@ -109,8 +116,8 @@ describe("glossary", () => {
 			remarkGlossary,
 		);
 		const [heading, paragraph] = root.children;
-		expect(heading?.type === "heading" ? heading.children[0]?.type : undefined).toBe("text");
-		expect(paragraph?.type === "paragraph" ? paragraph.children[0]?.type : undefined).toBe("emphasis");
+		expect(heading?.type === "heading" ? leading(heading.children)?.type : undefined).toBe("text");
+		expect(paragraph?.type === "paragraph" ? leading(paragraph.children)?.type : undefined).toBe("emphasis");
 	});
 });
 
@@ -125,7 +132,7 @@ describe("images", () => {
 	it("rewrites image nodes", () => {
 		const root = run(rootOf([{ type: "paragraph", children: [{ type: "image", url: "./images/x.png", alt: "x" }] }]), remarkImageUrls);
 		const paragraph = firstChild(root);
-		expect(paragraph.type === "paragraph" ? paragraph.children[0] : undefined).toEqual({ type: "image", url: "/images/x.png", alt: "x" });
+		expect(paragraph.type === "paragraph" ? leading(paragraph.children) : undefined).toEqual({ type: "image", url: "/images/x.png", alt: "x" });
 	});
 });
 
@@ -201,10 +208,10 @@ describe("task markers", () => {
 			remarkTaskMarkers,
 		);
 		const list = firstChild(root);
-		const item = list.type === "list" ? list.children[0] : undefined;
+		const item = list.type === "list" ? leading(list.children) : undefined;
 		expect(item?.checked).toBeNull();
-		const paragraph = item?.children[0];
-		expect(paragraph?.type === "paragraph" ? paragraph.children[0] : undefined).toEqual({ type: "text", value: "✓ Ship it" });
+		const paragraph = leading(item?.children);
+		expect(paragraph?.type === "paragraph" ? leading(paragraph.children) : undefined).toEqual({ type: "text", value: "✓ Ship it" });
 	});
 });
 

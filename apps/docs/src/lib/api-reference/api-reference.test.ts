@@ -160,7 +160,8 @@ describe("schema tables", () => {
 		expect(requestSchema).toBeDefined();
 		const rows = requestSchema === undefined ? [] : schemaRows(requestSchema, registry);
 		expect(rows.map((row) => row.name)).toEqual(["codes", "codes[].backupCode"]);
-		expect(rows[0]).toMatchObject({ required: true, notes: "1–10 items" });
+		const [codesRow] = rows;
+		expect(codesRow).toMatchObject({ required: true, notes: "1–10 items" });
 	});
 
 	it("resolves $ref against the component registry", () => {
@@ -174,7 +175,8 @@ describe("renderApiReference", () => {
 	});
 
 	it("describes the credential each endpoint needs", () => {
-		expect(accessLines(endpoint("RedemptionsController_checkout"), ACCESS.get("RedemptionsController_checkout"))[0]).toContain("Merchant API key");
+		const [credentialLine] = accessLines(endpoint("RedemptionsController_checkout"), ACCESS.get("RedemptionsController_checkout"));
+		expect(credentialLine).toContain("Merchant API key");
 		expect(accessLines(endpoint("RolesController_update"), ACCESS.get("RolesController_update")).join("\n")).toContain("SuperAdmin only");
 	});
 

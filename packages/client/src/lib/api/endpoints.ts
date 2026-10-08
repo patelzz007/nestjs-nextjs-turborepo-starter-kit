@@ -30,6 +30,9 @@ import {
 	apiContract,
 	clientTypeHeader,
 	flattenQueryParams,
+	isBooleanPrimitive,
+	isNumberPrimitive,
+	isStringPrimitive,
 	type ApiAccess,
 	type ApiContractDef,
 	type ApiVersion,
@@ -185,6 +188,14 @@ export function isRouterSubtree(value: object): value is RouterTree {
 	return !isErasedProcedureDef(value);
 }
 
+/** Every router node — a procedure def or a nested router — is a plain object (zod rejects arrays and functions). */
+const RouterNodeSchema = z.object({});
+
+/** Zod-backed guard — the value is a router node object (not a primitive, array or function). */
+function isRouterNode<T>(value: T): value is T & object {
+	return RouterNodeSchema.safeParse(value).success;
+}
+
 function isRouterTreeKey<R extends object>(router: R, key: string): key is keyof R & string {
 	return Object.hasOwn(router, key);
 }
@@ -220,7 +231,9 @@ const INVALID_ROUTER_NODE_MESSAGE = "Invalid router node — expected a procedur
 /**
  * Walks a router tree and binds every entry through `mapper` — the one walker
  * behind the browser caller, the React client router and the SSR caller. A
- * value that is neither a procedure leaf nor a nested router throws. Narrow
+ * value that is neither a procedure leaf nor a nested router throws: a
+ * primitive, `null`, a function, and an array (a list is never a router — its
+ * index keys would silently become route names). Narrow
  * the result to the caller's tree type with {@link assertCompleteRouterTree}.
  */
 export function mapRouterTree<R extends object, TNode extends object>(router: R, mapper: RouterTreeMapper<TNode>): MappedRouterTree<R, TNode> {
@@ -228,7 +241,7 @@ export function mapRouterTree<R extends object, TNode extends object>(router: R,
 	const settledKeys = new Set<string>();
 
 	eachRouterEntry(router, (key, value) => {
-		if (typeof value !== "object" || value === null) {
+		if (!isRouterNode(value)) {
 			throw new Error(INVALID_ROUTER_NODE_MESSAGE);
 		}
 		let node: TNode | undefined;
@@ -326,7 +339,7 @@ export function defineMutation<Input extends SerializableInput, Data extends Dat
 
 // ── REST serialization (shared by client + server) ─────────────────────────
 
-const PARAM_PATTERN = /:([A-Za-z0-9_]+)/g;
+const PARAM_PATTERN = /:(?<name>[A-Za-z0-9_]+)/g;
 
 /** How `resolveRequest` routes leftover input keys — defaults to GET with no query overrides. */
 export interface ResolveRequestOptions {
@@ -353,7 +366,7 @@ export interface ResolvedRequest {
 export function resolveRequest(path: string, input: SerializableInput, options?: ResolveRequestOptions): ResolvedRequest {
 	const record: Readonly<Record<string, DataValue | undefined>> = input ?? {};
 	const method: RestMethod = options?.method ?? "GET";
-	const paramNames: readonly string[] = [...path.matchAll(PARAM_PATTERN)].map((match) => match[1] ?? "");
+	const paramNames: readonly string[] = [...path.matchAll(PARAM_PATTERN)].map((match) => match.groups?.name ?? "");
 
 	const consumed = new Set<string>(paramNames);
 	for (const key of options?.toQuery ?? []) consumed.add(key);
@@ -409,8 +422,8 @@ function toQueryString(entries: readonly { readonly key: string; readonly value:
 /** Serializes a path-param value without tripping no-base-to-string on arbitrary values. */
 function stringifyQueryValue(value: DataValue | undefined): string {
 	if (value === undefined) return "";
-	if (typeof value === "string") return value;
-	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	if (isStringPrimitive(value)) return value;
+	if (isNumberPrimitive(value) || isBooleanPrimitive(value)) return String(value);
 	if (value === null) return "null";
 	// Non-primitive values are normalized to their JSON form (schemas only
 	// allow primitives on query strings, so this is defensive only).
@@ -624,7 +637,7 @@ export const apiRouter = {
 			scope: ({ organizationId }: AdminOrganizationScope): QueryKey => ["rewards-admin", "organization", organizationId, "documents", "download"],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite),
-		previewInviteEmail: defineMutation(apiContract.rewardsAdmin.previewInviteEmail),
+		previewInviteEmail: defineQuery(apiContract.rewardsAdmin.previewInviteEmail, { scope: (): QueryKey => ["rewards-admin", "invites", "preview-email"] }),
 		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, { scope: (): QueryKey => ["rewards-admin", "analytics", "sales"] }),
 		/** The platform analytics dashboard; the export is `apiDownloads.rewardsAdmin.analyticsExport`. */
 		analyticsDashboard: defineQuery(apiContract.rewardsAdmin.analyticsDashboard, { scope: (): QueryKey => ["rewards-admin", "analytics", "dashboard"] }),

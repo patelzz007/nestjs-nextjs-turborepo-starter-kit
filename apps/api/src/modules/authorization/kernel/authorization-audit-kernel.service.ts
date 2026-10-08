@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import type { AuthorizationAuditLogRequest, AuthorizationEvaluationStep, AuthorizationResult } from "@workspace/shared";
-import { CaughtValueSchema } from "@workspace/shared";
+import { CaughtValueSchema, isStringPrimitive } from "@workspace/shared";
 
 import { normalizeCaughtError } from "../../../common/utils/caught-error";
 import { parsePrismaNullableJson } from "../../../common/utils/prisma-json";
@@ -18,7 +18,7 @@ const SENSITIVE_READ_RESOURCES: ReadonlySet<string> = new Set(["USER", "ROLE", "
 
 function readEvaluationDetailId(step: AuthorizationEvaluationStep, detailKey: "policyId" | "aclId"): string | undefined {
 	const value = step.details?.[detailKey];
-	return typeof value === "string" ? value : undefined;
+	return isStringPrimitive(value) ? value : undefined;
 }
 
 /**

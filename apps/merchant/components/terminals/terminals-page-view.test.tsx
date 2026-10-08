@@ -9,6 +9,7 @@ import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, organizationContextFixture, type ContextQueryState } from "@/test/tenant-context";
 import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
 import {
+	LIST_SLOT_INDEX,
 	ApiPaginatedMetaSchema,
 	MERCHANT_TERMINALS_PAGE_SIZE,
 	MerchantErrorCodes,
@@ -442,9 +443,9 @@ describe("TerminalsPageView add and pair", () => {
 		renderAsAdmin();
 
 		const pairingDialog = await addBackOffice();
-		const pollCall = terminalsListQuery.mock.calls.find((call) => call[1]?.enabled === true);
-		expect(pollCall?.[0]).toEqual(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, locationId: STORE_A.id }));
-		const pollOptions: PollOptions | undefined = pollCall?.[1];
+		const pollCall = terminalsListQuery.mock.calls.find((call) => call[LIST_SLOT_INDEX.second]?.enabled === true);
+		expect(pollCall?.[LIST_SLOT_INDEX.first]).toEqual(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, locationId: STORE_A.id }));
+		const pollOptions: PollOptions | undefined = pollCall?.[LIST_SLOT_INDEX.second];
 		expect(pollOptions?.refetchInterval?.({ state: { data: undefined } })).toBe(PAIRING_STATUS_POLL_INTERVAL_MS);
 		expect(liveRegionText(pairingDialog)).toContain("Waiting for the till to pair…");
 
@@ -470,7 +471,7 @@ describe("TerminalsPageView add and pair", () => {
 		renderAsAdmin();
 
 		await addBackOffice();
-		const pollOptions: PollOptions | undefined = terminalsListQuery.mock.calls.find((call) => call[1]?.enabled === true)?.[1];
+		const pollOptions: PollOptions | undefined = terminalsListQuery.mock.calls.find((call) => call[LIST_SLOT_INDEX.second]?.enabled === true)?.[LIST_SLOT_INDEX.second];
 
 		expect(pollOptions?.refetchInterval?.({ state: { data: { data: [] } } })).toBe(false);
 		vi.setSystemTime(nextPairing.pairingCodeExpiresAt);

@@ -2,6 +2,7 @@
 // lib/api/server-query-outcome.test.ts - expected vs unexpected SSR failures
 // ============================================
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import type * as ServerApi from "./server-api";
 import { expectedFailureKind, settleServerQuery, UnexpectedServerQueryError } from "./server-query-outcome";
@@ -93,7 +94,7 @@ describe("settleServerQuery", () => {
 
 		expect(() => settleServerQuery(outage, { label: LABEL, expected: ["unauthenticated", "forbidden"] })).toThrow(UnexpectedServerQueryError);
 		expect(errorSpy).toHaveBeenCalledTimes(1);
-		expect(errorSpy.mock.lastCall?.[0]).toBe("claims.list failed during server render: network (ECONNREFUSED)");
+		expect(errorSpy.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe("claims.list failed during server render: network (ECONNREFUSED)");
 	});
 
 	it("rethrows a 5xx with the original error as its cause", () => {
@@ -138,6 +139,6 @@ describe("settleServerQuery", () => {
 		expect(thrown?.message).toBe("claims.list failed during server render: network (non-Error rejection)");
 		expect(thrown?.cause).toBeInstanceOf(Error);
 		expect(thrown?.cause).toHaveProperty("message", "the request rejected with a non-Error value");
-		expect(errorSpy.mock.lastCall?.[1]).toBe(thrown?.cause);
+		expect(errorSpy.mock.lastCall?.[LIST_SLOT_INDEX.second]).toBe(thrown?.cause);
 	});
 });

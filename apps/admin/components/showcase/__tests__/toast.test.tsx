@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { act } from "react";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -244,7 +245,7 @@ describe("Toast", () => {
 		// timer when ANY card is hovered; the label must mirror that or the text
 		// desyncs from the real dismissal).
 		const cards = Array.from(document.querySelectorAll("[data-slot='toast']"));
-		const firstCard = cards[0];
+		const firstCard = cards[LIST_SLOT_INDEX.first];
 		if (firstCard !== undefined) {
 			fireEvent.mouseEnter(firstCard);
 		}
@@ -273,14 +274,14 @@ describe("Toast", () => {
 		});
 		// Newest toast is first (store prepends).
 		const cards = Array.from(document.querySelectorAll("[data-slot='toast']"));
-		expect(cards[0]?.className).toContain("bg-tone-red-soft");
-		expect(cards[0]?.className).toContain("border-tone-red/30");
-		expect(cards[0]?.className).toContain("text-foreground");
-		expect(cards[1]?.className).toContain("bg-tone-green-soft");
-		expect(cards[1]?.className).toContain("border-tone-green/30");
+		expect(cards[LIST_SLOT_INDEX.first]?.className).toContain("bg-tone-red-soft");
+		expect(cards[LIST_SLOT_INDEX.first]?.className).toContain("border-tone-red/30");
+		expect(cards[LIST_SLOT_INDEX.first]?.className).toContain("text-foreground");
+		expect(cards[LIST_SLOT_INDEX.second]?.className).toContain("bg-tone-green-soft");
+		expect(cards[LIST_SLOT_INDEX.second]?.className).toContain("border-tone-green/30");
 		const icons = Array.from(document.querySelectorAll("[data-slot='toast-icon'] svg"));
-		expect(icons[0]?.getAttribute("class")).toContain("text-tone-red");
-		expect(icons[1]?.getAttribute("class")).toContain("text-tone-green");
+		expect(icons[LIST_SLOT_INDEX.first]?.getAttribute("class")).toContain("text-tone-red");
+		expect(icons[LIST_SLOT_INDEX.second]?.getAttribute("class")).toContain("text-tone-green");
 	});
 
 	it("renders an action button and fires its onClick (feature 5)", () => {

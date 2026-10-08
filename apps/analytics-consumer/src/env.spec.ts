@@ -1,4 +1,4 @@
-import { EnvValidationError } from "@workspace/shared";
+import { LIST_SLOT_INDEX, EnvValidationError } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -68,7 +68,7 @@ describe("parseConsumerEnv", () => {
 	});
 
 	it("rejects an empty broker list and brokers without a port", () => {
-		expect(captureEnvError(() => parseConsumerEnv({ ...VALID, KAFKA_BROKERS: " , " })).issues[0]?.problem).toMatch(/at least one/);
+		expect(captureEnvError(() => parseConsumerEnv({ ...VALID, KAFKA_BROKERS: " , " })).issues[LIST_SLOT_INDEX.first]?.problem).toMatch(/at least one/);
 		expect(captureEnvError(() => parseConsumerEnv({ ...VALID, KAFKA_BROKERS: "localhost" })).variables).toEqual(["KAFKA_BROKERS.0"]);
 	});
 

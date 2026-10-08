@@ -1,5 +1,5 @@
 import { ApiError } from "@workspace/client/lib/api/use-api";
-import { MerchantErrorCodes } from "@workspace/shared";
+import { LIST_SLOT_INDEX, MerchantErrorCodes } from "@workspace/shared";
 import type { QueryCache, QueryKey } from "@tanstack/react-query";
 import { z } from "zod";
 
@@ -30,7 +30,7 @@ export function readRejectedLocationId(queryKey: QueryKey, error: Error, orgSlug
 		return undefined;
 	}
 	const key = OrganizationQueryKeySchema.safeParse(queryKey);
-	if (!key.success || key.data[1] !== orgSlug) {
+	if (!key.success || key.data[LIST_SLOT_INDEX.second] !== orgSlug) {
 		return undefined;
 	}
 	const input = LocationScopedInputSchema.safeParse(key.data.at(-1));

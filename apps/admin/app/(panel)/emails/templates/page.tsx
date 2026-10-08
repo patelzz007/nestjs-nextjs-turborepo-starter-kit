@@ -1,4 +1,4 @@
-import { EmailTemplateKeySchema } from "@workspace/shared";
+import { LIST_SLOT_INDEX, EmailTemplateKeySchema } from "@workspace/shared";
 
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { EMAIL_TEMPLATES_URL_STATE } from "@/lib/url-state/selection";
@@ -23,7 +23,7 @@ export default async function EmailPreviewPage({
 
 	const listData = await server.email.previewList.query(undefined);
 
-	const firstKey: string | undefined = EmailTemplateKeySchema.options[0];
+	const firstKey: string | undefined = EmailTemplateKeySchema.options[LIST_SLOT_INDEX.first];
 	const effectiveKey = requestedKey ?? firstKey;
 	const detailData = effectiveKey !== undefined ? await server.email.previewDetail.query({ key: effectiveKey }) : undefined;
 

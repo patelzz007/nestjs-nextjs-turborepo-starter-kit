@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
-import { ApiPaginatedMetaSchema, PERMISSION, type ApiPaginatedMeta } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ApiPaginatedMetaSchema, PERMISSION, type ApiPaginatedMeta } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -119,7 +119,7 @@ describe("PendingRewardsPanel", () => {
 		pendingQuery.mockReturnValue({ data: { data: [REWARD], meta: pageMeta(2, 23, 3) }, isLoading: false, isError: false, refetch });
 		renderPanel();
 
-		expect(pendingQuery.mock.lastCall?.[0]).toMatchObject({ page: 2, limit: 10 });
+		expect(pendingQuery.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ page: 2, limit: 10 });
 	});
 
 	it("shows a retryable error — not 'no rewards' — when the queue fails to load", () => {

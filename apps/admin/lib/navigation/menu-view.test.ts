@@ -4,6 +4,7 @@
  * tests pin the behavior admin relies on, against admin's compiled menu shape.
  */
 import { describe, expect, it } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { buildSidebarView, computeRouteState, filterItemsBySearch, isRouteActive, sectionHasActiveItem } from "@workspace/ui/lib/sidebar/menu-view";
 import { compileMenu } from "@/lib/navigation/sidebar-menu";
@@ -65,10 +66,10 @@ describe("compileMenu (unique ids)", () => {
 		const compiled = compileMenu(RAW_MENU);
 		const ids = compiled.sections.flatMap((section) => section.items.map((item) => item.id));
 		// Two "Security" siblings under "Main": section-prefixed, second gets -2.
-		expect(ids[0]).toBe("main-security");
-		expect(ids[1]).toBe("main-security-2");
+		expect(ids[LIST_SLOT_INDEX.first]).toBe("main-security");
+		expect(ids[LIST_SLOT_INDEX.second]).toBe("main-security-2");
 		// Same title in another section gets that section's prefix — no collision.
-		expect(ids[2]).toBe("account-security");
+		expect(ids[LIST_SLOT_INDEX.third]).toBe("account-security");
 	});
 
 	it("produces globally unique ids across the whole tree", () => {
@@ -197,26 +198,26 @@ describe("filterItemsBySearch", () => {
 	it("keeps parents that match and their subtrees", () => {
 		const result = filterItemsBySearch(ITEMS, "settings");
 		expect(result).toHaveLength(1);
-		expect(result[0]?.title).toBe("Settings");
-		expect(result[0]?.children).toHaveLength(2);
+		expect(result[LIST_SLOT_INDEX.first]?.title).toBe("Settings");
+		expect(result[LIST_SLOT_INDEX.first]?.children).toHaveLength(2);
 	});
 
 	it("keeps parents whose children match, pruned to the match", () => {
 		const result = filterItemsBySearch(ITEMS, "general");
 		expect(result).toHaveLength(1);
-		expect(result[0]?.children?.map((child) => child.title)).toEqual(["General"]);
+		expect(result[LIST_SLOT_INDEX.first]?.children?.map((child) => child.title)).toEqual(["General"]);
 	});
 
 	it("matches URLs (audit #5)", () => {
 		const result = filterItemsBySearch(ITEMS, "/docs/alpha");
 		expect(result).toHaveLength(1);
-		expect(result[0]?.title).toBe("Docs");
+		expect(result[LIST_SLOT_INDEX.first]?.title).toBe("Docs");
 	});
 
 	it("matches multiple tokens against the title path (audit #5)", () => {
 		const result = filterItemsBySearch(ITEMS, "settings security");
 		expect(result).toHaveLength(1);
-		expect(result[0]?.children?.map((child) => child.title)).toEqual(["Security"]);
+		expect(result[LIST_SLOT_INDEX.first]?.children?.map((child) => child.title)).toEqual(["Security"]);
 	});
 
 	it("is case-insensitive", () => {

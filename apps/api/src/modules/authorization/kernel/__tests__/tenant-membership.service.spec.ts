@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { TenantMembershipService } from "../tenant-membership.service";
@@ -54,7 +55,9 @@ describe("TenantMembershipService.verify", () => {
 
 		expect(result.organizationRejected).toBe(true);
 		expect(result.context).toEqual({});
-		expect(mocks.membershipFindFirst.mock.lastCall?.[0]).toMatchObject({ where: { userId: "user-1", organizationId: "org-b", status: "ACTIVE", isDeleted: false } });
+		expect(mocks.membershipFindFirst.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({
+			where: { userId: "user-1", organizationId: "org-b", status: "ACTIVE", isDeleted: false },
+		});
 	});
 
 	it("verifies an active membership", async () => {

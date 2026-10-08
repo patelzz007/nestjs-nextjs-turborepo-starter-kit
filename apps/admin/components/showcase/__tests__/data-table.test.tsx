@@ -8,6 +8,7 @@
 // state behaves.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -127,12 +128,12 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 			render(<DataTable data={makeRows(5)} columns={demoColumns} checkbox={{ export: true, exportFilename: "sections.csv" }} />, { wrapper: UiKitTestProviders });
 
 			// Select rows 1 and 3 only.
-			const rowCheckboxes = screen.getAllByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectRowAriaLabel });
-			if (rowCheckboxes[0] !== undefined) {
-				fireEvent.click(rowCheckboxes[0]);
+			const [firstRowCheckbox, , thirdRowCheckbox] = screen.getAllByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectRowAriaLabel });
+			if (firstRowCheckbox !== undefined) {
+				fireEvent.click(firstRowCheckbox);
 			}
-			if (rowCheckboxes[2] !== undefined) {
-				fireEvent.click(rowCheckboxes[2]);
+			if (thirdRowCheckbox !== undefined) {
+				fireEvent.click(thirdRowCheckbox);
 			}
 
 			// Open the export menu and pick JSON.
@@ -153,8 +154,8 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 				throw new Error("Exported JSON did not match the demo row schema");
 			}
 			expect(parsed.data).toHaveLength(2);
-			expect(parsed.data[0]?.header).toBe("Section 1");
-			expect(parsed.data[1]?.header).toBe("Section 3");
+			expect(parsed.data[LIST_SLOT_INDEX.first]?.header).toBe("Section 1");
+			expect(parsed.data[LIST_SLOT_INDEX.second]?.header).toBe("Section 3");
 			expect(anchorClick).toHaveBeenCalled();
 		} finally {
 			vi.restoreAllMocks();
@@ -206,7 +207,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		});
 
 		const rowCheckboxes = screen.getAllByRole("checkbox", { name: UI_KIT_LABELS_EN.dataTable.selectRowAriaLabel });
-		const firstRowCheckbox = rowCheckboxes[0];
+		const firstRowCheckbox = rowCheckboxes[LIST_SLOT_INDEX.first];
 		expect(firstRowCheckbox).toBeDefined();
 		if (firstRowCheckbox !== undefined) {
 			fireEvent.click(firstRowCheckbox);
@@ -388,20 +389,20 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		// 1st click → ascending (rows 1…5 in order).
 		fireEvent.click(idHeader);
 		let rows = screen.getAllByRole("row");
-		expect(rows[1]?.textContent).toContain("Section 1");
-		expect(rows[5]?.textContent).toContain("Section 5");
+		expect(rows[LIST_SLOT_INDEX.second]?.textContent).toContain("Section 1");
+		expect(rows[LIST_SLOT_INDEX.sixth]?.textContent).toContain("Section 5");
 
 		// 2nd click → descending (rows 5…1).
 		fireEvent.click(idHeader);
 		rows = screen.getAllByRole("row");
-		expect(rows[1]?.textContent).toContain("Section 5");
-		expect(rows[5]?.textContent).toContain("Section 1");
+		expect(rows[LIST_SLOT_INDEX.second]?.textContent).toContain("Section 5");
+		expect(rows[LIST_SLOT_INDEX.sixth]?.textContent).toContain("Section 1");
 
 		// 3rd click → cleared (back to the original order).
 		fireEvent.click(idHeader);
 		rows = screen.getAllByRole("row");
-		expect(rows[1]?.textContent).toContain("Section 1");
-		expect(rows[5]?.textContent).toContain("Section 5");
+		expect(rows[LIST_SLOT_INDEX.second]?.textContent).toContain("Section 1");
+		expect(rows[LIST_SLOT_INDEX.sixth]?.textContent).toContain("Section 5");
 	});
 
 	it("virtualizes long lists when virtualizeRows is enabled", () => {
@@ -485,8 +486,8 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		render(<DataTable data={makeRows(5)} columns={demoColumns} draggable onRowReorder={onRowReorder} />, { wrapper: UiKitTestProviders });
 
 		const rows = screen.getAllByRole("row");
-		const firstRow = rows[1];
-		const thirdRow = rows[3];
+		const firstRow = rows[LIST_SLOT_INDEX.second];
+		const thirdRow = rows[LIST_SLOT_INDEX.fourth];
 		expect(firstRow).toBeDefined();
 		expect(thirdRow).toBeDefined();
 		if (firstRow === undefined || thirdRow === undefined) {
@@ -519,7 +520,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		// The callback receives the source/drop indices plus the visible row
 		// originals in display order (so consumers reorder by id, not index).
 		expect(onRowReorder).toHaveBeenCalledWith(0, 2, expect.any(Array));
-		const rowsArg = onRowReorder.mock.calls[0]?.[2];
+		const rowsArg = onRowReorder.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.third];
 		expect(rowsArg).toHaveLength(5);
 	});
 });
@@ -547,7 +548,7 @@ describe("DataTableShowcase", () => {
 	it("opens the row action menu from the actions column", () => {
 		render(<DataTableShowcase />, { wrapper: UiKitTestProviders });
 
-		const openMenuButton = screen.getAllByRole("button", { name: "Open section row menu" })[0];
+		const [openMenuButton] = screen.getAllByRole("button", { name: "Open section row menu" });
 		expect(openMenuButton).toBeDefined();
 		if (openMenuButton !== undefined) {
 			fireEvent.click(openMenuButton);

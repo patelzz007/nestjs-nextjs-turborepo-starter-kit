@@ -1,3 +1,5 @@
+import { hasGlobalValue } from "@workspace/shared";
+
 const DEFAULT_COOKIE_NAME = "sidebar_state";
 const DEFAULT_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
@@ -21,14 +23,14 @@ export function createCookieSidebarStorage(options: CreateCookieSidebarStorageOp
 
 	return {
 		read(): boolean | null {
-			if (typeof document === "undefined") {
+			if (!hasGlobalValue("document")) {
 				return null;
 			}
-			const match = new RegExp(`(?:^|; )${cookieName}=([^;]*)`).exec(document.cookie);
-			if (match?.[1] === undefined) {
+			const encoded = new RegExp(`(?:^|; )${cookieName}=(?<value>[^;]*)`).exec(document.cookie)?.groups?.value;
+			if (encoded === undefined) {
 				return null;
 			}
-			const value = decodeURIComponent(match[1]);
+			const value = decodeURIComponent(encoded);
 			if (value === "true") {
 				return true;
 			}
@@ -38,7 +40,7 @@ export function createCookieSidebarStorage(options: CreateCookieSidebarStorageOp
 			return null;
 		},
 		write(open: boolean): void {
-			if (typeof document === "undefined") {
+			if (!hasGlobalValue("document")) {
 				return;
 			}
 			// `Secure` on https so the cookie never travels over plain http; SameSite keeps it first-party.

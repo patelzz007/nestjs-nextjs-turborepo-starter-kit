@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -77,7 +78,7 @@ export async function createScratchDatabase(serverUrl: string, prefix: string): 
 		const deadline: number = Date.now() + SESSION_DRAIN_DEADLINE_MS;
 		for (;;) {
 			const result = await server.query("SELECT count(*) AS sessions FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()", [name]);
-			const { sessions } = SessionCountRowSchema.parse(result.rows[0]);
+			const { sessions } = SessionCountRowSchema.parse(result.rows[LIST_SLOT_INDEX.first]);
 			if (sessions === 0) {
 				return;
 			}

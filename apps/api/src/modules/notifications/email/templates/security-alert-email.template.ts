@@ -21,7 +21,7 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 	public readonly propsSchema = SecurityAlertEmailPropsSchema;
 	public readonly subject: string = "New sign-in to your account";
 	protected readonly accent: EmailAccent = "amber";
-	protected readonly eyebrow: string = "Security Alert";
+	protected readonly eyebrow: string = "Security alert";
 	protected readonly heading: string = "A new device signed in";
 
 	public getPreviewText(context: EmailRenderContext): string {
@@ -56,7 +56,7 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 			this.paragraph("Was this you? You're all set — no action needed."),
 			this.callout("Didn't sign in?", "Reset your password now and sign out of any sessions you don't recognize."),
 			this.note(
-				`${this.link(this.buildUrl(context, APP_LINKS.auth.forgotPassword), "Reset password")} · ${this.link(this.buildUrl(context, APP_LINKS.web.account), "Review active sessions")}`,
+				`${this.link(this.buildUrl(context, APP_LINKS.auth.forgotPassword), "Reset your password")} or ${this.link(this.buildUrl(context, APP_LINKS.web.account), "review your active sessions")}.`,
 			),
 		].join("");
 	}

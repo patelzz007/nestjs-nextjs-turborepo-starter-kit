@@ -1,3 +1,4 @@
+import { isBrowserRuntime } from "@workspace/shared";
 import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
 
 export const MOBILE_BREAKPOINT_PX = 1024;
@@ -25,7 +26,7 @@ export function useIsDesktop(): boolean {
 
 /** Synchronous viewport check for event handlers (no hook subscription). */
 export function isMobileViewport(): boolean {
-	if (typeof window === "undefined") {
+	if (!isBrowserRuntime()) {
 		return true;
 	}
 	return window.matchMedia(MOBILE_MEDIA_QUERY).matches;

@@ -1,4 +1,12 @@
-import { epochMs, type CreateFileUploadUrlResponse, type Envelope, type FileDetailResponse, type FileStatus, type StoredObjectScanStatus } from "@workspace/shared";
+import {
+	LIST_SLOT_INDEX,
+	epochMs,
+	type CreateFileUploadUrlResponse,
+	type Envelope,
+	type FileDetailResponse,
+	type FileStatus,
+	type StoredObjectScanStatus,
+} from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { envelopeFixture } from "../../test/auth-fixtures";
@@ -34,7 +42,7 @@ describe("uploadFileWithTicket", () => {
 
 		await uploadFileWithTicket(postTicket(), pdf());
 
-		const body = fetchMock.mock.calls[0]?.[1]?.body;
+		const body = fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]?.body;
 		expect(body instanceof FormData ? [...body.keys()] : []).toEqual(["key", "token", "file"]);
 	});
 
@@ -59,7 +67,7 @@ describe("uploadFileWithTicket", () => {
 
 		await uploadFileWithTicket({ ...postTicket(), method: "PUT", fields: undefined, headers: { "Content-Type": "application/pdf" } }, pdf());
 
-		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "PUT", headers: { "Content-Type": "application/pdf" } });
+		expect(fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]).toMatchObject({ method: "PUT", headers: { "Content-Type": "application/pdf" } });
 	});
 });
 

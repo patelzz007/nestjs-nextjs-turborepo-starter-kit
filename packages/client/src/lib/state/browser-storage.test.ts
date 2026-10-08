@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { createResilientStorage } from "./browser-storage";
 
@@ -54,7 +55,7 @@ describe("createResilientStorage", () => {
 		expect(storage.getItem("a")).toBe("1");
 		expect(storage.getItem("b")).toBe("2");
 		expect(report).toHaveBeenCalledTimes(1);
-		expect(report.mock.calls[0]?.[0]).toContain("QuotaExceededError");
+		expect(report.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toContain("QuotaExceededError");
 	});
 
 	it("rethrows anything that is not a storage refusal (a programming error)", () => {

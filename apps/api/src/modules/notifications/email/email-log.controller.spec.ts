@@ -1,4 +1,5 @@
 import type { MessageEvent } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RequestContextService } from "../../../common/context/request-context";
@@ -38,8 +39,8 @@ describe("EmailLogController (SSE stream)", () => {
 		events.emitUpdated();
 
 		expect(frames).toHaveLength(2);
-		expect(Object.keys(frames[0] ?? {})).toEqual(["data"]);
-		expect(frames[0]?.data).toHaveProperty("updatedAt", expect.any(Number));
+		expect(Object.keys(frames[LIST_SLOT_INDEX.first] ?? {})).toEqual(["data"]);
+		expect(frames[LIST_SLOT_INDEX.first]?.data).toHaveProperty("updatedAt", expect.any(Number));
 
 		subscription.unsubscribe();
 	});

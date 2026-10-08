@@ -1,4 +1,5 @@
 import { JwtService } from "@nestjs/jwt";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RequestContextService } from "../../common/context/request-context";
@@ -187,8 +188,8 @@ describe("ImpersonationService", () => {
 			expect(session).toMatchObject({ impersonatorId: ADMIN_ID, targetUserId: TARGET_ID, endedAt: null });
 			expect(state.committedAudit).toEqual([{ action: "START", impersonatorId: ADMIN_ID, sessionId: session?.id }]);
 			expect(state.enqueueInTransaction).toHaveBeenCalledTimes(1);
-			expect(state.enqueueInTransaction.mock.lastCall?.[0]).toBe(state.transactionClients[0]);
-			expect(state.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({
+			expect(state.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(state.transactionClients[LIST_SLOT_INDEX.first]);
+			expect(state.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({
 				type: "impersonation.action",
 				payload: { action: "start", superAdminId: ADMIN_ID, targetUserId: TARGET_ID, status: "succeeded" },
 			});
@@ -237,8 +238,10 @@ describe("ImpersonationService", () => {
 			expect(state.sessions.get(sessionId)?.endedAt).not.toBeNull();
 			expect(state.committedAudit).toEqual([{ action: "STOP", impersonatorId: ADMIN_ID, sessionId }]);
 			expect(state.enqueueInTransaction).toHaveBeenCalledTimes(1);
-			expect(state.enqueueInTransaction.mock.lastCall?.[0]).toBe(state.transactionClients[0]);
-			expect(state.enqueueInTransaction.mock.lastCall?.[1]).toMatchObject({ payload: { action: "stop", superAdminId: ADMIN_ID, targetUserId: TARGET_ID } });
+			expect(state.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.first]).toBe(state.transactionClients[LIST_SLOT_INDEX.first]);
+			expect(state.enqueueInTransaction.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({
+				payload: { action: "stop", superAdminId: ADMIN_ID, targetUserId: TARGET_ID },
+			});
 		});
 
 		it.each([

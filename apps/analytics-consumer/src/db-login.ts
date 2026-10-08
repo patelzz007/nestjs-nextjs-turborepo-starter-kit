@@ -1,4 +1,5 @@
 import type pg from "pg";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { z } from "zod";
 
 /**
@@ -55,7 +56,7 @@ async function buildStatement(admin: pg.ClientBase, template: string, values: re
 	const result = await admin.query(`SELECT format('${template}', ${values.map((_: string, index: number): string => `$${String(index + 1)}::text`).join(", ")}) AS sql`, [
 		...values,
 	]);
-	return SqlRowSchema.parse(result.rows[0]).sql;
+	return SqlRowSchema.parse(result.rows[LIST_SLOT_INDEX.first]).sql;
 }
 
 /**

@@ -82,6 +82,12 @@ class InMemoryInboxStore implements InboxStore {
 		}
 		return Promise.resolve();
 	}
+
+	/** The first dead letter recorded (insertion order), if any. */
+	public firstDeadLetter(): DeadLetterInput | undefined {
+		const [first] = this.deadLetters.values();
+		return first;
+	}
 }
 
 class CapturingLogger implements ConsumerLogger {
@@ -210,7 +216,7 @@ describe("handlePlatformMessage", () => {
 		expect(outcome).toEqual({ kind: "parked", reason: "RETRIES_EXHAUSTED", eventId: EVENT_ID, attempts: RETRY.maxAttempts });
 		expect(sleeper.delays).toHaveLength(RETRY.maxAttempts - 1);
 		expect(store.processed.size).toBe(0);
-		expect([...store.deadLetters.values()][0]).toMatchObject({ reason: "RETRIES_EXHAUSTED", attempts: RETRY.maxAttempts });
+		expect(store.firstDeadLetter()).toMatchObject({ reason: "RETRIES_EXHAUSTED", attempts: RETRY.maxAttempts });
 		expect(logger.lines.find(({ entry }) => entry.event === "analytics.retries_exhausted")).toMatchObject({ level: "error", entry: { sqlState: "57P01" } });
 	});
 
@@ -228,7 +234,7 @@ describe("handlePlatformMessage", () => {
 		expect(outcome).toEqual({ kind: "parked", reason: "PERMANENT_PROCESSING_ERROR", eventId: EVENT_ID, attempts: 1 });
 		expect(sleeper.delays).toEqual([]);
 		expect(store.processed.size).toBe(0);
-		expect([...store.deadLetters.values()][0]).toMatchObject({ reason: "PERMANENT_PROCESSING_ERROR", error: "value too long for type character varying(64)" });
+		expect(store.firstDeadLetter()).toMatchObject({ reason: "PERMANENT_PROCESSING_ERROR", error: "value too long for type character varying(64)" });
 	});
 
 	it("releases the record un-committed when shutdown interrupts a retry wait", async () => {
@@ -263,7 +269,7 @@ describe("handlePlatformMessage", () => {
 		const outcome = await handlePlatformMessage({ topic: "platform.rewards", partition: 0, offset: "7", value: invalidUtf8 }, deps);
 
 		expect(outcome).toMatchObject({ kind: "parked", reason: "MALFORMED_JSON" });
-		expect([...store.deadLetters.values()][0]?.payload?.bytes.equals(invalidUtf8)).toBe(true);
+		expect(store.firstDeadLetter()?.payload?.bytes.equals(invalidUtf8)).toBe(true);
 	});
 
 	it("stores an oversized value truncated, but with its original size, hash and an explicit flag", async () => {
@@ -271,8 +277,8 @@ describe("handlePlatformMessage", () => {
 
 		await handlePlatformMessage(record(oversized), deps);
 
-		expect([...store.deadLetters.values()][0]?.payload).toMatchObject({ sizeBytes: MAX_PAYLOAD_BYTES * 3, truncated: true });
-		expect([...store.deadLetters.values()][0]?.payload?.bytes.length).toBe(MAX_PAYLOAD_BYTES);
+		expect(store.firstDeadLetter()?.payload).toMatchObject({ sizeBytes: MAX_PAYLOAD_BYTES * 3, truncated: true });
+		expect(store.firstDeadLetter()?.payload?.bytes.length).toBe(MAX_PAYLOAD_BYTES);
 	});
 
 	it("keeps the event id on the dead letter when the envelope carried one", async () => {
@@ -285,7 +291,7 @@ describe("handlePlatformMessage", () => {
 		const outcome = await handlePlatformMessage(record(rewardMessage(), "42", "platform.auth"), deps);
 
 		expect(outcome).toMatchObject({ kind: "parked", reason: "SCHEMA_VIOLATION" });
-		expect([...store.deadLetters.values()][0]?.error).toBe("event type reward.platform belongs on platform.rewards, received on platform.auth");
+		expect(store.firstDeadLetter()?.error).toBe("event type reward.platform belongs on platform.rewards, received on platform.auth");
 	});
 
 	it("parks the same poison record only once across redeliveries", async () => {

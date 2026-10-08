@@ -157,6 +157,7 @@ List email template metadata
 | `data.templates[].description` | string | yes | at least 1 characters |
 | `data.templates[].key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
 | `data.templates[].label` | string | yes | at least 1 characters |
+| `data.templates[].sampleSubject` | string | yes | at least 1 characters |
 | `data.templates[].sampleTo` | string (email) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -186,19 +187,21 @@ Response `200 OK` (application/json):
         "key": "verification",
         "label": "Email Verification",
         "description": "Sent after signup to prove the user owns the inbox.",
-        "sampleTo": "jamie@example.com"
+        "sampleTo": "jamie@example.com",
+        "sampleSubject": "Verify your email address"
       },
       {
         "key": "password-reset",
         "label": "Password Reset",
         "description": "Sent when a user requests a password reset.",
-        "sampleTo": "jamie@example.com"
+        "sampleTo": "jamie@example.com",
+        "sampleSubject": "Reset your password"
       }
     ]
   },
   "meta": {
-    "correlationId": "gy2F1Dc1FX7DmM89vcHjG",
-    "timestamp": 1791193326096
+    "correlationId": "NbGdYJuwqSzXXTt_Fu0ex",
+    "timestamp": 1791458520461
   }
 }
 ```

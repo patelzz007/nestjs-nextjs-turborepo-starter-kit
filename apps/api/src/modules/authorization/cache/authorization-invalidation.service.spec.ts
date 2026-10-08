@@ -1,4 +1,5 @@
 import { Logger } from "@nestjs/common";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import Redis from "ioredis";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -232,7 +233,7 @@ describe("AuthorizationInvalidationService", () => {
 		const origin: string = z.object({ origin: z.string() }).parse(JSON.parse(payload)).origin;
 		subscriber.emit(CHANNEL, payload);
 
-		const lines: string[] = debug.mock.calls.map((call) => String(call[0]));
+		const lines: string[] = debug.mock.calls.map((call) => String(call[LIST_SLOT_INDEX.first]));
 		expect(lines).toEqual([
 			`Invalidated authorization cache for 1 user(s) [user-7]: trigger=logout_all_devices, accessTokenState=true, origin=this instance ${origin}`,
 			`Invalidated authorization cache for 1 user(s) [user-7]: trigger=logout_all_devices, accessTokenState=true, origin=remote instance ${origin}`,
@@ -247,7 +248,9 @@ describe("AuthorizationInvalidationService", () => {
 
 		await sender.service.invalidateUsers(userIds, { accessTokenState: false, trigger: "rbac_mutation" });
 
-		expect(String(debug.mock.calls.at(0)?.[0])).toContain("12 user(s) [u0, u1, u2, u3, u4, u5, u6, u7, u8, u9 (+2 more)]: trigger=rbac_mutation");
+		expect(String(debug.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first])).toContain(
+			"12 user(s) [u0, u1, u2, u3, u4, u5, u6, u7, u8, u9 (+2 more)]: trigger=rbac_mutation",
+		);
 		debug.mockRestore();
 	});
 

@@ -1,9 +1,9 @@
 import { paginatedResponse, singleResponse } from "@workspace/shared";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
 
 import { jsonResponse, type FetchImpl } from "../test-utils";
-import { createApiRequestContext, fetchMutation, fetchQuery } from "./api-request";
+import { createApiRequestContext, fetchMutation, fetchQuery, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR, SessionRefreshUnavailableError } from "./api-request";
 import { defineMutation, defineQuery } from "./endpoints";
 import { ApiResponseContractError, MAX_RESPONSE_CONTRACT_ISSUES, parseResponseContract } from "./response-contract";
 
@@ -78,7 +78,7 @@ describe("the fetch layer validates every response with its contract", () => {
 
 		const result = await fetchQuery(context, itemDef, { id: "a" });
 
-		expect(result).toEqual({ ok: true, status: 200, data: { success: true, data: { id: "a", price: 3 }, meta: META } });
+		expect(result).toEqual({ kind: "success", ok: true, status: 200, data: { success: true, data: { id: "a", price: 3 }, meta: META } });
 	});
 
 	it("parses the paginated envelope, including the pagination meta", async () => {
@@ -95,6 +95,7 @@ describe("the fetch layer validates every response with its contract", () => {
 
 		const result = await fetchMutation(context, createDef, { price: 3 });
 
+		expect(result.kind).toBe("contract");
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.status).toBe(201);
@@ -111,5 +112,54 @@ describe("the fetch layer validates every response with its contract", () => {
 		const result = await fetchQuery(context, itemListDef, undefined);
 
 		expect(!result.ok && result.error instanceof ApiResponseContractError).toBe(true);
+	});
+});
+
+describe("the kind of every transport outcome", () => {
+	const context = createApiRequestContext(BASE_URL, "web");
+
+	it("is httpError when the API answers a non-2xx status", async () => {
+		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(404, { success: false, error: { code: "NOT_FOUND", message: "No item" }, meta: META })));
+
+		const result = await fetchQuery(context, itemDef, { id: "a" });
+
+		expect(result).toMatchObject({ kind: "httpError", ok: false, status: 404, data: null });
+	});
+
+	it("is network when there is no HTTP answer at all", async () => {
+		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockRejectedValue(new TypeError("fetch failed")));
+
+		const result = await fetchQuery(context, itemDef, { id: "a" });
+
+		expect(result).toMatchObject({ kind: "network", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null });
+	});
+
+	it("is aborted when the caller's signal fired", async () => {
+		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockRejectedValue(new DOMException("The operation was aborted.", "AbortError")));
+
+		const result = await fetchQuery(context, itemDef, { id: "a" });
+
+		expect(result).toEqual({ kind: "aborted", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR });
+	});
+
+	it("narrows `error` per kind, so a switch needs no guessing", async () => {
+		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { id: "a", price: 3 }, meta: META })));
+
+		const result = await fetchQuery(context, itemDef, { id: "a" });
+
+		switch (result.kind) {
+			case "success":
+				expectTypeOf(result.data.data).toEqualTypeOf<{ id: string; price: number }>();
+				expect(result.data.data.price).toBe(3);
+				break;
+			case "aborted":
+				expectTypeOf(result.error).toEqualTypeOf<"aborted">();
+				break;
+			case "sessionUnavailable":
+				expectTypeOf(result.error).toEqualTypeOf<SessionRefreshUnavailableError>();
+				break;
+			default:
+				expect.unreachable(`unexpected ${result.kind}`);
+		}
 	});
 });

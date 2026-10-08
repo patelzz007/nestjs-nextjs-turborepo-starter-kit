@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Prisma, ResourceAcl } from "@prisma/client";
-import { PolicyConditionsSchema, type AuthorizationRequest } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PolicyConditionsSchema, type AuthorizationRequest } from "@workspace/shared";
 
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { AclService, type AclLookup } from "../acl.service";
@@ -74,7 +74,7 @@ describe("AclService.findApplicable", () => {
 		await createService().findApplicable(lookup, request);
 
 		expect(mocks.aclFindMany).toHaveBeenCalledTimes(1);
-		const where = mocks.aclFindMany.mock.lastCall?.[0].where;
+		const where = mocks.aclFindMany.mock.lastCall?.[LIST_SLOT_INDEX.first].where;
 		expect(where?.isDeleted).toBe(false);
 		expect(where?.action).toEqual({ in: ["DELETE", "MANAGE"] });
 		expect(where?.resourceType).toBe("ORDER");
@@ -97,10 +97,10 @@ describe("AclService.findApplicable", () => {
 		const service = createService();
 
 		await service.findApplicable({ ...lookup, resourceScope: { kind: "typeWide" } }, request);
-		expect(mocks.aclFindMany.mock.lastCall?.[0].where?.AND).toContainEqual({ resourceId: null });
+		expect(mocks.aclFindMany.mock.lastCall?.[LIST_SLOT_INDEX.first].where?.AND).toContainEqual({ resourceId: null });
 
 		await service.findApplicable({ ...lookup, resourceScope: { kind: "everyResource" } }, request);
-		expect(mocks.aclFindMany.mock.lastCall?.[0].where?.AND).toContainEqual({});
+		expect(mocks.aclFindMany.mock.lastCall?.[LIST_SLOT_INDEX.first].where?.AND).toContainEqual({});
 	});
 
 	it("splits entries by effect and drops entries whose conditions do not match", async () => {

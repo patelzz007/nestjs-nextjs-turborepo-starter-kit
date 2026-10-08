@@ -62,14 +62,19 @@ export class RewardsAdminInvitesController {
 		return this.rewardsAdminService.createMerchantInvite(user.sub, body);
 	}
 
+	// A pure render (no state change), so a GET: the admin page re-renders it live as the form is typed.
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
-	@Post("preview-email")
-	@ApiOperation({ summary: "Preview merchant invite email with form data (does not send)" })
-	@ZodResponse(EmailPreviewSchema, { status: HttpStatus.CREATED, description: "Rendered invite email preview" })
+	@Get("preview-email")
+	@ApiOperation({
+		summary: "Preview merchant invite email (does not send)",
+		description:
+			"Renders the invite email for a business name and pilot city, for a live preview while the invite is composed. The template's sample business name stands in when none is given. The recipient is not an input: the email body never shows it.",
+	})
+	@ZodResponse(EmailPreviewSchema, { description: "Rendered invite email preview" })
 	public previewInviteEmail(
-		@ZodBody(apiContract.rewardsAdmin.previewInviteEmail.input) body: z.output<typeof apiContract.rewardsAdmin.previewInviteEmail.input>,
+		@ZodQuery(apiContract.rewardsAdmin.previewInviteEmail.input) query: z.output<typeof apiContract.rewardsAdmin.previewInviteEmail.input>,
 	): ReturnType<RewardsAdminService["previewMerchantInviteEmail"]> {
-		return this.rewardsAdminService.previewMerchantInviteEmail(body);
+		return this.rewardsAdminService.previewMerchantInviteEmail(query);
 	}
 }
 

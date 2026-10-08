@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -90,7 +91,7 @@ describe("Stepper", () => {
 		render(<Fixture value={2} onValueChange={handleValueChange} />);
 		fireEvent.click(screen.getByRole("tab", { name: /First/ }));
 		expect(handleValueChange).toHaveBeenCalledExactlyOnceWith(1);
-		expect(items()[1]?.dataset.state).toBe("active");
+		expect(items()[LIST_SLOT_INDEX.second]?.dataset.state).toBe("active");
 	});
 
 	it("disables a step's trigger", (): void => {

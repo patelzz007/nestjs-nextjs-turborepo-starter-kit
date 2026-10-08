@@ -13,6 +13,7 @@ import {
 	ApiErrorResponseSchema,
 	apiVersionPrefix,
 	clientTypeHeader,
+	isStringPrimitive,
 	JsonValueSchema,
 	MUTATION_INTENT_HEADER,
 	MUTATION_INTENT_VALUE,
@@ -24,6 +25,7 @@ import {
 	type DataValue,
 	type JsonValue,
 	type SerializableInput,
+	type ToDiscoUnion,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
@@ -191,20 +193,51 @@ export type ApiErrorPayload = Error | string;
 
 // ── Transport envelope ───────────────────────────────────────────────────────
 
-export interface ApiSuccess<T> {
-	ok: true;
-	status: number;
-	data: T;
-}
-
-export interface ApiFailure {
+/** The fields every failed call carries — `error` narrowed per kind of failure. */
+interface ApiFailureFields<E extends ApiErrorPayload> {
 	ok: false;
 	status: number;
 	data: null;
-	error: ApiErrorPayload;
+	error: E;
 }
 
-export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
+/**
+ * How one API call ended, as a discriminated union on `kind` (built with `ToDiscoUnion`).
+ * `ok`, `status`, `data` and `error` keep their meaning, so `if (res.ok)` still narrows;
+ * `kind` names the case, so a caller can `switch (res.kind)` instead of guessing it from
+ * `status` and the type of `error`.
+ */
+export type ApiResponse<T> = ToDiscoUnion<
+	{
+		/** A 2xx answer whose body matched the response contract. */
+		success: { ok: true; status: number; data: T };
+		/** The API answered with a non-2xx status; `error` is its error body (an `ApiError`) or its text. */
+		httpError: ApiFailureFields<ApiErrorPayload>;
+		/**
+		 * The API answered, but not with what its contract promises (ADR 022): an
+		 * `ApiResponseContractError` for a JSON body, an `ApiDownloadError` for a file of the wrong type.
+		 */
+		contract: ApiFailureFields<Error>;
+		/** No HTTP answer at all — offline, DNS, CORS. `status` is {@link NO_HTTP_RESPONSE_STATUS}. */
+		network: ApiFailureFields<ApiErrorPayload>;
+		/** The caller aborted the request. `status` is {@link NO_HTTP_RESPONSE_STATUS}. */
+		aborted: ApiFailureFields<typeof REQUEST_ABORTED_ERROR>;
+		/** A 401 whose silent refresh got no verdict: only this call failed; the session stands. */
+		sessionUnavailable: ApiFailureFields<SessionRefreshUnavailableError>;
+		/** A 401 that ended the session — `onUnauthorized` has already run. */
+		unauthorized: ApiFailureFields<ApiErrorPayload>;
+	},
+	"kind"
+>;
+
+/** The successful case of {@link ApiResponse}. */
+export type ApiSuccess<T> = Extract<ApiResponse<T>, { ok: true }>;
+
+/** Every failed case of {@link ApiResponse} — narrow further on `kind`. */
+export type ApiFailure = Extract<ApiResponse<null>, { ok: false }>;
+
+/** The name of each way a call can end — `ApiResponse["kind"]`. */
+export type ApiResponseKind = ApiResponse<null>["kind"];
 
 /** Per-call overrides on top of the procedure def (signal, extra headers). */
 export interface ProcedureCallOptions {
@@ -241,7 +274,7 @@ export type CallerTreeBranch<V> =
 export type CallerTree<R extends object> = { [K in keyof R]: CallerTreeBranch<R[K]> };
 
 function extractErrorMessage(error: Error | string, status: number): string {
-	if (typeof error === "string" && error.length > 0) {
+	if (isStringPrimitive(error) && error.length > 0) {
 		return error;
 	}
 	if (error instanceof Error && error.message.length > 0) {
@@ -249,6 +282,9 @@ function extractErrorMessage(error: Error | string, status: number): string {
 	}
 	return `Request failed (${String(status)})`;
 }
+
+/** A thrown value the transport can carry as-is in its `error` slot. */
+const TransportErrorSchema = z.union([z.instanceof(Error), z.string()]);
 
 const SESSION_DEAD_ERROR_CODES: readonly string[] = ["TOKEN_VERSION_MISMATCH", "REFRESH_TOKEN_REVOKED", "TOKEN_THEFT_DETECTED"];
 
@@ -343,7 +379,7 @@ function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> {
 			init.body = request.body;
 		} else {
 			headers["Content-Type"] = "application/json";
-			init.body = typeof request.body === "string" ? request.body : JSON.stringify(request.body);
+			init.body = isStringPrimitive(request.body) ? request.body : JSON.stringify(request.body);
 		}
 	}
 
@@ -354,7 +390,7 @@ function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> {
 
 			if (!res.ok) {
 				const errorData: ApiErrorPayload = await readErrorPayload(res);
-				return { ok: false, status: res.status, data: null, error: errorData };
+				return { kind: "httpError", ok: false, status: res.status, data: null, error: errorData };
 			}
 
 			const source: ResponseContractSource = { method, url: targetUrl, status: res.status };
@@ -362,18 +398,19 @@ function executeHttp<T>(request: HttpRequest<T>): Promise<ApiResponse<T>> {
 			// The one response-validation point of the browser transport (ADR 022).
 			const data: T = parseResponseText(responseSchema, text, source);
 
-			return { ok: true, status: res.status, data };
+			return { kind: "success", ok: true, status: res.status, data };
 		} catch (error) {
 			if (error instanceof ApiResponseContractError) {
-				return { ok: false, status: error.status, data: null, error };
+				return { kind: "contract", ok: false, status: error.status, data: null, error };
 			}
 			if (error instanceof DOMException && error.name === "AbortError") {
-				return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR };
+				return { kind: "aborted", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR };
 			}
-			if (error instanceof Error || typeof error === "string") {
-				return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error };
+			const transportError = TransportErrorSchema.safeParse(error);
+			if (transportError.success) {
+				return { kind: "network", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: transportError.data };
 			}
-			return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: new Error(String(error)) };
+			return { kind: "network", ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: new Error(String(error)) };
 		}
 	};
 
@@ -399,14 +436,14 @@ export async function withSessionRefresh<T>(
 			result = await execute();
 		} else if (refreshed === "transient") {
 			// No verdict on the session: fail this request only, never the session.
-			return { ok: false, status: result.status, data: null, error: new SessionRefreshUnavailableError() };
+			return { kind: "sessionUnavailable", ok: false, status: result.status, data: null, error: new SessionRefreshUnavailableError() };
 		}
 		// `expired`: the session is dead — fall through to `onUnauthorized`.
 	}
 
 	if (!result.ok && result.status === 401 && onUnauthorized) {
 		await onUnauthorized();
-		return { ok: false, status: result.status, data: null, error: "Unauthorized" };
+		return { kind: "unauthorized", ok: false, status: result.status, data: null, error: "Unauthorized" };
 	}
 
 	return result;

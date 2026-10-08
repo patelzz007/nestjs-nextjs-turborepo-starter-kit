@@ -18,7 +18,7 @@ export class WelcomeEmailTemplate extends BaseEmailTemplate<WelcomeEmailProps> {
 	public readonly propsSchema = WelcomeEmailPropsSchema;
 	public readonly subject: string = "Welcome aboard!";
 	protected readonly accent: EmailAccent = "green";
-	protected readonly eyebrow: string = "Getting Started";
+	protected readonly eyebrow: string = "Getting started";
 	protected readonly heading: string = "You're in!";
 
 	public getPreviewText(context: EmailRenderContext): string {

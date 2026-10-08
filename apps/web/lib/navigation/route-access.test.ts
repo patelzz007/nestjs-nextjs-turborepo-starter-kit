@@ -2,7 +2,7 @@ import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/clien
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { compileMenu } from "@workspace/client/lib/sidebar/sidebar-menu-compile";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem, SidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { samplePathForPattern } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 import { describe, expect, it } from "vitest";
 
@@ -223,7 +223,7 @@ describe("applyWebRouteAuthorization", () => {
 	};
 
 	it("copies each page's requirement onto its menu item by URL", () => {
-		const [browse, orders, soon] = applyWebRouteAuthorization(MENU, RULES).sections[0]?.items ?? [];
+		const [browse, orders, soon] = applyWebRouteAuthorization(MENU, RULES).sections[LIST_SLOT_INDEX.first]?.items ?? [];
 
 		expect(browse?.authorization).toBeUndefined();
 		expect(orders?.authorization?.permissions).toEqual([PERMISSION.ORDER.LIST]);

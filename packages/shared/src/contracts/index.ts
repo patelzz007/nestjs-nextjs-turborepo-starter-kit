@@ -125,6 +125,7 @@ import {
 import {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
+	AdminMerchantInvitePreviewQuerySchema,
 	AdminKybUpdatePathInputSchema,
 	AdminMerchantIdParamSchema,
 	AdminMerchantListQuerySchema,
@@ -1103,10 +1104,11 @@ export const apiContract = {
 			input: AdminCreateMerchantInviteSchema,
 			response: singleResponse(AdminMerchantInviteCreatedResponseSchema),
 		}),
+		/** Renders the invite email from the form as the admin types — a safe read, so it is a GET and never audited as a change. */
 		previewInviteEmail: defineContract({
-			method: "POST",
+			method: "GET",
 			path: apiRoutes.rewardsAdmin.invitesPreviewEmail,
-			input: AdminCreateMerchantInviteSchema,
+			input: AdminMerchantInvitePreviewQuerySchema,
 			response: singleResponse(EmailPreviewSchema),
 		}),
 		salesAnalytics: defineContract({

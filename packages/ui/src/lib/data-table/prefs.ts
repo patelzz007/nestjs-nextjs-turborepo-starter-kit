@@ -1,4 +1,5 @@
 import type { ColumnPinningState, ColumnVisibilityState, SortingState } from "@tanstack/react-table";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { z } from "zod";
 
 const sortingStateEntrySchema = z.object({
@@ -142,7 +143,7 @@ function reconcilePageSize(saved: number | undefined, pageSizeOptions: readonly 
 	if (pageSizeOptions.includes(saved)) {
 		return saved;
 	}
-	return pageSizeOptions[0] ?? defaultPageSize;
+	return pageSizeOptions[LIST_SLOT_INDEX.first] ?? defaultPageSize;
 }
 
 function reconcileColumnVisibility(saved: ColumnVisibilityState | undefined, columnIds: readonly string[]): ColumnVisibilityState {

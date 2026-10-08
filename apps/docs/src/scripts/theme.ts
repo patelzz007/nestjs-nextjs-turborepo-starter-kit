@@ -2,7 +2,11 @@
  * Light / dark theme. The initial theme is applied before first paint by the
  * inline bootstrap in `BaseLayout.astro` (same storage key); this module only
  * handles the toggle and follows the OS setting until the reader picks one.
+ * A toggle click animates the switch as a reveal growing from the button — the
+ * same one the apps use (`@workspace/ui/lib/core/theme-transition`).
  */
+import { runThemeTransition, themeTransitionOrigin } from "@workspace/ui/lib/core/theme-transition";
+
 export const THEME_STORAGE_KEY = "docs:theme";
 /** Fired on `document` after the theme changes (mermaid diagrams re-render on it). */
 export const THEME_CHANGE_EVENT = "docs:theme-change";
@@ -40,7 +44,9 @@ export function initTheme(): void {
 		button.addEventListener("click", () => {
 			const next: Theme = currentTheme() === "dark" ? "light" : "dark";
 			storeTheme(next);
-			applyTheme(next);
+			runThemeTransition((): void => {
+				applyTheme(next);
+			}, themeTransitionOrigin(button));
 		});
 	}
 	const media = window.matchMedia("(prefers-color-scheme: dark)");

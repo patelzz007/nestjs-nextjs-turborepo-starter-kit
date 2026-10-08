@@ -1,4 +1,4 @@
-import { QUEUE_JOB_OPTIONS, type StorageCdnInvalidationJob, type StorageDeleteJob, type StorageScanJob } from "@workspace/shared";
+import { LIST_SLOT_INDEX, QUEUE_JOB_OPTIONS, type StorageCdnInvalidationJob, type StorageDeleteJob, type StorageScanJob } from "@workspace/shared";
 import type { JobsOptions } from "bullmq";
 import { describe, expect, it } from "vitest";
 
@@ -63,7 +63,7 @@ describe("StorageCdnInvalidationProcessor", () => {
 		await expect(processor.purge(JOB)).resolves.toBeUndefined();
 
 		expect(cdn.requests).toHaveLength(2);
-		expect(cdn.requests[0]).toEqual(cdn.requests[1]);
-		expect(cdn.requests[0]?.objectKeys).toEqual(JOB.objectKeys);
+		expect(cdn.requests[LIST_SLOT_INDEX.first]).toEqual(cdn.requests[LIST_SLOT_INDEX.second]);
+		expect(cdn.requests[LIST_SLOT_INDEX.first]?.objectKeys).toEqual(JOB.objectKeys);
 	});
 });

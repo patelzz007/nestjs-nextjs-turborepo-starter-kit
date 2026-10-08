@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { highlightCode, resolveCodeBlockLanguage, type CodeBlockLine } from "@workspace/ui/components/code-block-highlight";
 import type { Element, Root } from "hast";
 import type { Raw } from "mdast-util-to-hast";
@@ -17,15 +18,20 @@ import { parseCodeTitle, parseHighlightLines } from "./fence-meta";
  *     ```ts title="main.ts" {2-4}
  */
 
+/** A hast `className` property: a list of class tokens. */
+const CLASS_LIST_SCHEMA = z.array(z.union([z.string(), z.number()]));
+const LANGUAGE_CLASS_PREFIX = "language-";
+
 /** Fence tag from `class="language-ts"`; empty when the fence has none. */
 export function fenceLanguage(code: Element): string {
-	const classes = code.properties.className;
-	if (!Array.isArray(classes)) {
+	const classes = CLASS_LIST_SCHEMA.safeParse(code.properties.className);
+	if (!classes.success) {
 		return "";
 	}
-	for (const name of classes) {
-		if (typeof name === "string" && name.startsWith("language-")) {
-			return name.slice("language-".length);
+	for (const name of classes.data) {
+		const className = String(name);
+		if (className.startsWith(LANGUAGE_CLASS_PREFIX)) {
+			return className.slice(LANGUAGE_CLASS_PREFIX.length);
 		}
 	}
 	return "";

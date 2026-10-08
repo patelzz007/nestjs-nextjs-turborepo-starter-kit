@@ -5,7 +5,7 @@ import { HttpAdapterHost } from "@nestjs/core";
 import { FastifyAdapter, RouteConfig, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import { Prisma } from "@prisma/client";
-import { ApiErrorResponseSchema, type JsonValue } from "@workspace/shared";
+import { LIST_SLOT_INDEX, ApiErrorResponseSchema, type JsonValue } from "@workspace/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -123,7 +123,7 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		expect(envelopeOf(response.body).error).toEqual({ code: "SERVICE_UNAVAILABLE", message: "The API is not ready to serve traffic." });
 		expect(errorLog).not.toHaveBeenCalled();
 		expect(warnLog).toHaveBeenCalledTimes(1);
-		expect(warnLog.mock.calls[0]?.[1]).not.toHaveProperty("trace");
+		expect(warnLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]).not.toHaveProperty("trace");
 	});
 
 	/** Parse and schema-check the error envelope of a response body. */
@@ -158,7 +158,7 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		expect(envelope.meta.correlationId).not.toContain("corr with spaces");
 		expect(envelope.meta.correlationId).toMatch(/^[A-Za-z0-9._:-]{1,64}$/);
 		expect(response.headers["x-correlation-id"]).toBe(envelope.meta.correlationId);
-		expect(errorLog.mock.calls[0]?.[1]?.metadata).toMatchObject({ correlationId: envelope.meta.correlationId });
+		expect(errorLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]?.metadata).toMatchObject({ correlationId: envelope.meta.correlationId });
 	});
 
 	it("rejects an over-long incoming correlation id (max 64 characters)", async () => {
@@ -238,7 +238,7 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		expect(response.body).not.toContain("at ");
 
 		expect(errorLog).toHaveBeenCalledTimes(1);
-		const [message, options] = errorLog.mock.calls[0] ?? [];
+		const [message, options] = errorLog.mock.calls[LIST_SLOT_INDEX.first] ?? [];
 		expect(message).toContain("GET /probe/boom failed with 500 INTERNAL_ERROR");
 		expect(options?.metadata).toMatchObject({ correlationId: "corr-500", httpStatus: 500, errorCode: "INTERNAL_ERROR", errorName: "Error" });
 		expect(options?.trace).toContain("boom");

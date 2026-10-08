@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { RequestMethod } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants.js";
 import { Reflector } from "@nestjs/core";
-import { apiPath, epochMs, OwnProfileSchema, type OwnProfile, type UpdateOwnProfileInput } from "@workspace/shared";
+import { apiPath, epochMs, isFunctionValue, OwnProfileSchema, type OwnProfile, type UpdateOwnProfileInput } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { createAuditTrailDouble } from "../../../../test/support/audit-trail-double";
@@ -108,8 +108,8 @@ describe("ProfileController", () => {
 		const read = authorizationOf("getOwnProfile");
 		const update = authorizationOf("updateOwnProfile");
 
-		expect([read?.action, read?.resource, typeof read?.resourceId]).toEqual(["READ", "PROFILE", "function"]);
-		expect([update?.action, update?.resource, typeof update?.resourceId]).toEqual(["UPDATE", "PROFILE", "function"]);
+		expect([read?.action, read?.resource, isFunctionValue(read?.resourceId)]).toEqual(["READ", "PROFILE", true]);
+		expect([update?.action, update?.resource, isFunctionValue(update?.resourceId)]).toEqual(["UPDATE", "PROFILE", true]);
 	});
 
 	it("answers both routes with the shared profile contract", () => {

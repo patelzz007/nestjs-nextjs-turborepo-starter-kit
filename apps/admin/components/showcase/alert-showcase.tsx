@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger } from "@workspace/ui/components/alert-dialog";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { Alert, AlertAction, AlertDescription, AlertTitle, type AlertVariant } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -145,7 +146,7 @@ export function AlertShowcase(): React.JSX.Element {
 							undoHint="You have 5 seconds to undo after confirming."
 							onConfirm={handleConfirm}
 							actionOrder="cancel-first">
-							<AlertDialogTitle>Delete {destructiveSummary[0]?.value ?? "12"} users?</AlertDialogTitle>
+							<AlertDialogTitle>Delete {destructiveSummary[LIST_SLOT_INDEX.first]?.value ?? "12"} users?</AlertDialogTitle>
 							<AlertDialogDescription>
 								This permanently removes the selected accounts and revokes every session. <strong className="font-medium text-foreground">This cannot be undone.</strong>
 							</AlertDialogDescription>

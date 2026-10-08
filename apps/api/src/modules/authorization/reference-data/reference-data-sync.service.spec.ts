@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import type { OperatorIdentityProvider } from "../../../common/operator-identity";
@@ -69,7 +70,7 @@ describe("ReferenceDataSyncService", () => {
 
 		expect(report.totalChanges).toBe(3);
 		expect(log).toEqual(["begin", "sync:a", "audit", "commit", "begin", "sync:b", "commit"]);
-		const entry = record.mock.calls[0]?.[0];
+		const entry = record.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first];
 		expect(entry).toMatchObject({ action: "REFERENCE_DATA_SYNCED", actor: { kind: "SYSTEM_OPERATION", operation: REFERENCE_DATA_SYNC_OPERATION } });
 		expect(JSON.parse(entry?.detail ?? "{}")).toEqual({ section: "a", created: 2, updated: 1, restored: 0, retired: 0, ranBy: OPERATOR });
 	});

@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { UnrecoverableError } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -123,7 +124,7 @@ describe("EmailSenderService", () => {
 
 			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: "re_2", mode: "send" });
 
-			const keys = mocks.resendSend.mock.calls.map((call) => JSON.stringify(call[1]));
+			const keys = mocks.resendSend.mock.calls.map((call) => JSON.stringify(call[LIST_SLOT_INDEX.second]));
 			expect(keys).toEqual([JSON.stringify({ idempotencyKey: `email-log/${EMAIL_LOG_ID}` }), JSON.stringify({ idempotencyKey: `email-log/${EMAIL_LOG_ID}` })]);
 			expect(mocks.finalizeSent).toHaveBeenCalledTimes(1);
 		});

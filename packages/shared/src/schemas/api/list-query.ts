@@ -27,6 +27,8 @@
 
 import { z } from "zod";
 
+import { isArrayValue, isBooleanPrimitive, isJsonPrimitive, isNumberPrimitive, isStringPrimitive } from "../../lib/runtime-narrowing";
+
 import type { DataValue } from "./common";
 
 // ── Limits (server-enforced — the schema IS the enforcement) ───────────────
@@ -89,7 +91,7 @@ type RawQueryValue = DataValue | undefined;
 const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/;
 
 function toNumberWhenNumeric(value: RawQueryValue): RawQueryValue {
-	if (typeof value === "string" && NUMERIC_PATTERN.test(value.trim())) {
+	if (isStringPrimitive(value) && NUMERIC_PATTERN.test(value.trim())) {
 		return Number(value.trim());
 	}
 	return value;
@@ -103,11 +105,11 @@ function toBooleanWhenLiteral(value: RawQueryValue): RawQueryValue {
 
 /** `"a,b"` → `["a", "b"]`; repeated keys (`["a,b", "c"]`) are flattened; anything else is left for the schema to reject. */
 function toValueList(value: RawQueryValue): RawQueryValue {
-	if (typeof value === "string") {
+	if (isStringPrimitive(value)) {
 		return splitValueList(value);
 	}
-	if (Array.isArray(value)) {
-		return value.flatMap((item: DataValue): DataValue[] => (typeof item === "string" ? splitValueList(item) : [item]));
+	if (isArrayValue(value)) {
+		return value.flatMap((item: DataValue): DataValue[] => (isStringPrimitive(item) ? splitValueList(item) : [item]));
 	}
 	return value;
 }
@@ -121,7 +123,7 @@ function splitValueList(value: string): string[] {
 
 /** `filter[status]=ACTIVE` (a bare scalar) is shorthand for `filter[status][eq]=ACTIVE`. */
 function toOperatorObject(value: RawQueryValue): RawQueryValue {
-	if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+	if (isJsonPrimitive(value) && value !== null) {
 		return { eq: value };
 	}
 	return value;
@@ -539,7 +541,7 @@ function resolveSortSafely<TField extends string>(sort: string, sortable: readon
 
 // ── Query-string decoding (flat bracket keys → nested filter object) ───────
 
-const FILTER_KEY_PATTERN = /^filter\[([A-Za-z][A-Za-z0-9]*)\](?:\[([A-Za-z]+)\])?$/;
+const FILTER_KEY_PATTERN = /^filter\[(?<field>[A-Za-z][A-Za-z0-9]*)\](?:\[(?<operator>[A-Za-z]+)\])?$/;
 
 /** A query-string record as Fastify / `URLSearchParams` deliver it (strings, or arrays for repeated keys). */
 export type RawQueryRecord = Readonly<Record<string, DataValue | undefined>>;
@@ -565,7 +567,7 @@ export function nestBracketQueryParams(raw: RawQueryRecord): NestBracketQueryRes
 	for (const [key, value] of Object.entries(raw)) {
 		if (value === undefined) continue;
 		const match: RegExpExecArray | null = FILTER_KEY_PATTERN.exec(key);
-		const field: string | undefined = match?.[1];
+		const field: string | undefined = match?.groups?.field;
 		if (match === null || field === undefined) {
 			passthrough.set(key, value);
 			continue;
@@ -574,7 +576,7 @@ export function nestBracketQueryParams(raw: RawQueryRecord): NestBracketQueryRes
 		if (filterParams > LIST_MAX_FILTER_PARAMS) {
 			return { success: false, message: `At most ${String(LIST_MAX_FILTER_PARAMS)} filter parameters are allowed` };
 		}
-		const operator: string = match[2] ?? "eq";
+		const operator: string = match.groups?.operator ?? "eq";
 		if (!LIST_FILTER_OPERATORS.some((known: ListFilterOperator): boolean => known === operator)) {
 			return { success: false, message: `Unknown filter operator '${operator}' in '${key}'. Operators: ${LIST_FILTER_OPERATORS.join(", ")}` };
 		}
@@ -606,10 +608,10 @@ export function nestBracketQueryParams(raw: RawQueryRecord): NestBracketQueryRes
 export function flattenQueryParams(key: string, value: DataValue | undefined): readonly (readonly [string, string])[] {
 	if (value === undefined) return [];
 	if (value === null) return [[key, "null"]];
-	if (typeof value === "string") return [[key, value]];
-	if (typeof value === "number" || typeof value === "boolean") return [[key, String(value)]];
-	if (Array.isArray(value)) {
-		return [[key, value.map((item: DataValue): string => (typeof item === "string" ? item : JSON.stringify(item))).join(LIST_VALUE_SEPARATOR)]];
+	if (isStringPrimitive(value)) return [[key, value]];
+	if (isNumberPrimitive(value) || isBooleanPrimitive(value)) return [[key, String(value)]];
+	if (isArrayValue(value)) {
+		return [[key, value.map((item: DataValue): string => (isStringPrimitive(item) ? item : JSON.stringify(item))).join(LIST_VALUE_SEPARATOR)]];
 	}
 	return Object.entries(value).flatMap(([childKey, childValue]: [string, DataValue | undefined]): readonly (readonly [string, string])[] =>
 		flattenQueryParams(`${key}[${childKey}]`, childValue),

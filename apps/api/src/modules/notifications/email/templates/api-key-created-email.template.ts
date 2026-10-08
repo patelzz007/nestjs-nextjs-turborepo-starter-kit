@@ -23,7 +23,7 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 	public readonly propsSchema = ApiKeyCreatedEmailPropsSchema;
 	public readonly subject: string = "New API key created";
 	protected readonly accent: EmailAccent = "sky";
-	protected readonly eyebrow: string = "API Keys";
+	protected readonly eyebrow: string = "API keys";
 	protected readonly heading: string = "A new API key was created";
 
 	public getPreviewText(context: EmailRenderContext): string {

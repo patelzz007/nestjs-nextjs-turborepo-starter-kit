@@ -18,18 +18,11 @@
 // ============================================================
 
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { isArrayValue, isBrowserRuntime, LIST_SLOT_INDEX } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
-import {
-	AccordionContext,
-	accordionVariants,
-	createImperativeChangeDetails,
-	isBrowser,
-	readPersistedAccordion,
-	type AccordionSize,
-	type AccordionVariant,
-} from "./accordion-context";
+import { AccordionContext, accordionVariants, createImperativeChangeDetails, readPersistedAccordion, type AccordionSize, type AccordionVariant } from "./accordion-context";
 
 // ── Imperative ref API (feature 9) ──────────────────────────────────────────
 
@@ -158,7 +151,7 @@ const Accordion = forwardRef<AccordionRef, AccordionProps>(function Accordion(
 	// ── Imperative API (feature 9) ──────────────────────────────────────────
 	const expandAll = useCallback((): void => {
 		const values = [...registeredValues()];
-		const first = values[0];
+		const first = values[LIST_SLOT_INDEX.first];
 		if (first === undefined) {
 			return;
 		}
@@ -248,7 +241,7 @@ const Accordion = forwardRef<AccordionRef, AccordionProps>(function Accordion(
 	// not `setInternalValue` — so deep-linking also works on *controlled*
 	// accordions (the imperative setter forwards through `onValueChange`).
 	useEffect(() => {
-		if (!isBrowser() || !hashSync) {
+		if (!isBrowserRuntime() || !hashSync) {
 			return;
 		}
 		const id = window.location.hash.replace(/^#/, "");
@@ -264,7 +257,7 @@ const Accordion = forwardRef<AccordionRef, AccordionProps>(function Accordion(
 	}, [hashSync, setValue]);
 
 	useEffect(() => {
-		if (!isBrowser() || !hashSync) {
+		if (!isBrowserRuntime() || !hashSync) {
 			return;
 		}
 		const openIds = resolvedValue.map((value) => registryRef.current.get(value)).filter((itemId): itemId is string => itemId !== undefined);
@@ -276,7 +269,7 @@ const Accordion = forwardRef<AccordionRef, AccordionProps>(function Accordion(
 
 	// ── Persistence (feature 10) ────────────────────────────────────────────
 	useEffect(() => {
-		if (!isBrowser() || persistKey === undefined || isControlled) {
+		if (!isBrowserRuntime() || persistKey === undefined || isControlled) {
 			return;
 		}
 		try {
@@ -288,7 +281,7 @@ const Accordion = forwardRef<AccordionRef, AccordionProps>(function Accordion(
 
 	// ── Print expand-all (feature 19) ───────────────────────────────────────
 	useEffect(() => {
-		if (!isBrowser() || !expandOnPrint) {
+		if (!isBrowserRuntime() || !expandOnPrint) {
 			return;
 		}
 		const beforePrint = (): void => {
@@ -351,9 +344,9 @@ export function measureAccordionContent(element: HTMLElement): number {
 	return element.scrollHeight;
 }
 
-/** Type guard: `Array.isArray` doesn't narrow `readonly` arrays under TS 7. */
+/** Type guard: structural array check narrows `readonly` arrays under TS 7. */
 function isStringArray(value: string | readonly string[]): value is readonly string[] {
-	return Array.isArray(value);
+	return isArrayValue(value);
 }
 
 /**

@@ -19,7 +19,7 @@
 //     `propertyNames`, `patternProperties`, …) because zod objects strip unknown keys,
 // and `toOpenApiSchema` maps the typed tree onto `@nestjs/swagger`'s
 // `SchemaObject`, fixing the few 3.0-isms (`const` → `enum`, numeric
-// `exclusiveMinimum` → boolean form, `examples[0]` → `example`, `$ref`
+// `exclusiveMinimum` → boolean form, the first `examples` entry → `example`, `$ref`
 // siblings wrapped in `allOf`).
 //
 // Why not Swagger's built-in Standard-JSON-Schema fallback: recursive schemas
@@ -31,7 +31,7 @@
 import { createHash } from "node:crypto";
 
 import type { ReferenceObject, SchemaObject, StandardSchemaConverter } from "@nestjs/swagger";
-import { JsonPrimitiveSchema, JsonValueSchema, type JsonPrimitive, type JsonValue } from "@workspace/shared";
+import { isArrayValue, LIST_SLOT_INDEX, JsonPrimitiveSchema, JsonValueSchema, type JsonPrimitive, type JsonValue } from "@workspace/shared";
 import { z } from "zod";
 
 /** A schema position in an OpenAPI 3.0 document: an inline schema or a `$ref`. */
@@ -134,7 +134,7 @@ export interface ZodOpenApiConversion {
 }
 
 const COMPONENT_REF_PREFIX = "#/components/schemas/";
-const LOCAL_REF_PATTERN = /^#\/(?:definitions|\$defs)\/(.+)$/;
+const LOCAL_REF_PATTERN = /^#\/(?:definitions|\$defs)\/(?<name>.+)$/;
 /** zod names anonymous recursive definitions `__schema0`, `__schema1`, … — unique per conversion only. */
 const GENERATED_DEFINITION_PATTERN = /^__schema\d+$/;
 /** Hex characters of the content hash used to name anonymous recursive definitions. */
@@ -205,7 +205,7 @@ interface ConversionContext {
 
 function rewriteRef(ref: string, renames: ReadonlyMap<string, string>): string {
 	const match: RegExpExecArray | null = LOCAL_REF_PATTERN.exec(ref);
-	const localName: string | undefined = match?.[1];
+	const localName: string | undefined = match?.groups?.name;
 	if (localName === undefined) {
 		throw new Error(`Unsupported $ref "${ref}" in a zod-generated schema (a self-referencing root schema cannot be documented — give the recursive part its own schema).`);
 	}
@@ -231,7 +231,7 @@ function toOpenApiSchema(node: JsonSchemaNode, context: ConversionContext): Open
 	else if (node.const !== undefined) schema.enum = [node.const];
 	if (node.items !== undefined) {
 		// A tuple (`items: [...]`) has no OpenAPI 3.0 form; document "any of the positions".
-		schema.items = Array.isArray(node.items) ? { anyOf: toOpenApiList(node.items, context) } : toOpenApiSchema(node.items, context);
+		schema.items = isArrayValue(node.items) ? { anyOf: toOpenApiList(node.items, context) } : toOpenApiSchema(node.items, context);
 	}
 	if (node.properties !== undefined) {
 		schema.properties = Object.fromEntries(
@@ -262,7 +262,7 @@ function annotationsOf(node: JsonSchemaNode): SchemaObject {
 	if (node.writeOnly !== undefined) schema.writeOnly = node.writeOnly;
 	if (node.default !== undefined) schema.default = node.default;
 	// OpenAPI 3.0 schemas carry a single `example`; `.meta({ examples })` contributes its first entry.
-	const example: JsonValue | undefined = node.example ?? node.examples?.[0];
+	const example: JsonValue | undefined = node.example ?? node.examples?.[LIST_SLOT_INDEX.first];
 	if (example !== undefined) schema.example = example;
 	return schema;
 }

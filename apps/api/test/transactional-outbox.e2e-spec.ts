@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -47,12 +48,12 @@ describe("Transactional outbox (integration)", () => {
 
 	async function countOutboxRows(eventId: string): Promise<number> {
 		const result = await verifier.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM public.outbox_events WHERE id = $1", [eventId]);
-		return result.rows[0]?.count ?? 0;
+		return result.rows[LIST_SLOT_INDEX.first]?.count ?? 0;
 	}
 
 	async function countEmailLogs(templateKey: string): Promise<number> {
 		const result = await verifier.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM public.email_logs WHERE template_key = $1", [templateKey]);
-		return result.rows[0]?.count ?? 0;
+		return result.rows[LIST_SLOT_INDEX.first]?.count ?? 0;
 	}
 
 	beforeAll(async () => {
@@ -93,7 +94,7 @@ describe("Transactional outbox (integration)", () => {
 			"SELECT status::text AS status, attempts, topic FROM public.outbox_events WHERE id = $1",
 			[eventId],
 		);
-		expect(stored.rows[0]).toEqual({ status: "PENDING", attempts: 0, topic: "platform.email" });
+		expect(stored.rows[LIST_SLOT_INDEX.first]).toEqual({ status: "PENDING", attempts: 0, topic: "platform.email" });
 	});
 
 	it("drops the event when the domain transaction rolls back", async () => {
@@ -165,7 +166,7 @@ describe("Transactional outbox (integration)", () => {
 
 		const claimed = await runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async () => store.claimDue(2, nowMs, CLAIM_LEASE_MS));
 		expect(claimed.map((row) => row.id)).toEqual([first, second]);
-		expect(claimed[0]).toMatchObject({ topic: "platform.email", attempts: 0 });
+		expect(claimed[LIST_SLOT_INDEX.first]).toMatchObject({ topic: "platform.email", attempts: 0 });
 
 		const reclaimed = await runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async () => store.claimDue(2, nowMs, CLAIM_LEASE_MS));
 		expect(reclaimed.map((row) => row.id)).not.toContain(first);

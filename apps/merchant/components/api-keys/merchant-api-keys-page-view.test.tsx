@@ -19,6 +19,7 @@ import { STORE_A, STORE_B } from "@/test/terminals";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import {
+	LIST_SLOT_INDEX,
 	ApiPaginatedMetaSchema,
 	MERCHANT_API_KEYS_PAGE_SIZE,
 	MerchantApiKeySummarySchema,
@@ -435,7 +436,7 @@ describe("MerchantApiKeysPageView revoke", () => {
 describe("MerchantApiKeysPageView server prefetch (no double fetch)", () => {
 	function callFor(isNull: boolean): { readonly input: ApiKeysListInput | undefined; readonly options: ApiKeysListOptions | undefined } {
 		const call = apiKeysListQuery.mock.calls.find(([input]) => input.filter?.revokedAt?.isNull === isNull);
-		return { input: call?.[0], options: call?.[1] };
+		return { input: call?.[LIST_SLOT_INDEX.first], options: call?.[LIST_SLOT_INDEX.second] };
 	}
 
 	it("seeds each query with the server's real envelope when fetched for the store and view the client asks for", () => {

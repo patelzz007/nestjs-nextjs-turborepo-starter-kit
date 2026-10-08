@@ -18,8 +18,9 @@ export function initToc(): void {
 		return;
 	}
 
+	const [firstHeading] = headings;
 	const update = (): void => {
-		let current = headings[0]?.id ?? "";
+		let current = firstHeading?.id ?? "";
 		for (const heading of headings) {
 			if (heading.getBoundingClientRect().top - ACTIVE_OFFSET_PX > 0) {
 				break;

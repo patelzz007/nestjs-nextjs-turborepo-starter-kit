@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { apiRouter } from "@workspace/client/lib/api/endpoints";
 import type { Envelope, RewardClaimResponse } from "@workspace/shared";
 import * as React from "react";
@@ -97,15 +98,15 @@ describe("MyClaimsPageView", () => {
 		renderAt("");
 
 		const pageCall = claimsListQuery.mock.calls.find(([input]) => !isCountQuery(input));
-		expect(pageCall?.[0]).toEqual({ page: 1, limit: WALLET_CLAIMS_PAGE_SIZE });
-		expect(pageCall?.[1]?.initialData).toBe(PAGE_ONE);
+		expect(pageCall?.[LIST_SLOT_INDEX.first]).toEqual({ page: 1, limit: WALLET_CLAIMS_PAGE_SIZE });
+		expect(pageCall?.[LIST_SLOT_INDEX.second]?.initialData).toBe(PAGE_ONE);
 
 		cleanup();
 		claimsListQuery.mockClear();
 		renderAt("?page=2");
 		const secondPageCall = claimsListQuery.mock.calls.find(([input]) => !isCountQuery(input));
-		expect(secondPageCall?.[0]).toEqual({ page: 2, limit: WALLET_CLAIMS_PAGE_SIZE });
-		expect(secondPageCall?.[1]?.initialData).toBeUndefined();
+		expect(secondPageCall?.[LIST_SLOT_INDEX.first]).toEqual({ page: 2, limit: WALLET_CLAIMS_PAGE_SIZE });
+		expect(secondPageCall?.[LIST_SLOT_INDEX.second]?.initialData).toBeUndefined();
 	});
 
 	it("pages forward with the response's keyset cursor", () => {

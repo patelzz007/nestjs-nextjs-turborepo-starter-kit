@@ -24,7 +24,8 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 3. [The rules we enforce (and why)](#3-the-rules-we-enforce-and-why)
    - [3.1 Import boundaries](#31-import-boundaries)
    - [3.2 Env boundary (`process.env`)](#32-env-boundary-processenv)
-   - [3.3 Lint canaries](#33-lint-canaries)
+   - [3.3 Runtime validation and named indices (rules/27, rules/28)](#33-runtime-validation-and-named-indices-rules27-rules28)
+   - [3.4 Lint canaries](#34-lint-canaries)
 4. [Per-repo exceptions](#4-per-repo-exceptions)
 5. [Prettier integration](#5-prettier-integration)
 6. [How to run ESLint](#6-how-to-run-eslint)
@@ -277,7 +278,17 @@ Everything else imports `clientEnv` / `serverEnv` (Next), injects
 [Configuration](../configuration/frontend.md) and [API Configuration](../configuration/api.md). (`next.config.ts` and
 `vitest.config.ts` are build-tool files and are globally ignored by `base.js`.)
 
-### 3.3 Lint canaries
+### 3.3 Runtime validation and named indices (rules/27, rules/28)
+
+`no-restricted-syntax` (see `packages/eslint-config/restricted-syntax-rules.js`) applies to every TypeScript file, schema files included, and bans:
+
+- the runtime `typeof` operator in any form (`typeof x === "string"`, `typeof x.y`, `switch (typeof x)`, `typeof window`). Type-position `typeof` (`z.infer<typeof Schema>`) is a different AST node and stays allowed.
+- `Array.isArray(x)` and `Object.prototype.toString` tag sniffing
+- numeric-literal index access: `items[0]`, `match?.[1]`, `row[0] = …`
+
+**Do instead:** parse once at the trust boundary with a shared zod schema and pass `z.infer<typeof Schema>` inward. To pick the branch of a union you already hold (`string | string[]`, `bigint | number`, a JSON node, a React ref), use the zod-backed guards in `@workspace/shared`: `isStringPrimitive`, `isNumberPrimitive`, `isBooleanPrimitive`, `isBigIntPrimitive`, `isJsonPrimitive`, `isArrayValue`, `isFunctionValue`. For the runtime environment use `isBrowserRuntime()`, `hasGlobalValue(name)` and `hasGlobalConstructor(name)`. For list positions, destructure, use `LIST_SLOT_INDEX.first` (literal-typed, so tuples keep their element types), or a named RegExp capture group (`match.groups?.year`). Full guides: [rules/28-runtime-validation.md](../../../rules/28-runtime-validation.md), [rules/27-array-index-readability.md](../../../rules/27-array-index-readability.md).
+
+### 3.4 Lint canaries
 
 `apps/web/eslint-boundaries.test.ts`, `packages/client/src/eslint-boundaries.test.ts`,
 `apps/api/src/eslint-boundaries.spec.ts` and `apps/analytics-consumer/src/eslint-boundaries.spec.ts`
