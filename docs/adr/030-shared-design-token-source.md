@@ -12,7 +12,8 @@ order: 30
 
 ## Status
 
-Accepted (2026-10-08). Not implemented yet.
+Accepted (2026-10-08). Implemented (2026-10-08): `packages/tokens`, consumed by `packages/ui` through
+the generated `web.css` (see [the mobile plan, section 5](../technical/mobile/mobile-app.md#5-piece-1-packagestokens)).
 
 ## Context
 

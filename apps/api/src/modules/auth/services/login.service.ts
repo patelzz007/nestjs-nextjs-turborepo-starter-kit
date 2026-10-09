@@ -10,6 +10,7 @@ import type {
 } from "@workspace/shared";
 
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
+import type { SessionDeviceContext } from "../../sessions/device/session-device";
 import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AccountLockoutService } from "./account-lockout.service";
@@ -47,9 +48,8 @@ export class LoginService {
 	})
 	public async login(
 		loginDto: LoginInput,
-		clientType?: string,
-		deviceInfo?: string,
-		ipAddress?: string,
+		clientType: string | undefined,
+		device: SessionDeviceContext,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		const { email, password } = loginDto;
 
@@ -102,11 +102,13 @@ export class LoginService {
 			return this.loginVerificationService.maybeRequireVerification({
 				userId: user.id,
 				clientType: clientType ?? null,
-				deviceInfo: deviceInfo ?? null,
-				ipAddress: ipAddress ?? null,
+				deviceInfo: device.userAgent,
+				ipAddress: device.ipAddress,
+				signInMethod: "PASSWORD",
+				device,
 			});
 		}
 
-		return this.twoFactorService.createLoginChallenge(user.id, clientType, deviceInfo, ipAddress);
+		return this.twoFactorService.createLoginChallenge(user.id, clientType, device.userAgent ?? undefined, device.ipAddress ?? undefined);
 	}
 }

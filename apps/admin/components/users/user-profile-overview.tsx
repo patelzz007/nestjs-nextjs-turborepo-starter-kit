@@ -2,20 +2,36 @@
 
 import type { AdminUserDetail } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { NO_SIGNUP_REFERRAL_LABEL, SIGNUP_REFERRAL_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
+import { ROUTES } from "@/lib/routes";
+import Link from "next/link";
 import * as React from "react";
 
 export interface UserProfileFieldProps {
 	readonly label: string;
 	readonly value: string;
 	readonly mono?: boolean;
+	/** When set, the value links here (e.g. another user's profile). */
+	readonly href?: string | undefined;
 }
 
-export const UserProfileField = React.forwardRef<HTMLDivElement, UserProfileFieldProps>(function UserProfileField({ label, value, mono = false }, ref): React.JSX.Element {
+export const UserProfileField = React.forwardRef<HTMLDivElement, UserProfileFieldProps>(function UserProfileField(
+	{ label, value, mono = false, href },
+	ref,
+): React.JSX.Element {
 	return (
 		<div ref={ref} className="space-y-1">
 			<dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
-			<dd className={`text-sm text-foreground ${mono ? "font-mono text-xs" : ""}`}>{value}</dd>
+			<dd className={`text-sm text-foreground ${mono ? "font-mono text-xs" : ""}`}>
+				{href === undefined ? (
+					value
+				) : (
+					<Link href={href} className="text-primary hover:underline">
+						{value}
+					</Link>
+				)}
+			</dd>
 		</div>
 	);
 });
@@ -75,6 +91,18 @@ export const UserProfileOverview = React.forwardRef<HTMLDivElement, UserProfileO
 						<UserProfileField label="Full name" value={user.fullName} />
 						<UserProfileField label="Email" value={user.email} />
 						<UserProfileField label="User ID" value={user.id} mono />
+					</UserProfileSection>
+
+					<UserProfileSection title="Signup referral" description="Who referred this user at registration and whether they have redeemed a reward.">
+						<UserProfileField
+							label="Referrer"
+							value={user.signupReferrer?.fullName ?? NO_SIGNUP_REFERRAL_LABEL}
+							href={user.signupReferrer === null ? undefined : ROUTES.users.detail(user.signupReferrer.id)}
+						/>
+						<UserProfileField
+							label="Referral status"
+							value={user.signupReferralStatus === null ? NO_SIGNUP_REFERRAL_LABEL : SIGNUP_REFERRAL_STATUS_LABELS[user.signupReferralStatus]}
+						/>
 					</UserProfileSection>
 
 					<UserProfileSection title="Account status" description="How the account behaves in the product and admin panel.">

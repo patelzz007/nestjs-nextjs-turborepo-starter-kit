@@ -1,15 +1,16 @@
 import { Test } from "@nestjs/testing";
-import { epochMs, type LoginServiceResponse } from "@workspace/shared";
+import { epochMs, type LoginServiceResponse, type SessionSignInMethod } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { REDIS_PUBLISHER } from "../../../infrastructure/redis/redis.tokens";
+import type { SessionDeviceContext } from "../../sessions/device/session-device";
 import { AuthSessionService } from "./auth-session.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
-import { LoginVerificationService } from "./login-verification.service";
+import { LoginVerificationService, type PendingLoginContext, type PendingSignInMethod } from "./login-verification.service";
 import { createTestTypedConfig, type TestEnv } from "../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
@@ -42,7 +43,31 @@ const ISSUED_SESSION: LoginServiceResponse = {
 	refreshToken: "refresh",
 };
 
-const LOGIN_CONTEXT = { userId: "user-1", clientType: "web", deviceInfo: "Firefox on macOS", ipAddress: "198.18.0.1" };
+/** The request continuing the login (and receiving the session). */
+const DEVICE: SessionDeviceContext = {
+	device: {
+		clientType: "web",
+		browserName: "Firefox",
+		browserVersion: "142.0",
+		osName: "macOS",
+		osVersion: "16.1",
+		deviceType: "DESKTOP",
+		deviceModel: null,
+		deviceName: null,
+		appVersion: null,
+	},
+	ipAddress: "198.18.0.1",
+	userAgent: "Firefox on macOS",
+};
+
+const LOGIN_CONTEXT: PendingLoginContext = {
+	userId: "user-1",
+	clientType: "web",
+	deviceInfo: "Firefox on macOS",
+	ipAddress: "198.18.0.1",
+	signInMethod: "PASSWORD_TOTP",
+	device: DEVICE,
+};
 
 /** The one-time code the stubbed crypto service generates. */
 const GENERATED_CODE = "123456";
@@ -97,14 +122,14 @@ describe("LoginVerificationService", () => {
 		const service = await createService({ LOGIN_VERIFICATION_MODE: "new-device" });
 		await service.maybeRequireVerification(LOGIN_CONTEXT);
 
-		await expect(service.verifyLoginCode("verification-1", GENERATED_CODE)).resolves.toEqual(ISSUED_SESSION);
+		await expect(service.verifyLoginCode("verification-1", GENERATED_CODE, DEVICE)).resolves.toEqual(ISSUED_SESSION);
 		await expect(service.maybeRequireVerification(LOGIN_CONTEXT)).resolves.toEqual(ISSUED_SESSION);
 	});
 
 	it("requires the code on every login in always mode", async () => {
 		const service = await createService({ LOGIN_VERIFICATION_MODE: "always" });
 		await service.maybeRequireVerification(LOGIN_CONTEXT);
-		await service.verifyLoginCode("verification-1", GENERATED_CODE);
+		await service.verifyLoginCode("verification-1", GENERATED_CODE, DEVICE);
 
 		await expect(service.maybeRequireVerification(LOGIN_CONTEXT)).resolves.toMatchObject({ requiresVerification: true });
 	});
@@ -114,7 +139,27 @@ describe("LoginVerificationService", () => {
 
 		await expect(service.maybeRequireVerification(LOGIN_CONTEXT)).resolves.toEqual(ISSUED_SESSION);
 		expect(mocks.sendLoginVerificationEmail).not.toHaveBeenCalled();
+		// The session is stored for the continuing request, with the proofs collected so far.
+		expect(mocks.issueSessionForUser).toHaveBeenCalledWith("user-1", "web", { device: DEVICE, signInMethod: "PASSWORD_TOTP" }, { mfaAssured: undefined });
 	});
+
+	it.each([
+		["PASSWORD", "PASSWORD_NEW_DEVICE_CODE"],
+		["PASSWORD_TOTP", "PASSWORD_TOTP_NEW_DEVICE_CODE"],
+		["PASSWORD_BACKUP_CODE", "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE"],
+		["TEAM_INVITE_REGISTRATION", "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE"],
+	] satisfies [PendingSignInMethod, SessionSignInMethod][])(
+		"records %s completed by the emailed code as %s, for the device presenting the code",
+		async (pending, completed) => {
+			const service = await createService({ LOGIN_VERIFICATION_MODE: "always" });
+			await service.maybeRequireVerification({ ...LOGIN_CONTEXT, signInMethod: pending });
+			const codeDevice: SessionDeviceContext = { ...DEVICE, ipAddress: "203.0.113.9" };
+
+			await service.verifyLoginCode("verification-1", GENERATED_CODE, codeDevice);
+
+			expect(mocks.issueSessionForUser).toHaveBeenCalledWith("user-1", "web", { device: codeDevice, signInMethod: completed });
+		},
+	);
 
 	it("never writes the one-time code to the log", async () => {
 		const service = await createService({ LOGIN_VERIFICATION_MODE: "always", NODE_ENV: "development" });

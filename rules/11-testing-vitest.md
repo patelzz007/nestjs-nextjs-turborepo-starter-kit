@@ -27,6 +27,23 @@ describe('calculateDiscount', () => {
 
 A PR that adds new logic — of any size — without a corresponding test is incomplete, full stop. This applies equally to a new utility function, a new zod schema refinement, a new policy check, and a new endpoint. See `18-definition-of-done.md`.
 
+## The one exception to Vitest: `apps/mobile` uses jest-expo
+
+[ADR 031](../docs/adr/031-jest-expo-for-mobile-tests.md): the Expo app is tested with **jest-expo** (`~57.0.2`, on Jest 29 and `@react-native/jest-preset` 0.86) and **`@testing-library/react-native`** (v14: `render`, `fireEvent` and `act` are async — `await` them). React Native's transforms and native-module mocks are built for Jest; running them under Vitest is unsupported. Everything else in this document still applies to those suites, word for word: tests for everything, no `.skip` / `.only`, no weakened assertions, and **mock only boundaries**.
+
+What counts as a boundary in `apps/mobile`, and how it is faked:
+
+| Boundary | Fake |
+|---|---|
+| The API | `fetch`, replaced per test by `apps/mobile/test/api-stub.ts` (`stubApi({ "POST /auth/login": ok(...) })`) — the api-client, its validation and refresh, and TanStack Query run for real |
+| The OS secret store | `expo-secure-store` → an in-memory map (`apps/mobile/test/secure-store-memory.ts`, installed by `jest.setup.ts`) |
+| Biometrics / passcode | `jest.mock("expo-local-authentication", …)` per suite |
+| Clipboard, share sheet, links | `jest.mock("expo-clipboard")`, `jest.spyOn(Share, "share")`, `jest.spyOn(Linking, "openURL")` |
+| Theme engine | `jest.mock("uniwind", …)` where a test asserts the theme |
+| Navigation | NOT mocked — screens render inside Expo Router's test router (`renderInApp` in `apps/mobile/test/app-harness.tsx`, built on `expo-router/testing-library`) with the real app runtime, stores and providers |
+
+Platform-neutral logic does not get a Jest test in the app: it lives in `packages/shared` / `packages/api-client` and is tested there with Vitest. Run the mobile suites with `pnpm --filter @workspace/mobile test` (which also runs `expo install --check`); they are part of `pnpm run test` like every other workspace.
+
 ## Test pyramid
 
 ```text

@@ -16,6 +16,7 @@ import type {
 	IpAddressScope,
 	KybStatus,
 	MerchantOrgStatus,
+	SignupReferralStatus,
 } from "@workspace/shared";
 
 /** One option of a data-table select filter. */
@@ -48,6 +49,15 @@ export const ADMIN_USER_STATUS_LABELS: Readonly<Record<AdminUserStatus, string>>
 	locked: "Locked",
 };
 
+/** ADR 035 labels: the signup-referral state, never the account-status labels. */
+export const SIGNUP_REFERRAL_STATUS_LABELS: Readonly<Record<SignupReferralStatus, string>> = {
+	not_redeemed: "Not redeemed",
+	redeemed: "Redeemed",
+};
+
+/** Profile and table copy for a user with no signup referral. */
+export const NO_SIGNUP_REFERRAL_LABEL = "None";
+
 export const EMAIL_LOG_STATUS_LABELS: Readonly<Record<EmailLogStatus, string>> = {
 	pending: "Pending",
 	sent: "Sent",
@@ -76,6 +86,7 @@ export const AUDIT_AUTH_METHOD_LABELS: Readonly<Record<AuditAuthMethod, string>>
 	SESSION_COOKIE: "Session cookie",
 	BEARER_TOKEN: "Bearer token",
 	REFRESH_COOKIE: "Refresh cookie",
+	REFRESH_BODY: "Refresh token (body)",
 	API_KEY: "API key",
 };
 

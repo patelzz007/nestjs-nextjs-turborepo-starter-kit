@@ -84,7 +84,17 @@
 		"build": {
 			"dependsOn": ["^build"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"outputs": [".next/**", "!.next/cache/**", "dist/**"]
+			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
+			"env": [
+				"EXPO_PUBLIC_API_URL",
+				"EXPO_PUBLIC_API_PORT",
+				"EXPO_PUBLIC_IOS_STORE_URL",
+				"EXPO_PUBLIC_ANDROID_STORE_URL",
+				"MOBILE_APP_NAME",
+				"MOBILE_APP_SLUG",
+				"MOBILE_BUNDLE_ID",
+				"MOBILE_SCHEME"
+			]
 		},
 		"lint": {
 			"dependsOn": ["^lint"],

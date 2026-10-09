@@ -123,7 +123,7 @@ test per variant.
 
 ## 5. The client side
 
-`defineQuery` / `defineMutation` (`packages/client/src/lib/api/endpoints.ts`) take
+`defineQuery` / `defineMutation` (`packages/api-client/src/router.ts`) take
 `contract.response.envelope`; `parseResponseContract` (`response-contract.ts`) is the only place a
 response body is parsed — for the browser transport (`api-request.ts`) and the SSR pipeline
 (`server-request.ts`). On a mismatch:

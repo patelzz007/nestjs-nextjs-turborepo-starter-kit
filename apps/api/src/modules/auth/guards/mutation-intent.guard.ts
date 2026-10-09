@@ -1,16 +1,18 @@
 import { CanActivate, type ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
+import { isBrowserClientType, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { readFirstHeader } from "../../../common/utils/http-headers";
 import { SKIP_MUTATION_INTENT_KEY } from "../decorators/skip-mutation-intent.decorator";
+import { resolveRequestClientType } from "../utils/client-type";
 
 const UNSAFE_METHODS: readonly string[] = ["POST", "PUT", "PATCH", "DELETE"];
 
 /**
  * Enforces same-origin mutation intent for cookie-authenticated unsafe requests.
+ * Bearer requests and client type `mobile` (no ambient credential) are exempt.
  *
  * Validates `Origin` or `Referer` against the configured CORS allowlist and
  * requires the fixed `X-Mutation-Intent: same-origin` header from first-party clients.
@@ -37,6 +39,15 @@ export class MutationIntentGuard implements CanActivate {
 
 		const authorization: string | undefined = readFirstHeader(request.headers.authorization);
 		if (authorization?.toLowerCase().startsWith("bearer ")) {
+			return true;
+		}
+
+		// Client type `mobile` never authenticates with an ambient credential: its
+		// access token is a Bearer header and its refresh token a request body
+		// (the auth and refresh guards never read a cookie for it, ADR 029). A
+		// cross-site page that declares `mobile` therefore carries nothing a
+		// forged request could ride on, and a native app sends no Origin.
+		if (!isBrowserClientType(resolveRequestClientType(request))) {
 			return true;
 		}
 

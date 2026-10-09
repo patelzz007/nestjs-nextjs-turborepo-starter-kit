@@ -1,0 +1,16 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		// Emit real ESM + .d.ts files with tsc (no bundler). Source is authored
+		// extensionless; `tsc-alias --resolve-full-paths` adds the `.js` extensions
+		// Node's ESM runtime needs (see package.json build script).
+		"noEmit": false,
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true
+	},
+	"include": ["src"],
+	"exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

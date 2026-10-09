@@ -1,0 +1,75 @@
+{
+	"name": "@workspace/api-client",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths",
+		"lint": "eslint --max-warnings=0",
+		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"clean": "rm -rf dist"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"development": {
+				"types": "./src/index.ts",
+				"default": "./src/index.ts"
+			},
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./react": {
+			"development": {
+				"types": "./src/react/index.ts",
+				"default": "./src/react/index.ts"
+			},
+			"types": "./dist/react/index.d.ts",
+			"default": "./dist/react/index.js"
+		},
+		"./testing": {
+			"development": {
+				"types": "./src/testing/index.ts",
+				"default": "./src/testing/index.ts"
+			},
+			"types": "./dist/testing/index.d.ts",
+			"default": "./dist/testing/index.js"
+		}
+	},
+	"dependencies": {
+		"@workspace/shared": "workspace:*",
+		"zod": "4.6.5"
+	},
+	"peerDependencies": {
+		"@tanstack/react-query": "^5.104.1",
+		"react": "19.3.0"
+	},
+	"peerDependenciesMeta": {
+		"@tanstack/react-query": {
+			"optional": true
+		},
+		"react": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@tanstack/react-query": "^5.104.1",
+		"@testing-library/dom": "^10.4.2",
+		"@testing-library/react": "^16.3.3",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@vitejs/plugin-react": "^6.1.2",
+		"@workspace/eslint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"jsdom": "^30.1.2",
+		"react": "19.3.0",
+		"react-dom": "19.3.0",
+		"tsc-alias": "^1.9.7",
+		"typescript": "6.0.3",
+		"vitest": "^5.0.3"
+	}
+}

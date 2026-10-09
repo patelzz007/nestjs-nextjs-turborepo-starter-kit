@@ -20,11 +20,21 @@ export const STANDARD_ERROR_MESSAGES: Readonly<Record<StandardApiErrorCode, stri
 	IDEMPOTENCY_KEY_REQUIRED: "An Idempotency-Key header is required for this request.",
 	IDEMPOTENCY_KEY_REUSED: "This Idempotency-Key was already used with a different request.",
 	IDEMPOTENCY_REQUEST_IN_PROGRESS: "A request with this Idempotency-Key is still being processed. Retry shortly.",
+	APP_VERSION_UNSUPPORTED: "This version of the app is no longer supported. Please update the app to continue.",
 	INTERNAL_ERROR: "An unexpected error occurred.",
 	EXTERNAL_SERVICE_ERROR: "An upstream service failed to respond correctly.",
 	SERVICE_UNAVAILABLE: "The service is temporarily unavailable.",
 	GATEWAY_TIMEOUT: "An upstream service timed out.",
 };
+
+/**
+ * 426 Upgrade Required (RFC 9110 §15.5.22) — not in Nest's `HttpStatus` enum.
+ * The API answers it only to a mobile app older than `MOBILE_MIN_SUPPORTED_VERSION` (ADR 033).
+ */
+export const HTTP_STATUS_UPGRADE_REQUIRED = 426;
+
+/** Every HTTP status an `AppError` can carry: Nest's enum plus the few standard statuses it lacks. */
+export type AppErrorHttpStatus = HttpStatus | typeof HTTP_STATUS_UPGRADE_REQUIRED;
 
 /** HTTP status → generic code, for exceptions that carry a status but no domain code. */
 const STATUS_TO_CODE: ReadonlyMap<number, StandardApiErrorCode> = new Map<number, StandardApiErrorCode>([
@@ -36,6 +46,7 @@ const STATUS_TO_CODE: ReadonlyMap<number, StandardApiErrorCode> = new Map<number
 	[HttpStatus.PAYLOAD_TOO_LARGE, ApiErrorCodes.PAYLOAD_TOO_LARGE],
 	[HttpStatus.UNSUPPORTED_MEDIA_TYPE, ApiErrorCodes.UNSUPPORTED_MEDIA_TYPE],
 	[HttpStatus.UNPROCESSABLE_ENTITY, ApiErrorCodes.UNPROCESSABLE_ENTITY],
+	[HTTP_STATUS_UPGRADE_REQUIRED, ApiErrorCodes.APP_VERSION_UNSUPPORTED],
 	[HttpStatus.TOO_MANY_REQUESTS, ApiErrorCodes.RATE_LIMITED],
 	[HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCodes.INTERNAL_ERROR],
 	[HttpStatus.BAD_GATEWAY, ApiErrorCodes.EXTERNAL_SERVICE_ERROR],

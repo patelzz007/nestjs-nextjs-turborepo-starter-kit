@@ -53,6 +53,23 @@ describe("redactSecrets", () => {
 		expect(redactSecrets({ email: "a@example.com", password: "hunter2" })).toEqual({ email: "a@example.com", password: REDACTED });
 	});
 
+	it("redacts the session tokens a mobile login / refresh returns in the body, and keeps the transport marker", () => {
+		expect(redactSecrets({ message: "Tokens refreshed successfully", tokenTransport: "body", accessToken: "a.b.c", refreshToken: "d.e.f" })).toEqual({
+			message: "Tokens refreshed successfully",
+			tokenTransport: "body",
+			accessToken: REDACTED,
+			refreshToken: REDACTED,
+		});
+	});
+
+	it("redacts the 2FA enrollment key URI and QR code (both carry the TOTP secret)", () => {
+		expect(redactSecrets({ secret: "S", otpAuthUrl: "otpauth://totp/x?secret=S", qrCodeDataUrl: "data:image/png;base64,AAA" })).toEqual({
+			secret: REDACTED,
+			otpAuthUrl: REDACTED,
+			qrCodeDataUrl: REDACTED,
+		});
+	});
+
 	it("redacts at any depth, including inside arrays", () => {
 		const input: DataValue = {
 			user: { profile: { credentials: { refreshToken: "r", note: "keep" } } },

@@ -5,7 +5,7 @@ import { contrastRatio, MIN_TEXT_CONTRAST, readCustomProperties } from "@workspa
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const PALETTE_CSS = readFileSync(require.resolve("@workspace/ui/styles/palette.css"), "utf8");
+const PALETTE_CSS = readFileSync(require.resolve("@workspace/tokens/palette.css"), "utf8");
 const THEME_CSS = readFileSync(new URL("./global.css", import.meta.url), "utf8");
 
 const PALETTE = readCustomProperties(PALETTE_CSS, ":root");

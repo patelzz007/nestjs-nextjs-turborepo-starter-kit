@@ -138,7 +138,7 @@ element (`renderLink`).
 Categorical chips (HTTP method, status class, credential, device, address class …) use the
 `Badge` tone variants `green`, `blue`, `yellow`, `red`, `orange`, `teal` and `violet`
 (`<Badge variant="teal">`). Each is a `--tone-X` text colour on its `--tone-X-soft` fill, defined
-for light and dark in `packages/ui/src/styles/tokens.css`, and every pair is held to WCAG AA text
+for light and dark in `packages/tokens/src/semantic.ts` (generated into `packages/tokens/generated/web.css`), and every pair is held to WCAG AA text
 contrast by `tokens-contrast.test.ts`. Pick tones from a typed `Record<Value, BadgeVariant>` (see
 `components/audit-logs/audit-log-badges.tsx`) — never raw Tailwind palette classes — so a new
 value cannot ship uncoloured and a theme can retune every chip at once.

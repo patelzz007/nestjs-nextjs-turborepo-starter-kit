@@ -1,0 +1,43 @@
+{
+  "extends": [
+    "expo/tsconfig.base",
+    "@workspace/typescript-config/base.json"
+  ],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "allowJs": false,
+    "customConditions": [
+      "react-native",
+      "development"
+    ],
+    "types": [
+      "jest"
+    ]
+  },
+  "include": [
+    "app.config.ts",
+    "index.ts",
+    "jest.setup.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "test/**/*.tsx",
+    "uniwind-types.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".expo"
+  ]
+}

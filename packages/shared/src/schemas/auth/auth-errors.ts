@@ -22,10 +22,14 @@ export const AuthErrorCodeSchema = z.enum([
 	"ACCESS_TOKEN_MISSING",
 	"ACCESS_TOKEN_INVALID",
 	"ACCESS_TOKEN_EXPIRED",
+	/** The access token's device session (`sid`) was revoked — signed out from the device list, logout or a revocation (ADR 034). */
+	"SESSION_REVOKED",
 	// ── Refresh token ─────────────────────────────────────────────────────
 	"REFRESH_TOKEN_MISSING",
 	"REFRESH_TOKEN_INVALID",
 	"REFRESH_TOKEN_EXPIRED",
+	/** The refresh token came through the wrong channel for the client type (a request body from a browser client type). */
+	"REFRESH_TOKEN_TRANSPORT_MISMATCH",
 	"TOKEN_THEFT_DETECTED",
 	// ── Account state ─────────────────────────────────────────────────────
 	"USER_NOT_FOUND",

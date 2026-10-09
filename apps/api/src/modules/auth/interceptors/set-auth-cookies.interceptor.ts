@@ -1,70 +1,90 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
-import { map, tap } from "rxjs/operators";
+import { map } from "rxjs/operators";
 
-import { FastifyQuerySchema, JsonObjectSchema, LoginTokenFieldsSchema, type JsonValue } from "@workspace/shared";
-
-import { readFirstHeader, readQueryParam } from "../../../common/utils/http-headers";
 import {
-	CookieConfigService,
-	ACCESS_TOKEN_COOKIE_NAME,
-	REFRESH_TOKEN_COOKIE_NAME,
-	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
-	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
-	MERCHANT_ACCESS_TOKEN_COOKIE_NAME,
-	MERCHANT_REFRESH_TOKEN_COOKIE_NAME,
-	type CookieNames,
-} from "../constants/cookie.config";
+	AUTH_COOKIE_NAMES,
+	AuthTokenTransportSchema,
+	isBrowserClientType,
+	JsonObjectSchema,
+	LoginTokenFieldsSchema,
+	type AuthClientType,
+	type AuthCookieNamePair,
+	type JsonObject,
+	type JsonValue,
+} from "@workspace/shared";
+
+import { CookieConfigService } from "../constants/cookie.config";
 import { CookieService } from "../services/cookies.service";
+import { resolveRequestClientType } from "../utils/client-type";
+
+/** The token fields of a handler result — the only keys this interceptor moves. */
+const TOKEN_FIELD_NAMES: ReadonlySet<string> = new Set<string>(["accessToken", "refreshToken"]);
 
 /**
- * Interceptor that extracts `accessToken` and `refreshToken` from the response
- * body, sets them as httpOnly cookies, and strips them from the JSON response.
+ * Delivers the session tokens a login-like handler returned, by the token
+ * transport of the request's validated client type (ADR 029) — chosen on the
+ * server, never by a client-controlled flag:
+ *
+ * - **Browser client types** (`web`, `admin`, `merchant`) — cookie transport:
+ *   `accessToken` / `refreshToken` are set as that app's httpOnly cookies
+ *   (`AUTH_COOKIE_NAMES`) and stripped from the JSON body.
+ * - **`mobile`** — body transport: no cookie is set; the tokens stay in the
+ *   body and, when BOTH are present, the body is marked
+ *   `tokenTransport: "body"`. Only that marker lets the response contract's
+ *   token-bearing variant match (`LoginClientResponseSchema`,
+ *   `RefreshClientResponseSchema`), so a browser body can never carry a token
+ *   to the wire even if it slipped past this interceptor.
+ *
+ * A result without both tokens (2FA / verification pending, impersonation's
+ * access-token-only payload) gets no marker; its token fields are stripped by
+ * the response contract, so `mobile` receives no impersonation token.
  */
 @Injectable()
 export class SetAuthCookiesInterceptor implements NestInterceptor {
-	constructor(private readonly cookieConfig: CookieConfigService) {}
+	public constructor(private readonly cookieConfig: CookieConfigService) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<JsonValue> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
+		const clientType: AuthClientType = resolveRequestClientType(request);
 
-		const headerType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
-		const queryParsed = FastifyQuerySchema.safeParse(request.query);
-		const queryValue: string | undefined = queryParsed.success ? readQueryParam(queryParsed.data, "client_type") : undefined;
-		const clientType: string | undefined = headerType ?? queryValue;
-		const isAdmin: boolean = clientType === "admin";
-		const isMerchant: boolean = clientType === "merchant";
-		const accessTokenName: CookieNames = isAdmin ? ADMIN_ACCESS_TOKEN_COOKIE_NAME : isMerchant ? MERCHANT_ACCESS_TOKEN_COOKIE_NAME : ACCESS_TOKEN_COOKIE_NAME;
-		const refreshTokenName: CookieNames = isAdmin ? ADMIN_REFRESH_TOKEN_COOKIE_NAME : isMerchant ? MERCHANT_REFRESH_TOKEN_COOKIE_NAME : REFRESH_TOKEN_COOKIE_NAME;
+		if (!isBrowserClientType(clientType)) {
+			return next.handle().pipe(map((data: JsonValue): JsonValue => SetAuthCookiesInterceptor.markBodyTransport(data)));
+		}
 
-		return next.handle().pipe(
-			tap((data: JsonValue) => {
-				const body = JsonObjectSchema.safeParse(data);
-				if (!body.success) {
-					return;
-				}
-				const tokens = LoginTokenFieldsSchema.safeParse(body.data);
-				if (!tokens.success) {
-					return;
-				}
-				if (tokens.data.accessToken !== undefined) {
-					CookieService.setCookie(response, accessTokenName, tokens.data.accessToken, this.cookieConfig.accessTokenOptions);
-				}
-				if (tokens.data.refreshToken !== undefined) {
-					CookieService.setCookie(response, refreshTokenName, tokens.data.refreshToken, this.cookieConfig.refreshTokenOptions);
-				}
-			}),
-			map((data: JsonValue) => {
-				const body = JsonObjectSchema.safeParse(data);
-				if (!body.success) {
-					return data;
-				}
-				return JsonObjectSchema.parse(
-					Object.fromEntries(Object.entries(body.data).filter(([key]: readonly [string, JsonValue]): boolean => key !== "accessToken" && key !== "refreshToken")),
-				);
-			}),
-		);
+		const cookieNames: AuthCookieNamePair = AUTH_COOKIE_NAMES[clientType];
+		return next.handle().pipe(map((data: JsonValue): JsonValue => this.moveTokensToCookies(data, response, cookieNames)));
+	}
+
+	/** Body transport: keep the tokens and add the marker the token-bearing contract variants require. */
+	private static markBodyTransport(data: JsonValue): JsonValue {
+		const body = JsonObjectSchema.safeParse(data);
+		if (!body.success) {
+			return data;
+		}
+		const tokens = LoginTokenFieldsSchema.safeParse(body.data);
+		if (!tokens.success || tokens.data.accessToken === undefined || tokens.data.refreshToken === undefined) {
+			return data;
+		}
+		return { ...body.data, tokenTransport: AuthTokenTransportSchema.enum.body };
+	}
+
+	/** Cookie transport: set the app's httpOnly cookies, then strip the tokens from the body. */
+	private moveTokensToCookies(data: JsonValue, response: FastifyReply, cookieNames: AuthCookieNamePair): JsonValue {
+		const body = JsonObjectSchema.safeParse(data);
+		if (!body.success) {
+			return data;
+		}
+		const tokens = LoginTokenFieldsSchema.safeParse(body.data);
+		if (tokens.success && tokens.data.accessToken !== undefined) {
+			CookieService.setCookie(response, cookieNames.accessToken, tokens.data.accessToken, this.cookieConfig.accessTokenOptions);
+		}
+		if (tokens.success && tokens.data.refreshToken !== undefined) {
+			CookieService.setCookie(response, cookieNames.refreshToken, tokens.data.refreshToken, this.cookieConfig.refreshTokenOptions);
+		}
+		const withoutTokens: JsonObject = Object.fromEntries(Object.entries(body.data).filter(([key]: readonly [string, JsonValue]): boolean => !TOKEN_FIELD_NAMES.has(key)));
+		return withoutTokens;
 	}
 }

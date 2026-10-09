@@ -16,7 +16,7 @@ import {
 } from "@workspace/shared";
 
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
-import { isUniqueViolationOf } from "../utils/prisma-unique-violation.util";
+import { isUniqueViolationOf } from "../../../platform/persistence/unique-violation";
 import { isLocationInScope } from "../utils/merchant-location-scope.util";
 import type { MerchantLocationScope } from "../types/merchant-location-scope";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";

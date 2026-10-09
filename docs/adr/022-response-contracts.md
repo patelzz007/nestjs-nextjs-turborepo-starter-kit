@@ -66,7 +66,7 @@ not contracts at all:
    schemas keep it. Union responses use discriminated unions (a strip-mode `z.union` would let an
    earlier option swallow a later one).
 5. **The client validates in one place.** `defineQuery` / `defineMutation` take the envelope from
-   the contract leaf; `parseResponseContract` (`packages/client/src/lib/api/response-contract.ts`)
+   the contract leaf; `parseResponseContract` (`packages/api-client/src/response-contract.ts`)
    is the only response parser — used by the browser transport and the SSR pipeline — and turns a
    mismatch into a typed `ApiResponseContractError` (method, URL, real HTTP status, bounded issue
    list).

@@ -1,10 +1,9 @@
 import jsxA11y from "eslint-plugin-jsx-a11y";
-import pluginReact from "eslint-plugin-react";
-import pluginReactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
 import { config as baseConfig } from "./base.js";
 import { frontendImportBoundaryConfig } from "./import-boundaries.js";
+import { reactRuleBlocks } from "./react-rules.js";
 import { withErrorSeverity } from "./rule-severity.js";
 
 /**
@@ -16,60 +15,11 @@ import { withErrorSeverity } from "./rule-severity.js";
 export const config = [
 	...baseConfig,
 
-	// ── React strict rules ─────────────────────────────────────────────
-	{
-		...pluginReact.configs.flat.recommended,
-		// Merge the two presets' rules explicitly: spreading both objects would let
-		// jsx-runtime's `rules` (2 entries) replace recommended's (22 entries).
-		rules: withErrorSeverity({
-			...pluginReact.configs.flat.recommended.rules,
-			...pluginReact.configs.flat["jsx-runtime"].rules,
-		}),
-		languageOptions: {
-			...pluginReact.configs.flat.recommended.languageOptions,
-			globals: {
-				...globals.serviceworker,
-				...globals.browser,
-			},
-		},
-		settings: {
-			react: {
-				version: "detect",
-			},
-		},
-	},
-
-	// ── Additional React rules ──────────────────────────────────────────
-	{
-		rules: {
-			"react/jsx-no-leaked-render": ["error", { validStrategies: ["ternary"] }],
-			"react/jsx-no-bind": [
-				"error",
-				{
-					ignoreDOMComponents: false,
-					ignoreRefs: false,
-					allowFunctions: true,
-					allowArrowFunctions: false,
-				},
-			],
-			"react/jsx-boolean-value": ["error", "never"],
-			"react/jsx-key": ["error", { checkFragmentShorthand: true }],
-			"react/no-unstable-nested-components": ["error", { allowAsProps: true }],
-			"react/no-array-index-key": "error",
-			"react/react-in-jsx-scope": "off",
-			"react/prop-types": "off",
-		},
-	},
-
-	// ── React Hooks rules ───────────────────────────────────────────────
-	{
-		plugins: {
-			"react-hooks": pluginReactHooks,
-		},
-		rules: {
-			...withErrorSeverity(pluginReactHooks.configs.recommended.rules),
-		},
-	},
+	// ── React, React rules and React Hooks (shared with react-native.js) ──
+	...reactRuleBlocks({
+		...globals.serviceworker,
+		...globals.browser,
+	}),
 
 	// ── Import boundaries (frontend) ────────────────────────────────────
 	// Same browser-safety boundaries as the Next apps (see docs/technical/tooling/eslint.md).

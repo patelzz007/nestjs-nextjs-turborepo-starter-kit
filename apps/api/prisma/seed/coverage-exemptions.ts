@@ -43,4 +43,32 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		reason:
 			"Submitted KYB evidence is retained for the review history: a resubmission retires a link (is_active = false) and DELETE /files/:id refuses submitted evidence (KYB_EVIDENCE_RETAINED), so no correct database holds a soft-deleted link.",
 	},
+	{
+		kind: "null-column",
+		table: "signup_referral_codes",
+		column: "deleted_at",
+		reason:
+			"ADR 035: a signup referral code is never edited or retired early — history is the append of a successor row, and no endpoint, job or admin action soft-deletes a code — so no correct database holds a soft-deleted code row.",
+	},
+	{
+		kind: "null-column",
+		table: "signup_referral_codes",
+		column: "deleted_by",
+		reason:
+			"ADR 035: a signup referral code is never edited or retired early — history is the append of a successor row, and no endpoint, job or admin action soft-deletes a code — so no correct database holds a soft-deleted code row.",
+	},
+	{
+		kind: "null-column",
+		table: "signup_referrals",
+		column: "deleted_at",
+		reason:
+			"ADR 035: a signup referral is never withdrawn, swapped or cleared — there is no user, referrer or admin delete in this slice and the row is the permanent record of the account's origin — so no correct database holds a soft-deleted signup referral.",
+	},
+	{
+		kind: "null-column",
+		table: "signup_referrals",
+		column: "deleted_by",
+		reason:
+			"ADR 035: a signup referral is never withdrawn, swapped or cleared — there is no user, referrer or admin delete in this slice and the row is the permanent record of the account's origin — so no correct database holds a soft-deleted signup referral.",
+	},
 ];

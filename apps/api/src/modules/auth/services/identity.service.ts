@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import type { AccessTokenPayload, SignupInput, SignupResponse, SessionPermissionsResponse, UserResponse, UserPermissions } from "@workspace/shared";
+import type { Prisma } from "@prisma/client";
+import type { AccessTokenPayload, ConsumerWebSignupInput, SignupResponse, SessionPermissionsResponse, UserResponse, UserPermissions } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
@@ -14,6 +15,34 @@ import { EmailService } from "./email.service";
 import { UserProvisioningService } from "./user-provisioning.service";
 import { TokenService } from "./token.service";
 import { UserResponseMapper } from "./user-response.mapper";
+import { SignupReferralService } from "../signup-referrals/signup-referral.service";
+import { isUniqueViolationOf } from "../../../platform/persistence/unique-violation";
+
+/** Unique index on `users.email`: a violation means a concurrent signup took the email first. */
+const USERS_EMAIL_UNIQUE_INDEX = "users_email_key";
+
+/**
+ * The one signup answer whether or not the email was free (and whether or not
+ * a concurrent request took it first), so signup is not an account oracle.
+ */
+const GENERIC_SIGNUP_RESPONSE: SignupResponse = {
+	message: "If this email is available, check your inbox for verification instructions.",
+};
+
+const SIGNUP_CREATED_USER_SELECT = {
+	id: true,
+	email: true,
+	fullName: true,
+	isActive: true,
+	isSuperAdmin: true,
+	createdAt: true,
+	updatedAt: true,
+	isDeleted: true,
+	deletedAt: true,
+} satisfies Prisma.UserSelect;
+
+/** The account columns signup reads back after the insert. */
+type SignupCreatedUser = Prisma.UserGetPayload<{ select: typeof SIGNUP_CREATED_USER_SELECT }>;
 
 /**
  * Handles user identity operations: signup and profile retrieval (`/me`).
@@ -35,42 +64,52 @@ export class IdentityService {
 		private readonly emailService: EmailService,
 		private readonly userProvisioning: UserProvisioningService,
 		private readonly config: TypedConfigService,
+		private readonly signupReferrals: SignupReferralService,
 	) {}
 
 	@TrackAuthFlow({ flow: "signup" })
-	public async signup(signupDto: SignupInput, clientType?: string): Promise<SignupResponse> {
-		const { email, password, fullName } = signupDto;
+	public async signup(signupDto: ConsumerWebSignupInput, clientType?: string): Promise<SignupResponse> {
+		const { email, password, fullName, referralCode } = signupDto;
+
+		// The code is checked before the taken-email disguise: a bad code is a
+		// validation error, never a generic "check your inbox" (ADR 035).
+		const acceptedReferral = await this.signupReferrals.acceptCodeForSignup(referralCode, clientType);
 
 		const emailTaken: boolean = await this.userRepo.existsByEmail(email);
 		if (emailTaken) {
-			return {
-				message: "If this email is available, check your inbox for verification instructions.",
-			};
+			return GENERIC_SIGNUP_RESPONSE;
 		}
 
 		const hashedPassword = await this.cryptoService.hash(password);
 		const verificationToken = await this.tokenService.generateEmailVerificationToken(email);
 		const enrollmentDeadline = BigInt(Date.now() + this.config.mfa.enrollmentDeadlineMs);
 
-		const newUser = await this.prisma.user.create({
-			data: {
-				email,
-				passwordHash: hashedPassword,
-				fullName,
-				mfaEnrollmentDeadline: enrollmentDeadline,
-			},
-			select: {
-				id: true,
-				email: true,
-				fullName: true,
-				isActive: true,
-				isSuperAdmin: true,
-				createdAt: true,
-				updatedAt: true,
-				isDeleted: true,
-				deletedAt: true,
-			},
-		});
+		let newUser: SignupCreatedUser;
+		try {
+			newUser = await this.prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<SignupCreatedUser> => {
+				const created = await tx.user.create({
+					data: {
+						email,
+						passwordHash: hashedPassword,
+						fullName,
+						mfaEnrollmentDeadline: enrollmentDeadline,
+					},
+					select: SIGNUP_CREATED_USER_SELECT,
+				});
+				await this.signupReferrals.issueFirstCodeInTx(tx, created.id, Date.now());
+				if (acceptedReferral !== null) {
+					await this.signupReferrals.attachSignupReferralInTx(tx, acceptedReferral, { id: created.id, createdAt: Number(created.createdAt) });
+				}
+				return created;
+			});
+		} catch (error) {
+			// A concurrent signup with the same email committed between the check
+			// above and this insert: same generic answer, nothing created.
+			if (error instanceof Error && isUniqueViolationOf(error, USERS_EMAIL_UNIQUE_INDEX)) {
+				return GENERIC_SIGNUP_RESPONSE;
+			}
+			throw error;
+		}
 
 		identifyAuthFlowSubject(newUser.id);
 		await this.userProvisioning.assignDefaultConsumerRole(newUser.id);
@@ -89,9 +128,7 @@ export class IdentityService {
 
 		await this.emailService.sendVerificationEmail(newUser.email, verificationToken, clientType);
 
-		return {
-			message: "If this email is available, check your inbox for verification instructions.",
-		};
+		return GENERIC_SIGNUP_RESPONSE;
 	}
 
 	public async getMe(userId: string): Promise<UserResponse> {

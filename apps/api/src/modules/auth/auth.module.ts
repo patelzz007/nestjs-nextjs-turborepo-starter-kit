@@ -11,6 +11,8 @@ import { REDIS_PUBLISHER } from "../../infrastructure/redis/redis.tokens";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { AuthorizationModule } from "../authorization/authorization.module";
 import { PrismaModule } from "../../prisma/prisma.module";
+import { SessionLocationModule } from "../sessions/location/session-location.module";
+import { SessionsPersistenceModule } from "../sessions/sessions-persistence.module";
 
 import { AccessTokenModule } from "./access-token.module";
 import { CookieConfigService } from "./constants/cookie.config";
@@ -21,7 +23,7 @@ import { RefreshTokenGuard } from "./guards/refresh-token.guard";
 import { RestrictedSessionGuard } from "./guards/restricted-session.guard";
 import { MutationIntentGuard } from "./guards/mutation-intent.guard";
 import { SuperAdminGuard } from "./guards/super-admin.guard";
-import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.interceptor";
+import { ClearAuthCookiesInterceptor, ClearAuthCookiesOnSessionEndInterceptor } from "./interceptors/clear-auth-cookies.interceptor";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { AuthController } from "./auth.controller";
 import { MfaRecoveryController } from "./mfa-recovery.controller";
@@ -53,6 +55,10 @@ import { PasswordHistoryService } from "./services/password-history.service";
 import { SessionRestrictionService } from "./services/session-restriction.service";
 import { TwoFactorService } from "./services/two-factor.service";
 import { TaskScheduleService } from "./services/task-schedule.service";
+import { SignupReferralController } from "./signup-referrals/signup-referral.controller";
+import { SignupReferralRepository } from "./signup-referrals/signup-referral.repository";
+import { SignupReferralService } from "./signup-referrals/signup-referral.service";
+import { SignupReferralCheckoutService } from "./signup-referrals/signup-referral-checkout.service";
 import { TokenService } from "./services/token.service";
 import { UserResponseMapper } from "./services/user-response.mapper";
 import { MfaChallengeService } from "./services/mfa-challenge.service";
@@ -69,13 +75,15 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		JwtModule.register({ global: true }),
 		AuthorizationModule,
 		NotificationsModule,
+		SessionsPersistenceModule,
+		SessionLocationModule,
 		ThrottlerModule.forRootAsync({
 			imports: [ConfigModule],
 			inject: [TypedConfigService],
 			useFactory: authThrottlerOptionsFactory,
 		}),
 	],
-	controllers: [AuthController, TwoFactorController, MfaRecoveryController, ProfileController],
+	controllers: [AuthController, TwoFactorController, MfaRecoveryController, ProfileController, SignupReferralController],
 	providers: [
 		// ── Facade ──────────────────────────────────────────────
 		AuthService,
@@ -150,6 +158,9 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		CookieConfigService,
 		EmailService,
 		TaskScheduleService,
+		SignupReferralRepository,
+		SignupReferralService,
+		SignupReferralCheckoutService,
 		// ── Guards & interceptors ────────────────────────────────
 		AuthGuard,
 		AdminAccessGuard,
@@ -159,6 +170,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		RefreshTokenGuard,
 		SetAuthCookiesInterceptor,
 		ClearAuthCookiesInterceptor,
+		ClearAuthCookiesOnSessionEndInterceptor,
 		AuthMeCacheListener,
 	],
 	exports: [
@@ -166,6 +178,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		AuthService,
 		// ── Domain services (for sibling modules) ───────────────
 		IdentityService,
+		SignupReferralCheckoutService,
 		UserProvisioningService,
 		UserResponseMapper,
 		UserSessionCacheService,
@@ -189,6 +202,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		RefreshTokenGuard,
 		SetAuthCookiesInterceptor,
 		ClearAuthCookiesInterceptor,
+		ClearAuthCookiesOnSessionEndInterceptor,
 		CookieConfigService,
 		// Shared rate-limit store (Redis, in-memory fallback) — the POS per-API-key limiter counts here too.
 		ThrottlerStorage,

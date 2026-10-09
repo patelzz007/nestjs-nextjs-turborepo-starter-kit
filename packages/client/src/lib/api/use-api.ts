@@ -1,13 +1,18 @@
 // ============================================
 // lib/use-api.ts - Cookie-based API hook (endpoint-agnostic)
 // ============================================
+// The web binding of `@workspace/api-client`: the client is built from the
+// injected config with the COOKIE transport (`credentials: "include"`), its
+// hooks come from `@workspace/api-client/react`, and the web-only file
+// download (`download.ts`) is bound to the same request context.
 "use client";
 
+import { createApiClientContext, type ApiRequestContext } from "@workspace/api-client";
+import { buildClientRouter, createProcedureForDef, type ClientMutationProcedure, type ClientQueryProcedure, type ClientRouterTree } from "@workspace/api-client/react";
 import type { AuthClientType, DataValue, SerializableInput } from "@workspace/shared";
 import { useMemo } from "react";
 
-import { createApiRequestContext, type ApiRequestContext, type OnRefresh, type OnUnauthorized } from "./api-request";
-import { buildClientRouter, createProcedureForDef, type ClientMutationProcedure, type ClientQueryProcedure, type ClientRouterTree } from "./client-router";
+import type { OnRefresh, OnUnauthorized } from "./api-request";
 import { fetchDownload, type DownloadDef, type DownloadedFile, type DownloadOptions } from "./download";
 import type { MutationDef, ProcedureDef, QueryDef, RouterTree } from "./endpoints";
 
@@ -42,7 +47,7 @@ export {
 	type UncheckedApiRequestContext,
 } from "./api-request";
 
-export type { ClientMutationProcedure, ClientQueryProcedure, ClientRouterTree } from "./client-router";
+export type { ClientMutationProcedure, ClientQueryProcedure, ClientRouterTree } from "@workspace/api-client/react";
 
 export interface ApiClientProcedureBinding {
 	procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
@@ -73,7 +78,12 @@ export type ApiClient<R extends object = RouterTree> = ApiClientProcedureBinding
  */
 export function useApi<R extends object>(router: R, baseUrl: string, clientType: AuthClientType, onUnauthorized: OnUnauthorized, onRefresh: OnRefresh): ApiClient<R> {
 	return useMemo(() => {
-		const routerContext: ApiRequestContext = createApiRequestContext(baseUrl, clientType, onUnauthorized, onRefresh);
+		const routerContext: ApiRequestContext = createApiClientContext({
+			baseUrl,
+			clientType,
+			transport: { kind: "cookie", refreshSession: onRefresh },
+			onSessionExpired: onUnauthorized,
+		});
 
 		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
 		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;

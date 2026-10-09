@@ -3,28 +3,33 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 
-import type { JsonValue } from "@workspace/shared";
-import { readFirstHeader } from "../../../common/utils/http-headers";
-import {
-	CookieConfigService,
-	ACCESS_TOKEN_COOKIE_NAME,
-	REFRESH_TOKEN_COOKIE_NAME,
-	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
-	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
-	MERCHANT_ACCESS_TOKEN_COOKIE_NAME,
-	MERCHANT_REFRESH_TOKEN_COOKIE_NAME,
-} from "../constants/cookie.config";
+import { AUTH_COOKIE_NAMES, isBrowserClientType, RevokeSessionResponseSchema, type AuthClientType, type AuthCookieNamePair, type JsonValue } from "@workspace/shared";
+
+import { CookieConfigService } from "../constants/cookie.config";
 import { CookieService } from "../services/cookies.service";
+import { resolveRequestClientType } from "../utils/client-type";
+
+/** The cookie pair the request's client type uses, or `undefined` for `mobile` (no cookies — ADR 029). */
+function authCookieNamesOf(request: FastifyRequest): AuthCookieNamePair | undefined {
+	const clientType: AuthClientType = resolveRequestClientType(request);
+	return isBrowserClientType(clientType) ? AUTH_COOKIE_NAMES[clientType] : undefined;
+}
+
+/** Expire the access and refresh cookie of one pair. */
+function clearAuthCookies(response: FastifyReply, cookieNames: AuthCookieNamePair, cookieConfig: CookieConfigService): void {
+	CookieService.setCookie(response, cookieNames.accessToken, null, cookieConfig.accessTokenOptions);
+	CookieService.setCookie(response, cookieNames.refreshToken, null, cookieConfig.refreshTokenOptions);
+}
 
 /**
  * Interceptor that clears auth cookies after the route handler completes.
  *
- * Reads the `X-Client-Type` header to determine which cookie set to clear:
- * - `admin`: clears `adminAccessToken` / `adminRefreshToken`
- * - anything else (or unset): clears `accessToken` / `refreshToken`
- *
- * This prevents a logout in one app from clearing the other app's cookies.
- * Previously all 4 cookies were cleared regardless of client type.
+ * Clears ONLY the cookie pair of the request's client type
+ * (`AUTH_COOKIE_NAMES`: `web` → `accessToken` / `refreshToken`, `admin` →
+ * `adminAccessToken` / `adminRefreshToken`, `merchant` → `merchantAccessToken` /
+ * `merchantRefreshToken`), so a logout in one app never clears another app's
+ * session. Client type `mobile` has no cookies (ADR 029): nothing is cleared —
+ * the app deletes its tokens from its own secure store.
  *
  * @example
  * ```typescript
@@ -37,30 +42,47 @@ import { CookieService } from "../services/cookies.service";
  */
 @Injectable()
 export class ClearAuthCookiesInterceptor implements NestInterceptor {
-	constructor(private readonly cookieConfig: CookieConfigService) {}
+	public constructor(private readonly cookieConfig: CookieConfigService) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<JsonValue> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
-
-		const clientType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
-		const isAdmin: boolean = clientType === "admin";
-		const isMerchant: boolean = clientType === "merchant";
+		const cookieNames: AuthCookieNamePair | undefined = authCookieNamesOf(request);
 
 		return next.handle().pipe(
-			tap(() => {
-				if (isAdmin) {
-					// Only clear admin cookies — leave web cookies intact
-					CookieService.setCookie(response, ADMIN_ACCESS_TOKEN_COOKIE_NAME, null, this.cookieConfig.accessTokenOptions);
-					CookieService.setCookie(response, ADMIN_REFRESH_TOKEN_COOKIE_NAME, null, this.cookieConfig.refreshTokenOptions);
-				} else if (isMerchant) {
-					CookieService.setCookie(response, MERCHANT_ACCESS_TOKEN_COOKIE_NAME, null, this.cookieConfig.accessTokenOptions);
-					CookieService.setCookie(response, MERCHANT_REFRESH_TOKEN_COOKIE_NAME, null, this.cookieConfig.refreshTokenOptions);
-				} else {
-					// Only clear web cookies — leave admin cookies intact
-					CookieService.setCookie(response, ACCESS_TOKEN_COOKIE_NAME, null, this.cookieConfig.accessTokenOptions);
-					CookieService.setCookie(response, REFRESH_TOKEN_COOKIE_NAME, null, this.cookieConfig.refreshTokenOptions);
+			tap((): void => {
+				if (cookieNames === undefined) {
+					return;
 				}
+				clearAuthCookies(response, cookieNames, this.cookieConfig);
+			}),
+		);
+	}
+}
+
+/**
+ * For `POST /auth/sessions/:sessionId/revoke`: clears the request's auth
+ * cookies only when the handler revoked the caller's OWN session
+ * (`revokedCurrentSession: true`) — revoking the current device is a sign-out
+ * (ADR 034); revoking another device leaves this one signed in. Client type
+ * `mobile` has no cookies: the app drops its stored tokens itself.
+ */
+@Injectable()
+export class ClearAuthCookiesOnSessionEndInterceptor implements NestInterceptor {
+	public constructor(private readonly cookieConfig: CookieConfigService) {}
+
+	public intercept(context: ExecutionContext, next: CallHandler): Observable<JsonValue> {
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
+		const cookieNames: AuthCookieNamePair | undefined = authCookieNamesOf(request);
+
+		return next.handle().pipe(
+			tap((body: JsonValue): void => {
+				const result = RevokeSessionResponseSchema.safeParse(body);
+				if (cookieNames === undefined || !result.success || !result.data.revokedCurrentSession) {
+					return;
+				}
+				clearAuthCookies(response, cookieNames, this.cookieConfig);
 			}),
 		);
 	}

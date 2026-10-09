@@ -12,7 +12,7 @@ order: 33
 
 ## Status
 
-Accepted (2026-10-08). Not implemented yet.
+Accepted (2026-10-08). Implemented in piece 3 of the mobile plan (2026-10-08) — see [Mobile app §7](../technical/mobile/mobile-app.md#7-piece-3-the-mobile-client-type-in-the-api). The mobile app sends `X-App-Version` and shows its blocking update screen on any 426 since piece 5 (2026-10-09) — see [§9](../technical/mobile/mobile-app.md#9-piece-5-appsmobile).
 
 ## Context
 

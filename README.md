@@ -61,6 +61,7 @@
 | **Docs** | `@workspace/docs` | `3002` | Astro documentation site for `docs/` + `blog/` (see `apps/docs/README.md`) |
 | **Merchant** | `@workspace/merchant` | `3003` | Merchant portal (isolated auth cookies) |
 | **API** | `@workspace/api` | `8080` | NestJS backend — Swagger at `/v1/docs` |
+| **Mobile** | `@workspace/mobile` | `8081` (Metro) | Expo (SDK 57) iOS + Android starter shell, run in Expo Go (see `apps/mobile/README.md`) |
 
 Shared packages keep the stack consistent: **`@workspace/shared`** (Zod schemas), **`@workspace/client`** (auth + typed API), **`@workspace/ui`** (presentational components).
 
@@ -74,6 +75,7 @@ apps/
 ├── admin/      Admin panel
 ├── merchant/   Merchant portal
 ├── docs/       Documentation site
+├── mobile/     Expo app (iOS + Android, Expo Router, Uniwind)
 └── api/        NestJS + Prisma API (Rspack bundle, Fastify adapter)
 
 packages/
@@ -145,6 +147,7 @@ pnpm dev:web
 pnpm dev:admin
 pnpm dev:merchant
 pnpm dev:api
+pnpm dev:mobile   # Expo Go on your phone — see apps/mobile/README.md
 ```
 
 > **New here?** Follow [Getting started](./docs/technical/getting-started.md) — prerequisites, env files, database, demo accounts and troubleshooting.
@@ -159,7 +162,7 @@ pnpm dev:api
 | `pnpm setup:db` | Build shared package, generate Prisma client, deploy migrations, apply RLS, and seed |
 | `pnpm build:shared` | Build `@workspace/shared` manually |
 | `pnpm dev` | Start dev servers (Turbo) |
-| `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:merchant` / `pnpm dev:api` | Start individual apps |
+| `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:merchant` / `pnpm dev:api` / `pnpm dev:mobile` | Start individual apps |
 | `pnpm build` | Build all workspaces |
 | `pnpm lint` / `pnpm format` / `pnpm typecheck` / `pnpm test` | Quality gates across the monorepo |
 | `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/technical/database.md](./docs/technical/database.md) |

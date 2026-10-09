@@ -3,9 +3,11 @@ import tseslint from "typescript-eslint";
 import { describe, expect, it } from "vitest";
 
 import { config as baseConfig } from "../base.js";
+import { apiClientBoundaryConfigs, backendImportBoundaryConfig, mobileImportBoundaryConfig } from "../import-boundaries.js";
 import { nestjsConfig } from "../nestjs.js";
 import { nextJsConfig } from "../next.js";
 import { config as reactInternalConfig } from "../react-internal.js";
+import { config as reactNativeConfig, REACT_NATIVE_ACCESSIBILITY_SELECTORS, REACT_NATIVE_GLOBALS } from "../react-native.js";
 import { withErrorSeverity } from "../rule-severity.js";
 
 /** ESLint numeric severity for "warn" (0 = off, 1 = warn, 2 = error). */
@@ -16,6 +18,7 @@ const EXPORTED_CONFIGS = [
 	["next-js", nextJsConfig],
 	["react-internal", reactInternalConfig],
 	["nestjs", nestjsConfig],
+	["react-native", reactNativeConfig],
 ];
 
 /**
@@ -264,5 +267,244 @@ describe("base config: numeric-literal index access (rules/27)", () => {
 		["a named capture group", "const year = match.groups?.year;"],
 	])("allows %s", (_what, code) => {
 		expect(restrictedSyntaxMessages(code)).toEqual([]);
+	});
+});
+
+/**
+ * Lints `code` as `filePath` (relative to packages/api-client) with ONLY the
+ * api-client boundary blocks, so the import and global bans are tested in isolation.
+ */
+function apiClientBoundaryMessages(code, filePath) {
+	const linter = new Linter({ configType: "flat" });
+	return linter
+		.verify(code, [{ files: ["**/*.ts", "**/*.tsx"], languageOptions: { parser: tseslint.parser } }, ...apiClientBoundaryConfigs], filePath)
+		.map((message) => `${message.ruleId}: ${message.message}`);
+}
+
+describe("api-client: the core is portable (no React, Next, DOM-only or Node code)", () => {
+	const CORE_FILE = "src/request.ts";
+
+	it.each([
+		["next", 'import { cookies } from "next/headers";'],
+		["react-dom", 'import { createPortal } from "react-dom";'],
+		["server-only", 'import "server-only";'],
+		["react", 'import { useMemo } from "react";'],
+		["@tanstack/react-query", 'import { useQuery } from "@tanstack/react-query";'],
+		["a type-only TanStack import", 'import type { QueryKey } from "@tanstack/react-query";'],
+		["a node: built-in", 'import { readFile } from "node:fs/promises";'],
+		["a bare Node built-in", 'import { EventEmitter } from "events";'],
+		["the web client package", 'import { useAuth } from "@workspace/client/lib/auth";'],
+		["the web UI package", 'import { Button } from "@workspace/ui/components/button";'],
+	])("flags %s", (_what, code) => {
+		expect(apiClientBoundaryMessages(code, CORE_FILE)).toEqual([expect.stringMatching(/^no-restricted-imports: /)]);
+	});
+
+	it.each([
+		["window", "export const href = window.location.href;"],
+		["localStorage", 'export const token = localStorage.getItem("t");'],
+		["DOMException", "export const isAbort = (error: Error): boolean => error instanceof DOMException;"],
+		["process", "export const env = process.env.NODE_ENV;"],
+		["Buffer", 'export const bytes = Buffer.from("x");'],
+	])("flags the %s global", (_name, code) => {
+		expect(apiClientBoundaryMessages(code, CORE_FILE)).toEqual([expect.stringMatching(/^no-restricted-globals: /)]);
+	});
+
+	it("lets a test build a browser DOMException (the abort it proves the client handles)", () => {
+		expect(apiClientBoundaryMessages('export const abort = new DOMException("aborted", "AbortError");', "src/request.test.ts")).toEqual([]);
+	});
+
+	it("allows the shared contracts, zod and the fetch-family globals", () => {
+		const code = [
+			'import { apiContract } from "@workspace/shared";',
+			'import { z } from "zod";',
+			"export const send = (url: string, body: FormData, signal: AbortSignal): Promise<Response> => fetch(new URL(url).toString(), { body, signal, headers: new Headers() });",
+		].join("\n");
+		expect(apiClientBoundaryMessages(code, CORE_FILE)).toEqual([]);
+	});
+});
+
+describe("api-client: the ./react entry adds react and @tanstack/react-query only", () => {
+	const REACT_FILE = "src/react/hooks.ts";
+
+	it("allows react and @tanstack/react-query", () => {
+		expect(apiClientBoundaryMessages('import { useMemo } from "react";\nimport { useQuery } from "@tanstack/react-query";', REACT_FILE)).toEqual([]);
+	});
+
+	it.each([
+		["next", 'import { useRouter } from "next/navigation";'],
+		["react-dom", 'import { flushSync } from "react-dom";'],
+		["a Node built-in", 'import { join } from "node:path";'],
+	])("still flags %s", (_what, code) => {
+		expect(apiClientBoundaryMessages(code, REACT_FILE)).toEqual([expect.stringMatching(/^no-restricted-imports: /)]);
+	});
+
+	it("still flags DOM-only globals", () => {
+		expect(apiClientBoundaryMessages("export const title = document.title;", REACT_FILE)).toEqual([expect.stringMatching(/^no-restricted-globals: /)]);
+	});
+});
+
+describe("backend boundary: the API client is frontend-only", () => {
+	it("flags @workspace/api-client in a Node backend", () => {
+		const linter = new Linter({ configType: "flat" });
+		const messages = linter.verify(
+			'import { apiRouter } from "@workspace/api-client";',
+			[{ files: ["**/*.ts"], languageOptions: { parser: tseslint.parser } }, backendImportBoundaryConfig],
+			"service.ts",
+		);
+		expect(messages.map((message) => message.ruleId)).toEqual(["no-restricted-imports"]);
+	});
+});
+
+// ── React Native (apps/mobile) ─────────────────────────────────────────────
+
+describe("react-native config: the shared React rules with React Native globals", () => {
+	it("enables react recommended and react-hooks as errors, and the React Native rules", async () => {
+		await expect(resolvedRule(reactNativeConfig, "react/no-unescaped-entities")).resolves.toEqual([2]);
+		await expect(resolvedRule(reactNativeConfig, "react-hooks/exhaustive-deps")).resolves.toEqual([2]);
+		await expect(resolvedRule(reactNativeConfig, "react/jsx-no-bind")).resolves.toEqual([2, expect.objectContaining({ allowArrowFunctions: false })]);
+		await expect(resolvedRule(reactNativeConfig, "react-native/no-raw-text")).resolves.toEqual([2]);
+		await expect(resolvedRule(reactNativeConfig, "react-native/no-inline-styles")).resolves.toEqual([2]);
+		await expect(resolvedRule(reactNativeConfig, "react-native/no-color-literals")).resolves.toEqual([2]);
+	});
+
+	it("uses React Native globals, not the browser's (jsx-a11y is DOM-only and not loaded)", async () => {
+		const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: reactNativeConfig });
+		const resolved = await eslint.calculateConfigForFile("component.tsx");
+		expect(resolved.languageOptions.globals).toMatchObject({ __DEV__: "readonly", fetch: "readonly", FormData: "readonly" });
+		expect(resolved.languageOptions.globals).not.toHaveProperty("document");
+		expect(resolved.rules["jsx-a11y/alt-text"]).toBeUndefined();
+		expect(REACT_NATIVE_GLOBALS).not.toHaveProperty("localStorage");
+	});
+
+	it("keeps the base type-safety selectors next to the accessibility ones in ONE rule entry", async () => {
+		const entry = await resolvedRule(reactNativeConfig, "no-restricted-syntax");
+		const selectors = entry.slice(1).map((option) => option.selector);
+		expect(selectors).toEqual(expect.arrayContaining(["UnaryExpression[operator='typeof']", ...REACT_NATIVE_ACCESSIBILITY_SELECTORS.map((option) => option.selector)]));
+	});
+});
+
+/** Lints a TSX snippet with ONLY the react-native config's no-restricted-syntax and react-native/* rules (no type information). */
+function reactNativeMessages(code) {
+	const syntaxBlock = reactNativeConfig.findLast((block) => block.rules?.["no-restricted-syntax"] !== undefined && block.files?.includes("**/*.tsx"));
+	const pluginBlock = reactNativeConfig.find((block) => block.plugins?.["react-native"] !== undefined);
+	const linter = new Linter({ configType: "flat" });
+	return linter
+		.verify(
+			code,
+			[
+				{
+					files: ["**/*.tsx"],
+					languageOptions: { parser: tseslint.parser, parserOptions: { ecmaFeatures: { jsx: true } } },
+					plugins: pluginBlock.plugins,
+					rules: { "no-restricted-syntax": syntaxBlock.rules["no-restricted-syntax"], ...pluginBlock.rules },
+				},
+			],
+			"screen.tsx",
+		)
+		.map((message) => `${message.ruleId}: ${message.message}`);
+}
+
+describe("react-native config: React Native accessibility selectors", () => {
+	it.each([
+		["a Pressable without a role", '<Pressable accessibilityLabel="Save" onPress={save} />', "needs `accessibilityRole`"],
+		["a Pressable without a label", '<Pressable accessibilityRole="button" onPress={save} />', "needs `accessibilityLabel`"],
+		["a TouchableOpacity without a role", '<TouchableOpacity accessibilityLabel="Save" onPress={save} />', "needs `accessibilityRole`"],
+		["a TextInput without a label", "<TextInput value={value} onChangeText={setValue} />", "A TextInput needs `accessibilityLabel`"],
+		["an Image without a label", "<Image source={logo} />", "An Image needs `accessibilityLabel`"],
+	])("flags %s", (_what, jsx, expected) => {
+		expect(reactNativeMessages(`export const node = ${jsx};`)).toEqual([expect.stringContaining(expected)]);
+	});
+
+	it.each([
+		["a labelled button", '<Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={save} />'],
+		["a labelled TextInput", '<TextInput accessibilityLabel="Email" value={value} onChangeText={setValue} />'],
+		["a decorative Image hidden from screen readers", '<Image source={logo} accessibilityElementsHidden importantForAccessibility="no" />'],
+		["an Image with alt text", '<Image source={logo} alt="Company logo" />'],
+	])("allows %s", (_what, jsx) => {
+		expect(reactNativeMessages(`export const node = ${jsx};`)).toEqual([]);
+	});
+
+	it("still bans `as const` in TSX", () => {
+		expect(reactNativeMessages("export const sizes = ['sm'] as const;")).toEqual([expect.stringContaining("`as const` is banned")]);
+	});
+});
+
+describe("react-native config: React Native rules", () => {
+	it("flags raw text outside <Text>, inline styles and colour literals", () => {
+		expect(reactNativeMessages("export const node = <View>Hello</View>;")).toEqual([expect.stringMatching(/^react-native\/no-raw-text: /)]);
+		expect(reactNativeMessages("export const node = <View style={{ marginTop: 4 }} />;")).toEqual([expect.stringMatching(/^react-native\/no-inline-styles: /)]);
+		expect(reactNativeMessages("export const node = <View style={{ color: 'red' }} />;")).toEqual(
+			expect.arrayContaining([expect.stringMatching(/^react-native\/no-color-literals: /)]),
+		);
+	});
+
+	it("allows text inside <Text>", () => {
+		expect(reactNativeMessages("export const node = <Text>Hello</Text>;")).toEqual([]);
+	});
+});
+
+/** Lints `code` as `filePath` (relative to apps/mobile) with ONLY the mobile boundary block. */
+function mobileBoundaryMessages(code, filePath = "src/app/index.tsx") {
+	const linter = new Linter({ configType: "flat" });
+	return linter
+		.verify(code, [{ files: ["**/*.ts", "**/*.tsx", "**/*.cjs"], languageOptions: { parser: tseslint.parser } }, mobileImportBoundaryConfig], filePath)
+		.map((message) => `${message.ruleId}: ${message.message}`);
+}
+
+describe("mobile boundary: apps/mobile stays React Native-only (docs/technical/mobile/mobile-app.md §4, §9.8)", () => {
+	it.each([
+		["next", 'import Link from "next/link";'],
+		["react-dom", 'import { createPortal } from "react-dom";'],
+		["server-only", 'import "server-only";'],
+		["the web UI package", 'import { Button } from "@workspace/ui/components/button";'],
+		["the web client package", 'import { useAuth } from "@workspace/client/lib/auth";'],
+		["a node: built-in", 'import { readFile } from "node:fs/promises";'],
+		["a bare Node built-in", 'import path from "path";'],
+		["AsyncStorage", 'import AsyncStorage from "@react-native-async-storage/async-storage";'],
+		["another app", 'import { config } from "@workspace/web";'],
+		["a server-only workspace", 'import { publish } from "@workspace/messaging";'],
+		["a database client", 'import { PrismaClient } from "@prisma/client";'],
+		["a deep shared path", 'import { LoginSchema } from "@workspace/shared/schemas/auth";'],
+	])("flags %s", (_what, code) => {
+		expect(mobileBoundaryMessages(code)).toEqual([expect.stringMatching(/^no-restricted-imports: /)]);
+	});
+
+	it.each([
+		["the shared contracts", 'import { LoginSchema } from "@workspace/shared";'],
+		["the API client core", 'import { apiRouter } from "@workspace/api-client";'],
+		["the API client React entry", 'import { buildClientRouter } from "@workspace/api-client/react";'],
+		["an Expo module", 'import * as SecureStore from "expo-secure-store";'],
+		["React Native", 'import { View } from "react-native";'],
+	])("allows %s", (_what, code) => {
+		expect(mobileBoundaryMessages(code)).toEqual([]);
+	});
+
+	it.each([
+		["document", "export const title = document.title;"],
+		["localStorage", 'export const token = localStorage.getItem("t");'],
+		["Buffer", 'export const bytes = Buffer.from("x");'],
+		["__dirname", "export const here = __dirname;"],
+	])("flags the %s global", (_name, code) => {
+		expect(mobileBoundaryMessages(code)).toEqual([expect.stringMatching(/^no-restricted-globals: /)]);
+	});
+
+	it("allows the globals React Native provides", () => {
+		expect(mobileBoundaryMessages('export const load = (): Promise<Response> => fetch(new URL("https://api.example.com").toString());')).toEqual([]);
+	});
+
+	it("leaves Node tooling files (.cjs, never bundled) alone", () => {
+		expect(mobileBoundaryMessages("const path = require('node:path'); module.exports = path.resolve(__dirname);", "jest.resolver.cjs")).toEqual([]);
+	});
+});
+
+describe("backend boundary: the mobile app is an app, never a library", () => {
+	it("flags @workspace/mobile in a Node backend", () => {
+		const linter = new Linter({ configType: "flat" });
+		const messages = linter.verify(
+			'import { config } from "@workspace/mobile";',
+			[{ files: ["**/*.ts"], languageOptions: { parser: tseslint.parser } }, backendImportBoundaryConfig],
+			"service.ts",
+		);
+		expect(messages.map((message) => message.ruleId)).toEqual(["no-restricted-imports"]);
 	});
 });

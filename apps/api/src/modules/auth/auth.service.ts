@@ -19,7 +19,7 @@ import type {
 	ResetPasswordInput,
 	ResetPasswordResponse,
 	SessionPermissionsResponse,
-	SignupInput,
+	ConsumerWebSignupInput,
 	SignupResponse,
 	UserResponse,
 	VerifyEmailResponse,
@@ -31,6 +31,7 @@ import type {
 import { AdminUserService } from "./services/admin-user.service";
 import { ChangePasswordService } from "./services/change-password.service";
 import { EmailVerificationService } from "./services/email-verification.service";
+import type { SessionDeviceContext } from "../sessions/device/session-device";
 import { IdentityService } from "./services/identity.service";
 import { LoginService } from "./services/login.service";
 import { LoginVerificationService } from "./services/login-verification.service";
@@ -62,7 +63,7 @@ export class AuthService {
 
 	// ── Identity ────────────────────────────────────────────────────────
 
-	public async signup(signupDto: SignupInput, clientType?: string): Promise<SignupResponse> {
+	public async signup(signupDto: ConsumerWebSignupInput, clientType?: string): Promise<SignupResponse> {
 		return this.identityService.signup(signupDto, clientType);
 	}
 
@@ -78,15 +79,14 @@ export class AuthService {
 
 	public async login(
 		loginDto: LoginInput,
-		clientType?: string,
-		deviceInfo?: string,
-		ipAddress?: string,
+		clientType: string | undefined,
+		device: SessionDeviceContext,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
-		return this.loginService.login(loginDto, clientType, deviceInfo, ipAddress);
+		return this.loginService.login(loginDto, clientType, device);
 	}
 
-	public async verifyLogin(dto: VerifyLoginInput, ipAddress?: string): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
-		return this.loginVerificationService.verifyLoginCode(dto.verificationId, dto.code, ipAddress);
+	public async verifyLogin(dto: VerifyLoginInput, device: SessionDeviceContext): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
+		return this.loginVerificationService.verifyLoginCode(dto.verificationId, dto.code, device);
 	}
 
 	// ── Email Verification ──────────────────────────────────────────────

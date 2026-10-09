@@ -13,7 +13,7 @@ import { AuthClientTypeSchema, clientTypeHeader, MUTATION_INTENT_HEADER, MUTATIO
 
 import { API_URL_PREFIX, RUNTIME_NODE_ENV } from "../../api/config";
 import { apiRouter } from "../../api/endpoints";
-import { createTransientFailureBreaker, type TransientFailureBreaker } from "../transient-failure-breaker";
+import { createTransientFailureBreaker, type TransientFailureBreaker } from "@workspace/api-client";
 import { decodeJwtPayload } from "./jwt";
 import { collectSetCookies, extractRotatedAccessToken, hasRotatedAuthCookies } from "./proxy-refresh-cookies";
 
@@ -294,7 +294,7 @@ async function refreshTokenFingerprint(refreshToken: string): Promise<string> {
 
 /**
  * Wraps a proxy refresh attempt with the shared transient-failure breaker
- * (`../transient-failure-breaker.ts`): after a network/5xx failure the SAME
+ * (`createTransientFailureBreaker` from `@workspace/api-client`): after a network/5xx failure the SAME
  * refresh token short-circuits to `{ ok: false, status: 0, skipped: true }`
  * for `cooldownMs` (no network call), and only a burst of failures across
  * members — the API itself is down — opens the circuit for everyone. One

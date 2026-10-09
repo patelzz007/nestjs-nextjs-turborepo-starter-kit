@@ -120,7 +120,7 @@ the primitives wherever the slot is drawn — so identity never rests on colour 
   (slot 5). Charts keep to two or three series, so they stay legible in grayscale.
 
 **The admin panel is black and white**, so it uses the shared neutral ramp from
-`packages/ui/src/styles/tokens.css` (no override): slot 1 has the most contrast and slots 1↔2 —
+`packages/tokens/src/semantic.ts` (no override): slot 1 has the most contrast and slots 1↔2 —
 the pair every two-series admin chart uses — are a wide lightness step apart. Validator results
 (dataviz `validate_palette.js`):
 

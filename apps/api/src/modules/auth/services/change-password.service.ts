@@ -5,6 +5,7 @@ import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { identifyAuthFlowSubject, TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { AuthorizationInvalidationService } from "../../authorization/cache/authorization-invalidation.service";
+import { revokedByUser, sessionRevokerColumn } from "../../sessions/device/session-revoker";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
@@ -79,7 +80,8 @@ export class ChangePasswordService {
 					isDeleted: false,
 					...(currentRefreshTokenId === undefined ? {} : { id: { not: currentRefreshTokenId } }),
 				},
-				data: { isDeleted: true, deletedAt: changedAt, updatedAt: changedAt },
+				// The user changed their own password: they are the actor of the sign-out.
+				data: { isDeleted: true, deletedAt: changedAt, deletedBy: sessionRevokerColumn(revokedByUser(userId)), updatedAt: changedAt },
 			}),
 		]);
 

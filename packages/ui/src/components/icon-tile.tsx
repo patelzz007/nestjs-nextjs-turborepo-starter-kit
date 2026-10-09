@@ -6,7 +6,7 @@ import * as React from "react";
  * A small rounded tile holding an icon — the colour cue for stat cards and
  * navigation lists, so a column of items scans by meaning instead of reading
  * as a wall of grey. `brand` follows the app's primary colour; `neutral` is
- * muted; the named tones are the categorical tone palette (tokens.css), whose
+ * muted; the named tones are the categorical tone palette (packages/tokens), whose
  * text-on-fill pairs meet WCAG AA in both themes. Decorative: the label next to
  * it carries the meaning, so the tile is hidden from assistive technology.
  */

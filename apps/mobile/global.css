@@ -1,0 +1,9 @@
+/*
+ * The mobile app's one stylesheet (Uniwind, ADR 032). Imported by the root
+ * layout (src/app/_layout.tsx), never by the entry file. The colours, radii and
+ * type sizes come from the shared token source (ADR 030): edit the tokens in
+ * packages/tokens and run `pnpm tokens:generate`, never this file.
+ */
+@import "tailwindcss";
+@import "uniwind";
+@import "@workspace/tokens/mobile.css";

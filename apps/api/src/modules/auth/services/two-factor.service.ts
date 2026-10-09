@@ -30,7 +30,8 @@ import { AccessTokenStateService } from "./access-token-state.service";
 import { AccountLockoutService } from "./account-lockout.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
-import { LoginVerificationService } from "./login-verification.service";
+import type { SessionDeviceContext } from "../../sessions/device/session-device";
+import { LoginVerificationService, type PendingSignInMethod } from "./login-verification.service";
 import { MfaChallengeService, type VerifiedMfaChallengeRef } from "./mfa-challenge.service";
 import { SecretEncryptionService } from "./secret-encryption.service";
 
@@ -41,6 +42,15 @@ const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
 const TOTP_PERIOD_SECONDS = 30;
 
 const BackupCodesHashesSchema = z.array(z.string().min(1));
+
+/** The second factor that completed a login challenge. */
+type MfaLoginMethod = "totp" | "backup_code";
+
+/** The sign-in method a login completed with each second factor carries (before any new-device code). */
+const MFA_LOGIN_SIGN_IN_METHOD: Readonly<Record<MfaLoginMethod, PendingSignInMethod>> = {
+	totp: "PASSWORD_TOTP",
+	backup_code: "PASSWORD_BACKUP_CODE",
+};
 
 interface TotpVerificationSuccess {
 	readonly valid: true;
@@ -115,9 +125,13 @@ export class TwoFactorService {
 		});
 		const qrCodeDataUrl = await QRCode.toDataURL(otpAuthUrl);
 
+		// The key URI is returned as well as encoded in the QR code: a phone
+		// cannot scan its own screen, so the mobile app opens this link in the
+		// installed authenticator app instead.
 		return {
 			secret,
 			qrCodeDataUrl,
+			otpAuthUrl,
 			backupCodes,
 		};
 	}
@@ -275,7 +289,11 @@ export class TwoFactorService {
 		};
 	}
 
-	public async completeLoginWithTotp(dto: LoginTwoFactorInput): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
+	/** Completes a login with a TOTP code; a session issued now is stored for `device`, the request presenting the code. */
+	public async completeLoginWithTotp(
+		dto: LoginTwoFactorInput,
+		device: SessionDeviceContext,
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const challenge = await this.mfaChallengeService.verifyChallengeRef(dto.tempToken);
 		if (challenge.purpose !== "LOGIN") {
 			throw new UnauthorizedException("Invalid MFA challenge");
@@ -309,14 +327,16 @@ export class TwoFactorService {
 				metadata: { event: "mfa.challenge.fail", challengeId: challenge.challengeId, method: "totp" },
 			});
 		} else {
-			return this.finishMfaLogin(challenge, "totp", { twoFactorLastTotpStep: BigInt(verification.timeStep) });
+			return this.finishMfaLogin(challenge, "totp", device, { twoFactorLastTotpStep: BigInt(verification.timeStep) });
 		}
 
 		throw new UnauthorizedException("Invalid 2FA code");
 	}
 
+	/** Completes a login with a backup code; a session issued now is stored for `device`, the request presenting the code. */
 	public async completeLoginWithBackupCode(
 		dto: VerifyBackupCodeLoginInput,
+		device: SessionDeviceContext,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const challenge = await this.mfaChallengeService.verifyChallengeRef(dto.tempToken);
 		if (challenge.purpose !== "LOGIN") {
@@ -335,7 +355,7 @@ export class TwoFactorService {
 			throw new UnauthorizedException("Invalid or used backup code");
 		}
 
-		return this.finishMfaLogin(challenge, "backup_code");
+		return this.finishMfaLogin(challenge, "backup_code", device);
 	}
 
 	/**
@@ -345,7 +365,8 @@ export class TwoFactorService {
 	 */
 	private async finishMfaLogin(
 		challenge: VerifiedMfaChallengeRef,
-		method: "totp" | "backup_code",
+		method: MfaLoginMethod,
+		device: SessionDeviceContext,
 		userData: Prisma.UserUpdateInput = {},
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const assuredAt = Date.now();
@@ -368,6 +389,8 @@ export class TwoFactorService {
 			clientType: challenge.clientType,
 			deviceInfo: challenge.deviceInfo,
 			ipAddress: challenge.ipAddress,
+			signInMethod: MFA_LOGIN_SIGN_IN_METHOD[method],
+			device,
 			mfaAssured: true,
 		});
 	}

@@ -247,7 +247,9 @@ describe("command palette entries ⇔ route table", () => {
 	it("offers signed-in members the app pages but not the sign-in page", () => {
 		const urls = accessiblePaletteItems((href) => canAccessWebPath(href, MEMBER)).map((item) => item.url);
 
-		expect(urls).toEqual(expect.arrayContaining([ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.account]));
+		expect(urls).toEqual(
+			expect.arrayContaining([ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.referrals, ROUTES.rewardHub.account]),
+		);
 		expect(urls).not.toContain(ROUTES.auth.login);
 	});
 

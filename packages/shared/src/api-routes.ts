@@ -31,8 +31,15 @@ export const apiRoutes = {
 		login: "/auth/login",
 		adminLogin: "/auth/login",
 		signup: "/auth/signup",
+		signupReferralsDashboard: "/auth/signup-referrals/dashboard",
+		signupReferralsReferees: "/auth/signup-referrals/referees",
 		refresh: "/auth/refresh",
 		logout: "/auth/logout",
+		logoutAll: "/auth/logout-all",
+		/** The caller's device sessions. */
+		sessions: "/auth/sessions",
+		/** Revoke one of the caller's device sessions (ADR 034). */
+		revokeSession: "/auth/sessions/:sessionId/revoke",
 		forgotPassword: "/auth/forgot-password",
 		resetPassword: "/auth/reset-password",
 		resendVerification: "/auth/resend-verification",

@@ -1,10 +1,10 @@
 ---
 title: "Configuration & Environment Variables (Next.js apps)"
 tags: ["configuration", "environment", "nextjs", "zod", "security"]
-description: "How web, admin and merchant read environment variables: one zod-validated config per app, split into a browser-safe env.client and a server-only env.server, validated once and failing fast with value-free errors."
+description: "How web, admin and merchant read environment variables: one zod-validated config per app, split into a browser-safe env.client and a server-only env.server, validated once and failing fast with value-free errors. Also the Expo app's EXPO_PUBLIC_* and MOBILE_* variables."
 order: 7
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -13,7 +13,8 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 > [!NOTE] This page covers the three Next.js apps (`apps/web`, `apps/admin`,
 > `apps/merchant`) and `packages/client`. The API and the analytics consumer
 > use the same building blocks and error format — see
-> [API Configuration](./api.md).
+> [API Configuration](./api.md). The Expo app (`apps/mobile`) has its own
+> section: [§10](#10-the-mobile-app-appsmobile).
 
 ## Table of Contents
 
@@ -26,6 +27,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 7. [Adding a variable](#7-adding-a-variable)
 8. [Tests](#8-tests)
 9. [FAQ](#9-faq)
+10. [The mobile app (`apps/mobile`)](#10-the-mobile-app-appsmobile)
 
 ---
 
@@ -286,3 +288,37 @@ is missing from your `.env`. The error names it. Copy the new line from
 **Why not `@t3-oss/env-nextjs`?** The same pattern takes a few dozen lines on
 top of the zod schemas already shared with the API. It needs no extra
 dependency and uses one error format everywhere.
+
+---
+
+## 10. The mobile app (`apps/mobile`)
+
+The Expo app follows the same rule — **only one module reads `process.env`** — with two kinds of
+variables (docs/technical/mobile/mobile-app.md §9.3, §9.5):
+
+| Variable | Read by | Required | Purpose |
+| --- | --- | --- | --- |
+| `EXPO_PUBLIC_API_URL` | `src/lib/env.ts` (bundled) | outside development | The API's absolute URL — `https://` outside development; `http://` allowed in development to reach an API on another machine |
+| `EXPO_PUBLIC_API_PORT` | `src/lib/env.ts` | no (`8080`) | Development only: the API's port on the dev machine, joined with the host Expo Go connected to (never `localhost` — on a phone that is the phone) |
+| `EXPO_PUBLIC_IOS_STORE_URL`, `EXPO_PUBLIC_ANDROID_STORE_URL` | `src/lib/env.ts` | no | `https://` store pages the "Update required" screen opens (ADR 033) |
+| `MOBILE_APP_NAME` | `app.config.ts` (build machine) | no (`Starter`) | Display name, at most 30 characters |
+| `MOBILE_APP_SLUG` | `app.config.ts` | no (`starter`) | Expo slug |
+| `MOBILE_BUNDLE_ID` | `app.config.ts` | no (`com.example.starter`) | iOS bundle id and Android package — letters and digits in reverse-DNS segments |
+| `MOBILE_SCHEME` | `app.config.ts` | no (`starter`) | Deep-link scheme (Expo Router's default links only) |
+
+- **`EXPO_PUBLIC_*` is public.** Metro inlines each literal `process.env.EXPO_PUBLIC_…` read into
+  the bundle, so the value is readable by anyone who has the app. No secret is ever configured this
+  way ([`rules/10`](../../../rules/10-security-auth-authorization.md)). Changing one needs a new bundle.
+- **Validation.** `resolveMobileEnv()` parses the raw values with zod. An invalid environment builds
+  no API client: the root guard shows the **configuration error screen**, naming the variable and an
+  example value — never the configured value. `app.config.ts` validates `MOBILE_*` and stops
+  `expo start` / `expo export` with the variable's name.
+- **The env boundary is lint-enforced** exactly like the web: `no-restricted-properties` on
+  `process.env` everywhere in `apps/mobile` except `src/lib/env.ts` (`apps/mobile/eslint.config.mjs`).
+  `app.config.ts` runs on the build machine and is not part of the bundle.
+- **Where to set them:** `apps/mobile/.env` (copy `.env.example`; Expo loads it on start) or the
+  build environment. `turbo.json` lists them in the `build` task's `env`, so a changed value
+  re-runs `expo export` instead of replaying a cached bundle.
+- **Tests:** `src/lib/env.test.ts` (every rule above) and `src/runtime/app-runtime.test.ts`
+  (an invalid environment ends at the configuration error).
+

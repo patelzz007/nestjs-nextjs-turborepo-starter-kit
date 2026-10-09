@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 // `jsonwebtoken` is CJS; its named export `TokenExpiredError` is not statically
@@ -58,7 +60,9 @@ export class TokenService {
 	 * Generate an access token and a refresh token in parallel.
 	 *
 	 * @param user - The FlatUserResponse to embed (roles and permissions are included)
-	 * @param refreshTokenId - The UUID of the refresh token record (used as JWT `jti`)
+	 * @param refreshTokenId - The UUID of the refresh token record — the device
+	 *   session: the refresh token's `jti` and the access token's `sid` (ADR 034).
+	 *   Rotation updates the row in place, so it is stable for the session's life.
 	 */
 	public async generateTokens(
 		user: FlatUserResponse,
@@ -78,13 +82,20 @@ export class TokenService {
 			tokenVersion: user.tokenVersion,
 			sessionScope,
 			mfaAssuredAt: options.mfaAssuredAt,
+			sid: refreshTokenId,
 		};
 
+		// `jti` is the session (refresh-token row) id and stays the same across
+		// rotations, and `iat` has one-second resolution — without a per-issue
+		// nonce, two rotations within the same second would mint the SAME token,
+		// so the "rotated" token would still be the current one and reuse
+		// detection could not tell a replay from a legitimate refresh.
 		const refreshPayload = {
 			sub: user.id,
 			email: user.email,
 			jti: refreshTokenId,
 			tokenType: "refresh",
+			nonce: randomUUID(),
 		};
 
 		const [accessToken, refreshToken] = await Promise.all([
@@ -113,7 +124,7 @@ export class TokenService {
 		return this.generateTokens(user, refreshTokenId, options);
 	}
 
-	/** Generate a fresh access token (no refresh token rotation). */
+	/** Generate a fresh access token (no refresh token rotation, no device session — so no `sid`). */
 	public async generateAccessToken(user: FlatUserResponse, options: AccessTokenGenerationOptions = {}): Promise<string> {
 		const sessionScope: SessionScope = options.sessionScope ?? "full";
 		const accessPayload: AccessTokenPayload = {

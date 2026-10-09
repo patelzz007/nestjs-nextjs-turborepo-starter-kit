@@ -101,3 +101,10 @@ auditConfig:
     # which expand glob patterns written in this repository, never request input.
     # review-by: 2026-11-04
     - GHSA-vfj7-8cjw-p6xm
+    # node-forge <=1.4.0 RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm
+    # elements; no patched release exists (1.4.0 is the latest). Reached only through the Expo CLI
+    # (@expo/cli and @expo/code-signing-certificates, apps/mobile dev tooling), which signs and checks
+    # expo-updates manifests and reads iOS signing certificates with the developer's OWN keys on the
+    # developer's machine — never untrusted input, and node-forge is not part of the app bundle.
+    # review-by: 2026-11-09
+    - GHSA-86w9-cpqp-85rv

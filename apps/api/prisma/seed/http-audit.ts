@@ -8,6 +8,7 @@ import { buildIdempotencyScope, hashIdempotentRequest } from "../../src/platform
 import { IDEMPOTENCY_RETENTION_MS } from "../../src/platform/idempotency/idempotency.constants";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
+import { SEED_DEVICE_PROFILES } from "./device-sessions";
 import { ORGANIZATION_SEED_IDS } from "./organizations";
 
 // ---------------------------------------------------------------------------
@@ -98,6 +99,10 @@ const AUDIT_VIEWER_READ_REQUEST = 22;
 const PAGE_READ_REQUEST = 23;
 const MOBILE_PROFILE_READ_REQUEST = 24;
 const CRAWLER_UNKNOWN_ROUTE_REQUEST = 25;
+const MOBILE_SESSION_REFRESH_REQUEST = 26;
+/** Placeholder tokens of the seeded mobile refresh — never valid, and redacted before storage like real ones. */
+const SEED_BODY_REFRESH_TOKEN = "seed-mobile-refresh-token";
+const SEED_BODY_ACCESS_TOKEN = "seed-mobile-access-token";
 
 /**
  * The completed `Idempotency-Key` record of the demo product create, built
@@ -305,6 +310,34 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 			responseBody: toAuditPayload({ success: true, data: { message: "Tokens refreshed" } }),
 			systemOperations: [],
 			authMethod: "REFRESH_COOKIE",
+		}),
+		// The mobile app rotating its tokens: the refresh token travels in the body (redacted), the rotated pair in the response (redacted).
+		entry(MOBILE_SESSION_REFRESH_REQUEST, {
+			method: "POST",
+			endpoint: `${API_VERSION_PREFIX}${apiRoutes.auth.refresh}`,
+			path: `${API_VERSION_PREFIX}${apiRoutes.auth.refresh}`,
+			outcome: "SUCCEEDED",
+			responseStatus: 200,
+			errorCode: null,
+			actorUserId: actors.userId,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			...NO_TENANT,
+			requestParams: toAuditPayload({ params: {}, query: {} }),
+			// The app's own redaction replaces both tokens with [REDACTED], exactly as for a live request.
+			requestBody: toAuditPayload({ refreshToken: SEED_BODY_REFRESH_TOKEN }),
+			responseBody: toAuditPayload({
+				success: true,
+				data: { message: "Tokens refreshed successfully", tokenTransport: "body", accessToken: SEED_BODY_ACCESS_TOKEN, refreshToken: SEED_BODY_REFRESH_TOKEN },
+			}),
+			systemOperations: [],
+			authMethod: "REFRESH_BODY",
+			clientType: "mobile",
+			userAgent: SEED_DEVICE_PROFILES.mobileIphone.userAgent,
+			ipAddress: SEED_MOBILE_CLIENT_IP,
+			origin: null,
+			referer: null,
+			acceptLanguage: null,
 		}),
 		entry(BEARER_VALIDATION_FAILURE_REQUEST, {
 			method: "POST",

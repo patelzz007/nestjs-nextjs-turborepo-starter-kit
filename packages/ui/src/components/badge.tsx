@@ -1,7 +1,7 @@
 // Ported from ReUI (https://reui.io/r/base-vega/badge.json). Variants, sizes,
 // radius and `data-slot` match ReUI, so its docs and examples apply, with these
 // deliberate deviations:
-// - Colours and type sizes route through tokens (tokens.css): solid status
+// - Colours and type sizes route through tokens (packages/tokens): solid status
 //   fills use `text-status-foreground` instead of `text-white`, and the two
 //   smallest sizes use `--text-badge-xs` / `--text-badge-sm` instead of
 //   arbitrary rem values.
@@ -46,7 +46,7 @@ const badgeVariants = cva(
 				"invert-outline": "border-border bg-background text-invert-foreground dark:bg-input/30",
 				ghost: "text-foreground hover:bg-muted hover:text-foreground dark:hover:bg-muted/60",
 				link: "text-primary underline-offset-4 hover:underline",
-				// Tone palette (tokens.css): categorical chips — a soft fill with AA-contrast text in both themes.
+				// Tone palette (packages/tokens): categorical chips — a soft fill with AA-contrast text in both themes.
 				green: "bg-tone-green-soft text-tone-green [a]:hover:bg-tone-green-soft/80",
 				blue: "bg-tone-blue-soft text-tone-blue [a]:hover:bg-tone-blue-soft/80",
 				yellow: "bg-tone-yellow-soft text-tone-yellow [a]:hover:bg-tone-yellow-soft/80",

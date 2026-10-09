@@ -3,7 +3,7 @@ title: "Database, migrations and seed"
 description: "PostgreSQL + Prisma: every db command, the generated-only migration flow, the migration baseline marker, drift checks, seed scenarios and seed coverage."
 order: 10
 author: "Platform Team"
-lastUpdated: 1791158400000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1200&h=630&fit=crop"
 tags: ["database", "prisma", "migrations", "seed"]
 ---
@@ -186,6 +186,39 @@ How it works (`apps/api/scripts/seed-coverage.ts`, `seed-coverage-catalog.ts`, `
   characters that states a structural cause ("no correct database holds this value"). "We did not
   seed it" is never a reason. An entry that no longer matches a gap fails the check, so the list
   only shrinks.
+
+## Device sessions (`refresh_tokens`)
+
+One row per signed-in device ([mobile plan §8](./mobile/mobile-app.md#8-piece-4-device-sessions),
+[ADR 034](../adr/034-immediate-per-session-revocation.md)). The row is rotated **in place** on every
+refresh, so its `id` is the session id for the whole session: the refresh token's `jti` and the
+access token's `sid`.
+
+| Column | Written | Notes |
+| --- | --- | --- |
+| `token`, `previous_token_hash`, `rotation_version` | sign-in, every refresh | SHA-256 digests, never a token; `rotation_version` also moves on a revoke |
+| `client_type` (`SessionClientType`) | sign-in | the validated `X-Client-Type` |
+| `browser_name`, `browser_version`, `os_name`, `os_version`, `device_type` | sign-in | parsed from the User-Agent (`common/http/user-agent.ts`) |
+| `device_model` | sign-in | `X-Device-Model` for client type `mobile`, else the User-Agent's model |
+| `device_name`, `app_version` | sign-in | `X-Device-Name` / `X-App-Version`, client type `mobile` only |
+| `sign_in_method` (`SessionSignInMethod`) | sign-in | the proofs the login flow required (password, TOTP, backup code, team-invite registration — each with or without the emailed new-device code) |
+| `ipAddress`, `last_ip_address` | sign-in / every refresh | server-observed (`TRUST_PROXY`-aware) |
+| `last_active_at` | sign-in, every refresh | epoch ms |
+| `location_country`, `location_region`, `location_city` | sign-in | the `SessionLocationResolver` port (`SESSION_LOCATION_PROVIDER`, only `none` today — NULL) |
+| `is_deleted`, `deleted_at`, `deleted_by` | every revocation | `deleted_by` = a user id (the user or an admin) or a system marker from `SessionSystemRevokerSchema` |
+
+Client-reported values are display-only: bounded to their columns and validated with the shared zod
+schemas before storage (`packages/shared/src/schemas/auth/device-session.ts`); an invalid value is
+stored as NULL rather than refusing the sign-in. The device-detail columns are nullable because
+sessions created before the `device_sessions` migration have no details; they stay NULL until those
+sessions expire (`last_active_at` was backfilled with the migration time).
+
+**Seed coverage.** `prisma/seed/device-sessions.ts` builds every seeded session through the API's own
+User-Agent parser and header validation (`describeSessionDevice`): every client type (web, merchant,
+admin, and the mobile app on iOS and Android), every sign-in method, locations with and without a
+region or city, and — on the MFA demo user (`account-security.ts`) — a revoked session for every
+`deleted_by` path (the user, an admin, and each system marker), so `db:check-seed-coverage` sees a
+value in every column.
 
 ## Related
 

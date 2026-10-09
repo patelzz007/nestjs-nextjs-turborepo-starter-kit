@@ -81,7 +81,17 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 	url_analytics: ["url_tags", "clicks", "logs", "email_logs", "impersonation_audit_logs", "api_key_usage_logs"],
 	file_derived: ["file_variants"],
 	product_catalog: ["product", "sample_category"],
-	reward_user: ["reward_claims", "reward_redemptions", "reward_sales", "reward_referrals", "reward_otp_challenges", "reward_legal_acceptances", "reward_notifications"],
+	reward_user: [
+		"reward_claims",
+		"reward_redemptions",
+		"reward_sales",
+		"reward_referrals",
+		"signup_referral_codes",
+		"signup_referrals",
+		"reward_otp_challenges",
+		"reward_legal_acceptances",
+		"reward_notifications",
+	],
 	authorization_simulation: ["authorization_policy_simulations"],
 };
 

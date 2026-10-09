@@ -34,7 +34,7 @@ export interface RequestTenant {
 }
 
 /** How a USER principal authenticated (machine callers are `API_KEY`, recorded from {@link RequestApiKeyPrincipal}). */
-export type RequestPrincipalAuthMethod = Extract<AuditAuthMethod, "BEARER_TOKEN" | "SESSION_COOKIE" | "REFRESH_COOKIE">;
+export type RequestPrincipalAuthMethod = Extract<AuditAuthMethod, "BEARER_TOKEN" | "SESSION_COOKIE" | "REFRESH_COOKIE" | "REFRESH_BODY">;
 
 /** Who the request acts as, once authentication has run. */
 export interface RequestPrincipal {

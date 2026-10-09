@@ -1,14 +1,14 @@
 import { HttpStatus } from "@nestjs/common";
 import { ApiErrorCodeSchema, ApiErrorCodes, type ApiErrorCode, type ApiErrorDetails, type StandardApiErrorCode } from "@workspace/shared";
 
-import { STANDARD_ERROR_MESSAGES } from "./error-codes";
+import { HTTP_STATUS_UPGRADE_REQUIRED, STANDARD_ERROR_MESSAGES, type AppErrorHttpStatus } from "./error-codes";
 
 /** Everything needed to construct an {@link AppError} directly. */
 export interface AppErrorOptions {
 	/** Stable, machine-matchable code (`SCREAMING_SNAKE_CASE`). */
 	readonly code: ApiErrorCode;
 	/** HTTP status the global exception filter responds with. */
-	readonly httpStatus: HttpStatus;
+	readonly httpStatus: AppErrorHttpStatus;
 	/** Client-safe, human-readable message. Never include secrets, SQL, or internal paths. */
 	readonly message: string;
 	/** Client-safe structured metadata (validation issues, retry hints, …). */
@@ -38,7 +38,7 @@ export interface AppErrorOverrides {
  */
 export class AppError extends Error {
 	public readonly code: ApiErrorCode;
-	public readonly httpStatus: HttpStatus;
+	public readonly httpStatus: AppErrorHttpStatus;
 	public readonly details: ApiErrorDetails | undefined;
 
 	public constructor(options: AppErrorOptions) {
@@ -53,7 +53,7 @@ export class AppError extends Error {
 }
 
 /** Builds the constructor options for a subclass from its defaults plus caller overrides. */
-function withDefaults(defaultCode: StandardApiErrorCode, httpStatus: HttpStatus, overrides: AppErrorOverrides): AppErrorOptions {
+function withDefaults(defaultCode: StandardApiErrorCode, httpStatus: AppErrorHttpStatus, overrides: AppErrorOverrides): AppErrorOptions {
 	const code: ApiErrorCode = overrides.code ?? defaultCode;
 	return {
 		code,
@@ -117,5 +117,16 @@ export class ExternalServiceError extends AppError {
 export class DependencyUnavailableError extends AppError {
 	public constructor(overrides: AppErrorOverrides = {}) {
 		super(withDefaults(ApiErrorCodes.SERVICE_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE, overrides));
+	}
+}
+
+/**
+ * 426 — a mobile app older than the minimum supported version (ADR 033): its
+ * `X-App-Version` is missing, malformed or below `MOBILE_MIN_SUPPORTED_VERSION`.
+ * The app shows a blocking "please update" screen; it must not refresh or retry.
+ */
+export class AppVersionUnsupportedError extends AppError {
+	public constructor(overrides: AppErrorOverrides = {}) {
+		super(withDefaults(ApiErrorCodes.APP_VERSION_UNSUPPORTED, HTTP_STATUS_UPGRADE_REQUIRED, overrides));
 	}
 }

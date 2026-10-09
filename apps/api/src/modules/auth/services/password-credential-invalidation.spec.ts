@@ -82,6 +82,8 @@ describe("password credential changes invalidate cached state on every instance 
 
 		expect(effects).toEqual(["commit:user.update,passwordHistory.create,refreshToken.updateMany", `invalidate:${USER_ID}`]);
 		expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: USER_ID, isDeleted: false, id: { not: "current-rt" } } }));
+		// The user changed their own password: they are the recorded revoker.
+		expect(prisma.refreshToken.updateMany.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ data: { isDeleted: true, deletedBy: USER_ID } });
 		expect(invalidation.invalidateUsers).toHaveBeenCalledWith([USER_ID], { accessTokenState: true, trigger: "password_changed" });
 	});
 
@@ -91,6 +93,8 @@ describe("password credential changes invalidate cached state on every instance 
 		await passwordReset.resetPassword({ token: "raw-token", password: "New@12345" });
 
 		expect(effects).toEqual(["commit:user.update,passwordResetToken.update,passwordHistory.create,refreshToken.updateMany", `invalidate:${USER_ID}`]);
+		// No signed-in actor: the system sign-out marker.
+		expect(prisma.refreshToken.updateMany.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ data: { isDeleted: true, deletedBy: "system:logout-all" } });
 		expect(invalidation.invalidateUsers).toHaveBeenCalledWith([USER_ID], { accessTokenState: true, trigger: "password_reset" });
 	});
 

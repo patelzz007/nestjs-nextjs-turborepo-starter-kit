@@ -4,6 +4,7 @@ import { CapabilitySlugSchema } from "../domain/rbac/capabilities";
 import { defineListQuery, listFilter, ListSearchSchema } from "../api/list-query";
 
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";
+import { AdminSignupReferralStatusFilterSchema, AdminSignupReferrerSummarySchema, SignupReferralStatusSchema } from "../domain/signup-referrals/signup-referrals";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { UserFullNameSchema } from "./profile";
 import { StrictMessageResponseSchema } from "../api/message";
@@ -127,6 +128,12 @@ export const AdminUserDetailSchema = UserResponseSchema.extend({
 	directPermissionIds: z.array(z.string()).meta({
 		description: "Permission IDs granted directly to this user (not via roles)",
 	}),
+	signupReferrer: AdminSignupReferrerSummarySchema.nullable().meta({
+		description: "Who referred this user at signup, if anyone",
+	}),
+	signupReferralStatus: SignupReferralStatusSchema.nullable().meta({
+		description: "Whether the user's signup referral has been redeemed at checkout",
+	}),
 });
 
 export type AdminUserDetail = z.output<typeof AdminUserDetailSchema>;
@@ -142,6 +149,8 @@ export const adminUserListQuery = defineListQuery({
 	filter: {
 		status: listFilter.enumeration(AdminUserStatusSchema, { eq: true }),
 		role: listFilter.string({ eq: true }),
+		referrerId: listFilter.uuid({ eq: true }),
+		referralStatus: listFilter.enumeration(AdminSignupReferralStatusFilterSchema, { eq: true }),
 	},
 	params: { search: ListSearchSchema },
 });

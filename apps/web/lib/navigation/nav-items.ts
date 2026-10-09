@@ -1,4 +1,4 @@
-import { BarChart3, Gift, LogIn, Ticket, UserCog, type LucideIcon } from "lucide-react";
+import { BarChart3, Gift, LogIn, Ticket, UserCog, Users, type LucideIcon } from "lucide-react";
 
 import { ROUTES } from "@/lib/routes";
 
@@ -39,6 +39,15 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 		description: "Your claimed offers",
 		icon: Ticket,
 		keywords: ["claims", "wallet", "qr", "redeem", "my rewards"],
+	},
+	{
+		id: "referrals",
+		title: "Referrals",
+		url: ROUTES.rewardHub.referrals,
+		section: "Rewards",
+		description: "Your signup code and friends who joined",
+		icon: Users,
+		keywords: ["referral", "invite", "friends", "code", "signup"],
 	},
 	{
 		id: "account",

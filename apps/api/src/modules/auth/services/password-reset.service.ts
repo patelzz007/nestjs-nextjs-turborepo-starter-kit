@@ -12,6 +12,7 @@ import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { PasswordHistoryService } from "./password-history.service";
 import { AuthorizationInvalidationService } from "../../authorization/cache/authorization-invalidation.service";
+import { revokedBySystem, sessionRevokerColumn } from "../../sessions/device/session-revoker";
 
 /** Milliseconds per hour — converts the shared reset-link lifetime (hours) to an expiry. */
 const MS_PER_HOUR = 3_600_000;
@@ -129,7 +130,8 @@ export class PasswordResetService {
 			// Revoke all existing refresh tokens (force re-login)
 			this.prisma.refreshToken.updateMany({
 				where: { userId: matchedToken.userId, isDeleted: false },
-				data: { isDeleted: true, deletedAt: resetAt, updatedAt: resetAt },
+				// No signed-in actor (the reset link proved the email): a system sign-out of every device.
+				data: { isDeleted: true, deletedAt: resetAt, deletedBy: sessionRevokerColumn(revokedBySystem("system:logout-all")), updatedAt: resetAt },
 			}),
 		]);
 

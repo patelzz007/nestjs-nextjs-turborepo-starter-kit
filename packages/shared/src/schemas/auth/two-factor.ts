@@ -48,10 +48,25 @@ export const StartTwoFactorSetupSchema = z.object({}).strict();
 
 export type StartTwoFactorSetupInput = z.output<typeof StartTwoFactorSetupSchema>;
 
+/** Scheme of the key URI an authenticator app imports (`otpauth://totp/…`). */
+export const OTP_AUTH_URL_PREFIX = "otpauth://";
+
+/** A key URI: the `otpauth://` scheme (a pattern, not `startsWith`, so the JSON Schema stays a plain `pattern`). */
+const OTP_AUTH_URL_PATTERN = /^otpauth:\/\//;
+
+/** Upper bound on the key URI (issuer + account label + secret stay far below it). */
+const OTP_AUTH_URL_MAX_LENGTH = 2048;
+
 /** Response from `POST /auth/2fa/setup` (and `POST /auth/2fa/rotate`). */
 export const TwoFactorSetupResponseSchema = z.object({
 	secret: z.string().min(1),
 	qrCodeDataUrl: z.string().min(1),
+	/**
+	 * The `otpauth://` key URI the QR code encodes. A phone cannot scan its own
+	 * screen, so the mobile app hands this link to an installed authenticator
+	 * app instead; the web apps keep showing the QR code.
+	 */
+	otpAuthUrl: z.string().max(OTP_AUTH_URL_MAX_LENGTH).regex(OTP_AUTH_URL_PATTERN, `must start with ${OTP_AUTH_URL_PREFIX}`),
 	backupCodes: z.array(BackupCodeSchema).length(BACKUP_CODE_COUNT),
 });
 

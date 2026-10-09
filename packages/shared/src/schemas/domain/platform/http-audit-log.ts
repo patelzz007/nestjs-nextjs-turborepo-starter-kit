@@ -20,7 +20,7 @@ export const AuditOutcomeSchema = z.enum(["SUCCEEDED", "FAILED"]);
 export type AuditOutcome = z.output<typeof AuditOutcomeSchema>;
 
 /** How the caller authenticated. Mirrors the Prisma enum `AuditAuthMethod`; `null` on a record = anonymous. */
-export const AuditAuthMethodSchema = z.enum(["BEARER_TOKEN", "SESSION_COOKIE", "REFRESH_COOKIE", "API_KEY"]);
+export const AuditAuthMethodSchema = z.enum(["BEARER_TOKEN", "SESSION_COOKIE", "REFRESH_COOKIE", "REFRESH_BODY", "API_KEY"]);
 export type AuditAuthMethod = z.output<typeof AuditAuthMethodSchema>;
 
 /** The standard HTTP methods the viewer filters by (a record may carry any method the client sent). */

@@ -40,6 +40,8 @@ export interface WebRewardHubRoutes {
 	readonly activity: string;
 	/** Personal settings — email verification, password, 2FA/MFA, sessions. */
 	readonly account: string;
+	/** Signup referral code and referee list. */
+	readonly referrals: string;
 }
 
 export interface WebRoutes {
@@ -80,6 +82,7 @@ export const ROUTES: WebRoutes = {
 		wallet: APP_LINKS.web.wallet,
 		activity: `${REWARD_HUB_PREFIX}/activity`,
 		account: APP_LINKS.web.account,
+		referrals: `${REWARD_HUB_PREFIX}/referrals`,
 	},
 };
 

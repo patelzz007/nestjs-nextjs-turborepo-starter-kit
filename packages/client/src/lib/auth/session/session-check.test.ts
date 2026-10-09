@@ -12,7 +12,7 @@ import {
 	type ApiResponse,
 	type RefreshResult,
 } from "../../api/api-request";
-import { ApiResponseContractError } from "../../api/response-contract";
+import { ApiResponseContractError } from "@workspace/api-client";
 import {
 	checkSession,
 	classifySessionFailure,

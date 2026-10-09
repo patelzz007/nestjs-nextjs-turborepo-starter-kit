@@ -3,7 +3,7 @@ title: "ADR 031: jest-expo for the Mobile App's Tests"
 tags: ["adr", "testing", "mobile"]
 description: "The Expo app is tested with jest-expo and @testing-library/react-native, an explicit exception to the repo-wide Vitest standard; platform-neutral logic stays in shared packages under Vitest."
 author: "Platform Team"
-lastUpdated: 1791417600000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
 order: 31
 ---
@@ -12,7 +12,14 @@ order: 31
 
 ## Status
 
-Accepted (2026-10-08). Not implemented yet.
+Accepted (2026-10-08). Implemented (2026-10-09) in piece 5 of the mobile plan: `apps/mobile` runs
+jest-expo `~57.0.5` (the `~57.0.2` floor avoids 57.0.0's install failure) on Jest 29 with
+`@react-native/jest-preset` 0.86.3 and `@testing-library/react-native` 14 (async `render` /
+`fireEvent` / `act`). Screens render inside Expo Router's test router with the real app runtime;
+only `fetch`, the native modules and the theme engine are faked
+([`rules/11`](../../rules/11-testing-vitest.md#the-one-exception-to-vitest-appsmobile-uses-jest-expo)).
+`jest.resolver.cjs` mirrors Metro's two resolution rules (singleton React / React Native / TanStack
+Query, `development` export of `@workspace/*`), so tests load exactly what the bundle loads.
 
 ## Context
 

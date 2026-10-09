@@ -67,6 +67,19 @@ describe("toAuditPayload", () => {
 		});
 	});
 
+	it("redacts the session tokens of a mobile (body transport) login response and keeps the rest", () => {
+		expect(toAuditPayload({ user: { id: "user-1" }, tokenTransport: "body", accessToken: "a.b.c", refreshToken: "d.e.f" })).toEqual({
+			user: { id: "user-1" },
+			tokenTransport: "body",
+			accessToken: REDACTED,
+			refreshToken: REDACTED,
+		});
+	});
+
+	it("redacts the refresh token a mobile client sends in a refresh / logout request body", () => {
+		expect(toAuditPayload({ refreshToken: "d.e.f" })).toEqual({ refreshToken: REDACTED });
+	});
+
 	it("masks a non-email value in an email field completely", () => {
 		expect(toAuditPayload({ email: "not-an-email" })).toEqual({ email: PII_MASK });
 	});

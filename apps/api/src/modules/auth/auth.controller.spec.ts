@@ -262,7 +262,9 @@ describe("AuthController", () => {
 
 			expect(response.statusCode).toBe(HTTP_CREATED);
 			expect(response.json()).toEqual(pending);
-			expect(authService.login).toHaveBeenCalledWith(body, "admin", USER_AGENT, "198.51.100.23");
+			const [loginBody, clientType, device] = authService.login.mock.lastCall ?? [];
+			expect([loginBody, clientType]).toEqual([body, "admin"]);
+			expect(device).toMatchObject({ device: { clientType: "admin", deviceName: null, appVersion: null }, ipAddress: "198.51.100.23", userAgent: USER_AGENT });
 			expect(authCookies.calls).toBe(1);
 		});
 

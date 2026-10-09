@@ -22,6 +22,7 @@ import { ApiKeysModule } from "./modules/api-keys/api-keys.module";
 import { ApiKeyAuthGuard } from "./modules/api-keys/guards/api-key-auth.guard";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
+import { MobileAppVersionGuard } from "./modules/auth/guards/mobile-app-version.guard";
 import { RestrictedSessionGuard } from "./modules/auth/guards/restricted-session.guard";
 import { GeoModule } from "./modules/geo/geo.module";
 import { HealthModule } from "./modules/health/health.module";
@@ -130,8 +131,13 @@ if (observeConfig !== null) {
 			provide: APP_INTERCEPTOR,
 			useClass: PerformanceInterceptor,
 		},
-		// ApiKeyAuthGuard first (optional API key on @AllowApiKeyAuth routes),
-		// then AuthGuard (JWT), then AuthorizationGuard.
+		// MobileAppVersionGuard first (an outdated mobile app gets 426 before any
+		// other answer — ADR 033), then ApiKeyAuthGuard (optional API key on
+		// @AllowApiKeyAuth routes), then AuthGuard (JWT), then AuthorizationGuard.
+		{
+			provide: APP_GUARD,
+			useClass: MobileAppVersionGuard,
+		},
 		{
 			provide: APP_GUARD,
 			useClass: ApiKeyAuthGuard,

@@ -23,7 +23,7 @@ import type {
 	ValidateResetTokenInput,
 	ValidateResetTokenResponse,
 	SessionPermissionsResponse,
-	SignupInput,
+	ConsumerWebSignupInput,
 	SignupResponse,
 	UserResponse,
 	VerifyEmailInput,
@@ -63,10 +63,11 @@ import { SkipMutationIntent } from "./decorators/skip-mutation-intent.decorator"
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
-import { extractClientInfo } from "../../common/utils/client-info";
+import { readSessionDeviceContext } from "../sessions/device/session-device";
 import { Authorize, self } from "../authorization/decorators/authorize.decorator";
 
 import { AuthService } from "./auth.service";
+import { TOKEN_DELIVERY_DESCRIPTION } from "./constants/token-delivery.constants";
 import type { AccessTokenPayload } from "./services/token.service";
 
 /**
@@ -95,7 +96,7 @@ export class AuthController {
 		description: "Set to 'merchant' so the verification link targets the merchant app. Defaults to the web app.",
 	})
 	public async signup(
-		@ZodBody(apiContract.auth.signup.input) body: SignupInput,
+		@ZodBody(apiContract.auth.signup.input) body: ConsumerWebSignupInput,
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@ZodQuery(AuthClientTypeQuerySchema) query: AuthClientTypeQuery,
 	): Promise<SignupResponse> {
@@ -112,11 +113,12 @@ export class AuthController {
 	@ApiHeader({
 		name: "x-client-type",
 		required: false,
-		description: "Set to 'admin' when logging in from the admin panel. Only users with isSuperAdmin === true or the ADMIN_DASHBOARD permission may use this.",
+		description:
+			"Set to 'admin' when logging in from the admin panel (only users with isSuperAdmin === true or the ADMIN_DASHBOARD permission may use this), 'merchant' from the merchant portal, or 'mobile' from the mobile app (tokens in the body, no cookies; requires X-App-Version).",
 	})
 	@ZodResponse(LoginClientResponseSchema, {
 		status: HttpStatus.CREATED,
-		description: "Login result — tokens are set as httpOnly cookies and never appear in the body",
+		description: "Login result" + TOKEN_DELIVERY_DESCRIPTION,
 	})
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid credentials / Account locked" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "Admin access required (when X-Client-Type: admin and user is not superadmin)" })
@@ -129,8 +131,7 @@ export class AuthController {
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		// Accept client type from header (browser apps) or query param (Swagger UI)
 		const clientType: string | undefined = headerClientType ?? query.client_type;
-		const { deviceInfo, ipAddress } = extractClientInfo(req);
-		return this.authService.login(body, clientType, deviceInfo, ipAddress);
+		return this.authService.login(body, clientType, readSessionDeviceContext(req));
 	}
 
 	// ── Email Verification ───────────────────────────────────────────────
@@ -208,14 +209,13 @@ export class AuthController {
 	@SkipMutationIntent()
 	@Post("/verify-login")
 	@ApiOperation({ summary: "Complete login with an email verification code" })
-	@ZodResponse(LoginClientResponseSchema, { description: "Login result after verification — tokens are set as httpOnly cookies" })
+	@ZodResponse(LoginClientResponseSchema, { description: "Login result after verification" + TOKEN_DELIVERY_DESCRIPTION })
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	public async verifyLogin(
 		@ZodBody(apiContract.auth.verifyLogin.input) body: VerifyLoginInput,
 		@Req() req: FastifyRequest,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
-		const { ipAddress } = extractClientInfo(req);
-		return this.authService.verifyLogin(body, ipAddress);
+		return this.authService.verifyLogin(body, readSessionDeviceContext(req));
 	}
 
 	@SkipAuthThrottle()

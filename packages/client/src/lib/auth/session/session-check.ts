@@ -18,7 +18,7 @@ import { assertNever, type Envelope, type SessionPermissionsResponse, type UserR
 import { z } from "zod";
 
 import { isDeadSessionError, type ApiFailure, type ApiResponse, type RefreshResult } from "../../api/api-request";
-import { ApiResponseContractError, type ApiResponseContractIssue } from "../../api/response-contract";
+import { ApiResponseContractError, type ApiResponseContractIssue } from "@workspace/api-client";
 
 // ── Policy ──────────────────────────────────────────────────────────────────
 

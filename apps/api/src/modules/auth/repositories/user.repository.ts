@@ -89,12 +89,17 @@ function buildAdminUserStatusWhere(status: AdminUserStatus, now: bigint): Prisma
 export function buildAdminUserListWhere(query: AdminUserListQuery, now: bigint): Prisma.UserWhereInput {
 	const status: AdminUserStatus | undefined = query.filter?.status?.eq;
 	const role: string | undefined = query.filter?.role?.eq;
+	const referrerId: string | undefined = query.filter?.referrerId?.eq;
+	const referralStatus: "not_redeemed" | "redeemed" | undefined = query.filter?.referralStatus?.eq;
 	const conditions: Prisma.UserWhereInput[] = [
 		...(query.search !== undefined
 			? [{ OR: [{ fullName: { contains: query.search, mode: "insensitive" } }, { email: { contains: query.search, mode: "insensitive" } }] } satisfies Prisma.UserWhereInput]
 			: []),
 		...(status !== undefined ? [buildAdminUserStatusWhere(status, now)] : []),
 		...(role !== undefined ? [{ userRoles: { some: { isDeleted: false, role: { name: role, isDeleted: false } } } } satisfies Prisma.UserWhereInput] : []),
+		...(referrerId !== undefined ? [{ signupReferralsAsReferee: { isDeleted: false, referrerUserId: referrerId } } satisfies Prisma.UserWhereInput] : []),
+		...(referralStatus === "not_redeemed" ? [{ signupReferralsAsReferee: { isDeleted: false, successfulAt: null } } satisfies Prisma.UserWhereInput] : []),
+		...(referralStatus === "redeemed" ? [{ signupReferralsAsReferee: { isDeleted: false, successfulAt: { not: null } } } satisfies Prisma.UserWhereInput] : []),
 	];
 	return { AND: conditions };
 }

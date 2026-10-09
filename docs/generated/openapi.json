@@ -316,7 +316,7 @@
         "type": "http"
       },
       "clientType": {
-        "description": "Which login session cookie authenticates the request: `admin` (admin panel — Swagger's default), `web` or `merchant`. Log in through that app (or POST /auth/login here) and the browser sends its httpOnly cookie automatically. A Bearer token, when set, takes priority.",
+        "description": "Which login session cookie authenticates the request: `admin` (admin panel — Swagger's default), `web` or `merchant`. Log in through that app (or POST /auth/login here) and the browser sends its httpOnly cookie automatically. A Bearer token, when set, takes priority. `mobile` (the mobile app) uses no cookie: it authenticates by Bearer token only, receives its tokens in response bodies, and must send `X-App-Version` (426 APP_VERSION_UNSUPPORTED below MOBILE_MIN_SUPPORTED_VERSION).",
         "in": "header",
         "name": "X-Client-Type",
         "type": "apiKey"
@@ -1976,6 +1976,7 @@
                         "BEARER_TOKEN",
                         "SESSION_COOKIE",
                         "REFRESH_COOKIE",
+                        "REFRESH_BODY",
                         "API_KEY"
                       ],
                       "type": "string"
@@ -1986,6 +1987,7 @@
                           "BEARER_TOKEN",
                           "SESSION_COOKIE",
                           "REFRESH_COOKIE",
+                          "REFRESH_BODY",
                           "API_KEY"
                         ],
                         "type": "string"
@@ -2384,6 +2386,7 @@
                               "BEARER_TOKEN",
                               "SESSION_COOKIE",
                               "REFRESH_COOKIE",
+                              "REFRESH_BODY",
                               "API_KEY"
                             ],
                             "nullable": true,
@@ -2842,6 +2845,7 @@
                             "BEARER_TOKEN",
                             "SESSION_COOKIE",
                             "REFRESH_COOKIE",
+                            "REFRESH_BODY",
                             "API_KEY"
                           ],
                           "nullable": true,
@@ -11492,6 +11496,11 @@
                           "minItems": 10,
                           "type": "array"
                         },
+                        "otpAuthUrl": {
+                          "maxLength": 2048,
+                          "pattern": "^otpauth:\\/\\/",
+                          "type": "string"
+                        },
                         "qrCodeDataUrl": {
                           "minLength": 1,
                           "type": "string"
@@ -11504,6 +11513,7 @@
                       "required": [
                         "secret",
                         "qrCodeDataUrl",
+                        "otpAuthUrl",
                         "backupCodes"
                       ],
                       "type": "object"
@@ -11547,7 +11557,7 @@
                 }
               }
             },
-            "description": "New TOTP secret, QR code and backup codes"
+            "description": "New TOTP secret, QR code, otpauth:// key URI and backup codes"
           },
           "4XX": {
             "content": {
@@ -11619,6 +11629,11 @@
                           "minItems": 10,
                           "type": "array"
                         },
+                        "otpAuthUrl": {
+                          "maxLength": 2048,
+                          "pattern": "^otpauth:\\/\\/",
+                          "type": "string"
+                        },
                         "qrCodeDataUrl": {
                           "minLength": 1,
                           "type": "string"
@@ -11631,6 +11646,7 @@
                       "required": [
                         "secret",
                         "qrCodeDataUrl",
+                        "otpAuthUrl",
                         "backupCodes"
                       ],
                       "type": "object"
@@ -11674,7 +11690,7 @@
                 }
               }
             },
-            "description": "TOTP secret, QR code and backup codes (pending until confirmed via /2fa/enable)"
+            "description": "TOTP secret, QR code, otpauth:// key URI and backup codes (pending until confirmed via /2fa/enable)"
           },
           "4XX": {
             "content": {
@@ -13255,7 +13271,8 @@
               "enum": [
                 "web",
                 "admin",
-                "merchant"
+                "merchant",
+                "mobile"
               ],
               "type": "string"
             }
@@ -13630,13 +13647,14 @@
               "enum": [
                 "web",
                 "admin",
-                "merchant"
+                "merchant",
+                "mobile"
               ],
               "type": "string"
             }
           },
           {
-            "description": "Set to 'admin' when logging in from the admin panel. Only users with isSuperAdmin === true or the ADMIN_DASHBOARD permission may use this.",
+            "description": "Set to 'admin' when logging in from the admin panel (only users with isSuperAdmin === true or the ADMIN_DASHBOARD permission may use this), 'merchant' from the merchant portal, or 'mobile' from the mobile app (tokens in the body, no cookies; requires X-App-Version).",
             "in": "header",
             "name": "x-client-type",
             "required": false,
@@ -13684,6 +13702,161 @@
                   "properties": {
                     "data": {
                       "anyOf": [
+                        {
+                          "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "enrollmentReason": {
+                              "enum": [
+                                "email_verification",
+                                "mfa_enrollment"
+                              ],
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "organizationSlug": {
+                              "maxLength": 64,
+                              "minLength": 2,
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "requiresEnrollment": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "requiresEnrollment",
+                            "enrollmentReason",
+                            "message",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
                         {
                           "properties": {
                             "enrollmentReason": {
@@ -13865,6 +14038,137 @@
                         },
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "user",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "user": {
                               "properties": {
                                 "createdAt": {
@@ -14013,7 +14317,7 @@
                 }
               }
             },
-            "description": "Login result — tokens are set as httpOnly cookies and never appear in the body"
+            "description": "Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body"
           },
           "401": {
             "content": {
@@ -14109,6 +14413,161 @@
                       "anyOf": [
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "enrollmentReason": {
+                              "enum": [
+                                "email_verification",
+                                "mfa_enrollment"
+                              ],
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "organizationSlug": {
+                              "maxLength": 64,
+                              "minLength": 2,
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "requiresEnrollment": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "requiresEnrollment",
+                            "enrollmentReason",
+                            "message",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "enrollmentReason": {
                               "enum": [
                                 "email_verification",
@@ -14288,6 +14747,137 @@
                         },
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "user",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "user": {
                               "properties": {
                                 "createdAt": {
@@ -14436,7 +15026,7 @@
                 }
               }
             },
-            "description": "Login result — tokens are set as httpOnly cookies and never appear in the body"
+            "description": "Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body"
           },
           "4XX": {
             "content": {
@@ -14512,6 +15102,161 @@
                       "anyOf": [
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "enrollmentReason": {
+                              "enum": [
+                                "email_verification",
+                                "mfa_enrollment"
+                              ],
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "organizationSlug": {
+                              "maxLength": 64,
+                              "minLength": 2,
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "requiresEnrollment": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "requiresEnrollment",
+                            "enrollmentReason",
+                            "message",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "enrollmentReason": {
                               "enum": [
                                 "email_verification",
@@ -14691,6 +15436,137 @@
                         },
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "user",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "user": {
                               "properties": {
                                 "createdAt": {
@@ -14839,7 +15715,7 @@
                 }
               }
             },
-            "description": "Login result — tokens are set as httpOnly cookies and never appear in the body"
+            "description": "Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body"
           },
           "4XX": {
             "content": {
@@ -14878,6 +15754,27 @@
       "post": {
         "operationId": "SessionsController_logout",
         "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "refreshToken": {
+                    "description": "Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie)",
+                    "example": "eyJhbGciOiJIUzI1NiIs...",
+                    "maxLength": 4096,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "201": {
             "content": {
@@ -14963,7 +15860,7 @@
             "clientType": []
           }
         ],
-        "summary": "Logout from the current device (idempotent — always clears the auth cookies)",
+        "summary": "Logout from the current device (idempotent — always clears a browser client's auth cookies; client type mobile presents its refresh token as { refreshToken })",
         "tags": [
           "Sessions"
         ]
@@ -14973,6 +15870,27 @@
       "post": {
         "operationId": "SessionsController_logoutAll",
         "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "refreshToken": {
+                    "description": "Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie)",
+                    "example": "eyJhbGciOiJIUzI1NiIs...",
+                    "maxLength": 4096,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "201": {
             "content": {
@@ -15058,7 +15976,7 @@
             "clientType": []
           }
         ],
-        "summary": "Logout from all devices",
+        "summary": "Logout from all devices, on every client type (refresh token: the httpOnly cookie for browser client types, { refreshToken } for client type mobile)",
         "tags": [
           "Sessions"
         ]
@@ -16053,6 +16971,27 @@
       "post": {
         "operationId": "SessionsController_refreshToken",
         "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "refreshToken": {
+                    "description": "Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie)",
+                    "example": "eyJhbGciOiJIUzI1NiIs...",
+                    "maxLength": 4096,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -16060,15 +16999,52 @@
                 "schema": {
                   "properties": {
                     "data": {
-                      "properties": {
-                        "message": {
-                          "type": "string"
+                      "anyOf": [
+                        {
+                          "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "message",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "message"
+                          ],
+                          "type": "object"
                         }
-                      },
-                      "required": [
-                        "message"
-                      ],
-                      "type": "object"
+                      ]
                     },
                     "meta": {
                       "properties": {
@@ -16109,7 +17085,7 @@
                 }
               }
             },
-            "description": "Tokens refreshed — set as httpOnly cookies, never in the body"
+            "description": "Tokens rotated — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body"
           },
           "401": {
             "content": {
@@ -16119,7 +17095,7 @@
                 }
               }
             },
-            "description": "Invalid or expired refresh token"
+            "description": "Missing, invalid, expired, reused or wrong-source refresh token"
           },
           "4XX": {
             "content": {
@@ -16148,7 +17124,7 @@
             "clientType": []
           }
         ],
-        "summary": "Refresh access token using refresh token cookie",
+        "summary": "Rotate the session tokens (refresh token: the httpOnly cookie for browser client types, the { refreshToken } body for client type mobile)",
         "tags": [
           "Sessions"
         ]
@@ -16168,7 +17144,8 @@
               "enum": [
                 "web",
                 "admin",
-                "merchant"
+                "merchant",
+                "mobile"
               ],
               "type": "string"
             }
@@ -16463,12 +17440,55 @@
                     "data": {
                       "items": {
                         "properties": {
+                          "appVersion": {
+                            "description": "Mobile app version",
+                            "example": "1.4.0",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "browserName": {
+                            "example": "Chrome",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "browserVersion": {
+                            "example": "141.0.0.0",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "clientType": {
+                            "enum": [
+                              "web",
+                              "admin",
+                              "merchant",
+                              "mobile"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "createdAt": {
                             "maximum": 9007199254740991,
                             "minimum": 0,
                             "type": "integer"
                           },
-                          "deviceInfo": {
+                          "deviceModel": {
+                            "example": "iPhone 15 Pro",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "deviceName": {
+                            "example": "Alex’s iPhone",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "deviceType": {
+                            "enum": [
+                              "DESKTOP",
+                              "MOBILE",
+                              "TABLET",
+                              "BOT",
+                              "UNKNOWN"
+                            ],
                             "nullable": true,
                             "type": "string"
                           },
@@ -16478,19 +17498,111 @@
                             "type": "integer"
                           },
                           "id": {
+                            "description": "The session id — the `sid` of its access tokens",
                             "type": "string"
                           },
                           "ipAddress": {
+                            "description": "IP at sign-in",
+                            "example": "203.0.113.24",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "isCurrent": {
+                            "description": "This request's own session (from the access token's `sid`)",
+                            "type": "boolean"
+                          },
+                          "label": {
+                            "description": "Display name built by the server from the device details",
+                            "example": "Chrome 141 on macOS",
+                            "type": "string"
+                          },
+                          "lastActiveAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "lastIpAddress": {
+                            "description": "IP of the most recent refresh",
+                            "example": "198.51.100.7",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "location": {
+                            "nullable": true,
+                            "properties": {
+                              "city": {
+                                "example": "Petaling Jaya",
+                                "maxLength": 128,
+                                "minLength": 1,
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "country": {
+                                "description": "ISO 3166-1 alpha-2 country",
+                                "example": "MY",
+                                "pattern": "^[A-Z]{2}$",
+                                "type": "string"
+                              },
+                              "region": {
+                                "example": "Selangor",
+                                "maxLength": 64,
+                                "minLength": 1,
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "country",
+                              "region",
+                              "city"
+                            ],
+                            "type": "object"
+                          },
+                          "osName": {
+                            "example": "macOS",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "osVersion": {
+                            "example": "16.1",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "signInMethod": {
+                            "enum": [
+                              "PASSWORD",
+                              "PASSWORD_NEW_DEVICE_CODE",
+                              "PASSWORD_TOTP",
+                              "PASSWORD_TOTP_NEW_DEVICE_CODE",
+                              "PASSWORD_BACKUP_CODE",
+                              "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE",
+                              "TEAM_INVITE_REGISTRATION",
+                              "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE"
+                            ],
                             "nullable": true,
                             "type": "string"
                           }
                         },
                         "required": [
                           "id",
-                          "deviceInfo",
+                          "label",
+                          "isCurrent",
+                          "clientType",
+                          "browserName",
+                          "browserVersion",
+                          "osName",
+                          "osVersion",
+                          "deviceType",
+                          "deviceModel",
+                          "deviceName",
+                          "appVersion",
+                          "signInMethod",
                           "ipAddress",
-                          "expiresAt",
-                          "createdAt"
+                          "lastIpAddress",
+                          "location",
+                          "createdAt",
+                          "lastActiveAt",
+                          "expiresAt"
                         ],
                         "type": "object"
                       },
@@ -16535,7 +17647,7 @@
                 }
               }
             },
-            "description": "List of active sessions"
+            "description": "The caller's active device sessions"
           },
           "4XX": {
             "content": {
@@ -16566,7 +17678,140 @@
             "clientType": []
           }
         ],
-        "summary": "Get all active sessions for the current user",
+        "summary": "List the caller's signed-in devices (every client type): the current one first, then by last activity",
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/auth/sessions/{sessionId}/revoke": {
+      "post": {
+        "description": "Revokes one of the caller's device sessions: its refresh token stops working at once and its access tokens on their next request. Revoking the current session signs this device out (a browser's auth cookies are cleared; the mobile app drops its tokens). Idempotent. 404 SESSION_NOT_FOUND for any id that is not one of the caller's sessions; 403 SESSION_REVOKE_DURING_IMPERSONATION during impersonation.",
+        "operationId": "SessionsController_revokeSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        },
+                        "revokedCurrentSession": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "message",
+                        "revokedCurrentSession"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The session is revoked (or already was)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "SESSION_REVOKE_DURING_IMPERSONATION — an impersonation session cannot sign out the user's devices"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "SESSION_NOT_FOUND — no session with that id belongs to the caller"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Sign out one of the caller's devices",
         "tags": [
           "Sessions"
         ]
@@ -16586,7 +17831,8 @@
               "enum": [
                 "web",
                 "admin",
-                "merchant"
+                "merchant",
+                "mobile"
               ],
               "type": "string"
             }
@@ -17128,6 +18374,161 @@
                       "anyOf": [
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "enrollmentReason": {
+                              "enum": [
+                                "email_verification",
+                                "mfa_enrollment"
+                              ],
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "organizationSlug": {
+                              "maxLength": 64,
+                              "minLength": 2,
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "requiresEnrollment": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "requiresEnrollment",
+                            "enrollmentReason",
+                            "message",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "enrollmentReason": {
                               "enum": [
                                 "email_verification",
@@ -17307,6 +18708,137 @@
                         },
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "user",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "user": {
                               "properties": {
                                 "createdAt": {
@@ -17455,7 +18987,7 @@
                 }
               }
             },
-            "description": "Login result after verification — tokens are set as httpOnly cookies"
+            "description": "Login result after verification — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body"
           },
           "4XX": {
             "content": {
@@ -31209,6 +32741,161 @@
                       "anyOf": [
                         {
                           "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "enrollmentReason": {
+                              "enum": [
+                                "email_verification",
+                                "mfa_enrollment"
+                              ],
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "organizationSlug": {
+                              "maxLength": 64,
+                              "minLength": 2,
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "requiresEnrollment": {
+                              "enum": [
+                                true
+                              ],
+                              "type": "boolean"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "requiresEnrollment",
+                            "enrollmentReason",
+                            "message",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
                             "enrollmentReason": {
                               "enum": [
                                 "email_verification",
@@ -31383,6 +33070,137 @@
                             "requiresVerification",
                             "verificationId",
                             "message"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
+                            "accessToken": {
+                              "description": "Access token — send as `Authorization: Bearer`",
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "refreshToken": {
+                              "description": "Refresh token — present once to `POST /auth/refresh`; rotated on every use",
+                              "maxLength": 4096,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tokenTransport": {
+                              "description": "The tokens travel in this body (client type `mobile`)",
+                              "enum": [
+                                "body"
+                              ],
+                              "type": "string"
+                            },
+                            "user": {
+                              "properties": {
+                                "createdAt": {
+                                  "description": "Epoch milliseconds when the record was created",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "deletedAt": {
+                                  "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "email": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                },
+                                "hasAdminAccess": {
+                                  "description": "Whether the user can access the admin panel",
+                                  "type": "boolean"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "isDeleted": {
+                                  "description": "Soft-delete flag — false means the record is active",
+                                  "example": false,
+                                  "type": "boolean"
+                                },
+                                "isEmailVerified": {
+                                  "type": "boolean"
+                                },
+                                "isSuperAdmin": {
+                                  "type": "boolean"
+                                },
+                                "roles": {
+                                  "items": {
+                                    "properties": {
+                                      "description": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "description"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "tokenVersion": {
+                                  "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
+                                  "type": "number"
+                                },
+                                "twoFactorEnabled": {
+                                  "default": false,
+                                  "description": "Whether TOTP two-factor authentication is enabled",
+                                  "type": "boolean"
+                                },
+                                "updatedAt": {
+                                  "description": "Epoch milliseconds when the record was last updated",
+                                  "example": 1786300000000,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "createdAt",
+                                "updatedAt",
+                                "isDeleted",
+                                "deletedAt",
+                                "id",
+                                "email",
+                                "fullName",
+                                "isActive",
+                                "isSuperAdmin",
+                                "isEmailVerified",
+                                "twoFactorEnabled",
+                                "hasAdminAccess",
+                                "tokenVersion",
+                                "roles"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "user",
+                            "tokenTransport",
+                            "accessToken",
+                            "refreshToken"
                           ],
                           "type": "object"
                         },

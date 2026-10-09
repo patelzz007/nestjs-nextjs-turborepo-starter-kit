@@ -12,7 +12,8 @@
 		"./next-js": "./next.js",
 		"./react-internal": "./react-internal.js",
 		"./nestjs": "./nestjs.js",
-		"./import-boundaries": "./import-boundaries.js"
+		"./import-boundaries": "./import-boundaries.js",
+		"./react-native": "./react-native.js"
 	},
 	"devDependencies": {
 		"@darraghor/eslint-plugin-nestjs-typed": "^7.5.8",
@@ -27,6 +28,7 @@
 		"eslint-plugin-prettier": "^5.5.6",
 		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^7.1.1",
+		"eslint-plugin-react-native": "^5.0.0",
 		"eslint-plugin-turbo": "^2.11.7",
 		"globals": "^17.13.0",
 		"typescript": "6.0.3",

@@ -6,7 +6,7 @@ import type { PanelSectionColor } from "@workspace/ui/lib/sidebar/menu-view";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import * as React from "react";
 
-/** Section dots use the tone palette (tokens.css), so they theme and meet non-text contrast in both modes. */
+/** Section dots use the tone palette (packages/tokens), so they theme and meet non-text contrast in both modes. */
 const SECTION_COLOR_MAP: Record<PanelSectionColor, string> = {
 	blue: "bg-tone-blue",
 	green: "bg-tone-green",

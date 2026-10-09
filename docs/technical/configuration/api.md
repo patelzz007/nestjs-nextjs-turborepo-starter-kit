@@ -4,7 +4,7 @@ tags: ["configuration", "environment", "nestjs", "zod", "security"]
 description: "How apps/api reads its environment: one zod schema parsed once before Nest bootstraps, value-free fail-fast errors, no insecure secret defaults, and TypedConfigService as the only way code reads configuration."
 order: 7
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -149,6 +149,8 @@ missing). Summary, grouped as in the schema:
 | Frontend URLs | `APP_URL`, `ADMIN_APP_URL`, `MERCHANT_APP_URL` | all **required** (no localhost fallbacks) |
 | Database | `DATABASE_URL`, `DB_POOL_MAX`, `DB_IDLE_TIMEOUT_MS` | postgres URL **required**; `10`, `30000` |
 | Auth | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EMAIL_VERIFICATION_SECRET`, `TWO_FACTOR_PENDING_SECRET`, `JWT_ACCESS_EXPIRY`, `JWT_REFRESH_EXPIRY`, `TWO_FACTOR_ISSUER`, `LOGIN_VERIFICATION_MODE`, `BCRYPT_SALT_ROUNDS` | four **required secrets** (≥ 32 chars, not the placeholder, pairwise different); `15m`, `7d`; issuer = `APP_NAME`; `new-device` (`new-device` \| `always` \| `disabled`, `disabled` rejected in production); 10–15, default `12` |
+| Mobile app (`config.mobile`) | `MOBILE_MIN_SUPPORTED_VERSION` | semantic version (`AppVersionSchema` from `@workspace/shared`, surrounding whitespace ignored), default `1.0.0` (the first release); see "Minimum mobile app version" below |
+| Device sessions (`config.sessions`) | `SESSION_LOCATION_PROVIDER`, `SESSION_LOCATION_TIMEOUT_MS` | the `SessionLocationResolver` adapter — only `none` today (no lookup, the location stays hidden; a GeoIP provider is a [pending decision](../../adr/README.md#pending-decisions)); lookup budget 1–5000 ms, default `300` — a slower or failing lookup is logged and the session is stored without a location, never blocking sign-in |
 | MFA / encryption | `MFA_ENCRYPTION_KEYS`, `MFA_ENROLLMENT_DEADLINE_MS`, `MFA_RECOVERY_DELAY_MS`, `MFA_STEP_UP_TTL_MS`, `TENANT_ENCRYPTION_MASTER_KEY`, `TENANT_JOB_HMAC_SECRET` | MFA key ring and master key **required secrets** (base64 of exactly 32 bytes); 30 d / 24 h / 5 min; job secret optional (fails closed when unset) |
 | Email | `EMAIL_MODE`, `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_REPLY_TO`, `EMAIL_TEST_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET`, `WEBHOOK_RATE_LIMIT_PER_MINUTE` | `send`; key required with `send`; from address **required**; 1–10 (3), ≥ 100 ms (10000), 0; webhook 120/min |
 | Rate limits / caches | `THROTTLE_*`, `SECURITY_COUNTER_MAX_KEYS`, `AUTHORIZATION_CACHE_*`, `USER_SESSION_CACHE_*`, `ACCESS_TOKEN_STATE_CACHE_*` | positive integers with the historical defaults; backends `memory`/`redis`/`auto` |
@@ -177,6 +179,20 @@ Cloudflare `CF-IPCountry` / `CF-IPCity`, Vercel `X-Vercel-IP-*`) are read only
 when the TCP peer is a trusted proxy (`common/http/edge-location.ts`), so list
 your CDN / load balancer there to get country, region, city and time zone on
 every audit row ([ADR 025](../../adr/025-global-http-audit-log.md)).
+
+Minimum mobile app version (`MOBILE_MIN_SUPPORTED_VERSION`,
+[ADR 033](../../adr/033-mobile-forced-upgrade.md)): the oldest mobile app build
+the API still serves. The global `MobileAppVersionGuard` (registered first)
+checks every request whose client type is `mobile` — public routes such as
+login included — and answers a missing, malformed or lower `X-App-Version`
+with `426 APP_VERSION_UNSUPPORTED` (`details.minimumVersion`, `details.reason`
+= `missing` / `malformed` / `below_minimum`) in the standard error envelope.
+Comparison is semver precedence: a prerelease ranks below its release
+(`1.2.0-rc.1` < `1.2.0`, so a beta of the minimum is refused while a beta of
+a newer version is served) and build metadata (`+417`) is ignored. Browser
+client types (and health probes, which send no `X-Client-Type`) are never
+checked. Raise it only after the new build is live in both stores, and only
+after weighing the users who cannot update (old OS versions).
 
 Toggles: the historical `0`/`1` switches (`SECURITY_HARDENING_ENABLED`, `SWAGGER_ENABLED`, `OBSERVE_ENABLED`) accept
 `0`, `1`, `true`, `false`; the `true`/`false` flags (`MEMORY_MONITORING`,

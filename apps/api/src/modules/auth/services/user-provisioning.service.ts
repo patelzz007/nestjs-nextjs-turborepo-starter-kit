@@ -4,6 +4,7 @@ import type { Prisma, User } from "@prisma/client";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { DEFAULT_CONSUMER_ROLE_NAME } from "../../authorization/constants/authorization.constants";
 import { RoleService } from "../../authorization/services/role.service";
+import { SignupReferralRepository } from "../signup-referrals/signup-referral.repository";
 
 /** Platform role granted to every consumer-facing account (signup, merchant staff, cashiers). */
 export { DEFAULT_CONSUMER_ROLE_NAME } from "../../authorization/constants/authorization.constants";
@@ -26,6 +27,7 @@ export class UserProvisioningService {
 	public constructor(
 		private readonly prisma: PrismaService,
 		private readonly roleService: RoleService,
+		private readonly signupReferralRepository: SignupReferralRepository,
 	) {}
 
 	/**
@@ -43,15 +45,20 @@ export class UserProvisioningService {
 	}
 
 	public async createConsumerAccount(input: CreateConsumerAccountInput): Promise<User> {
-		const user = await this.prisma.user.create({
-			data: {
-				email: input.email,
-				passwordHash: input.passwordHash,
-				fullName: input.fullName,
-				emailVerifiedAt: input.emailVerifiedAt ?? null,
-			},
+		// The account and its first signup referral code commit together (ADR 035):
+		// a rolled-back insert leaves neither behind.
+		const user = await this.prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<User> => {
+			const created = await tx.user.create({
+				data: {
+					email: input.email,
+					passwordHash: input.passwordHash,
+					fullName: input.fullName,
+					emailVerifiedAt: input.emailVerifiedAt ?? null,
+				},
+			});
+			await this.signupReferralRepository.insertCodeInTx(tx, created.id, Date.now());
+			return created;
 		});
-
 		await this.assignDefaultConsumerRole(user.id);
 		return user;
 	}
@@ -79,6 +86,7 @@ export class UserProvisioningService {
 			},
 		});
 		await this.roleService.assignToUserAtProvisioningInTx(user.id, role.id, user.id, tx);
+		await this.signupReferralRepository.insertCodeInTx(tx, user.id, Date.now());
 		return user;
 	}
 }

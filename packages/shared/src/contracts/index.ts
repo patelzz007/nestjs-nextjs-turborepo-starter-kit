@@ -26,13 +26,15 @@ import {
 	LoginSchema,
 	ResendVerificationSchema,
 	ResetPasswordSchema,
-	SignupSchema,
+	ConsumerWebSignupSchema,
 	VerifyEmailSchema,
 	ForgotPasswordResponseSchema,
 	ImpersonateResponseSchema,
 	LoginClientResponseSchema,
+	LogoutAllResponseSchema,
 	LogoutResponseSchema,
-	RefreshResponseMessageSchema,
+	RefreshClientResponseSchema,
+	RefreshTokenInputSchema,
 	ResendVerificationResponseSchema,
 	ResetPasswordResponseSchema,
 	SignupResponseSchema,
@@ -40,6 +42,7 @@ import {
 	VerifyEmailResponseSchema,
 } from "../schemas/auth/auth";
 import { ChangePasswordSchema, ChangePasswordResponseSchema } from "../schemas/auth/change-password";
+import { RevokeSessionInputSchema, RevokeSessionResponseSchema, SessionListResponseSchema } from "../schemas/auth/device-session";
 import { OwnProfileSchema, UpdateOwnProfileSchema } from "../schemas/auth/profile";
 import {
 	AdminMfaRecoveryListQuerySchema,
@@ -62,6 +65,7 @@ import {
 	VerifyBackupCodeResponseSchema,
 } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema, AdminUserDetailSchema, SessionPermissionsResponseSchema, UserResponseSchema } from "../schemas/auth/user";
+import { SignupReferralDashboardSchema, SignupReferralRefereeItemSchema, SignupReferralRefereeListQuerySchema } from "../schemas/domain/signup-referrals/signup-referrals";
 import { UuidParamSchema } from "../schemas/domain/platform/param-schemas";
 import { HttpAuditLogDetailSchema, HttpAuditLogIdParamSchema, HttpAuditLogListQuerySchema, HttpAuditLogSummarySchema } from "../schemas/domain/platform/http-audit-log";
 import { EmailLogListQuerySchema, EmailLogEntrySchema, EmailPreviewListResponseSchema, EmailPreviewSchema, EmailSendResultSchema } from "../schemas/email/email";
@@ -387,15 +391,55 @@ export const apiContract = {
 		login: defineContract({ access: "public", method: "POST", path: apiRoutes.auth.login, input: LoginSchema, response: singleResponse(LoginClientResponseSchema) }),
 		/** Admin login — sends `X-Client-Type: admin` for cookie isolation. */
 		adminLogin: defineContract({ access: "public", method: "POST", path: apiRoutes.auth.adminLogin, input: LoginSchema, response: singleResponse(LoginClientResponseSchema) }),
-		signup: defineContract({ access: "public", method: "POST", path: apiRoutes.auth.signup, input: SignupSchema, response: singleResponse(SignupResponseSchema) }),
+		signup: defineContract({ access: "public", method: "POST", path: apiRoutes.auth.signup, input: ConsumerWebSignupSchema, response: singleResponse(SignupResponseSchema) }),
+		signupReferralsDashboard: defineContract({
+			method: "GET",
+			path: apiRoutes.auth.signupReferralsDashboard,
+			input: z.undefined(),
+			response: singleResponse(SignupReferralDashboardSchema),
+		}),
+		signupReferralsReferees: defineContract({
+			method: "GET",
+			path: apiRoutes.auth.signupReferralsReferees,
+			input: SignupReferralRefereeListQuerySchema,
+			response: paginatedResponse(SignupReferralRefereeItemSchema),
+		}),
+		/**
+		 * Rotate the session tokens. Browser client types send no body (the
+		 * refresh token is the httpOnly cookie) and get `{ message }`; client type
+		 * `mobile` sends `{ refreshToken }` and gets the rotated tokens in the body
+		 * (`RefreshMobileResponseSchema`, ADR 029).
+		 */
 		refresh: defineContract({
 			access: "public",
 			method: "POST",
 			path: apiRoutes.auth.refresh,
-			input: EmptyInputSchema,
-			response: singleResponse(RefreshResponseMessageSchema),
+			input: RefreshTokenInputSchema,
+			response: singleResponse(RefreshClientResponseSchema),
 		}),
-		logout: defineContract({ access: "public", method: "POST", path: apiRoutes.auth.logout, input: EmptyInputSchema, response: singleResponse(LogoutResponseSchema) }),
+		/** Sign out this device session — the refresh token comes from the cookie (browsers) or `{ refreshToken }` (`mobile`). Idempotent. */
+		logout: defineContract({ access: "public", method: "POST", path: apiRoutes.auth.logout, input: RefreshTokenInputSchema, response: singleResponse(LogoutResponseSchema) }),
+		/** Sign out every device session of the user, on every client type — the refresh token comes from the cookie (browsers) or `{ refreshToken }` (`mobile`). */
+		logoutAll: defineContract({
+			access: "public",
+			method: "POST",
+			path: apiRoutes.auth.logoutAll,
+			input: RefreshTokenInputSchema,
+			response: singleResponse(LogoutAllResponseSchema),
+		}),
+		/** The caller's device sessions on every client type — the current one first (`isCurrent`), then by last activity. */
+		sessions: defineContract({ method: "GET", path: apiRoutes.auth.sessions, input: z.undefined(), response: singleResponse(SessionListResponseSchema) }),
+		/**
+		 * Revoke one of the caller's device sessions (404 for any other id). Its
+		 * access tokens stop working on the next request (ADR 034); revoking the
+		 * caller's own session signs it out. Idempotent.
+		 */
+		revokeSession: defineContract({
+			method: "POST",
+			path: apiRoutes.auth.revokeSession,
+			input: RevokeSessionInputSchema,
+			response: singleResponse(RevokeSessionResponseSchema),
+		}),
 		forgotPassword: defineContract({
 			access: "public",
 			method: "POST",

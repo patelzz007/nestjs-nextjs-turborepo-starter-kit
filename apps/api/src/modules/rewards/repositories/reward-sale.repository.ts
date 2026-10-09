@@ -7,7 +7,7 @@ import { DEFAULT_SALE_CURRENCY, MerchantBusinessCategorySchema, type MerchantBus
 import { PrismaService } from "../../../prisma/prisma.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { minorUnitsToNumber } from "../utils/minor-units.util";
-import { isUniqueViolationOf } from "../utils/prisma-unique-violation.util";
+import { isUniqueViolationOf } from "../../../platform/persistence/unique-violation";
 import { appendRewardAuditLog } from "./reward-audit-log.repository";
 
 /** System operation reading merchant names/categories for sales breakdowns (customers can't read `organizations` under RLS). */

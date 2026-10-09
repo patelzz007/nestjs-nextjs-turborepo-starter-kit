@@ -90,7 +90,7 @@ apps/docs/
     ├── components/ layouts/   # .astro markup — header, sidebar + mobile drawer (shared NavTree), TOC, cards, pager, search
     ├── pages/                 # routes: /, /docs, /docs/[...slug], /blog, /images/…, /search-index.json, /feed.xml
     ├── scripts/               # progressive enhancement: theme, drawer, search, TOC scroll spy, copy, mermaid
-    └── styles/global.css      # every colour, size and weight is a token (light + dark); colours map onto packages/ui palette.css
+    └── styles/global.css      # every colour, size and weight is a token (light + dark); colours map onto the packages/tokens palette
 ```
 
 - **Search** — `/search-index.json` is generated at build time (one entry per guide and per
@@ -98,7 +98,7 @@ apps/docs/
   validates it with zod, and ranks matches in the browser (`src/lib/search.ts`). If the corpus
   ever grows past a few MB, swap in a chunked index such as Pagefind.
 - **Look** — layout modelled on docs.apidog.com; colours are the product's shared palette:
-  `global.css` imports `@workspace/ui/styles/palette.css` (the `--palette-*` primitives) and maps
+  `global.css` imports `@workspace/tokens/palette.css` (the `--palette-*` primitives) and maps
   its own names onto them, so the docs and the apps cannot drift. Light: white reading surfaces,
   the cool "ink" grey text scale (`neutral-900` / `700` / `600`), `neutral-200` borders and the one
   slate accent (`brand-800`; `brand-300` in dark mode) for links, the active state, bars and fills,

@@ -28,7 +28,13 @@ const APP_PAGE_ROUTES = listAppPageRoutes();
  * fall behind the module.
  */
 const AUTH_PAGE_PATHS: readonly string[] = [ROUTES.auth.login, ROUTES.auth.signup, ROUTES.auth.forgotPassword, ROUTES.auth.resetPassword, ROUTES.auth.verifyEmail];
-const REWARD_HUB_PAGE_PATHS: readonly string[] = [ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.account];
+const REWARD_HUB_PAGE_PATHS: readonly string[] = [
+	ROUTES.rewardHub.browse,
+	ROUTES.rewardHub.wallet,
+	ROUTES.rewardHub.activity,
+	ROUTES.rewardHub.referrals,
+	ROUTES.rewardHub.account,
+];
 const STATIC_PAGE_PATHS: readonly string[] = [ROUTES.home, ROUTES.hello, ...AUTH_PAGE_PATHS, ...REWARD_HUB_PAGE_PATHS];
 
 describe("ROUTES", () => {
@@ -51,6 +57,7 @@ describe("ROUTES", () => {
 			browse: "/rewardhub",
 			wallet: "/rewardhub/wallet",
 			activity: "/rewardhub/activity",
+			referrals: "/rewardhub/referrals",
 			account: "/rewardhub/account",
 		});
 	});

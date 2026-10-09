@@ -3,6 +3,7 @@ import type { User } from "@prisma/client";
 import { seedPlatformGuardrails } from "../organizations";
 import type { ReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
+import { seedSignupReferralCodes } from "../signup-referrals";
 import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "../users";
 import { seedLog } from "../seed-log";
 
@@ -23,6 +24,7 @@ export interface PlatformAccounts {
 export async function seedPlatformAccounts(reference: ReferenceData): Promise<PlatformAccounts> {
 	seedLog("Creating platform test accounts...");
 	const users = await createUsers();
+	await seedSignupReferralCodes(users);
 	await assignRolesToUsers(users, reference.roles);
 	await assignAdditionalPermissions(users, reference.permissions);
 	seedLog(`✅ ${String(users.length)} platform test accounts`);

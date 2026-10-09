@@ -57,11 +57,28 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     AND EXISTS (SELECT 1 FROM public.rewards r WHERE r.id = reward_id AND app_api_key_org_access(r.organization_id));
 $$;
 
+-- The referee of a signup referral redeemed at the key's store (ADR 035): the
+-- checkout transaction inserts the redemption first, so the stamp that follows
+-- it in the same transaction sees the row. SECURITY DEFINER so the lookup does
+-- not depend on the redemption table's own policies; it still checks the
+-- key's organization and store through the session helpers.
+CREATE OR REPLACE FUNCTION app_api_key_signup_referee_access(referee_user_id text) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT app_current_api_key_id() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.reward_redemptions rr
+      WHERE rr.user_id = referee_user_id
+        AND rr.is_deleted = false
+        AND app_api_key_store_access(rr.organization_id, rr.location_id)
+    );
+$$;
+
 GRANT EXECUTE ON FUNCTION app_current_api_key_id() TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_current_api_key_location_id() TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_api_key_org_access(text) TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_api_key_store_access(text, text) TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_api_key_reward_access(text) TO app_runtime;
+GRANT EXECUTE ON FUNCTION app_api_key_signup_referee_access(text) TO app_runtime;
 
 -- ── organization reference rows the reward responses embed (read only)
 
@@ -154,6 +171,21 @@ CREATE POLICY reward_referrals_api_key_update ON public.reward_referrals
   FOR UPDATE TO app_runtime
   USING (app_api_key_reward_access(reward_id))
   WITH CHECK (app_api_key_reward_access(reward_id));
+
+-- The checkout stamps the customer's signup referral successful (ADR 035): the
+-- key reads and updates ONLY the signup referral of a customer it has just
+-- redeemed for at its own store. It never inserts or deletes one, never sees
+-- the referrer's other referees, and the success notification is written
+-- after the commit under a system operation, not by the key.
+DROP POLICY IF EXISTS signup_referrals_api_key_read ON public.signup_referrals;
+CREATE POLICY signup_referrals_api_key_read ON public.signup_referrals
+  FOR SELECT TO app_runtime USING (app_api_key_signup_referee_access(referee_user_id));
+
+DROP POLICY IF EXISTS signup_referrals_api_key_update ON public.signup_referrals;
+CREATE POLICY signup_referrals_api_key_update ON public.signup_referrals
+  FOR UPDATE TO app_runtime
+  USING (app_api_key_signup_referee_access(referee_user_id))
+  WITH CHECK (app_api_key_signup_referee_access(referee_user_id));
 
 -- The in-app "referrer reward credited" notice written inside a checkout: only
 -- to a user who referred someone to one of this organization's rewards.

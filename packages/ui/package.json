@@ -32,6 +32,7 @@
 		"@shadcn/react": "^0.3.1",
 		"@tanstack/react-table": "^9.2.6",
 		"@workspace/shared": "workspace:*",
+		"@workspace/tokens": "workspace:*",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
@@ -75,8 +76,6 @@
 	},
 	"exports": {
 		"./globals.css": "./src/styles/globals.css",
-		"./styles/palette.css": "./src/styles/palette.css",
-		"./styles/tokens.css": "./src/styles/tokens.css",
 		"./postcss.config": "./postcss.config.mjs",
 		"./lib/core/highlight-text": "./src/lib/core/highlight-text.tsx",
 		"./lib/*": "./src/lib/*.ts",

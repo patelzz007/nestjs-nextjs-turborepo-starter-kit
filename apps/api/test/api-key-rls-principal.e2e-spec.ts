@@ -46,6 +46,9 @@ describe("API key RLS principal (e2e)", () => {
 	const rewardIds: Record<"kl" | "mlk", string> = { kl: randomUUID(), mlk: randomUUID() };
 	const bills: Partial<Record<"kl" | "katil" | "beruang", StoreBill>> = {};
 	const claimIds: string[] = [];
+	/** Signup referrals this file inserted (ADR 035): the redeemed customer's, and one of a user who never redeemed. */
+	const signupReferralIds: { customer?: string; stranger?: string } = {};
+	const createdSignupReferralIds: string[] = [];
 
 	async function asBypass<T>(run: (client: PoolClient) => Promise<T>): Promise<T> {
 		const client = await pool.connect();
@@ -124,6 +127,34 @@ describe("API key RLS principal (e2e)", () => {
 		return bill;
 	}
 
+	/**
+	 * A signup referral for `refereeId` pointing at another user's code, unless the
+	 * referee already has one. Returns the referral id and whether this file created it.
+	 */
+	async function ensureSignupReferral(refereeId: string): Promise<{ readonly id: string; readonly created: boolean }> {
+		return asBypass(async (client) => {
+			const existing = await client.query<{ id: string }>(`SELECT id FROM public.signup_referrals WHERE referee_user_id = $1`, [refereeId]);
+			const [row] = existing.rows;
+			if (row !== undefined) {
+				return { id: row.id, created: false };
+			}
+			const codes = await client.query<{ id: string; ownerId: string }>(
+				`SELECT id, user_id AS "ownerId" FROM public.signup_referral_codes WHERE user_id <> $1 AND is_deleted = false ORDER BY created_at DESC, id DESC LIMIT 1`,
+				[refereeId],
+			);
+			const [code] = codes.rows;
+			if (code === undefined) {
+				throw new Error("fixture: no signup referral code to refer from — run pnpm db:seed");
+			}
+			const id = randomUUID();
+			await client.query(
+				`INSERT INTO public.signup_referrals (id, referrer_user_id, referee_user_id, referral_code_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
+				[id, code.ownerId, refereeId, code.id, Date.now()],
+			);
+			return { id, created: true };
+		});
+	}
+
 	function requireBill(name: "kl" | "katil" | "beruang"): StoreBill {
 		const bill = bills[name];
 		if (bill === undefined) {
@@ -156,10 +187,30 @@ describe("API key RLS principal (e2e)", () => {
 		bills.kl = await createBill(KL_ORG, KL_STORE, rewardIds.kl);
 		bills.katil = await createBill(MLK_ORG, KATIL, rewardIds.mlk);
 		bills.beruang = await createBill(MLK_ORG, BERUANG, rewardIds.mlk);
+
+		const customerReferral = await ensureSignupReferral(customerId);
+		createdSignupReferralIds.push(...(customerReferral.created ? [customerReferral.id] : []));
+		signupReferralIds.customer = customerReferral.id;
+		const strangers = await asBypass((client) =>
+			client.query<{ id: string }>(
+				`SELECT u.id FROM public.users u
+         WHERE u.id <> $1 AND u.is_deleted = false
+           AND NOT EXISTS (SELECT 1 FROM public.reward_redemptions rr WHERE rr.user_id = u.id)
+         ORDER BY u.id LIMIT 1`,
+				[customerId],
+			),
+		);
+		const [stranger] = strangers.rows;
+		if (stranger !== undefined) {
+			const strangerReferral = await ensureSignupReferral(stranger.id);
+			createdSignupReferralIds.push(...(strangerReferral.created ? [strangerReferral.id] : []));
+			signupReferralIds.stranger = strangerReferral.id;
+		}
 	});
 
 	afterAll(async () => {
 		await asBypass(async (client) => {
+			await client.query(`DELETE FROM public.signup_referrals WHERE id = ANY($1::text[])`, [createdSignupReferralIds]);
 			const fixtureBills = Object.values(bills);
 			await client.query(`DELETE FROM public.reward_redemptions WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.redemptionId)]);
 			await client.query(`DELETE FROM public.reward_sales WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.saleId)]);
@@ -231,9 +282,31 @@ describe("API key RLS principal (e2e)", () => {
 		});
 	});
 
+	it("lets a key read and stamp the signup referral of a customer it redeemed for at its own store — and no other signup referral", async () => {
+		const customerReferral = signupReferralIds.customer;
+		const strangerReferral = signupReferralIds.stranger;
+		if (customerReferral === undefined || strangerReferral === undefined) {
+			throw new Error("fixture signup referrals missing");
+		}
+		await as(apiKeyRlsContext(mlkKatilKeyId, MLK_ORG, KATIL), async (client) => {
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.signup_referrals WHERE id = $1`, [customerReferral])).toBe(1);
+			const stamped = await client.query(`UPDATE public.signup_referrals SET successful_at = $2 WHERE id = $1`, [customerReferral, Date.now()]);
+			expect(stamped.rowCount).toBe(1);
+
+			// A user who never redeemed at this store is invisible to the key, by id or by update.
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.signup_referrals WHERE id = $1`, [strangerReferral])).toBe(0);
+			const foreign = await client.query(`UPDATE public.signup_referrals SET successful_at = $2 WHERE id = $1`, [strangerReferral, Date.now()]);
+			expect(foreign.rowCount).toBe(0);
+			// The key never creates or deletes one.
+			const deleted = await client.query(`DELETE FROM public.signup_referrals WHERE id = $1`, [customerReferral]);
+			expect(deleted.rowCount).toBe(0);
+		});
+	});
+
 	it("gives a session with no key (and no user) none of these rows", async () => {
 		await as(anonymousRlsContext(KL_ORG), async (client) => {
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_sales WHERE id = $1`, [requireBill("kl").saleId])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.signup_referrals WHERE id = $1`, [signupReferralIds.customer ?? ""])).toBe(0);
 		});
 	});
 });

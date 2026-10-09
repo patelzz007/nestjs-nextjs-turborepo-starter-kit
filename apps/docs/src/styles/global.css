@@ -1,8 +1,8 @@
 @import "tailwindcss";
-@import "@workspace/ui/styles/palette.css";
+@import "@workspace/tokens/palette.css";
 
 /*
- * Docs theme — the product's shared palette (packages/ui palette.css, the
+ * Docs theme — the product's shared palette (packages/tokens generated/palette.css, the
  * `--palette-*` primitives), mapped onto the docs' own semantic names, so the
  * docs and the apps can never drift apart. Light: white reading surfaces, the
  * cool "ink" grey text scale (neutral-900 / 700 / 600) and the one slate
@@ -137,7 +137,7 @@
 	color-scheme: light;
 }
 
-/* Dark — the apps' cool ink surface (packages/ui palette.css `--palette-ink-*`). */
+/* Dark — the apps' cool ink surface (packages/tokens palette `--palette-ink-*`). */
 [data-theme="dark"] {
 	--brand: var(--palette-brand-300);
 	--brand-hover: var(--palette-brand-200);

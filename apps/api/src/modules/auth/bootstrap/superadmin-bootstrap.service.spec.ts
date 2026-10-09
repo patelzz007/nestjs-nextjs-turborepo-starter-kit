@@ -191,6 +191,7 @@ describe("SuperAdminBootstrapService", () => {
 			passwordHash: "bcrypt-hash-of-password",
 			emailVerifiedAt: NOW,
 			mfaEnrollmentDeadline: NOW,
+			referralCodeIssuedAt: NOW,
 		});
 		expect(JSON.stringify(outcome)).not.toContain(PASSWORD);
 	});

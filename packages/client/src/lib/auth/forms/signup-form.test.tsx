@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
-import type { Envelope, SignupInput, SignupResponse } from "@workspace/shared";
+import type { ConsumerWebSignupInput, Envelope, SignupInput, SignupResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { envelopeFixture } from "../../../test/auth-fixtures";
@@ -9,7 +9,7 @@ import { ApiError } from "../../api/use-api";
 import { SignupForm } from "./signup-form";
 
 const mocks = vi.hoisted(() => ({
-	signup: vi.fn<(input: SignupInput) => Promise<Envelope<SignupResponse>>>(),
+	signup: vi.fn<(input: ConsumerWebSignupInput) => Promise<Envelope<SignupResponse>>>(),
 }));
 
 vi.mock("../index", () => {
@@ -109,6 +109,39 @@ describe("SignupForm submit", () => {
 		await waitFor((): void => {
 			expect(screen.getByRole("button", { name: "Create account" })).toBeDefined();
 		});
+	});
+
+	it("sends a trimmed referral code with the signup", async () => {
+		mocks.signup.mockResolvedValue(envelopeFixture({ message: "Account created" }));
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
+
+		fireEvent.change(screen.getByLabelText("Referral code"), { target: { value: "  ab23cd45 " } });
+		submitSignup(VALID);
+
+		expect(await screen.findByText(SUCCESS_TEXT)).toBeDefined();
+		expect(mocks.signup).toHaveBeenCalledWith({ ...VALID, referralCode: "ab23cd45" });
+	});
+
+	it("omits a blank referral code instead of sending an empty one", async () => {
+		mocks.signup.mockResolvedValue(envelopeFixture({ message: "Account created" }));
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
+
+		fireEvent.change(screen.getByLabelText("Referral code"), { target: { value: "   " } });
+		submitSignup(VALID);
+
+		expect(await screen.findByText(SUCCESS_TEXT)).toBeDefined();
+		expect(mocks.signup).toHaveBeenCalledWith(VALID);
+	});
+
+	it("shows the API's referral-code error and keeps the form", async () => {
+		mocks.signup.mockRejectedValue(new ApiError({ message: "That referral code has expired.", statusCode: 400 }));
+		render(<SignupForm />, { wrapper: UiKitTestProviders });
+
+		fireEvent.change(screen.getByLabelText("Referral code"), { target: { value: "AB23CD45" } });
+		submitSignup(VALID);
+
+		expect(await screen.findByText("That referral code has expired.")).toBeDefined();
+		expect(screen.queryByText(SUCCESS_TEXT)).toBeNull();
 	});
 
 	it("links to sign-in from the form", () => {

@@ -48,7 +48,7 @@ flowchart LR
      transactions, race-condition protection), controller (`@Controller(apiPath(...))`,
      `@ZodBody`/`@ZodQuery`/`@ZodParams`, `@ZodResponse`, permission decorators).
    - Side effects that other systems need → outbox event in the same transaction ([Messaging](./messaging.md)).
-5. **Client** — typed leaf in `packages/client/src/lib/api/endpoints.ts`.
+5. **Client** — typed leaf in `packages/api-client/src/router.ts` (re-exported by `@workspace/client/lib/api/endpoints`).
 6. **UI** — page (smart) under the right app, presentational pieces in `@workspace/ui` if reusable,
    menu entry in the app's sidebar JSON with its authorization requirement, `can()` mirroring the API.
 7. **Tests** — unit tests for every function, controller/service specs, e2e for authorization, RLS

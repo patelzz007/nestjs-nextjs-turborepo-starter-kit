@@ -410,6 +410,8 @@ BEGIN
     'reward_redemptions',
     'reward_sales',
     'reward_referrals',
+    'signup_referral_codes',
+    'signup_referrals',
     'reward_otp_challenges',
     'reward_legal_acceptances',
     'reward_notifications',
@@ -605,6 +607,16 @@ CREATE POLICY reward_referrals_parties ON public.reward_referrals
     OR app_owns(referee_user_id)
     OR app_rls_bypass()
   )
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS signup_referral_codes_own ON public.signup_referral_codes;
+CREATE POLICY signup_referral_codes_own ON public.signup_referral_codes
+  USING (app_owns(user_id) OR app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS signup_referrals_referrer ON public.signup_referrals;
+CREATE POLICY signup_referrals_referrer ON public.signup_referrals
+  USING (app_owns(referrer_user_id) OR app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
 DROP POLICY IF EXISTS reward_otp_own ON public.reward_otp_challenges;

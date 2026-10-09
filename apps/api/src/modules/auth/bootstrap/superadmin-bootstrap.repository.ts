@@ -1,5 +1,6 @@
 import type { Prisma, User } from "@prisma/client";
 
+import { issueSignupReferralCode } from "../signup-referrals/signup-referral-code.issuer";
 import { SUPER_ADMIN_ROLE_NAME } from "./superadmin-bootstrap.constants";
 
 /** The part of the created row the bootstrap needs back (never the password hash). */
@@ -12,6 +13,8 @@ export interface NewSuperAdminRecord {
 	readonly passwordHash: string;
 	readonly emailVerifiedAt: number;
 	readonly mfaEnrollmentDeadline: number;
+	/** When the account's first signup referral code is issued (its validity window starts here). */
+	readonly referralCodeIssuedAt: number;
 }
 
 /**
@@ -38,8 +41,9 @@ export class SuperAdminBootstrapRepository {
 		return (await db.user.count({ where: { email } })) > 0;
 	}
 
+	/** Create the account and, on the same transaction, its first signup referral code (ADR 035: every account has one). */
 	public async createSuperAdmin(record: NewSuperAdminRecord, db: Prisma.TransactionClient): Promise<CreatedSuperAdmin> {
-		return db.user.create({
+		const user = await db.user.create({
 			data: {
 				email: record.email,
 				fullName: record.fullName,
@@ -50,5 +54,7 @@ export class SuperAdminBootstrapRepository {
 			},
 			select: { id: true, email: true, fullName: true },
 		});
+		await issueSignupReferralCode(db, user.id, record.referralCodeIssuedAt);
+		return user;
 	}
 }

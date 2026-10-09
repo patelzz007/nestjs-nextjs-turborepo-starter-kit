@@ -2418,7 +2418,7 @@ Request metadata only — open one record for its redacted payloads.
 | `data[].actor.fullName` | string \| null | yes |  |
 | `data[].actor.id` | string | yes | length 1–64 |
 | `data[].apiKeyId` | string \| null | yes | length 1–64 |
-| `data[].authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "API_KEY" \| null | yes |  |
+| `data[].authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "REFRESH_BODY" \| "API_KEY" \| null | yes |  |
 | `data[].browserName` | string \| null | yes | at most 64 characters |
 | `data[].browserVersion` | string \| null | yes | at most 32 characters |
 | `data[].clientType` | string \| null | yes | at most 32 characters |
@@ -2502,7 +2502,7 @@ Includes the redacted request params, request body and response body.
 | `data.actor.fullName` | string \| null | yes |  |
 | `data.actor.id` | string | yes | length 1–64 |
 | `data.apiKeyId` | string \| null | yes | length 1–64 |
-| `data.authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "API_KEY" \| null | yes |  |
+| `data.authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "REFRESH_BODY" \| "API_KEY" \| null | yes |  |
 | `data.browserName` | string \| null | yes | at most 64 characters |
 | `data.browserVersion` | string \| null | yes | at most 32 characters |
 | `data.clientType` | string \| null | yes | at most 32 characters |

@@ -19,6 +19,7 @@ import {
 	NodeEnvSchema,
 	optionalIntegerEnvSchema,
 	PostgresUrlEnvSchema,
+	type AppVersion,
 	type NodeEnv,
 } from "@workspace/shared";
 import { KafkaSecurityEnvShape, listKafkaSecurityEnvIssues, toKafkaSecurityOptions, type KafkaSecurityOptions } from "@workspace/messaging/kafka";
@@ -27,6 +28,7 @@ import { z } from "zod";
 import { TrustProxyEnvSchema } from "../common/http/client-ip";
 
 import {
+	AppVersionEnvSchema,
 	BullMqPrefixEnvSchema,
 	RedisNamespaceEnvSchema,
 	Aes256KeyEnvSchema,
@@ -56,6 +58,8 @@ import {
 	type MalwareScannerSetting,
 	type StorageProviderSetting,
 	TenantKmsProviderSchema,
+	SessionLocationProviderSchema,
+	type SessionLocationProvider,
 	type TenantKmsProvider,
 } from "./api-env.fields";
 
@@ -84,6 +88,13 @@ const DEFAULT_BCRYPT_SALT_ROUNDS = 12;
 const DEFAULT_MFA_ENROLLMENT_DEADLINE_MS = 30 * MS_PER_DAY;
 const DEFAULT_MFA_RECOVERY_DELAY_MS = MS_PER_DAY;
 const DEFAULT_MFA_STEP_UP_TTL_MS = 5 * MS_PER_MINUTE;
+
+/** The first mobile release: until the minimum is raised, every released build is served (ADR 033). */
+const DEFAULT_MOBILE_MIN_SUPPORTED_VERSION: AppVersion = "1.0.0";
+
+/** A location lookup slower than this is abandoned (the session is stored without a location); it never delays sign-in by more. */
+const DEFAULT_SESSION_LOCATION_TIMEOUT_MS = 300;
+const MAX_SESSION_LOCATION_TIMEOUT_MS = 5_000;
 /** Version of `TENANT_ENCRYPTION_MASTER_KEY` when `TENANT_ENCRYPTION_MASTER_KEY_VERSION` is unset (the first KEK). */
 const DEFAULT_TENANT_MASTER_KEY_VERSION = 1;
 /** KMS provider outside production when `TENANT_KMS_PROVIDER` is unset. Production must set it explicitly. */
@@ -200,6 +211,13 @@ export const ApiEnvInputSchema = z.object({
 	TENANT_KMS_PROVIDER: TenantKmsProviderSchema.optional(),
 	TENANT_JOB_HMAC_SECRET: SecretEnvSchema.optional(),
 	REWARD_CODE_HASH_KEYS: RewardCodeHashKeysEnvSchema,
+
+	// Mobile app (ADR 033)
+	MOBILE_MIN_SUPPORTED_VERSION: AppVersionEnvSchema.default(DEFAULT_MOBILE_MIN_SUPPORTED_VERSION),
+
+	// Device sessions (docs/technical/mobile/mobile-app.md §8.7)
+	SESSION_LOCATION_PROVIDER: SessionLocationProviderSchema.default("none"),
+	SESSION_LOCATION_TIMEOUT_MS: integerEnvSchema({ min: 1, max: MAX_SESSION_LOCATION_TIMEOUT_MS, defaultValue: DEFAULT_SESSION_LOCATION_TIMEOUT_MS }),
 
 	// Email
 	EMAIL_MODE: EmailModeSchema.default("send"),
@@ -353,6 +371,25 @@ export interface MfaConfig {
 	readonly stepUpTtlMs: number;
 }
 
+/** The mobile app (client type `mobile`, ADR 029 / 033). */
+export interface MobileConfig {
+	/**
+	 * The oldest app version the API still serves (`MOBILE_MIN_SUPPORTED_VERSION`):
+	 * a `mobile` request whose `X-App-Version` is missing, malformed or lower is
+	 * answered 426 `APP_VERSION_UNSUPPORTED`. Raise it only after the new build
+	 * is live in both stores.
+	 */
+	readonly minSupportedVersion: AppVersion;
+}
+
+/** Device sessions (docs/technical/mobile/mobile-app.md §8). */
+export interface SessionsConfig {
+	/** The `SessionLocationResolver` adapter (`SESSION_LOCATION_PROVIDER`); `none` resolves nothing. */
+	readonly locationProvider: SessionLocationProvider;
+	/** How long a sign-in waits for the location lookup before storing the session without one (`SESSION_LOCATION_TIMEOUT_MS`). */
+	readonly locationTimeoutMs: number;
+}
+
 export interface EncryptionConfig {
 	/** Base64 of exactly 32 bytes — the CURRENT key-encryption key: wraps every new tenant data key. */
 	readonly tenantMasterKey: string;
@@ -475,6 +512,8 @@ export interface ApiConfig {
 	readonly database: DatabaseConfig;
 	readonly auth: AuthConfig;
 	readonly mfa: MfaConfig;
+	readonly mobile: MobileConfig;
+	readonly sessions: SessionsConfig;
 	readonly encryption: EncryptionConfig;
 	readonly email: EmailConfig;
 	readonly rateLimits: RateLimitConfig;
@@ -850,6 +889,8 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			recoveryDelayMs: env.MFA_RECOVERY_DELAY_MS,
 			stepUpTtlMs: env.MFA_STEP_UP_TTL_MS,
 		},
+		mobile: { minSupportedVersion: env.MOBILE_MIN_SUPPORTED_VERSION },
+		sessions: { locationProvider: env.SESSION_LOCATION_PROVIDER, locationTimeoutMs: env.SESSION_LOCATION_TIMEOUT_MS },
 		encryption: {
 			tenantMasterKey: env.TENANT_ENCRYPTION_MASTER_KEY,
 			tenantMasterKeyVersion: env.TENANT_ENCRYPTION_MASTER_KEY_VERSION,

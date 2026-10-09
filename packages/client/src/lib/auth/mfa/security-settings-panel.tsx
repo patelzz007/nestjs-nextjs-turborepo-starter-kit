@@ -16,6 +16,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 
 import { MfaRecoveryRequestPanel } from "./recovery-request-panel";
+import { SignedInDevicesSection } from "../sessions/signed-in-devices-section";
+import { SIGNED_IN_DEVICES_LABELS } from "../sessions/signed-in-devices-labels";
 import { useEmailVerifiedToast } from "../email/use-verified-toast";
 import { catchCaught } from "../../caught";
 
@@ -335,6 +337,15 @@ export function SecuritySettingsPanel(): JSX.Element {
 					<p className="text-sm text-muted-foreground">Protect your account with Microsoft Authenticator or another TOTP app.</p>
 				</div>
 				<TwoFactorSetupPanel />
+			</section>
+			<section className="space-y-4 rounded-xl border bg-card p-6 lg:col-span-2" aria-labelledby="signed-in-devices-heading">
+				<div>
+					<h2 id="signed-in-devices-heading" className="text-lg font-semibold">
+						{SIGNED_IN_DEVICES_LABELS.title}
+					</h2>
+					<p className="text-sm text-muted-foreground">{SIGNED_IN_DEVICES_LABELS.description}</p>
+				</div>
+				<SignedInDevicesSection labels={SIGNED_IN_DEVICES_LABELS} />
 			</section>
 			<section className="space-y-4 rounded-xl border bg-card p-6 lg:col-span-2">
 				<div>

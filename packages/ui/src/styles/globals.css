@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "./palette.css";
-@import "./tokens.css";
+/* Design tokens: generated from packages/tokens (never edit the generated CSS; run `pnpm tokens:generate`). */
+@import "@workspace/tokens/web.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Post, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type {
@@ -33,7 +33,11 @@ import { Public } from "./decorators/public.decorator";
 import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { Authorize, self } from "../authorization/decorators/authorize.decorator";
+import type { FastifyRequest } from "fastify";
+
+import { readSessionDeviceContext } from "../sessions/device/session-device";
 import { TwoFactorService } from "./services/two-factor.service";
+import { TOKEN_DELIVERY_DESCRIPTION } from "./constants/token-delivery.constants";
 
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
@@ -51,7 +55,10 @@ export class TwoFactorController {
 	@Post("/2fa/setup")
 	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can start their own 2FA enrollment" })
 	@ApiOperation({ summary: "Start 2FA enrollment: generate a pending TOTP secret, QR code and backup codes" })
-	@ZodResponse(TwoFactorSetupResponseSchema, { status: HttpStatus.CREATED, description: "TOTP secret, QR code and backup codes (pending until confirmed via /2fa/enable)" })
+	@ZodResponse(TwoFactorSetupResponseSchema, {
+		status: HttpStatus.CREATED,
+		description: "TOTP secret, QR code, otpauth:// key URI and backup codes (pending until confirmed via /2fa/enable)",
+	})
 	public async startSetup(@GetUser("sub") userId: string, @ZodBody(apiContract.auth.twoFactorSetup.input) _body: StartTwoFactorSetupInput): Promise<TwoFactorSetupResponse> {
 		return this.twoFactorService.generateSetup(userId);
 	}
@@ -74,7 +81,7 @@ export class TwoFactorController {
 	@Post("/2fa/rotate")
 	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can rotate their own 2FA" })
 	@ApiOperation({ summary: "Rotate 2FA after confirming password and current TOTP or backup code" })
-	@ZodResponse(TwoFactorSetupResponseSchema, { description: "New TOTP secret, QR code and backup codes" })
+	@ZodResponse(TwoFactorSetupResponseSchema, { description: "New TOTP secret, QR code, otpauth:// key URI and backup codes" })
 	public async rotateTwoFactor(@GetUser("sub") userId: string, @ZodBody(apiContract.auth.twoFactorRotate.input) body: RotateTwoFactorInput): Promise<TwoFactorSetupResponse> {
 		return this.twoFactorService.rotateTwoFactor(userId, body);
 	}
@@ -103,12 +110,13 @@ export class TwoFactorController {
 	@RlsBypass()
 	@Post("/login/2fa")
 	@ApiOperation({ summary: "Complete login with a TOTP code" })
-	@ZodResponse(LoginClientResponseSchema, { description: "Login result — tokens are set as httpOnly cookies and never appear in the body" })
+	@ZodResponse(LoginClientResponseSchema, { description: "Login result" + TOKEN_DELIVERY_DESCRIPTION })
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	public async loginWithTwoFactor(
 		@ZodBody(apiContract.auth.loginTwoFactor.input) body: LoginTwoFactorInput,
+		@Req() req: FastifyRequest,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
-		return this.twoFactorService.completeLoginWithTotp(body);
+		return this.twoFactorService.completeLoginWithTotp(body, readSessionDeviceContext(req));
 	}
 
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
@@ -116,11 +124,12 @@ export class TwoFactorController {
 	@RlsBypass()
 	@Post("/login/backup-code")
 	@ApiOperation({ summary: "Complete login with a one-time backup code" })
-	@ZodResponse(LoginClientResponseSchema, { description: "Login result — tokens are set as httpOnly cookies and never appear in the body" })
+	@ZodResponse(LoginClientResponseSchema, { description: "Login result" + TOKEN_DELIVERY_DESCRIPTION })
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	public async loginWithBackupCode(
 		@ZodBody(apiContract.auth.loginBackupCode.input) body: VerifyBackupCodeLoginInput,
+		@Req() req: FastifyRequest,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
-		return this.twoFactorService.completeLoginWithBackupCode(body);
+		return this.twoFactorService.completeLoginWithBackupCode(body, readSessionDeviceContext(req));
 	}
 }

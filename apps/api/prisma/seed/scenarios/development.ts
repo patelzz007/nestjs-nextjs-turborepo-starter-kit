@@ -34,6 +34,7 @@ import { createTags } from "../tags";
 import { createPasswordResetTokens, createRefreshTokens } from "../tokens";
 import { createClicks, createUrlTags, createUrls } from "../urls";
 import { seedRbacDemo } from "../rbac-demo";
+import { seedSignupReferralCodes, seedSignupReferralDemo } from "../signup-referrals";
 import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "../users";
 import { printPlatformAccountCredentials } from "./platform-accounts";
 import { seedLog } from "../seed-log";
@@ -95,6 +96,10 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	const extraUsers = await generateAdditionalSeedData(roles, userRole);
 	const allUsers = [...users, ...extraUsers];
 	seedLog(`✅ ${String(allUsers.length)} users (${String(users.length)} primary + ${String(extraUsers.length)} additional)`);
+
+	seedLog("Issuing signup referral codes...");
+	await seedSignupReferralCodes(allUsers);
+	await seedSignupReferralDemo(allUsers);
 
 	seedLog("Assigning roles to users...");
 	await assignRolesToUsers(users, roles);

@@ -62,6 +62,8 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 	{ pattern: ROUTE_PATTERNS.walletClaim, audience: "signed-in", breadcrumbLabel: "Show at checkout" },
 	// GET /claims/analytics/dashboard — any session (own activity only)
 	{ pattern: ROUTES.rewardHub.activity, audience: "signed-in" },
+	// GET /auth/signup-referrals/* — any session (own code and referees only)
+	{ pattern: ROUTES.rewardHub.referrals, audience: "signed-in", breadcrumbLabel: "Referrals" },
 	// GET /auth/me, password and MFA endpoints — any session (restricted sessions included)
 	{ pattern: ROUTES.rewardHub.account, audience: "signed-in" },
 ];

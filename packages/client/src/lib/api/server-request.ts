@@ -21,12 +21,23 @@ import "server-only";
 //   are absent from the server caller's type and runtime tree.
 
 import {
+	ApiResponseContractError,
+	assertCompleteRouterTree,
+	mapRouterTree,
+	parseResponseText,
+	resolveRequest,
+	type ApiResponseContractIssue,
+	type MutationDef,
+	type QueryDef,
+	type RouterTree,
+} from "@workspace/api-client";
+import {
 	LIST_SLOT_INDEX,
 	apiVersionPrefix,
 	AUTH_COOKIE_NAMES,
 	clientTypeHeader,
-	type AuthClientType,
 	type AuthCookieNamePair,
+	type BrowserClientType,
 	type DataValue,
 	type SerializableInput,
 } from "@workspace/shared";
@@ -35,8 +46,6 @@ import { catchError, defer, from, mergeMap, Observable, of, retry, throwError, t
 import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
-import { ApiResponseContractError, parseResponseText, type ApiResponseContractIssue } from "./response-contract";
-import { assertCompleteRouterTree, mapRouterTree, resolveRequest, type MutationDef, type QueryDef, type RouterTree } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -44,8 +53,8 @@ import { assertCompleteRouterTree, mapRouterTree, resolveRequest, type MutationD
 export type ServerApiLogLevel = "silent" | "warn";
 
 export interface ServerApiConfig {
-	/** Which frontend's isolated cookie set (and `X-Client-Type`) the caller forwards. */
-	readonly clientType: AuthClientType;
+	/** Which browser frontend's isolated cookie set (and `X-Client-Type`) the caller forwards — `mobile` has no cookies. */
+	readonly clientType: BrowserClientType;
 	/** Budget for ONE fetch attempt. */
 	readonly attemptTimeoutMs: number;
 	/** Budget for the whole prefetch, retries and their backoff included. Must be ≥ `attemptTimeoutMs`. */

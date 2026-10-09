@@ -81,3 +81,7 @@ _Avoid_: login, token, connection
 **Minimum supported app version**:
 The oldest mobile app version the API still serves; anything older must update before it can be used.
 _Avoid_: min version, force update, kill switch
+
+**App lock**:
+An optional, on-device biometric or passcode check that guards an already signed-in mobile app on launch and after a time in the background. It never replaces signing in and is unknown to the server.
+_Avoid_: biometric login, Face ID login, PIN login

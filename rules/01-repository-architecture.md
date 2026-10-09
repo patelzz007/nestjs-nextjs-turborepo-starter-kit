@@ -19,6 +19,9 @@ packages/
   eslint-config/
   typescript-config/
   ui/                       # shadcn-based component library — web only
+  tokens/                   # design token source (TypeScript) + generator → committed web/mobile CSS
+  api-client/               # platform-neutral API client (router, fetch + zod, transports) — web and mobile
+  client/                   # web-only wrappers on top of api-client (Next server helpers, cookies, auth UI)
   shared/                    # framework-agnostic utilities usable by api/web/mobile
   observability/              # shared logging/tracing helpers
 
@@ -52,6 +55,9 @@ The exact package list can evolve as the product grows, but ownership of each pa
 | A pure, framework-agnostic function used by 2+ apps | `packages/shared` | No framework dependency, genuine reuse |
 | Prisma schema/client/seed | `packages/database` | Single source of DB truth |
 | Shared eslint/tsconfig | `packages/eslint-config`, `packages/typescript-config` | Config consistency across apps |
+| An API endpoint's client leaf, request/response handling, session transport, or a TanStack Query hook over the router | `packages/api-client` (core in `src/`, hooks in `src/react/`) | One client for web and mobile; it must stay free of Next, DOM and Node code |
+| Web-only API glue (Next server prefetch, route proxy refresh, cookie names, auth forms) | `packages/client` | Depends on `next` / `react-dom` / `server-only`, which the mobile app must never pull in |
+| A design token (colour, radius, type size, z-index, easing) | `packages/tokens/src` — then `pnpm tokens:generate` | One source for web and mobile (ADR 030); generated CSS is never hand-edited |
 
 ### Worked example
 
@@ -123,10 +129,52 @@ class UserRepository {
 ```text
 apps/api      → packages/contracts, packages/database, packages/shared, packages/observability, packages/config
 apps/web      → packages/contracts, packages/shared, packages/ui, packages/config
-apps/mobile   → packages/contracts, packages/shared, packages/config
-packages/ui   → packages/shared, packages/config
+apps/mobile   → packages/shared, packages/api-client (both entries), packages/tokens (generated mobile.css only), packages/eslint-config + typescript-config (dev)
+               NEVER packages/client, packages/ui, next, react-dom, server-only, Node built-ins or AsyncStorage (lint-enforced: mobileImportBoundaryConfig)
+packages/client     → packages/api-client, packages/shared, packages/ui
+packages/api-client → packages/shared (core "."); + react, @tanstack/react-query ("./react" entry only)
+packages/ui   → packages/shared, packages/tokens (generated web.css), packages/config
 packages/shared → packages/config only
+packages/tokens → nothing (no runtime dependencies; zod is a dev-only dependency for its own validation)
 ```
+
+`packages/tokens` sits at the bottom of the graph: it imports no other workspace and no runtime npm
+package, so any app or package may depend on it. It is consumed two ways:
+
+- **Generated CSS** (the normal path): `@workspace/tokens/web.css` (imported by `packages/ui`'s
+  `globals.css`), `@workspace/tokens/palette.css` (the docs site) and `@workspace/tokens/mobile.css`
+  (`apps/mobile`). These files are committed, produced only by `pnpm tokens:generate`, and a test
+  fails while they are stale — never edit them by hand.
+- **TypeScript** (`@workspace/tokens`): the typed token data and `resolveColorToken`, for code that
+  needs a value in JavaScript (a chart, a native API). It must stay platform-neutral: no React,
+  Next.js, DOM or Node imports outside its own `scripts/` and tests.
+
+`packages/api-client` is the one API client of every frontend: the router built from the shared
+contracts, `fetch` with zod validation, the error envelope mapping, and two session transports —
+cookies for the browser client types, body tokens (Bearer + refresh in the request body) for
+`mobile` ([ADR 029](../docs/adr/029-mobile-client-body-token-transport.md)). Its configuration
+(`baseUrl`, client type, transport, app version) is injected by each app and validated with zod; the
+package reads no environment. Because the mobile app runs it in React Native, lint
+(`apiClientBoundaryConfigs` in `packages/eslint-config/import-boundaries.js`) forbids its core from
+importing `next`, `react`, `react-dom`, `@tanstack/react-query`, `@workspace/client`, `@workspace/ui`
+or a Node built-in, and its shipped code from touching DOM-only or Node globals; only `src/react/`
+may add `react` and `@tanstack/react-query`. `packages/client` builds the web's cookie client on it
+and re-exports it from its old `lib/api/*` paths; never the other way round.
+
+`apps/mobile` (the Expo app, docs/technical/mobile/mobile-app.md §9) sits at the top beside the
+Next apps but on a different runtime (React Native / Hermes), so it reaches the API only through
+`@workspace/api-client` (token transport) and the contracts only through `@workspace/shared`. The web
+packages (`@workspace/client`, `@workspace/ui`) would drag `react-dom`, Next and the DOM into the
+native bundle; lint (`packages/eslint-config/react-native.js` → `mobileImportBoundaryConfig`) refuses
+them, Node built-ins and AsyncStorage. Logic that both the web and the mobile app need belongs in
+`packages/shared` (platform-neutral, Vitest-tested) or `packages/api-client`, never copied into the app.
+Two Metro resolution rules (`apps/mobile/metro.config.js`, mirrored by `jest.resolver.cjs`) keep
+`react`, `react-native` and `@tanstack/react-query` single instances (a workspace package's own
+devDependency copies would otherwise be bundled) and resolve `@workspace/*` through their
+`development` (TypeScript source) export.
+
+Token *values* live nowhere else. A component never hard-codes a colour, and `packages/ui` holds no
+token values of its own — only non-token CSS (base layer, scrollbars, component helpers).
 
 No package imports from `apps/*` — ever, under any circumstance. This is what keeps packages independently testable and prevents an app-specific assumption from quietly leaking into shared code. No circular package dependencies either.
 

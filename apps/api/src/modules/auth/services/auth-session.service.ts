@@ -1,11 +1,26 @@
+import { randomUUID } from "node:crypto";
+
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { epochMs, type EpochMs, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type UserPermissions } from "@workspace/shared";
+import {
+	epochMs,
+	type EpochMs,
+	type LoginRestrictedEnrollmentResponse,
+	type LoginServiceResponse,
+	type SessionLocation,
+	type SessionSignInMethod,
+	type UserPermissions,
+} from "@workspace/shared";
 
 import { parseExpiryToMilliseconds } from "../../../common/utils/expiry";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { AuthorizationInvalidationService } from "../../authorization/cache/authorization-invalidation.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
+import type { SessionDeviceContext } from "../../sessions/device/session-device";
+import { buildSessionDeviceLabel } from "../../sessions/device/session-device-label";
+import { SessionLocationLookupService } from "../../sessions/location/session-location-lookup.service";
+import { RefreshTokenRepository } from "../../sessions/repositories/refresh-token.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { IdentityService } from "./identity.service";
 import { SessionRestrictionService } from "./session-restriction.service";
@@ -18,6 +33,15 @@ export interface IssueSessionOptions {
 }
 
 /**
+ * The sign-in a session is issued for: the device that receives the tokens
+ * (the request completing the login) and the proofs the login flow required.
+ */
+export interface SessionSignIn {
+	readonly device: SessionDeviceContext;
+	readonly signInMethod: SessionSignInMethod;
+}
+
+/**
  * Issues authenticated sessions (refresh token + JWT pair).
  *
  * Extracted from `LoginService` so `TwoFactorService` can complete logins
@@ -27,6 +51,9 @@ export interface IssueSessionOptions {
 export class AuthSessionService {
 	public constructor(
 		private readonly prisma: PrismaService,
+		private readonly sessions: RefreshTokenRepository,
+		private readonly locationLookup: SessionLocationLookupService,
+		private readonly authorizationInvalidation: AuthorizationInvalidationService,
 		private readonly userRepo: UserRepository,
 		private readonly tokenService: TokenService,
 		private readonly cryptoService: CryptoService,
@@ -38,11 +65,16 @@ export class AuthSessionService {
 		private readonly sessionRestriction: SessionRestrictionService,
 	) {}
 
+	/**
+	 * Issue a session (one device session row + its token pair) to a user who
+	 * passed every step of a login flow. `clientType` is the one the flow
+	 * declared (merchant-access check); the stored session describes
+	 * `signIn.device`, the request receiving the tokens.
+	 */
 	public async issueSessionForUser(
 		userId: string,
-		clientType?: string,
-		deviceInfo?: string,
-		ipAddress?: string,
+		clientType: string | undefined,
+		signIn: SessionSignIn,
 		options: IssueSessionOptions = {},
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		const user = await this.userRepo.findLoginById(userId);
@@ -121,26 +153,29 @@ export class AuthSessionService {
 		const expiryMs = parseExpiryToMilliseconds(this.config.auth.jwtRefreshExpiry);
 		const expiresAt: EpochMs = epochMs(now + expiryMs);
 
-		const refreshTokenRecord = await this.prisma.refreshToken.create({
-			data: {
-				token: "",
-				userId: user.id,
-				deviceInfo: deviceInfo ?? "Unknown Device",
-				ipAddress: ipAddress ?? "Unknown IP",
-				expiresAt,
-			},
+		// The session id is chosen first: it is the refresh token's `jti` and the
+		// access token's `sid` (ADR 034), so the row is stored once, complete.
+		const sessionId: string = randomUUID();
+		const tokens = await this.tokenService.generateSessionTokens(flatUser, sessionId, tokenOptions);
+		const location: SessionLocation | null = await this.locationLookup.lookup(signIn.device.ipAddress);
+
+		await this.sessions.createSession({
+			id: sessionId,
+			userId: user.id,
+			tokenHash: this.cryptoService.hashRefreshToken(tokens.refreshToken),
+			device: signIn.device.device,
+			ipAddress: signIn.device.ipAddress,
+			location,
+			signInMethod: signIn.signInMethod,
+			createdAt: epochMs(now),
+			expiresAt,
 		});
 
-		const tokens = await this.tokenService.generateSessionTokens(flatUser, refreshTokenRecord.id, tokenOptions);
-
-		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
-
-		await this.prisma.refreshToken.update({
-			where: { id: refreshTokenRecord.id },
-			data: { token: hashedRt, updatedAt: now },
-		});
-
-		await this.cleanupExpiredTokens(user.id);
+		const retiredSessionIds: readonly string[] = await this.sessions.retireStaleSessions(user.id);
+		if (retiredSessionIds.length > 0) {
+			// A session retired above the cap may still hold an unexpired access token: reject its `sid` on every instance.
+			await this.authorizationInvalidation.invalidateUsers([user.id], { accessTokenState: true, trigger: "session_revoked" });
+		}
 
 		this.logService.info(`User logged in`, {
 			userId: user.id,
@@ -153,8 +188,10 @@ export class AuthSessionService {
 				isEmailVerified,
 				sessionScope,
 				enrollmentReason: restriction.restricted ? restriction.reason : null,
-				device: deviceInfo ?? "Unknown",
-				ip: ipAddress ?? "Unknown",
+				sessionId,
+				device: buildSessionDeviceLabel(signIn.device.device),
+				signInMethod: signIn.signInMethod,
+				ip: signIn.device.ipAddress ?? "Unknown",
 				clientType: clientType ?? "web",
 			},
 		});
@@ -176,27 +213,5 @@ export class AuthSessionService {
 			user: profile,
 			...tokens,
 		};
-	}
-
-	private async cleanupExpiredTokens(userId: string): Promise<void> {
-		await this.prisma.$transaction(async (tx) => {
-			await tx.refreshToken.updateMany({
-				where: { userId, expiresAt: { lt: Date.now() } },
-				data: { isDeleted: true, deletedAt: Date.now() },
-			});
-
-			const excessTokens = await tx.refreshToken.findMany({
-				where: { userId },
-				orderBy: { createdAt: "desc" },
-				skip: 5,
-			});
-
-			if (excessTokens.length > 0) {
-				await tx.refreshToken.updateMany({
-					where: { id: { in: excessTokens.map((t) => t.id) } },
-					data: { isDeleted: true, deletedAt: Date.now() },
-				});
-			}
-		});
 	}
 }

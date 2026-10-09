@@ -26,6 +26,14 @@ import { ClaimService } from "./claim.service";
 import { PosCodeLockoutService, posCodeLockedException } from "./pos-code-lockout.service";
 import { REFERRER_CLAIM_TTL_DAYS, REFERRER_CLAIM_TTL_MS } from "./referral-credit.constants";
 import { ReferralCreditNotificationService } from "./referral-credit-notification.service";
+import { SignupReferralCheckoutService } from "../../auth/signup-referrals/signup-referral-checkout.service";
+
+/** What the checkout transaction hands to the after-commit deliveries. */
+interface CheckoutSideEffects {
+	readonly credited: readonly CreditedReferral[];
+	/** The signup referral this checkout stamped successful, or null (ADR 035). */
+	readonly stampedSignupReferralId: string | null;
+}
 
 /** One presented code and the merchant claim it resolved to. */
 interface ResolvedCode {
@@ -55,6 +63,7 @@ export class RedemptionService {
 		private readonly outbox: PlatformOutboxService,
 		private readonly codeLockout: PosCodeLockoutService,
 		private readonly referralNotifications: ReferralCreditNotificationService,
+		private readonly signupReferralCheckout: SignupReferralCheckoutService,
 		private readonly codeHasher: RewardCodeHasher,
 	) {}
 
@@ -96,7 +105,9 @@ export class RedemptionService {
 	 * and the bill meets each reward's minimum spend. The write is race-safe
 	 * (see `RewardSaleRepository.checkoutInTransaction`) and, in the same
 	 * transaction, enqueues the analytics event and credits any referrer the
-	 * redeemed rewards earned. Referrer emails are delivered after the commit.
+	 * redeemed rewards earned, and stamps the customer's signup referral
+	 * successful on their first redemption (ADR 035). Referrer emails and the
+	 * signup-referral notification are delivered after the commit.
 	 */
 	public async checkout(pos: MerchantPosContext, input: RedemptionCheckoutInput): Promise<RedemptionCheckoutResponse> {
 		const requestHash = checkoutRequestHash(input);
@@ -117,7 +128,7 @@ export class RedemptionService {
 			throw new UnprocessableEntityException({ message: "At least one reward code is required", error: "REDEMPTION_INPUT_REQUIRED" });
 		}
 
-		let outcome: { readonly sale: RewardSaleWithRedemptions; readonly result: readonly CreditedReferral[] };
+		let outcome: { readonly sale: RewardSaleWithRedemptions; readonly result: CheckoutSideEffects };
 		try {
 			outcome = await this.saleRepository.checkoutInTransaction(
 				{
@@ -137,9 +148,11 @@ export class RedemptionService {
 						redemptionMethod: code.backupCode !== undefined ? "MANUAL" : "SCAN",
 					})),
 				},
-				async (tx: Prisma.TransactionClient, created: RewardSaleWithRedemptions): Promise<readonly CreditedReferral[]> => {
+				async (tx: Prisma.TransactionClient, created: RewardSaleWithRedemptions): Promise<CheckoutSideEffects> => {
 					await this.enqueueCheckoutEvent(tx, created);
-					return this.creditReferrers(tx, resolved, paidAt);
+					const credited = await this.creditReferrers(tx, resolved, paidAt);
+					const stampedSignupReferralId = await this.signupReferralCheckout.markSuccessfulInTransaction(tx, created.userId, paidAt);
+					return { credited, stampedSignupReferralId };
 				},
 			);
 		} catch (error) {
@@ -156,7 +169,8 @@ export class RedemptionService {
 			throw error;
 		}
 
-		await this.notifyCreditedReferrers(outcome.result);
+		await this.notifyCreditedReferrers(outcome.result.credited);
+		await this.signupReferralCheckout.deliverAfterCheckout(outcome.result.stampedSignupReferralId);
 		return toCheckoutResponse(outcome.sale);
 	}
 

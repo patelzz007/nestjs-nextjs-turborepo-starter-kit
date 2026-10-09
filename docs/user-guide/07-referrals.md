@@ -45,10 +45,23 @@ friend redeems several times or at several tills at the same moment.
 | `CREDITED` | The referrer received the credit claim |
 | `BLOCKED` | Not eligible for credit |
 
+## Signup referrals (platform)
+
+Separate from merchant **reward** referrals above: every Reward Hub member gets a rotating
+**signup referral code** to share when someone creates a **consumer web** account. Open
+**Earn More → Referrals** in the sidebar (or go to `/rewardhub/referrals`) to copy your code and
+see who registered with it. There is no payout to the referrer; status updates when they redeem
+their first reward at checkout, and you get one in-app notification naming them. Optional code
+field on web signup only (the mobile app and merchant staff creation do not ask for one). A code
+lasts 30 days; a new one is issued within the hour after it expires, and the screen shows the old
+code as **Code expired** until then. Admins see the referrer and referral status on the user list
+and profile, and can filter the list with **Referred by** and **Referral status**. Detail:
+[ADR 035](../adr/035-signup-referrals.md).
+
 > [!IMPORTANT]
-> **Not built yet:** the API has no endpoint for a customer to *create* a referral (an invite
-> link or code), and the web app's Referrals menu entries have no pages. Today referral rows
-> exist only in the seed data; crediting at checkout is fully implemented. See
-> [known gaps](../technical/README.md#known-gaps).
+> **Reward referrals — not built yet:** the API has no endpoint for a customer to *create* a
+> reward-scoped referral (invite link or attribution token). Sub-pages under Referrals (Invite
+> Friends, My Referrals, Earnings) stay disabled. Crediting reward referrals at checkout is
+> implemented. See [known gaps](../technical/README.md#known-gaps).
 
 Technical detail: [POS integration → Referrals](../technical/pos-integration.md#checkout).

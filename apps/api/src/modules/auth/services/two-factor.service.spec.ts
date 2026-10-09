@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { TwoFactorSetupResponseSchema } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -107,6 +108,15 @@ describe("TwoFactorService.generateSetup", () => {
 		await service.generateSetup(USER_ID);
 
 		expect(otplib.generateURI).toHaveBeenCalledWith({ issuer: "Issuer Co", label: "member@example.com", secret: "SECRET" });
+	});
+
+	it("returns the otpauth:// key URI the QR code encodes, so a phone can hand it to an authenticator app", async () => {
+		const service = await createService();
+
+		const setup = await service.generateSetup(USER_ID);
+
+		expect(setup.otpAuthUrl).toBe("otpauth://totp/test");
+		expect(TwoFactorSetupResponseSchema.parse(setup).otpAuthUrl).toBe("otpauth://totp/test");
 	});
 });
 

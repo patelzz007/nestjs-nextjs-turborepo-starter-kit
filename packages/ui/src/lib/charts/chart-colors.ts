@@ -2,7 +2,7 @@
 // lib/charts/chart-colors.ts - the chart series colour slots
 // ============================================
 // Charts never pick a colour: each series names a SLOT (`chart-1` … `chart-5`)
-// and the app theme fills the slot (`--chart-N` in packages/ui tokens.css,
+// and the app theme fills the slot (`--chart-N` in packages/tokens semantic.ts,
 // overridden per app in `apps/*/app/*-theme.css`, light and dark). The order is
 // fixed and assigned in sequence — never cycled — so slot 1 is always the first
 // series and an entity keeps its slot when filters change the series count

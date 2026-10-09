@@ -6,7 +6,7 @@
 // The schemas here encode API-only formats: secrets, AES keys, JWT expiry,
 // the legacy 0/1 toggles, and the closed option sets of API features.
 
-import { commaSeparatedEnvSchema, HttpUrlEnvSchema, JsonValueSchema, type JsonValue } from "@workspace/shared";
+import { AppVersionSchema, commaSeparatedEnvSchema, HttpUrlEnvSchema, JsonValueSchema, type JsonValue } from "@workspace/shared";
 import { z } from "zod";
 
 // ── Toggles ────────────────────────────────────────────────────────────────
@@ -116,6 +116,15 @@ export const RewardCodeHashKeysEnvSchema = MfaEncryptionKeysEnvSchema;
 export const TenantKmsProviderSchema = z.enum(["local"]);
 export type TenantKmsProvider = z.output<typeof TenantKmsProviderSchema>;
 
+/**
+ * Where the location of a device session comes from (`SessionLocationResolver`,
+ * docs/technical/mobile/mobile-app.md §8.7). `none` resolves nothing and the
+ * location stays hidden; a GeoIP provider (MaxMind GeoLite2, a lookup API) is
+ * added here together with its adapter — choosing one is a pending decision.
+ */
+export const SessionLocationProviderSchema = z.enum(["none"]);
+export type SessionLocationProvider = z.output<typeof SessionLocationProviderSchema>;
+
 // ── Formats ────────────────────────────────────────────────────────────────
 
 const JWT_EXPIRY_PATTERN = /^[1-9]\d*[smhd]?$/;
@@ -202,6 +211,9 @@ export const AmqpUrlEnvSchema = z.url({ protocol: AMQP_PROTOCOL_PATTERN, error: 
 
 /** A non-empty identifier such as a bucket name or a service id. */
 export const NonEmptyEnvStringSchema = z.string().trim().min(1, "must not be empty");
+
+/** A semantic version (`MOBILE_MIN_SUPPORTED_VERSION`), surrounding whitespace ignored — the same `AppVersionSchema` the `X-App-Version` header is parsed with. */
+export const AppVersionEnvSchema = z.string().trim().pipe(AppVersionSchema);
 
 /**
  * Bare host name of the CDN that serves public assets (`d123abc.cloudfront.net`

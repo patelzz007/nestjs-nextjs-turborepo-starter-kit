@@ -3,7 +3,7 @@ title: "ADR 032: Uniwind (Free) for Mobile Styling"
 tags: ["adr", "mobile", "ui", "styling"]
 description: "The Expo app styles with Uniwind's free tier on Tailwind v4 instead of NativeWind, so web and mobile share one Tailwind major version and one token CSS format, and the app still runs in Expo Go."
 author: "Platform Team"
-lastUpdated: 1791417600000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=630&fit=crop"
 order: 32
 ---
@@ -12,8 +12,15 @@ order: 32
 
 ## Status
 
-Accepted (2026-10-08). Not implemented yet. Supersedes the NativeWind mandate in
-`rules/04-mobile-expo.md`, which is updated when the mobile app lands.
+Accepted (2026-10-08). Implemented (2026-10-09) in piece 5 of the mobile plan: `apps/mobile` uses
+Uniwind 1.12 (free, MIT) on Tailwind 4.3. `global.css` imports `tailwindcss`, `uniwind` and
+`@workspace/tokens/mobile.css`, and is imported by the root layout; `withUniwindConfig` is the
+outermost Metro wrapper. The generated `mobile.css` needed no change: an `expo export` of the app
+showed Uniwind compiling both `@variant`s (oklch converted to hex, alpha kept), the `@theme inline`
+`var()` mapping (`bg-card` → `--card` per theme) and the radius scale (`rounded-lg` → 10).
+`rules/04-mobile-expo.md` now names Uniwind instead of NativeWind. With pnpm, Uniwind's Metro peers
+are pinned in `apps/mobile` to the Metro version Expo SDK 57 bundles (`0.84.5`); otherwise pnpm
+auto-installs the newest Metro for Uniwind alone.
 
 ## Context
 

@@ -11,8 +11,10 @@ import { MfaRecoveryAuditAction } from "../../src/modules/auth/repositories/mfa-
 import { CryptoService } from "../../src/modules/auth/services/crypto.service";
 import { SecretEncryptionService } from "../../src/modules/auth/services/secret-encryption.service";
 import { findActivePolicyVersionInTx } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/modules/sessions/device/session-revoker";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
+import { SEED_DEVICE_PROFILES, seedSessionRow, type SeedDeviceProfile, type SeedSession } from "./device-sessions";
 import { daysAgo } from "./helpers";
 import { requireRow } from "./require-row";
 
@@ -29,7 +31,8 @@ import { requireRow } from "./require-row";
 //     soft-deleted (deletedBy = approving admin), never removed.
 //   • An MFA-enrolled user (live + used backup codes, a live and a consumed
 //     login challenge, last TOTP step), a user mid-enrollment (pending setup),
-//     a locked-out user, password history, a rotated and a revoked session.
+//     a locked-out user, password history, device sessions in the mobile and
+//     merchant apps (one rotated) and a revoked session per `deletedBy` path.
 //   • Support-access grants in every lifecycle state with their organization
 //     audit rows under the organization's active policy version.
 //
@@ -65,6 +68,8 @@ const SUPPORT_GRANT_DURATION_MS = 2 * HOUR_MS;
 const SUPPORT_IP = "203.0.113.24";
 const SUPPORT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
 const USER_IP = "198.51.100.73";
+/** The network the MFA user's devices refreshed from most recently. */
+const SECOND_USER_IP = "203.0.113.41";
 // const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 /** The organization a scenario seeds support-access grants for. */
@@ -393,44 +398,76 @@ export class AccountSecuritySeeder {
 		return { totpSecret, unusedBackupCode };
 	}
 
-	/** A session rotated three times (previous token hash kept for the grace window) and a revoked one. */
+	/**
+	 * The MFA user's device sessions: one in the mobile app rotated three times
+	 * (previous token hash kept for the grace window), one in the merchant app,
+	 * and a revoked session for every revocation path — the user (sign-out /
+	 * revoke from the device list), an admin's RBAC change, and every system
+	 * marker — each with its `deletedBy` (docs/technical/mobile/mobile-app.md §8.3).
+	 */
 	private async seedRotatedSessions(now: number): Promise<void> {
-		const { mfaUser } = this.cast;
-		const rotatedId = this.id("refresh-rotated");
-		if ((await prisma.refreshToken.findUnique({ where: { id: rotatedId }, select: { id: true } })) === null) {
-			const [currentHash, previousHash, revokedHash] = await Promise.all([
-				this.crypto.hash(this.material("refresh:current").toString("hex")),
-				this.crypto.hash(this.material("refresh:previous").toString("hex")),
-				this.crypto.hash(this.material("refresh:revoked").toString("hex")),
-			]);
-			await prisma.refreshToken.create({
-				data: {
-					id: rotatedId,
-					userId: mfaUser.id,
-					token: currentHash,
-					previousTokenHash: previousHash,
-					rotationVersion: 3,
-					deviceInfo: "Safari on iOS",
-					ipAddress: USER_IP,
-					expiresAt: now + 7 * DAY_MS,
-					createdAt: now - 3 * DAY_MS,
-					updatedAt: now - 2 * HOUR_MS,
-				},
+		const { mfaUser, superAdmin } = this.cast;
+		const revocations: readonly { readonly key: string; readonly by: SessionRevoker; readonly profile: SeedDeviceProfile }[] = [
+			{ key: "refresh-revoked", by: revokedByUser(mfaUser.id), profile: SEED_DEVICE_PROFILES.webFirefoxLinux },
+			{ key: "refresh-revoked-admin", by: revokedByUser(superAdmin.id), profile: SEED_DEVICE_PROFILES.adminEdgeWindows },
+			{ key: "refresh-revoked-reuse", by: revokedBySystem("system:rotation-reuse"), profile: SEED_DEVICE_PROFILES.mobilePixel },
+			{ key: "refresh-revoked-logout-all", by: revokedBySystem("system:logout-all"), profile: SEED_DEVICE_PROFILES.webSafariIphone },
+			{ key: "refresh-revoked-expired", by: revokedBySystem("system:expired-cleanup"), profile: SEED_DEVICE_PROFILES.webChromeMac },
+			{ key: "refresh-revoked-limit", by: revokedBySystem("system:session-limit"), profile: SEED_DEVICE_PROFILES.merchantChromeTablet },
+			{ key: "refresh-revoked-rbac", by: revokedBySystem("system:rbac-mutation"), profile: SEED_DEVICE_PROFILES.merchantSafariMac },
+		];
+		const sessions: SeedSession[] = [
+			{
+				id: this.id("refresh-rotated"),
+				userId: mfaUser.id,
+				tokenHash: await this.crypto.hash(this.material("refresh:current").toString("hex")),
+				previousTokenHash: await this.crypto.hash(this.material("refresh:previous").toString("hex")),
+				rotationVersion: 3,
+				profile: SEED_DEVICE_PROFILES.mobileIphone,
+				signInMethod: "PASSWORD_TOTP_NEW_DEVICE_CODE",
+				ipAddress: USER_IP,
+				lastIpAddress: SECOND_USER_IP,
+				location: { country: "MY", region: "Selangor", city: "Petaling Jaya" },
+				createdAt: now - 3 * DAY_MS,
+				lastActiveAt: now - 2 * HOUR_MS,
+				expiresAt: now + 7 * DAY_MS,
+			},
+			{
+				id: this.id("refresh-merchant"),
+				userId: mfaUser.id,
+				tokenHash: await this.crypto.hash(this.material("refresh:merchant").toString("hex")),
+				profile: SEED_DEVICE_PROFILES.merchantSafariMac,
+				signInMethod: "PASSWORD_BACKUP_CODE",
+				ipAddress: USER_IP,
+				lastIpAddress: USER_IP,
+				location: null,
+				createdAt: now - DAY_MS,
+				lastActiveAt: now - 20 * MINUTE_MS,
+				expiresAt: now + 6 * DAY_MS,
+			},
+		];
+		for (const [index, revocation] of revocations.entries()) {
+			const signedInAt: number = now - (index + 2) * DAY_MS;
+			const revokedAt: number = revocation.by.kind === "system" && revocation.by.marker === "system:expired-cleanup" ? now - HOUR_MS : signedInAt + DAY_MS;
+			sessions.push({
+				id: this.id(revocation.key),
+				userId: mfaUser.id,
+				tokenHash: await this.crypto.hash(this.material(`refresh:${revocation.key}`).toString("hex")),
+				profile: revocation.profile,
+				signInMethod: "PASSWORD_TOTP",
+				ipAddress: USER_IP,
+				lastIpAddress: SECOND_USER_IP,
+				location: { country: "MY", region: "Kuala Lumpur", city: "Kuala Lumpur" },
+				createdAt: signedInAt,
+				lastActiveAt: revokedAt - HOUR_MS,
+				// The expired-cleanup session was retired after its expiry; the others were still live when revoked.
+				expiresAt: revocation.by.kind === "system" && revocation.by.marker === "system:expired-cleanup" ? now - 2 * HOUR_MS : signedInAt + 7 * DAY_MS,
+				revoked: { at: revokedAt, by: revocation.by },
 			});
-			await prisma.refreshToken.create({
-				data: {
-					id: this.id("refresh-revoked"),
-					userId: mfaUser.id,
-					token: revokedHash,
-					deviceInfo: "Firefox on Linux",
-					ipAddress: USER_IP,
-					expiresAt: now + 5 * DAY_MS,
-					isDeleted: true,
-					deletedAt: now - DAY_MS,
-					createdAt: now - 2 * DAY_MS,
-					updatedAt: now - DAY_MS,
-				},
-			});
+		}
+		for (const session of sessions) {
+			const row: Prisma.RefreshTokenUncheckedCreateInput = seedSessionRow(session);
+			await prisma.refreshToken.upsert({ where: { id: requireRow(session.id, "seeded session id") }, create: row, update: row });
 		}
 	}
 

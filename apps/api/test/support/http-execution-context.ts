@@ -76,12 +76,13 @@ export function refreshToken(overrides: Partial<RefreshTokenPayload> = {}): Refr
 /**
  * Real Nest `ExecutionContext` for an HTTP request whose handler carries the
  * given metadata — so `Reflector` resolves it exactly as for decorated routes.
+ * `reply` is what `switchToHttp().getResponse()` returns (e.g. a cookie-recording fake).
  */
-export function createHttpContext(request: TestHttpRequest, metadata: TestRouteMetadata = {}): ExecutionContext {
+export function createHttpContext(request: TestHttpRequest, metadata: TestRouteMetadata = {}, reply: object = {}): ExecutionContext {
 	class TestController {}
 	function testHandler(): void {}
 	for (const [key, value] of Object.entries(metadata)) {
 		Reflect.defineMetadata(key, value, testHandler);
 	}
-	return new ExecutionContextHost([request, {}, (): void => {}], TestController, testHandler);
+	return new ExecutionContextHost([request, reply, (): void => {}], TestController, testHandler);
 }

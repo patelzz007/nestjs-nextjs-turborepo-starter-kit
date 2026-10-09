@@ -2,6 +2,42 @@
 	"$schema": "https://unpkg.com/syncpack@15.3.3/dist/schema.json",
 	"versionGroups": [
 		{
+			"label": "apps/mobile: React is what Expo SDK 57 pins (19.2), not the web's 19.3. Change only with `npx expo install expo@<next> --fix` (docs/technical/mobile/mobile-app.md §14.3)",
+			"dependencies": ["react"],
+			"packages": ["@workspace/mobile"],
+			"pinVersion": "19.2.3"
+		},
+		{
+			"label": "apps/mobile: React's types follow the SDK's React (expo install)",
+			"dependencies": ["@types/react"],
+			"packages": ["@workspace/mobile"],
+			"pinVersion": "~19.2.18"
+		},
+		{
+			"label": "apps/mobile: React Native and its @react-native/* tooling are the version Expo SDK 57 pins (0.86)",
+			"dependencies": ["react-native", "@react-native/**"],
+			"packages": ["@workspace/mobile"],
+			"pinVersion": "0.86.3"
+		},
+		{
+			"label": "apps/mobile: Metro is the version @expo/metro bundles for SDK 57, so Uniwind's Metro peers resolve to the bundler Expo runs",
+			"dependencies": ["metro", "metro-cache", "metro-transform-worker"],
+			"packages": ["@workspace/mobile"],
+			"pinVersion": "0.84.5"
+		},
+		{
+			"label": "apps/mobile: jest-expo 57 runs on Jest 29 (ADR 031)",
+			"dependencies": ["jest"],
+			"packages": ["@workspace/mobile"],
+			"pinVersion": "^29.7.0"
+		},
+		{
+			"label": "apps/mobile: Jest's types follow the Jest that jest-expo 57 runs",
+			"dependencies": ["@types/jest"],
+			"packages": ["@workspace/mobile"],
+			"pinVersion": "^29.5.14"
+		},
+		{
 			"label": "Shared deps must be the same version across all workspaces",
 			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
 			"packages": ["**", "!@workspace/eslint-config"],

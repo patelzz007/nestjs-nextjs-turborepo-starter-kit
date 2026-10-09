@@ -21,7 +21,7 @@ Import global styles once in your app layout:
 import "@workspace/ui/globals.css";
 ```
 
-Colour primitives live in `src/styles/palette.css`; semantic tokens (and everything else below) in `src/styles/tokens.css` — see "Palette", "Reward tiers", "Elevation and radius" and "Typography" in `rules/07-ui-system.md`. Z-index layers:
+Design tokens (colour primitives, semantic colours, radii, type sizes, z-index layers and the Tailwind `@theme` mapping) come from `packages/tokens`: `globals.css` imports its generated `@workspace/tokens/web.css`, which is never edited by hand (change the TypeScript source, then run `pnpm tokens:generate`) — see "Palette", "Reward tiers", "Elevation and radius" and "Typography" in `rules/07-ui-system.md`. Z-index layers:
 
 - `z-overlay` — modal / dialog / sheet backdrops
 - `z-popover` — dropdowns, selects, tooltips
@@ -204,7 +204,7 @@ A pre-built `lines` array can also carry per-line `gutter` labels (e.g. dual old
 patch) and per-token `color` / `colorDark`. ReUI's unified-diff (`parseUnifiedDiff`) and ANSI
 (`ansiToLines`) parsers were not kept: nothing in the monorepo uses them, and the ANSI palette is
 hard-coded hex that bypasses the kit's tokens. The markdown helpers are kept (see above). Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `--warning`,
-`--info`, `--accent`, `--muted` (all in `styles/tokens.css`).
+`--info`, `--accent`, `--muted` (all from `packages/tokens`).
 
 **Deliberate deviations from ReUI** (behaviour otherwise identical):
 
@@ -247,7 +247,7 @@ lists its deliberate deviations; the common ones are:
 - **Fully controlled** — `Stepper` requires `value` (no `defaultValue`); `Alert` has no
   dismiss/timer state: the parent renders it conditionally and puts a dismiss `Button` in
   `AlertAction`.
-- **Tokens** — ReUI's status colours map onto `tokens.css`: `success|warning|info|destructive`
+- **Tokens** — ReUI's status colours map onto the semantic tokens (`packages/tokens`): `success|warning|info|destructive`
   plus `-foreground` (text on a light tint, aliased to the tone palette so it keeps its AA
   contrast), `invert` / `invert-foreground`, and `status-foreground` (text on a solid status
   fill, in place of `text-white`). Badge's two smallest sizes use `--text-badge-xs|sm`.
@@ -366,6 +366,6 @@ src/
   components/   — every component, flat: `components/<name>.tsx`, imported as
                   `@workspace/ui/components/<name>` (no category folders)
   lib/          — utils, format (dates, counts, money), field-variants, field-state, sidebar-labels, sidebar-storage, sidebar-variants
-  styles/       — tokens, globals
+  styles/       — globals (imports the generated @workspace/tokens/web.css), base, components, token contrast test
   hooks/
 ```

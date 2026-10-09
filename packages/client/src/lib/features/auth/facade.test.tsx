@@ -71,12 +71,13 @@ const CHANNEL_NAME = "auth-sync:web";
 
 // ── The API: a routed fetch stub ──────────────────────────────────────────
 
-type RouteName = "me" | "permissions" | "logout" | "refresh";
+type RouteName = "me" | "permissions" | "logout" | "logoutAll" | "refresh";
 
 const ROUTE_SUFFIXES: Readonly<Record<RouteName, string>> = {
 	me: "/auth/me",
 	permissions: "/auth/permissions",
 	logout: "/auth/logout",
+	logoutAll: "/auth/logout-all",
 	refresh: "/auth/refresh",
 };
 
@@ -128,7 +129,7 @@ let timeline: string[];
 
 function routeOf(input: string | URL | Request): RouteName | undefined {
 	const pathname = new URL(input instanceof Request ? input.url : String(input)).pathname;
-	const names: readonly RouteName[] = ["me", "permissions", "logout", "refresh"];
+	const names: readonly RouteName[] = ["me", "permissions", "logout", "logoutAll", "refresh"];
 	return names.find((name: RouteName): boolean => pathname.endsWith(ROUTE_SUFFIXES[name]));
 }
 
@@ -250,6 +251,7 @@ beforeEach((): void => {
 		me: (): Response => envelopeResponse(userFixture()),
 		permissions: (): Response => envelopeResponse(sessionPermissionsFixture()),
 		logout: (): Response => envelopeResponse({ message: "Logged out" }),
+		logoutAll: (): Response => envelopeResponse({ message: "Logged out from all devices" }),
 		refresh: (): Response => envelopeResponse({ message: "Refreshed" }),
 	};
 	MockBroadcastChannel.channelsByName.clear();
@@ -557,6 +559,42 @@ describe("auth facade — sign-out", () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	it("signs out everywhere: the API revokes every session first, then the client session ends, the other tabs hear it and the page leaves", async () => {
+		const { result, queryClient } = renderAuth(RETURNING_MEMBER);
+		await waitFor((): void => {
+			expect(result.current.isAuthenticated).toBe(true);
+		});
+		openOtherTab();
+		timeline = [];
+
+		let confirmed = false;
+		await act(async (): Promise<void> => {
+			confirmed = await result.current.commands.logoutEverywhere();
+		});
+
+		expect(confirmed).toBe(true);
+		expect(result.current.status).toBe("signed-out");
+		expect(cachedData(queryClient)).toEqual([]);
+		expect(timeline).toEqual(["api:logoutAll", "other-tab:logged-out", "leave:/auth/login"]);
+	});
+
+	it("keeps the session (and says so) when the API does not confirm the sign-out everywhere", async () => {
+		const { result } = renderAuth(RETURNING_MEMBER);
+		await waitFor((): void => {
+			expect(result.current.isAuthenticated).toBe(true);
+		});
+		routes.logoutAll = (): Response => statusResponse(UNAVAILABLE_STATUS);
+
+		let confirmed = true;
+		await act(async (): Promise<void> => {
+			confirmed = await result.current.commands.logoutEverywhere();
+		});
+
+		expect(confirmed).toBe(false);
+		expect(result.current.isAuthenticated).toBe(true);
+		expect(leaveSession).not.toHaveBeenCalled();
 	});
 
 	it("leaves for the configured redirect target", async () => {

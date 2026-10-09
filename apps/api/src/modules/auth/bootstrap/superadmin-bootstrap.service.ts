@@ -123,7 +123,7 @@ export class SuperAdminBootstrapService {
 	private async createAccount(identity: BootstrapIdentity, passwordHash: string, now: number, tx: Prisma.TransactionClient): Promise<CreatedSuperAdmin> {
 		try {
 			return await this.repository.createSuperAdmin(
-				{ email: identity.email, fullName: identity.fullName, passwordHash, emailVerifiedAt: now, mfaEnrollmentDeadline: now },
+				{ email: identity.email, fullName: identity.fullName, passwordHash, emailVerifiedAt: now, mfaEnrollmentDeadline: now, referralCodeIssuedAt: now },
 				tx,
 			);
 		} catch (error) {

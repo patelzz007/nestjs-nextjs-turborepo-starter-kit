@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (218 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (219 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 218 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 219 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 > [!NOTE]
 > This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
@@ -21,7 +21,7 @@ Every endpoint of `apps/api` — 218 operations, 214 with a sample captured from
 
 | Page | Endpoints | Covers |
 | --- | --- | --- |
-| [Auth, sessions and account security](./auth-and-sessions.md) | 37 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
+| [Auth, sessions and account security](./auth-and-sessions.md) | 38 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions, policies and audit](./access-control.md) | 33 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 15 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
 | [Merchant organizations (portal API)](./merchant-organizations.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
@@ -53,18 +53,19 @@ Every endpoint of `apps/api` — 218 operations, 214 with a sample captured from
 | POST | [`/api/v1/auth/login`](./auth-and-sessions.md#post-apiv1authlogin) | Authenticate with email and password |
 | POST | [`/api/v1/auth/login/2fa`](./auth-and-sessions.md#post-apiv1authlogin2fa) | Complete login with a TOTP code |
 | POST | [`/api/v1/auth/login/backup-code`](./auth-and-sessions.md#post-apiv1authloginbackup-code) | Complete login with a one-time backup code |
-| POST | [`/api/v1/auth/logout`](./auth-and-sessions.md#post-apiv1authlogout) | Logout from the current device (idempotent — always clears the auth cookies) |
-| POST | [`/api/v1/auth/logout-all`](./auth-and-sessions.md#post-apiv1authlogout-all) | Logout from all devices |
+| POST | [`/api/v1/auth/logout`](./auth-and-sessions.md#post-apiv1authlogout) | Logout from the current device (idempotent — always clears a browser client's auth cookies; client type mobile presents its refresh token as { refreshToken }) |
+| POST | [`/api/v1/auth/logout-all`](./auth-and-sessions.md#post-apiv1authlogout-all) | Logout from all devices, on every client type (refresh token: the httpOnly cookie for browser client types, { refreshToken } for client type mobile) |
 | GET | [`/api/v1/auth/me`](./auth-and-sessions.md#get-apiv1authme) | Get the currently authenticated user's profile |
 | POST | [`/api/v1/auth/mfa/recovery`](./auth-and-sessions.md#post-apiv1authmfarecovery) | Initiate an admin-reviewed MFA recovery request |
 | GET | [`/api/v1/auth/mfa/recovery/status`](./auth-and-sessions.md#get-apiv1authmfarecoverystatus) | Get the current MFA recovery request status |
 | GET | [`/api/v1/auth/permissions`](./auth-and-sessions.md#get-apiv1authpermissions) | Get the current session's roles and permissions |
 | GET | [`/api/v1/auth/profile`](./auth-and-sessions.md#get-apiv1authprofile) | Get the signed-in user's own profile (name, avatar, optimistic-lock version) |
 | PATCH | [`/api/v1/auth/profile`](./auth-and-sessions.md#patch-apiv1authprofile) | Edit the signed-in user's own profile |
-| POST | [`/api/v1/auth/refresh`](./auth-and-sessions.md#post-apiv1authrefresh) | Refresh access token using refresh token cookie |
+| POST | [`/api/v1/auth/refresh`](./auth-and-sessions.md#post-apiv1authrefresh) | Rotate the session tokens (refresh token: the httpOnly cookie for browser client types, the { refreshToken } body for client type mobile) |
 | POST | [`/api/v1/auth/resend-verification`](./auth-and-sessions.md#post-apiv1authresend-verification) | Resend email verification link |
 | POST | [`/api/v1/auth/reset-password`](./auth-and-sessions.md#post-apiv1authreset-password) | Reset password using a valid reset token |
-| GET | [`/api/v1/auth/sessions`](./auth-and-sessions.md#get-apiv1authsessions) | Get all active sessions for the current user |
+| GET | [`/api/v1/auth/sessions`](./auth-and-sessions.md#get-apiv1authsessions) | List the caller's signed-in devices (every client type): the current one first, then by last activity |
+| POST | [`/api/v1/auth/sessions/{sessionId}/revoke`](./auth-and-sessions.md#post-apiv1authsessionssessionidrevoke) | Sign out one of the caller's devices |
 | POST | [`/api/v1/auth/signup`](./auth-and-sessions.md#post-apiv1authsignup) | Register a new user account |
 | POST | [`/api/v1/auth/stop-impersonation`](./auth-and-sessions.md#post-apiv1authstop-impersonation) | Stop impersonating and restore the original admin session |
 | POST | [`/api/v1/auth/validate-reset-token`](./auth-and-sessions.md#post-apiv1authvalidate-reset-token) | Validate a password reset token without consuming it |

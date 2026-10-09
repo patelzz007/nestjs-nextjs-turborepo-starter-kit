@@ -227,30 +227,49 @@ Use one icon library consistently (as already noted) and treat icons as decorati
 
 ## Palette — primitives, semantic tokens, one accent
 
-All colour is defined ONCE in `packages/ui`, in two layers and two files:
+All design tokens — colours, radii, type sizes, z-index layers, easing and the Tailwind `@theme`
+mapping — are defined ONCE, as typed TypeScript data in **`packages/tokens`** (`@workspace/tokens`,
+ADR 030). A generator writes the CSS every platform consumes; nothing else holds a token value.
 
-1. **Primitives** — `packages/ui/src/styles/palette.css`. Raw scales only, every neutral carrying
+1. **Primitives** — `packages/tokens/src/palette.ts`. Raw scales only, every neutral carrying
    the same faint cool "ink" cast (hue 258): `--palette-neutral-0…900` (the light theme: 0 = card
    white, 50 = the tinted canvas, 100 = in-card fills, 600 = secondary text, 900 = ink text),
    `--palette-ink-50…950` (the dark theme, by elevation), `--palette-brand-*` (slate — admin, docs and
    the kit's default accent), `--palette-blue-*` (web, sapphire), `--palette-green-*` (merchant,
    emerald) and `--palette-warm-*` (kopi amber, the charts' counter-colour). Each accent scale has
    `960` / `975` steps — the deep sidebar tones of the dark theme.
-2. **Semantic tokens** — `packages/ui/src/styles/tokens.css`: `--background`, `--primary`,
-   `--border`, `--sidebar-*`, `--chart-*`, `--tier-*`, … each mapped onto a primitive step per theme
-   (`:root` / `.dark`). `globals.css` imports `palette.css` first, then `tokens.css`.
+2. **Semantic tokens** — `packages/tokens/src/semantic.ts`: `--background`, `--primary`,
+   `--border`, `--sidebar-*`, `--chart-*`, `--tier-*`, … one object per theme (`LIGHT_THEME`,
+   `DARK_THEME`), both typed from the ONE role list in `schema.ts` (`ThemeRoleSchema`), so a theme
+   that misses a role does not compile. Theme-independent colours (`--scrim`, `--qr-*`, `--auth-*`, …)
+   live in `SHARED_COLORS`; radii, type sizes, layout and motion in `radius.ts`, `typography.ts`,
+   `layout.ts`, `motion.ts`; the Tailwind mapping in `tailwind-theme.ts`. Zod schemas (`schema.ts`)
+   validate every value.
+
+**Generated CSS is never edited by hand.** Change the TypeScript source, run `pnpm tokens:generate`,
+and commit the regenerated files in `packages/tokens/generated/`:
+
+| File | Holds | Consumed by |
+|---|---|---|
+| `web.css` | `:root` (palette, theme-independent tokens, light theme), `.dark` (dark theme), `@theme inline` | `packages/ui/src/styles/globals.css` (`@import "@workspace/tokens/web.css"`) |
+| `palette.css` | the primitives alone | the docs site (`@workspace/tokens/palette.css`) |
+| `mobile.css` | the same names in Uniwind's `@layer theme` / `@variant light|dark` format, literal values, plus `@theme inline` | `apps/mobile` (ADR 032) |
+
+A test in `packages/tokens` regenerates in memory and fails `pnpm run test` (and CI) when a committed
+file is stale or hand-edited; the generator also fails when any theme lacks a variable another
+defines. Variable names never change when a value does, so components are untouched by a token edit.
 
 Components read **semantic tokens only**, never `--palette-*` — the mapping is what lets light and
 dark (and a future rebrand) change in one place. App themes (`apps/*/app/*-theme.css`) may re-map
 **brand and sidebar tokens only** (`APP_BRAND_TOKENS` in `lib/core/color-contrast.ts`) onto their hue —
 web is blue, merchant green, admin uses the shared slate — and never page/card surfaces, borders or
 text; each app's theme test enforces that and proves the layered theme's contrast. The docs site
-(`apps/docs/src/styles/global.css`) imports `@workspace/ui/styles/palette.css` and maps its own
+(`apps/docs/src/styles/global.css`) imports `@workspace/tokens/palette.css` and maps its own
 names onto the same primitives, so it cannot drift (`apps/docs/src/styles/theme-contrast.test.ts`).
-Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`tokens-contrast.test.ts`).
+Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`packages/ui/src/styles/tokens-contrast.test.ts`, which reads the generated `web.css`).
 
-To rebrand a product built on this kit: change the accent scale(s) in `palette.css`, then re-run
-`pnpm run test` — the contrast tests tell you which steps need nudging.
+To rebrand a product built on this kit: change the accent scale(s) in `packages/tokens/src/palette.ts`,
+run `pnpm tokens:generate`, then re-run `pnpm run test` — the contrast tests tell you which steps need nudging.
 
 - **Brand colour is reserved for meaning** — primary actions, links, focus rings, the active nav
   row and the lead chart series. Hover rows stay neutral. Status (success / warning / destructive /
@@ -289,7 +308,7 @@ sidebars, by each app's theme test.
 
 ## Elevation and radius
 
-- **Shadows** — Tailwind's `shadow-2xs … shadow-2xl` scale is redefined in `tokens.css` to read two
+- **Shadows** — Tailwind's `shadow-2xs … shadow-2xl` scale is redefined in the token source (`packages/tokens/src/tailwind-theme.ts`) to read two
   theme colours, `--shadow-ambient` and `--shadow-key`. Light mode: soft, ink-tinted (never a grey
   `rgba(0,0,0,.1)`). Dark mode: near-invisible on small shadows (depth comes from lightness), deep on
   floating layers (`shadow-md` and up — popovers, menus, dialogs). `shadow-<color>/N` modifiers still

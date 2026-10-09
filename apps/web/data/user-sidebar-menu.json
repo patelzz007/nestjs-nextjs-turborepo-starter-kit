@@ -96,27 +96,7 @@
           "title": "Referrals",
           "url": "/rewardhub/referrals",
           "icon": "Users",
-          "disabled": true,
-          "children": [
-            {
-              "title": "Invite Friends",
-              "url": "/rewardhub/referrals/invite",
-              "icon": "UserPlus",
-              "disabled": true
-            },
-            {
-              "title": "My Referrals",
-              "url": "/rewardhub/referrals/list",
-              "icon": "Users",
-              "disabled": true
-            },
-            {
-              "title": "Earnings",
-              "url": "/rewardhub/referrals/earnings",
-              "icon": "DollarSign",
-              "disabled": true
-            }
-          ]
+          "disabled": false
         },
         {
           "title": "Points",

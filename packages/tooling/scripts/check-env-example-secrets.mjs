@@ -8,7 +8,14 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 
-const EXAMPLE_FILES = ["apps/api/.env.example", "apps/web/.env.example", "apps/admin/.env.example", "apps/merchant/.env.example", "apps/analytics-consumer/.env.example"];
+const EXAMPLE_FILES = [
+	"apps/api/.env.example",
+	"apps/web/.env.example",
+	"apps/admin/.env.example",
+	"apps/merchant/.env.example",
+	"apps/analytics-consumer/.env.example",
+	"apps/mobile/.env.example",
+];
 
 const ALLOWED_PATTERNS = [
 	/^change-me-/i,

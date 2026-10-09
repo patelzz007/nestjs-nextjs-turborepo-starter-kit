@@ -1,0 +1,30 @@
+{
+	"name": "@workspace/tokens",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"description": "The single source of the design tokens (ADR 030): TypeScript token data plus a generator that writes the committed web and mobile CSS. No runtime dependencies.",
+	"scripts": {
+		"generate": "tsx scripts/generate.ts",
+		"lint": "eslint --max-warnings=0",
+		"format": "prettier --write \"**/*.ts\"",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./palette.css": "./generated/palette.css",
+		"./web.css": "./generated/web.css",
+		"./mobile.css": "./generated/mobile.css"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.4",
+		"@workspace/eslint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"tsx": "^4.23.15",
+		"typescript": "6.0.3",
+		"vitest": "^5.0.3",
+		"zod": "4.6.5"
+	}
+}

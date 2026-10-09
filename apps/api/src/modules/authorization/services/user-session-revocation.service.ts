@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
+import type { SessionRevoker } from "../../sessions/device/session-revoker";
 import { RefreshTokenRepository } from "../../sessions/repositories/refresh-token.repository";
 import { SessionUserRepository } from "../../sessions/repositories/session-user.repository";
 import { AuthorizationInvalidationService, type UserInvalidationTrigger } from "../cache/authorization-invalidation.service";
@@ -24,6 +25,9 @@ const NO_ADDITIONAL_WRITE: RevocationTransactionWrite = (): Promise<void> => Pro
  *
  * Cached access-token state is invalidated only after commit — on every API
  * instance — so a concurrent reload cannot re-cache the old tokenVersion.
+ *
+ * Every revoked session records who revoked it (`deletedBy`, a
+ * {@link SessionRevoker}: the user, an admin, or a system marker).
  */
 @Injectable()
 export class UserSessionRevocationService {
@@ -36,8 +40,13 @@ export class UserSessionRevocationService {
 		private readonly invalidation: AuthorizationInvalidationService,
 	) {}
 
-	public async revokeAllSessionsForUser(userId: string, trigger: UserInvalidationTrigger, withinTransaction: RevocationTransactionWrite = NO_ADDITIONAL_WRITE): Promise<void> {
-		await this.revokeAllSessionsForUsers([userId], trigger, withinTransaction);
+	public async revokeAllSessionsForUser(
+		userId: string,
+		revoker: SessionRevoker,
+		trigger: UserInvalidationTrigger,
+		withinTransaction: RevocationTransactionWrite = NO_ADDITIONAL_WRITE,
+	): Promise<void> {
+		await this.revokeAllSessionsForUsers([userId], revoker, trigger, withinTransaction);
 	}
 
 	/**
@@ -46,6 +55,7 @@ export class UserSessionRevocationService {
 	 */
 	public async revokeAllSessionsForUsers(
 		userIds: readonly string[],
+		revoker: SessionRevoker,
 		trigger: UserInvalidationTrigger,
 		withinTransaction: RevocationTransactionWrite = NO_ADDITIONAL_WRITE,
 	): Promise<void> {
@@ -55,7 +65,7 @@ export class UserSessionRevocationService {
 		}
 
 		await this.prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<void> => {
-			await this.revokeWithinTransaction(uniqueUserIds, tx);
+			await this.revokeWithinTransaction(uniqueUserIds, revoker, tx);
 			await withinTransaction(tx);
 		});
 
@@ -63,12 +73,12 @@ export class UserSessionRevocationService {
 	}
 
 	/** Revoke refresh tokens and bump tokenVersion inside the caller's transaction. Pair with {@link afterRevocationCommitted}. */
-	public async revokeWithinTransaction(userIds: readonly string[], tx: Prisma.TransactionClient): Promise<void> {
+	public async revokeWithinTransaction(userIds: readonly string[], revoker: SessionRevoker, tx: Prisma.TransactionClient): Promise<void> {
 		const uniqueUserIds: string[] = [...new Set<string>(userIds)];
 		if (uniqueUserIds.length === 0) {
 			return;
 		}
-		await this.refreshTokens.revokeAllForUsers(uniqueUserIds, tx);
+		await this.refreshTokens.revokeAllForUsers(uniqueUserIds, revoker, tx);
 		await this.sessionUsers.bumpTokenVersions(uniqueUserIds, tx);
 	}
 

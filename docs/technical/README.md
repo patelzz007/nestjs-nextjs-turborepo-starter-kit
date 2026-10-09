@@ -48,7 +48,7 @@ is a real limitation of the current code, not of the docs.
 | # | Gap | Where it shows |
 | --- | --- | --- |
 | 1 | `GET /geo/*?search=` answers `500` until the forward migration that creates the `pg_trgm` extension and the `*_name_trgm_idx` GIN indexes (declared in `schema.prisma`) is generated and applied | [Geography API](./api-reference/geography.md) (samples use `filter[...]` instead) |
-| 4 | Referrals: no endpoint or UI creates a referral; the web Referrals menu has no pages (crediting at checkout works) | [Referrals](../user-guide/07-referrals.md) |
+| 4 | **Reward** referrals: no customer endpoint or UI to record a reward-scoped referral (invite link / attribution); merchant crediting at checkout works. **Signup** referrals (rotating code at registration) ship at `/rewardhub/referrals` — see [ADR 035](../adr/035-signup-referrals.md). | [Referrals](../user-guide/07-referrals.md) |
 | 5 | Reward notifications have an API and client leaves but no screen | [Customer claims](../user-guide/05-customer-claims.md) |
 | 6 | No command creates the first SuperAdmin on a non-demo database | [Platform setup](../user-guide/01-platform-setup.md) |
 | 7 | Uploads are single requests (≤ 25 MB); chunked S3 multipart upload is not implemented | [Storage](./storage/overview.md) |

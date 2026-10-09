@@ -19,6 +19,8 @@ interface UserRowStub {
 	readonly roles: readonly { readonly id: string; readonly name: string }[];
 	readonly isSuperAdmin: boolean;
 	readonly hasAdminAccess: boolean;
+	readonly signupReferrer: AdminUserDetail["signupReferrer"];
+	readonly signupReferralStatus: AdminUserDetail["signupReferralStatus"];
 }
 
 interface UsersQueryStub {
@@ -41,10 +43,41 @@ vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({ api: { auth: { adminUsers: { useQuery: usersQuery } } } }),
 }));
 
+/** The picker has its own tests; here it only reports a choice, so the table's query calls stay the table's own. */
+const PICKED_REFERRER_ID = "8c1b6d2e-4f3a-4b5c-9d6e-7f8a9b0c1d2e";
+interface ReferrerPickerStubProps {
+	readonly id: string;
+	readonly value: string;
+	readonly onChange: (userId: string) => void;
+}
+
+/** Picks {@link PICKED_REFERRER_ID}, or clears the choice when one is set. */
+function ReferrerPickerStub({ id, value, onChange }: ReferrerPickerStubProps): React.JSX.Element {
+	const handleClick = React.useCallback((): void => {
+		onChange(value.length > 0 ? "" : PICKED_REFERRER_ID);
+	}, [onChange, value]);
+	return (
+		<button type="button" id={id} onClick={handleClick}>
+			Referred by picker
+		</button>
+	);
+}
+
+vi.mock("../referrer-picker", () => ({ ReferrerPicker: ReferrerPickerStub }));
+
 const PATH = "/users";
 const NEXT_CURSOR = "eyJhdCI6MSwiaWQiOiJ1In0";
 
-const USER: UserRowStub = { id: "u-1", fullName: "Jane Doe", email: "jane@example.com", roles: [], isSuperAdmin: false, hasAdminAccess: true };
+const USER: UserRowStub = {
+	id: "u-1",
+	fullName: "Jane Doe",
+	email: "jane@example.com",
+	roles: [],
+	isSuperAdmin: false,
+	hasAdminAccess: true,
+	signupReferrer: null,
+	signupReferralStatus: null,
+};
 
 function pageMeta(overrides: Partial<ApiPaginatedMeta>): ApiPaginatedMeta {
 	return ApiPaginatedMetaSchema.parse({
@@ -183,6 +216,46 @@ describe("UsersAllTable URL state", () => {
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
 		expect(currentQuery()).toBe("?page=2&sort=email");
+	});
+
+	it("queries the referral filters the URL asks for", () => {
+		setUrl(`${PATH}?filter[referrerId]=${PICKED_REFERRER_ID}&filter[referralStatus]=not_redeemed`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		expect(usersQuery).toHaveBeenLastCalledWith(
+			{ page: 1, limit: 20, filter: { referrerId: { eq: PICKED_REFERRER_ID }, referralStatus: { eq: "not_redeemed" } } },
+			expect.anything(),
+		);
+		expect(screen.getByRole("combobox", { name: "Referral status" }).textContent).toContain("Not redeemed");
+	});
+
+	it("writes the referrer chosen in the Referred by picker to the URL and resets to page 1", () => {
+		setUrl(`${PATH}?page=3`);
+		const pushState = vi.spyOn(window.history, "pushState");
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: "Referred by" }));
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(currentQuery()).toBe(`?filter[referrerId]=${PICKED_REFERRER_ID}`);
+	});
+
+	it("drops the referrer filter when the picker is cleared", () => {
+		setUrl(`${PATH}?filter[referrerId]=${PICKED_REFERRER_ID}`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: "Referred by" }));
+
+		expect(currentQuery()).toBe("");
+	});
+
+	it("renders a referee's referrer as a profile link and the referral status label", () => {
+		const referee: UserRowStub = { ...USER, signupReferrer: { id: PICKED_REFERRER_ID, fullName: "Alice Referrer" }, signupReferralStatus: "redeemed" };
+		usersQuery.mockReturnValue({ data: { data: [referee], meta: pageMeta({}) }, isLoading: false, isError: false, isFetching: false });
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		expect(screen.getAllByRole("link", { name: "Alice Referrer" }).at(0)?.getAttribute("href")).toBe(`/users/${PICKED_REFERRER_ID}`);
+		expect(screen.getAllByText("Redeemed").length).toBeGreaterThan(0);
 	});
 
 	it("uses the server-prefetched page only for the URL state it was fetched for", () => {

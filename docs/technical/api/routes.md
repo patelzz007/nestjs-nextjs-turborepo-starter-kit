@@ -99,7 +99,7 @@ export class ConsumerRewardsController {
 }
 ```
 
-**Client** (`packages/client/src/lib/api/endpoints.ts`) — a typed leaf whose query key scope is
+**Client** (`packages/api-client/src/router.ts`, re-exported by `@workspace/client/lib/api/endpoints`) — a typed leaf whose query key scope is
 declared once:
 
 ```ts

@@ -71,8 +71,11 @@ export const SystemOperationSchema = z.enum([
 	"maintenance.audit_log_retention",
 	"maintenance.password_reset_token_cleanup",
 	"maintenance.mfa_recovery_unlock",
+	"maintenance.signup_referral_codes",
 	// ── Account security ─────────────────────────────────────────────────
 	"auth.profile.update",
+	"auth.signup_referrals.list_referees",
+	"auth.signup_referrals.notify_success",
 	"auth.mfa_recovery.request",
 	"auth.mfa_recovery.review",
 	"auth.superadmin.bootstrap",
@@ -174,14 +177,25 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	"queue.claims.expire_pending": runtime("BullMQ worker: expire pending reward claims"),
 	"queue.claims.expire_referrer": runtime("BullMQ worker: expire referrer reward claims"),
 	"queue.rewards.referral_credit_notify": runtime("BullMQ worker: deliver pending referrer-reward-credited emails"),
-	"rewards.referral_credit.deliver": runtime("Read a credited referral's referrer email and mark it notified — whoever triggered the delivery (the POS checkout right after commit, or the retry job)"),
+	"rewards.referral_credit.deliver": runtime(
+		"Read a credited referral's referrer email and mark it notified — whoever triggered the delivery (the POS checkout right after commit, or the retry job)",
+	),
 	"maintenance.permission_expiry": runtime("Cron: revoke expired temporary permissions"),
 	"maintenance.audit_log_retention": runtime("Cron: purge permission audit rows past retention"),
 	"maintenance.password_reset_token_cleanup": runtime("Cron: delete expired password reset tokens"),
 	"maintenance.mfa_recovery_unlock": runtime("Cron: apply due MFA recovery unlocks"),
+	"maintenance.signup_referral_codes": runtime(
+		"Cron: issue the first signup referral code to every non-deleted user without one, and a successor after a code expires, each under that user's row lock, with a system audit row (ADR 035)",
+	),
 
 	"auth.profile.update": runtime(
 		"A user edits their OWN profile (optimistic-lock conditional update scoped to their id), with the request's audit row in the bypass-only audit table, in one transaction",
+	),
+	"auth.signup_referrals.list_referees": runtime(
+		"Read referee display names for the authenticated referrer's signup-referral list (`users` RLS is self-only); only after the caller is bound to their own referrer id",
+	),
+	"auth.signup_referrals.notify_success": runtime(
+		"Claim a successful signup referral's owed notification and write it to the referrer's in-app inbox with the referee's current name — after the POS checkout that stamped it, or from the hourly retry pass (ADR 035)",
 	),
 	"auth.mfa_recovery.request": runtime("A user opens an MFA recovery request, with its audit row in the bypass-only platform audit table"),
 	"auth.mfa_recovery.review": runtime(

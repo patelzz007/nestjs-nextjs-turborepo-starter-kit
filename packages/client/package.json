@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.104.1",
+		"@workspace/api-client": "workspace:*",
 		"@workspace/shared": "workspace:*",
 		"@workspace/ui": "workspace:*",
 		"react": "19.3.0",

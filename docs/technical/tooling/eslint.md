@@ -4,7 +4,7 @@ tags: ["eslint", "linting", "tooling", "import-boundaries"]
 description: "How ESLint is configured repo-wide and how to run it — both globally (via Turborepo) and per project."
 order: 6
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -50,6 +50,9 @@ packages/eslint-config/          ← the shared config package (@workspace/eslin
 ├── base.js                      ← core rules applied to EVERY repo
 ├── next.js                      ← web + admin + merchant (react-internal.js + Next.js rules)
 ├── react-internal.js            ← packages/ui + packages/client (React library rules)
+├── react-native.js              ← apps/mobile (the shared React rules with React Native globals,
+│                                   React Native + accessibility rules, mobile import boundaries)
+├── react-rules.js               ← the React / hooks blocks shared by react-internal.js and react-native.js
 ├── nestjs.js                    ← apps/api (NestJS + DI-friendly rules)
 └── import-boundaries.js         ← import-boundary patterns + the local `workspace-boundaries` rule
                                    (imported by base / next / react-internal / nestjs; also exported as
@@ -67,6 +70,7 @@ Each workspace's own `eslint.config.js` simply imports one of the above:
 | `apps/api`        | `nestjsConfig` (+ local overrides) | `@workspace/eslint-config/nestjs`         |
 | `packages/ui`     | `config`                           | `@workspace/eslint-config/react-internal` |
 | `packages/shared` | `baseConfig` (+ Zod exception)     | `@workspace/eslint-config/base`           |
+| `apps/mobile`     | `config` (+ text components, env boundary) — `eslint.config.mjs` | `@workspace/eslint-config/react-native` |
 
 The package `packages/eslint-config/package.json` maps these import paths:
 
@@ -76,7 +80,9 @@ The package `packages/eslint-config/package.json` maps these import paths:
 		"./base": "./base.js",
 		"./next-js": "./next.js",
 		"./react-internal": "./react-internal.js",
-		"./nestjs": "./nestjs.js"
+		"./nestjs": "./nestjs.js",
+		"./import-boundaries": "./import-boundaries.js",
+		"./react-native": "./react-native.js"
 	}
 }
 ```
@@ -157,6 +163,24 @@ only the Next-specific part:
 - `@next/eslint-plugin-next` (recommended + core-web-vitals)
 - `react/require-default-props` off (TypeScript handles optional props)
 
+### `react-native.js` (apps/mobile)
+
+Everything from `base.js` (the same strict TypeScript rules: no casts, no runtime `typeof`, explicit
+return types and access modifiers), plus:
+
+- the same React, React Hooks and extra React rules as `react-internal.js` (both spread
+  `react-rules.js`), with **React Native globals** (`__DEV__`, `fetch`, `FormData`, timers, …)
+  instead of `globals.browser`;
+- `eslint-plugin-react-native`: `no-raw-text` (a string outside `<Text>` crashes React Native; the
+  app lists its own text components in `skip`), `no-inline-styles`, `no-color-literals` (styling is
+  token utilities through Uniwind), `no-unused-styles`, `no-single-element-style-arrays`,
+  `split-platform-components`;
+- **React Native accessibility** as `no-restricted-syntax` selectors (jsx-a11y targets DOM elements
+  and is not loaded): a `Pressable` / `Touchable*` needs `accessibilityRole` and `accessibilityLabel`;
+  a `TextInput` and an `Image` need `accessibilityLabel` (an `Image` may instead be hidden from
+  screen readers). They join the base selectors in the same rule entry;
+- the **mobile import boundaries** (see [3.1](#31-import-boundaries)).
+
 ### `nestjs.js` (apps/api)
 
 Everything from `base.js` plus:
@@ -230,8 +254,33 @@ so no extra plugin is installed. Every rule is `error`.
 
 | Pattern                                          | Why                                                                                    |
 | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `@workspace/client`, `@workspace/ui` (+ subpaths) | Frontend-only (browser API client, React components). Share contracts via `@workspace/shared`. |
+| `@workspace/api-client`, `@workspace/client`, `@workspace/ui` (+ subpaths) | Frontend-only (the web/mobile API client, React components). Share contracts via `@workspace/shared`. |
 | `next`, `react`, `react-dom` (+ subpaths)         | Frontend runtime; a Node backend never renders React or runs Next.js.                  |
+
+**API client** (`packages/api-client`, via `apiClientBoundaryConfigs`) — the client runs in the
+Next apps **and** React Native ([mobile plan §4](../mobile/mobile-app.md#4-architecture-at-a-glance)),
+so it may only use what both runtimes provide:
+
+| Applies to | Banned | Why |
+| --- | --- | --- |
+| `src/**` (imports) | the universal + frontend patterns, plus `next`, `react-dom`, `server-only`, `@workspace/client`, `@workspace/ui`, Node built-ins (`node:*` and bare `fs`, `events`, …) | Web-only or Node-only code crashes in React Native; `@workspace/client` depends on this package (a cycle) |
+| `src/**` except `src/react/**` (imports) | `react`, `@tanstack/react-query` (type-only imports included) | The core is framework-free; React bindings live in the `./react` entry |
+| `src/**` except tests (`no-restricted-globals`) | `window`, `document`, `navigator`, `location`, `history`, `localStorage`, `sessionStorage`, `indexedDB`, `DOMException`, `BroadcastChannel`, `self`, `process`, `Buffer`, `global`, `__dirname`, `__filename`, `require`, `module`, `setImmediate` | DOM-only and Node globals do not exist in React Native. `fetch`, `URL`, `Headers`, `FormData`, `AbortSignal` and `Response` stay allowed. Tests may build a browser `DOMException` to prove the client handles it. |
+
+The package's tsconfig also loads no Node types (`types: []`), so a Node built-in does not
+typecheck either.
+
+**Mobile** (`apps/mobile`, via `react-native.js` → `mobileImportBoundaryConfig`; the app's bundled
+`.ts` / `.tsx` / `.js` / `.jsx` — Node tooling such as `jest.resolver.cjs` is exempt):
+
+| Banned | Why |
+| --- | --- |
+| the universal + frontend patterns | Another app, internals, server-only workspaces and packages |
+| `next`, `react-dom`, `server-only` (+ subpaths) | Not available in React Native |
+| `@workspace/client`, `@workspace/ui` (+ subpaths) | Web-only (react-dom, Next, Radix); the app uses `@workspace/api-client` and its own components |
+| Node built-ins (`node:*` and bare `fs`, `path`, …) | Hermes is not Node |
+| `@react-native-async-storage/*` | AsyncStorage is unencrypted; everything persisted goes through the Secure Store wrapper |
+| globals `document`, `localStorage`, `sessionStorage`, `indexedDB`, `DOMException`, `BroadcastChannel`, `Buffer`, `__dirname`, `__filename` (`no-restricted-globals`) | Browser-only or Node-only |
 
 `packages/shared` no longer depends on the Node-only `@workspace/messaging`
 (nothing in it imported the package), so the shared package stays safe for

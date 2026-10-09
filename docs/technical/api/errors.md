@@ -4,7 +4,7 @@ tags: ["api", "errors", "nestjs", "contracts", "observability"]
 description: "How the API turns every thrown value — AppError, Nest HttpException, Prisma errors, framework errors, bugs — into one stable, client-safe error envelope, and how clients read it."
 order: 14
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1791417600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -74,6 +74,7 @@ Throw a typed `AppError` subclass from `apps/api/src/common/errors/app-error.ts`
 | `NotFoundError` | 404 | `NOT_FOUND` |
 | `ConflictError` | 409 | `CONFLICT` |
 | `RateLimitError` | 429 | `RATE_LIMITED` |
+| `AppVersionUnsupportedError` | 426 | `APP_VERSION_UNSUPPORTED` |
 | `ExternalServiceError` | 502 | `EXTERNAL_SERVICE_ERROR` |
 | `DependencyUnavailableError` | 503 | `SERVICE_UNAVAILABLE` |
 
@@ -161,7 +162,7 @@ body, malformed JSON).
 
 ## 6. Reading errors on the client
 
-`packages/client/src/lib/api/api-request.ts` parses the envelope into an `ApiError`:
+`packages/api-client/src/errors.ts` parses the envelope into an `ApiError`:
 
 | `ApiError` field | Source |
 |---|---|
@@ -205,12 +206,17 @@ Exported as `StandardApiErrorCodeSchema` / `ApiErrorCodes` from `@workspace/shar
 | `IDEMPOTENCY_KEY_REQUIRED` | 400 |
 | `IDEMPOTENCY_KEY_REUSED` | 409 |
 | `IDEMPOTENCY_REQUEST_IN_PROGRESS` | 409 |
+| `APP_VERSION_UNSUPPORTED` | 426 — client type `mobile` only: `X-App-Version` missing, malformed or below `MOBILE_MIN_SUPPORTED_VERSION`; `details.reason` ∈ `missing` / `malformed` / `below_minimum`, `details.minimumVersion` |
 | `INTERNAL_ERROR` | 500 (also the fallback for unmapped 5xx) |
 | `EXTERNAL_SERVICE_ERROR` | 502 |
 | `SERVICE_UNAVAILABLE` | 503 |
 | `GATEWAY_TIMEOUT` | 504 |
 
 The idempotency codes are described in [API Routes → Idempotency](./routes.md#10-idempotency).
+`APP_VERSION_UNSUPPORTED` is the forced upgrade of the mobile app
+([ADR 033](../../adr/033-mobile-forced-upgrade.md)): the app shows a blocking update screen and
+never refreshes or retries. 426 is not in Nest's `HttpStatus` enum, so `AppError` statuses are typed
+`AppErrorHttpStatus` (`HttpStatus` plus `HTTP_STATUS_UPGRADE_REQUIRED`).
 
 ---
 

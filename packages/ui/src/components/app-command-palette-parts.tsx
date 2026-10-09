@@ -23,7 +23,7 @@ export interface AppCommandPaletteQuickAction {
 	readonly run: () => void;
 }
 
-/** Scope chip tints — tone tokens (tokens.css), so they theme and keep AA text contrast in both modes. */
+/** Scope chip tints — tone tokens (packages/tokens), so they theme and keep AA text contrast in both modes. */
 const SCOPE_BADGE_CLASS: Readonly<Record<ScopeType, string>> = {
 	all: "",
 	commands: "bg-tone-blue-soft text-tone-blue",

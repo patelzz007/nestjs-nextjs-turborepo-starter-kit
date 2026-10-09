@@ -63,6 +63,9 @@ export const SENSITIVE_FIELD_NAMES: readonly string[] = [
 	"recoveryCodes",
 	"backupCode",
 	"backupCodes",
+	// 2FA enrollment: both carry the TOTP secret (the key URI in its query, the QR code as an image of it)
+	"otpAuthUrl",
+	"qrCodeDataUrl",
 	// Device pairing (POS terminal pairing codes are bearer credentials)
 	"pairingCode",
 	// Payment data

@@ -3,7 +3,7 @@ title: "ADR 025: One Global, Append-Only HTTP Audit Log"
 tags: ["adr", "security", "audit", "rls", "nestjs"]
 description: "Every HTTP request — reads included — produces exactly one complete, redacted, append-only audit row — written by a global interceptor (success) and the global exception filter (failure), or inside the handler's own transaction."
 author: "Backend Team"
-lastUpdated: 1791244800000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&h=630&fit=crop"
 order: 25
 ---
@@ -52,7 +52,8 @@ left no record, and failed or guard-rejected attempts left none at all.
   bypass-only; UPDATE/DELETE are withheld from `app_runtime` (`prisma/rls/withheld-privileges.ts`).
 - **Request metadata (added 2026-10-06).** Each row also records the trace id, the
   impersonation session id, how the caller authenticated (`auth_method`: `SESSION_COOKIE`,
-  `BEARER_TOKEN`, `REFRESH_COOKIE`, `API_KEY`; NULL = anonymous — set by the auth guards on the
+  `BEARER_TOKEN`, `REFRESH_COOKIE`, `REFRESH_BODY` (the mobile app's `{ refreshToken }` body,
+  added 2026-10-09), `API_KEY`; NULL = anonymous — set by the auth guards on the
   request context, never read from a client header), the claimed client app (`X-Client-Type`),
   HTTP version, `Host`, `Origin`, `Referer` (sensitive query parameters redacted like `path`),
   `Accept-Language`, request `Content-Type`, declared request size (`Content-Length`) and the

@@ -3,12 +3,12 @@ import { canonicalEmailSchema } from "../api/email-address";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { LoginVerificationPendingResponseSchema } from "./login-verification";
 import { LoginTwoFactorPendingResponseSchema } from "./two-factor";
-import { EpochMsSchema } from "../api/common";
 import { OrganizationSlugSchema } from "../domain/organization/organization";
 import { VerifyEmailTokenParamSchema } from "../domain/platform/param-schemas";
 import { strongPassword } from "./password";
 import { UserResponseSchema } from "./user";
 import { PlainMessageResponseSchema } from "../api/message";
+import { SignupReferralCodeInputSchema } from "../domain/signup-referrals/signup-referrals";
 
 export { strongPassword } from "./password";
 
@@ -45,6 +45,18 @@ export const SignupSchema = z
 
 export type SignupInput = z.output<typeof SignupSchema>;
 
+/**
+ * Consumer web signup (ADR 035): {@link SignupSchema} plus the optional
+ * `referralCode`. It is the `POST /auth/signup` body contract; the API accepts a
+ * non-empty code only from client type `web` — mobile and merchant signup keep
+ * {@link SignupSchema} and never send one.
+ */
+export const ConsumerWebSignupSchema = SignupSchema.extend({
+	referralCode: SignupReferralCodeInputSchema,
+}).strict();
+
+export type ConsumerWebSignupInput = z.output<typeof ConsumerWebSignupSchema>;
+
 export const ForgotPasswordSchema = z
 	.object({
 		email: canonicalEmailSchema("Invalid email address").meta({
@@ -56,10 +68,39 @@ export const ForgotPasswordSchema = z
 
 export type ForgotPasswordInput = z.output<typeof ForgotPasswordSchema>;
 
-/** Which frontend initiated an auth action (matches `X-Client-Type`). */
-export const AuthClientTypeSchema = z.enum(["web", "admin", "merchant"]);
+/**
+ * Which app a request comes from (matches `X-Client-Type`): the three browser
+ * apps (`web`, `admin`, `merchant`) and the Expo app (`mobile`). It selects how
+ * tokens travel — httpOnly cookies for browsers, JSON bodies for `mobile`
+ * (ADR 029) — and never grants or removes a permission.
+ */
+export const AuthClientTypeSchema = z.enum(["web", "admin", "merchant", "mobile"]);
 
 export type AuthClientType = z.output<typeof AuthClientTypeSchema>;
+
+/** The browser client types — each has its own httpOnly cookie pair (`AUTH_COOKIE_NAMES`). */
+export const BrowserClientTypeSchema = AuthClientTypeSchema.exclude(["mobile"]);
+
+export type BrowserClientType = z.output<typeof BrowserClientTypeSchema>;
+
+/** `true` for a browser client type (cookie transport); `false` for `mobile` (body transport). */
+export function isBrowserClientType(clientType: AuthClientType): clientType is BrowserClientType {
+	return BrowserClientTypeSchema.safeParse(clientType).success;
+}
+
+/**
+ * How a client type receives and presents its tokens (ADR 029): `cookie` —
+ * httpOnly cookies set by the API; `body` — the JSON response body, sent back
+ * as `Authorization: Bearer` (access) and a request body (refresh).
+ */
+export const AuthTokenTransportSchema = z.enum(["cookie", "body"]);
+
+export type AuthTokenTransport = z.output<typeof AuthTokenTransportSchema>;
+
+/** The token transport of a client type — chosen by the server from the validated client type, never by a client flag. */
+export function authTokenTransportOf(clientType: AuthClientType): AuthTokenTransport {
+	return isBrowserClientType(clientType) ? AuthTokenTransportSchema.enum.cookie : AuthTokenTransportSchema.enum.body;
+}
 
 /**
  * `?client_type=` on the public auth endpoints — the fallback for callers that
@@ -97,23 +138,6 @@ export const ResendVerificationSchema = z
 	.strict();
 
 export type ResendVerificationInput = z.output<typeof ResendVerificationSchema>;
-
-// ── Session ──────────────────────────────────────────────────────────────
-
-export const SessionSchema = z.object({
-	id: z.string(),
-	deviceInfo: z.string().nullable(),
-	ipAddress: z.string().nullable(),
-	expiresAt: EpochMsSchema,
-	createdAt: EpochMsSchema,
-});
-
-export type Session = z.output<typeof SessionSchema>;
-
-/** `GET /auth/sessions` — the caller's active sessions. */
-export const SessionListResponseSchema = z.array(SessionSchema);
-
-export type SessionListResponse = z.output<typeof SessionListResponseSchema>;
 
 // ── Service-level schemas (not exposed to FE clients) ────────────────────
 
@@ -179,6 +203,75 @@ export const RefreshResponseSchema = z
 
 export type RefreshResponse = z.output<typeof RefreshResponseSchema>;
 
+// ── Body token transport (client type `mobile`, ADR 029) ─────────────────
+
+/** Upper bound on a refresh-token JWT presented in a request body (identity-only claims stay far below it). */
+export const REFRESH_TOKEN_MAX_LENGTH = 4096;
+
+/** A refresh-token JWT as a `mobile` client presents it. */
+export const RefreshTokenValueSchema = z.string().min(1).max(REFRESH_TOKEN_MAX_LENGTH);
+
+/**
+ * Upper bound on an access-token JWT in a response body. Access tokens carry
+ * the user's display claims (name, email), so they get more room than the
+ * identity-only refresh token; the bound stops a malformed or hostile body
+ * from being stored in a device's secret store.
+ */
+export const ACCESS_TOKEN_MAX_LENGTH = 8192;
+
+/** An access-token JWT as the body token transport delivers it. */
+export const AccessTokenValueSchema = z.string().min(1).max(ACCESS_TOKEN_MAX_LENGTH);
+
+/**
+ * The request body a `mobile` client sends to `POST /auth/refresh`,
+ * `POST /auth/logout` and `POST /auth/logout-all`.
+ */
+export const RefreshTokenBodySchema = z
+	.object({
+		refreshToken: RefreshTokenValueSchema.meta({ description: "The refresh token (client type `mobile` only)", example: "eyJhbGciOiJIUzI1NiIs..." }),
+	})
+	.strict();
+
+export type RefreshTokenBody = z.output<typeof RefreshTokenBodySchema>;
+
+/**
+ * Route input of `POST /auth/refresh`, `/auth/logout` and `/auth/logout-all`
+ * for every client type: `mobile` sends `{ refreshToken }`; a browser sends an
+ * empty body (or none — the edge proxy refresh sends no body), because its
+ * refresh token travels in the httpOnly cookie. The API enforces which source
+ * a client type may use (`refresh-token.guard.ts`): a body token from a browser
+ * client type is rejected, and a `mobile` request never reads a cookie.
+ */
+export const RefreshTokenInputSchema = z
+	.object({
+		refreshToken: RefreshTokenValueSchema.optional().meta({
+			description: "Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie)",
+			example: "eyJhbGciOiJIUzI1NiIs...",
+		}),
+	})
+	.strict()
+	.default({});
+
+export type RefreshTokenInput = z.output<typeof RefreshTokenInputSchema>;
+
+/**
+ * The fields a token-bearing response carries for client type `mobile`:
+ * the session tokens plus the `tokenTransport: "body"` marker.
+ *
+ * Only the API's token-delivery interceptor adds the marker, and only for a
+ * `mobile` request. The marker is what lets the token-bearing variants of
+ * the login / refresh contracts match: a browser response never carries it,
+ * so a token that somehow remained in a browser body still falls to the
+ * browser variant and is stripped by the response contract (defense in depth).
+ */
+export const BodyTokenFieldsSchema = z.object({
+	tokenTransport: z.literal(AuthTokenTransportSchema.enum.body).meta({ description: "The tokens travel in this body (client type `mobile`)" }),
+	accessToken: AccessTokenValueSchema.meta({ description: "Access token — send as `Authorization: Bearer`" }),
+	refreshToken: RefreshTokenValueSchema.meta({ description: "Refresh token — present once to `POST /auth/refresh`; rotated on every use" }),
+});
+
+export type BodyTokenFields = z.output<typeof BodyTokenFieldsSchema>;
+
 // ── Response Schemas ─────────────────────────────────────────────────────
 
 export const LoginResponseSchema = z.object({
@@ -186,6 +279,16 @@ export const LoginResponseSchema = z.object({
 });
 
 export type LoginResponse = z.output<typeof LoginResponseSchema>;
+
+/** A full login for client type `mobile`: the user plus the session tokens in the body. */
+export const LoginMobileResponseSchema = LoginResponseSchema.extend(BodyTokenFieldsSchema.shape);
+
+export type LoginMobileResponse = z.output<typeof LoginMobileResponseSchema>;
+
+/** A restricted enrollment session for client type `mobile`: the enrollment result plus the session tokens in the body. */
+export const LoginRestrictedEnrollmentMobileResponseSchema = LoginRestrictedEnrollmentClientResponseSchema.extend(BodyTokenFieldsSchema.shape);
+
+export type LoginRestrictedEnrollmentMobileResponse = z.output<typeof LoginRestrictedEnrollmentMobileResponseSchema>;
 
 /**
  * Client-visible login result after cookies are set (or 2FA / verification step required).
@@ -203,11 +306,18 @@ export type LoginResponse = z.output<typeof LoginResponseSchema>;
  * success: the restricted-enrollment variant carries an optional `user` and
  * would otherwise be swallowed by `LoginResponseSchema`. No flag variant can
  * match another's payload (each requires its own literal flag).
+ *
+ * The token-bearing variants (client type `mobile`, ADR 029) come right before
+ * their browser twin: they require `tokenTransport: "body"`, which only the
+ * API's mobile transport adds, so a browser body — even one that still held a
+ * token — never matches them and keeps being stripped to the browser variant.
  */
 export const LoginClientResponseSchema = z.union([
+	LoginRestrictedEnrollmentMobileResponseSchema,
 	LoginRestrictedEnrollmentClientResponseSchema,
 	LoginTwoFactorPendingResponseSchema,
 	LoginVerificationPendingResponseSchema,
+	LoginMobileResponseSchema,
 	LoginResponseSchema,
 ]);
 
@@ -220,6 +330,21 @@ export type SignupResponse = z.output<typeof SignupResponseSchema>;
 export const RefreshResponseMessageSchema = PlainMessageResponseSchema;
 
 export type RefreshResponseMessage = z.output<typeof RefreshResponseMessageSchema>;
+
+/** `POST /auth/refresh` for client type `mobile`: the message plus the rotated tokens in the body. */
+export const RefreshMobileResponseSchema = RefreshResponseMessageSchema.extend(BodyTokenFieldsSchema.shape);
+
+export type RefreshMobileResponse = z.output<typeof RefreshMobileResponseSchema>;
+
+/**
+ * The response contract of `POST /auth/refresh` for every client type: the
+ * token-bearing `mobile` variant first (it requires `tokenTransport: "body"`),
+ * then the browser `{ message }` (tokens set as httpOnly cookies, stripped
+ * from the body).
+ */
+export const RefreshClientResponseSchema = z.union([RefreshMobileResponseSchema, RefreshResponseMessageSchema]);
+
+export type RefreshClientResponse = z.output<typeof RefreshClientResponseSchema>;
 
 export const LogoutResponseSchema = PlainMessageResponseSchema;
 

@@ -1136,10 +1136,13 @@ Response `201 Created` (application/json):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.⟨shape 1⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
 | `data.⟨shape 1⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
 | `data.⟨shape 1⟩ message` | string | yes |  |
 | `data.⟨shape 1⟩ organizationSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.⟨shape 1⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
 | `data.⟨shape 1⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 1⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
 | `data.⟨shape 1⟩ user` | object | no |  |
 | `data.⟨shape 1⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.⟨shape 1⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
@@ -1158,30 +1161,73 @@ Response `201 Created` (application/json):
 | `data.⟨shape 1⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
 | `data.⟨shape 1⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.⟨shape 1⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 2⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
 | `data.⟨shape 2⟩ message` | string | yes |  |
-| `data.⟨shape 2⟩ requiresTwoFactor` | true | yes |  |
-| `data.⟨shape 2⟩ tempToken` | string | yes | at least 1 characters |
+| `data.⟨shape 2⟩ organizationSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.⟨shape 2⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 2⟩ user` | object | no |  |
+| `data.⟨shape 2⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 2⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 2⟩ user.email` | string | yes |  |
+| `data.⟨shape 2⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 2⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 2⟩ user.id` | string | yes |  |
+| `data.⟨shape 2⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 2⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 2⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 2⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 2⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 2⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 2⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 2⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 2⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 3⟩ message` | string | yes |  |
-| `data.⟨shape 3⟩ requiresVerification` | true | yes |  |
-| `data.⟨shape 3⟩ verificationId` | string | yes | at least 1 characters |
-| `data.⟨shape 4⟩ user` | object | yes |  |
-| `data.⟨shape 4⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
-| `data.⟨shape 4⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
-| `data.⟨shape 4⟩ user.email` | string | yes |  |
-| `data.⟨shape 4⟩ user.fullName` | string | yes |  |
-| `data.⟨shape 4⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
-| `data.⟨shape 4⟩ user.id` | string | yes |  |
-| `data.⟨shape 4⟩ user.isActive` | boolean | yes |  |
-| `data.⟨shape 4⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
-| `data.⟨shape 4⟩ user.isEmailVerified` | boolean | yes |  |
-| `data.⟨shape 4⟩ user.isSuperAdmin` | boolean | yes |  |
-| `data.⟨shape 4⟩ user.roles` | object[] | yes |  |
-| `data.⟨shape 4⟩ user.roles[].description` | string \| null | yes |  |
-| `data.⟨shape 4⟩ user.roles[].id` | string | yes |  |
-| `data.⟨shape 4⟩ user.roles[].name` | string | yes |  |
-| `data.⟨shape 4⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
-| `data.⟨shape 4⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
-| `data.⟨shape 4⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 3⟩ requiresTwoFactor` | true | yes |  |
+| `data.⟨shape 3⟩ tempToken` | string | yes | at least 1 characters |
+| `data.⟨shape 4⟩ message` | string | yes |  |
+| `data.⟨shape 4⟩ requiresVerification` | true | yes |  |
+| `data.⟨shape 4⟩ verificationId` | string | yes | at least 1 characters |
+| `data.⟨shape 5⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
+| `data.⟨shape 5⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
+| `data.⟨shape 5⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
+| `data.⟨shape 5⟩ user` | object | yes |  |
+| `data.⟨shape 5⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 5⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 5⟩ user.email` | string | yes |  |
+| `data.⟨shape 5⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 5⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 5⟩ user.id` | string | yes |  |
+| `data.⟨shape 5⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 5⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 5⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 5⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 5⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 5⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 5⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 5⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 5⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.⟨shape 6⟩ user` | object | yes |  |
+| `data.⟨shape 6⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.⟨shape 6⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.⟨shape 6⟩ user.email` | string | yes |  |
+| `data.⟨shape 6⟩ user.fullName` | string | yes |  |
+| `data.⟨shape 6⟩ user.hasAdminAccess` | boolean | yes | Whether the user can access the admin panel |
+| `data.⟨shape 6⟩ user.id` | string | yes |  |
+| `data.⟨shape 6⟩ user.isActive` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.⟨shape 6⟩ user.isEmailVerified` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.isSuperAdmin` | boolean | yes |  |
+| `data.⟨shape 6⟩ user.roles` | object[] | yes |  |
+| `data.⟨shape 6⟩ user.roles[].description` | string \| null | yes |  |
+| `data.⟨shape 6⟩ user.roles[].id` | string | yes |  |
+| `data.⟨shape 6⟩ user.roles[].name` | string | yes |  |
+| `data.⟨shape 6⟩ user.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
+| `data.⟨shape 6⟩ user.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
+| `data.⟨shape 6⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
 

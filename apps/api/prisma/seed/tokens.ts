@@ -8,40 +8,59 @@ import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
 import { CryptoService } from "../../src/modules/auth/services/crypto.service";
 import { prisma } from "./client";
-import { daysAgo, daysFromNow, rand, randomIpv4 } from "./helpers";
+import { SEED_BROWSER_PROFILES, SEED_MOBILE_PROFILES, SEED_SESSION_LOCATIONS, SEED_SIGN_IN_METHODS, seedSessionRow } from "./device-sessions";
+import { daysAgo, daysFromNow, rand, randInt, randomIpv4 } from "./helpers";
 
 /** bcrypt cost for seeded secrets (matches the users seeder; the app's cost comes from BCRYPT_SALT_ROUNDS). */
 const SEED_BCRYPT_ROUNDS = 10;
 
 /** Bytes of entropy behind each seeded (never-issued) refresh token secret. */
 const SEED_REFRESH_SECRET_BYTES = 32;
+const MINUTE_MS = 60_000;
 
 /**
- * Two demo sessions per active user. Like the app (`AuthSessionService`), the
- * `token` column holds a bcrypt HASH — never a usable plaintext. The secrets
- * are random and discarded: these rows populate session lists, they cannot be
- * used to refresh.
+ * Two demo device sessions per active user — one in a browser app (web,
+ * merchant or admin) and one in the mobile app (iOS or Android) — with every
+ * device detail a real sign-in stores (`seedSessionRow`, through the API's own
+ * User-Agent parser and header validation), the sign-in method, the sign-in
+ * and last-refresh IPs, the last activity and a location. The `token` column
+ * holds a bcrypt HASH of a random, discarded secret — never a usable token:
+ * these rows populate the device lists, they cannot be used to refresh.
  */
 export async function createRefreshTokens(users: User[]): Promise<void> {
 	const activeUsers = users.filter((u) => u.isActive);
 	const hashedSecret = async (): Promise<string> => bcrypt.hash(crypto.randomBytes(SEED_REFRESH_SECRET_BYTES).toString("hex"), SEED_BCRYPT_ROUNDS);
 	for (const u of activeUsers) {
+		const browserSignedInAt: number = daysAgo(randInt(1, 6));
+		const mobileSignedInAt: number = daysAgo(randInt(1, 20));
+		const browserIp: string = randomIpv4();
+		const mobileIp: string = randomIpv4();
 		await prisma.refreshToken.createMany({
 			data: [
-				{
+				seedSessionRow({
 					userId: u.id,
-					token: await hashedSecret(),
-					deviceInfo: rand(["Chrome on Windows", "Safari on macOS", "Firefox on Linux"]),
-					ipAddress: randomIpv4(),
+					tokenHash: await hashedSecret(),
+					profile: rand(SEED_BROWSER_PROFILES),
+					signInMethod: rand(SEED_SIGN_IN_METHODS),
+					ipAddress: browserIp,
+					lastIpAddress: rand([browserIp, randomIpv4()]),
+					location: rand([...SEED_SESSION_LOCATIONS, null]),
+					createdAt: browserSignedInAt,
+					lastActiveAt: Date.now() - randInt(1, 600) * MINUTE_MS,
 					expiresAt: daysFromNow(7),
-				},
-				{
+				}),
+				seedSessionRow({
 					userId: u.id,
-					token: await hashedSecret(),
-					deviceInfo: rand(["Chrome on Android", "Safari on iOS", "Samsung Internet"]),
-					ipAddress: randomIpv4(),
-					expiresAt: daysFromNow(30),
-				},
+					tokenHash: await hashedSecret(),
+					profile: rand(SEED_MOBILE_PROFILES),
+					signInMethod: rand(SEED_SIGN_IN_METHODS),
+					ipAddress: mobileIp,
+					lastIpAddress: randomIpv4(),
+					location: rand(SEED_SESSION_LOCATIONS),
+					createdAt: mobileSignedInAt,
+					lastActiveAt: Date.now() - randInt(1, 2_000) * MINUTE_MS,
+					expiresAt: daysFromNow(7),
+				}),
 			],
 		});
 	}

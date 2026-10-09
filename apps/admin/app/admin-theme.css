@@ -1,4 +1,4 @@
-/* Admin panel — layout chrome only; every colour comes from the shared palette (packages/ui tokens.css). */
+/* Admin panel — layout chrome only; every colour comes from the shared palette (packages/tokens, generated into web.css). */
 
 /* Solid panel chrome — the topbar matches the canvas in light, the page surface in dark (`--topbar`), divided by --sidebar-border. No frosted tint. */
 .admin-app .admin-shell-topbar,

@@ -1,6 +1,14 @@
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type Redis from "ioredis";
-import { assertNever, BoundedTtlCache, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type LoginVerificationPendingResponse } from "@workspace/shared";
+import {
+	assertNever,
+	BoundedTtlCache,
+	SessionSignInMethodSchema,
+	type LoginRestrictedEnrollmentResponse,
+	type LoginServiceResponse,
+	type LoginVerificationPendingResponse,
+	type SessionSignInMethod,
+} from "@workspace/shared";
 
 import { z } from "zod";
 
@@ -9,6 +17,7 @@ import { TypedConfigService } from "../../../config/typed-config.service";
 import { REDIS_PUBLISHER } from "../../../infrastructure/redis/redis.tokens";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import type { SessionDeviceContext } from "../../sessions/device/session-device";
 import { AuthSessionService } from "./auth-session.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
@@ -18,6 +27,23 @@ const RECOGNIZED_DEVICE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const LAST_VERIFIED_TTL_SECONDS = 7 * 24 * 60 * 60;
 const MAX_VERIFY_ATTEMPTS = 5;
 
+/**
+ * The proofs a login flow collected BEFORE login verification: the sign-in
+ * method of a session issued right away. The emailed new-device code, when
+ * asked for, upgrades it ({@link SIGN_IN_METHOD_WITH_NEW_DEVICE_CODE}).
+ */
+export const PendingSignInMethodSchema = SessionSignInMethodSchema.extract(["PASSWORD", "PASSWORD_TOTP", "PASSWORD_BACKUP_CODE", "TEAM_INVITE_REGISTRATION"]);
+
+export type PendingSignInMethod = z.output<typeof PendingSignInMethodSchema>;
+
+/** The sign-in method of a session issued after the emailed new-device code. */
+export const SIGN_IN_METHOD_WITH_NEW_DEVICE_CODE: Readonly<Record<PendingSignInMethod, SessionSignInMethod>> = {
+	PASSWORD: "PASSWORD_NEW_DEVICE_CODE",
+	PASSWORD_TOTP: "PASSWORD_TOTP_NEW_DEVICE_CODE",
+	PASSWORD_BACKUP_CODE: "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE",
+	TEAM_INVITE_REGISTRATION: "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE",
+};
+
 const LoginVerificationRecordSchema = z
 	.object({
 		userId: z.string().min(1),
@@ -25,17 +51,24 @@ const LoginVerificationRecordSchema = z
 		clientType: z.string().nullable(),
 		deviceInfo: z.string().nullable(),
 		ipAddress: z.string().nullable(),
+		signInMethod: PendingSignInMethodSchema,
 		attempts: z.number().int().nonnegative(),
 	})
 	.strict();
 
 type LoginVerificationRecord = z.output<typeof LoginVerificationRecordSchema>;
 
-interface PendingLoginContext {
+export interface PendingLoginContext {
 	readonly userId: string;
 	readonly clientType: string | null;
+	/** The User-Agent of the request that started the login (new-device recognition, the verification email). */
 	readonly deviceInfo: string | null;
+	/** The IP of the request that started the login (the verification email). */
 	readonly ipAddress: string | null;
+	/** The proofs the flow collected so far. */
+	readonly signInMethod: PendingSignInMethod;
+	/** The request continuing the login: the device a session issued now is stored for. */
+	readonly device: SessionDeviceContext;
 	readonly mfaAssured?: boolean;
 }
 
@@ -61,15 +94,19 @@ export class LoginVerificationService {
 	public async maybeRequireVerification(context: PendingLoginContext): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const needsVerification = await this.needsVerification(context.userId, context.deviceInfo);
 		if (!needsVerification) {
-			return this.authSessionService.issueSessionForUser(context.userId, context.clientType ?? undefined, context.deviceInfo ?? undefined, context.ipAddress ?? undefined, {
-				mfaAssured: context.mfaAssured,
-			});
+			return this.authSessionService.issueSessionForUser(
+				context.userId,
+				context.clientType ?? undefined,
+				{ device: context.device, signInMethod: context.signInMethod },
+				{ mfaAssured: context.mfaAssured },
+			);
 		}
 
 		return this.createVerificationChallenge(context);
 	}
 
-	public async verifyLoginCode(verificationId: string, code: string, ipAddress?: string): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
+	/** Completes a login with the emailed code; the session is stored for `device`, the request presenting the code. */
+	public async verifyLoginCode(verificationId: string, code: string, device: SessionDeviceContext): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		const raw = await this.getStoreValue(this.verificationKey(verificationId));
 		if (raw === null) {
 			throw new BadRequestException("Verification session expired or invalid");
@@ -101,10 +138,13 @@ export class LoginVerificationService {
 		this.logService.info("Login verification succeeded", {
 			userId: record.userId,
 			context: "LoginVerificationService",
-			metadata: { verificationId, ipAddress: ipAddress ?? "Unknown" },
+			metadata: { verificationId, ipAddress: device.ipAddress ?? "Unknown" },
 		});
 
-		return this.authSessionService.issueSessionForUser(record.userId, record.clientType ?? undefined, record.deviceInfo ?? undefined, record.ipAddress ?? undefined);
+		return this.authSessionService.issueSessionForUser(record.userId, record.clientType ?? undefined, {
+			device,
+			signInMethod: SIGN_IN_METHOD_WITH_NEW_DEVICE_CODE[record.signInMethod],
+		});
 	}
 
 	private async createVerificationChallenge(context: PendingLoginContext): Promise<LoginVerificationPendingResponse> {
@@ -127,6 +167,7 @@ export class LoginVerificationService {
 			clientType: context.clientType,
 			deviceInfo: context.deviceInfo,
 			ipAddress: context.ipAddress,
+			signInMethod: context.signInMethod,
 			attempts: 0,
 		};
 

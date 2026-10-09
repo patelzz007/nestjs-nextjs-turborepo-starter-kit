@@ -4,7 +4,7 @@ tags: ["auth", "security", "tokens"]
 description: "How access-token rotation works across the Next.js server-side proxy and browser-side 401 recovery paths."
 order: 3
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -19,6 +19,10 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 > 2. **Layer 2 — Browser-side reactive refresh** when an API request returns `401`.
 >
 > Both ultimately use the same `POST /auth/refresh` API endpoint.
+>
+> The mobile app has no cookies and no proxy: it refreshes through the **token transport** of
+> `@workspace/api-client` (Bearer access token, refresh token in the request body), described in
+> [section 13](#13-token-transport-the-mobile-app).
 
 ---
 
@@ -71,6 +75,7 @@ And a **401 in the Network tab is not an error** — it's the *trigger* that sta
 11. [Security & trade-offs](#10-security--trade-offs)
 12. [Configuration & tuning](#11-configuration--tuning)
 13. [FAQ](#12-faq)
+14. [Token transport (the mobile app)](#13-token-transport-the-mobile-app)
 
 ---
 
@@ -192,9 +197,16 @@ Old refresh token
         via Set-Cookie
 ```
 
-The old refresh token is invalidated after rotation. Refresh tokens are stored hashed in the database, so the previous token cannot simply be reused.
+The old refresh token is invalidated after rotation. Refresh tokens are stored as SHA-256 digests in the database (never bcrypt: bcrypt reads only the first 72 bytes, which every refresh JWT of a user shares, so it could not tell an old token from the current one), and each issued token carries a random `nonce` claim, so two rotations within the same second never produce the same token — the previous token cannot simply be reused. Client type `mobile` presents the refresh token as a `{ refreshToken }` request body instead of the cookie and receives the rotated pair in the response body ([Authentication → Client types and token transport](./authentication.md#client-types-and-token-transport)).
 
 This means a stolen refresh token is intended to be **single-use**.
+
+The refresh-token row is the **device session** and is rotated **in place**: its id never changes,
+so it is the refresh token's `jti` and the access token's `sid` for the whole life of the session,
+and every device detail recorded at sign-in (client type, browser and OS, device model and name,
+app version, sign-in method, sign-in IP, location) carries forward. A rotation only replaces the
+token and its expiry and records the activity: `lastActiveAt` and the refreshing request's IP as
+`lastIpAddress` ([device sessions](../mobile/mobile-app.md#8-piece-4-device-sessions)).
 
 ---
 
@@ -209,8 +221,35 @@ On **every authenticated request**, `AuthGuard` calls `AccessTokenStateService.a
 | `tokenVersion` | `401 TOKEN_VERSION_MISMATCH` — password changes, logout-all, MFA changes, and role updates bump the counter |
 | `isActive` | `401 ACCOUNT_IS_INACTIVE` |
 | `isDeleted` | `401 ACCOUNT_DELETED` |
+| `sid` (the device session that issued the token) | `401 SESSION_REVOKED` — the session was revoked: signed out (`POST /auth/logout`), revoked from the device list (`POST /auth/sessions/:sessionId/revoke`) or retired above the per-user session cap ([ADR 034](../../adr/034-immediate-per-session-revocation.md)) |
 
 A short-lived in-process cache (30 seconds) avoids hitting the database on every request while still propagating revocations quickly.
+
+**Revoking one device is immediate (`sid`).** Access tokens carry `sid`, the id of the device
+session (refresh-token row) that issued them — identity, not authorization data, so
+[ADR 003](../../adr/003-jwt-identity-only.md) holds. The cached account state also holds the ids
+of the user's sessions revoked within one access-token lifetime (`JWT_ACCESS_EXPIRY` plus a
+one-minute skew margin): a token whose `sid` is among them is rejected. The set is read in the same
+query as `tokenVersion` on a cache miss, so the check adds no query to the hot path. Every
+single-session revocation drops the user's cached state **after commit on every API instance**
+(`AuthorizationInvalidationService`, trigger `session_revoked`, Redis pub/sub in deployed
+environments), so the revoked device fails on its very next request; a missed pub/sub message only
+delays that until the entry's TTL. Tokens minted before `sid` existed (and impersonation tokens,
+which belong to no device session) carry none and are accepted until they expire. The 401 code
+`SESSION_REVOKED` is a dead-session code for the clients: they end the session instead of trying a
+refresh (`isDeadSessionError`).
+
+**Revoke vs. refresh race.** Revoking a session and rotating it are conditional updates of the same
+row (`isDeleted = false`, plus the stored hash for the rotation; the revoke also moves
+`rotationVersion`), so whichever commits second sees the other's result: a refresh that loses
+answers 401, and a revoke that loses still revokes the rotated row — whose new access token is then
+rejected by `sid`. A session is never resurrected.
+
+**Who revoked it.** Every revocation records `deletedBy` on the session row: the user (sign-out,
+device list, sign out everywhere, own password change), an admin (RBAC change), or a system marker
+from the closed `SessionSystemRevokerSchema` — `system:rotation-reuse`, `system:logout-all`
+(password reset), `system:expired-cleanup` and `system:session-limit` (the sweep at sign-in),
+`system:rbac-mutation` (a scheduled authorization change).
 
 **Guests make no session calls.** The web app passes `sessionHint` (did the server see a session cookie — `hasServerSession`) to `AuthProvider`; without one it skips the on-mount `/auth/me` + `/auth/permissions` revalidation, which could only answer 401. Cross-tab sync and the post-login session sync are unaffected.
 
@@ -271,7 +310,7 @@ flowchart TD
 
 **Key idea:** the access token may still be within its time expiry (e.g. 15 minutes left), but the embedded `tokenVersion` is checked on every request. After a role change, that version is stale immediately — refresh cannot recover because refresh rows were deleted too.
 
-**Code paths:** `UserSessionRevocationService` (`apps/api/src/modules/authorization/services/user-session-revocation.service.ts`), wired from `RoleService` and `PermissionService`; client handling in `packages/client/src/lib/api/api-request.ts` and `packages/client/src/lib/features/auth/facade.tsx` (`AuthProvider`); proxy hardening in `packages/client/src/lib/auth/edge/proxy-refresh.ts`.
+**Code paths:** `UserSessionRevocationService` (`apps/api/src/modules/authorization/services/user-session-revocation.service.ts`), wired from `RoleService` and `PermissionService`; client handling in `packages/api-client/src/request.ts` (the shared 401 pipeline) and `packages/client/src/lib/features/auth/facade.tsx` (`AuthProvider`); proxy hardening in `packages/client/src/lib/auth/edge/proxy-refresh.ts`.
 
 ---
 
@@ -618,8 +657,9 @@ Layer 2 lives in:
 
 ```text
 packages/client/src/lib/features/auth/facade.tsx   (AuthProvider — re-exported by @workspace/client/lib/auth)
-packages/client/src/lib/api/use-api.ts
-packages/client/src/lib/api/api-request.ts
+packages/client/src/lib/api/use-api.ts             (the cookie-transport client: createApiClientContext + ./react hooks)
+packages/api-client/src/request.ts                 (the 401 pipeline shared with the mobile app: withSessionRefresh)
+packages/api-client/src/refresh.ts                 (createRefreshCooldown)
 ```
 
 The refresh entry point is:
@@ -701,7 +741,7 @@ session; an unreachable API never does.
 | `/auth/me` answer | Verdict | What the tab does |
 |---|---|---|
 | 2xx, body matches the contract | `valid` | `Session Restored` (seeds `/auth/me`, and `/auth/permissions` when that answered). A failed `/auth/permissions` alone does not block it: the live permissions query fills the scope in. |
-| 401 with `TOKEN_VERSION_MISMATCH`, `REFRESH_TOKEN_REVOKED` or `TOKEN_THEFT_DETECTED` | `no-session` | `Session Not Found` at once, no refresh. |
+| 401 with `TOKEN_VERSION_MISMATCH`, `SESSION_REVOKED`, `REFRESH_TOKEN_REVOKED` or `TOKEN_THEFT_DETECTED` | `no-session` | `Session Not Found` at once, no refresh. |
 | Any other 401 (expired, missing, invalid access token) | `expired-access-token` | ONE refresh through the tab's single-flight refresh (the same one the 401 pipeline uses, so the token rotates once), then one more read without refreshing. That read is final; a 401 now means `no-session`. The second read also runs after a refresh that answered 401, because another tab may have rotated the shared refresh token first (`REFRESH_TOKEN_SUPERSEDED`), leaving this tab a valid new pair. |
 | 403 | `unavailable` (`unexpected-status`), reported | The API answers 403 only after authentication succeeded (`AuthGuard` runs first), restricted sessions are allowlisted for both endpoints (`RestrictedSessionGuard`), and neither route has an authorization requirement. A 403 here comes from a gateway or a contract break: signing out would be wrong and a refresh cannot fix it. |
 | Other 4xx (404, 400, …) | `unavailable` (`unexpected-status`), reported | Same reasoning. |
@@ -1484,6 +1524,119 @@ The two refresh layers do not coordinate across tabs.
 Because rotation invalidates the previous refresh token, a race between tabs can cause one refresh attempt to use a token that another tab has already rotated.
 
 This is a known trade-off of the current architecture.
+
+---
+
+## 13. Token transport (the mobile app)
+
+The mobile app (client type `mobile`, [ADR 029](../../adr/029-mobile-client-body-token-transport.md))
+has no httpOnly cookies and no Next.js proxy, so neither layer above applies. Its requests go
+through the **token transport** of `@workspace/api-client` — the same request core, router and
+401 pipeline (`withSessionRefresh`) the web apps use, with a different way of carrying the session.
+
+| | Cookie transport (web, admin, merchant) | Token transport (mobile) |
+| --- | --- | --- |
+| Access token | httpOnly cookie, `credentials: "include"` | `Authorization: Bearer`, `credentials: "omit"` |
+| Refresh token | httpOnly cookie | request body `{ refreshToken }` |
+| Rotated pair | set as cookies by the API | response body `{ accessToken, refreshToken }`, saved through the injected `TokenProvider` |
+| Who refreshes | the auth facade (Layer 2) and the proxy (Layer 1) | the client itself (`createTokenRequestTransport`) |
+| Extra headers | `X-Client-Type` | `X-Client-Type: mobile`, `X-App-Version`, and the config's static `headers` (the app's percent-encoded `X-Device-Model` / `X-Device-Name`) — on the refresh too |
+| Sign out / sign out everywhere | `fetchMutationUnchecked` (cookie) | `fetchBodyTokenLifecycleMutation`: the stored refresh token in the body, no Bearer, outside the 401 pipeline |
+
+### 13.1 Building the client
+
+The configuration is injected and zod-validated (`createApiClientContext`, `packages/api-client/src/config.ts`);
+the package reads no environment. A wrong config (mobile on the cookie transport, a missing app
+version, a malformed base URL, a token provider without its four methods) throws
+`InvalidApiClientConfigError` at app start.
+
+```ts
+const context = createApiClientContext({
+	baseUrl,                                   // resolved by the app
+	clientType: "mobile",
+	transport: { kind: "token", tokenProvider }, // backed by expo-secure-store
+	appVersion,                                // sent as X-App-Version (ADR 033)
+	headers: deviceHeaders,                    // static headers for every request (display-only device details)
+	onSessionExpired: () => sessionStore.dispatch(sessionActions.expired()),
+});
+```
+
+The mobile app builds exactly this in `apps/mobile/src/lib/api.ts`; its `onSessionExpired` tells the
+session store, and the root guard shows sign-in with "Your session has ended. Please sign in again."
+A config `headers` entry may not set a header the client owns (`Authorization`, `X-Client-Type`,
+`X-App-Version`, the mutation intent, `Accept`, `Content-Type`, `Cookie`) and must be visible ASCII
+(percent-encode anything else); a per-call header of the same name wins.
+
+Build the context **once** per app: it holds the single-flight refresh, and two contexts would
+race for one refresh token.
+
+### 13.2 401 → one refresh → retry once
+
+```text
+request ──► GET /auth/me (Bearer A1) ──► 401
+                │
+                ▼
+         refresh() ── single flight: concurrent 401s join the same promise
+                │
+                ▼
+   POST /auth/refresh { refreshToken: R1 }   (no Bearer, no cookies)
+                │
+       ┌────────┴──────────────┬─────────────────────────┐
+     2xx {A2, R2}         401 / 403                 5xx · 429 · network
+       │                       │                         │
+ saveTokens(A2, R2)     clearTokens()             session kept; this request
+       │                onSessionExpired()        fails as `sessionUnavailable`;
+ retry ONCE (Bearer A2) (once per session)        30 s cooldown before the next try
+```
+
+- **Single flight.** A refresh token is single-use (rotation + reuse detection), so concurrent
+  401s share ONE `POST /auth/refresh`; every waiting request then retries once with the new
+  access token. Same idea as the web facade's single flight (section 5.4).
+- **Retry once.** A retried request that is refused again is not retried in a loop: the session
+  is ended (tokens cleared, `onSessionExpired`) and the call resolves `unauthorized`.
+- **Session end runs once.** However many requests see the session die, `clearTokens()` and
+  `onSessionExpired()` run once; a request whose access token is no longer the stored one (the
+  session already ended, or a new one started) changes nothing.
+- **Signed out is not expired.** A request sent without an access token (sign-in, sign-up,
+  password reset) never refreshes: its 401 (wrong password, …) is returned as the API's answer.
+- **Dead-session codes** (`TOKEN_VERSION_MISMATCH`, `SESSION_REVOKED`, `REFRESH_TOKEN_REVOKED`, `TOKEN_THEFT_DETECTED`)
+  end the session without trying a refresh, exactly like the web.
+- **A spent token cannot be recovered.** A 2xx refresh whose body has no valid token pair, or a
+  pair the secret store fails to save, ends the session: the API already rotated the old token.
+- **No verdict is not a dead session.** An unreachable API, a 5xx, a 429 or an unreadable
+  secret store keep the tokens; only the current request fails, and the shared transient-failure
+  cooldown (`createRefreshCooldown`, 30 s) stops every 401 from re-hitting a dead API.
+
+### 13.3 Sign out and sign out everywhere
+
+`POST /auth/logout` and `POST /auth/logout-all` identify the session by its refresh token, which a
+`mobile` client presents in the body. They must NOT go through the 401 pipeline: a refresh would
+rotate (spend) the very token being presented. `fetchBodyTokenLifecycleMutation(context, def)`
+reads the stored refresh token, sends `{ refreshToken }` (or `{}` when none is stored) with the
+client type, app version and static headers but no Bearer and no cookies (the request-level
+`anonymous-token` transport), and returns the API's answer as-is — it never clears tokens itself.
+The app decides: **sign out** always clears the tokens (the device leaves even offline), **sign out
+everywhere** leaves only on success (on failure the devices are still signed in). A context without
+the token transport throws `TokenTransportRequiredError`.
+
+### 13.4 426 Upgrade Required
+
+A 426 (`APP_VERSION_UNSUPPORTED`, [ADR 033](../../adr/033-mobile-forced-upgrade.md)) is never
+refreshed or retried. It surfaces as `UpgradeRequiredError` (a subclass of `ApiError`):
+`fetchOrThrow` / `mutate` throw it and `.fetch()` returns it in its `error` slot, and the app
+shows its blocking update screen.
+
+### 13.5 Code paths and tests
+
+| Concern | Code | Tests |
+| --- | --- | --- |
+| Config and validation | `packages/api-client/src/config.ts` | `config.test.ts` |
+| Transport, session end | `packages/api-client/src/transport.ts` | `transport.test.ts`, `token-transport.test.ts` |
+| Body-token refresh, single flight, cooldown | `packages/api-client/src/refresh.ts` | `refresh.test.ts`, `refresh-cooldown.test.ts` |
+| Wire shapes of the body transport | `packages/api-client/src/body-token-contract.ts` | `token-transport.test.ts` |
+| 426 mapping | `packages/api-client/src/errors.ts` | `upgrade-required.test.ts` |
+| Static headers, lifecycle calls (sign out / everywhere) | `config.ts`, `request.ts` (`fetchBodyTokenLifecycleMutation`) | `static-headers-and-lifecycle.test.ts` |
+| The mobile app's wiring (Secure Store provider, session end, refresh token gated by the app lock) | `apps/mobile/src/lib/api.ts`, `src/lib/secure-store-token-provider.ts`, `src/runtime/app-runtime.ts` | `api.test.ts`, `secure-store-token-provider.test.ts`, `app-runtime.test.ts` (jest-expo) |
 
 ---
 

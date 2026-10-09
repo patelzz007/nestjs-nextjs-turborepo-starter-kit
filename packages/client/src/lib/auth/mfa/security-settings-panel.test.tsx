@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import {
@@ -8,11 +9,13 @@ import {
 	type BackupCodesRemainingResponse,
 	type EnableTwoFactorInput,
 	type Envelope,
+	type Session,
 	type StartTwoFactorSetupInput,
 	type TwoFactorMessageResponse,
 	type TwoFactorSetupResponse,
 	type UserResponse,
 } from "@workspace/shared";
+import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
@@ -54,10 +57,30 @@ vi.mock("../index", () => {
 			twoFactorBackupCodesRemaining: {
 				useQuery: (): QueryStub<Envelope<BackupCodesRemainingResponse>> => ({ data: undefined, refetch: mocks.refetchRemaining }),
 			},
+			sessions: {
+				useQuery: (): QueryStub<Envelope<Session[]>> & { readonly isPending: boolean; readonly isError: boolean } => ({
+					data: envelopeFixture([]),
+					refetch: mocks.noop,
+					isPending: false,
+					isError: false,
+				}),
+			},
+			revokeSession: {
+				useMutation: (): { readonly mutateAsync: typeof mocks.noop; readonly isPending: boolean; readonly error: null; readonly reset: () => void } => ({
+					mutateAsync: mocks.noop,
+					isPending: false,
+					error: null,
+					reset: (): void => undefined,
+				}),
+			},
 		},
 	};
 	return {
-		useAuth: (): { readonly user: null; readonly api: typeof api } => ({ user: null, api }),
+		useAuth: (): { readonly user: null; readonly api: typeof api; readonly logoutEverywhere: () => Promise<boolean> } => ({
+			user: null,
+			api,
+			logoutEverywhere: (): Promise<boolean> => Promise.resolve(true),
+		}),
 	};
 });
 
@@ -66,8 +89,18 @@ function setupResponseFixture(): TwoFactorSetupResponse {
 	return TwoFactorSetupResponseSchema.parse({
 		secret: "JBSWY3DPEHPK3PXP",
 		qrCodeDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+		otpAuthUrl: "otpauth://totp/Freebuff:member%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Freebuff",
 		backupCodes: Array.from({ length: BACKUP_CODE_COUNT }, (_, index): string => `ABCDEFGH2345678${BACKUP_CODE_CHARSET.charAt(index)}`),
 	});
+}
+
+/** The panel's providers: the kit's labels and a query client (the device list invalidates its query). */
+function Providers({ children }: { readonly children: ReactNode }): JSX.Element {
+	return (
+		<QueryClientProvider client={new QueryClient()}>
+			<UiKitTestProviders>{children}</UiKitTestProviders>
+		</QueryClientProvider>
+	);
 }
 
 const SETUP_BUTTON = "Set up authenticator app";
@@ -76,7 +109,7 @@ const SAVED_CODES_LABEL = "I saved my backup codes in a secure place";
 async function startSetup(): Promise<TwoFactorSetupResponse> {
 	const setup = setupResponseFixture();
 	mocks.twoFactorSetup.mockResolvedValue(envelopeFixture(setup));
-	render(<SecuritySettingsPanel />, { wrapper: UiKitTestProviders });
+	render(<SecuritySettingsPanel />, { wrapper: Providers });
 	fireEvent.click(screen.getByRole("button", { name: SETUP_BUTTON }));
 	await screen.findByRole("img", { name: "2FA QR code" });
 	return setup;
@@ -101,7 +134,7 @@ afterEach(() => {
 
 describe("SecuritySettingsPanel two-factor setup", () => {
 	it("starts setup with the POST mutation on click — never by reading it as a query", async () => {
-		render(<SecuritySettingsPanel />, { wrapper: UiKitTestProviders });
+		render(<SecuritySettingsPanel />, { wrapper: Providers });
 
 		// Nothing is generated just by viewing the page: no QR until the member asks for one.
 		expect(screen.queryByRole("img", { name: "2FA QR code" })).toBeNull();
@@ -129,7 +162,7 @@ describe("SecuritySettingsPanel two-factor setup", () => {
 
 	it("shows the error when setup fails and renders no QR code", async () => {
 		mocks.twoFactorSetup.mockRejectedValue(new ApiError({ message: "Two-factor authentication is already enabled", statusCode: 409 }));
-		render(<SecuritySettingsPanel />, { wrapper: UiKitTestProviders });
+		render(<SecuritySettingsPanel />, { wrapper: Providers });
 
 		fireEvent.click(screen.getByRole("button", { name: SETUP_BUTTON }));
 
@@ -204,5 +237,14 @@ describe("SecuritySettingsPanel enabling two-factor", () => {
 		expect(await screen.findByText("Invalid verification code")).toBeDefined();
 		expect(screen.getByText(setup.secret)).toBeDefined();
 		expect(mocks.refetchRemaining).not.toHaveBeenCalled();
+	});
+});
+
+describe("SecuritySettingsPanel sections", () => {
+	it("includes the signed-in devices section with its sign-out-everywhere action", () => {
+		render(<SecuritySettingsPanel />, { wrapper: Providers });
+
+		expect(screen.getByRole("heading", { name: "Signed-in devices" })).toBeDefined();
+		expect(screen.getByRole("button", { name: "Sign out everywhere" })).toBeDefined();
 	});
 });

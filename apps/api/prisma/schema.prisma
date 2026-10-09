@@ -55,6 +55,34 @@ enum DeviceType {
   UNKNOWN
 }
 
+/// The app a device session belongs to (`X-Client-Type`, validated server-side). Mirrors `AuthClientTypeSchema`.
+enum SessionClientType {
+  web
+  admin
+  merchant
+  mobile
+}
+
+/// How a device session was signed in — the proofs the login flow required. Mirrors `SessionSignInMethodSchema`.
+enum SessionSignInMethod {
+  /// Password only.
+  PASSWORD
+  /// Password, then the emailed new-device code.
+  PASSWORD_NEW_DEVICE_CODE
+  /// Password and an authenticator (TOTP) code.
+  PASSWORD_TOTP
+  /// Password, TOTP, then the emailed new-device code.
+  PASSWORD_TOTP_NEW_DEVICE_CODE
+  /// Password and a single-use backup code.
+  PASSWORD_BACKUP_CODE
+  /// Password, a backup code, then the emailed new-device code.
+  PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE
+  /// A staff account created from a team invite (the password was set in the same request).
+  TEAM_INVITE_REGISTRATION
+  /// Team-invite registration, then the emailed new-device code.
+  TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE
+}
+
 enum TwoFactorLoginChallengePurpose {
   LOGIN
   ROTATE
@@ -219,6 +247,9 @@ model User {
   rewardSales                            RewardSale[]
   rewardReferralsAsReferrer              RewardReferral[]                @relation("ReferrerUser")
   rewardReferralsAsReferee               RewardReferral[]                @relation("RefereeUser")
+  signupReferralCodes                    SignupReferralCode[]
+  signupReferralsAsReferrer              SignupReferral[]                @relation("SignupReferrerUser")
+  signupReferralsAsReferee               SignupReferral?                 @relation("SignupRefereeUser")
   rewardOtpChallenges                    RewardOtpChallenge[]
   rewardLegalAcceptances                 RewardLegalAcceptance[]
   rewardNotifications                    RewardNotification[]
@@ -665,6 +696,11 @@ model AuthorizationAudit {
   @@map("authorization_audits")
 }
 
+/// One device session: the refresh token a signed-in device holds (rotated in place on every refresh,
+/// so `id` is the stable session id — the `sid` claim of its access tokens, ADR 034).
+/// Client-reported details (browser, OS, device model and name, app version) are display-only,
+/// length-limited and zod-validated before storage; they never influence authorization.
+/// Columns that are NULL on a session created before piece 4 of the mobile plan stay NULL.
 /// RLS: own row — `app_owns("userId")`.
 model RefreshToken {
   id                String  @id @default(uuid())
@@ -674,12 +710,40 @@ model RefreshToken {
   userId            String
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  deviceInfo String? @db.VarChar(255)
-  ipAddress  String? @db.VarChar(45)
+  /// The app that signed in (server-classified from `X-Client-Type`).
+  clientType      SessionClientType?   @map("client_type")
+  /// Browser / HTTP client parsed from the User-Agent (`Chrome`, `CFNetwork`).
+  browserName     String?              @map("browser_name") @db.VarChar(64)
+  browserVersion  String?              @map("browser_version") @db.VarChar(32)
+  /// Operating system parsed from the User-Agent (`macOS`, `iOS`).
+  osName          String?              @map("os_name") @db.VarChar(64)
+  osVersion       String?              @map("os_version") @db.VarChar(32)
+  /// Device class parsed from the User-Agent.
+  deviceType      DeviceType?          @map("device_type")
+  /// Device model: `X-Device-Model` for client type mobile, else the User-Agent's model (`iPhone 15 Pro`, `Pixel 8`).
+  deviceModel     String?              @map("device_model") @db.VarChar(64)
+  /// The device's own name (`X-Device-Name`, client type mobile only).
+  deviceName      String?              @map("device_name") @db.VarChar(64)
+  /// The mobile app's version (`X-App-Version`, client type mobile only).
+  appVersion      String?              @map("app_version") @db.VarChar(64)
+  /// The login flow that created the session.
+  signInMethod    SessionSignInMethod? @map("sign_in_method")
+  /// Request IP at sign-in.
+  ipAddress       String?              @db.VarChar(45)
+  /// Request IP of the most recent refresh.
+  lastIpAddress   String?              @map("last_ip_address") @db.VarChar(45)
+  /// Set at sign-in and on every refresh.
+  lastActiveAt    BigInt               @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("last_active_at")
+  /// Location of the sign-in IP from the `SessionLocationResolver` port (ISO 3166-1 alpha-2); NULL while the port resolves nothing.
+  locationCountry String?              @map("location_country") @db.VarChar(2)
+  locationRegion  String?              @map("location_region") @db.VarChar(64)
+  locationCity    String?              @map("location_city") @db.VarChar(128)
 
   expiresAt BigInt
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
+  /// Who revoked the session: a user id (the user, or an admin) or a system marker (`SessionSystemRevokerSchema`).
+  deletedBy String? @map("deleted_by") @db.VarChar(64)
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
 
@@ -2369,6 +2433,48 @@ model RewardReferral {
 }
 
 /// RLS: app_owns(user_id).
+model SignupReferralCode {
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  code      String  @unique @db.VarChar(8)
+  expiresAt BigInt  @map("expires_at")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt BigInt? @map("deleted_at")
+  deletedBy String? @map("deleted_by")
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signupReferrals SignupReferral[]
+
+  @@index([userId, createdAt])
+  @@map("signup_referral_codes")
+}
+
+/// RLS: referrer owns row + bypass.
+model SignupReferral {
+  id                String  @id @default(uuid())
+  referrerUserId    String  @map("referrer_user_id")
+  refereeUserId     String  @unique @map("referee_user_id")
+  referralCodeId    String  @map("referral_code_id")
+  successfulAt      BigInt? @map("successful_at")
+  successNotifiedAt BigInt? @map("success_notified_at")
+  isDeleted         Boolean @default(false) @map("is_deleted")
+  deletedAt         BigInt? @map("deleted_at")
+  deletedBy         String? @map("deleted_by")
+  createdAt         BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt         BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  referrerUser User               @relation("SignupReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  refereeUser  User               @relation("SignupRefereeUser", fields: [refereeUserId], references: [id], onDelete: Cascade)
+  referralCode SignupReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Restrict)
+
+  @@index([referrerUserId, createdAt])
+  @@index([successNotifiedAt, successfulAt])
+  @@map("signup_referrals")
+}
+
+/// RLS: app_owns(user_id).
 model RewardOtpChallenge {
   id             String           @id @default(uuid())
   userId         String           @map("user_id")
@@ -2579,8 +2685,10 @@ enum AuditAuthMethod {
   BEARER_TOKEN
   /// The access-token cookie of a frontend session (web / admin / merchant cookie set).
   SESSION_COOKIE
-  /// The refresh-token cookie (`/auth/refresh`, logout).
+  /// The refresh-token cookie of a browser client type (`/auth/refresh`, logout).
   REFRESH_COOKIE
+  /// The refresh token in the request body (`{ refreshToken }`, client type `mobile` — ADR 029).
+  REFRESH_BODY
   /// A machine API key (merchant POS terminals).
   API_KEY
 }

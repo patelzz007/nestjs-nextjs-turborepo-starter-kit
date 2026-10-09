@@ -15,6 +15,6 @@ export interface ClientInfo {
  * request context (`TRUST_PROXY`, common/http/client-ip.ts): a forwarding
  * header from an untrusted peer is never believed.
  */
-export function extractClientInfo(req: FastifyRequest): ClientInfo {
+export function extractClientInfo(req: Pick<FastifyRequest, "headers" | "ip">): ClientInfo {
 	return { deviceInfo: readFirstHeader(req.headers["user-agent"])?.slice(0, MAX_USER_AGENT_LENGTH), ipAddress: req.ip };
 }

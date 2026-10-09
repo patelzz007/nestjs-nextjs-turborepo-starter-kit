@@ -15,6 +15,7 @@ import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
 import { UserRepository } from "../repositories/user.repository";
+import { SignupReferralRepository } from "../signup-referrals/signup-referral.repository";
 import { UserResponseMapper } from "./user-response.mapper";
 
 /**
@@ -31,6 +32,7 @@ export class AdminUserService {
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly logService: LogService,
 		private readonly mapper: UserResponseMapper,
+		private readonly signupReferrals: SignupReferralRepository,
 	) {}
 
 	public async getAdminUsersList(query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminUserDetail>> {
@@ -38,6 +40,7 @@ export class AdminUserService {
 		const users = listResult.items;
 
 		const userIds: string[] = users.map((u) => u.id);
+		const signupReferralByReferee = await this.signupReferrals.findAdminSummariesForReferees(userIds);
 		const userRoles = await this.prisma.userRole.findMany({
 			where: { userId: { in: userIds }, isDeleted: false, role: { isDeleted: false } },
 			include: {
@@ -79,6 +82,8 @@ export class AdminUserService {
 				failedLoginAttempts: u.failedLoginAttempts,
 				lockedUntil: u.lockedUntil !== null ? epochMs(Number(u.lockedUntil)) : null,
 				directPermissionIds: [],
+				signupReferrer: signupReferralByReferee.get(u.id)?.referrer ?? null,
+				signupReferralStatus: signupReferralByReferee.get(u.id)?.status ?? null,
 			};
 		});
 
@@ -93,12 +98,15 @@ export class AdminUserService {
 		const isEmailVerified: boolean = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 		const baseUser: UserResponse = this.mapper.build(user, userPermissions, isEmailVerified);
 
+		const signupReferral = await this.signupReferrals.findAdminSummaryForReferee(userId);
 		return {
 			...baseUser,
 			permissions: userPermissions.permissions,
 			failedLoginAttempts: user.failedLoginAttempts,
 			lockedUntil: user.lockedUntil !== null ? epochMs(Number(user.lockedUntil)) : null,
 			directPermissionIds: [...directPermissionIds],
+			signupReferrer: signupReferral?.referrer ?? null,
+			signupReferralStatus: signupReferral?.status ?? null,
 		};
 	}
 

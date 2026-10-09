@@ -7,6 +7,7 @@ import { AuthorizationAuditService, type AuditActor, type AuditEntry } from "../
 import { RBAC_MUTATION_ADVISORY_LOCK_KEY } from "../constants/authorization.constants";
 import { AuthorizationEventEmitter } from "../events/authorization.events";
 import type { AuthorizationActor } from "./privilege-escalation.service";
+import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../sessions/device/session-revoker";
 import { UserSessionRevocationService } from "./user-session-revocation.service";
 
 /** An audit row a mutation asks for — the runner stamps the actor. */
@@ -117,7 +118,9 @@ export class RbacMutationRunner {
 				await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RBAC_MUTATION_ADVISORY_LOCK_KEY})`;
 				const produced: NormalizedOutcome<T> = await work(tx);
 				if (produced.audits.length > 0) {
-					await this.sessionRevocation.revokeWithinTransaction(produced.affectedUserIds, tx);
+					// The actor's id, or the system marker for a scheduled change (an expired temporary permission).
+					const revoker: SessionRevoker = actorUserId === null ? revokedBySystem("system:rbac-mutation") : revokedByUser(actorUserId);
+					await this.sessionRevocation.revokeWithinTransaction(produced.affectedUserIds, revoker, tx);
 					for (const draft of produced.audits) {
 						await this.audit.record({ ...draft, actor }, tx);
 					}

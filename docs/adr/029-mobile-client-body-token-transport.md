@@ -12,7 +12,7 @@ order: 29
 
 ## Status
 
-Accepted (2026-10-08). Not implemented yet.
+Accepted (2026-10-08). Implemented in piece 3 of the mobile plan (2026-10-08) — see [Mobile app §7](../technical/mobile/mobile-app.md#7-piece-3-the-mobile-client-type-in-the-api). The mobile app uses it since piece 5 (2026-10-09): Secure Store token provider, Bearer access token, body refresh, and sign-out / sign-out-everywhere through the api-client's `fetchBodyTokenLifecycleMutation` — see [§9](../technical/mobile/mobile-app.md#9-piece-5-appsmobile).
 
 ## Context
 

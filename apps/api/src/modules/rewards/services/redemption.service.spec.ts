@@ -19,6 +19,7 @@ import { ClaimService } from "./claim.service";
 import { PosCodeLockoutService, posCodeLockedException } from "./pos-code-lockout.service";
 import { RewardCodeHasher } from "../crypto/reward-code-hasher";
 import { ReferralCreditNotificationService } from "./referral-credit-notification.service";
+import { SignupReferralCheckoutService } from "../../auth/signup-referrals/signup-referral-checkout.service";
 import { RedemptionService } from "./redemption.service";
 
 vi.mock("../../../prisma/prisma.service", () => ({ PrismaService: class {} }));
@@ -137,6 +138,10 @@ describe("RedemptionService", () => {
 		recordUnknownBackupCodes: vi.fn<PosCodeLockoutService["recordUnknownBackupCodes"]>(),
 	};
 	const notifications = { deliver: vi.fn<ReferralCreditNotificationService["deliver"]>() };
+	const signupReferralCheckout = {
+		markSuccessfulInTransaction: vi.fn<SignupReferralCheckoutService["markSuccessfulInTransaction"]>(),
+		deliverAfterCheckout: vi.fn<SignupReferralCheckoutService["deliverAfterCheckout"]>(),
+	};
 	/** Code → claim this merchant owns (anything else, incl. other merchants' codes, resolves to null). */
 	let known: Map<string, RewardClaimRedemptionLookup>;
 
@@ -152,6 +157,8 @@ describe("RedemptionService", () => {
 		lockout.recordUnknownBackupCodes.mockResolvedValue(null);
 		referrals.creditReferrerForRedemption.mockResolvedValue(null);
 		notifications.deliver.mockResolvedValue("delivered");
+		signupReferralCheckout.markSuccessfulInTransaction.mockResolvedValue(null);
+		signupReferralCheckout.deliverAfterCheckout.mockResolvedValue(undefined);
 
 		const moduleRef = await Test.createTestingModule({
 			providers: [
@@ -163,6 +170,7 @@ describe("RedemptionService", () => {
 				{ provide: PlatformOutboxService, useValue: outbox },
 				{ provide: PosCodeLockoutService, useValue: lockout },
 				{ provide: ReferralCreditNotificationService, useValue: notifications },
+				{ provide: SignupReferralCheckoutService, useValue: signupReferralCheckout },
 				{ provide: RewardCodeHasher, useValue: new RewardCodeHasher({ 1: Buffer.alloc(32, 7).toString("base64") }) },
 			],
 		}).compile();
@@ -219,6 +227,28 @@ describe("RedemptionService", () => {
 	});
 
 	describe("checkout", () => {
+		it("stamps the customer's signup referral in the SAME transaction and delivers only that referral's notification after the commit", async () => {
+			known.set(TOKEN_A, lookup(CLAIM_A));
+			const input = checkoutInput([{ token: TOKEN_A }]);
+			commitCheckout([CLAIM_A], checkoutRequestHash(input));
+			signupReferralCheckout.markSuccessfulInTransaction.mockResolvedValue("signup-referral-1");
+
+			await service.checkout(POS, input);
+
+			expect(signupReferralCheckout.markSuccessfulInTransaction).toHaveBeenCalledWith(TX, CUSTOMER, NOW);
+			expect(signupReferralCheckout.deliverAfterCheckout).toHaveBeenCalledWith("signup-referral-1");
+		});
+
+		it("hands null to the after-commit delivery when the checkout stamped no signup referral", async () => {
+			known.set(TOKEN_A, lookup(CLAIM_A));
+			const input = checkoutInput([{ token: TOKEN_A }]);
+			commitCheckout([CLAIM_A], checkoutRequestHash(input));
+
+			await service.checkout(POS, input);
+
+			expect(signupReferralCheckout.deliverAfterCheckout).toHaveBeenCalledWith(null);
+		});
+
 		it("records the bill, enqueues the event and credits referrers in the SAME transaction, then delivers the referrer email", async () => {
 			known.set(TOKEN_A, lookup(CLAIM_A));
 			const input = checkoutInput([{ token: TOKEN_A }]);
@@ -274,6 +304,9 @@ describe("RedemptionService", () => {
 			await expect(service.checkout(POS, input)).resolves.toMatchObject({ saleId: SALE_ID });
 			await expect(service.checkout(POS, checkoutInput([{ token: TOKEN_A }], BILL_MINOR + 1))).rejects.toMatchObject({ response: { error: "IDEMPOTENCY_KEY_REUSED" } });
 			expect(claims.findMerchantClaim).not.toHaveBeenCalled();
+			// A replay neither stamps a signup referral again nor sends another notification.
+			expect(signupReferralCheckout.markSuccessfulInTransaction).not.toHaveBeenCalled();
+			expect(signupReferralCheckout.deliverAfterCheckout).not.toHaveBeenCalled();
 		});
 
 		it("replays the winner when a concurrent request with the same key committed first", async () => {

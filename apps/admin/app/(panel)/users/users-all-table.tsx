@@ -1,6 +1,6 @@
 "use client";
 
-import { adminUserListQuery, AdminUserStatusSchema, type AdminUserDetail, type Envelope } from "@workspace/shared";
+import { adminUserListQuery, AdminSignupReferralStatusFilterSchema, AdminUserStatusSchema, type AdminUserDetail, type Envelope } from "@workspace/shared";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
@@ -24,9 +24,13 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
-import { ADMIN_USER_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enum-filter-options";
+import { ADMIN_USER_STATUS_LABELS, enumFilterOptions, SIGNUP_REFERRAL_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
+import { Label } from "@workspace/ui/components/label";
+
+import { ReferrerPicker } from "./referrer-picker";
 
 const USER_SEARCH_PLACEHOLDER = "Search name or email…";
+const REFERRER_FILTER_ID = "users-referrer-filter";
 
 /** Only the strings that differ from the kit pack's `dataTable` copy. */
 const USER_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
@@ -43,7 +47,8 @@ export interface UsersAllTableProps {
 }
 
 /**
- * `/users` table. Search, status filter, sort and page live in the URL
+ * `/users` table. Search, the account-status and signup-referral filters
+ * (`filter[referrerId]` via the "Referred by" picker, `filter[referralStatus]`), sort and page live in the URL
  * (lib/url-state/users) — shareable, refresh-safe and back/forward-aware; the
  * only local state is the search box's in-progress draft.
  */
@@ -55,7 +60,7 @@ export default function UsersAllTable({
 	const { api } = useAuth();
 	const router = useRouter();
 	const [urlState, updateUrlState] = useUrlState(USERS_TABLE_URL_STATE);
-	const isFiltered = urlState.search !== undefined || urlState.status !== undefined;
+	const isFiltered = urlState.search !== undefined || urlState.status !== undefined || urlState.referrerId !== undefined || urlState.referralStatus !== undefined;
 
 	const commitSearch = React.useCallback(
 		(value: string): void => {
@@ -65,8 +70,15 @@ export default function UsersAllTable({
 	);
 	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
 
+	const handleReferrerChange = React.useCallback(
+		(referrerId: string): void => {
+			updateUrlState({ referrerId: referrerId.length > 0 ? referrerId : undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+		},
+		[updateUrlState],
+	);
+
 	const handleClearFilters = React.useCallback((): void => {
-		updateUrlState({ search: undefined, status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+		updateUrlState({ search: undefined, status: undefined, referrerId: undefined, referralStatus: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
 	}, [updateUrlState]);
 
 	const stateKey: string = USERS_TABLE_URL_STATE.serialize(urlState);
@@ -125,6 +137,14 @@ export default function UsersAllTable({
 						label: "Access",
 						value: user.isSuperAdmin ? "Super admin" : user.hasAdminAccess ? "Admin panel" : "Standard",
 					},
+					{
+						label: "Referrer",
+						value: user.signupReferrer?.fullName ?? "—",
+					},
+					{
+						label: "Referral status",
+						value: user.signupReferralStatus === null ? "—" : SIGNUP_REFERRAL_STATUS_LABELS[user.signupReferralStatus],
+					},
 				]}
 				actions={cardActions}
 			/>
@@ -163,6 +183,34 @@ export default function UsersAllTable({
 				),
 			},
 			{
+				id: "signupReferrer",
+				header: "Referrer",
+				enableSorting: false,
+				cell: ({ row }) =>
+					row.original.signupReferrer === null ? (
+						<span className="text-muted-foreground">—</span>
+					) : (
+						<Link href={ROUTES.users.detail(row.original.signupReferrer.id)} className="text-primary hover:underline">
+							{row.original.signupReferrer.fullName}
+						</Link>
+					),
+			},
+			{
+				id: "signupReferralStatus",
+				header: "Referral status",
+				enableSorting: false,
+				cell: ({ row }): React.ReactNode => {
+					if (row.original.signupReferralStatus === null) {
+						return <span className="text-muted-foreground">—</span>;
+					}
+					return (
+						<Badge variant={row.original.signupReferralStatus === "redeemed" ? "default" : "outline"} className="text-xs">
+							{SIGNUP_REFERRAL_STATUS_LABELS[row.original.signupReferralStatus]}
+						</Badge>
+					);
+				},
+			},
+			{
 				id: "access",
 				header: "Access",
 				enableSorting: false,
@@ -184,12 +232,26 @@ export default function UsersAllTable({
 		(filterKey: string, value: string | null): void => {
 			if (filterKey === "status") {
 				updateUrlState({ status: parseFilterOption(value ?? "", AdminUserStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
+				return;
+			}
+			if (filterKey === "referralStatus") {
+				updateUrlState({
+					referralStatus: parseFilterOption(value ?? "", AdminSignupReferralStatusFilterSchema),
+					page: LIST_FIRST_PAGE,
+					cursor: undefined,
+				});
 			}
 		},
 		[updateUrlState],
 	);
 
-	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: urlState.status ?? ALL_FILTER_OPTION }), [urlState.status]);
+	const manualColumnFilters = React.useMemo(
+		(): Readonly<Record<string, string>> => ({
+			status: urlState.status ?? ALL_FILTER_OPTION,
+			referralStatus: urlState.referralStatus ?? ALL_FILTER_OPTION,
+		}),
+		[urlState.referralStatus, urlState.status],
+	);
 
 	const tableFilters = React.useMemo(
 		(): Filter[] => [
@@ -198,6 +260,11 @@ export default function UsersAllTable({
 				label: "Account status",
 				options: enumFilterOptions(AdminUserStatusSchema.options, ADMIN_USER_STATUS_LABELS),
 			},
+			{
+				key: "referralStatus",
+				label: "Referral status",
+				options: enumFilterOptions(AdminSignupReferralStatusFilterSchema.options, SIGNUP_REFERRAL_STATUS_LABELS),
+			},
 		],
 		[],
 	);
@@ -205,8 +272,18 @@ export default function UsersAllTable({
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("users.csv", ["fullName", "email"]), []);
 
 	const toolbarContent = React.useMemo(
-		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={USER_SEARCH_PLACEHOLDER} />,
-		[searchDraft, setSearchDraft],
+		() => (
+			<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={USER_SEARCH_PLACEHOLDER} />
+				<div className="w-full sm:max-w-xs">
+					<Label htmlFor={REFERRER_FILTER_ID} className="sr-only">
+						Referred by
+					</Label>
+					<ReferrerPicker id={REFERRER_FILTER_ID} value={urlState.referrerId ?? ""} onChange={handleReferrerChange} />
+				</div>
+			</div>
+		),
+		[handleReferrerChange, searchDraft, setSearchDraft, urlState.referrerId],
 	);
 
 	return (

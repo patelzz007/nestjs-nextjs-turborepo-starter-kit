@@ -36,6 +36,8 @@ export const UserInvalidationTriggerSchema = z.enum([
 	"rbac_mutation",
 	/** The user signed out of every device. */
 	"logout_all_devices",
+	/** One device session was revoked (signed out, or revoked from the device list — ADR 034): its `sid` is rejected from now on. */
+	"session_revoked",
 	/** A rotated refresh token was replayed (theft signal): every session was revoked. */
 	"refresh_token_reuse",
 	/** The user changed their password. */

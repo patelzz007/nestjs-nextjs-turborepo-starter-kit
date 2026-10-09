@@ -295,6 +295,32 @@ describe("API env schema", () => {
 			expect(captureEnvError({ LOGIN_VERIFICATION_MODE: "true" }).variables).toEqual(["LOGIN_VERIFICATION_MODE"]);
 		});
 
+		it("defaults MOBILE_MIN_SUPPORTED_VERSION to the first release and accepts any semantic version", () => {
+			expect(parse({ MOBILE_MIN_SUPPORTED_VERSION: undefined }).mobile.minSupportedVersion).toBe("1.0.0");
+			expect(parse({ MOBILE_MIN_SUPPORTED_VERSION: "" }).mobile.minSupportedVersion).toBe("1.0.0");
+			expect(parse({ MOBILE_MIN_SUPPORTED_VERSION: " 1.2.0 " }).mobile.minSupportedVersion).toBe("1.2.0");
+			expect(parse({ MOBILE_MIN_SUPPORTED_VERSION: "2.3.1" }).mobile.minSupportedVersion).toBe("2.3.1");
+			expect(parse({ MOBILE_MIN_SUPPORTED_VERSION: "2.0.0-rc.1" }).mobile.minSupportedVersion).toBe("2.0.0-rc.1");
+		});
+
+		it.each(["2", "2.3", "v2.3.1", "latest", "02.3.1", "2.3.1-"])("rejects MOBILE_MIN_SUPPORTED_VERSION=%j (not a semantic version)", (value: string) => {
+			expect(captureEnvError({ MOBILE_MIN_SUPPORTED_VERSION: value }).variables).toEqual(["MOBILE_MIN_SUPPORTED_VERSION"]);
+		});
+
+		it("defaults the session location lookup to `none` with a 300 ms budget", () => {
+			expect(parse({ SESSION_LOCATION_PROVIDER: undefined, SESSION_LOCATION_TIMEOUT_MS: undefined }).sessions).toEqual({ locationProvider: "none", locationTimeoutMs: 300 });
+			expect(parse({ SESSION_LOCATION_TIMEOUT_MS: "1500" }).sessions.locationTimeoutMs).toBe(1500);
+		});
+
+		it.each([
+			["SESSION_LOCATION_PROVIDER", "maxmind"],
+			["SESSION_LOCATION_TIMEOUT_MS", "0"],
+			["SESSION_LOCATION_TIMEOUT_MS", "5001"],
+			["SESSION_LOCATION_TIMEOUT_MS", "fast"],
+		])("rejects %s=%j", (variable: string, value: string) => {
+			expect(captureEnvError({ [variable]: value }).variables).toEqual([variable]);
+		});
+
 		it("parses Kafka brokers, Redis and AMQP URLs", () => {
 			const config = parse({ KAFKA_BROKERS: "k1:9092, k2:9093", REDIS_URL: "rediss://cache:6380", RABBITMQ_URL: "amqp://mq:5672" });
 

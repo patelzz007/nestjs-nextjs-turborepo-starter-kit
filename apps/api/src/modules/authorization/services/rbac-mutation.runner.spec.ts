@@ -51,6 +51,7 @@ interface Harness {
 	readonly withSystemOperation: MockInstance<TenantTransactionService["withSystemOperation"]>;
 	readonly afterCommit: MockInstance<UserSessionRevocationService["afterRevocationCommitted"]>;
 	readonly emit: MockInstance<AuthorizationEventEmitter["emitUsersMeInvalidate"]>;
+	readonly revoke: MockInstance<UserSessionRevocationService["revokeWithinTransaction"]>;
 }
 
 /** Wires a runner whose transaction records `begin` / `commit` / `rollback` around the real handler. */
@@ -70,7 +71,7 @@ function harness(): Harness {
 		}
 	});
 	const sessionRevocation = createTestSessionRevocation(db);
-	vi.spyOn(sessionRevocation, "revokeWithinTransaction").mockImplementation(() => {
+	const revoke = vi.spyOn(sessionRevocation, "revokeWithinTransaction").mockImplementation(() => {
 		mocks.steps.push("revoke");
 		return Promise.resolve();
 	});
@@ -80,7 +81,13 @@ function harness(): Harness {
 	});
 	const events = new AuthorizationEventEmitter();
 	const emit = vi.spyOn(events, "emitUsersMeInvalidate");
-	return { runner: new RbacMutationRunner(tenantTx, new AuthorizationAuditService(requestContext), sessionRevocation, events), withSystemOperation, afterCommit, emit };
+	return {
+		runner: new RbacMutationRunner(tenantTx, new AuthorizationAuditService(requestContext), sessionRevocation, events),
+		withSystemOperation,
+		afterCommit,
+		emit,
+		revoke,
+	};
 }
 
 describe("RbacMutationRunner", () => {
@@ -102,7 +109,7 @@ describe("RbacMutationRunner", () => {
 	});
 
 	it("runs lock → write → revocation → audit in ONE allowlisted transaction, and invalidates only after commit", async () => {
-		const { runner, withSystemOperation, afterCommit, emit } = harness();
+		const { runner, withSystemOperation, afterCommit, emit, revoke } = harness();
 
 		const result = await runner.run(ACTOR, "Assign role to user", async () => {
 			mocks.steps.push("write");
@@ -124,6 +131,8 @@ describe("RbacMutationRunner", () => {
 			targetUserId: "user-2",
 			targetRoleId: "role-1",
 		});
+		// The revoked sessions record the admin as their `deletedBy`.
+		expect(revoke).toHaveBeenCalledWith(["user-2", "user-2"], { kind: "user", userId: "admin-1" }, expect.anything());
 		expect(afterCommit).toHaveBeenCalledWith(["user-2"], "rbac_mutation");
 		expect(emit).toHaveBeenCalledWith(["user-2"]);
 	});
@@ -174,7 +183,7 @@ describe("RbacMutationRunner", () => {
 		expect(afterCommit).not.toHaveBeenCalled();
 	});
 	it("runs a scheduled job under its own operation, records one audit row per change with the operation as actor, then invalidates", async () => {
-		const { runner, withSystemOperation, afterCommit, emit } = harness();
+		const { runner, withSystemOperation, afterCommit, emit, revoke } = harness();
 
 		const result = await runner.runAsSystemOperation("maintenance.permission_expiry", "Expire grants", async () => {
 			mocks.steps.push("write");
@@ -195,6 +204,8 @@ describe("RbacMutationRunner", () => {
 			expect.objectContaining({ actorKind: "SYSTEM_OPERATION", actorId: "maintenance.permission_expiry", targetUserId: "user-1" }),
 			expect.objectContaining({ actorKind: "SYSTEM_OPERATION", actorId: "maintenance.permission_expiry", targetUserId: "user-2" }),
 		]);
+		// No user acted: the revoked sessions record the closed system marker.
+		expect(revoke).toHaveBeenCalledWith(["user-1", "user-2"], { kind: "system", marker: "system:rbac-mutation" }, expect.anything());
 		expect(afterCommit).toHaveBeenCalledWith(["user-1", "user-2"], "rbac_mutation");
 		expect(emit).toHaveBeenCalledWith(["user-1", "user-2"]);
 	});

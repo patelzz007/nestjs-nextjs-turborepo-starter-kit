@@ -1,0 +1,19 @@
+{
+	"extends": "@workspace/typescript-config/react-library.json",
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		// ES + the fetch-family types (`fetch`, `Response`, `Headers`, `RequestInit`,
+		// `AbortSignal`, `URL`, `FormData`) that both browsers and React Native provide.
+		// The DOM-only globals (`window`, `document`, storage, `DOMException`, …) are
+		// banned by lint (packages/eslint-config/import-boundaries.js), and no Node
+		// types are loaded (`types: []`), so a Node built-in does not even typecheck.
+		"lib": ["es2022", "DOM", "DOM.Iterable"],
+		"types": [],
+		"noEmit": true,
+		// Resolve @workspace/* through their `development` export (src/), never a stale dist/.
+		"customConditions": ["development"]
+	},
+	"include": ["."],
+	"exclude": ["node_modules", "dist"]
+}

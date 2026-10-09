@@ -3,7 +3,7 @@
 /*
  * Consumer Reward Hub brand (sapphire) — only brand and sidebar tokens are re-mapped (onto the shared
  * `--palette-blue-*` scale; APP_BRAND_TOKENS in packages/ui color-contrast.ts); page and card
- * surfaces, borders and text stay shared (packages/ui tokens.css). Light: a solid blue active-nav
+ * surfaces, borders and text stay shared (packages/tokens semantic.ts). Light: a solid blue active-nav
  * pill on the neutral canvas sidebar. Dark: the same neutral ink surface as the page,
  * with a solid blue active pill and blue kept for buttons, focus and charts.
  */

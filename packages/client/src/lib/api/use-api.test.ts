@@ -16,7 +16,7 @@ import {
 import { LIST_SLOT_INDEX, DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
 import { apiRouter, defineMutation, defineQuery } from "./endpoints";
 import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
-import { ApiResponseContractError } from "./response-contract";
+import { ApiResponseContractError } from "@workspace/api-client";
 
 const BASE_URL = "http://api.test";
 

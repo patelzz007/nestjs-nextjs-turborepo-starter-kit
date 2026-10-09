@@ -28,7 +28,7 @@ export const BEARER_SECURITY_SCHEME = "bearer";
 /** Name of the security scheme that selects which session cookie authenticates a request. */
 export const CLIENT_TYPE_SECURITY_SCHEME = "clientType";
 
-/** The header `AuthGuard` picks the session cookie by (`accessToken` / `adminAccessToken` / `merchantAccessToken`). */
+/** The header `AuthGuard` picks the session cookie by (`accessToken` / `adminAccessToken` / `merchantAccessToken`); `mobile` has no cookie. */
 export const CLIENT_TYPE_HEADER = "X-Client-Type";
 
 /**
@@ -104,7 +104,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
 				type: "apiKey",
 				in: "header",
 				name: CLIENT_TYPE_HEADER,
-				description: `Which login session cookie authenticates the request: \`admin\` (admin panel — Swagger's default), \`web\` or \`merchant\`. Log in through that app (or POST /auth/login here) and the browser sends its httpOnly cookie automatically. A Bearer token, when set, takes priority.`,
+				description: `Which login session cookie authenticates the request: \`admin\` (admin panel — Swagger's default), \`web\` or \`merchant\`. Log in through that app (or POST /auth/login here) and the browser sends its httpOnly cookie automatically. A Bearer token, when set, takes priority. \`mobile\` (the mobile app) uses no cookie: it authenticates by Bearer token only, receives its tokens in response bodies, and must send \`X-App-Version\` (426 APP_VERSION_UNSUPPORTED below MOBILE_MIN_SUPPORTED_VERSION).`,
 			},
 			CLIENT_TYPE_SECURITY_SCHEME,
 		)

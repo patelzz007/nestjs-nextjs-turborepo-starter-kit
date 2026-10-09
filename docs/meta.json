@@ -71,6 +71,8 @@
 		"technical/storage/firebase",
 		"technical/email/resend-setup",
 		"technical/email/templates",
+		"--- Mobile ---",
+		"technical/mobile/mobile-app",
 		"--- Frontend & Tooling ---",
 		"technical/frontend/routing",
 		"technical/frontend/admin-panel",

@@ -2,6 +2,7 @@ import type { DeviceType, Plan, Role, Tag, Url, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
+import { SEED_DEVICE_PROFILES, SEED_MOBILE_PROFILES, SEED_SESSION_LOCATIONS, seedSessionRow } from "./device-sessions";
 import {
 	BROWSERS,
 	CITIES,
@@ -108,23 +109,35 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 			create: { userId: u.id, roleId: userRole.id },
 		});
 
-		// Create refresh tokens (2 per user)
+		// Two device sessions per user: the web app on a desktop and the mobile app.
+		const desktopIp: string = randomIpv4();
+		const phoneIp: string = randomIpv4();
 		await prisma.refreshToken.createMany({
 			data: [
-				{
+				seedSessionRow({
 					userId: u.id,
-					token: `rt_${u.id}_d_${String(Date.now())}`,
-					deviceInfo: "Chrome on Windows",
-					ipAddress: randomIpv4(),
+					tokenHash: `rt_${u.id}_d_${String(Date.now())}`,
+					profile: SEED_DEVICE_PROFILES.webChromeMac,
+					signInMethod: "PASSWORD_NEW_DEVICE_CODE",
+					ipAddress: desktopIp,
+					lastIpAddress: desktopIp,
+					location: rand([...SEED_SESSION_LOCATIONS, null]),
+					createdAt: daysAgo(randInt(1, 6)),
+					lastActiveAt: daysAgo(randInt(0, 1)),
 					expiresAt: daysFromNow(7),
-				},
-				{
+				}),
+				seedSessionRow({
 					userId: u.id,
-					token: `rt_${u.id}_m_${String(Date.now() + 1)}`,
-					deviceInfo: "Safari on iOS",
-					ipAddress: randomIpv4(),
-					expiresAt: daysFromNow(30),
-				},
+					tokenHash: `rt_${u.id}_m_${String(Date.now() + 1)}`,
+					profile: rand(SEED_MOBILE_PROFILES),
+					signInMethod: "PASSWORD",
+					ipAddress: phoneIp,
+					lastIpAddress: randomIpv4(),
+					location: rand(SEED_SESSION_LOCATIONS),
+					createdAt: daysAgo(randInt(2, 6)),
+					lastActiveAt: daysAgo(randInt(0, 1)),
+					expiresAt: daysFromNow(7),
+				}),
 			],
 		});
 

@@ -82,6 +82,8 @@ function targetUser(overrides: { readonly isSuperAdmin?: boolean } = {}): AdminU
 		updatedAt: 1_786_300_000_000,
 		isDeleted: false,
 		deletedAt: null,
+		signupReferrer: null,
+		signupReferralStatus: null,
 	});
 }
 

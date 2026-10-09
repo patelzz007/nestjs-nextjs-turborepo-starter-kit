@@ -15,8 +15,8 @@ import { z } from "zod";
 
 import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
 import { AuthorizationException } from "../../modules/authorization/exceptions/authorization.exception";
-import { ConflictError, NotFoundError } from "./app-error";
-import { isServerErrorStatus, STANDARD_ERROR_MESSAGES, standardCodeForStatus } from "./error-codes";
+import { AppVersionUnsupportedError, ConflictError, NotFoundError } from "./app-error";
+import { HTTP_STATUS_UPGRADE_REQUIRED, isServerErrorStatus, STANDARD_ERROR_MESSAGES, standardCodeForStatus } from "./error-codes";
 import { mapException, type ExceptionMappingOptions, type MappedError } from "./exception-mapper";
 
 const PRODUCTION: ExceptionMappingOptions = { exposeInternalErrors: false };
@@ -49,6 +49,7 @@ describe("standardCodeForStatus", () => {
 		[HttpStatus.PAYLOAD_TOO_LARGE, "PAYLOAD_TOO_LARGE"],
 		[HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE"],
 		[HttpStatus.UNPROCESSABLE_ENTITY, "UNPROCESSABLE_ENTITY"],
+		[HTTP_STATUS_UPGRADE_REQUIRED, "APP_VERSION_UNSUPPORTED"],
 		[HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED"],
 		[HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR"],
 		[HttpStatus.BAD_GATEWAY, "EXTERNAL_SERVICE_ERROR"],
@@ -73,6 +74,18 @@ describe("mapException", () => {
 			const mapped: MappedError = mapException(new ConflictError({ code: "EMAIL_TAKEN", message: "Email already in use", details: { field: "email" } }), PRODUCTION);
 
 			expect(mapped).toEqual({ httpStatus: HttpStatus.CONFLICT, code: "EMAIL_TAKEN", message: "Email already in use", details: { field: "email" } });
+		});
+
+		it("answers an outdated mobile app 426 APP_VERSION_UNSUPPORTED with the client-safe update message and its details", () => {
+			const mapped: MappedError = mapException(new AppVersionUnsupportedError({ details: { reason: "below_minimum", minimumVersion: "1.2.0" } }), PRODUCTION);
+
+			expect(mapped).toEqual({
+				httpStatus: 426,
+				code: "APP_VERSION_UNSUPPORTED",
+				message: STANDARD_ERROR_MESSAGES.APP_VERSION_UNSUPPORTED,
+				details: { reason: "below_minimum", minimumVersion: "1.2.0" },
+			});
+			expect(isServerErrorStatus(mapped.httpStatus)).toBe(false);
 		});
 	});
 

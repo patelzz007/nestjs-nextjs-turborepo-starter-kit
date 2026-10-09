@@ -63,7 +63,7 @@ export class ApiDocsAccessGate {
 		}
 		try {
 			const payload = await this.verifier.tokens.verifyAccessToken(token);
-			await this.verifier.tokenState.assertTokenValid(payload.sub, payload.tokenVersion);
+			await this.verifier.tokenState.assertTokenValid(payload.sub, payload.tokenVersion, payload.sid);
 			return payload.isSuperAdmin ? null : new AuthorizationError({ message: "The API documentation is restricted to platform administrators." });
 		} catch {
 			// An invalid, expired or revoked token is an authentication failure — the cause is not disclosed.

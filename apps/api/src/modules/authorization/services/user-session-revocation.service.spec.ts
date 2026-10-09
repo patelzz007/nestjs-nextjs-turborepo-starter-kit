@@ -4,12 +4,20 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { AccessTokenStateService } from "../../auth/services/access-token-state.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 import { AuthorizationInvalidationService } from "../cache/authorization-invalidation.service";
+import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../sessions/device/session-revoker";
 import { RefreshTokenRepository } from "../../sessions/repositories/refresh-token.repository";
 import { SessionUserRepository } from "../../sessions/repositories/session-user.repository";
 
 import { UserSessionRevocationService } from "./user-session-revocation.service";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 import { createTestPrisma } from "../../../../test/support/test-service-graph";
+
+/** The user signing themselves out everywhere. */
+const OWNER: SessionRevoker = revokedByUser("user-1");
+/** An admin whose RBAC change signs users out. */
+const ADMIN: SessionRevoker = revokedByUser("admin-1");
+/** Reuse detection. */
+const ROTATION_REUSE: SessionRevoker = revokedBySystem("system:rotation-reuse");
 
 const mocks = vi.hoisted(() => ({
 	revokeAllForUsers: vi.fn(),
@@ -69,9 +77,9 @@ describe("UserSessionRevocationService", () => {
 	});
 
 	it("revokes refresh tokens and bumps tokenVersion in one transaction, then invalidates the access-token cache", async () => {
-		await createService().revokeAllSessionsForUsers(["user-1", "user-1"], "logout_all_devices");
+		await createService().revokeAllSessionsForUsers(["user-1", "user-1"], OWNER, "logout_all_devices");
 
-		expect(mocks.revokeAllForUsers).toHaveBeenCalledWith(["user-1"], mocks.transactionClient);
+		expect(mocks.revokeAllForUsers).toHaveBeenCalledWith(["user-1"], OWNER, mocks.transactionClient);
 		expect(mocks.bumpTokenVersions).toHaveBeenCalledWith(["user-1"], mocks.transactionClient);
 		expect(mocks.invalidate).toHaveBeenCalledWith(["user-1"], { accessTokenState: true, trigger: "logout_all_devices" });
 		expect(mocks.steps).toEqual(["begin", "commit", "invalidate"]);
@@ -83,7 +91,7 @@ describe("UserSessionRevocationService", () => {
 			return Promise.resolve();
 		});
 
-		await createService().revokeAllSessionsForUser("user-1", "refresh_token_reuse", withinTransaction);
+		await createService().revokeAllSessionsForUser("user-1", ROTATION_REUSE, "refresh_token_reuse", withinTransaction);
 
 		expect(withinTransaction).toHaveBeenCalledWith(mocks.transactionClient);
 		expect(mocks.steps).toEqual(["begin", "event", "commit", "invalidate"]);
@@ -92,7 +100,7 @@ describe("UserSessionRevocationService", () => {
 	it("does not invalidate the cache when the transaction fails", async () => {
 		mocks.bumpTokenVersions.mockRejectedValue(new Error("deadlock detected"));
 
-		await expect(createService().revokeAllSessionsForUser("user-1", "logout_all_devices")).rejects.toThrow("deadlock detected");
+		await expect(createService().revokeAllSessionsForUser("user-1", OWNER, "logout_all_devices")).rejects.toThrow("deadlock detected");
 
 		expect(mocks.invalidate).not.toHaveBeenCalled();
 	});
@@ -100,9 +108,9 @@ describe("UserSessionRevocationService", () => {
 	it("joins the caller's transaction and invalidates only when the caller reports the commit", async () => {
 		const service = createService();
 
-		await service.revokeWithinTransaction(["user-1", "user-2", "user-1"], createTestPrisma());
+		await service.revokeWithinTransaction(["user-1", "user-2", "user-1"], ADMIN, createTestPrisma());
 
-		expect(mocks.revokeAllForUsers).toHaveBeenCalledWith(["user-1", "user-2"], expect.anything());
+		expect(mocks.revokeAllForUsers).toHaveBeenCalledWith(["user-1", "user-2"], ADMIN, expect.anything());
 		expect(mocks.bumpTokenVersions).toHaveBeenCalledWith(["user-1", "user-2"], expect.anything());
 		expect(mocks.invalidate).not.toHaveBeenCalled();
 		expect(mocks.steps).toEqual([]);
@@ -112,7 +120,7 @@ describe("UserSessionRevocationService", () => {
 	});
 
 	it("no-ops when userIds is empty", async () => {
-		await createService().revokeAllSessionsForUsers([], "logout_all_devices");
+		await createService().revokeAllSessionsForUsers([], OWNER, "logout_all_devices");
 
 		expect(mocks.revokeAllForUsers).not.toHaveBeenCalled();
 		expect(mocks.bumpTokenVersions).not.toHaveBeenCalled();

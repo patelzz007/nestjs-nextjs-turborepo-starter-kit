@@ -10,7 +10,7 @@ const DEFAULT_QR_SIZE_PX = 200;
 /**
  * The modules are drawn in `currentColor` over a transparent background, so the
  * frame's `qr-foreground` / `qr-background` tokens (pure black on white in every
- * theme, tokens.css) decide the colours — SVG presentation attributes cannot
+ * theme, packages/tokens) decide the colours — SVG presentation attributes cannot
  * read CSS variables directly.
  */
 const QR_MODULE_COLOR = "currentColor";

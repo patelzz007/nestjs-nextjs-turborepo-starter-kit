@@ -4,7 +4,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 });
 
 const nextConfig: NextConfig = {
-	transpilePackages: ["@workspace/client", "@workspace/ui", "@workspace/shared"],
+	transpilePackages: ["@workspace/api-client", "@workspace/client", "@workspace/ui", "@workspace/shared"],
 };
 
 export default withBundleAnalyzer(nextConfig);

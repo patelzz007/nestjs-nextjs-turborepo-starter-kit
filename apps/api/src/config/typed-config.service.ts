@@ -9,6 +9,8 @@ import type {
 	HttpConfig,
 	MessagingConfig,
 	MfaConfig,
+	MobileConfig,
+	SessionsConfig,
 	ObservabilityConfig,
 	RateLimitConfig,
 	RuntimeConfig,
@@ -60,6 +62,14 @@ export class TypedConfigService {
 
 	public get mfa(): MfaConfig {
 		return this.config.mfa;
+	}
+
+	public get mobile(): MobileConfig {
+		return this.config.mobile;
+	}
+
+	public get sessions(): SessionsConfig {
+		return this.config.sessions;
 	}
 
 	/** Raw key material; prefer the decoded {@link tenantEncryptionMasterKey} / {@link tenantEncryptionPreviousMasterKeys} copies. */

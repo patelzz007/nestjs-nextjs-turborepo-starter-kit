@@ -47,6 +47,8 @@ export const StandardApiErrorCodeSchema = z.enum([
 	"IDEMPOTENCY_KEY_REQUIRED",
 	"IDEMPOTENCY_KEY_REUSED",
 	"IDEMPOTENCY_REQUEST_IN_PROGRESS",
+	/** 426 — a `mobile` request whose `X-App-Version` is missing, malformed or below `MOBILE_MIN_SUPPORTED_VERSION` (ADR 033). */
+	"APP_VERSION_UNSUPPORTED",
 	"INTERNAL_ERROR",
 	"EXTERNAL_SERVICE_ERROR",
 	"SERVICE_UNAVAILABLE",

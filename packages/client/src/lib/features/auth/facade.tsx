@@ -113,6 +113,13 @@ export interface AuthCommands {
 	/** Signs out: clears the client session and cache, the server cookies, then redirects. */
 	readonly logout: () => Promise<void>;
 	/**
+	 * Signs out EVERY device session of the account, on every client type and
+	 * this one included (`POST /auth/logout-all`), then leaves like `logout`.
+	 * Resolves `false` — and keeps this session — when the API did not confirm
+	 * it, so the caller can say so instead of pretending.
+	 */
+	readonly logoutEverywhere: () => Promise<boolean>;
+	/**
 	 * Rotates the session cookies (`POST /auth/refresh`) through the tab's
 	 * SINGLE-FLIGHT refresh — shared with the 401 pipeline and the session
 	 * check, so concurrent callers never rotate the refresh token twice.
@@ -551,6 +558,29 @@ function AuthSession({
 		finalizeSessionExit();
 	}, [clearServerSession, finalizeSessionExit, invalidateSession]);
 
+	const signOutEverywhere = React.useCallback(async (): Promise<boolean> => {
+		try {
+			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, clientType);
+			const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.logoutAll, {});
+			if (!response.ok) {
+				return false;
+			}
+		} catch (error) {
+			console.error("Sign out everywhere failed:", error);
+			return false;
+		}
+		// Every session is revoked and this tab's cookies are cleared by the API: leave.
+		invalidateSession(authActions.signedOut());
+		finalizeSessionExit();
+		return true;
+	}, [baseUrl, clientType, finalizeSessionExit, invalidateSession]);
+
+	const signOutEverywhereRef = React.useRef(signOutEverywhere);
+	React.useEffect((): void => {
+		signOutEverywhereRef.current = signOutEverywhere;
+	}, [signOutEverywhere]);
+	const logoutEverywhere = React.useCallback((): Promise<boolean> => signOutEverywhereRef.current(), []);
+
 	// `logout` keeps one identity for the provider's lifetime (the flow behind
 	// it follows the route-dependent redirect rules), so effects may depend on it.
 	const signOutRef = React.useRef(signOut);
@@ -633,7 +663,10 @@ function AuthSession({
 
 	const refreshSession = React.useCallback((): Promise<RefreshResult> => refreshOnce(), [refreshOnce]);
 
-	const commands = React.useMemo((): AuthCommands => ({ login, logout, refreshSession, recheckSession }), [login, logout, recheckSession, refreshSession]);
+	const commands = React.useMemo(
+		(): AuthCommands => ({ login, logout, logoutEverywhere, refreshSession, recheckSession }),
+		[login, logout, logoutEverywhere, recheckSession, refreshSession],
+	);
 
 	const value = React.useMemo(
 		(): AuthContextType => ({

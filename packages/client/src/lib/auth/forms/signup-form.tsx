@@ -1,6 +1,6 @@
 "use client";
 
-import { LIST_SLOT_INDEX, SignupSchema } from "@workspace/shared";
+import { ConsumerWebSignupSchema, LIST_SLOT_INDEX, SIGNUP_REFERRAL_CODE_LENGTH } from "@workspace/shared";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -22,6 +22,7 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 	const [fullName, setFullName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [referralCode, setReferralCode] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSubmitted, setIsSubmitted] = useState(false);
@@ -41,13 +42,24 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 		setPassword(event.target.value);
 	}, []);
 
+	const handleReferralCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setReferralCode(event.target.value);
+	}, []);
+
 	const handleSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			setIsLoading(true);
 			setError(null);
 
-			const parsed = SignupSchema.safeParse({ fullName, email, password });
+			// An empty or whitespace-only code is "no referral" and is not sent; the API folds case and re-validates.
+			const trimmedReferralCode = referralCode.trim();
+			const parsed = ConsumerWebSignupSchema.safeParse({
+				fullName,
+				email,
+				password,
+				...(trimmedReferralCode.length > 0 ? { referralCode: trimmedReferralCode } : {}),
+			});
 			if (!parsed.success) {
 				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Invalid signup details");
 				setIsLoading(false);
@@ -65,7 +77,7 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 				setIsLoading(false);
 			});
 		},
-		[email, fullName, mutation, password],
+		[email, fullName, mutation, password, referralCode],
 	);
 
 	if (isSubmitted) {
@@ -96,6 +108,19 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 					<Label htmlFor="password">Password</Label>
 					<PasswordInput id="password" value={password} onChange={handlePasswordChange} required autoComplete="new-password" className="h-11" />
 					<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="referralCode">Referral code</Label>
+					<Input
+						id="referralCode"
+						value={referralCode}
+						onChange={handleReferralCodeChange}
+						autoComplete="off"
+						className="h-11 font-mono tracking-widest uppercase"
+						placeholder="Optional"
+						maxLength={SIGNUP_REFERRAL_CODE_LENGTH}
+					/>
+					<p className="text-xs text-muted-foreground">If a friend shared their Reward Hub code, enter it here.</p>
 				</div>
 			</FormShell>
 			<p className="mt-6 text-center text-sm text-muted-foreground">

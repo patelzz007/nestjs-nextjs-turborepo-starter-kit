@@ -70,6 +70,14 @@ export const AccessTokenPayloadSchema = z.object({
 	 * unknown, ended, or expired — stopping impersonation revokes it.
 	 */
 	impersonationSessionId: z.string().optional(),
+	/**
+	 * The device session (refresh-token row id) that issued this token — the
+	 * same id across refresh rotations (ADR 034). Identity, not authorization
+	 * data: the API rejects a token whose session was revoked, and lists the
+	 * session with `isCurrent`. Absent on impersonation tokens and on tokens
+	 * minted before the claim existed (accepted until they expire).
+	 */
+	sid: z.string().min(1).optional(),
 	iat: z.number().optional(),
 	exp: z.number().optional(),
 });

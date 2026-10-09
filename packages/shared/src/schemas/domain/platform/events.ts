@@ -24,10 +24,10 @@ export const AuthFlowEventSchema = z
 
 export type AuthFlowEvent = z.output<typeof AuthFlowEventSchema>;
 
-/** Completed session action (refresh, logout-device, logout-all). */
+/** Completed session action (refresh, logout-device, logout-all, revoke-device — one session revoked from the device list). */
 export const SessionActionEventSchema = z
 	.object({
-		action: z.enum(["refresh", "logout-device", "logout-all"]),
+		action: z.enum(["refresh", "logout-device", "logout-all", "revoke-device"]),
 		userId: z.string(),
 		status: PlatformEventOutcomeSchema,
 		/** Stable error code of a failed flow (e.g. INVALID_CREDENTIALS) — never a human-readable message. */

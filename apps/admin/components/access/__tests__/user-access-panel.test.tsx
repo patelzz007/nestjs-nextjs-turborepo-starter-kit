@@ -77,6 +77,8 @@ const USER = AdminUserDetailSchema.parse({
 	updatedAt: 1_786_300_000_000,
 	isDeleted: false,
 	deletedAt: null,
+	signupReferrer: null,
+	signupReferralStatus: null,
 });
 
 const ROLES = [RoleListItemSchema.parse({ id: "role-viewer", name: "Viewer", description: null, isActive: true, parentId: null })];

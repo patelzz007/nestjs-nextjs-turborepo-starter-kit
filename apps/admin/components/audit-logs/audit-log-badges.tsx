@@ -13,7 +13,7 @@ import type * as React from "react";
 
 import { AUDIT_AUTH_METHOD_LABELS, DEVICE_TYPE_LABELS, IP_ADDRESS_SCOPE_LABELS } from "@/lib/data-table/enum-filter-options";
 
-/** A Badge variant — the tone palette (tokens.css) plus `outline` for "nothing to say". */
+/** A Badge variant — the tone palette (`packages/tokens`, generated into `web.css`) plus `outline` for "nothing to say". */
 type BadgeVariant = NonNullable<React.ComponentProps<typeof Badge>["variant"]>;
 
 /** One colour per method, so a page of requests reads at a glance: reads blue, creates green, deletes red. */
@@ -31,6 +31,7 @@ const AUTH_METHOD_TONE: Readonly<Record<AuditAuthMethod, BadgeVariant>> = {
 	SESSION_COOKIE: "blue",
 	BEARER_TOKEN: "violet",
 	REFRESH_COOKIE: "teal",
+	REFRESH_BODY: "green",
 	API_KEY: "orange",
 };
 

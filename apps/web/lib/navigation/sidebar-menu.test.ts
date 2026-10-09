@@ -85,10 +85,12 @@ describe("consumer sidebar menu (data/user-sidebar-menu.json)", () => {
 		expect(MENU_ENTRIES.filter((entry) => !isPathWithin(entry.item.url, ROUTES.rewardHub.browse)).map((entry) => entry.item.url)).toEqual([]);
 	});
 
-	it("offers browse, wallet, activity and account as enabled links", () => {
+	it("offers browse, wallet, activity, referrals and account as enabled links", () => {
 		const urls = ENABLED_ITEMS.map((item) => item.url);
 
-		expect(urls).toEqual(expect.arrayContaining([ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.account]));
+		expect(urls).toEqual(
+			expect.arrayContaining([ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.referrals, ROUTES.rewardHub.account]),
+		);
 	});
 });
 

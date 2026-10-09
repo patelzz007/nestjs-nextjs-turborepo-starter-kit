@@ -1,10 +1,10 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { AUTH_COOKIE_NAMES, isBrowserClientType, type AuthClientType } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { RequestContextService } from "../../../common/context/request-context";
 import { DependencyUnavailableError } from "../../../common/errors/app-error";
-import { readFirstHeader } from "../../../common/utils/http-headers";
 import { hasApiKeyAuthOnRequest } from "../../api-keys/types/api-key-auth-request";
 
 import { AccessTokenStateService } from "../services/access-token-state.service";
@@ -12,6 +12,7 @@ import { ImpersonationSessionStateService } from "../services/impersonation-sess
 import { TokenService } from "../services/token.service";
 import type { AccessTokenPayload } from "../services/token.service";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { resolveRequestClientType } from "../utils/client-type";
 
 const BEARER_PREFIX = "Bearer ";
 
@@ -29,19 +30,38 @@ export function readBearerToken(authorization: string | undefined): string | und
 }
 
 /**
+ * The access-token cookie of the request's client type, or `undefined`.
+ *
+ * Browser apps use isolated cookie pairs (`AUTH_COOKIE_NAMES`) so a logout in
+ * one app does not clear the session in another. Client type `mobile` has no
+ * cookie: it authenticates by `Authorization: Bearer` only (ADR 029), so a
+ * `mobile` request never rides on an ambient cookie — which is what lets the
+ * mutation-intent guard skip it.
+ */
+export function readAccessTokenCookie(request: Pick<FastifyRequest, "headers" | "query" | "cookies">): string | undefined {
+	const clientType: AuthClientType = resolveRequestClientType(request);
+	if (!isBrowserClientType(clientType)) {
+		return undefined;
+	}
+	return request.cookies[AUTH_COOKIE_NAMES[clientType].accessToken];
+}
+
+/**
  * Guard that validates the JWT access token.
  *
  * Supports two authentication methods:
- * 1. **Cookie-based** (browsers): Reads from `request.cookies["accessToken"]`
- * 2. **Bearer header** (Swagger UI / API clients): Reads from
- *    `Authorization: Bearer <token>`
+ * 1. **Cookie-based** (browser client types): the access-token cookie of the
+ *    request's client type ({@link readAccessTokenCookie})
+ * 2. **Bearer header** (client type `mobile`, Swagger UI, API clients):
+ *    `Authorization: Bearer <token>` — the ONLY method for `mobile`
  *
  * The Bearer header takes priority over the cookie. If both are absent,
  * the guard throws an `UnauthorizedException`.
  *
  * Failure mapping:
  * - a missing, malformed, expired, or revoked token (stale `tokenVersion`,
- *   inactive/deleted account, ended impersonation session) → 401
+ *   inactive/deleted account, revoked device session `sid` — ADR 034, ended
+ *   impersonation session) → 401
  * - the revocation state could not be READ (database / cache outage) → 503
  *   `SERVICE_UNAVAILABLE`, never a 401 that would log a valid user out
  *
@@ -71,19 +91,9 @@ export class AuthGuard implements CanActivate {
 		}
 
 		const bearer: string | undefined = readBearerToken(request.headers.authorization);
+		const token: string | undefined = bearer ?? readAccessTokenCookie(request);
 
-		// Web and admin use isolated cookie pairs so logout in one app does not
-		// clear the session in the other. Pick the cookie set from X-Client-Type.
-		const clientType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
-		const isAdmin: boolean = clientType === "admin";
-		const isMerchant: boolean = clientType === "merchant";
-		const token: string | undefined = isAdmin
-			? (bearer ?? request.cookies.adminAccessToken)
-			: isMerchant
-				? (bearer ?? request.cookies.merchantAccessToken)
-				: (bearer ?? request.cookies.accessToken);
-
-		if (!token) {
+		if (token === undefined || token.length === 0) {
 			throw new UnauthorizedException({
 				message: "Authentication required. Send a Bearer token or ensure the access token cookie is set.",
 				error: "ACCESS_TOKEN_MISSING",
@@ -112,7 +122,7 @@ export class AuthGuard implements CanActivate {
 	 */
 	private async assertTokenNotRevoked(payload: AccessTokenPayload): Promise<void> {
 		try {
-			await this.accessTokenState.assertTokenValid(payload.sub, payload.tokenVersion);
+			await this.accessTokenState.assertTokenValid(payload.sub, payload.tokenVersion, payload.sid);
 			await this.impersonationSessions.assertLiveIfImpersonating(payload);
 		} catch (error) {
 			if (error instanceof UnauthorizedException) {
