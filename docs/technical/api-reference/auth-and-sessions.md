@@ -505,7 +505,7 @@ SuperAdmin: list all users with roles and lockout status
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: fullName, email, createdAt. Default: -createdAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role, referrerId, referralStatus |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
 **Response 200 OK** — Paginated admin user list
@@ -536,6 +536,10 @@ SuperAdmin: list all users with roles and lockout status
 | `data[].roles[].description` | string \| null | yes |  |
 | `data[].roles[].id` | string | yes |  |
 | `data[].roles[].name` | string | yes |  |
+| `data[].signupReferralStatus` | "not_redeemed" \| "redeemed" \| null | yes | Whether the user's signup referral has been redeemed at checkout |
+| `data[].signupReferrer` | object \| null | yes | Who referred this user at signup, if anyone |
+| `data[].signupReferrer.fullName` | string | yes |  |
+| `data[].signupReferrer.id` | string (uuid) | yes |  |
 | `data[].tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
 | `data[].twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -680,6 +684,10 @@ SuperAdmin: get detailed user info including security state
 | `data.roles[].description` | string \| null | yes |  |
 | `data.roles[].id` | string | yes |  |
 | `data.roles[].name` | string | yes |  |
+| `data.signupReferralStatus` | "not_redeemed" \| "redeemed" \| null | yes | Whether the user's signup referral has been redeemed at checkout |
+| `data.signupReferrer` | object \| null | yes | Who referred this user at signup, if anyone |
+| `data.signupReferrer.fullName` | string | yes |  |
+| `data.signupReferrer.id` | string (uuid) | yes |  |
 | `data.tokenVersion` | number | yes | Incremented on role/permission mutations; JWTs with a stale version are rejected |
 | `data.twoFactorEnabled` | boolean | yes | Whether TOTP two-factor authentication is enabled; default `false` |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -2039,6 +2047,7 @@ Register a new user account
 | `email` | string (email) | yes | at most 100 characters |
 | `fullName` | string | yes | User's full name; at least 2 characters |
 | `password` | string | yes | User password (must meet complexity requirements); at least 8 characters |
+| `referralCode` | string \| null | no | Optional signup referral code from another user (consumer web signup only); at most 8 characters |
 
 **Response 201 Created** — User registered
 
@@ -2084,6 +2093,76 @@ Response `201 Created` (application/json):
   }
 }
 ```
+
+### GET /api/v1/auth/signup-referrals/dashboard
+
+Referrer dashboard: current code and shareability
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Operation id `SignupReferralController_dashboard` · [source](../../../apps/api/src/modules/auth/signup-referrals/signup-referral.controller.ts)
+
+**Response 200 OK** — Signup referral code state
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.code` | string \| null | yes | exactly 8 characters |
+| `data.codeState` | "active" \| "expired" \| "unavailable" \| "pending" | yes |  |
+| `data.expiresAt` | integer \| null | yes |  |
+| `data.shareable` | boolean | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/auth/signup-referrals/referees
+
+People who registered with the caller's referral code
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Operation id `SignupReferralController_referees` · [source](../../../apps/api/src/modules/auth/signup-referrals/signup-referral.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
+
+**Response 200 OK** — Signup referral referees
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].createdAt` | integer | yes |  |
+| `data[].fullName` | string | yes |  |
+| `data[].status` | "not_redeemed" \| "redeemed" | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### POST /api/v1/auth/validate-reset-token
 

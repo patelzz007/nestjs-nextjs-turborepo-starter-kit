@@ -1,0 +1,29 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"test": {
+			// The tests check REPO-WIDE files, not this package's own: every
+			// workspace tsconfig resolves @workspace imports through the
+			// `development` condition (tests/tsconfig-conditions.test.mjs), and the
+			// workspace manifests agree with pnpm-workspace.yaml's overrides and
+			// exceptions (tests/dependency-*.test.mjs). Without these inputs a
+			// change to one of those files is a cache hit here: the suite passes
+			// locally on a stale result and fails in CI's cold cache. Globs are
+			// depth-bounded (no `**`): explicit inputs stop honouring .gitignore,
+			// so `**` would hash every node_modules. The lockfile and the root
+			// package.json / turbo.json already invalidate every task.
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/pnpm-workspace.yaml",
+				"$TURBO_ROOT$/apps/*/package.json",
+				"$TURBO_ROOT$/packages/*/package.json",
+				"$TURBO_ROOT$/apps/*/tsconfig*.json",
+				"$TURBO_ROOT$/apps/*/*/tsconfig*.json",
+				"$TURBO_ROOT$/packages/*/tsconfig*.json",
+				"$TURBO_ROOT$/packages/*/*/tsconfig*.json",
+				"$TURBO_ROOT$/packages/typescript-config/*.json"
+			]
+		}
+	}
+}

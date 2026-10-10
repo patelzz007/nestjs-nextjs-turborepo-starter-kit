@@ -31,6 +31,7 @@
 		"expo-haptics": "~57.0.3",
 		"expo-linking": "~57.0.12",
 		"expo-local-authentication": "~57.0.3",
+		"expo-network": "~57.0.2",
 		"expo-router": "~57.0.25",
 		"expo-secure-store": "~57.0.4",
 		"expo-splash-screen": "~57.0.9",

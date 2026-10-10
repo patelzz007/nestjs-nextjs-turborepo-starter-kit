@@ -3,16 +3,16 @@
 	"compilerOptions": {
 		"outDir": "./dist",
 		"rootDir": "./src",
-		"incremental": true
-		// Do not add `"customConditions": ["development"]`. That condition
-		// resolves @workspace/shared and @workspace/messaging to TypeScript
-		// source, so type-aware ESLint typechecks their zod contracts inside
-		// this program. After the referral and device-session contracts landed,
-		// that program no longer fits in Node's default heap (ESLint exit 134).
-		// Both packages publish dist/*.d.ts; tsc-alias writes resolvable
-		// `import("…/index.js")` paths, so the declarations are the types.
-		// `lint` waits for those builds (apps/api/turbo.json). Runtime already
-		// loads dist: rspack leaves workspace packages external.
+		"incremental": true,
+		// Resolve @workspace/* TYPES to their TypeScript source (the packages'
+		// `development` export condition), never to a dist/ build that may be
+		// missing or stale — packages/tooling/tests/tsconfig-conditions.test.mjs
+		// enforces this for every workspace tsconfig. Runtime still loads dist:
+		// rspack leaves workspace packages external. Type-aware ESLint parses
+		// the API with ONE program (tsconfig.check.json, see eslint.config.js);
+		// a second one over this tsconfig would double the source graph in
+		// memory.
+		"customConditions": ["development"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]

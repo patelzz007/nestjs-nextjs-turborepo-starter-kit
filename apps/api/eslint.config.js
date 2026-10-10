@@ -17,17 +17,22 @@ export default [
 		ignores: ["!prisma/", "!prisma/**/", "!prisma/**/*.ts"],
 	},
 
-	// ── Parser options: allow spec files as default project members ──
-	// Spec files are excluded from tsconfig.json, but typescript-eslint's
-	// projectService tries to resolve them. allowDefaultProject tells the
-	// service to include matching files even though they're not in tsconfig.
+	// ── Type-aware parsing: ONE TypeScript program per file group ───────
+	// Every file is parsed against a single program. tsconfig.check.json is the
+	// superset of the API's TypeScript — all of src/ (production code AND specs),
+	// test/, prisma/, the tool configs and the source-graph script — under the
+	// same strict flags `typecheck` runs, so it covers everything the build
+	// program (tsconfig.json) does. Do not let the project service resolve src/
+	// through tsconfig.json alongside it: that builds a SECOND full program over
+	// the same src/ and @workspace source in the same ESLint process, and the
+	// two together exceed Node's default heap (exit 134), while each alone fits.
 	{
-		files: ["**/*.ts", "**/*.tsx"],
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		languageOptions: {
 			parserOptions: {
-				projectService: {
-					allowDefaultProject: ["src/modules/auth/*.spec.ts"],
-				},
+				project: "./tsconfig.check.json",
+				tsconfigRootDir: import.meta.dirname,
+				projectService: false,
 			},
 		},
 	},
@@ -49,23 +54,16 @@ export default [
 			"@typescript-eslint/no-unsafe-return": "off",
 		},
 	},
+	// The tsx-run scripts have their own program (tsconfig.scripts.json: Node
+	// types only, no decorator metadata), which `typecheck` also runs.
+	// render-email-previews.ts imports the Nest source graph, so it stays in the
+	// check program above.
 	{
 		files: ["scripts/**/*.ts"],
+		ignores: ["scripts/render-email-previews.ts"],
 		languageOptions: {
 			parserOptions: {
 				project: "./tsconfig.scripts.json",
-				projectService: false,
-			},
-		},
-	},
-	// ── Tests, seed, and source-graph scripts: type-aware lint via tsconfig.check.json ──
-	// These files are outside tsconfig.json (the build program), so they are
-	// parsed with the strict check program that `typecheck` also runs.
-	{
-		files: ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__tests__/**/*.ts", "test/**/*.ts", "prisma/**/*.ts", "scripts/render-email-previews.ts"],
-		languageOptions: {
-			parserOptions: {
-				project: "./tsconfig.check.json",
 				tsconfigRootDir: import.meta.dirname,
 				projectService: false,
 			},

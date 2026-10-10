@@ -168,7 +168,7 @@ Extends `base.json` with NestJS requirements:
 | ------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*` path alias only; `customConditions: ["development"]`; Next include globs                                        |
 | `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web (also `apps/merchant`)                                                                                    |
-| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts`                                  |
+| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`, `customConditions: ["development"]`; excludes `src/**/*.spec.ts` |
 | `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `customConditions: ["development"]`; hosts auth / API client code      |
 | `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                |
 | `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `lib: ["es2022"]`                                      |
@@ -188,16 +188,14 @@ Extends `base.json` with NestJS requirements:
 > **How `@workspace/shared` is resolved:** the package `exports` field exposes a
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
 > `customConditions: ["development"]` so dev (and Next.js bundling) resolves source
-> directly. The API does **not** set that condition: it resolves the built `dist/`
-> output, which is also what Node loads at runtime (rspack leaves workspace
-> packages external). Type-aware ESLint uses this same program. Resolving shared
-> and `@workspace/messaging` to source makes ESLint typecheck their zod contracts
-> inside the API program; that outgrew Node's default heap (exit 134) once the
-> referral and device-session contracts landed. `apps/api` `lint` therefore
-> depends on `@workspace/shared#build` and `@workspace/messaging#build`. Do not
-> put `customConditions` back on `apps/api/tsconfig.json` to chase a declaration
-> bug — `tsc-alias --resolve-full-paths` already rewrites `dist` `import()` paths
-> to resolvable `…/index.js` specifiers.
+> directly. Every workspace that imports a `@workspace` package sets it, the API
+> included — `packages/tooling/tests/tsconfig-conditions.test.mjs` fails on a
+> tsconfig without it, because types read from a built `dist/` pass on a laptop
+> with a stale build and fail in a clean CI checkout. Node still loads `dist/` at
+> runtime (rspack leaves workspace packages external). The API's type-aware ESLint
+> parses every file with ONE program (`tsconfig.check.json`): a second program over
+> the same source graph is what once exhausted Node's default heap — see
+> [`eslint.md` §8.7](./eslint.md#87-api-eslint-exits-134-javascript-heap-out-of-memory).
 
 ### `apps/api/tsconfig.json` in detail
 
@@ -207,7 +205,8 @@ Extends `base.json` with NestJS requirements:
 	"compilerOptions": {
 		"outDir": "./dist",
 		"rootDir": "./src",
-		"incremental": true
+		"incremental": true,
+		"customConditions": ["development"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
@@ -219,8 +218,11 @@ Extends `base.json` with NestJS requirements:
 - `rootDir: ./src` — only `src/` is typechecked (`tsc --noEmit`); Rspack
   bundle step ignores it.
 - `incremental: true` — kept for editor/typecheck ergonomics.
+- `customConditions: ["development"]` — `@workspace/*` types come from source,
+  never from a possibly stale `dist/` build.
 - `exclude: ["src/**/*.spec.ts"]` — tests are not part of the build. (ESLint
-  handles them via `allowDefaultProject`, see `docs/eslint.md`.)
+  parses them, like every API file, with `tsconfig.check.json` — see
+  [`eslint.md` §8.7](./eslint.md#87-api-eslint-exits-134-javascript-heap-out-of-memory).)
 
 ---
 

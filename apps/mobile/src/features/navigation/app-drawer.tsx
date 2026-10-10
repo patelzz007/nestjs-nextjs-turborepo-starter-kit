@@ -2,7 +2,9 @@
 // Drawer and drawer menu to the app — who is signed in, which screen is on
 // show, the current appearance and app lock settings, where each destination
 // goes, and signing out. Opened from the menu button in the corner of each
-// tab's first screen, or by a swipe from the left edge there.
+// tab's first screen, or by a swipe from the left edge there. Under the account
+// header, the connection and session pills in full (the corner shows them
+// compact).
 
 import { usePathname, useRouter } from "expo-router";
 import LogOutIcon from "lucide-react-native/icons/log-out";
@@ -15,6 +17,7 @@ import { useApi } from "../../lib/api-context";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { useReadyRuntime } from "../../runtime/runtime-context";
 import { useAppDrawerCommands, useAppDrawerOpen } from "../app-drawer/facade";
+import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
 import { SignOutDialog } from "../auth/sign-out-dialog";
 import { useSignOutConfirmation } from "../auth/use-sign-out-confirmation";
 import { useAppLockEnabled, useThemePreference } from "../preferences/facade";
@@ -114,6 +117,10 @@ function AppDrawerPanel(): React.JSX.Element {
 						/>
 					</View>
 				)}
+				<View className="flex-row flex-wrap gap-2 px-4" testID="app-drawer-status">
+					<NetworkStatusPill compact={false} testID="app-drawer-network" />
+					<SessionStatusPill compact={false} testID="app-drawer-session" />
+				</View>
 				<DrawerSection>
 					{DRAWER_TABS.map((destination: DrawerDestination): React.JSX.Element => (
 						<DestinationRow key={destination.route} destination={destination} value={undefined} selected={destination.route === pathname} onOpen={open} />

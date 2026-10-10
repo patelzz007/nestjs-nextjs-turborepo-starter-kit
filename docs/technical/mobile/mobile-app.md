@@ -879,6 +879,7 @@ tests in [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md).
 | Secure storage | `expo-secure-store` | SDK-pinned |
 | Biometrics | `expo-local-authentication` | SDK-pinned |
 | Device details | `expo-device`, `expo-application` | SDK-pinned |
+| Connectivity | `expo-network` (the online / offline pill, §10.16) | SDK-pinned |
 | Tests | jest-expo `~57.0.2` + `@react-native/jest-preset` 0.86.x + `@testing-library/react-native` | 57.0.0 has a known install failure; pin `~57.0.2` |
 
 Expo-managed packages are always installed with `npx expo install <pkg>`, never `pnpm add`, so
@@ -1265,6 +1266,34 @@ are none in `EXPO_PUBLIC_*`, but the screen does not print values regardless).
 - **Update required (10.13):** store URLs are `EXPO_PUBLIC_IOS_STORE_URL` /
   `EXPO_PUBLIC_ANDROID_STORE_URL`.
 
+### 10.16 Connection and session status
+
+The mobile counterpart of the admin topbar's online / offline indicator and session badge
+(`apps/admin/components/common/network-status-bar.tsx`, `session-status-badge.tsx`), shown in two
+places inside the `(app)` group:
+
+- **Top-right corner**, compact, opposite the drawer's menu button: the connection as an icon (green
+  wifi / red wifi-off) and the token countdown (`14m 32s`, `2h 05m` past an hour, fixed-width
+  digits). Rendered once by the `(app)` layout through `CornerOverlay` (the same fade and placement
+  as the menu button), shown on a tab's first screen and faded away deeper in a stack. Display only:
+  touches pass through. `Screen` keeps its title clear of both corners.
+- **App drawer**, in full, under the account header: "Online" / "Offline" and
+  "Token expires in 14m 32s".
+
+One `AppStatusProvider` (`src/features/app-status/facade.tsx`) derives both, once, for every pill:
+
+| Concern | Behaviour |
+| --- | --- |
+| Connectivity | `expo-network`'s state (`src/lib/use-network-reading.ts`). Offline only when the OS says so (`isConnected` or `isInternetReachable` false); before its first answer the app counts as online, as the admin does. |
+| Session | `GET /session` through the api-client, so a 401 runs the single-flight refresh and retries. A silent refresh shows as `expiresAt` moving forward: the pill reads "Refreshed" with the tone's full border for 2 s. |
+| Countdown | Computed on the device from `expiresAt`, re-read every second **only while the app is in the foreground** (`useAppActive`). A verified session stays verified when a later re-check fails (offline): the countdown is still right. |
+| Re-checks | On return to the foreground, when the connection comes back, and once when the countdown reaches zero — the request that refreshes the expired token. No steady polling. |
+| Failure | "Check failed" (unreachable) or "Expired" (401 after refresh — the api-client also ends the session, so the root guard leaves for sign-in). |
+
+This is a status display, not offline support: nothing here queues writes or changes how queries
+behave offline (rules/04, offline behaviour). Wiring TanStack Query's `onlineManager` to the same
+connectivity is a separate decision for when offline semantics are designed.
+
 ## 11. The app lock
 
 > **Status: implemented** (2026-10-09) — [11.6](#116-what-the-implementation-changed). Behaviour on
@@ -1642,6 +1671,7 @@ touches shared packages.
 | `POST /auth/signup` | Sign up |
 | `POST /auth/forgot-password` | Forgot password |
 | `GET /auth/me` | Home, Profile |
+| `GET /session` | Status pills: the token countdown (§10.16) |
 | `POST /auth/change-password` | Security |
 | `POST /auth/refresh` | api-client (automatic) |
 | `GET /auth/sessions` | Signed-in devices |

@@ -12372,14 +12372,38 @@
             }
           },
           {
-            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role",
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role, referrerId, referralStatus",
             "in": "query",
             "name": "filter",
             "required": false,
             "schema": {
               "additionalProperties": false,
-              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role",
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role, referrerId, referralStatus",
               "properties": {
+                "referralStatus": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "not_redeemed",
+                        "redeemed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "referrerId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
                 "role": {
                   "additionalProperties": false,
                   "properties": {
@@ -12549,6 +12573,34 @@
                             },
                             "type": "array"
                           },
+                          "signupReferralStatus": {
+                            "description": "Whether the user's signup referral has been redeemed at checkout",
+                            "enum": [
+                              "not_redeemed",
+                              "redeemed"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "signupReferrer": {
+                            "description": "Who referred this user at signup, if anyone",
+                            "nullable": true,
+                            "properties": {
+                              "fullName": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "fullName"
+                            ],
+                            "type": "object"
+                          },
                           "tokenVersion": {
                             "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
                             "type": "number"
@@ -12584,7 +12636,9 @@
                           "permissions",
                           "failedLoginAttempts",
                           "lockedUntil",
-                          "directPermissionIds"
+                          "directPermissionIds",
+                          "signupReferrer",
+                          "signupReferralStatus"
                         ],
                         "type": "object"
                       },
@@ -12867,6 +12921,34 @@
                           },
                           "type": "array"
                         },
+                        "signupReferralStatus": {
+                          "description": "Whether the user's signup referral has been redeemed at checkout",
+                          "enum": [
+                            "not_redeemed",
+                            "redeemed"
+                          ],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "signupReferrer": {
+                          "description": "Who referred this user at signup, if anyone",
+                          "nullable": true,
+                          "properties": {
+                            "fullName": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "fullName"
+                          ],
+                          "type": "object"
+                        },
                         "tokenVersion": {
                           "description": "Incremented on role/permission mutations; JWTs with a stale version are rejected",
                           "type": "number"
@@ -12902,7 +12984,9 @@
                         "permissions",
                         "failedLoginAttempts",
                         "lockedUntil",
-                        "directPermissionIds"
+                        "directPermissionIds",
+                        "signupReferrer",
+                        "signupReferralStatus"
                       ],
                       "type": "object"
                     },
@@ -17888,6 +17972,13 @@
                     "example": "StrongP@ss1",
                     "minLength": 8,
                     "type": "string"
+                  },
+                  "referralCode": {
+                    "description": "Optional signup referral code from another user (consumer web signup only)",
+                    "example": "AB23CD45",
+                    "maxLength": 8,
+                    "nullable": true,
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -17997,6 +18088,358 @@
           }
         ],
         "summary": "Register a new user account",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup-referrals/dashboard": {
+      "get": {
+        "operationId": "SignupReferralController_dashboard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "code": {
+                          "maxLength": 8,
+                          "minLength": 8,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "codeState": {
+                          "enum": [
+                            "active",
+                            "expired",
+                            "unavailable",
+                            "pending"
+                          ],
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "shareable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "expiresAt",
+                        "shareable",
+                        "codeState"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Signup referral code state"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Referrer dashboard: current code and shareability",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup-referrals/referees": {
+      "get": {
+        "operationId": "SignupReferralController_referees",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt",
+              "example": "-createdAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "properties": {
+                          "createdAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "fullName": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "not_redeemed",
+                              "redeemed"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "fullName",
+                          "createdAt",
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Signup referral referees"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "People who registered with the caller's referral code",
         "tags": [
           "Auth"
         ]

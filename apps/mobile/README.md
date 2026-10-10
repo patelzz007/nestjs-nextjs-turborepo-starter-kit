@@ -34,8 +34,9 @@ src/
   components/        presentational: data-agnostic, controlled, accessible, token-styled
   features/          session (root guard state machine), preferences (theme, app lock settings), app-lock,
                      auth (login steps, sign out, refresh), two-factor (enrollment flow), devices, profile,
-                     navigation (the tab registry, the tab bar adapter, the app drawer), app-drawer
-                     (the drawer's open state)
+                     navigation (the tab registry, the tab bar adapter, the app drawer, the status corner),
+                     app-drawer (the drawer's open state), app-status (online / offline and the access
+                     token countdown — the admin topbar's indicators, in the corner and the drawer)
   lib/               env, api client, Secure Store registry + token provider, app version, device headers,
                      query client, error messages, the feature-store toolkit (lib/state), motion springs,
                      haptics, keyboard visibility, tab-bar clearance

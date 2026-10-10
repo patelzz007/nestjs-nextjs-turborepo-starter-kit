@@ -361,12 +361,22 @@ export default [
 	//    Must come AFTER the spread: a negated ignore only re-includes what an earlier object ignored.
 	{ ignores: ["!prisma/", "!prisma/**/", "!prisma/**/*.ts"] },
 
-	// 2. Specs, test/**, prisma/** and source-graph scripts are outside tsconfig.json,
-	//    so they are parsed with the strict program `typecheck` also runs.
+	// 2. ONE program for every API file: tsconfig.check.json is the superset of the
+	//    API's TypeScript (all of src/ including specs, test/**, prisma/**, the tool
+	//    configs, the source-graph script) under the strict flags `typecheck` runs.
+	//    No project service: it would build a second program over the same src/ (§8.7).
 	{
-		files: ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__tests__/**/*.ts", "test/**/*.ts", "prisma/**/*.ts", "scripts/render-email-previews.ts"],
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		languageOptions: {
 			parserOptions: { project: "./tsconfig.check.json", tsconfigRootDir: import.meta.dirname, projectService: false },
+		},
+	},
+	//    …and the tsx-run scripts on their own program (tsconfig.scripts.json).
+	{
+		files: ["scripts/**/*.ts"],
+		ignores: ["scripts/render-email-previews.ts"],
+		languageOptions: {
+			parserOptions: { project: "./tsconfig.scripts.json", tsconfigRootDir: import.meta.dirname, projectService: false },
 		},
 	},
 
@@ -600,10 +610,12 @@ root. Flat config resolves the config from the **current working directory**.
 
 ### 8.2 "Cannot resolve parserOptions.project" / file not part of the project
 
-Type-checked rules need a file to be part of the nearest `tsconfig.json`. If a file
-is intentionally **not** in `tsconfig.json` (e.g. spec files), add it to the
-`projectService.allowDefaultProject` list in the workspace's `eslint.config.js`
-(see the api config in [Section 4](#4-per-repo-exceptions)).
+Type-checked rules need a file to be part of the program ESLint parses it with.
+With the project service (the default), that is the nearest `tsconfig.json`; a file
+intentionally **not** in it goes on the `projectService.allowDefaultProject` list in
+the workspace's `eslint.config.js`. The API instead parses every file with one
+explicit program (`tsconfig.check.json`, §8.7): add a new top-level `.ts` file to
+that tsconfig's `include` (see the api config in [Section 4](#4-per-repo-exceptions)).
 
 ### 8.3 False-positive `no-unsafe-*` errors on Prisma / Zod / Fastify code
 
@@ -630,13 +642,23 @@ stale results.
 ### 8.7 API ESLint exits 134 (JavaScript heap out of memory)
 
 Exit 134 here is V8 aborting at its default old-space limit (~4GB), not an OS
-kill and not a lint finding. The API program must resolve `@workspace/shared`
-and `@workspace/messaging` to their built `dist/*.d.ts` (no `customConditions`
-on `apps/api/tsconfig.json`). Pointing them at source typechecks those packages'
-zod contracts inside ESLint and exhausts the heap. `pnpm lint` builds both
-packages first (`apps/api/turbo.json`). Raising `--max-old-space-size` on the
-lint script hides that; don't. `typecheck` still requests 8GB because the API
-program itself is large — that flag is not a substitute for the dist resolution.
+kill and not a lint finding. Typed lint holds every TypeScript program it uses
+in ONE process, so the cost is the sum of the programs, and a program over the
+API's `src/` plus `@workspace/shared` / `@workspace/messaging` source (their zod
+contracts) is large — over 3GB resident on its own. The API config therefore
+parses every file with a single program, `tsconfig.check.json`, the superset of
+`tsconfig.json` (§4). Letting the project service resolve `src/` through
+`tsconfig.json` next to it builds a second program over the same graph; the two
+together crossed the limit once the referral and device-session contracts landed
+(measured: either program alone passes; both crash at ~4.9GB). With one program
+the API lint fits under a 3GB heap cap, well inside the default.
+
+Do not "fix" the crash by pointing the API at the packages' built
+`dist/*.d.ts` (dropping `customConditions`): types from a missing or stale build
+pass on a laptop and fail in CI, and `packages/tooling/tests/tsconfig-conditions.test.mjs`
+fails on it. Do not raise `--max-old-space-size` on the lint script either — that
+hides a duplicated program instead of removing it. (`typecheck` runs `tsc` with
+8GB for its own, separate reasons; it is not a precedent for lint.)
 
 ---
 

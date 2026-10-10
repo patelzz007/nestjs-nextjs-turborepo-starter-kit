@@ -34,6 +34,11 @@ export function userJson(overrides: UserOverrides = {}): DataValue {
 	};
 }
 
+/** `GET /session`: who the access token belongs to and when it expires (epoch ms, or `null`). */
+export function sessionStatusJson(expiresAt: number | null): DataValue {
+	return { userId: "user-1", email: "member@example.com", fullName: "Alex Morgan", expiresAt, checkedAt: NOW_MS };
+}
+
 /** `POST /auth/login` for client type mobile: the user plus the tokens in the body (ADR 029). */
 export function mobileLoginJson(accessToken: string = FULL_ACCESS_TOKEN, refreshToken: string = REFRESH_TOKEN): DataValue {
 	return { user: userJson(), tokenTransport: "body", accessToken, refreshToken };

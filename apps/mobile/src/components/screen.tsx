@@ -36,7 +36,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 	const tabBarClearance = useTabBarClearance();
 	const clearanceStyle = React.useMemo((): { readonly height: number } => ({ height: tabBarClearance }), [tabBarClearance]);
 	const scrollIndicatorInsets = React.useMemo((): { readonly bottom: number } => ({ bottom: tabBarClearance }), [tabBarClearance]);
-	// A layout's control (the menu button) sits in the top-left corner: the title moves over beside it.
+	// A layout's controls sit in the top corners (the menu button left, the status pills right): the title stays between them.
 	const cornerTaken = useScreenCornerTaken();
 
 	return (
@@ -50,7 +50,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 						refreshControl={onRefresh === undefined ? undefined : <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
 						{title === undefined ? null : (
 							<View className="gap-1">
-								<View className={cornerTaken ? "min-h-11 justify-center pl-14" : ""}>
+								<View className={cornerTaken ? "min-h-11 justify-center pr-36 pl-14" : ""}>
 									<Heading>{title}</Heading>
 								</View>
 								{description === undefined ? null : <MutedText>{description}</MutedText>}
