@@ -6,7 +6,9 @@ export type PreferencesAction =
 	| { readonly type: "[ Preferences ] Theme Changed"; readonly theme: ThemePreference }
 	| { readonly type: "[ Preferences ] App Lock Turned On" }
 	| { readonly type: "[ Preferences ] App Lock Turned Off" }
-	| { readonly type: "[ Preferences ] App Lock Timeout Changed"; readonly timeoutMs: AppLockTimeoutMs };
+	| { readonly type: "[ Preferences ] App Lock Timeout Changed"; readonly timeoutMs: AppLockTimeoutMs }
+	| { readonly type: "[ Preferences ] Onboarding Completed" }
+	| { readonly type: "[ Preferences ] Onboarding Reset" };
 
 export const preferencesActions = {
 	restored: (preferences: PreferencesState): PreferencesAction => ({ type: "[ Preferences ] Restored", preferences }),
@@ -14,4 +16,7 @@ export const preferencesActions = {
 	appLockTurnedOn: (): PreferencesAction => ({ type: "[ Preferences ] App Lock Turned On" }),
 	appLockTurnedOff: (): PreferencesAction => ({ type: "[ Preferences ] App Lock Turned Off" }),
 	appLockTimeoutChanged: (timeoutMs: AppLockTimeoutMs): PreferencesAction => ({ type: "[ Preferences ] App Lock Timeout Changed", timeoutMs }),
+	onboardingCompleted: (): PreferencesAction => ({ type: "[ Preferences ] Onboarding Completed" }),
+	/** Development builds only (Settings → About): onboarding shows again at the next sign-out. */
+	onboardingReset: (): PreferencesAction => ({ type: "[ Preferences ] Onboarding Reset" }),
 };

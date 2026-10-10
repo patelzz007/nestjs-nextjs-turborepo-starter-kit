@@ -7,8 +7,8 @@
 
 import * as React from "react";
 
-import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
+import { AuthPage } from "../../components/auth-page";
+import { TextLink } from "../../components/text-link";
 import { useRefreshSession } from "../../features/auth/use-refresh-session";
 import { useSignOut } from "../../features/auth/use-sign-out";
 import { TwoFactorEnrollment } from "../../features/two-factor/two-factor-enrollment";
@@ -21,9 +21,11 @@ export default function EnrollTwoFactorScreen(): React.JSX.Element {
 	}, [signOut]);
 
 	return (
-		<Screen title="Set up two-factor authentication" description="Your account requires two-factor authentication. Set it up to continue.">
+		<AuthPage
+			title="Set up two-factor authentication"
+			description="Your account requires two-factor authentication. Set it up to continue."
+			footer={<TextLink leadIn="Not you?" label="Sign out" role="button" onPress={handleSignOut} />}>
 			<TwoFactorEnrollment mode="setup" onComplete={refreshSession} completeLabel="Continue to the app" />
-			<Button label="Sign out" variant="ghost" onPress={handleSignOut} />
-		</Screen>
+		</AuthPage>
 	);
 }

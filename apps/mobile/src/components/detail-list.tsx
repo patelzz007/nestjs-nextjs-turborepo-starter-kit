@@ -18,8 +18,8 @@ export function DetailList({ items }: DetailListProps): React.JSX.Element {
 		<View className="gap-1">
 			{items.map((item: DetailItem): React.JSX.Element => (
 				<View key={item.label} className="flex-row flex-wrap gap-1" accessible accessibilityLabel={`${item.label}: ${item.value}`}>
-					<Text className="text-sm text-muted-foreground">{item.label}:</Text>
-					<Text className="shrink text-sm text-foreground">{item.value}</Text>
+					<Text className="font-sans text-sm text-muted-foreground">{item.label}:</Text>
+					<Text className="shrink font-sans text-sm text-foreground">{item.value}</Text>
 				</View>
 			))}
 		</View>

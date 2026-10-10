@@ -4,7 +4,15 @@ import { deleteSecureValue, readSecureValue, readSecureValueOrDefault, SECURE_ST
 describe("the Secure Store registry", () => {
 	it("declares one key per value (§9.7), all made of characters Secure Store accepts", () => {
 		const keys = Object.values(SECURE_STORE_ENTRIES).map((entry): string => entry.key);
-		expect(keys).toEqual(["auth.accessToken", "auth.refreshToken", "prefs.theme", "prefs.appLock.enabled", "prefs.appLock.timeoutMs", "prefs.appLock.enrolledBiometrics"]);
+		expect(keys).toEqual([
+			"auth.accessToken",
+			"auth.refreshToken",
+			"prefs.theme",
+			"prefs.appLock.enabled",
+			"prefs.appLock.timeoutMs",
+			"prefs.appLock.enrolledBiometrics",
+			"prefs.onboarding.completed",
+		]);
 		expect(new Set(keys).size).toBe(keys.length);
 		for (const key of keys) {
 			expect(key).toMatch(/^[\w.-]+$/);

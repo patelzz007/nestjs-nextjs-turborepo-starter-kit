@@ -8,12 +8,13 @@ import { View } from "react-native";
 
 import { Button } from "../../../components/button";
 import { Card } from "../../../components/card";
-import { ConfirmDialog } from "../../../components/confirm-dialog";
 import { DetailList, type DetailItem } from "../../../components/detail-list";
 import { ListRow } from "../../../components/list-row";
 import { Screen } from "../../../components/screen";
+import { SignOutDialog } from "../../../features/auth/sign-out-dialog";
 import { useSignOut } from "../../../features/auth/use-sign-out";
-import { useAppLockEnabled, useThemePreference } from "../../../features/preferences/facade";
+import { useSignOutConfirmation } from "../../../features/auth/use-sign-out-confirmation";
+import { useAppLockEnabled, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { THEME_LABELS } from "../../../features/preferences/labels";
 import { ROUTES } from "../../../runtime/routes";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
@@ -23,9 +24,9 @@ export default function SettingsScreen(): React.JSX.Element {
 	const { appVersion, buildNumber, env } = useReadyRuntime();
 	const theme = useThemePreference();
 	const appLockEnabled = useAppLockEnabled();
-	const { signOut } = useSignOut();
-	const [isSignOutOpen, setSignOutOpen] = React.useState(false);
-	const [isSigningOut, setSigningOut] = React.useState(false);
+	const signOut = useSignOutConfirmation();
+	const preferences = usePreferencesCommands();
+	const { signOut: signOutNow } = useSignOut();
 
 	const openAppearance = React.useCallback((): void => {
 		router.push(ROUTES.appearance);
@@ -39,19 +40,12 @@ export default function SettingsScreen(): React.JSX.Element {
 	const openAppLock = React.useCallback((): void => {
 		router.push(ROUTES.appLock);
 	}, [router]);
-	const askSignOut = React.useCallback((): void => {
-		setSignOutOpen(true);
-	}, []);
-	const cancelSignOut = React.useCallback((): void => {
-		setSignOutOpen(false);
-	}, []);
-	const confirmSignOut = React.useCallback((): void => {
-		setSigningOut(true);
-		// The device leaves whatever the API answers; the root guard then shows sign-in.
-		signOut().catch((): void => {
-			setSigningOut(false);
-		});
-	}, [signOut]);
+
+	/** Development builds only: onboarding's "seen" flag lives in the Keychain, which outlives reinstalls (ADR 041). */
+	const replayOnboarding = React.useCallback((): void => {
+		preferences.onboardingReset();
+		void signOutNow();
+	}, [preferences, signOutNow]);
 
 	const about: DetailItem[] = [{ label: "Version", value: appVersion }];
 	if (buildNumber !== null) {
@@ -73,19 +67,17 @@ export default function SettingsScreen(): React.JSX.Element {
 			</Card>
 			<Card title="About">
 				<DetailList items={about} />
+				{env.isDevelopment ? (
+					<Button
+						label="Sign out and replay onboarding"
+						variant="secondary"
+						onPress={replayOnboarding}
+						accessibilityHint="Development builds only: shows the first-launch walkthrough again"
+					/>
+				) : null}
 			</Card>
-			<Button label="Sign out" variant="secondary" onPress={askSignOut} />
-			<ConfirmDialog
-				visible={isSignOutOpen}
-				title="Sign out?"
-				description="You'll need your password to sign in again on this device."
-				confirmLabel="Sign out"
-				cancelLabel="Cancel"
-				onConfirm={confirmSignOut}
-				onCancel={cancelSignOut}
-				pending={isSigningOut}
-				destructive
-			/>
+			<Button label="Sign out" onPress={signOut.ask} />
+			<SignOutDialog confirmation={signOut} />
 		</Screen>
 	);
 }

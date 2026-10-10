@@ -18,9 +18,8 @@ import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-lang
 
 export const metadata: Metadata = {
 	title: "Reward Hub Admin",
-	icons: {
-		icon: { url: "/icon.svg", type: "image/svg+xml" },
-	},
+	// Icons come from the file conventions in this folder — icon.svg, favicon.ico, apple-icon.png —
+	// all generated from the brand mark by `pnpm tokens:generate` (ADR 040).
 };
 
 export default function RootLayout({

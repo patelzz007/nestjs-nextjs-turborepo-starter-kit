@@ -17,7 +17,8 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DetailList } from "../../components/detail-list";
 import { Screen } from "../../components/screen";
-import { ErrorState, LoadingState } from "../../components/states";
+import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
+import { ErrorState } from "../../components/states";
 import { TextField } from "../../components/text-field";
 import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError, STALE_PROFILE_MESSAGE } from "../../features/profile/own-profile-cache";
 import { useApi } from "../../lib/api-context";
@@ -34,7 +35,7 @@ export default function ProfileScreen(): React.JSX.Element {
 	const current = profile.data?.data;
 	return (
 		<Screen title="Profile" refreshing={profile.isRefetching} onRefresh={refetch}>
-			{profile.isPending ? <LoadingState label="Loading your profile…" /> : null}
+			{profile.isPending ? <ProfileSkeleton /> : null}
 			{profile.isError ? <ErrorState message={errorMessageOf(profile.error)} retryLabel="Try again" onRetry={refetch} /> : null}
 			{/* Keyed by version: the form restarts from the stored values after every save or reload. */}
 			{current === undefined ? null : <ProfileEditor key={current.version} profile={current} />}
@@ -98,6 +99,34 @@ function ProfileEditor({ profile }: ProfileEditorProps): React.JSX.Element {
 				)}
 			</form.Field>
 			<Button label="Save changes" onPress={submit} loading={update.isPending} />
+		</>
+	);
+}
+
+/**
+ * The profile's shape while it loads — the account card, the name field and
+ * the save button where they will be — so nothing moves when the profile arrives.
+ */
+function ProfileSkeleton(): React.JSX.Element {
+	return (
+		<>
+			<Card>
+				<SkeletonGroup accessibilityLabel="Loading your profile" testID="profile-skeleton">
+					<View className="flex-row items-center gap-4">
+						<Skeleton className="size-14 rounded-full" />
+						<View className="flex-1">
+							<SkeletonText size="sm" widthClassName="w-48" />
+						</View>
+					</View>
+				</SkeletonGroup>
+			</Card>
+			<SkeletonGroup className="gap-1.5">
+				<SkeletonText size="sm" widthClassName="w-20" />
+				<Skeleton className="min-h-12 w-full rounded-xl" />
+			</SkeletonGroup>
+			<SkeletonGroup>
+				<Skeleton className="min-h-12 w-full rounded-lg" />
+			</SkeletonGroup>
 		</>
 	);
 }

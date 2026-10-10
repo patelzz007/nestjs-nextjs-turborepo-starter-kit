@@ -140,7 +140,47 @@ describe("Sign in screen", () => {
 		stubApi({});
 		await renderSignIn();
 
-		await fireEvent.press(screen.getByRole("button", { name: "Forgot password?" }));
+		await fireEvent.press(screen.getByRole("link", { name: "Forgot password?" }));
 		expect(await screen.findByText("forgot-password screen")).toBeOnTheScreen();
+	});
+
+	it("links to sign up from the footer", async () => {
+		stubApi({});
+		await renderSignIn();
+
+		expect(screen.getByText("Don't have an account?")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("link", { name: "Create one" }));
+		expect(await screen.findByText("sign-up screen")).toBeOnTheScreen();
+	});
+
+	it("offers one-tap demo logins in a development build, filling the form and signing in as that account (ADR 042)", async () => {
+		const api = stubApi({ "POST /auth/login": ok(mobileLoginJson()) });
+		const { runtime } = await renderSignIn();
+
+		expect(await screen.findByRole("header", { name: "Quick sign-in (development)" })).toBeOnTheScreen();
+		for (const label of ["Super Admin", "Admin", "Manager", "KL Owner", "Melaka Owner", "KL Cashier"]) {
+			expect(screen.getByRole("button", { name: `Sign in as ${label}` })).toBeOnTheScreen();
+		}
+		await fireEvent.press(screen.getByRole("button", { name: "Sign in as KL Owner" }));
+
+		await waitFor(() => {
+			expect(runtime.sessionStore.getState().status).toBe("signedIn");
+		});
+		expect(screen.getByLabelText("Email")).toHaveDisplayValue("brew.owner@kl-rewards.demo");
+		const [login] = api.callsTo("POST /auth/login");
+		expect(login?.body).toBe(JSON.stringify({ email: "brew.owner@kl-rewards.demo", password: "BrewOwner@123" }));
+	});
+
+	it("never logs the login response (it carries tokens)", async () => {
+		const log = jest.spyOn(console, "log");
+		stubApi({ "POST /auth/login": ok(mobileLoginJson()) });
+		const { runtime } = await renderSignIn();
+
+		await fillAndSubmit("member@example.com", "Secret@123");
+
+		await waitFor(() => {
+			expect(runtime.sessionStore.getState().status).toBe("signedIn");
+		});
+		expect(log).not.toHaveBeenCalled();
 	});
 });

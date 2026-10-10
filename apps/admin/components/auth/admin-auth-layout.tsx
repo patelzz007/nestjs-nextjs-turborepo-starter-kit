@@ -1,5 +1,4 @@
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
-import { KeyRound, MailCheck, ShieldCheck, type LucideIcon } from "lucide-react";
 import type * as React from "react";
 
 import { ROUTES } from "@/lib/routes";
@@ -7,17 +6,7 @@ import { ROUTES } from "@/lib/routes";
 /** Product name shown in the brand panel and the copyright line of every admin auth page. */
 export const ADMIN_AUTH_BRAND_NAME = "Admin Panel";
 
-/** The brand-panel icon of each auth page. */
-export type AdminAuthIcon = "shield" | "key" | "mail";
-
-const ADMIN_AUTH_ICONS: Readonly<Record<AdminAuthIcon, LucideIcon>> = {
-	shield: ShieldCheck,
-	key: KeyRound,
-	mail: MailCheck,
-};
-
 export interface AdminAuthLayoutProps {
-	readonly icon: AdminAuthIcon;
 	readonly tagline: string;
 	readonly features: readonly string[];
 	readonly title: string;
@@ -30,13 +19,11 @@ export interface AdminAuthLayoutProps {
 /**
  * The admin app's auth-page frame: the shared split-screen `AuthLayout` with
  * the admin branding and back link filled in once, so the four auth
- * pages only state what differs (icon, copy, form).
+ * pages only state what differs (copy, form). The brand mark is AuthLayout's own.
  */
-export function AdminAuthLayout({ icon, tagline, features, title, subtitle, showBackToLogin = false, children }: AdminAuthLayoutProps): React.JSX.Element {
-	const Icon = ADMIN_AUTH_ICONS[icon];
+export function AdminAuthLayout({ tagline, features, title, subtitle, showBackToLogin = false, children }: AdminAuthLayoutProps): React.JSX.Element {
 	return (
 		<AuthLayout
-			logo={<Icon className="size-5" aria-hidden="true" />}
 			brandName={ADMIN_AUTH_BRAND_NAME}
 			tagline={tagline}
 			features={features}

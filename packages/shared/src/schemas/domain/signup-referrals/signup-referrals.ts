@@ -32,24 +32,22 @@ export type SignupReferralErrorCode = z.output<typeof SignupReferralErrorCodeSch
 export const SignupReferralCodeStateSchema = z.enum(["active", "expired", "unavailable", "pending"]);
 export type SignupReferralCodeState = z.output<typeof SignupReferralCodeStateSchema>;
 
-export const SignupReferralRefereeItemSchema = z
-	.object({
-		fullName: z.string(),
-		createdAt: EpochMsSchema,
-		status: SignupReferralStatusSchema,
-	})
-	.strict();
+/** Response item (ADR 022): open object. The API strips unknown keys; clients tolerate fields added later. */
+export const SignupReferralRefereeItemSchema = z.object({
+	fullName: z.string(),
+	createdAt: EpochMsSchema,
+	status: SignupReferralStatusSchema,
+});
 
 export type SignupReferralRefereeItem = z.output<typeof SignupReferralRefereeItemSchema>;
 
-export const SignupReferralDashboardSchema = z
-	.object({
-		code: z.string().length(SIGNUP_REFERRAL_CODE_LENGTH).nullable(),
-		expiresAt: EpochMsSchema.nullable(),
-		shareable: z.boolean(),
-		codeState: SignupReferralCodeStateSchema,
-	})
-	.strict();
+/** Response body (ADR 022): open object, same reason as {@link SignupReferralRefereeItemSchema}. */
+export const SignupReferralDashboardSchema = z.object({
+	code: z.string().length(SIGNUP_REFERRAL_CODE_LENGTH).nullable(),
+	expiresAt: EpochMsSchema.nullable(),
+	shareable: z.boolean(),
+	codeState: SignupReferralCodeStateSchema,
+});
 
 export type SignupReferralDashboard = z.output<typeof SignupReferralDashboardSchema>;
 
@@ -63,11 +61,10 @@ export const signupReferralRefereeListQuery = defineListQuery({
 export const SignupReferralRefereeListQuerySchema = signupReferralRefereeListQuery.schema;
 export type SignupReferralRefereeListQuery = z.output<typeof SignupReferralRefereeListQuerySchema>;
 
-export const AdminSignupReferrerSummarySchema = z
-	.object({
-		id: z.uuid(),
-		fullName: z.string(),
-	})
-	.strict();
+/** Nested admin response (ADR 022): open object, so `AdminUserDetailSchema` stays open in OpenAPI. */
+export const AdminSignupReferrerSummarySchema = z.object({
+	id: z.uuid(),
+	fullName: z.string(),
+});
 
 export type AdminSignupReferrerSummary = z.output<typeof AdminSignupReferrerSummarySchema>;

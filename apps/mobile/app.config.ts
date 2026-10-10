@@ -11,6 +11,8 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import { z } from "zod";
 
+import generatedLaunchColors from "./assets/launch-colors.json";
+
 /**
  * The app's own semantic version, sent as `X-App-Version` on every request
  * (ADR 033). Raise it with every store release; the API's
@@ -60,14 +62,40 @@ function readAppIdentity(): AppIdentityEnv {
 	return parsed.data;
 }
 
+/**
+ * The launch assets, generated from the brand mark and the `splash` colour
+ * tokens by `pnpm tokens:generate` (packages/tokens, ADR 043) — never edited here.
+ */
+const APP_ICON = "./assets/app-icon.png";
+const SPLASH_IMAGE = "./assets/splash-icon.png";
+/** The mark's width on the native splash, in points — the in-app launch screen draws it at the same size (src/components/launch-screen.tsx `LAUNCH_MARK_SIZE`). */
+const SPLASH_IMAGE_WIDTH = 96;
+
+const HexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/u, "must be #rrggbb");
+const LaunchColorsSchema = z.object({ backgroundColor: HexColorSchema, foregroundColor: HexColorSchema });
+
+type LaunchColors = z.output<typeof LaunchColorsSchema>;
+
+function readLaunchColors(): LaunchColors {
+	const parsed = LaunchColorsSchema.safeParse(generatedLaunchColors);
+	if (!parsed.success) {
+		throw new Error(`Invalid assets/launch-colors.json — run \`pnpm tokens:generate\` (${parsed.error.issues.map((issue): string => issue.message).join("; ")})`);
+	}
+	return parsed.data;
+}
+
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
 	const identity = readAppIdentity();
+	const launchColors = readLaunchColors();
+	// The same slate splash in light and dark: launching looks the same whatever the theme.
+	const splash = { image: SPLASH_IMAGE, imageWidth: SPLASH_IMAGE_WIDTH, backgroundColor: launchColors.backgroundColor, resizeMode: "contain" };
 	return {
 		...config,
 		name: identity.MOBILE_APP_NAME,
 		slug: identity.MOBILE_APP_SLUG,
 		scheme: identity.MOBILE_SCHEME,
 		version: APP_VERSION,
+		icon: APP_ICON,
 		orientation: "portrait",
 		// System / Light / Dark is chosen in the app (Settings → Appearance); "automatic" lets it follow the OS.
 		userInterfaceStyle: "automatic",
@@ -79,7 +107,13 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 		},
 		android: {
 			package: identity.MOBILE_BUNDLE_ID,
+			adaptiveIcon: { foregroundImage: APP_ICON, backgroundColor: launchColors.backgroundColor },
 		},
-		plugins: ["expo-router", "expo-secure-store", ["expo-local-authentication", { faceIDPermission: FACE_ID_PERMISSION }]],
+		plugins: [
+			"expo-router",
+			"expo-secure-store",
+			["expo-local-authentication", { faceIDPermission: FACE_ID_PERMISSION }],
+			["expo-splash-screen", { ...splash, dark: splash }],
+		],
 	};
 }

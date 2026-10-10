@@ -5,7 +5,7 @@ import * as React from "react";
 import type { AppLockTimeoutMs, ThemePreference } from "../../lib/secure-store";
 import { createFeatureStoreContext } from "../../lib/state/feature-store-context";
 import { preferencesActions, type PreferencesAction } from "./actions";
-import { selectAppLockEnabled, selectAppLockTimeoutMs, selectTheme } from "./selectors";
+import { selectAppLockEnabled, selectAppLockTimeoutMs, selectOnboardingCompleted, selectTheme } from "./selectors";
 import type { PreferencesState } from "./state";
 
 const preferencesContext = createFeatureStoreContext<PreferencesState, PreferencesAction>("Preferences");
@@ -18,6 +18,11 @@ export function useThemePreference(): ThemePreference {
 
 export function useAppLockEnabled(): boolean {
 	return preferencesContext.useFeatureSelector(selectAppLockEnabled);
+}
+
+/** Whether this device has been through onboarding (the root guard reads it). */
+export function useOnboardingCompleted(): boolean {
+	return preferencesContext.useFeatureSelector(selectOnboardingCompleted);
 }
 
 export function useAppLockTimeoutMs(): AppLockTimeoutMs {
@@ -34,6 +39,8 @@ export interface PreferencesCommands {
 	readonly appLockTurnedOn: () => void;
 	readonly appLockTurnedOff: () => void;
 	readonly appLockTimeoutChanged: (timeoutMs: AppLockTimeoutMs) => void;
+	readonly onboardingCompleted: () => void;
+	readonly onboardingReset: () => void;
 }
 
 export function usePreferencesCommands(): PreferencesCommands {
@@ -51,6 +58,12 @@ export function usePreferencesCommands(): PreferencesCommands {
 			},
 			appLockTimeoutChanged: (timeoutMs: AppLockTimeoutMs): void => {
 				dispatch(preferencesActions.appLockTimeoutChanged(timeoutMs));
+			},
+			onboardingCompleted: (): void => {
+				dispatch(preferencesActions.onboardingCompleted());
+			},
+			onboardingReset: (): void => {
+				dispatch(preferencesActions.onboardingReset());
 			},
 		}),
 		[dispatch],

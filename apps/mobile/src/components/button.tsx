@@ -47,7 +47,7 @@ export const Button = React.forwardRef<View, ButtonProps>(function Button(
 			testID={testID}
 			className={`min-h-11 flex-row items-center justify-center gap-2 rounded-lg px-4 py-3 active:opacity-80 ${classes.container} ${isInactive ? "opacity-60" : ""}`}>
 			{loading ? <ActivityIndicator size="small" colorClassName={classes.spinner} /> : null}
-			<Text className={`text-base font-semibold ${classes.label}`}>{label}</Text>
+			<Text className={`font-sans-semibold text-base ${classes.label}`}>{label}</Text>
 		</Pressable>
 	);
 });

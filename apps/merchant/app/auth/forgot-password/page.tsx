@@ -4,7 +4,6 @@ import { ForgotPasswordForm } from "@workspace/client/lib/auth/forms/forgot-pass
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import type { JSX } from "react";
 
-import { MerchantAuthLogo } from "@/app/auth/merchant-auth-logo";
 import { ROUTES } from "@/lib/routes";
 
 /**
@@ -15,7 +14,6 @@ import { ROUTES } from "@/lib/routes";
 export default function MerchantForgotPasswordPage(): JSX.Element {
 	return (
 		<AuthLayout
-			logo={<MerchantAuthLogo />}
 			brandName="Merchant Portal"
 			tagline="Recover access to your store account."
 			features={["Secure password reset links", "Links expire after 1 hour", "All sessions are signed out after reset"]}

@@ -7,6 +7,8 @@
 // the typed token data and `resolveColorToken` for a theme's final colour.
 // Importing it pulls in no runtime dependency.
 
+export type { BrandMarkFacet, BrandMarkFacetName } from "./brand";
+export { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX } from "./brand";
 export { LAYOUT } from "./layout";
 export { MOTION } from "./motion";
 export { PALETTE } from "./palette";

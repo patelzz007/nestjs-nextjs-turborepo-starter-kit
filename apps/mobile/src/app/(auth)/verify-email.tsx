@@ -7,10 +7,10 @@
 
 import * as React from "react";
 
+import { AuthPage } from "../../components/auth-page";
 import { Banner } from "../../components/banner";
 import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
-import { BodyText } from "../../components/text";
+import { TextLink } from "../../components/text-link";
 import { useRefreshSession } from "../../features/auth/use-refresh-session";
 import { useSignOut } from "../../features/auth/use-sign-out";
 import { useApi } from "../../lib/api-context";
@@ -62,16 +62,17 @@ export default function VerifyEmailScreen(): React.JSX.Element {
 	}, [signOut]);
 
 	return (
-		<Screen title="Verify your email">
-			<BodyText>
-				{email === null
+		<AuthPage
+			title="Verify your email"
+			description={
+				email === null
 					? "Open the verification link we emailed you on any device, then come back here."
-					: `Open the verification link we sent to ${email} on any device, then come back here.`}
-			</BodyText>
+					: `Open the verification link we sent to ${email} on any device, then come back here.`
+			}
+			footer={<TextLink leadIn="Not you?" label="Sign out" role="button" onPress={handleSignOut} />}>
 			{message === null ? null : <Banner tone={message.tone} message={message.text} />}
 			<Button label="I've verified my email" onPress={checkVerified} loading={checking} />
 			<Button label="Send the link again" variant="secondary" onPress={resendLink} loading={resend.isPending} disabled={email === null} />
-			<Button label="Sign out" variant="ghost" onPress={handleSignOut} />
-		</Screen>
+		</AuthPage>
 	);
 }

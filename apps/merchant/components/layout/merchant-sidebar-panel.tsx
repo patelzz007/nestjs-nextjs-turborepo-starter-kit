@@ -28,7 +28,8 @@ import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
-import { AlertCircle, Gift } from "lucide-react";
+import { BrandMark } from "@workspace/ui/components/brand-mark";
+import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -103,11 +104,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
-			<PanelSidebarHeader
-				title={MERCHANT_SIDEBAR_MENU.header.title}
-				subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle}
-				icon={<Gift className="size-4 text-primary" aria-hidden="true" />}
-			/>
+			<PanelSidebarHeader title={MERCHANT_SIDEBAR_MENU.header.title} subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle} icon={<BrandMark className="size-5 text-primary" />} />
 
 			<PanelSidebarNav
 				view={view}

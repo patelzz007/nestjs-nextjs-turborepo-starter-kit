@@ -94,7 +94,7 @@ describe("Two-factor screen (§10.3)", () => {
 		stubApi({});
 		await renderTwoFactor();
 
-		await fireEvent.press(screen.getByRole("button", { name: "Use a different account" }));
+		await fireEvent.press(screen.getByRole("link", { name: "Use a different account" }));
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 	});
 });

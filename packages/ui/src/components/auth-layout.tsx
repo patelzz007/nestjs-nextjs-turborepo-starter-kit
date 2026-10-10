@@ -10,6 +10,7 @@ import * as React from "react";
 
 import { cn } from "../lib/core/utils";
 import type { UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
+import { BrandMark } from "./brand-mark";
 import { buttonVariants, Button } from "./button";
 import { ShellThemeToggle } from "./shell-theme-toggle";
 import { useUiKitLabels } from "./ui-kit-labels-provider";
@@ -30,7 +31,6 @@ const GLOW_DELAY_SHORT_STYLE: React.CSSProperties = { animationDelay: "0.5s" };
 const GLOW_DELAY_LONG_STYLE: React.CSSProperties = { animationDelay: "1s" };
 
 export interface AuthLayoutProps {
-	readonly logo: React.ReactNode;
 	readonly brandName: string;
 	readonly tagline: string;
 	readonly features: readonly string[];
@@ -48,7 +48,6 @@ export interface AuthLayoutProps {
 
 export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(function AuthLayout(
 	{
-		logo,
 		brandName,
 		tagline,
 		features,
@@ -85,7 +84,7 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 				<div className="relative z-10 flex flex-col items-center px-8 text-center">
 					<div className="relative mb-8">
 						<div className="flex size-20 items-center justify-center rounded-2xl bg-linear-to-br from-auth-brand-from to-auth-brand-to shadow-2xl">
-							<span className="[&_svg]:size-10 [&_svg]:text-auth-panel-foreground">{logo}</span>
+							<BrandMark className="size-10 text-auth-panel-foreground" />
 						</div>
 						<div className="absolute -top-2 -right-2 size-6 rounded-full bg-success motion-safe:animate-pulse" />
 					</div>
@@ -113,7 +112,7 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 				<div className="relative z-10 flex items-center justify-between p-6">
 					<div className="flex items-center gap-3 md:hidden">
 						<div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-auth-brand-from to-auth-brand-to">
-							<span className="[&_svg]:size-4 [&_svg]:text-auth-panel-foreground">{logo}</span>
+							<BrandMark className="size-4 text-auth-panel-foreground" />
 						</div>
 						<span className="text-lg font-semibold text-foreground">{brandName}</span>
 					</div>

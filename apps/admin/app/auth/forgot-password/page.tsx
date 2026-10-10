@@ -7,7 +7,6 @@ import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
 export default function AdminForgotPasswordPage(): React.JSX.Element {
 	return (
 		<AdminAuthLayout
-			icon="key"
 			tagline="Recover access to your administrator account."
 			features={["Secure password reset links", `Links expire after ${formatLinkLifetimeHours(PASSWORD_RESET_LINK_TTL_HOURS)}`, "All sessions are revoked after reset"]}
 			title="Reset password"

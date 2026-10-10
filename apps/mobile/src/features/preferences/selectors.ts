@@ -9,6 +9,10 @@ export function selectAppLockEnabled(state: PreferencesState): boolean {
 	return state.appLock.enabled;
 }
 
+export function selectOnboardingCompleted(state: PreferencesState): boolean {
+	return state.onboardingCompleted;
+}
+
 export function selectAppLockTimeoutMs(state: PreferencesState): AppLockTimeoutMs {
 	return state.appLock.timeoutMs;
 }

@@ -14,6 +14,11 @@ export const Uniwind = {
 	setTheme: (): void => undefined,
 };
 
+/** The resolved theme: light under Jest unless a suite overrides it. */
+export function useUniwind(): { readonly theme: "light" | "dark"; readonly hasAdaptiveThemes: boolean } {
+	return { theme: "light", hasAdaptiveThemes: true };
+}
+
 export function useCSSVariable(): string {
 	return NEUTRAL_COLOR;
 }

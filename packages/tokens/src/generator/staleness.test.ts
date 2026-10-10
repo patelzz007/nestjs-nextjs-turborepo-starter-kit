@@ -11,12 +11,12 @@ import { findStaleStylesheets, findUnexpectedGeneratedFiles } from "./staleness"
 
 const GENERATED_DIRECTORY = new URL("../../generated/", import.meta.url);
 
-function readCommitted(fileName: string): string | undefined {
+function readCommitted(fileName: string): Uint8Array | undefined {
 	const file = new URL(fileName, GENERATED_DIRECTORY);
-	return existsSync(file) ? readFileSync(file, "utf8") : undefined;
+	return existsSync(file) ? readFileSync(file) : undefined;
 }
 
-describe("the committed generated CSS", () => {
+describe("the committed generated files", () => {
 	it(`matches what the token source generates now (if this fails, run \`${GENERATE_COMMAND}\` and commit the result)`, () => {
 		expect(findStaleStylesheets(generateTokenStylesheets(TOKEN_SOURCE), readCommitted)).toStrictEqual([]);
 	});
@@ -34,9 +34,11 @@ describe("findStaleStylesheets", () => {
 	});
 
 	it("reports a hand edit of a generated file, naming the command to fix it", () => {
-		const handEdited = (fileName: string): string | undefined => {
+		const handEdited = (fileName: string): Uint8Array | undefined => {
 			const committed = readCommitted(fileName);
-			return fileName === "web.css" && committed !== undefined ? committed.replace("--card: var(--palette-neutral-0);", "--card: white;") : committed;
+			return fileName === "web.css" && committed !== undefined
+				? new TextEncoder().encode(new TextDecoder().decode(committed).replace("--card: var(--palette-neutral-0);", "--card: white;"))
+				: committed;
 		};
 
 		expect(findStaleStylesheets(expected, handEdited)).toStrictEqual([

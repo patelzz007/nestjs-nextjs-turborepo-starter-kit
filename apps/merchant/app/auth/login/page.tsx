@@ -3,7 +3,6 @@ import { EmailAddressSchema, isStringPrimitive } from "@workspace/shared";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import * as React from "react";
 
-import { MerchantAuthLogo } from "@/app/auth/merchant-auth-logo";
 import { loadMerchantDemoAccounts } from "@/lib/auth/demo-accounts";
 import { isAllowedMerchantPostLoginRedirect } from "@/lib/auth/routes";
 import { ROUTES } from "@/lib/routes";
@@ -33,7 +32,6 @@ export default async function MerchantLoginPage({ searchParams }: MerchantLoginP
 
 	return (
 		<AuthLayout
-			logo={<MerchantAuthLogo />}
 			brandName="Merchant Portal"
 			tagline="Manage rewards, redemptions, and POS keys for your store."
 			features={["Draft and publish rewards", "Track redemptions in real time", "Manage POS API keys securely"]}

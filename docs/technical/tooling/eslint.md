@@ -627,6 +627,17 @@ Type-checked rules run the TypeScript compiler. `projectService: true` caches th
 project, so the second run is much faster. Use `--no-cache` only when you suspect
 stale results.
 
+### 8.7 API ESLint exits 134 (JavaScript heap out of memory)
+
+Exit 134 here is V8 aborting at its default old-space limit (~4GB), not an OS
+kill and not a lint finding. The API program must resolve `@workspace/shared`
+and `@workspace/messaging` to their built `dist/*.d.ts` (no `customConditions`
+on `apps/api/tsconfig.json`). Pointing them at source typechecks those packages'
+zod contracts inside ESLint and exhausts the heap. `pnpm lint` builds both
+packages first (`apps/api/turbo.json`). Raising `--max-old-space-size` on the
+lint script hides that; don't. `typecheck` still requests 8GB because the API
+program itself is large — that flag is not a substitute for the dist resolution.
+
 ---
 
 ## 9. Adding / changing rules

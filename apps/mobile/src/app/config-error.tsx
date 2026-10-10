@@ -10,7 +10,7 @@ import * as React from "react";
 import { Banner } from "../components/banner";
 import { Card } from "../components/card";
 import { Screen } from "../components/screen";
-import { BodyText, MutedText } from "../components/text";
+import { CodeText, MutedText } from "../components/text";
 import { useConfigIssue } from "../runtime/runtime-context";
 
 /** Where the variables are explained (development builds only). */
@@ -26,9 +26,7 @@ export default function ConfigErrorScreen(): React.JSX.Element {
 				<Card title={issue.subject}>
 					<Banner tone="error" message={`${issue.subject} ${issue.message}.`} />
 					<MutedText>Example</MutedText>
-					<BodyText selectable className="font-mono">
-						{issue.example}
-					</BodyText>
+					<CodeText selectable>{issue.example}</CodeText>
 				</Card>
 			)}
 			{__DEV__ ? <MutedText>{`Set the value in apps/mobile/.env and restart Expo. See ${CONFIG_HELP_PATH}.`}</MutedText> : null}

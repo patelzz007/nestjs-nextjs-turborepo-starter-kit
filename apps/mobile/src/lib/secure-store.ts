@@ -51,6 +51,7 @@ export const SECURE_STORE_ENTRIES = {
 	appLockEnabled: { key: "prefs.appLock.enabled", schema: z.boolean() },
 	appLockTimeoutMs: { key: "prefs.appLock.timeoutMs", schema: AppLockTimeoutMsSchema },
 	appLockBiometricFingerprint: { key: "prefs.appLock.enrolledBiometrics", schema: BiometricFingerprintSchema },
+	onboardingCompleted: { key: "prefs.onboarding.completed", schema: z.boolean() },
 } satisfies Record<string, SecureStoreEntry<string | number | boolean>>;
 
 /** JSON as stored: any value a registry schema can describe. */

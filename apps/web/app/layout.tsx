@@ -25,9 +25,8 @@ import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
 
 export const metadata: Metadata = {
 	title: "Reward Hub",
-	icons: {
-		icon: { url: "/icon.svg", type: "image/svg+xml" },
-	},
+	// Icons come from the file conventions in this folder — icon.svg, favicon.ico, apple-icon.png —
+	// all generated from the brand mark by `pnpm tokens:generate` (ADR 040).
 };
 
 export const dynamic = "force-dynamic";

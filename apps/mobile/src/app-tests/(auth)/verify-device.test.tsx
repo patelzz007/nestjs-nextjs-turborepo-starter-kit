@@ -83,7 +83,7 @@ describe("Verify device screen (§10.2)", () => {
 		await renderVerify();
 
 		expect(screen.getByText("Didn't get a code? Sign in again to send a new one.")).toBeOnTheScreen();
-		await fireEvent.press(screen.getByRole("button", { name: "Use a different account" }));
+		await fireEvent.press(screen.getByRole("link", { name: "Use a different account" }));
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 	});
 });

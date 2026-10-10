@@ -191,6 +191,8 @@ export const SharedColorNameSchema = z.enum([
 	"auth-panel-foreground",
 	"auth-brand-from",
 	"auth-brand-to",
+	"splash",
+	"splash-foreground",
 	"print-foreground",
 	"print-border",
 	"print-header-bg",
@@ -420,5 +422,21 @@ export type TokenSource = z.infer<typeof TokenSourceSchema>;
 // ─── Generator output ─────────────────────────────────────────────────────
 
 /** The files the generator writes into `generated/`. */
-export const GeneratedFileNameSchema = z.enum(["palette.css", "web.css", "mobile.css"]);
+export const GeneratedFileNameSchema = z.enum([
+	"palette.css",
+	"web.css",
+	"mobile.css",
+	"favicon.svg",
+	"favicon.ico",
+	"apple-touch-icon.png",
+	"favicon-blue.svg",
+	"favicon-blue.ico",
+	"apple-touch-icon-blue.png",
+	"favicon-green.svg",
+	"favicon-green.ico",
+	"apple-touch-icon-green.png",
+	"app-icon.png",
+	"splash-icon.png",
+	"launch-colors.json",
+]);
 export type GeneratedFileName = z.infer<typeof GeneratedFileNameSchema>;

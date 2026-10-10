@@ -33,6 +33,30 @@ describe("TextField", () => {
 		expect(screen.getByRole("alert")).toHaveTextContent("Too short");
 	});
 
+	it("masks a password and shows or hides it with the eye button", async () => {
+		await render(<TextField label="Password" value="secret" onChange={jest.fn()} secureTextEntry testID="password" />);
+
+		expect(screen.getByLabelText("Password")).toHaveProp("secureTextEntry", true);
+		await fireEvent.press(screen.getByRole("button", { name: "Show password" }));
+		expect(screen.getByLabelText("Password")).toHaveProp("secureTextEntry", false);
+		await fireEvent.press(screen.getByRole("button", { name: "Hide password" }));
+		expect(screen.getByLabelText("Password")).toHaveProp("secureTextEntry", true);
+		expect(screen.getByTestId("password-visibility")).toBeOnTheScreen();
+	});
+
+	it("names the eye button after its field", async () => {
+		await render(<TextField label="Current password" value="" onChange={jest.fn()} secureTextEntry />);
+
+		expect(screen.getByRole("button", { name: "Show current password" })).toBeOnTheScreen();
+	});
+
+	it("has no eye button on an ordinary field", async () => {
+		await render(<TextField label="Email" value="" onChange={jest.fn()} />);
+
+		expect(screen.queryByRole("button")).toBeNull();
+		expect(screen.getByLabelText("Email")).toHaveProp("secureTextEntry", false);
+	});
+
 	it("shows no error element without an error", async () => {
 		await render(<TextField label="Name" value="" onChange={jest.fn()} error="" />);
 		expect(screen.queryByRole("alert")).toBeNull();

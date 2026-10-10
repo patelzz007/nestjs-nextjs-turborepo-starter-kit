@@ -112,28 +112,20 @@ describe("AnalyticsRangeControls", () => {
 		expect(menuTrigger(PICKER_LABELS.interval).textContent).toBe("Month");
 	});
 
-	it("picks custom days in the calendar, refuses an incomplete pick, and applies a valid range", async (): Promise<void> => {
+	it("keeps a custom range out of the URL until Apply commits the days already in effect", async (): Promise<void> => {
+		// Incomplete picks and disabled days are covered by the picker and checkCustomRange tests.
+		// This test only checks that Apply is what writes the URL.
 		const refresh = renderControls();
 
 		await choose(PICKER_LABELS.range, "Custom range");
-		// The URL does not change until Apply; the calendar starts at the days in effect.
+		// Choosing custom only opens a draft. The URL changes on Apply.
 		expect(currentQuery()).toBe("");
-		const days = screen.getByRole("button", { name: new RegExp(`^${PICKER_LABELS.customDays} `) });
-		expect(days.textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026");
+		expect(screen.getByRole("button", { name: new RegExp(`^${PICKER_LABELS.customDays} `) }).textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026");
 
-		fireEvent.click(days);
-		// A new pick starts over: the first click sets the first day only.
-		fireEvent.click(await screen.findByRole("button", { name: /September 14th, 2026/ }));
-		expect(screen.getByRole("alert").textContent).toBe("Choose both a start and an end date");
-		expect(screen.getByRole<HTMLButtonElement>("button", { name: PICKER_LABELS.apply }).disabled).toBe(true);
-		fireEvent.click(screen.getByRole("button", { name: /September 20th, 2026/ }));
-		fireEvent.click(screen.getByRole("button", { name: /next month/i }));
-		// Days after today (5 Oct, UTC) cannot be picked.
-		expect(screen.getByRole("button", { name: /October 6th, 2026/ }).hasAttribute("disabled")).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: PICKER_LABELS.apply }));
 		refresh();
 
-		expect(currentQuery()).toBe("?range=custom&from=2026-09-14&to=2026-09-20");
+		expect(currentQuery()).toBe("?range=custom&from=2026-09-06&to=2026-10-05");
 		expect(menuTrigger(PICKER_LABELS.range).textContent).toBe("Custom range");
 	});
 

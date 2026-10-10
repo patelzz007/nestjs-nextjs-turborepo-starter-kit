@@ -9,6 +9,8 @@ import { Slot, Stack } from "expo-router";
 import * as React from "react";
 import { Text } from "react-native";
 
+import { AppDrawerStoreProvider } from "../src/features/app-drawer/facade";
+import { createAppDrawerStore } from "../src/features/app-drawer/store";
 import { PreferencesStoreProvider } from "../src/features/preferences/facade";
 import type { PreferencesState } from "../src/features/preferences/state";
 import { sessionActions, type RestoredSession } from "../src/features/session/actions";
@@ -76,7 +78,10 @@ export function AppProviders({ runtime, children }: AppProvidersProps): React.JS
 			<ApiClientProvider client={runtime.apiClient}>
 				<QueryClientProvider client={runtime.queryClient}>
 					<SessionStoreProvider store={runtime.sessionStore}>
-						<PreferencesStoreProvider store={runtime.preferencesStore}>{children}</PreferencesStoreProvider>
+						<PreferencesStoreProvider store={runtime.preferencesStore}>
+							{/* The (app) layout provides the drawer's store in the app; screens rendered on their own get one here. */}
+							<AppDrawerStoreProvider store={createAppDrawerStore()}>{children}</AppDrawerStoreProvider>
+						</PreferencesStoreProvider>
 					</SessionStoreProvider>
 				</QueryClientProvider>
 			</ApiClientProvider>
@@ -108,7 +113,14 @@ export interface RenderedApp {
  * Renders `screens` (Expo Router file names → components) inside the app's
  * providers, starting at `initialUrl`.
  */
-export async function renderInApp(runtime: ReadyAppRuntime, screens: Readonly<Record<string, () => React.JSX.Element>>, initialUrl: string): Promise<RenderedApp> {
+/**
+ * A route as a test registers it: a screen component, or a whole module
+ * (`import * as …`) when the router must also read the module's other exports,
+ * such as a layout's stack settings.
+ */
+export type TestRoute = (() => React.JSX.Element) | { readonly default: () => React.JSX.Element };
+
+export async function renderInApp(runtime: ReadyAppRuntime, screens: Readonly<Record<string, TestRoute>>, initialUrl: string): Promise<RenderedApp> {
 	function TestRootLayout(): React.JSX.Element {
 		return (
 			<AppProviders runtime={runtime}>

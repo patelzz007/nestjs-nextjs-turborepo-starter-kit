@@ -21,7 +21,6 @@ export default async function AdminResetPasswordPage({ searchParams }: AdminRese
 
 	return (
 		<AdminAuthLayout
-			icon="key"
 			tagline="Choose a strong new password."
 			features={["Must meet complexity requirements", "Cannot reuse recent passwords", "Other sessions will be signed out"]}
 			title="Create new password"

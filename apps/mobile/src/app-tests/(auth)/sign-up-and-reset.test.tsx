@@ -54,7 +54,8 @@ describe("Sign up (§10.4)", () => {
 	it("leads back to sign-in", async () => {
 		stubApi({});
 		await open("/sign-up");
-		await fireEvent.press(screen.getByRole("button", { name: "I already have an account" }));
+		expect(screen.getByText("Already have an account?")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("link", { name: "Sign in" }));
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 	});
 });
@@ -88,7 +89,7 @@ describe("Forgot password (§10.6)", () => {
 	it("leads back to sign-in", async () => {
 		stubApi({});
 		await open("/forgot-password");
-		await fireEvent.press(screen.getByRole("button", { name: "Back to sign in" }));
+		await fireEvent.press(screen.getByRole("link", { name: "Back to sign in" }));
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 	});
 });

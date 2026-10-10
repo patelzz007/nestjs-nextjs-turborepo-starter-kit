@@ -24,11 +24,11 @@ export function ListRow({ label, onPress, value, description, accessibilityHint,
 			testID={testID}
 			className="min-h-12 flex-row items-center gap-3 py-3 active:opacity-70">
 			<View className="flex-1 gap-0.5">
-				<Text className="text-base text-foreground">{label}</Text>
-				{description === undefined ? null : <Text className="text-sm text-muted-foreground">{description}</Text>}
+				<Text className="font-sans text-base text-foreground">{label}</Text>
+				{description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{description}</Text>}
 			</View>
-			{value === undefined ? null : <Text className="text-base text-muted-foreground">{value}</Text>}
-			<Text className="text-lg text-muted-foreground" importantForAccessibility="no" accessibilityElementsHidden>
+			{value === undefined ? null : <Text className="font-sans text-base text-muted-foreground">{value}</Text>}
+			<Text className="font-sans text-lg text-muted-foreground" importantForAccessibility="no" accessibilityElementsHidden>
 				›
 			</Text>
 		</Pressable>

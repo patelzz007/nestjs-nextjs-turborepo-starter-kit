@@ -7,3 +7,18 @@
 @import "tailwindcss";
 @import "uniwind";
 @import "@workspace/tokens/mobile.css";
+
+/*
+ * The typefaces (ADR 037): the web's faces, one family per weight, because
+ * React Native picks a font by family name, not by weight. Each value is ONE
+ * family name, unquoted, exactly as src/lib/fonts.ts (APP_FONTS) registers it;
+ * keep the two in step. Text never uses the weight utilities (`font-semibold`).
+ */
+@theme {
+	--font-sans: Geist_400Regular;
+	--font-sans-medium: Geist_500Medium;
+	--font-sans-semibold: Geist_600SemiBold;
+	--font-sans-bold: Geist_700Bold;
+	--font-heading: BricolageGrotesque_600SemiBold;
+	--font-mono: GeistMono_400Regular;
+}

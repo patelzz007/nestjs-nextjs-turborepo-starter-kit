@@ -15,7 +15,8 @@
 		".": "./src/index.ts",
 		"./palette.css": "./generated/palette.css",
 		"./web.css": "./generated/web.css",
-		"./mobile.css": "./generated/mobile.css"
+		"./mobile.css": "./generated/mobile.css",
+		"./icons/*": "./generated/*"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.4",

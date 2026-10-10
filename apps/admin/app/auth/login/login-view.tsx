@@ -15,7 +15,6 @@ export interface LoginViewProps {
 export function LoginView({ redirectPath, webBaseUrl, demoAccounts }: LoginViewProps): React.JSX.Element {
 	return (
 		<AdminAuthLayout
-			icon="shield"
 			tagline="Manage users, roles, and permissions from one secure place."
 			features={["Role-based access control", "Audit & activity logs", "Enterprise-grade security"]}
 			title="Admin Login"

@@ -43,8 +43,8 @@ function RadioRow<TValue extends string | number>({ option, selected, disabled, 
 				{selected ? <View className="size-3 rounded-full bg-primary" /> : null}
 			</View>
 			<View className="flex-1 gap-0.5">
-				<Text className="text-base text-foreground">{option.label}</Text>
-				{option.description === undefined ? null : <Text className="text-sm text-muted-foreground">{option.description}</Text>}
+				<Text className="font-sans text-base text-foreground">{option.label}</Text>
+				{option.description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{option.description}</Text>}
 			</View>
 		</Pressable>
 	);

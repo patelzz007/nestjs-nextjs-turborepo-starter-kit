@@ -5,7 +5,6 @@ import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
 
-import { MerchantAuthLogo } from "@/app/auth/merchant-auth-logo";
 import { ROUTES } from "@/lib/routes";
 
 /** The `?token=` from the reset email; a missing or blank token gets a clear dead-end message. */
@@ -27,7 +26,6 @@ function MerchantResetPasswordContent(): JSX.Element {
 export default function MerchantResetPasswordPage(): JSX.Element {
 	return (
 		<AuthLayout
-			logo={<MerchantAuthLogo />}
 			brandName="Merchant Portal"
 			tagline="Choose a strong new password."
 			features={["Must meet complexity requirements", "Cannot reuse recent passwords", "Other sessions will be signed out"]}

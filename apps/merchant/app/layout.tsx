@@ -18,9 +18,8 @@ import * as React from "react";
 
 export const metadata: Metadata = {
 	title: "Merchant Portal",
-	icons: {
-		icon: { url: "/icon.svg", type: "image/svg+xml" },
-	},
+	// Icons come from the file conventions in this folder — icon.svg, favicon.ico, apple-icon.png —
+	// all generated from the brand mark by `pnpm tokens:generate` (ADR 040).
 };
 
 export const dynamic = "force-dynamic";

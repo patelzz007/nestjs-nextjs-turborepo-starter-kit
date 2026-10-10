@@ -6,6 +6,7 @@ import { Text } from "react-native";
 import { createAppRuntime } from "../runtime/app-runtime";
 import { createDeviceAppRuntime } from "../runtime/device-runtime";
 import { markerScreen, SlotLayout, testRuntimeInputs, TEST_RAW_ENV } from "../../test/app-harness";
+import { memorySecureStore } from "../../test/secure-store-memory";
 import AuthLayout from "../app/(auth)/_layout";
 import ConfigErrorScreen from "../app/config-error";
 import RootLayout from "../app/_layout";
@@ -43,6 +44,7 @@ describe("RootLayout", () => {
 
 describe("RootLayout with a valid environment", () => {
 	it("renders the app shell, which restores the session and opens sign-in", async () => {
+		memorySecureStore.seed("prefs.onboarding.completed", "true");
 		jest.mocked(createDeviceAppRuntime).mockReturnValue(createAppRuntime(testRuntimeInputs()));
 		const view = renderRouter(
 			{
@@ -59,6 +61,7 @@ describe("RootLayout with a valid environment", () => {
 	});
 
 	it("opens sign-in at `/` through the real (auth) layout, which has no index of its own", async () => {
+		memorySecureStore.seed("prefs.onboarding.completed", "true");
 		// The app opens at `/`, the (app) group's Home. Signed out, the guard protects it and the
 		// router falls back to the (auth) group — a Stack of several screens with no index — which
 		// must land on sign-in, not on a sibling screen or on nothing.
@@ -81,6 +84,9 @@ describe("RootLayout with a valid environment", () => {
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 		expect(view.getPathname()).toBe("/sign-in");
 		expect(screen.queryByText("home screen")).toBeNull();
+		// The (auth) layout frames every signed-out screen in the AuthShell, branded with the app's name (ADR 039).
+		expect(screen.getByTestId("auth-shell")).toBeOnTheScreen();
+		expect(screen.getByRole("header", { name: "Starter" })).toBeOnTheScreen();
 	});
 });
 

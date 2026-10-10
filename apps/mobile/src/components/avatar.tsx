@@ -3,9 +3,18 @@
 import * as React from "react";
 import { Image, Text, View } from "react-native";
 
+export type AvatarTone = "default" | "inverse";
+
+/** Initials colours per tone: `inverse` sits on a `primary` surface (the drawer's account header). */
+const TONE_CLASSES: Readonly<Record<AvatarTone, { readonly circle: string; readonly initials: string }>> = {
+	default: { circle: "bg-primary", initials: "text-primary-foreground" },
+	inverse: { circle: "bg-primary-foreground", initials: "text-primary" },
+};
+
 export interface AvatarProps {
 	readonly name: string;
 	readonly imageUrl: string | null;
+	readonly tone?: AvatarTone;
 }
 
 /** Side of the avatar, in points. */
@@ -25,13 +34,14 @@ export function initialsOf(name: string): string {
 		.join("");
 }
 
-export function Avatar({ name, imageUrl }: AvatarProps): React.JSX.Element {
+export function Avatar({ name, imageUrl, tone = "default" }: AvatarProps): React.JSX.Element {
+	const classes = TONE_CLASSES[tone];
 	if (imageUrl !== null) {
 		return <Image source={{ uri: imageUrl }} accessibilityLabel={`${name}'s profile picture`} width={AVATAR_SIZE} height={AVATAR_SIZE} className="rounded-full" />;
 	}
 	return (
-		<View accessibilityLabel={`${name}'s initials`} accessible className="size-14 items-center justify-center rounded-full bg-primary">
-			<Text className="text-lg font-semibold text-primary-foreground">{initialsOf(name)}</Text>
+		<View accessibilityLabel={`${name}'s initials`} accessible className={`size-14 items-center justify-center rounded-full ${classes.circle}`}>
+			<Text className={`font-heading text-lg ${classes.initials}`}>{initialsOf(name)}</Text>
 		</View>
 	);
 }

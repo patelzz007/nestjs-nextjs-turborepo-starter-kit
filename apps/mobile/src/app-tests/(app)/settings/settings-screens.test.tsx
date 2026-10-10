@@ -10,6 +10,7 @@ import { savePreferences } from "../../../features/preferences/persistence";
 import AppLockScreen, { APP_LOCK_FAILED_MESSAGE, APP_LOCK_UNAVAILABLE_MESSAGE } from "../../../app/(app)/settings/app-lock";
 import AppearanceScreen from "../../../app/(app)/settings/appearance";
 import SettingsScreen from "../../../app/(app)/settings/index";
+import { preferencesActions } from "../../../features/preferences/actions";
 
 jest.mock("expo-local-authentication", () => ({
 	SecurityLevel: { NONE: 0, SECRET: 1, BIOMETRIC_WEAK: 2, BIOMETRIC_STRONG: 3 },
@@ -54,6 +55,20 @@ describe("Settings (§10.9)", () => {
 		stubApi({});
 		await renderSettings(SETTINGS_SCREENS, "/settings", { rawEnv: { ...TEST_RAW_ENV, isDevelopment: false, apiUrl: "https://api.example.com" } });
 		expect(screen.queryByLabelText(/API address/)).toBeNull();
+		expect(screen.queryByRole("button", { name: "Sign out and replay onboarding" })).toBeNull();
+	});
+
+	it("can replay onboarding in a development build: it forgets it was seen and signs out (ADR 041)", async () => {
+		stubApi({ "POST /auth/logout": ok({ message: "Logged out successfully" }, 201) });
+		const runtime = await renderSettings(SETTINGS_SCREENS, "/settings");
+		runtime.preferencesStore.dispatch(preferencesActions.onboardingCompleted());
+
+		await fireEvent.press(screen.getByRole("button", { name: "Sign out and replay onboarding" }));
+
+		expect(runtime.preferencesStore.getState().onboardingCompleted).toBe(false);
+		await waitFor(() => {
+			expect(runtime.sessionStore.getState().status).toBe("signedOut");
+		});
 	});
 
 	it.each([

@@ -10,7 +10,8 @@ import { Avatar } from "../../components/avatar";
 import { Banner } from "../../components/banner";
 import { Card } from "../../components/card";
 import { Screen } from "../../components/screen";
-import { ErrorState, LoadingState } from "../../components/states";
+import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
+import { ErrorState } from "../../components/states";
 import { BodyText, MutedText, Subheading } from "../../components/text";
 import { backupCodesNotice } from "../../features/two-factor/backup-codes-status";
 import { useApi } from "../../lib/api-context";
@@ -33,7 +34,7 @@ export default function HomeScreen(): React.JSX.Element {
 
 	return (
 		<Screen title="Home" refreshing={me.isRefetching} onRefresh={refetch}>
-			{me.isPending ? <LoadingState label="Loading your account…" /> : null}
+			{me.isPending ? <AccountCardSkeleton /> : null}
 			{me.isError ? <ErrorState message={errorMessageOf(me.error)} retryLabel="Try again" onRetry={refetch} /> : null}
 			{user === undefined ? null : (
 				<Card>
@@ -52,5 +53,22 @@ export default function HomeScreen(): React.JSX.Element {
 				<MutedText>See apps/mobile/README.md for how the app is put together and where new features go.</MutedText>
 			</Card>
 		</Screen>
+	);
+}
+
+/** The account card's shape while it loads: the avatar and two lines where the name and email will be, so nothing moves when they arrive. */
+function AccountCardSkeleton(): React.JSX.Element {
+	return (
+		<Card>
+			<SkeletonGroup accessibilityLabel="Loading your account" testID="account-skeleton">
+				<View className="flex-row items-center gap-4">
+					<Skeleton className="size-14 rounded-full" />
+					<View className="flex-1 gap-0.5">
+						<SkeletonText size="lg" widthClassName="w-40" />
+						<SkeletonText size="sm" widthClassName="w-52" />
+					</View>
+				</View>
+			</SkeletonGroup>
+		</Card>
 	);
 }

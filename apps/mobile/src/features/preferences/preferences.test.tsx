@@ -14,16 +14,19 @@ function dependencies(overrides: Partial<PreferencesStoreDependencies> = {}): Pr
 }
 
 describe("preferencesReducer", () => {
-	it("defaults to System, lock off, 60 s (§9.7, §11.2)", () => {
-		expect(DEFAULT_PREFERENCES).toEqual({ theme: "system", appLock: { enabled: false, timeoutMs: 60_000 } });
+	it("defaults to System, lock off, 60 s, onboarding not seen yet (§9.7, §11.2, ADR 041)", () => {
+		expect(DEFAULT_PREFERENCES).toEqual({ theme: "system", appLock: { enabled: false, timeoutMs: 60_000 }, onboardingCompleted: false });
 	});
 
 	it("applies each change", () => {
-		const changed = [preferencesActions.themeChanged("dark"), preferencesActions.appLockTurnedOn(), preferencesActions.appLockTimeoutChanged(0)].reduce(
-			preferencesReducer,
-			DEFAULT_PREFERENCES,
-		);
-		expect(changed).toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 0 } });
+		const changed = [
+			preferencesActions.themeChanged("dark"),
+			preferencesActions.appLockTurnedOn(),
+			preferencesActions.appLockTimeoutChanged(0),
+			preferencesActions.onboardingCompleted(),
+		].reduce(preferencesReducer, DEFAULT_PREFERENCES);
+		expect(changed).toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 0 }, onboardingCompleted: true });
+		expect(preferencesReducer(changed, preferencesActions.onboardingReset()).onboardingCompleted).toBe(false);
 		expect(preferencesReducer(changed, preferencesActions.appLockTurnedOff()).appLock).toEqual({ enabled: false, timeoutMs: 0 });
 		expect(preferencesReducer(changed, preferencesActions.restored(DEFAULT_PREFERENCES))).toEqual(DEFAULT_PREFERENCES);
 	});
@@ -50,7 +53,7 @@ describe("theme persistence (§10.9)", () => {
 		await waitFor(() => {
 			expect(memorySecureStore.peek("prefs.theme")).toBe(JSON.stringify("dark"));
 		});
-		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: false, timeoutMs: 60_000 } });
+		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: false, timeoutMs: 60_000 }, onboardingCompleted: false });
 	});
 
 	it("reports a failed save and keeps the preference for this run", async () => {
@@ -76,7 +79,7 @@ describe("loadPreferences", () => {
 		memorySecureStore.seed("prefs.appLock.enabled", JSON.stringify(true));
 		memorySecureStore.seed("prefs.appLock.timeoutMs", "not-json");
 
-		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 60_000 } });
+		await expect(loadPreferences()).resolves.toEqual({ theme: "dark", appLock: { enabled: true, timeoutMs: 60_000 }, onboardingCompleted: false });
 		expect(memorySecureStore.peek("prefs.appLock.timeoutMs")).toBe("60000");
 	});
 });

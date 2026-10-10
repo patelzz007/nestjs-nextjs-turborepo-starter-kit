@@ -9,11 +9,11 @@ import { SignupSchema, type SignupInput } from "@workspace/shared";
 import { useRouter } from "expo-router";
 import * as React from "react";
 
+import { AuthPage } from "../../components/auth-page";
 import { Banner } from "../../components/banner";
 import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
-import { BodyText } from "../../components/text";
 import { TextField } from "../../components/text-field";
+import { TextLink } from "../../components/text-link";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { visibleFieldError } from "../../lib/form";
@@ -51,15 +51,17 @@ export default function SignUpScreen(): React.JSX.Element {
 
 	if (registeredEmail !== null) {
 		return (
-			<Screen title="Check your email">
-				<BodyText>{`We sent a verification link to ${registeredEmail}. Open it on any device, then come back and sign in.`}</BodyText>
+			<AuthPage title="Check your email" description={`We sent a verification link to ${registeredEmail}. Open it on any device, then come back and sign in.`}>
 				<Button label="Back to sign in" onPress={backToSignIn} />
-			</Screen>
+			</AuthPage>
 		);
 	}
 
 	return (
-		<Screen title="Create an account">
+		<AuthPage
+			title="Create an account"
+			description="Enter your details to get started."
+			footer={<TextLink leadIn="Already have an account?" label="Sign in" onPress={backToSignIn} />}>
 			{requestError === null ? null : <Banner tone="error" message={requestError} />}
 			<form.Field name="fullName">
 				{(field): React.JSX.Element => (
@@ -107,7 +109,6 @@ export default function SignUpScreen(): React.JSX.Element {
 				)}
 			</form.Field>
 			<Button label="Create account" onPress={submit} loading={signup.isPending} />
-			<Button label="I already have an account" variant="ghost" onPress={backToSignIn} />
-		</Screen>
+		</AuthPage>
 	);
 }

@@ -235,6 +235,9 @@ export const SHARED_COLORS: SharedColors = {
 	"auth-panel-foreground": paletteColor("neutral", "0"),
 	"auth-brand-from": paletteColor("brand", "600"),
 	"auth-brand-to": paletteColor("brand", "800"),
+	/* The app's launch screen (the Expo app's native splash and its in-app hand-off, the app icon): slate in every theme, so launching looks the same in light and dark. */
+	splash: paletteColor("brand", "800"),
+	"splash-foreground": paletteColor("neutral", "0"),
 	"print-foreground": oklch(0.21, 0.034, 264.665),
 	"print-border": oklch(0.928, 0.006, 264.531),
 	"print-header-bg": oklch(0.967, 0.003, 264.542),

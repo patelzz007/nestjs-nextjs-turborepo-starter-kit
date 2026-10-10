@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { BottomTabBarHeightContext } from "expo-router/tabs";
 import * as React from "react";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 
@@ -7,6 +8,7 @@ import { Card } from "./card";
 import { DetailList } from "./detail-list";
 import { ListRow } from "./list-row";
 import { PrivacyCover } from "./privacy-cover";
+import { ScreenCornerProvider } from "../lib/screen-corner";
 import { Screen } from "./screen";
 import { BodyText, ErrorText, Heading, Label, MutedText, Subheading } from "./text";
 
@@ -25,6 +27,45 @@ describe("Screen", () => {
 		expect(screen.getByRole("header", { name: "Settings" })).toBeOnTheScreen();
 		expect(screen.getByText("Your preferences")).toBeOnTheScreen();
 		expect(screen.getByText("Content")).toBeOnTheScreen();
+	});
+
+	it("adds no tab-bar clearance outside the tabs", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<Screen title="Sign in">
+					<BodyText>Content</BodyText>
+				</Screen>
+			</SafeAreaProvider>,
+		);
+		expect(screen.queryByTestId("tab-bar-clearance")).toBeNull();
+	});
+
+	it("ends its content above the floating tab bar inside the tabs", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<BottomTabBarHeightContext value={106}>
+					<Screen title="Home">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</BottomTabBarHeightContext>
+			</SafeAreaProvider>,
+		);
+		expect(screen.getByTestId("tab-bar-clearance")).toHaveStyle({ height: 106 });
+	});
+
+	it("moves its title over when a layout's control takes the top-left corner", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<ScreenCornerProvider value>
+					<Screen title="Home">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</ScreenCornerProvider>
+			</SafeAreaProvider>,
+		);
+
+		expect(screen.getByRole("header", { name: "Home" })).toBeOnTheScreen();
+		expect(screen.queryByRole("button")).toBeNull();
 	});
 
 	it("renders without a title", async () => {

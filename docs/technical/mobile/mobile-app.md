@@ -114,7 +114,7 @@ record; everything else is recorded here.
 | 16 | API address | Dev: Expo's host address + API port. Otherwise `EXPO_PUBLIC_API_URL`, zod-checked, config error screen | this page |
 | 17 | Forced upgrade | `X-App-Version` header, `MOBILE_MIN_SUPPORTED_VERSION`, 426, blocking screen | [ADR 033](../../adr/033-mobile-forced-upgrade.md) |
 | 18 | Navigation | Expo Router: `(auth)` stack, `(app)` tabs, root guard | this page |
-| 19 | Starter screens | Full sign-in flow, sign-up, forgot password, Home, Profile, Settings, Security | this page |
+| 19 | Starter screens | Full sign-in flow, sign-up, forgot password, Home, Search (placeholder), Profile, Settings, Security — under the floating tab bar ([ADR 036](../../adr/036-mobile-floating-tab-bar.md)) | this page |
 | 20 | 2FA enrollment on phone | "Open in authenticator app" link + copyable secret + QR | this page |
 | 21 | Email-link flows | Reset password and email verification finish on the web pages | this page |
 | 22 | Theme | System / Light / Dark, default System | this page |

@@ -9,11 +9,12 @@ import { TOTP_CODE_LENGTH, VerifyLoginSchema } from "@workspace/shared";
 import { useRouter } from "expo-router";
 import * as React from "react";
 
+import { AuthPage } from "../../components/auth-page";
 import { Banner } from "../../components/banner";
 import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
 import { MutedText } from "../../components/text";
 import { TextField } from "../../components/text-field";
+import { TextLink } from "../../components/text-link";
 import { EXPIRED_STEP_MESSAGE, VerifyDeviceRouteParamsSchema } from "../../features/auth/sign-in-steps";
 import { useSignInStepHandler } from "../../features/auth/use-sign-in-step";
 import { useApi } from "../../lib/api-context";
@@ -34,10 +35,10 @@ export default function VerifyDeviceScreen(): React.JSX.Element {
 
 	if (params === null) {
 		return (
-			<Screen title="Verify this device">
+			<AuthPage title="Verify this device">
 				<Banner tone="error" message={EXPIRED_STEP_MESSAGE} />
 				<Button label="Back to sign in" onPress={startOver} />
-			</Screen>
+			</AuthPage>
 		);
 	}
 	return <DeviceVerification verificationId={params.verificationId} onStartOver={startOver} />;
@@ -72,7 +73,10 @@ function DeviceVerification({ verificationId, onStartOver }: DeviceVerificationP
 	}, [form]);
 
 	return (
-		<Screen title="Verify this device" description="We emailed you a 6-digit code because this device is new to your account. Enter it to finish signing in.">
+		<AuthPage
+			title="Verify this device"
+			description="We emailed you a 6-digit code because this device is new to your account. Enter it to finish signing in."
+			footer={<TextLink leadIn="Not you?" label="Use a different account" onPress={onStartOver} />}>
 			{requestError === null ? null : <Banner tone="error" message={requestError} />}
 			<form.Field name="code">
 				{(field): React.JSX.Element => (
@@ -93,7 +97,6 @@ function DeviceVerification({ verificationId, onStartOver }: DeviceVerificationP
 			</form.Field>
 			<Button label="Verify and sign in" onPress={submit} loading={verifyLogin.isPending} />
 			<MutedText>Didn&apos;t get a code? Sign in again to send a new one.</MutedText>
-			<Button label="Use a different account" variant="ghost" onPress={onStartOver} />
-		</Screen>
+		</AuthPage>
 	);
 }

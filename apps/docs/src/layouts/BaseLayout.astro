@@ -40,7 +40,10 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 		<title>{fullTitle}</title>
 		<meta name="description" content={description} />
 		{canonical !== undefined && <link rel="canonical" href={canonical} />}
+		<!-- Generated from the brand mark by `pnpm tokens:generate` (ADR 040): the ICO for Safari and older browsers, the SVG for the rest. -->
+		<link rel="icon" href="/favicon.ico" sizes="32x32" />
 		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		<link rel="alternate" type="application/rss+xml" title={`${SITE_NAME} blog`} href="/feed.xml" />
 		<link rel="sitemap" href="/sitemap-index.xml" />
 		<meta property="og:site_name" content={SITE_NAME} />

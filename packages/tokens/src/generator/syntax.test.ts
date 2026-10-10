@@ -15,7 +15,10 @@ const DECLARATION = /^\s*--[\w-]+\s*:\s*[^;{}]+;\s*$/u;
 /** A rule's selector line (`:root {`, `.dark {`, `@theme inline {`, `@variant dark {`) or its closing brace. */
 const BLOCK_EDGE = /^\s*(?:[^{};]+\{|\})\s*$/u;
 
-describe.each(GeneratedFileNameSchema.options)("generated/%s syntax", (fileName) => {
+/** The generated stylesheets; the favicon is SVG and has its own test (render-favicon.test.ts). */
+const STYLESHEETS = GeneratedFileNameSchema.options.filter((fileName) => fileName.endsWith(".css"));
+
+describe.each(STYLESHEETS)("generated/%s syntax", (fileName) => {
 	it("leaves only selectors, braces and token declarations once comments are stripped — a stray `*/` inside the header comment would leak text into a rule and break every app's build", () => {
 		const css = readFileSync(new URL(`../../generated/${fileName}`, import.meta.url), "utf8");
 		const strayLines = withoutComments(css)

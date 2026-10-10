@@ -89,6 +89,8 @@
 			--auth-panel-foreground: oklch(1 0 0);
 			--auth-brand-from: oklch(0.5 0.055 257);
 			--auth-brand-to: oklch(0.33 0.05 257);
+			--splash: oklch(0.33 0.05 257);
+			--splash-foreground: oklch(1 0 0);
 			--print-foreground: oklch(0.21 0.034 264.665);
 			--print-border: oklch(0.928 0.006 264.531);
 			--print-header-bg: oklch(0.967 0.003 264.542);
@@ -194,6 +196,8 @@
 			--auth-panel-foreground: oklch(1 0 0);
 			--auth-brand-from: oklch(0.5 0.055 257);
 			--auth-brand-to: oklch(0.33 0.05 257);
+			--splash: oklch(0.33 0.05 257);
+			--splash-foreground: oklch(1 0 0);
 			--print-foreground: oklch(0.21 0.034 264.665);
 			--print-border: oklch(0.928 0.006 264.531);
 			--print-header-bg: oklch(0.967 0.003 264.542);
@@ -229,6 +233,8 @@
 	--color-auth-panel-foreground: var(--auth-panel-foreground);
 	--color-auth-brand-from: var(--auth-brand-from);
 	--color-auth-brand-to: var(--auth-brand-to);
+	--color-splash: var(--splash);
+	--color-splash-foreground: var(--splash-foreground);
 	--color-print-foreground: var(--print-foreground);
 	--color-print-border: var(--print-border);
 	--color-print-header-bg: var(--print-header-bg);

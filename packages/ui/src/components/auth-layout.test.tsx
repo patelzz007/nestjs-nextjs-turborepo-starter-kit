@@ -25,7 +25,7 @@ const FEATURES: readonly string[] = ["Fast"];
 
 function renderLayout(ref?: React.Ref<HTMLDivElement>): ReturnType<typeof render> {
 	return render(
-		<AuthLayout ref={ref} logo={null} brandName="Acme" tagline="Rewards" features={FEATURES} title="Sign in" subtitle="Welcome back" labels={LABELS}>
+		<AuthLayout ref={ref} brandName="Acme" tagline="Rewards" features={FEATURES} title="Sign in" subtitle="Welcome back" labels={LABELS}>
 			<form aria-label="login" />
 		</AuthLayout>,
 		{ wrapper: UiKitTestProviders },
@@ -34,7 +34,7 @@ function renderLayout(ref?: React.Ref<HTMLDivElement>): ReturnType<typeof render
 
 function UnlabelledLayout(): React.JSX.Element {
 	return (
-		<AuthLayout logo={null} brandName="Acme" tagline="Rewards" features={FEATURES} title="Sign in" subtitle="Welcome back" showBackButton>
+		<AuthLayout brandName="Acme" tagline="Rewards" features={FEATURES} title="Sign in" subtitle="Welcome back" showBackButton>
 			<form aria-label="login" />
 		</AuthLayout>
 	);

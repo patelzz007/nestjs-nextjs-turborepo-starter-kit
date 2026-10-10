@@ -22,6 +22,7 @@
 		"@tanstack/react-table": "^9.2.6",
 		"@workspace/client": "workspace:*",
 		"@workspace/shared": "workspace:*",
+		"@workspace/tokens": "workspace:*",
 		"@workspace/ui": "workspace:*",
 		"cmdk": "^1.1.1",
 		"date-fns": "^4.4.0",

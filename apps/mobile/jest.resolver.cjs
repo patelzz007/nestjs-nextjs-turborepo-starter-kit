@@ -11,6 +11,20 @@ const WORKSPACE_SOURCE_CONDITION = "development";
 
 const WORKSPACE_SCOPE = "@workspace/";
 
+/**
+ * Packages whose React Native build is ES modules only, which Jest would have to
+ * transpile out of node_modules. Tests load the same release's CommonJS build
+ * (its `require` export) instead: the same code in a format Jest runs as is.
+ */
+const COMMONJS_UNDER_TEST_PACKAGES = ["lucide-react-native"];
+
+/** The export conditions that select an ES module build. */
+const ES_MODULE_CONDITIONS = new Set(["react-native", "import", "browser"]);
+
+function isCommonJsUnderTest(request) {
+	return COMMONJS_UNDER_TEST_PACKAGES.some((name) => request === name || request.startsWith(`${name}/`));
+}
+
 function isSingleton(request) {
 	return SINGLETON_PACKAGES.some((name) => request === name || request.startsWith(`${name}/`));
 }
@@ -21,6 +35,12 @@ module.exports = (request, options) => {
 	}
 	if (request.startsWith(WORKSPACE_SCOPE)) {
 		return options.defaultResolver(request, { ...options, conditions: [...(options.conditions ?? []), WORKSPACE_SOURCE_CONDITION] });
+	}
+	if (isCommonJsUnderTest(request)) {
+		return options.defaultResolver(request, {
+			...options,
+			conditions: ["require", ...(options.conditions ?? []).filter((condition) => !ES_MODULE_CONDITIONS.has(condition))],
+		});
 	}
 	return options.defaultResolver(request, options);
 };

@@ -20,7 +20,7 @@ export function Badge({ label, tone = "neutral" }: BadgeProps): React.JSX.Elemen
 	const classes = TONE_CLASSES[tone];
 	return (
 		<View className={`self-start rounded-full px-2.5 py-0.5 ${classes.container}`}>
-			<Text className={`text-xs font-medium ${classes.text}`}>{label}</Text>
+			<Text className={`font-sans-medium text-xs ${classes.text}`}>{label}</Text>
 		</View>
 	);
 }

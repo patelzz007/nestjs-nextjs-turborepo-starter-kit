@@ -9,20 +9,21 @@
 // | State           | Routes allowed                 |
 // | ConfigError     | config-error only              |
 // | UpgradeRequired | update-required only           |
-// | SignedOut       | (auth) only                    |
+// | SignedOut       | onboarding only, until it is done (ADR 041); then (auth) only |
 // | Locked          | lock only                      |
 // | SignedIn        | (app) only ((auth) enrollment screens while the session is restricted) |
 
 import { Stack } from "expo-router";
 import * as React from "react";
 
-import type { RootRoute } from "../features/session/selectors";
+import { ROOT_TRANSITION } from "../lib/screen-transitions";
+import type { AppRootRoute } from "./root-route";
 
 export interface RootStackProps {
-	readonly route: Exclude<RootRoute, "starting">;
+	readonly route: Exclude<AppRootRoute, "starting">;
 }
 
-const SCREEN_OPTIONS = { headerShown: false } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
+const SCREEN_OPTIONS = { headerShown: false, animation: ROOT_TRANSITION } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
 
 /** The navigator with every group guarded by the current root route. */
 export function RootStack({ route }: RootStackProps): React.JSX.Element {
@@ -36,6 +37,9 @@ export function RootStack({ route }: RootStackProps): React.JSX.Element {
 			</Stack.Protected>
 			<Stack.Protected guard={route === "lock"}>
 				<Stack.Screen name="lock" options={{ gestureEnabled: false }} />
+			</Stack.Protected>
+			<Stack.Protected guard={route === "onboarding"}>
+				<Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
 			</Stack.Protected>
 			<Stack.Protected guard={route === "auth"}>
 				<Stack.Screen name="(auth)" />

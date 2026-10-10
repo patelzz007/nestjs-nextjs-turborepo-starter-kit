@@ -56,6 +56,8 @@ export const TAILWIND_THEME: TailwindTheme = {
 		"auth-panel-foreground",
 		"auth-brand-from",
 		"auth-brand-to",
+		"splash",
+		"splash-foreground",
 		"print-foreground",
 		"print-border",
 		"print-header-bg",

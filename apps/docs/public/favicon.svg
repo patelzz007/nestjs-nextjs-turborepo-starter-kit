@@ -1,4 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="48" fill="#18181b"/>
-  <path d="M 24 30 L 34 70 L 50 48 L 66 70 L 76 30 L 68 30 L 56 58 L 50 50 L 44 58 L 32 30 Z" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Brand mark">
+  <!-- GENERATED FILE: do not edit by hand. Source: packages/tokens/src/brand.ts (ADR 040); regenerate with `pnpm tokens:generate`. -->
+  <rect width="24" height="24" rx="6.6" fill="#4f6583"/>
+  <g transform="translate(6 6) scale(0.5)">
+    <path d="M12 2.13 L20 6.75 L12 11.37 L4 6.75 Z" fill="#ffffff" fill-opacity="1"/>
+    <path d="M3.45 7.69 L11.45 12.31 L11.45 21.55 L3.45 16.93 Z" fill="#ffffff" fill-opacity="0.62"/>
+    <path d="M12.55 12.31 L20.55 7.7 L20.55 16.93 L12.55 21.55 Z" fill="#ffffff" fill-opacity="0.32"/>
+  </g>
 </svg>

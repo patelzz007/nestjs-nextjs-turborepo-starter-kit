@@ -188,7 +188,16 @@ Extends `base.json` with NestJS requirements:
 > **How `@workspace/shared` is resolved:** the package `exports` field exposes a
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
 > `customConditions: ["development"]` so dev (and Next.js bundling) resolves source
-> directly. The API (no custom condition) resolves the built `dist/` output.
+> directly. The API does **not** set that condition: it resolves the built `dist/`
+> output, which is also what Node loads at runtime (rspack leaves workspace
+> packages external). Type-aware ESLint uses this same program. Resolving shared
+> and `@workspace/messaging` to source makes ESLint typecheck their zod contracts
+> inside the API program; that outgrew Node's default heap (exit 134) once the
+> referral and device-session contracts landed. `apps/api` `lint` therefore
+> depends on `@workspace/shared#build` and `@workspace/messaging#build`. Do not
+> put `customConditions` back on `apps/api/tsconfig.json` to chase a declaration
+> bug — `tsc-alias --resolve-full-paths` already rewrites `dist` `import()` paths
+> to resolvable `…/index.js` specifiers.
 
 ### `apps/api/tsconfig.json` in detail
 

@@ -22,7 +22,6 @@ export default async function AdminVerifyEmailPage({ searchParams }: AdminVerify
 
 	return (
 		<AdminAuthLayout
-			icon="mail"
 			tagline="Confirm your email to finish securing your administrator account."
 			features={["One-click verification", "Secure token-based link", `Expires after ${formatLinkLifetimeHours(EMAIL_VERIFICATION_LINK_TTL_HOURS)}`]}
 			title="Verify email"

@@ -9,11 +9,11 @@ import { ForgotPasswordSchema, type ForgotPasswordInput } from "@workspace/share
 import { useRouter } from "expo-router";
 import * as React from "react";
 
+import { AuthPage } from "../../components/auth-page";
 import { Banner } from "../../components/banner";
 import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
-import { BodyText } from "../../components/text";
 import { TextField } from "../../components/text-field";
+import { TextLink } from "../../components/text-link";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { visibleFieldError } from "../../lib/form";
@@ -51,15 +51,19 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
 
 	if (requestedEmail !== null) {
 		return (
-			<Screen title="Check your email">
-				<BodyText>{`If an account exists for ${requestedEmail}, we sent a reset link. Open it on any device to choose a new password, then come back and sign in.`}</BodyText>
+			<AuthPage
+				title="Check your email"
+				description={`If an account exists for ${requestedEmail}, we sent a reset link. Open it on any device to choose a new password, then come back and sign in.`}>
 				<Button label="Back to sign in" onPress={backToSignIn} />
-			</Screen>
+			</AuthPage>
 		);
 	}
 
 	return (
-		<Screen title="Reset your password" description="Enter your account's email and we'll send you a link to choose a new password.">
+		<AuthPage
+			title="Reset your password"
+			description="Enter your account's email and we'll send you a link to choose a new password."
+			footer={<TextLink leadIn="Remembered it?" label="Back to sign in" onPress={backToSignIn} />}>
 			{requestError === null ? null : <Banner tone="error" message={requestError} />}
 			<form.Field name="email">
 				{(field): React.JSX.Element => (
@@ -79,7 +83,6 @@ export default function ForgotPasswordScreen(): React.JSX.Element {
 				)}
 			</form.Field>
 			<Button label="Send reset link" onPress={submit} loading={forgotPassword.isPending} />
-			<Button label="Back to sign in" variant="ghost" onPress={backToSignIn} />
-		</Screen>
+		</AuthPage>
 	);
 }

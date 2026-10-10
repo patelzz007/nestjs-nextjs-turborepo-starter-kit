@@ -7,6 +7,7 @@ import { SidebarFooter, SidebarHeader } from "@workspace/ui/components/sidebar";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import type { SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
+import { BrandMark } from "@workspace/ui/components/brand-mark";
 import { AlertCircle, LogOut } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -72,7 +73,7 @@ export function AdminSidebarPanel({
 			<SidebarHeader className="h-14 border-b border-sidebar-border">
 				<div className="flex h-full min-w-0 items-center gap-3 px-2">
 					<div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-accent ring-1 ring-sidebar-border/50">
-						<span className="text-sm font-bold text-sidebar-foreground">{getUserInitials(menu.header.title)}</span>
+						<BrandMark className="size-5 text-primary" />
 					</div>
 					<div className="min-w-0 flex-1">
 						<span className="block truncate text-sm font-semibold text-sidebar-foreground" title={menu.header.title}>
