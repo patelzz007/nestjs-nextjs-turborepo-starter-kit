@@ -42,9 +42,9 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 		});
 	});
 
-	it("shows the connection and the token's countdown, compact, in the top-right corner of a tab's first screen", async () => {
+	it("shows the connection and the token's countdown, compact, in the page header", async () => {
 		await renderSignedIn("/");
-		const corner = within(screen.getByTestId("app-status-corner"));
+		const corner = within(screen.getByTestId("app-header"));
 
 		expect(corner.getByLabelText("Online")).toBeOnTheScreen();
 		expect(await corner.findByText("14m 32s")).toBeOnTheScreen();
@@ -71,7 +71,7 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 			await Promise.resolve();
 		});
 
-		expect(within(screen.getByTestId("app-status-corner")).getByLabelText("Offline")).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByLabelText("Offline")).toBeOnTheScreen();
 		expect(within(screen.getByTestId("app-drawer-status", { includeHiddenElements: true })).getByText("Offline", { includeHiddenElements: true })).toBeOnTheScreen();
 	});
 
@@ -85,17 +85,19 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 		});
 
 		await waitFor(() => {
-			expect(within(screen.getByTestId("app-status-corner")).getByText("14m 30s")).toBeOnTheScreen();
+			expect(within(screen.getByTestId("app-header")).getByText("14m 30s")).toBeOnTheScreen();
 		});
 	});
 
-	it("fades away deeper in a stack, where the corner belongs to the screen", async () => {
+	it("stays in the header deeper in a stack, beside the back button", async () => {
 		await renderSignedIn("/");
 		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
 		await fireEvent.press(within(screen.getByTestId("app-drawer-panel")).getByRole("button", { name: "Security" }));
 		expect(await screen.findByText("security screen")).toBeOnTheScreen();
 
-		expect(screen.queryByTestId("app-status-corner")).toBeNull();
-		expect(screen.getByTestId("app-status-corner", { includeHiddenElements: true })).toHaveProp("pointerEvents", "none");
+		const header = within(screen.getByTestId("app-header"));
+		expect(header.getByLabelText("Online")).toBeOnTheScreen();
+		expect(header.getByText("14m 32s")).toBeOnTheScreen();
+		expect(header.getByRole("button", { name: "Back" })).toBeOnTheScreen();
 	});
 });

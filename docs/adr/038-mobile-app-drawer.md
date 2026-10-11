@@ -13,7 +13,9 @@ order: 38
 ## Status
 
 Accepted (2026-10-09). Implemented (2026-10-09). Amended (2026-10-10): the scrim blurs the app — see
-"Blurred scrim" below.
+"Blurred scrim" below. **Partly superseded (2026-10-12) by [ADR 046](./046-mobile-app-shell-and-page-header.md):**
+the menu button now leads the app shell's page header (with back deeper in a stack); the "no top
+bar / quiet corner button" decision below is history.
 
 ## Context
 

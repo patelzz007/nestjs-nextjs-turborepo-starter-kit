@@ -56,7 +56,7 @@ export default function SettingsScreen(): React.JSX.Element {
 	}
 
 	return (
-		<Screen title="Settings">
+		<Screen>
 			<Card>
 				<View>
 					<ListRow label="Appearance" value={THEME_LABELS[theme]} onPress={openAppearance} />

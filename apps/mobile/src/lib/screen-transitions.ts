@@ -14,6 +14,7 @@ import type { BottomTabNavigationOptions } from "expo-router/tabs";
 import { Easing } from "react-native";
 import type { StackAnimationTypes } from "react-native-screens";
 
+import { PAGE_CHANGE_MS } from "./motion";
 import { isReduceMotionOn } from "./reduce-motion-setting";
 
 /** Opening a screen within a stack (Settings → Security, Sign in → Sign up): the iOS push, the screen below drifting behind. */
@@ -26,10 +27,10 @@ const { "ease-emphasized-enter": EMPHASIZED_ENTER } = MOTION;
 
 /** Decelerating: quick to respond, long gentle settle — the token's `ease-emphasized-enter`. */
 export const EMPHASIZED_EASING = Easing.bezier(EMPHASIZED_ENTER.x1, EMPHASIZED_ENTER.y1, EMPHASIZED_ENTER.x2, EMPHASIZED_ENTER.y2);
-/** Long enough to read as motion, short enough never to wait on it. */
-const TAB_TRANSITION_MS = 260;
-/** How far a tab drifts while it fades — a hint of direction, not a slide. */
-const TAB_DRIFT = 16;
+/** How far a tab drifts while it fades — a hint of direction, not a slide. The header's title drifts as far. */
+export const TAB_DRIFT = 16;
+/** How far the header's title travels when a screen is pushed or popped — a little further than a tab, as the push moves the whole page. */
+export const PUSH_TITLE_DRIFT = 24;
 /** A tab's position relative to the selected one: before it, it, after it. */
 const BEFORE = -1;
 const SELECTED = 0;
@@ -40,7 +41,7 @@ const VISIBLE = 1;
 /** Switching tabs: a quick cross-fade with a short drift toward the side the new tab sits on. */
 export const TAB_TRANSITION_SPEC: NonNullable<BottomTabNavigationOptions["transitionSpec"]> = {
 	animation: "timing",
-	config: { duration: TAB_TRANSITION_MS, easing: EMPHASIZED_EASING },
+	config: { duration: PAGE_CHANGE_MS, easing: EMPHASIZED_EASING },
 };
 
 export const tabSceneStyle: NonNullable<BottomTabNavigationOptions["sceneStyleInterpolator"]> = ({ current }) => {

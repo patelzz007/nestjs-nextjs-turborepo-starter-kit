@@ -1277,11 +1277,10 @@ The mobile counterpart of the admin topbar's online / offline indicator and sess
 (`apps/admin/components/common/network-status-bar.tsx`, `session-status-badge.tsx`), shown in two
 places inside the `(app)` group:
 
-- **Top-right corner**, compact, opposite the drawer's menu button: the connection as an icon (green
-  wifi / red wifi-off) and the token countdown (`14m 32s`, `2h 05m` past an hour, fixed-width
-  digits). Rendered once by the `(app)` layout through `CornerOverlay` (the same fade and placement
-  as the menu button), shown on a tab's first screen and faded away deeper in a stack. Display only:
-  touches pass through. `Screen` keeps its title clear of both corners.
+- **Page header**, compact, on the right (since 2026-10-12, [ADR 046](../../adr/046-mobile-app-shell-and-page-header.md)):
+  the connection as an icon (green wifi / red wifi-off) and the token countdown (`14m 32s`, `2h 05m`
+  past an hour, fixed-width digits), on every signed-in screen — the tab's first screen and deeper
+  in a stack alike. Rendered once by the app shell. Display only: touches pass through.
 - **App drawer**, in full, under the account header: "Online" / "Offline" and
   "Token expires in 14m 32s".
 

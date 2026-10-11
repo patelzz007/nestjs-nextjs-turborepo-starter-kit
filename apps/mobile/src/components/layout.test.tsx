@@ -8,7 +8,7 @@ import { Card } from "./card";
 import { DetailList } from "./detail-list";
 import { ListRow } from "./list-row";
 import { PrivacyCover } from "./privacy-cover";
-import { ScreenCornerProvider } from "../lib/screen-corner";
+import { PageHeaderClearanceProvider } from "../lib/page-header-clearance";
 import { Screen } from "./screen";
 import { BodyText, ErrorText, Heading, Label, MutedText, Subheading } from "./text";
 
@@ -53,19 +53,21 @@ describe("Screen", () => {
 		expect(screen.getByTestId("tab-bar-clearance")).toHaveStyle({ height: 106 });
 	});
 
-	it("moves its title over when a layout's control takes the top-left corner", async () => {
+	it("under the app shell's header, leaves the title to the header and starts its content below it", async () => {
 		await render(
 			<SafeAreaProvider initialMetrics={METRICS}>
-				<ScreenCornerProvider value>
-					<Screen title="Home">
+				<PageHeaderClearanceProvider value={123}>
+					<Screen title="Home" description="Your account at a glance" testID="screen">
 						<BodyText>Content</BodyText>
 					</Screen>
-				</ScreenCornerProvider>
+				</PageHeaderClearanceProvider>
 			</SafeAreaProvider>,
 		);
 
-		expect(screen.getByRole("header", { name: "Home" })).toBeOnTheScreen();
-		expect(screen.queryByRole("button")).toBeNull();
+		expect(screen.queryByRole("header")).toBeNull();
+		expect(screen.getByText("Your account at a glance")).toBeOnTheScreen();
+		expect(screen.getByTestId("screen-content")).toHaveProp("contentContainerStyle", { paddingTop: 123 });
+		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: 123, bottom: 0 });
 	});
 
 	it("renders without a title", async () => {

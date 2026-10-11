@@ -61,6 +61,7 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [043](./043-mobile-launch-screen-and-app-icon.md) | Mobile launch screen and app icon, generated from the token source | Accepted — implemented (2026-10-09) |
 | [044](./044-mobile-motion-and-navigation-theme.md) | Mobile motion, token-coloured navigation theme, layout-level menu button, launch animation | Accepted — implemented (2026-10-10) |
 | [045](./045-github-contributions-integration.md) | GitHub contributions: server token, repository allowlist, in-memory stale-on-failure cache | Accepted — implemented (2026-10-10) |
+| [046](./046-mobile-app-shell-and-page-header.md) | Mobile app shell and a page header that is not a bar (menu or back, moving titles, status) | Accepted — implemented (2026-10-12) |
 | [RabbitMQ](./rabbitmq-placeholder.md) | RabbitMQ as infrastructure placeholder only | Accepted |
 
 ## Pending decisions

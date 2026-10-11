@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react-native";
 import WifiIcon from "lucide-react-native/icons/wifi";
 import * as React from "react";
 
-import { CornerOverlay } from "./corner-overlay";
 import { StatusPill } from "./status-pill";
 
 /** The utility classes on an element, one by one. */
@@ -45,41 +44,5 @@ describe("StatusPill", () => {
 
 		expect(screen.getByLabelText("Session status: checking")).toBeOnTheScreen();
 		expect(screen.getByTestId("pill")).toHaveProp("accessibilityRole", "text");
-	});
-});
-
-describe("CornerOverlay", () => {
-	it("sits in the chosen top corner, below the safe area", async () => {
-		const view = await render(
-			<CornerOverlay side="right" visible topInset={47} testID="corner">
-				<StatusPill icon={WifiIcon} label={null} accessibilityLabel="Online" />
-			</CornerOverlay>,
-		);
-		expect(screen.getByTestId("corner")).toHaveStyle({ top: 71, right: 20 });
-
-		await view.rerender(
-			<CornerOverlay side="left" visible topInset={47} testID="corner">
-				<StatusPill icon={WifiIcon} label={null} accessibilityLabel="Online" />
-			</CornerOverlay>,
-		);
-		expect(screen.getByTestId("corner")).toHaveStyle({ top: 71, left: 20 });
-	});
-
-	it("passes touches through to its content while visible, and hides it from screen readers while not", async () => {
-		const view = await render(
-			<CornerOverlay side="right" visible topInset={0} testID="corner">
-				<StatusPill icon={WifiIcon} label={null} accessibilityLabel="Online" />
-			</CornerOverlay>,
-		);
-		expect(screen.getByTestId("corner")).toHaveProp("pointerEvents", "box-none");
-		expect(screen.getByLabelText("Online")).toBeOnTheScreen();
-
-		await view.rerender(
-			<CornerOverlay side="right" visible={false} topInset={0} testID="corner">
-				<StatusPill icon={WifiIcon} label={null} accessibilityLabel="Online" />
-			</CornerOverlay>,
-		);
-		expect(screen.getByTestId("corner", { includeHiddenElements: true })).toHaveProp("pointerEvents", "none");
-		expect(screen.queryByLabelText("Online")).toBeNull();
 	});
 });

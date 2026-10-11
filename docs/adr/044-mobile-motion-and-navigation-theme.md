@@ -12,7 +12,9 @@ order: 44
 
 ## Status
 
-Accepted (2026-10-10). Implemented (2026-10-10).
+Accepted (2026-10-10). Implemented (2026-10-10). The menu button and status corner described below
+were replaced by the app shell's page header on 2026-10-12 ([ADR 046](./046-mobile-app-shell-and-page-header.md));
+the transitions still stand, and the header's titles reuse the tab transition's timing.
 
 ## Context
 

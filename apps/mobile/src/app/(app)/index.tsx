@@ -33,7 +33,7 @@ export default function HomeScreen(): React.JSX.Element {
 	const notice = remaining.data === undefined ? null : backupCodesNotice(remaining.data.data.remaining);
 
 	return (
-		<Screen title="Home" refreshing={me.isRefetching} onRefresh={refetch}>
+		<Screen refreshing={me.isRefetching} onRefresh={refetch}>
 			{me.isPending ? <AccountCardSkeleton /> : null}
 			{me.isError ? <ErrorState message={errorMessageOf(me.error)} retryLabel="Try again" onRetry={refetch} /> : null}
 			{user === undefined ? null : (

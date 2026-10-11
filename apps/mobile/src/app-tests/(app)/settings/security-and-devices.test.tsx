@@ -1,5 +1,5 @@
-import { fireEvent, screen, waitFor } from "expo-router/testing-library";
-import * as React from "react";
+import { router } from "expo-router";
+import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 
 import { dynamic, fail, ok, stubApi } from "../../../../test/api-stub";
 import { createTestRuntime, markerScreen, type RenderedApp, renderInApp } from "../../../../test/app-harness";
@@ -9,6 +9,10 @@ import { memorySecureStore } from "../../../../test/secure-store-memory";
 import DevicesScreen from "../../../app/(app)/settings/devices";
 import SecurityScreen from "../../../app/(app)/settings/security";
 import TwoFactorSetupScreen from "../../../app/(app)/settings/two-factor";
+import { ROUTES } from "../../../runtime/routes";
+import AppTabsLayout from "../../../app/(app)/_layout";
+// The whole module: the router reads `unstable_settings` (Settings first in its stack) from it, as in the app.
+import * as SettingsLayoutModule from "../../../app/(app)/settings/_layout";
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
 
@@ -17,7 +21,7 @@ interface View {
 	readonly app: RenderedApp;
 }
 
-async function renderSignedIn(screens: Readonly<Record<string, () => React.JSX.Element>>, url: string): Promise<View> {
+async function renderSignedIn(screens: Parameters<typeof renderInApp>[1], url: string): Promise<View> {
 	const runtime = createTestRuntime({}, { status: "signedIn", session: { scope: "full" } });
 	await runtime.tokenProvider.saveTokens({ accessToken: testAccessToken({}, "first"), refreshToken: "refresh-1" });
 	const app = await renderInApp(runtime, screens, url);
@@ -225,7 +229,17 @@ describe("Signed-in devices (§10.11)", () => {
 });
 
 describe("Turn on 2FA / new backup codes from Security", () => {
-	const TWO_FACTOR_SCREENS = { "settings/two-factor": TwoFactorSetupScreen, "settings/security": markerScreen("security screen") };
+	/** Inside the real app shell: its header shows the screen's title (by mode). */
+	const TWO_FACTOR_SCREENS = {
+		"(app)/_layout": AppTabsLayout,
+		"(app)/index": markerScreen("home screen"),
+		"(app)/search": markerScreen("search screen"),
+		"(app)/profile": markerScreen("profile screen"),
+		"(app)/settings/_layout": SettingsLayoutModule,
+		"(app)/settings/index": markerScreen("settings screen"),
+		"(app)/settings/two-factor": TwoFactorSetupScreen,
+		"(app)/settings/security": markerScreen("security screen"),
+	};
 
 	it("turns 2FA on and refreshes at once, so the token-version bump never signs this device out", async () => {
 		const api = stubApi({
@@ -233,9 +247,14 @@ describe("Turn on 2FA / new backup codes from Security", () => {
 			"POST /auth/2fa/enable": ok({ message: "enabled" }, 201),
 			"POST /auth/refresh": refreshAnswer("second"),
 		});
-		const { runtime } = await renderSignedIn(TWO_FACTOR_SCREENS, "/settings/two-factor?mode=setup");
+		// Opened from Security, as in the app: "Done" goes back there.
+		const { runtime } = await renderSignedIn(TWO_FACTOR_SCREENS, "/settings/security");
+		await act(async (): Promise<void> => {
+			router.push({ pathname: ROUTES.twoFactorSetup, params: { mode: "setup" } });
+			await Promise.resolve();
+		});
 
-		expect(screen.getByRole("header", { name: "Turn on two-factor authentication" })).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "Turn on two-factor authentication" })).toBeOnTheScreen();
 		await fireEvent.press(screen.getByRole("button", { name: "Set up authenticator app" }));
 		await fireEvent.changeText(await screen.findByLabelText("Authentication code"), "123456");
 		await fireEvent.press(screen.getByRole("button", { name: "Turn on two-factor authentication" }));
@@ -258,7 +277,7 @@ describe("Turn on 2FA / new backup codes from Security", () => {
 		});
 		await renderSignedIn(TWO_FACTOR_SCREENS, "/settings/two-factor?mode=rotate");
 
-		expect(screen.getByRole("header", { name: "New backup codes" })).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "New backup codes" })).toBeOnTheScreen();
 		await fireEvent.press(screen.getByRole("button", { name: "Generate new codes" }));
 		expect(await screen.findByText("Password is required")).toBeOnTheScreen();
 
@@ -291,7 +310,7 @@ describe("Turn on 2FA / new backup codes from Security", () => {
 	it("falls back to setup for an unknown mode", async () => {
 		stubApi({});
 		await renderSignedIn(TWO_FACTOR_SCREENS, "/settings/two-factor?mode=everything");
-		expect(screen.getByRole("header", { name: "Turn on two-factor authentication" })).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "Turn on two-factor authentication" })).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: "Set up authenticator app" })).toBeOnTheScreen();
 	});
 });

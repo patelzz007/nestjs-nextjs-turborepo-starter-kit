@@ -14,7 +14,7 @@ export default function AppearanceScreen(): React.JSX.Element {
 	const theme = useThemePreference();
 	const { themeChanged } = usePreferencesCommands();
 	return (
-		<Screen title="Appearance" description="Choose how the app looks on this device.">
+		<Screen description="Choose how the app looks on this device.">
 			<Card>
 				<RadioGroup label="Theme" options={THEME_OPTIONS} value={theme} onChange={themeChanged} />
 			</Card>

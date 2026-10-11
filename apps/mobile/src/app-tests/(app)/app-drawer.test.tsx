@@ -162,14 +162,30 @@ describe("app drawer (ADR 038)", () => {
 		expect(screen.getByRole("tab", { name: "Search" })).toBeSelected();
 	});
 
-	it("hides the menu button deeper in a stack, where the corner belongs to the screen", async () => {
+	it("leads with back instead of the menu deeper in a stack, and back returns to the tab's first screen", async () => {
 		await renderSignedIn("/");
 		const drawer = await openDrawer();
 		await fireEvent.press(drawer.getByRole("button", { name: "Security" }));
 		expect(await screen.findByText("security screen")).toBeOnTheScreen();
 
-		expect(screen.queryByRole("button", { name: "Open menu" })).toBeNull();
-		expect(screen.getByTestId("app-menu-button", { includeHiddenElements: true })).toBeOnTheScreen();
+		const header = within(screen.getByTestId("app-header"));
+		expect(header.getByRole("header", { name: "Security" })).toBeOnTheScreen();
+		expect(header.queryByRole("button", { name: "Open menu" })).toBeNull();
+		await fireEvent.press(header.getByRole("button", { name: "Back" }));
+
+		expect(await screen.findByText("settings screen")).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "Settings" })).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("button", { name: "Open menu" })).toBeOnTheScreen();
+	});
+
+	it("titles the header with the page on show as tabs switch", async () => {
+		await renderSignedIn("/");
+		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "Home" })).toBeOnTheScreen();
+
+		await fireEvent.press(screen.getByRole("tab", { name: "Profile" }));
+
+		expect(await screen.findByText("profile screen")).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("header", { name: "Profile" })).toBeOnTheScreen();
 	});
 
 	it("puts the menu button on every tab's first screen", async () => {

@@ -35,9 +35,10 @@ src/
   features/          session (root guard state machine), preferences (theme, app lock settings), app-lock,
                      auth (login steps, sign out, refresh), two-factor (enrollment flow), devices, profile,
                      github (the Profile's GitHub contributions section),
-                     navigation (the tab registry, the tab bar adapter, the app drawer, the status corner),
+                     navigation (the tab registry, the screens' header titles, the tab bar adapter, the app drawer),
+                     app-shell (every signed-in screen's frame: status, drawer and the page header — ADR 046),
                      app-drawer (the drawer's open state), app-status (online / offline and the access
-                     token countdown — the admin topbar's indicators, in the corner and the drawer)
+                     token countdown — the admin topbar's indicators, in the page header and the drawer)
   lib/               env, api client, Secure Store registry + token provider, app version, device headers,
                      query client, error messages, the feature-store toolkit (lib/state), motion springs,
                      haptics, keyboard visibility, tab-bar clearance
@@ -130,9 +131,14 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
   live in `src/features/navigation/app-tabs.ts` — add a tab there and as a route file in `src/app/(app)`.
   The floating bar (`src/components/floating-tab-bar.tsx`) covers the bottom of the screen; `Screen`
   pads its content by `useTabBarClearance()`, so a screen that does not use `Screen` must do the same.
+- App shell ([ADR 046](../../docs/adr/046-mobile-app-shell-and-page-header.md)): every signed-in screen sits in
+  `src/features/app-shell/app-shell.tsx` — status, drawer and a page header rendered once (never
+  re-mounted). The header leads with the menu on a tab's first screen and back deeper in, shows the
+  title from `src/features/navigation/app-screens.ts` (add a new screen's title there; `Screen` inside
+  the shell takes no `title`), and the status pills. It is not a bar: no band, divider or shadow, and
+  content scrolls up into a fade under it.
 - Drawer ([ADR 038](../../docs/adr/038-mobile-app-drawer.md), [ADR 044](../../docs/adr/044-mobile-motion-and-navigation-theme.md)):
-  there is no top bar. The `(app)` layout renders the menu button once, above every tab (it never
-  re-mounts); screens learn the corner is taken from `ScreenCornerProvider`. Never re-render the tab
+  opened from the header's menu button. Never re-render the tab
   navigator from state that changes as you navigate — it cancels the tab reset. An edge swipe opens the
   drawer on a tab's first screen too. Its menu is `src/features/navigation/drawer-destinations.ts`
   (the tabs, then sections with a divider and a tone dot before each title, as on the web sidebars); its open state is the `app-drawer` feature store.

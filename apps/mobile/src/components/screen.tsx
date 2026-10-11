@@ -1,16 +1,23 @@
 // The frame of every screen: safe areas, the theme background, scrolling,
 // keyboard avoidance and an optional title.
+//
+// Inside the app shell (ADR 046) the page header is laid over the top of the
+// screen: the content starts below it, and the header — not the screen — shows
+// the title (it comes from the route, features/navigation/app-screens.ts), so
+// a screen there passes no `title`. Outside it (the lock screen, a forced
+// update) the screen draws its own title at the top of the content.
 
 import * as React from "react";
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
-import { useScreenCornerTaken } from "../lib/screen-corner";
+import { usePageHeaderClearance } from "../lib/page-header-clearance";
 import { useTabBarClearance } from "../lib/use-tab-bar-clearance";
 import { Heading, MutedText } from "./text";
 
 export interface ScreenProps {
+	/** Drawn at the top of the content outside the app shell; inside it the header shows the route's title instead. */
 	readonly title?: string;
 	readonly description?: string;
 	readonly children: React.ReactNode;
@@ -35,27 +42,36 @@ export function Screen({ title, description, children, refreshing = false, onRef
 	// Inside the tabs, the floating tab bar covers the bottom of the screen: the content ends above it.
 	const tabBarClearance = useTabBarClearance();
 	const clearanceStyle = React.useMemo((): { readonly height: number } => ({ height: tabBarClearance }), [tabBarClearance]);
-	const scrollIndicatorInsets = React.useMemo((): { readonly bottom: number } => ({ bottom: tabBarClearance }), [tabBarClearance]);
-	// A layout's controls sit in the top corners (the menu button left, the status pills right): the title stays between them.
-	const cornerTaken = useScreenCornerTaken();
+	// Inside the app shell the header covers the top (status bar included): the content starts below it.
+	const headerClearance = usePageHeaderClearance();
+	const hasHeader = headerClearance !== null;
+	const headerClearanceStyle = React.useMemo(
+		(): { readonly paddingTop: number } | undefined => (headerClearance === null ? undefined : { paddingTop: headerClearance }),
+		[headerClearance],
+	);
+	const scrollIndicatorInsets = React.useMemo(
+		(): { readonly top: number; readonly bottom: number } => ({ top: headerClearance ?? 0, bottom: tabBarClearance }),
+		[headerClearance, tabBarClearance],
+	);
+	const showTitle = title !== undefined && !hasHeader;
 
 	return (
-		<StyledSafeAreaView edges={["top", "left", "right"]} className="flex-1 bg-background" testID={testID}>
+		<StyledSafeAreaView edges={hasHeader ? ["left", "right"] : ["top", "left", "right"]} className="flex-1 bg-background" testID={testID}>
 			<View className="flex-1">
 				<KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} className="flex-1">
 					<ScrollView
+						testID={testID === undefined ? undefined : `${testID}-content`}
 						keyboardShouldPersistTaps="handled"
 						scrollIndicatorInsets={scrollIndicatorInsets}
 						contentContainerClassName="grow gap-5 px-5 py-6"
+						contentContainerStyle={headerClearanceStyle}
 						refreshControl={onRefresh === undefined ? undefined : <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-						{title === undefined ? null : (
+						{showTitle || description !== undefined ? (
 							<View className="gap-1">
-								<View className={cornerTaken ? "min-h-11 justify-center pr-36 pl-14" : ""}>
-									<Heading>{title}</Heading>
-								</View>
+								{showTitle ? <Heading>{title}</Heading> : null}
 								{description === undefined ? null : <MutedText>{description}</MutedText>}
 							</View>
-						)}
+						) : null}
 						{children}
 						{tabBarClearance > 0 ? <View style={clearanceStyle} testID="tab-bar-clearance" /> : null}
 					</ScrollView>

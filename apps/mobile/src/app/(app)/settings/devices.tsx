@@ -66,7 +66,7 @@ export default function DevicesScreen(): React.JSX.Element {
 
 	const list = sessions.data?.data;
 	return (
-		<Screen title={DEVICES_COPY.title} description={DEVICES_COPY.description} refreshing={sessions.isRefetching} onRefresh={refetch}>
+		<Screen description={DEVICES_COPY.description} refreshing={sessions.isRefetching} onRefresh={refetch}>
 			{revokedLabel === null ? null : <Banner tone="success" message={DEVICES_COPY.revoked(revokedLabel)} />}
 			{sessions.isPending ? <LoadingState label={DEVICES_COPY.loading} /> : null}
 			{sessions.isError ? <ErrorState message={DEVICES_COPY.loadError} retryLabel={DEVICES_COPY.retry} onRetry={refetch} /> : null}

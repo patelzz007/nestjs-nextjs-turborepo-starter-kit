@@ -40,7 +40,7 @@ export default function ProfileScreen(): React.JSX.Element {
 
 	const current = profile.data?.data;
 	return (
-		<Screen title="Profile" refreshing={profile.isRefetching} onRefresh={refetch}>
+		<Screen refreshing={profile.isRefetching} onRefresh={refetch}>
 			{profile.isPending ? <ProfileSkeleton /> : null}
 			{profile.isError ? <ErrorState message={errorMessageOf(profile.error)} retryLabel="Try again" onRetry={refetch} /> : null}
 			{/* Keyed by version: the form restarts from the stored values after every save or reload. */}

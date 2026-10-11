@@ -51,16 +51,23 @@ export const PULSE: PulseMotion = {
 	easing: Easing.bezierFn(0.4, 0, 0.6, 1),
 };
 
-/** A layout control appearing or leaving with the screen under it (the corner menu button): a short, plain fade. */
-export const CORNER_FADE: WithTimingConfig = {
-	duration: 180,
-	reduceMotion: ReduceMotion.System,
-};
+/** One header control swapping for another (the menu button for a back button): a short, plain fade, in ms. */
+export const CONTROL_SWAP_MS = 180;
 
 const { "ease-emphasized-enter": EMPHASIZED_ENTER } = MOTION;
 
 /** The tokens' `ease-emphasized-enter` (decelerating: quick start, long settle), as a Reanimated easing. */
 export const EMPHASIZED_ENTER_EASING: EasingFunction = Easing.bezierFn(EMPHASIZED_ENTER.x1, EMPHASIZED_ENTER.y1, EMPHASIZED_ENTER.x2, EMPHASIZED_ENTER.y2);
+
+/** How long a page change takes — the tab cross-fade and the header title that moves with it. Long enough to read as motion, short enough never to wait on it. */
+export const PAGE_CHANGE_MS = 260;
+
+/** The header title moving with a page change: the tab transition's duration and curve. */
+export const PAGE_TITLE_TIMING: WithTimingConfig = {
+	duration: PAGE_CHANGE_MS,
+	easing: EMPHASIZED_ENTER_EASING,
+	reduceMotion: ReduceMotion.System,
+};
 
 /** The launch screen's opening moment (LaunchScreen): the mark settles and lifts, the words rise under it. */
 export const LAUNCH_MOTION = {

@@ -58,7 +58,7 @@ export default function AppLockScreen(): React.JSX.Element {
 	}, [enabled, preferences]);
 
 	return (
-		<Screen title="App lock" description="Ask for Face ID, Touch ID, your fingerprint or the device passcode before the app opens.">
+		<Screen description="Ask for Face ID, Touch ID, your fingerprint or the device passcode before the app opens.">
 			<Card>
 				<BodyText>{enabled ? "The app lock is on." : "The app lock is off."}</BodyText>
 				{failure === null ? null : <Banner tone="error" message={failure} />}

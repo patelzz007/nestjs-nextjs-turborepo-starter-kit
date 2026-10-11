@@ -54,7 +54,7 @@ export default function SecurityScreen(): React.JSX.Element {
 	const lowCodesNotice = remainingCount === null ? null : backupCodesNotice(remainingCount);
 
 	return (
-		<Screen title="Security" refreshing={me.isRefetching} onRefresh={refetch}>
+		<Screen refreshing={me.isRefetching} onRefresh={refetch}>
 			<Card title="Change password" description="Changing your password signs out every device, including this one.">
 				<ChangePasswordForm />
 			</Card>

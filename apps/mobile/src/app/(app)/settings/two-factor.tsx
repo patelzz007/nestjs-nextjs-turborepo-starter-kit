@@ -40,7 +40,7 @@ export default function TwoFactorSetupScreen(): React.JSX.Element {
 	}, [queryClient, router]);
 
 	return (
-		<Screen title={mode === "setup" ? "Turn on two-factor authentication" : "New backup codes"}>
+		<Screen>
 			<TwoFactorEnrollment mode={mode} afterTokenVersionBump={refreshSession} onComplete={finish} completeLabel="Done" />
 		</Screen>
 	);
