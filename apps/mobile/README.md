@@ -137,6 +137,10 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
   title from `src/features/navigation/app-screens.ts` (add a new screen's title there; `Screen` inside
   the shell takes no `title`), and the status pills. It is not a bar: no band, divider or shadow, and
   content scrolls up into a fade under it.
+- Feedback ([ADR 047](../../docs/adr/047-mobile-action-feedback-toasts.md)): every action reports its outcome
+  with `useToast().success(…)` / `.error(…)` (`src/features/toast`), shown under the header by the
+  app shell. Keep inline only what belongs to a step in front of the person (a dialog's failure,
+  field validation).
 - Drawer ([ADR 038](../../docs/adr/038-mobile-app-drawer.md), [ADR 044](../../docs/adr/044-mobile-motion-and-navigation-theme.md)):
   opened from the header's menu button. Never re-render the tab
   navigator from state that changes as you navigate — it cancels the tab reset. An edge swipe opens the

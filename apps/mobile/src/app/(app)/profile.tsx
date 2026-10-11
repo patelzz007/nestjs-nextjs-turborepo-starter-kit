@@ -14,7 +14,6 @@ import * as React from "react";
 import { View } from "react-native";
 
 import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DetailList } from "../../components/detail-list";
@@ -25,9 +24,12 @@ import { TextField } from "../../components/text-field";
 import { GithubContributionsSection } from "../../features/github/github-contributions-section";
 import { refreshGithubContributions } from "../../features/github/refresh";
 import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError, STALE_PROFILE_MESSAGE } from "../../features/profile/own-profile-cache";
+import { useToast } from "../../features/toast/facade";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { visibleFieldError } from "../../lib/form";
+
+export const PROFILE_SAVED_MESSAGE = "Profile saved.";
 
 export default function ProfileScreen(): React.JSX.Element {
 	const api = useApi();
@@ -57,15 +59,16 @@ interface ProfileEditorProps {
 function ProfileEditor({ profile }: ProfileEditorProps): React.JSX.Element {
 	const api = useApi();
 	const queryClient = useQueryClient();
-	const [feedback, setFeedback] = React.useState<{ readonly tone: "error" | "success"; readonly text: string } | null>(null);
+	// The outcome is a toast, not local state: a save bumps the profile's version, which re-mounts this editor (its key).
+	const toast = useToast();
 	const update = api.auth.updateProfile.useMutation({
 		onSuccess: async (response): Promise<void> => {
 			await applyOwnProfileUpdated(queryClient, response);
-			setFeedback({ tone: "success", text: "Profile saved." });
+			toast.success(PROFILE_SAVED_MESSAGE);
 		},
 		onError: async (error: Error): Promise<void> => {
 			await applyOwnProfileUpdateFailed(queryClient, error);
-			setFeedback({ tone: "error", text: isStaleProfileVersionError(error) ? STALE_PROFILE_MESSAGE : errorMessageOf(error) });
+			toast.error(isStaleProfileVersionError(error) ? STALE_PROFILE_MESSAGE : errorMessageOf(error));
 		},
 	});
 
@@ -73,7 +76,6 @@ function ProfileEditor({ profile }: ProfileEditorProps): React.JSX.Element {
 		defaultValues: { fullName: profile.fullName },
 		validators: { onChange: OwnProfileEditableFieldsSchema },
 		onSubmit: ({ value }): void => {
-			setFeedback(null);
 			update.mutate({ ...OwnProfileEditableFieldsSchema.parse(value), version: profile.version });
 		},
 	});
@@ -91,7 +93,6 @@ function ProfileEditor({ profile }: ProfileEditorProps): React.JSX.Element {
 					</View>
 				</View>
 			</Card>
-			{feedback === null ? null : <Banner tone={feedback.tone} message={feedback.text} />}
 			<form.Field name="fullName">
 				{(field): React.JSX.Element => (
 					<TextField

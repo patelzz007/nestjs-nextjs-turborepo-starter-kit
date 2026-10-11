@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "expo-router/testing-library";
+import { fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as React from "react";
 
@@ -134,6 +134,7 @@ describe("Appearance (§10.9)", () => {
 
 		expect(applyTheme).toHaveBeenLastCalledWith("dark");
 		expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
+		expect(within(screen.getByTestId("app-toast")).getByText("Theme set to Dark.")).toBeOnTheScreen();
 		expect(runtime.preferencesStore.getState().theme).toBe("dark");
 		await waitFor(() => {
 			expect(memorySecureStore.peek("prefs.theme")).toBe(JSON.stringify("dark"));
@@ -152,12 +153,14 @@ describe("App lock settings (§11)", () => {
 		await fireEvent.press(screen.getByRole("button", { name: "Turn on app lock" }));
 
 		expect(await screen.findByText("The app lock is on.")).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-toast")).getByText("App lock turned on.")).toBeOnTheScreen();
 		expect(authenticate).toHaveBeenCalledTimes(1);
 		expect(memorySecureStore.peek("prefs.appLock.enrolledBiometrics")).toBe(JSON.stringify("3:2"));
 		expect(screen.getByRole("radio", { name: "After 1 minute" })).toBeChecked();
 
 		await fireEvent.press(screen.getByRole("radio", { name: "Immediately" }));
 		expect(runtime.preferencesStore.getState().appLock).toEqual({ enabled: true, timeoutMs: 0 });
+		expect(within(screen.getByTestId("app-toast")).getByText("The app will lock immediately.")).toBeOnTheScreen();
 	});
 
 	it("turns off after one successful check", async () => {
@@ -171,6 +174,7 @@ describe("App lock settings (§11)", () => {
 
 		expect(await screen.findByText("The app lock is off.")).toBeOnTheScreen();
 		expect(runtime.preferencesStore.getState().appLock.enabled).toBe(false);
+		expect(within(screen.getByTestId("app-toast")).getByText("App lock turned off.")).toBeOnTheScreen();
 	});
 
 	it("changes nothing when the check fails, and says why", async () => {
@@ -180,7 +184,8 @@ describe("App lock settings (§11)", () => {
 
 		await fireEvent.press(screen.getByRole("button", { name: "Turn on app lock" }));
 
-		expect(await screen.findByText(APP_LOCK_FAILED_MESSAGE)).toBeOnTheScreen();
+		expect(within(await screen.findByTestId("app-toast")).getByText(APP_LOCK_FAILED_MESSAGE)).toBeOnTheScreen();
+		expect(screen.getByTestId("app-toast")).toHaveProp("accessibilityRole", "alert");
 		expect(screen.getByText("The app lock is off.")).toBeOnTheScreen();
 	});
 
@@ -195,6 +200,7 @@ describe("App lock settings (§11)", () => {
 			expect(screen.getByRole("button", { name: "Turn on app lock" })).not.toBeBusy();
 		});
 		expect(screen.queryByRole("alert")).toBeNull();
+		expect(screen.queryByTestId("app-toast")).toBeNull();
 	});
 
 	it("explains a device without a passcode", async () => {

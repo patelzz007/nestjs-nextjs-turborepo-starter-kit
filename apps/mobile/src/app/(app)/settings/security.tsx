@@ -22,6 +22,7 @@ import { TextField } from "../../../components/text-field";
 import { SignOutEverywhere } from "../../../features/devices/sign-out-everywhere";
 import { useSessionCommands } from "../../../features/session/facade";
 import { backupCodesNotice } from "../../../features/two-factor/backup-codes-status";
+import { useToast } from "../../../features/toast/facade";
 import { useApi } from "../../../lib/api-context";
 import { errorMessageOf } from "../../../lib/error-messages";
 import { visibleFieldError } from "../../../lib/form";
@@ -89,19 +90,19 @@ function ChangePasswordForm(): React.JSX.Element {
 	const { tokenProvider } = useReadyRuntime();
 	const session = useSessionCommands();
 	const changePassword = api.auth.changePassword.useMutation();
-	const [requestError, setRequestError] = React.useState<string | null>(null);
+	const toast = useToast();
 
 	const form = useForm({
 		defaultValues: EMPTY_PASSWORD_CHANGE,
 		validators: { onChange: ChangePasswordSchema },
 		onSubmit: async ({ value }): Promise<void> => {
-			setRequestError(null);
 			try {
 				await changePassword.mutateAsync(ChangePasswordSchema.parse(value));
 			} catch (error) {
-				setRequestError(errorMessageOf(error instanceof Error ? error : null));
+				toast.error(errorMessageOf(error instanceof Error ? error : null));
 				return;
 			}
+			// Success signs every device out, this one included: the sign-in screen says why (SIGNED_OUT_NOTICES.passwordChanged).
 			await tokenProvider.clearTokens();
 			session.signedOut("passwordChanged");
 		},
@@ -112,7 +113,6 @@ function ChangePasswordForm(): React.JSX.Element {
 
 	return (
 		<>
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
 			<form.Field name="currentPassword">
 				{(field): React.JSX.Element => (
 					<TextField

@@ -65,7 +65,16 @@ export function Screen({ title, description, children, refreshing = false, onRef
 						scrollIndicatorInsets={scrollIndicatorInsets}
 						contentContainerClassName="grow gap-5 px-5 py-6"
 						contentContainerStyle={headerClearanceStyle}
-						refreshControl={onRefresh === undefined ? undefined : <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+						refreshControl={
+							onRefresh === undefined ? undefined : (
+								<RefreshControl
+									refreshing={refreshing}
+									onRefresh={onRefresh}
+									// The spinner sits at the scroll view's top edge, not after the content's padding: under the shell's header it would be hidden. It drops to where the content starts.
+									{...(headerClearance === null ? {} : { progressViewOffset: headerClearance })}
+								/>
+							)
+						}>
 						{showTitle || description !== undefined ? (
 							<View className="gap-1">
 								{showTitle ? <Heading>{title}</Heading> : null}

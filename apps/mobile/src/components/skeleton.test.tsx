@@ -54,8 +54,13 @@ describe("SkeletonGroup", () => {
 			</SkeletonGroup>,
 		);
 
+		// First let the Reduce Motion reading (a promise) land, then move the clock in a separate,
+		// synchronous act: advancing fake timers inside an async act also fires React's own
+		// "was this act awaited?" check early, which warned although it was awaited.
 		await act(async (): Promise<void> => {
 			await Promise.resolve();
+		});
+		await act((): void => {
 			jest.advanceTimersByTime(PULSE.cycleMs / 2);
 		});
 

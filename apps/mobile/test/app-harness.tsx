@@ -7,7 +7,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { renderRouter } from "expo-router/testing-library";
 import { Slot, Stack } from "expo-router";
 import * as React from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
 import { AppDrawerStoreProvider } from "../src/features/app-drawer/facade";
 import { createAppDrawerStore } from "../src/features/app-drawer/store";
@@ -15,6 +15,9 @@ import { PreferencesStoreProvider } from "../src/features/preferences/facade";
 import type { PreferencesState } from "../src/features/preferences/state";
 import { sessionActions, type RestoredSession } from "../src/features/session/actions";
 import { SessionStoreProvider } from "../src/features/session/facade";
+import { ToastStoreProvider } from "../src/features/toast/facade";
+import { createToastStore } from "../src/features/toast/store";
+import { ToastHost } from "../src/features/toast/toast-host";
 import { ApiClientProvider } from "../src/lib/api-context";
 import type { RawMobileEnv } from "../src/lib/env";
 import type { ThemePreference } from "../src/lib/secure-store";
@@ -73,14 +76,23 @@ export interface AppProvidersProps {
 
 /** The providers of src/runtime/app-shell.tsx, without the root guard. */
 export function AppProviders({ runtime, children }: AppProvidersProps): React.JSX.Element {
+	// The app shell provides these in the app (ADR 046, ADR 047); screens rendered on their own get them here, once per render.
+	const [drawerStore] = React.useState(createAppDrawerStore);
+	const [toastStore] = React.useState(createToastStore);
 	return (
 		<ReadyRuntimeProvider runtime={runtime}>
 			<ApiClientProvider client={runtime.apiClient}>
 				<QueryClientProvider client={runtime.queryClient}>
 					<SessionStoreProvider store={runtime.sessionStore}>
 						<PreferencesStoreProvider store={runtime.preferencesStore}>
-							{/* The (app) layout provides the drawer's store in the app; screens rendered on their own get one here. */}
-							<AppDrawerStoreProvider store={createAppDrawerStore()}>{children}</AppDrawerStoreProvider>
+							<AppDrawerStoreProvider store={drawerStore}>
+								<ToastStoreProvider store={toastStore}>
+									<View className="flex-1">
+										{children}
+										<ToastHost top={0} />
+									</View>
+								</ToastStoreProvider>
+							</AppDrawerStoreProvider>
 						</PreferencesStoreProvider>
 					</SessionStoreProvider>
 				</QueryClientProvider>

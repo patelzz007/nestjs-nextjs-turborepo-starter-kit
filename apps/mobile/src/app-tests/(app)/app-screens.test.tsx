@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from "expo-router/testing-library";
+import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 import * as Haptics from "expo-haptics";
 import * as React from "react";
 import { DeviceEventEmitter, Linking, type KeyboardEvent } from "react-native";
@@ -212,7 +212,8 @@ describe("Profile (§10.8)", () => {
 		await fireEvent.changeText(await screen.findByLabelText("Full name"), "  Alex Q. Morgan ");
 		await fireEvent.press(screen.getByRole("button", { name: "Save changes" }));
 
-		expect(await screen.findByText("Profile saved.")).toBeOnTheScreen();
+		// A toast: the save re-mounts the editor (keyed by version), so the outcome cannot live in it.
+		expect(within(await screen.findByTestId("app-toast")).getByText("Profile saved.")).toBeOnTheScreen();
 		expect(api.callsTo("PATCH /auth/profile").at(0)?.body).toBe(JSON.stringify({ fullName: "Alex Q. Morgan", version: 3 }));
 		expect(screen.getByLabelText("Full name")).toHaveDisplayValue("Alex Q. Morgan");
 	});
@@ -234,6 +235,9 @@ describe("Profile (§10.8)", () => {
 		await waitFor(() => {
 			expect(screen.getByLabelText("Full name")).toHaveDisplayValue("Changed Elsewhere");
 		});
+		expect(
+			within(screen.getByTestId("app-toast")).getByText("Your profile changed on another device. We loaded the latest version — please make your change again."),
+		).toBeOnTheScreen();
 	});
 
 	it("validates with the shared schema", async () => {

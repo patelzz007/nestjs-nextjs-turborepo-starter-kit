@@ -58,7 +58,9 @@ the page — designed so that it does not look like a top bar.
   follow Reduce Motion. The direction is a pure function (`header-transition.ts`).
 - **`Screen` learns the header's height** (status bar + 56 pt row + 20 pt fade) from
   `PageHeaderClearance`. It pads its content and scroll indicator by it and drops the top safe-area
-  edge.
+  edge. The pull-to-refresh spinner ignores content padding (it sits at the scroll view's top edge,
+  which is under the header), so `Screen` also passes the clearance as the `RefreshControl`'s
+  `progressViewOffset`, honored on iOS and Android in the new architecture.
 
 ## Alternatives
 

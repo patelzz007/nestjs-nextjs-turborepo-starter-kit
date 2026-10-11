@@ -54,7 +54,21 @@ export const PULSE: PulseMotion = {
 /** One header control swapping for another (the menu button for a back button): a short, plain fade, in ms. */
 export const CONTROL_SWAP_MS = 180;
 
-const { "ease-emphasized-enter": EMPHASIZED_ENTER } = MOTION;
+const { "ease-emphasized-enter": EMPHASIZED_ENTER, "ease-overlay-emphasized": OVERLAY_EMPHASIZED } = MOTION;
+
+/** The tokens' `ease-overlay-emphasized` (the web toast's curve: a fast start that glides to rest), as a Reanimated easing. */
+export const OVERLAY_EMPHASIZED_EASING: EasingFunction = Easing.bezierFn(OVERLAY_EMPHASIZED.x1, OVERLAY_EMPHASIZED.y1, OVERLAY_EMPHASIZED.x2, OVERLAY_EMPHASIZED.y2);
+
+/**
+ * A toast arriving and leaving (the web toast's 500 ms slide on the same curve).
+ * Leaving is quicker than arriving: the person already read it, or sent it away.
+ */
+export const TOAST_MOTION = {
+	enter: { duration: 500, easing: OVERLAY_EMPHASIZED_EASING, reduceMotion: ReduceMotion.System } satisfies WithTimingConfig,
+	exit: { duration: 300, easing: OVERLAY_EMPHASIZED_EASING, reduceMotion: ReduceMotion.System } satisfies WithTimingConfig,
+	/** A swipe that falls short springs back to place without overshooting. */
+	settle: { duration: 300, dampingRatio: 1, overshootClamping: true, reduceMotion: ReduceMotion.System } satisfies WithSpringConfig,
+};
 
 /** The tokens' `ease-emphasized-enter` (decelerating: quick start, long settle), as a Reanimated easing. */
 export const EMPHASIZED_ENTER_EASING: EasingFunction = Easing.bezierFn(EMPHASIZED_ENTER.x1, EMPHASIZED_ENTER.y1, EMPHASIZED_ENTER.x2, EMPHASIZED_ENTER.y2);

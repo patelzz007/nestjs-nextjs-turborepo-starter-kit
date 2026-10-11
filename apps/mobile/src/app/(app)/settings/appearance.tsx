@@ -8,15 +8,28 @@ import { Card } from "../../../components/card";
 import { RadioGroup } from "../../../components/radio-group";
 import { Screen } from "../../../components/screen";
 import { usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
-import { THEME_OPTIONS } from "../../../features/preferences/labels";
+import { PREFERENCE_MESSAGES, THEME_OPTIONS } from "../../../features/preferences/labels";
+import { useToast } from "../../../features/toast/facade";
+import type { ThemePreference } from "../../../lib/secure-store";
 
 export default function AppearanceScreen(): React.JSX.Element {
 	const theme = useThemePreference();
 	const { themeChanged } = usePreferencesCommands();
+	const toast = useToast();
+	const changeTheme = React.useCallback(
+		(next: ThemePreference): void => {
+			if (next === theme) {
+				return;
+			}
+			themeChanged(next);
+			toast.success(PREFERENCE_MESSAGES.themeChanged(next));
+		},
+		[theme, themeChanged, toast],
+	);
 	return (
 		<Screen description="Choose how the app looks on this device.">
 			<Card>
-				<RadioGroup label="Theme" options={THEME_OPTIONS} value={theme} onChange={themeChanged} />
+				<RadioGroup label="Theme" options={THEME_OPTIONS} value={theme} onChange={changeTheme} />
 			</Card>
 		</Screen>
 	);

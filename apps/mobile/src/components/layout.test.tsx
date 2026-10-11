@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { BottomTabBarHeightContext } from "expo-router/tabs";
 import * as React from "react";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
+import { z } from "zod";
 
 import { Avatar, initialsOf } from "./avatar";
 import { Card } from "./card";
@@ -11,6 +12,13 @@ import { PrivacyCover } from "./privacy-cover";
 import { PageHeaderClearanceProvider } from "../lib/page-header-clearance";
 import { Screen } from "./screen";
 import { BodyText, ErrorText, Heading, Label, MutedText, Subheading } from "./text";
+
+/** The pull-to-refresh control a scroll view was given (Jest's scroll view does not render it): only the offset is read. */
+const RefreshControlElementSchema = z.object({ props: z.object({ progressViewOffset: z.number().optional() }) });
+
+function refreshOffsetOf(testID: string): number | undefined {
+	return RefreshControlElementSchema.parse(screen.getByTestId(testID).props.refreshControl).props.progressViewOffset;
+}
 
 /** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
@@ -68,6 +76,32 @@ describe("Screen", () => {
 		expect(screen.getByText("Your account at a glance")).toBeOnTheScreen();
 		expect(screen.getByTestId("screen-content")).toHaveProp("contentContainerStyle", { paddingTop: 123 });
 		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: 123, bottom: 0 });
+	});
+
+	it("drops the pull-to-refresh spinner below the app shell's header, where the content starts", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<PageHeaderClearanceProvider value={123}>
+					<Screen onRefresh={jest.fn()} testID="screen">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</PageHeaderClearanceProvider>
+			</SafeAreaProvider>,
+		);
+
+		expect(refreshOffsetOf("screen-content")).toBe(123);
+	});
+
+	it("leaves the spinner at the top outside the shell", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<Screen onRefresh={jest.fn()} testID="screen">
+					<BodyText>Content</BodyText>
+				</Screen>
+			</SafeAreaProvider>,
+		);
+
+		expect(refreshOffsetOf("screen-content")).toBeUndefined();
 	});
 
 	it("renders without a title", async () => {
