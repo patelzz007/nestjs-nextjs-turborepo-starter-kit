@@ -19,7 +19,7 @@ bar / quiet corner button" decision below is history.
 
 ## Context
 
-The floating tab bar (ADR 036) covers the four main destinations. The account and preference
+The floating tab bar (ADR 036) covers the main destinations (four at first; five since ADR 048 added Analytics). The account and preference
 screens (Security, Signed-in devices, Appearance, App lock) were two taps deep under Settings, and
 the product wanted a drawer menu that slides in from the left. There must be no top bar. The app
 must keep running in Expo Go, and every colour must come from the tokens (ADR 030).
@@ -46,7 +46,7 @@ must keep running in Expo Go, and every colour must come from the tokens (ADR 03
   - A solid `primary` account header with the avatar (inverse tone), the name in Bricolage, the
     email and "Edit profile".
   - Below the header, a plain list on the panel's card surface, with no tiles or cards:
-    - The four tabs, with no dividers between them.
+    - The tabs (five since ADR 048), with no dividers between them.
     - An "Account" section (Security, Signed-in devices) and a "Preferences" section
       (Appearance, App lock, each showing its current value).
     - Each section opens with a full-width divider and a tone dot before its title (blue and
@@ -98,6 +98,14 @@ must keep running in Expo Go, and every colour must come from the tokens (ADR 03
   checked on a device.
 - It is mounted only from the moment the drawer opens (or an opening edge drag starts) until a
   close has settled, so a closed drawer keeps no blur view rendering behind the app.
+- **A settled-closed drawer is not displayed** (amended 2026-10-12). From the same moment, the
+  panel and the scrim carry `hidden`. Before this, "closed" was only the panel's animated
+  `translateX`. Reanimated keeps an animation's resting values on the UI thread and copies them
+  back into React later (`FORCE_REACT_RENDER_FOR_SETTLED_ANIMATIONS`, on by default in 4.x), so a
+  React re-render of the resting panel could re-apply an older resting value — the open one. A
+  theme change does exactly that: Uniwind re-renders the panel for its theme colours. The closed
+  drawer then showed fully open and ignored every touch, because its `pointerEvents` followed the
+  real, closed state. With "closed" held in React state, no re-render can bring the panel back.
 - Android blurs only with an explicit method: the app sits in a `BlurTargetView` the `BlurView`
   reads, with `dimezisBlurViewSdk31Plus` — a real blur on Android 12+, the dim alone on older
   versions, where the blur is too slow.

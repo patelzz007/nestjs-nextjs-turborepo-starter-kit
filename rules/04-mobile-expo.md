@@ -47,7 +47,7 @@ apps/mobile/src/
   app/                 # Expo Router routes — smart components, same role as app/**/page.tsx on web
     _layout.tsx        #   root layout: global.css, app runtime, root guard
     (auth)/            #   sign-in steps, sign-up, forgot password, forced enrollment — inside AuthShell; each screen is an AuthPage holding only its form (ADR 039)
-    (app)/             #   tabs: Home, Search, Profile, Settings (+ settings/* stack) — floating tab bar (ADR 036), app drawer (ADR 038)
+    (app)/             #   tabs: Home, Analytics, Search, Profile, Settings (+ settings/* stack) — floating tab bar (ADR 036), app drawer (ADR 038)
   components/          # dumb, presentational: data-agnostic, controlled, accessible, token-styled
   features/            # per feature: feature stores (session, preferences) and their hooks/logic
   lib/                 # env, api client, secure-store registry, app version, device headers, state toolkit

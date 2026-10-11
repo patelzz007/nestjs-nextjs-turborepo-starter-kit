@@ -63,6 +63,7 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [045](./045-github-contributions-integration.md) | GitHub contributions: server token, repository allowlist, in-memory stale-on-failure cache | Accepted — implemented (2026-10-10) |
 | [046](./046-mobile-app-shell-and-page-header.md) | Mobile app shell and a page header that is not a bar (menu or back, moving titles, status) | Accepted — implemented (2026-10-12) |
 | [047](./047-mobile-action-feedback-toasts.md) | Mobile action feedback through toasts (success, failure, why) | Accepted — implemented (2026-10-12) |
+| [048](./048-mobile-analytics-screen.md) | Mobile Analytics tab: UI only, token-coloured SVG charts, sample data in the API's dashboard shape | Accepted — implemented (2026-10-12) |
 | [RabbitMQ](./rabbitmq-placeholder.md) | RabbitMQ as infrastructure placeholder only | Accepted |
 
 ## Pending decisions
