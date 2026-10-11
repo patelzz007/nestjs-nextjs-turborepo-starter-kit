@@ -4,7 +4,7 @@ The starter's iOS and Android app: Expo SDK 57 (React Native 0.86, React 19.2), 
 Uniwind on Tailwind v4, TanStack Query / Form and Zustand feature stores, all in strict TypeScript.
 It is a **generic starter shell**, not a product: sign-in with every step the API can ask for
 (password → authenticator or backup code → emailed new-device code), forced 2FA enrollment, sign-up,
-password-reset request, Home, a Search placeholder, Profile, Settings (appearance, security, signed-in devices, app lock,
+password-reset request, Home, Analytics (sample data, no API call yet), a Search placeholder, Profile, Settings (appearance, security, signed-in devices, app lock,
 about, sign out) and the blocking update and configuration-error screens. It talks to the NestJS API
 as client type `mobile` with tokens in JSON bodies, kept in the OS secret store.
 
@@ -29,12 +29,13 @@ src/
     _layout.tsx      root layout: stylesheet, app runtime, root guard
     config-error.tsx, update-required.tsx, lock.tsx
     (auth)/          sign-in, verify-device, two-factor, sign-up, forgot-password, enroll-two-factor, verify-email
-    (app)/           tabs: index (Home), search (placeholder), profile, settings/ (index, appearance, security,
+    (app)/           tabs: index (Home), analytics (sample data), search (placeholder), profile, settings/ (index, appearance, security,
                      devices, app-lock, two-factor) — under the floating tab bar
   components/        presentational: data-agnostic, controlled, accessible, token-styled
   features/          session (root guard state machine), preferences (theme, app lock settings), app-lock,
                      auth (login steps, sign out, refresh), two-factor (enrollment flow), devices, profile,
                      github (the Profile's GitHub contributions section),
+                     analytics (the Analytics tab: range presets, sample history, dashboard and insights, presentation — ADR 048),
                      navigation (the tab registry, the screens' header titles, the tab bar adapter, the app drawer),
                      app-shell (every signed-in screen's frame: status, drawer and the page header — ADR 046),
                      app-drawer (the drawer's open state), app-status (online / offline and the access
@@ -170,6 +171,29 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
   web's `animate-pulse`; still under Reduce Motion; announces what is loading) in
   `src/components/skeleton.tsx` — so nothing shifts when the data arrives (Home, Profile).
   `LoadingState` (a spinner) is for content whose size is unknown.
+- Analytics ([ADR 048](../../docs/adr/048-mobile-analytics-screen.md)): `src/app/(app)/analytics.tsx`
+  is the customer's activity for the last 7 / 30 / 90 days or any start and end date picked on a
+  calendar (`DateRangePicker`; the web's custom-range rules, up to the API's 366 days) — the web's
+  "My Activity" on a phone. It is
+  UI only: `useActivityDashboard` (`src/features/analytics`) builds deterministic sample data typed as
+  the API's `CustomerAnalyticsDashboard`, and the screen is badged "Sample data". To read the real
+  numbers, replace that hook's body with `api.claims.analyticsDashboard.useQuery(...)` and add loading
+  and error states; nothing else changes. Beyond the web's sections the screen has highlights, this
+  period against the last, visits by weekday and by time of day, spend by time of day and by
+  category, a monthly budget, stamp cards and recent visits: `useActivityInsights` builds those from
+  the same sample history as `ActivityInsights` (`activity-insights.ts`), a mobile-only shape no
+  endpoint returns yet.
+- Charts: every chart is a generic, presentational component in `src/components` — it takes values,
+  labels and formatters, never the analytics types — so any screen can use it: `TrendChart` (lines
+  over time), `ColumnChart` (a value per category), `HeatmapGrid` (a value per row × column),
+  `DonutChart` and `ShareBar` (parts of a whole, legend in `ShareLegend`), `RankedBarList`,
+  `ComparisonBars` (now vs before), `ProgressRing` and `ProgressList` (towards a target; `steps` for a
+  stamp card), `Sparkline`, `KpiTile`, `HighlightGrid`, `Timeline`, `DataTable` (a chart's values,
+  borderless, banded rows), `SegmentedControl` and `DateRangePicker` (calendar maths in
+  `src/lib/calendar.ts`). A chart's y-axis values sit in their own column beside the plot, never
+  inside it. They are
+  views and react-native-svg layers coloured by the `chart-1…5` tokens (`chart-colors.ts`) through
+  class names — never a colour value; their geometry is `src/lib/chart-geometry.ts`.
 - Search: `src/app/(app)/search.tsx` is a "coming soon" placeholder (`ComingSoon`). A product replaces
   it with a search field and a results list fed from its own data source.
 - Typography ([ADR 037](../../docs/adr/037-mobile-typefaces.md)): the web's typefaces — Geist,

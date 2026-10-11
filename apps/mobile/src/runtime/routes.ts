@@ -10,6 +10,7 @@ export const ROUTES = {
 	enrollTwoFactor: "/enroll-two-factor",
 	verifyEmail: "/verify-email",
 	home: "/",
+	analytics: "/analytics",
 	search: "/search",
 	profile: "/profile",
 	settings: "/settings",

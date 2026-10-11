@@ -9,9 +9,9 @@ function routesOf(destinations: readonly DrawerDestination[]): readonly string[]
 }
 
 describe("DRAWER_TABS", () => {
-	it("are the four tabs, switched to rather than pushed", () => {
-		expect(labelsOf(DRAWER_TABS)).toStrictEqual(["Home", "Search", "Profile", "Settings"]);
-		expect(routesOf(DRAWER_TABS)).toStrictEqual(["/", "/search", "/profile", "/settings"]);
+	it("are the five tabs, switched to rather than pushed", () => {
+		expect(labelsOf(DRAWER_TABS)).toStrictEqual(["Home", "Analytics", "Search", "Profile", "Settings"]);
+		expect(routesOf(DRAWER_TABS)).toStrictEqual(["/", "/analytics", "/search", "/profile", "/settings"]);
 		expect(DRAWER_TABS.every((destination: DrawerDestination): boolean => destination.isTab)).toBe(true);
 	});
 });
@@ -45,6 +45,7 @@ describe("isTabRoot", () => {
 	it("is true on a tab's first screen, where the edge swipe opens the drawer", () => {
 		expect(isTabRoot("/")).toBe(true);
 		expect(isTabRoot("/settings")).toBe(true);
+		expect(isTabRoot("/analytics")).toBe(true);
 	});
 
 	it("is false deeper in a tab, where the edge swipe means back", () => {

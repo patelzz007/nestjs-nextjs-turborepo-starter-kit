@@ -1,4 +1,4 @@
-// The app drawer's menu (ADR 038), in display order: the four tabs first, then
+// The app drawer's menu (ADR 038), in display order: the five tabs first, then
 // the account and preference screens that otherwise sit two taps deep under
 // Settings. Labels use the same words as the screens they open. Two-factor
 // authentication is reached through Security: its own route is an enrollment
@@ -30,7 +30,7 @@ export interface DrawerDestinationGroup {
 	readonly destinations: readonly DrawerDestination[];
 }
 
-/** The four tabs, shown as the drawer's tile grid. */
+/** The five tabs, shown at the top of the drawer. */
 export const DRAWER_TABS: readonly DrawerDestination[] = APP_TABS.map((tab: AppTab): DrawerDestination => ({
 	label: tab.title,
 	icon: tab.icon,

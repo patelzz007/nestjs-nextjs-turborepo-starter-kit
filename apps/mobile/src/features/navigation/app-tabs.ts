@@ -3,6 +3,7 @@
 // screens from this list and the tab bar takes each tab's title and icon from
 // it, so a tab is added, renamed or reordered here and nowhere else.
 
+import ChartColumnIcon from "lucide-react-native/icons/chart-column";
 import HouseIcon from "lucide-react-native/icons/house";
 import SearchIcon from "lucide-react-native/icons/search";
 import SettingsIcon from "lucide-react-native/icons/settings";
@@ -12,7 +13,7 @@ import type { LucideIcon } from "../../components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 
 /** A tab's route name: its file name inside src/app/(app) (`index` is Home). */
-export type AppTabName = "index" | "search" | "profile" | "settings";
+export type AppTabName = "index" | "analytics" | "search" | "profile" | "settings";
 
 export interface AppTab {
 	readonly name: AppTabName;
@@ -24,6 +25,7 @@ export interface AppTab {
 
 export const APP_TABS: readonly AppTab[] = [
 	{ name: "index", title: "Home", icon: HouseIcon, route: ROUTES.home },
+	{ name: "analytics", title: "Analytics", icon: ChartColumnIcon, route: ROUTES.analytics },
 	{ name: "search", title: "Search", icon: SearchIcon, route: ROUTES.search },
 	{ name: "profile", title: "Profile", icon: UserIcon, route: ROUTES.profile },
 	{ name: "settings", title: "Settings", icon: SettingsIcon, route: ROUTES.settings },

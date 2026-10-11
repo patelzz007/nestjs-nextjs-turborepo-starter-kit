@@ -1,4 +1,4 @@
-// The (app) group: tabs — Home, Search, Profile, Settings (§9.2) — under the
+// The (app) group: tabs — Home, Analytics, Search, Profile, Settings (§9.2) — under the
 // floating tab bar (ADR 036), inside the app shell (ADR 046): the drawer
 // (ADR 038) and the page header, rendered once above every screen. Reachable
 // only with a full session (the root guard). The tabs, their order, titles and

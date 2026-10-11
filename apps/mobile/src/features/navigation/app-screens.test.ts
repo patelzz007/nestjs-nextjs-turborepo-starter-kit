@@ -4,7 +4,13 @@ import { screenTitleOf } from "./app-screens";
 
 describe("screenTitleOf", () => {
 	it("names the tabs as the tab bar does", () => {
-		expect([ROUTES.home, ROUTES.search, ROUTES.profile, ROUTES.settings].map((route) => screenTitleOf(route, {}))).toEqual(["Home", "Search", "Profile", "Settings"]);
+		expect([ROUTES.home, ROUTES.analytics, ROUTES.search, ROUTES.profile, ROUTES.settings].map((route) => screenTitleOf(route, {}))).toEqual([
+			"Home",
+			"Analytics",
+			"Search",
+			"Profile",
+			"Settings",
+		]);
 	});
 
 	it("names the screens under Settings in their own words", () => {

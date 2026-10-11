@@ -56,6 +56,7 @@ describe("(app) tabs", () => {
 	const TAB_SCREENS = {
 		"(app)/_layout": AppTabsLayout,
 		"(app)/index": HomeScreen,
+		"(app)/analytics": markerScreen("analytics"),
 		"(app)/search": SearchScreen,
 		"(app)/profile": ProfileScreen,
 		"(app)/settings": markerScreen("settings"),
@@ -65,15 +66,16 @@ describe("(app) tabs", () => {
 		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()) });
 	}
 
-	it("offers Home, Search, Profile and Settings in the floating tab bar, Home selected", async () => {
+	it("offers Home, Analytics, Search, Profile and Settings in the floating tab bar, Home selected", async () => {
 		stubAccount();
 		await renderSignedIn(TAB_SCREENS, "/");
 
 		expect(await screen.findByText("Alex Morgan")).toBeOnTheScreen();
 		const tabs = screen.getAllByRole("tab");
-		expect(tabs).toHaveLength(4);
-		const [home, search, profile, settings] = tabs;
+		expect(tabs).toHaveLength(5);
+		const [home, analytics, search, profile, settings] = tabs;
 		expect(home).toHaveAccessibleName("Home");
+		expect(analytics).toHaveAccessibleName("Analytics");
 		expect(search).toHaveAccessibleName("Search");
 		expect(profile).toHaveAccessibleName("Profile");
 		expect(settings).toHaveAccessibleName("Settings");

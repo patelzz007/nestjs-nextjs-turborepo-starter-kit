@@ -9,6 +9,15 @@
 // the panel. It is mounted only while the drawer is open, opening or closing —
 // a closed drawer keeps no blur view rendering behind the app. On Android the
 // blur reads the app through a BlurTargetView around it.
+//
+// A fully closed drawer is not displayed at all (the panel and the scrim are
+// `hidden`). Its resting place must not depend on animated values alone:
+// Reanimated keeps an animation's resting values on the UI thread and copies
+// them back into React only later, so a React re-render of a resting animated
+// view (a theme change re-renders the panel for its colours) can re-apply an
+// older resting value — the open one — to a closed panel, which then shows,
+// open and untouchable (`pointerEvents` says closed). "Closed" is React state
+// here, so no re-render can put the panel back on screen.
 
 import { BlurTargetView, BlurView } from "expo-blur";
 import * as React from "react";
@@ -69,32 +78,33 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 	const progress = useSharedValue(open ? OPEN : CLOSED);
 	const blurTarget = React.useRef<View>(null);
 	/**
-	 * Whether the blur view exists: from the moment the drawer opens (or an
-	 * opening drag starts) until a close has fully settled, so the blur fades
-	 * out with the panel instead of vanishing when `open` turns false.
+	 * Whether the drawer is on screen: from the moment it opens (or an opening
+	 * drag starts) until a close has fully settled, so the panel, the scrim and
+	 * the blur leave with the animation instead of vanishing when `open` turns
+	 * false. Off, the panel and the scrim are not displayed and the blur is unmounted.
 	 */
-	const [isBlurMounted, setBlurMounted] = React.useState(open);
-	if (open && !isBlurMounted) {
+	const [isShown, setShown] = React.useState(open);
+	if (open && !isShown) {
 		// Adjusting state to a prop change during render (React's documented pattern), not in an effect.
-		setBlurMounted(true);
+		setShown(true);
 	}
-	const unmountBlur = React.useCallback((): void => {
-		setBlurMounted(false);
+	const hide = React.useCallback((): void => {
+		setShown(false);
 	}, []);
 
-	/** Springs the drawer open or closed; the blur is unmounted once a close has fully settled. */
+	/** Springs the drawer open or closed; the drawer leaves the screen once a close has fully settled. */
 	const springTo = React.useCallback(
 		(target: number): void => {
 			progress.set(
 				withSpring(target, PANEL_SPRING, (finished?: boolean): void => {
 					"worklet";
 					if (finished === true && target === CLOSED) {
-						scheduleOnRN(unmountBlur);
+						scheduleOnRN(hide);
 					}
 				}),
 			);
 		},
-		[progress, unmountBlur],
+		[progress, hide],
 	);
 
 	React.useEffect((): void => {
@@ -133,9 +143,9 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 		() =>
 			PanResponder.create({
 				onMoveShouldSetPanResponder: (_event: GestureResponderEvent, gesture: PanResponderGestureState): boolean => isHorizontalDrag(gesture.dx, gesture.dy, 1),
-				// An opening drag shows the blur from its first frame.
+				// An opening drag shows the drawer from its first frame.
 				onPanResponderGrant: (): void => {
-					setBlurMounted(true);
+					setShown(true);
 				},
 				onPanResponderMove: (_event: GestureResponderEvent, gesture: PanResponderGestureState): void => {
 					progress.set(progressWhileOpening(gesture.dx, panelWidth));
@@ -189,8 +199,12 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 			{swipeEnabled && !open ? (
 				<View className="absolute inset-y-0 left-0 w-5" {...edgeResponder.panHandlers} testID={testID === undefined ? undefined : `${testID}-edge`} />
 			) : null}
-			{isBlurMounted ? <DrawerBlur progress={progress} blurTarget={blurTarget} testID={testID === undefined ? undefined : `${testID}-blur`} /> : null}
-			<StyledAnimatedView pointerEvents={open ? "auto" : "none"} className="absolute inset-0" style={scrimStyle}>
+			{isShown ? <DrawerBlur progress={progress} blurTarget={blurTarget} testID={testID === undefined ? undefined : `${testID}-blur`} /> : null}
+			<StyledAnimatedView
+				pointerEvents={open ? "auto" : "none"}
+				className={`absolute inset-0 ${isShown ? "" : "hidden"}`}
+				style={scrimStyle}
+				testID={testID === undefined ? undefined : `${testID}-scrim-layer`}>
 				<View pointerEvents="none" className="absolute inset-0 bg-scrim" />
 				<Pressable
 					accessibilityRole="button"
@@ -206,7 +220,7 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 				accessibilityElementsHidden={!open}
 				importantForAccessibility={open ? "yes" : "no-hide-descendants"}
 				pointerEvents={open ? "auto" : "none"}
-				className="absolute inset-y-0 left-0 overflow-hidden rounded-r-3xl border-r border-border bg-card shadow-2xl"
+				className={`absolute inset-y-0 left-0 overflow-hidden rounded-r-3xl border-r border-border bg-card shadow-2xl ${isShown ? "" : "hidden"}`}
 				style={[panelFrame, panelStyle]}
 				{...panelResponder.panHandlers}
 				testID={testID === undefined ? undefined : `${testID}-panel`}>

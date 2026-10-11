@@ -11,6 +11,9 @@ const FULL_BLUR_INTENSITY = 18;
 /** Long enough for the panel spring to settle under Jest (Reanimated runs it on mocked animation frames). */
 const CLOSE_SETTLE_TIMEOUT_MS = 5_000;
 
+/** Uniwind's `hidden` (display: none) as a whole class — not `overflow-hidden`. Jest keeps class names unresolved. */
+const HIDDEN_CLASS = /(^|\s)hidden(\s|$)/u;
+
 /** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
 
@@ -138,6 +141,40 @@ describe("Drawer", () => {
 			},
 			{ timeout: CLOSE_SETTLE_TIMEOUT_MS },
 		);
+	});
+
+	it("takes a closed drawer off the screen entirely: no panel or scrim is displayed", async () => {
+		await render(drawer(false, handlers()));
+
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		expect(screen.getByTestId("drawer-scrim-layer", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+	});
+
+	it("displays the drawer while it closes, takes it off the screen once the close has settled, and keeps it off through re-renders", async () => {
+		const view = await render(drawer(true, handlers()));
+		expect(screen.getByTestId("drawer-panel")).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+
+		await view.rerender(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		await waitFor(
+			() => {
+				expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+			},
+			{ timeout: CLOSE_SETTLE_TIMEOUT_MS },
+		);
+
+		// A re-render at rest (a theme change re-renders the panel for its colours) cannot bring it back.
+		await view.rerender(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		expect(screen.getByTestId("drawer-scrim-layer", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+	});
+
+	it("shows the drawer again when it reopens", async () => {
+		const view = await render(drawer(false, handlers()));
+
+		await view.rerender(drawer(true, handlers()));
+		expect(screen.getByTestId("drawer-panel")).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		expect(screen.getByTestId("drawer-scrim-layer", { includeHiddenElements: true })).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
 	});
 
 	it("raises the blur to full with the open drawer (Jest renders as iOS, where the intensity is animated)", async () => {
