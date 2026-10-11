@@ -1,0 +1,150 @@
+import { Logger } from "@nestjs/common";
+import { describe, expect, it, vi } from "vitest";
+
+import { NotFoundError } from "../../common/errors/app-error";
+import { GithubResponseError, GithubUnavailableError, repositoryTarget } from "./github.errors";
+import { GithubResponseCache, type GithubLoadResult } from "./github-response.cache";
+
+const FRESH_MS = 1_000;
+const STALE_FALLBACK_MS = 10_000;
+const START = 1_800_000_000_000;
+const REPOSITORY = { owner: "octo-org", repository: "hello-world" };
+
+/** Keeps what the cache warns about instead of printing it. */
+class RecordingLogger extends Logger {
+	public readonly warnings: string[] = [];
+
+	public override warn(message: string): void {
+		this.warnings.push(message);
+	}
+}
+
+interface TestClock {
+	now: number;
+	nowEpochMs(): number;
+}
+
+interface Harness {
+	readonly cache: GithubResponseCache<string>;
+	readonly clock: TestClock;
+	readonly logger: RecordingLogger;
+}
+
+function setup(): Harness {
+	const clock: TestClock = { now: START, nowEpochMs: (): number => clock.now };
+	const logger = new RecordingLogger("test");
+	return { cache: new GithubResponseCache<string>({ freshMs: FRESH_MS, staleFallbackMs: STALE_FALLBACK_MS, maxEntries: 10 }, clock, logger), clock, logger };
+}
+
+function cacheable(value: string): () => Promise<GithubLoadResult<string>> {
+	return (): Promise<GithubLoadResult<string>> => Promise.resolve({ kind: "cacheable", value });
+}
+
+function failing(error: Error): () => Promise<GithubLoadResult<string>> {
+	return (): Promise<GithubLoadResult<string>> => Promise.reject(error);
+}
+
+describe("GithubResponseCache", () => {
+	it("serves a fresh answer without loading again", async () => {
+		const { cache, clock } = setup();
+		const load = vi.fn(cacheable("first"));
+
+		await cache.read("key", load);
+		clock.now += FRESH_MS - 1;
+
+		expect(await cache.read("key", cacheable("second"))).toBe("first");
+		expect(load).toHaveBeenCalledTimes(1);
+	});
+
+	it("loads again once the answer is no longer fresh", async () => {
+		const { cache, clock } = setup();
+
+		await cache.read("key", cacheable("first"));
+		clock.now += FRESH_MS;
+
+		expect(await cache.read("key", cacheable("second"))).toBe("second");
+	});
+
+	it("keeps keys apart", async () => {
+		const { cache } = setup();
+
+		await cache.read("a", cacheable("for a"));
+
+		expect(await cache.read("b", cacheable("for b"))).toBe("for b");
+	});
+
+	it("shares one load between concurrent misses of the same key", async () => {
+		const { cache } = setup();
+		let resolveLoad: (value: GithubLoadResult<string>) => void = (): void => undefined;
+		const load = vi.fn(
+			(): Promise<GithubLoadResult<string>> =>
+				new Promise<GithubLoadResult<string>>((resolve): void => {
+					resolveLoad = resolve;
+				}),
+		);
+
+		const first = cache.read("key", load);
+		const second = cache.read("key", load);
+		resolveLoad({ kind: "cacheable", value: "shared" });
+
+		expect(await Promise.all([first, second])).toEqual(["shared", "shared"]);
+		expect(load).toHaveBeenCalledTimes(1);
+	});
+
+	it("loads again after a failed single-flight load instead of replaying the failure", async () => {
+		const { cache } = setup();
+
+		await expect(cache.read("key", failing(new GithubUnavailableError("timeout")))).rejects.toBeInstanceOf(GithubUnavailableError);
+
+		expect(await cache.read("key", cacheable("recovered"))).toBe("recovered");
+	});
+
+	it.each([
+		["unavailable", new GithubUnavailableError("rate-limited")],
+		["answering badly", new GithubResponseError("unexpected-status", repositoryTarget(REPOSITORY), "HTTP 500")],
+	])("serves the stale answer, and logs it, while GitHub is %s", async (_label: string, error: Error) => {
+		const { cache, clock, logger } = setup();
+
+		await cache.read("key", cacheable("stale"));
+		clock.now += FRESH_MS + STALE_FALLBACK_MS - 1;
+
+		expect(await cache.read("key", failing(error))).toBe("stale");
+		expect(logger.warnings).toHaveLength(1);
+	});
+
+	it("does not stand in for a failure that is about the repository itself", async () => {
+		const { cache, clock } = setup();
+		const notFound = new NotFoundError();
+
+		await cache.read("key", cacheable("stale"));
+		clock.now += FRESH_MS;
+
+		await expect(cache.read("key", failing(notFound))).rejects.toBe(notFound);
+	});
+
+	it("fails once the stale fallback window has passed", async () => {
+		const { cache, clock } = setup();
+		const unavailable = new GithubUnavailableError("unreachable");
+
+		await cache.read("key", cacheable("too old"));
+		clock.now += FRESH_MS + STALE_FALLBACK_MS + 1;
+
+		await expect(cache.read("key", failing(unavailable))).rejects.toBe(unavailable);
+	});
+
+	it("returns a transient answer without keeping it", async () => {
+		const { cache } = setup();
+
+		expect(await cache.read("key", (): Promise<GithubLoadResult<string>> => Promise.resolve({ kind: "transient", value: "computing" }))).toBe("computing");
+		expect(await cache.read("key", cacheable("ready"))).toBe("ready");
+	});
+
+	it("prefers the previous answer to a transient one", async () => {
+		const { cache, clock } = setup();
+
+		await cache.read("key", cacheable("ready before"));
+		clock.now += FRESH_MS;
+
+		expect(await cache.read("key", (): Promise<GithubLoadResult<string>> => Promise.resolve({ kind: "transient", value: "computing" }))).toBe("ready before");
+	});
+});

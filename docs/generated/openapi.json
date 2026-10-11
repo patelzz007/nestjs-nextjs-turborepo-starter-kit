@@ -5715,7 +5715,8 @@
                                   "INVENTORY",
                                   "ORGANIZATION",
                                   "LOCATION",
-                                  "STORE"
+                                  "STORE",
+                                  "GITHUB"
                                 ],
                                 "type": "string"
                               }
@@ -5878,7 +5879,8 @@
                       "INVENTORY",
                       "ORGANIZATION",
                       "LOCATION",
-                      "STORE"
+                      "STORE",
+                      "GITHUB"
                     ],
                     "example": "USER",
                     "type": "string"
@@ -5981,7 +5983,8 @@
                             "INVENTORY",
                             "ORGANIZATION",
                             "LOCATION",
-                            "STORE"
+                            "STORE",
+                            "GITHUB"
                           ],
                           "type": "string"
                         },
@@ -6145,7 +6148,8 @@
                       "INVENTORY",
                       "ORGANIZATION",
                       "LOCATION",
-                      "STORE"
+                      "STORE",
+                      "GITHUB"
                     ],
                     "type": "string"
                   },
@@ -6997,7 +7001,8 @@
                             "INVENTORY",
                             "ORGANIZATION",
                             "LOCATION",
-                            "STORE"
+                            "STORE",
+                            "GITHUB"
                           ],
                           "type": "string"
                         },
@@ -7232,7 +7237,8 @@
                             "INVENTORY",
                             "ORGANIZATION",
                             "LOCATION",
-                            "STORE"
+                            "STORE",
+                            "GITHUB"
                           ],
                           "type": "string"
                         },
@@ -7448,7 +7454,8 @@
                             "INVENTORY",
                             "ORGANIZATION",
                             "LOCATION",
-                            "STORE"
+                            "STORE",
+                            "GITHUB"
                           ],
                           "type": "string"
                         },
@@ -19517,7 +19524,8 @@
                             "INVENTORY",
                             "ORGANIZATION",
                             "LOCATION",
-                            "STORE"
+                            "STORE",
+                            "GITHUB"
                           ],
                           "type": "string"
                         },
@@ -19599,7 +19607,8 @@
                                   "INVENTORY",
                                   "ORGANIZATION",
                                   "LOCATION",
-                                  "STORE"
+                                  "STORE",
+                                  "GITHUB"
                                 ],
                                 "type": "string"
                               },
@@ -19751,7 +19760,8 @@
                 "INVENTORY",
                 "ORGANIZATION",
                 "LOCATION",
-                "STORE"
+                "STORE",
+                "GITHUB"
               ],
               "type": "string"
             }
@@ -31835,6 +31845,854 @@
         "summary": "Update a subregion",
         "tags": [
           "Geo"
+        ]
+      }
+    },
+    "/api/v1/github/repositories": {
+      "get": {
+        "description": "`configured`: the ones pinned in GITHUB_REPOSITORIES, in that order. `discovered` (GITHUB_REPOSITORIES empty): the token account's own public repositories (no forks) and the public repositories it recently contributed to, most recently pushed first. `off`: no GITHUB_TOKEN, an empty list. Discovery reads GitHub: 503 SERVICE_UNAVAILABLE / 502 EXTERNAL_SERVICE_ERROR when it fails and no earlier list can be served.",
+        "operationId": "GithubController_listRepositories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "account": {
+                          "description": "GitHub account login",
+                          "example": "octocat",
+                          "maxLength": 44,
+                          "minLength": 1,
+                          "nullable": true,
+                          "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?$",
+                          "type": "string"
+                        },
+                        "repositories": {
+                          "items": {
+                            "properties": {
+                              "fullName": {
+                                "maxLength": 140,
+                                "type": "string"
+                              },
+                              "owner": {
+                                "description": "GitHub user or organization",
+                                "example": "octo-org",
+                                "maxLength": 39,
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+                                "type": "string"
+                              },
+                              "pushedAt": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "relationship": {
+                                "enum": [
+                                  "configured",
+                                  "owned",
+                                  "contributed"
+                                ],
+                                "type": "string"
+                              },
+                              "repository": {
+                                "description": "GitHub repository name",
+                                "example": "hello-world",
+                                "maxLength": 100,
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z0-9._-]+$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "owner",
+                              "repository",
+                              "fullName",
+                              "relationship",
+                              "pushedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 100,
+                          "type": "array"
+                        },
+                        "source": {
+                          "enum": [
+                            "off",
+                            "configured",
+                            "discovered"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "account",
+                        "repositories"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The repositories the API may read (empty when the integration is off)"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "List the GitHub repositories the API may read",
+        "tags": [
+          "GitHub"
+        ]
+      }
+    },
+    "/api/v1/github/repositories/{owner}/{repository}": {
+      "get": {
+        "description": "404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.",
+        "operationId": "GithubController_getRepositorySummary",
+        "parameters": [
+          {
+            "description": "GitHub user or organization",
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "description": "GitHub user or organization",
+              "example": "octo-org",
+              "maxLength": 39,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "GitHub repository name",
+            "in": "path",
+            "name": "repository",
+            "required": true,
+            "schema": {
+              "description": "GitHub repository name",
+              "example": "hello-world",
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._-]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "defaultBranch": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "description": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "forks": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "htmlUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
+                        "languages": {
+                          "items": {
+                            "properties": {
+                              "bytes": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "color": {
+                                "nullable": true,
+                                "pattern": "^#[0-9A-Fa-f]{6}$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "maxLength": 100,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "percent": {
+                                "maximum": 100,
+                                "minimum": 0,
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "color",
+                              "bytes",
+                              "percent"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "type": "array"
+                        },
+                        "openIssues": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "owner": {
+                          "description": "GitHub user or organization",
+                          "example": "octo-org",
+                          "maxLength": 39,
+                          "minLength": 1,
+                          "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+                          "type": "string"
+                        },
+                        "primaryLanguage": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "pushedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "repository": {
+                          "description": "GitHub repository name",
+                          "example": "hello-world",
+                          "maxLength": 100,
+                          "minLength": 1,
+                          "pattern": "^[A-Za-z0-9._-]+$",
+                          "type": "string"
+                        },
+                        "stars": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalCommits": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "watchers": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "owner",
+                        "repository",
+                        "fullName",
+                        "description",
+                        "htmlUrl",
+                        "defaultBranch",
+                        "primaryLanguage",
+                        "stars",
+                        "forks",
+                        "watchers",
+                        "openIssues",
+                        "totalCommits",
+                        "pushedAt",
+                        "languages"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Repository summary"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Summary of a configured repository: stars, forks, languages, commit count, last push",
+        "tags": [
+          "GitHub"
+        ]
+      }
+    },
+    "/api/v1/github/repositories/{owner}/{repository}/commits": {
+      "get": {
+        "description": "Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.",
+        "operationId": "GithubController_getCommitPage",
+        "parameters": [
+          {
+            "description": "GitHub user or organization",
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "description": "GitHub user or organization",
+              "example": "octo-org",
+              "maxLength": 39,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "GitHub repository name",
+            "in": "path",
+            "name": "repository",
+            "required": true,
+            "schema": {
+              "description": "GitHub repository name",
+              "example": "hello-world",
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._-]+$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`nextCursor` of the previous page; omit for the newest commits",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "`nextCursor` of the previous page; omit for the newest commits",
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Commits per page (1-50)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Commits per page (1-50)",
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "items": {
+                          "items": {
+                            "properties": {
+                              "additions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "author": {
+                                "properties": {
+                                  "avatarUrl": {
+                                    "format": "uri",
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "login": {
+                                    "description": "GitHub account login",
+                                    "example": "octocat",
+                                    "maxLength": 44,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?$",
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "login",
+                                  "avatarUrl"
+                                ],
+                                "type": "object"
+                              },
+                              "changedFiles": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "committedAt": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "deletions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "headline": {
+                                "type": "string"
+                              },
+                              "htmlUrl": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "sha": {
+                                "maxLength": 40,
+                                "minLength": 40,
+                                "pattern": "^[0-9a-f]+$",
+                                "type": "string"
+                              },
+                              "shortSha": {
+                                "maxLength": 40,
+                                "minLength": 1,
+                                "pattern": "^[0-9a-f]+$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "sha",
+                              "shortSha",
+                              "headline",
+                              "htmlUrl",
+                              "committedAt",
+                              "author",
+                              "additions",
+                              "deletions",
+                              "changedFiles"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        },
+                        "nextCursor": {
+                          "maxLength": 200,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "totalCommits": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "nextCursor",
+                        "totalCommits"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Commits, newest first, and the cursor of the next page"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "One page of a configured repository's commit history with lines added/deleted per commit",
+        "tags": [
+          "GitHub"
+        ]
+      }
+    },
+    "/api/v1/github/repositories/{owner}/{repository}/contributors": {
+      "get": {
+        "description": "GitHub computes these in the background: `{ status: \"computing\" }` means ask again in a few seconds. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.",
+        "operationId": "GithubController_getContributorStats",
+        "parameters": [
+          {
+            "description": "GitHub user or organization",
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "description": "GitHub user or organization",
+              "example": "octo-org",
+              "maxLength": 39,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "GitHub repository name",
+            "in": "path",
+            "name": "repository",
+            "required": true,
+            "schema": {
+              "description": "GitHub repository name",
+              "example": "hello-world",
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._-]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "properties": {
+                            "status": {
+                              "enum": [
+                                "computing"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "properties": {
+                            "contributors": {
+                              "items": {
+                                "properties": {
+                                  "additions": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "avatarUrl": {
+                                    "format": "uri",
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "commits": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "deletions": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "htmlUrl": {
+                                    "format": "uri",
+                                    "type": "string"
+                                  },
+                                  "login": {
+                                    "description": "GitHub account login",
+                                    "example": "octocat",
+                                    "maxLength": 44,
+                                    "minLength": 1,
+                                    "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?$",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "login",
+                                  "avatarUrl",
+                                  "htmlUrl",
+                                  "commits",
+                                  "additions",
+                                  "deletions"
+                                ],
+                                "type": "object"
+                              },
+                              "maxItems": 100,
+                              "type": "array"
+                            },
+                            "status": {
+                              "enum": [
+                                "ready"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "contributors"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Contributor totals, or `computing` while GitHub prepares them"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Commits and lines added/deleted per contributor of a configured repository",
+        "tags": [
+          "GitHub"
         ]
       }
     },

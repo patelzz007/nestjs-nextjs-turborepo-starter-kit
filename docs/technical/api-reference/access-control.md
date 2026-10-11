@@ -1047,7 +1047,7 @@ Response `201 Created` (application/json):
 | `data.items[].group` | string \| null | yes |  |
 | `data.items[].id` | string | yes |  |
 | `data.items[].isSystem` | boolean | yes |  |
-| `data.items[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `data.items[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `data.total` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1115,7 +1115,7 @@ Response `200 OK` (application/json):
 | `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action this permission grants |
 | `description` | string | no | Permission description |
 | `group` | string | no | Permission group/category |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes | The resource this permission applies to |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes | The resource this permission applies to |
 
 **Response 201 Created** — Created permission
 
@@ -1130,7 +1130,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1211,7 +1211,7 @@ Response `201 Created` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1293,7 +1293,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1426,7 +1426,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1486,7 +1486,7 @@ Response `201 Created` (application/json):
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action to check |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes | The resource to check against |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes | The resource to check against |
 | `userId` | string (uuid) | yes | User ID to check permissions for |
 
 **Response 201 Created** — Permission check result with grant provenance
@@ -1788,7 +1788,7 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | --- | --- | --- | --- |
 | `checks` | object[] | yes | 1–50 items |
 | `checks[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `checks[].resourceId` | string | no | length 1–64 |
 
 **Response 200 OK** — One decision per requested check, in request order
@@ -1798,7 +1798,7 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | `data.results` | object[] | yes |  |
 | `data.results[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
 | `data.results[].allowed` | boolean | yes |  |
-| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `data.results[].resourceId` | string | no | length 1–64 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1871,7 +1871,7 @@ Admin: step-by-step explanation of an authorization decision
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
 | `action` | query | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+16 more) | yes |  |
+| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
 | `resourceId` | query | string | no |  |
 | `userId` | query | string | no |  |
 | `organizationId` | query | string | no |  |

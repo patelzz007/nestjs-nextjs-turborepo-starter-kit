@@ -25,6 +25,7 @@ import { AuthGuard } from "./modules/auth/guards/auth.guard";
 import { MobileAppVersionGuard } from "./modules/auth/guards/mobile-app-version.guard";
 import { RestrictedSessionGuard } from "./modules/auth/guards/restricted-session.guard";
 import { GeoModule } from "./modules/geo/geo.module";
+import { GithubModule } from "./modules/github/github.module";
 import { HealthModule } from "./modules/health/health.module";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
 import { LogsModule } from "./modules/logs/logs.module";
@@ -86,6 +87,7 @@ if (observeConfig !== null) {
 		ImpersonationModule,
 		NotificationsModule,
 		GeoModule,
+		GithubModule,
 		AuditLogModule,
 		IdempotencyModule.register(),
 		StorageModule,

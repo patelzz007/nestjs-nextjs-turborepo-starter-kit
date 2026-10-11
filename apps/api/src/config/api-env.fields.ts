@@ -6,7 +6,15 @@
 // The schemas here encode API-only formats: secrets, AES keys, JWT expiry,
 // the legacy 0/1 toggles, and the closed option sets of API features.
 
-import { AppVersionSchema, commaSeparatedEnvSchema, HttpUrlEnvSchema, JsonValueSchema, type JsonValue } from "@workspace/shared";
+import {
+	AppVersionSchema,
+	commaSeparatedEnvSchema,
+	GithubRepositoryParamsSchema,
+	HttpUrlEnvSchema,
+	JsonValueSchema,
+	type GithubRepositoryParams,
+	type JsonValue,
+} from "@workspace/shared";
 import { z } from "zod";
 
 // ── Toggles ────────────────────────────────────────────────────────────────
@@ -211,6 +219,24 @@ export const AmqpUrlEnvSchema = z.url({ protocol: AMQP_PROTOCOL_PATTERN, error: 
 
 /** A non-empty identifier such as a bucket name or a service id. */
 export const NonEmptyEnvStringSchema = z.string().trim().min(1, "must not be empty");
+
+/** `owner/repository` — exactly one slash; each half is validated by the shared GitHub name schemas. */
+const GITHUB_FULL_NAME_PATTERN = /^(?<owner>[^/]+)\/(?<repository>[^/]+)$/;
+
+/**
+ * Splits a GitHub full name (`octo-org/hello-world`) into its validated
+ * halves, surrounding whitespace ignored; `null` when it is not one.
+ */
+export function toGithubRepositoryParams(fullName: string): GithubRepositoryParams | null {
+	const groups = GITHUB_FULL_NAME_PATTERN.exec(fullName.trim())?.groups;
+	const parsed = GithubRepositoryParamsSchema.safeParse({ owner: groups?.owner, repository: groups?.repository });
+	return parsed.success ? parsed.data : null;
+}
+
+/** The repositories the GitHub integration may read (`GITHUB_REPOSITORIES`): a comma-separated list of `owner/repository`. */
+export const GithubRepositoriesEnvSchema = commaSeparatedEnvSchema(
+	z.string().refine((entry: string): boolean => toGithubRepositoryParams(entry) !== null, { error: "every entry must be owner/repository (a GitHub full name)" }),
+);
 
 /** A semantic version (`MOBILE_MIN_SUPPORTED_VERSION`), surrounding whitespace ignored — the same `AppVersionSchema` the `X-App-Version` header is parsed with. */
 export const AppVersionEnvSchema = z.string().trim().pipe(AppVersionSchema);

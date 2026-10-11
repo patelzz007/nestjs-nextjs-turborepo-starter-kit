@@ -19,7 +19,9 @@ import {
 	NodeEnvSchema,
 	optionalIntegerEnvSchema,
 	PostgresUrlEnvSchema,
+	GITHUB_REPOSITORIES_MAX,
 	type AppVersion,
+	type GithubRepositoryParams,
 	type NodeEnv,
 } from "@workspace/shared";
 import { KafkaSecurityEnvShape, listKafkaSecurityEnvIssues, toKafkaSecurityOptions, type KafkaSecurityOptions } from "@workspace/messaging/kafka";
@@ -29,6 +31,8 @@ import { TrustProxyEnvSchema } from "../common/http/client-ip";
 
 import {
 	AppVersionEnvSchema,
+	GithubRepositoriesEnvSchema,
+	toGithubRepositoryParams,
 	BullMqPrefixEnvSchema,
 	RedisNamespaceEnvSchema,
 	Aes256KeyEnvSchema,
@@ -95,6 +99,12 @@ const DEFAULT_MOBILE_MIN_SUPPORTED_VERSION: AppVersion = "1.0.0";
 /** A location lookup slower than this is abandoned (the session is stored without a location); it never delays sign-in by more. */
 const DEFAULT_SESSION_LOCATION_TIMEOUT_MS = 300;
 const MAX_SESSION_LOCATION_TIMEOUT_MS = 5_000;
+/** A GitHub read slower than this fails (the last good answer is served if there is one); GitHub normally answers in well under a second. */
+const DEFAULT_GITHUB_REQUEST_TIMEOUT_MS = 5 * MS_PER_SECOND;
+const MAX_GITHUB_REQUEST_TIMEOUT_MS = 30 * MS_PER_SECOND;
+/** How long a GitHub answer is served from memory before it is read again — keeps every instance far below GitHub's 5,000 requests/hour. */
+const DEFAULT_GITHUB_CACHE_TTL_MS = 5 * MS_PER_MINUTE;
+const MAX_GITHUB_CACHE_TTL_MS = MS_PER_DAY;
 /** Version of `TENANT_ENCRYPTION_MASTER_KEY` when `TENANT_ENCRYPTION_MASTER_KEY_VERSION` is unset (the first KEK). */
 const DEFAULT_TENANT_MASTER_KEY_VERSION = 1;
 /** KMS provider outside production when `TENANT_KMS_PROVIDER` is unset. Production must set it explicitly. */
@@ -218,6 +228,12 @@ export const ApiEnvInputSchema = z.object({
 	// Device sessions (docs/technical/mobile/mobile-app.md §8.7)
 	SESSION_LOCATION_PROVIDER: SessionLocationProviderSchema.default("none"),
 	SESSION_LOCATION_TIMEOUT_MS: integerEnvSchema({ min: 1, max: MAX_SESSION_LOCATION_TIMEOUT_MS, defaultValue: DEFAULT_SESSION_LOCATION_TIMEOUT_MS }),
+
+	// GitHub contributions (docs/technical/github-contributions.md)
+	GITHUB_TOKEN: NonEmptyEnvStringSchema.optional(),
+	GITHUB_REPOSITORIES: GithubRepositoriesEnvSchema.optional(),
+	GITHUB_REQUEST_TIMEOUT_MS: integerEnvSchema({ min: 1, max: MAX_GITHUB_REQUEST_TIMEOUT_MS, defaultValue: DEFAULT_GITHUB_REQUEST_TIMEOUT_MS }),
+	GITHUB_CACHE_TTL_MS: integerEnvSchema({ min: 1, max: MAX_GITHUB_CACHE_TTL_MS, defaultValue: DEFAULT_GITHUB_CACHE_TTL_MS }),
 
 	// Email
 	EMAIL_MODE: EmailModeSchema.default("send"),
@@ -390,6 +406,18 @@ export interface SessionsConfig {
 	readonly locationTimeoutMs: number;
 }
 
+/** The read-only GitHub contributions integration (docs/technical/github-contributions.md). */
+export interface GithubConfig {
+	/** Token the API reads GitHub with (`GITHUB_TOKEN`); `null` leaves the integration off. */
+	readonly token: string | null;
+	/** Pinned repositories (`GITHUB_REPOSITORIES`), in the configured order; empty = discover them from the token's account. */
+	readonly repositories: readonly GithubRepositoryParams[];
+	/** Budget of one GitHub request (`GITHUB_REQUEST_TIMEOUT_MS`). */
+	readonly requestTimeoutMs: number;
+	/** How long an answer is reused before GitHub is read again (`GITHUB_CACHE_TTL_MS`). */
+	readonly cacheTtlMs: number;
+}
+
 export interface EncryptionConfig {
 	/** Base64 of exactly 32 bytes — the CURRENT key-encryption key: wraps every new tenant data key. */
 	readonly tenantMasterKey: string;
@@ -514,6 +542,7 @@ export interface ApiConfig {
 	readonly mfa: MfaConfig;
 	readonly mobile: MobileConfig;
 	readonly sessions: SessionsConfig;
+	readonly github: GithubConfig;
 	readonly encryption: EncryptionConfig;
 	readonly email: EmailConfig;
 	readonly rateLimits: RateLimitConfig;
@@ -830,6 +859,25 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 		context.addIssue({ code: "custom", path: [missing], message: "is required when OBSERVE_ENABLED is on" });
 	}
 	checkStorageRules(env, context);
+	checkGithubRules(env, context);
+}
+
+/** A repository list needs a token to read it with, stays small, and names each repository once (GitHub names are case-insensitive). */
+function checkGithubRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	const repositories: readonly string[] = env.GITHUB_REPOSITORIES ?? [];
+	if (repositories.length === 0) {
+		return;
+	}
+	if (env.GITHUB_TOKEN === undefined) {
+		context.addIssue({ code: "custom", path: ["GITHUB_TOKEN"], message: "is required when GITHUB_REPOSITORIES is set (a read-only token for those repositories)" });
+	}
+	if (repositories.length > GITHUB_REPOSITORIES_MAX) {
+		context.addIssue({ code: "custom", path: ["GITHUB_REPOSITORIES"], message: `may list at most ${String(GITHUB_REPOSITORIES_MAX)} repositories` });
+	}
+	const normalized: readonly string[] = repositories.map((fullName: string): string => fullName.trim().toLowerCase());
+	if (new Set(normalized).size !== normalized.length) {
+		context.addIssue({ code: "custom", path: ["GITHUB_REPOSITORIES"], message: "must not list the same repository twice" });
+	}
 }
 
 // ── Grouping ───────────────────────────────────────────────────────────────
@@ -891,6 +939,15 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 		},
 		mobile: { minSupportedVersion: env.MOBILE_MIN_SUPPORTED_VERSION },
 		sessions: { locationProvider: env.SESSION_LOCATION_PROVIDER, locationTimeoutMs: env.SESSION_LOCATION_TIMEOUT_MS },
+		github: {
+			token: env.GITHUB_TOKEN ?? null,
+			repositories: (env.GITHUB_REPOSITORIES ?? []).flatMap((fullName: string): GithubRepositoryParams[] => {
+				const params = toGithubRepositoryParams(fullName);
+				return params === null ? [] : [params];
+			}),
+			requestTimeoutMs: env.GITHUB_REQUEST_TIMEOUT_MS,
+			cacheTtlMs: env.GITHUB_CACHE_TTL_MS,
+		},
 		encryption: {
 			tenantMasterKey: env.TENANT_ENCRYPTION_MASTER_KEY,
 			tenantMasterKeyVersion: env.TENANT_ENCRYPTION_MASTER_KEY_VERSION,

@@ -1,13 +1,22 @@
 import { act, fireEvent, screen, waitFor } from "expo-router/testing-library";
 import * as Haptics from "expo-haptics";
 import * as React from "react";
-import { DeviceEventEmitter, type KeyboardEvent } from "react-native";
+import { DeviceEventEmitter, Linking, type KeyboardEvent } from "react-native";
 
 // First: the uniwind mock factory below reads it while the screens import uniwind.
 import * as mockUniwindDefaults from "../../../test/uniwind-mock";
 import { dynamic, fail, ok, stubApi } from "../../../test/api-stub";
 import { createTestRuntime, markerScreen, renderInApp } from "../../../test/app-harness";
-import { profileJson, userJson } from "../../../test/fixtures";
+import {
+	githubCommitJson,
+	githubCommitPageJson,
+	githubContributorsJson,
+	githubDiscoveredRepositoriesJson,
+	githubRepositoriesJson,
+	githubSummaryJson,
+	profileJson,
+	userJson,
+} from "../../../test/fixtures";
 import { testAccessToken } from "../../../test/jwt";
 import { memorySecureStore } from "../../../test/secure-store-memory";
 import AppTabsLayout from "../../app/(app)/_layout";
@@ -239,7 +248,8 @@ describe("Profile (§10.8)", () => {
 	});
 
 	it("shows a load error with a retry", async () => {
-		stubApi({ "GET /auth/profile": fail(403, "FORBIDDEN", "No profile access") });
+		// The GitHub section is off (no repositories), so the only "Try again" is the profile's.
+		stubApi({ "GET /auth/profile": fail(403, "FORBIDDEN", "No profile access"), "GET /github/repositories": ok(githubRepositoriesJson([])) });
 		await renderSignedIn({ profile: ProfileScreen }, "/profile");
 		expect(await screen.findByText("No profile access")).toBeOnTheScreen();
 		await act(async (): Promise<void> => {
@@ -257,5 +267,169 @@ describe("session end while signed in", () => {
 			expect(runtime.sessionStore.getState()).toEqual({ status: "signedOut", reason: "sessionExpired" });
 		});
 		expect(memorySecureStore.peek("auth.refreshToken")).toBeNull();
+	});
+});
+
+describe("Profile — GitHub contributions", () => {
+	const LIST = "GET /github/repositories";
+	const SUMMARY = "GET /github/repositories/octo-org/hello-world";
+	const CONTRIBUTORS = "GET /github/repositories/octo-org/hello-world/contributors";
+	const NEWEST_COMMITS = "GET /github/repositories/octo-org/hello-world/commits?limit=10";
+	const OLDER_COMMITS = "GET /github/repositories/octo-org/hello-world/commits?cursor=page-2&limit=10";
+
+	/** Everything the section reads for octo-org/hello-world, plus the profile above it. */
+	function helloWorldRoutes(): Record<string, ReturnType<typeof ok>> {
+		return {
+			"GET /auth/profile": ok(profileJson()),
+			[LIST]: ok(githubRepositoriesJson()),
+			[SUMMARY]: ok(githubSummaryJson()),
+			[CONTRIBUTORS]: ok(githubContributorsJson(["octocat", "amy"])),
+			[NEWEST_COMMITS]: ok(githubCommitPageJson([githubCommitJson({ index: 1, headline: "feat: add contributions" })])),
+		};
+	}
+
+	it("shows the repository's numbers, languages, contributors and commits with their line counts", async () => {
+		stubApi(helloWorldRoutes());
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(await screen.findByText("GitHub contributions")).toBeOnTheScreen();
+		expect(await screen.findByLabelText("Stars: 1,204")).toBeOnTheScreen();
+		expect(screen.getByLabelText("Commits: 128")).toBeOnTheScreen();
+		expect(screen.getByLabelText("TypeScript: 75%")).toBeOnTheScreen();
+		expect(await screen.findByRole("link", { name: "octocat. 2 commits. 1,000 lines added, 250 deleted" })).toBeOnTheScreen();
+		expect(await screen.findByRole("link", { name: /^feat: add contributions\. octocat · .* · 4 files\. 120 lines added, 30 deleted$/ })).toBeOnTheScreen();
+		// One repository: nothing to choose.
+		expect(screen.queryByRole("combobox", { name: /^Repository/ })).toBeNull();
+	});
+
+	it.each([
+		["no repository is configured", ok(githubRepositoriesJson([]))],
+		["the account may not read them (403)", fail(403, "FORBIDDEN", "Missing permission")],
+	])("is not shown when %s", async (_label: string, answer: ReturnType<typeof ok>) => {
+		const api = stubApi({ "GET /auth/profile": ok(profileJson()), [LIST]: answer });
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(await screen.findByLabelText("Full name")).toBeOnTheScreen();
+		await waitFor(() => {
+			expect(api.callsTo(LIST)).toHaveLength(1);
+		});
+		expect(screen.queryByText("GitHub contributions")).toBeNull();
+		expect(api.callsTo(SUMMARY)).toHaveLength(0);
+	});
+
+	it("holds the section's place with a skeleton while the repositories load", async () => {
+		globalThis.fetch = jest.fn((): Promise<Response> => new Promise<Response>((): void => undefined));
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(screen.getByRole("progressbar", { name: "Loading GitHub contributions" })).toBeBusy();
+	});
+
+	it("loads older commits with the cursor of the previous page", async () => {
+		const api = stubApi({
+			...helloWorldRoutes(),
+			[NEWEST_COMMITS]: ok(githubCommitPageJson([githubCommitJson({ index: 1, headline: "Newest" })], "page-2")),
+			[OLDER_COMMITS]: ok(githubCommitPageJson([githubCommitJson({ index: 2, headline: "Older" })])),
+		});
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		await fireEvent.press(await screen.findByRole("button", { name: "Show older commits" }));
+
+		expect(await screen.findByRole("link", { name: /^Older\./ })).toBeOnTheScreen();
+		expect(screen.getByRole("link", { name: /^Newest\./ })).toBeOnTheScreen();
+		expect(api.callsTo(OLDER_COMMITS)).toHaveLength(1);
+		// The last page has no cursor: nothing older to offer.
+		expect(screen.queryByRole("button", { name: "Show older commits" })).toBeNull();
+	});
+
+	it("switches between configured repositories", async () => {
+		const api = stubApi({
+			...helloWorldRoutes(),
+			[LIST]: ok(githubRepositoriesJson(["octo-org/hello-world", "octo-org/website"])),
+			"GET /github/repositories/octo-org/website": ok(githubSummaryJson("octo-org/website")),
+			"GET /github/repositories/octo-org/website/contributors": ok(githubContributorsJson(["webdev"])),
+			"GET /github/repositories/octo-org/website/commits?limit=10": ok(githubCommitPageJson([githubCommitJson({ index: 3, headline: "Website commit" })])),
+		});
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		await fireEvent.press(await screen.findByRole("combobox", { name: "Repository, octo-org/hello-world" }));
+		await fireEvent.press(screen.getByRole("radio", { name: "octo-org/website" }));
+
+		expect(await screen.findByRole("link", { name: /^Website commit\./ })).toBeOnTheScreen();
+		expect(screen.getByRole("combobox", { name: "Repository, octo-org/website" })).toBeOnTheScreen();
+		expect(api.callsTo("GET /github/repositories/octo-org/website")).toHaveLength(1);
+	});
+
+	it("says so while GitHub is still counting contributors", async () => {
+		stubApi({ ...helloWorldRoutes(), [CONTRIBUTORS]: ok({ status: "computing" }) });
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(await screen.findByText("GitHub is still counting this repository's contributions. They'll appear here shortly.")).toBeOnTheScreen();
+	});
+
+	it("opens a commit on GitHub", async () => {
+		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+		stubApi(helloWorldRoutes());
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		await fireEvent.press(await screen.findByRole("link", { name: /^feat: add contributions\./ }));
+
+		expect(openUrl).toHaveBeenCalledWith(`https://github.com/octo-org/hello-world/commit/${"1".padStart(40, "0")}`);
+	});
+
+	it("explains when GitHub cannot be opened", async () => {
+		jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser"));
+		stubApi(helloWorldRoutes());
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		await fireEvent.press(await screen.findByRole("link", { name: /^octocat\./ }));
+
+		expect(await screen.findByText("Couldn't open GitHub. Try again from a browser.")).toBeOnTheScreen();
+	});
+
+	it("shows the API's message and retries a part that failed", async () => {
+		let summaryReads = 0;
+		stubApi({
+			...helloWorldRoutes(),
+			[SUMMARY]: dynamic(() => {
+				summaryReads += 1;
+				return summaryReads === 1 ? fail(404, "NOT_FOUND", "This GitHub repository could not be found on GitHub.") : ok(githubSummaryJson());
+			}),
+		});
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(await screen.findByText("This GitHub repository could not be found on GitHub.")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+
+		expect(await screen.findByLabelText("Stars: 1,204")).toBeOnTheScreen();
+	});
+
+	it("offers the account's own and contributed-to repositories in a searchable dropdown", async () => {
+		const owned = ["patelzz007/one", "patelzz007/two", "patelzz007/three", "patelzz007/four", "patelzz007/five", "patelzz007/six", "patelzz007/seven", "patelzz007/eight"];
+		stubApi({
+			...helloWorldRoutes(),
+			[LIST]: ok(githubDiscoveredRepositoriesJson("patelzz007", owned, ["vercel/next.js"])),
+			"GET /github/repositories/patelzz007/one": ok(githubSummaryJson("patelzz007/one")),
+			"GET /github/repositories/patelzz007/one/contributors": ok(githubContributorsJson()),
+			"GET /github/repositories/patelzz007/one/commits?limit=10": ok(githubCommitPageJson([])),
+			"GET /github/repositories/vercel/next.js": ok(githubSummaryJson("vercel/next.js")),
+			"GET /github/repositories/vercel/next.js/contributors": ok(githubContributorsJson()),
+			"GET /github/repositories/vercel/next.js/commits?limit=10": ok(githubCommitPageJson([githubCommitJson({ index: 9, headline: "Next.js commit" })])),
+		});
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(await screen.findByText("Public repositories of @patelzz007")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("combobox", { name: "Repository, patelzz007/one" }));
+
+		expect(screen.getAllByRole("radio")).toHaveLength(9);
+		expect(screen.getByRole("radio", { name: "patelzz007/one" })).toBeChecked();
+		expect(screen.getAllByHintText(/^Your repository · pushed .+ ago$/)).toHaveLength(8);
+		await fireEvent.changeText(screen.getByLabelText("Search repository"), "next");
+
+		expect(screen.getAllByRole("radio")).toHaveLength(1);
+		expect(screen.getByRole("radio", { name: "vercel/next.js" })).toBeOnTheScreen();
+		expect(screen.getByHintText(/^Contributed to · pushed .+ ago$/)).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("radio", { name: "vercel/next.js" }));
+
+		expect(await screen.findByRole("link", { name: /^Next\.js commit\./ })).toBeOnTheScreen();
 	});
 });

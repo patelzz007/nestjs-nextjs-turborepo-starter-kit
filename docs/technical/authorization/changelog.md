@@ -72,6 +72,8 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 ## 5. Data and seed fixes
 
 - **User role** now holds **OWN-scoped** permissions only (profile, URLs, tags, API keys, analytics).
+  One later, documented exception (2026-10-10): `READ:GITHUB` (GLOBAL) — the configured GitHub
+  repositories are shared configuration nobody owns ([ADR 045](../../adr/045-github-contributions-integration.md)).
 - `PermissionDefinition` gained `scope`; permission sync and capability sync are scope-aware (a capability links to the GLOBAL row when several scopes exist).
 - The seeded ABAC policies were invalid JSON rules (and, combined with the old DENY semantics, **denied the admin dashboard to every non-superadmin**) — rewritten in the valid format.
 - SuperAdmins receive every platform capability from `/auth/permissions`.

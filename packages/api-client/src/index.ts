@@ -100,6 +100,7 @@ export {
 	type ErasedMutationDef,
 	type ErasedProcedureDef,
 	type ErasedQueryDef,
+	type GithubRepositoryScope,
 	type MappedRouterTree,
 	type MutationDef,
 	type OrganizationScope,

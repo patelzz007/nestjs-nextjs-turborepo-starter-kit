@@ -1,7 +1,7 @@
 ---
 title: "API reference — Sample catalog (products and categories)"
 description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk."
-order: 11
+order: 12
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"

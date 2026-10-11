@@ -55,6 +55,13 @@ const EXPIRY_PATTERN = /^(?<value>\d+)(?<unit>[smhd])$/;
 const unit = EXPIRY_PATTERN.exec(expiry)?.groups?.unit;
 ```
 
+Read named groups with `exec()` only — **never through `String.prototype.matchAll`** in code the
+mobile app bundles (`packages/shared`, `packages/api-client`, `apps/mobile`). On React Native
+(Hermes, with the bundle's regex transform) the matches `matchAll` yields have no `groups`, while
+`exec()` keeps them; Jest runs on Node and does not catch it. This once left every `:param` of the
+api-client's paths unsubstituted on phones. To walk a structured string (a path), prefer plain
+string operations (`split`, `startsWith`) over a global regex.
+
 ## What stays allowed
 
 | Pattern | Why |

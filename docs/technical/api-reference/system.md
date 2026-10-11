@@ -1,7 +1,7 @@
 ---
 title: "API reference — System: health and version"
 description: "Liveness, readiness and deep health probes and the API version manifest."
-order: 12
+order: 13
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"

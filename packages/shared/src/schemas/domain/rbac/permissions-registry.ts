@@ -145,6 +145,9 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "LIST", resource: "REWARD", description: "List rewards", group: "Rewards" },
 	{ action: "MANAGE", resource: "REWARD", description: "Full reward management", group: "Rewards" },
 
+	// GitHub contributions (read-only views of the server-configured repositories)
+	{ action: "READ", resource: "GITHUB", description: "View contributions of the configured GitHub repositories", group: "GitHub" },
+
 	// Merchant orgs
 	{ action: "CREATE", resource: "MERCHANT_ORG", description: "Create merchant organizations", group: "Merchant" },
 	{ action: "READ", resource: "MERCHANT_ORG", description: "View merchant organization details", group: "Merchant" },

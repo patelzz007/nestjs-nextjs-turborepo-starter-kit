@@ -66,6 +66,14 @@ import {
 } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema, AdminUserDetailSchema, SessionPermissionsResponseSchema, UserResponseSchema } from "../schemas/auth/user";
 import { SignupReferralDashboardSchema, SignupReferralRefereeItemSchema, SignupReferralRefereeListQuerySchema } from "../schemas/domain/signup-referrals/signup-referrals";
+import {
+	GithubCommitHistoryInputSchema,
+	GithubCommitPageSchema,
+	GithubContributorStatsSchema,
+	GithubRepositoryListSchema,
+	GithubRepositoryParamsSchema,
+	GithubRepositorySummarySchema,
+} from "../schemas/domain/github/github-contributions";
 import { UuidParamSchema } from "../schemas/domain/platform/param-schemas";
 import { HttpAuditLogDetailSchema, HttpAuditLogIdParamSchema, HttpAuditLogListQuerySchema, HttpAuditLogSummarySchema } from "../schemas/domain/platform/http-audit-log";
 import { EmailLogListQuerySchema, EmailLogEntrySchema, EmailPreviewListResponseSchema, EmailPreviewSchema, EmailSendResultSchema } from "../schemas/email/email";
@@ -661,6 +669,36 @@ export const apiContract = {
 			response: singleResponse(EmailSendResultSchema),
 		}),
 		logList: defineContract({ method: "GET", path: apiRoutes.email.logList, input: EmailLogListQuerySchema, response: paginatedResponse(EmailLogEntrySchema) }),
+	},
+
+	// ── GitHub contributions ───────────────────────────────────────────
+	// Read-only views of the repositories the API may read: pinned by
+	// `GITHUB_REPOSITORIES`, or discovered from the token's account when that is
+	// empty. Any other repository is a 404.
+	github: {
+		/** The repositories the API may read (pinned or discovered) — empty when the integration is off. */
+		repositories: defineContract({ method: "GET", path: apiRoutes.github.repositories, input: z.undefined(), response: singleResponse(GithubRepositoryListSchema) }),
+		/** Stars, forks, languages, commit count and last push of one configured repository. */
+		repositorySummary: defineContract({
+			method: "GET",
+			path: apiRoutes.github.repositorySummary,
+			input: GithubRepositoryParamsSchema,
+			response: singleResponse(GithubRepositorySummarySchema),
+		}),
+		/** One page of the default branch's history, newest first, with lines added/deleted per commit. */
+		repositoryCommits: defineContract({
+			method: "GET",
+			path: apiRoutes.github.repositoryCommits,
+			input: GithubCommitHistoryInputSchema,
+			response: singleResponse(GithubCommitPageSchema),
+		}),
+		/** Commits and lines added/deleted per contributor — `computing` while GitHub prepares the statistics. */
+		repositoryContributors: defineContract({
+			method: "GET",
+			path: apiRoutes.github.repositoryContributors,
+			input: GithubRepositoryParamsSchema,
+			response: singleResponse(GithubContributorStatsSchema),
+		}),
 	},
 
 	// ── Geo (Country / State / City) ────────────────────────────────

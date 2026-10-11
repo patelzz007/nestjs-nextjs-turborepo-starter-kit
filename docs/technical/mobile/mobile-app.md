@@ -1187,6 +1187,11 @@ View and edit the fields the web profile supports, through the same endpoints an
 Avatar upload follows the existing upload contract if the web profile supports it; otherwise it is
 listed as a next step rather than invented here.
 
+Below the editor, the **GitHub contributions** section (2026-10-10): the configured repositories'
+summary, top contributors and commit history with lines added and deleted. Hidden when the
+integration is off or the account lacks `READ:GITHUB` — see
+[GitHub contributions §4](../github-contributions.md#4-mobile-profile-section).
+
 ### 10.9 Settings
 
 - **Appearance:** System / Light / Dark (radio list). Applied immediately via `Uniwind.setTheme`
@@ -1671,6 +1676,7 @@ touches shared packages.
 | `POST /auth/signup` | Sign up |
 | `POST /auth/forgot-password` | Forgot password |
 | `GET /auth/me` | Home, Profile |
+| `GET /github/repositories`, `GET /github/repositories/:owner/:repository`, `…/commits`, `…/contributors` | Profile: GitHub contributions |
 | `GET /session` | Status pills: the token countdown (§10.16) |
 | `POST /auth/change-password` | Security |
 | `POST /auth/refresh` | api-client (automatic) |

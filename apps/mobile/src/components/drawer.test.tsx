@@ -1,9 +1,15 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as React from "react";
-import { BackHandler, Text, type HardwareBackPressEvent, type NativeEventSubscription } from "react-native";
+import { BackHandler, Platform, Text, type HardwareBackPressEvent, type NativeEventSubscription } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 
 import { Drawer, type DrawerProps } from "./drawer";
+
+/** The drawer's blur intensity when fully open (`BLUR_MAX_INTENSITY` in drawer.tsx). */
+const FULL_BLUR_INTENSITY = 18;
+
+/** Long enough for the panel spring to settle under Jest (Reanimated runs it on mocked animation frames). */
+const CLOSE_SETTLE_TIMEOUT_MS = 5_000;
 
 /** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
@@ -104,5 +110,41 @@ describe("Drawer", () => {
 
 		await view.rerender(drawer(true, handlers()));
 		expect(screen.queryByTestId("drawer-edge", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("renders no blur behind a closed drawer", async () => {
+		await render(drawer(false, handlers()));
+
+		expect(screen.queryByTestId("drawer-blur", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("blurs the app behind an open drawer, without taking touches from the scrim", async () => {
+		const view = await render(drawer(false, handlers()));
+
+		await view.rerender(drawer(true, handlers()));
+
+		expect(screen.getByTestId("drawer-blur", { includeHiddenElements: true })).toHaveProp("pointerEvents", "none");
+	});
+
+	it("keeps the blur while the drawer closes, then removes it once the close has settled", async () => {
+		const view = await render(drawer(true, handlers()));
+
+		await view.rerender(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-blur", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await waitFor(
+			() => {
+				expect(screen.queryByTestId("drawer-blur", { includeHiddenElements: true })).toBeNull();
+			},
+			{ timeout: CLOSE_SETTLE_TIMEOUT_MS },
+		);
+	});
+
+	it("raises the blur to full with the open drawer (Jest renders as iOS, where the intensity is animated)", async () => {
+		expect(Platform.OS).toBe("ios");
+		await render(drawer(true, handlers()));
+
+		expect(screen.getByTestId("drawer-blur-view", { includeHiddenElements: true })).toHaveProp("intensity", FULL_BLUR_INTENSITY);
+		expect(screen.getByTestId("drawer-blur-view", { includeHiddenElements: true })).toHaveProp("tint", "dark");
 	});
 });

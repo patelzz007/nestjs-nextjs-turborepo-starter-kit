@@ -40,11 +40,18 @@ describe("SYSTEM_ROLE_CATALOG", () => {
 		expect(grantsOf("SuperAdmin")).toHaveLength(CATALOG.length);
 	});
 
-	it("keeps the customer role OWN-scoped and out of the admin panel", () => {
+	it("keeps the customer role OWN-scoped, apart from the documented shared reads, and out of the admin panel", () => {
 		const user = grantsOf("User");
+		const shared = user.filter((permission) => permission.scope !== "OWN");
 
-		expect(user.every((permission) => permission.scope === "OWN")).toBe(true);
+		expect([...keys(shared)]).toEqual(["READ:GITHUB:GLOBAL"]);
 		expect(user.some((permission) => permission.resource === "ADMIN_DASHBOARD")).toBe(false);
+	});
+
+	it("lets every platform role read the configured GitHub repositories", () => {
+		for (const roleName of ["SuperAdmin", "Admin", "Manager", "User"]) {
+			expect(keys(grantsOf(roleName)).has("READ:GITHUB:GLOBAL"), roleName).toBe(true);
+		}
 	});
 
 	it("withholds RBAC, system settings and the two direct-grant permissions from Manager and Admin as documented", () => {

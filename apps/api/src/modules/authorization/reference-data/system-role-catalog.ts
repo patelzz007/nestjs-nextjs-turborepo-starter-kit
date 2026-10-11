@@ -33,7 +33,8 @@ export interface SystemRoleDefinition {
  * - SuperAdmin: the full matrix (the `isSuperAdmin` flag on the user row still bypasses checks; the role is for assigned operators).
  * - Admin: the admin panel except DELETE:USER and MANAGE:SYSTEM_SETTINGS (granted directly where needed).
  * - Manager: a limited admin panel (team lead): no RBAC, system settings, geo or email tools.
- * - User: customer app only, every grant OWN-scoped, no ADMIN_DASHBOARD.
+ * - User: customer app only, every grant OWN-scoped except READ:GITHUB (the configured repositories are shared,
+ *   not owned — every signed-in person sees the same contributions), no ADMIN_DASHBOARD.
  * - Store Manager / Store Staff: STORE-scoped rows, applied only inside the member's store.
  */
 export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
@@ -59,7 +60,8 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "GEO", ["READ", "LIST", "CREATE", "UPDATE", "DELETE"]) ||
 			matchesAny(p, "REWARD", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
 			matchesAny(p, "MERCHANT_ORG", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
-			matchesAny(p, "STORE", ["CREATE", "READ", "UPDATE", "LIST"]),
+			matchesAny(p, "STORE", ["CREATE", "READ", "UPDATE", "LIST"]) ||
+			matches(p, "READ", "GITHUB"),
 	},
 	{
 		name: "Manager",
@@ -70,7 +72,8 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "PROFILE", ["READ", "LIST"]) ||
 			matchesAny(p, "REPORT", ["READ", "LIST"]) ||
 			matchesAny(p, "ANALYTICS", ["READ", "LIST"]) ||
-			matchesAny(p, "AUDIT_LOG", ["READ", "LIST"]),
+			matchesAny(p, "AUDIT_LOG", ["READ", "LIST"]) ||
+			matches(p, "READ", "GITHUB"),
 	},
 	{
 		name: "User",
@@ -80,7 +83,8 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "URL", ["CREATE", "READ", "UPDATE", "DELETE", "LIST"], "OWN") ||
 			matchesAny(p, "TAG", ["CREATE", "READ", "UPDATE", "DELETE", "LIST"], "OWN") ||
 			matchesAny(p, "API_KEY", ["CREATE", "READ", "UPDATE", "DELETE", "LIST"], "OWN") ||
-			matchesAny(p, "ANALYTICS", ["READ", "LIST"], "OWN"),
+			matchesAny(p, "ANALYTICS", ["READ", "LIST"], "OWN") ||
+			matches(p, "READ", "GITHUB"),
 	},
 	{
 		name: "Store Manager",

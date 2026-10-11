@@ -3,12 +3,14 @@
 // implementation under Jest (ADR 031, rules/11): the OS secret store becomes an
 // in-memory map each test can inspect and reset, the device's network is a fake
 // each test can switch offline, Uniwind (compiled by Metro) renders unstyled,
-// and Reanimated's native worklet runtime runs on the JS thread.
+// the native blur view is a plain view, and Reanimated's native worklet runtime
+// runs on the JS thread.
 
 import "@testing-library/react-native/matchers";
 import type * as Worklets from "react-native-worklets";
 
 // `mock…` names are the only outer variables a hoisted jest.mock factory may use.
+import * as mockBlur from "./test/expo-blur-mock";
 import * as mockNetwork from "./test/network-fake";
 import { memorySecureStore as mockSecureStore } from "./test/secure-store-memory";
 import * as mockUniwind from "./test/uniwind-mock";
@@ -18,6 +20,8 @@ jest.mock("expo-secure-store", () => mockSecureStore);
 jest.mock("expo-network", () => mockNetwork);
 // Uniwind compiles styles in Metro, not under Jest (test/uniwind-mock.tsx).
 jest.mock("uniwind", () => mockUniwind);
+// The blur is a native view (test/expo-blur-mock.tsx): a plain view that still takes refs and animated props.
+jest.mock("expo-blur", () => mockBlur);
 // Reanimated's worklet runtime is native; its own Jest stand-in runs worklets on the JS thread,
 // so the real Reanimated (springs, animated styles) runs under test (ADR 036).
 jest.mock("react-native-worklets", () => jest.requireActual<typeof Worklets>("react-native-worklets/src/mock"));

@@ -102,6 +102,14 @@ export const apiRoutes = {
 		detail: "/admin/audit-logs/:id",
 	},
 
+	// ── GitHub contributions (read-only, server-configured repositories) ──
+	github: {
+		repositories: "/github/repositories",
+		repositorySummary: "/github/repositories/:owner/:repository",
+		repositoryCommits: "/github/repositories/:owner/:repository/commits",
+		repositoryContributors: "/github/repositories/:owner/:repository/contributors",
+	},
+
 	// ── Geo ────────────────────────────────────────────────────────────
 	geo: {
 		stats: "/geo/stats",

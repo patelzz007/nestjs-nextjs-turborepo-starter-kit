@@ -10,6 +10,7 @@ import type {
 	MessagingConfig,
 	MfaConfig,
 	MobileConfig,
+	GithubConfig,
 	SessionsConfig,
 	ObservabilityConfig,
 	RateLimitConfig,
@@ -70,6 +71,10 @@ export class TypedConfigService {
 
 	public get sessions(): SessionsConfig {
 		return this.config.sessions;
+	}
+
+	public get github(): GithubConfig {
+		return this.config.github;
 	}
 
 	/** Raw key material; prefer the decoded {@link tenantEncryptionMasterKey} / {@link tenantEncryptionPreviousMasterKeys} copies. */

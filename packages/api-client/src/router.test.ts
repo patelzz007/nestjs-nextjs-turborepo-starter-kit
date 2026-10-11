@@ -1,5 +1,5 @@
 import { apiContract, epochMs, MERCHANT_TERMINALS_PAGE_SIZE, type SerializableInput } from "@workspace/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { apiRouter, isErasedProcedureDef, isRouterSubtree, mapRouterTree, resolveRequest, type ApiQueryKey, type ErasedQueryDef, type RouterTreeMapper } from "./router";
@@ -234,5 +234,50 @@ describe("mapRouterTree", () => {
 		["an array (its index keys would become route names)", [leaf]],
 	])("throws for %s instead of treating it as a router", (_what, node) => {
 		expect(() => mapRouterTree({ broken: node }, MAPPER)).toThrow("Invalid router node");
+	});
+});
+
+describe("resolveRequest path parameters", () => {
+	const OWNER = "patelzz007";
+	const REPOSITORY = "nestjs-nextjs-turborepo-starter-kit";
+
+	it("fills every :param segment and sends only the other keys as the query string", () => {
+		const commits = apiRouter.github.repositoryCommits;
+
+		expect(resolveRequest(commits.path, { owner: OWNER, repository: REPOSITORY, limit: 10 })).toEqual({ url: `/github/repositories/${OWNER}/${REPOSITORY}/commits?limit=10` });
+		expect(resolveRequest(apiRouter.github.repositorySummary.path, { owner: OWNER, repository: REPOSITORY })).toEqual({ url: `/github/repositories/${OWNER}/${REPOSITORY}` });
+	});
+
+	it("percent-encodes a parameter value", () => {
+		expect(resolveRequest(apiRouter.auth.adminUserDetail.path, { userId: "a/b c" })).toEqual({ url: "/auth/admin/users/a%2Fb%20c" });
+	});
+
+	it("does not depend on RegExp named groups, which React Native's engine does not return from matchAll", () => {
+		const matchAll = vi.spyOn(String.prototype, "matchAll").mockImplementation(() => {
+			throw new Error("matchAll must not be used to read path parameters");
+		});
+		try {
+			expect(resolveRequest(apiRouter.github.repositorySummary.path, { owner: OWNER, repository: REPOSITORY })).toEqual({
+				url: `/github/repositories/${OWNER}/${REPOSITORY}`,
+			});
+		} finally {
+			matchAll.mockRestore();
+		}
+	});
+});
+
+describe("apiRouter.github query keys", () => {
+	it("nests every repository view under the list's scope, so one invalidation reloads them all", () => {
+		const scope = apiRouter.github.repositories.scopeKey(undefined);
+		const params = { owner: "patelzz007", repository: "site" };
+		const keys = [
+			apiRouter.github.repositorySummary.queryKey(params),
+			apiRouter.github.repositoryCommits.queryKey({ ...params, limit: 10 }),
+			apiRouter.github.repositoryContributors.queryKey(params),
+		];
+
+		for (const key of keys) {
+			expect(key.slice(0, scope.length)).toEqual(scope);
+		}
 	});
 });

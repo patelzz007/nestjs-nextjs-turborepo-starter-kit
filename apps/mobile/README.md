@@ -34,6 +34,7 @@ src/
   components/        presentational: data-agnostic, controlled, accessible, token-styled
   features/          session (root guard state machine), preferences (theme, app lock settings), app-lock,
                      auth (login steps, sign out, refresh), two-factor (enrollment flow), devices, profile,
+                     github (the Profile's GitHub contributions section),
                      navigation (the tab registry, the tab bar adapter, the app drawer, the status corner),
                      app-drawer (the drawer's open state), app-status (online / offline and the access
                      token countdown — the admin topbar's indicators, in the corner and the drawer)

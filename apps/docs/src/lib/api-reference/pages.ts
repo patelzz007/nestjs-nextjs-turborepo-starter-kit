@@ -89,6 +89,13 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		tags: ["Geo"],
 	},
 	{
+		slug: "github",
+		title: "GitHub contributions",
+		description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with.",
+		guide: { label: "GitHub contributions guide", href: "../github-contributions.md" },
+		tags: ["GitHub"],
+	},
+	{
 		slug: "catalog-samples",
 		title: "Sample catalog (products and categories)",
 		description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk.",

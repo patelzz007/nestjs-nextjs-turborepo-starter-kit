@@ -24,6 +24,7 @@
 		"@workspace/tokens": "workspace:*",
 		"expo": "~57.0.27",
 		"expo-application": "~57.0.3",
+		"expo-blur": "~57.0.3",
 		"expo-clipboard": "~57.0.2",
 		"expo-constants": "~57.0.21",
 		"expo-device": "~57.0.2",

@@ -87,6 +87,12 @@ export interface AdminOrganizationScope extends ScopeFields {
 	readonly organizationId: string;
 }
 
+/** Scope of one configured GitHub repository. */
+export interface GithubRepositoryScope extends ScopeFields {
+	readonly owner: string;
+	readonly repository: string;
+}
+
 // ── Definition model (input-first, tRPC-style) ────────────────────────────
 
 /** A GET procedure: input → path params + query string, response → typed payload. */
@@ -348,7 +354,19 @@ export function defineMutation<Input extends SerializableInput, Data extends Dat
 
 // ── REST serialization (shared by client + server) ─────────────────────────
 
-const PARAM_PATTERN = /:(?<name>[A-Za-z0-9_]+)/g;
+/** Marks a path segment as a parameter: `/orgs/:orgSlug` → `orgSlug`. */
+const PARAM_SEGMENT_PREFIX = ":";
+const PATH_SEPARATOR = "/";
+
+/**
+ * The parameter name of one path segment, or `null` for a literal segment.
+ * Plain string operations, never a RegExp with named groups: React Native's
+ * engine (Hermes, through the bundle's regex transform) returns no `groups`
+ * from `matchAll`, which once left every `:param` unsubstituted on mobile.
+ */
+function paramNameOf(segment: string): string | null {
+	return segment.startsWith(PARAM_SEGMENT_PREFIX) && segment.length > PARAM_SEGMENT_PREFIX.length ? segment.slice(PARAM_SEGMENT_PREFIX.length) : null;
+}
 
 /** How `resolveRequest` routes leftover input keys — defaults to GET with no query overrides. */
 export interface ResolveRequestOptions {
@@ -375,15 +393,21 @@ export interface ResolvedRequest {
 export function resolveRequest(path: string, input: SerializableInput, options?: ResolveRequestOptions): ResolvedRequest {
 	const record: Readonly<Record<string, DataValue | undefined>> = input ?? {};
 	const method: RestMethod = options?.method ?? "GET";
-	const paramNames: readonly string[] = [...path.matchAll(PARAM_PATTERN)].map((match) => match.groups?.name ?? "");
+	const segments: readonly string[] = path.split(PATH_SEPARATOR);
+	const paramNames: readonly string[] = segments.flatMap((segment) => {
+		const name = paramNameOf(segment);
+		return name === null ? [] : [name];
+	});
 
 	const consumed = new Set<string>(paramNames);
 	for (const key of options?.toQuery ?? []) consumed.add(key);
 
-	let url = path;
-	for (const param of paramNames) {
-		url = url.replace(`:${param}`, encodeURIComponent(stringifyQueryValue(record[param])));
-	}
+	let url = segments
+		.map((segment) => {
+			const name = paramNameOf(segment);
+			return name === null ? segment : encodeURIComponent(stringifyQueryValue(record[name]));
+		})
+		.join(PATH_SEPARATOR);
 
 	// Leftover keys → query string (GET) or body (mutations); `undefined` values are dropped.
 	const leftover: readonly { readonly key: string; readonly value: DataValue }[] = Object.keys(record).flatMap((key) => {
@@ -497,6 +521,22 @@ export const apiRouter = {
 		adminUserDetail: defineQuery(apiContract.auth.adminUserDetail, { scope: ({ userId }: { readonly userId: string }): ApiQueryKey => ["auth", "admin-user", userId] }),
 		impersonate: defineMutation(apiContract.auth.impersonate),
 		stopImpersonation: defineMutation(apiContract.auth.stopImpersonation),
+	},
+
+	// Every GitHub key starts with `repositories`' scope, so invalidating that one scope reloads the list and every repository view.
+	github: {
+		/** The repositories the API may read (pinned or discovered) — empty when the integration is off. */
+		repositories: defineQuery(apiContract.github.repositories, { scope: (): ApiQueryKey => ["github", "repositories"] }),
+		repositorySummary: defineQuery(apiContract.github.repositorySummary, {
+			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "summary"],
+		}),
+		/** One page per cursor — the cursor is part of the input, so each page is its own cache entry. */
+		repositoryCommits: defineQuery(apiContract.github.repositoryCommits, {
+			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "commits"],
+		}),
+		repositoryContributors: defineQuery(apiContract.github.repositoryContributors, {
+			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "contributors"],
+		}),
 	},
 
 	capabilities: {

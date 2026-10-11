@@ -132,6 +132,7 @@ enum PermissionResource {
   ORGANIZATION
   LOCATION
   STORE
+  GITHUB
 }
 
 enum PermissionScope {

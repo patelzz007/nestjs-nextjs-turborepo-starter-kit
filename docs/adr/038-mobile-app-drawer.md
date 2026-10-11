@@ -12,7 +12,8 @@ order: 38
 
 ## Status
 
-Accepted (2026-10-09). Implemented (2026-10-09).
+Accepted (2026-10-09). Implemented (2026-10-09). Amended (2026-10-10): the scrim blurs the app — see
+"Blurred scrim" below.
 
 ## Context
 
@@ -77,3 +78,26 @@ must keep running in Expo Go, and every colour must come from the tokens (ADR 03
   `drawer.tsx`.
 - Gestures are covered by unit tests of `drawer-gesture.ts`, not by simulated touches. Check
   swipes on a device, on iOS and Android.
+
+## Blurred scrim (amendment, 2026-10-10)
+
+- Behind an open drawer the app is **blurred** as well as dimmed: an `expo-blur` `BlurView`
+  (included in Expo Go, installed with `npx expo install`) with the `dark` tint at intensity 18,
+  under the `--scrim` dim, which drops to 25 % since the blur already sets the app back.
+- The blur follows the panel's progress, differently per platform:
+  - **Android fades a fixed blur** (the wrapper's opacity follows the progress). Changing the blur
+    radius every frame is too slow there; fading is a cheap alpha change.
+  - **iOS animates the intensity** (Reanimated animated props, starting from 0). iOS renders a blur
+    inside a view with alpha below 1 incorrectly, so it cannot be faded.
+- `DrawerBlur` is memoized and its props never change while mounted. Every render of expo-blur
+  re-sends its JS `intensity` to the native view, overriding the animated value for a frame — which
+  showed as a flash of blur when the drawer started closing. Jest cannot reproduce that native
+  override (Reanimated's Jest fallback re-applies animated values after each render), so it is
+  checked on a device.
+- It is mounted only from the moment the drawer opens (or an opening edge drag starts) until a
+  close has settled, so a closed drawer keeps no blur view rendering behind the app.
+- Android blurs only with an explicit method: the app sits in a `BlurTargetView` the `BlurView`
+  reads, with `dimezisBlurViewSdk31Plus` — a real blur on Android 12+, the dim alone on older
+  versions, where the blur is too slow.
+- Under Jest, `expo-blur` is a boundary stand-in (`test/expo-blur-mock.tsx`): plain views, so the
+  real Reanimated and drawer code run. The blur's look is checked on a device.

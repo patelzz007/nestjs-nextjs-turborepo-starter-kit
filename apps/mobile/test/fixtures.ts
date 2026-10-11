@@ -89,3 +89,98 @@ export function twoFactorSetupJson(): DataValue {
 		backupCodes: ["S", "T", "U", "V", "W", "X", "Y", "Z", "2", "3"].map((last: string): string => `ABCDEFGHJKMNPQR${last}`),
 	};
 }
+
+// ── GitHub contributions ───────────────────────────────────────────────────
+
+/** `GET /github/repositories`: repositories pinned by `GITHUB_REPOSITORIES` (`owner/repository` full names). */
+export function githubRepositoriesJson(fullNames: readonly string[] = ["octo-org/hello-world"]): DataValue {
+	return {
+		source: fullNames.length === 0 ? "off" : "configured",
+		account: null,
+		repositories: fullNames.map((fullName: string): DataValue => {
+			const [owner = "", repository = ""] = fullName.split("/");
+			return { owner, repository, fullName, relationship: "configured", pushedAt: null };
+		}),
+	};
+}
+
+/** `GET /github/repositories` discovered from `account`: its own repositories, then the ones it contributed to, each pushed a day before the previous. */
+export function githubDiscoveredRepositoriesJson(account: string, owned: readonly string[], contributed: readonly string[] = []): DataValue {
+	const items = [
+		...owned.map((fullName: string) => ({ fullName, relationship: "owned" })),
+		...contributed.map((fullName: string) => ({ fullName, relationship: "contributed" })),
+	];
+	return {
+		source: "discovered",
+		account,
+		repositories: items.map(({ fullName, relationship }, index: number): DataValue => {
+			const [owner = "", repository = ""] = fullName.split("/");
+			return { owner, repository, fullName, relationship, pushedAt: NOW_MS - (index + 1) * 24 * HOUR_MS };
+		}),
+	};
+}
+
+/** `GET /github/repositories/:owner/:repository`. */
+export function githubSummaryJson(fullName = "octo-org/hello-world"): DataValue {
+	const [owner = "", repository = ""] = fullName.split("/");
+	return {
+		owner,
+		repository,
+		fullName,
+		description: "A hello world repository",
+		htmlUrl: `https://github.com/${fullName}`,
+		defaultBranch: "main",
+		primaryLanguage: "TypeScript",
+		stars: 1204,
+		forks: 7,
+		watchers: 5,
+		openIssues: 3,
+		totalCommits: 128,
+		pushedAt: NOW_MS - 2 * HOUR_MS,
+		languages: [
+			{ name: "TypeScript", color: "#3178c6", bytes: 750, percent: 75 },
+			{ name: "CSS", color: "#663399", bytes: 250, percent: 25 },
+		],
+	};
+}
+
+interface GithubCommitJsonOverrides {
+	readonly index: number;
+	readonly headline?: string;
+}
+
+/** One commit; `index` makes its sha (and so its key) unique. */
+export function githubCommitJson({ index, headline }: GithubCommitJsonOverrides): DataValue {
+	const sha = index.toString(16).padStart(40, "0");
+	return {
+		sha,
+		shortSha: sha.slice(0, 7),
+		headline: headline ?? `Commit ${String(index)}`,
+		htmlUrl: `https://github.com/octo-org/hello-world/commit/${sha}`,
+		committedAt: NOW_MS - HOUR_MS,
+		author: { name: "Octo Cat", login: "octocat", avatarUrl: null },
+		additions: 120,
+		deletions: 30,
+		changedFiles: 4,
+	};
+}
+
+/** `GET /github/repositories/:owner/:repository/commits`. */
+export function githubCommitPageJson(items: readonly DataValue[], nextCursor: string | null = null): DataValue {
+	return { items: [...items], nextCursor, totalCommits: 128 };
+}
+
+/** `GET /github/repositories/:owner/:repository/contributors` once GitHub has counted them. */
+export function githubContributorsJson(logins: readonly string[] = ["octocat"]): DataValue {
+	return {
+		status: "ready",
+		contributors: logins.map((login: string, index: number): DataValue => ({
+			login,
+			avatarUrl: null,
+			htmlUrl: `https://github.com/${login}`,
+			commits: logins.length - index,
+			additions: 1000,
+			deletions: 250,
+		})),
+	};
+}

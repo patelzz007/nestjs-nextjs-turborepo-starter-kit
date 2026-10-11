@@ -441,6 +441,63 @@ describe("API env schema", () => {
 		});
 	});
 
+	describe("GitHub contributions", () => {
+		const TOKEN = "github_pat_test_read_only";
+
+		it("is off by default: no token, no repositories, a 5 s request budget and a 5 min cache", () => {
+			expect(parse({ GITHUB_TOKEN: undefined, GITHUB_REPOSITORIES: undefined }).github).toEqual({
+				token: null,
+				repositories: [],
+				requestTimeoutMs: 5_000,
+				cacheTtlMs: 300_000,
+			});
+		});
+
+		it("splits GITHUB_REPOSITORIES into owner and repository, in the configured order", () => {
+			const github = parse({ GITHUB_TOKEN: TOKEN, GITHUB_REPOSITORIES: " octo-org/hello-world , me/next.js_site-2 " }).github;
+
+			expect(github.token).toBe(TOKEN);
+			expect(github.repositories).toEqual([
+				{ owner: "octo-org", repository: "hello-world" },
+				{ owner: "me", repository: "next.js_site-2" },
+			]);
+		});
+
+		it("reads the request budget and cache lifetime", () => {
+			expect(parse({ GITHUB_REQUEST_TIMEOUT_MS: "1500", GITHUB_CACHE_TTL_MS: "60000" }).github).toMatchObject({ requestTimeoutMs: 1_500, cacheTtlMs: 60_000 });
+		});
+
+		it("requires GITHUB_TOKEN once repositories are listed", () => {
+			expect(captureEnvError({ GITHUB_TOKEN: undefined, GITHUB_REPOSITORIES: "octo-org/hello-world" }).variables).toEqual(["GITHUB_TOKEN"]);
+		});
+
+		it("rejects the same repository twice, whatever the letter case", () => {
+			expect(captureEnvError({ GITHUB_TOKEN: TOKEN, GITHUB_REPOSITORIES: "octo-org/hello-world,Octo-Org/Hello-World" }).variables).toEqual(["GITHUB_REPOSITORIES"]);
+		});
+
+		it("rejects more than 20 repositories", () => {
+			const repositories = Array.from({ length: 21 }, (_entry: undefined, index: number): string => `octo-org/repo-${String(index)}`).join(",");
+
+			expect(captureEnvError({ GITHUB_TOKEN: TOKEN, GITHUB_REPOSITORIES: repositories }).variables).toEqual(["GITHUB_REPOSITORIES"]);
+		});
+
+		it.each(["hello-world", "octo-org/", "/hello-world", "octo-org/hello/world", "-octo/hello", "octo--org/hello", "octo-org/..", "octo org/hello"])(
+			"rejects GITHUB_REPOSITORIES=%j (not owner/repository), naming the bad entry",
+			(value: string) => {
+				expect(captureEnvError({ GITHUB_TOKEN: TOKEN, GITHUB_REPOSITORIES: `octo-org/fine,${value}` }).variables).toEqual(["GITHUB_REPOSITORIES.1"]);
+			},
+		);
+
+		it.each([
+			["GITHUB_REQUEST_TIMEOUT_MS", "0"],
+			["GITHUB_REQUEST_TIMEOUT_MS", "30001"],
+			["GITHUB_CACHE_TTL_MS", "0"],
+			["GITHUB_CACHE_TTL_MS", "86400001"],
+		])("rejects %s=%j", (variable: string, value: string) => {
+			expect(captureEnvError({ [variable]: value }).variables).toEqual([variable]);
+		});
+	});
+
 	describe("derived values", () => {
 		it("auto-detects s3 from a legacy bucket name, but never from a local-* container", () => {
 			expect(parse({ STORAGE_S3_BUCKET: "rewardhub", ...S3_PUBLIC_DELIVERY }).storage).toMatchObject({ provider: "s3", privateContainer: "rewardhub" });

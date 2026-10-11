@@ -38,6 +38,7 @@ describe("apps/api/.env.example", () => {
 			"RESEND_WEBHOOK_SECRET",
 			"OBSERVE_APP_KEY",
 			"OBSERVE_APP_SECRET",
+			"GITHUB_TOKEN",
 		]) {
 			expect(active[key] ?? "", key).toBe("");
 		}

@@ -803,6 +803,17 @@ async function captureCatalog(context) {
 	await capture("ProductController_bulkDelete", admin, { method: "POST", path: api("/product/bulk-delete"), body: { ids: [newProduct?.id, ...productBulkIds] } });
 }
 
+async function captureGithub(context) {
+	const { admin } = context;
+	// The capture API runs without GITHUB_REPOSITORIES, so the list is empty and every per-repository route is a 404.
+	await capture("GithubController_listRepositories", admin, { method: "GET", path: api("/github/repositories") });
+	const needsGithub =
+		"Reads GitHub with the API's GITHUB_TOKEN; the capture API has no token and no network access to GitHub. Shape: see the response schema (docs/technical/github-contributions.md).";
+	notCaptured("GithubController_getRepositorySummary", needsGithub);
+	notCaptured("GithubController_getCommitPage", needsGithub);
+	notCaptured("GithubController_getContributorStats", needsGithub);
+}
+
 async function captureEmail(context) {
 	const { admin } = context;
 	await capture("EmailLogController_list", admin, { method: "GET", path: api("/notifications/email-log"), query: { limit: "2" } });
@@ -1339,6 +1350,7 @@ async function main() {
 		["auth", captureAuth],
 		["rbac", captureRbac],
 		["geo", captureGeo],
+		["github", captureGithub],
 		["catalog", captureCatalog],
 		["email", captureEmail],
 		["files", captureFiles],
