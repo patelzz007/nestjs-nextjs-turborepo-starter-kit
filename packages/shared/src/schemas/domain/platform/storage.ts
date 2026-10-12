@@ -28,7 +28,12 @@ export const FileStatusSchema = z.enum(["PENDING", "UPLOADED", "PROCESSING", "SC
 
 export type FileStatus = z.output<typeof FileStatusSchema>;
 
-export const FileCategorySchema = z.enum(["PRODUCT_IMAGE", "STORE_LOGO", "STORE_BANNER", "USER_AVATAR", "MERCHANT_KYB"]);
+/**
+ * What a stored file is for. `REWARD_COVER` is the image a merchant shows on a
+ * reward: uploaded to the organization first, then named by the reward's
+ * `coverFileId` (a reward cannot be saved without one).
+ */
+export const FileCategorySchema = z.enum(["PRODUCT_IMAGE", "STORE_LOGO", "STORE_BANNER", "USER_AVATAR", "MERCHANT_KYB", "REWARD_COVER"]);
 
 export type FileCategory = z.output<typeof FileCategorySchema>;
 
@@ -101,6 +106,14 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		maxBytes: 10_485_760,
 		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
 		generatesVariants: true,
+	},
+	REWARD_COVER: {
+		category: "REWARD_COVER",
+		visibility: "PUBLIC",
+		// At most 10 MiB, so the single-shot signed upload stays within rules/20 (multipart above ~10 MB).
+		maxBytes: 10_485_760,
+		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+		generatesVariants: false,
 	},
 	MERCHANT_KYB: {
 		category: "MERCHANT_KYB",
@@ -186,6 +199,9 @@ export const CreateFileUploadUrlSchema = z
 		}
 		if (value.category === "USER_AVATAR" && value.userId === undefined) {
 			ctx.addIssue({ code: "custom", message: "userId is required for USER_AVATAR uploads", path: ["userId"] });
+		}
+		if (value.category === "REWARD_COVER" && value.organizationId === undefined) {
+			ctx.addIssue({ code: "custom", message: "organizationId is required for REWARD_COVER uploads", path: ["organizationId"] });
 		}
 		if (value.category === "MERCHANT_KYB" && value.organizationId === undefined) {
 			ctx.addIssue({ code: "custom", message: "organizationId is required for MERCHANT_KYB uploads", path: ["organizationId"] });

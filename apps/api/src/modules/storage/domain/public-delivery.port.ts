@@ -45,3 +45,12 @@ export interface PublicDelivery {
 	 */
 	unpublishAsset(input: PublicAssetWithdrawalInput): Promise<PublicAssetWithdrawalResult>;
 }
+
+/**
+ * Cache policy of published public assets, on every provider (the CDN copy on
+ * S3, the local driver's `local-public` route). Keys are unique per file (they
+ * embed the file id). A withdrawn asset is invalidated at the CDN, but browsers
+ * that already fetched it keep their copy until this expires, so it is bounded
+ * to one day rather than marked immutable.
+ */
+export const PUBLIC_ASSET_CACHE_CONTROL = "public, max-age=86400";

@@ -219,3 +219,15 @@ export function useMerchantLocation(): MerchantLocationState {
 		[access, effectiveLocationId, isLoading],
 	);
 }
+
+/**
+ * The active organization's id (`undefined` until its context has loaded) —
+ * for API inputs keyed by id rather than slug, e.g. file uploads. Read from the
+ * shared organization-context query, never stored.
+ */
+export function useActiveOrganizationId(): string | undefined {
+	const { api } = useAuth();
+	const { orgSlug, initialOrganizationContext } = useTenantScope();
+	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
+	return contextQuery.data?.data.organization.id;
+}

@@ -1,5 +1,5 @@
-import { NotFoundException } from "@nestjs/common";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { epochMs, LIST_SLOT_INDEX } from "@workspace/shared";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,13 +8,13 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
-import { RewardRepository } from "../repositories/reward.repository";
+import { RewardCoverUnavailableError, RewardRepository } from "../repositories/reward.repository";
 import { MerchantContextService } from "./merchant-context.service";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
-import { selectedLocationsScope } from "../types/merchant-location-scope";
+import { ALL_LOCATIONS_SCOPE, selectedLocationsScope } from "../types/merchant-location-scope";
 
 vi.mock("../../../prisma/prisma.service", () => ({
 	PrismaService: class {},
@@ -180,5 +180,104 @@ describe("MerchantRewardService.getReward (store scope)", () => {
 		expect(merchantContext.requireActorCapability).toHaveBeenCalledWith(actor, "merchant:view_rewards");
 		expect(merchantContext.resolveLocationScope).toHaveBeenCalledWith(actor, undefined);
 		expect(rewardRepository.findConsumerByOrganization).toHaveBeenCalledWith(ORGANIZATION_ID, REWARD_ID, scope);
+	});
+});
+
+describe("MerchantRewardService reward cover", () => {
+	const COVER_ID = "6b7c8d9e-0f1a-4b2c-8d3e-4f5a6b7c8d9e";
+	const REFERRER_ID = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+	const actor = { kind: "user", userId: USER_ID, organizationId: ORGANIZATION_ID, orgSlug: "brew" } satisfies MerchantActor;
+	const rewardRepository = {
+		findOrgConsumerReward: vi.fn<RewardRepository["findOrgConsumerReward"]>(),
+		updateReward: vi.fn<RewardRepository["updateReward"]>(),
+		updateRewardWithCover: vi.fn<RewardRepository["updateRewardWithCover"]>(),
+		createConsumerReward: vi.fn<RewardRepository["createConsumerReward"]>(),
+		countOrganizationLocations: vi.fn<RewardRepository["countOrganizationLocations"]>(),
+		findUniqueOrThrowWithOrganization: vi.fn<RewardRepository["findUniqueOrThrowWithOrganization"]>(),
+	};
+	const merchantContext = {
+		requireActorCapability: vi.fn<MerchantContextService["requireActorCapability"]>(),
+		resolveLocationScope: vi.fn<MerchantContextService["resolveLocationScope"]>(),
+	};
+
+	async function createService(): Promise<MerchantRewardService> {
+		const moduleRef = await Test.createTestingModule({
+			providers: [
+				MerchantRewardService,
+				{ provide: RewardRepository, useValue: rewardRepository },
+				{ provide: RewardClaimRepository, useValue: {} },
+				{ provide: RewardRedemptionRepository, useValue: {} },
+				{ provide: MerchantContextService, useValue: merchantContext },
+				{ provide: OrganizationRepository, useValue: {} },
+				{ provide: RewardNotificationService, useValue: {} },
+				{ provide: PlatformOutboxService, useValue: {} },
+			],
+		}).compile();
+		return moduleRef.get(MerchantRewardService);
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		merchantContext.requireActorCapability.mockResolvedValue(undefined);
+		merchantContext.resolveLocationScope.mockResolvedValue(ALL_LOCATIONS_SCOPE);
+		rewardRepository.findOrgConsumerReward.mockResolvedValue({
+			id: REWARD_ID,
+			status: "DRAFT",
+			referrerRewardId: REFERRER_ID,
+			quantityTotal: 10,
+			quantityRemaining: 10,
+			locationScopeType: "ALL_LOCATIONS",
+			locationIds: [],
+		});
+		rewardRepository.countOrganizationLocations.mockResolvedValue(1);
+	});
+
+	it("swaps the cover of the reward and its referrer reward in one checked write, scoped to the caller's organization", async () => {
+		rewardRepository.updateRewardWithCover.mockResolvedValue(undefined);
+		rewardRepository.findUniqueOrThrowWithOrganization.mockRejectedValue(new Error("stop after the write"));
+		const service = await createService();
+
+		await expect(service.updateReward(actor, REWARD_ID, { coverFileId: COVER_ID, title: "New title" })).rejects.toThrow("stop after the write");
+
+		expect(rewardRepository.updateRewardWithCover).toHaveBeenCalledWith(REWARD_ID, REFERRER_ID, { title: "New title" }, { organizationId: ORGANIZATION_ID, fileId: COVER_ID });
+		expect(rewardRepository.updateReward).not.toHaveBeenCalled();
+	});
+
+	it("leaves the cover alone when an edit does not name one", async () => {
+		rewardRepository.updateReward.mockResolvedValue(undefined);
+		rewardRepository.findUniqueOrThrowWithOrganization.mockRejectedValue(new Error("stop after the write"));
+		const service = await createService();
+
+		await expect(service.updateReward(actor, REWARD_ID, { title: "New title" })).rejects.toThrow("stop after the write");
+
+		expect(rewardRepository.updateReward).toHaveBeenCalledWith(REWARD_ID, { title: "New title" });
+		expect(rewardRepository.updateRewardWithCover).not.toHaveBeenCalled();
+	});
+
+	it("answers 400 REWARD_COVER_INVALID when the cover is not one of the organization's ready covers — on edit and on create", async () => {
+		rewardRepository.updateRewardWithCover.mockRejectedValue(new RewardCoverUnavailableError(COVER_ID));
+		rewardRepository.createConsumerReward.mockRejectedValue(new RewardCoverUnavailableError(COVER_ID));
+		const service = await createService();
+		const invalidCover = { response: { error: "REWARD_COVER_INVALID" } };
+
+		await expect(service.updateReward(actor, REWARD_ID, { coverFileId: COVER_ID })).rejects.toBeInstanceOf(BadRequestException);
+		await expect(service.updateReward(actor, REWARD_ID, { coverFileId: COVER_ID })).rejects.toMatchObject(invalidCover);
+		await expect(
+			service.createReward(actor, {
+				title: "Free kuih",
+				description: "One free kuih",
+				rewardType: "FREE_ITEM",
+				rewardValue: 1,
+				category: "food",
+				coverFileId: COVER_ID,
+				quantityTotal: 10,
+				expiryDate: epochMs(1_794_614_400_000),
+				referralsEnabled: false,
+				saveAsDraft: true,
+				locationScopeType: "ALL_LOCATIONS",
+				locationIds: [],
+			}),
+		).rejects.toMatchObject(invalidCover);
+		expect(rewardRepository.createConsumerReward).toHaveBeenCalledWith(expect.objectContaining({ coverFileId: COVER_ID, organizationId: ORGANIZATION_ID }), []);
 	});
 });

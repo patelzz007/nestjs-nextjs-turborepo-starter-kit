@@ -45,6 +45,35 @@ export interface BuildFileObjectPathInput {
 
 const STAGING_PREFIX = "staging";
 
+interface CategoryKeyLayout {
+	/** First key segment, before the owner id. */
+	readonly root: string;
+	/** Segment after the owner id (`null`: files sit directly under the owner). */
+	readonly folder: string | null;
+	/** Variants replace `folder` (`products/<id>/thumbnail/…`) instead of nesting under it. */
+	readonly variantsReplaceFolder: boolean;
+}
+
+/**
+ * Where each category's objects live, keyed by the owner the file belongs to
+ * (`file-ownership.util`). Exhaustive on purpose: a new category must say where
+ * its files go instead of falling through into another category's folder.
+ */
+const CATEGORY_KEY_LAYOUT: Readonly<Record<FileCategory, CategoryKeyLayout>> = {
+	PRODUCT_IMAGE: { root: "products", folder: "original", variantsReplaceFolder: true },
+	STORE_LOGO: { root: "stores", folder: "logo", variantsReplaceFolder: false },
+	STORE_BANNER: { root: "stores", folder: "banner", variantsReplaceFolder: false },
+	USER_AVATAR: { root: "users", folder: "avatar", variantsReplaceFolder: false },
+	MERCHANT_KYB: { root: "kyb", folder: null, variantsReplaceFolder: false },
+	REWARD_COVER: { root: "stores", folder: "reward-covers", variantsReplaceFolder: false },
+};
+
+/** `<root>/<ownerId>[/<folder>]` — the directory a category's original files live in. */
+function categoryDirectory(category: FileCategory, ownerId: string): string {
+	const { root, folder } = CATEGORY_KEY_LAYOUT[category];
+	return folder === null ? `${root}/${ownerId}` : `${root}/${ownerId}/${folder}`;
+}
+
 /**
  * Ephemeral object key for browser direct uploads.
  * Bytes live here only until upload completion promotes a copy to the final path.
@@ -52,21 +81,7 @@ const STAGING_PREFIX = "staging";
 export function buildStagingPath(input: BuildFileObjectPathInput): string {
 	const baseName = stripFileExtension(sanitizeFileName(input.fileName));
 	const extension = extensionForMimeType(input.mimeType);
-	const fileSegment = `${input.fileId}-${baseName}.${extension}`;
-
-	if (input.category === "PRODUCT_IMAGE") {
-		return `${STAGING_PREFIX}/products/${input.ownerId}/original/${fileSegment}`;
-	}
-	if (input.category === "STORE_LOGO") {
-		return `${STAGING_PREFIX}/stores/${input.ownerId}/logo/${fileSegment}`;
-	}
-	if (input.category === "STORE_BANNER") {
-		return `${STAGING_PREFIX}/stores/${input.ownerId}/banner/${fileSegment}`;
-	}
-	if (input.category === "USER_AVATAR") {
-		return `${STAGING_PREFIX}/users/${input.ownerId}/avatar/${fileSegment}`;
-	}
-	return `${STAGING_PREFIX}/kyb/${input.ownerId}/${fileSegment}`;
+	return `${STAGING_PREFIX}/${categoryDirectory(input.category, input.ownerId)}/${input.fileId}-${baseName}.${extension}`;
 }
 
 /**
@@ -75,21 +90,7 @@ export function buildStagingPath(input: BuildFileObjectPathInput): string {
  */
 export function buildFinalStoragePath(input: BuildFileObjectPathInput): string {
 	const extension = extensionForMimeType(input.mimeType);
-	const fileSegment = `${input.fileId}.${extension}`;
-
-	if (input.category === "PRODUCT_IMAGE") {
-		return `products/${input.ownerId}/original/${fileSegment}`;
-	}
-	if (input.category === "STORE_LOGO") {
-		return `stores/${input.ownerId}/logo/${fileSegment}`;
-	}
-	if (input.category === "STORE_BANNER") {
-		return `stores/${input.ownerId}/banner/${fileSegment}`;
-	}
-	if (input.category === "USER_AVATAR") {
-		return `users/${input.ownerId}/avatar/${fileSegment}`;
-	}
-	return `kyb/${input.ownerId}/${fileSegment}`;
+	return `${categoryDirectory(input.category, input.ownerId)}/${input.fileId}.${extension}`;
 }
 
 export function isStagingPath(storagePath: string): boolean {
@@ -97,18 +98,9 @@ export function isStagingPath(storagePath: string): boolean {
 }
 
 export function buildPublicVariantPath(input: BuildFileObjectPathInput): string {
-	const variant = input.variant ?? "ORIGINAL";
+	const variant = (input.variant ?? "ORIGINAL").toLowerCase();
 	const extension = extensionForMimeType(input.mimeType);
-	const fileSegment = `${input.fileId}.${extension}`;
-
-	if (input.category === "PRODUCT_IMAGE") {
-		return `products/${input.ownerId}/${variant.toLowerCase()}/${fileSegment}`;
-	}
-	if (input.category === "STORE_LOGO") {
-		return `stores/${input.ownerId}/logo/${variant.toLowerCase()}/${fileSegment}`;
-	}
-	if (input.category === "STORE_BANNER") {
-		return `stores/${input.ownerId}/banner/${variant.toLowerCase()}/${fileSegment}`;
-	}
-	return `users/${input.ownerId}/avatar/${variant.toLowerCase()}/${fileSegment}`;
+	const { root, variantsReplaceFolder } = CATEGORY_KEY_LAYOUT[input.category];
+	const directory = variantsReplaceFolder ? `${root}/${input.ownerId}/${variant}` : `${categoryDirectory(input.category, input.ownerId)}/${variant}`;
+	return `${directory}/${input.fileId}.${extension}`;
 }

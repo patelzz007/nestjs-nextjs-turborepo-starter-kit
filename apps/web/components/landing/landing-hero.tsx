@@ -2,12 +2,14 @@ import { RewardCategoryVisual } from "@/components/rewardhub/detail/category-vis
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
 import type { FeaturedOffer } from "@/lib/rewards/featured-offers";
 import { buttonVariants } from "@workspace/ui/components/button";
+import { CoverImage } from "@workspace/ui/components/cover-image";
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ArrowDown, ArrowRight, ChevronRight, Gift, Home, MapPin, QrCode, Search, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { REWARD_LIST_ROW_COVER_RATIO } from "@/lib/rewards/reward-cover";
 import { landingSectionPath, LANDING_SECTION_IDS, publicRewardDetailPath } from "@/lib/routes";
 
 /** Cities in the pilot — the only places offers are redeemable today. */
@@ -169,18 +171,23 @@ function PhonePreview({ offers }: PhonePreviewProps): React.JSX.Element {
 						</div>
 
 						<ul className="mt-3 space-y-2.5">
-							{offers.map((offer: FeaturedOffer): React.JSX.Element => (
+							{offers.map((offer: FeaturedOffer, index: number): React.JSX.Element => (
 								<li key={offer.id}>
 									<Link
 										href={publicRewardDetailPath(offer.id)}
 										className="group flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-3 shadow-xs transition-[border-color,transform] hover:-translate-y-0.5 hover:border-primary/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-										<span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-											<RewardCategoryVisual category={offer.category} className="size-5" />
-										</span>
+										{/* The hero sits above the fold, so its first cover loads eagerly. */}
+										<CoverImage
+											src={offer.coverImageUrl}
+											ratio={REWARD_LIST_ROW_COVER_RATIO}
+											priority={index === 0}
+											fallback={<RewardCategoryVisual category={offer.category} className="size-5 text-primary" />}
+											className="w-16 shrink-0 rounded-xl"
+										/>
 										<span className="min-w-0 flex-1">
 											<span className="line-clamp-2 text-sm leading-snug font-semibold text-foreground">{offer.title}</span>
-											<span className="mt-0.5 flex min-w-0 gap-1 text-xs text-muted-foreground">
-												{offer.merchantName === undefined ? null : <span className="truncate">{offer.merchantName} ·</span>}
+											<span className="mt-0.5 flex min-w-0 gap-2 text-xs text-muted-foreground">
+												{offer.merchantName === undefined ? null : <span className="truncate font-medium">{offer.merchantName}</span>}
 												<span className="shrink-0">Until {formatEpochMs(offer.expiryDate, "dayMonth", PLATFORM_DISPLAY_REGION)}</span>
 											</span>
 											<RewardInventoryBar compact remaining={offer.remaining} total={offer.total} className="mt-2" />

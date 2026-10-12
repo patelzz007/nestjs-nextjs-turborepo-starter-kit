@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildFinalStoragePath, buildPublicVariantPath, buildStagingPath, isStagingPath, stripFileExtension } from "./file-path.util";
+import { buildFinalStoragePath, buildPublicVariantPath, buildStagingPath, isStagingPath, stripFileExtension, type BuildFileObjectPathInput } from "./file-path.util";
 
 describe("file-path.util", () => {
 	it("strips trailing extensions before rebuilding from MIME type", () => {
@@ -66,5 +66,18 @@ describe("file-path.util", () => {
 			variant: "THUMBNAIL",
 		});
 		expect(path).toBe("users/user-1/avatar/thumbnail/file-3.webp");
+	});
+
+	it("keeps reward covers in their own folder under the organization", () => {
+		const input: BuildFileObjectPathInput = { category: "REWARD_COVER", ownerId: "org-1", fileId: "file-4", fileName: "Kuih platter.webp", mimeType: "image/webp" };
+		expect(buildStagingPath(input)).toBe("staging/stores/org-1/reward-covers/file-4-Kuih platter.webp");
+		expect(buildFinalStoragePath(input)).toBe("stores/org-1/reward-covers/file-4.webp");
+		expect(buildPublicVariantPath({ ...input, variant: "THUMBNAIL" })).toBe("stores/org-1/reward-covers/thumbnail/file-4.webp");
+	});
+
+	it("nests variants under the category folder, except products, whose variants replace the original folder", () => {
+		const product: BuildFileObjectPathInput = { category: "PRODUCT_IMAGE", ownerId: "product-1", fileId: "file-5", fileName: "photo.png", mimeType: "image/png" };
+		expect(buildPublicVariantPath({ ...product, variant: "MEDIUM" })).toBe("products/product-1/medium/file-5.png");
+		expect(buildPublicVariantPath({ ...product, category: "STORE_BANNER", ownerId: "org-1" })).toBe("stores/org-1/banner/original/file-5.png");
 	});
 });

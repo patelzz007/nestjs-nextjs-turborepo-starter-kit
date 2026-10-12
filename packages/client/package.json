@@ -102,6 +102,8 @@
 		"./lib/features/sidebar/open-cookie": "./src/lib/features/sidebar/open-cookie.ts",
 		"./lib/features/ui-preferences/facade": "./src/lib/features/ui-preferences/facade.tsx",
 		"./lib/features/ui-preferences/rewards-view-toggle": "./src/lib/features/ui-preferences/rewards-view-toggle.tsx",
+		"./lib/storage/direct-upload": "./src/lib/storage/direct-upload.ts",
+		"./lib/storage/image-file-rules": "./src/lib/storage/image-file-rules.ts",
 		"./lib/state/feature-persistence": "./src/lib/state/feature-persistence.ts",
 		"./lib/state/feature-store": "./src/lib/state/feature-store.ts",
 		"./lib/state/feature-store-context": "./src/lib/state/feature-store-context.tsx",

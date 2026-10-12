@@ -1,6 +1,8 @@
 "use client";
 
+import { MerchantRewardCoverField } from "@/components/rewards/merchant-reward-cover-field";
 import { MAX_CLAIMS_OPTIONS, REWARD_TYPE_OPTIONS, getRewardValueLabel } from "@/components/rewards/merchant-reward-form.constants";
+import type { UploadedRewardCover } from "@/lib/rewards/use-upload-reward-cover";
 import type { MerchantRewardFormValues, RewardType } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -58,6 +60,10 @@ export interface MerchantRewardFormFieldsProps {
 	readonly selectedType: RewardType;
 	readonly onTypeSelect: (rewardType: RewardType) => void;
 	readonly onMaxClaimsChange: (value: string | null) => void;
+	/** The organization covers are uploaded to (`undefined` while it loads). */
+	readonly organizationId: string | undefined;
+	/** The saved cover's URL when editing; `null` for a new reward. */
+	readonly initialCoverUrl: string | null;
 	readonly readOnly?: boolean;
 }
 
@@ -65,14 +71,24 @@ export function MerchantRewardFormFields({
 	register,
 	control,
 	errors,
+	setValue,
 	selectedType,
 	onTypeSelect,
 	onMaxClaimsChange,
+	organizationId,
+	initialCoverUrl,
 	readOnly = false,
 }: MerchantRewardFormFieldsProps): React.JSX.Element {
 	const maxClaimsPerUser = useWatch({ control, name: "maxClaimsPerUser" });
 	const startDate = useWatch({ control, name: "startDate" });
 	const fieldDisabled = readOnly;
+
+	const handleCoverUploaded = React.useCallback(
+		(cover: UploadedRewardCover): void => {
+			setValue("coverFileId", cover.fileId, { shouldValidate: true, shouldDirty: true });
+		},
+		[setValue],
+	);
 
 	const renderStartDateField = React.useCallback(
 		({ field }: { readonly field: ControllerRenderProps<MerchantRewardFormValues, "startDate"> }): React.JSX.Element => (
@@ -155,6 +171,15 @@ export function MerchantRewardFormFields({
 					</div>
 				</CardContent>
 			</Card>
+
+			<MerchantRewardCoverField
+				organizationId={organizationId}
+				initialPreviewUrl={initialCoverUrl}
+				onCoverUploaded={handleCoverUploaded}
+				errorMessage={errors.coverFileId?.message}
+				disabled={fieldDisabled}
+			/>
+			<input type="hidden" {...register("coverFileId")} />
 
 			<Card className="border-border/80 bg-card shadow-xs">
 				<CardHeader>

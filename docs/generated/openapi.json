@@ -7656,6 +7656,15 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "coverFileId": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "coverImageUrl": {
+                            "format": "uri",
+                            "type": "string"
+                          },
                           "createdAt": {
                             "description": "Epoch milliseconds when the record was created",
                             "example": 1786300000000,
@@ -7720,9 +7729,6 @@
                             "type": "string"
                           },
                           "organizationName": {
-                            "type": "string"
-                          },
-                          "placeholderImageKey": {
                             "type": "string"
                           },
                           "quantityRemaining": {
@@ -7854,7 +7860,8 @@
                           "termsConditions",
                           "rewardKind",
                           "category",
-                          "placeholderImageKey",
+                          "coverFileId",
+                          "coverImageUrl",
                           "quantityTotal",
                           "quantityRemaining",
                           "quantityReserved",
@@ -8043,6 +8050,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -8107,9 +8123,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -8241,7 +8254,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -8392,6 +8406,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -8456,9 +8479,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -8590,7 +8610,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -22436,7 +22457,8 @@
                       "STORE_LOGO",
                       "STORE_BANNER",
                       "USER_AVATAR",
-                      "MERCHANT_KYB"
+                      "MERCHANT_KYB",
+                      "REWARD_COVER"
                     ],
                     "type": "string"
                   },
@@ -22767,7 +22789,8 @@
                                 "STORE_LOGO",
                                 "STORE_BANNER",
                                 "USER_AVATAR",
-                                "MERCHANT_KYB"
+                                "MERCHANT_KYB",
+                                "REWARD_COVER"
                               ],
                               "type": "string"
                             },
@@ -22982,7 +23005,8 @@
                                 "STORE_LOGO",
                                 "STORE_BANNER",
                                 "USER_AVATAR",
-                                "MERCHANT_KYB"
+                                "MERCHANT_KYB",
+                                "REWARD_COVER"
                               ],
                               "type": "string"
                             },
@@ -36031,7 +36055,8 @@
                                 "STORE_LOGO",
                                 "STORE_BANNER",
                                 "USER_AVATAR",
-                                "MERCHANT_KYB"
+                                "MERCHANT_KYB",
+                                "REWARD_COVER"
                               ],
                               "type": "string"
                             },
@@ -42356,6 +42381,15 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "coverFileId": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "coverImageUrl": {
+                            "format": "uri",
+                            "type": "string"
+                          },
                           "createdAt": {
                             "description": "Epoch milliseconds when the record was created",
                             "example": 1786300000000,
@@ -42420,9 +42454,6 @@
                             "type": "string"
                           },
                           "organizationName": {
-                            "type": "string"
-                          },
-                          "placeholderImageKey": {
                             "type": "string"
                           },
                           "quantityRemaining": {
@@ -42554,7 +42585,8 @@
                           "termsConditions",
                           "rewardKind",
                           "category",
-                          "placeholderImageKey",
+                          "coverFileId",
+                          "coverImageUrl",
                           "quantityTotal",
                           "quantityRemaining",
                           "quantityReserved",
@@ -42692,6 +42724,11 @@
                     ],
                     "type": "string"
                   },
+                  "coverFileId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
                   "description": {
                     "maxLength": 5000,
                     "minLength": 1,
@@ -42793,6 +42830,7 @@
                   "rewardType",
                   "rewardValue",
                   "category",
+                  "coverFileId",
                   "quantityTotal",
                   "expiryDate"
                 ],
@@ -42817,6 +42855,15 @@
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
                           "type": "integer"
+                        },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
                         },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
@@ -42882,9 +42929,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -43016,7 +43060,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -43162,6 +43207,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -43226,9 +43280,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -43360,7 +43411,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -43494,6 +43546,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "coverFileId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
                   "description": {
                     "maxLength": 5000,
                     "minLength": 1,
@@ -43591,6 +43648,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -43655,9 +43721,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -43789,7 +43852,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -43945,6 +44009,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -44009,9 +44082,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -44143,7 +44213,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -49375,6 +49446,15 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "coverFileId": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "coverImageUrl": {
+                            "format": "uri",
+                            "type": "string"
+                          },
                           "createdAt": {
                             "description": "Epoch milliseconds when the record was created",
                             "example": 1786300000000,
@@ -49439,9 +49519,6 @@
                             "type": "string"
                           },
                           "organizationName": {
-                            "type": "string"
-                          },
-                          "placeholderImageKey": {
                             "type": "string"
                           },
                           "quantityRemaining": {
@@ -49573,7 +49650,8 @@
                           "termsConditions",
                           "rewardKind",
                           "category",
-                          "placeholderImageKey",
+                          "coverFileId",
+                          "coverImageUrl",
                           "quantityTotal",
                           "quantityRemaining",
                           "quantityReserved",
@@ -49750,6 +49828,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "coverFileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -49814,9 +49901,6 @@
                           "type": "string"
                         },
                         "organizationName": {
-                          "type": "string"
-                        },
-                        "placeholderImageKey": {
                           "type": "string"
                         },
                         "quantityRemaining": {
@@ -49948,7 +50032,8 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "placeholderImageKey",
+                        "coverFileId",
+                        "coverImageUrl",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",

@@ -2,15 +2,8 @@
 // prisma/seed/files.ts — file lifecycle demo data (development scenario)
 // ============================================
 // Every row is produced the way the application produces it (FileService /
-// FileFinalizationService / StoredFileRepository):
-//   - the object bytes go through the CONFIGURED storage adapter (local disk,
-//     S3 or Firebase — the same port uploads use), so every seeded file is
-//     really downloadable and carries the provider's revision;
-//   - the scan status comes from the CONFIGURED malware scanner: with
-//     MALWARE_SCANNER=none files are READY + NOT_SCANNED, never CLEAN;
-//   - public files carry the URL the provider's PublicDelivery returns;
-//   - a deleted file was deleted by a user: the file AND every row that pointed
-//     at it are soft-deleted with the same `deleted_by`, and the bytes removed;
+// FileFinalizationService / StoredFileRepository) — see stored-file-seed-writer.ts
+// for how bytes, scan status and public URLs are written;
 //   - Brew & Bean KL completed onboarding through its invite and submitted KYB
 //     evidence twice: the first submission was retired (is_active = false) by
 //     the second, and the second consumed the invite's document window
@@ -21,20 +14,13 @@ import type { Prisma } from "@prisma/client";
 import { DAY_MS } from "@workspace/shared";
 
 import { sha256Hex } from "../../src/common/crypto/sha256";
-import { getApiConfig } from "../../src/config/api-config";
-import { TypedConfigService } from "../../src/config/typed-config.service";
-import { LocalTransferTokenService } from "../../src/modules/storage/adapters/local/local-transfer-token.service";
-import { createMalwareScanner } from "../../src/modules/storage/adapters/scanners/malware-scanner.factory";
-import type { MalwareScanner } from "../../src/modules/storage/domain/malware-scanner.port";
-import { createStorageAdapter, type StorageAdapter } from "../../src/modules/storage/factory/storage-adapter.factory";
-import { buildFinalStoragePath, buildPublicVariantPath } from "../../src/modules/storage/utils/file-path.util";
-import { toStorageObjectLocator } from "../../src/modules/storage/utils/storage-locator.util";
+import { buildPublicVariantPath } from "../../src/modules/storage/utils/file-path.util";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
-import { sha256BytesHex } from "./helpers";
 import { ORGANIZATION_SEED_IDS } from "./organizations";
 import { buildProductSeedId } from "./products";
 import { requireRow } from "./require-row";
+import { createSeedFileWriter, type SeedObject } from "./stored-file-seed-writer";
 
 const NAMESPACE = "file-seed";
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -65,90 +51,17 @@ const PNG_BYTES: Buffer = Buffer.from(
 	"hex",
 );
 
+function daysAgo(days: number): bigint {
+	return BigInt(Date.now() - days * DAY_MS);
+}
+
 export interface FileSeedSummary {
 	readonly files: number;
 	readonly provider: string;
 }
 
-type SeedCategory = "MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO";
-
-interface SeedObject {
-	readonly id: string;
-	readonly category: SeedCategory;
-	readonly ownerId: string;
-	readonly fileName: string;
-	readonly mimeType: "application/pdf" | "image/png";
-	readonly bytes: Buffer;
-	readonly uploadedById: string;
-	readonly organizationId: string | null;
-	readonly uploadedDaysAgo: number;
-}
-
-interface StoredSeedObject {
-	readonly storagePath: string;
-	readonly revision: string | null;
-	readonly publicPath: string | null;
-}
-
-/** How the configured scanner clears a seeded file (seeds only ever hold usable demo files). */
-interface SeedScanRecord {
-	readonly scanStatus: "CLEAN" | "NOT_SCANNED";
-	readonly scanResult: string;
-}
-
-function daysAgo(days: number): bigint {
-	return BigInt(Date.now() - days * DAY_MS);
-}
-
-/** Asks the configured scanner, exactly as the upload pipeline does. */
-async function scanRecordFor(
-	scanner: MalwareScanner,
-	object: SeedObject,
-	storage: StorageAdapter,
-	stored: StoredSeedObject,
-	locatorFor: (path: string) => ReturnType<typeof toStorageObjectLocator>,
-): Promise<SeedScanRecord> {
-	const result = await scanner.scan({
-		fileId: object.id,
-		locator: locatorFor(stored.storagePath),
-		openStream: async () => storage.getObjectStream(locatorFor(stored.storagePath)),
-	});
-	switch (result.outcome) {
-		case "CLEAN":
-			return { scanStatus: "CLEAN", scanResult: `${result.engine}: ${result.detail}` };
-		case "NOT_SCANNED":
-			return { scanStatus: "NOT_SCANNED", scanResult: `${result.engine}: ${result.reason}` };
-		case "INFECTED":
-		case "PENDING_EXTERNAL":
-			throw new Error(`Seed demo file ${object.fileName} cannot be seeded as READY: the configured scanner answered ${result.outcome}`);
-		default:
-			return assertNever(result);
-	}
-}
-
-function assertNever(value: never): never {
-	throw new Error(`Unhandled scan result: ${JSON.stringify(value)}`);
-}
-
 export async function seedFileLifecycle(): Promise<FileSeedSummary> {
-	const config = new TypedConfigService(getApiConfig());
-	const provider = config.storage.provider;
-	const container = config.storage.privateContainer;
-	const storage = createStorageAdapter(config, new LocalTransferTokenService());
-	const scanner = createMalwareScanner(config.storage.malwareScanner);
-	const locatorFor = (path: string): ReturnType<typeof toStorageObjectLocator> => toStorageObjectLocator(provider, container, path);
-	/** Writes through the configured adapter; an unreachable or missing bucket fails with the fix, not a raw SDK error. */
-	const uploadSeedObject = async (input: Parameters<StorageAdapter["upload"]>[0]): ReturnType<StorageAdapter["upload"]> => {
-		try {
-			return await storage.upload(input);
-		} catch (error) {
-			throw new Error(
-				`File seed could not write to STORAGE_PROVIDER=${provider} container "${container}" (${error instanceof Error ? error.message : "unknown error"}). ` +
-					"Create the bucket / fix its credentials, or set STORAGE_PROVIDER=local in apps/api/.env for offline development.",
-				{ cause: error },
-			);
-		}
-	};
+	const { provider, container, storage, locatorFor, uploadSeedObject, seedReadyFile, deleteFile } = createSeedFileWriter();
 
 	const klOwnerMembership = requireRow(
 		(await prisma.organizationMembership.findUnique({ where: { id: ORGANIZATION_SEED_IDS.klOwnerMembership }, include: { user: true } })) ?? undefined,
@@ -159,63 +72,6 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	// Demo Product 001 (product seed ids are 1-based).
 	const productId = buildProductSeedId(1);
 	const admin = requireRow((await prisma.user.findUnique({ where: { email: "admin@example.com" } })) ?? undefined, "user admin@example.com");
-
-	/** Stores the bytes, publishes public files, scans, and upserts the READY row. */
-	const seedReadyFile = async (object: SeedObject): Promise<StoredSeedObject> => {
-		const storagePath = buildFinalStoragePath({ category: object.category, ownerId: object.ownerId, fileId: object.id, fileName: object.fileName, mimeType: object.mimeType });
-		const uploaded = await uploadSeedObject({ locator: locatorFor(storagePath), buffer: object.bytes, mimeType: object.mimeType });
-		const isPublic = object.category !== "MERCHANT_KYB";
-		const publicPath = isPublic
-			? (await storage.publishAsset({ locator: uploaded.locator, fileId: object.id, mimeType: object.mimeType, fileName: object.fileName })).publicUrl
-			: null;
-		const stored: StoredSeedObject = { storagePath, revision: uploaded.revision, publicPath };
-		const scan = await scanRecordFor(scanner, object, storage, stored, locatorFor);
-		const checksum = sha256BytesHex(object.bytes);
-		const row = {
-			id: object.id,
-			category: object.category,
-			visibility: isPublic ? "PUBLIC" : "PRIVATE",
-			originalName: object.fileName,
-			mimeType: object.mimeType,
-			sizeBytes: object.bytes.length,
-			expectedChecksum: checksum,
-			actualChecksum: checksum,
-			storageProvider: provider,
-			storageContainer: container,
-			storageBucket: container,
-			storagePath,
-			publicPath,
-			objectRevision: uploaded.revision,
-			objectGeneration: uploaded.revision,
-			status: "READY",
-			scanStatus: scan.scanStatus,
-			scannedAt: daysAgo(object.uploadedDaysAgo),
-			scanResult: scan.scanResult,
-			uploadedById: object.uploadedById,
-			organizationId: object.organizationId,
-			productId: object.category === "PRODUCT_IMAGE" ? object.ownerId : null,
-			createdAt: daysAgo(object.uploadedDaysAgo),
-			updatedAt: daysAgo(object.uploadedDaysAgo),
-			// A re-run restores the live state; the delete step below re-applies deletions.
-			isDeleted: false,
-			deletedAt: null,
-			deletedBy: null,
-		} satisfies Prisma.StoredFileUncheckedCreateInput;
-		await prisma.storedFile.upsert({ where: { id: object.id }, create: row, update: row });
-		return stored;
-	};
-
-	/** What DELETE /files/:id does: the file and every referencing row soft-deleted by `deletedBy`, then the bytes removed. */
-	const deleteFile = async (fileId: string, stored: StoredSeedObject, deletedBy: string, deletedDaysAgo: number): Promise<void> => {
-		const deletedAt = daysAgo(deletedDaysAgo);
-		const softDelete = { isDeleted: true, deletedAt, deletedBy, updatedAt: deletedAt };
-		await prisma.storedFile.update({ where: { id: fileId }, data: { status: "DELETED", ...softDelete } });
-		await prisma.productImage.updateMany({ where: { fileId }, data: { ...softDelete, isPrimary: false } });
-		await prisma.organizationAsset.updateMany({ where: { fileId }, data: softDelete });
-		await prisma.userAvatar.updateMany({ where: { fileId }, data: softDelete });
-		await prisma.fileVariant.updateMany({ where: { fileId }, data: softDelete });
-		await storage.deleteObject(locatorFor(stored.storagePath));
-	};
 
 	// ── Onboarding: invite accepted, KYB evidence submitted twice (window consumed by the second), review approved ──
 	const acceptedAt = daysAgo(20);

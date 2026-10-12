@@ -1,4 +1,5 @@
 import { Controller, Get, HttpStatus, Post, Req, Res } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { apiPath, SuccessAckResponseSchema, UuidParamSchema, type SuccessAckResponse } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -11,6 +12,7 @@ import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 import { LOCAL_DOWNLOAD_TOKEN_PARAM } from "../../storage/adapters/local/local-object-storage.adapter";
+import { PUBLIC_ASSET_CACHE_CONTROL } from "../../storage/domain/public-delivery.port";
 import { LocalStorageTransferService, type LocalObjectDownload } from "../services/local-storage-transfer.service";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
@@ -26,12 +28,15 @@ function contentDisposition(download: LocalObjectDownload): string {
 	return `${download.disposition}; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(download.fileName)}`;
 }
 
-async function sendObject(reply: FastifyReply, download: LocalObjectDownload): Promise<void> {
+/** Private objects (signed links) are never cached. */
+const PRIVATE_OBJECT_CACHE_CONTROL = "private, no-store";
+
+async function sendObject(reply: FastifyReply, download: LocalObjectDownload, cacheControl: string): Promise<void> {
 	await reply
 		.header("Content-Type", download.mimeType)
 		.header("Content-Disposition", contentDisposition(download))
 		.header("X-Content-Type-Options", "nosniff")
-		.header("Cache-Control", "private, no-store")
+		.header("Cache-Control", cacheControl)
 		.send(download.stream);
 }
 
@@ -54,17 +59,20 @@ export class LocalStorageTransferController {
 	@ApiOperation({ summary: "Download a private object through a signed, expiring local-storage link (development only)" })
 	@ApiOkResponse({ description: "Object bytes" })
 	public async localDownload(@ZodQuery(LocalDownloadQuerySchema) query: z.output<typeof LocalDownloadQuerySchema>, @Res() reply: FastifyReply): Promise<void> {
-		await sendObject(reply, await this.transfers.download(query.token));
+		await sendObject(reply, await this.transfers.download(query.token), PRIVATE_OBJECT_CACHE_CONTROL);
 	}
 
 	@Public()
 	@RlsBypass()
 	@SkipEnvelope()
+	// Plays the CDN's role: a page shows many public images (reward covers), so browsers cache them like
+	// the CDN copy, and the credential-guarding `strict` limit does not apply (the `default` one still does).
+	@SkipThrottle({ strict: true })
 	@Get(":fileId/local-public")
 	@ApiOperation({ summary: "Serve a READY public asset from local storage (development only)" })
 	@ApiOkResponse({ description: "Object bytes" })
 	public async localPublic(@ZodParams(FileIdParamSchema) params: z.output<typeof FileIdParamSchema>, @Res() reply: FastifyReply): Promise<void> {
-		await sendObject(reply, await this.transfers.downloadPublic(params.fileId));
+		await sendObject(reply, await this.transfers.downloadPublic(params.fileId), PUBLIC_ASSET_CACHE_CONTROL);
 	}
 
 	@Public()

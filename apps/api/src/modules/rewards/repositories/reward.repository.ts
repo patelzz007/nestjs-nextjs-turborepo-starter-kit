@@ -39,8 +39,12 @@ const ORGANIZATION_LOGO_ASSETS_SELECT = {
 	take: 1,
 } satisfies Prisma.Organization$assetsArgs;
 
+/** The cover's published URL — every reward has one (`coverFileId` is required and validated on every save). */
+const REWARD_COVER_FILE_SELECT = { select: { publicPath: true } } satisfies Prisma.StoredFileDefaultArgs;
+
 const REWARD_WITH_ORGANIZATION_INCLUDE = {
 	organization: { select: { displayName: true, assets: ORGANIZATION_LOGO_ASSETS_SELECT } },
+	coverFile: REWARD_COVER_FILE_SELECT,
 	locationScopes: {
 		where: { location: { isDeleted: false } },
 		select: {
@@ -51,6 +55,45 @@ const REWARD_WITH_ORGANIZATION_INCLUDE = {
 } satisfies Prisma.RewardInclude;
 
 export type RewardWithOrganization = Prisma.RewardGetPayload<{ include: typeof REWARD_WITH_ORGANIZATION_INCLUDE }>;
+
+/** The cover a reward names is not one of the organization's ready, published `REWARD_COVER` images. */
+export class RewardCoverUnavailableError extends Error {
+	public constructor(public readonly fileId: string) {
+		super(`File ${fileId} cannot be used as a reward cover`);
+		this.name = "RewardCoverUnavailableError";
+	}
+}
+
+/** A reward-cover check inside a write: the file to lock and the organization it must belong to. */
+export interface RewardCoverCheck {
+	readonly organizationId: string;
+	readonly fileId: string;
+}
+
+type RewardWriteClient = Prisma.TransactionClient;
+
+/**
+ * Locks the cover file row and checks it is usable: this organization's
+ * READY, public, published, live `REWARD_COVER`. The same row lock is taken by
+ * file deletion (`StoredFileRepository.softDeleteWithReferences`), so a reward
+ * can never be saved naming a cover that is being deleted, nor a cover deleted
+ * while a save names it.
+ */
+async function lockUsableRewardCover(tx: RewardWriteClient, check: RewardCoverCheck): Promise<void> {
+	const locked = await tx.$queryRaw<{ id: string }[]>`
+		SELECT id FROM "stored_files"
+		WHERE id = ${check.fileId}
+			AND organization_id = ${check.organizationId}
+			AND category = 'REWARD_COVER'
+			AND visibility = 'PUBLIC'
+			AND status = 'READY'
+			AND is_deleted = false
+			AND public_path IS NOT NULL
+		FOR UPDATE`;
+	if (locked.length !== 1) {
+		throw new RewardCoverUnavailableError(check.fileId);
+	}
+}
 
 /** The organization's live consumer rewards available at a store of `scope` (the AUTHORIZED store scope). */
 function buildOrganizationRewardWhere(organizationId: string, scope: MerchantLocationScope): Prisma.RewardWhereInput {
@@ -214,8 +257,10 @@ export class RewardRepository {
 		});
 	}
 
+	/** Creates the reward (and its store scope) after locking and checking its cover; throws {@link RewardCoverUnavailableError}. */
 	public async createConsumerReward(data: Prisma.RewardUncheckedCreateInput, locationIds: readonly string[]): Promise<RewardWithOrganization> {
 		return this.prisma.$transaction(async (tx) => {
+			await lockUsableRewardCover(tx, { organizationId: data.organizationId, fileId: data.coverFileId });
 			const reward = await tx.reward.create({
 				data,
 				include: REWARD_WITH_ORGANIZATION_INCLUDE,
@@ -272,6 +317,22 @@ export class RewardRepository {
 
 	public async createReferrerReward(data: Prisma.RewardUncheckedCreateInput): Promise<Reward> {
 		return this.prisma.reward.create({ data });
+	}
+
+	/**
+	 * Points the reward — and its referrer reward, which shares the cover — at a
+	 * new cover, together with `data`, after locking and checking the cover;
+	 * throws {@link RewardCoverUnavailableError}.
+	 */
+	public async updateRewardWithCover(rewardId: string, referrerRewardId: string | null, data: Prisma.RewardUpdateInput, cover: RewardCoverCheck): Promise<void> {
+		const coverFile = { connect: { id: cover.fileId } };
+		await this.prisma.$transaction(async (tx) => {
+			await lockUsableRewardCover(tx, cover);
+			await tx.reward.update({ where: { id: rewardId }, data: { ...data, coverFile } });
+			if (referrerRewardId !== null) {
+				await tx.reward.update({ where: { id: referrerRewardId }, data: { coverFile } });
+			}
+		});
 	}
 
 	public async updateReward(rewardId: string, data: Prisma.RewardUpdateInput): Promise<void> {

@@ -17,12 +17,13 @@ import type { Envelope, RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { CoverImage } from "@workspace/ui/components/cover-image";
 import { Label } from "@workspace/ui/components/label";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, X } from "lucide-react";
+import { Check, Maximize2, X } from "lucide-react";
 import * as React from "react";
 
 import { PENDING_REWARDS_LOADING_LABELS } from "@/components/loading/loading-labels";
@@ -72,6 +73,34 @@ function PendingRewardsStatus({ status, onRetry }: { readonly status: PendingRew
 		case "ready":
 			return null;
 	}
+}
+
+interface PendingRewardCoverProps {
+	readonly title: string;
+	readonly coverImageUrl: string;
+}
+
+/**
+ * The reward's cover, which reviewers moderate along with the copy. The whole
+ * frame opens the full-size image in a new tab; the image itself is decorative
+ * because the title sits right next to it and the link carries the name.
+ */
+function PendingRewardCover({ title, coverImageUrl }: PendingRewardCoverProps): React.JSX.Element {
+	return (
+		<a
+			href={coverImageUrl}
+			target="_blank"
+			rel="noopener noreferrer"
+			aria-label={`Open cover image of ${title}`}
+			className="group relative block self-start overflow-hidden rounded-md border outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+			<CoverImage src={coverImageUrl} className="transition-opacity group-hover:opacity-90" />
+			<span
+				aria-hidden="true"
+				className="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-md border bg-background/90 text-foreground shadow-sm backdrop-blur-sm">
+				<Maximize2 className="size-3.5" />
+			</span>
+		</a>
+	);
 }
 
 export default function PendingRewardsPanel({ initialPage }: PendingRewardsPanelProps): React.JSX.Element {
@@ -209,49 +238,54 @@ export default function PendingRewardsPanel({ initialPage }: PendingRewardsPanel
 				<CardContent className="space-y-4">
 					<PendingRewardsStatus status={queueStatus} onRetry={handleRetry} />
 					{rewards.map((reward) => (
-						<div key={reward.id} className="space-y-3 rounded-lg border p-4">
-							<div className="flex flex-wrap items-start justify-between gap-3">
-								<div className="min-w-0 space-y-1">
-									<p className="font-medium">{reward.title}</p>
-									<p className="text-sm text-muted-foreground">{reward.description}</p>
-									<div className="flex flex-wrap gap-2 pt-1">
-										<Badge variant="outline">{reward.organizationName ?? "Merchant"}</Badge>
-										<Badge variant="secondary">{reward.rewardType}</Badge>
-										<Badge variant="outline">{reward.status}</Badge>
+						<div key={reward.id} className="space-y-4 rounded-lg border p-4">
+							<div className="grid gap-4 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+								<PendingRewardCover title={reward.title} coverImageUrl={reward.coverImageUrl} />
+								<div className="min-w-0 space-y-4">
+									<div className="flex flex-wrap items-start justify-between gap-3">
+										<div className="min-w-0 space-y-1">
+											<p className="font-medium">{reward.title}</p>
+											<p className="text-sm text-muted-foreground">{reward.description}</p>
+											<div className="flex flex-wrap gap-2 pt-1">
+												<Badge variant="outline">{reward.organizationName ?? "Merchant"}</Badge>
+												<Badge variant="secondary">{reward.rewardType}</Badge>
+												<Badge variant="outline">{reward.status}</Badge>
+											</div>
+										</div>
+										{/* `POST /admin/rewards/:id/{approve,reject}` require MANAGE on REWARD — this page's own route rule, enforced by the route guard. */}
+										<div className="flex shrink-0 gap-2">
+											<Button size="sm" variant="default" disabled={isBusy} data-reward-id={reward.id} onClick={handleApproveClick}>
+												<Check className="mr-1 size-4" />
+												Approve
+											</Button>
+											<Button size="sm" variant="outline" disabled={isBusy} data-reward-id={reward.id} onClick={handleStartRejectClick}>
+												<X className="mr-1 size-4" />
+												Reject
+											</Button>
+										</div>
 									</div>
-								</div>
-								{/* `POST /admin/rewards/:id/{approve,reject}` require MANAGE on REWARD — this page's own route rule, enforced by the route guard. */}
-								<div className="flex shrink-0 gap-2">
-									<Button size="sm" variant="default" disabled={isBusy} data-reward-id={reward.id} onClick={handleApproveClick}>
-										<Check className="mr-1 size-4" />
-										Approve
-									</Button>
-									<Button size="sm" variant="outline" disabled={isBusy} data-reward-id={reward.id} onClick={handleStartRejectClick}>
-										<X className="mr-1 size-4" />
-										Reject
-									</Button>
+									<dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+										<div>
+											<dt className="font-medium text-foreground">Quantity</dt>
+											<dd>
+												{reward.quantityRemaining} / {reward.quantityTotal} left
+											</dd>
+										</div>
+										<div>
+											<dt className="font-medium text-foreground">Expires</dt>
+											<dd>{formatDateTime(reward.expiryDate)}</dd>
+										</div>
+										<div>
+											<dt className="font-medium text-foreground">Category</dt>
+											<dd>{reward.category}</dd>
+										</div>
+										<div>
+											<dt className="font-medium text-foreground">Reward ID</dt>
+											<dd className="font-mono wrap-break-word">{reward.id}</dd>
+										</div>
+									</dl>
 								</div>
 							</div>
-							<dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-								<div>
-									<dt className="font-medium text-foreground">Quantity</dt>
-									<dd>
-										{reward.quantityRemaining} / {reward.quantityTotal} left
-									</dd>
-								</div>
-								<div>
-									<dt className="font-medium text-foreground">Expires</dt>
-									<dd>{formatDateTime(reward.expiryDate)}</dd>
-								</div>
-								<div>
-									<dt className="font-medium text-foreground">Category</dt>
-									<dd>{reward.category}</dd>
-								</div>
-								<div>
-									<dt className="font-medium text-foreground">Reward ID</dt>
-									<dd className="font-mono">{reward.id}</dd>
-								</div>
-							</dl>
 							{rejectingId === reward.id ? (
 								<div className="space-y-2 rounded-md border border-dashed p-3">
 									<Label htmlFor={`reject-reason-${reward.id}`}>Rejection reason (optional)</Label>

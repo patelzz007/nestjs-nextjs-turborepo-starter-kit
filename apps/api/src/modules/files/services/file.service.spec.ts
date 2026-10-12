@@ -164,6 +164,24 @@ describe("FileService.deleteStoredFile", () => {
 		expect(repository.rows.get(FILE_ID)?.isDeleted).toBe(false);
 		expect(dispatcher.deletes).toEqual([]);
 	});
+
+	it("refuses to delete the cover of a live reward and keeps it published", async () => {
+		const cover = storedFile({ status: "READY", category: "REWARD_COVER", visibility: "PUBLIC", publicPath: `https://cdn.test/${FILE_ID}` });
+		const { service, repository, storage, dispatcher } = setup(cover);
+		storage.published.add(FILE_ID);
+		repository.rewardCoverFileIds.add(FILE_ID);
+
+		await expect(service.deleteStoredFile(cover, UPLOADER_ID)).rejects.toMatchObject({ response: { error: "FILE_IN_USE_AS_REWARD_COVER" } });
+		expect(repository.rows.get(FILE_ID)?.isDeleted).toBe(false);
+		expect(storage.published.has(FILE_ID)).toBe(true);
+		expect(dispatcher.deletes).toEqual([]);
+	});
+
+	it("reports a file that was already deleted as not found", async () => {
+		const { service } = setup({ status: "DELETED", isDeleted: true });
+
+		await expect(service.deleteStoredFile(storedFile({ status: "READY" }), UPLOADER_ID)).rejects.toMatchObject({ response: { error: "FILE_NOT_FOUND" } });
+	});
 });
 
 describe("FileService.createDownloadUrl", () => {

@@ -44,6 +44,8 @@ Browse published consumer rewards
 | `data` | object[] | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
+| `data[].coverFileId` | string (uuid) | yes |  |
+| `data[].coverImageUrl` | string (uri) | yes |  |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
@@ -56,7 +58,6 @@ Browse published consumer rewards
 | `data[].organizationId` | string (uuid) | yes |  |
 | `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data[].organizationName` | string | no |  |
-| `data[].placeholderImageKey` | string | yes |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -214,6 +215,8 @@ Get published reward detail
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.coverFileId` | string (uuid) | yes |  |
+| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
@@ -226,7 +229,6 @@ Get published reward detail
 | `data.organizationId` | string (uuid) | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
-| `data.placeholderImageKey` | string | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |

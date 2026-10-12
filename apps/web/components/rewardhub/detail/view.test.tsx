@@ -18,6 +18,7 @@ interface RewardStub {
 	readonly title: string;
 	readonly description: string;
 	readonly category: string;
+	readonly coverImageUrl: string;
 	readonly rewardType: string;
 	readonly status: string;
 	readonly quantityRemaining: number;
@@ -37,6 +38,7 @@ interface MutationStub {
 
 const REWARD_ID = "reward-1";
 const DAY_MS = 86_400_000;
+const COVER_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/cover.jpg";
 
 const { rewardUseQuery, legalStatusUseQuery } = vi.hoisted(() => ({
 	rewardUseQuery: vi.fn<() => { readonly data: { readonly data: RewardStub } | undefined; readonly isLoading: boolean; readonly refetch: () => Promise<void> }>(),
@@ -76,6 +78,7 @@ function buildReward(overrides: Partial<RewardStub> = {}): RewardStub {
 		title: "Free coffee",
 		description: "One free latte",
 		category: "food",
+		coverImageUrl: COVER_IMAGE_URL,
 		rewardType: "FREE_ITEM",
 		status: "PUBLISHED",
 		quantityRemaining: 10,
@@ -187,6 +190,24 @@ describe("RewardDetailView merchant identity", () => {
 		renderView(GUEST_SESSION_STATE);
 
 		expect(screen.getByText("Brew & Bean KL")).toBeDefined();
+		expect(screen.getByText("BK")).toBeDefined();
+	});
+});
+
+describe("RewardDetailView cover", () => {
+	it("leads the offer with its cover as a hero, loaded eagerly because it is above the fold", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		const cover = document.querySelector<HTMLImageElement>("[data-slot=cover-image] img");
+		expect(cover?.getAttribute("src")).toBe(COVER_IMAGE_URL);
+		expect(cover?.getAttribute("alt")).toBe("");
+		expect(cover?.getAttribute("loading")).toBe("eager");
+	});
+
+	it("keeps the merchant's mark alongside the cover", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(document.querySelector("[data-slot=cover-image]")).not.toBeNull();
 		expect(screen.getByText("BK")).toBeDefined();
 	});
 });

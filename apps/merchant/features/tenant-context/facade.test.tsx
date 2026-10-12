@@ -16,6 +16,7 @@ import { MerchantErrorCodes, type Envelope, type OrganizationContextResponse } f
 import {
 	TenantContextProvider,
 	useActiveLocationFilter,
+	useActiveOrganizationId,
 	useActiveLocationId,
 	useMerchantLocation,
 	useTenantContextCommands,
@@ -113,6 +114,15 @@ describe("tenant-context facade", () => {
 			hasOrganizationWideAccess: true,
 			isLoading: false,
 		});
+	});
+
+	it("exposes the active organization's id from the context, and nothing before it has loaded", () => {
+		const { result, rerender } = renderHook(useActiveOrganizationId, { wrapper });
+		expect(result.current).toBe(TWO_STORE_CONTEXT.organization.id);
+
+		contextQuery.mockReturnValue(contextQueryState(undefined));
+		rerender();
+		expect(result.current).toBeUndefined();
 	});
 
 	it("seeds the organization-context query for this organization from the server", () => {

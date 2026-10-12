@@ -23,25 +23,19 @@ import type {
 	StorageUploadInput,
 	StorageUploadResult,
 } from "../../domain/object-storage.port";
-import type {
-	PublicAssetPublicationInput,
-	PublicAssetPublicationResult,
-	PublicAssetWithdrawalInput,
-	PublicAssetWithdrawalResult,
-	PublicDelivery,
+import {
+	PUBLIC_ASSET_CACHE_CONTROL,
+	type PublicAssetPublicationInput,
+	type PublicAssetPublicationResult,
+	type PublicAssetWithdrawalInput,
+	type PublicAssetWithdrawalResult,
+	type PublicDelivery,
 } from "../../domain/public-delivery.port";
 import { sha256Base64ToHex, sha256HexToBase64 } from "../../utils/checksum.util";
 
 const HTTP_NOT_FOUND = 404;
 /** Server-side encryption applied to every object the API writes (SSE-S3). */
 const SERVER_SIDE_ENCRYPTION = "AES256";
-/**
- * Cache policy of published public assets. Keys are unique per file (they
- * embed the file id). A withdrawn asset is invalidated at CloudFront, but
- * browsers that already fetched it keep their copy until this expires, so it
- * is bounded to one day rather than marked immutable.
- */
-const PUBLIC_ASSET_CACHE_CONTROL = "public, max-age=86400";
 
 /** S3 reports a missing key as a 404 service exception (NoSuchKey on GET, NotFound on HEAD). */
 function isMissingObjectError(error: Error): boolean {

@@ -3,6 +3,8 @@ import { RewardResponseSchema, type RewardResponse } from "@workspace/shared";
 const FIXTURE_NOW_MS = 1_790_000_000_000;
 const FIXTURE_TTL_MS = 30 * 86_400_000;
 const FIXTURE_QUANTITY = 50;
+/** The cover the fixture carries — a stable, schema-valid https URL a test can assert on. */
+export const FIXTURE_COVER_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/cover.jpg";
 
 /** The fields a case may override — plain values; the schema parse brands them. */
 export interface RewardFixtureOverrides {
@@ -10,6 +12,7 @@ export interface RewardFixtureOverrides {
 	readonly organizationName?: string;
 	readonly organizationLogoUrl?: string | null;
 	readonly quantityRemaining?: number;
+	readonly coverImageUrl?: string;
 }
 
 /** A complete, schema-valid consumer reward; `overrides` set only what a case is about. */
@@ -26,7 +29,8 @@ export function buildRewardResponse(overrides: RewardFixtureOverrides = {}): Rew
 		termsConditions: null,
 		rewardKind: "CONSUMER",
 		category: "cafe",
-		placeholderImageKey: "cafe",
+		coverFileId: "00000000-0000-4000-8000-0000000000c1",
+		coverImageUrl: FIXTURE_COVER_IMAGE_URL,
 		quantityTotal: FIXTURE_QUANTITY,
 		quantityRemaining: FIXTURE_QUANTITY,
 		quantityReserved: 0,

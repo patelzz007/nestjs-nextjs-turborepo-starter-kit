@@ -12,6 +12,7 @@ import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
 import { daysAgo, daysFromNow } from "./helpers";
 import { seedCheckout, type SeedCheckoutInput } from "./reward-checkout";
+import { rewardCoverSeedId, seedRewardCovers } from "./reward-covers";
 import { seedRewardLifecycleStates } from "./reward-lifecycle-states";
 import { seedLog } from "./seed-log";
 
@@ -58,12 +59,23 @@ interface ExtraKlRewardSeed {
 	readonly title: string;
 	readonly description: string;
 	readonly rewardType: RewardType;
-	readonly rewardValue?: number;
+	readonly rewardValue: number;
 	readonly category: string;
-	readonly placeholderImageKey: string;
+	readonly coverFileId: string;
 	readonly quantityTotal: number;
 	readonly quantityRemaining: number;
 	readonly quantityReserved: number;
+}
+
+/** Extra published, store-limited rewards seeded for Jonker Street Kitchen. */
+interface ExtraMlkRewardSeed {
+	readonly title: string;
+	readonly rewardType: RewardType;
+	readonly rewardValue: number;
+	readonly description: string;
+	readonly category: string;
+	readonly coverFileId: string;
+	readonly locationIds: readonly string[];
 }
 
 export const DEMO_QR_TOKEN_PENDING_KL = "seed_qr_token_kl_pending_alice_001";
@@ -241,6 +253,15 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 
 	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user, klPendingCashier);
 
+	// Every reward shows a cover, so the covers are uploaded before any reward is created.
+	const coverCount = await seedRewardCovers({
+		klOrganizationId: klOrganization.id,
+		klOwnerUserId: klOwner.id,
+		mlkOrganizationId: mlkOrganization.id,
+		mlkOwnerUserId: mlkOwner.id,
+	});
+	seedLog(`Reward covers: ${String(coverCount)} published`);
+
 	const klKeyId = deterministicUuid("reward-seed-api-key", "kl-pos-simulator");
 	const mlkKeyId = deterministicUuid("reward-seed-api-key", "mlk-katil-pos");
 	const klIntegrationKeyId = deterministicUuid("reward-seed-api-key", "kl-integration");
@@ -336,7 +357,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "One per customer. Valid weekdays only.",
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				placeholderImageKey: "category-cafe",
+				coverFileId: rewardCoverSeedId("free-coffee"),
 				minSpendMinor: 0,
 				quantityTotal: 200,
 				quantityRemaining: 142,
@@ -353,14 +374,14 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			{
 				id: REWARD_SEED_IDS.mlkRewardPublished,
 				organizationId: mlkOrganization.id,
-				title: "RM10 off Jonker lunch set",
+				title: "10% off the Jonker lunch set",
 				description: "Weekday lunch 11am–3pm. Min spend RM35. Available at both Bukit Katil and Bukit Beruang.",
 				rewardType: "DISCOUNT",
 				rewardValue: 10,
 				termsConditions: "Minimum spend RM35. Weekdays 11am–3pm only.",
 				rewardKind: "CONSUMER",
 				category: "restaurant",
-				placeholderImageKey: "category-restaurant",
+				coverFileId: rewardCoverSeedId("jonker-lunch-set"),
 				minSpendMinor: 3500,
 				quantityTotal: 120,
 				quantityRemaining: 95,
@@ -385,7 +406,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "Bukit Katil store only. One per customer per day.",
 				rewardKind: "CONSUMER",
 				category: "beverage",
-				placeholderImageKey: "category-beverage",
+				coverFileId: rewardCoverSeedId("iced-tea"),
 				quantityTotal: 80,
 				quantityRemaining: 64,
 				quantityReserved: 3,
@@ -400,14 +421,14 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			{
 				id: REWARD_SEED_IDS.mlkRewardBeruangOnly,
 				organizationId: mlkOrganization.id,
-				title: "RM8 off weekend dinner — Bukit Beruang",
+				title: "15% off weekend dinner — Bukit Beruang",
 				description: "Friday and Saturday dinner from 6pm. Bukit Beruang store only.",
 				rewardType: "DISCOUNT",
-				rewardValue: 8,
+				rewardValue: 15,
 				termsConditions: "Bukit Beruang store only. Fri–Sat 6pm–10pm.",
 				rewardKind: "CONSUMER",
 				category: "restaurant",
-				placeholderImageKey: "category-restaurant",
+				coverFileId: rewardCoverSeedId("weekend-dinner"),
 				minSpendMinor: 2500,
 				quantityTotal: 60,
 				quantityRemaining: 48,
@@ -432,11 +453,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			id: REWARD_SEED_IDS.klRewardReferrer,
 			organizationId: klOrganization.id,
 			title: "Referrer: Free pastry (Brew & Bean)",
-			description: "Auto-cloned referrer reward when friends redeem the free coffee campaign.",
+			description: "A free pastry of your choice, earned when a friend redeems their free coffee.",
 			rewardType: "FREE_ITEM",
+			rewardValue: 1,
 			rewardKind: "REFERRER",
 			category: "cafe",
-			placeholderImageKey: "category-cafe",
+			coverFileId: rewardCoverSeedId("free-pastry"),
 			quantityTotal: 50,
 			quantityRemaining: 48,
 			quantityReserved: 1,
@@ -452,11 +474,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			id: REWARD_SEED_IDS.mlkRewardReferrer,
 			organizationId: mlkOrganization.id,
 			title: "Referrer: 15% off next meal",
-			description: "Referrer bonus for Jonker lunch campaign.",
+			description: "15% off your next meal, earned when a friend redeems the Jonker lunch set offer.",
 			rewardType: "DISCOUNT",
+			rewardValue: 15,
 			rewardKind: "REFERRER",
 			category: "restaurant",
-			placeholderImageKey: "category-restaurant",
+			coverFileId: rewardCoverSeedId("next-meal"),
 			quantityTotal: 30,
 			quantityRemaining: 29,
 			quantityReserved: 0,
@@ -485,11 +508,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				id: REWARD_SEED_IDS.klRewardPending,
 				organizationId: klOrganization.id,
 				title: "20% off weekend brunch",
-				description: "Awaiting admin moderation or auto-publish.",
+				description: "20% off any brunch plate on Saturdays and Sundays, 9am–1pm.",
 				rewardType: "DISCOUNT",
+				rewardValue: 20,
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				placeholderImageKey: "category-cafe",
+				coverFileId: rewardCoverSeedId("weekend-brunch"),
 				quantityTotal: 80,
 				quantityRemaining: 80,
 				quantityReserved: 0,
@@ -503,11 +527,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				id: REWARD_SEED_IDS.klRewardDraft,
 				organizationId: klOrganization.id,
 				title: "Draft: Matcha latte trial",
-				description: "Not submitted for review yet.",
+				description: "A free iced or hot matcha latte while we trial our new matcha.",
 				rewardType: "FREE_ITEM",
+				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "beverage",
-				placeholderImageKey: "category-beverage",
+				coverFileId: rewardCoverSeedId("matcha-latte"),
 				quantityTotal: 40,
 				quantityRemaining: 40,
 				quantityReserved: 0,
@@ -519,11 +544,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				id: REWARD_SEED_IDS.klRewardExpired,
 				organizationId: klOrganization.id,
 				title: "Expired: Merdeka promo",
-				description: "Past campaign for expiry job testing.",
+				description: "31% off any kopi to celebrate Merdeka Day.",
 				rewardType: "DISCOUNT",
+				rewardValue: 31,
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				placeholderImageKey: "category-cafe",
+				coverFileId: rewardCoverSeedId("merdeka-coffee"),
 				quantityTotal: 100,
 				quantityRemaining: 12,
 				quantityReserved: 0,
@@ -535,11 +561,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				id: REWARD_SEED_IDS.mlkRewardDisabled,
 				organizationId: mlkOrganization.id,
 				title: "Disabled: Cendol giveaway",
-				description: "Merchant disabled after stock issue.",
+				description: "A free bowl of cendol with gula Melaka with any main course.",
 				rewardType: "FREE_ITEM",
+				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "food",
-				placeholderImageKey: "category-food",
+				coverFileId: rewardCoverSeedId("cendol"),
 				quantityTotal: 50,
 				quantityRemaining: 0,
 				quantityReserved: 0,
@@ -554,63 +581,66 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const extraKlRewards: readonly ExtraKlRewardSeed[] = [
 		{
 			title: "RM5 cashback on dine-in",
-			description: "Credited on your next visit.",
+			description: "RM5 back on any dine-in bill over RM30, credited on your next visit.",
 			rewardType: "CASHBACK",
 			rewardValue: 5,
 			category: "restaurant",
-			placeholderImageKey: "category-restaurant",
+			coverFileId: rewardCoverSeedId("dine-in-cashback"),
 			quantityTotal: 75,
 			quantityRemaining: 60,
 			quantityReserved: 2,
 		},
 		{
-			title: "Double loyalty points weekend",
-			description: "Earn 2x points on all orders.",
+			title: "200 bonus points this weekend",
+			description: "Earn 200 bonus loyalty points on any purchase this weekend.",
 			rewardType: "POINTS",
 			rewardValue: 200,
 			category: "retail",
-			placeholderImageKey: "category-retail",
+			coverFileId: rewardCoverSeedId("loyalty-points-retail"),
 			quantityTotal: 100,
 			quantityRemaining: 88,
 			quantityReserved: 1,
 		},
 		{
-			title: "BOGO signature noodles",
-			description: "Buy one bowl, get one free.",
+			title: "Buy one, get one signature noodles",
+			description: "Buy one bowl of our signature curry laksa and get a second one free.",
 			rewardType: "BOGO",
 			rewardValue: 1,
 			category: "food",
-			placeholderImageKey: "category-food",
+			coverFileId: rewardCoverSeedId("signature-noodles"),
 			quantityTotal: 50,
 			quantityRemaining: 41,
 			quantityReserved: 1,
 		},
 		{
 			title: "Second coffee 50% off",
-			description: "Afternoon pick-me-up 2–5pm.",
+			description: "50% off your second coffee, 2–5pm on weekdays.",
 			rewardType: "DISCOUNT",
+			rewardValue: 50,
 			category: "cafe",
-			placeholderImageKey: "category-cafe",
+			coverFileId: rewardCoverSeedId("second-coffee"),
 			quantityTotal: 60,
 			quantityRemaining: 44,
 			quantityReserved: 3,
 		},
 		{
 			title: "Free croissant with any drink",
-			description: "Breakfast bundle.",
+			description: "A free butter croissant with any hot or iced drink before 11am.",
 			rewardType: "FREE_ITEM",
+			rewardValue: 1,
 			category: "food",
-			placeholderImageKey: "category-food",
+			coverFileId: rewardCoverSeedId("croissant"),
 			quantityTotal: 40,
 			quantityRemaining: 31,
 			quantityReserved: 2,
 		},
 		{
 			title: "Wellness: Free yoga class voucher",
-			description: "Partner studio next door.",
+			description: "One free drop-in class at our partner yoga studio next door.",
 			rewardType: "FREE_ITEM",
+			rewardValue: 1,
 			category: "wellness",
-			placeholderImageKey: "category-wellness",
+			coverFileId: rewardCoverSeedId("yoga-class"),
 			quantityTotal: 25,
 			quantityRemaining: 20,
 			quantityReserved: 1,
@@ -624,11 +654,11 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: row.title,
 				description: row.description,
 				rewardType: row.rewardType,
-				rewardValue: row.rewardValue ?? (row.rewardType === "DISCOUNT" ? 20 : 1),
+				rewardValue: row.rewardValue,
 				termsConditions: "Subject to store availability.",
 				rewardKind: "CONSUMER",
 				category: row.category,
-				placeholderImageKey: row.placeholderImageKey,
+				coverFileId: row.coverFileId,
 				quantityTotal: row.quantityTotal,
 				quantityRemaining: row.quantityRemaining,
 				quantityReserved: row.quantityReserved,
@@ -639,19 +669,23 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		});
 	}
 
-	const extraMlkRewards = [
+	const extraMlkRewards: readonly ExtraMlkRewardSeed[] = [
 		{
 			title: "Nyonya kuih sampler",
+			rewardType: "FREE_ITEM",
+			rewardValue: 1,
 			description: "Three-piece kuih platter. Bukit Katil only.",
 			category: "food",
-			placeholderImageKey: "category-food",
+			coverFileId: rewardCoverSeedId("nyonya-kuih"),
 			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil],
 		},
 		{
-			title: "Friday night entertainment discount",
-			description: "RM15 off live music dinner. Bukit Beruang only.",
+			title: "15% off Friday live-music dinner",
+			rewardType: "DISCOUNT",
+			rewardValue: 15,
+			description: "15% off your dinner bill on live-music Friday nights. Bukit Beruang only.",
 			category: "entertainment",
-			placeholderImageKey: "category-entertainment",
+			coverFileId: rewardCoverSeedId("live-music-night"),
 			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationBeruang],
 		},
 	];
@@ -662,12 +696,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				organizationId: mlkOrganization.id,
 				title: row.title,
 				description: row.description,
-				rewardType: "FREE_ITEM",
-				rewardValue: 1,
+				rewardType: row.rewardType,
+				rewardValue: row.rewardValue,
 				termsConditions: "While stocks last.",
 				rewardKind: "CONSUMER",
 				category: row.category,
-				placeholderImageKey: row.placeholderImageKey,
+				coverFileId: row.coverFileId,
 				quantityTotal: 35,
 				quantityRemaining: 28,
 				quantityReserved: 2,

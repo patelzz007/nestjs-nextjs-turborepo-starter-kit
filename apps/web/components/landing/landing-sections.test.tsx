@@ -26,12 +26,22 @@ const EXPIRY_JUST_AFTER_MALAYSIAN_MIDNIGHT = Date.UTC(2026, 10, 14, 16, 30);
 const RUNTIME_TIME_ZONES: readonly string[] = ["UTC", "America/Los_Angeles", "Asia/Kuala_Lumpur", "Pacific/Kiritimati"];
 
 const OFFERS: readonly FeaturedOffer[] = [
-	{ id: "offer-1", title: "Free coffee — Grand Opening", merchantName: "Brew & Bean KL", category: "cafe", remaining: 142, total: 200, expiryDate: EXPIRY_PICKED_DAY },
+	{
+		id: "offer-1",
+		title: "Free coffee — Grand Opening",
+		merchantName: "Brew & Bean KL",
+		category: "cafe",
+		coverImageUrl: "https://cdn.example.com/rewards/offer-1/cover.jpg",
+		remaining: 142,
+		total: 200,
+		expiryDate: EXPIRY_PICKED_DAY,
+	},
 	{
 		id: "offer-2",
 		title: "RM10 off Jonker lunch set",
 		merchantName: undefined,
 		category: "restaurant",
+		coverImageUrl: "https://cdn.example.com/rewards/offer-2/cover.jpg",
 		remaining: 95,
 		total: 120,
 		expiryDate: EXPIRY_JUST_AFTER_MALAYSIAN_MIDNIGHT,
@@ -73,8 +83,16 @@ describe("LandingHero", () => {
 		const preview = screen.getByRole("region", { name: "Ending soon" });
 		const links = within(preview).getAllByRole("link");
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(["/rewards/offer-1", "/rewards/offer-2"]);
-		expect(within(preview).getByText("Brew & Bean KL ·")).toBeDefined();
+		expect(within(preview).getByText("Brew & Bean KL")).toBeDefined();
 		expect(within(preview).getAllByText("Until 15 Nov")).toHaveLength(2);
+	});
+
+	it("shows each featured offer's cover, loading only the first eagerly", () => {
+		render(<LandingHero featuredOffers={OFFERS} liveOfferCount={12} secondaryAction={SIGN_IN} />);
+
+		const covers = screen.getByRole("region", { name: "Ending soon" }).querySelectorAll<HTMLImageElement>("a [data-slot=cover-image] img");
+		expect([...covers].map((cover) => cover.getAttribute("src"))).toEqual(OFFERS.map((offer) => offer.coverImageUrl));
+		expect([...covers].map((cover) => cover.getAttribute("loading"))).toEqual(["eager", "lazy"]);
 	});
 
 	it.each(RUNTIME_TIME_ZONES)("dates each offer in Malaysia time whatever zone the server or browser runs in (%s)", (runtimeTimeZone: string) => {

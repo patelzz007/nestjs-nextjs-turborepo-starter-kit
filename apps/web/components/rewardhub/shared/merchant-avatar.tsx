@@ -4,10 +4,11 @@ import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
-export type RewardMerchantAvatarSize = "md" | "lg" | "xl";
+export type RewardMerchantAvatarSize = "sm" | "md" | "lg" | "xl";
 
 /** Category-glyph tile for a reward whose merchant is unknown — matches the avatar footprint per size. */
 const CATEGORY_TILE_CLASSES: Readonly<Record<RewardMerchantAvatarSize, { readonly tile: string; readonly icon: string }>> = {
+	sm: { tile: "size-8 rounded-lg", icon: "size-3.5" },
 	md: { tile: "size-10 rounded-lg", icon: "size-4" },
 	lg: { tile: "size-12 rounded-xl", icon: "size-5" },
 	xl: { tile: "size-16 rounded-xl", icon: "size-7" },

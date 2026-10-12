@@ -5,6 +5,7 @@ import { FEATURED_OFFER_LIMIT, selectFeaturedOffers, selectMerchantNames } from 
 
 const NOW = 1_790_000_000_000;
 const DAY_MS = 86_400_000;
+const COVER_IMAGE_URL = "https://cdn.example.com/rewards/offer/cover.jpg";
 
 let sequence = 0;
 
@@ -31,7 +32,8 @@ function reward(overrides: RewardOverrides = {}): RewardResponse {
 		termsConditions: null,
 		rewardKind: "CONSUMER",
 		category: "cafe",
-		placeholderImageKey: "cafe",
+		coverFileId: "00000000-0000-4000-8000-0000000000c1",
+		coverImageUrl: COVER_IMAGE_URL,
 		quantityTotal: 50,
 		quantityRemaining: 20,
 		quantityReserved: 0,
@@ -68,6 +70,7 @@ describe("selectFeaturedOffers", () => {
 			title: "Soonest",
 			merchantName: "Brew & Bean KL",
 			category: "cafe",
+			coverImageUrl: COVER_IMAGE_URL,
 			remaining: 20,
 			total: 50,
 			expiryDate: NOW + DAY_MS,

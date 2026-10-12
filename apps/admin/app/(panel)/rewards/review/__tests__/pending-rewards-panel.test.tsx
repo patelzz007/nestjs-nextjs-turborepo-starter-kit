@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, type RenderResult } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { LIST_SLOT_INDEX, ApiPaginatedMetaSchema, PERMISSION, type ApiPaginatedMeta } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
@@ -21,6 +21,8 @@ interface PendingRewardStub {
 	readonly quantityTotal: number;
 	readonly expiryDate: number;
 	readonly category: string;
+	readonly coverFileId: string;
+	readonly coverImageUrl: string;
 }
 
 type PageMetaStub = ApiPaginatedMeta;
@@ -68,6 +70,8 @@ const REWARD: PendingRewardStub = {
 	quantityTotal: 10,
 	expiryDate: 1_786_300_000_000,
 	category: "FOOD",
+	coverFileId: "9f1c2b7e-4d3a-4c8e-9b6f-2a1d5e7c3b40",
+	coverImageUrl: "https://files.example.com/rewards/free-coffee-cover.jpg",
 };
 
 function pageMeta(page: number, total: number, totalPages: number): PageMetaStub {
@@ -84,8 +88,8 @@ function pageMeta(page: number, total: number, totalPages: number): PageMetaStub
 	});
 }
 
-function renderPanel(): void {
-	render(
+function renderPanel(): RenderResult {
+	return render(
 		<QueryClientProvider client={new QueryClient()}>
 			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.MANAGE]}>
 				<PendingRewardsPanel />
@@ -114,6 +118,22 @@ describe("PendingRewardsPanel", () => {
 		expect(screen.getByRole("button", { name: "Approve" })).toBeDefined();
 		expect(screen.getByText("Moderation queue (23)")).toBeDefined();
 		expect(screen.getByText("Page 1 of 3")).toBeDefined();
+	});
+
+	it("shows the reward's cover and links it to the full-size image in a new tab", () => {
+		pendingQuery.mockReturnValue({ data: { data: [REWARD], meta: pageMeta(1, 1, 1) }, isLoading: false, isError: false, refetch });
+		const { container } = renderPanel();
+
+		const cover = container.querySelector('[data-slot="cover-image"] img');
+		expect(cover?.getAttribute("src")).toBe(REWARD.coverImageUrl);
+		// Decorative: the title sits right beside it and the link carries the name.
+		expect(cover?.getAttribute("alt")).toBe("");
+
+		const openLink = screen.getByRole("link", { name: "Open cover image of Free coffee" });
+		expect(openLink.getAttribute("href")).toBe(REWARD.coverImageUrl);
+		expect(openLink.getAttribute("target")).toBe("_blank");
+		expect(openLink.getAttribute("rel")).toBe("noopener noreferrer");
+		expect(openLink.contains(cover)).toBe(true);
 	});
 
 	it("queries the page the URL names", () => {

@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
 import { RewardClaimRepository, type ReservedClaimOutcome } from "../src/modules/rewards/repositories/reward-claim.repository";
 import { PrismaService } from "../src/prisma/prisma.service";
+import { rewardCoverSeedId } from "../prisma/seed/reward-covers";
 import { runWithSystemRlsContext } from "../src/prisma/rls-context";
 import { createE2eApp } from "./e2e-helpers";
 
@@ -38,7 +39,7 @@ describe("Reward claim reservation (integration)", () => {
 					description: "Created by reward-claim-reservation.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
 					category: "cafe",
-					placeholderImageKey: "category-cafe",
+					coverFileId: rewardCoverSeedId("free-coffee"),
 					quantityTotal: quantity,
 					quantityRemaining: quantity,
 					expiryDate: Date.now() + 30 * DAY_MS,

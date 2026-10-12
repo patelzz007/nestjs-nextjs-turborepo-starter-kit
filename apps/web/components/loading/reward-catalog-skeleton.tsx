@@ -1,9 +1,11 @@
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 import type { RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import { PilotCitySchema, RewardCategorySchema } from "@workspace/shared";
+import { AspectRatio } from "@workspace/ui/components/aspect-ratio";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
+import { REWARD_CARD_COVER_RATIO, REWARD_LIST_ROW_COVER_RATIO } from "@/lib/rewards/reward-cover";
 
 /*
  * Bones for the rewards catalog — `RewardCard` / `RewardListRow` silhouettes
@@ -25,11 +27,14 @@ const TITLE_WIDTHS: readonly string[] = ["w-3/4", "w-2/3", "w-4/5", "w-3/5"];
 const MERCHANT_WIDTHS: readonly string[] = ["w-28", "w-36", "w-24", "w-32"];
 const CHIP_WIDTHS: readonly string[] = ["w-24", "w-20", "w-28", "w-16"];
 
-/** A `RewardCard` silhouette: merchant header, title and copy, availability bar and expiry, the full-width action. */
+/** A `RewardCard` silhouette: cover, merchant header, title and copy, availability bar and expiry, the full-width action. */
 export function RewardCardSkeleton({ index }: { readonly index: number }): React.JSX.Element {
 	return (
 		<div data-slot="reward-card-skeleton" className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-			<div className="flex items-start gap-3 border-b border-border/80 p-4">
+			<AspectRatio ratio={REWARD_CARD_COVER_RATIO} className="border-b border-border/80">
+				<Skeleton className="absolute inset-0 rounded-none" />
+			</AspectRatio>
+			<div className="flex items-start gap-3 p-4 pb-0">
 				<Skeleton className="size-12 rounded-xl" />
 				<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 					<Skeleton variant="text" className={cn("my-0.5 h-4", cycledWidth(MERCHANT_WIDTHS, index, "w-28"))} />
@@ -65,20 +70,24 @@ export function RewardCardSkeleton({ index }: { readonly index: number }): React
 	);
 }
 
-/** A `RewardListRow` silhouette: avatar, title and meta line, compact availability (md+), count (xl+), the "View" button. */
+/** A `RewardListRow` silhouette: cover thumbnail, title, merchant and meta lines, compact availability (md+), the "View" button. */
 export function RewardListRowSkeleton({ index }: { readonly index: number }): React.JSX.Element {
 	return (
-		<div data-slot="reward-list-row-skeleton" className="flex items-center gap-3.5 rounded-xl border border-border bg-card px-3.5 py-3 shadow-xs sm:gap-4 sm:px-4 sm:py-3.5">
-			<Skeleton className="size-10 rounded-lg" />
+		<div
+			data-slot="reward-list-row-skeleton"
+			className="flex items-center gap-3.5 rounded-xl border border-border bg-card py-2.5 pr-3.5 pl-2.5 shadow-xs sm:gap-4 sm:py-3 sm:pr-4 sm:pl-3">
+			<AspectRatio ratio={REWARD_LIST_ROW_COVER_RATIO} className="w-20 shrink-0 sm:w-24">
+				<Skeleton className="absolute inset-0 rounded-lg" />
+			</AspectRatio>
 			<div className="flex min-w-0 flex-1 flex-col gap-1">
 				<Skeleton variant="text" className={cn("my-1 h-4", cycledWidth(TITLE_WIDTHS, index, "w-3/4"))} />
-				<Skeleton variant="text" className="my-0.5 h-3 w-4/5 max-w-80" />
+				<Skeleton variant="text" className={cn("my-0.5 h-3", cycledWidth(MERCHANT_WIDTHS, index, "w-28"))} />
+				<Skeleton variant="text" className="my-0.5 h-3 w-36 max-w-full" />
 			</div>
 			<div className="hidden w-24 items-center gap-2 md:flex lg:w-28">
 				<Skeleton variant="text" className="h-1 flex-1" />
 				<Skeleton variant="text" className="h-3 w-10" />
 			</div>
-			<Skeleton variant="text" className="hidden h-3 w-12 xl:block" />
 			<Skeleton className="size-9 sm:w-18" />
 		</div>
 	);

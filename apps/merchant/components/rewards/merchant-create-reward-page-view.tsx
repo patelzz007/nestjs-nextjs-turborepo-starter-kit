@@ -4,7 +4,7 @@ import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantRewardLocationFields } from "@/components/rewards/merchant-reward-location-fields";
-import { useMerchantLocation } from "@/features/tenant-context/facade";
+import { useActiveOrganizationId, useMerchantLocation } from "@/features/tenant-context/facade";
 import { upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,6 +39,8 @@ function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipl
 		rewardType: "DISCOUNT",
 		title: "",
 		description: "",
+		// Empty until a cover is uploaded — the schema then asks for one ("Add a cover image").
+		coverFileId: "",
 		rewardValue: 0,
 		startDate: format(startDate, "yyyy-MM-dd"),
 		expiryDate: format(expiryDate, "yyyy-MM-dd"),
@@ -68,6 +70,7 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 	const queryClient = useQueryClient();
 	const router = useRouter();
 	const { locationId: activeLocationId, accessibleLocations } = useMerchantLocation();
+	const organizationId = useActiveOrganizationId();
 	const hasMultipleLocations = accessibleLocations.length > 1;
 	const rewardsPath = orgRoutes(orgSlug).rewards.list;
 	const [saveAsDraft, setSaveAsDraft] = React.useState<boolean>(false);
@@ -158,6 +161,8 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 					selectedType={selectedType}
 					onTypeSelect={handleTypeSelect}
 					onMaxClaimsChange={handleMaxClaimsChange}
+					organizationId={organizationId}
+					initialCoverUrl={null}
 				/>
 
 				<MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={createMutation.isPending} />

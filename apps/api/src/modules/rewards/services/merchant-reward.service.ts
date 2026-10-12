@@ -19,7 +19,7 @@ import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
-import { RewardRepository, type RewardOrgConsumerSummary } from "../repositories/reward.repository";
+import { RewardCoverUnavailableError, RewardRepository, type RewardOrgConsumerSummary } from "../repositories/reward.repository";
 import { isRewardWithinScope } from "../utils/merchant-location-scope.util";
 import { toStoredRewardRules } from "../utils/reward-rules.util";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
@@ -73,31 +73,33 @@ export class MerchantRewardService {
 		const now = Date.now();
 		const autoPublishAt = saveAsDraft ? null : now + AUTO_PUBLISH_MS;
 
-		const reward = await this.rewardRepository.createConsumerReward(
-			{
-				organizationId: orgId,
-				title: input.title,
-				description: input.description,
-				rewardType: input.rewardType,
-				rewardValue: input.rewardValue,
-				termsConditions: input.termsConditions ?? null,
-				rewardKind: "CONSUMER",
-				category: input.category,
-				placeholderImageKey: `category-${input.category}`,
-				...(input.rules === undefined ? {} : toStoredRewardRules(input.rules)),
-				quantityTotal: input.quantityTotal,
-				quantityRemaining: input.quantityTotal,
-				startDate: input.startDate ?? null,
-				expiryDate: input.expiryDate,
-				status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
-				submittedForReviewAt: saveAsDraft ? null : now,
-				autoPublishAt,
-				referralsEnabled,
-				referralPoolTotal,
-				referralPoolRemaining: referralPoolTotal,
-				locationScopeType,
-			},
-			locationIds,
+		const reward = await this.withCoverCheck(() =>
+			this.rewardRepository.createConsumerReward(
+				{
+					organizationId: orgId,
+					title: input.title,
+					description: input.description,
+					rewardType: input.rewardType,
+					rewardValue: input.rewardValue,
+					termsConditions: input.termsConditions ?? null,
+					rewardKind: "CONSUMER",
+					category: input.category,
+					coverFileId: input.coverFileId,
+					...(input.rules === undefined ? {} : toStoredRewardRules(input.rules)),
+					quantityTotal: input.quantityTotal,
+					quantityRemaining: input.quantityTotal,
+					startDate: input.startDate ?? null,
+					expiryDate: input.expiryDate,
+					status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
+					submittedForReviewAt: saveAsDraft ? null : now,
+					autoPublishAt,
+					referralsEnabled,
+					referralPoolTotal,
+					referralPoolRemaining: referralPoolTotal,
+					locationScopeType,
+				},
+				locationIds,
+			),
 		);
 
 		if (referralsEnabled && referralPoolTotal !== null) {
@@ -113,7 +115,8 @@ export class MerchantRewardService {
 				termsConditions: input.termsConditions ?? null,
 				rewardKind: "REFERRER",
 				category: input.category,
-				placeholderImageKey: `category-${input.category}`,
+				// The referrer reward shows the same cover as the reward it is earned through.
+				coverFileId: input.coverFileId,
 				quantityTotal: referralPoolTotal,
 				quantityRemaining: referralPoolTotal,
 				expiryDate: referrerExpiry,
@@ -134,6 +137,21 @@ export class MerchantRewardService {
 
 		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
 		return mapRewardToResponse(refreshed, refreshed.organization);
+	}
+
+	/** A cover that is not one of the organization's ready, published reward-cover images is the caller's mistake (400). */
+	private async withCoverCheck<TResult>(write: () => Promise<TResult>): Promise<TResult> {
+		try {
+			return await write();
+		} catch (error) {
+			if (error instanceof RewardCoverUnavailableError) {
+				throw new BadRequestException({
+					message: "The cover image is not ready or does not belong to this organization. Upload it again.",
+					error: "REWARD_COVER_INVALID",
+				});
+			}
+			throw error;
+		}
 	}
 
 	private async resolveRewardLocationScope(
@@ -232,7 +250,12 @@ export class MerchantRewardService {
 			updateData.referralPoolRemaining = input.referralPoolTotal;
 		}
 
-		await this.rewardRepository.updateReward(reward.id, updateData);
+		if (input.coverFileId === undefined) {
+			await this.rewardRepository.updateReward(reward.id, updateData);
+		} else {
+			const cover = { organizationId: actor.organizationId, fileId: input.coverFileId };
+			await this.withCoverCheck(() => this.rewardRepository.updateRewardWithCover(reward.id, reward.referrerRewardId, updateData, cover));
+		}
 
 		if (input.referrerRewardTitle !== undefined && reward.referrerRewardId !== null) {
 			await this.rewardRepository.updateReward(reward.referrerRewardId, { title: input.referrerRewardTitle });

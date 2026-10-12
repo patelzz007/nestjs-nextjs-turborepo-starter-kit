@@ -190,14 +190,18 @@ export class FileService {
 	 * references it (product image, store asset, avatar, KYB link), withdraws a
 	 * published public asset at once (a deleted file is never served publicly,
 	 * on any provider), then dispatches the delayed physical delete of the
-	 * private original. Submitted KYB evidence is retained.
+	 * private original. Submitted KYB evidence is retained, and an image a live
+	 * reward shows as its cover is refused.
 	 */
 	public async deleteStoredFile(file: StoredFile, actorUserId: string): Promise<void> {
 		if (file.category === "MERCHANT_KYB" && (await this.repository.hasKybSubmissionReference(file.id))) {
 			throw new ConflictException({ message: "Submitted verification evidence is retained and cannot be deleted", error: "KYB_EVIDENCE_RETAINED" });
 		}
-		const deleted = await this.repository.softDeleteWithReferences(file.id, actorUserId);
-		if (!deleted) {
+		const deletion = await this.repository.softDeleteWithReferences(file.id, actorUserId);
+		if (deletion === "IN_USE_AS_REWARD_COVER") {
+			throw new ConflictException({ message: "This image is the cover of a reward. Choose another cover first.", error: "FILE_IN_USE_AS_REWARD_COVER" });
+		}
+		if (deletion === "ALREADY_DELETED") {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
 		const locator = locatorFromStoredFile(file, this.config.storage.provider);

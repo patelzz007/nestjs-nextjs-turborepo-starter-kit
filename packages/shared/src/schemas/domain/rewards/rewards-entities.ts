@@ -290,6 +290,11 @@ const RewardValueSchema = z.number().nonnegative();
 const RewardTermsSchema = z.string().max(5000);
 const RewardQuantitySchema = z.number().int().min(1);
 const RewardReferralPoolSchema = z.number().int().min(1);
+/**
+ * The reward's cover image: a READY, public `REWARD_COVER` file uploaded to the
+ * same organization (`POST /files/upload-url`). Required — every reward shows one.
+ */
+const RewardCoverFileIdSchema = z.uuid({ error: "Add a cover image" });
 
 export const MerchantCreateRewardSchema = z
 	.object({
@@ -299,6 +304,7 @@ export const MerchantCreateRewardSchema = z
 		rewardValue: RewardValueSchema,
 		termsConditions: RewardTermsSchema.optional(),
 		category: RewardCategorySchema,
+		coverFileId: RewardCoverFileIdSchema,
 		quantityTotal: RewardQuantitySchema,
 		startDate: EpochMsSchema.optional(),
 		expiryDate: EpochMsSchema,
@@ -331,6 +337,7 @@ export const MerchantRewardFormFieldsSchema = z
 		rewardType: RewardTypeSchema,
 		title: RewardTitleSchema,
 		description: RewardDescriptionSchema,
+		coverFileId: RewardCoverFileIdSchema,
 		rewardValue: RewardValueSchema,
 		minPurchase: z.number().nonnegative().optional(),
 		termsConditions: RewardTermsSchema.optional(),
@@ -405,6 +412,7 @@ export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFor
 		rewardValue: form.rewardValue,
 		termsConditions: form.termsConditions,
 		category,
+		coverFileId: form.coverFileId,
 		quantityTotal: form.quantityTotal,
 		startDate: parseRewardDateInputToEpochMs(form.startDate),
 		expiryDate: parseRewardDateInputToEpochMs(form.expiryDate),
@@ -423,6 +431,7 @@ export function mapMerchantUpdateRewardFormToInput(form: MerchantRewardFormValue
 		rewardType: form.rewardType,
 		rewardValue: form.rewardValue,
 		termsConditions: form.termsConditions ?? null,
+		coverFileId: form.coverFileId,
 		quantityTotal: form.quantityTotal,
 		startDate: parseRewardDateInputToEpochMs(form.startDate),
 		expiryDate: parseRewardDateInputToEpochMs(form.expiryDate),
@@ -438,6 +447,7 @@ export function mapRewardResponseToFormValues(reward: RewardResponse): MerchantR
 		rewardType: reward.rewardType,
 		title: reward.title,
 		description: reward.description,
+		coverFileId: reward.coverFileId,
 		rewardValue: reward.rewardValue,
 		minPurchase: rules?.minSpendMyr,
 		termsConditions: reward.termsConditions ?? undefined,
@@ -455,6 +465,7 @@ export const MerchantUpdateRewardSchema = z
 		rewardType: RewardTypeSchema.optional(),
 		rewardValue: RewardValueSchema.optional(),
 		termsConditions: RewardTermsSchema.nullable().optional(),
+		coverFileId: RewardCoverFileIdSchema.optional(),
 		quantityTotal: RewardQuantitySchema.optional(),
 		startDate: EpochMsSchema.nullable().optional(),
 		expiryDate: EpochMsSchema.optional(),
@@ -715,7 +726,15 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	termsConditions: z.string().nullable(),
 	rewardKind: RewardKindSchema,
 	category: z.string(),
-	placeholderImageKey: z.string(),
+	/** The `REWARD_COVER` file shown on the reward. */
+	coverFileId: z.uuid(),
+	/**
+	 * Public URL of the cover image (the READY `REWARD_COVER` file's published
+	 * copy). Always present: a reward is only saved with a READY, published
+	 * cover, and a cover in use cannot be deleted. http(s) only — rendered
+	 * straight into an `<img src>`.
+	 */
+	coverImageUrl: z.url({ protocol: /^https?$/ }),
 	quantityTotal: z.number().int(),
 	quantityRemaining: z.number().int(),
 	quantityReserved: z.number().int(),

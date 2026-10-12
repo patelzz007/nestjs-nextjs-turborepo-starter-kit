@@ -253,7 +253,10 @@ describe("rewards, geography, users, account and access skeletons", () => {
 		cleanup();
 
 		const { container } = render(<PendingRewardItemsSkeleton />);
-		expect(count(container, '[data-skeleton="pending-reward"]')).toBeGreaterThan(0);
+		const rewardCards = count(container, '[data-skeleton="pending-reward"]');
+		expect(rewardCards).toBeGreaterThan(0);
+		// Every card holds the cover the reviewer moderates.
+		expect(count(container, '[data-skeleton="pending-reward-cover"]')).toBe(rewardCards);
 	});
 
 	it("draws geography's five stat cards, the tab control and the bare table", () => {

@@ -223,6 +223,9 @@ export class FileFinalizationService {
 			case "MERCHANT_KYB":
 				// KYB evidence is attached explicitly when the merchant submits it for review.
 				return { kind: "NONE" };
+			case "REWARD_COVER":
+				// A cover is attached when a reward names it (`coverFileId`), which needs the file READY first.
+				return { kind: "NONE" };
 			default:
 				return assertNever(file.category, "file category");
 		}

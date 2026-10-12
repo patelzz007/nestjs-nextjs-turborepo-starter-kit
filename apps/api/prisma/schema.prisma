@@ -1902,6 +1902,8 @@ enum FileCategory {
   STORE_BANNER
   USER_AVATAR
   MERCHANT_KYB
+  /// A reward's cover image — uploaded to the organization, then named by `Reward.coverFileId`.
+  REWARD_COVER
 }
 
 enum FileVisibility {
@@ -2008,6 +2010,7 @@ model StoredFile {
   organizationAssets OrganizationAsset[]
   userAvatar         UserAvatar?
   kybFiles           OrganizationKybFile[]
+  rewardCovers       Reward[]              @relation("RewardCover")
 
   @@index([uploadedById])
   @@index([organizationId])
@@ -2219,7 +2222,9 @@ model Reward {
   termsConditions        String?                       @map("terms_conditions") @db.Text
   rewardKind             RewardKind                    @default(CONSUMER) @map("reward_kind")
   category               String                        @db.VarChar(100)
-  placeholderImageKey    String                        @map("placeholder_image_key") @db.VarChar(100)
+  /// The cover image (a READY, PUBLIC `REWARD_COVER` stored file of the same organization).
+  /// Required; a referrer reward shares its consumer reward's cover. The file cannot be deleted while a live reward uses it.
+  coverFileId            String                        @map("cover_file_id")
   /// Reward rules other than the minimum spend (e.g. `maxUsePerUser`); validated by `RewardRulesSchema`.
   rules                  Json?
   /// Minimum bill, in integer minor units (sen), for redeeming this reward; null = no minimum.
@@ -2259,8 +2264,10 @@ model Reward {
   claims               RewardClaim[]
   referrals            RewardReferral[]
   locationScopes       RewardLocationScope[]
+  coverFile            StoredFile            @relation("RewardCover", fields: [coverFileId], references: [id], onDelete: Restrict)
 
   @@index([organizationId])
+  @@index([coverFileId])
   @@index([status])
   @@index([category])
   @@index([expiryDate])

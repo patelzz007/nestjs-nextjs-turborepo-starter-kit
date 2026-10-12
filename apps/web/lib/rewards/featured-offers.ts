@@ -9,6 +9,8 @@ export interface FeaturedOffer {
 	readonly title: string;
 	readonly merchantName: string | undefined;
 	readonly category: string;
+	/** The offer's cover — the preview's thumbnail. */
+	readonly coverImageUrl: string;
 	readonly remaining: number;
 	readonly total: number;
 	readonly expiryDate: number;
@@ -30,6 +32,7 @@ export function selectFeaturedOffers(rewards: readonly RewardResponse[], now: nu
 			title: reward.title,
 			merchantName: reward.organizationName,
 			category: reward.category,
+			coverImageUrl: reward.coverImageUrl,
 			remaining: reward.quantityRemaining,
 			total: reward.quantityTotal,
 			expiryDate: reward.expiryDate,

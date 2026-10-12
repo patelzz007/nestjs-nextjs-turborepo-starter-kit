@@ -434,6 +434,19 @@ CREATE POLICY stored_files_owner ON public.stored_files
   USING (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)) OR app_rls_bypass())
   WITH CHECK (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)) OR app_rls_bypass());
 
+-- A reward's cover is readable by whoever can read the reward (marketplace
+-- shoppers, claim holders, members): the EXISTS runs under rewards_read, so
+-- cover visibility follows reward visibility exactly. Read-only, and only for
+-- public REWARD_COVER files — every other file stays owner/member-scoped.
+DROP POLICY IF EXISTS stored_files_reward_cover_read ON public.stored_files;
+CREATE POLICY stored_files_reward_cover_read ON public.stored_files
+  FOR SELECT
+  USING (
+    category = 'REWARD_COVER'
+    AND visibility = 'PUBLIC'
+    AND EXISTS (SELECT 1 FROM public.rewards r WHERE r.cover_file_id = stored_files.id)
+  );
+
 DROP POLICY IF EXISTS file_variants_file ON public.file_variants;
 CREATE POLICY file_variants_file ON public.file_variants
   USING (

@@ -91,7 +91,33 @@ interface RewardLocationScopeRow {
 
 type RewardWithLocationScopes = Reward & {
 	readonly locationScopes?: readonly RewardLocationScopeRow[];
+	/** The cover's published copy — every reward query that builds a response selects it. */
+	readonly coverFile: { readonly publicPath: string | null };
 };
+
+/** A reward's cover has no valid public URL — impossible while saves validate the cover and in-use covers cannot be deleted. */
+export class RewardCoverUrlMissingError extends Error {
+	public constructor(public readonly rewardId: string) {
+		super(`Reward ${rewardId} has no published cover image`);
+		this.name = "RewardCoverUrlMissingError";
+	}
+}
+
+/** The response contract's own rule for a cover URL — the stored value is re-checked against it. */
+const RewardCoverUrlSchema = RewardResponseSchema.shape.coverImageUrl;
+
+/**
+ * The cover URL for a reward response. A cover is validated (READY, public,
+ * published) on every save and cannot be deleted while a live reward uses it,
+ * so a missing or invalid URL is a broken invariant and fails loudly.
+ */
+export function resolveRewardCoverUrl(reward: Pick<RewardWithLocationScopes, "id" | "coverFile">): string {
+	const parsed = RewardCoverUrlSchema.safeParse(reward.coverFile.publicPath);
+	if (!parsed.success) {
+		throw new RewardCoverUrlMissingError(reward.id);
+	}
+	return parsed.data;
+}
 
 /** The organization fields a reward response carries — the shape the reward repository's include selects. */
 export interface RewardOrganizationSummary {
@@ -142,7 +168,8 @@ export function mapRewardToResponse(reward: RewardWithLocationScopes, organizati
 		termsConditions: reward.termsConditions,
 		rewardKind: reward.rewardKind,
 		category: reward.category,
-		placeholderImageKey: reward.placeholderImageKey,
+		coverFileId: reward.coverFileId,
+		coverImageUrl: resolveRewardCoverUrl(reward),
 		quantityTotal: reward.quantityTotal,
 		quantityRemaining: reward.quantityRemaining,
 		quantityReserved: reward.quantityReserved,

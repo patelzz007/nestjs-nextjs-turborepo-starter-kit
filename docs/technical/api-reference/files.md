@@ -36,7 +36,7 @@ Get file metadata
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -166,7 +166,7 @@ Complete a direct upload after browser upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -490,7 +490,7 @@ Create a browser upload ticket
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `assetType` | "LOGO" \| "BANNER" | no |  |
-| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" | yes |  |
+| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |

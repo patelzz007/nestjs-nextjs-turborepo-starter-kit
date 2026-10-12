@@ -119,7 +119,7 @@ CREATE TYPE "KybDocumentScanStatus" AS ENUM ('SCANNING', 'CLEAN', 'INFECTED', 'N
 CREATE TYPE "FileStatus" AS ENUM ('PENDING', 'UPLOADED', 'PROCESSING', 'SCANNING', 'READY', 'FAILED', 'QUARANTINED', 'DELETED');
 
 -- CreateEnum
-CREATE TYPE "FileCategory" AS ENUM ('PRODUCT_IMAGE', 'STORE_LOGO', 'STORE_BANNER', 'USER_AVATAR', 'MERCHANT_KYB');
+CREATE TYPE "FileCategory" AS ENUM ('PRODUCT_IMAGE', 'STORE_LOGO', 'STORE_BANNER', 'USER_AVATAR', 'MERCHANT_KYB', 'REWARD_COVER');
 
 -- CreateEnum
 CREATE TYPE "FileVisibility" AS ENUM ('PUBLIC', 'PRIVATE');
@@ -1364,7 +1364,7 @@ CREATE TABLE "rewards" (
     "terms_conditions" TEXT,
     "reward_kind" "RewardKind" NOT NULL DEFAULT 'CONSUMER',
     "category" VARCHAR(100) NOT NULL,
-    "placeholder_image_key" VARCHAR(100) NOT NULL,
+    "cover_file_id" TEXT NOT NULL,
     "rules" JSONB,
     "min_spend_minor" INTEGER,
     "quantity_total" INTEGER NOT NULL,
@@ -2280,6 +2280,9 @@ CREATE UNIQUE INDEX "organization_terminals_organization_id_terminal_id_key" ON 
 CREATE INDEX "rewards_organization_id_idx" ON "rewards"("organization_id");
 
 -- CreateIndex
+CREATE INDEX "rewards_cover_file_id_idx" ON "rewards"("cover_file_id");
+
+-- CreateIndex
 CREATE INDEX "rewards_status_idx" ON "rewards"("status");
 
 -- CreateIndex
@@ -2788,6 +2791,9 @@ ALTER TABLE "rewards" ADD CONSTRAINT "rewards_referrer_reward_id_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "rewards" ADD CONSTRAINT "rewards_parent_consumer_reward_id_fkey" FOREIGN KEY ("parent_consumer_reward_id") REFERENCES "rewards"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "rewards" ADD CONSTRAINT "rewards_cover_file_id_fkey" FOREIGN KEY ("cover_file_id") REFERENCES "stored_files"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "reward_location_scopes" ADD CONSTRAINT "reward_location_scopes_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;

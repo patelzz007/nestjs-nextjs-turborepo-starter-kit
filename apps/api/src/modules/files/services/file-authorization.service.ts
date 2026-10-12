@@ -28,7 +28,7 @@ export const FILE_AUTHORIZATION_OPERATION = "files.authorization";
 type FileAction = "complete" | "read" | "delete";
 
 /** Organization-owned categories and the merchant capability each action needs. */
-type OrganizationFileCategory = Extract<FileCategory, "STORE_LOGO" | "STORE_BANNER" | "MERCHANT_KYB">;
+type OrganizationFileCategory = Extract<FileCategory, "STORE_LOGO" | "STORE_BANNER" | "MERCHANT_KYB" | "REWARD_COVER">;
 
 interface OrganizationFileRule {
 	/** Upload, complete and delete — changes what the organization shows or submits. */
@@ -41,6 +41,7 @@ interface OrganizationFileRule {
 const ORGANIZATION_FILE_RULES: Readonly<Record<OrganizationFileCategory, OrganizationFileRule>> = {
 	STORE_LOGO: { manage: MERCHANT_CAPABILITY.manageLocations, read: MERCHANT_CAPABILITY.viewLocations, deniedMessage: "Your organization role cannot change store branding" },
 	STORE_BANNER: { manage: MERCHANT_CAPABILITY.manageLocations, read: MERCHANT_CAPABILITY.viewLocations, deniedMessage: "Your organization role cannot change store branding" },
+	REWARD_COVER: { manage: MERCHANT_CAPABILITY.manageRewards, read: MERCHANT_CAPABILITY.viewRewards, deniedMessage: "Your organization role cannot change rewards" },
 	MERCHANT_KYB: {
 		manage: MERCHANT_CAPABILITY.manageVerification,
 		read: MERCHANT_CAPABILITY.manageVerification,
@@ -64,6 +65,7 @@ function organizationRule(category: FileCategory): OrganizationFileRule | null {
 		case "STORE_LOGO":
 		case "STORE_BANNER":
 		case "MERCHANT_KYB":
+		case "REWARD_COVER":
 			return ORGANIZATION_FILE_RULES[category];
 		case "PRODUCT_IMAGE":
 		case "USER_AVATAR":
@@ -80,6 +82,8 @@ function organizationRule(category: FileCategory): OrganizationFileRule | null {
  * - STORE_LOGO / STORE_BANNER → upload/complete/delete need `merchant:manage_locations`;
  *   reading needs active membership (`merchant:view_locations`, every role)
  * - MERCHANT_KYB  → every action needs `merchant:manage_verification` (owner-only)
+ * - REWARD_COVER  → upload/complete/delete need `merchant:manage_rewards`; reading needs
+ *   `merchant:view_rewards` (the published copy is public — this guards metadata and signed URLs)
  *
  * Organization capabilities that guard an API action go through
  * {@link OrganizationRewardAuthService.requireMembershipCapability} — the
@@ -113,7 +117,8 @@ export class FileAuthorizationService {
 				return;
 			case "STORE_LOGO":
 			case "STORE_BANNER":
-			case "MERCHANT_KYB": {
+			case "MERCHANT_KYB":
+			case "REWARD_COVER": {
 				const rule = ORGANIZATION_FILE_RULES[input.category];
 				await this.assertOrganizationCapability("upload", actor.id, input.organizationId ?? null, rule.manage, rule.deniedMessage);
 				return;

@@ -19,6 +19,7 @@ import {
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
+import { rewardCoverSeedId } from "../prisma/seed/reward-covers";
 import { sha256Hex } from "../src/common/crypto/sha256";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
@@ -142,9 +143,9 @@ describe("Merchant store scope (e2e)", () => {
 		);
 
 		await query(
-			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, placeholder_image_key, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
-       VALUES ($1, $2, 'E2E store-scope reward', 'Created by merchant-location-scope.e2e-spec.ts', 'DISCOUNT', 10, 'restaurant', 'restaurant', 10, 10, $3, 'PUBLISHED', false)`,
-			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, Date.now() + 30 * DAY_MS],
+			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, cover_file_id, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
+       VALUES ($1, $2, 'E2E store-scope reward', 'Created by merchant-location-scope.e2e-spec.ts', 'DISCOUNT', 10, 'restaurant', $4, 10, 10, $3, 'PUBLISHED', false)`,
+			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, Date.now() + 30 * DAY_MS, rewardCoverSeedId("weekend-dinner")],
 		);
 		await insertRedemption(katilRedemptionId, KATIL, KATIL_BILL_MINOR);
 		await insertRedemption(beruangRedemptionId, BERUANG, BERUANG_BILL_MINOR);

@@ -60,8 +60,9 @@ export function RewardHubCatalog({
 				</SkeletonRegion>
 			) : viewMode === "grid" ? (
 				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-					{rewards.map((reward) => (
-						<RewardCard key={reward.id} reward={reward} detailPathPrefix={detailPathPrefix} />
+					{rewards.map((reward, index) => (
+						// Only the first card is reliably above the fold; the rest load as they scroll in.
+						<RewardCard key={reward.id} reward={reward} detailPathPrefix={detailPathPrefix} priority={index === 0} />
 					))}
 				</div>
 			) : (

@@ -55,6 +55,9 @@ export type StoredFileBinding =
 	| { readonly kind: "NONE" };
 
 /** The binding target of a READY transition no longer exists (e.g. the product was removed mid-scan). */
+/** What `softDeleteWithReferences` did. */
+export type StoredFileDeletion = "DELETED" | "ALREADY_DELETED" | "IN_USE_AS_REWARD_COVER";
+
 export class StoredFileBindingTargetMissingError extends Error {
 	public constructor(public readonly binding: StoredFileBinding) {
 		super(`File binding target is missing: ${binding.kind}`);
@@ -138,25 +141,32 @@ export class StoredFileRepository {
 
 	/**
 	 * Soft-deletes a live file and every row that points at it, in one
-	 * transaction, recording who deleted them. `false` when the file was already deleted.
+	 * transaction, recording who deleted them. A file that a live reward shows
+	 * as its cover is refused: the file row is locked first and reward saves
+	 * lock it too (`lockLiveRewardCover`), so a save and a delete never interleave.
 	 */
-	public async softDeleteWithReferences(id: string, deletedBy: string): Promise<boolean> {
+	public async softDeleteWithReferences(id: string, deletedBy: string): Promise<StoredFileDeletion> {
 		const deletedAt = BigInt(Date.now());
 		const softDelete = { isDeleted: true, deletedAt, deletedBy, updatedAt: deletedAt };
-		return this.prisma.$transaction(async (tx: StoredFileDbClient): Promise<boolean> => {
+		return this.prisma.$transaction(async (tx: StoredFileDbClient): Promise<StoredFileDeletion> => {
+			await tx.$queryRaw`SELECT id FROM "stored_files" WHERE id = ${id} FOR UPDATE`;
+			const coverUses = await tx.reward.count({ where: { coverFileId: id, isDeleted: false } });
+			if (coverUses > 0) {
+				return "IN_USE_AS_REWARD_COVER";
+			}
 			const file = await tx.storedFile.updateMany({
 				where: { id, isDeleted: false },
 				data: { status: "DELETED", ...softDelete },
 			});
 			if (file.count !== 1) {
-				return false;
+				return "ALREADY_DELETED";
 			}
 			await tx.productImage.updateMany({ where: { fileId: id, isDeleted: false }, data: { ...softDelete, isPrimary: false } });
 			await tx.organizationAsset.updateMany({ where: { fileId: id, isDeleted: false }, data: softDelete });
 			await tx.userAvatar.updateMany({ where: { fileId: id, isDeleted: false }, data: softDelete });
 			await tx.organizationKybFile.updateMany({ where: { fileId: id, isDeleted: false }, data: { ...softDelete, isActive: false } });
 			await tx.fileVariant.updateMany({ where: { fileId: id, isDeleted: false }, data: softDelete });
-			return true;
+			return "DELETED";
 		});
 	}
 

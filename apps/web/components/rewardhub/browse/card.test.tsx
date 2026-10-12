@@ -4,7 +4,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { RewardCard } from "@/components/rewardhub/browse/card";
-import { buildRewardResponse } from "@/test-support/reward";
+import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL } from "@/test-support/reward";
 
 const LOGO_URL = "https://cdn.example.com/organizations/brew-bean/logo.png";
 
@@ -44,5 +44,42 @@ describe("RewardCard merchant identity", () => {
 
 		expect(merchantMark(container)).toBeNull();
 		expect(screen.queryByText("BK")).toBeNull();
+	});
+});
+
+function coverImage(container: HTMLElement): HTMLImageElement | null {
+	return container.querySelector("[data-slot=cover-image] img");
+}
+
+describe("RewardCard cover", () => {
+	it("leads the card with the reward's cover, decorative because the title sits below it", () => {
+		const { container } = render(<RewardCard reward={buildRewardResponse()} />);
+
+		expect(coverImage(container)?.getAttribute("src")).toBe(FIXTURE_COVER_IMAGE_URL);
+		expect(coverImage(container)?.getAttribute("alt")).toBe("");
+		expect(container.querySelector("article")?.firstElementChild?.querySelector("[data-slot=cover-image]")).not.toBeNull();
+	});
+
+	it("lazy-loads the cover unless the card is marked as the above-the-fold priority", () => {
+		const { container } = render(<RewardCard reward={buildRewardResponse()} />);
+		expect(coverImage(container)?.getAttribute("loading")).toBe("lazy");
+		cleanup();
+
+		const { container: priorityContainer } = render(<RewardCard reward={buildRewardResponse()} priority />);
+		expect(coverImage(priorityContainer)?.getAttribute("loading")).toBe("eager");
+	});
+
+	it("keeps the merchant's mark beside the cover", () => {
+		const { container } = render(<RewardCard reward={buildRewardResponse({ organizationLogoUrl: LOGO_URL })} />);
+
+		expect(coverImage(container)).not.toBeNull();
+		expect(merchantMark(container)?.querySelector("img")?.getAttribute("src")).toBe(LOGO_URL);
+	});
+
+	it("marks a sold-out offer on its cover", () => {
+		render(<RewardCard reward={buildRewardResponse({ quantityRemaining: 0 })} />);
+
+		expect(screen.getByText("Sold out")).toBeDefined();
+		expect(screen.getByText("Unavailable")).toBeDefined();
 	});
 });

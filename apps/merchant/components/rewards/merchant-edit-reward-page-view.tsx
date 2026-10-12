@@ -4,6 +4,7 @@ import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/me
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
+import { useActiveOrganizationId } from "@/features/tenant-context/facade";
 import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
@@ -57,6 +58,7 @@ export function MerchantEditRewardPageView(props: MerchantEditRewardPageViewProp
 
 function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const organizationId = useActiveOrganizationId();
 	const queryClient = useQueryClient();
 	const { can } = useAuthorization();
 
@@ -214,6 +216,8 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 					selectedType={selectedType}
 					onTypeSelect={handleTypeSelect}
 					onMaxClaimsChange={handleMaxClaimsChange}
+					organizationId={organizationId}
+					initialCoverUrl={reward.coverImageUrl}
 					readOnly={!canEdit}
 				/>
 

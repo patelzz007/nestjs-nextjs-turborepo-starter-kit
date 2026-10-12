@@ -1752,7 +1752,7 @@ Complete an invite-authorized KYB document upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -2418,6 +2418,8 @@ List organization rewards
 | `data` | object[] | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
+| `data[].coverFileId` | string (uuid) | yes |  |
+| `data[].coverImageUrl` | string (uri) | yes |  |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
@@ -2430,7 +2432,6 @@ List organization rewards
 | `data[].organizationId` | string (uuid) | yes |  |
 | `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data[].organizationName` | string | no |  |
-| `data[].placeholderImageKey` | string | yes |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2569,6 +2570,7 @@ Create a draft reward
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" | yes |  |
+| `coverFileId` | string (uuid) | yes |  |
 | `description` | string | yes | length 1–5000 |
 | `expiryDate` | integer | yes |  |
 | `locationIds` | string (uuid)[] | no | default `[]` |
@@ -2593,6 +2595,8 @@ Create a draft reward
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.coverFileId` | string (uuid) | yes |  |
+| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
@@ -2605,7 +2609,6 @@ Create a draft reward
 | `data.organizationId` | string (uuid) | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
-| `data.placeholderImageKey` | string | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2735,6 +2738,8 @@ Read one organization reward (404 when not offered at any of the caller's stores
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.coverFileId` | string (uuid) | yes |  |
+| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
@@ -2747,7 +2752,6 @@ Read one organization reward (404 when not offered at any of the caller's stores
 | `data.organizationId` | string (uuid) | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
-| `data.placeholderImageKey` | string | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2851,6 +2855,7 @@ Update a draft or pending reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `coverFileId` | string (uuid) | no |  |
 | `description` | string | no | length 1–5000 |
 | `expiryDate` | integer | no |  |
 | `quantityTotal` | integer | no | min 1 |
@@ -2872,6 +2877,8 @@ Update a draft or pending reward
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.coverFileId` | string (uuid) | yes |  |
+| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
@@ -2884,7 +2891,6 @@ Update a draft or pending reward
 | `data.organizationId` | string (uuid) | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
-| `data.placeholderImageKey` | string | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3003,6 +3009,8 @@ _No fields._
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.coverFileId` | string (uuid) | yes |  |
+| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
@@ -3015,7 +3023,6 @@ _No fields._
 | `data.organizationId` | string (uuid) | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
-| `data.placeholderImageKey` | string | yes |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |

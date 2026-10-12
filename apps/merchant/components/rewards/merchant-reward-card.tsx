@@ -1,16 +1,15 @@
 "use client";
 
-import { formatRewardTypeLabel, formatRewardValueSummary } from "@/components/rewards/merchant-reward-form.constants";
-import { MerchantRewardLocationLabel } from "@/components/rewards/merchant-reward-location-label";
-import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
+import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { RewardStockMeter } from "@/components/rewards/reward-stock-meter";
+import { describeRewardStores, formatRewardEnd, formatRewardOffer, isRewardEnded } from "@/lib/rewards/presentation";
 import { ORG_ROUTES } from "@/lib/routes";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
-import { buttonVariants } from "@workspace/ui/components/button";
+import { CoverImage } from "@workspace/ui/components/cover-image";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
-import { ArrowUpRight, Ticket } from "lucide-react";
+import { formatCount } from "@workspace/ui/lib/format/number";
+import { MapPin } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -19,66 +18,93 @@ export interface MerchantRewardCardProps {
 	readonly canManageRewards: boolean;
 }
 
-/** Grid tile for a merchant reward — scannable KPIs and inventory at a glance. */
+/*
+ * The card is a voucher: the offer on top, a tear line, the stub with the
+ * numbers below. The two notches of the tear line are CUT OUT with a mask
+ * (circles of 8px radius at the seam), not painted in the page colour, so the
+ * card reads the same on any surface and in both themes. `NOTCH_RIM_CLASS`
+ * draws the cut's edge in the card's border colour; the card clips the half of
+ * each rim that falls outside it.
+ */
+const OFFER_HALF_NOTCHES =
+	"[mask-composite:intersect] [mask-image:radial-gradient(circle_8px_at_0_100%,transparent_98%,#000_100%),radial-gradient(circle_8px_at_100%_100%,transparent_98%,#000_100%)]";
+const STUB_HALF_NOTCHES =
+	"[mask-composite:intersect] [mask-image:radial-gradient(circle_8px_at_0_0,transparent_98%,#000_100%),radial-gradient(circle_8px_at_100%_0,transparent_98%,#000_100%)]";
+
+/** The outline of one notch: a 16px ring centred on the card edge at the seam. */
+const NOTCH_RIM_CLASS =
+	"absolute top-0 size-4 -translate-y-1/2 rounded-full border border-border transition-[border-color] duration-200 group-hover:border-foreground/20 motion-reduce:transition-none dark:group-hover:border-foreground/25";
+
+/** Each half carries its own border, so the notches open the outline instead of covering it. */
+const HALF_CLASS =
+	"border-border bg-card transition-[border-color] duration-200 group-hover:border-foreground/20 motion-reduce:transition-none dark:group-hover:border-foreground/25";
+
+/** Grid tile for a merchant reward: its cover and offer, then stock, activity, stores and end date. The whole card opens the reward. */
 export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardCardProps): React.JSX.Element {
 	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.edit(reward.id));
-	const expiryLabel = formatEpochMs(reward.expiryDate, "date", PLATFORM_DISPLAY_REGION);
-	const isLive = reward.status === "PUBLISHED";
+	const ended = isRewardEnded(reward.status);
+	const stores = describeRewardStores(reward);
+	const { locale } = PLATFORM_DISPLAY_REGION;
+	const endLabel = formatRewardEnd(reward);
 
 	return (
 		<article
-			className={cn(
-				"group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xs transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none",
-				isLive ? "hover:border-primary/35 hover:shadow-sm" : "hover:border-border/80 hover:shadow-sm",
-			)}>
-			<div className="flex items-start justify-between gap-3 border-b border-border/80 px-4 py-3">
-				<div className="flex min-w-0 flex-wrap items-center gap-2">
-					<Badge variant="secondary" className="capitalize">
-						{reward.category}
-					</Badge>
-					<MerchantRewardLocationLabel reward={reward} />
-					<span className="text-xs text-muted-foreground capitalize">{reward.rewardKind.replaceAll("_", " ").toLowerCase()}</span>
-				</div>
-				<MerchantRewardStatusBadge status={reward.status} />
-			</div>
-
-			<div className="flex flex-1 flex-col gap-4 p-4">
-				<div className="space-y-2">
-					<div className="flex flex-wrap items-center gap-2">
-						<Badge variant="outline" className="font-medium">
-							{formatRewardTypeLabel(reward.rewardType)}
-						</Badge>
-						<span className="text-sm font-medium text-primary">{formatRewardValueSummary(reward.rewardType, reward.rewardValue)}</span>
+			data-slot="reward-card"
+			className="group relative flex h-full flex-col overflow-hidden rounded-xl shadow-xs has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-2 has-[a:focus-visible]:ring-offset-background">
+			<div className={cn(HALF_CLASS, OFFER_HALF_NOTCHES, "flex flex-1 flex-col rounded-t-xl border border-b-0")}>
+				<CoverImage src={reward.coverImageUrl} className={cn("rounded-t-[inherit]", ended ? "opacity-80 grayscale" : null)} />
+				<div className="flex flex-1 flex-col gap-4 px-5 pt-4 pb-5">
+					<div className="flex items-center justify-between gap-3">
+						<p className="truncate text-xs text-muted-foreground capitalize">
+							{reward.category}
+							{reward.rewardKind === "REFERRER" ? <span className="normal-case"> referral reward</span> : null}
+						</p>
+						<MerchantRewardStatusBadge status={reward.status} className="shrink-0" />
 					</div>
-					<h2 className="text-base leading-snug font-semibold tracking-tight text-foreground">{reward.title}</h2>
-					<p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{reward.description}</p>
-				</div>
 
-				<div className="mt-auto space-y-3">
-					<MerchantInventoryBar remaining={reward.quantityRemaining} total={reward.quantityTotal} />
-					<dl className="grid grid-cols-2 gap-2 text-xs">
-						<div className="rounded-lg border border-border/80 bg-muted/40 px-2.5 py-2">
-							<dt className="text-muted-foreground">Claims</dt>
-							<dd className="mt-0.5 font-semibold text-foreground tabular-nums">{reward.claimCount}</dd>
-						</div>
-						<div className="rounded-lg border border-border/80 bg-muted/40 px-2.5 py-2">
-							<dt className="text-muted-foreground">Redeemed</dt>
-							<dd className="mt-0.5 font-semibold text-foreground tabular-nums">{reward.redemptionCount}</dd>
-						</div>
-					</dl>
-					<p className="text-xs text-muted-foreground">Expires {expiryLabel}</p>
+					<div className="flex flex-col gap-2">
+						<p className={cn("text-[1.75rem] leading-none font-semibold tracking-tight tabular-nums", ended ? "text-muted-foreground" : "text-primary dark:text-foreground")}>
+							{formatRewardOffer(reward.rewardType, reward.rewardValue)}
+						</p>
+						<h3 className="mt-1 line-clamp-2 text-base leading-snug font-semibold text-foreground">
+							<Link href={rewardPath} className="outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']">
+								{reward.title}
+								<span className="sr-only">{canManageRewards ? ", manage reward" : ", view reward"}</span>
+							</Link>
+						</h3>
+						<p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{reward.description}</p>
+					</div>
 				</div>
 			</div>
 
-			<div className="border-t border-border/80 p-3">
-				<Link href={rewardPath} className={cn(buttonVariants({ size: "sm", variant: isLive ? "default" : "outline" }), "w-full justify-center gap-2")}>
-					<Ticket className="size-4" aria-hidden="true" />
-					{canManageRewards ? "Manage reward" : "View reward"}
-					<ArrowUpRight
-						className="size-3.5 opacity-70 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none"
-						aria-hidden="true"
-					/>
-				</Link>
+			<div aria-hidden="true" className="relative h-0">
+				<span className={cn(NOTCH_RIM_CLASS, "-left-2")} />
+				<span className={cn(NOTCH_RIM_CLASS, "-right-2")} />
+			</div>
+
+			<div className={cn(HALF_CLASS, STUB_HALF_NOTCHES, "flex flex-col gap-3.5 rounded-b-xl border border-t-0 px-5 pb-4")}>
+				<div aria-hidden="true" className="-mx-2 border-t-[1.5px] border-dashed border-border" />
+
+				<RewardStockMeter remaining={reward.quantityRemaining} total={reward.quantityTotal} ended={ended} />
+
+				<dl className="flex gap-5 text-xs">
+					<div className="flex flex-row-reverse items-baseline justify-end gap-1">
+						<dt className="text-muted-foreground">claimed</dt>
+						<dd className="text-sm font-semibold text-foreground tabular-nums">{formatCount(reward.claimCount, locale)}</dd>
+					</div>
+					<div className="flex flex-row-reverse items-baseline justify-end gap-1">
+						<dt className="text-muted-foreground">redeemed</dt>
+						<dd className="text-sm font-semibold text-foreground tabular-nums">{formatCount(reward.redemptionCount, locale)}</dd>
+					</div>
+				</dl>
+
+				<div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+					<p className="flex min-w-0 items-center gap-1" title={stores.fullLabel}>
+						<MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+						<span className="truncate">{stores.label}</span>
+					</p>
+					<p className="shrink-0 tabular-nums">{endLabel}</p>
+				</div>
 			</div>
 		</article>
 	);

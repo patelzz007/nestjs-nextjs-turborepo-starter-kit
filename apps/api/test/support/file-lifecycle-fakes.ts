@@ -25,6 +25,7 @@ import type {
 import {
 	StoredFileRepository,
 	type StoredFileBinding,
+	type StoredFileDeletion,
 	type StoredFileDbClient,
 	type StoredFileStatusFields,
 } from "../../src/modules/files/repositories/stored-file.repository";
@@ -78,6 +79,8 @@ export class InMemoryStoredFileRepository extends StoredFileRepository {
 	public readonly bindings: StoredFileBinding[] = [];
 	public readonly softDeletedBy: string[] = [];
 	public kybSubmitted = false;
+	/** Files a live reward shows as its cover — deleting them is refused. */
+	public readonly rewardCoverFileIds = new Set<string>();
 
 	public constructor(...files: StoredFile[]) {
 		super(createTestPrisma());
@@ -116,14 +119,17 @@ export class InMemoryStoredFileRepository extends StoredFileRepository {
 		return Promise.resolve();
 	}
 
-	public override softDeleteWithReferences(id: string, deletedBy: string): Promise<boolean> {
+	public override softDeleteWithReferences(id: string, deletedBy: string): Promise<StoredFileDeletion> {
+		if (this.rewardCoverFileIds.has(id)) {
+			return Promise.resolve("IN_USE_AS_REWARD_COVER");
+		}
 		const row = this.rows.get(id);
 		if (row === undefined || row.isDeleted) {
-			return Promise.resolve(false);
+			return Promise.resolve("ALREADY_DELETED");
 		}
 		this.rows.set(id, { ...row, status: "DELETED", isDeleted: true, deletedBy });
 		this.softDeletedBy.push(deletedBy);
-		return Promise.resolve(true);
+		return Promise.resolve("DELETED");
 	}
 
 	public override hasKybSubmissionReference(): Promise<boolean> {
