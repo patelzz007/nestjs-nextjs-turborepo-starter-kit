@@ -83,3 +83,62 @@
 		max-width: calc(var(--max-width-10xl) - (var(--max-width-10xl) - var(--max-width-8xl)) * var(--sidebar-progress, 0));
 	}
 }
+
+/* Loading skeletons (components/skeleton.tsx, skeleton-region.tsx, skeleton-patterns.tsx).
+   One highlight sweeps the whole viewport: every bone paints the same gradient with a FIXED attachment, so the
+   band sits at one screen position at a time and travels across all bones together — a single wave, not dozens of
+   independent pulses. The band then rests off-screen for the last stretch of each cycle, so the motion reads as a
+   calm breath. Reduced motion keeps the bones and drops the sweep. Light themes sweep toward the card surface, dark
+   themes toward the foreground, so the highlight always lifts the bone instead of darkening it.
+   Every number here is SKELETON_MOTION in @workspace/tokens (the mobile app animates the same values); the gradient
+   is 5 band-widths wide with the band in its middle fifth, so its positions follow from the band's start and end.
+   skeleton-motion-parity.test.ts fails if the two drift. */
+:root {
+	--skeleton-sheen: color-mix(in oklch, var(--card) 85%, transparent);
+	--skeleton-sweep-duration: 2.2s;
+	--skeleton-reveal-delay: 150ms;
+	--skeleton-reveal-duration: 240ms;
+}
+
+.dark {
+	--skeleton-sheen: color-mix(in oklch, var(--foreground) 7%, transparent);
+}
+
+@keyframes skeleton-sweep {
+	from {
+		background-position-x: -120vw;
+	}
+	70%,
+	to {
+		background-position-x: 20vw;
+	}
+}
+
+.skeleton-bone {
+	background-image: linear-gradient(100deg, transparent 40%, var(--skeleton-sheen) 50%, transparent 60%);
+	background-size: 200vw 100%;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	animation: skeleton-sweep var(--skeleton-sweep-duration) ease-in-out infinite;
+}
+
+/* A fast load should never flash a skeleton: the region stays invisible for a beat, then fades in. */
+@keyframes skeleton-reveal {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.skeleton-region {
+	animation: skeleton-reveal var(--skeleton-reveal-duration) ease-out var(--skeleton-reveal-delay) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skeleton-bone {
+		background-image: none;
+		animation: none;
+	}
+}

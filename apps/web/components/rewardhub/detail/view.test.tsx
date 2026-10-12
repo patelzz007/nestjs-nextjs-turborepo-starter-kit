@@ -4,7 +4,10 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/web-authorization-provider";
+import { CLAIM_OPTIONS_LOADING_LABELS, REWARD_DETAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RewardDetailView } from "@/components/rewardhub/detail/view";
+import { expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
 
 /** Only the reward fields the detail view reads. */
@@ -86,6 +89,7 @@ function renderView(session: WebSessionState): void {
 		<WebSessionTestProvider session={session}>
 			<RewardDetailView rewardId={REWARD_ID} />
 		</WebSessionTestProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 
@@ -138,6 +142,25 @@ describe("RewardDetailView claim gating", () => {
 
 		expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
 		expect(screen.getByRole("link", { name: "Browse other offers" })).toBeDefined();
+	});
+});
+
+describe("RewardDetailView loading", () => {
+	it("shows a reward-shaped skeleton, announced once, until the reward arrives", () => {
+		rewardUseQuery.mockReturnValue({ data: undefined, isLoading: true, refetch: (): Promise<void> => Promise.resolve() });
+		renderView(GUEST_SESSION_STATE);
+
+		expectSingleLoadingStatus(REWARD_DETAIL_LOADING_LABELS.loading);
+		expect(screen.queryByRole("heading", { name: "Reward unavailable" })).toBeNull();
+	});
+
+	it("shows a claim-form skeleton while a signed-in user's claim options load", () => {
+		legalStatusUseQuery.mockReturnValue({ data: undefined, refetch: (): Promise<void> => Promise.resolve() });
+		renderView(signedInSession());
+
+		expect(screen.getByText("Free coffee")).toBeDefined();
+		expectSingleLoadingStatus(CLAIM_OPTIONS_LOADING_LABELS.loading);
+		expect(screen.queryByRole("button", { name: "Accept & continue" })).toBeNull();
 	});
 });
 

@@ -2,6 +2,7 @@
 
 import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
 import { MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
+import { MERCHANT_LOCATIONS_LOADING_LABELS, OrganizationLocationsSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
@@ -12,6 +13,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type OrganizationLocationResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import Link from "next/link";
 import * as React from "react";
 
@@ -82,9 +84,9 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 			) : null}
 
 			{contextQuery.isLoading ? (
-				<MerchantSurfacePanel className="p-6">
-					<p className="text-sm text-muted-foreground">Loading locations…</p>
-				</MerchantSurfacePanel>
+				<SkeletonRegion labels={MERCHANT_LOCATIONS_LOADING_LABELS} className="flex flex-col gap-8">
+					<OrganizationLocationsSkeleton />
+				</SkeletonRegion>
 			) : null}
 
 			{canManageLocations && showCreateForm ? (

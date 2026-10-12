@@ -12,6 +12,8 @@ import { STORE_A, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { testEnvelope } from "@/test/envelope";
 import { ApiPaginatedMetaSchema, MerchantRedemptionListItemSchema, type ApiPaginatedMeta, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
+import { MERCHANT_REDEMPTIONS_LOADING_LABELS, REDEMPTION_SKELETON_ROWS, REDEMPTION_STAT_CARDS } from "@/components/loading/merchant-page-skeletons";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 type RedemptionsInput = Parameters<typeof apiRouter.organizations.redemptions.queryKey>[0];
 
@@ -103,7 +105,20 @@ describe("MerchantRedemptionsPageView authorization", () => {
 	it("renders the loading state while the membership resolves", () => {
 		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { isLoading: true });
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REDEMPTIONS_LOADING_LABELS.loading]);
+	});
+});
+
+describe("MerchantRedemptionsPageView loading", () => {
+	it("draws the stat cards and redemption rows — never a count of zero — while the first page loads", () => {
+		redemptionsQuery.mockReturnValue({ data: undefined, isLoading: true });
+		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REDEMPTIONS_LOADING_LABELS.loading]);
+		expect(document.querySelectorAll('[data-slot="merchant-bordered-row-skeleton"]')).toHaveLength(REDEMPTION_SKELETON_ROWS);
+		expect(document.querySelectorAll('[data-slot="merchant-stat-card-skeleton"]')).toHaveLength(REDEMPTION_STAT_CARDS);
+		expect(screen.queryByText("Showing")).toBeNull();
+		expect(screen.queryByText("No redemptions yet")).toBeNull();
 	});
 });
 

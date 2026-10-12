@@ -7,8 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OrgDashboardPageView } from "@/components/org/org-dashboard-page-view";
 import { OrganizationLocationsPageView } from "@/components/org/organization-locations-page-view";
-import { OrganizationTeamPageView } from "@/components/org/organization-team-page-view";
+import { OrganizationTeamPageView, TEAM_INVITES_LOADING_LABELS, TEAM_MEMBERS_LOADING_LABELS } from "@/components/org/organization-team-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { LOCATION_SKELETON_CARDS, MERCHANT_LOCATIONS_LOADING_LABELS, MERCHANT_TEAM_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 const { contextQuery, listMembersQuery, listInvitesQuery, organizationMutation } = vi.hoisted(() => ({
 	contextQuery: vi.fn(),
@@ -71,8 +73,42 @@ describe("OrganizationTeamPageView authorization (merchant:manage_team)", () => 
 	it("renders the loading state while the membership resolves", () => {
 		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, undefined, true);
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_TEAM_LOADING_LABELS.loading]);
 		expect(screen.queryByText("Team access required")).toBeNull();
+	});
+});
+
+describe("OrganizationTeamPageView loading", () => {
+	it("draws member rows (not 'No members found') while the roster loads, and invitation rows while they load", () => {
+		listMembersQuery.mockReturnValue({ data: undefined, isLoading: true });
+		listInvitesQuery.mockReturnValue({ data: undefined, isLoading: true });
+		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, "ADMIN");
+
+		expect(busyRegionAnnouncements()).toEqual([TEAM_MEMBERS_LOADING_LABELS.loading, TEAM_INVITES_LOADING_LABELS.loading]);
+		expect(screen.queryByText("No members found.")).toBeNull();
+		expect(screen.queryByText("No pending invitations.")).toBeNull();
+		// The invite form never waits on the roster.
+		expect(screen.getByRole("button", { name: "Send invitation" })).toBeTruthy();
+	});
+
+	it("shows the empty roster and invitations once both have loaded, with nothing busy", () => {
+		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, "ADMIN");
+
+		expect(busyRegionAnnouncements()).toEqual([]);
+		expect(screen.getByText("No members found.")).toBeTruthy();
+		expect(screen.getByText("No pending invitations.")).toBeTruthy();
+	});
+});
+
+describe("OrganizationLocationsPageView loading", () => {
+	it("draws the summary and location cards in one busy region while the organization context loads", () => {
+		contextQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch: vi.fn() });
+		renderAs(<OrganizationLocationsPageView orgSlug={TEST_ORG_SLUG} />, "OWNER");
+
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_LOCATIONS_LOADING_LABELS.loading]);
+		expect(document.querySelectorAll('[data-slot="location-card-skeleton"]')).toHaveLength(LOCATION_SKELETON_CARDS);
+		// The request button waits for the context it would add to.
+		expect(screen.getByRole("button", { name: "Add store" }).hasAttribute("disabled")).toBe(true);
 	});
 });
 

@@ -70,8 +70,10 @@
 		"./lib/auth/forms/login-form": "./src/lib/auth/forms/login-form.tsx",
 		"./lib/auth/forms/login-response": "./src/lib/auth/forms/login-response.ts",
 		"./lib/auth/forms/reset-password-form": "./src/lib/auth/forms/reset-password-form.tsx",
+		"./lib/auth/forms/reset-password-form-skeleton": "./src/lib/auth/forms/reset-password-form-skeleton.tsx",
 		"./lib/auth/forms/signup-form": "./src/lib/auth/forms/signup-form.tsx",
 		"./lib/auth/mfa/security-settings-panel": "./src/lib/auth/mfa/security-settings-panel.tsx",
+		"./lib/auth/mfa/security-settings-panel-skeleton": "./src/lib/auth/mfa/security-settings-panel-skeleton.tsx",
 		"./lib/auth/password": "./src/lib/auth/password.ts",
 		"./lib/auth/profile/own-profile-cache": "./src/lib/auth/profile/own-profile-cache.ts",
 		"./lib/auth/profile/profile-avatar": "./src/lib/auth/profile/profile-avatar.ts",
@@ -88,6 +90,7 @@
 		"./lib/merchant/kyb/document-preview-dialog": "./src/lib/merchant/kyb/document-preview-dialog.tsx",
 		"./lib/merchant/kyb/document-utils": "./src/lib/merchant/kyb/document-utils.ts",
 		"./lib/merchant/kyb/stored-document-list": "./src/lib/merchant/kyb/stored-document-list.tsx",
+		"./lib/merchant/kyb/verification-skeleton": "./src/lib/merchant/kyb/verification-skeleton.tsx",
 		"./lib/merchant/kyb/verification-view": "./src/lib/merchant/kyb/verification-view.tsx",
 		"./lib/merchant/onboarding/use-onboarding-document-status": "./src/lib/merchant/onboarding/use-onboarding-document-status.ts",
 		"./lib/merchant/onboarding/view": "./src/lib/merchant/onboarding/view.tsx",
@@ -110,6 +113,7 @@
 		"./lib/url-state/use-url-draft": "./src/lib/url-state/use-url-draft.ts",
 		"./lib/url-state/use-url-state": "./src/lib/url-state/use-url-state.ts",
 		"./lib/sidebar/sidebar-menu-compile": "./src/lib/sidebar/sidebar-menu-compile.ts",
-		"./lib/sidebar/sidebar-menu-schema": "./src/lib/sidebar/sidebar-menu-schema.ts"
+		"./lib/sidebar/sidebar-menu-schema": "./src/lib/sidebar/sidebar-menu-schema.ts",
+		"./lib/sidebar/sidebar-menu-skeleton": "./src/lib/sidebar/sidebar-menu-skeleton.ts"
 	}
 }

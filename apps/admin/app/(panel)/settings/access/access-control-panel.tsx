@@ -3,6 +3,8 @@
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { buildPermissionTree } from "@/lib/permissions/build-permission-tree";
 import { AccessPermissionExplorerTree } from "@/components/access/access-permission-explorer-tree";
+import { PermissionGroupsSkeleton, RoleRowsSkeleton } from "@/components/loading/access-control-skeletons";
+import { PERMISSIONS_LOADING_LABELS, ROLES_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { PermissionCheckForm, PermissionCheckResult } from "@/components/access/permission-check-form";
 import { toastMutationError } from "@/lib/api/mutation-error";
 import { PERMISSION, type CheckPermissionInput, type CheckPermissionResponse, type Envelope, type PermissionListResponse, type RoleListResponse } from "@workspace/shared";
@@ -10,6 +12,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import * as React from "react";
 
@@ -114,6 +117,11 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 								<CardDescription>Role catalog from the API. Assign roles to users on their profile page.</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-2">
+								{rolesQuery.isLoading ? (
+									<SkeletonRegion labels={ROLES_LOADING_LABELS} className="flex flex-col gap-2">
+										<RoleRowsSkeleton />
+									</SkeletonRegion>
+								) : null}
 								{roles.map((role) => (
 									<div key={role.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
 										<div>
@@ -139,7 +147,13 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 								{permissionsQuery.isError ? (
 									<p className="text-sm text-destructive">Could not load the permission catalog. Check LIST:PERMISSION permission and refresh.</p>
 								) : null}
-								<AccessPermissionExplorerTree groups={permissionTree} emptyMessage="No permissions in catalog." defaultOpen={false} />
+								{permissionsQuery.isLoading ? (
+									<SkeletonRegion labels={PERMISSIONS_LOADING_LABELS}>
+										<PermissionGroupsSkeleton />
+									</SkeletonRegion>
+								) : (
+									<AccessPermissionExplorerTree groups={permissionTree} emptyMessage="No permissions in catalog." defaultOpen={false} />
+								)}
 							</CardContent>
 						</Card>
 					</TabsContent>

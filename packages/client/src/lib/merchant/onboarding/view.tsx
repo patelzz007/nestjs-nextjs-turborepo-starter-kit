@@ -95,9 +95,15 @@ function OnboardingNotice({ title, message, href, linkLabel, isPrimaryLink = fal
 	);
 }
 
+/** How many steps the wizard (and so its loading placeholder's timeline) has. */
+export const MERCHANT_ONBOARDING_STEP_COUNT: number = WIZARD_STEPS.length;
+
+/** What the wizard's loading placeholder announces — for apps asserting it. */
+export { MERCHANT_ONBOARDING_LOADING_LABELS } from "./onboarding-invite-summary";
+
 /** The wizard's loading placeholder — for the page's own Suspense fallback as well as the view's. */
 export function MerchantOnboardingViewSkeleton(): JSX.Element {
-	return <MerchantOnboardingSkeleton stepCount={WIZARD_STEPS.length} />;
+	return <MerchantOnboardingSkeleton stepCount={MERCHANT_ONBOARDING_STEP_COUNT} />;
 }
 
 export interface MerchantOnboardingViewProps {

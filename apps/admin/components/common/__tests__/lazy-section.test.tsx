@@ -24,17 +24,26 @@ describe("LazySection", () => {
 			}),
 		);
 
-		render(
+		const { container } = render(
 			<LazySection height="h-10">
 				<p>Section body</p>
 			</LazySection>,
 		);
 		expect(screen.queryByText("Section body")).toBeNull();
+		// Section bones at the reserved height, hidden from assistive technology —
+		// nothing is loading yet, so nothing is announced.
+		const bones = container.querySelector('[data-skeleton="section"]');
+		expect(bones?.classList.contains("h-10")).toBe(true);
+		expect(bones?.closest('[aria-hidden="true"]')).not.toBeNull();
+		expect(bones?.querySelector('[data-slot="skeleton"].skeleton-bone')).not.toBeNull();
+		expect(screen.queryByRole("status")).toBeNull();
+		expect(container.querySelector(".animate-pulse")).toBeNull();
 
 		act(() => {
 			callbacks[LIST_SLOT_INDEX.first]?.([{ isIntersecting: true }]);
 		});
 		expect(screen.getByText("Section body")).toBeTruthy();
+		expect(container.querySelector('[data-skeleton="section"]')).toBeNull();
 		expect(disconnect).toHaveBeenCalled();
 	});
 

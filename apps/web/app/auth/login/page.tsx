@@ -1,9 +1,10 @@
 import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
-import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import * as React from "react";
 
 import { loadWebDemoAccounts } from "@/lib/auth/demo-accounts";
 import { ROUTES } from "@/lib/routes";
+
+import { WebLoginAuthLayout } from "./login-auth-layout";
 
 /**
  * `/auth/login` — consumer sign-in. A server component, so the seeded demo
@@ -14,13 +15,7 @@ export default async function WebLoginPage(): Promise<React.JSX.Element> {
 	const demoAccounts = await loadWebDemoAccounts();
 
 	return (
-		<AuthLayout
-			brandName="Reward Hub"
-			tagline="Discover and claim local rewards in KL and Melaka."
-			features={["Browse rewards by city and category", "Claim offers with OTP verification", "Redeem in-store with QR codes"]}
-			title="Sign in"
-			subtitle="Access your claimed rewards and account"
-			copyright="Reward Hub">
+		<WebLoginAuthLayout>
 			<LoginForm
 				{...(demoAccounts.length > 0 ? { demoAccounts } : {})}
 				redirectPath={ROUTES.rewardHub.browse}
@@ -33,6 +28,6 @@ export default async function WebLoginPage(): Promise<React.JSX.Element> {
 					</p>
 				}
 			/>
-		</AuthLayout>
+		</WebLoginAuthLayout>
 	);
 }

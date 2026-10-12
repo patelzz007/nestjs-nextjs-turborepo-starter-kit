@@ -4,7 +4,7 @@ tags: ["routing", "navigation", "sidebar", "nextjs"]
 description: "URL conventions shared by the web, admin and merchant apps, where each app's routes live, how cross-app links (emails, invites) stay in sync, and how the sidebar's active item follows the URL."
 order: 17
 author: "Platform Team"
-lastUpdated: 1790899200000
+lastUpdated: 1791763200000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -26,6 +26,7 @@ consistent across the three Next.js apps.
 | Section index | exists — a page, or a redirect to its default child (`/settings` → `/settings/billing`) |
 | Detail pages in the path | `/merchants/[organizationId]`; query strings only for in-page selection or filters (`?key=`, `?page=`), declared with `defineUrlState` and read with `useUrlState`, never mirrored into `useState` ([List queries §7](../api/list-queries.md#7-table-state-in-the-url)) |
 | Personal vs configuration | `account` = the signed-in user's profile, password, 2FA, sessions; `settings` = org / platform configuration |
+| Every page has a loading boundary | its own `loading.tsx` shaped like the page, or an inherited one that genuinely fits; a page whose skeleton must not leak to child routes sits in a route group (web `app/(landing)/` for `/`, admin `app/(panel)/(home)/` for the dashboard) — see [Loading skeletons](./loading-skeletons.md) |
 
 ## Where routes live
 

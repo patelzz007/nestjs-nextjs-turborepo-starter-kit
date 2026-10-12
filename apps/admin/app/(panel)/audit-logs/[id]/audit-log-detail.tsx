@@ -9,6 +9,7 @@ import Link from "next/link";
 import type * as React from "react";
 
 import { AuditLogRecord } from "@/components/audit-logs/audit-log-record";
+import { AuditLogDetailPageSkeleton } from "@/components/loading/audit-log-skeletons";
 import { ROUTES } from "@/lib/routes";
 
 export interface AuditLogDetailViewProps {
@@ -28,7 +29,7 @@ export default function AuditLogDetailView({ id, initialRecord }: AuditLogDetail
 	const record: HttpAuditLogDetail | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && record === undefined) {
-		return <p className="text-sm text-muted-foreground">Loading audit record…</p>;
+		return <AuditLogDetailPageSkeleton />;
 	}
 
 	if (detailQuery.isError || record === undefined) {

@@ -2,6 +2,7 @@
 
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
+import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
@@ -48,7 +49,7 @@ function isRewardEditable(status: RewardResponse["status"]): boolean {
 /** Reward detail route — viewing needs `merchant:view_rewards`; edit/submit need `merchant:manage_rewards`. */
 export function MerchantEditRewardPageView(props: MerchantEditRewardPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<MerchantRewardEditorPageSkeleton mode="edit" />}>
 			<MerchantEditRewardPageContent {...props} />
 		</MerchantCapabilityGate>
 	);
@@ -154,7 +155,7 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 	}, [orgSlug, publishMutation, rewardId]);
 
 	if (isResolvingReward) {
-		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
+		return <MerchantRewardEditorPageSkeleton mode="edit" />;
 	}
 
 	if (reward === undefined && rewardsQuery.isError) {

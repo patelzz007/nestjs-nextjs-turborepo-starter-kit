@@ -1,6 +1,7 @@
 "use client";
 
 import { useWebSession } from "@/components/auth/web-authorization-provider";
+import { ImpersonationUsersSkeleton } from "@/components/loading/impersonation-users-skeleton";
 import { PERMISSION, type AdminUserDetail, type CapabilitySlug } from "@workspace/shared";
 import { readPaginatedHasNext, readPaginatedNextCursor } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -126,7 +127,7 @@ function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string
 				<Input placeholder="Search by name or email…" value={search} onChange={handleSearchChange} aria-label="Search users" />
 
 				{usersQuery.isLoading ? (
-					<p className="text-sm text-muted-foreground">Loading users…</p>
+					<ImpersonationUsersSkeleton />
 				) : users.length === 0 ? (
 					<p className="text-sm text-muted-foreground">No users found.</p>
 				) : (

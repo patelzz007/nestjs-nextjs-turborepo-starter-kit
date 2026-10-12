@@ -25,13 +25,16 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
 import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { ArrowLeft, Loader2, Mail, MapPin, Shield, Users } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
 
+import { TeamInvitePageFrame } from "@/components/team-invite/team-invite-page-frame";
+import { TEAM_INVITE_LOADING_LABELS, TeamInviteCardSkeleton, TeamInvitePreviewSkeleton } from "@/components/team-invite/team-invite-skeletons";
 import { TEAM_INVITE_PREVIEW_STALE_TIME_MS, retryTransientFailures } from "@/lib/query/query-policy";
 import {
 	isCompleteVerificationCode,
@@ -305,10 +308,9 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 					</div>
 
 					{isLoading ? (
-						<div className="flex items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-8">
-							<Loader2 className="size-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
-							<p className="text-sm text-muted-foreground">Validating your invitation…</p>
-						</div>
+						<SkeletonRegion labels={TEAM_INVITE_LOADING_LABELS} className="flex flex-col gap-4">
+							<TeamInvitePreviewSkeleton />
+						</SkeletonRegion>
 					) : null}
 
 					{loadError !== null ? <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{loadError}</div> : null}
@@ -471,36 +473,10 @@ function TeamInviteRouteContent(): JSX.Element {
 
 export default function TeamInvitePage(): JSX.Element {
 	return (
-		<div className="relative min-h-svh overflow-x-hidden bg-background">
-			<div className="merchant-grid-bg-subtle pointer-events-none absolute inset-0" aria-hidden="true" />
-			<div className="pointer-events-none absolute -top-24 right-0 size-80 rounded-full bg-primary/6 blur-3xl" aria-hidden="true" />
-			<div className="pointer-events-none absolute bottom-0 left-0 size-72 rounded-full bg-chart-2/6 blur-3xl" aria-hidden="true" />
-
-			<div className="relative z-10 mx-auto flex min-h-svh w-full max-w-3xl flex-col px-4 py-6 sm:px-6">
-				<header className="mb-8 flex items-center gap-3">
-					<div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-						<Users className="size-5" aria-hidden="true" />
-					</div>
-					<div>
-						<p className="text-sm font-semibold text-foreground">Reward Hub</p>
-						<p className="text-xs text-muted-foreground">Team invitation</p>
-					</div>
-				</header>
-
-				<main className="flex flex-1 flex-col justify-center pb-8">
-					<Suspense
-						fallback={
-							<div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-border bg-card/80">
-								<Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
-								<span className="sr-only">Loading invitation…</span>
-							</div>
-						}>
-						<TeamInviteRouteContent />
-					</Suspense>
-				</main>
-
-				<footer className="pt-2 text-center text-xs text-muted-foreground sm:text-left">&copy; {new Date().getFullYear()} Reward Hub. All rights reserved.</footer>
-			</div>
-		</div>
+		<TeamInvitePageFrame>
+			<Suspense fallback={<TeamInviteCardSkeleton />}>
+				<TeamInviteRouteContent />
+			</Suspense>
+		</TeamInvitePageFrame>
 	);
 }

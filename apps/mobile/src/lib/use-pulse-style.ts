@@ -1,5 +1,6 @@
 // A slow breathing fade — Tailwind's `animate-pulse`, which the web uses for
-// its live dot and its skeletons (PULSE in lib/motion.ts) — as an animated
+// its live dot (PULSE in lib/motion.ts; skeletons sweep instead, see
+// lib/skeleton-sweep.ts) — as an animated
 // style. Stays fully opaque while the OS "Reduce Motion" setting is on, as the
 // web's `motion-safe:` variant does.
 

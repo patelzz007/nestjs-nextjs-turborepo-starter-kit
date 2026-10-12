@@ -4,11 +4,48 @@ import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
 import { Button } from "@workspace/ui/components/button";
 import { Label } from "@workspace/ui/components/label";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { useCallback, useState, type JSX } from "react";
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { catchCaught } from "../../caught";
+
+/** What the panel announces while it learns whether two-factor authentication is on. */
+export const MFA_RECOVERY_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading MFA recovery…" };
+/** What the status box announces while the current request loads. */
+export const MFA_RECOVERY_STATUS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading your recovery request…" };
+
+/** The status box's silhouette: the status, its message and the scheduled-unlock line. */
+function RecoveryStatusSkeleton(): JSX.Element {
+	return (
+		<div className="flex flex-col gap-2 rounded-lg border bg-muted/20 px-4 py-3">
+			<Skeleton variant="text" className="h-4 w-56 max-w-full" />
+			<Skeleton variant="text" className="h-3.5 w-80 max-w-full" />
+		</div>
+	);
+}
+
+/** The enrolled panel's silhouette: heading, explanation, status box, reason field and the request button. */
+function RecoveryPanelSkeleton(): JSX.Element {
+	return (
+		<div className="flex flex-col gap-4">
+			<div className="flex flex-col gap-2">
+				<Skeleton variant="text" className="h-4 w-56 max-w-full" />
+				<Skeleton variant="text" className="h-3.5 w-full" />
+				<Skeleton variant="text" className="h-3.5 w-2/3" />
+			</div>
+			<RecoveryStatusSkeleton />
+			<div className="flex flex-col gap-2">
+				<Skeleton variant="text" className="h-3.5 w-48" />
+				<Skeleton className="h-20 w-full" />
+			</div>
+			<Skeleton className="h-9 w-44" />
+		</div>
+	);
+}
 
 /** The same text on the server and in the browser: an explicit locale + time zone, never the runtime's defaults. */
 function formatDateTime(ms: number): string {
@@ -69,6 +106,15 @@ export function MfaRecoveryRequestPanel(): JSX.Element {
 		[initiateMutation, reason, statusQuery],
 	);
 
+	// Until the account answers, "not enrolled" would be a guess — draw the panel's shape instead.
+	if (meQuery.isPending) {
+		return (
+			<SkeletonRegion labels={MFA_RECOVERY_LOADING_LABELS}>
+				<RecoveryPanelSkeleton />
+			</SkeletonRegion>
+		);
+	}
+
 	if (!twoFactorEnabled) {
 		return (
 			<div className="rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">MFA recovery is available after you enroll in two-factor authentication.</div>
@@ -85,6 +131,12 @@ export function MfaRecoveryRequestPanel(): JSX.Element {
 					If you no longer have your authenticator app or backup codes, request an administrator-reviewed recovery. MFA is cleared only after a security delay.
 				</p>
 			</div>
+
+			{statusQuery.isPending ? (
+				<SkeletonRegion labels={MFA_RECOVERY_STATUS_LOADING_LABELS}>
+					<RecoveryStatusSkeleton />
+				</SkeletonRegion>
+			) : null}
 
 			{recoveryStatus !== undefined ? (
 				<div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm">

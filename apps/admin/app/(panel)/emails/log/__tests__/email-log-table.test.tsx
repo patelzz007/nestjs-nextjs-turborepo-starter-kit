@@ -87,3 +87,16 @@ describe("EmailLogView URL state", () => {
 		expect(window.location.search).toBe("?page=2");
 	});
 });
+
+describe("EmailLogView loading", () => {
+	it("shows the page's table skeleton while the first page loads", () => {
+		logQuery.mockReturnValue({ data: undefined, isLoading: true, isFetching: true, error: null, refetch: (): Promise<void> => Promise.resolve() });
+		const { container } = render(<EmailLogView />, { wrapper: UiKitTestProviders });
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading email log…");
+		expect(container.querySelector('[data-slot="table-skeleton"]')).not.toBeNull();
+		expect(screen.queryByRole("heading", { name: "Email Log" })).toBeNull();
+	});
+});

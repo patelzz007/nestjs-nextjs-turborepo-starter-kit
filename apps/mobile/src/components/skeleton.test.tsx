@@ -1,10 +1,27 @@
 import { act, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo } from "react-native";
+import { SKELETON_MOTION } from "@workspace/tokens";
+import { AccessibilityInfo, Dimensions } from "react-native";
 import { getAnimatedStyle } from "react-native-reanimated";
+import { z } from "zod";
 
-import { PULSE } from "../lib/motion";
+import { sweepBandLeft, sweepBandWidth } from "../lib/skeleton-sweep";
 import { Skeleton, SkeletonGroup, SkeletonText } from "./skeleton";
+
+/** One animation frame at 60 Hz, so a timing that ends exactly on a boundary has settled. */
+const FRAME_MS = 16;
+/** Probe the pass a tenth of the way in, where ease-in-out has barely started moving. */
+const EASE_PROBE_DIVISOR = 10;
+
+/** The band's animated style: its one transform is the horizontal offset. */
+const BandStyleSchema = z.object({ transform: z.tuple([z.object({ translateX: z.number() })]) });
+
+function bandOffset(band: ReturnType<typeof screen.getByTestId>): number {
+	const {
+		transform: [{ translateX }],
+	} = BandStyleSchema.parse(getAnimatedStyle(band));
+	return translateX;
+}
 
 describe("SkeletonGroup", () => {
 	it("tells screen readers what is loading, as a busy progress bar", async () => {
@@ -29,7 +46,7 @@ describe("SkeletonGroup", () => {
 		expect(screen.getByTestId("group", { includeHiddenElements: true })).toBeOnTheScreen();
 	});
 
-	it("breathes like the web's animate-pulse", async () => {
+	it("waits a beat, then fades in, so a fast load never flashes", async () => {
 		jest.useFakeTimers();
 		await render(
 			<SkeletonGroup accessibilityLabel="Loading" testID="group">
@@ -37,35 +54,71 @@ describe("SkeletonGroup", () => {
 			</SkeletonGroup>,
 		);
 
+		expect(getAnimatedStyle(screen.getByTestId("group"))).toMatchObject({ opacity: 0 });
 		await act((): void => {
-			jest.advanceTimersByTime(PULSE.cycleMs / 2);
-		});
-
-		expect(getAnimatedStyle(screen.getByTestId("group"))).toMatchObject({ opacity: PULSE.minOpacity });
-		jest.useRealTimers();
-	});
-
-	it("stays still while Reduce Motion is on", async () => {
-		jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
-		jest.useFakeTimers();
-		await render(
-			<SkeletonGroup accessibilityLabel="Loading" testID="group">
-				<Skeleton className="h-4 w-20" />
-			</SkeletonGroup>,
-		);
-
-		// First let the Reduce Motion reading (a promise) land, then move the clock in a separate,
-		// synchronous act: advancing fake timers inside an async act also fires React's own
-		// "was this act awaited?" check early, which warned although it was awaited.
-		await act(async (): Promise<void> => {
-			await Promise.resolve();
-		});
-		await act((): void => {
-			jest.advanceTimersByTime(PULSE.cycleMs / 2);
+			jest.advanceTimersByTime(SKELETON_MOTION.revealDelayMs + SKELETON_MOTION.revealMs + FRAME_MS);
 		});
 
 		expect(getAnimatedStyle(screen.getByTestId("group"))).toMatchObject({ opacity: 1 });
 		jest.useRealTimers();
+	});
+
+	it("sweeps one band across the window, through every bone, then rests", async () => {
+		jest.useFakeTimers();
+		await render(
+			<SkeletonGroup accessibilityLabel="Loading" testID="group">
+				<Skeleton className="h-4 w-20" testID="bone" />
+			</SkeletonGroup>,
+		);
+		const { width } = Dimensions.get("window");
+		const band = (): ReturnType<typeof screen.getByTestId> => screen.getByTestId("bone-sweep", { includeHiddenElements: true });
+
+		expect(getAnimatedStyle(band())).toMatchObject({ width: sweepBandWidth(width), transform: [{ translateX: sweepBandLeft(0, width) }] });
+
+		const travelMs = SKELETON_MOTION.sweepCycleMs * SKELETON_MOTION.travelFraction;
+		// Ease-in: a tenth of the way through the travel time, the band has covered less than a tenth of its journey.
+		await act((): void => {
+			jest.advanceTimersByTime(travelMs / EASE_PROBE_DIVISOR);
+		});
+		const journey = sweepBandLeft(1, width) - sweepBandLeft(0, width);
+		expect(bandOffset(band()) - sweepBandLeft(0, width)).toBeLessThan(journey / EASE_PROBE_DIVISOR);
+
+		// The pass ends off the right edge, and the band rests there for the rest of the cycle.
+		await act((): void => {
+			jest.advanceTimersByTime(travelMs - travelMs / EASE_PROBE_DIVISOR + FRAME_MS);
+		});
+		expect(bandOffset(band())).toBeCloseTo(sweepBandLeft(1, width), 0);
+		await act((): void => {
+			jest.advanceTimersByTime((SKELETON_MOTION.sweepCycleMs - travelMs) / 2);
+		});
+		expect(bandOffset(band())).toBeCloseTo(sweepBandLeft(1, width), 0);
+		jest.useRealTimers();
+	});
+
+	it("draws no band while Reduce Motion is on", async () => {
+		jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+		await render(
+			<SkeletonGroup accessibilityLabel="Loading" testID="group">
+				<Skeleton className="h-4 w-20" testID="bone" />
+			</SkeletonGroup>,
+		);
+
+		// Let the Reduce Motion reading (a promise) land.
+		await act(async (): Promise<void> => {
+			await Promise.resolve();
+		});
+
+		expect(screen.getByTestId("bone", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByTestId("bone-sweep", { includeHiddenElements: true })).toBeNull();
+	});
+});
+
+describe("Skeleton", () => {
+	it("stays still outside a group (no sweep to share)", async () => {
+		await render(<Skeleton className="h-4 w-20" testID="bone" />);
+
+		expect(screen.getByTestId("bone")).toBeOnTheScreen();
+		expect(screen.queryByTestId("bone-sweep")).toBeNull();
 	});
 });
 

@@ -44,6 +44,9 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 	const forwardRefSources: readonly string[] = [
 		"components/spinner.tsx",
 		"components/skeleton.tsx",
+		"components/skeleton-region.tsx",
+		"components/skeleton-patterns.tsx",
+		"components/panel-shell-skeleton.tsx",
 		"components/progress.tsx",
 		"components/table.tsx",
 		"components/kbd.tsx",

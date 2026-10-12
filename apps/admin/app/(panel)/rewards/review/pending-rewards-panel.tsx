@@ -18,12 +18,15 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Label } from "@workspace/ui/components/label";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import * as React from "react";
 
+import { PENDING_REWARDS_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { PendingRewardItemsSkeleton } from "@/components/loading/rewards-skeletons";
 import { toastMutationError } from "@/lib/api/mutation-error";
 import { formatDateTime } from "@/lib/format/dates";
 import { REWARDS_REVIEW_URL_STATE, toPendingRewardsListQuery } from "@/lib/url-state/rewards-review";
@@ -50,7 +53,11 @@ export function resolveQueueStatus(isError: boolean, isLoading: boolean, rowCoun
 function PendingRewardsStatus({ status, onRetry }: { readonly status: PendingRewardsQueueStatus; readonly onRetry: () => void }): React.JSX.Element | null {
 	switch (status) {
 		case "loading":
-			return <p className="text-sm text-muted-foreground">Loading…</p>;
+			return (
+				<SkeletonRegion labels={PENDING_REWARDS_LOADING_LABELS} className="flex flex-col gap-4">
+					<PendingRewardItemsSkeleton />
+				</SkeletonRegion>
+			);
 		case "error":
 			return (
 				<div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">

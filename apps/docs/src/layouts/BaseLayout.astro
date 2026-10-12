@@ -72,6 +72,8 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 					theme = "light";
 				}
 				document.documentElement.dataset.theme = theme;
+				// Scripts will run: lets CSS show loading skeletons (e.g. unrendered diagrams) that would never resolve without JS.
+				document.documentElement.dataset.js = "true";
 			})();
 		</script>
 	</head>

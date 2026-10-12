@@ -3,7 +3,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CLAIM_QR_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ClaimQrView } from "@/components/rewardhub/claims/qr-view";
+import { expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { resolveWebTrail } from "@/lib/navigation/breadcrumb";
 import { ROUTES, walletClaimPath } from "@/lib/routes";
 
@@ -74,6 +77,14 @@ describe("ClaimQrView", () => {
 		expect(parentLabel).toBe("My Wallet");
 		const back = screen.getByRole("link", { name: `← ${parentLabel ?? ""}` });
 		expect(back.getAttribute("href")).toBe(ROUTES.rewardHub.wallet);
+	});
+
+	it("shows a QR-shaped skeleton, announced once, until the code arrives", () => {
+		qrUseQuery.mockReturnValue({ ...queryResult(undefined), isLoading: true });
+		render(<ClaimQrView claimId={CLAIM_ID} />, { wrapper: UiKitTestProviders });
+
+		expectSingleLoadingStatus(CLAIM_QR_LOADING_LABELS.loading);
+		expect(screen.queryByRole("heading", { name: "Claim unavailable" })).toBeNull();
 	});
 
 	it("offers the way back to the wallet when the claim is unavailable", () => {

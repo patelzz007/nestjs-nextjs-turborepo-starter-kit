@@ -10,7 +10,10 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { BACKUP_CODE_LENGTH, normalizeBackupCodeInput, TOTP_CODE_LENGTH } from "@workspace/shared";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
@@ -20,6 +23,9 @@ import { SignedInDevicesSection } from "../sessions/signed-in-devices-section";
 import { SIGNED_IN_DEVICES_LABELS } from "../sessions/signed-in-devices-labels";
 import { useEmailVerifiedToast } from "../email/use-verified-toast";
 import { catchCaught } from "../../caught";
+
+/** What the backup-code count announces while it loads. */
+export const BACKUP_CODES_REMAINING_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading your backup codes…" };
 
 /** Keeps only digits, at most one TOTP code long. */
 function sanitizeTotpInput(value: string): string {
@@ -186,6 +192,12 @@ function TwoFactorSetupPanel(): JSX.Element {
 		<div className="space-y-6">
 			{error ? <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div> : null}
 			{message ? <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">{message}</div> : null}
+
+			{twoFactorEnabled && remainingQuery.isPending ? (
+				<SkeletonRegion labels={BACKUP_CODES_REMAINING_LOADING_LABELS}>
+					<Skeleton variant="text" className="h-3.5 w-56" />
+				</SkeletonRegion>
+			) : null}
 
 			{remainingCount !== null ? (
 				<p className="text-sm text-muted-foreground">

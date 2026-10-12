@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { HttpAuditLogDetailSchema, type HttpAuditLogDetail } from "@workspace/shared";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuditLogDetailView from "../audit-log-detail";
@@ -114,6 +115,17 @@ describe("AuditLogDetailView", () => {
 		expect(screen.getByRole("link", { name: ACTOR_ID }).getAttribute("href")).toBe(`/audit-logs?filter[actorUserId]=${ACTOR_ID}`);
 		expect(screen.getByRole("link", { name: "Kopi Corner" }).getAttribute("href")).toBe(`/audit-logs?filter[organizationId]=${ORGANIZATION_ID}`);
 		expect(screen.getByRole("link", { name: "corr-1" }).getAttribute("href")).toBe("/audit-logs?filter[correlationId]=corr-1");
+	});
+
+	it("shows the full-page record's skeleton while the record loads", () => {
+		detailQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+		render(<AuditLogDetailView id={RECORD_ID} />, { wrapper: UiKitTestProviders });
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading audit record…");
+		expect(screen.queryByRole("heading", { name: "/api/v1/product" })).toBeNull();
+		expect(screen.queryByRole("link", { name: /Back to audit log/ })).toBeNull();
 	});
 
 	it("explains a failed load with a way back", () => {

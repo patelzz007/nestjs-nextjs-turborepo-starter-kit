@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MerchantOnboardingInviteSummary, MerchantOnboardingSkeleton } from "./onboarding-invite-summary";
+import { MERCHANT_ONBOARDING_LOADING_LABELS, MerchantOnboardingInviteSummary, MerchantOnboardingSkeleton } from "./onboarding-invite-summary";
 
 afterEach((): void => {
 	cleanup();
@@ -24,15 +25,27 @@ describe("MerchantOnboardingInviteSummary", () => {
 	});
 });
 
+/** A wizard of four steps (business, stores, registration, documents). */
+const STEP_COUNT = 4;
+
 describe("MerchantOnboardingSkeleton", () => {
-	it("announces the loading state", (): void => {
-		render(<MerchantOnboardingSkeleton stepCount={4} />);
-		expect(screen.getByRole("status").textContent).toContain("Verifying your invite");
+	it("announces one busy loading region naming what is verified", (): void => {
+		render(<MerchantOnboardingSkeleton stepCount={STEP_COUNT} />, { wrapper: UiKitTestProviders });
+
+		const [status, ...others] = screen.getAllByRole("status");
+		expect(others).toHaveLength(0);
+		expect(status?.getAttribute("aria-busy")).toBe("true");
+		expect(status?.textContent).toBe(MERCHANT_ONBOARDING_LOADING_LABELS.loading);
 	});
 
 	it("draws one placeholder timeline row per step", (): void => {
-		const stepCount = 4;
-		const { container } = render(<MerchantOnboardingSkeleton stepCount={stepCount} />);
-		expect(container.querySelectorAll('[data-slot="skeleton"].rounded-full')).toHaveLength(stepCount);
+		const { container } = render(<MerchantOnboardingSkeleton stepCount={STEP_COUNT} />, { wrapper: UiKitTestProviders });
+		expect(container.querySelectorAll('[data-slot="onboarding-step-skeleton"]')).toHaveLength(STEP_COUNT);
+	});
+
+	it("keeps the placeholder bones out of the accessibility tree", (): void => {
+		const { container } = render(<MerchantOnboardingSkeleton stepCount={STEP_COUNT} />, { wrapper: UiKitTestProviders });
+		const bone = container.querySelector('[data-slot="skeleton"]');
+		expect(bone?.closest('[aria-hidden="true"]')).not.toBeNull();
 	});
 });

@@ -3,12 +3,17 @@ import { cleanup, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { REWARDS_CATALOG_LOADING_LABELS } from "@/components/rewards/merchant-rewards-catalog";
 import { MerchantRewardsPageView } from "@/components/rewards/merchant-rewards-page-view";
+import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A } from "@/test/terminals";
 import type { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { ApiError } from "@workspace/client/lib/api/use-api";
+import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
+import { MERCHANT_REWARDS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 type RewardsListInput = Parameters<typeof apiRouter.organizations.rewards.list.queryKey>[0];
 
@@ -75,9 +80,26 @@ describe("MerchantRewardsPageView authorization", () => {
 	it("renders the loading state rather than a denial while the membership resolves", () => {
 		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { isLoading: true });
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARDS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("You don't have access to this page")).toBeNull();
 		expect(rewardsListQuery).not.toHaveBeenCalled();
+	});
+});
+
+describe("MerchantRewardsPageView loading", () => {
+	it("draws the summary strip and catalog — never zero counts — while the catalog loads", () => {
+		rewardsListQuery.mockReturnValue({ isSuccess: false, isPending: true, isFetching: true, isError: false, error: null, data: undefined, refetch: vi.fn() });
+		renderWithAuthorization(
+			<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
+				<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />
+			</UiPreferencesStoreProvider>,
+			{ role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) },
+		);
+
+		expect(busyRegionAnnouncements()).toEqual([REWARDS_CATALOG_LOADING_LABELS.loading]);
+		expect(document.querySelector('[data-slot="rewards-summary-skeleton"]')).not.toBeNull();
+		expect(screen.queryByText("Live offers")).toBeNull();
+		expect(screen.queryByText("No rewards yet")).toBeNull();
 	});
 });
 

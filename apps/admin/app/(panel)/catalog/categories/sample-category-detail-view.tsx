@@ -9,6 +9,8 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
+import { CATEGORY_DETAIL_SHAPE, CatalogDetailPageSkeleton } from "@/components/loading/catalog-skeletons";
+import { CATEGORY_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ROUTES } from "@/lib/routes";
 import { formatDateTime } from "@/lib/format/dates";
 
@@ -38,7 +40,7 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 	const entity: SampleCategory | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && entity === undefined) {
-		return <p className="text-muted-foreground">{"Loading category…"}</p>;
+		return <CatalogDetailPageSkeleton labels={CATEGORY_LOADING_LABELS} shape={CATEGORY_DETAIL_SHAPE} />;
 	}
 
 	if (detailQuery.isError || entity === undefined) {

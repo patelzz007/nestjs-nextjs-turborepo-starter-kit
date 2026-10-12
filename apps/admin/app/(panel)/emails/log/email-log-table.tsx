@@ -8,6 +8,8 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 
 import { emailLogListQuery, EmailLogStatusSchema, type EmailLogEntry, type EmailLogStatus, type Envelope } from "@workspace/shared";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
+import { EMAIL_LOG_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { EMAIL_LOG_TABLE_PAGE, TablePageSkeleton } from "@/components/loading/table-page-skeleton";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
@@ -23,7 +25,7 @@ import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
+import { CircleCheck, CircleX, Mail, RefreshCw, TriangleAlert } from "lucide-react";
 import * as React from "react";
 import { EMAIL_LOG_STATUS_LABELS, enumFilterOptions } from "@/lib/data-table/enum-filter-options";
 
@@ -245,14 +247,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 	}, [logQuery]);
 
 	if (logQuery.isLoading && rows.length === 0) {
-		return (
-			<div className="flex min-h-[60vh] items-center justify-center">
-				<div className="flex flex-col items-center gap-3 text-muted-foreground">
-					<Loader2 className="size-6 animate-spin" />
-					<p className="text-sm">Loading email log…</p>
-				</div>
-			</div>
-		);
+		return <TablePageSkeleton labels={EMAIL_LOG_LOADING_LABELS} shape={EMAIL_LOG_TABLE_PAGE} />;
 	}
 
 	if (logQuery.error !== null && rows.length === 0) {

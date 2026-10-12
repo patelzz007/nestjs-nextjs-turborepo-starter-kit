@@ -227,6 +227,9 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 		mobileTitle: "Sidebar",
 		mobileDescription: "Displays the mobile sidebar.",
 	},
+	skeletonRegion: {
+		loading: "Loading…",
+	},
 	timeSeriesChart: {
 		partial: "partial",
 		partialNote: "Shaded periods are cut off by the start or end of the range, so they cover fewer days.",

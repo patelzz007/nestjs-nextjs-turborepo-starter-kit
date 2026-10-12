@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthStatusLineSkeleton } from "@/components/loading/auth-form-skeleton";
+import { VERIFY_EMAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ROUTES } from "@/lib/routes";
 import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
@@ -30,7 +32,7 @@ export default function WebVerifyEmailPage(): JSX.Element {
 			title="Verify email"
 			subtitle="We're confirming your email address"
 			copyright="Reward Hub">
-			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
+			<Suspense fallback={<AuthStatusLineSkeleton labels={VERIFY_EMAIL_LOADING_LABELS} />}>
 				<VerifyEmailContent />
 			</Suspense>
 		</AuthLayout>

@@ -167,8 +167,9 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
   list is imported only inside `if (__DEV__)` so Metro drops it from store builds — never import
   `demo-account-list.ts` anywhere else.
 - Loading: content whose shape is known (a card, a form) loads behind a skeleton that mirrors it —
-  `Skeleton`, `SkeletonText` (one text line's exact height) and `SkeletonGroup` (pulses as one, like the
-  web's `animate-pulse`; still under Reduce Motion; announces what is loading) in
+  `Skeleton`, `SkeletonText` (one text line's exact height) and `SkeletonGroup` (the web's sweep: one
+  highlight band crosses the window through every bone, from `SKELETON_MOTION` in `@workspace/tokens`;
+  waits a beat before fading in; still under Reduce Motion; announces what is loading) in
   `src/components/skeleton.tsx` — so nothing shifts when the data arrives (Home, Profile).
   `LoadingState` (a spinner) is for content whose size is unknown.
 - Analytics ([ADR 048](../../docs/adr/048-mobile-analytics-screen.md)): `src/app/(app)/analytics.tsx`

@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantRewardLocationFields } from "@/components/rewards/merchant-reward-location-fields";
@@ -56,7 +57,7 @@ export interface MerchantCreateRewardPageViewProps {
 /** Create-reward route — requires `merchant:manage_rewards` (create endpoint); form hooks mount only when allowed. */
 export function MerchantCreateRewardPageView(props: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards} loading={<MerchantRewardEditorPageSkeleton mode="create" />}>
 			<MerchantCreateRewardPageContent {...props} />
 		</MerchantCapabilityGate>
 	);

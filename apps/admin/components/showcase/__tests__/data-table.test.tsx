@@ -355,8 +355,14 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	it("renders skeleton rows while isLoading instead of the data", () => {
 		const { container } = render(<DataTable data={makeRows(12)} columns={demoColumns} isLoading skeletonRows={4} />, { wrapper: UiKitTestProviders });
 
-		// Skeleton placeholders (shimmer) are present; real rows are not.
-		expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+		// One kit skeleton row per `skeletonRows`, a bone in every cell; real rows are not.
+		const skeletonRows = [...container.querySelectorAll("tbody tr")].filter((row) => row.querySelector('[data-slot="skeleton"]') !== null);
+		expect(skeletonRows.length).toBe(4);
+		for (const row of skeletonRows) {
+			const bones = row.querySelectorAll('[data-slot="skeleton"].skeleton-bone');
+			expect(bones.length).toBe(row.querySelectorAll("td").length);
+		}
+		expect(container.querySelector(".animate-pulse")).toBeNull();
 		expect(screen.queryByText("Section 1")).toBeNull();
 	});
 

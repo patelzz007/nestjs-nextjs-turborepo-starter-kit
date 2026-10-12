@@ -160,6 +160,17 @@ describe("AuditLogView", () => {
 		expect(window.location.search).toBe("?page=2");
 	});
 
+	it("shows the page's table skeleton while the first page loads", () => {
+		listQuery.mockReturnValue({ data: undefined, isLoading: true, isFetching: true, error: null, refetch: (): Promise<void> => Promise.resolve() });
+		const { container } = render(<AuditLogView />, { wrapper: UiKitTestProviders });
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading audit log…");
+		expect(container.querySelector('[data-slot="table-skeleton"]')).not.toBeNull();
+		expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+	});
+
 	it("explains a failed load instead of showing an empty table", () => {
 		listQuery.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, error: new Error("403"), refetch: (): Promise<void> => Promise.resolve() });
 		render(<AuditLogView />, { wrapper: UiKitTestProviders });

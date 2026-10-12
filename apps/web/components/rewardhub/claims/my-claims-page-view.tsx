@@ -4,12 +4,15 @@ import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readP
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { WALLET_CLAIMS_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { WalletClaimRowsBones } from "@/components/loading/wallet-skeleton";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import { PLATFORM_DISPLAY_REGION, type Envelope, type RewardClaimResponse } from "@workspace/shared";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -80,7 +83,9 @@ export function MyClaimsPageView({ initialPage, initialReadyCount }: MyClaimsPag
 			</div>
 
 			{isLoading ? (
-				<p className="text-sm text-muted-foreground">Loading claims…</p>
+				<SkeletonRegion labels={WALLET_CLAIMS_LOADING_LABELS}>
+					<WalletClaimRowsBones />
+				</SkeletonRegion>
 			) : claimsQuery.isError && claimsQuery.data === undefined ? (
 				<WebEmptyState
 					title="Couldn't load your claims"

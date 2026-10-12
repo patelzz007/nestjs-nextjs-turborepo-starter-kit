@@ -4,8 +4,12 @@ import { highlightTerms, queryTerms, SearchIndexSchema, searchIndex, type Search
 /** Where `src/pages/search-index.json.ts` is emitted. */
 const SEARCH_INDEX_URL = "/search-index.json";
 const RESULT_LIMIT = 12;
+/** Placeholder rows shown while the index downloads — enough to fill the dialog's first screen. */
+const SKELETON_RESULT_COUNT = 4;
 
 let indexRequest: Promise<readonly SearchEntry[]> | null = null;
+/** Set once the index has arrived, so a search with the index in hand never flashes placeholders. */
+let indexLoaded = false;
 
 /** Fetches and validates the index once; a failed request is retried on the next search. */
 function loadIndex(): Promise<readonly SearchEntry[]> {
@@ -14,7 +18,9 @@ function loadIndex(): Promise<readonly SearchEntry[]> {
 			if (!response.ok) {
 				throw new Error(`Search index request failed with HTTP ${String(response.status)}`);
 			}
-			return SearchIndexSchema.parse(await response.json());
+			const index = SearchIndexSchema.parse(await response.json());
+			indexLoaded = true;
+			return index;
 		})
 		.catch((error: unknown) => {
 			indexRequest = null;
@@ -39,6 +45,21 @@ function resultElement(hit: SearchHit, terms: readonly string[], selected: boole
 		`</span>`,
 	].join("");
 	item.append(link);
+	return item;
+}
+
+/** A result-shaped placeholder: icon, title and context lines (hidden from assistive tech — the list is `aria-busy`). */
+function skeletonResultElement(): HTMLLIElement {
+	const item = document.createElement("li");
+	item.className = "search-result search-result--skeleton";
+	item.setAttribute("aria-hidden", "true");
+	item.innerHTML = [
+		`<span class="search-result__icon"><span class="skeleton-bone skeleton-bone--icon"></span></span>`,
+		`<span class="search-result__body">`,
+		`<span class="skeleton-bone skeleton-bone--title"></span>`,
+		`<span class="skeleton-bone skeleton-bone--line"></span>`,
+		`</span>`,
+	].join("");
 	return item;
 }
 
@@ -81,6 +102,7 @@ export function initSearch(navigate: (href: string) => void = goTo): void {
 	};
 
 	const renderHits = (terms: readonly string[]): void => {
+		list.removeAttribute("aria-busy");
 		list.replaceChildren(...hits.map((hit, index) => resultElement(hit, terms, index === selected)));
 		list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
 	};
@@ -93,6 +115,12 @@ export function initSearch(navigate: (href: string) => void = goTo): void {
 			renderHits([]);
 			setStatus("Type to search the guides.");
 			return;
+		}
+		if (!indexLoaded) {
+			hits = [];
+			setStatus(null);
+			list.setAttribute("aria-busy", "true");
+			list.replaceChildren(...Array.from({ length: SKELETON_RESULT_COUNT }, skeletonResultElement));
 		}
 		try {
 			const index = await loadIndex();

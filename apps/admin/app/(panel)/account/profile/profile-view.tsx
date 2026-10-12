@@ -13,6 +13,7 @@ import * as React from "react";
 
 import { ProfileAvatarField } from "@/components/account/profile-avatar-field";
 import { ProfileForm } from "@/components/account/profile-form";
+import { ProfilePageSkeleton } from "@/components/loading/account-skeletons";
 import { toastMutationError, type MutationErrorMessages } from "@/lib/api/mutation-error";
 
 /** Messages for the codes `PATCH /auth/profile` can answer besides the standard ones. */
@@ -117,17 +118,15 @@ export function ProfileView({ initialProfile }: ProfileViewProps): React.JSX.Ele
 	);
 
 	if (profile === undefined) {
-		return (
+		return profileQuery.isError ? (
 			<div className="flex w-full flex-col gap-6">
 				<h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-				{profileQuery.isError ? (
-					<p role="alert" className="text-destructive">
-						Could not load your profile.
-					</p>
-				) : (
-					<p className="text-muted-foreground">Loading profile…</p>
-				)}
+				<p role="alert" className="text-destructive">
+					Could not load your profile.
+				</p>
 			</div>
+		) : (
+			<ProfilePageSkeleton />
 		);
 	}
 

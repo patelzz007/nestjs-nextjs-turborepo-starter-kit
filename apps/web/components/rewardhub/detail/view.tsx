@@ -2,6 +2,7 @@
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { AccessGate } from "@/components/auth/access-gate";
+import { RewardDetailSkeleton } from "@/components/loading/reward-detail-skeleton";
 import { RewardClaimFlow } from "@/components/rewardhub/detail/claim-flow";
 import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import { WebPageHeader } from "@/components/web-ui/page-header";
@@ -58,7 +59,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	}, [rewardQuery]);
 
 	if (rewardQuery.isLoading && initialReward === undefined) {
-		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
+		return <RewardDetailSkeleton />;
 	}
 
 	if (reward === undefined) {

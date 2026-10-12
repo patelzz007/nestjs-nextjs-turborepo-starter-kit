@@ -1,11 +1,14 @@
 "use client";
 
+import { API_KEY_ROW_ACTIONS, API_KEY_ROW_GRID, API_KEY_ROW_TEXT_CELLS } from "@/components/api-keys/api-key-row-grid";
+import { MerchantGridRowsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { API_KEY_FILTERS, isActiveApiKey, type ApiKeyFilter } from "@/lib/api-keys/api-key-summary";
 import { apiKeyScopeLabel } from "@/lib/api-keys/create-api-key-form";
 import { PLATFORM_DISPLAY_REGION, type MerchantApiKeySummary } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
-import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { AlertTriangle, Ban, CalendarDays, KeyRound, MapPin, RotateCw } from "lucide-react";
@@ -13,11 +16,11 @@ import * as React from "react";
 
 const FILTER_LABELS: Readonly<Record<ApiKeyFilter, string>> = { active: "Active", revoked: "Revoked", all: "All" };
 
-/** Column layout shared by the header and every row (stacked below `md`). */
-const ROW_GRID = "grid gap-3 px-5 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1fr)_7rem] md:items-center md:gap-4";
-
 /** Rows shown while the first page loads (matches a typical small fleet of terminals). */
 const SKELETON_ROWS = 3;
+
+/** What the list's loading region announces. */
+export const API_KEY_LIST_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading API keys…" };
 
 function formatDay(epochMs: number): string {
 	return formatEpochMs(epochMs, "date", PLATFORM_DISPLAY_REGION);
@@ -41,7 +44,8 @@ export interface ApiKeyListProps {
 
 /** Filterable list of POS keys with loading, error and empty states. Presentational. */
 export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, onRetry, revokingKeyId, onRevokeRequest, truncationNote }: ApiKeyListProps): React.JSX.Element {
-	const showColumnHeader = !isLoading && !isError && keys.length > 0;
+	// Drawn while the rows load too, so the loaded rows land under it without a jump.
+	const showColumnHeader = !isError && (isLoading || keys.length > 0);
 
 	return (
 		<section aria-labelledby="api-key-list-heading" className="rounded-xl border border-border bg-card shadow-xs">
@@ -64,7 +68,7 @@ export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, o
 			{showColumnHeader ? (
 				<div
 					aria-hidden="true"
-					className={cn(ROW_GRID, "hidden border-b border-border bg-muted/40 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase md:grid")}>
+					className={cn(API_KEY_ROW_GRID, "hidden border-b border-border bg-muted/40 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase md:grid")}>
 					<span>Terminal</span>
 					<span>Store</span>
 					<span>Created</span>
@@ -74,17 +78,9 @@ export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, o
 
 			<div>
 				{isLoading ? (
-					<ul aria-label="Loading keys" aria-busy="true" className="space-y-2 p-3">
-						{Array.from({ length: SKELETON_ROWS }, (_, index: number) => (
-							<li key={index} className="flex items-center gap-3 rounded-lg px-3 py-3">
-								<Skeleton className="size-10 rounded-lg" />
-								<div className="flex-1 space-y-2">
-									<Skeleton className="h-4 w-40" />
-									<Skeleton className="h-3 w-64" />
-								</div>
-							</li>
-						))}
-					</ul>
+					<SkeletonRegion labels={API_KEY_LIST_LOADING_LABELS}>
+						<MerchantGridRowsSkeleton rows={SKELETON_ROWS} rowGridClassName={API_KEY_ROW_GRID} textCells={API_KEY_ROW_TEXT_CELLS} actions={API_KEY_ROW_ACTIONS} />
+					</SkeletonRegion>
 				) : isError ? (
 					<div role="alert" className="flex flex-col items-center gap-3 px-6 py-12 text-center">
 						<AlertTriangle className="size-6 text-destructive" aria-hidden="true" />
@@ -153,7 +149,7 @@ function ApiKeyRow({ apiKey, isRevoking, onRevokeRequest }: ApiKeyRowProps): Rea
 	}, [apiKey, onRevokeRequest]);
 
 	return (
-		<li className={cn(ROW_GRID, "py-4 transition-colors hover:bg-muted/30 motion-reduce:transition-none")}>
+		<li className={cn(API_KEY_ROW_GRID, "py-4 transition-colors hover:bg-muted/30 motion-reduce:transition-none")}>
 			<div className="flex min-w-0 items-center gap-3">
 				<span
 					className={cn(

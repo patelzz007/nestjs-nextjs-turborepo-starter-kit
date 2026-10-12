@@ -11,8 +11,16 @@ import AccessControlPanel from "../access-control-panel";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 interface ListQueryStub {
-	readonly useQuery: () => { readonly data: { readonly data: { readonly items: readonly [] } }; readonly isError: boolean };
+	readonly useQuery: () => { readonly data: { readonly data: { readonly items: readonly [] } } | undefined; readonly isError: boolean; readonly isLoading: boolean };
 }
+
+/** Which catalog queries are still on their first load. */
+interface CatalogLoadState {
+	roles: boolean;
+	permissions: boolean;
+}
+
+const catalogLoad = vi.hoisted((): CatalogLoadState => ({ roles: false, permissions: false }));
 
 interface MutationOptionsStub {
 	readonly onError?: (error: Error) => void;
@@ -36,13 +44,18 @@ const { checkMutate, checkOptions } = vi.hoisted(() => {
 });
 
 vi.mock("@workspace/client/lib/auth", () => {
-	const emptyList: ListQueryStub = { useQuery: () => ({ data: { data: { items: [] } }, isError: false }) };
+	const roleList: ListQueryStub = {
+		useQuery: () => (catalogLoad.roles ? { data: undefined, isError: false, isLoading: true } : { data: { data: { items: [] } }, isError: false, isLoading: false }),
+	};
+	const permissionList: ListQueryStub = {
+		useQuery: () => (catalogLoad.permissions ? { data: undefined, isError: false, isLoading: true } : { data: { data: { items: [] } }, isError: false, isLoading: false }),
+	};
 	const auth: AuthStub = {
 		api: {
 			admin: {
-				roles: { list: emptyList },
+				roles: { list: roleList },
 				permissions: {
-					list: emptyList,
+					list: permissionList,
 					check: {
 						useMutation: (options: MutationOptionsStub) => {
 							checkOptions.push(options);
@@ -70,6 +83,8 @@ afterEach(() => {
 	vi.clearAllMocks();
 	vi.restoreAllMocks();
 	checkOptions.length = 0;
+	catalogLoad.roles = false;
+	catalogLoad.permissions = false;
 });
 
 /** Clicks `element`, then lets the form's async submit (validation + onSubmit) settle. */
@@ -103,6 +118,33 @@ describe("AccessControlPanel authorization", () => {
 	it("selects the roles tab first when every view is permitted", () => {
 		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
 		expect(screen.getByRole("tab", { name: /Roles/ }).getAttribute("aria-selected")).toBe("true");
+	});
+});
+
+describe("AccessControlPanel loading", () => {
+	it("shows role-row skeletons in the roles card while the role catalog loads", () => {
+		catalogLoad.roles = true;
+		renderPanel([PERMISSION.ROLE.LIST]);
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading roles…");
+		expect(status.querySelector('[data-skeleton="role-row"]')).not.toBeNull();
+	});
+
+	it("shows category skeletons instead of the explorer while the permission catalog loads", () => {
+		catalogLoad.permissions = true;
+		renderPanel([PERMISSION.PERMISSION.LIST]);
+
+		const status = screen.getByRole("status");
+		expect(status.textContent).toBe("Loading permissions…");
+		expect(status.querySelector('[data-skeleton="permission-group"]')).not.toBeNull();
+		expect(screen.queryByText("No permissions in catalog.")).toBeNull();
+	});
+
+	it("shows no skeleton once the catalogs are there", () => {
+		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST]);
+		expect(screen.queryByRole("status")).toBeNull();
 	});
 });
 

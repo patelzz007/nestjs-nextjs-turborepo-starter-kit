@@ -149,7 +149,7 @@ the same as unauthorized (spec §25). Unauthorized items are removed, not disabl
 | Provider | `components/layout/dashboard-layout.tsx` | mounts `CapabilitiesProvider` with live capabilities |
 | Page requirements | `lib/navigation/menu-authorization.ts` | `ADMIN_MENU_AUTHORIZATION`: sidebar URL → `PERMISSION.*` requirement, one line per page with a comment naming the API route it mirrors |
 | Route rules | `lib/navigation/route-authorization.ts` | built from the menu + explicit per-page rules (`ROUTE_PATTERNS` in `lib/routes.ts`: detail pages need READ, edit pages UPDATE); the most specific pattern wins (a literal segment beats `[id]`); disabled menu items create no rules; `superAdminOnly` rules for `@SuperAdminOnly` pages |
-| Route guard | `components/access/route-authorization-guard.tsx` | renders `AdminAccessDenied` when the current page's rule is not met — also during the server render (permissions are loaded server-side), so a denied page never flashes |
+| Route guard | `components/access/route-authorization-guard.tsx` | renders `AdminAccessDenied` when the current page's rule is not met — also during the server render (permissions are loaded server-side), so a denied page never flashes; while the permissions (or the super-admin flag) are still resolving it renders the content-area skeleton (`PanelContentSkeleton`, "Checking your access…") — never the page, never a denial |
 | Visible ⇔ allowed | `filterMenuByRouteAccess` + `canAccessRoute` (`AuthorizedNavigationProvider` in `dashboard-layout.tsx`) | the sidebar, ⌘K palette (items + quick actions), pinned items, topbar and profile links all use the guard's own rules — an item is shown exactly when its page would render |
 | Coverage test | `lib/navigation/page-authorization.test.ts` | every `app/**/page.tsx` has a reviewed rule (both directions), and "visible ⇔ allowed" holds for every capability set |
 | Super admin | `lib/session/super-admin.ts` | `useSuperAdminStatus()`, `useCanStartImpersonation()` |
@@ -191,7 +191,7 @@ membership role name. Capabilities come from the active membership's role throug
 | Building block | File |
 |---|---|
 | Provider | `components/access/merchant-authorization-provider.tsx` — `MerchantAuthorizationProvider` (feeds `CapabilitiesProvider`), `useMerchantAuthorizationStatus()` (`isLoading`, `capabilities`) |
-| Capability gate | `components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (skeleton while loading, then `<Can fallback={<MerchantAccessDenied/>}>`), `MerchantAccessDenied`, `MerchantReadOnlyNotice` |
+| Capability gate | `components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (while the membership resolves it renders its `loading` prop — each page view passes its own page skeleton, the same one its `loading.tsx` draws — or a generic page skeleton announcing "Checking access…"; then `<Can fallback={<MerchantAccessDenied/>}>`), `MerchantAccessDenied`, `MerchantReadOnlyNotice` |
 | Capability hook | `lib/org/capabilities.ts` — `useMerchantCapabilities()` (membership → capabilities) |
 | **Org route map** | `lib/navigation/org-route-authorization.ts` — `ORG_PAGE_RULES`: every page under `app/orgs/[orgSlug]/` → its capability requirement, or explicitly `open` with a reason |
 | **Server page guard** | `lib/org/org-page-guard.tsx` — `guardOrgPage(orgSlug, route)`; decision in `lib/org/org-page-access.ts` |

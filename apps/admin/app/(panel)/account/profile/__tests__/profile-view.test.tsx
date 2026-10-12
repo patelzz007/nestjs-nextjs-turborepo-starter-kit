@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { epochMs, type OwnProfile, type UpdateOwnProfileInput } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -84,12 +85,18 @@ describe("ProfileView", () => {
 
 	it("shows the loading state, then the error state, until the profile is there", () => {
 		state.profile = undefined;
-		const { rerender } = render(<ProfileView />);
-		expect(screen.getByText("Loading profile…")).toBeTruthy();
+		const { container, rerender } = render(<ProfileView />, { wrapper: UiKitTestProviders });
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading profile…");
+		// Shaped like the personal-details card: the name field's bones, no real form yet.
+		expect(container.querySelector('[data-slot="form-skeleton"]')).not.toBeNull();
+		expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
 
 		state.isError = true;
 		rerender(<ProfileView />);
 		expect(screen.getByRole("alert").textContent).toBe("Could not load your profile.");
+		expect(screen.queryByRole("status")).toBeNull();
 	});
 
 	it("shows the profile's identity", () => {

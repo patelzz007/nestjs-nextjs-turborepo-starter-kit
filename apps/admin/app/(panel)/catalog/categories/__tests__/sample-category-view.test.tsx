@@ -32,12 +32,19 @@ interface AuthStub {
 				};
 				readonly fetchOrThrow: () => Promise<void>;
 			};
-			readonly detail: { readonly useQuery: () => { readonly data: { readonly data: SampleCategory }; readonly isLoading: boolean; readonly isError: boolean } };
+			readonly detail: { readonly useQuery: () => { readonly data: { readonly data: SampleCategory } | undefined; readonly isLoading: boolean; readonly isError: boolean } };
 			readonly delete: MutationHookStub;
 			readonly bulkDelete: MutationHookStub;
 		};
 	};
 }
+
+/** Whether the detail query is still on its first load. */
+interface DetailLoadState {
+	loading: boolean;
+}
+
+const detailLoad = vi.hoisted((): DetailLoadState => ({ loading: false }));
 
 const { CATEGORY_INPUT, categoryListSpy, deleteOptions } = vi.hoisted(() => ({
 	deleteOptions: vi.fn<(options: DeleteMutationOptionsStub) => void>(),
@@ -76,7 +83,9 @@ vi.mock("@workspace/client/lib/auth", () => {
 					},
 					fetchOrThrow: () => Promise.resolve(),
 				},
-				detail: { useQuery: () => ({ data: { data: category }, isLoading: false, isError: false }) },
+				detail: {
+					useQuery: () => (detailLoad.loading ? { data: undefined, isLoading: true, isError: false } : { data: { data: category }, isLoading: false, isError: false }),
+				},
 				delete: {
 					useMutation: (options: DeleteMutationOptionsStub) => {
 						deleteOptions(options);
@@ -103,6 +112,7 @@ const PATH = "/catalog/categories";
 
 beforeEach(() => {
 	window.history.replaceState(null, "", PATH);
+	detailLoad.loading = false;
 });
 
 afterEach(() => {
@@ -133,6 +143,19 @@ describe("SampleCategoryDetailView authorization", () => {
 		expect(screen.getByText("Beverages")).toBeDefined();
 		expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+	});
+});
+
+describe("SampleCategoryDetailView loading", () => {
+	it("shows the category sheet's skeleton while the category loads", () => {
+		detailLoad.loading = true;
+		renderWith([PERMISSION.SAMPLE_CATEGORY.READ], <SampleCategoryDetailView id={CATEGORY_INPUT.id} />);
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading category…");
+		expect(status.querySelector('[data-skeleton="catalog-detail"]')).not.toBeNull();
+		expect(screen.queryByText("Beverages")).toBeNull();
 	});
 });
 

@@ -122,7 +122,8 @@ export const LIGHT_THEME: Theme = {
 	"sidebar-primary-foreground": paletteColor("neutral", "0"),
 	"sidebar-accent": paletteColor("neutral", "100"),
 	"sidebar-accent-foreground": paletteColor("neutral", "900"),
-	"sidebar-border": paletteColor("neutral", "400"),
+	/* Shell dividers (sidebar footer, topbar edge): one step past the card border, so chrome reads as quieter structure than content edges — never a dark rule on the canvas. */
+	"sidebar-border": paletteColor("neutral", "300"),
 	"sidebar-ring": paletteColor("brand", "600"),
 	/* Active nav row: a solid slate pill — row, hairline and icon chip read as one shape with white text. */
 	"sidebar-active": paletteColor("brand", "800"),
@@ -221,7 +222,8 @@ export const DARK_THEME: Theme = {
 	"sidebar-primary-foreground": paletteColor("neutral", "0"),
 	"sidebar-accent": paletteColor("ink", "750"),
 	"sidebar-accent-foreground": paletteColor("ink", "50"),
-	"sidebar-border": paletteColor("ink", "600"),
+	/* Shell dividers share the card border's step: on the ink-850 shell a lighter step read as a bright rule. */
+	"sidebar-border": paletteColor("ink", "650"),
 	"sidebar-ring": paletteColor("brand", "300"),
 	/* Active nav row: solid slate pill (web / merchant re-map to blue / green in their themes). */
 	"sidebar-active": paletteColor("brand", "600"),

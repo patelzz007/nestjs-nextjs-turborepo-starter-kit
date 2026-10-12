@@ -190,6 +190,14 @@ Keep animation duration and easing driven by design tokens (`07-ui-system.md`-eq
 
 A bare spinner is acceptable for a genuinely small, unpredictably-shaped piece of UI (a button's own loading state); for a whole section/page, a skeleton matching the eventual layout is the standard.
 
+Build skeletons from the kit, never from ad-hoc `animate-pulse` divs:
+
+- `Skeleton` (`@workspace/ui/components/skeleton`) — one bone. Every bone shares a single viewport-wide sweep (`skeleton-bone` in `styles/components.css`), so a page of placeholders shimmers as one wave; reduced motion leaves still bones. Its numbers are `SKELETON_MOTION` in `@workspace/tokens`, which the mobile skeletons animate too — change the token, never the CSS alone (a parity test fails).
+- `SkeletonRegion` (`@workspace/ui/components/skeleton-region`) — exactly **one** per loading surface: it is the `role="status"` / `aria-busy` live region with the screen-reader announcement (`labels={{ loading: "Loading claims…" }}`, hoisted to a module constant), hides the bones from assistive tech, and holds back ~150ms before fading in so a fast load never flashes.
+- `skeleton-patterns` — layout-shaped bones that mirror real kit surfaces: `PageHeaderSkeleton`, `StatCardsSkeleton`, `TableSkeleton`, `CardGridSkeleton`, `ListSkeleton`, `FormSkeleton`, `DetailSkeleton`, `ChartSkeleton`, `ProseSkeleton`.
+
+Every Next.js route gets a skeleton shaped like it — its own `loading.tsx`, or an inherited parent one whose shape genuinely fits — and every query-pending state inside a view renders a shaped skeleton, not "Loading…" text. See `docs/technical/frontend/loading-skeletons.md`.
+
 ## Toast/notification patterns
 
 ```tsx
@@ -297,7 +305,7 @@ Panel shells (admin, web, merchant):
   the row reads as one shape.
 - **Dark mode** — cool ink, elevation by lightness: the sidebar, page and topbar share one neutral
   surface (`ink-850`). Cards lift off it (`ink-750`), popovers and menus float above cards (`ink-700`).
-  Borders and shell dividers use a darker step (`ink-600` on shell chrome; `ink-650` on cards). The active nav row is a solid accent pill
+  Borders and shell dividers share one step (`ink-650`), so the shell's rules stay as quiet as a card edge. The active nav row is a solid accent pill
   (slate on admin; blue or green in web / merchant themes); hover rows use `ink-750` on the sidebar.
 
 Paint the sidebar with `bg-sidebar` (the `Sidebar` primitive already does) — never `bg-card` or a

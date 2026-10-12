@@ -1,4 +1,5 @@
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
+import { MerchantKybVerificationSectionSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { guardOrgPage } from "@/lib/org/org-page-guard";
 import { orgRoutes } from "@/lib/routes";
 import { MerchantKybVerificationView } from "@workspace/client/lib/merchant/kyb/verification-view";
@@ -35,7 +36,7 @@ export default async function MerchantVerificationPage({ params }: MerchantVerif
 				.
 			</p>
 			{/* Client re-check: hides the form if the role changes after the server render. */}
-			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification}>
+			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification} loading={<MerchantKybVerificationSectionSkeleton />}>
 				<MerchantKybVerificationView orgSlug={orgSlug} />
 			</MerchantCapabilityGate>
 		</div>

@@ -157,6 +157,34 @@ describe("initSearch", () => {
 	});
 });
 
+describe("initSearch — index still downloading", () => {
+	it("shows busy, result-shaped placeholders until the index arrives, then never again", async () => {
+		vi.resetModules();
+		const { initSearch: freshInit } = await import("./search");
+		const pending = Promise.withResolvers<Response>();
+		fetchIndex.mockReset();
+		fetchIndex.mockImplementation(() => pending.promise);
+		document.body.innerHTML = MARKUP;
+		freshInit();
+		const list = query("[data-search-results]", HTMLUListElement);
+
+		type("security");
+		expect(list.getAttribute("aria-busy")).toBe("true");
+		expect(list.querySelectorAll('.search-result--skeleton[aria-hidden="true"]').length).toBe(4);
+		expect(status().hidden).toBe(true);
+
+		pending.resolve(new Response(JSON.stringify(INDEX)));
+		await vi.waitFor(() => {
+			expect(titles()).toEqual(["Row-level security", "Prisma"]);
+		});
+		expect(list.hasAttribute("aria-busy")).toBe(false);
+		expect(list.querySelector(".search-result--skeleton")).toBeNull();
+
+		type("prisma");
+		expect(list.querySelector(".search-result--skeleton")).toBeNull();
+	});
+});
+
 describe("initSearch — unavailable index", () => {
 	it("explains the failure and retries on the next query", async () => {
 		vi.resetModules();

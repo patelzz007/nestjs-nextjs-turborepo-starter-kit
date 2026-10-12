@@ -128,8 +128,22 @@ the current page (`lib/navigation/legacy-redirects.ts`, loaded by `next.config.t
   label), nested branches, per-page expansion, disabled rows.
 - The shell lives in the `(panel)` **route-group layout**, so it stays mounted across navigations:
   sidebar, topbar and their state survive, and only the page segment changes. Inside the group,
-  `loading.tsx` streams a content skeleton, `error.tsx` is the client error boundary ("Try again"),
-  and `[...slug]/page.tsx` + `not-found.tsx` render unknown panel URLs as a 404 **inside** the shell.
+  `error.tsx` is the client error boundary ("Try again"), and `[...slug]/page.tsx` + `not-found.tsx`
+  render unknown panel URLs as a 404 **inside** the shell.
+- Loading states: **every panel route has its own `loading.tsx`**, shaped like that page (header,
+  section order, cards vs bare, grid columns, table column count), so content lands where the
+  skeleton stood. The compositions live in `components/loading/` and are built from the kit's
+  `Skeleton`, `SkeletonRegion` and `skeleton-patterns` — exactly one `SkeletonRegion` (one polite,
+  named announcement, e.g. "Loading users…") per loading surface; the labels are module constants in
+  `components/loading/loading-labels.ts`. Routes that share a shape share a composition
+  (`TablePageSkeleton` + a `TablePageShape` per list page, `CatalogEditorPageSkeleton`,
+  `CatalogDetailPageSkeleton`). Index routes that only redirect (`/catalog`, `/emails`, `/rewards`,
+  `/settings`, `/account`) wait in their target's shape. `(panel)/loading.tsx` is the generic fallback
+  (header over a table) for any route without its own; since a `loading.tsx` wraps its segment's page
+  **and every child segment**, the dashboard page lives in the `(home)` route group so its own
+  skeleton does not become everyone's fallback. In-page loading (a drawer's record, a queue, a
+  catalog tab, a selected merchant) reuses the same bones in its own `SkeletonRegion`, and the route
+  guard shows the content skeleton ("Checking your access…") while permissions resolve.
   The root `app/not-found.tsx` covers URLs outside the panel. Both use the shared `NotFoundContent`
   from `@workspace/ui`.
 - Command palette (`⌘K`): global search across the menu pages. The docs

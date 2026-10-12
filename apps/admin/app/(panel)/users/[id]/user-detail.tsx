@@ -3,6 +3,7 @@
 import { PERMISSION, type AdminUserDetail, type Envelope, type PermissionListResponse, type RoleListResponse } from "@workspace/shared";
 import { UserAccessPanel } from "@/components/access/user-access-panel";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
+import { UserDetailPageSkeleton } from "@/components/loading/user-skeletons";
 import { UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/components/users/user-profile-overview";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
@@ -58,7 +59,7 @@ export default function UserDetailView({ userId, initialUser, initialRoles, init
 			<UserDetailBreadcrumb displayName={user?.fullName} />
 
 			{userQuery.isLoading && user === undefined ? (
-				<p className="text-sm text-muted-foreground">Loading user…</p>
+				<UserDetailPageSkeleton />
 			) : userQuery.isError || user === undefined ? (
 				<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
 					Failed to load user.{" "}

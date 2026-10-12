@@ -48,9 +48,10 @@ export const MerchantDashboardStatCard = React.forwardRef<HTMLDivElement, Mercha
 ): React.JSX.Element {
 	const toneStyle = TONE_STYLES[tone];
 	const trend = changePercent !== null ? formatTrend(changePercent) : null;
+	const showSkeleton = isLoading || value === undefined;
 
 	return (
-		<Card ref={ref} className={cn("relative overflow-hidden border-border/80 bg-card shadow-xs", className)} {...props}>
+		<Card ref={ref} aria-busy={showSkeleton} className={cn("relative overflow-hidden border-border/80 bg-card shadow-xs", className)} {...props}>
 			<CardContent className="p-5">
 				<div className="flex items-center justify-between">
 					<div className={cn("flex size-10 items-center justify-center rounded-xl", toneStyle.icon)}>
@@ -64,14 +65,15 @@ export const MerchantDashboardStatCard = React.forwardRef<HTMLDivElement, Mercha
 					) : null}
 				</div>
 				<div className="mt-4">
-					{isLoading || value === undefined ? (
-						<Skeleton className="h-8 w-20" />
+					{showSkeleton ? (
+						// The figure's line box (text-2xl / lg:text-3xl), so the label below never moves when it lands.
+						<div aria-hidden="true" className="flex h-8 items-center lg:h-9">
+							<Skeleton className="h-7 w-20 lg:h-8" />
+						</div>
 					) : (
-						<>
-							<p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums lg:text-3xl">{value}</p>
-							<p className="mt-1 text-sm text-muted-foreground">{label}</p>
-						</>
+						<p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums lg:text-3xl">{value}</p>
 					)}
+					<p className="mt-1 text-sm text-muted-foreground">{label}</p>
 				</div>
 			</CardContent>
 		</Card>

@@ -319,6 +319,15 @@ wording (refreshed every 30 s; the absolute time stays as the tooltip).
 callbacks — never an API type. What each is for, the colour rules, accessibility and testing:
 [Analytics dashboards](../../docs/technical/frontend/analytics-charts.md).
 
+## Loading skeletons (`skeleton`, `skeleton-region`, `skeleton-patterns`)
+
+`Skeleton` is one bone; `SkeletonRegion` is the single accessible status around a loading surface
+(announcement, `aria-busy`, bones hidden from assistive tech, delayed fade-in); the patterns
+(`PageHeaderSkeleton`, `StatCardsSkeleton`, `TableSkeleton`, `CardGridSkeleton`, `ListSkeleton`,
+`FormSkeleton`, `DetailSkeleton`, `ChartSkeleton`, `ProseSkeleton`) are bones-only silhouettes of
+real kit surfaces. The sweep is CSS (`skeleton-bone` in `styles/components.css`) and respects reduced
+motion. When and how to use them: [Loading skeletons](../../docs/technical/frontend/loading-skeletons.md).
+
 ## React Hook Form
 
 `react-hook-form` is an **optional peer** — install it in the app that owns the form:

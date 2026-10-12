@@ -1,5 +1,6 @@
 "use client";
 
+import { VerifyEmailStatusSkeleton } from "@/components/loading/auth-skeletons";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { ORG_ROUTES, ROUTES } from "@/lib/routes";
 import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
@@ -32,7 +33,7 @@ export default function MerchantVerifyEmailPage(): JSX.Element {
 			title="Verify email"
 			subtitle="We're confirming your email address"
 			copyright="Reward Hub">
-			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
+			<Suspense fallback={<VerifyEmailStatusSkeleton />}>
 				<VerifyEmailContent />
 			</Suspense>
 		</AuthLayout>

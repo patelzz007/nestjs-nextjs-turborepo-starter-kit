@@ -204,7 +204,7 @@
 	--sidebar-primary-foreground: var(--palette-neutral-0);
 	--sidebar-accent: var(--palette-neutral-100);
 	--sidebar-accent-foreground: var(--palette-neutral-900);
-	--sidebar-border: var(--palette-neutral-400);
+	--sidebar-border: var(--palette-neutral-300);
 	--sidebar-ring: var(--palette-brand-600);
 	--sidebar-active: var(--palette-brand-800);
 	--sidebar-active-foreground: var(--palette-neutral-0);
@@ -282,7 +282,7 @@
 	--sidebar-primary-foreground: var(--palette-neutral-0);
 	--sidebar-accent: var(--palette-ink-750);
 	--sidebar-accent-foreground: var(--palette-ink-50);
-	--sidebar-border: var(--palette-ink-600);
+	--sidebar-border: var(--palette-ink-650);
 	--sidebar-ring: var(--palette-brand-300);
 	--sidebar-active: var(--palette-brand-600);
 	--sidebar-active-foreground: var(--palette-neutral-0);

@@ -94,11 +94,15 @@ describe("AuditLogDrawer", () => {
 		expect(screen.getByRole("link", { name: /Open full page/ }).getAttribute("href")).toBe(`/audit-logs/${RECORD_ID}`);
 	});
 
-	it("shows progress while the record loads", () => {
+	it("shows the record's skeleton while it loads", () => {
 		detailQuery.mockReturnValue({ data: undefined, isLoading: true });
 		render(<AuditLogDrawer recordId={RECORD_ID} onClose={vi.fn()} />, { wrapper: UiKitTestProviders });
 
-		expect(screen.getByText("Loading audit record…")).toBeTruthy();
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading audit record…");
+		expect(status.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+		expect(screen.queryByRole("heading", { name: "/api/v1/geo/cities/:id" })).toBeNull();
 	});
 
 	it("says so when the record cannot be loaded", () => {

@@ -44,8 +44,13 @@ describe("BreadcrumbTrail", () => {
 	it("shows a skeleton while loading and nothing else", () => {
 		const { container } = render(<BreadcrumbTrail items={[]} status="loading" renderLink={renderLink} />, { wrapper: UiKitTestProviders });
 
-		// Two shimmering pills are rendered.
-		expect(container.querySelectorAll(".animate-pulse").length).toBe(2);
+		// Two kit skeleton bones (the shared sheen), no legacy pulse.
+		const bones = container.querySelectorAll('[data-slot="skeleton"]');
+		expect(bones.length).toBe(2);
+		for (const bone of bones) {
+			expect(bone.classList.contains("skeleton-bone")).toBe(true);
+		}
+		expect(container.querySelector(".animate-pulse")).toBeNull();
 		expect(screen.queryByText("General")).toBeNull();
 		expect(screen.getByLabelText(UI_KIT_LABELS_EN.breadcrumb.ariaLabel)).toBeTruthy();
 	});

@@ -7,8 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/web-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
+import { IMPERSONATION_USERS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
+import { countSlots, expectSingleLoadingStatus } from "@/test-support/skeleton";
 
 interface AuthUserStub {
 	readonly id: string;
@@ -90,6 +92,16 @@ describe("ImpersonateUserPanel", () => {
 
 		expect(screen.getByText("Impersonate user")).toBeDefined();
 		expect(adminUsersUseQuery).toHaveBeenCalled();
+	});
+
+	it("shows user-row skeletons, announced once, while the user list loads", () => {
+		harness.user = SUPER_ADMIN;
+		adminUsersUseQuery.mockReturnValue({ data: undefined, isLoading: true });
+		renderWithSession(signedInSession({ capabilities: IMPERSONATION_GRANTS }), <ImpersonateUserPanel />);
+
+		expectSingleLoadingStatus(IMPERSONATION_USERS_LOADING_LABELS.loading);
+		expect(countSlots(document.body, "impersonation-user-row-skeleton")).toBeGreaterThan(0);
+		expect(screen.queryByText("No users found.")).toBeNull();
 	});
 
 	it("accepts MANAGE USER as implying both actions", () => {

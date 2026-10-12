@@ -13,6 +13,7 @@ import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
 import { passwordStrength } from "../password";
 import { catchCaught } from "../../caught";
+import { ResetPasswordFormSkeleton } from "./reset-password-form-skeleton";
 
 export interface ResetPasswordFormProps {
 	readonly token: string;
@@ -99,7 +100,7 @@ export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, for
 	);
 
 	if (isTokenValid === null) {
-		return <p className="text-center text-sm text-muted-foreground">Validating reset link...</p>;
+		return <ResetPasswordFormSkeleton />;
 	}
 
 	if (!isTokenValid) {

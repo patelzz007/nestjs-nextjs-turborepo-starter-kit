@@ -5,7 +5,9 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantEditRewardPageView } from "@/components/rewards/merchant-edit-reward-page-view";
+import { MERCHANT_REWARD_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import type { MerchantRewardFormValues } from "@workspace/shared";
@@ -101,6 +103,16 @@ describe("MerchantEditRewardPageView form", () => {
 		expect(options).not.toHaveProperty("refetchOnMount");
 		expect(options).toHaveProperty("staleTime", expect.any(Number));
 		expect(options?.staleTime).toBeGreaterThan(0);
+	});
+
+	it("draws the editor's shape — not 'reward not found' — while the reward resolves", () => {
+		rewardsListQuery.mockReturnValue({ data: undefined, isLoading: true, isFetching: true, isError: false, error: null, refetch: vi.fn() });
+		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARD_LOADING_LABELS.loading]);
+		expect(document.querySelector('[data-slot="reward-performance-skeleton"]')).not.toBeNull();
+		expect(screen.queryByText("Reward not found")).toBeNull();
+		expect(screen.queryByLabelText("Title")).toBeNull();
 	});
 
 	it("shows a load failure as an error with a retry — not as 'reward not found'", () => {

@@ -4,7 +4,12 @@ import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-passwo
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
+import { AuthFormSkeleton } from "@/components/loading/auth-form-skeleton";
+import { RESET_PASSWORD_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ROUTES } from "@/lib/routes";
+
+/** The reset form's fields: new password and its confirmation. */
+const RESET_PASSWORD_FIELD_COUNT = 2;
 
 function ResetPasswordContent(): JSX.Element {
 	const searchParams = useSearchParams();
@@ -33,7 +38,7 @@ export default function WebResetPasswordPage(): JSX.Element {
 			showBackButton
 			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">
-			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
+			<Suspense fallback={<AuthFormSkeleton fields={RESET_PASSWORD_FIELD_COUNT} labels={RESET_PASSWORD_LOADING_LABELS} />}>
 				<ResetPasswordContent />
 			</Suspense>
 		</AuthLayout>

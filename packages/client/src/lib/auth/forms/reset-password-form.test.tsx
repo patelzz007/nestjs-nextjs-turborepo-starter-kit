@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { envelopeFixture } from "../../../test/auth-fixtures";
 import { ApiError } from "../../api/use-api";
 import { ResetPasswordForm } from "./reset-password-form";
+import { RESET_PASSWORD_FORM_LOADING_LABELS } from "./reset-password-form-skeleton";
 
 const mocks = vi.hoisted(() => ({
 	resetPassword: vi.fn<(input: ResetPasswordInput) => Promise<Envelope<MessageResponse>>>(),
@@ -78,8 +79,12 @@ describe("ResetPasswordForm token validation", () => {
 		mocks.validateResetToken.mockResolvedValue(envelopeFixture({ valid: true }));
 		render(<ResetPasswordForm token={TOKEN} />, { wrapper: UiKitTestProviders });
 
-		expect(screen.getByText("Validating reset link...")).toBeDefined();
+		const pending = screen.getByRole("status");
+		expect(pending.getAttribute("aria-busy")).toBe("true");
+		expect(pending.textContent).toBe(RESET_PASSWORD_FORM_LOADING_LABELS.loading);
+		expect(screen.queryByLabelText("New password")).toBeNull();
 		expect(await screen.findByLabelText("New password")).toBeDefined();
+		expect(document.querySelector('[aria-busy="true"]')).toBeNull();
 		expect(mocks.validateResetToken).toHaveBeenCalledWith({ token: TOKEN });
 	});
 

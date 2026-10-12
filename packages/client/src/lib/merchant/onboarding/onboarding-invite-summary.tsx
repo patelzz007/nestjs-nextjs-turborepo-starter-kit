@@ -2,9 +2,13 @@
 
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { CalendarClock, Mail, MapPin, type LucideIcon } from "lucide-react";
 import type { JSX } from "react";
+
+import { placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 
 /** The surface every onboarding panel sits on, so the summary, timeline and form read as one set. */
 export const ONBOARDING_PANEL_CLASS_NAME = "rounded-2xl border border-border/80 bg-card/90 shadow-xs backdrop-blur-sm";
@@ -64,57 +68,85 @@ export function MerchantOnboardingInviteSummary({ businessName, email, city, exp
 	);
 }
 
-/** Number of placeholder fields in the loading form. */
+/** Placeholder fields in the loading form — the first step's business fields. */
 const SKELETON_FIELD_COUNT = 3;
+/** The invite's fixed details: work email, pilot city, expiry. */
+const SKELETON_DETAIL_COUNT = 3;
+
+/** What the wizard announces while the invite is verified. */
+export const MERCHANT_ONBOARDING_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Verifying your invite…" };
 
 export interface MerchantOnboardingSkeletonProps {
 	/** One placeholder timeline row per wizard step. */
 	readonly stepCount: number;
 }
 
-/** The wizard's layout while the invite is verified, so nothing shifts when it loads. */
+/**
+ * The wizard's layout while the invite is verified — the invite summary, the
+ * step timeline and the first step's form — so nothing shifts when it loads.
+ * One announced, busy region; the bones themselves stay out of the accessibility tree.
+ */
 export function MerchantOnboardingSkeleton({ stepCount }: MerchantOnboardingSkeletonProps): JSX.Element {
 	return (
-		<div role="status" className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-8">
-			<span className="sr-only">Verifying your invite…</span>
-			<div className="space-y-4" aria-hidden="true">
-				<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "space-y-4 p-5")}>
+		<SkeletonRegion labels={MERCHANT_ONBOARDING_LOADING_LABELS} className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-8">
+			<div className="flex flex-col gap-4">
+				<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "p-5")}>
 					<div className="flex items-center gap-3">
 						<Skeleton className="size-12 rounded-xl" />
-						<div className="flex-1 space-y-2">
-							<Skeleton size="sm" className="w-24" />
-							<Skeleton className="h-5 w-40" />
+						<div className="flex min-w-0 flex-1 flex-col gap-2">
+							<Skeleton variant="text" className="h-3 w-28" />
+							<Skeleton variant="text" className="h-5 w-40 max-w-full" />
 						</div>
 					</div>
-					<Skeleton size="sm" className="w-3/4" />
-					<Skeleton size="sm" className="w-1/2" />
-				</div>
-				<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "hidden space-y-5 p-5 lg:block")}>
-					<Skeleton className="h-1.5 w-full" />
-					{Array.from({ length: stepCount }, (_, index) => (
-						<div key={index} className="flex items-center gap-3">
-							<Skeleton variant="circular" className="size-8" />
-							<div className="flex-1 space-y-1.5">
-								<Skeleton size="sm" className="w-24" />
-								<Skeleton size="sm" className="w-36" />
+					<div className="mt-4 grid gap-3 border-t border-border/70 pt-4 sm:grid-cols-2 lg:grid-cols-1">
+						{placeholderKeys("detail", SKELETON_DETAIL_COUNT).map((key): JSX.Element => (
+							<div key={key} className="flex items-start gap-3">
+								<Skeleton className="size-7 rounded-lg" />
+								<div className="flex min-w-0 flex-1 flex-col gap-1.5">
+									<Skeleton variant="text" className="h-3 w-20" />
+									<Skeleton variant="text" className="h-3.5 w-36 max-w-full" />
+								</div>
 							</div>
+						))}
+					</div>
+				</div>
+				<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "hidden flex-col gap-5 p-5 lg:flex")}>
+					<div className="flex flex-col gap-2">
+						<div className="flex justify-between gap-3">
+							<Skeleton variant="text" className="h-3 w-32" />
+							<Skeleton variant="text" className="h-3 w-8" />
+						</div>
+						<Skeleton className="h-1.5 w-full rounded-full" />
+					</div>
+					<div className="flex flex-col gap-6">
+						{placeholderKeys("step", stepCount).map((key): JSX.Element => (
+							<div key={key} data-slot="onboarding-step-skeleton" className="flex items-start gap-3">
+								<Skeleton variant="circular" className="size-8" />
+								<div className="flex min-w-0 flex-1 flex-col gap-1.5 pt-1.5">
+									<Skeleton variant="text" className="h-3.5 w-24" />
+									<Skeleton variant="text" className="h-3 w-36 max-w-full" />
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			</div>
+			<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "p-5 sm:p-6")}>
+				<div className="mb-6 flex flex-col gap-2 border-b border-border/70 pb-5">
+					<Skeleton variant="text" className="h-3 w-28" />
+					<Skeleton variant="text" className="h-6 w-56 max-w-full" />
+					<Skeleton variant="text" className="h-3.5 w-80 max-w-full" />
+				</div>
+				<div className="flex flex-col gap-5">
+					{placeholderKeys("field", SKELETON_FIELD_COUNT).map((key): JSX.Element => (
+						<div key={key} className="flex flex-col gap-2">
+							<Skeleton variant="text" className="h-3.5 w-28" />
+							<Skeleton className="h-11 w-full" />
 						</div>
 					))}
+					<Skeleton className="ms-auto h-11 w-32" />
 				</div>
 			</div>
-			<div className={cn(ONBOARDING_PANEL_CLASS_NAME, "space-y-6 p-5 sm:p-6")} aria-hidden="true">
-				<div className="space-y-2 border-b border-border/70 pb-5">
-					<Skeleton size="sm" className="w-20" />
-					<Skeleton className="h-6 w-56" />
-				</div>
-				{Array.from({ length: SKELETON_FIELD_COUNT }, (_, index) => (
-					<div key={index} className="space-y-2">
-						<Skeleton size="sm" className="w-28" />
-						<Skeleton className="h-11 w-full" />
-					</div>
-				))}
-				<Skeleton className="ms-auto h-11 w-32" />
-			</div>
-		</div>
+		</SkeletonRegion>
 	);
 }

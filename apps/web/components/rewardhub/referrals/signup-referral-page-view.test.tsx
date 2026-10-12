@@ -4,7 +4,10 @@ import { ApiPaginatedMetaSchema, epochMs, type ApiPaginatedMeta, type SignupRefe
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { REFEREES_LOADING_LABELS, REFERRAL_CODE_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { SignupReferralPageView } from "@/components/rewardhub/referrals/signup-referral-page-view";
+import { countSlots, expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
 const EXPIRES_AT = 1_800_000_000_000;
 const JOINED_AT = 1_799_000_000_000;
@@ -15,6 +18,7 @@ interface DashboardQueryStub {
 
 interface RefereesQueryStub {
 	readonly data: { readonly data: readonly SignupReferralRefereeItem[]; readonly meta: ApiPaginatedMeta } | undefined;
+	readonly isLoading?: boolean;
 }
 
 const { dashboardUseQuery, refereesUseQuery } = vi.hoisted(() => ({
@@ -124,5 +128,25 @@ describe("SignupReferralPageView referee list", () => {
 		render(<SignupReferralPageView />);
 
 		expect(screen.getByText("No one has registered with your code yet.")).toBeDefined();
+	});
+});
+
+describe("SignupReferralPageView loading", () => {
+	it("shows a code-shaped skeleton, announced once, until the code dashboard arrives", () => {
+		dashboardUseQuery.mockReturnValue({ data: undefined });
+		render(<SignupReferralPageView />, { wrapper: UiKitTestProviders });
+
+		expectSingleLoadingStatus(REFERRAL_CODE_LOADING_LABELS.loading);
+		expect(screen.queryByRole("button", { name: /copy code/i })).toBeNull();
+	});
+
+	it("shows referee-row skeletons while the list loads, never the empty state", () => {
+		showDashboard({ code: "AB23CD45", expiresAt: epochMs(EXPIRES_AT), shareable: true, codeState: "active" });
+		refereesUseQuery.mockReturnValue({ data: undefined, isLoading: true });
+		const { container } = render(<SignupReferralPageView />, { wrapper: UiKitTestProviders });
+
+		expectSingleLoadingStatus(REFEREES_LOADING_LABELS.loading);
+		expect(countSlots(container, "referee-row-skeleton")).toBeGreaterThan(0);
+		expect(screen.queryByText("No one has registered with your code yet.")).toBeNull();
 	});
 });

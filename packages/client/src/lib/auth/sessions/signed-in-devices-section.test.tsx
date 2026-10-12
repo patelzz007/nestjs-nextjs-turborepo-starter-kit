@@ -12,6 +12,7 @@ import { apiRouter } from "../../api/endpoints";
 import { ApiError } from "../../api/use-api";
 import { SIGNED_IN_DEVICES_LABELS, type SignedInDevicesLabels } from "./signed-in-devices-labels";
 import { SignedInDevicesSection } from "./signed-in-devices-section";
+import { SIGNED_IN_DEVICES_SKELETON_ROWS } from "./signed-in-devices-skeleton";
 
 /** What the stubbed `api.auth.sessions.useQuery` answers. */
 interface SessionsQueryState {
@@ -145,11 +146,15 @@ afterEach(() => {
 });
 
 describe("SignedInDevicesSection — states", () => {
-	it("shows a loading state while the list loads", () => {
+	it("shows one busy, announced device-row skeleton while the list loads", () => {
 		mocks.sessionsState.mockReturnValue({ data: undefined, isPending: true, isError: false });
 		renderSection();
 
-		expect(screen.getByRole("status", { name: SIGNED_IN_DEVICES_LABELS.loading })).toBeDefined();
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe(SIGNED_IN_DEVICES_LABELS.loading);
+		expect(status.querySelector('[data-slot="signed-in-devices-skeleton"]')?.children).toHaveLength(SIGNED_IN_DEVICES_SKELETON_ROWS);
+		// The placeholder rows are hidden from assistive tech: no list is announced until the devices arrive.
 		expect(screen.queryByRole("list")).toBeNull();
 	});
 

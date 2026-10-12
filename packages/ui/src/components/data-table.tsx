@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { Input } from "@workspace/ui/components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
@@ -1373,7 +1374,7 @@ const SkeletonRow = React.memo(function SkeletonRow({ cells, height }: SkeletonR
 		<TableRow>
 			{Array.from({ length: cells }, (_, index) => (
 				<TableCell key={index} className="p-4">
-					<div className="h-4 animate-pulse rounded-md bg-muted" style={skeletonStyle} />
+					<Skeleton variant="text" className="h-4" style={skeletonStyle} />
 				</TableCell>
 			))}
 		</TableRow>

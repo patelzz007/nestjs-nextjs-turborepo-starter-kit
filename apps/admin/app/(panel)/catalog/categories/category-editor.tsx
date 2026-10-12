@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { CategoryForm } from "@/components/catalog/category-form";
+import { CATEGORY_FORM_SHAPE, CatalogEditorPageSkeleton } from "@/components/loading/catalog-skeletons";
+import { CATEGORY_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { toastMutationError, type MutationErrorMessages } from "@/lib/api/mutation-error";
 import { EMPTY_CATEGORY_FORM_VALUES, toCategoryFormValues } from "@/lib/catalog/form-values";
 import { ROUTES } from "@/lib/routes";
@@ -123,7 +125,7 @@ export function EditCategoryView({ id, initialCategory }: EditCategoryViewProps)
 				Could not load this category.
 			</p>
 		) : (
-			<p className="text-muted-foreground">Loading category…</p>
+			<CatalogEditorPageSkeleton labels={CATEGORY_LOADING_LABELS} shape={CATEGORY_FORM_SHAPE} />
 		);
 	}
 

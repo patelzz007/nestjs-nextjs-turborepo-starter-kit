@@ -1,9 +1,12 @@
 "use client";
 
+import { FLEET_STAT_CARDS, MerchantTerminalsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
+import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { AddTerminalDialog, type TerminalStoreOption } from "@/components/terminals/add-terminal-dialog";
 import { PairingCodeDialog } from "@/components/terminals/pairing-code-dialog";
 import { TerminalList } from "@/components/terminals/terminal-list";
@@ -44,8 +47,11 @@ const CREATE_TERMINAL_FAILED_MESSAGE = "The terminal could not be added. Try aga
 const REMOVE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Remove terminal", loading: "Removing…" };
 const REPAIR_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Issue new code", loading: "Issuing…" };
 
-/** Shown instead of a number that is still loading or cannot be counted from one page. */
+/** Shown instead of a number that could not be loaded or cannot be counted from one page. */
 const UNKNOWN_STAT_VALUE = "—";
+
+/** What the stat row announces while the first page of tills loads. */
+export const TERMINAL_STATS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading terminal totals…" };
 const UNCOUNTABLE_STAT_HINT = "Too many terminals to count here — see the list";
 
 function statValue(state: TerminalStatsState | undefined, key: "active" | "awaitingPairing" | "storesCovered"): string {
@@ -68,6 +74,7 @@ export function TerminalsPageView(props: TerminalsPageViewProps): React.JSX.Elem
 	return (
 		<MerchantCapabilityGate
 			capability={MERCHANT_CAPABILITY.manageApiKeys}
+			loading={<MerchantTerminalsPageSkeleton />}
 			fallback={
 				<div className="space-y-8">
 					<MerchantPageHeader title="POS terminals" description="Tills that validate redemptions — owner or admin access required." />
@@ -299,29 +306,35 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 			/>
 			<MerchantLocationScopeBanner filteredNote="Only this store's tills are listed and counted." allStoresNote="Listing the tills of every store you can access." />
 
-			<div className="grid gap-4 sm:grid-cols-3">
-				<StatCard
-					label="Active"
-					tone="green"
-					value={statValue(statsState, "active")}
-					hint={statHint(statsState, "Paired and ready to redeem")}
-					icon={<CheckCircle2 className="size-5" aria-hidden="true" />}
-				/>
-				<StatCard
-					label="Awaiting pairing"
-					tone="yellow"
-					value={statValue(statsState, "awaitingPairing")}
-					hint={statHint(statsState, "Code issued, till not paired yet")}
-					icon={<Hourglass className="size-5" aria-hidden="true" />}
-				/>
-				<StatCard
-					label="Stores covered"
-					tone="blue"
-					value={statValue(statsState, "storesCovered")}
-					hint={statHint(statsState, "With at least one active till")}
-					icon={<Store className="size-5" aria-hidden="true" />}
-				/>
-			</div>
+			{terminalsQuery.isPending ? (
+				<SkeletonRegion labels={TERMINAL_STATS_LOADING_LABELS}>
+					<MerchantStatCardsSkeleton count={FLEET_STAT_CARDS} className="sm:grid-cols-3" />
+				</SkeletonRegion>
+			) : (
+				<div className="grid gap-4 sm:grid-cols-3">
+					<StatCard
+						label="Active"
+						tone="green"
+						value={statValue(statsState, "active")}
+						hint={statHint(statsState, "Paired and ready to redeem")}
+						icon={<CheckCircle2 className="size-5" aria-hidden="true" />}
+					/>
+					<StatCard
+						label="Awaiting pairing"
+						tone="yellow"
+						value={statValue(statsState, "awaitingPairing")}
+						hint={statHint(statsState, "Code issued, till not paired yet")}
+						icon={<Hourglass className="size-5" aria-hidden="true" />}
+					/>
+					<StatCard
+						label="Stores covered"
+						tone="blue"
+						value={statValue(statsState, "storesCovered")}
+						hint={statHint(statsState, "With at least one active till")}
+						icon={<Store className="size-5" aria-hidden="true" />}
+					/>
+				</div>
+			)}
 
 			<TerminalList
 				terminals={terminals}

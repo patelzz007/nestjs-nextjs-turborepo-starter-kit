@@ -1,9 +1,9 @@
 "use client";
 
 import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
+import { MERCHANT_ACCESS_LOADING_LABELS, MerchantPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { Can } from "@workspace/client/lib/auth/can";
 import type { CapabilitySlug } from "@workspace/shared";
-import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Eye, ShieldAlert } from "lucide-react";
 import * as React from "react";
 
@@ -28,15 +28,13 @@ export function MerchantAccessDenied({
 	);
 }
 
-/** Placeholder while the active membership resolves — avoids flashing a denied state. */
+/**
+ * Placeholder while the active membership resolves — avoids flashing a denied
+ * state. A page passes its own skeleton as the gate's `loading`; this generic
+ * page silhouette ("Checking access…") is the fallback for a section without one.
+ */
 export function MerchantAccessLoading(): React.JSX.Element {
-	return (
-		<div role="status" aria-live="polite" aria-label="Checking access" className="space-y-4">
-			<Skeleton className="h-8 w-1/3" />
-			<Skeleton className="h-4 w-2/3" />
-			<Skeleton className="h-40 w-full" />
-		</div>
-	);
+	return <MerchantPageSkeleton labels={MERCHANT_ACCESS_LOADING_LABELS} />;
 }
 
 export interface MerchantReadOnlyNoticeProps {
@@ -58,14 +56,16 @@ export interface MerchantCapabilityGateProps {
 	readonly children: React.ReactNode;
 	/** Rendered when denied. Defaults to {@link MerchantAccessDenied}. */
 	readonly fallback?: React.ReactNode;
+	/** Rendered while the membership resolves — the page's own skeleton, so its content lands where it stood. Defaults to {@link MerchantAccessLoading}. */
+	readonly loading?: React.ReactNode;
 }
 
 /** Page/section gate: `<Can>` with the merchant loading state and access-denied fallback. */
-export function MerchantCapabilityGate({ capability, children, fallback }: MerchantCapabilityGateProps): React.JSX.Element {
+export function MerchantCapabilityGate({ capability, children, fallback, loading }: MerchantCapabilityGateProps): React.JSX.Element {
 	const { isLoading } = useMerchantAuthorizationStatus();
 
 	if (isLoading) {
-		return <MerchantAccessLoading />;
+		return <>{loading ?? <MerchantAccessLoading />}</>;
 	}
 
 	return (

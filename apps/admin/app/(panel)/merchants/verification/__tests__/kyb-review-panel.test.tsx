@@ -68,8 +68,10 @@ interface UpdateKybOptionsStub {
 interface AuthStub {
 	readonly api: {
 		readonly rewardsAdmin: {
-			readonly listOrganizations: { readonly useQuery: () => { readonly data: { readonly data: readonly QueueMerchantStub[] }; readonly isLoading: boolean } };
-			readonly getOrganization: { readonly useQuery: () => { readonly data: { readonly data: MerchantDetailStub }; readonly isLoading: boolean; readonly isError: boolean } };
+			readonly listOrganizations: { readonly useQuery: () => { readonly data: { readonly data: readonly QueueMerchantStub[] } | undefined; readonly isLoading: boolean } };
+			readonly getOrganization: {
+				readonly useQuery: () => { readonly data: { readonly data: MerchantDetailStub } | undefined; readonly isLoading: boolean; readonly isError: boolean };
+			};
 			readonly updateKyb: {
 				readonly useMutation: (options: UpdateKybOptionsStub) => { readonly mutate: (input: UpdateKybMutationInputStub) => void; readonly isPending: boolean };
 			};
@@ -85,6 +87,14 @@ vi.mock("@workspace/client/lib/merchant/kyb/document-preview-dialog", () => ({
 vi.mock("@workspace/client/lib/merchant/kyb/stored-document-list", () => ({
 	MerchantKybStoredDocumentList: (): null => null,
 }));
+
+/** Which of the panel's queries are still on their first load. */
+interface KybLoadState {
+	queue: boolean;
+	merchant: boolean;
+}
+
+const kybLoad = vi.hoisted((): KybLoadState => ({ queue: false, merchant: false }));
 
 const { SELECTED_ORG_ID, OTHER_ORG_ID, getOrganizationQuery, updateKybOptions, updateKybMutate } = vi.hoisted(() => ({
 	updateKybMutate: vi.fn<(input: UpdateKybMutationInputStub) => void>(),
@@ -125,15 +135,18 @@ vi.mock("@workspace/client/lib/auth", () => {
 		api: {
 			rewardsAdmin: {
 				listOrganizations: {
-					useQuery: () => ({
-						data: { data: [{ id: OTHER_ORG_ID, businessName: "Moonlight Bakery", kybStatus: "PENDING", city: "MELAKA", category: "FOOD" }] },
-						isLoading: false,
-					}),
+					useQuery: () =>
+						kybLoad.queue
+							? { data: undefined, isLoading: true }
+							: {
+									data: { data: [{ id: OTHER_ORG_ID, businessName: "Moonlight Bakery", kybStatus: "PENDING", city: "MELAKA", category: "FOOD" }] },
+									isLoading: false,
+								},
 				},
 				getOrganization: {
 					useQuery: (...args: readonly object[]) => {
 						getOrganizationQuery(...args);
-						return { data: { data: merchant }, isLoading: false, isError: false };
+						return kybLoad.merchant ? { data: undefined, isLoading: true, isError: false } : { data: { data: merchant }, isLoading: false, isError: false };
 					},
 				},
 				updateKyb: {
@@ -166,6 +179,8 @@ function renderPanel(capabilities: readonly CapabilitySlug[]): ReturnType<typeof
 
 beforeEach(() => {
 	window.history.replaceState(null, "", `${PATH}?organizationId=${SELECTED_ORG_ID}`);
+	kybLoad.queue = false;
+	kybLoad.merchant = false;
 });
 
 afterEach(() => {
@@ -174,6 +189,29 @@ afterEach(() => {
 	updateKybOptions.mockReset();
 	updateKybMutate.mockReset();
 	vi.restoreAllMocks();
+});
+
+describe("KybReviewPanel loading", () => {
+	it("shows queue-item skeletons in the pending queue while it loads", () => {
+		kybLoad.queue = true;
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading pending merchants…");
+		expect(status.querySelector('[data-skeleton="kyb-queue-item"]')).not.toBeNull();
+		expect(screen.queryByText("No merchants are currently pending KYB review.")).toBeNull();
+	});
+
+	it("shows the merchant card's skeleton while the selected merchant loads", () => {
+		kybLoad.merchant = true;
+		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+
+		const status = screen.getByRole("status");
+		expect(status.textContent).toBe("Loading merchant details…");
+		expect(status.querySelector('[data-skeleton="kyb-merchant-card"]')).not.toBeNull();
+		expect(screen.queryByText("Review decision")).toBeNull();
+	});
 });
 
 describe("KybReviewPanel authorization", () => {

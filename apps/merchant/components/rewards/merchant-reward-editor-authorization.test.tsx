@@ -8,6 +8,8 @@ import { MerchantCreateRewardPageView } from "@/components/rewards/merchant-crea
 import { MerchantEditRewardPageView } from "@/components/rewards/merchant-edit-reward-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
+import { MERCHANT_REWARD_EDITOR_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
@@ -100,7 +102,7 @@ describe("MerchantCreateRewardPageView authorization", () => {
 	it("renders the loading state while the membership resolves", () => {
 		renderWithQueryClient(<MerchantCreateRewardPageView orgSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, undefined, true);
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARD_EDITOR_LOADING_LABELS.loading]);
 	});
 });
 

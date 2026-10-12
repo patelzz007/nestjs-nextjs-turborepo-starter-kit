@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { PERMISSION } from "@workspace/shared";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -48,6 +49,7 @@ function renderGuard({ pathname, capabilities, enabledFeatureFlags = [], permiss
 				<div>page-content</div>
 			</RouteAuthorizationGuard>
 		</CapabilitiesProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 
@@ -83,10 +85,13 @@ describe("RouteAuthorizationGuard", () => {
 		expect(screen.queryByText("page-content")).toBeNull();
 	});
 
-	it("renders nothing for a gated route until permissions are resolved", () => {
+	it("shows the content skeleton — never the page or a denial — for a gated route until permissions are resolved", () => {
 		renderGuard({ pathname: "/orders", capabilities: [], permissionsStatus: "loading" });
 		expect(screen.queryByText("page-content")).toBeNull();
 		expect(screen.queryByRole("heading")).toBeNull();
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Checking your access…");
 	});
 
 	it("shows a retryable load failure — not access denied — when the permissions could not be fetched", () => {
@@ -121,9 +126,16 @@ describe("RouteAuthorizationGuard", () => {
 		expect(screen.getByText("page-content")).toBeDefined();
 	});
 
-	it("renders nothing for a super-admin-only route until the identity is resolved", () => {
+	it("shows the content skeleton for a super-admin-only route until the identity is resolved", () => {
 		renderGuard({ pathname: "/users/42", capabilities: [], superAdmin: { isSuperAdmin: false, isResolved: false } });
 		expect(screen.queryByText("page-content")).toBeNull();
 		expect(screen.queryByRole("heading")).toBeNull();
+		expect(screen.getByRole("status").textContent).toBe("Checking your access…");
+	});
+
+	it("shows no loading skeleton once the page renders", () => {
+		renderGuard({ pathname: "/orders/42", capabilities: [PERMISSION.ORDER.MANAGE] });
+		expect(screen.getByText("page-content")).toBeDefined();
+		expect(screen.queryByRole("status")).toBeNull();
 	});
 });

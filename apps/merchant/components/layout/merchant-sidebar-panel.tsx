@@ -178,7 +178,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
 				{activeMembership !== undefined ? (
 					<div className="px-2 pb-2">
-						<div className="min-w-0 overflow-hidden rounded-lg border border-sidebar-border bg-background/60 px-3 py-3">
+						<div className="min-w-0 overflow-hidden rounded-lg border border-border bg-background/60 px-3 py-3">
 							<p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Active store</p>
 							<p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground" title={activeMembership.displayName}>
 								{activeMembership.displayName}

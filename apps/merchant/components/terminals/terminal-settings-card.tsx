@@ -2,6 +2,7 @@
 
 import type { MerchantTerminalSettings } from "@workspace/shared";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Button } from "@workspace/ui/components/button";
 import { Switch } from "@workspace/ui/components/switch";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
@@ -10,6 +11,23 @@ import { AlertTriangle, RotateCw, ShieldCheck } from "lucide-react";
 import * as React from "react";
 
 const REQUIRE_DIALOG_LABELS: UiKitLabelsOverride<"alertDialog"> = { confirm: "Turn on", loading: "Saving…" };
+
+/** What the card's loading region announces. */
+export const TERMINAL_SETTINGS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading terminal settings…" };
+
+/** The policy row's silhouette — its label, the two-line hint and the switch. Bones only: wrap in a `SkeletonRegion`. */
+export function TerminalSettingsRowSkeleton(): React.JSX.Element {
+	return (
+		<div className="flex items-start justify-between gap-4">
+			<div className="flex min-w-0 flex-1 flex-col gap-2">
+				<Skeleton variant="text" className="h-4 w-56 max-w-full" />
+				<Skeleton variant="text" className="h-3.5 w-full max-w-xl" />
+				<Skeleton variant="text" className="h-3.5 w-2/3 max-w-md" />
+			</div>
+			<Skeleton variant="circular" className="h-5 w-9" />
+		</div>
+	);
+}
 
 export interface TerminalSettingsCardProps {
 	/** `undefined` until the settings load. */
@@ -63,13 +81,9 @@ export function TerminalSettingsCard({
 
 			<div className="px-5 py-4">
 				{isLoading ? (
-					<div aria-label="Loading terminal settings" aria-busy="true" className="flex items-center justify-between gap-4">
-						<div className="flex-1 space-y-2">
-							<Skeleton className="h-4 w-56" />
-							<Skeleton className="h-3 w-full max-w-md" />
-						</div>
-						<Skeleton className="h-5 w-9 rounded-full" />
-					</div>
+					<SkeletonRegion labels={TERMINAL_SETTINGS_LOADING_LABELS}>
+						<TerminalSettingsRowSkeleton />
+					</SkeletonRegion>
 				) : isError || settings === undefined ? (
 					<div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
 						<AlertTriangle className="size-4 text-destructive" aria-hidden="true" />

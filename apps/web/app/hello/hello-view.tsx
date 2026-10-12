@@ -9,7 +9,11 @@ import { useCallback, useState, type JSX } from "react";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 
 import { Button } from "@workspace/ui/components/button";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { BreadcrumbTrail } from "@/components/breadcrumb-trail";
+import { HelloProfileSkeleton } from "@/components/loading/hello-profile-skeleton";
+import { PROFILE_EMAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { LogoutButton } from "@/components/logout-button";
@@ -82,17 +86,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 	const user: DisplayUser | null = apiUser ?? storeUserDisplay;
 
 	if (meQuery.isLoading && user === null) {
-		return (
-			<div className="flex min-h-svh items-center justify-center">
-				<div className="flex flex-col items-center gap-4">
-					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24">
-						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-					</svg>
-					<p className="text-sm text-muted-foreground">Loading your profile...</p>
-				</div>
-			</div>
-		);
+		return <HelloProfileSkeleton />;
 	}
 
 	if (meQuery.error && user === null) {
@@ -127,7 +121,13 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 							</svg>
 						</div>
 						<h1 className="mt-4 text-2xl font-bold tracking-tight">Welcome, {user?.fullName ?? "User"}</h1>
-						<p className="mt-1 text-sm text-muted-foreground">{user?.email ?? "Loading..."}</p>
+						{user === null ? (
+							<SkeletonRegion labels={PROFILE_EMAIL_LOADING_LABELS} className="mt-1 flex justify-center">
+								<Skeleton variant="text" className="my-0.5 h-4 w-44" />
+							</SkeletonRegion>
+						) : (
+							<p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
+						)}
 					</div>
 
 					{/* Status badges */}

@@ -1,10 +1,13 @@
 "use client";
 
+import { CLAIM_OPTIONS_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { ClaimFlowBones } from "@/components/loading/reward-detail-skeleton";
 import { formatClaimApiError } from "@/lib/rewards/claim-errors";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { walletClaimPath } from "@/lib/routes";
@@ -147,7 +150,11 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed }: RewardCl
 	}, [claimMutation, onMessage, otp, phone, requiresOtp, rewardId]);
 
 	if (displayStep === "loading") {
-		return <p className="text-sm text-muted-foreground">Loading claim options…</p>;
+		return (
+			<SkeletonRegion labels={CLAIM_OPTIONS_LOADING_LABELS}>
+				<ClaimFlowBones />
+			</SkeletonRegion>
+		);
 	}
 
 	if (displayStep === "legal") {

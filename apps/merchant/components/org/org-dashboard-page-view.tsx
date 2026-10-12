@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantDashboardPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { StatCard } from "@workspace/ui/components/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
@@ -62,7 +63,7 @@ export interface OrgDashboardPageViewProps {
 /** Organization dashboard — requires `merchant:view_dashboard`; shortcuts are shown only for routes the role can use. */
 export function OrgDashboardPageView(props: OrgDashboardPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewDashboard}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewDashboard} loading={<MerchantDashboardPageSkeleton />}>
 			<OrgDashboardPageContent {...props} />
 		</MerchantCapabilityGate>
 	);

@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { ProductForm } from "@/components/catalog/product-form";
+import { CatalogEditorPageSkeleton, PRODUCT_FORM_SHAPE } from "@/components/loading/catalog-skeletons";
+import { PRODUCT_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { toastMutationError, type MutationErrorMessages } from "@/lib/api/mutation-error";
 import { EMPTY_PRODUCT_FORM_VALUES, toProductFormValues } from "@/lib/catalog/form-values";
 import { ROUTES } from "@/lib/routes";
@@ -123,7 +125,7 @@ export function EditProductView({ id, initialProduct }: EditProductViewProps): R
 				Could not load this product.
 			</p>
 		) : (
-			<p className="text-muted-foreground">Loading product…</p>
+			<CatalogEditorPageSkeleton labels={PRODUCT_LOADING_LABELS} shape={PRODUCT_FORM_SHAPE} />
 		);
 	}
 

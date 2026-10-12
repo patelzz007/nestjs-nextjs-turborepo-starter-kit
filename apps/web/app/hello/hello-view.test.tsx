@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { PROFILE_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { TEST_RESPONSE_META, testEnvelope } from "@/test-support/envelope";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { LIST_SLOT_INDEX, epochMs, UserResponseSchema, type Envelope, type UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -76,7 +78,7 @@ afterEach((): void => {
 
 describe("HelloView server-rendered profile", () => {
 	it("seeds /auth/me with the server's profile, stamped with the server's answer time", () => {
-		render(<HelloView initialEnvelope={SERVER_PROFILE} />);
+		render(<HelloView initialEnvelope={SERVER_PROFILE} />, { wrapper: UiKitTestProviders });
 
 		expect(lastMeOptions()).toEqual({ initialData: SERVER_PROFILE, initialDataUpdatedAt: SERVER_ANSWERED_AT });
 	});
@@ -84,9 +86,9 @@ describe("HelloView server-rendered profile", () => {
 	it("never seeds /auth/me with it once the tab crossed a session boundary (sign-out, another member)", () => {
 		session.serverRendered = false;
 
-		render(<HelloView initialEnvelope={SERVER_PROFILE} />);
+		render(<HelloView initialEnvelope={SERVER_PROFILE} />, { wrapper: UiKitTestProviders });
 
 		expect(lastMeOptions()?.initialData).toBeUndefined();
-		expect(screen.getByText("Loading your profile...")).toBeDefined();
+		expect(screen.getByRole("status").textContent).toBe(PROFILE_LOADING_LABELS.loading);
 	});
 });

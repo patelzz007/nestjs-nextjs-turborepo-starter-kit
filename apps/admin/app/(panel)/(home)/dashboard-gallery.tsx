@@ -4,11 +4,11 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 
 import { Button } from "@workspace/ui/components/button";
-import { cn } from "@workspace/ui/lib/core/utils";
 
 import type { AccordionDemoItem } from "@/components/showcase/accordion-showcase";
 import { LazySection } from "@/components/common/lazy-section";
 import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
+import { SectionSkeleton } from "@/components/loading/section-skeleton";
 
 // ── Lazy demo sections ────────────────────────────────────────────────────
 // Every showcase below the fold (chart, table, accordion, …) is code-split so
@@ -16,10 +16,6 @@ import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards"
 // (recharts, react-table, dnd-kit, react-hook-form, …) load in parallel with
 // hydration instead of blocking first paint — LCP and TBT both drop. The
 // `loading` skeletons reserve each section's height, so nothing jumps.
-
-function SectionSkeleton({ height }: { readonly height: string }): React.JSX.Element {
-	return <div role="status" aria-label="Loading section" className={cn("animate-pulse rounded-lg border bg-card", height)} />;
-}
 
 const tableSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-[400px]" />;
 const breadcrumbSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-24" />;

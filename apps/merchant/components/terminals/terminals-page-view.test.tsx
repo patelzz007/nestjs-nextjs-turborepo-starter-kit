@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PAIRING_STATUS_POLL_INTERVAL_MS, TerminalsPageView } from "@/components/terminals/terminals-page-view";
+import { PAIRING_STATUS_POLL_INTERVAL_MS, TERMINAL_STATS_LOADING_LABELS, TerminalsPageView } from "@/components/terminals/terminals-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG, type TenantContextSeed } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, organizationContextFixture, type ContextQueryState } from "@/test/tenant-context";
@@ -26,6 +26,8 @@ import {
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { QueryClient } from "@tanstack/react-query";
+import { TERMINAL_LIST_LOADING_LABELS } from "@/components/terminals/terminal-list";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 const {
 	terminalsListQuery,
@@ -314,7 +316,10 @@ describe("TerminalsPageView list", () => {
 	it("shows a skeleton while loading, an empty state with a call to action, and a retry on error", () => {
 		listState = { isPending: true };
 		renderAsAdmin();
-		expect(screen.getByRole("list", { name: "Loading terminals" }).getAttribute("aria-busy")).toBe("true");
+		// The totals and the list load as two surfaces, each announced once; no "—" stands in for a count.
+		expect(busyRegionAnnouncements()).toEqual([TERMINAL_STATS_LOADING_LABELS.loading, TERMINAL_LIST_LOADING_LABELS.loading]);
+		expect(screen.queryByText("Stores covered")).toBeNull();
+		expect(screen.queryByRole("list", { name: "Terminals" })).toBeNull();
 		cleanup();
 
 		listState = { terminals: [] };

@@ -1,8 +1,9 @@
 "use client";
 
 import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
+import { MerchantRewardsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-catalog";
-import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewards-summary-strip";
+import { MerchantRewardsSummaryStrip, MerchantRewardsSummaryStripSkeleton } from "@/components/rewards/merchant-rewards-summary-strip";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { useMerchantLocation } from "@/features/tenant-context/facade";
@@ -31,7 +32,7 @@ export interface MerchantRewardsPageViewProps {
 /** Rewards catalog route — requires `merchant:view_rewards` (list endpoint); create CTAs need `merchant:manage_rewards`. */
 export function MerchantRewardsPageView({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<MerchantRewardsPageSkeleton />}>
 			<MerchantRewardsPageContent orgSlug={orgSlug} />
 		</MerchantCapabilityGate>
 	);
@@ -110,7 +111,14 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 
 			{canManageRewards ? null : <MerchantReadOnlyNotice>Your role can view rewards but not create, edit, or submit them for review.</MerchantReadOnlyNotice>}
 
-			<MerchantRewardsSummaryStrip items={summaryItems} />
+			{isLoading ? (
+				// Figures of a catalog not loaded yet would read as zeros; the catalog's region below announces the load.
+				<div aria-hidden="true">
+					<MerchantRewardsSummaryStripSkeleton />
+				</div>
+			) : (
+				<MerchantRewardsSummaryStrip items={summaryItems} />
+			)}
 
 			{showError ? (
 				<MerchantEmptyState

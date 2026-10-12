@@ -5,6 +5,8 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
 import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
+import { KYB_MERCHANT_LOADING_LABELS, KYB_QUEUE_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { KybMerchantCardSkeleton, KybQueueItemsSkeleton } from "@/components/loading/merchant-skeletons";
 import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "@workspace/client/lib/merchant/kyb/document-preview-dialog";
 import { openExternalDocument, triggerBrowserDownload } from "@workspace/client/lib/merchant/kyb/document-utils";
 import { MerchantKybStoredDocumentList } from "@workspace/client/lib/merchant/kyb/stored-document-list";
@@ -25,7 +27,7 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Label } from "@workspace/ui/components/label";
 import { Separator } from "@workspace/ui/components/separator";
-import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -364,10 +366,9 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 					</CardHeader>
 					<CardContent className="grid gap-2">
 						{pendingMerchantsQuery.isLoading ? (
-							<div className="grid gap-2">
-								<Skeleton className="h-16 w-full rounded-xl" />
-								<Skeleton className="h-16 w-full rounded-xl" />
-							</div>
+							<SkeletonRegion labels={KYB_QUEUE_LOADING_LABELS} className="grid gap-2">
+								<KybQueueItemsSkeleton />
+							</SkeletonRegion>
 						) : null}
 						{!pendingMerchantsQuery.isLoading && pendingMerchants.length === 0 ? (
 							<p className="text-sm text-muted-foreground">No merchants are currently pending KYB review.</p>
@@ -399,13 +400,9 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 					) : null}
 
 					{organizationId.length > 0 && merchantDetailQuery.isLoading ? (
-						<Card>
-							<CardContent className="grid gap-4 py-6">
-								<Skeleton className="h-6 w-48" />
-								<Skeleton className="h-24 w-full" />
-								<Skeleton className="h-24 w-full" />
-							</CardContent>
-						</Card>
+						<SkeletonRegion labels={KYB_MERCHANT_LOADING_LABELS}>
+							<KybMerchantCardSkeleton />
+						</SkeletonRegion>
 					) : null}
 
 					{organizationId.length > 0 && merchantDetailQuery.isError ? (

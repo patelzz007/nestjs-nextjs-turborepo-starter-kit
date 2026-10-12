@@ -4,7 +4,8 @@ import * as React from "react";
 
 import { hasGlobalConstructor } from "@workspace/shared";
 import { useIsClient } from "@workspace/ui/hooks/use-is-client";
-import { cn } from "@workspace/ui/lib/core/utils";
+
+import { SectionBones } from "@/components/loading/section-skeleton";
 
 export interface LazySectionProps {
 	/** Reserved height while hidden (prevents layout shift, e.g. `h-40`). */
@@ -22,10 +23,14 @@ export interface LazySectionProps {
 /**
  * Viewport-triggered mounting for below-the-fold sections.
  *
- * Renders a fixed-height skeleton until an `IntersectionObserver` reports the
+ * Renders fixed-height section bones until an `IntersectionObserver` reports the
  * wrapper is near the viewport (default: within 300px), then mounts `children`
  * with a fade + slide-up reveal animation. Once revealed it stays mounted (no
  * unmount-on-scroll-away), so scrolling back up never re-triggers a load.
+ *
+ * The bones are hidden from assistive technology: nothing is loading yet, so
+ * there is nothing to announce. Once the section mounts, a `next/dynamic`
+ * child announces its own load (`SectionSkeleton`, an announced region).
  *
  * This sits OUTSIDE the `next/dynamic` boundary: the heavy chunk for the
  * section still only downloads/parses when the dynamic component is first
@@ -70,8 +75,14 @@ export function LazySection({ height, children, rootMargin = "300px 0px" }: Lazy
 	}, [visible, rootMargin]);
 
 	return (
-		<div ref={containerRef} className={visible ? undefined : cn(height, "animate-pulse rounded-lg border bg-card")}>
-			{visible ? <div className="animate-in duration-300 fill-mode-both fade-in slide-in-from-bottom-2">{children}</div> : null}
+		<div ref={containerRef}>
+			{visible ? (
+				<div className="animate-in duration-300 fill-mode-both fade-in slide-in-from-bottom-2">{children}</div>
+			) : (
+				<div aria-hidden="true">
+					<SectionBones height={height} />
+				</div>
+			)}
 		</div>
 	);
 }

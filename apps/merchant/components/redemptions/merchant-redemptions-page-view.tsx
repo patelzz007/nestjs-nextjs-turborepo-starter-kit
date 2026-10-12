@@ -2,6 +2,13 @@
 
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
+import {
+	MERCHANT_REDEMPTIONS_LOADING_LABELS,
+	MerchantRedemptionsPageSkeleton,
+	REDEMPTION_STAT_CARDS,
+	RedemptionRowsSkeleton,
+} from "@/components/loading/merchant-page-skeletons";
+import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
@@ -19,6 +26,7 @@ import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { formatEpochMs, toIsoTimestamp } from "@workspace/ui/lib/format/date-time";
 import { CalendarClock, Receipt, ScanLine } from "lucide-react";
 import * as React from "react";
@@ -36,7 +44,7 @@ export interface MerchantRedemptionsPageViewProps {
 /** Redemptions route — requires `merchant:view_redemptions` (redemptions endpoint); the query mounts only when allowed. */
 export function MerchantRedemptionsPageView(props: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRedemptions}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRedemptions} loading={<MerchantRedemptionsPageSkeleton />}>
 			<MerchantRedemptionsPageViewContent {...props} />
 		</MerchantCapabilityGate>
 	);
@@ -86,25 +94,34 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today
 			<MerchantPageHeader title="Redemptions" description="Recent POS redemptions for the selected store — newest first." />
 			<MerchantLocationScopeBanner filteredNote="Redemptions at this store only." allStoresNote="Showing redemptions across every store you can access." />
 
-			<div className="grid gap-4 sm:grid-cols-2">
-				<StatCard
-					label="Showing"
-					tone="brand"
-					value={String(rows.length)}
-					hint={isFirstPage ? "Latest page of activity" : `Page ${String(urlState.page)} of activity`}
-					icon={<Receipt className="size-4" aria-hidden="true" />}
-				/>
-				<StatCard
-					label="Today"
-					tone="teal"
-					value={todayValue}
-					hint={todayQuery.isError ? "Couldn't load today's count" : "Redeemed since midnight, store time"}
-					icon={<CalendarClock className="size-4" aria-hidden="true" />}
-				/>
-			</div>
+			{isLoading ? (
+				// A page not loaded yet would count as zero; the log's region below announces the load.
+				<div aria-hidden="true">
+					<MerchantStatCardsSkeleton count={REDEMPTION_STAT_CARDS} className="sm:grid-cols-2" />
+				</div>
+			) : (
+				<div className="grid gap-4 sm:grid-cols-2">
+					<StatCard
+						label="Showing"
+						tone="brand"
+						value={String(rows.length)}
+						hint={isFirstPage ? "Latest page of activity" : `Page ${String(urlState.page)} of activity`}
+						icon={<Receipt className="size-4" aria-hidden="true" />}
+					/>
+					<StatCard
+						label="Today"
+						tone="teal"
+						value={todayValue}
+						hint={todayQuery.isError ? "Couldn't load today's count" : "Redeemed since midnight, store time"}
+						icon={<CalendarClock className="size-4" aria-hidden="true" />}
+					/>
+				</div>
+			)}
 
 			{isLoading ? (
-				<p className="text-sm text-muted-foreground">Loading redemptions…</p>
+				<SkeletonRegion labels={MERCHANT_REDEMPTIONS_LOADING_LABELS}>
+					<RedemptionRowsSkeleton />
+				</SkeletonRegion>
 			) : rows.length === 0 && !isFirstPage ? (
 				<MerchantEmptyState
 					title="No redemptions on this page"

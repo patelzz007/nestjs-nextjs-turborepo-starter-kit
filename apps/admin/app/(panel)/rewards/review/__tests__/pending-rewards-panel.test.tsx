@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { LIST_SLOT_INDEX, ApiPaginatedMetaSchema, PERMISSION, type ApiPaginatedMeta } from "@workspace/shared";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -90,6 +91,7 @@ function renderPanel(): void {
 				<PendingRewardsPanel />
 			</CapabilitiesProvider>
 		</QueryClientProvider>,
+		{ wrapper: UiKitTestProviders },
 	);
 }
 
@@ -120,6 +122,18 @@ describe("PendingRewardsPanel", () => {
 		renderPanel();
 
 		expect(pendingQuery.mock.lastCall?.[LIST_SLOT_INDEX.first]).toMatchObject({ page: 2, limit: 10 });
+	});
+
+	it("shows reward-card skeletons inside the queue card while the first page loads", () => {
+		pendingQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch });
+		renderPanel();
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading pending rewards…");
+		expect(status.querySelector('[data-skeleton="pending-reward"]')).not.toBeNull();
+		expect(screen.queryByText("No rewards waiting for review.")).toBeNull();
+		expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
 	});
 
 	it("shows a retryable error — not 'no rewards' — when the queue fails to load", () => {

@@ -51,6 +51,20 @@ describe("initMermaid", () => {
 		expect(block?.textContent).toBe("graph TD; A-->B");
 	});
 
+	it("marks diagrams busy while they render, and clears it once drawn", async () => {
+		const run = Promise.withResolvers<undefined>();
+		mermaidApi.run.mockReturnValue(run.promise);
+		const { initMermaid } = await import("./mermaid");
+		initMermaid();
+		const block = document.querySelector<HTMLElement>("pre.mermaid");
+		expect(block?.getAttribute("aria-busy")).toBe("true");
+
+		run.resolve(undefined);
+		await vi.waitFor(() => {
+			expect(block?.hasAttribute("aria-busy")).toBe(false);
+		});
+	});
+
 	it("flags diagrams that fail to render", async () => {
 		mermaidApi.run.mockRejectedValue(new Error("bad diagram"));
 		const { initMermaid } = await import("./mermaid");
@@ -58,5 +72,6 @@ describe("initMermaid", () => {
 		await vi.waitFor(() => {
 			expect(document.querySelector<HTMLElement>("pre.mermaid")?.dataset.error).toBe("true");
 		});
+		expect(document.querySelector<HTMLElement>("pre.mermaid")?.hasAttribute("aria-busy")).toBe(false);
 	});
 });

@@ -4,6 +4,8 @@ import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readP
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { REFEREES_LOADING_LABELS, REFERRAL_CODE_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { RefereeRowsBones, ReferralCodeBones } from "@/components/loading/referrals-skeleton";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
@@ -18,6 +20,7 @@ import {
 } from "@workspace/shared";
 import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
 import { Button } from "@workspace/ui/components/button";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { Check, ChevronLeft, ChevronRight, Copy, Hourglass, UserPlus } from "lucide-react";
 import * as React from "react";
@@ -121,30 +124,34 @@ export function SignupReferralPageView({ initialDashboard, initialReferees }: Si
 					<div className="pointer-events-none absolute -top-10 -right-8 text-[7rem] font-semibold tracking-tighter text-primary/10" aria-hidden="true">
 						RH
 					</div>
-					<div className="relative space-y-5">
-						<p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-							{dashboard === undefined ? "Loading your code…" : CODE_STATE_MESSAGES[dashboard.codeState]}
-						</p>
-						<div className="flex flex-wrap items-end gap-4">
-							<div className="space-y-1">
-								<p className="text-xs text-muted-foreground">Your referral code</p>
-								<p className="font-mono text-3xl font-semibold tracking-[0.35em] text-foreground sm:text-4xl">{dashboard?.code ?? "········"}</p>
+					{dashboard === undefined ? (
+						<SkeletonRegion labels={REFERRAL_CODE_LOADING_LABELS} className="relative">
+							<ReferralCodeBones />
+						</SkeletonRegion>
+					) : (
+						<div className="relative space-y-5">
+							<p className="max-w-md text-sm leading-relaxed text-muted-foreground">{CODE_STATE_MESSAGES[dashboard.codeState]}</p>
+							<div className="flex flex-wrap items-end gap-4">
+								<div className="space-y-1">
+									<p className="text-xs text-muted-foreground">Your referral code</p>
+									<p className="font-mono text-3xl font-semibold tracking-[0.35em] text-foreground sm:text-4xl">{dashboard.code ?? "········"}</p>
+								</div>
+								{codeStateBadge(dashboard.codeState)}
+								{shareableCode !== null ? (
+									<Button type="button" variant="secondary" size="sm" onClick={handleCopy} className="gap-2">
+										{copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
+										{copied ? "Copied" : "Copy code"}
+									</Button>
+								) : null}
 							</div>
-							{dashboard === undefined ? null : codeStateBadge(dashboard.codeState)}
-							{shareableCode !== null ? (
-								<Button type="button" variant="secondary" size="sm" onClick={handleCopy} className="gap-2">
-									{copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
-									{copied ? "Copied" : "Copy code"}
-								</Button>
+							{dashboard.expiresAt !== null ? (
+								<p className="flex items-center gap-2 text-xs text-muted-foreground">
+									<Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
+									{dashboard.codeState === "expired" ? "Expired" : "Valid until"} {formatEpochMs(dashboard.expiresAt, "dateTime", PLATFORM_DISPLAY_REGION)}
+								</p>
 							) : null}
 						</div>
-						{dashboard?.expiresAt !== null && dashboard?.expiresAt !== undefined ? (
-							<p className="flex items-center gap-2 text-xs text-muted-foreground">
-								<Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
-								{dashboard.codeState === "expired" ? "Expired" : "Valid until"} {formatEpochMs(dashboard.expiresAt, "dateTime", PLATFORM_DISPLAY_REGION)}
-							</p>
-						) : null}
-					</div>
+					)}
 				</WebSurfacePanel>
 
 				<WebSurfacePanel className="flex flex-col justify-between gap-4 p-6">
@@ -160,7 +167,11 @@ export function SignupReferralPageView({ initialDashboard, initialReferees }: Si
 				<div className="border-b border-border px-6 py-4">
 					<h2 className="text-base font-semibold text-foreground">Registered with your code</h2>
 				</div>
-				{referees.length === 0 ? (
+				{refereesQuery.isLoading ? (
+					<SkeletonRegion labels={REFEREES_LOADING_LABELS}>
+						<RefereeRowsBones />
+					</SkeletonRegion>
+				) : referees.length === 0 ? (
 					<WebEmptyState
 						icon={<UserPlus className="size-8" aria-hidden="true" />}
 						title="No one has registered with your code yet."

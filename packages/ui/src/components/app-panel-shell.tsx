@@ -24,6 +24,8 @@ export interface AppPanelShellProps {
 	readonly mainClassName?: string;
 	readonly sidebarOpen?: boolean;
 	readonly onSidebarOpenChange?: (open: boolean) => void;
+	/** Uncontrolled only: whether the sidebar starts open (default true) — e.g. a loading shell that mirrors the saved state. */
+	readonly defaultSidebarOpen?: boolean;
 	readonly sidebarBadges?: Readonly<Record<string, string | number>>;
 	/** Per-usage overrides of the `sidebar` family's copy (toggle, mobile sheet) from `UiKitLabelsProvider`. */
 	readonly sidebarLabels?: UiKitLabelsOverride<"sidebar">;
@@ -67,6 +69,7 @@ export const AppPanelShell = React.forwardRef<HTMLDivElement, AppPanelShellProps
 		mainClassName,
 		sidebarOpen,
 		onSidebarOpenChange,
+		defaultSidebarOpen = true,
 		sidebarBadges = NO_SIDEBAR_BADGES,
 		sidebarLabels,
 		scrollResetKey,
@@ -99,7 +102,7 @@ export const AppPanelShell = React.forwardRef<HTMLDivElement, AppPanelShellProps
 	return (
 		<div ref={ref} data-slot="app-panel-shell" className={cn("min-h-svh text-foreground", shellClassName)}>
 			<SidebarProvider
-				defaultOpen={sidebarOpen ?? true}
+				defaultOpen={sidebarOpen ?? defaultSidebarOpen}
 				open={isControlledSidebar ? sidebarOpen : undefined}
 				onOpenChange={isControlledSidebar ? onSidebarOpenChange : undefined}
 				labels={sidebarLabels}

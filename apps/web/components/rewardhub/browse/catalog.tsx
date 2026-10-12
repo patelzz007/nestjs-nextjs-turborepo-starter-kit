@@ -2,11 +2,14 @@
 
 import { RewardCard } from "@/components/rewardhub/browse/card";
 import { RewardListRow } from "@/components/rewardhub/browse/list-row";
+import { REWARDS_CATALOG_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { RewardCatalogBones } from "@/components/loading/reward-catalog-skeleton";
 import { RewardsViewToggle, type RewardsViewToggleLabels } from "@workspace/client/lib/features/ui-preferences/rewards-view-toggle";
-import { useRewardsViewMode, useUiPreferencesCommands, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
+import { useRewardsViewMode, useUiPreferencesCommands } from "@workspace/client/lib/features/ui-preferences/facade";
 import type { RewardResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
 import { ROUTE_PREFIXES } from "@/lib/routes";
@@ -23,26 +26,6 @@ export interface RewardHubCatalogProps {
 	readonly detailPathPrefix?: string;
 }
 
-function CatalogSkeleton({ viewMode }: { readonly viewMode: RewardsViewMode }): React.JSX.Element {
-	if (viewMode === "list") {
-		return (
-			<div className="space-y-2">
-				{Array.from({ length: 5 }, (_, index) => (
-					<Skeleton key={index} className="h-16 w-full rounded-xl" />
-				))}
-			</div>
-		);
-	}
-
-	return (
-		<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-			{Array.from({ length: 6 }, (_, index) => (
-				<Skeleton key={index} className="h-80 w-full rounded-2xl" />
-			))}
-		</div>
-	);
-}
-
 /** Consumer rewards collection with grid/list toggle and cursor pagination. */
 export function RewardHubCatalog({
 	rewards,
@@ -56,20 +39,25 @@ export function RewardHubCatalog({
 	const viewMode = useRewardsViewMode();
 	const { changeRewardsViewMode } = useUiPreferencesCommands();
 
-	const resultLabel = isLoading ? "Loading offers…" : `Showing ${String(rewards.length)} offers`;
-
 	return (
 		<section className="space-y-4" aria-label="Rewards catalog">
 			<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/25 px-4 py-3">
 				<div className="min-w-0">
-					<p className="text-sm font-medium text-foreground">{resultLabel}</p>
+					{/* While loading, the count is a bone; the catalog's skeleton region below announces the load. */}
+					{isLoading ? (
+						<Skeleton aria-hidden="true" variant="text" className="my-0.5 h-4 w-32" />
+					) : (
+						<p className="text-sm font-medium text-foreground">{`Showing ${String(rewards.length)} offers`}</p>
+					)}
 					<p className="text-xs text-muted-foreground">Switch layout to compare offers at a glance.</p>
 				</div>
 				<RewardsViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} labels={VIEW_TOGGLE_LABELS} />
 			</div>
 
 			{isLoading ? (
-				<CatalogSkeleton viewMode={viewMode} />
+				<SkeletonRegion labels={REWARDS_CATALOG_LOADING_LABELS}>
+					<RewardCatalogBones viewMode={viewMode} />
+				</SkeletonRegion>
 			) : viewMode === "grid" ? (
 				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 					{rewards.map((reward) => (

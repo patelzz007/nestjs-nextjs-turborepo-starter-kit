@@ -6,7 +6,10 @@ import type { Envelope, RewardClaimResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { WALLET_CLAIMS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { MyClaimsPageView } from "@/components/rewardhub/claims/my-claims-page-view";
+import { expectSingleLoadingStatus } from "@/test-support/skeleton";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { WALLET_CLAIMS_PAGE_SIZE } from "@/lib/url-state/wallet-claims";
 import { buildRewardClaimResponse, claimsPageEnvelope } from "@/test-support/claim";
 
@@ -71,7 +74,7 @@ function statValue(label: string): string | null | undefined {
 
 function renderAt(query: string): void {
 	window.history.replaceState(null, "", `${PATH}${query}`);
-	render(<MyClaimsPageView initialPage={{ stateKey: "", data: PAGE_ONE }} initialReadyCount={READY_COUNT} />);
+	render(<MyClaimsPageView initialPage={{ stateKey: "", data: PAGE_ONE }} initialReadyCount={READY_COUNT} />, { wrapper: UiKitTestProviders });
 }
 
 beforeEach((): void => {
@@ -122,6 +125,14 @@ describe("MyClaimsPageView", () => {
 		renderAt("");
 
 		expect(statValue("Ready to redeem")).toBe("—");
+	});
+
+	it("shows claim-row skeletons, announced once, while the page of claims loads", () => {
+		answer({ data: undefined, isLoading: true, isError: false, refetch }, loaded(READY_COUNT));
+		renderAt("");
+
+		expectSingleLoadingStatus(WALLET_CLAIMS_LOADING_LABELS.loading);
+		expect(screen.queryByText("No claims yet")).toBeNull();
 	});
 
 	it("shows a distinct error state with a retry when the claims cannot be loaded", () => {

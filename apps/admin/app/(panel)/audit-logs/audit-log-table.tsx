@@ -21,7 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Loader2, RefreshCw, X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -34,6 +34,8 @@ import {
 	describeClientSoftware,
 } from "@/components/audit-logs/audit-log-badges";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
+import { AUDIT_LOG_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { AUDIT_LOG_TABLE_PAGE, TablePageSkeleton } from "@/components/loading/table-page-skeleton";
 import {
 	AUDIT_AUTH_METHOD_LABELS,
 	AUDIT_HTTP_METHOD_LABELS,
@@ -317,14 +319,7 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 	}, [logQuery]);
 
 	if (logQuery.isLoading && rows.length === 0) {
-		return (
-			<div className="flex min-h-[60vh] items-center justify-center">
-				<div className="flex flex-col items-center gap-3 text-muted-foreground">
-					<Loader2 className="size-6 animate-spin" />
-					<p className="text-sm">Loading audit log…</p>
-				</div>
-			</div>
-		);
+		return <TablePageSkeleton labels={AUDIT_LOG_LOADING_LABELS} shape={AUDIT_LOG_TABLE_PAGE} />;
 	}
 
 	if (logQuery.error !== null && rows.length === 0) {

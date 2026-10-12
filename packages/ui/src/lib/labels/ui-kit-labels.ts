@@ -19,6 +19,7 @@ import type { LockoutCountdownLabels } from "../../components/lockout-countdown"
 import type { PasswordInputLabels } from "../../components/password-input";
 import type { PasswordStrengthMeterLabels } from "../../components/password-strength-meter";
 import type { SelectLabels } from "../../components/select-context";
+import type { SkeletonRegionLabels } from "../../components/skeleton-region";
 import type { TimeSeriesChartLabels } from "../../components/time-series-chart";
 import type { ToastLabels } from "../../components/toast";
 import type { DataTableLabels } from "../data-table/labels";
@@ -84,6 +85,7 @@ export interface UiKitLabels {
 	readonly sheet: SheetLabels;
 	readonly shellThemeToggle: ShellThemeToggleLabels;
 	readonly sidebar: SidebarLabels;
+	readonly skeletonRegion: SkeletonRegionLabels;
 	readonly timeSeriesChart: TimeSeriesChartLabels;
 	readonly toast: ToastLabels;
 }

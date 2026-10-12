@@ -5,7 +5,7 @@ import { PLATFORM_DISPLAY_REGION, type Session } from "@workspace/shared";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
-import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { LogOut, ShieldAlert } from "lucide-react";
@@ -16,10 +16,8 @@ import { catchCaught } from "../../caught";
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
 import { DeviceSessionRow } from "./device-session-row";
+import { SignedInDevicesSkeleton } from "./signed-in-devices-skeleton";
 import { SIGNED_IN_DEVICES_LABELS, type SignedInDevicesLabels } from "./signed-in-devices-labels";
-
-/** Placeholder rows while the list loads. */
-const LOADING_ROW_COUNT = 2;
 
 export interface SignedInDevicesSectionProps {
 	/** The section's copy; English by default. */
@@ -53,6 +51,7 @@ export function SignedInDevicesSection({ labels = SIGNED_IN_DEVICES_LABELS }: Si
 	/** The session whose revoke is in flight, if any. */
 	const revokingSessionId: string | null = isRevoking ? (deviceToRevoke?.id ?? null) : null;
 	const revokeDialogLabels = useMemo((): UiKitLabelsOverride<"alertDialog"> => ({ confirm: labels.revokeConfirm, loading: labels.revokePending }), [labels]);
+	const loadingLabels = useMemo((): UiKitLabelsOverride<"skeletonRegion"> => ({ loading: labels.loading }), [labels]);
 	const signOutEverywhereDialogLabels = useMemo(
 		(): UiKitLabelsOverride<"alertDialog"> => ({ confirm: labels.signOutEverywhereConfirm, loading: labels.signOutEverywherePending }),
 		[labels],
@@ -122,11 +121,9 @@ export function SignedInDevicesSection({ labels = SIGNED_IN_DEVICES_LABELS }: Si
 	return (
 		<div className="space-y-4">
 			{sessionsQuery.isPending ? (
-				<div className="space-y-3" role="status" aria-label={labels.loading}>
-					{Array.from({ length: LOADING_ROW_COUNT }, (_, index): JSX.Element => (
-						<Skeleton key={index} className="h-20 w-full" />
-					))}
-				</div>
+				<SkeletonRegion labels={loadingLabels}>
+					<SignedInDevicesSkeleton />
+				</SkeletonRegion>
 			) : sessionsQuery.isError ? (
 				<Alert variant="destructive">
 					<AlertTitle>{labels.loadErrorTitle}</AlertTitle>

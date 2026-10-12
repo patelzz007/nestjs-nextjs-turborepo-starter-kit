@@ -7,6 +7,7 @@ import { memo, useCallback, useMemo } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@workspace/ui/components/breadcrumb";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import type { BreadcrumbItem as BreadcrumbItemData, BreadcrumbStatus } from "@workspace/ui/components/breadcrumb-context";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
@@ -212,11 +213,11 @@ const HiddenCrumbsPopover = memo(function HiddenCrumbsPopover({ hidden, renderLi
 function BreadcrumbSkeleton(): React.JSX.Element {
 	return (
 		<div className="flex items-center gap-1.5 sm:gap-2.5" aria-hidden="true">
-			<div className="h-4 w-20 animate-pulse rounded bg-muted" />
+			<Skeleton variant="text" className="h-4 w-20" />
 			<div className="size-3.5 text-muted-foreground/30">
 				<ChevronSeparator />
 			</div>
-			<div className="h-4 w-28 animate-pulse rounded bg-muted" />
+			<Skeleton variant="text" className="h-4 w-28" />
 		</div>
 	);
 }

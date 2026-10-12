@@ -13,9 +13,12 @@ import {
 } from "@workspace/shared";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
+import { STORE_REQUEST_QUEUE_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { StoreRequestRowsSkeleton } from "@/components/loading/merchant-skeletons";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, MapPin } from "lucide-react";
@@ -142,7 +145,11 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2">
-						{requestsQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading requests…</p> : null}
+						{requestsQuery.isLoading ? (
+							<SkeletonRegion labels={STORE_REQUEST_QUEUE_LOADING_LABELS} className="flex flex-col gap-2">
+								<StoreRequestRowsSkeleton />
+							</SkeletonRegion>
+						) : null}
 						{requests.length === 0 && !requestsQuery.isLoading ? <p className="text-sm text-muted-foreground">No pending store requests.</p> : null}
 						{requests.map((request) => (
 							<LocationRequestRow key={request.id} request={request} isSelected={selectedRequest?.id === request.id} onSelect={handleSelectRequest} />

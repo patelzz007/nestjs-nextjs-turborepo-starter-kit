@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { AdminAccessDenied } from "@/components/access/admin-access-denied";
+import { ROUTE_ACCESS_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { PanelContentSkeleton } from "@/components/loading/panel-skeletons";
 import { isOpenRouteRule, isRouteRuleSatisfied, resolveRouteAuthorization, type RouteAuthorizationRule } from "@/lib/navigation/route-authorization";
 import type { SessionPermissionsStatus } from "@/lib/session/capabilities";
 import type { SuperAdminStatus } from "@/lib/session/super-admin";
@@ -15,7 +17,7 @@ const NOT_SUPER_ADMIN: SuperAdminStatus = { isSuperAdmin: false, isResolved: tru
 export interface RouteAuthorizationGuardProps {
 	readonly rules: readonly RouteAuthorizationRule[];
 	readonly enabledFeatureFlags: readonly string[];
-	/** Whether the session permissions are known — `loading` renders nothing (no denied-state flash), `failed` offers a retry. */
+	/** Whether the session permissions are known — `loading` renders the content-area skeleton (no denied-state flash), `failed` offers a retry. */
 	readonly permissionsStatus: SessionPermissionsStatus;
 	/** Refetches the session permissions after a failure. */
 	readonly onRetryPermissions: () => void;
@@ -38,7 +40,7 @@ export function RouteAuthorizationGuard({
 	onRetryPermissions,
 	superAdmin = NOT_SUPER_ADMIN,
 	children,
-}: RouteAuthorizationGuardProps): React.JSX.Element | null {
+}: RouteAuthorizationGuardProps): React.JSX.Element {
 	const pathname = usePathname();
 	const { can } = useAuthorization();
 	const rule = React.useMemo(() => resolveRouteAuthorization(rules, pathname), [rules, pathname]);
@@ -50,7 +52,7 @@ export function RouteAuthorizationGuard({
 		return <PermissionsLoadFailed onRetry={onRetryPermissions} />;
 	}
 	if (permissionsStatus === "loading" || (rule.superAdminOnly === true && !superAdmin.isResolved)) {
-		return null;
+		return <PanelContentSkeleton labels={ROUTE_ACCESS_LOADING_LABELS} />;
 	}
 	if (!isRouteRuleSatisfied(rule, can, enabledFeatureFlags, superAdmin.isSuperAdmin)) {
 		return <AdminAccessDenied />;

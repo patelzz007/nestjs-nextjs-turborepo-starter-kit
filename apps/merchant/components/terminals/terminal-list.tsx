@@ -1,22 +1,24 @@
 "use client";
 
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
+import { MerchantGridRowsSkeleton } from "@/components/loading/merchant-skeleton-parts";
+import { TERMINAL_ROW_ACTIONS, TERMINAL_ROW_GRID, TERMINAL_ROW_TEXT_CELLS } from "@/components/terminals/terminal-row-grid";
 import { describeTerminalStatus, pairingActionLabel, type TerminalStatusTone } from "@/lib/terminals/terminal-summary";
 import { PLATFORM_DISPLAY_REGION, type MerchantTerminalSummary } from "@workspace/shared";
 import { CodeBlockCopyButton } from "@workspace/ui/components/code-block";
 import { RelativeTime } from "@workspace/ui/components/relative-time";
-import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { AlertTriangle, Clock, MapPin, MonitorSmartphone, Plus, RotateCw } from "lucide-react";
 import * as React from "react";
 
-/** Column layout shared by the header and every row (stacked below `lg`). */
-const ROW_GRID = "grid gap-3 px-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto] lg:items-center lg:gap-4";
-
 /** Rows shown while the first page loads (matches a typical small fleet of tills). */
 const SKELETON_ROWS = 3;
+
+/** What the list's loading region announces. */
+export const TERMINAL_LIST_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading terminals…" };
 
 const TONE_TEXT: Readonly<Record<TerminalStatusTone, string>> = {
 	success: "text-success",
@@ -68,7 +70,8 @@ export function TerminalList({
 	onRemoveRequest,
 	truncationNote,
 }: TerminalListProps): React.JSX.Element {
-	const showColumnHeader = !isLoading && !isError && terminals.length > 0;
+	// Drawn while the rows load too, so the loaded rows land under it without a jump.
+	const showColumnHeader = !isError && (isLoading || terminals.length > 0);
 
 	return (
 		<section aria-labelledby="terminal-list-heading" className="rounded-xl border border-border bg-card shadow-xs">
@@ -84,7 +87,7 @@ export function TerminalList({
 			{showColumnHeader ? (
 				<div
 					aria-hidden="true"
-					className={cn(ROW_GRID, "hidden border-b border-border bg-muted/40 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase lg:grid")}>
+					className={cn(TERMINAL_ROW_GRID, "hidden border-b border-border bg-muted/40 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase lg:grid")}>
 					<span>Terminal</span>
 					<span>Terminal ID</span>
 					<span>Store</span>
@@ -95,17 +98,9 @@ export function TerminalList({
 
 			<div>
 				{isLoading ? (
-					<ul aria-label="Loading terminals" aria-busy="true" className="space-y-2 p-3">
-						{Array.from({ length: SKELETON_ROWS }, (_, index: number) => (
-							<li key={index} className="flex items-center gap-3 rounded-lg px-3 py-3">
-								<Skeleton className="size-10 rounded-lg" />
-								<div className="flex-1 space-y-2">
-									<Skeleton className="h-4 w-40" />
-									<Skeleton className="h-3 w-64" />
-								</div>
-							</li>
-						))}
-					</ul>
+					<SkeletonRegion labels={TERMINAL_LIST_LOADING_LABELS}>
+						<MerchantGridRowsSkeleton rows={SKELETON_ROWS} rowGridClassName={TERMINAL_ROW_GRID} textCells={TERMINAL_ROW_TEXT_CELLS} actions={TERMINAL_ROW_ACTIONS} />
+					</SkeletonRegion>
 				) : isError ? (
 					<div role="alert" className="flex flex-col items-center gap-3 px-6 py-12 text-center">
 						<AlertTriangle className="size-6 text-destructive" aria-hidden="true" />
@@ -173,7 +168,7 @@ function TerminalRow({ terminal, isIssuingCode, isRemoving, onPairRequest, onRem
 	}, [onRemoveRequest, terminal]);
 
 	return (
-		<li className={cn(ROW_GRID, "py-4 transition-colors hover:bg-muted/30 motion-reduce:transition-none")}>
+		<li className={cn(TERMINAL_ROW_GRID, "py-4 transition-colors hover:bg-muted/30 motion-reduce:transition-none")}>
 			<div className="flex min-w-0 items-center gap-3">
 				<span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg border", TONE_TILE[status.tone])}>
 					<MonitorSmartphone className="size-5" aria-hidden="true" />

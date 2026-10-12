@@ -3,7 +3,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MerchantApiKeysPageView } from "@/components/api-keys/merchant-api-keys-page-view";
+import { API_KEY_STATS_LOADING_LABELS, MerchantApiKeysPageView } from "@/components/api-keys/merchant-api-keys-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import {
@@ -28,6 +28,9 @@ import {
 	type Envelope,
 	type MerchantApiKeySummary,
 } from "@workspace/shared";
+import { API_KEY_LIST_LOADING_LABELS } from "@/components/api-keys/api-key-list";
+import { MERCHANT_API_KEYS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 type ApiKeysListInput = Parameters<typeof apiRouter.organizations.apiKeys.list.queryKey>[0];
 
@@ -217,7 +220,7 @@ describe("MerchantApiKeysPageView authorization", () => {
 	it("renders the loading state while the membership resolves", () => {
 		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { isLoading: true });
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_API_KEYS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("Owner or admin access required")).toBeNull();
 	});
 });
@@ -293,7 +296,10 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 	it("shows a skeleton while the keys load and an empty state when there are none", () => {
 		serverHas({ isPending: true });
 		renderAsAdmin();
-		expect(screen.getByRole("list", { name: "Loading keys" }).getAttribute("aria-busy")).toBe("true");
+		// The totals and the list load as two surfaces, each announced once; no "—" stands in for a count.
+		expect(busyRegionAnnouncements()).toEqual([API_KEY_STATS_LOADING_LABELS.loading, API_KEY_LIST_LOADING_LABELS.loading]);
+		expect(screen.queryByText("Active keys")).toBeNull();
+		expect(screen.queryByRole("list", { name: "Active keys" })).toBeNull();
 		cleanup();
 
 		serverHas({ active: [], revoked: [] });

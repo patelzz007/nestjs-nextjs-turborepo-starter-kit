@@ -5,9 +5,12 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import Link from "next/link";
 import * as React from "react";
 
+import { USER_MFA_HISTORY_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { MfaRecoveryRequestSkeleton } from "@/components/loading/user-skeletons";
 import { MfaRecoveryReviewPanel } from "@/components/security/mfa-recovery-review-panel";
 import { MFA_RECOVERY_PENDING_QUEUE_HREF } from "@/lib/url-state/mfa-recovery";
 
@@ -57,7 +60,11 @@ function UserMfaRecoveryHistory({ userId }: { readonly userId: string }): React.
 
 	switch (state.status) {
 		case "loading":
-			return <p className="text-sm text-muted-foreground">Loading recovery history…</p>;
+			return (
+				<SkeletonRegion labels={USER_MFA_HISTORY_LOADING_LABELS}>
+					<MfaRecoveryRequestSkeleton />
+				</SkeletonRegion>
+			);
 		case "error":
 			return (
 				<p role="alert" className="text-sm text-destructive">

@@ -9,6 +9,8 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
+import { CatalogDetailPageSkeleton, PRODUCT_DETAIL_SHAPE } from "@/components/loading/catalog-skeletons";
+import { PRODUCT_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ROUTES } from "@/lib/routes";
 import { formatCatalogAmount } from "@/lib/format/numbers";
 import { formatDateTime } from "@/lib/format/dates";
@@ -39,7 +41,7 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 	const entity: Product | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && entity === undefined) {
-		return <p className="text-muted-foreground">{"Loading product…"}</p>;
+		return <CatalogDetailPageSkeleton labels={PRODUCT_LOADING_LABELS} shape={PRODUCT_DETAIL_SHAPE} />;
 	}
 
 	if (detailQuery.isError || entity === undefined) {

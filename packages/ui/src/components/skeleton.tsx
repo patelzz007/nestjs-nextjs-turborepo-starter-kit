@@ -4,11 +4,14 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-const skeletonVariants = cva("animate-pulse rounded-md bg-muted", {
+/** `skeleton-bone` (styles/components.css) is the shared viewport-wide sweep; reduced motion leaves a still bone. */
+const skeletonVariants = cva("skeleton-bone shrink-0 rounded-md bg-muted", {
 	variants: {
 		variant: {
 			default: "",
 			circular: "rounded-full",
+			/** A line of text: rounded like a pill, sized by the caller's height. */
+			text: "rounded-full",
 		},
 		size: {
 			default: "",

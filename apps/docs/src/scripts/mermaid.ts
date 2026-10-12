@@ -14,8 +14,9 @@ const LIGHT_THEME_VARIABLES: Readonly<Record<string, string>> = {
 /**
  * Renders `<pre class="mermaid">` diagrams (emitted by `remarkMermaid`). The
  * library is only downloaded on pages that contain a diagram, and diagrams are
- * re-rendered when the theme changes. On failure the diagram source stays
- * visible as text.
+ * re-rendered when the theme changes. While a render runs each block is
+ * `aria-busy`, and global.css draws it as a skeleton instead of flashing the
+ * raw source. On failure the diagram source stays visible as text.
  */
 export function initMermaid(): void {
 	const blocks = [...document.querySelectorAll<HTMLElement>("pre.mermaid")];
@@ -44,11 +45,18 @@ export function initMermaid(): void {
 			block.textContent = block.dataset.source ?? "";
 		}
 		await mermaid.run({ nodes: blocks, suppressErrors: true });
+		for (const block of blocks) {
+			block.removeAttribute("aria-busy");
+		}
 	};
 
 	const renderSafely = (): void => {
+		for (const block of blocks) {
+			block.setAttribute("aria-busy", "true");
+		}
 		render().catch(() => {
 			for (const block of blocks) {
+				block.removeAttribute("aria-busy");
 				block.dataset.error = "true";
 			}
 		});

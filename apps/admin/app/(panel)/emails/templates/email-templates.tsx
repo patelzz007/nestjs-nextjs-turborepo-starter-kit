@@ -5,6 +5,8 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
+import { EmailPreviewBodySkeleton, EmailTemplateMetaSkeleton, EmailTemplatesPageSkeleton } from "@/components/loading/email-skeletons";
+import { EMAIL_PREVIEW_LOADING_LABELS, EMAIL_TEMPLATE_DETAILS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import {
 	LIST_SLOT_INDEX,
@@ -20,7 +22,7 @@ import { EMAIL_TEMPLATES_URL_STATE } from "@/lib/url-state/selection";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Check, Copy, FileCode2, Loader2, Mail, Send } from "lucide-react";
@@ -256,14 +258,7 @@ export default function EmailPreviewPage({
 	}, [effectiveKey, sendMutation]);
 
 	if (listQuery.isLoading) {
-		return (
-			<div className="flex min-h-[60vh] items-center justify-center">
-				<div className="flex flex-col items-center gap-3 text-muted-foreground">
-					<Loader2 className="size-6 animate-spin" />
-					<p className="text-sm">Loading email templates…</p>
-				</div>
-			</div>
-		);
+		return <EmailTemplatesPageSkeleton />;
 	}
 
 	if (listQuery.error) {
@@ -326,10 +321,9 @@ export default function EmailPreviewPage({
 										</CardDescription>
 									</div>
 								) : (
-									<div className="space-y-2">
-										<Skeleton className="h-6 w-48" />
-										<Skeleton className="h-4 w-72" />
-									</div>
+									<SkeletonRegion labels={EMAIL_TEMPLATE_DETAILS_LOADING_LABELS} className="min-w-0">
+										<EmailTemplateMetaSkeleton />
+									</SkeletonRegion>
 								)}
 								<div className="flex items-center gap-2">
 									<div className="flex items-center gap-0.5 rounded-md border p-0.5">
@@ -362,7 +356,9 @@ export default function EmailPreviewPage({
 									</div>
 								) : null}
 								{shownPreview === undefined ? (
-									<Skeleton className="h-180 w-full rounded-lg" />
+									<SkeletonRegion labels={EMAIL_PREVIEW_LOADING_LABELS}>
+										<EmailPreviewBodySkeleton />
+									</SkeletonRegion>
 								) : (
 									<div className={cn("transition-opacity duration-150 motion-reduce:transition-none", isSwitching && "opacity-60")}>
 										<div className={cn("h-180 w-full", mode !== "preview" && "hidden")} aria-hidden={mode !== "preview"}>

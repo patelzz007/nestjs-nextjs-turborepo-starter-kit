@@ -17,9 +17,16 @@ const NOT_RECORDED = "—";
 /** `page`: the full-width detail page; `drawer`: the narrower side panel of the table. */
 export type AuditLogRecordLayout = "page" | "drawer";
 
-const GRID_BY_LAYOUT: Readonly<Record<AuditLogRecordLayout, string>> = {
+/** The field grid of each section, per layout — shared with the record's loading skeleton so both line up. */
+export const AUDIT_LOG_RECORD_GRID_BY_LAYOUT: Readonly<Record<AuditLogRecordLayout, string>> = {
 	page: "sm:grid-cols-2 lg:grid-cols-3",
 	drawer: "sm:grid-cols-2",
+};
+
+/** The three payload panels' grid, per layout. */
+export const AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT: Readonly<Record<AuditLogRecordLayout, string>> = {
+	page: "lg:grid-cols-3",
+	drawer: "",
 };
 
 /** One labelled value; `mono` for ids, addresses and raw header values. */
@@ -54,7 +61,7 @@ function Section({
 				<h3 className="text-sm font-semibold">{title}</h3>
 				<p className="text-xs text-muted-foreground">{description}</p>
 			</div>
-			<dl className={cn("grid gap-4", GRID_BY_LAYOUT[layout])}>{children}</dl>
+			<dl className={cn("grid gap-4", AUDIT_LOG_RECORD_GRID_BY_LAYOUT[layout])}>{children}</dl>
 		</section>
 	);
 }
@@ -234,7 +241,7 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 				</Field>
 			</Section>
 
-			<div className={cn("grid gap-4", layout === "page" && "lg:grid-cols-3")}>
+			<div className={cn("grid gap-4", AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT[layout])}>
 				<Payload title="Route params & query" value={record.requestParams} />
 				<Payload title="Request body" value={record.requestBody} />
 				<Payload title="Response body" value={record.responseBody} />

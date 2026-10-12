@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { renderWithAuthorization } from "@/test/authorization";
+import { MERCHANT_ACCESS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
 function ManageRewardsProbe(): React.JSX.Element {
 	const { can } = useAuthorization();
@@ -60,9 +62,34 @@ describe("MerchantCapabilityGate", () => {
 			{ isLoading: true },
 		);
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_ACCESS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("You don't have access to this page")).toBeNull();
 		expect(screen.queryByText("rewards")).toBeNull();
+	});
+
+	it("draws the page's own skeleton instead of the generic one when the page passes it", () => {
+		renderWithAuthorization(
+			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<p>rewards page skeleton</p>}>
+				<p>rewards</p>
+			</MerchantCapabilityGate>,
+			{ isLoading: true },
+		);
+
+		expect(screen.getByText("rewards page skeleton")).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([]);
+		expect(screen.queryByText("rewards")).toBeNull();
+	});
+
+	it("ignores the loading skeleton once the membership has resolved", () => {
+		renderWithAuthorization(
+			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<p>rewards page skeleton</p>}>
+				<p>rewards</p>
+			</MerchantCapabilityGate>,
+			{ role: "CASHIER" },
+		);
+
+		expect(screen.getByText("rewards")).toBeTruthy();
+		expect(screen.queryByText("rewards page skeleton")).toBeNull();
 	});
 
 	it("denies everything without a provider (fail closed)", () => {
@@ -131,7 +158,7 @@ describe("MerchantCapabilityGate for organization management", () => {
 			{ isLoading: true },
 		);
 
-		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
+		expect(busyRegionAnnouncements()).toEqual([MERCHANT_ACCESS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("You don't have access to this page")).toBeNull();
 		expect(screen.queryByText("team")).toBeNull();
 	});

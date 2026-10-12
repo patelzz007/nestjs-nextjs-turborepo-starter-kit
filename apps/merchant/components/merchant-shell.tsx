@@ -1,6 +1,7 @@
 "use client";
 
 import { MerchantAuthorizationProvider } from "@/components/access/merchant-authorization-provider";
+import { MerchantAccessLoading } from "@/components/access/merchant-capability-gate";
 import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcrumb";
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
@@ -92,7 +93,7 @@ function MerchantShellContent({
 						sidebar={<MerchantSidebarPanel memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} initialUser={initialUser} />}
 						topbar={<MerchantTopbar />}>
 						{showMembershipLoading ? (
-							<p className="text-sm text-muted-foreground">Loading merchant access…</p>
+							<MerchantAccessLoading />
 						) : showMembershipGate ? (
 							<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
 								<p className="text-sm font-medium text-foreground">No merchant membership found</p>

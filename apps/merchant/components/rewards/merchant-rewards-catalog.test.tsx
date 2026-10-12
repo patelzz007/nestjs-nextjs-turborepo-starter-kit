@@ -1,17 +1,21 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { UI_PREFERENCES_VERSION, UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-catalog";
+import { MerchantRewardsCatalog, REWARDS_CATALOG_LOADING_LABELS } from "@/components/rewards/merchant-rewards-catalog";
 import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
+import { busyRegionAnnouncements } from "@/test/skeleton";
 
-function renderCatalog(): void {
+function renderCatalog(isLoading = false): void {
 	render(
-		<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
-			<MerchantRewardsCatalog rewards={[]} isLoading={false} canManageRewards />
-		</UiPreferencesStoreProvider>,
+		<UiKitTestProviders>
+			<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
+				<MerchantRewardsCatalog rewards={[]} isLoading={isLoading} canManageRewards />
+			</UiPreferencesStoreProvider>
+		</UiKitTestProviders>,
 	);
 }
 
@@ -62,5 +66,33 @@ describe("MerchantRewardsCatalog layout preference", () => {
 
 		expect(isPressed("List view")).toBe(true);
 		expect(listColumnHeader()).not.toBeNull();
+	});
+});
+
+describe("MerchantRewardsCatalog loading", () => {
+	it("draws reward cards in the grid layout, announced once, while the catalog loads", () => {
+		renderCatalog(true);
+
+		expect(busyRegionAnnouncements()).toEqual([REWARDS_CATALOG_LOADING_LABELS.loading]);
+		expect(document.querySelector('[data-slot="rewards-grid-skeleton"]')).not.toBeNull();
+		expect(screen.queryByText("0 rewards")).toBeNull();
+	});
+
+	it("draws list rows instead when the member chose the list layout", () => {
+		window.localStorage.setItem(MERCHANT_UI_PREFERENCES_STORAGE_KEY, "list");
+		renderCatalog(true);
+
+		expect(document.querySelector('[data-slot="rewards-list-skeleton"]')).not.toBeNull();
+		expect(document.querySelector('[data-slot="rewards-grid-skeleton"]')).toBeNull();
+	});
+
+	it("keeps the layout toggle usable while the catalog loads", () => {
+		renderCatalog(true);
+
+		act(() => {
+			fireEvent.click(screen.getByRole("button", { name: "List view" }));
+		});
+
+		expect(document.querySelector('[data-slot="rewards-list-skeleton"]')).not.toBeNull();
 	});
 });

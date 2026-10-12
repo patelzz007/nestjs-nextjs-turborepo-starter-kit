@@ -9,6 +9,7 @@ import {
 	MerchantKybSubmissionFormSchema,
 } from "@workspace/shared";
 import { useQueryClient } from "@tanstack/react-query";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import * as React from "react";
 
 import { resolveAuthErrorMessage } from "../../auth/errors";
@@ -20,6 +21,7 @@ import { submitMerchantKyb } from "./multipart";
 import type { MerchantKybFieldValues } from "./fields";
 import { MerchantKybVerificationApprovedSection } from "./verification-approved-section";
 import { profileToFieldValues, readKybStringField } from "./verification-profile-utils";
+import { MERCHANT_KYB_VERIFICATION_LOADING_LABELS, MerchantKybVerificationSkeleton } from "./verification-skeleton";
 import { MerchantKybVerificationStatusBanners } from "./verification-status-banners";
 import { MerchantKybVerificationUpdateSection, type MerchantKybVerificationUpdateStep } from "./verification-update-section";
 import { catchCaught } from "../../caught";
@@ -46,7 +48,11 @@ export function MerchantKybVerificationView({ orgSlug }: MerchantKybVerification
 	const profile = profileQuery.data?.data;
 
 	if (profileQuery.isLoading && profile === undefined) {
-		return <p className="text-sm text-muted-foreground">Loading business verification…</p>;
+		return (
+			<SkeletonRegion labels={MERCHANT_KYB_VERIFICATION_LOADING_LABELS}>
+				<MerchantKybVerificationSkeleton />
+			</SkeletonRegion>
+		);
 	}
 
 	if (profile === undefined) {

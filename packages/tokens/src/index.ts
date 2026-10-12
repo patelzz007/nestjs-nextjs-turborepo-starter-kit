@@ -13,6 +13,8 @@ export { LAYOUT } from "./layout";
 export { MOTION } from "./motion";
 export { PALETTE } from "./palette";
 export { RADIUS, RADIUS_SCALE } from "./radius";
+export type { SkeletonMotion, SkeletonSheen } from "./skeleton";
+export { SKELETON_MOTION } from "./skeleton";
 export type { ColorLookups, ColorSource } from "./resolve";
 export { ColorReferenceCycleError, createColorLookups, resolveColorToken, resolveColorValue, UnknownColorTokenError, UnknownPaletteStepError } from "./resolve";
 export type {

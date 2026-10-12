@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -43,13 +44,22 @@ interface ReviewMutationOptionsStub {
 interface AuthStub {
 	readonly api: {
 		readonly rewardsAdmin: {
-			readonly listLocationRequests: { readonly useQuery: () => { readonly data: { readonly data: readonly LocationRequestStub[] }; readonly isLoading: boolean } };
+			readonly listLocationRequests: {
+				readonly useQuery: () => { readonly data: { readonly data: readonly LocationRequestStub[] } | undefined; readonly isLoading: boolean };
+			};
 			readonly reviewOrganizationLocation: {
 				readonly useMutation: (options: ReviewMutationOptionsStub) => { readonly mutate: (input: ReviewMutationInputStub) => void; readonly isPending: boolean };
 			};
 		};
 	};
 }
+
+/** Whether the pending-queue query is still on its first load. */
+interface QueueLoadState {
+	loading: boolean;
+}
+
+const queueLoad = vi.hoisted((): QueueLoadState => ({ loading: false }));
 
 const { FIRST_REQUEST_ID, SECOND_REQUEST_ID, reviewOptions, reviewMutate } = vi.hoisted(() => ({
 	reviewMutate: vi.fn<(input: ReviewMutationInputStub) => void>(),
@@ -88,7 +98,7 @@ vi.mock("@workspace/client/lib/auth", () => {
 	const auth: AuthStub = {
 		api: {
 			rewardsAdmin: {
-				listLocationRequests: { useQuery: () => ({ data: { data: [request, second] }, isLoading: false }) },
+				listLocationRequests: { useQuery: () => (queueLoad.loading ? { data: undefined, isLoading: true } : { data: { data: [request, second] }, isLoading: false }) },
 				reviewOrganizationLocation: {
 					useMutation: (options: ReviewMutationOptionsStub) => {
 						reviewOptions(options);
@@ -114,11 +124,12 @@ function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient
 }
 
 function renderPanel(capabilities: readonly CapabilitySlug[]): ReturnType<typeof render> {
-	return render(panel(capabilities));
+	return render(panel(capabilities), { wrapper: UiKitTestProviders });
 }
 
 beforeEach(() => {
 	window.history.replaceState(null, "", PATH);
+	queueLoad.loading = false;
 });
 
 afterEach(() => {
@@ -126,6 +137,20 @@ afterEach(() => {
 	vi.restoreAllMocks();
 	reviewOptions.mockReset();
 	reviewMutate.mockReset();
+});
+
+describe("LocationRequestsPanel loading", () => {
+	it("shows request-row skeletons in the pending queue while it loads", () => {
+		queueLoad.loading = true;
+		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading requests…");
+		expect(status.querySelector('[data-skeleton="store-request-row"]')).not.toBeNull();
+		expect(screen.queryByText("No pending store requests.")).toBeNull();
+		expect(screen.queryByText("Bangsar outlet")).toBeNull();
+	});
 });
 
 describe("LocationRequestsPanel authorization", () => {

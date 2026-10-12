@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveUserMfaRecoveryState, UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
@@ -35,6 +36,19 @@ describe("UserMfaRecoveryPanel", () => {
 		expect(screen.getByRole("alert").textContent).toContain("Could not load MFA recovery requests.");
 		expect(screen.queryByText(/No MFA recovery requests/)).toBeNull();
 		expect(screen.queryByText(/Loading recovery history/)).toBeNull();
+		expect(screen.queryByRole("status")).toBeNull();
+	});
+
+	it("shows a recovery request's skeleton while the history loads", () => {
+		requestsQuery.mockReturnValue({ data: undefined, isError: false, isLoading: true, refetch: () => Promise.resolve() });
+		render(<UserMfaRecoveryPanel userId={USER_ID} userFullName="Jane Doe" userEmail="jane@example.com" twoFactorEnabled />, { wrapper: UiKitTestProviders });
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading recovery history…");
+		expect(status.querySelector('[data-skeleton="mfa-recovery-request"]')).not.toBeNull();
+		expect(screen.queryByRole("alert")).toBeNull();
+		expect(screen.queryByText(/No MFA recovery requests/)).toBeNull();
 	});
 });
 

@@ -4,9 +4,11 @@ import { UI_PREFERENCES_VERSION, UiPreferencesStoreProvider } from "@workspace/c
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { REWARDS_CATALOG_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RewardHubCatalog } from "@/components/rewardhub/browse/catalog";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { buildRewardResponse } from "@/test-support/reward";
+import { countSlots, expectSingleLoadingStatus, SkeletonTestProviders } from "@/test-support/skeleton";
 
 const REWARD_TITLE = "Free flat white";
 
@@ -67,5 +69,35 @@ describe("RewardHubCatalog layout preference", () => {
 
 		expect(isPressed("List view")).toBe(true);
 		expect(listRowLink()).not.toBeNull();
+	});
+});
+
+describe("RewardHubCatalog loading", () => {
+	function renderLoadingCatalog(): HTMLElement {
+		return render(<RewardHubCatalog rewards={[]} isLoading hasNext={false} hasPrevious={false} onNext={noop} onPrevious={noop} />, { wrapper: SkeletonTestProviders })
+			.container;
+	}
+
+	it("shows reward-card skeletons, announced once, while the grid loads", () => {
+		const container = renderLoadingCatalog();
+
+		expectSingleLoadingStatus(REWARDS_CATALOG_LOADING_LABELS.loading);
+		expect(countSlots(container, "reward-card-skeleton")).toBeGreaterThan(0);
+		expect(screen.queryByText(/^Showing/)).toBeNull();
+	});
+
+	it("shapes the skeleton as list rows for a visitor who chose the list layout", () => {
+		window.localStorage.setItem(WEB_UI_PREFERENCES_STORAGE_KEY, "list");
+
+		const container = renderLoadingCatalog();
+
+		expect(countSlots(container, "reward-list-row-skeleton")).toBeGreaterThan(0);
+		expect(countSlots(container, "reward-card-skeleton")).toBe(0);
+	});
+
+	it("keeps the layout toggle usable while the catalog loads", () => {
+		renderLoadingCatalog();
+
+		expect(screen.getByRole("button", { name: "List view" })).toBeDefined();
 	});
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-password-form";
+import { ResetPasswordFormSkeleton } from "@workspace/client/lib/auth/forms/reset-password-form-skeleton";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
@@ -35,7 +36,7 @@ export default function MerchantResetPasswordPage(): JSX.Element {
 			showBackButton
 			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">
-			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading…</p>}>
+			<Suspense fallback={<ResetPasswordFormSkeleton />}>
 				<MerchantResetPasswordContent />
 			</Suspense>
 		</AuthLayout>

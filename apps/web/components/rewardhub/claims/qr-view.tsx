@@ -1,6 +1,8 @@
 "use client";
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { ClaimQrSkeleton } from "@/components/loading/claim-qr-skeleton";
+import { CLAIM_QR_SIZE_PX } from "@/components/rewardhub/claims/claim-qr-layout";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -34,7 +36,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 	}, [qrQuery]);
 
 	if (qrQuery.isLoading && initialQr === undefined) {
-		return <p className="text-sm text-muted-foreground">Loading redemption code…</p>;
+		return <ClaimQrSkeleton />;
 	}
 
 	if (qr === undefined) {
@@ -58,7 +60,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 
 			<WebSurfacePanel className="p-5 sm:p-6">
 				<div className="mb-6 flex flex-col items-center gap-3 text-center">
-					<QrCode value={qr.qrPayload} size={220} label="Reward redemption QR code" />
+					<QrCode value={qr.qrPayload} size={CLAIM_QR_SIZE_PX} label="Reward redemption QR code" />
 					<p className="text-sm text-muted-foreground">Position this code within the scanner at the till</p>
 				</div>
 

@@ -4,11 +4,12 @@ import { useAuth } from "@workspace/client/lib/auth";
 import type { HttpAuditLogDetail } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@workspace/ui/components/sheet";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
 import { AuditLogRecord } from "@/components/audit-logs/audit-log-record";
+import { AuditLogDrawerSkeleton } from "@/components/loading/audit-log-skeletons";
 import { ROUTES } from "@/lib/routes";
 
 /** The id a closed drawer queries with — never sent: the query is disabled while the drawer is closed. */
@@ -56,10 +57,7 @@ export function AuditLogDrawer({ recordId, onClose }: AuditLogDrawerProps): Reac
 				</SheetHeader>
 				<div className="px-4 pb-6">
 					{detailQuery.isLoading ? (
-						<div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-							<Loader2 className="size-4 animate-spin" aria-hidden />
-							Loading audit record…
-						</div>
+						<AuditLogDrawerSkeleton />
 					) : record === undefined ? (
 						<p className="py-10 text-sm text-destructive">Could not load this audit record.</p>
 					) : (

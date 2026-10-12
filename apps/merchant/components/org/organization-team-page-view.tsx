@@ -1,5 +1,13 @@
 "use client";
 
+import {
+	MerchantTeamPageSkeleton,
+	TEAM_INVITE_LINES,
+	TEAM_INVITE_SKELETON_ROWS,
+	TEAM_MEMBER_LINES,
+	TEAM_MEMBER_SKELETON_ROWS,
+} from "@/components/loading/merchant-page-skeletons";
+import { MerchantBorderedRowsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
@@ -25,11 +33,19 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
+import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import * as React from "react";
 import { z } from "zod";
+
+/** What the roster announces while the members load. */
+export const TEAM_MEMBERS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading team members…" };
+/** What the invitations panel announces while they load. */
+export const TEAM_INVITES_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading invitations…" };
 
 const INVITE_ROLES: readonly { readonly value: OrganizationMembershipRole; readonly label: string }[] = [
 	{ value: "ADMIN", label: "Admin" },
@@ -144,6 +160,7 @@ export function OrganizationTeamPageView({ orgSlug }: OrganizationTeamPageViewPr
 	return (
 		<MerchantCapabilityGate
 			capability={MERCHANT_CAPABILITY.manageTeam}
+			loading={<MerchantTeamPageSkeleton />}
 			fallback={
 				<div className="space-y-8">
 					<MerchantPageHeader title="Team & access" description="Invite colleagues and manage their store access." />
@@ -270,9 +287,13 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 			<MerchantSurfacePanel className="space-y-4 p-6">
 				<div className="flex items-center justify-between gap-3">
 					<h2 className="text-base font-semibold text-foreground">Current members</h2>
-					<Badge variant="outline">{String(members.length)}</Badge>
+					{membersQuery.isLoading ? <Skeleton aria-hidden="true" className="h-5 w-8 rounded-full" /> : <Badge variant="outline">{String(members.length)}</Badge>}
 				</div>
-				{membersQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading team…</p> : null}
+				{membersQuery.isLoading ? (
+					<SkeletonRegion labels={TEAM_MEMBERS_LOADING_LABELS}>
+						<MerchantBorderedRowsSkeleton rows={TEAM_MEMBER_SKELETON_ROWS} lines={TEAM_MEMBER_LINES} trailing="badge" surface="card" />
+					</SkeletonRegion>
+				) : null}
 				{members.length === 0 && !membersQuery.isLoading ? <p className="text-sm text-muted-foreground">No members found.</p> : null}
 				<div className="space-y-3">
 					{members.map((member) => (
@@ -293,10 +314,13 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 			<MerchantSurfacePanel className="space-y-4 p-6">
 				<div className="flex items-center justify-between gap-3">
 					<h2 className="text-base font-semibold text-foreground">Pending invitations</h2>
-					<Badge variant="outline">{String(pendingInvites.length)}</Badge>
+					{invitesQuery.isLoading ? <Skeleton aria-hidden="true" className="h-5 w-8 rounded-full" /> : <Badge variant="outline">{String(pendingInvites.length)}</Badge>}
 				</div>
-				{invitesQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading invitations…</p> : null}
-				{pendingInvites.length === 0 && !invitesQuery.isLoading ? (
+				{invitesQuery.isLoading ? (
+					<SkeletonRegion labels={TEAM_INVITES_LOADING_LABELS}>
+						<MerchantBorderedRowsSkeleton rows={TEAM_INVITE_SKELETON_ROWS} lines={TEAM_INVITE_LINES} trailing="button" surface="card" />
+					</SkeletonRegion>
+				) : pendingInvites.length === 0 ? (
 					<p className="text-sm text-muted-foreground">No pending invitations.</p>
 				) : (
 					<div className="space-y-3">

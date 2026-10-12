@@ -54,6 +54,10 @@
 	--surface: var(--palette-neutral-0);
 	--surface-muted: var(--palette-neutral-25);
 	--hover: var(--palette-neutral-100);
+	/* Loading skeletons: bones sit on the hover tone; the sweep lifts them toward the surface. */
+	--skeleton-bone: var(--hover);
+	--skeleton-sheen: color-mix(in oklch, var(--surface) 85%, transparent);
+	--skeleton-sweep-duration: 2.2s;
 	/* Text */
 	--text: var(--palette-neutral-900);
 	--text-secondary: var(--palette-neutral-700);
@@ -158,6 +162,7 @@
 	--surface: var(--palette-ink-850);
 	--surface-muted: var(--palette-ink-800);
 	--hover: var(--palette-ink-750);
+	--skeleton-sheen: color-mix(in oklch, var(--palette-ink-50) 7%, transparent);
 	--text: var(--palette-ink-50);
 	--text-secondary: var(--palette-ink-200);
 	--muted: var(--palette-ink-400);
@@ -1204,6 +1209,22 @@
 		text-align: center;
 	}
 
+	/* While a diagram renders (scripts on, mermaid not done), draw a skeleton instead of flashing its source. The
+	   source stays in the DOM for screen readers and becomes visible again if rendering fails (data-error). */
+	:root[data-js] .mermaid-diagram pre.mermaid:not([data-processed="true"], [data-error]) {
+		min-height: 180px;
+		overflow: hidden;
+		border-radius: 8px;
+		color: transparent;
+		user-select: none;
+		background-color: var(--skeleton-bone);
+		background-image: linear-gradient(100deg, transparent 40%, var(--skeleton-sheen) 50%, transparent 60%);
+		background-size: 200vw 100%;
+		background-repeat: no-repeat;
+		background-attachment: fixed;
+		animation: skeleton-sweep var(--skeleton-sweep-duration) ease-in-out infinite;
+	}
+
 	/* Screenshot gallery */
 
 	.image-gallery {
@@ -1658,6 +1679,43 @@
 		color: inherit;
 	}
 
+	/* Search placeholders while the index downloads — same row rhythm as a real result. */
+	.search-result--skeleton {
+		pointer-events: none;
+	}
+
+	.search-result--skeleton .search-result__body {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		gap: 8px;
+		padding-block: 4px;
+	}
+
+	.skeleton-bone--icon {
+		width: 18px;
+		height: 18px;
+		border-radius: 5px;
+	}
+
+	.skeleton-bone--title {
+		width: 55%;
+		height: 12px;
+	}
+
+	.skeleton-bone--line {
+		width: 80%;
+		height: 10px;
+	}
+
+	.search-result--skeleton:nth-child(even) .skeleton-bone--title {
+		width: 40%;
+	}
+
+	.search-result--skeleton:nth-child(3n) .skeleton-bone--line {
+		width: 65%;
+	}
+
 	.search-dialog__status {
 		margin: 0;
 		padding: 32px 16px;
@@ -1758,12 +1816,41 @@
 		background: var(--brand-solid-hover);
 	}
 
+	/* Loading skeletons — the same treatment as the apps' kit (packages/ui styles/components.css) and the mobile app, from SKELETON_MOTION in @workspace/tokens (skeleton-motion-parity.test.ts): one highlight
+	   sweeps the viewport (fixed attachment), so every bone shimmers in unison; reduced motion keeps still bones. */
+	.skeleton-bone {
+		display: block;
+		border-radius: 999px;
+		background-color: var(--skeleton-bone);
+		background-image: linear-gradient(100deg, transparent 40%, var(--skeleton-sheen) 50%, transparent 60%);
+		background-size: 200vw 100%;
+		background-repeat: no-repeat;
+		background-attachment: fixed;
+		animation: skeleton-sweep var(--skeleton-sweep-duration) ease-in-out infinite;
+	}
+
+	@keyframes skeleton-sweep {
+		from {
+			background-position-x: -120vw;
+		}
+		70%,
+		to {
+			background-position-x: 20vw;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		*,
 		*::before,
 		*::after {
 			transition: none !important;
 			scroll-behavior: auto !important;
+		}
+
+		.skeleton-bone,
+		:root[data-js] .mermaid-diagram pre.mermaid:not([data-processed="true"], [data-error]) {
+			background-image: none;
+			animation: none;
 		}
 	}
 }

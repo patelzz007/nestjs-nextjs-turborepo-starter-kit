@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantAnalyticsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
@@ -72,7 +73,7 @@ export interface MerchantAnalyticsPageViewProps {
 /** Analytics route — requires `merchant:view_analytics` (dashboard and export); the query mounts only when allowed. */
 export function MerchantAnalyticsPageView(props: MerchantAnalyticsPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewAnalytics}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewAnalytics} loading={<MerchantAnalyticsPageSkeleton />}>
 			<MerchantAnalyticsContent {...props} />
 		</MerchantCapabilityGate>
 	);
