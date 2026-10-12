@@ -7,21 +7,31 @@
 // mapping to our contract lives in `github.mappers.ts`.
 
 import { HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
-import { GITHUB_DISCOVERY_PER_KIND_MAX, JsonValueSchema, type GithubRepositoryParams, type JsonValue } from "@workspace/shared";
+import {
+	GITHUB_COMMIT_FILES_MAX,
+	GITHUB_DISCOVERY_PER_KIND_MAX,
+	JsonValueSchema,
+	type GithubCommitParams,
+	type GithubRepositoryParams,
+	type JsonValue,
+} from "@workspace/shared";
 import type { z } from "zod";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import {
 	GITHUB_GRAPHQL_API_URL,
 	GITHUB_JSON_MEDIA_TYPE,
+	GITHUB_LINK_HEADER,
 	GITHUB_RATE_LIMIT_REMAINING_HEADER,
 	GITHUB_REST_API_URL,
 	GITHUB_REST_API_VERSION,
 	GITHUB_RETRY_AFTER_HEADER,
 } from "./github.constants";
 import {
+	commitTarget,
 	describeTarget,
 	GITHUB_ACCOUNT_TARGET,
+	GithubCommitNotFoundError,
 	GithubRepositoryNotFoundError,
 	GithubResponseError,
 	GithubUnavailableError,
@@ -30,10 +40,12 @@ import {
 } from "./github.errors";
 import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_SUMMARY_LANGUAGES_REQUESTED, GITHUB_VIEWER_REPOSITORIES_QUERY } from "./github.queries";
 import {
+	GithubCommitDetailWireSchema,
 	GithubCommitHistoryResponseWireSchema,
 	GithubContributorStatsWireSchema,
 	GithubRepositorySummaryResponseWireSchema,
 	GithubViewerRepositoriesResponseWireSchema,
+	type GithubCommitDetailWire,
 	type GithubCommitHistoryWire,
 	type GithubContributorStatWire,
 	type GithubGraphqlEnvelopeWire,
@@ -51,6 +63,12 @@ export const GLOBAL_GITHUB_FETCH: GithubFetch = (url: string, init: RequestInit)
 
 /** Contributor statistics as GitHub reports them: still being computed, or ready. */
 export type GithubContributorStatsResult = { readonly status: "computing" } | { readonly status: "ready"; readonly stats: readonly GithubContributorStatWire[] };
+
+/** One commit and whether GitHub has more of its files than the page it answered with. */
+export interface GithubCommitDetailResult {
+	readonly commit: GithubCommitDetailWire;
+	readonly filesTruncated: boolean;
+}
 
 /** The commit-history page a GraphQL read asked for. */
 export interface GithubCommitHistoryRequest {
@@ -71,7 +89,11 @@ const STATUS_NO_CONTENT: number = HttpStatus.NO_CONTENT;
 const STATUS_UNAUTHORIZED: number = HttpStatus.UNAUTHORIZED;
 const STATUS_FORBIDDEN: number = HttpStatus.FORBIDDEN;
 const STATUS_NOT_FOUND: number = HttpStatus.NOT_FOUND;
+const STATUS_UNPROCESSABLE_ENTITY: number = HttpStatus.UNPROCESSABLE_ENTITY;
 const STATUS_TOO_MANY_REQUESTS: number = HttpStatus.TOO_MANY_REQUESTS;
+
+/** How the `Link` header names the page after this one. */
+const NEXT_PAGE_RELATION = 'rel="next"';
 
 /** The name `AbortSignal.timeout()` gives the error it aborts with. */
 const TIMEOUT_ERROR_NAME = "TimeoutError";
@@ -112,6 +134,20 @@ export class GithubApiClient {
 			throw new GithubRepositoryNotFoundError(params);
 		}
 		return repository.defaultBranchRef?.target?.history ?? null;
+	}
+
+	/**
+	 * One commit with the first {@link GITHUB_COMMIT_FILES_MAX} of its changed
+	 * files and their diffs. Throws {@link GithubCommitNotFoundError} when the
+	 * repository has no such commit (GitHub answers 404 or 422).
+	 */
+	public async fetchCommit(params: GithubCommitParams): Promise<GithubCommitDetailResult> {
+		const path = `/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repository)}/commits/${encodeURIComponent(params.sha)}`;
+		const query = new URLSearchParams({ per_page: String(GITHUB_COMMIT_FILES_MAX) });
+		const target = commitTarget(params);
+		const response = await this.send(`${GITHUB_REST_API_URL}${path}?${query.toString()}`, { method: "GET" }, target);
+		const filesTruncated = response.headers.get(GITHUB_LINK_HEADER)?.includes(NEXT_PAGE_RELATION) ?? false;
+		return { commit: await this.parseBody(response, GithubCommitDetailWireSchema, target), filesTruncated };
 	}
 
 	/**
@@ -198,8 +234,9 @@ export class GithubApiClient {
 	}
 
 	private statusError(response: Response, target: GithubReadTarget): Error {
-		if (response.status === STATUS_NOT_FOUND) {
-			return notFound(target, "HTTP 404");
+		// GitHub answers an unknown SHA with 422 ("No commit found for SHA"), an unknown repository with 404.
+		if (response.status === STATUS_NOT_FOUND || (response.status === STATUS_UNPROCESSABLE_ENTITY && target.kind === "commit")) {
+			return notFound(target, `HTTP ${String(response.status)}`);
 		}
 		if (response.status === STATUS_TOO_MANY_REQUESTS || (response.status === STATUS_FORBIDDEN && isRateLimitResponse(response))) {
 			return this.rateLimited(target);
@@ -233,9 +270,16 @@ export class GithubApiClient {
 	}
 }
 
-/** A 404 is about the repository when there is one; for the token's own account it means GitHub answered unexpectedly. */
+/** A 404 is about the repository or commit read; for the token's own account it means GitHub answered unexpectedly. */
 function notFound(target: GithubReadTarget, detail: string): Error {
-	return target.kind === "repository" ? new GithubRepositoryNotFoundError(target.params) : new GithubResponseError("unexpected-status", target, detail);
+	switch (target.kind) {
+		case "repository":
+			return new GithubRepositoryNotFoundError(target.params);
+		case "commit":
+			return new GithubCommitNotFoundError(target.params);
+		case "account":
+			return new GithubResponseError("unexpected-status", target, detail);
+	}
 }
 
 /** GitHub answers a used-up primary or secondary rate limit with 403 plus one of these headers. */

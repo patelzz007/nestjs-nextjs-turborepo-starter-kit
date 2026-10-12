@@ -198,6 +198,24 @@ export type GithubCommitHistoryInput = z.input<typeof GithubCommitHistoryInputSc
 const GIT_SHA_LENGTH = 40;
 const GIT_SHA_PATTERN = /^[0-9a-f]+$/;
 
+/** A full commit id (`a1b2…`, 40 lowercase hex characters) — the only form a commit is addressed by. */
+export const GithubCommitShaSchema = z
+	.string()
+	.length(GIT_SHA_LENGTH)
+	.regex(GIT_SHA_PATTERN, "must be a full commit SHA")
+	.meta({ description: "Full commit SHA (40 lowercase hex characters)", example: "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39" });
+
+/** Path params of one commit: `/github/repositories/:owner/:repository/commits/:sha`. */
+export const GithubCommitParamsSchema = z
+	.object({
+		owner: GithubOwnerSchema,
+		repository: GithubRepositoryNameSchema,
+		sha: GithubCommitShaSchema,
+	})
+	.strict();
+
+export type GithubCommitParams = z.output<typeof GithubCommitParamsSchema>;
+
 /** Who wrote a commit: the git author name, and the GitHub account when the email maps to one. */
 export const GithubCommitAuthorSchema = z.object({
 	name: z.string(),
@@ -208,7 +226,7 @@ export const GithubCommitAuthorSchema = z.object({
 export type GithubCommitAuthor = z.output<typeof GithubCommitAuthorSchema>;
 
 export const GithubCommitSchema = z.object({
-	sha: z.string().length(GIT_SHA_LENGTH).regex(GIT_SHA_PATTERN),
+	sha: GithubCommitShaSchema,
 	shortSha: z.string().min(1).max(GIT_SHA_LENGTH).regex(GIT_SHA_PATTERN),
 	/** The first line of the commit message. */
 	headline: z.string(),
@@ -232,6 +250,78 @@ export const GithubCommitPageSchema = z.object({
 });
 
 export type GithubCommitPage = z.output<typeof GithubCommitPageSchema>;
+
+// ── One commit, with its diff ──────────────────────────────────────────────
+
+/** Most changed files one commit answers with — GitHub's own page size for a commit's files. */
+export const GITHUB_COMMIT_FILES_MAX = 100;
+/** Most parents listed — a merge has two; an octopus merge may have more. */
+export const GITHUB_COMMIT_PARENTS_MAX = 8;
+/** Longest commit message kept; anything beyond is cut (GitHub still has it all). */
+export const GITHUB_COMMIT_MESSAGE_MAX_LENGTH = 10_000;
+/** Longest path git and GitHub keep for a file. */
+export const GITHUB_FILE_PATH_MAX_LENGTH = 4_096;
+/** Longest diff of ONE file sent; a longer one is answered `too-large`, so one huge file cannot crowd out the rest. */
+export const GITHUB_FILE_PATCH_MAX_LENGTH = 20_000;
+/** Longest the diffs of one commit may be together; files past the budget are answered `too-large`. */
+export const GITHUB_COMMIT_DIFF_MAX_LENGTH = 200_000;
+
+/** What happened to a file in a commit, in GitHub's words. */
+export const GithubCommitFileStatusSchema = z.enum(["added", "removed", "modified", "renamed", "copied", "changed", "unchanged"]);
+export type GithubCommitFileStatus = z.output<typeof GithubCommitFileStatusSchema>;
+
+/**
+ * A file's diff: the unified `patch` (hunks only, no `diff --git` header), or
+ * why there is none — `too-large` past this API's limits
+ * ({@link GITHUB_FILE_PATCH_MAX_LENGTH}, {@link GITHUB_COMMIT_DIFF_MAX_LENGTH}),
+ * `unavailable` when GitHub sends no text diff (a binary file, a rename without
+ * changes, or past GitHub's own limits).
+ */
+export const GithubCommitFileDiffSchema = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("patch"), patch: z.string().min(1).max(GITHUB_FILE_PATCH_MAX_LENGTH) }),
+	z.object({ kind: z.literal("too-large") }),
+	z.object({ kind: z.literal("unavailable") }),
+]);
+
+export type GithubCommitFileDiff = z.output<typeof GithubCommitFileDiffSchema>;
+
+export const GithubCommitFileSchema = z.object({
+	/** The file's path after the commit. */
+	path: z.string().min(1).max(GITHUB_FILE_PATH_MAX_LENGTH),
+	/** Its path before a rename or copy; `null` otherwise. */
+	previousPath: z.string().min(1).max(GITHUB_FILE_PATH_MAX_LENGTH).nullable(),
+	status: GithubCommitFileStatusSchema,
+	additions: z.number().int().nonnegative(),
+	deletions: z.number().int().nonnegative(),
+	diff: GithubCommitFileDiffSchema,
+});
+
+export type GithubCommitFile = z.output<typeof GithubCommitFileSchema>;
+
+/** A parent commit, by id. */
+export const GithubCommitParentSchema = z.object({
+	sha: GithubCommitShaSchema,
+	shortSha: z.string().min(1).max(GIT_SHA_LENGTH).regex(GIT_SHA_PATTERN),
+});
+
+export type GithubCommitParent = z.output<typeof GithubCommitParentSchema>;
+
+/**
+ * One commit as its own page shows it: everything the history row has, plus
+ * the whole message, its parents and every changed file with its diff.
+ * `additions` / `deletions` count the whole commit; `changedFiles` is `null`
+ * when the commit changed more files than listed (`filesTruncated`).
+ */
+export const GithubCommitDetailSchema = GithubCommitSchema.extend({
+	/** The whole commit message — the headline, then the body. */
+	message: z.string().max(GITHUB_COMMIT_MESSAGE_MAX_LENGTH),
+	parents: z.array(GithubCommitParentSchema).max(GITHUB_COMMIT_PARENTS_MAX),
+	files: z.array(GithubCommitFileSchema).max(GITHUB_COMMIT_FILES_MAX),
+	/** `true` when the commit changed more files than {@link GITHUB_COMMIT_FILES_MAX}; the rest are on GitHub. */
+	filesTruncated: z.boolean(),
+});
+
+export type GithubCommitDetail = z.output<typeof GithubCommitDetailSchema>;
 
 // ── Contributors ───────────────────────────────────────────────────────────
 

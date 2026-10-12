@@ -13,6 +13,8 @@ export const ROUTES = {
 	analytics: "/analytics",
 	search: "/search",
 	profile: "/profile",
+	/** One commit of a GitHub repository (`?owner=&repository=&sha=`), pushed from the Profile's commit history. */
+	githubCommit: "/profile/commit",
 	settings: "/settings",
 	security: "/settings/security",
 	devices: "/settings/devices",

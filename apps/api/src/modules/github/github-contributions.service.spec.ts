@@ -3,11 +3,11 @@ import { Test } from "@nestjs/testing";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { createTestTypedConfig, type TestEnv } from "../../../test/support/test-api-env";
-import { GithubRepositoryNotConfiguredError, GithubUnavailableError } from "./github.errors";
+import { GithubCommitNotFoundError, GithubRepositoryNotConfiguredError, GithubUnavailableError } from "./github.errors";
 import { GithubApiClient } from "./github-api.client";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { GITHUB_CLOCK, GithubContributionsService } from "./github-contributions.service";
-import { commitHistory, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
+import { SHA_A, commitDetailWire, commitHistory, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
 
 const CACHE_TTL_MS = 60_000;
 const START = 1_800_000_000_000;
@@ -15,6 +15,7 @@ const START = 1_800_000_000_000;
 interface FakeGithubApiClient {
 	readonly fetchRepositorySummary: Mock<GithubApiClient["fetchRepositorySummary"]>;
 	readonly fetchCommitHistory: Mock<GithubApiClient["fetchCommitHistory"]>;
+	readonly fetchCommit: Mock<GithubApiClient["fetchCommit"]>;
 	readonly fetchContributorStats: Mock<GithubApiClient["fetchContributorStats"]>;
 	readonly fetchViewerRepositories: Mock<GithubApiClient["fetchViewerRepositories"]>;
 }
@@ -43,6 +44,7 @@ async function setup(github: TestEnv = CONFIGURED): Promise<Harness> {
 	const client: FakeGithubApiClient = {
 		fetchRepositorySummary: vi.fn<GithubApiClient["fetchRepositorySummary"]>(() => Promise.resolve(summaryNode())),
 		fetchCommitHistory: vi.fn<GithubApiClient["fetchCommitHistory"]>(() => Promise.resolve(commitHistory())),
+		fetchCommit: vi.fn<GithubApiClient["fetchCommit"]>(() => Promise.resolve({ commit: commitDetailWire(), filesTruncated: false })),
 		fetchContributorStats: vi.fn<GithubApiClient["fetchContributorStats"]>(() => Promise.resolve({ status: "ready", stats: [contributorStat("amy", [[1, 1, 1]])] })),
 		fetchViewerRepositories: vi.fn<GithubApiClient["fetchViewerRepositories"]>(() =>
 			Promise.resolve(viewerRepositories([repositoryNode("patelzz007/Site", "2026-10-01T00:00:00Z")], [repositoryNode("vercel/next.js", "2026-09-01T00:00:00Z")])),
@@ -143,6 +145,8 @@ describe("GithubContributionsService", () => {
 			await expect(service.getRepositorySummary(requested)).rejects.toBeInstanceOf(GithubRepositoryNotConfiguredError);
 			await expect(service.getCommitPage(requested, { limit: 20 })).rejects.toBeInstanceOf(GithubRepositoryNotConfiguredError);
 			await expect(service.getContributorStats(requested)).rejects.toBeInstanceOf(GithubRepositoryNotConfiguredError);
+			await expect(service.getCommit({ ...requested, sha: SHA_A })).rejects.toBeInstanceOf(GithubRepositoryNotConfiguredError);
+			expect(client.fetchCommit).not.toHaveBeenCalled();
 			expect(client.fetchRepositorySummary).not.toHaveBeenCalled();
 			expect(client.fetchCommitHistory).not.toHaveBeenCalled();
 			expect(client.fetchContributorStats).not.toHaveBeenCalled();
@@ -225,6 +229,48 @@ describe("GithubContributionsService", () => {
 			await service.getCommitPage(repository, { limit: 5 });
 
 			expect(client.fetchCommitHistory).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	describe("getCommit", () => {
+		it("reads the commit with the listed spelling of its repository and reuses it while fresh", async () => {
+			const { service, client } = await setup();
+
+			const commit = await service.getCommit({ owner: "octo-org", repository: "website", sha: SHA_A });
+			await service.getCommit({ owner: "Octo-Org", repository: "Website", sha: SHA_A });
+
+			expect(commit).toMatchObject({ sha: SHA_A, headline: "feat: add contributions", files: [{ path: "src/app.ts" }] });
+			expect(client.fetchCommit).toHaveBeenCalledTimes(1);
+			expect(client.fetchCommit).toHaveBeenCalledWith({ owner: "Octo-Org", repository: "Website", sha: SHA_A });
+		});
+
+		it("keeps each commit apart", async () => {
+			const { service, client } = await setup();
+			const repository = { owner: "octo-org", repository: "hello-world" };
+
+			await service.getCommit({ ...repository, sha: SHA_A });
+			await service.getCommit({ ...repository, sha: "c".repeat(40) });
+
+			expect(client.fetchCommit).toHaveBeenCalledTimes(2);
+		});
+
+		it("serves the last good answer while GitHub is unavailable", async () => {
+			const { service, client, clock } = await setup();
+			const commit = { owner: "octo-org", repository: "hello-world", sha: SHA_A };
+
+			await service.getCommit(commit);
+			clock.now += CACHE_TTL_MS;
+			client.fetchCommit.mockRejectedValueOnce(new GithubUnavailableError("timeout"));
+
+			expect(await service.getCommit(commit)).toMatchObject({ sha: SHA_A });
+		});
+
+		it("passes on a commit GitHub does not have, never replaced by an older answer", async () => {
+			const { service, client } = await setup();
+			const commit = { owner: "octo-org", repository: "hello-world", sha: SHA_A };
+			client.fetchCommit.mockRejectedValueOnce(new GithubCommitNotFoundError(commit));
+
+			await expect(service.getCommit(commit)).rejects.toBeInstanceOf(GithubCommitNotFoundError);
 		});
 	});
 

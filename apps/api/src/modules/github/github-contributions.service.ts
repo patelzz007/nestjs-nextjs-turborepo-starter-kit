@@ -1,8 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
 	toGithubFullName,
+	type GithubCommitDetail,
 	type GithubCommitHistoryQuery,
 	type GithubCommitPage,
+	type GithubCommitParams,
 	type GithubContributorStats,
 	type GithubRepositoryList,
 	type GithubRepositoryListItem,
@@ -12,9 +14,17 @@ import {
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { GithubApiClient } from "./github-api.client";
-import { GITHUB_CACHE_MAX_ENTRIES, GITHUB_STALE_FALLBACK_MS } from "./github.constants";
+import { GITHUB_CACHE_MAX_ENTRIES, GITHUB_COMMIT_CACHE_MAX_ENTRIES, GITHUB_STALE_FALLBACK_MS } from "./github.constants";
 import { GithubRepositoryNotConfiguredError } from "./github.errors";
-import { GITHUB_INTEGRATION_OFF, toCommitPage, toConfiguredRepositoryList, toContributorStats, toDiscoveredRepositoryList, toRepositorySummary } from "./github.mappers";
+import {
+	GITHUB_INTEGRATION_OFF,
+	toCommitDetail,
+	toCommitPage,
+	toConfiguredRepositoryList,
+	toContributorStats,
+	toDiscoveredRepositoryList,
+	toRepositorySummary,
+} from "./github.mappers";
 import { GithubResponseCache, type GithubClock, type GithubResponseCacheOptions } from "./github-response.cache";
 
 export const GITHUB_CLOCK = Symbol("GITHUB_CLOCK");
@@ -40,6 +50,7 @@ export class GithubContributionsService {
 	private readonly discoveredLists: GithubResponseCache<GithubRepositoryList>;
 	private readonly summaries: GithubResponseCache<GithubRepositorySummary>;
 	private readonly commitPages: GithubResponseCache<GithubCommitPage>;
+	private readonly commits: GithubResponseCache<GithubCommitDetail>;
 	private readonly contributorStats: GithubResponseCache<GithubContributorStats>;
 
 	public constructor(
@@ -51,6 +62,7 @@ export class GithubContributionsService {
 		this.discoveredLists = new GithubResponseCache<GithubRepositoryList>(cacheOptions, clock, this.logger);
 		this.summaries = new GithubResponseCache<GithubRepositorySummary>(cacheOptions, clock, this.logger);
 		this.commitPages = new GithubResponseCache<GithubCommitPage>(cacheOptions, clock, this.logger);
+		this.commits = new GithubResponseCache<GithubCommitDetail>({ ...cacheOptions, maxEntries: GITHUB_COMMIT_CACHE_MAX_ENTRIES }, clock, this.logger);
 		this.contributorStats = new GithubResponseCache<GithubContributorStats>(cacheOptions, clock, this.logger);
 	}
 
@@ -85,6 +97,20 @@ export class GithubContributionsService {
 		return this.commitPages.read(key, async () => ({
 			kind: "cacheable",
 			value: toCommitPage(await this.client.fetchCommitHistory(repository, { first: query.limit, after: query.cursor ?? null })),
+		}));
+	}
+
+	/**
+	 * One commit of a listed repository with its files and diffs. Any commit of
+	 * the repository may be read, not only the default branch's: the repository
+	 * is what the list allows, and every commit of it is as public as it is.
+	 */
+	public async getCommit(requested: GithubCommitParams): Promise<GithubCommitDetail> {
+		const repository = await this.resolveAllowed(requested);
+		const commit: GithubCommitParams = { ...repository, sha: requested.sha };
+		return this.commits.read(`${toGithubFullName(repository)}@${commit.sha}`, async () => ({
+			kind: "cacheable",
+			value: toCommitDetail(await this.client.fetchCommit(commit)),
 		}));
 	}
 

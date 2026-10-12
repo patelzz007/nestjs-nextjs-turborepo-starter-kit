@@ -4,15 +4,17 @@ import { z } from "zod";
 
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { GITHUB_GRAPHQL_API_URL, GITHUB_REST_API_URL, GITHUB_REST_API_VERSION } from "./github.constants";
-import { GithubRepositoryNotFoundError, GithubResponseError, GithubUnavailableError } from "./github.errors";
+import { GithubCommitNotFoundError, GithubRepositoryNotFoundError, GithubResponseError, GithubUnavailableError } from "./github.errors";
 import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_VIEWER_REPOSITORIES_QUERY } from "./github.queries";
 import { GithubApiClient, type GithubFetch } from "./github-api.client";
-import { commitHistory, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
+import { SHA_A, commitDetailWire, commitHistory, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
 
 const TOKEN = "github_pat_test_read_only";
 const TIMEOUT_MS = 1_234;
 const REPOSITORY = { owner: "octo-org", repository: "hello-world" };
 const CONTRIBUTORS_URL = `${GITHUB_REST_API_URL}/repos/octo-org/hello-world/stats/contributors`;
+const COMMIT = { ...REPOSITORY, sha: SHA_A };
+const COMMIT_URL = `${GITHUB_REST_API_URL}/repos/octo-org/hello-world/commits/${SHA_A}?per_page=100`;
 
 function json(body: object, status = 200, headers: Record<string, string> = {}): Response {
 	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
@@ -211,6 +213,50 @@ describe("GithubApiClient", () => {
 			await client(fetchGithub).fetchContributorStats({ owner: "octo-org", repository: "next.js" });
 
 			expect(fetchGithub).toHaveBeenCalledWith(`${GITHUB_REST_API_URL}/repos/octo-org/next.js/stats/contributors`, expect.anything());
+		});
+	});
+
+	describe("fetchCommit", () => {
+		it("GETs the commit with a full page of its files", async () => {
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json(commitDetailWire())));
+
+			expect(await client(fetchGithub).fetchCommit(COMMIT)).toEqual({ commit: commitDetailWire(), filesTruncated: false });
+			expect(fetchGithub).toHaveBeenCalledWith(COMMIT_URL, expect.objectContaining({ method: "GET" }));
+		});
+
+		it("says the files were cut when GitHub links a next page of them", async () => {
+			const link = `<${GITHUB_REST_API_URL}/repositories/1/commits/${SHA_A}?per_page=100&page=2>; rel="next", <${GITHUB_REST_API_URL}/repositories/1/commits/${SHA_A}?per_page=100&page=3>; rel="last"`;
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json(commitDetailWire(), 200, { link })));
+
+			expect(await client(fetchGithub).fetchCommit(COMMIT)).toMatchObject({ filesTruncated: true });
+		});
+
+		it("does not take a link to the previous page for more files", async () => {
+			const link = `<${GITHUB_REST_API_URL}/repositories/1/commits/${SHA_A}?per_page=100&page=1>; rel="prev"`;
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json(commitDetailWire(), 200, { link })));
+
+			expect(await client(fetchGithub).fetchCommit(COMMIT)).toMatchObject({ filesTruncated: false });
+		});
+
+		it.each([
+			["an unknown SHA (422)", 422],
+			["a missing commit or repository (404)", 404],
+		])("reports %s as the commit not found", async (_label: string, status: number) => {
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ message: "No commit found for SHA" }, status)));
+
+			await expect(client(fetchGithub).fetchCommit(COMMIT)).rejects.toBeInstanceOf(GithubCommitNotFoundError);
+		});
+
+		it("reports a 422 about anything but a commit as 502, not as not found", async () => {
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ message: "Unprocessable" }, 422)));
+
+			await expect(client(fetchGithub).fetchContributorStats(REPOSITORY)).rejects.toMatchObject({ problem: "unexpected-status", httpStatus: 502 });
+		});
+
+		it("reports a commit of the wrong shape as 502", async () => {
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ ...commitDetailWire(), files: "many" })));
+
+			await expect(client(fetchGithub).fetchCommit(COMMIT)).rejects.toMatchObject({ problem: "unexpected-body", httpStatus: 502 });
 		});
 	});
 

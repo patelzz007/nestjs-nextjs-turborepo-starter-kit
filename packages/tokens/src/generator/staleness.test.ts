@@ -11,6 +11,9 @@ import { findStaleStylesheets, findUnexpectedGeneratedFiles } from "./staleness"
 
 const GENERATED_DIRECTORY = new URL("../../generated/", import.meta.url);
 
+/** What the token source generates now, rendered once for the file (it draws the 1024 px launch icons). */
+const GENERATED = generateTokenStylesheets(TOKEN_SOURCE);
+
 function readCommitted(fileName: string): Uint8Array | undefined {
 	const file = new URL(fileName, GENERATED_DIRECTORY);
 	return existsSync(file) ? readFileSync(file) : undefined;
@@ -18,19 +21,17 @@ function readCommitted(fileName: string): Uint8Array | undefined {
 
 describe("the committed generated files", () => {
 	it(`matches what the token source generates now (if this fails, run \`${GENERATE_COMMAND}\` and commit the result)`, () => {
-		expect(findStaleStylesheets(generateTokenStylesheets(TOKEN_SOURCE), readCommitted)).toStrictEqual([]);
+		expect(findStaleStylesheets(GENERATED, readCommitted)).toStrictEqual([]);
 	});
 
 	it("holds no file the generator does not produce", () => {
-		expect(findUnexpectedGeneratedFiles(generateTokenStylesheets(TOKEN_SOURCE), readdirSync(GENERATED_DIRECTORY))).toStrictEqual([]);
+		expect(findUnexpectedGeneratedFiles(GENERATED, readdirSync(GENERATED_DIRECTORY))).toStrictEqual([]);
 	});
 });
 
 describe("findStaleStylesheets", () => {
-	const expected = generateTokenStylesheets(TOKEN_SOURCE);
-
 	it("reports nothing when every committed file matches", () => {
-		expect(findStaleStylesheets(expected, readCommitted)).toStrictEqual([]);
+		expect(findStaleStylesheets(GENERATED, readCommitted)).toStrictEqual([]);
 	});
 
 	it("reports a hand edit of a generated file, naming the command to fix it", () => {
@@ -43,7 +44,7 @@ describe("findStaleStylesheets", () => {
 
 		// The edit must actually land, or this would pass for the wrong reason.
 		expect(new TextDecoder().decode(handEdited("web.css"))).toContain("--card: white;");
-		expect(findStaleStylesheets(expected, handEdited)).toStrictEqual([
+		expect(findStaleStylesheets(GENERATED, handEdited)).toStrictEqual([
 			`generated/web.css is out of date with packages/tokens/src (or was edited by hand). Run \`${GENERATE_COMMAND}\` and commit the result.`,
 		]);
 	});
@@ -55,13 +56,13 @@ describe("findStaleStylesheets", () => {
 	});
 
 	it("reports a committed file that is missing", () => {
-		expect(findStaleStylesheets(expected, () => undefined)).toHaveLength(expected.length);
+		expect(findStaleStylesheets(GENERATED, () => undefined)).toHaveLength(GENERATED.length);
 	});
 });
 
 describe("findUnexpectedGeneratedFiles", () => {
 	it("names a leftover file in generated/", () => {
-		expect(findUnexpectedGeneratedFiles(generateTokenStylesheets(TOKEN_SOURCE), ["web.css", "tokens-old.css"])).toStrictEqual([
+		expect(findUnexpectedGeneratedFiles(GENERATED, ["web.css", "tokens-old.css"])).toStrictEqual([
 			`generated/tokens-old.css is not produced by the generator. Delete it, or add it to the generator, then run \`${GENERATE_COMMAND}\`.`,
 		]);
 	});

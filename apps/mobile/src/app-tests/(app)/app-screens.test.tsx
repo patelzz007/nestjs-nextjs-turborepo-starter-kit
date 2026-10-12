@@ -21,7 +21,7 @@ import { testAccessToken } from "../../../test/jwt";
 import { memorySecureStore } from "../../../test/secure-store-memory";
 import AppTabsLayout from "../../app/(app)/_layout";
 import HomeScreen from "../../app/(app)/index";
-import ProfileScreen from "../../app/(app)/profile";
+import ProfileScreen from "../../app/(app)/profile/index";
 import SearchScreen from "../../app/(app)/search";
 
 const mockSetTheme = jest.fn();
@@ -372,14 +372,14 @@ describe("Profile — GitHub contributions", () => {
 		expect(await screen.findByText("GitHub is still counting this repository's contributions. They'll appear here shortly.")).toBeOnTheScreen();
 	});
 
-	it("opens a commit on GitHub", async () => {
+	it("opens a contributor's profile on GitHub", async () => {
 		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
 		stubApi(helloWorldRoutes());
 		await renderSignedIn({ profile: ProfileScreen }, "/profile");
 
-		await fireEvent.press(await screen.findByRole("link", { name: /^feat: add contributions\./ }));
+		await fireEvent.press(await screen.findByRole("link", { name: /^octocat\./ }));
 
-		expect(openUrl).toHaveBeenCalledWith(`https://github.com/octo-org/hello-world/commit/${"1".padStart(40, "0")}`);
+		expect(openUrl).toHaveBeenCalledWith("https://github.com/octocat");
 	});
 
 	it("explains when GitHub cannot be opened", async () => {

@@ -1,20 +1,20 @@
 import { PATH_METADATA } from "@nestjs/common/constants";
 import { Reflector } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
-import { API_VERSION_PREFIX, type GithubCommitPage, type GithubContributorStats, type GithubRepositorySummary } from "@workspace/shared";
+import { API_VERSION_PREFIX, type GithubCommitDetail, type GithubCommitPage, type GithubContributorStats, type GithubRepositorySummary } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { REQUIRED_PERMISSION_KEY } from "../authorization/constants/authorization.constants";
 import { GithubContributionsService } from "./github-contributions.service";
 import { GithubController } from "./github.controller";
-import { GITHUB_INTEGRATION_OFF, toRepositorySummary } from "./github.mappers";
-import { summaryNode } from "./__tests__/github-wire.builders";
+import { GITHUB_INTEGRATION_OFF, toCommitDetail, toRepositorySummary } from "./github.mappers";
+import { SHA_A, commitDetailWire, summaryNode } from "./__tests__/github-wire.builders";
 
 const reflector = new Reflector();
 
-type HandlerName = "listRepositories" | "getRepositorySummary" | "getCommitPage" | "getContributorStats";
+type HandlerName = "listRepositories" | "getRepositorySummary" | "getCommitPage" | "getCommit" | "getContributorStats";
 
-const HANDLERS: readonly HandlerName[] = ["listRepositories", "getRepositorySummary", "getCommitPage", "getContributorStats"];
+const HANDLERS: readonly HandlerName[] = ["listRepositories", "getRepositorySummary", "getCommitPage", "getCommit", "getContributorStats"];
 const REPOSITORY = { owner: "octo-org", repository: "hello-world" };
 
 function routeMetadata(name: HandlerName, key: string): object | string | undefined {
@@ -39,6 +39,7 @@ describe("GithubController", () => {
 		["listRepositories", ""],
 		["getRepositorySummary", ":owner/:repository"],
 		["getCommitPage", ":owner/:repository/commits"],
+		["getCommit", ":owner/:repository/commits/:sha"],
 		["getContributorStats", ":owner/:repository/contributors"],
 	])("routes %s to %j", (name: string, path: string) => {
 		const handler = HANDLERS.find((candidate: HandlerName): boolean => candidate === name);
@@ -52,10 +53,12 @@ describe("GithubController", () => {
 		const summary: GithubRepositorySummary = toRepositorySummary(REPOSITORY, summaryNode());
 		const page: GithubCommitPage = { items: [], nextCursor: null, totalCommits: 0 };
 		const stats: GithubContributorStats = { status: "computing" };
+		const commit: GithubCommitDetail = toCommitDetail({ commit: commitDetailWire(), filesTruncated: false });
 		const service = {
 			listRepositories: vi.fn<GithubContributionsService["listRepositories"]>(() => Promise.resolve(GITHUB_INTEGRATION_OFF)),
 			getRepositorySummary: vi.fn<GithubContributionsService["getRepositorySummary"]>(() => Promise.resolve(summary)),
 			getCommitPage: vi.fn<GithubContributionsService["getCommitPage"]>(() => Promise.resolve(page)),
+			getCommit: vi.fn<GithubContributionsService["getCommit"]>(() => Promise.resolve(commit)),
 			getContributorStats: vi.fn<GithubContributionsService["getContributorStats"]>(() => Promise.resolve(stats)),
 		};
 		const moduleRef = await Test.createTestingModule({ controllers: [GithubController], providers: [{ provide: GithubContributionsService, useValue: service }] }).compile();
@@ -65,6 +68,8 @@ describe("GithubController", () => {
 		expect(await controller.getRepositorySummary(REPOSITORY)).toBe(summary);
 		expect(await controller.getCommitPage(REPOSITORY, { limit: 5, cursor: "c" })).toBe(page);
 		expect(await controller.getContributorStats(REPOSITORY)).toBe(stats);
+		expect(await controller.getCommit({ ...REPOSITORY, sha: SHA_A })).toBe(commit);
+		expect(service.getCommit).toHaveBeenCalledWith({ ...REPOSITORY, sha: SHA_A });
 		expect(service.getRepositorySummary).toHaveBeenCalledWith(REPOSITORY);
 		expect(service.getContributorStats).toHaveBeenCalledWith(REPOSITORY);
 		expect(service.getCommitPage).toHaveBeenCalledWith(REPOSITORY, { limit: 5, cursor: "c" });

@@ -913,7 +913,9 @@ apps/mobile/
       (app)/_layout.tsx     tabs
       (app)/index.tsx       Home
       (app)/analytics.tsx   Analytics (sample data, ADR 048)
-      (app)/profile.tsx
+      (app)/profile/_layout.tsx   stack
+      (app)/profile/index.tsx     Profile (+ GitHub contributions)
+      (app)/profile/commit.tsx    one GitHub commit and its diff
       (app)/settings/index.tsx
       (app)/settings/security.tsx
       (app)/settings/devices.tsx
@@ -1189,7 +1191,9 @@ Avatar upload follows the existing upload contract if the web profile supports i
 listed as a next step rather than invented here.
 
 Below the editor, the **GitHub contributions** section (2026-10-10): the configured repositories'
-summary, top contributors and commit history with lines added and deleted. Hidden when the
+summary, top contributors and commit history with lines added and deleted. Tapping a commit
+pushes its own screen (`/profile/commit`, 2026-10-12): the message, author, SHA and parents, then
+every changed file with a GitHub-style diff. Hidden when the
 integration is off or the account lacks `READ:GITHUB` — see
 [GitHub contributions §4](../github-contributions.md#4-mobile-profile-section).
 
@@ -1676,7 +1680,7 @@ touches shared packages.
 | `POST /auth/signup` | Sign up |
 | `POST /auth/forgot-password` | Forgot password |
 | `GET /auth/me` | Home, Profile |
-| `GET /github/repositories`, `GET /github/repositories/:owner/:repository`, `…/commits`, `…/contributors` | Profile: GitHub contributions |
+| `GET /github/repositories`, `GET /github/repositories/:owner/:repository`, `…/commits`, `…/commits/:sha`, `…/contributors` | Profile: GitHub contributions and a commit's screen |
 | `GET /session` | Status pills: the token countdown (§10.16) |
 | `POST /auth/change-password` | Security |
 | `POST /auth/refresh` | api-client (automatic) |

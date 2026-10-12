@@ -534,6 +534,10 @@ export const apiRouter = {
 		repositoryCommits: defineQuery(apiContract.github.repositoryCommits, {
 			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "commits"],
 		}),
+		/** A commit never changes, so its key is its sha — nested under the repository like every other view. */
+		repositoryCommit: defineQuery(apiContract.github.repositoryCommit, {
+			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "commit"],
+		}),
 		repositoryContributors: defineQuery(apiContract.github.repositoryContributors, {
 			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "contributors"],
 		}),

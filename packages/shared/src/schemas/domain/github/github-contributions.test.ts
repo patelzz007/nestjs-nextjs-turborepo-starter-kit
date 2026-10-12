@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	GITHUB_COMMIT_FILES_MAX,
 	GITHUB_COMMIT_PAGE_DEFAULT_LIMIT,
+	GITHUB_FILE_PATCH_MAX_LENGTH,
 	GITHUB_COMMIT_PAGE_MAX_LIMIT,
 	GithubAccountLoginSchema,
+	GithubCommitDetailSchema,
+	GithubCommitFileDiffSchema,
 	GithubCommitHistoryInputSchema,
 	GithubCommitHistoryQuerySchema,
+	GithubCommitParamsSchema,
 	GithubCommitSchema,
 	GithubContributorStatsSchema,
 	GithubOwnerSchema,
@@ -147,5 +152,72 @@ describe("GithubRepositoryListSchema", () => {
 		["more than 100 repositories", { source: "discovered", account: "patelzz007", repositories: Array.from({ length: 101 }, () => item) }],
 	])("rejects %s", (_label: string, list: object) => {
 		expect(GithubRepositoryListSchema.safeParse(list).success).toBe(false);
+	});
+});
+
+describe("GithubCommitParamsSchema", () => {
+	const repository = { owner: "octo-org", repository: "hello-world" };
+
+	it("accepts a full lowercase SHA", () => {
+		expect(GithubCommitParamsSchema.safeParse({ ...repository, sha: SHA }).success).toBe(true);
+	});
+
+	it.each([
+		["a short SHA", SHA.slice(0, 7)],
+		["an uppercase SHA", SHA.toUpperCase()],
+		["a branch name", "main".padEnd(40, "x")],
+		["a path", `../${SHA.slice(3)}`],
+	])("rejects %s", (_label: string, sha: string) => {
+		expect(GithubCommitParamsSchema.safeParse({ ...repository, sha }).success).toBe(false);
+	});
+
+	it("rejects unknown keys", () => {
+		expect(GithubCommitParamsSchema.safeParse({ ...repository, sha: SHA, ref: "main" }).success).toBe(false);
+	});
+});
+
+describe("GithubCommitFileDiffSchema", () => {
+	it.each([{ kind: "patch", patch: "@@ -1 +1 @@\n-a\n+b" }, { kind: "too-large" }, { kind: "unavailable" }])("accepts %j", (diff: object) => {
+		expect(GithubCommitFileDiffSchema.safeParse(diff).success).toBe(true);
+	});
+
+	it.each([
+		["a patch without text", { kind: "patch", patch: "" }],
+		["a patch past the per-file limit", { kind: "patch", patch: "+".repeat(GITHUB_FILE_PATCH_MAX_LENGTH + 1) }],
+		["an unknown kind", { kind: "binary" }],
+	])("rejects %s", (_label: string, diff: object) => {
+		expect(GithubCommitFileDiffSchema.safeParse(diff).success).toBe(false);
+	});
+});
+
+describe("GithubCommitDetailSchema", () => {
+	const file = { path: "src/app.ts", previousPath: null, status: "modified", additions: 1, deletions: 1, diff: { kind: "unavailable" } };
+	const detail = {
+		sha: SHA,
+		shortSha: SHA.slice(0, 7),
+		headline: "feat: x",
+		htmlUrl: `https://github.com/octo-org/hello-world/commit/${SHA}`,
+		committedAt: 1_800_000_000_000,
+		author: { name: "Octo Cat", login: "octocat", avatarUrl: null },
+		additions: 1,
+		deletions: 1,
+		changedFiles: 1,
+		message: "feat: x\n\nWhy.",
+		parents: [{ sha: SHA, shortSha: SHA.slice(0, 7) }],
+		files: [file],
+		filesTruncated: false,
+	};
+
+	it("accepts a commit with its files", () => {
+		expect(GithubCommitDetailSchema.safeParse(detail).success).toBe(true);
+	});
+
+	it.each([
+		["an unknown file status", { ...detail, files: [{ ...file, status: "moved" }] }],
+		["an empty path", { ...detail, files: [{ ...file, path: "" }] }],
+		["more files than one page", { ...detail, files: Array.from({ length: GITHUB_COMMIT_FILES_MAX + 1 }, () => file) }],
+		["a parent that is not a SHA", { ...detail, parents: [{ sha: "main", shortSha: "main" }] }],
+	])("rejects %s", (_label: string, candidate: object) => {
+		expect(GithubCommitDetailSchema.safeParse(candidate).success).toBe(false);
 	});
 });

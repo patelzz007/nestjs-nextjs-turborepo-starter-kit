@@ -248,6 +248,14 @@ describe("resolveRequest path parameters", () => {
 		expect(resolveRequest(apiRouter.github.repositorySummary.path, { owner: OWNER, repository: REPOSITORY })).toEqual({ url: `/github/repositories/${OWNER}/${REPOSITORY}` });
 	});
 
+	it("puts a commit's SHA in its path, with nothing left for the query string", () => {
+		const sha = "0123456789abcdef0123456789abcdef01234567";
+
+		expect(resolveRequest(apiRouter.github.repositoryCommit.path, { owner: OWNER, repository: REPOSITORY, sha })).toEqual({
+			url: `/github/repositories/${OWNER}/${REPOSITORY}/commits/${sha}`,
+		});
+	});
+
 	it("percent-encodes a parameter value", () => {
 		expect(resolveRequest(apiRouter.auth.adminUserDetail.path, { userId: "a/b c" })).toEqual({ url: "/auth/admin/users/a%2Fb%20c" });
 	});
@@ -274,6 +282,7 @@ describe("apiRouter.github query keys", () => {
 			apiRouter.github.repositorySummary.queryKey(params),
 			apiRouter.github.repositoryCommits.queryKey({ ...params, limit: 10 }),
 			apiRouter.github.repositoryContributors.queryKey(params),
+			apiRouter.github.repositoryCommit.queryKey({ ...params, sha: "0123456789abcdef0123456789abcdef01234567" }),
 		];
 
 		for (const key of keys) {

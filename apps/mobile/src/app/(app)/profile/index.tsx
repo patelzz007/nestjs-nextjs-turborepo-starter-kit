@@ -13,21 +13,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
-import { DetailList } from "../../components/detail-list";
-import { Screen } from "../../components/screen";
-import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { ErrorState } from "../../components/states";
-import { TextField } from "../../components/text-field";
-import { GithubContributionsSection } from "../../features/github/github-contributions-section";
-import { refreshGithubContributions } from "../../features/github/refresh";
-import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError, STALE_PROFILE_MESSAGE } from "../../features/profile/own-profile-cache";
-import { useToast } from "../../features/toast/facade";
-import { useApi } from "../../lib/api-context";
-import { errorMessageOf } from "../../lib/error-messages";
-import { visibleFieldError } from "../../lib/form";
+import { Avatar } from "../../../components/avatar";
+import { Button } from "../../../components/button";
+import { Card } from "../../../components/card";
+import { DetailList } from "../../../components/detail-list";
+import { Screen } from "../../../components/screen";
+import { Skeleton, SkeletonGroup, SkeletonText } from "../../../components/skeleton";
+import { ErrorState } from "../../../components/states";
+import { TextField } from "../../../components/text-field";
+import { GithubContributionsSection } from "../../../features/github/github-contributions-section";
+import { refreshGithubContributions } from "../../../features/github/refresh";
+import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError, STALE_PROFILE_MESSAGE } from "../../../features/profile/own-profile-cache";
+import { useToast } from "../../../features/toast/facade";
+import { useApi } from "../../../lib/api-context";
+import { errorMessageOf } from "../../../lib/error-messages";
+import { visibleFieldError } from "../../../lib/form";
 
 export const PROFILE_SAVED_MESSAGE = "Profile saved.";
 

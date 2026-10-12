@@ -4,13 +4,16 @@
 // Reads the repositories the API may read (GET /github/repositories: pinned by
 // config, or the token account's own and contributed-to repositories) and
 // shows one at a time: its summary, its top contributors and its commit
-// history with the lines each commit added and deleted. The section is not
+// history with the lines each commit added and deleted. Tapping a commit opens
+// its own screen with every changed file's diff (github-commit-detail.tsx); a
+// contributor opens their GitHub profile. The section is not
 // shown at all when the integration is off (no repositories) or the account
 // may not read it (403) — there is nothing for the person to act on.
 // docs/technical/github-contributions.md
 
 import { ApiError } from "@workspace/api-client";
 import type { GithubCommit, GithubContributor, GithubRepositoryListItem, GithubRepositoryRef } from "@workspace/shared";
+import { useRouter } from "expo-router";
 import * as React from "react";
 import { Linking, View } from "react-native";
 
@@ -27,6 +30,7 @@ import { BodyText, Label, MutedText } from "../../components/text";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useNow } from "../../lib/use-now";
+import { ROUTES } from "../../runtime/routes";
 import {
 	changeSummary,
 	commitMeta,
@@ -34,6 +38,7 @@ import {
 	formatCount,
 	languageItems,
 	lastPushLabel,
+	OPEN_GITHUB_FAILED_MESSAGE,
 	repositoryDescription,
 	repositoryListDescription,
 	summaryTiles,
@@ -57,8 +62,6 @@ export const GITHUB_REPOSITORY_SEARCH_MIN = 8;
 const RELATIVE_TIME_REFRESH_MS = 60_000;
 
 const HTTP_FORBIDDEN = 403;
-
-const OPEN_FAILED_MESSAGE = "Couldn't open GitHub. Try again from a browser.";
 
 /** The account may not read GitHub contributions (no READ:GITHUB) — the section stays hidden. */
 function isForbidden(error: Error): boolean {
@@ -146,6 +149,7 @@ interface RepositoryContributionsProps extends RepositoryProps {
 }
 
 function RepositoryContributions({ repository, nowMs }: RepositoryContributionsProps): React.JSX.Element {
+	const router = useRouter();
 	const [openFailed, setOpenFailed] = React.useState(false);
 	const openOnGithub = React.useCallback((url: string): void => {
 		setOpenFailed(false);
@@ -153,12 +157,18 @@ function RepositoryContributions({ repository, nowMs }: RepositoryContributionsP
 			setOpenFailed(true);
 		});
 	}, []);
+	const openCommit = React.useCallback(
+		(sha: string): void => {
+			router.push({ pathname: ROUTES.githubCommit, params: { owner: repository.owner, repository: repository.repository, sha } });
+		},
+		[repository.owner, repository.repository, router],
+	);
 	return (
 		<View className="gap-5">
 			<RepositorySummary repository={repository} nowMs={nowMs} />
-			{openFailed ? <Banner tone="error" message={OPEN_FAILED_MESSAGE} /> : null}
+			{openFailed ? <Banner tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
 			<TopContributors repository={repository} onOpen={openOnGithub} />
-			<CommitHistory repository={repository} nowMs={nowMs} onOpen={openOnGithub} />
+			<CommitHistory repository={repository} nowMs={nowMs} onOpenCommit={openCommit} />
 		</View>
 	);
 }
@@ -283,8 +293,10 @@ function ContributorRow({ contributor, onOpen }: ContributorRowProps): React.JSX
 	);
 }
 
-interface CommitHistoryProps extends OpenableProps {
+interface CommitHistoryProps extends RepositoryProps {
 	readonly nowMs: number;
+	/** Shows one commit, by SHA, on its own screen. */
+	readonly onOpenCommit: (sha: string) => void;
 }
 
 /**
@@ -292,7 +304,7 @@ interface CommitHistoryProps extends OpenableProps {
  * own query (keyed by its cursor); only the cursors of the pages the person
  * asked for are local state.
  */
-function CommitHistory({ repository, nowMs, onOpen }: CommitHistoryProps): React.JSX.Element {
+function CommitHistory({ repository, nowMs, onOpenCommit }: CommitHistoryProps): React.JSX.Element {
 	const [olderCursors, setOlderCursors] = React.useState<readonly string[]>([]);
 	const loadOlder = React.useCallback((cursor: string): void => {
 		setOlderCursors((current: readonly string[]): readonly string[] => (current.includes(cursor) ? current : [...current, cursor]));
@@ -301,9 +313,17 @@ function CommitHistory({ repository, nowMs, onOpen }: CommitHistoryProps): React
 	return (
 		<View className="gap-1">
 			<Label>Recent commits</Label>
-			<CommitHistoryPage repository={repository} cursor={undefined} isLast={lastCursor === undefined} nowMs={nowMs} onOpen={onOpen} onLoadOlder={loadOlder} />
+			<CommitHistoryPage repository={repository} cursor={undefined} isLast={lastCursor === undefined} nowMs={nowMs} onOpenCommit={onOpenCommit} onLoadOlder={loadOlder} />
 			{olderCursors.map((cursor: string): React.JSX.Element => (
-				<CommitHistoryPage key={cursor} repository={repository} cursor={cursor} isLast={cursor === lastCursor} nowMs={nowMs} onOpen={onOpen} onLoadOlder={loadOlder} />
+				<CommitHistoryPage
+					key={cursor}
+					repository={repository}
+					cursor={cursor}
+					isLast={cursor === lastCursor}
+					nowMs={nowMs}
+					onOpenCommit={onOpenCommit}
+					onLoadOlder={loadOlder}
+				/>
 			))}
 		</View>
 	);
@@ -317,7 +337,7 @@ interface CommitHistoryPageProps extends CommitHistoryProps {
 	readonly onLoadOlder: (cursor: string) => void;
 }
 
-function CommitHistoryPage({ repository, cursor, isLast, nowMs, onOpen, onLoadOlder }: CommitHistoryPageProps): React.JSX.Element {
+function CommitHistoryPage({ repository, cursor, isLast, nowMs, onOpenCommit, onLoadOlder }: CommitHistoryPageProps): React.JSX.Element {
 	const api = useApi();
 	const page = api.github.repositoryCommits.useQuery({
 		owner: repository.owner,
@@ -347,7 +367,7 @@ function CommitHistoryPage({ repository, cursor, isLast, nowMs, onOpen, onLoadOl
 	return (
 		<View>
 			{items.map((commit: GithubCommit): React.JSX.Element => (
-				<CommitRow key={commit.sha} commit={commit} nowMs={nowMs} onOpen={onOpen} />
+				<CommitRow key={commit.sha} commit={commit} nowMs={nowMs} onOpenCommit={onOpenCommit} />
 			))}
 			{isLast && nextCursor !== null ? <LoadOlderButton cursor={nextCursor} onLoadOlder={onLoadOlder} /> : null}
 		</View>
@@ -357,13 +377,13 @@ function CommitHistoryPage({ repository, cursor, isLast, nowMs, onOpen, onLoadOl
 interface CommitRowProps {
 	readonly commit: GithubCommit;
 	readonly nowMs: number;
-	readonly onOpen: (url: string) => void;
+	readonly onOpenCommit: (sha: string) => void;
 }
 
-function CommitRow({ commit, nowMs, onOpen }: CommitRowProps): React.JSX.Element {
+function CommitRow({ commit, nowMs, onOpenCommit }: CommitRowProps): React.JSX.Element {
 	const open = React.useCallback((): void => {
-		onOpen(commit.htmlUrl);
-	}, [commit.htmlUrl, onOpen]);
+		onOpenCommit(commit.sha);
+	}, [commit.sha, onOpenCommit]);
 	return (
 		<ChangeRow
 			title={commit.headline}
@@ -371,7 +391,7 @@ function CommitRow({ commit, nowMs, onOpen }: CommitRowProps): React.JSX.Element
 			additions={formatCount(commit.additions)}
 			deletions={formatCount(commit.deletions)}
 			changeSummary={changeSummary(commit.additions, commit.deletions)}
-			accessibilityHint="Opens the commit on GitHub"
+			accessibilityHint="Shows the files this commit changed"
 			onPress={open}
 		/>
 	);

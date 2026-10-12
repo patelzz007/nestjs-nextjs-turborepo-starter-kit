@@ -143,7 +143,7 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 | `data.items[].deletions` | integer | yes |  |
 | `data.items[].headline` | string | yes |  |
 | `data.items[].htmlUrl` | string (uri) | yes |  |
-| `data.items[].sha` | string | yes | exactly 40 characters; pattern `^[0-9a-f]+$` |
+| `data.items[].sha` | string | yes | Full commit SHA (40 lowercase hex characters); exactly 40 characters; pattern `^[0-9a-f]+$` |
 | `data.items[].shortSha` | string | yes | length 1–40; pattern `^[0-9a-f]+$` |
 | `data.nextCursor` | string \| null | yes | at most 200 characters |
 | `data.totalCommits` | integer | yes |  |
@@ -152,6 +152,73 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 
 | Status | Code | When |
 | --- | --- | --- |
+| 404 | `NOT_FOUND` | Stated in the endpoint description. |
+| 503 | `SERVICE_UNAVAILABLE` | Stated in the endpoint description. |
+| 502 | `EXTERNAL_SERVICE_ERROR` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/github/repositories/{owner}/{repository}/commits/{sha}
+
+One commit of a configured repository: its message, parents and every changed file with its diff
+
+Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000 characters or once the commit's diffs reach 200,000 together, and `unavailable` when GitHub sends none (binary files). At most 100 files; `filesTruncated` says the commit changed more. 404 NOT_FOUND also when the repository has no commit with this SHA. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `READ:GITHUB`.
+- Operation id `GithubController_getCommit` · [source](../../../apps/api/src/modules/github/github.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `owner` | path | string | yes | GitHub user or organization |
+| `repository` | path | string | yes | GitHub repository name |
+| `sha` | path | string | yes | Full commit SHA (40 lowercase hex characters) |
+
+**Response 200 OK** — The commit and its changed files
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.additions` | integer | yes |  |
+| `data.author` | object | yes |  |
+| `data.author.avatarUrl` | string (uri) \| null | yes |  |
+| `data.author.login` | string \| null | yes | GitHub account login; length 1–44; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\[bot\])?$` |
+| `data.author.name` | string | yes |  |
+| `data.changedFiles` | integer \| null | yes |  |
+| `data.committedAt` | integer | yes |  |
+| `data.deletions` | integer | yes |  |
+| `data.files` | object[] | yes | 0–100 items |
+| `data.files[].additions` | integer | yes |  |
+| `data.files[].deletions` | integer | yes |  |
+| `data.files[].diff` | object | yes |  |
+| `data.files[].diff.⟨shape 1⟩ kind` | "patch" | yes |  |
+| `data.files[].diff.⟨shape 1⟩ patch` | string | yes | length 1–20000 |
+| `data.files[].diff.⟨shape 2⟩ kind` | "too-large" | yes |  |
+| `data.files[].diff.⟨shape 3⟩ kind` | "unavailable" | yes |  |
+| `data.files[].path` | string | yes | length 1–4096 |
+| `data.files[].previousPath` | string \| null | yes | length 1–4096 |
+| `data.files[].status` | "added" \| "removed" \| "modified" \| "renamed" \| "copied" \| "changed" \| "unchanged" | yes |  |
+| `data.filesTruncated` | boolean | yes |  |
+| `data.headline` | string | yes |  |
+| `data.htmlUrl` | string (uri) | yes |  |
+| `data.message` | string | yes | at most 10000 characters |
+| `data.parents` | object[] | yes | 0–8 items |
+| `data.parents[].sha` | string | yes | Full commit SHA (40 lowercase hex characters); exactly 40 characters; pattern `^[0-9a-f]+$` |
+| `data.parents[].shortSha` | string | yes | length 1–40; pattern `^[0-9a-f]+$` |
+| `data.sha` | string | yes | Full commit SHA (40 lowercase hex characters); exactly 40 characters; pattern `^[0-9a-f]+$` |
+| `data.shortSha` | string | yes | length 1–40; pattern `^[0-9a-f]+$` |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `NOT_FOUND` | Stated in the endpoint description. |
 | 404 | `NOT_FOUND` | Stated in the endpoint description. |
 | 503 | `SERVICE_UNAVAILABLE` | Stated in the endpoint description. |
 | 502 | `EXTERNAL_SERVICE_ERROR` | Stated in the endpoint description. |

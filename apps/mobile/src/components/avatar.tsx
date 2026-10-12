@@ -11,14 +11,21 @@ const TONE_CLASSES: Readonly<Record<AvatarTone, { readonly circle: string; reado
 	inverse: { circle: "bg-primary-foreground", initials: "text-primary" },
 };
 
+/** `lg` heads an account (profile, drawer); `sm` sits inline with text (a commit's author). */
+export type AvatarSize = "sm" | "lg";
+
+/** Side of the avatar per size, in points, and the classes of the initials fallback. */
+const SIZES: Readonly<Record<AvatarSize, { readonly points: number; readonly circle: string; readonly initials: string }>> = {
+	sm: { points: 24, circle: "size-6", initials: "text-xs" },
+	lg: { points: 56, circle: "size-14", initials: "text-lg" },
+};
+
 export interface AvatarProps {
 	readonly name: string;
 	readonly imageUrl: string | null;
 	readonly tone?: AvatarTone;
+	readonly size?: AvatarSize;
 }
-
-/** Side of the avatar, in points. */
-const AVATAR_SIZE = 56;
 
 const WHITESPACE_PATTERN = /\s+/;
 const MAX_INITIALS = 2;
@@ -34,14 +41,15 @@ export function initialsOf(name: string): string {
 		.join("");
 }
 
-export function Avatar({ name, imageUrl, tone = "default" }: AvatarProps): React.JSX.Element {
+export function Avatar({ name, imageUrl, tone = "default", size = "lg" }: AvatarProps): React.JSX.Element {
 	const classes = TONE_CLASSES[tone];
+	const dimensions = SIZES[size];
 	if (imageUrl !== null) {
-		return <Image source={{ uri: imageUrl }} accessibilityLabel={`${name}'s profile picture`} width={AVATAR_SIZE} height={AVATAR_SIZE} className="rounded-full" />;
+		return <Image source={{ uri: imageUrl }} accessibilityLabel={`${name}'s profile picture`} width={dimensions.points} height={dimensions.points} className="rounded-full" />;
 	}
 	return (
-		<View accessibilityLabel={`${name}'s initials`} accessible className={`size-14 items-center justify-center rounded-full ${classes.circle}`}>
-			<Text className={`font-heading text-lg ${classes.initials}`}>{initialsOf(name)}</Text>
+		<View accessibilityLabel={`${name}'s initials`} accessible className={`${dimensions.circle} items-center justify-center rounded-full ${classes.circle}`}>
+			<Text className={`font-heading ${dimensions.initials} ${classes.initials}`}>{initialsOf(name)}</Text>
 		</View>
 	);
 }

@@ -6,11 +6,21 @@
 
 import {
 	epochMs,
+	GITHUB_COMMIT_DIFF_MAX_LENGTH,
+	GITHUB_COMMIT_FILES_MAX,
+	GITHUB_COMMIT_MESSAGE_MAX_LENGTH,
+	GITHUB_COMMIT_PARENTS_MAX,
+	GITHUB_FILE_PATCH_MAX_LENGTH,
 	GITHUB_REPOSITORY_LIST_MAX,
+	GithubCommitFileStatusSchema,
 	GithubLanguageShareSchema,
 	toGithubFullName,
 	type GithubCommit,
+	type GithubCommitDetail,
+	type GithubCommitFile,
+	type GithubCommitFileDiff,
 	type GithubCommitPage,
+	type GithubCommitParent,
 	type GithubContributor,
 	type GithubContributorStats,
 	type GithubLanguageShare,
@@ -22,8 +32,10 @@ import {
 	type GithubRepositorySummary,
 } from "@workspace/shared";
 
-import type { GithubContributorStatsResult } from "./github-api.client";
+import type { GithubCommitDetailResult, GithubContributorStatsResult } from "./github-api.client";
 import type {
+	GithubCommitDetailWire,
+	GithubCommitFileWire,
 	GithubCommitHistoryWire,
 	GithubCommitNodeWire,
 	GithubContributorStatWire,
@@ -38,6 +50,15 @@ const PERCENT_DECIMAL_FACTOR = 10;
 
 /** Shown when a commit's author has neither a git name nor a GitHub account. */
 export const UNKNOWN_COMMIT_AUTHOR = "Unknown author";
+
+/** GitHub's own abbreviation of a commit id (`a1b2c3d`). */
+export const SHORT_SHA_LENGTH = 7;
+
+/** A file status GitHub adds later is shown as a plain change, not refused. */
+const FileStatusSchema = GithubCommitFileStatusSchema.catch("changed");
+
+/** Ends the headline of a commit message. */
+const LINE_BREAK = "\n";
 
 export function toRepositoryRef(params: GithubRepositoryParams): GithubRepositoryRef {
 	return { owner: params.owner, repository: params.repository, fullName: toGithubFullName(params) };
@@ -175,4 +196,70 @@ export function toContributorStats(result: GithubContributorStatsResult): Github
 		})
 		.sort((left: GithubContributor, right: GithubContributor): number => right.commits - left.commits || left.login.localeCompare(right.login));
 	return { status: "ready", contributors };
+}
+
+/**
+ * One commit with its files. Diffs are passed on while they fit: one file's
+ * up to {@link GITHUB_FILE_PATCH_MAX_LENGTH} characters, all files together up
+ * to {@link GITHUB_COMMIT_DIFF_MAX_LENGTH} (in GitHub's order) — past that a
+ * file is `too-large`, so one answer stays small enough for a phone.
+ */
+export function toCommitDetail({ commit, filesTruncated }: GithubCommitDetailResult): GithubCommitDetail {
+	const listed = commit.files.slice(0, GITHUB_COMMIT_FILES_MAX);
+	const files: GithubCommitFile[] = [];
+	let diffBudget = GITHUB_COMMIT_DIFF_MAX_LENGTH;
+	for (const file of listed) {
+		const diff = toFileDiff(file, diffBudget);
+		diffBudget -= diff.kind === "patch" ? diff.patch.length : 0;
+		files.push(toCommitFile(file, diff));
+	}
+	const message = commit.commit.message.slice(0, GITHUB_COMMIT_MESSAGE_MAX_LENGTH);
+	const [headline = ""] = message.split(LINE_BREAK);
+	const user = commit.author;
+	return {
+		sha: commit.sha,
+		shortSha: commit.sha.slice(0, SHORT_SHA_LENGTH),
+		headline,
+		htmlUrl: commit.html_url,
+		committedAt: epochMs(Date.parse(commit.commit.committer.date)),
+		author: {
+			name: commit.commit.author?.name ?? user?.login ?? UNKNOWN_COMMIT_AUTHOR,
+			login: user?.login ?? null,
+			avatarUrl: user?.avatar_url ?? null,
+		},
+		additions: commit.stats.additions,
+		deletions: commit.stats.deletions,
+		changedFiles: filesTruncated ? null : files.length,
+		message,
+		parents: commit.parents.slice(0, GITHUB_COMMIT_PARENTS_MAX).map(toCommitParent),
+		files,
+		filesTruncated,
+	};
+}
+
+function toCommitParent(parent: GithubCommitDetailWire["parents"][number]): GithubCommitParent {
+	return { sha: parent.sha, shortSha: parent.sha.slice(0, SHORT_SHA_LENGTH) };
+}
+
+/** A file's diff, if GitHub sent one and it fits both this file's limit and what is left of the commit's. */
+function toFileDiff(file: GithubCommitFileWire, diffBudget: number): GithubCommitFileDiff {
+	const patch = file.patch ?? "";
+	if (patch.length === 0) {
+		return { kind: "unavailable" };
+	}
+	if (patch.length > GITHUB_FILE_PATCH_MAX_LENGTH || patch.length > diffBudget) {
+		return { kind: "too-large" };
+	}
+	return { kind: "patch", patch };
+}
+
+function toCommitFile(file: GithubCommitFileWire, diff: GithubCommitFileDiff): GithubCommitFile {
+	return {
+		path: file.filename,
+		previousPath: file.previous_filename ?? null,
+		status: FileStatusSchema.parse(file.status),
+		additions: file.additions,
+		deletions: file.deletions,
+		diff,
+	};
 }

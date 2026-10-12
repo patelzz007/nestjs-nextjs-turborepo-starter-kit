@@ -150,3 +150,46 @@ export const GithubContributorStatWireSchema = z.object({
 export type GithubContributorStatWire = z.output<typeof GithubContributorStatWireSchema>;
 
 export const GithubContributorStatsWireSchema = z.array(GithubContributorStatWireSchema);
+
+// ── One commit with its files (REST) ───────────────────────────────────────
+
+/** What git records about a person on a commit; GitHub sends `null` fields for malformed history. */
+const GitPersonWireSchema = z.object({
+	name: z.string().nullable(),
+	date: z.iso.datetime({ offset: true }),
+});
+
+/** The GitHub account behind a git identity — `null` when the email maps to none. */
+const GithubAccountWireSchema = z.object({ login: z.string(), avatar_url: z.url() }).nullable();
+
+/**
+ * One changed file. `patch` is absent for a binary file, a pure rename, or a
+ * diff past GitHub's own limits; `previous_filename` only for a rename or copy.
+ */
+export const GithubCommitFileWireSchema = z.object({
+	filename: z.string(),
+	previous_filename: z.string().optional(),
+	status: z.string(),
+	additions: z.number().int().nonnegative(),
+	deletions: z.number().int().nonnegative(),
+	patch: z.string().optional(),
+});
+
+export type GithubCommitFileWire = z.output<typeof GithubCommitFileWireSchema>;
+
+/** `GET /repos/{owner}/{repo}/commits/{ref}` — the first page of its files. */
+export const GithubCommitDetailWireSchema = z.object({
+	sha: z.string(),
+	html_url: z.url(),
+	commit: z.object({
+		message: z.string(),
+		author: GitPersonWireSchema.nullable(),
+		committer: GitPersonWireSchema,
+	}),
+	author: GithubAccountWireSchema,
+	parents: z.array(z.object({ sha: z.string() })),
+	stats: z.object({ additions: z.number().int().nonnegative(), deletions: z.number().int().nonnegative() }),
+	files: z.array(GithubCommitFileWireSchema),
+});
+
+export type GithubCommitDetailWire = z.output<typeof GithubCommitDetailWireSchema>;

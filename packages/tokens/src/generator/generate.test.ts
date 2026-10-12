@@ -10,13 +10,20 @@ import { generateTokenStylesheets } from "./generate";
 import { renderMobileStylesheet } from "./render-mobile";
 import { renderWebStylesheet } from "./render-web";
 
+/**
+ * What the token source generates, rendered once for the file: generating
+ * draws the 1024 px launch icons, so each test renders only the output it is
+ * about and compares it with this.
+ */
+const GENERATED = generateTokenStylesheets(TOKEN_SOURCE);
+
 describe("generateTokenStylesheets", () => {
 	it("produces every generated file, once each", () => {
-		expect(generateTokenStylesheets(TOKEN_SOURCE).map(({ fileName }) => fileName)).toStrictEqual(GeneratedFileNameSchema.options);
+		expect(GENERATED.map(({ fileName }) => fileName)).toStrictEqual(GeneratedFileNameSchema.options);
 	});
 
 	it("is deterministic: the same source gives byte-identical output", () => {
-		expect(generateTokenStylesheets(structuredClone(TOKEN_SOURCE))).toStrictEqual(generateTokenStylesheets(TOKEN_SOURCE));
+		expect(generateTokenStylesheets(structuredClone(TOKEN_SOURCE))).toStrictEqual(GENERATED);
 	});
 
 	it("does not depend on the order the data modules list their keys in", () => {
@@ -28,7 +35,7 @@ describe("generateTokenStylesheets", () => {
 		expect(Object.keys(reordered.themes).at(0)).toBe("dark");
 		expect(renderWebStylesheet(reordered)).toBe(renderWebStylesheet(TOKEN_SOURCE));
 		expect(renderMobileStylesheet(reordered)).toBe(renderMobileStylesheet(TOKEN_SOURCE));
-		expect(generateTokenStylesheets(reordered)).toStrictEqual(generateTokenStylesheets(TOKEN_SOURCE));
+		expect(generateTokenStylesheets(reordered)).toStrictEqual(GENERATED);
 	});
 
 	it("fails on a value the schema does not support", () => {

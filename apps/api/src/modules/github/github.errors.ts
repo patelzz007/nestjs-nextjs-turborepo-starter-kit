@@ -1,12 +1,13 @@
-import { toGithubFullName, type GithubRepositoryParams } from "@workspace/shared";
+import { toGithubFullName, type GithubCommitParams, type GithubRepositoryParams } from "@workspace/shared";
 
 import { DependencyUnavailableError, ExternalServiceError, NotFoundError } from "../../common/errors/app-error";
 
 /**
- * What one GitHub read is about: one repository, or the token's own account
- * (discovering its repositories). Errors and logs name it.
+ * What one GitHub read is about: one repository, one commit of it, or the
+ * token's own account (discovering its repositories). Errors and logs name it.
  */
-export type GithubReadTarget = { readonly kind: "repository"; readonly params: GithubRepositoryParams } | { readonly kind: "account" };
+export type GithubReadTarget =
+	{ readonly kind: "repository"; readonly params: GithubRepositoryParams } | { readonly kind: "commit"; readonly params: GithubCommitParams } | { readonly kind: "account" };
 
 /** The token's account as a read target. */
 export const GITHUB_ACCOUNT_TARGET: GithubReadTarget = { kind: "account" };
@@ -15,9 +16,20 @@ export function repositoryTarget(params: GithubRepositoryParams): GithubReadTarg
 	return { kind: "repository", params };
 }
 
-/** `octo-org/hello-world`, or "the token's account" — for logs and server-side causes only. */
+export function commitTarget(params: GithubCommitParams): GithubReadTarget {
+	return { kind: "commit", params };
+}
+
+/** `octo-org/hello-world`, `octo-org/hello-world@a1b2…`, or the token's account — for logs and server-side causes only. */
 export function describeTarget(target: GithubReadTarget): string {
-	return target.kind === "repository" ? toGithubFullName(target.params) : "the GITHUB_TOKEN account";
+	switch (target.kind) {
+		case "repository":
+			return toGithubFullName(target.params);
+		case "commit":
+			return `${toGithubFullName(target.params)}@${target.params.sha}`;
+		case "account":
+			return "the GITHUB_TOKEN account";
+	}
 }
 
 /**
@@ -36,6 +48,16 @@ export class GithubRepositoryNotConfiguredError extends NotFoundError {
 export class GithubRepositoryNotFoundError extends NotFoundError {
 	public constructor(public readonly params: GithubRepositoryParams) {
 		super({ message: "This GitHub repository could not be found on GitHub." });
+	}
+}
+
+/**
+ * 404 — the repository is listed but has no commit with this SHA (never
+ * pushed, or rewritten away), or GitHub no longer shows the repository.
+ */
+export class GithubCommitNotFoundError extends NotFoundError {
+	public constructor(public readonly params: GithubCommitParams) {
+		super({ message: "This commit could not be found on GitHub." });
 	}
 }
 

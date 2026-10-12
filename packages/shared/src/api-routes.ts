@@ -107,6 +107,7 @@ export const apiRoutes = {
 		repositories: "/github/repositories",
 		repositorySummary: "/github/repositories/:owner/:repository",
 		repositoryCommits: "/github/repositories/:owner/:repository/commits",
+		repositoryCommit: "/github/repositories/:owner/:repository/commits/:sha",
 		repositoryContributors: "/github/repositories/:owner/:repository/contributors",
 	},
 

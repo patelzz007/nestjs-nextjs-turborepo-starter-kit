@@ -32376,6 +32376,8 @@
                                 "type": "string"
                               },
                               "sha": {
+                                "description": "Full commit SHA (40 lowercase hex characters)",
+                                "example": "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
                                 "maxLength": 40,
                                 "minLength": 40,
                                 "pattern": "^[0-9a-f]+$",
@@ -32493,6 +32495,361 @@
           }
         ],
         "summary": "One page of a configured repository's commit history with lines added/deleted per commit",
+        "tags": [
+          "GitHub"
+        ]
+      }
+    },
+    "/api/v1/github/repositories/{owner}/{repository}/commits/{sha}": {
+      "get": {
+        "description": "Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000 characters or once the commit's diffs reach 200,000 together, and `unavailable` when GitHub sends none (binary files). At most 100 files; `filesTruncated` says the commit changed more. 404 NOT_FOUND also when the repository has no commit with this SHA. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.",
+        "operationId": "GithubController_getCommit",
+        "parameters": [
+          {
+            "description": "GitHub user or organization",
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "description": "GitHub user or organization",
+              "example": "octo-org",
+              "maxLength": 39,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "GitHub repository name",
+            "in": "path",
+            "name": "repository",
+            "required": true,
+            "schema": {
+              "description": "GitHub repository name",
+              "example": "hello-world",
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._-]+$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Full commit SHA (40 lowercase hex characters)",
+            "in": "path",
+            "name": "sha",
+            "required": true,
+            "schema": {
+              "description": "Full commit SHA (40 lowercase hex characters)",
+              "example": "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+              "maxLength": 40,
+              "minLength": 40,
+              "pattern": "^[0-9a-f]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "additions": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "author": {
+                          "properties": {
+                            "avatarUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "login": {
+                              "description": "GitHub account login",
+                              "example": "octocat",
+                              "maxLength": 44,
+                              "minLength": 1,
+                              "nullable": true,
+                              "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?$",
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "login",
+                            "avatarUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "changedFiles": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "committedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "deletions": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "files": {
+                          "items": {
+                            "properties": {
+                              "additions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "deletions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "diff": {
+                                "oneOf": [
+                                  {
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "patch"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "patch": {
+                                        "maxLength": 20000,
+                                        "minLength": 1,
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "patch"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "too-large"
+                                        ],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "unavailable"
+                                        ],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind"
+                                    ],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "path": {
+                                "maxLength": 4096,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "previousPath": {
+                                "maxLength": 4096,
+                                "minLength": 1,
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": [
+                                  "added",
+                                  "removed",
+                                  "modified",
+                                  "renamed",
+                                  "copied",
+                                  "changed",
+                                  "unchanged"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "previousPath",
+                              "status",
+                              "additions",
+                              "deletions",
+                              "diff"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 100,
+                          "type": "array"
+                        },
+                        "filesTruncated": {
+                          "type": "boolean"
+                        },
+                        "headline": {
+                          "type": "string"
+                        },
+                        "htmlUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
+                        "message": {
+                          "maxLength": 10000,
+                          "type": "string"
+                        },
+                        "parents": {
+                          "items": {
+                            "properties": {
+                              "sha": {
+                                "description": "Full commit SHA (40 lowercase hex characters)",
+                                "example": "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+                                "maxLength": 40,
+                                "minLength": 40,
+                                "pattern": "^[0-9a-f]+$",
+                                "type": "string"
+                              },
+                              "shortSha": {
+                                "maxLength": 40,
+                                "minLength": 1,
+                                "pattern": "^[0-9a-f]+$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "sha",
+                              "shortSha"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 8,
+                          "type": "array"
+                        },
+                        "sha": {
+                          "description": "Full commit SHA (40 lowercase hex characters)",
+                          "example": "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+                          "maxLength": 40,
+                          "minLength": 40,
+                          "pattern": "^[0-9a-f]+$",
+                          "type": "string"
+                        },
+                        "shortSha": {
+                          "maxLength": 40,
+                          "minLength": 1,
+                          "pattern": "^[0-9a-f]+$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "sha",
+                        "shortSha",
+                        "headline",
+                        "htmlUrl",
+                        "committedAt",
+                        "author",
+                        "additions",
+                        "deletions",
+                        "changedFiles",
+                        "message",
+                        "parents",
+                        "files",
+                        "filesTruncated"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The commit and its changed files"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "One commit of a configured repository: its message, parents and every changed file with its diff",
         "tags": [
           "GitHub"
         ]

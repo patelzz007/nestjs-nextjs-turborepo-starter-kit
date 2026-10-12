@@ -165,6 +165,41 @@ export function githubCommitJson({ index, headline }: GithubCommitJsonOverrides)
 	};
 }
 
+/** The diff of `src/app.ts` in {@link githubCommitDetailJson}: one hunk, one line changed, one added. */
+export const GITHUB_COMMIT_PATCH = '@@ -1,3 +1,4 @@ export function app() {\n import { a } from "./a";\n-const b = 1;\n+const b = 2;\n+const c = 3;\n export default a;';
+
+/** `GET /github/repositories/:owner/:repository/commits/:sha` for commit `index` of {@link githubCommitJson}: a modified file, a renamed one and a binary one. */
+export function githubCommitDetailJson(index: number, overrides: Readonly<Record<string, DataValue>> = {}): DataValue {
+	const parent = (index + 1).toString(16).padStart(40, "0");
+	return {
+		...githubCommitDetailBase(index),
+		message: "feat: add contributions\n\nShows each commit's changed files.",
+		parents: [{ sha: parent, shortSha: parent.slice(0, 7) }],
+		files: [
+			{ path: "src/app.ts", previousPath: null, status: "modified", additions: 2, deletions: 1, diff: { kind: "patch", patch: GITHUB_COMMIT_PATCH } },
+			{ path: "src/new-name.ts", previousPath: "src/old-name.ts", status: "renamed", additions: 0, deletions: 0, diff: { kind: "unavailable" } },
+			{ path: "assets/logo.png", previousPath: null, status: "added", additions: 0, deletions: 0, diff: { kind: "unavailable" } },
+		],
+		filesTruncated: false,
+		changedFiles: 3,
+		additions: 2,
+		deletions: 1,
+		...overrides,
+	};
+}
+
+function githubCommitDetailBase(index: number): Readonly<Record<string, DataValue>> {
+	const sha = index.toString(16).padStart(40, "0");
+	return {
+		sha,
+		shortSha: sha.slice(0, 7),
+		headline: "feat: add contributions",
+		htmlUrl: `https://github.com/octo-org/hello-world/commit/${sha}`,
+		committedAt: NOW_MS - HOUR_MS,
+		author: { name: "Octo Cat", login: "octocat", avatarUrl: null },
+	};
+}
+
 /** `GET /github/repositories/:owner/:repository/commits`. */
 export function githubCommitPageJson(items: readonly DataValue[], nextCursor: string | null = null): DataValue {
 	return { items: [...items], nextCursor, totalCommits: 128 };

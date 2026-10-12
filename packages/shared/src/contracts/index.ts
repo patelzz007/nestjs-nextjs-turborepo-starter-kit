@@ -67,8 +67,10 @@ import {
 import { AdminUserListQuerySchema, AdminUserDetailSchema, SessionPermissionsResponseSchema, UserResponseSchema } from "../schemas/auth/user";
 import { SignupReferralDashboardSchema, SignupReferralRefereeItemSchema, SignupReferralRefereeListQuerySchema } from "../schemas/domain/signup-referrals/signup-referrals";
 import {
+	GithubCommitDetailSchema,
 	GithubCommitHistoryInputSchema,
 	GithubCommitPageSchema,
+	GithubCommitParamsSchema,
 	GithubContributorStatsSchema,
 	GithubRepositoryListSchema,
 	GithubRepositoryParamsSchema,
@@ -691,6 +693,13 @@ export const apiContract = {
 			path: apiRoutes.github.repositoryCommits,
 			input: GithubCommitHistoryInputSchema,
 			response: singleResponse(GithubCommitPageSchema),
+		}),
+		/** One commit of a listed repository: its whole message, parents and every changed file with its diff. */
+		repositoryCommit: defineContract({
+			method: "GET",
+			path: apiRoutes.github.repositoryCommit,
+			input: GithubCommitParamsSchema,
+			response: singleResponse(GithubCommitDetailSchema),
 		}),
 		/** Commits and lines added/deleted per contributor — `computing` while GitHub prepares the statistics. */
 		repositoryContributors: defineContract({

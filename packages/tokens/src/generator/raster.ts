@@ -5,8 +5,10 @@
 // a square of pixels, for the PNG icons. Edges are anti-aliased by sampling a
 // grid of points inside each pixel and averaging. Scanline-based: for each row
 // of samples the covered spans (the tile, each facet) are worked out once and
-// filled into a typed array, so a 1024 px image renders in tens of milliseconds. Pure arithmetic — no canvas,
-// no dependency.
+// filled into a typed array; each run of equal samples has its colour worked
+// out once, and a pixel row whose samples match the row above is copied, not
+// recomputed (the flat tile above and below the mark). A 1024 px image renders
+// in a few milliseconds. Pure arithmetic — no canvas, no dependency.
 
 import type { BrandMarkFacet } from "../brand";
 
@@ -119,56 +121,106 @@ function fillSpan(shares: Float32Array, span: Span | null, step: number, share: 
 	shares.fill(share, first, last + 1);
 }
 
+/** The colours one pixel row's samples are drawn in. */
+interface RowColors {
+	readonly tile: Rgb | null;
+	readonly base: Rgb;
+	readonly mark: Rgb;
+}
+
+/**
+ * Adds one row of samples to the premultiplied pixel sums. Each run of equal
+ * samples has its colour terms computed once; every sample still adds them in
+ * the same order as a per-sample loop, so the sums — and the bytes — are
+ * exactly the same.
+ */
+function accumulateSampleRow(sums: Float64Array, shares: Float32Array, samplesPerAxis: number, colors: RowColors): void {
+	let column = 0;
+	while (column < shares.length) {
+		const markShare = shares[column] ?? OUTSIDE;
+		let runEnd = column + 1;
+		while (runEnd < shares.length && shares[runEnd] === markShare) {
+			runEnd += 1;
+		}
+		if (markShare !== OUTSIDE) {
+			const tileShare = colors.tile === null ? TRANSPARENT : OPAQUE - markShare;
+			const markRed = colors.mark.red * markShare;
+			const markGreen = colors.mark.green * markShare;
+			const markBlue = colors.mark.blue * markShare;
+			const baseRed = colors.base.red * tileShare;
+			const baseGreen = colors.base.green * tileShare;
+			const baseBlue = colors.base.blue * tileShare;
+			for (let sample = column; sample < runEnd; sample += 1) {
+				const offset = Math.floor(sample / samplesPerAxis) * BYTES_PER_PIXEL;
+				sums[offset] = (sums[offset] ?? 0) + markRed + baseRed;
+				sums[offset + 1] = (sums[offset + 1] ?? 0) + markGreen + baseGreen;
+				sums[offset + 2] = (sums[offset + 2] ?? 0) + markBlue + baseBlue;
+				sums[offset + 3] = (sums[offset + 3] ?? 0) + markShare + tileShare;
+			}
+		}
+		column = runEnd;
+	}
+}
+
+/** Whether two pixel rows were sampled identically (and so draw identical pixels). */
+function sameSamples(left: Float32Array, right: Float32Array): boolean {
+	for (let index = 0; index < left.length; index += 1) {
+		if (left[index] !== right[index]) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /** RGBA bytes, row by row, of the mark (on its tile, unless `tileColor` is null) drawn into `pixels` × `pixels`. */
 export function rasterizeTile(spec: TileSpec, facets: readonly BrandMarkFacet[], pixels: number): Uint8Array {
 	const tile = spec.tileColor === null ? null : parseHex(spec.tileColor);
-	const base = tile ?? NO_TILE;
-	const mark = parseHex(spec.markColor);
+	const colors: RowColors = { tile, base: tile ?? NO_TILE, mark: parseHex(spec.markColor) };
 	const polygons = facets.map((facet: BrandMarkFacet) => ({ polygon: facetPolygon(facet, spec), opacity: facet.opacity }));
 	const samplesPerAxis = pixels >= LARGE_ICON_PIXELS ? LARGE_ICON_SAMPLES_PER_AXIS : SMALL_ICON_SAMPLES_PER_AXIS;
 	const samples = samplesPerAxis * samplesPerAxis;
 	const sampleColumns = pixels * samplesPerAxis;
 	/** Distance between neighbouring samples, in tile units. */
 	const step = spec.size / sampleColumns;
-	const bytes = new Uint8Array(pixels * pixels * BYTES_PER_PIXEL);
-	// Per sample column of the current sample row: the mark's share there, or OUTSIDE when off the tile.
-	const shares = new Float32Array(sampleColumns);
+	const rowBytes = pixels * BYTES_PER_PIXEL;
+	const bytes = new Uint8Array(pixels * rowBytes);
+	// Per sample of the current pixel row (its sample rows one after another): the mark's share there, or OUTSIDE when off the tile.
+	let rowShares = new Float32Array(samplesPerAxis * sampleColumns);
+	// The same for the row above, to recognise a row that draws exactly like it.
+	let previousShares = new Float32Array(rowShares.length);
 	// Premultiplied sums for one row of pixels.
-	const sums = new Float64Array(pixels * BYTES_PER_PIXEL);
+	const sums = new Float64Array(rowBytes);
 
 	for (let row = 0; row < pixels; row += 1) {
-		sums.fill(0);
 		for (let sampleY = 0; sampleY < samplesPerAxis; sampleY += 1) {
 			const y = (row * samplesPerAxis + sampleY + HALF) * step;
+			const shares = rowShares.subarray(sampleY * sampleColumns, (sampleY + 1) * sampleColumns);
 			shares.fill(OUTSIDE);
 			fillSpan(shares, tile === null ? { from: 0, to: spec.size } : roundedSquareSpan(spec.size, spec.radius, y), step, TRANSPARENT);
 			// The facets do not overlap; each paints its own span over the tile.
 			for (const { polygon, opacity } of polygons) {
 				fillSpan(shares, polygonSpan(polygon, y), step, opacity);
 			}
-			for (let column = 0; column < sampleColumns; column += 1) {
-				const markShare = shares[column] ?? OUTSIDE;
-				if (markShare === OUTSIDE) {
-					continue;
-				}
-				const tileShare = tile === null ? TRANSPARENT : OPAQUE - markShare;
-				const offset = Math.floor(column / samplesPerAxis) * BYTES_PER_PIXEL;
-				sums[offset] = (sums[offset] ?? 0) + mark.red * markShare + base.red * tileShare;
-				sums[offset + 1] = (sums[offset + 1] ?? 0) + mark.green * markShare + base.green * tileShare;
-				sums[offset + 2] = (sums[offset + 2] ?? 0) + mark.blue * markShare + base.blue * tileShare;
-				sums[offset + 3] = (sums[offset + 3] ?? 0) + markShare + tileShare;
+		}
+		const target = row * rowBytes;
+		if (row > 0 && sameSamples(rowShares, previousShares)) {
+			bytes.copyWithin(target, target - rowBytes, target);
+		} else {
+			sums.fill(0);
+			for (let sampleY = 0; sampleY < samplesPerAxis; sampleY += 1) {
+				accumulateSampleRow(sums, rowShares.subarray(sampleY * sampleColumns, (sampleY + 1) * sampleColumns), samplesPerAxis, colors);
+			}
+			for (let column = 0; column < pixels; column += 1) {
+				const offset = column * BYTES_PER_PIXEL;
+				const alpha = sums[offset + 3] ?? 0;
+				const unpremultiply = alpha === 0 ? 0 : 1 / alpha;
+				bytes[target + offset] = Math.round((sums[offset] ?? 0) * unpremultiply);
+				bytes[target + offset + 1] = Math.round((sums[offset + 1] ?? 0) * unpremultiply);
+				bytes[target + offset + 2] = Math.round((sums[offset + 2] ?? 0) * unpremultiply);
+				bytes[target + offset + 3] = Math.round((alpha / samples) * BYTE_MAX);
 			}
 		}
-		for (let column = 0; column < pixels; column += 1) {
-			const offset = column * BYTES_PER_PIXEL;
-			const alpha = sums[offset + 3] ?? 0;
-			const unpremultiply = alpha === 0 ? 0 : 1 / alpha;
-			const target = (row * pixels + column) * BYTES_PER_PIXEL;
-			bytes[target] = Math.round((sums[offset] ?? 0) * unpremultiply);
-			bytes[target + 1] = Math.round((sums[offset + 1] ?? 0) * unpremultiply);
-			bytes[target + 2] = Math.round((sums[offset + 2] ?? 0) * unpremultiply);
-			bytes[target + 3] = Math.round((alpha / samples) * BYTE_MAX);
-		}
+		[previousShares, rowShares] = [rowShares, previousShares];
 	}
 	return bytes;
 }

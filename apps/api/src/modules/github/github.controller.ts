@@ -2,14 +2,18 @@ import { Controller, Get } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiPath,
+	GithubCommitDetailSchema,
 	GithubCommitHistoryQuerySchema,
 	GithubCommitPageSchema,
+	GithubCommitParamsSchema,
 	GithubContributorStatsSchema,
 	GithubRepositoryListSchema,
 	GithubRepositoryParamsSchema,
 	GithubRepositorySummarySchema,
+	type GithubCommitDetail,
 	type GithubCommitHistoryQuery,
 	type GithubCommitPage,
+	type GithubCommitParams,
 	type GithubContributorStats,
 	type GithubRepositoryList,
 	type GithubRepositoryParams,
@@ -75,6 +79,20 @@ export class GithubController {
 		@ZodQuery(GithubCommitHistoryQuerySchema) query: GithubCommitHistoryQuery,
 	): Promise<GithubCommitPage> {
 		return this.contributions.getCommitPage(params, query);
+	}
+
+	@RequirePermission("READ", "GITHUB")
+	@Get(":owner/:repository/commits/:sha")
+	@ApiOperation({
+		summary: "One commit of a configured repository: its message, parents and every changed file with its diff",
+		description:
+			"Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000 characters or once the commit's diffs reach 200,000 together, and `unavailable` when GitHub sends none (binary files). At most 100 files; `filesTruncated` says the commit changed more. " +
+			"404 NOT_FOUND also when the repository has no commit with this SHA. " +
+			GITHUB_READ_ERRORS,
+	})
+	@ZodResponse(GithubCommitDetailSchema, { description: "The commit and its changed files" })
+	public async getCommit(@ZodParams(GithubCommitParamsSchema) params: GithubCommitParams): Promise<GithubCommitDetail> {
+		return this.contributions.getCommit(params);
 	}
 
 	@RequirePermission("READ", "GITHUB")

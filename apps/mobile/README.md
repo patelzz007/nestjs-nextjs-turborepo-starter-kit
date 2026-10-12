@@ -29,12 +29,12 @@ src/
     _layout.tsx      root layout: stylesheet, app runtime, root guard
     config-error.tsx, update-required.tsx, lock.tsx
     (auth)/          sign-in, verify-device, two-factor, sign-up, forgot-password, enroll-two-factor, verify-email
-    (app)/           tabs: index (Home), analytics (sample data), search (placeholder), profile, settings/ (index, appearance, security,
+    (app)/           tabs: index (Home), analytics (sample data), search (placeholder), profile/ (index, commit), settings/ (index, appearance, security,
                      devices, app-lock, two-factor) — under the floating tab bar
   components/        presentational: data-agnostic, controlled, accessible, token-styled
   features/          session (root guard state machine), preferences (theme, app lock settings), app-lock,
                      auth (login steps, sign out, refresh), two-factor (enrollment flow), devices, profile,
-                     github (the Profile's GitHub contributions section),
+                     github (the Profile's GitHub contributions section and a commit's diff screen),
                      analytics (the Analytics tab: range presets, sample history, dashboard and insights, presentation — ADR 048),
                      navigation (the tab registry, the screens' header titles, the tab bar adapter, the app drawer),
                      app-shell (every signed-in screen's frame: status, drawer and the page header — ADR 046),

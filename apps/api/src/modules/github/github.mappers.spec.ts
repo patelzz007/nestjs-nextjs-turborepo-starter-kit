@@ -1,5 +1,11 @@
 import {
+	GITHUB_COMMIT_DIFF_MAX_LENGTH,
+	GITHUB_COMMIT_FILES_MAX,
+	GITHUB_COMMIT_MESSAGE_MAX_LENGTH,
+	GITHUB_COMMIT_PARENTS_MAX,
+	GITHUB_FILE_PATCH_MAX_LENGTH,
 	GITHUB_REPOSITORY_LIST_MAX,
+	GithubCommitDetailSchema,
 	GithubCommitPageSchema,
 	GithubContributorStatsSchema,
 	GithubRepositoryListSchema,
@@ -7,11 +13,23 @@ import {
 } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { SHA_A, SHA_B, commitHistory, commitNode, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
+import {
+	SHA_A,
+	SHA_B,
+	commitDetailWire,
+	commitFileWire,
+	commitHistory,
+	commitNode,
+	contributorStat,
+	repositoryNode,
+	summaryNode,
+	viewerRepositories,
+} from "./__tests__/github-wire.builders";
 import {
 	GITHUB_INTEGRATION_OFF,
 	UNKNOWN_COMMIT_AUTHOR,
 	toCommit,
+	toCommitDetail,
 	toConfiguredRepositoryList,
 	toDiscoveredRepositoryList,
 	toCommitPage,
@@ -231,5 +249,104 @@ describe("repository lists", () => {
 		const contributed = [repositoryNode("vercel/next.js", null)];
 
 		expect(toDiscoveredRepositoryList(viewerRepositories(owned, contributed)).repositories).toHaveLength(GITHUB_REPOSITORY_LIST_MAX);
+	});
+});
+
+/** A patch of exactly `length` characters (its content does not matter to the budget). */
+function patchOf(length: number): string {
+	return "+".repeat(length);
+}
+
+describe("toCommitDetail", () => {
+	it("maps every field and satisfies the response contract", () => {
+		const detail = toCommitDetail({ commit: commitDetailWire(), filesTruncated: false });
+
+		expect(detail).toEqual({
+			sha: SHA_A,
+			shortSha: "aaaaaaa",
+			headline: "feat: add contributions",
+			htmlUrl: `https://github.com/octo-org/hello-world/commit/${SHA_A}`,
+			committedAt: Date.parse("2026-10-02T08:30:00Z"),
+			author: { name: "Octo Cat", login: "octocat", avatarUrl: "https://avatars.githubusercontent.com/u/1" },
+			additions: 2,
+			deletions: 1,
+			changedFiles: 1,
+			message: "feat: add contributions\n\nShows commits and their line counts.",
+			parents: [{ sha: SHA_B, shortSha: "bbbbbbb" }],
+			files: [{ path: "src/app.ts", previousPath: null, status: "modified", additions: 2, deletions: 1, diff: { kind: "patch", patch: commitFileWire().patch } }],
+			filesTruncated: false,
+		});
+		expect(GithubCommitDetailSchema.safeParse(detail).success).toBe(true);
+	});
+
+	it("keeps a rename's previous path", () => {
+		const detail = toCommitDetail({
+			commit: commitDetailWire({ files: [commitFileWire({ status: "renamed", filename: "src/new.ts", previous_filename: "src/old.ts" })] }),
+			filesTruncated: false,
+		});
+
+		expect(detail.files).toMatchObject([{ path: "src/new.ts", previousPath: "src/old.ts", status: "renamed" }]);
+	});
+
+	it("shows a status GitHub adds later as a plain change", () => {
+		const detail = toCommitDetail({ commit: commitDetailWire({ files: [commitFileWire({ status: "transmogrified" })] }), filesTruncated: false });
+
+		expect(detail.files).toMatchObject([{ status: "changed" }]);
+	});
+
+	it("says a file has no diff when GitHub sends none (a binary file)", () => {
+		const binary = { filename: "logo.png", status: "added", additions: 0, deletions: 0 };
+
+		expect(toCommitDetail({ commit: commitDetailWire({ files: [binary] }), filesTruncated: false }).files).toMatchObject([{ diff: { kind: "unavailable" } }]);
+	});
+
+	it("leaves out one file's diff past the per-file limit, keeping the files after it", () => {
+		const files = [commitFileWire({ filename: "big.ts", patch: patchOf(GITHUB_FILE_PATCH_MAX_LENGTH + 1) }), commitFileWire({ filename: "small.ts", patch: patchOf(10) })];
+
+		const detail = toCommitDetail({ commit: commitDetailWire({ files }), filesTruncated: false });
+
+		expect(detail.files.map((file) => [file.path, file.diff.kind])).toEqual([
+			["big.ts", "too-large"],
+			["small.ts", "patch"],
+		]);
+		expect(GithubCommitDetailSchema.safeParse(detail).success).toBe(true);
+	});
+
+	it("stops sending diffs once the commit's budget is spent", () => {
+		const perFile = GITHUB_FILE_PATCH_MAX_LENGTH;
+		const fitting = GITHUB_COMMIT_DIFF_MAX_LENGTH / perFile;
+		const files = Array.from({ length: fitting + 1 }, (_entry: undefined, index: number) => commitFileWire({ filename: `file-${String(index)}.ts`, patch: patchOf(perFile) }));
+
+		const kinds = toCommitDetail({ commit: commitDetailWire({ files }), filesTruncated: false }).files.map((file) => file.diff.kind);
+
+		expect(kinds.filter((kind) => kind === "patch")).toHaveLength(fitting);
+		expect(kinds.at(-1)).toBe("too-large");
+	});
+
+	it("does not count the file count when GitHub has more files than listed", () => {
+		const detail = toCommitDetail({ commit: commitDetailWire(), filesTruncated: true });
+
+		expect(detail).toMatchObject({ changedFiles: null, filesTruncated: true });
+	});
+
+	it("keeps at most the contract's files, parents and message length", () => {
+		const commit = commitDetailWire({
+			commit: { ...commitDetailWire().commit, message: "x".repeat(GITHUB_COMMIT_MESSAGE_MAX_LENGTH + 1) },
+			parents: Array.from({ length: GITHUB_COMMIT_PARENTS_MAX + 1 }, () => ({ sha: SHA_B })),
+			files: Array.from({ length: GITHUB_COMMIT_FILES_MAX + 1 }, (_entry: undefined, index: number) => commitFileWire({ filename: `f${String(index)}`, patch: patchOf(1) })),
+		});
+
+		const detail = toCommitDetail({ commit, filesTruncated: true });
+
+		expect(detail.message).toHaveLength(GITHUB_COMMIT_MESSAGE_MAX_LENGTH);
+		expect(detail.parents).toHaveLength(GITHUB_COMMIT_PARENTS_MAX);
+		expect(detail.files).toHaveLength(GITHUB_COMMIT_FILES_MAX);
+		expect(GithubCommitDetailSchema.safeParse(detail).success).toBe(true);
+	});
+
+	it("names an author with neither a git name nor an account", () => {
+		const detail = toCommitDetail({ commit: commitDetailWire({ commit: { ...commitDetailWire().commit, author: null }, author: null }), filesTruncated: false });
+
+		expect(detail.author).toEqual({ name: UNKNOWN_COMMIT_AUTHOR, login: null, avatarUrl: null });
 	});
 });

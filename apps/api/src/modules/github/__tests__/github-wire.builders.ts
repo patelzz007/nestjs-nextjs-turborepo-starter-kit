@@ -2,6 +2,8 @@
 // valid answer and overrides only what it is about.
 
 import type {
+	GithubCommitDetailWire,
+	GithubCommitFileWire,
 	GithubCommitHistoryWire,
 	GithubCommitNodeWire,
 	GithubContributorStatWire,
@@ -74,4 +76,34 @@ export function repositoryNode(fullName: string, pushedAt: string | null): Githu
 
 export function viewerRepositories(owned: readonly GithubRepositoryNodeWire[], contributed: readonly GithubRepositoryNodeWire[] = []): GithubViewerRepositoriesWire {
 	return { login: "patelzz007", repositories: { nodes: [...owned] }, repositoriesContributedTo: { nodes: [...contributed] } };
+}
+
+/** One changed file: a two-line change to `src/app.ts` unless overridden. */
+export function commitFileWire(overrides: Partial<GithubCommitFileWire> = {}): GithubCommitFileWire {
+	return {
+		filename: "src/app.ts",
+		status: "modified",
+		additions: 2,
+		deletions: 1,
+		patch: '@@ -1,3 +1,4 @@\n import { a } from "./a";\n-const b = 1;\n+const b = 2;\n+const c = 3;',
+		...overrides,
+	};
+}
+
+/** `GET /repos/{owner}/{repo}/commits/{sha}` for {@link SHA_A}, one parent ({@link SHA_B}) and one file. */
+export function commitDetailWire(overrides: Partial<GithubCommitDetailWire> = {}): GithubCommitDetailWire {
+	return {
+		sha: SHA_A,
+		html_url: `https://github.com/octo-org/hello-world/commit/${SHA_A}`,
+		commit: {
+			message: "feat: add contributions\n\nShows commits and their line counts.",
+			author: { name: "Octo Cat", date: "2026-10-02T08:00:00Z" },
+			committer: { name: "GitHub", date: "2026-10-02T08:30:00Z" },
+		},
+		author: { login: "octocat", avatar_url: "https://avatars.githubusercontent.com/u/1" },
+		parents: [{ sha: SHA_B }],
+		stats: { additions: 2, deletions: 1 },
+		files: [commitFileWire()],
+		...overrides,
+	};
 }

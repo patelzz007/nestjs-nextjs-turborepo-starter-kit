@@ -1,9 +1,35 @@
-import { GithubCommitSchema, GithubContributorStatsSchema, GithubRepositoryListSchema, GithubRepositorySummarySchema, type GithubCommit } from "@workspace/shared";
-
-import { NOW_MS, githubCommitJson, githubContributorsJson, githubDiscoveredRepositoriesJson, githubRepositoriesJson, githubSummaryJson } from "../../../test/fixtures";
 import {
+	GithubCommitDetailSchema,
+	GithubCommitSchema,
+	GithubContributorStatsSchema,
+	GithubRepositoryListSchema,
+	GithubRepositorySummarySchema,
+	type GithubCommit,
+	type GithubCommitDetail,
+	type GithubCommitFileStatus,
+} from "@workspace/shared";
+
+import {
+	NOW_MS,
+	githubCommitDetailJson,
+	githubCommitJson,
+	githubContributorsJson,
+	githubDiscoveredRepositoriesJson,
+	githubRepositoriesJson,
+	githubSummaryJson,
+} from "../../../test/fixtures";
+import {
+	changedFilesSummary,
 	changeSummary,
+	commitAuthorName,
+	commitBody,
 	commitMeta,
+	commitScreenTitle,
+	committedLabel,
+	fileStatusLabel,
+	missingDiffMessage,
+	MORE_FILES_ON_GITHUB,
+	parentsLabel,
 	contributorMeta,
 	countOf,
 	formatCount,
@@ -85,5 +111,59 @@ describe("GitHub contribution labels", () => {
 			"Public repositories of @patelzz007",
 		);
 		expect(repositoryListDescription(GithubRepositoryListSchema.parse(githubRepositoriesJson()))).toBeNull();
+	});
+});
+
+const FILE_STATUS_LABEL_CASES: readonly (readonly [GithubCommitFileStatus, string])[] = [
+	["added", "Added"],
+	["removed", "Deleted"],
+	["modified", "Modified"],
+	["renamed", "Renamed"],
+	["copied", "Copied"],
+	["changed", "Changed"],
+	["unchanged", "Unchanged"],
+];
+
+function commitDetail(overrides: Readonly<Record<string, string | number | boolean>> = {}): GithubCommitDetail {
+	return GithubCommitDetailSchema.parse(githubCommitDetailJson(1, overrides));
+}
+
+describe("GitHub commit labels", () => {
+	it("titles the screen with the short SHA, or plainly before it is known", () => {
+		expect(commitScreenTitle("a1b2c3d")).toBe("Commit a1b2c3d");
+		expect(commitScreenTitle(null)).toBe("Commit");
+	});
+
+	it("separates the message's body from its headline", () => {
+		expect(commitBody(commitDetail())).toBe("Shows each commit's changed files.");
+		expect(commitBody(commitDetail({ message: "feat: add contributions" }))).toBeNull();
+		expect(commitBody(commitDetail({ message: "feat: add contributions\n\n   \n" }))).toBeNull();
+	});
+
+	it("names the author by login, or by git name without an account, and says when they committed", () => {
+		expect(commitAuthorName(commitDetail())).toBe("octocat");
+		expect(commitAuthorName(commit({ author: { name: "Local Dev", login: null, avatarUrl: null } }))).toBe("Local Dev");
+		expect(committedLabel(commitDetail(), NOW_MS)).toBe("committed 1 hour ago");
+	});
+
+	it("counts parents", () => {
+		expect(parentsLabel(1)).toBe("1 parent");
+		expect(parentsLabel(2)).toBe("2 parents");
+	});
+
+	it("sums up the changed files the way GitHub does", () => {
+		expect(changedFilesSummary(commitDetail())).toBe("Showing 3 changed files with 2 additions and 1 deletion.");
+		expect(changedFilesSummary(commitDetail({ additions: 1, deletions: 1204 }))).toBe("Showing 3 changed files with 1 addition and 1,204 deletions.");
+		expect(MORE_FILES_ON_GITHUB).toBe("This commit changed more than 100 files. Open it on GitHub to see the rest.");
+	});
+
+	it.each(FILE_STATUS_LABEL_CASES)("calls a %s file %j", (status: GithubCommitFileStatus, label: string) => {
+		expect(fileStatusLabel(status)).toBe(label);
+	});
+
+	it("explains a missing diff, and says nothing when there is one", () => {
+		expect(missingDiffMessage({ kind: "too-large" })).toBe("This diff is too large to show here. Open the commit on GitHub to read it.");
+		expect(missingDiffMessage({ kind: "unavailable" })).toBe("There's no text diff for this file. It may be binary, or only renamed.");
+		expect(missingDiffMessage({ kind: "patch", patch: "@@ -1 +1 @@" })).toBeNull();
 	});
 });

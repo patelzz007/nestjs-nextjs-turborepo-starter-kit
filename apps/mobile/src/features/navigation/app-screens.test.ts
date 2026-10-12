@@ -29,6 +29,15 @@ describe("screenTitleOf", () => {
 		expect(screenTitleOf(ROUTES.twoFactorSetup, { mode: ["rotate", "setup"] })).toBe("Turn on two-factor authentication");
 	});
 
+	it("names a GitHub commit by its short SHA, plainly when the link carries none", () => {
+		const sha = "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39";
+
+		expect(screenTitleOf(ROUTES.githubCommit, { owner: "octo-org", repository: "hello-world", sha })).toBe("Commit 4f2a9c1");
+		expect(screenTitleOf(ROUTES.githubCommit, {})).toBe("Commit");
+		expect(screenTitleOf(ROUTES.githubCommit, { sha: "not-a-sha" })).toBe("Commit");
+		expect(screenTitleOf(ROUTES.githubCommit, { sha: [sha, sha] })).toBe("Commit");
+	});
+
 	it("has no title for a path the app does not have", () => {
 		expect(screenTitleOf("/nowhere", {})).toBe("");
 	});

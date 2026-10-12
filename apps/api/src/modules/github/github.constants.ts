@@ -32,6 +32,16 @@ export const GITHUB_STALE_FALLBACK_MS = MS_PER_HOUR;
  */
 export const GITHUB_CACHE_MAX_ENTRIES = 500;
 
+/**
+ * Most cached commit answers per API instance. A commit carries its diff (up
+ * to `GITHUB_COMMIT_DIFF_MAX_LENGTH` characters), so far fewer are kept than
+ * of the small answers.
+ */
+export const GITHUB_COMMIT_CACHE_MAX_ENTRIES = 50;
+
+/** GitHub's `Link` header: a commit with more files than one page names the next page `rel="next"`. */
+export const GITHUB_LINK_HEADER = "link";
+
 /** The `Retry-After` / `X-RateLimit-Remaining` headers GitHub sets when a rate limit is used up. */
 export const GITHUB_RETRY_AFTER_HEADER = "retry-after";
 export const GITHUB_RATE_LIMIT_REMAINING_HEADER = "x-ratelimit-remaining";

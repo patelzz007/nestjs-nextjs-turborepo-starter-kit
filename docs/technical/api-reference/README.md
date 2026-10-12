@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (225 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (226 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 225 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 226 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 > [!NOTE]
 > This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
@@ -30,7 +30,7 @@ Every endpoint of `apps/api` — 225 operations, 214 with a sample captured from
 | [Files and object storage](./files.md) | 9 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
 | [Geography reference data](./geography.md) | 31 | Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export. |
-| [GitHub contributions](./github.md) | 4 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
+| [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
 | [System: health and version](./system.md) | 6 | Liveness, readiness and deep health probes and the API version manifest. |
 
@@ -240,6 +240,7 @@ Every endpoint of `apps/api` — 225 operations, 214 with a sample captured from
 | GET | [`/api/v1/github/repositories`](./github.md#get-apiv1githubrepositories) | List the GitHub repositories the API may read |
 | GET | [`/api/v1/github/repositories/{owner}/{repository}`](./github.md#get-apiv1githubrepositoriesownerrepository) | Summary of a configured repository: stars, forks, languages, commit count, last push |
 | GET | [`/api/v1/github/repositories/{owner}/{repository}/commits`](./github.md#get-apiv1githubrepositoriesownerrepositorycommits) | One page of a configured repository's commit history with lines added/deleted per commit |
+| GET | [`/api/v1/github/repositories/{owner}/{repository}/commits/{sha}`](./github.md#get-apiv1githubrepositoriesownerrepositorycommitssha) | One commit of a configured repository: its message, parents and every changed file with its diff |
 | GET | [`/api/v1/github/repositories/{owner}/{repository}/contributors`](./github.md#get-apiv1githubrepositoriesownerrepositorycontributors) | Commits and lines added/deleted per contributor of a configured repository |
 | GET | [`/api/v1/product`](./catalog-samples.md#get-apiv1product) | List Products |
 | POST | [`/api/v1/product`](./catalog-samples.md#post-apiv1product) | Create Product (send an Idempotency-Key header to make retries safe) |

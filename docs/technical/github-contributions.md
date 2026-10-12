@@ -1,16 +1,16 @@
 ---
 title: "GitHub contributions"
-description: "Read-only views of the GitHub repositories the API is configured with — summary, commit history with line counts, contributor totals — and how the mobile Profile shows them."
+description: "Read-only views of the GitHub repositories the API is configured with — summary, commit history with line counts, one commit with its diff, contributor totals — and how the mobile Profile shows them."
 order: 11
 author: "Platform Team"
-lastUpdated: 1791590400000
+lastUpdated: 1791763200000
 coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=630&fit=crop"
 tags: ["github", "integration", "api", "mobile"]
 ---
 
 # GitHub contributions
 
-The API reads GitHub repositories with its own read-only token and answers four views of them. The
+The API reads GitHub repositories with its own read-only token and answers five views of them. The
 repositories are either **pinned** in config or **discovered** from the token's account (its own
 public repositories plus the public ones it contributed to). The mobile app shows them in a section of the Profile screen. The decision record is
 [ADR 045](../adr/045-github-contributions-integration.md); every endpoint, field and error is in the
@@ -22,7 +22,7 @@ flowchart LR
     A --> S[GithubContributionsService<br/>allowlist + cache]
     S -->|miss / stale| C[GithubApiClient<br/>token, timeout, typed errors]
     C -->|GraphQL: summary, commits| G[(api.github.com)]
-    C -->|REST: stats/contributors| G
+    C -->|REST: stats/contributors, commits/:sha| G
 ```
 
 ## 1. Turning it on
@@ -63,6 +63,7 @@ Every route is `GET`, read-only (so no audit entry), and needs `READ:GITHUB`. Th
 | `/github/repositories` | `{ source, account, repositories }` — `source` is `configured` (pinned, in the configured order), `discovered` (`account` = the token's login; each repository `owned` or `contributed`, with its last push, most recent first) or `off` | None: the list is platform configuration, the same for every caller |
 | `/github/repositories/:owner/:repository` | Stars, forks, watchers, open issues, commit count of the default branch, last push, up to 10 languages with their share | Same — and the repository must be in the allowlist (404 otherwise) |
 | `/github/repositories/:owner/:repository/commits?cursor=&limit=` | One page (1–50, default 20) of the default branch's history, newest first: headline, author, time, **lines added / deleted**, files changed; `nextCursor` for the next page | Same |
+| `/github/repositories/:owner/:repository/commits/:sha` | One commit (full 40-character SHA): the whole message, author, parents, total lines added / deleted, and up to 100 changed files, each with its status (`added`, `removed`, `modified`, `renamed`, …), previous path after a rename, line counts and **diff** — a unified `patch` (hunks only), or `too-large` / `unavailable`; `filesTruncated` when the commit changed more files | Same; any commit of a listed repository may be read (it is as public as the repository) |
 | `/github/repositories/:owner/:repository/contributors` | `{ status: "ready", contributors }` — per contributor: commits, lines added, lines deleted, most commits first — or `{ status: "computing" }` | Same |
 
 `READ:GITHUB` is a **GLOBAL** grant on the `User` role, the one exception to "every customer grant
@@ -84,6 +85,7 @@ proxy to every repository the token can see.
 | GitHub times out / is unreachable / rate-limits the token | The last good answer is served if it is at most **one hour** past its cache lifetime (logged as a warning); otherwise **503** `SERVICE_UNAVAILABLE` |
 | GitHub rejects the token, errors, or answers in an unexpected shape | Same fallback; otherwise **502** `EXTERNAL_SERVICE_ERROR` (the cause is logged, never sent) |
 | GitHub no longer shows the repository to the token | **404** — never replaced by a stale answer |
+| The repository has no commit with that SHA (GitHub's `404` / `422`) | **404** `This commit could not be found on GitHub.` — never replaced by a stale answer |
 | Contributor statistics not computed yet (GitHub's `202`) | `{ status: "computing" }`, not cached; the previous `ready` answer is served when there is one |
 
 Decisions per [rules/12](../../rules/12-observability-and-operations.md#for-every-external-dependency-decide-explicitly):
@@ -95,7 +97,7 @@ Decisions per [rules/12](../../rules/12-observability-and-operations.md#for-ever
   `GITHUB_CACHE_TTL_MS` per instance however many people open the screen, so a struggling GitHub is
   never hammered; the stale fallback is the degradation.
 - **Cache location**: in memory per API instance (`BoundedTtlCache`, 500 answers per kind, oldest
-  evicted). The data is public repository metadata and a lost cache costs one GitHub read; Redis
+  evicted; commits — which carry their diff — 50). The data is public repository metadata and a lost cache costs one GitHub read; Redis
   would add a dependency for no correctness gain ([ADR 045](../adr/045-github-contributions-integration.md)).
 
 ## 4. Mobile Profile section
@@ -115,7 +117,24 @@ Decisions per [rules/12](../../rules/12-observability-and-operations.md#for-ever
   `+added −deleted`. While GitHub is computing, a short note, and the query asks again every 5 s.
 - **Recent commits**: 10 per page with `+added −deleted` and files changed; "Show older commits"
   loads the next page by its cursor. Each page is its own query, so loaded pages stay cached.
-- Tapping a commit or a contributor opens it on GitHub (`Linking.openURL`).
+- Tapping a **contributor** opens their GitHub profile (`Linking.openURL`).
+- Tapping a **commit** pushes its own screen, `/profile/commit?owner=&repository=&sha=` (Profile
+  is a stack, like Settings). The params are parsed with the shared `GithubCommitParamsSchema`
+  first — a link that does not name a commit says so and never calls the API. The header reads
+  "Commit a1b2c3d". Laid out like GitHub's commit page:
+  - the headline, the body (monospace), the author's avatar with "committed 2 hours ago", the
+    short SHA (tap to copy the full one — a toast confirms) and the parents;
+  - "Showing N changed files with X additions and Y deletions." with GitHub's five-square
+    diffstat, and a note when the commit changed more than 100 files;
+  - one card per file: chevron, status icon, path (and the old path after a rename), `+added
+    −deleted` and its diffstat. Expanded, the diff: old / new line-number gutters, the `+`/`−`
+    marker, code in Geist Mono, added lines on `success-soft`, deleted on `destructive-soft`, hunk
+    headers on `info-soft`; long lines scroll sideways. A file without a diff explains why;
+  - "View on GitHub" opens the commit in the browser.
+- **Bounded rendering** of large commits: the API caps one file's diff at 20,000 characters and a
+  commit's at 200,000; on the phone, a file opens expanded only when its diff is at most 200 lines
+  and the expanded files stay within 600 lines together (`features/github/diff.ts`) — the rest open
+  collapsed and are parsed only when opened.
 
 Each part loads, fails and retries on its own; a failure shows the API's message with "Try again".
 
@@ -128,7 +147,7 @@ Each part loads, fails and retries on its own; a failure shows the API's message
 | API | `apps/api/src/modules/github/` — controller, service (allowlist + caches), `GithubApiClient` (the only code that calls GitHub), wire schemas, GraphQL documents, mappers, errors |
 | Config | `GithubConfig` in `apps/api/src/config/api-config.schema.ts` |
 | Client | `apiRouter.github.*` in `packages/api-client/src/router.ts` |
-| Mobile | `features/github/` (section, labels, refresh), `components/select-field.tsx`, `components/change-row.tsx`, `components/stat-tiles.tsx` |
+| Mobile | `features/github/` (section, commit screen, diff parsing, labels, refresh), `app/(app)/profile/` (stack, commit route), `components/select-field.tsx`, `components/change-row.tsx`, `components/stat-tiles.tsx`, `components/changed-file.tsx`, `components/diff-view.tsx`, `components/diff-stat.tsx` |
 
 ## 6. Known limits and next steps
 
@@ -140,6 +159,9 @@ Each part loads, fails and retries on its own; a failure shows the API's message
 - **Discovery covers public repositories only**, at most 50 owned and 50 contributed to, and only
   *recent* contributions (GitHub's `repositoriesContributedTo`). Pin older or private ones with
   `GITHUB_REPOSITORIES` (pinning replaces discovery).
+- **One commit's files** stop at 100 (GitHub's page size); the screen says when there are more and
+  links to GitHub. Diffs past this API's limits, and binary files, show a note instead of lines.
+- **Diffs are not syntax-highlighted** — GitHub's colours for added / deleted lines only.
 - **An invalid `cursor`** (one GitHub did not issue) is answered 502, because GitHub reports it as a
   generic GraphQL error.
 - **Per-user GitHub accounts** (each person links their own GitHub through OAuth, for a project
