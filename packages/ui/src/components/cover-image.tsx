@@ -1,6 +1,9 @@
 "use client";
 
 import { AspectRatio } from "@workspace/ui/components/aspect-ratio";
+import { useImageLoadingStatus } from "@workspace/ui/hooks/use-image-loading-status";
+import { useNearViewport } from "@workspace/ui/hooks/use-near-viewport";
+import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { ImageOff } from "lucide-react";
 import * as React from "react";
@@ -40,38 +43,28 @@ const CoverImage = React.forwardRef<HTMLDivElement, CoverImageProps>(function Co
 	ref,
 ): React.JSX.Element {
 	const hasSource = src !== null && src !== undefined && src.length > 0;
-	const [loadState, setLoadState] = React.useState<{ readonly src: string | null; readonly state: CoverImageState }>({ src: null, state: "loading" });
-	// A new `src` starts loading again — derived during render instead of reset in an effect.
-	const state: CoverImageState = hasSource && loadState.src === src ? loadState.state : "loading";
+	// Load tracking starts as the frame nears the viewport (at once for the priority cover), keeping covers lazy.
+	const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
+	const frameRef = React.useMemo(() => mergeRefs<HTMLDivElement>(setFrame, ref), [ref]);
+	const isNearViewport = useNearViewport(frame, priority);
+	const loadingStatus = useImageLoadingStatus(src, isNearViewport);
+	const state: CoverImageState = loadingStatus === "loaded" ? "loaded" : loadingStatus === "error" ? "error" : "loading";
 	const showFallback = !hasSource || state === "error";
 
-	const handleLoad = React.useCallback((): void => {
-		setLoadState({ src: src ?? null, state: "loaded" });
-	}, [src]);
-	const handleError = React.useCallback((): void => {
-		setLoadState({ src: src ?? null, state: "error" });
-	}, [src]);
-	// A server-rendered image can finish loading before React attaches `onLoad`; catch it on mount.
-	const detectAlreadyLoaded = React.useCallback(
-		(image: HTMLImageElement | null): void => {
-			if (image !== null && image.complete && image.naturalWidth > 0) {
-				handleLoad();
-			}
-		},
-		[handleLoad],
-	);
-
 	return (
-		<AspectRatio ref={ref} ratio={ratio} data-slot="cover-image" data-state={showFallback ? "fallback" : state} className={cn("overflow-hidden bg-muted", className)} {...props}>
+		<AspectRatio
+			ref={frameRef}
+			ratio={ratio}
+			data-slot="cover-image"
+			data-state={showFallback ? "fallback" : state}
+			className={cn("overflow-hidden bg-muted", className)}
+			{...props}>
 			{hasSource && state !== "error" ? (
 				<img
-					ref={detectAlreadyLoaded}
 					src={src}
 					alt={alt}
 					loading={priority ? "eager" : "lazy"}
 					decoding="async"
-					onLoad={handleLoad}
-					onError={handleError}
 					className={cn(
 						"absolute inset-0 size-full object-cover transition-opacity duration-300 motion-reduce:transition-none",
 						state === "loaded" ? "opacity-100" : "opacity-0",

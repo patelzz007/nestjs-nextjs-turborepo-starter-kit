@@ -306,7 +306,7 @@ The same default chain runs on a laptop; pick one, in order of preference:
 ## Public assets and CloudFront
 
 Every upload is written to the **private container**. When a public file (`PRODUCT_IMAGE`,
-`STORE_LOGO`, `STORE_BANNER`, `USER_AVATAR`) becomes READY:
+`STORE_LOGO`, `STORE_BANNER`, `USER_AVATAR`, `REWARD_COVER`) becomes READY:
 
 1. the staging object is promoted to its final key in the private bucket (`products/…`, `stores/…`, `users/…`);
 2. the adapter copies that object into the **public-origin bucket** under the same key

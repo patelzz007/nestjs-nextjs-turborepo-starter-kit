@@ -282,6 +282,26 @@ Composes `Avatar`; data-agnostic (`name` + optional `src`, nothing domain-specif
 <EntityAvatar name={shop.name} src={shop.logoUrl} alt="" size="lg" />
 ```
 
+## Cover image (`cover-image.tsx`)
+
+A cropped image in a fixed aspect ratio — reward covers on cards, list thumbnails and detail
+heroes. Data-agnostic (`src`, nothing domain-specific).
+
+- **Frame first** — `AspectRatio` (`ratio`, default 16:9) keeps the size while loading, so nothing
+  shifts; the image fills it (`object-cover`).
+- **Loading** — tracked off-element (`useImageLoadingStatus`), started as the frame nears the
+  viewport (`useNearViewport`, 200px margin), so covers stay lazy; `priority` starts at once and
+  loads eagerly — for the first, above-the-fold cover only. The image fades in once loaded
+  (no fade with reduced motion).
+- **Fallback** — no `src`, or a failed load, shows `fallback` (default: a quiet "no image" mark),
+  never a broken image.
+- **Accessibility** — `alt` defaults to `""` (decorative): a cover sits next to the title that names
+  it. Pass a description when the image is the only thing saying what it shows.
+
+```tsx
+<CoverImage src={reward.coverImageUrl} priority={index === 0} className="rounded-t-[inherit]" />
+```
+
 ## Formatting dates, counts and money (`lib/format/`)
 
 The one sanctioned way to render a timestamp, count or money amount in every app. Never call

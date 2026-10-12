@@ -469,6 +469,7 @@ service, then acts.
 | `PRODUCT_IMAGE` | upload: `PRODUCT:UPDATE` on that product (kernel); afterwards the uploader | the uploader |
 | `STORE_LOGO`, `STORE_BANNER` | `merchant:manage_locations` (`OWNER`, `ADMIN`) | any active member (`merchant:view_locations`) |
 | `MERCHANT_KYB` | `merchant:manage_verification` (`OWNER`) | `merchant:manage_verification` (`OWNER`) |
+| `REWARD_COVER` | `merchant:manage_rewards` | `merchant:view_rewards` (the published copy itself is public) |
 | SuperAdmin | any | any |
 
 - **Same check as the rest of the merchant API.** Organization capabilities that guard an action go

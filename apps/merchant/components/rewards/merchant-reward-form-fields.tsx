@@ -2,6 +2,7 @@
 
 import { MerchantRewardCoverField } from "@/components/rewards/merchant-reward-cover-field";
 import { MAX_CLAIMS_OPTIONS, REWARD_TYPE_OPTIONS, getRewardValueLabel } from "@/components/rewards/merchant-reward-form.constants";
+import { optionalNumberInput } from "@/lib/forms/optional-number-input";
 import type { UploadedRewardCover } from "@/lib/rewards/use-upload-reward-cover";
 import type { MerchantRewardFormValues, RewardType } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
@@ -159,7 +160,14 @@ export function MerchantRewardFormFields({
 
 						<div className="space-y-2">
 							<Label htmlFor="minPurchase">Minimum Purchase (RM)</Label>
-							<Input id="minPurchase" type="number" min={0} placeholder="0 (Optional)" disabled={fieldDisabled} {...register("minPurchase", { valueAsNumber: true })} />
+							<Input
+								id="minPurchase"
+								type="number"
+								min={0}
+								placeholder="0 (Optional)"
+								disabled={fieldDisabled}
+								{...register("minPurchase", { setValueAs: optionalNumberInput })}
+							/>
 							{errors.minPurchase ? <p className="text-sm text-destructive">{errors.minPurchase.message}</p> : null}
 						</div>
 					</div>

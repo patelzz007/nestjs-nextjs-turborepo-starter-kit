@@ -224,6 +224,7 @@ describe("Merchant store scope (e2e)", () => {
 				rewardType: "DISCOUNT",
 				rewardValue: 5,
 				category: "restaurant",
+				coverFileId: rewardCoverSeedId("weekend-dinner"),
 				quantityTotal: 5,
 				expiryDate: Date.now() + 30 * DAY_MS,
 			};
@@ -234,6 +235,16 @@ describe("Merchant store scope (e2e)", () => {
 
 			const otherStore = await post(storeAdmin, "/rewards", { ...base, locationScopeType: "SELECTED", locationIds: [KATIL] });
 			expect(otherStore.statusCode).toBe(403);
+
+			// Its own store, but another organization's cover: refused before anything is written.
+			const foreignCover = await post(storeAdmin, "/rewards", {
+				...base,
+				coverFileId: rewardCoverSeedId("free-coffee"),
+				locationScopeType: "SELECTED",
+				locationIds: [BERUANG],
+			});
+			expect(foreignCover.statusCode).toBe(400);
+			expect(errorCodeOf(foreignCover)).toBe("REWARD_COVER_INVALID");
 		});
 
 		it("hides an organization-wide reward from a store-limited member's edits (404)", async () => {

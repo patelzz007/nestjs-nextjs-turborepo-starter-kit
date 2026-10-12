@@ -60,11 +60,32 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | `MERCHANT_KYB` | private (signed links only) | 25 MB | PDF, JPEG, PNG, WebP |
 | `PRODUCT_IMAGE`, `STORE_BANNER` | public | 25 MB | JPEG, PNG, WebP, AVIF |
-| `STORE_LOGO`, `USER_AVATAR` | public | 10 MB | JPEG, PNG, WebP, AVIF |
+| `STORE_LOGO`, `USER_AVATAR`, `REWARD_COVER` | public | 10 MB | JPEG, PNG, WebP, AVIF |
 
 Source of truth: `FILE_CATEGORY_POLICIES` in `packages/shared/src/schemas/domain/platform/storage.ts`.
 Uploads are a single request; chunked S3 multipart upload (retrying only failed parts) is **not
 implemented yet** and is required before allowing much larger files.
+
+## Reward covers
+
+Every reward shows a cover image (`rewards.cover_file_id`, required).
+
+- **Upload first, then save.** The merchant uploads a `REWARD_COVER` file to the organization
+  (`merchant:manage_rewards`); it goes through the normal ticket → upload → complete → scan path and
+  is bound to nothing (`StoredFileBinding` `NONE`). The reward then names it in `coverFileId` on
+  create or edit.
+- **Checked on every save.** `RewardRepository` locks the file row (`FOR UPDATE`) and requires the
+  organization's own READY, public, published, live `REWARD_COVER` inside the reward write's
+  transaction; otherwise the API answers `400 REWARD_COVER_INVALID`. A referrer reward shares its
+  consumer reward's cover.
+- **Never deleted while in use.** `DELETE /files/:id` takes the same row lock and answers
+  `409 FILE_IN_USE_AS_REWARD_COVER` while a live reward shows the file, so a save and a delete cannot
+  interleave and every reward always has a URL (`RewardResponse.coverImageUrl`).
+- **Readable with the reward.** RLS policy `stored_files_reward_cover_read` lets a session read a
+  cover's file row exactly when it can read a reward using it (marketplace shoppers, claim holders,
+  members).
+- Keys: `stores/{organizationId}/reward-covers/{fileId}.{ext}`. Seed photos live in
+  `apps/api/prisma/seed/assets/reward-covers/` (Unsplash License, credits in `CREDITS.md`).
 
 ## Statuses
 
@@ -180,7 +201,11 @@ environment), but it behaves like a presigned-URL provider:
   expired → `403`; the file must still be READY at that key, otherwise `404`. Served with the file's
   own `Content-Type`, `X-Content-Type-Options: nosniff` and a sanitized `Content-Disposition`
   (ASCII fallback plus RFC 5987 `filename*`).
-- **Public assets:** `GET /files/{fileId}/local-public` serves READY public files by id.
+- **Public assets:** `GET /files/{fileId}/local-public` serves READY public files by id. It plays
+  the CDN's role, so it sends the same `Cache-Control: public, max-age=86400` as the CloudFront copy
+  (`PUBLIC_ASSET_CACHE_CONTROL`) and is exempt from the credential-guarding `strict` rate limit (the
+  `default` limit still applies): a catalog page shows many public images at once. Signed private
+  downloads stay `private, no-store`.
 - Paths are resolved inside `apps/api/.object-storage`: `..`, `.`, empty segments, backslashes, NUL
   and absolute keys are refused, and the resolved path is re-checked against the root.
 - The signing key is generated per process: restarting the API invalidates outstanding links.

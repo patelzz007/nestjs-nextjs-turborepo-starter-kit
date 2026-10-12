@@ -9,6 +9,8 @@ import { KybDocumentScanStatusSchema, RewardRulesResponseSchema, RewardRulesSche
 // Response schemas are OPEN (ADR 022): the API strips unknown keys and clients
 // tolerate additive fields. Request schemas sharing the same fields stay CLOSED.
 
+const COVER_FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
+const COVER_URL = `https://cdn.example.com/stores/org/reward-covers/${COVER_FILE_ID}.webp`;
 const CREATED_AT_MS = 1_786_300_000_000;
 const EXPIRY_MS = 1_786_400_000_000;
 const MIN_SPEND_MYR = 20;
@@ -38,7 +40,8 @@ const reward: RewardResponse = {
 	termsConditions: null,
 	rewardKind: "CONSUMER",
 	category: "food",
-	placeholderImageKey: "food",
+	coverFileId: COVER_FILE_ID,
+	coverImageUrl: COVER_URL,
 	quantityTotal: QUANTITY_TOTAL,
 	quantityRemaining: QUANTITY_TOTAL,
 	quantityReserved: 0,
@@ -102,6 +105,7 @@ describe("reward rules", () => {
 			rewardType: "FREE_ITEM",
 			rewardValue: REWARD_VALUE,
 			category: "food",
+			coverFileId: COVER_FILE_ID,
 			quantityTotal: QUANTITY_TOTAL,
 			expiryDate: EXPIRY_MS,
 		};
@@ -131,6 +135,14 @@ describe("RewardResponseSchema", () => {
 		expect(RewardResponseSchema.safeParse(withoutLogo).success).toBe(false);
 	});
 
+	it("requires a cover image, as an http(s) URL", () => {
+		const { coverImageUrl, ...withoutCover } = reward;
+		expect(coverImageUrl).toBe(COVER_URL);
+		expect(RewardResponseSchema.safeParse(withoutCover).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, coverImageUrl: "javascript:alert(1)" }).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, coverImageUrl: "/covers/kuih.webp" }).success).toBe(false);
+	});
+
 	it("rejects a non-http(s) or relative logo URL", () => {
 		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "javascript:alert(1)" }).success).toBe(false);
 		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "data:image/png;base64,AAAA" }).success).toBe(false);
@@ -146,5 +158,23 @@ describe("MerchantKybProfileResponseSchema", () => {
 			documents: kybProfile.documents.map((document) => ({ ...document, storagePath: "kyb/raw/ssm.pdf" })),
 		};
 		expect(MerchantKybProfileResponseSchema.parse(leaky)).toEqual(kybProfile);
+	});
+});
+
+describe("reward cover on create", () => {
+	it("refuses a reward without a cover, naming what is missing", () => {
+		const request = {
+			title: "Free coffee",
+			description: "One free coffee",
+			rewardType: "FREE_ITEM",
+			rewardValue: REWARD_VALUE,
+			category: "food",
+			quantityTotal: QUANTITY_TOTAL,
+			expiryDate: EXPIRY_MS,
+		};
+		const parsed = MerchantCreateRewardSchema.safeParse(request);
+		expect(parsed.success).toBe(false);
+		expect(parsed.error?.issues.map((issue) => issue.path.join("."))).toContain("coverFileId");
+		expect(MerchantCreateRewardSchema.safeParse({ ...request, coverFileId: "not-a-file" }).error?.issues.at(0)?.message).toBe("Add a cover image");
 	});
 });

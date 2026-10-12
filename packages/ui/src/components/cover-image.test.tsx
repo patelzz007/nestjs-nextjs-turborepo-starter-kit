@@ -1,16 +1,42 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { COVER_IMAGE_DEFAULT_RATIO, CoverImage } from "./cover-image";
 
 const COVER_URL = "https://cdn.example.com/stores/org-1/reward-covers/file-1.webp";
 const OTHER_COVER_URL = "https://cdn.example.com/stores/org-1/reward-covers/file-2.webp";
 
+/** The detached images the cover loads through (useImageLoadingStatus), so a test can finish a load. */
+const loaders: HTMLImageElement[] = [];
+const NativeImage = window.Image;
+
+beforeEach((): void => {
+	loaders.length = 0;
+	window.Image = class extends NativeImage {
+		public constructor() {
+			super();
+			loaders.push(this);
+		}
+	};
+});
+
 afterEach((): void => {
 	cleanup();
+	window.Image = NativeImage;
 });
+
+/** Finishes loading (or failing) the latest image the cover asked for. */
+function finishLoad(event: "load" | "error"): void {
+	const loader = loaders.at(-1);
+	if (loader === undefined) {
+		throw new Error("the cover started no load");
+	}
+	act((): void => {
+		loader.dispatchEvent(new Event(event));
+	});
+}
 
 function frame(): HTMLElement {
 	const element = document.querySelector<HTMLElement>('[data-slot="cover-image"]');
@@ -52,7 +78,7 @@ describe("CoverImage", () => {
 		expect(frame().dataset.state).toBe("loading");
 		expect(image().className).toContain("opacity-0");
 
-		fireEvent.load(image());
+		finishLoad("load");
 		expect(frame().dataset.state).toBe("loaded");
 		expect(image().className).toContain("opacity-100");
 
@@ -62,7 +88,7 @@ describe("CoverImage", () => {
 
 	it("shows the fallback, never a broken image, when there is no image or it fails to load", (): void => {
 		const { rerender } = render(<CoverImage src={COVER_URL} fallback={<span>No cover</span>} />);
-		fireEvent.error(image());
+		finishLoad("error");
 
 		expect(frame().dataset.state).toBe("fallback");
 		expect(frame().querySelector("img")).toBeNull();
