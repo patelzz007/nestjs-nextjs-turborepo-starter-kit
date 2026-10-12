@@ -9,7 +9,7 @@ import { BreadcrumbTrail as SharedBreadcrumbTrail } from "@workspace/ui/componen
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useIsDesktop } from "@workspace/ui/hooks/use-mobile";
 
-/** Consumer shell breadcrumb — reads trail from context and renders the shared trail. */
+/** Consumer shell breadcrumb — reads trail from context and renders the shared trail, on one line in the page header. */
 export function WebShellBreadcrumb(): React.JSX.Element | null {
 	const { status } = useWebBreadcrumb();
 	const isDesktop = useIsDesktop();
@@ -32,15 +32,15 @@ export function WebShellBreadcrumb(): React.JSX.Element | null {
 	}
 
 	return (
-		<div className="mb-5">
-			<SharedBreadcrumbTrail
-				items={status.kind === "ready" ? status.items : []}
-				status={status.kind}
-				{...(status.kind === "error" ? { errorMessage: status.message } : {})}
-				maxItems={maxItems}
-				renderLink={renderLink}
-				onCopy={handleCopy}
-			/>
-		</div>
+		<SharedBreadcrumbTrail
+			className="mb-0 min-w-0"
+			scrollable
+			items={status.kind === "ready" ? status.items : []}
+			status={status.kind}
+			{...(status.kind === "error" ? { errorMessage: status.message } : {})}
+			maxItems={maxItems}
+			renderLink={renderLink}
+			onCopy={handleCopy}
+		/>
 	);
 }

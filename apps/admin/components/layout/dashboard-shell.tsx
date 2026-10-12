@@ -31,6 +31,8 @@ export interface DashboardShellProps {
 	readonly initialSessionPermissions?: Envelope<SessionPermissionsResponse> | undefined;
 	/** Server-evaluated feature flags (env-backed), forwarded to the menu filter and route guard. */
 	readonly enabledFeatureFlags?: readonly string[] | undefined;
+	/** Whether the desktop sidebar was open, read by the server from its cookie — the first paint matches it. */
+	readonly initialSidebarOpen?: boolean | undefined;
 }
 
 /**
@@ -53,7 +55,14 @@ const PLACEHOLDER_USER: SidebarUser = { name: "Account", email: "Loading profile
  * error screen — a still-loading one renders the full shell with the
  * placeholder identity.
  */
-export function DashboardShell({ footerActions = [], children, initialUser = null, initialSessionPermissions, enabledFeatureFlags }: DashboardShellProps): React.JSX.Element {
+export function DashboardShell({
+	footerActions = [],
+	children,
+	initialUser = null,
+	initialSessionPermissions,
+	enabledFeatureFlags,
+	initialSidebarOpen,
+}: DashboardShellProps): React.JSX.Element {
 	const { api, logout } = useAuth();
 	const authUser = useAuthUser();
 	// The breadcrumb provider must wrap EVERY consumer (the layout's own
@@ -108,7 +117,7 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 		<AdminBreadcrumbProvider pathname={pathname}>
 			<ImpersonationBanner />
 			<SessionCheckNotice />
-			<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName={ADMIN_SIDEBAR_DEVTOOLS_NAME}>
+			<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName={ADMIN_SIDEBAR_DEVTOOLS_NAME} initialIsOpen={initialSidebarOpen}>
 				<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} ownerId={authUser?.id ?? null} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
 					<DashboardLayout
 						user={{ name: resolvedUser.name, email: resolvedUser.email }}

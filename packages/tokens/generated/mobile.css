@@ -13,11 +13,13 @@
 		@variant light {
 			--background: #f1f4f9;
 			--foreground: oklch(0.24 0.02 258);
-			--card: oklch(1 0 0);
+			--card: oklch(0.985 0.003 258);
 			--card-foreground: oklch(0.24 0.02 258);
 			--popover: oklch(1 0 0);
 			--popover-foreground: oklch(0.24 0.02 258);
 			--topbar: #f1f4f9;
+			--shell-frame: #f5f7fb;
+			--shell-panel: #f1f4f9;
 			--primary: oklch(0.33 0.05 257);
 			--primary-foreground: oklch(1 0 0);
 			--secondary: oklch(0.935 0.009 258);
@@ -125,6 +127,8 @@
 			--popover: oklch(0.32 0.018 258);
 			--popover-foreground: oklch(0.965 0.004 258);
 			--topbar: oklch(0.225 0.015 258);
+			--shell-frame: oklch(0.18 0.013 258);
+			--shell-panel: oklch(0.225 0.015 258);
 			--primary: oklch(0.94 0.018 257);
 			--primary-foreground: oklch(0.22 0.035 257);
 			--secondary: oklch(0.32 0.018 258);
@@ -286,6 +290,8 @@
 	--color-tone-violet: var(--tone-violet);
 	--color-tone-violet-soft: var(--tone-violet-soft);
 	--color-topbar: var(--topbar);
+	--color-shell-frame: var(--shell-frame);
+	--color-shell-panel: var(--shell-panel);
 	--color-tier-bronze: var(--tier-bronze);
 	--color-tier-bronze-soft: var(--tier-bronze-soft);
 	--color-tier-silver: var(--tier-silver);

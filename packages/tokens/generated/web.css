@@ -141,11 +141,13 @@
 	--radius: 0.625rem;
 	--background: var(--palette-neutral-50);
 	--foreground: var(--palette-neutral-900);
-	--card: var(--palette-neutral-0);
+	--card: var(--palette-neutral-25);
 	--card-foreground: var(--palette-neutral-900);
 	--popover: var(--palette-neutral-0);
 	--popover-foreground: var(--palette-neutral-900);
 	--topbar: var(--palette-neutral-50);
+	--shell-frame: var(--palette-neutral-40);
+	--shell-panel: var(--palette-neutral-50);
 	--primary: var(--palette-brand-800);
 	--primary-foreground: var(--palette-neutral-0);
 	--secondary: var(--palette-neutral-100);
@@ -222,6 +224,8 @@
 	--popover: var(--palette-ink-700);
 	--popover-foreground: var(--palette-ink-50);
 	--topbar: var(--palette-ink-850);
+	--shell-frame: var(--palette-ink-950);
+	--shell-panel: var(--palette-ink-850);
 	--primary: var(--palette-brand-100);
 	--primary-foreground: var(--palette-brand-950);
 	--secondary: var(--palette-ink-700);
@@ -362,6 +366,8 @@
 	--color-tone-violet: var(--tone-violet);
 	--color-tone-violet-soft: var(--tone-violet-soft);
 	--color-topbar: var(--topbar);
+	--color-shell-frame: var(--shell-frame);
+	--color-shell-panel: var(--shell-panel);
 	--color-tier-bronze: var(--tier-bronze);
 	--color-tier-bronze-soft: var(--tier-bronze-soft);
 	--color-tier-silver: var(--tier-silver);

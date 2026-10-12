@@ -25,7 +25,7 @@ export {
 	SidebarTrigger,
 } from "./sidebar-parts";
 
-export { SidebarProvider, useSidebar } from "./sidebar-context";
+export { SidebarProvider, useSidebar, useSidebarControls, type SidebarControls } from "./sidebar-context";
 
 export type { SidebarLabels } from "@workspace/ui/lib/sidebar/labels";
 export { createCookieSidebarStorage, createNoopSidebarStorage, type SidebarStorageAdapter } from "@workspace/ui/lib/sidebar/storage";

@@ -25,7 +25,7 @@ import { PERMISSION } from "@workspace/shared";
 
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
 import { PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS } from "@workspace/ui/components/panel-sidebar-search";
-import { SidebarProvider } from "@workspace/ui/components/sidebar";
+import { SidebarProvider, useSidebar } from "@workspace/ui/components/sidebar";
 import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
@@ -38,13 +38,13 @@ let harnessIsMobile = false;
 
 vi.mock("@workspace/ui/components/sidebar", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@workspace/ui/components/sidebar")>();
-	const useSidebarActual = actual.useSidebar;
+	const useSidebarControlsActual = actual.useSidebarControls;
 	return {
 		...actual,
-		useSidebar: (): ReturnType<typeof actual.useSidebar> => {
-			const context = useSidebarActual();
+		useSidebarControls: (): ReturnType<typeof actual.useSidebarControls> => {
+			const controls = useSidebarControlsActual();
 			return {
-				...context,
+				...controls,
 				setOpenMobile: setOpenMobileMock,
 				isMobile: harnessIsMobile,
 			};
@@ -123,6 +123,8 @@ interface HarnessProps {
 	readonly onReportIssue?: () => void;
 	readonly pinnedItems?: readonly SearchableMenuItem[];
 	readonly menu?: CompiledSidebarMenuData;
+	readonly status?: React.ReactNode;
+	readonly profileMenu?: React.ReactNode;
 }
 
 /**
@@ -132,7 +134,7 @@ interface HarnessProps {
  * typing in search / reordering sections re-renders with a fresh view, exactly
  * like the real layout.
  */
-function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU }: HarnessProps): React.JSX.Element {
+function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU, status, profileMenu }: HarnessProps): React.JSX.Element {
 	const searchQuery = useSidebarSearchQuery();
 	const sectionOrder = useSidebarSectionOrder();
 	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
@@ -163,10 +165,19 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 				onMoveSectionDown={moveSectionDown}
 				pinnedItems={pinnedItems}
 				pageLabel={null}
+				status={status}
+				profileMenu={profileMenu}
 			/>
+			<SidebarOpenProbe />
 			<output data-testid="expanded-items">{JSON.stringify(expandedItems)}</output>
 		</SidebarProvider>
 	);
+}
+
+/** Whether the sidebar is open, as the provider says — the header toggle's effect. */
+function SidebarOpenProbe(): React.JSX.Element {
+	const { open } = useSidebar();
+	return <output data-testid="sidebar-open">{String(open)}</output>;
 }
 
 /** Renders the store state as JSON, so tests assert on it without reaching into the store. */
@@ -388,6 +399,32 @@ describe("Sidebar", () => {
 		expect(link("Support").getAttribute("href")).toBe("/support");
 		fireEvent.click(link("Support"));
 		expect(setOpenMobileMock).toHaveBeenCalledWith(false);
+	});
+
+	it("collapses itself completely from the toggle in its header", () => {
+		renderSidebar({ pathname: "/" });
+		expect(screen.getByTestId("sidebar-open").textContent).toBe("true");
+
+		fireEvent.click(screen.getByRole("button", { name: /toggle sidebar/iu }));
+
+		expect(screen.getByTestId("sidebar-open").textContent).toBe("false");
+	});
+
+	it("shows the connection and session status above the user row", () => {
+		renderSidebar({ pathname: "/", status: <span>Online</span> });
+		expect(screen.getByText("Online")).toBeTruthy();
+	});
+
+	it("opens the profile menu from the user row, and keeps log out and the theme toggle beside it", () => {
+		const onLogout = vi.fn();
+		renderSidebar({ pathname: "/", onLogout, profileMenu: <p>Profile menu</p> });
+
+		fireEvent.click(screen.getByRole("button", { name: "Open profile menu, Ada Lovelace" }));
+		expect(screen.getByText("Profile menu")).toBeTruthy();
+
+		fireEvent.click(screen.getByRole("button", { name: ADMIN_SHELL_LABELS.logoutAriaLabel }));
+		expect(onLogout).toHaveBeenCalledTimes(1);
+		expect(screen.getByRole("button", { name: /theme/iu })).toBeTruthy();
 	});
 
 	it("fires footer actions on click", () => {

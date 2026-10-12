@@ -114,3 +114,57 @@ describe("sidebar facade", () => {
 		expect(() => renderHook(useSidebarIsOpen)).toThrow(/Sidebar store is missing/u);
 	});
 });
+
+describe("sidebar open state across a reload", () => {
+	const COOKIE = `${STORAGE_KEY}-open`;
+
+	function clearCookie(): void {
+		document.cookie = `${COOKIE}=; path=/; max-age=0`;
+	}
+
+	function cookieValue(): string | undefined {
+		return new RegExp(`(?:^|; )${COOKIE}=(?<value>[^;]*)`).exec(document.cookie)?.groups?.value;
+	}
+
+	beforeEach((): void => {
+		clearCookie();
+	});
+
+	afterEach((): void => {
+		clearCookie();
+	});
+
+	it("starts from the open state the server rendered, so the first paint matches it", () => {
+		function collapsedWrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+			return (
+				<SidebarStoreProvider storageKey={STORAGE_KEY} devtoolsName="Sidebar · test" initialIsOpen={false}>
+					{children}
+				</SidebarStoreProvider>
+			);
+		}
+		const firstRenders: boolean[] = [];
+		renderHook(
+			(): void => {
+				firstRenders.push(useSidebarIsOpen());
+			},
+			{ wrapper: collapsedWrapper },
+		);
+
+		expect(firstRenders.at(0)).toBe(false);
+	});
+
+	it("keeps the cookie the server reads equal to the open state, from mount and on every change", () => {
+		const { result } = renderHook(useSidebarProbe, { wrapper });
+		expect(cookieValue()).toBe("true");
+
+		act(() => {
+			result.current.commands.toggle();
+		});
+		expect(cookieValue()).toBe("false");
+
+		act(() => {
+			result.current.commands.toggle();
+		});
+		expect(cookieValue()).toBe("true");
+	});
+});

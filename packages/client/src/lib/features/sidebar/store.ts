@@ -14,11 +14,15 @@ import {
 
 export type SidebarStore = FeatureStore<SidebarState, SidebarAction>;
 
-/** One sidebar store (no effects: every sidebar change is a pure state transition). */
-export function createSidebarStore(devtoolsName: string): SidebarStore {
+/**
+ * One sidebar store (no effects: every sidebar change is a pure state
+ * transition). `initialIsOpen` is the open state the server rendered (from
+ * the sidebar's cookie — open-cookie.ts), so the first client render matches it.
+ */
+export function createSidebarStore(devtoolsName: string, initialIsOpen?: boolean): SidebarStore {
 	return createFeatureStore<SidebarState, SidebarAction>({
 		name: devtoolsName,
-		initialState: INITIAL_SIDEBAR_STATE,
+		initialState: initialIsOpen === undefined ? INITIAL_SIDEBAR_STATE : { ...INITIAL_SIDEBAR_STATE, isOpen: initialIsOpen },
 		reducer: sidebarReducer,
 	});
 }

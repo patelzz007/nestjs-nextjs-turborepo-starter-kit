@@ -109,6 +109,8 @@ export const TAILWIND_THEME: TailwindTheme = {
 		"tone-violet",
 		"tone-violet-soft",
 		"topbar",
+		"shell-frame",
+		"shell-panel",
 		"tier-bronze",
 		"tier-bronze-soft",
 		"tier-silver",

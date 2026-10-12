@@ -1,61 +1,39 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { SidebarProvider } from "@workspace/ui/components/sidebar";
+import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/web-authorization-provider";
 import { RewardHubTopbar } from "@/components/layout/reward-hub-topbar";
-import { WEB_SIDEBAR_DEVTOOLS_NAME, WEB_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
-import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
-import { SidebarStoreProvider } from "@workspace/client/lib/features/sidebar/facade";
 
-vi.mock("@workspace/client/lib/auth", () => ({
-	useAuth: (): { readonly user: null; readonly logout: () => Promise<void> } => ({ user: null, logout: (): Promise<void> => Promise.resolve() }),
-}));
-
-vi.mock("next/navigation", () => ({
-	usePathname: (): string => "/rewardhub",
-	useRouter: (): { readonly push: () => void } => ({ push: (): void => undefined }),
-}));
-
-/** Keep the chrome out of the way — the test only cares about gated children. */
-vi.mock("@workspace/ui/components/app-shell-topbar", () => ({
-	AppShellTopbar: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <header>{children}</header>,
-	useCommandPaletteShortcut: (): void => undefined,
+/** The trail and the bell read app state; the header only places them. */
+vi.mock("@/components/layout/web-shell-breadcrumb", () => ({
+	WebShellBreadcrumb: (): React.JSX.Element => <nav aria-label="Breadcrumb">Rewards</nav>,
 }));
 
 vi.mock("@/components/layout/web-notifications-dropdown", () => ({
-	WebNotificationsDropdown: (): null => null,
+	WebNotificationsDropdown: (): React.JSX.Element => <button type="button">Notifications</button>,
 }));
-
-vi.mock("@workspace/ui/components/shell-theme-toggle", () => ({
-	ShellThemeToggle: (): null => null,
-}));
-
-function renderTopbar(session: WebSessionState): void {
-	render(
-		<WebSessionTestProvider session={session}>
-			<SidebarStoreProvider storageKey={WEB_SIDEBAR_STORAGE_KEY} devtoolsName={WEB_SIDEBAR_DEVTOOLS_NAME}>
-				<RewardHubTopbar />
-			</SidebarStoreProvider>
-		</WebSessionTestProvider>,
-	);
-}
 
 afterEach(() => {
 	cleanup();
 });
 
 describe("RewardHubTopbar", () => {
-	it("links to the personal account page for signed-in users", () => {
-		renderTopbar(signedInSession());
+	it("is the shared page header: the breadcrumb trail, notifications and search", () => {
+		render(
+			<SidebarProvider storage={createNoopSidebarStorage()}>
+				<RewardHubTopbar />
+			</SidebarProvider>,
+			{ wrapper: UiKitTestProviders },
+		);
 
-		expect(screen.getByRole("link", { name: "Account settings" }).getAttribute("href")).toBe("/rewardhub/account");
-	});
-
-	it("hides the account link from anonymous visitors", () => {
-		renderTopbar(GUEST_SESSION_STATE);
-
-		expect(screen.queryByRole("link", { name: "Account settings" })).toBeNull();
+		const header = screen.getByRole("banner");
+		expect(header.getAttribute("data-slot")).toBe("app-shell-header");
+		expect(screen.getByRole("navigation", { name: "Breadcrumb" }).textContent).toBe("Rewards");
+		expect(screen.getByRole("button", { name: "Notifications" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Search pages" })).toBeTruthy();
 	});
 });

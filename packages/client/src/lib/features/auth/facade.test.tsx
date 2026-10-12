@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { LIST_SLOT_INDEX, epochMs, type ApiResponseMeta, type AuthClientType, type DataValue } from "@workspace/shared";
 import * as React from "react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
@@ -907,6 +908,73 @@ describe("auth facade — 401 pipeline", () => {
 		expect(callCount("logout")).toBe(1);
 		expect(leaveSession).not.toHaveBeenCalled();
 		expect(timeline).not.toContain("other-tab:logged-out");
+	});
+});
+
+describe("auth facade — the session the server rendered for", () => {
+	const SUPER_ADMIN = userFixture({ id: "user-super", email: "root@example.com", isSuperAdmin: true });
+
+	/** What the root layout hands over: the API's answers to this request, stamped when it answered (now). */
+	function serverSession(): NonNullable<AuthProviderProps["serverSession"]> {
+		return {
+			profile: envelopeFixture(SUPER_ADMIN, answeredNow()),
+			permissions: envelopeFixture(sessionPermissionsFixture(), answeredNow()),
+		};
+	}
+
+	function ServerRenderedProbe(): React.JSX.Element {
+		const { user, isLoading } = useAuth();
+		return <p>{`${String(isLoading)}|${user?.email ?? "none"}|${String(user?.isSuperAdmin === true)}`}</p>;
+	}
+
+	it("is in the server render's HTML: the signed-in user, not a pending session", () => {
+		const queryClient = new QueryClient();
+		const html = renderToString(
+			<QueryClientProvider client={queryClient}>
+				<AuthProvider clientType={CLIENT_TYPE} serverSession={serverSession()}>
+					<ServerRenderedProbe />
+				</AuthProvider>
+			</QueryClientProvider>,
+		);
+
+		expect(html).toContain("false|root@example.com|true");
+	});
+
+	it("starts the tab authenticated on its first render, in the server-rendered epoch, then re-confirms it once", async () => {
+		routes.me = (): Response => envelopeResponse(SUPER_ADMIN);
+		const session = serverSession();
+		const { result, queryClient } = renderAuth({ ...RETURNING_MEMBER, serverSession: session });
+
+		expect(result.current.status).toBe("authenticated");
+		expect(result.current.auth.isLoading).toBe(false);
+		expect(result.current.user).toMatchObject({ id: "user-super", isSuperAdmin: true, sessionScope: "full" });
+		expect(result.current.serverRenderedSession).toBe(true);
+		expect(cachedData(queryClient)).toContain(JSON.stringify(session.profile));
+
+		// The mount check re-confirms it; the freshly seeded queries do not fetch it again.
+		await waitFor((): void => {
+			expect(callCount("permissions")).toBe(1);
+		});
+		await act(async (): Promise<void> => {
+			await Promise.resolve();
+		});
+		expect(callCount("me")).toBe(1);
+		expect(result.current.status).toBe("authenticated");
+		expect(result.current.serverRenderedSession).toBe(true);
+	});
+
+	it("is signed out by the browser's check when the session ended after the server rendered", async () => {
+		routes.me = unauthorizedResponse;
+		routes.permissions = unauthorizedResponse;
+		routes.refresh = unauthorizedResponse;
+
+		const { result } = renderAuth({ ...RETURNING_MEMBER, serverSession: serverSession() });
+		expect(result.current.status).toBe("authenticated");
+
+		await waitFor((): void => {
+			expect(result.current.status).toBe("signed-out");
+		});
+		expect(result.current.user).toBeNull();
 	});
 });
 

@@ -2,7 +2,6 @@
 
 import { MerchantAuthorizationProvider } from "@/components/access/merchant-authorization-provider";
 import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcrumb";
-import { MerchantShellBreadcrumb } from "@/components/layout/merchant-shell-breadcrumb";
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
@@ -14,11 +13,11 @@ import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { useSwitchOrganization } from "@/lib/org/use-switch-organization";
 import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
 import type { Envelope, OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { AppPanelShell } from "@workspace/ui/components/app-panel-shell";
+import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
 import { MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME, MERCHANT_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
 import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
 import { MERCHANT_SIDEBAR_DEVTOOLS_NAME, MERCHANT_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
-import { SidebarStoreProvider, useSidebarCommands, useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
+import { SidebarStoreProvider } from "@workspace/client/lib/features/sidebar/facade";
 import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import { usePathname } from "next/navigation";
@@ -36,13 +35,15 @@ export interface MerchantShellProps {
 	readonly initialMemberships?: Envelope<OrganizationRewardMembershipResponse[]> | undefined;
 	readonly initialUser?: ServerUser | null;
 	readonly initialIsImpersonating?: boolean;
+	/** Whether the desktop sidebar was open, read by the server from its cookie — the first paint matches it. */
+	readonly initialSidebarOpen?: boolean | undefined;
 }
 
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */
 export function MerchantShell(props: MerchantShellProps): React.JSX.Element {
 	const authUser = useAuthUser();
 	return (
-		<SidebarStoreProvider storageKey={MERCHANT_SIDEBAR_STORAGE_KEY} devtoolsName={MERCHANT_SIDEBAR_DEVTOOLS_NAME}>
+		<SidebarStoreProvider storageKey={MERCHANT_SIDEBAR_STORAGE_KEY} devtoolsName={MERCHANT_SIDEBAR_DEVTOOLS_NAME} initialIsOpen={props.initialSidebarOpen}>
 			<CommandPaletteStoreProvider storageKey={MERCHANT_COMMAND_PALETTE_STORAGE_KEY} ownerId={authUser?.id ?? null} devtoolsName={MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME}>
 				<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
 					<MerchantShellContent {...props} />
@@ -64,19 +65,6 @@ function MerchantShellContent({
 	const { api } = useAuth();
 	const pathname = usePathname();
 	const switchOrganization = useSwitchOrganization();
-	const sidebarOpen = useSidebarIsOpen();
-	const { open: openSidebar, close: closeSidebar } = useSidebarCommands();
-
-	const handleSidebarOpenChange = React.useCallback(
-		(open: boolean): void => {
-			if (open) {
-				openSidebar();
-			} else {
-				closeSidebar();
-			}
-		},
-		[closeSidebar, openSidebar],
-	);
 
 	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
 		{},
@@ -96,15 +84,13 @@ function MerchantShellContent({
 		<MerchantAuthorizationProvider initialMemberships={initialMemberships}>
 			<TenantContextProvider orgSlug={orgSlug} initialLocationId={initialLocationId} initialOrganizationContext={initialOrganizationContext}>
 				<MerchantBreadcrumbProvider>
-					<AppPanelShell
+					<StoreBoundAppPanelShell
 						shellClassName="merchant-panel-shell"
 						contentClassName="space-y-6"
 						scrollResetKey={pathname}
 						banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
-						sidebarOpen={sidebarOpen}
-						onSidebarOpenChange={handleSidebarOpenChange}
-						sidebar={<MerchantSidebarPanel memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} />}
-						topbar={<MerchantTopbar initialUser={initialUser} />}>
+						sidebar={<MerchantSidebarPanel memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} initialUser={initialUser} />}
+						topbar={<MerchantTopbar />}>
 						{showMembershipLoading ? (
 							<p className="text-sm text-muted-foreground">Loading merchant access…</p>
 						) : showMembershipGate ? (
@@ -116,12 +102,9 @@ function MerchantShellContent({
 								</div>
 							</div>
 						) : (
-							<>
-								<MerchantShellBreadcrumb />
-								{children}
-							</>
+							children
 						)}
-					</AppPanelShell>
+					</StoreBoundAppPanelShell>
 				</MerchantBreadcrumbProvider>
 			</TenantContextProvider>
 		</MerchantAuthorizationProvider>

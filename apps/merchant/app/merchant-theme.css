@@ -78,21 +78,6 @@ html:has(body.merchant-app) {
 	mask-image: radial-gradient(ellipse 95% 85% at 50% 38%, black 8%, transparent 72%);
 }
 
-/* Solid panel chrome — the topbar matches the canvas in light, the page surface in dark (`--topbar`), divided by --sidebar-border. No frosted tint. */
-.merchant-app .panel-shell-topbar {
-	height: 4rem;
-	flex-shrink: 0;
-	background: var(--topbar);
-	border-bottom: 1px solid var(--sidebar-border);
-	backdrop-filter: none;
-	-webkit-backdrop-filter: none;
-}
-
-.merchant-app .panel-shell-sidebar .panel-shell-sidebar-header {
-	height: 4rem;
-	flex-shrink: 0;
-}
-
 .merchant-panel-shell {
 	height: 100svh;
 	min-height: 100svh;

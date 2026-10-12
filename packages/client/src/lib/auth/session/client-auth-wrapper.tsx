@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, type JSX, type ReactNode } from "react";
 
 import { AuthProvider } from "../index";
+import type { ServerRenderedSession } from "./server-rendered-session";
 
 export interface ClientAuthWrapperProps {
 	readonly children: ReactNode;
@@ -29,6 +30,8 @@ export interface ClientAuthWrapperProps {
 	readonly revalidateSessionEnabled?: boolean | undefined;
 	/** Did the server see a session cookie? `false` skips only the on-mount revalidation (a guest has nothing to restore). @default true */
 	readonly sessionHint?: boolean | undefined;
+	/** The session the server rendered the page for (`loadServerRenderedSession`): the auth store starts from it. */
+	readonly serverSession?: ServerRenderedSession | undefined;
 }
 
 /** The pathname part of an app-relative URL (`/auth/login?redirect=…` → `/auth/login`). */
@@ -44,6 +47,7 @@ export function ClientAuthWrapper({
 	shouldRedirectOnUnauthorized,
 	revalidateSessionEnabled,
 	sessionHint,
+	serverSession,
 }: ClientAuthWrapperProps): JSX.Element {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -80,7 +84,8 @@ export function ClientAuthWrapper({
 			clientType={clientType}
 			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
 			revalidateSessionEnabled={revalidateSessionEnabled}
-			sessionHint={sessionHint}>
+			sessionHint={sessionHint}
+			serverSession={serverSession}>
 			{children}
 		</AuthProvider>
 	);

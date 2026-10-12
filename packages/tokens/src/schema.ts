@@ -115,6 +115,8 @@ export const ThemeRoleSchema = z.enum([
 	"popover",
 	"popover-foreground",
 	"topbar",
+	"shell-frame",
+	"shell-panel",
 	"primary",
 	"primary-foreground",
 	"secondary",

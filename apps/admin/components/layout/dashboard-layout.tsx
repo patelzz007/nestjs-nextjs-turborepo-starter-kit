@@ -2,12 +2,8 @@
 
 import { BreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
 import { breadcrumbPageLabel, type BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
-import { PanelShellContent } from "@workspace/ui/components/panel-shell-content";
-import { Sidebar, SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
-import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { Button } from "@workspace/ui/components/button";
-import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -27,16 +23,22 @@ import { withAccessibleLinks } from "@/lib/navigation/breadcrumb";
 import { ADMIN_PANEL_SIDEBAR_NAV_LABELS, ADMIN_SHELL_LABELS } from "@/lib/sidebar-labels";
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
+import { AppShellHeader } from "@workspace/ui/components/app-shell-header";
+import { NetworkStatusIndicator } from "@/components/common/network-status-bar";
+import { SessionStatusBadge } from "@/components/common/session-status-badge";
+import { Profile01 } from "@/components/settings/profile-01";
+import { useCommandPaletteShortcut } from "@workspace/ui/components/app-shell-topbar";
+import dynamic from "next/dynamic";
 import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
-import { useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
+import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
 import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
-const SIDEBAR_STORAGE = createNoopSidebarStorage();
+const CommandPalette = dynamic(() => import("@/components/layout/command-palette").then((m) => m.CommandPalette), { ssr: false });
 
 const SKIP_TO_CONTENT_CLASS =
 	"sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg";
@@ -93,6 +95,8 @@ function ShellBreadcrumb(): React.JSX.Element {
 
 	return (
 		<BreadcrumbTrail
+			className="mb-0 min-w-0"
+			scrollable
 			items={items}
 			status={status.kind}
 			{...(status.kind === "error" ? { errorMessage: status.message } : {})}
@@ -114,10 +118,9 @@ export function DashboardLayout({
 }: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
 	const { status: breadcrumbStatus } = useAdminBreadcrumb();
-	const isOpen = useSidebarIsOpen();
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const { open: openSidebar, close: closeSidebar, setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 	const pathname = usePathname();
 	const { capabilities, status: permissionsStatus, retry: retryPermissions } = useSessionPermissionsQuery(initialSessionPermissions);
@@ -153,23 +156,18 @@ export function DashboardLayout({
 
 	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
 
-	const handleSidebarOpenChange = React.useCallback(
-		(open: boolean): void => {
-			if (open) {
-				openSidebar();
-			} else {
-				closeSidebar();
-			}
-		},
-		[openSidebar, closeSidebar],
-	);
-
 	const handleToggleItem = React.useCallback(
 		(itemId: string): void => {
 			setItemExpanded(pathname, itemId, expandedItems[itemId] !== true);
 		},
 		[expandedItems, pathname, setItemExpanded],
 	);
+
+	const [commandOpen, setCommandOpen] = React.useState(false);
+	const openCommandPalette = React.useCallback((): void => {
+		setCommandOpen(true);
+	}, []);
+	useCommandPaletteShortcut(commandOpen, openCommandPalette);
 
 	const handleSkipToContent = React.useCallback((): void => {
 		const main = document.getElementById("main-content");
@@ -184,11 +182,15 @@ export function DashboardLayout({
 	return (
 		<CapabilitiesProvider capabilities={capabilities}>
 			<AuthorizedNavigationProvider searchableItems={searchableItems} canAccessRoute={canAccessPath}>
-				<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
-					<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
-						{ADMIN_SHELL_LABELS.skipToContent}
-					</Button>
-					<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-sidebar">
+				<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
+					{ADMIN_SHELL_LABELS.skipToContent}
+				</Button>
+				{commandOpen ? <CommandPalette open setOpen={setCommandOpen} /> : null}
+				<StoreBoundAppPanelShell
+					sidebarClassName="admin-shell-sidebar"
+					scrollResetKey={pathname}
+					sidebarBadges={sidebarBadges}
+					sidebar={
 						<AdminSidebarPanel
 							user={user}
 							onLogout={onLogout}
@@ -205,26 +207,26 @@ export function DashboardLayout({
 							onMoveSectionDown={moveSectionDown}
 							pinnedItems={pinnedItems}
 							pageLabel={breadcrumbPageLabel(breadcrumbStatus)}
+							status={
+								<>
+									<NetworkStatusIndicator />
+									<SessionStatusBadge compact />
+								</>
+							}
+							profileMenu={<Profile01 user={user} onLogout={onLogout} />}
 						/>
-					</Sidebar>
-					<SidebarInset className={cn("flex h-svh min-w-0 flex-col overflow-hidden bg-background")}>
-						<Topbar user={user} onLogout={onLogout} />
-						<main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto overscroll-none outline-none">
-							<PanelShellContent>
-								<ShellBreadcrumb />
-								<RouteAuthorizationGuard
-									rules={ADMIN_ROUTE_AUTHORIZATION}
-									enabledFeatureFlags={enabledFeatureFlags}
-									permissionsStatus={permissionsStatus}
-									onRetryPermissions={retryPermissions}
-									superAdmin={superAdmin}>
-									{children}
-								</RouteAuthorizationGuard>
-							</PanelShellContent>
-							<ScrollToTop threshold={300} />
-						</main>
-					</SidebarInset>
-				</SidebarProvider>
+					}
+					topbar={<AppShellHeader breadcrumb={<ShellBreadcrumb />} onOpenSearch={openCommandPalette} />}
+					overlay={<ScrollToTop threshold={300} />}>
+					<RouteAuthorizationGuard
+						rules={ADMIN_ROUTE_AUTHORIZATION}
+						enabledFeatureFlags={enabledFeatureFlags}
+						permissionsStatus={permissionsStatus}
+						onRetryPermissions={retryPermissions}
+						superAdmin={superAdmin}>
+						{children}
+					</RouteAuthorizationGuard>
+				</StoreBoundAppPanelShell>
 			</AuthorizedNavigationProvider>
 		</CapabilitiesProvider>
 	);

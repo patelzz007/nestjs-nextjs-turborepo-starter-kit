@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loadMerchantServerContext, loadOrganizationContext } from "@/lib/merchant-server-api";
+import { loadMerchantServerContext, loadMerchantServerSession, loadOrganizationContext } from "@/lib/merchant-server-api";
 import { UnexpectedServerQueryError } from "@workspace/client/lib/api/server-query-outcome";
 import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
 
@@ -103,6 +103,31 @@ describe("loadMerchantServerContext", () => {
 		apiAnswers(() => answer(200, [membershipFixture("OWNER")]));
 
 		expect((await loadMerchantServerContext()).organizationSlug).toBe(TEST_ORG_SLUG);
+	});
+});
+
+describe("loadMerchantServerSession", () => {
+	it("is signed out without asking the API when the request carries no session cookie", async () => {
+		cookieJar.clear();
+		const fetchSpy = vi.fn();
+		vi.stubGlobal("fetch", fetchSpy);
+
+		await expect(loadMerchantServerSession()).resolves.toEqual({ kind: "signed-out" });
+		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("is signed out when the API rejects the session (401) — the browser may still refresh it", async () => {
+		apiAnswers(() => answer(401, null));
+
+		await expect(loadMerchantServerSession()).resolves.toEqual({ kind: "signed-out" });
+	});
+
+	it("reports an outage as unavailable instead of failing the page — the browser's session check settles it", async () => {
+		apiAnswers(() => answer(503, null));
+
+		const outcome = await loadMerchantServerSession();
+
+		expect(outcome.kind).toBe("unavailable");
 	});
 });
 

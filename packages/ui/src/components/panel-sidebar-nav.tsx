@@ -12,7 +12,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarSeparator,
-	useSidebar,
+	useSidebarControls,
 } from "@workspace/ui/components/sidebar";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
 import { useFocusShortcut } from "@workspace/ui/hooks/use-focus-shortcut";
@@ -132,7 +132,7 @@ function useNavRowContext(
 
 /** Following a link closes the mobile drawer (the desktop rail stays as it is). */
 function useCloseMobileSidebar(): () => void {
-	const { isMobile, setOpenMobile } = useSidebar();
+	const { isMobile, setOpenMobile } = useSidebarControls();
 	return React.useCallback((): void => {
 		if (isMobile) {
 			setOpenMobile(false);

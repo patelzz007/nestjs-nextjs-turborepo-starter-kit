@@ -37,10 +37,12 @@ describe("findStaleStylesheets", () => {
 		const handEdited = (fileName: string): Uint8Array | undefined => {
 			const committed = readCommitted(fileName);
 			return fileName === "web.css" && committed !== undefined
-				? new TextEncoder().encode(new TextDecoder().decode(committed).replace("--card: var(--palette-neutral-0);", "--card: white;"))
+				? new TextEncoder().encode(new TextDecoder().decode(committed).replace(/--card: [^;]+;/u, "--card: white;"))
 				: committed;
 		};
 
+		// The edit must actually land, or this would pass for the wrong reason.
+		expect(new TextDecoder().decode(handEdited("web.css"))).toContain("--card: white;");
 		expect(findStaleStylesheets(expected, handEdited)).toStrictEqual([
 			`generated/web.css is out of date with packages/tokens/src (or was edited by hand). Run \`${GENERATE_COMMAND}\` and commit the result.`,
 		]);

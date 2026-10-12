@@ -1,9 +1,13 @@
 import "server-only";
 
 import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
+import { loadServerSessionOutcome, type ServerSessionOutcome } from "@workspace/client/lib/auth/session/load-server-session";
 import { AUTH_COOKIE_NAMES } from "@workspace/shared";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { z } from "zod";
+
+import { createAdminServerCaller } from "@/lib/admin-server-api";
 
 /**
  * Server-side identity for the admin shell, decoded from the httpOnly
@@ -57,3 +61,12 @@ export async function getServerUser(): Promise<ServerUser | null> {
 
 	return { name: parsed.data.fullName, email: parsed.data.email };
 }
+
+/**
+ * This request's session as the API describes it (`/auth/me` +
+ * `/auth/permissions`), asked once per request (`React.cache`): the root
+ * layout starts the auth store from it, so the first paint already knows who
+ * is signed in (super-admin navigation included), and the panel layout takes
+ * its permissions from the same answer.
+ */
+export const loadAdminServerSession = cache((): Promise<ServerSessionOutcome> => loadServerSessionOutcome(createAdminServerCaller()));

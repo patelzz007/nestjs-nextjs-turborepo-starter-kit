@@ -121,12 +121,12 @@ export const APP_BRAND_TOKENS: readonly string[] = [
 ];
 
 /** Surfaces a focus ring or a chart can sit on. */
-const RING_SURFACES: readonly string[] = ["--background", "--card", "--popover", "--muted", "--sidebar"];
+const RING_SURFACES: readonly string[] = ["--background", "--card", "--popover", "--muted", "--sidebar", "--shell-frame", "--shell-panel"];
 const CHART_SERIES: readonly string[] = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"];
 const CHART_SURFACES: readonly string[] = ["--card", "--popover"];
-const MUTED_TEXT_SURFACES: readonly string[] = ["--background", "--card", "--muted", "--sidebar"];
-/** Surfaces sidebar nav labels sit on — the chrome itself and a hovered row. */
-const SIDEBAR_TEXT_SURFACES: readonly string[] = ["--sidebar", "--sidebar-accent"];
+const MUTED_TEXT_SURFACES: readonly string[] = ["--background", "--card", "--muted", "--sidebar", "--shell-frame", "--shell-panel"];
+/** Surfaces sidebar nav labels sit on — the chrome itself, an inset shell's frame (its sidebar is see-through) and a hovered row. */
+const SIDEBAR_TEXT_SURFACES: readonly string[] = ["--sidebar", "--shell-frame", "--sidebar-accent"];
 /** The tone palette: each `--tone-X` is text on its own `--tone-X-soft` fill (Badge tone variants). */
 const TONES: readonly string[] = ["green", "blue", "yellow", "red", "orange", "teal", "violet"];
 /** Reward tiers: each `--tier-X` is text on its own `--tier-X-soft` fill (tier badges, membership cards). */
@@ -135,6 +135,7 @@ const TIERS: readonly string[] = ["bronze", "silver", "gold", "platinum"];
 const SURFACE_TEXT: readonly (readonly [string, string])[] = [
 	["--foreground", "--background"],
 	["--foreground", "--topbar"],
+	["--foreground", "--shell-panel"],
 	["--card-foreground", "--card"],
 	["--popover-foreground", "--popover"],
 ];

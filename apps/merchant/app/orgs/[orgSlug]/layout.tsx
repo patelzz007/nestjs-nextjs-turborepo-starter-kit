@@ -1,7 +1,7 @@
 import { OrgTenantBootstrap } from "@/components/org/org-tenant-bootstrap";
 import { MerchantShell } from "@/components/merchant-shell";
 import { getMerchantServerSession } from "@/lib/auth/server";
-import { loadMerchantServerContext, readOrganizationSlugCookie } from "@/lib/merchant-server-api";
+import { loadMerchantServerContext, readOrganizationSlugCookie, readSidebarOpen } from "@/lib/merchant-server-api";
 import { isCanonicalOrganizationSlug, resolveOrganizationTenantFromUrlSegment, resolvePreferredMembershipSlug } from "@/lib/org/resolve-slug";
 import { loadServerLocationScope, type ServerLocationScope } from "@/lib/org/server-location-scope";
 import { orgRoutes, ROUTES } from "@/lib/routes";
@@ -24,7 +24,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function OrgLayout({ children, params }: OrgLayoutProps): Promise<React.JSX.Element> {
 	const { orgSlug } = await params;
-	const [ctx, session, storedSlug] = await Promise.all([loadMerchantServerContext(), getMerchantServerSession(), readOrganizationSlugCookie()]);
+	const [ctx, session, storedSlug, sidebarOpen] = await Promise.all([
+		loadMerchantServerContext(),
+		getMerchantServerSession(),
+		readOrganizationSlugCookie(),
+		readSidebarOpen(),
+	]);
 	const resolvedTenant = resolveOrganizationTenantFromUrlSegment(ctx.memberships, orgSlug);
 	const preferredSlug = resolvePreferredMembershipSlug(ctx.memberships, storedSlug);
 
@@ -50,7 +55,8 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps): P
 			initialOrganizationContext={locationScope?.organizationContext}
 			initialMemberships={ctx.membershipsEnvelope}
 			initialUser={session.user}
-			initialIsImpersonating={session.isImpersonating}>
+			initialIsImpersonating={session.isImpersonating}
+			initialSidebarOpen={sidebarOpen}>
 			{resolvedTenant !== undefined ? <OrgTenantBootstrap orgSlug={resolvedTenant.slug} /> : null}
 			{children}
 		</MerchantShell>

@@ -52,6 +52,8 @@ const COMPLIANT_REWARDS_AND_SURFACES: readonly [string, string][] = [
 	["--reward-solid-foreground", "#000000"],
 	["--foreground", "#000000"],
 	["--topbar", "#ffffff"],
+	["--shell-frame", "#ffffff"],
+	["--shell-panel", "#ffffff"],
 	["--card-foreground", "#000000"],
 	["--popover-foreground", "#000000"],
 ];
@@ -86,7 +88,8 @@ describe("findContrastViolations", () => {
 
 		const violations = findContrastViolations(theme);
 
-		expect(violations).toHaveLength(5);
+		// The ring on every surface it can sit on: the page, cards, popovers, muted fills, the sidebar, and an inset shell's frame and panel.
+		expect(violations).toHaveLength(7);
 		expect(violations.every((line) => line.startsWith("--ring on "))).toBe(true);
 	});
 
@@ -124,7 +127,7 @@ describe("findContrastViolations", () => {
 		expect(violations[LIST_SLOT_INDEX.first]).toMatch(/^--tone-yellow on --tone-yellow-soft: /u);
 	});
 
-	it("holds sidebar nav labels to text contrast on the chrome, a hovered row and the active pill", () => {
+	it("holds sidebar nav labels to text contrast on the chrome, an inset shell's frame, a hovered row and the active row", () => {
 		const theme = new Map<string, string>([
 			...COMPLIANT_TONES,
 			...COMPLIANT_REWARDS_AND_SURFACES,
@@ -155,6 +158,7 @@ describe("findContrastViolations", () => {
 
 		expect(violations).toEqual([
 			expect.stringMatching(/^--sidebar-foreground on --sidebar: /u),
+			expect.stringMatching(/^--sidebar-foreground on --shell-frame: /u),
 			expect.stringMatching(/^--sidebar-foreground on --sidebar-accent: /u),
 			expect.stringMatching(/^--sidebar-primary-foreground on --sidebar-primary: /u),
 		]);

@@ -64,6 +64,8 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [046](./046-mobile-app-shell-and-page-header.md) | Mobile app shell and a page header that is not a bar (menu or back, moving titles, status) | Accepted — implemented (2026-10-12) |
 | [047](./047-mobile-action-feedback-toasts.md) | Mobile action feedback through toasts (success, failure, why) | Accepted — implemented (2026-10-12) |
 | [048](./048-mobile-analytics-screen.md) | Mobile Analytics tab: UI only, token-coloured SVG charts, sample data in the API's dashboard shape | Accepted — implemented (2026-10-12) |
+| [049](./049-shared-app-shell-and-sidebar-motion.md) | One app shell for admin, web and merchant (app shell 3); the sidebar moves on one spring the layout follows | Accepted — implemented (2026-10-12) |
+| [050](./050-server-rendered-session.md) | The auth store starts from the session the server rendered for (`/auth/me` + `/auth/permissions` asked during the render), so nothing that depends on who is signed in pops in after load | Accepted — implemented (2026-10-12) |
 | [RabbitMQ](./rabbitmq-placeholder.md) | RabbitMQ as infrastructure placeholder only | Accepted |
 
 ## Pending decisions

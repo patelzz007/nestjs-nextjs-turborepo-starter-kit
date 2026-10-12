@@ -7,9 +7,15 @@ import * as React from "react";
 export interface RewardHubShellProps {
 	readonly children: React.ReactNode;
 	readonly initialUser?: ServerUser | null;
+	/** Whether the desktop sidebar was open, read by the server from its cookie — the first paint matches it. */
+	readonly initialSidebarOpen?: boolean | undefined;
 }
 
 /** Consumer Reward Hub chrome — sidebar, topbar, and command palette. */
-export function RewardHubShell({ children, initialUser }: RewardHubShellProps): React.JSX.Element {
-	return <RewardHubLayout initialUser={initialUser}>{children}</RewardHubLayout>;
+export function RewardHubShell({ children, initialUser, initialSidebarOpen }: RewardHubShellProps): React.JSX.Element {
+	return (
+		<RewardHubLayout initialUser={initialUser} initialSidebarOpen={initialSidebarOpen}>
+			{children}
+		</RewardHubLayout>
+	);
 }

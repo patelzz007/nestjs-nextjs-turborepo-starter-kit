@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ChartContainer, ChartLegendContent, ChartStyle, ChartTooltipContent, type ChartConfig } from "./chart";
+import { LayoutTransitionProvider, useReportLayoutTransition } from "./layout-transition";
 
 const NO_SERIES: ChartConfig = {};
 const CONFIG: ChartConfig = { salesMinor: { label: "Sales", color: "var(--chart-1)" } };
@@ -22,6 +23,55 @@ function renderTooltip(valueFormatter?: (value: number) => string): void {
 
 afterEach(() => {
 	cleanup();
+});
+
+describe("ChartContainer while the layout moves", () => {
+	const HELD_WIDTH_PX = 640;
+
+	it("holds the chart at its width, anchored and clipped, then lets it fit — without re-rendering it", () => {
+		const reporter: { report: (isMoving: boolean) => void } = { report: (): void => undefined };
+		const chartRenders = vi.fn<() => void>();
+		function Reporter(): null {
+			reporter.report = useReportLayoutTransition();
+			return null;
+		}
+		function Plot(): React.JSX.Element {
+			chartRenders();
+			return <svg aria-label="Plot" />;
+		}
+		render(
+			<LayoutTransitionProvider>
+				<Reporter />
+				<ChartContainer config={CONFIG}>
+					<Plot />
+				</ChartContainer>
+			</LayoutTransitionProvider>,
+		);
+		const box = document.querySelector<HTMLElement>('[data-slot="chart-size"]');
+		const frame = document.querySelector<HTMLElement>('[data-slot="chart"]');
+		if (box === null || frame === null) {
+			throw new Error("The chart did not render");
+		}
+		vi.spyOn(box, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, HELD_WIDTH_PX, HELD_WIDTH_PX / 2));
+		const rendersBeforeMotion = chartRenders.mock.calls.length;
+
+		act((): void => {
+			reporter.report(true);
+		});
+		expect(box.style.width).toBe(`${String(HELD_WIDTH_PX)}px`);
+		expect(box.style.flexShrink).toBe("0");
+		expect(frame.style.overflowX).toBe("clip");
+		// Anchored at the start edge: the frame does not centre a held chart.
+		expect(frame.className).not.toContain("justify-center");
+
+		act((): void => {
+			reporter.report(false);
+		});
+		expect(box.style.width).toBe("");
+		expect(box.style.flexShrink).toBe("");
+		expect(frame.style.overflowX).toBe("");
+		expect(chartRenders).toHaveBeenCalledTimes(rendersBeforeMotion);
+	});
 });
 
 describe("ChartTooltipContent", () => {

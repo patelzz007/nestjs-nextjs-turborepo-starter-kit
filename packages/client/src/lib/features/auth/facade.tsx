@@ -18,6 +18,7 @@ import {
 	type RefreshResult,
 } from "../../api/use-api";
 import { createAuthQueryCache } from "../../auth/session/auth-query-cache";
+import type { ServerRenderedSession } from "../../auth/session/server-rendered-session";
 import { composeAuthUser, resolveSessionScope, type AuthUser } from "../../auth/session/session";
 import {
 	checkSession,
@@ -193,6 +194,19 @@ export interface AuthProviderProps {
 	 * `true` (e.g. the layout re-renders after sign-in) revalidates.
 	 */
 	readonly sessionHint?: boolean | undefined;
+	/**
+	 * The session the server rendered the page for (`loadServerRenderedSession`
+	 * in the app's root layout): the API's own `/auth/me` and
+	 * `/auth/permissions` answers for this request. The store starts from them —
+	 * as if the session check had already answered — so the first paint (server
+	 * and hydration alike) shows everything that depends on who is signed in:
+	 * the profile, super-admin-only navigation, the session's scope. The
+	 * browser's session check still runs on mount and corrects it (a session
+	 * that ended meanwhile is signed out as usual). Read once, when the provider
+	 * mounts: later sessions are this tab's own (sign-in, sign-out). Omit for a
+	 * guest or when the server could not ask.
+	 */
+	readonly serverSession?: ServerRenderedSession | undefined;
 }
 
 /** The cross-tab channel as the store's effects see it: posts go to whichever channel is open. */
@@ -227,9 +241,11 @@ export function AuthProvider(props: AuthProviderProps): React.JSX.Element {
 	const queryClient = useQueryClient();
 	const [tabLink] = React.useState(createAuthTabLink);
 	const devtoolsName = `Auth · ${props.clientType}`;
+	const { serverSession } = props;
+	// The server already asked the API about this request's session: the store starts from that answer.
 	const createStore = React.useCallback(
-		(): AuthStore => createAuthStore({ devtoolsName, queryCache: createAuthQueryCache(queryClient), broadcaster: tabLink }),
-		[devtoolsName, queryClient, tabLink],
+		(): AuthStore => createAuthStore({ devtoolsName, queryCache: createAuthQueryCache(queryClient), broadcaster: tabLink, serverSession }),
+		[devtoolsName, queryClient, serverSession, tabLink],
 	);
 
 	return (

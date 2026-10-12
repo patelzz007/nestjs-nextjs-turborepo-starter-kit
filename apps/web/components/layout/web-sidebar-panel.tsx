@@ -18,11 +18,13 @@ import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer } fr
 import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
 import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { BrandMark } from "@workspace/ui/components/brand-mark";
+import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
+import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import { AlertCircle } from "lucide-react";
+import { webProfileMenuItems } from "@/components/layout/web-profile-menu";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 export interface WebSidebarPanelProps {
@@ -40,8 +42,9 @@ function renderWebMenuIcon(iconName: string | undefined, className: string): Rea
 
 export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
-	const { user } = useAuth();
-	const { capabilities } = useWebSession();
+	const { user, logout } = useAuth();
+	const { capabilities, isAuthenticated } = useWebSession();
+	const router = useRouter();
 	const canAccessPath = useCanAccessWebPath();
 	const { status: breadcrumbStatus } = useWebBreadcrumb();
 
@@ -64,10 +67,21 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 	);
 
 	const displayName = user?.fullName ?? userName;
-	const userInitials = displayName !== null ? getUserInitials(displayName) : "?";
+
+	const handleLogout = React.useCallback((): void => {
+		void logout();
+	}, [logout]);
+
+	const navigate = React.useCallback(
+		(path: string): void => {
+			router.push(path);
+		},
+		[router],
+	);
+	const profileMenuItems = React.useMemo(() => webProfileMenuItems(isAuthenticated, navigate), [isAuthenticated, navigate]);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
+		<div className="flex h-full min-h-0 flex-col overflow-hidden text-sidebar-foreground">
 			<PanelSidebarHeader title={filteredMenu.header.title} subtitle={filteredMenu.header.subtitle} icon={<BrandMark className="size-5 text-primary" />} />
 
 			<PanelSidebarNav
@@ -86,26 +100,6 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 			/>
 
 			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
-				{displayName !== null ? (
-					<div className="flex items-center gap-2.5 px-2 py-2">
-						<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
-							{userInitials}
-						</div>
-						<div className="min-w-0 flex-1">
-							<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground" title={displayName}>
-								{displayName}
-							</span>
-							{user !== null ? (
-								<span className="block truncate text-[length:var(--text-sidebar-caption)] leading-tight text-muted-foreground" title={user.email}>
-									{user.email}
-								</span>
-							) : null}
-						</div>
-					</div>
-				) : (
-					<p className="px-2 py-2 text-xs text-muted-foreground">Browse as guest</p>
-				)}
-
 				<PanelSidebarFooterNav
 					view={view}
 					expandedItems={expandedItems}
@@ -118,6 +112,14 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 				<div className={view.bottomItems.length > 0 ? "px-2 pt-2" : "px-2 pb-2"}>
 					<ImpersonateUserPanel />
 				</div>
+				{displayName !== null ? (
+					<AppShellSidebarAccount name={displayName} email={user?.email} onLogout={handleLogout} menuItems={profileMenuItems} />
+				) : (
+					<div className="flex items-center justify-between gap-2 px-2 py-1">
+						<p className="text-xs text-muted-foreground">Browse as guest</p>
+						<ShellThemeToggle size="icon-xs" className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground [&_svg]:size-3.5" />
+					</div>
+				)}
 			</SidebarFooter>
 
 			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} />

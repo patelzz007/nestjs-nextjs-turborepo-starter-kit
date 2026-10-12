@@ -11,9 +11,11 @@ import { testEnvelope } from "@/test/envelope";
 
 import OrgLayout from "./layout";
 
-const { serverContext, storedSlug, redirect } = vi.hoisted(() => ({
+const { serverContext, storedSlug, sidebarOpen, shellProps, redirect } = vi.hoisted(() => ({
 	serverContext: vi.fn<() => Promise<Pick<MerchantServerContext, "memberships" | "membershipsEnvelope" | "organizationSlug">>>(),
 	storedSlug: vi.fn<() => Promise<string | undefined>>(),
+	sidebarOpen: vi.fn<() => Promise<boolean | undefined>>(),
+	shellProps: vi.fn<(props: { readonly initialSidebarOpen?: boolean | undefined }) => void>(),
 	// Like Next's `redirect()`, the mock throws: nothing after the call runs.
 	redirect: vi.fn((path: string): void => {
 		throw new Error(`NEXT_REDIRECT ${path}`);
@@ -21,12 +23,17 @@ const { serverContext, storedSlug, redirect } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/merchant-server-api", () => ({ loadMerchantServerContext: serverContext, readOrganizationSlugCookie: storedSlug }));
+vi.mock("@/lib/merchant-server-api", () => ({ loadMerchantServerContext: serverContext, readOrganizationSlugCookie: storedSlug, readSidebarOpen: sidebarOpen }));
 vi.mock("@/lib/auth/server", () => ({ getMerchantServerSession: (): Promise<object> => Promise.resolve({ user: null, isImpersonating: false }) }));
 vi.mock("@/lib/org/server-location-scope", () => ({
 	loadServerLocationScope: (): Promise<object> => Promise.resolve({ selectedLocationId: null, effectiveLocationId: null, organizationContext: undefined }),
 }));
-vi.mock("@/components/merchant-shell", () => ({ MerchantShell: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <>{children}</> }));
+vi.mock("@/components/merchant-shell", () => ({
+	MerchantShell: ({ children, initialSidebarOpen }: { readonly children: React.ReactNode; readonly initialSidebarOpen?: boolean | undefined }): React.JSX.Element => {
+		shellProps({ initialSidebarOpen });
+		return <>{children}</>;
+	},
+}));
 vi.mock("@/components/org/org-tenant-bootstrap", () => ({ OrgTenantBootstrap: (): React.JSX.Element => <p>bootstrap</p> }));
 
 const OWNER = membershipFixture("OWNER");
@@ -43,6 +50,7 @@ async function renderLayout(orgSlug: string): Promise<void> {
 beforeEach((): void => {
 	memberOf([OWNER, OTHER_ORG]);
 	storedSlug.mockResolvedValue(undefined);
+	sidebarOpen.mockResolvedValue(undefined);
 });
 
 afterEach((): void => {
@@ -79,5 +87,15 @@ describe("OrgLayout tenant resolution", () => {
 		memberOf([]);
 
 		await expect(renderLayout(OWNER.organizationId)).rejects.toThrow(`NEXT_REDIRECT ${ROUTES.onboarding}`);
+	});
+});
+
+describe("OrgLayout sidebar", () => {
+	it("renders the shell with the sidebar as the member left it (its cookie), so a reload does not flash it open", async () => {
+		sidebarOpen.mockResolvedValue(false);
+
+		await renderLayout(TEST_ORG_SLUG);
+
+		expect(shellProps).toHaveBeenCalledWith({ initialSidebarOpen: false });
 	});
 });

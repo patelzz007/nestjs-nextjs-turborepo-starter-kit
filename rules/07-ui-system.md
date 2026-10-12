@@ -290,7 +290,7 @@ never reads these tokens. Every pair is held to WCAG AA in both themes by `token
 Panel shells (admin, web, merchant):
 
 - **Light mode** — layered. The page, sidebar and topbar share one faintly cool canvas (`--background`,
-  `--sidebar`, `--topbar` → `neutral-50`). Cards and popovers are white (`neutral-0`) and lift off it.
+  `--sidebar`, `--topbar` → `neutral-50`). Cards are near-white (`neutral-25`, `#F9FAFC` — the canvas's cool hue, never pure white) and popovers white (`neutral-0`); both lift off it.
   Shell dividers use `--sidebar-border` (`neutral-300`); cards use `--border` (`neutral-200`) plus a soft shadow. The sidebar is neutral in every
   app; the active nav row is a solid accent pill (`--sidebar-active`: slate on admin, blue on web,
   green on merchant) with white text, and the icon chip (`--sidebar-primary`) matches the pill so
@@ -301,7 +301,11 @@ Panel shells (admin, web, merchant):
   (slate on admin; blue or green in web / merchant themes); hover rows use `ink-750` on the sidebar.
 
 Paint the sidebar with `bg-sidebar` (the `Sidebar` primitive already does) — never `bg-card` or a
-one-off colour; paint a topbar with `var(--topbar)`. Sidebar text pairs (`--sidebar-foreground` on
+one-off colour; paint a topbar with `var(--topbar)`. The panel shell (admin, web, merchant — `AppPanelShell`, [ADR 049](../docs/adr/049-shared-app-shell-and-sidebar-motion.md))
+paints its frame with `shell-frame` and its floating page panel with `shell-panel`, edged with the soft
+card border (`--border`, never the darker `--sidebar-border`); the inset sidebar is see-through, sitting
+on the frame. Light mode has no white chrome: a `#F5F7FB` frame (`neutral-40`) around the `#F1F4F9`
+canvas (`neutral-50`) — one cool hue, so they blend — with near-white `neutral-25` cards on the canvas. Sidebar text pairs (`--sidebar-foreground` on
 `--sidebar` / `--sidebar-accent`, `--sidebar-primary-foreground` on `--sidebar-primary`,
 `--muted-foreground` on `--sidebar`) are enforced by `tokens-contrast.test.ts` and, for the tinted
 sidebars, by each app's theme test.

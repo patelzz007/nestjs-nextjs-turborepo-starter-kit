@@ -20,5 +20,6 @@ export {
 	type AuthProviderProps,
 } from "../features/auth/facade";
 export type { AuthUser } from "./session/session";
+export type { ServerRenderedSession } from "./session/server-rendered-session";
 export { isRestrictedAuthUser, resolveAuthEnrollmentReason } from "./session/session";
 export type { SessionCheckState } from "../features/auth/state";

@@ -3,6 +3,8 @@
 import { isNumberPrimitive } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
+
+import { useLayoutTransitionListener } from "./layout-transition";
 import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
 import { z } from "zod";
@@ -72,17 +74,55 @@ const ChartContainer = React.forwardRef<
 				data-slot="chart"
 				data-chart={chartId}
 				className={cn(
-					"flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+					"flex aspect-video text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
 					className,
 				)}
 				{...props}>
 				{/* The selectors above match recharts' default `#ccc` / `#fff` stroke attributes in order to restyle them with tokens; they apply no hex colour. */}
 				<ChartStyle id={chartId} config={config} />
-				<RechartsPrimitive.ResponsiveContainer initialDimension={initialDimension}>{children}</RechartsPrimitive.ResponsiveContainer>
+				<ChartSizeHold>
+					<RechartsPrimitive.ResponsiveContainer initialDimension={initialDimension}>{children}</RechartsPrimitive.ResponsiveContainer>
+				</ChartSizeHold>
 			</div>
 		</ChartContext.Provider>
 	);
 });
+
+interface ChartSizeHoldProps {
+	readonly children: React.ReactNode;
+}
+
+/**
+ * Holds the chart at its width while the layout is in motion (the panel
+ * springing as the sidebar opens or collapses), then lets it fit once.
+ * Recharts re-renders the whole chart — scales, axes, every mark — on each size
+ * change, and a re-render per frame cost the dashboard 40–60ms frames. Pinning
+ * the width of the box the chart measures means it sees no change until the
+ * motion ends; a window resize still re-fits at once.
+ *
+ * The motion is a signal, not state: pinning and releasing are written to the
+ * elements directly, so starting or ending a motion re-renders nothing. The
+ * held chart stays anchored at the start edge and is clipped by its frame
+ * while the frame is narrower than it.
+ */
+function ChartSizeHold({ children }: ChartSizeHoldProps): React.JSX.Element {
+	const boxRef = React.useRef<HTMLDivElement>(null);
+	const holdSize = React.useCallback((isLayoutMoving: boolean): void => {
+		const box = boxRef.current;
+		if (box === null) {
+			return;
+		}
+		box.style.width = isLayoutMoving ? `${String(box.getBoundingClientRect().width)}px` : "";
+		box.style.flexShrink = isLayoutMoving ? "0" : "";
+		box.parentElement?.style.setProperty("overflow-x", isLayoutMoving ? "clip" : "");
+	}, []);
+	useLayoutTransitionListener(holdSize);
+	return (
+		<div ref={boxRef} data-slot="chart-size" className="size-full">
+			{children}
+		</div>
+	);
+}
 
 interface ChartStyleProps {
 	readonly id: string;

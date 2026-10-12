@@ -1,5 +1,13 @@
 import type { WebSessionState } from "@/components/auth/web-authorization-provider";
-import { epochMs, SessionPermissionsResponseSchema, type CapabilitySlug, type Envelope, type SessionPermissionsResponse } from "@workspace/shared";
+import {
+	epochMs,
+	SessionPermissionsResponseSchema,
+	UserResponseSchema,
+	type CapabilitySlug,
+	type Envelope,
+	type SessionPermissionsResponse,
+	type UserResponse,
+} from "@workspace/shared";
 
 export interface SessionFixtureOptions {
 	readonly capabilities?: readonly CapabilitySlug[];
@@ -41,3 +49,29 @@ export const GUEST_SESSION_STATE: WebSessionState = {
 	capabilities: [],
 	session: undefined,
 };
+
+/** Valid `GET /auth/me` profile for tests. */
+export function buildUserProfile(overrides: Partial<UserResponse> = {}): UserResponse {
+	return UserResponseSchema.parse({
+		id: "user-1",
+		email: "member@example.com",
+		fullName: "Test Member",
+		isActive: true,
+		isSuperAdmin: false,
+		isEmailVerified: true,
+		twoFactorEnabled: false,
+		hasAdminAccess: false,
+		tokenVersion: 1,
+		roles: [],
+		createdAt: epochMs(0),
+		updatedAt: epochMs(0),
+		isDeleted: false,
+		deletedAt: null,
+		...overrides,
+	});
+}
+
+/** The `GET /auth/me` envelope the server render receives (real meta shape). */
+export function userProfileEnvelope(profile: UserResponse): Envelope<UserResponse> {
+	return { success: true, data: profile, meta: { correlationId: "fixture", timestamp: FIXTURE_ANSWERED_AT } };
+}

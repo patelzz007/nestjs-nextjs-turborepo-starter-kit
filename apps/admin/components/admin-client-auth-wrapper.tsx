@@ -1,16 +1,19 @@
 "use client";
 
 import { isAdminAuthPath } from "@/lib/auth-routes";
+import type { ServerRenderedSession } from "@workspace/client/lib/auth";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/session/client-auth-wrapper";
 import { usePathname } from "next/navigation";
 import { useCallback, type JSX, type ReactNode } from "react";
 
 export interface AdminClientAuthWrapperProps {
 	readonly children: ReactNode;
+	/** The session the server rendered the page for; the auth store starts from it. */
+	readonly serverSession?: ServerRenderedSession | undefined;
 }
 
 /** Admin auth bridge — skips `/auth/me` on the auth pages (`ADMIN_AUTH_ROUTE_PREFIXES`). */
-export function AdminClientAuthWrapper({ children }: AdminClientAuthWrapperProps): JSX.Element {
+export function AdminClientAuthWrapper({ children, serverSession }: AdminClientAuthWrapperProps): JSX.Element {
 	const pathname = usePathname();
 
 	const shouldRedirectOnUnauthorized = useCallback((): boolean => {
@@ -20,7 +23,11 @@ export function AdminClientAuthWrapper({ children }: AdminClientAuthWrapperProps
 	const revalidateSessionEnabled = !isAdminAuthPath(pathname);
 
 	return (
-		<ClientAuthWrapper clientType="admin" shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled}>
+		<ClientAuthWrapper
+			clientType="admin"
+			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
+			revalidateSessionEnabled={revalidateSessionEnabled}
+			serverSession={serverSession}>
 			{children}
 		</ClientAuthWrapper>
 	);

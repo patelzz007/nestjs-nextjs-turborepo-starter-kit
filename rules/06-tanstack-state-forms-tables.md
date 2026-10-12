@@ -116,6 +116,7 @@ Rules:
 - **Reducers are pure.** No `fetch`, no `window`/`document`, no cookies, no `Date.now()`, no query client. That work goes in an effect.
 - **No effect for a purely synchronous change.** `[ Sidebar ] Toggled` needs none.
 - **Mount the provider at a persistent layout boundary** (the shell layout, never a page), so `router.push` / `<Link>` navigation keeps the state.
+- **Start from what the server already knows with `initialActions`**, never by dispatching after the store is created. A server render and hydration read the store's *initial* state (Zustand's `getInitialState()`), so a value dispatched afterwards is missing from the first paint. `createFeatureStore({ …, initialActions })` reduces them into that initial state and runs the effects once. The auth store starts from the server-rendered session this way (ADR 050).
 - **Persist deliberately** with `connectFeaturePersistence`. It restores after mount through a `[ Feature ] … Restored` action and validates with zod. Never persist tokens or authorization data.
 - **Never store** what TanStack Query owns, what the URL owns, or what can be derived. That includes static config: the sidebar menu is a constant, not state.
 

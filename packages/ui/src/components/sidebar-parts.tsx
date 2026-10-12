@@ -15,7 +15,7 @@ import { type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 
-import { useSidebar } from "./sidebar-context";
+import { useSidebar, useSidebarControls } from "./sidebar-context";
 
 /** Skeleton text bar width (%) when none is given — mid-range, so every row looks alike. */
 const DEFAULT_SKELETON_TEXT_WIDTH_PERCENT = 70;
@@ -66,32 +66,32 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(function S
 		);
 	}
 
+	const isOffcanvas = collapsible === "offcanvas";
+
 	return (
-		<div
-			ref={ref}
-			className="group peer hidden text-sidebar-foreground lg:block"
-			data-state={state}
-			data-collapsible={state === "collapsed" ? collapsible : ""}
-			data-variant={variant}
-			data-side={side}
-			data-slot="sidebar">
-			{/* This is what handles the sidebar gap on desktop */}
+		<SidebarRoot ref={ref} isOpen={state === "expanded"} collapsible={collapsible} variant={variant} side={side}>
+			{/* The space the sidebar takes in the layout. Off-canvas, its width follows --sidebar-progress (components.css). */}
 			<div
 				data-slot="sidebar-gap"
 				className={cn(
-					"relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear motion-reduce:transition-none",
-					"group-data-[collapsible=offcanvas]:w-0",
+					"relative bg-transparent",
 					"group-data-[side=right]:rotate-180",
-					variant === "floating" || variant === "inset"
-						? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-						: "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+					isOffcanvas
+						? null
+						: cn(
+								"w-(--sidebar-width) transition-[width] duration-200 ease-linear motion-reduce:transition-none",
+								variant === "floating" || variant === "inset"
+									? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
+									: "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+							),
 				)}
 			/>
 			<div
 				data-slot="sidebar-container"
 				data-side={side}
 				className={cn(
-					"fixed inset-y-0 z-sidebar hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:-left-(--sidebar-width) data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:-right-(--sidebar-width) motion-reduce:transition-none lg:flex",
+					"fixed inset-y-0 z-sidebar hidden h-svh w-(--sidebar-width) will-change-transform data-[side=left]:left-0 data-[side=right]:right-0 lg:flex",
+					isOffcanvas ? null : "transition-[width] duration-200 ease-linear motion-reduce:transition-none",
 					// Adjust the padding for floating and inset variants.
 					variant === "floating" || variant === "inset"
 						? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -99,13 +99,44 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(function S
 					className,
 				)}
 				{...props}>
+				{/* An inset sidebar is see-through: it sits on the shell's frame, which the provider's wrapper paints. */}
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border">
+					className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border group-data-[variant=inset]:bg-transparent">
 					{children}
 				</div>
 			</div>
+		</SidebarRoot>
+	);
+});
+
+interface SidebarRootProps {
+	/** Whether the sidebar is open. */
+	readonly isOpen: boolean;
+	readonly collapsible: NonNullable<SidebarProps["collapsible"]>;
+	readonly variant: NonNullable<SidebarProps["variant"]>;
+	readonly side: NonNullable<SidebarProps["side"]>;
+	readonly children: React.ReactNode;
+}
+
+/**
+ * The desktop sidebar's root. Off-canvas, its gap and slide follow
+ * `--sidebar-progress`, which `SidebarProgress` (in `SidebarProvider`) springs
+ * for the whole shell (styles/components.css).
+ */
+const SidebarRoot = React.forwardRef<HTMLDivElement, SidebarRootProps>(function SidebarRoot({ isOpen, collapsible, variant, side, children }, ref): React.JSX.Element {
+	return (
+		<div
+			ref={ref}
+			className="group peer hidden text-sidebar-foreground lg:block"
+			data-state={isOpen ? "expanded" : "collapsed"}
+			data-collapsible={isOpen ? "" : collapsible}
+			data-collapse-mode={collapsible}
+			data-variant={variant}
+			data-side={side}
+			data-slot="sidebar">
+			{children}
 		</div>
 	);
 });
@@ -114,7 +145,7 @@ export const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.Componen
 	{ className, onClick, ...props },
 	ref,
 ): React.JSX.Element {
-	const { toggleSidebar, labels } = useSidebar();
+	const { toggleSidebar, labels } = useSidebarControls();
 
 	// Button is a base-ui wrapper — its onClick receives `BaseUIEvent`
 	// (native event + preventBaseUIHandler), not a plain React.MouseEvent.
@@ -143,7 +174,7 @@ export const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.Componen
 });
 
 export const SidebarRail = React.forwardRef<HTMLElement, React.ComponentProps<typeof Button>>(function SidebarRail({ className, ...props }, ref): React.JSX.Element {
-	const { toggleSidebar, labels } = useSidebar();
+	const { toggleSidebar, labels } = useSidebarControls();
 
 	return (
 		<Button
@@ -170,13 +201,19 @@ export const SidebarRail = React.forwardRef<HTMLElement, React.ComponentProps<ty
 	);
 });
 
-export const SidebarInset = React.forwardRef<HTMLElement, React.ComponentProps<"main">>(function SidebarInset({ className, ...props }, ref): React.JSX.Element {
+/**
+ * The page's frame beside the sidebar (a floating panel in the inset variant).
+ * A plain `<div>`: the page's one `<main>` landmark lives inside it (the
+ * scroll area), next to the header — so the header is a banner, not part of
+ * the main content, and there is never a main inside a main.
+ */
+export const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function SidebarInset({ className, ...props }, ref): React.JSX.Element {
 	return (
-		<main
+		<div
 			ref={ref}
 			data-slot="sidebar-inset"
 			className={cn(
-				"relative flex w-full flex-1 flex-col bg-background lg:peer-data-[variant=inset]:m-2 lg:peer-data-[variant=inset]:ms-0 lg:peer-data-[variant=inset]:rounded-xl lg:peer-data-[variant=inset]:shadow-sm lg:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2",
+				"relative flex w-full flex-1 flex-col bg-background lg:peer-data-[variant=inset]:m-2 lg:peer-data-[variant=inset]:ms-0 lg:peer-data-[variant=inset]:rounded-xl lg:peer-data-[variant=inset]:shadow-sm lg:peer-data-[variant=inset]:peer-data-[collapsible=icon]:ms-2",
 				className,
 			)}
 			{...props}
@@ -287,11 +324,20 @@ export type SidebarMenuButtonProps = useRender.ComponentProps<"button"> & {
 	tooltip?: React.ComponentProps<typeof TooltipContent>;
 } & VariantProps<typeof sidebarMenuButtonVariants>;
 
+/**
+ * A menu button's tooltip: shown only beside a collapsed icon rail on desktop.
+ * It alone reads the open state, so the buttons themselves never re-render
+ * when the sidebar toggles.
+ */
+function SidebarMenuButtonTooltip(props: React.ComponentProps<typeof TooltipContent>): React.JSX.Element {
+	const { isMobile, state } = useSidebar();
+	return <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...props} />;
+}
+
 export const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonProps>(function SidebarMenuButton(
 	{ render, isActive = false, variant = "default", size = "default", tooltip, className, disabled, ...props },
 	ref,
 ): React.JSX.Element {
-	const { isMobile, state } = useSidebar();
 	const menuState = isActive ? "active" : disabled === true ? "disabled" : "default";
 	const comp = useRender({
 		ref,
@@ -319,7 +365,7 @@ export const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenu
 	return (
 		<Tooltip>
 			{comp}
-			<TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...tooltip} />
+			<SidebarMenuButtonTooltip {...tooltip} />
 		</Tooltip>
 	);
 });
@@ -363,7 +409,7 @@ export const SidebarMenuBadge = React.forwardRef<HTMLDivElement, SidebarMenuBadg
 	{ className, itemId, children, ...props },
 	ref,
 ): React.JSX.Element | null {
-	const { badges } = useSidebar();
+	const { badges } = useSidebarControls();
 	const badgeFromContext = itemId !== undefined ? badges[itemId] : undefined;
 	const content = children ?? (badgeFromContext !== undefined ? String(badgeFromContext) : null);
 	if (content === null || content === "") {

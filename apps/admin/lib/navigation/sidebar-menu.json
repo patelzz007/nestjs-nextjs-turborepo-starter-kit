@@ -6,7 +6,6 @@
 	"sections": [
 		{
 			"title": "Main",
-			"color": "blue",
 			"items": [
 				{
 					"title": "Overview",
@@ -100,7 +99,6 @@
 		},
 		{
 			"title": "Platform",
-			"color": "purple",
 			"items": [
 				{
 					"title": "Audit log",

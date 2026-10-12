@@ -29,6 +29,8 @@ import {
 	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
+	useSidebarControls,
+	type SidebarControls,
 } from "./sidebar";
 import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
 import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
@@ -83,6 +85,56 @@ describe("SidebarProvider", () => {
 		fireEvent.click(screen.getByRole("button", { name: UI_KIT_LABELS_EN.sidebar.toggleSidebar }));
 
 		expect(screen.getByTestId("open-mobile").textContent).toBe("true");
+	});
+});
+
+describe("useSidebarControls", () => {
+	function DesktopState(): React.JSX.Element {
+		const { open } = useSidebar();
+		return <output data-testid="open">{String(open)}</output>;
+	}
+
+	it("keeps its identity while the sidebar opens and collapses, and its toggle still flips the latest state", (): void => {
+		const seen: SidebarControls[] = [];
+		function ControlsProbe(): React.JSX.Element {
+			const controls = useSidebarControls();
+			seen.push(controls);
+			return (
+				<button type="button" onClick={controls.toggleSidebar}>
+					Toggle
+				</button>
+			);
+		}
+		render(
+			<SidebarProvider storage={STORAGE}>
+				<ControlsProbe />
+				<DesktopState />
+			</SidebarProvider>,
+			{ wrapper: UiKitTestProviders },
+		);
+		const [first] = seen;
+
+		fireEvent.click(screen.getByRole("button", { name: "Toggle" }));
+		expect(screen.getByTestId("open").textContent).toBe("false");
+		fireEvent.click(screen.getByRole("button", { name: "Toggle" }));
+		expect(screen.getByTestId("open").textContent).toBe("true");
+
+		expect(new Set(seen).size).toBe(1);
+		expect(seen.at(-1)).toBe(first);
+	});
+
+	it("throws outside a SidebarProvider", (): void => {
+		function Orphan(): React.JSX.Element {
+			useSidebarControls();
+			return <p>Orphan</p>;
+		}
+		// React logs the thrown render error; the assertion is the throw itself.
+		const consoleError = vi.spyOn(console, "error").mockImplementation((): void => undefined);
+
+		expect((): void => {
+			render(<Orphan />, { wrapper: UiKitTestProviders });
+		}).toThrow("useSidebarControls must be used within a SidebarProvider.");
+		consoleError.mockRestore();
 	});
 });
 

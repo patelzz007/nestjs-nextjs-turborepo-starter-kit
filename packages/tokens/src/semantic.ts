@@ -20,7 +20,8 @@ import { colorToken, oklch, paletteColor, TRANSPARENT } from "./value";
  * Light theme — layered: a cool #F1F4F9 canvas (`background`, neutral-50)
  * shared by the page and topbar; the sidebar sits a half step lighter
  * (neutral-40, same cool cast) so the navigation reads as its own panel yet
- * blends in; white cards and popovers lift off it. Cards and popovers carry one
+ * blends in; near-white cards (neutral-25, the canvas's cool hue — never pure
+ * white) and white popovers lift off it. Cards and popovers carry one
  * soft ink-tinted shadow (`shadow-*`), never a grey `rgba(0,0,0,.1)`. The
  * active nav row is a solid accent pill (slate here; web blue and merchant
  * green in their themes).
@@ -28,12 +29,20 @@ import { colorToken, oklch, paletteColor, TRANSPARENT } from "./value";
 export const LIGHT_THEME: Theme = {
 	background: paletteColor("neutral", "50"),
 	foreground: paletteColor("neutral", "900"),
-	card: paletteColor("neutral", "0"),
+	card: paletteColor("neutral", "25"),
 	"card-foreground": paletteColor("neutral", "900"),
 	popover: paletteColor("neutral", "0"),
 	"popover-foreground": paletteColor("neutral", "900"),
 	/* The app-shell topbar — same canvas as the page in light, the page surface in dark. */
 	topbar: paletteColor("neutral", "50"),
+	/*
+	 * An inset app shell (admin, app shell 3): the frame the sidebar sits on, and the floating page
+	 * panel beside it. Light: no pure white in the chrome — the frame is the sidebar's half-step tone
+	 * (#F5F7FB), the same cool hue as the #F1F4F9 canvas of the panel, so the two blend and the panel's
+	 * soft border marks the edge; cards are the near-white neutral-25.
+	 */
+	"shell-frame": paletteColor("neutral", "40"),
+	"shell-panel": paletteColor("neutral", "50"),
 	primary: paletteColor("brand", "800"),
 	"primary-foreground": paletteColor("neutral", "0"),
 	secondary: paletteColor("neutral", "100"),
@@ -140,7 +149,8 @@ export const LIGHT_THEME: Theme = {
  * neutral surface (ink-850); cards lift off it (ink-750); popovers and menus
  * float above cards (ink-700). Borders use a darker step (ink-650) for clear
  * chrome dividers. Accent colour is reserved for the active nav pill and actions
- * (slate on admin; web and merchant re-map their pill to blue / green). No drop
+ * (slate on admin; web and merchant re-map their pill to blue / green). An inset
+ * shell's frame steps below the page surface (ink-950). No drop
  * shadows to speak of — depth comes from lightness plus a faint top-edge
  * highlight on cards; only floating layers keep a deep shadow.
  */
@@ -152,6 +162,9 @@ export const DARK_THEME: Theme = {
 	popover: paletteColor("ink", "700"),
 	"popover-foreground": paletteColor("ink", "50"),
 	topbar: paletteColor("ink", "850"),
+	/* Inset shell, dark: the frame steps down below the page surface; the panel is the page surface, cards lift off it. */
+	"shell-frame": paletteColor("ink", "950"),
+	"shell-panel": paletteColor("ink", "850"),
 	primary: paletteColor("brand", "100"),
 	"primary-foreground": paletteColor("brand", "950"),
 	secondary: paletteColor("ink", "700"),

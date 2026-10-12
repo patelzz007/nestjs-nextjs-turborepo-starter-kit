@@ -1,12 +1,15 @@
 "use client";
 
 import { isMerchantAuthPath } from "@/lib/auth/routes";
+import type { ServerRenderedSession } from "@workspace/client/lib/auth";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/session/client-auth-wrapper";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 export interface MerchantRootProviderProps {
 	readonly children: React.ReactNode;
+	/** The session the server rendered the page for; the auth store starts from it. */
+	readonly serverSession?: ServerRenderedSession | undefined;
 }
 
 /**
@@ -15,7 +18,7 @@ export interface MerchantRootProviderProps {
  * org layout's `OrgTenantBootstrap` is the one writer of the
  * `organizationSlug` preference cookie.
  */
-export function MerchantRootProvider({ children }: MerchantRootProviderProps): React.JSX.Element {
+export function MerchantRootProvider({ children, serverSession }: MerchantRootProviderProps): React.JSX.Element {
 	const pathname = usePathname();
 
 	const shouldRedirectOnUnauthorized = React.useCallback((): boolean => {
@@ -25,7 +28,11 @@ export function MerchantRootProvider({ children }: MerchantRootProviderProps): R
 	const revalidateSessionEnabled = !isMerchantAuthPath(pathname);
 
 	return (
-		<ClientAuthWrapper clientType="merchant" shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled}>
+		<ClientAuthWrapper
+			clientType="merchant"
+			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
+			revalidateSessionEnabled={revalidateSessionEnabled}
+			serverSession={serverSession}>
 			{children}
 		</ClientAuthWrapper>
 	);

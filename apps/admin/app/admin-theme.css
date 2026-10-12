@@ -1,22 +1,5 @@
 /* Admin panel — layout chrome only; every colour comes from the shared palette (packages/tokens, generated into web.css). */
 
-/* Solid panel chrome — the topbar matches the canvas in light, the page surface in dark (`--topbar`), divided by --sidebar-border. No frosted tint. */
-.admin-app .admin-shell-topbar,
-.admin-app .app-shell-topbar {
-	height: 4rem;
-	flex-shrink: 0;
-	background: var(--topbar);
-	border-bottom: 1px solid var(--sidebar-border);
-	backdrop-filter: none;
-	-webkit-backdrop-filter: none;
-}
-
-.admin-app .admin-shell-sidebar [data-sidebar="header"] {
-	height: 4rem;
-	flex-shrink: 0;
-	border-bottom: 1px solid var(--sidebar-border);
-}
-
 .admin-app .admin-shell-divider-b {
 	border-bottom: 1px solid var(--sidebar-border);
 }

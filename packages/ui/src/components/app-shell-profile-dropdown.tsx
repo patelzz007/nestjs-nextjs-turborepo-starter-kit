@@ -41,7 +41,7 @@ const NO_MENU_ITEMS: readonly AppShellProfileMenuItem[] = [];
 /** The trigger is a round ghost icon button — hoisted so its element identity is stable. */
 const PROFILE_TRIGGER_RENDER = <Button variant="ghost" size="icon" className="rounded-full" />;
 
-interface AppShellProfileMenuProps {
+export interface AppShellProfileMenuProps {
 	readonly name: string;
 	readonly email?: string | null | undefined;
 	readonly menuItems: readonly AppShellProfileMenuItem[];
@@ -49,7 +49,8 @@ interface AppShellProfileMenuProps {
 	readonly logoutLabel: string;
 }
 
-function AppShellProfileMenu({ name, email, menuItems, onLogout, logoutLabel }: AppShellProfileMenuProps): React.JSX.Element {
+/** The profile menu's panel — identity, the app's items, log out. The dropdown and the sidebar account row both show it. */
+export function AppShellProfileMenu({ name, email, menuItems, onLogout, logoutLabel }: AppShellProfileMenuProps): React.JSX.Element {
 	const initials = getUserInitials(name);
 
 	const handleLogout = React.useCallback((): void => {

@@ -35,6 +35,13 @@ export interface FeatureStoreOptions<TState, TAction extends FeatureAction> {
 	readonly initialState: TState;
 	readonly reducer: FeatureReducer<TState, TAction>;
 	readonly effects?: readonly FeatureEffect<TState, TAction>[];
+	/**
+	 * What already happened before the store exists — e.g. the session the
+	 * server rendered the page for. Reduced into the starting state (so a
+	 * server render and hydration, which read the store's initial state, see
+	 * it), then handed to the effects once, in order, as if dispatched.
+	 */
+	readonly initialActions?: readonly TAction[];
 }
 
 /**
@@ -59,22 +66,30 @@ const DEVTOOLS_ENABLED: boolean = RUNTIME_NODE_ENV === "development" && !isServe
  * so server renders never share state between requests (rules/06).
  */
 export function createFeatureStore<TState, TAction extends FeatureAction>(options: FeatureStoreOptions<TState, TAction>): FeatureStore<TState, TAction> {
+	const initialActions = options.initialActions ?? [];
+	const startingState = initialActions.reduce(options.reducer, options.initialState);
 	const api = createStore<TState>()(
-		devtools((): TState => options.initialState, {
+		devtools((): TState => startingState, {
 			name: options.name,
 			enabled: DEVTOOLS_ENABLED,
 		}),
 	);
 	const effects = options.effects ?? [];
 
-	const dispatch = (action: TAction): void => {
-		const nextState = options.reducer(api.getState(), action);
-		// DevTools records `{ type, payload }`; the reducer always returns a whole state, so replace it.
-		api.setState(nextState, true, { type: action.type, payload: action });
+	const runEffects = (action: TAction): void => {
 		for (const effect of effects) {
 			effect(action, { getState: api.getState, dispatch });
 		}
 	};
+
+	function dispatch(action: TAction): void {
+		const nextState = options.reducer(api.getState(), action);
+		// DevTools records `{ type, payload }`; the reducer always returns a whole state, so replace it.
+		api.setState(nextState, true, { type: action.type, payload: action });
+		runEffects(action);
+	}
+
+	initialActions.forEach(runEffects);
 
 	return {
 		getState: api.getState,

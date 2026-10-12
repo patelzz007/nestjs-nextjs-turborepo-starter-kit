@@ -9,6 +9,23 @@ import { sidebarActions, type SidebarAction } from "./actions";
 import { resolveExpandedItems, selectIsOpen, selectManualExpansionFor, selectSearchQuery, selectSectionOrder } from "./selectors";
 import type { SidebarState } from "./state";
 import { createSidebarStore, sidebarPersistence, type SidebarStore } from "./store";
+import { SIDEBAR_OPEN_COOKIE_MAX_AGE_SECONDS, sidebarOpenCookieName } from "./open-cookie";
+import { createCookieSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
+
+/**
+ * Keeps the sidebar's cookie (open-cookie.ts) equal to the store's open state —
+ * once now (after the stored preferences are restored) and on every change —
+ * so the server can render the next page load as it was left.
+ */
+function mirrorOpenStateToCookie(store: SidebarStore, storageKey: string): () => void {
+	const cookie = createCookieSidebarStorage({ cookieName: sidebarOpenCookieName(storageKey), maxAgeSeconds: SIDEBAR_OPEN_COOKIE_MAX_AGE_SECONDS });
+	cookie.write(store.getState().isOpen);
+	return store.subscribe((state: SidebarState, previousState: SidebarState): void => {
+		if (state.isOpen !== previousState.isOpen) {
+			cookie.write(state.isOpen);
+		}
+	});
+}
 
 /**
  * Sidebar feature API — components use ONLY this module: read with the
@@ -24,14 +41,27 @@ export interface SidebarStoreProviderProps {
 	readonly storageKey: string;
 	/** Redux DevTools instance name (e.g. `Sidebar · admin`). */
 	readonly devtoolsName: string;
+	/**
+	 * The open state the server rendered — `readSidebarOpenCookie` in the app's
+	 * server layout — so the first paint shows the sidebar as it was left
+	 * (no open-then-close flash). Omitted: open.
+	 */
+	readonly initialIsOpen?: boolean | undefined;
 	readonly children: React.ReactNode;
 }
 
 /** Mount once in the app's persistent shell layout so navigation keeps the sidebar as it is. */
-export function SidebarStoreProvider({ storageKey, devtoolsName, children }: SidebarStoreProviderProps): React.JSX.Element {
-	const createStore = React.useCallback((): SidebarStore => createSidebarStore(devtoolsName), [devtoolsName]);
+export function SidebarStoreProvider({ storageKey, devtoolsName, initialIsOpen, children }: SidebarStoreProviderProps): React.JSX.Element {
+	const createStore = React.useCallback((): SidebarStore => createSidebarStore(devtoolsName, initialIsOpen), [devtoolsName, initialIsOpen]);
 	const connectStorage = React.useCallback(
-		(store: SidebarStore): (() => void) => connectFeaturePersistence(store, browserStorage("local"), sidebarPersistence(storageKey)),
+		(store: SidebarStore): (() => void) => {
+			const disconnectPersistence = connectFeaturePersistence(store, browserStorage("local"), sidebarPersistence(storageKey));
+			const disconnectCookie = mirrorOpenStateToCookie(store, storageKey);
+			return (): void => {
+				disconnectCookie();
+				disconnectPersistence();
+			};
+		},
 		[storageKey],
 	);
 	return (

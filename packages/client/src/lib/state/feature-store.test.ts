@@ -46,6 +46,25 @@ function memoryStorage(initial: Record<string, string> = {}): FeatureStorage & {
 }
 
 describe("createFeatureStore", () => {
+	it("starts from its initial actions: reduced into the first state, then handed to the effects once", () => {
+		const effect = vi.fn<FeatureEffect<CounterState, CounterAction>>();
+		const store = createFeatureStore<CounterState, CounterAction>({
+			name: "Counter",
+			initialState: INITIAL,
+			reducer: counterReducer,
+			effects: [effect],
+			initialActions: [
+				{ type: "[ Counter ] Restored", count: 5 },
+				{ type: "[ Counter ] Incremented", by: 2 },
+			],
+		});
+
+		// The store's own initial state — what a server render and hydration read — already includes them.
+		expect(store.api.getInitialState().count).toBe(7);
+		expect(store.getState().count).toBe(7);
+		expect(effect.mock.calls.map(([action]) => action.type)).toEqual(["[ Counter ] Restored", "[ Counter ] Incremented"]);
+	});
+
 	it("changes state only through the reducer and notifies subscribers", () => {
 		const store = createFeatureStore<CounterState, CounterAction>({ name: "Counter", initialState: INITIAL, reducer: counterReducer });
 		const listener = vi.fn();

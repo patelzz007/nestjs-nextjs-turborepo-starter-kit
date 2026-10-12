@@ -3,12 +3,13 @@
 import { Button } from "@workspace/ui/components/button";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
 import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
-import { SidebarFooter, SidebarHeader } from "@workspace/ui/components/sidebar";
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
+import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
+import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import type { SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { BrandMark } from "@workspace/ui/components/brand-mark";
-import { AlertCircle, LogOut } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -37,6 +38,10 @@ export interface SidebarProps {
 	readonly pinnedItems: readonly PanelSidebarPinnedItem[];
 	/** The current page's resolved breadcrumb label, announced after navigation. */
 	readonly pageLabel: string | null;
+	/** Connection and session status, shown above the user row. */
+	readonly status?: React.ReactNode;
+	/** The profile menu the user row opens (profile, security, settings, log out). */
+	readonly profileMenu?: React.ReactNode;
 }
 
 function renderAdminLink(href: string): React.ReactElement<PanelSidebarLinkProps> {
@@ -65,23 +70,14 @@ export function AdminSidebarPanel({
 	onMoveSectionDown,
 	pinnedItems,
 	pageLabel,
+	status,
+	profileMenu,
 }: SidebarProps): React.JSX.Element {
 	const menu = SIDEBAR_MENU;
 
 	return (
 		<>
-			<SidebarHeader className="h-14 border-b border-sidebar-border">
-				<div className="flex h-full min-w-0 items-center gap-3 px-2">
-					<div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-accent ring-1 ring-sidebar-border/50">
-						<BrandMark className="size-5 text-primary" />
-					</div>
-					<div className="min-w-0 flex-1">
-						<span className="block truncate text-sm font-semibold text-sidebar-foreground" title={menu.header.title}>
-							{menu.header.title}
-						</span>
-					</div>
-				</div>
-			</SidebarHeader>
+			<PanelSidebarHeader title={menu.header.title} icon={<BrandMark className="size-5 text-primary" />} />
 			<PanelSidebarNav
 				view={view}
 				pathname={pathname}
@@ -124,31 +120,14 @@ export function AdminSidebarPanel({
 					labels={navLabels}
 				/>
 
-				<div className="flex items-center justify-between px-2 py-2">
-					<div className="flex min-w-0 items-center gap-2.5">
-						<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
-							{getUserInitials(user.name)}
-						</div>
-						<div className="min-w-0">
-							<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground" title={user.name}>
-								{user.name}
-							</span>
-							<span className="block truncate text-[length:var(--text-sidebar-caption)] leading-tight text-muted-foreground" title={user.email}>
-								{user.email}
-							</span>
-						</div>
-					</div>
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon-xs"
-						onClick={onLogout}
-						className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-						aria-label={shellLabels.logoutAriaLabel}
-						title={shellLabels.logoutTitle}>
-						<LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-					</Button>
-				</div>
+				<AppShellSidebarAccount
+					name={user.name}
+					email={user.email}
+					onLogout={onLogout}
+					status={status}
+					{...(profileMenu === undefined ? {} : { menuContent: profileMenu })}
+					labels={{ logout: shellLabels.logoutAriaLabel }}
+				/>
 			</SidebarFooter>
 			<PanelSidebarRouteAnnouncer pageLabel={pageLabel} labels={navLabels} />
 		</>

@@ -2,6 +2,8 @@ import "@workspace/ui/globals.css";
 import "./merchant-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
+import { serverRenderedSessionOf } from "@workspace/client/lib/auth/session/load-server-session";
+import { loadMerchantServerSession } from "@/lib/merchant-server-api";
 import { MerchantRootProvider } from "@/lib/session/root-provider";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
@@ -24,13 +26,17 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+export default async function RootLayout({ children }: { readonly children: React.ReactNode }): Promise<React.JSX.Element> {
+	// The session the server renders for: the auth store starts from it, so nothing that depends on
+	// who is signed in pops in after load. Without one (a guest, an outage) the browser's check settles it.
+	const serverSession = serverRenderedSessionOf(await loadMerchantServerSession());
+
 	return (
 		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="merchant-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
 				<QueryProvider>
-					<MerchantRootProvider>
+					<MerchantRootProvider serverSession={serverSession}>
 						<ThemeProvider>
 							{children}
 							<Toaster position="top-right" />

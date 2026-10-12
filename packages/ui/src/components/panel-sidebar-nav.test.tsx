@@ -15,14 +15,18 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import { buildSidebarView, type SidebarMenuDataLike } from "@workspace/ui/lib/sidebar/menu-view";
 import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 
-/** The shell's mobile drawer, as `useSidebar()` reports it. */
+/** The shell's mobile drawer, as `useSidebarControls()` reports it. */
 const mobile = vi.hoisted(() => ({ isMobile: false, setOpenMobile: vi.fn<(open: boolean) => void>() }));
 
 vi.mock("./sidebar", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("./sidebar")>();
 	return {
 		...actual,
-		useSidebar: (): ReturnType<typeof actual.useSidebar> => ({ ...actual.useSidebar(), isMobile: mobile.isMobile, setOpenMobile: mobile.setOpenMobile }),
+		useSidebarControls: (): ReturnType<typeof actual.useSidebarControls> => ({
+			...actual.useSidebarControls(),
+			isMobile: mobile.isMobile,
+			setOpenMobile: mobile.setOpenMobile,
+		}),
 	};
 });
 

@@ -34,3 +34,52 @@
 	background-color: var(--search-mark-bg);
 	color: var(--search-mark-fg);
 }
+
+/* Desktop off-canvas sidebar motion — one animated number, --sidebar-progress (0 collapsed → 1 open), set for the
+   whole shell by framer-motion (components/sidebar-progress.tsx, lib/sidebar/motion.ts). The gap the sidebar reserves and
+   the sidebar's slide both follow it, so they move as one. An inset sidebar collapses to the panel's 0.5rem margin
+   (its frame), never to a hard edge; any other variant collapses to nothing. */
+[data-slot="sidebar"][data-collapse-mode="offcanvas"] {
+	--sidebar-gap-collapsed: 0rem;
+}
+
+[data-slot="sidebar"][data-collapse-mode="offcanvas"][data-variant="inset"],
+[data-slot="sidebar"][data-collapse-mode="offcanvas"][data-variant="floating"] {
+	--sidebar-gap-collapsed: 0.5rem;
+}
+
+[data-slot="sidebar"][data-collapse-mode="offcanvas"] > [data-slot="sidebar-gap"] {
+	width: calc(var(--sidebar-gap-collapsed) + (var(--sidebar-width) - var(--sidebar-gap-collapsed)) * var(--sidebar-progress, 1));
+}
+
+[data-slot="sidebar"][data-collapse-mode="offcanvas"] > [data-slot="sidebar-container"][data-side="left"] {
+	transform: translateX(calc((var(--sidebar-progress, 1) - 1) * 100%));
+}
+
+[data-slot="sidebar"][data-collapse-mode="offcanvas"] > [data-slot="sidebar-container"][data-side="right"] {
+	transform: translateX(calc((1 - var(--sidebar-progress, 1)) * 100%));
+}
+
+/* The header's expand toggle (AppShellHeader) is shown on desktop only while the sidebar is out of sight. Its slot
+   opens and closes on the sidebar's spring — the button's width (size-9) and the header's gap (gap-2) scaled by the
+   progress — so the breadcrumb beside it glides instead of jumping. Beside an open sidebar it is also out of the tab
+   order and the accessibility tree. */
+@media (min-width: 64rem) {
+	[data-slot="app-shell-header-toggle"] {
+		width: calc(var(--spacing) * 9 * (1 - var(--sidebar-progress, 1)));
+		margin-inline-end: calc(var(--spacing) * -2 * var(--sidebar-progress, 1));
+		opacity: calc(1 - var(--sidebar-progress, 1));
+	}
+
+	[data-slot="sidebar-wrapper"]:has([data-slot="sidebar"][data-state="expanded"]) [data-slot="app-shell-header-toggle"] {
+		visibility: hidden;
+	}
+}
+
+/* The page column widens as the sidebar collapses — 88rem beside an open sidebar, 104rem with it out of sight — on
+   the same spring, so it eases with the panel instead of snapping. Below lg the sidebar is a drawer: always 104rem. */
+@media (min-width: 64rem) {
+	[data-slot="panel-shell-content"] {
+		max-width: calc(var(--max-width-10xl) - (var(--max-width-10xl) - var(--max-width-8xl)) * var(--sidebar-progress, 0));
+	}
+}

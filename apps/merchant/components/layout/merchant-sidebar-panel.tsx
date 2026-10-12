@@ -7,6 +7,7 @@ import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/li
 import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lock";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
+import type { ServerUser } from "@/lib/auth/server";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
@@ -27,17 +28,24 @@ import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sideb
 import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { BrandMark } from "@workspace/ui/components/brand-mark";
+import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
+import { MERCHANT_CAPABILITY } from "@workspace/shared";
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { ORG_ROUTES } from "@/lib/routes";
+import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { AlertCircle } from "lucide-react";
+import { merchantProfileMenuItems } from "@/components/layout/merchant-profile-menu";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 export interface MerchantSidebarPanelProps {
 	readonly memberships: readonly OrganizationRewardMembershipResponse[];
 	readonly organizationSlug: string | undefined;
 	readonly onStoreChange: (slug: string) => void;
+	/** The identity the server decoded — shown on first paint, until the session profile has loaded. */
+	readonly initialUser?: ServerUser | null;
 }
 
 function renderMerchantLink(href: string): React.ReactElement<PanelSidebarLinkProps> {
@@ -49,7 +57,7 @@ function renderMerchantMenuIcon(iconName: string | undefined, className: string)
 	return <Icon className={className} aria-hidden="true" />;
 }
 
-export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreChange }: MerchantSidebarPanelProps): React.JSX.Element {
+export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreChange, initialUser = null }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
@@ -98,12 +106,40 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 		[onStoreChange],
 	);
 
-	const userInitials = getUserInitials(sessionProfile.fullName);
+	const logout = useMerchantLogout();
+	const router = useRouter();
+	const settingsPath = useOrganizationPath(ORG_ROUTES.settings.index);
+	const accountPath = useOrganizationPath(ORG_ROUTES.account);
+	const dashboardPath = useOrganizationPath(ORG_ROUTES.dashboard);
+	const apiKeysPath = useOrganizationPath(ORG_ROUTES.apiKeys);
+
+	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
+	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;
+
+	const handleLogout = React.useCallback((): void => {
+		void logout();
+	}, [logout]);
+
+	const navigate = React.useCallback(
+		(path: string): void => {
+			router.push(path);
+		},
+		[router],
+	);
+	const profileMenuItems = React.useMemo(
+		() =>
+			merchantProfileMenuItems(
+				{ isEnrollmentLocked, canViewDashboard: can(MERCHANT_CAPABILITY.viewDashboard), canManageApiKeys: can(MERCHANT_CAPABILITY.manageApiKeys) },
+				{ account: accountPath, dashboard: dashboardPath, apiKeys: apiKeysPath, settings: settingsPath },
+				navigate,
+			),
+		[accountPath, apiKeysPath, can, dashboardPath, isEnrollmentLocked, navigate, settingsPath],
+	);
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
 	const formatStoreValue = React.useCallback((slug: string): string => memberships.find((row) => row.organizationSlug === slug)?.displayName ?? slug, [memberships]);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
+		<div className="flex h-full min-h-0 flex-col overflow-hidden text-sidebar-foreground">
 			<PanelSidebarHeader title={MERCHANT_SIDEBAR_MENU.header.title} subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle} icon={<BrandMark className="size-5 text-primary" />} />
 
 			<PanelSidebarNav
@@ -140,20 +176,6 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 			/>
 
 			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
-				<div className="flex items-center gap-2.5 px-2 py-2">
-					<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
-						{userInitials}
-					</div>
-					<div className="min-w-0 flex-1">
-						<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground" title={sessionProfile.fullName}>
-							{sessionProfile.fullName}
-						</span>
-						<span className="block truncate text-[length:var(--text-sidebar-caption)] leading-tight text-muted-foreground" title={sessionProfile.email}>
-							{sessionProfile.email}
-						</span>
-					</div>
-				</div>
-
 				{activeMembership !== undefined ? (
 					<div className="px-2 pb-2">
 						<div className="min-w-0 overflow-hidden rounded-lg border border-sidebar-border bg-background/60 px-3 py-3">
@@ -198,6 +220,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				<div className={view.bottomItems.length > 0 ? "px-2 pt-2" : "px-2 pb-2"}>
 					<ImpersonateUserPanel />
 				</div>
+				<AppShellSidebarAccount name={profileName} email={profileEmail} onLogout={handleLogout} menuItems={profileMenuItems} />
 			</SidebarFooter>
 
 			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} />

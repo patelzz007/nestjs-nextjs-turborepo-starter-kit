@@ -2,11 +2,15 @@ import "server-only";
 
 import { createServerCaller, type ServerCaller } from "@workspace/client/lib/api/server-api";
 import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
+import { loadServerSessionOutcome, type ServerSessionOutcome } from "@workspace/client/lib/auth/session/load-server-session";
 import { UuidParamSchema, type Envelope, type OrganizationContextResponse, type OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { readSidebarOpenCookie } from "@workspace/client/lib/features/sidebar/open-cookie";
+
+import { MERCHANT_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
 import { organizationLocationCookieName } from "@/lib/org/location";
 import { isCanonicalOrganizationSlug, resolveOrganizationSlugFromContext } from "@/lib/org/resolve-slug";
 import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
@@ -18,6 +22,16 @@ export type MerchantServerCaller = ServerCaller;
 export function createMerchantServerCaller(): MerchantServerCaller {
 	return createServerCaller({ clientType: "merchant" });
 }
+
+/**
+ * This request's session as the API describes it (`/auth/me` +
+ * `/auth/permissions`), asked once per request (`React.cache`). The root
+ * layout starts the auth store from it, so the first paint already knows who
+ * is signed in (the super-admin impersonation panel, the session's scope). An
+ * outage only leaves the store to the browser's session check: the org layout
+ * renders it through its own memberships call.
+ */
+export const loadMerchantServerSession = cache((): Promise<ServerSessionOutcome> => loadServerSessionOutcome(createMerchantServerCaller()));
 
 export interface MerchantServerContext {
 	readonly server: MerchantServerCaller;
@@ -33,6 +47,11 @@ export interface MerchantServerContext {
  * cookie is client input: callers still match it against the memberships
  * (`resolveOrganizationSlugFromContext`) before following it anywhere.
  */
+/** Whether the member left the desktop sidebar open (its cookie — open-cookie.ts); `undefined` when never set. */
+export async function readSidebarOpen(): Promise<boolean | undefined> {
+	return readSidebarOpenCookie(await cookies(), MERCHANT_SIDEBAR_STORAGE_KEY);
+}
+
 export async function readOrganizationSlugCookie(): Promise<string | undefined> {
 	const cookieStore = await cookies();
 	const value = cookieStore.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;

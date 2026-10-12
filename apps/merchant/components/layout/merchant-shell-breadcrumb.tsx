@@ -28,15 +28,15 @@ export function MerchantShellBreadcrumb(): React.JSX.Element {
 	}, []);
 
 	return (
-		<div className="mb-5">
-			<SharedBreadcrumbTrail
-				items={status.kind === "ready" ? status.items : []}
-				status={status.kind}
-				{...(status.kind === "error" ? { errorMessage: status.message } : {})}
-				maxItems={maxItems}
-				renderLink={renderLink}
-				onCopy={handleCopy}
-			/>
-		</div>
+		<SharedBreadcrumbTrail
+			className="mb-0 min-w-0"
+			scrollable
+			items={status.kind === "ready" ? status.items : []}
+			status={status.kind}
+			{...(status.kind === "error" ? { errorMessage: status.message } : {})}
+			maxItems={maxItems}
+			renderLink={renderLink}
+			onCopy={handleCopy}
+		/>
 	);
 }

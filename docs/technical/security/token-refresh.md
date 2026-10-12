@@ -253,6 +253,8 @@ from the closed `SessionSystemRevokerSchema` — `system:rotation-reuse`, `syste
 
 **Guests make no session calls.** The web app passes `sessionHint` (did the server see a session cookie — `hasServerSession`) to `AuthProvider`; without one it skips the on-mount `/auth/me` + `/auth/permissions` revalidation, which could only answer 401. Cross-tab sync and the post-login session sync are unaffected.
 
+**The first paint already knows the session.** Each app's root layout asks the API for the request's session (`/auth/me` + `/auth/permissions`, `loadServerSessionOutcome`) and passes it to `AuthProvider` as `serverSession`. The store is created authenticated from it, in the server-rendered epoch, so the server HTML and hydration already show the user and everything gated on them. The on-mount check still runs and signs out a session that ended meanwhile. A 401 during the render is left to the browser, which can refresh; the server cannot write cookies. See [ADR 050](../../adr/050-server-rendered-session.md).
+
 **Logout-all bumps `tokenVersion`:** `POST /auth/logout-all` soft-deletes every refresh token **and** increments `tokenVersion`, so outstanding access tokens die immediately — not only after their 15-minute expiry.
 
 **Revoked refresh rejection:** `POST /auth/refresh` rejects refresh tokens whose database row has `isDeleted: true` with `401 REFRESH_TOKEN_REVOKED` before rotation logic runs. Token-theft detection also revokes all refresh rows and bumps `tokenVersion`.

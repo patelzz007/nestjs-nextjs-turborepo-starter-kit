@@ -19,5 +19,8 @@
 	},
 	"rtl": true,
 	"menuColor": "default",
-	"menuAccent": "subtle"
+	"menuAccent": "subtle",
+	"registries": {
+		"@efferd": "https://efferd.com/r/{style}/{name}.json"
+	}
 }

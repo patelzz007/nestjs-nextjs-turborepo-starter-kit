@@ -103,6 +103,29 @@ the current page (`lib/navigation/legacy-redirects.ts`, loaded by `next.config.t
 - `(panel)/layout.tsx` → `dashboard-layout.tsx`: sidebar (menu config in
   `apps/admin/lib/navigation/sidebar-menu.json` + icon map), topbar with breadcrumbs + theme toggle + command
   palette (`⌘K`), and the panel content area.
+- Layout: **app shell 3**, shared with web and merchant ([ADR 049](../../adr/049-shared-app-shell-and-sidebar-motion.md)):
+  `StoreBoundAppPanelShell` → `AppPanelShell`, with `AppShellHeader`, `PanelSidebarHeader` and
+  `AppShellSidebarAccount` from `packages/ui`; the admin supplies its menu, breadcrumb, status and profile
+  menu. The `Sidebar` is `variant="inset"` and `collapsible="offcanvas"`: it collapses
+  **completely** (no icon rail). It holds the chrome — brand and the collapse toggle in its header; the
+  menu; and in its footer the connection / session status, the user row (it opens the profile menu:
+  profile, security, settings, log out), the theme toggle and log out. The page is a floating panel beside
+  it (`SidebarInset`, rounded, edged with the soft `--border`), headed by `AppShellHeader` (3.5rem, on
+  the panel's surface, a soft hairline under it): the
+  breadcrumb trail and Search (`⌘K`), plus an expand toggle shown only while the sidebar is out of sight
+  (collapsed on desktop — CSS reads its state; always on phones, where the sidebar is a drawer). Only the
+  page under it scrolls. `⌘B` toggles the sidebar anywhere; it opens and closes on one spring the whole
+  layout follows — the page column widens from 88 rem to 104 rem as it collapses — and charts hold their
+  size until it settles. The open state is mirrored to a cookie the `(panel)` layout reads, so a reload
+  renders it as it was left.
+  The block's demo files (nav data, user, "latest change" card) are not used.
+- Surfaces (shared tokens, `packages/tokens`): frame `shell-frame` and page panel `shell-panel` — light
+  has no white chrome: a `#F5F7FB` frame around the `#F1F4F9` canvas (one cool hue), near-white `#F9FAFC` cards; dark: `ink-950` frame,
+  `ink-850` panel, `ink-750` cards. The inset sidebar is see-through, so it sits on the frame. Colours
+  live in the token source only: the sidebar tokens (`--sidebar-active` = the solid slate pill,
+  `--sidebar-primary`, …) and the shell roles; `admin-theme.css` declares none. The sidebar keeps every
+  behaviour of the shared panel nav: menu filter (`/`), pinned pages, section reorder (hover a group
+  label), nested branches, per-page expansion, disabled rows.
 - The shell lives in the `(panel)` **route-group layout**, so it stays mounted across navigations:
   sidebar, topbar and their state survive, and only the page segment changes. Inside the group,
   `loading.tsx` streams a content skeleton, `error.tsx` is the client error boundary ("Try again"),

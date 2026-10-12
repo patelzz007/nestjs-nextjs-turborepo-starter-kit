@@ -10,6 +10,7 @@ import { CHART_SLOT_COLORS, type ChartColorSlot } from "@workspace/ui/lib/charts
 import { CHART_SLOT_ENCODINGS, type ChartMarkerShape } from "@workspace/ui/lib/charts/chart-encodings";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { useDataTween } from "@workspace/ui/hooks/use-data-tween";
 import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
 import * as React from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ReferenceArea, XAxis, YAxis, type TooltipContentProps } from "recharts";
@@ -345,7 +346,9 @@ function Plot<TKey extends string>({
 	scope,
 }: PlotProps<TKey>): React.JSX.Element {
 	const isReducedMotion = useMediaQuery(REDUCED_MOTION_QUERY, true);
-	const animate = !isReducedMotion;
+	// The marks tween on entrance and on new data — a resize (the sidebar collapsing) redraws them in place.
+	const { isTweening, endTween } = useDataTween(rows);
+	const animate = !isReducedMotion && isTweening;
 	const config = React.useMemo((): ChartConfig => toChartConfig(series), [series]);
 	const pointByStart = React.useMemo((): ReadonlyMap<number, TimeSeriesPoint<TKey>> => new Map(points.map((point) => [point.start, point])), [points]);
 	const partialStarts = React.useMemo((): readonly number[] => points.filter((point) => point.isPartial).map((point) => point.start), [points]);
@@ -438,7 +441,8 @@ function Plot<TKey extends string>({
 							strokeLinejoin="round"
 							dot={dot}
 							activeDot={activeDot}
-							isAnimationActive={animate}>
+							isAnimationActive={animate}
+							onAnimationEnd={endTween}>
 							{directLabels ? <LabelList dataKey={definition.key} content={endLabel} /> : null}
 						</Line>
 					))}
@@ -463,6 +467,7 @@ function Plot<TKey extends string>({
 							fillOpacity={AREA_FILL_OPACITY}
 							activeDot={activeDot}
 							isAnimationActive={animate}
+							onAnimationEnd={endTween}
 						/>
 					))}
 				</AreaChart>
@@ -483,6 +488,7 @@ function Plot<TKey extends string>({
 							maxBarSize={MAX_BAR_THICKNESS_PX}
 							{...(kind === "stackedBar" ? (index === lastIndex ? STACKED_TOP_BAR : STACKED_BAR) : GROUPED_BAR)}
 							isAnimationActive={animate}
+							onAnimationEnd={endTween}
 						/>
 					))}
 				</BarChart>

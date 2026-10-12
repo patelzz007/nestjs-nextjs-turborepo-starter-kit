@@ -51,18 +51,3 @@
 	--auth-brand-from: var(--palette-blue-500);
 	--auth-brand-to: var(--palette-blue-700);
 }
-
-/* Solid panel chrome — the topbar matches the canvas in light, the page surface in dark (`--topbar`), divided by --sidebar-border. No frosted tint. */
-.web-app .panel-shell-topbar {
-	height: 4rem;
-	flex-shrink: 0;
-	background: var(--topbar);
-	border-bottom: 1px solid var(--sidebar-border);
-	backdrop-filter: none;
-	-webkit-backdrop-filter: none;
-}
-
-.web-app .panel-shell-sidebar .panel-shell-sidebar-header {
-	height: 4rem;
-	flex-shrink: 0;
-}

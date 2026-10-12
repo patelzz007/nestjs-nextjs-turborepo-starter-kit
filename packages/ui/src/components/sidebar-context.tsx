@@ -8,6 +8,9 @@ import { createCookieSidebarStorage, type SidebarStorageAdapter } from "@workspa
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
+import { LayoutTransitionProvider } from "./layout-transition";
+import { SidebarProgress } from "./sidebar-progress";
+
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 /** Stable empty badge map — a fresh `{}` default per render would change the context value every render. */
@@ -29,6 +32,17 @@ export interface SidebarContextProps {
 
 export const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 
+/**
+ * What a sidebar control needs without the open state: the commands, the
+ * viewport, the copy and the badges. Its value keeps its identity while the
+ * sidebar opens and collapses, so a toggle, a nav link or a badge reading it
+ * never re-renders on a toggle — only what shows the open state does (`useSidebar`).
+ */
+export type SidebarControls = Pick<SidebarContextProps, "setOpen" | "setOpenMobile" | "toggleSidebar" | "isMobile" | "labels" | "badges">;
+
+const SidebarControlsContext = React.createContext<SidebarControls | null>(null);
+
+/** The whole sidebar context, open state included: re-renders on every toggle. */
 export function useSidebar(): SidebarContextProps {
 	const context = React.useContext(SidebarContext);
 	if (!context) {
@@ -36,6 +50,16 @@ export function useSidebar(): SidebarContextProps {
 	}
 
 	return context;
+}
+
+/** The sidebar's commands and copy, without the open state: never re-renders on a toggle. */
+export function useSidebarControls(): SidebarControls {
+	const controls = React.useContext(SidebarControlsContext);
+	if (!controls) {
+		throw new Error("useSidebarControls must be used within a SidebarProvider.");
+	}
+
+	return controls;
 }
 
 export const SidebarProvider = React.forwardRef<
@@ -110,13 +134,22 @@ export const SidebarProvider = React.forwardRef<
 		[setOpenProp, resolvedStorage, isStorageBacked],
 	);
 
+	// The latest open states, read by the toggle when it runs — so the toggle
+	// keeps its identity (and the controls context its value) across toggles.
+	const openRef = React.useRef(open);
+	const openMobileRef = React.useRef(openMobile);
+	React.useLayoutEffect((): void => {
+		openRef.current = open;
+		openMobileRef.current = openMobile;
+	}, [open, openMobile]);
+
 	const toggleSidebar = React.useCallback((): void => {
 		if (isMobileViewport()) {
-			setOpenMobile(!openMobile);
+			setOpenMobile(!openMobileRef.current);
 		} else {
-			setOpen(!open);
+			setOpen(!openRef.current);
 		}
-	}, [open, setOpen, openMobile, setOpenMobile]);
+	}, [setOpen, setOpenMobile]);
 
 	// Latest "close the mobile sheet" command, read by the viewport listener
 	// without re-subscribing it whenever the controlled props change.
@@ -172,17 +205,25 @@ export const SidebarProvider = React.forwardRef<
 		}),
 		[state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, labels, badges],
 	);
+	const controls = React.useMemo<SidebarControls>(
+		() => ({ setOpen, setOpenMobile, toggleSidebar, isMobile, labels, badges }),
+		[setOpen, setOpenMobile, toggleSidebar, isMobile, labels, badges],
+	);
 
 	return (
-		<SidebarContext.Provider value={contextValue}>
-			<div
-				ref={ref}
-				data-slot="sidebar-wrapper"
-				style={style}
-				className={cn("group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar", className)}
-				{...props}>
-				{children}
-			</div>
-		</SidebarContext.Provider>
+		<LayoutTransitionProvider>
+			<SidebarControlsContext.Provider value={controls}>
+				<SidebarContext.Provider value={contextValue}>
+					<div
+						ref={ref}
+						data-slot="sidebar-wrapper"
+						style={style}
+						className={cn("group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar", className)}
+						{...props}>
+						<SidebarProgress isOpen={open}>{children}</SidebarProgress>
+					</div>
+				</SidebarContext.Provider>
+			</SidebarControlsContext.Provider>
+		</LayoutTransitionProvider>
 	);
 });

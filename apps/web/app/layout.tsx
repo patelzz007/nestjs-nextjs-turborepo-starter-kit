@@ -14,7 +14,7 @@ import { WebAuthorizationProvider } from "@/components/auth/web-authorization-pr
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { WebClientAuthWrapper } from "@/components/web-client-auth-wrapper";
 import { hasServerSession } from "@/lib/auth/server";
-import { loadWebInitialSessionPermissions } from "@/lib/navigation/server";
+import { loadWebServerSession } from "@/lib/auth/server-session";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
@@ -36,17 +36,18 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>): Promise<React.JSX.Element> {
-	// One capability source for every page: guests resolve to an empty set.
+	// The session the server renders for: the auth store and the capability source both start from
+	// it, so nothing that depends on who is signed in pops in after load. Guests have none.
 	const sessionActive = await hasServerSession();
-	const initialSessionPermissions = await loadWebInitialSessionPermissions(sessionActive);
+	const serverSession = await loadWebServerSession(sessionActive);
 
 	return (
 		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="web-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
 				<QueryProvider>
-					<WebClientAuthWrapper sessionActive={sessionActive}>
-						<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions}>
+					<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
+						<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
 							<ThemeProvider>
 								{/* Root, not the /rewardhub shell: the public landing page renders the rewards catalog too. */}
 								<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
