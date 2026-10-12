@@ -302,7 +302,12 @@ describe("Profile — GitHub contributions", () => {
 		expect(await screen.findByLabelText("Stars: 1,204")).toBeOnTheScreen();
 		expect(screen.getByLabelText("Commits: 128")).toBeOnTheScreen();
 		expect(screen.getByLabelText("TypeScript: 75%")).toBeOnTheScreen();
+		expect(screen.getByLabelText("Languages: TypeScript 75%, CSS 25%")).toBeOnTheScreen();
+		expect(screen.getByTestId("language-logo-TypeScript", { includeHiddenElements: true })).toBeOnTheScreen();
 		expect(await screen.findByRole("link", { name: "octocat. 2 commits. 1,000 lines added, 250 deleted" })).toBeOnTheScreen();
+		// Each contributor leads with their avatar (initials here: the fixture has no picture).
+		expect(screen.getByLabelText("octocat's initials", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.getByLabelText("amy's initials", { includeHiddenElements: true })).toBeOnTheScreen();
 		expect(await screen.findByRole("link", { name: /^feat: add contributions\. octocat · .* · 4 files\. 120 lines added, 30 deleted$/ })).toBeOnTheScreen();
 		// One repository: nothing to choose.
 		expect(screen.queryByRole("combobox", { name: /^Repository/ })).toBeNull();
@@ -365,11 +370,12 @@ describe("Profile — GitHub contributions", () => {
 		expect(api.callsTo("GET /github/repositories/octo-org/website")).toHaveLength(1);
 	});
 
-	it("says so while GitHub is still counting contributors", async () => {
-		stubApi({ ...helloWorldRoutes(), [CONTRIBUTORS]: ok({ status: "computing" }) });
+	it("says when the contributors were counted from the latest commits only", async () => {
+		stubApi({ ...helloWorldRoutes(), [CONTRIBUTORS]: ok(githubContributorsJson(["octocat"], { kind: "history", commitsCounted: 1000, complete: false })) });
 		await renderSignedIn({ profile: ProfileScreen }, "/profile");
 
-		expect(await screen.findByText("GitHub is still counting this repository's contributions. They'll appear here shortly.")).toBeOnTheScreen();
+		expect(await screen.findByText("Counted from the latest 1,000 commits while GitHub prepares its full statistics.")).toBeOnTheScreen();
+		expect(screen.getByRole("link", { name: /^octocat\./ })).toBeOnTheScreen();
 	});
 
 	it("opens a contributor's profile on GitHub", async () => {

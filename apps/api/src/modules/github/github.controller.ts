@@ -99,9 +99,9 @@ export class GithubController {
 	@Get(":owner/:repository/contributors")
 	@ApiOperation({
 		summary: "Commits and lines added/deleted per contributor of a configured repository",
-		description: `GitHub computes these in the background: \`{ status: "computing" }\` means ask again in a few seconds. ${GITHUB_READ_ERRORS}`,
+		description: `From GitHub's contributor statistics (\`basis.kind: "statistics"\`, the whole default branch). GitHub recomputes those after every push; until they are ready the API counts the default branch's latest commits itself, at most 1,000 (\`basis.kind: "history"\`, \`complete\` when that is all of them). Merge commits and commits by authors without a GitHub account are credited to no one. ${GITHUB_READ_ERRORS}`,
 	})
-	@ZodResponse(GithubContributorStatsSchema, { description: "Contributor totals, or `computing` while GitHub prepares them" })
+	@ZodResponse(GithubContributorStatsSchema, { description: "Contributor totals, most commits first, and what they were counted from" })
 	public async getContributorStats(@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams): Promise<GithubContributorStats> {
 		return this.contributions.getContributorStats(params);
 	}

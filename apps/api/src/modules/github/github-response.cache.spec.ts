@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { NotFoundError } from "../../common/errors/app-error";
 import { GithubResponseError, GithubUnavailableError, repositoryTarget } from "./github.errors";
-import { GithubResponseCache, type GithubLoadResult } from "./github-response.cache";
+import { GithubResponseCache } from "./github-response.cache";
 
 const FRESH_MS = 1_000;
 const STALE_FALLBACK_MS = 10_000;
@@ -36,12 +36,12 @@ function setup(): Harness {
 	return { cache: new GithubResponseCache<string>({ freshMs: FRESH_MS, staleFallbackMs: STALE_FALLBACK_MS, maxEntries: 10 }, clock, logger), clock, logger };
 }
 
-function cacheable(value: string): () => Promise<GithubLoadResult<string>> {
-	return (): Promise<GithubLoadResult<string>> => Promise.resolve({ kind: "cacheable", value });
+function cacheable(value: string): () => Promise<string> {
+	return (): Promise<string> => Promise.resolve(value);
 }
 
-function failing(error: Error): () => Promise<GithubLoadResult<string>> {
-	return (): Promise<GithubLoadResult<string>> => Promise.reject(error);
+function failing(error: Error): () => Promise<string> {
+	return (): Promise<string> => Promise.reject(error);
 }
 
 describe("GithubResponseCache", () => {
@@ -75,17 +75,17 @@ describe("GithubResponseCache", () => {
 
 	it("shares one load between concurrent misses of the same key", async () => {
 		const { cache } = setup();
-		let resolveLoad: (value: GithubLoadResult<string>) => void = (): void => undefined;
+		let resolveLoad: (value: string) => void = (): void => undefined;
 		const load = vi.fn(
-			(): Promise<GithubLoadResult<string>> =>
-				new Promise<GithubLoadResult<string>>((resolve): void => {
+			(): Promise<string> =>
+				new Promise<string>((resolve): void => {
 					resolveLoad = resolve;
 				}),
 		);
 
 		const first = cache.read("key", load);
 		const second = cache.read("key", load);
-		resolveLoad({ kind: "cacheable", value: "shared" });
+		resolveLoad("shared");
 
 		expect(await Promise.all([first, second])).toEqual(["shared", "shared"]);
 		expect(load).toHaveBeenCalledTimes(1);
@@ -130,21 +130,5 @@ describe("GithubResponseCache", () => {
 		clock.now += FRESH_MS + STALE_FALLBACK_MS + 1;
 
 		await expect(cache.read("key", failing(unavailable))).rejects.toBe(unavailable);
-	});
-
-	it("returns a transient answer without keeping it", async () => {
-		const { cache } = setup();
-
-		expect(await cache.read("key", (): Promise<GithubLoadResult<string>> => Promise.resolve({ kind: "transient", value: "computing" }))).toBe("computing");
-		expect(await cache.read("key", cacheable("ready"))).toBe("ready");
-	});
-
-	it("prefers the previous answer to a transient one", async () => {
-		const { cache, clock } = setup();
-
-		await cache.read("key", cacheable("ready before"));
-		clock.now += FRESH_MS;
-
-		expect(await cache.read("key", (): Promise<GithubLoadResult<string>> => Promise.resolve({ kind: "transient", value: "computing" }))).toBe("ready before");
 	});
 });

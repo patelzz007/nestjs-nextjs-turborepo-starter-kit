@@ -30,8 +30,9 @@ env:
   NODE_VERSION: "24"
   TURBO_TELEMETRY_DISABLED: "1"
   TURBO_UI: "false"
-  # Bound the restored local Turborepo cache so it cannot grow run over run.
-  TURBO_CACHE_MAX_AGE: 7d
+  # No Turborepo cache is carried between runs: every job runs its tasks for real,
+  # so a result from an earlier commit can never stand in for this one
+  # (docs/technical/operations/ci.md, "Caching").
   DO_NOT_TRACK: "1"
 
 jobs:
@@ -48,12 +49,6 @@ jobs:
         uses: ./.github/actions/setup-workspace
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Restore Turborepo cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
-          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       - name: Lint (zero errors, zero warnings)
         run: pnpm turbo run lint
 
@@ -70,12 +65,6 @@ jobs:
         uses: ./.github/actions/setup-workspace
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Restore Turborepo cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
-          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       - name: Typecheck
         run: pnpm turbo run typecheck
 
@@ -92,14 +81,10 @@ jobs:
         uses: ./.github/actions/setup-workspace
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Restore Turborepo cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
-          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
+      # One workspace's suite at a time, each using every core — as the root
+      # `test` script does (docs/technical/operations/ci.md, "Unit tests").
       - name: Unit tests
-        run: pnpm turbo run test
+        run: pnpm turbo run test --concurrency=1
 
   build:
     name: Build
@@ -124,12 +109,6 @@ jobs:
         uses: ./.github/actions/setup-workspace
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Restore Turborepo cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
-          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       - name: Build every workspace
         run: pnpm turbo run build
 

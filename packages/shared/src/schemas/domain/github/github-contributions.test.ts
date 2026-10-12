@@ -118,18 +118,24 @@ describe("GithubCommitSchema", () => {
 });
 
 describe("GithubContributorStatsSchema", () => {
-	it("accepts `computing` and `ready` with contributors", () => {
-		expect(GithubContributorStatsSchema.safeParse({ status: "computing" }).success).toBe(true);
-		expect(
-			GithubContributorStatsSchema.safeParse({
-				status: "ready",
-				contributors: [{ login: "octocat", avatarUrl: null, htmlUrl: "https://github.com/octocat", commits: 3, additions: 10, deletions: 2 }],
-			}).success,
-		).toBe(true);
+	const contributors = [{ login: "octocat", avatarUrl: null, htmlUrl: "https://github.com/octocat", commits: 3, additions: 10, deletions: 2 }];
+
+	it.each([
+		["GitHub's statistics", { kind: "statistics" }],
+		["the latest commits, counted by the API", { kind: "history", commitsCounted: 1000, complete: false }],
+		["the whole history, counted by the API", { kind: "history", commitsCounted: 173, complete: true }],
+	])("accepts contributors counted from %s", (_label: string, basis: object) => {
+		expect(GithubContributorStatsSchema.safeParse({ status: "ready", basis, contributors }).success).toBe(true);
 	});
 
-	it("requires contributors once ready", () => {
-		expect(GithubContributorStatsSchema.safeParse({ status: "ready" }).success).toBe(false);
+	it.each([
+		["`computing` (no longer sent)", { status: "computing" }],
+		["no basis", { status: "ready", contributors }],
+		["no contributors", { status: "ready", basis: { kind: "statistics" } }],
+		["more commits counted than the API counts", { status: "ready", basis: { kind: "history", commitsCounted: 1001, complete: false }, contributors }],
+		["an unknown basis", { status: "ready", basis: { kind: "guess" }, contributors }],
+	])("rejects %s", (_label: string, stats: object) => {
+		expect(GithubContributorStatsSchema.safeParse(stats).success).toBe(false);
 	});
 });
 

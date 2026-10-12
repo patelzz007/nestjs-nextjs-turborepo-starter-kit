@@ -12,16 +12,17 @@
 // docs/technical/github-contributions.md
 
 import { ApiError } from "@workspace/api-client";
-import type { GithubCommit, GithubContributor, GithubRepositoryListItem, GithubRepositoryRef } from "@workspace/shared";
+import type { GithubCommit, GithubContributor, GithubContributorStats, GithubRepositoryListItem, GithubRepositoryRef } from "@workspace/shared";
 import { useRouter } from "expo-router";
 import * as React from "react";
 import { Linking, View } from "react-native";
 
+import { Avatar } from "../../components/avatar";
 import { Banner } from "../../components/banner";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { ChangeRow } from "../../components/change-row";
-import { DetailList } from "../../components/detail-list";
+import { LanguageBreakdown } from "../../components/language-breakdown";
 import { SelectField, type SelectOption } from "../../components/select-field";
 import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
 import { StatTiles } from "../../components/stat-tiles";
@@ -34,9 +35,10 @@ import { ROUTES } from "../../runtime/routes";
 import {
 	changeSummary,
 	commitMeta,
+	contributorBasisNote,
 	contributorMeta,
 	formatCount,
-	languageItems,
+	languageShares,
 	lastPushLabel,
 	OPEN_GITHUB_FAILED_MESSAGE,
 	repositoryDescription,
@@ -51,9 +53,6 @@ export const GITHUB_COMMIT_PAGE_SIZE = 10;
 
 /** Contributors listed before "Show all contributors". */
 export const GITHUB_CONTRIBUTORS_PREVIEW = 5;
-
-/** How often the contributor totals are asked for again while GitHub is still computing them. */
-export const GITHUB_CONTRIBUTORS_POLL_MS = 5_000;
 
 /** Above this many repositories the dropdown gets a search box (a discovered list can be long). */
 export const GITHUB_REPOSITORY_SEARCH_MIN = 8;
@@ -201,7 +200,12 @@ function RepositorySummary({ repository, nowMs }: RepositorySummaryProps): React
 		<View className="gap-3">
 			{data.description === null ? null : <BodyText>{data.description}</BodyText>}
 			<StatTiles items={summaryTiles(data)} testID="github-summary-tiles" />
-			{data.languages.length === 0 ? null : <DetailList items={languageItems(data.languages)} />}
+			{data.languages.length === 0 ? null : (
+				<View className="gap-2">
+					<Label>Languages</Label>
+					<LanguageBreakdown title="Languages" languages={languageShares(data.languages)} testID="github-languages" />
+				</View>
+			)}
 			{pushed === null ? null : <MutedText>{pushed}</MutedText>}
 		</View>
 	);
@@ -214,10 +218,7 @@ interface OpenableProps extends RepositoryProps {
 
 function TopContributors({ repository, onOpen }: OpenableProps): React.JSX.Element {
 	const api = useApi();
-	const stats = api.github.repositoryContributors.useQuery(
-		{ owner: repository.owner, repository: repository.repository },
-		{ refetchInterval: (query): number | false => (query.state.data?.data.status === "computing" ? GITHUB_CONTRIBUTORS_POLL_MS : false) },
-	);
+	const stats = api.github.repositoryContributors.useQuery({ owner: repository.owner, repository: repository.repository });
 	const [showAll, setShowAll] = React.useState(false);
 	const retry = React.useCallback((): void => {
 		void stats.refetch();
@@ -235,13 +236,23 @@ function TopContributors({ repository, onOpen }: OpenableProps): React.JSX.Eleme
 				</SkeletonGroup>
 			) : null}
 			{stats.isError ? <ErrorState message={errorMessageOf(stats.error)} retryLabel="Try again" onRetry={retry} /> : null}
-			{stats.data?.data.status === "computing" ? (
-				<MutedText>GitHub is still counting this repository&apos;s contributions. They&apos;ll appear here shortly.</MutedText>
-			) : null}
-			{stats.data?.data.status === "ready" ? (
-				<ContributorList contributors={stats.data.data.contributors} showAll={showAll} onToggleShowAll={toggleShowAll} onOpen={onOpen} />
-			) : null}
+			{stats.data === undefined ? null : <ContributorTotals stats={stats.data.data} showAll={showAll} onToggleShowAll={toggleShowAll} onOpen={onOpen} />}
 		</View>
+	);
+}
+
+interface ContributorTotalsProps extends Omit<ContributorListProps, "contributors"> {
+	readonly stats: GithubContributorStats;
+}
+
+/** The contributors, and — when the API could only count the latest commits — a note saying so. */
+function ContributorTotals({ stats, showAll, onToggleShowAll, onOpen }: ContributorTotalsProps): React.JSX.Element {
+	const note = contributorBasisNote(stats.basis);
+	return (
+		<>
+			{note === null ? null : <MutedText>{note}</MutedText>}
+			<ContributorList contributors={stats.contributors} showAll={showAll} onToggleShowAll={onToggleShowAll} onOpen={onOpen} />
+		</>
 	);
 }
 
@@ -282,6 +293,7 @@ function ContributorRow({ contributor, onOpen }: ContributorRowProps): React.JSX
 	}, [contributor.htmlUrl, onOpen]);
 	return (
 		<ChangeRow
+			leading={<Avatar name={contributor.login} imageUrl={contributor.avatarUrl} size="md" />}
 			title={contributor.login}
 			meta={contributorMeta(contributor)}
 			additions={formatCount(contributor.additions)}

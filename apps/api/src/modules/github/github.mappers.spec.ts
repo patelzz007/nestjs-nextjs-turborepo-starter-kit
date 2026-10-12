@@ -3,6 +3,7 @@ import {
 	GITHUB_COMMIT_FILES_MAX,
 	GITHUB_COMMIT_MESSAGE_MAX_LENGTH,
 	GITHUB_COMMIT_PARENTS_MAX,
+	GITHUB_CONTRIBUTORS_MAX,
 	GITHUB_FILE_PATCH_MAX_LENGTH,
 	GITHUB_REPOSITORY_LIST_MAX,
 	GithubCommitDetailSchema,
@@ -20,6 +21,7 @@ import {
 	commitFileWire,
 	commitHistory,
 	commitNode,
+	contributionCommit,
 	contributorStat,
 	repositoryNode,
 	summaryNode,
@@ -33,10 +35,11 @@ import {
 	toConfiguredRepositoryList,
 	toDiscoveredRepositoryList,
 	toCommitPage,
-	toContributorStats,
+	toHistoryContributors,
 	toLanguageShares,
 	toRepositoryRef,
 	toRepositorySummary,
+	toStatisticsContributors,
 } from "./github.mappers";
 
 const REPOSITORY = { owner: "octo-org", repository: "hello-world" };
@@ -156,26 +159,20 @@ describe("toCommit", () => {
 	});
 });
 
-describe("toContributorStats", () => {
-	it("passes `computing` through", () => {
-		expect(toContributorStats({ status: "computing" })).toEqual({ status: "computing" });
-	});
-
-	it("sums each contributor's weeks and orders by commits, then login", () => {
-		const stats = toContributorStats({
-			status: "ready",
-			stats: [
-				contributorStat("zed", [
-					[10, 2, 1],
-					[5, 1, 1],
-				]),
-				contributorStat("amy", [[100, 40, 2]]),
-				contributorStat("dependabot[bot]", [[1, 1, 5]]),
-			],
-		});
+describe("toStatisticsContributors", () => {
+	it("sums each contributor's weeks, orders by commits then login, and says it is GitHub's statistics", () => {
+		const stats = toStatisticsContributors([
+			contributorStat("zed", [
+				[10, 2, 1],
+				[5, 1, 1],
+			]),
+			contributorStat("amy", [[100, 40, 2]]),
+			contributorStat("dependabot[bot]", [[1, 1, 5]]),
+		]);
 
 		expect(stats).toEqual({
 			status: "ready",
+			basis: { kind: "statistics" },
 			contributors: [
 				{
 					login: "dependabot[bot]",
@@ -193,9 +190,45 @@ describe("toContributorStats", () => {
 	});
 
 	it("leaves out commits whose author has no GitHub account any more", () => {
-		const stats = toContributorStats({ status: "ready", stats: [{ author: null, total: 3, weeks: [{ a: 1, d: 1, c: 3 }] }, contributorStat("amy", [[1, 0, 1]])] });
+		const stats = toStatisticsContributors([{ author: null, total: 3, weeks: [{ a: 1, d: 1, c: 3 }] }, contributorStat("amy", [[1, 0, 1]])]);
 
-		expect(stats.status === "ready" ? stats.contributors.map((contributor) => contributor.login) : []).toEqual(["amy"]);
+		expect(stats.contributors.map((contributor) => contributor.login)).toEqual(["amy"]);
+	});
+});
+
+describe("toHistoryContributors", () => {
+	it("totals each account's commits and lines, ordered by commits then login", () => {
+		const stats = toHistoryContributors(
+			[contributionCommit("zed", 10, 2), contributionCommit("amy", 100, 40), contributionCommit("zed", 5, 1), contributionCommit("amy", 1, 0)],
+			true,
+		);
+
+		expect(stats).toEqual({
+			status: "ready",
+			basis: { kind: "history", commitsCounted: 4, complete: true },
+			contributors: [
+				{ login: "amy", avatarUrl: "https://avatars.githubusercontent.com/amy", htmlUrl: "https://github.com/amy", commits: 2, additions: 101, deletions: 40 },
+				{ login: "zed", avatarUrl: "https://avatars.githubusercontent.com/zed", htmlUrl: "https://github.com/zed", commits: 2, additions: 15, deletions: 3 },
+			],
+		});
+		expect(GithubContributorStatsSchema.safeParse(stats).success).toBe(true);
+	});
+
+	it("credits no one for a merge commit or a commit without a GitHub account, but still counts it as read", () => {
+		const stats = toHistoryContributors([contributionCommit("amy", 3, 1), contributionCommit("amy", 500, 500, 2), contributionCommit(null, 7, 7)], false);
+
+		expect(stats.basis).toEqual({ kind: "history", commitsCounted: 3, complete: false });
+		expect(stats.contributors).toMatchObject([{ login: "amy", commits: 1, additions: 3, deletions: 1 }]);
+	});
+
+	it("credits no one in an empty repository", () => {
+		expect(toHistoryContributors([], true)).toEqual({ status: "ready", basis: { kind: "history", commitsCounted: 0, complete: true }, contributors: [] });
+	});
+
+	it("keeps at most the contract's contributors", () => {
+		const commits = Array.from({ length: GITHUB_CONTRIBUTORS_MAX + 1 }, (_entry: undefined, index: number) => contributionCommit(`dev${String(index)}`, 1, 0));
+
+		expect(toHistoryContributors(commits, true).contributors).toHaveLength(GITHUB_CONTRIBUTORS_MAX);
 	});
 });
 

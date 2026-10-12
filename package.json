@@ -17,7 +17,7 @@
 		"lint": "turbo lint",
 		"format": "turbo format",
 		"typecheck": "turbo typecheck",
-		"test": "turbo test",
+		"test": "turbo run test --concurrency=1",
 		"test:e2e": "pnpm --filter @workspace/api test:e2e && pnpm --filter @workspace/analytics-consumer test:e2e",
 		"ci:local": "node packages/tooling/scripts/ci-local.mjs",
 		"openapi:export": "turbo run openapi:export --filter=@workspace/api",

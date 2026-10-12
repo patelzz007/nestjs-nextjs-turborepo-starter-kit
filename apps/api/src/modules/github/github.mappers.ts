@@ -10,6 +10,7 @@ import {
 	GITHUB_COMMIT_FILES_MAX,
 	GITHUB_COMMIT_MESSAGE_MAX_LENGTH,
 	GITHUB_COMMIT_PARENTS_MAX,
+	GITHUB_CONTRIBUTORS_MAX,
 	GITHUB_FILE_PATCH_MAX_LENGTH,
 	GITHUB_REPOSITORY_LIST_MAX,
 	GithubCommitFileStatusSchema,
@@ -32,12 +33,13 @@ import {
 	type GithubRepositorySummary,
 } from "@workspace/shared";
 
-import type { GithubCommitDetailResult, GithubContributorStatsResult } from "./github-api.client";
+import type { GithubCommitDetailResult } from "./github-api.client";
 import type {
 	GithubCommitDetailWire,
 	GithubCommitFileWire,
 	GithubCommitHistoryWire,
 	GithubCommitNodeWire,
+	GithubContributionCommitWire,
 	GithubContributorStatWire,
 	GithubRepositoryNodeWire,
 	GithubRepositorySummaryNodeWire,
@@ -169,33 +171,64 @@ export function toCommit(node: GithubCommitNodeWire): GithubCommit {
 	};
 }
 
+/** Most commits first, then by login — the order GitHub lists contributors in. */
+function byCommitsThenLogin(left: GithubContributor, right: GithubContributor): number {
+	return right.commits - left.commits || left.login.localeCompare(right.login);
+}
+
 /**
- * Contributors by commits (most first, then by login), each with the lines
+ * GitHub's contributor statistics: each contributor's commits, and the lines
  * they added and deleted summed over every week. Commits by authors with no
  * GitHub account any more (`author: null`) have no one to credit and are left out.
  */
-export function toContributorStats(result: GithubContributorStatsResult): GithubContributorStats {
-	if (result.status === "computing") {
-		return { status: "computing" };
+export function toStatisticsContributors(stats: readonly GithubContributorStatWire[]): GithubContributorStats {
+	const contributors = stats.flatMap((stat: GithubContributorStatWire): GithubContributor[] => {
+		if (stat.author === null) {
+			return [];
+		}
+		return [
+			{
+				login: stat.author.login,
+				avatarUrl: stat.author.avatar_url,
+				htmlUrl: stat.author.html_url,
+				commits: stat.total,
+				additions: stat.weeks.reduce((sum: number, week): number => sum + week.a, 0),
+				deletions: stat.weeks.reduce((sum: number, week): number => sum + week.d, 0),
+			},
+		];
+	});
+	return { status: "ready", basis: { kind: "statistics" }, contributors: contributors.sort(byCommitsThenLogin).slice(0, GITHUB_CONTRIBUTORS_MAX) };
+}
+
+/** A merge commit only joins histories: like GitHub's statistics, it is credited to no one. */
+const MERGE_PARENTS = 2;
+
+/**
+ * Contributor totals counted from the default branch's latest commits (newest
+ * first, as read), for when GitHub's statistics are not ready. Credited like
+ * GitHub's: per GitHub account, merge commits and commits without an account
+ * left out. `complete` when `commits` is the whole history.
+ */
+export function toHistoryContributors(commits: readonly GithubContributionCommitWire[], complete: boolean): GithubContributorStats {
+	const totals = new Map<string, GithubContributor>();
+	for (const commit of commits) {
+		const user = commit.author?.user ?? null;
+		if (user === null || commit.parents.totalCount >= MERGE_PARENTS) {
+			continue;
+		}
+		const previous = totals.get(user.login) ?? { login: user.login, avatarUrl: user.avatarUrl, htmlUrl: user.url, commits: 0, additions: 0, deletions: 0 };
+		totals.set(user.login, {
+			...previous,
+			commits: previous.commits + 1,
+			additions: previous.additions + commit.additions,
+			deletions: previous.deletions + commit.deletions,
+		});
 	}
-	const contributors = result.stats
-		.flatMap((stat: GithubContributorStatWire): GithubContributor[] => {
-			if (stat.author === null) {
-				return [];
-			}
-			return [
-				{
-					login: stat.author.login,
-					avatarUrl: stat.author.avatar_url,
-					htmlUrl: stat.author.html_url,
-					commits: stat.total,
-					additions: stat.weeks.reduce((sum: number, week): number => sum + week.a, 0),
-					deletions: stat.weeks.reduce((sum: number, week): number => sum + week.d, 0),
-				},
-			];
-		})
-		.sort((left: GithubContributor, right: GithubContributor): number => right.commits - left.commits || left.login.localeCompare(right.login));
-	return { status: "ready", contributors };
+	return {
+		status: "ready",
+		basis: { kind: "history", commitsCounted: commits.length, complete },
+		contributors: [...totals.values()].sort(byCommitsThenLogin).slice(0, GITHUB_CONTRIBUTORS_MAX),
+	};
 }
 
 /**

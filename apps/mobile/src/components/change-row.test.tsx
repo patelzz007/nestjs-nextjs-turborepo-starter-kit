@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
+import { Text } from "react-native";
 
 import { ChangeRow } from "./change-row";
 import { StatTiles } from "./stat-tiles";
@@ -16,6 +17,14 @@ describe("ChangeRow", () => {
 		expect(screen.getByText("+120", { includeHiddenElements: true })).toBeOnTheScreen();
 		expect(screen.getByText("−30", { includeHiddenElements: true })).toBeOnTheScreen();
 		expect(screen.queryByText("+120")).toBeNull();
+		expect(screen.getByLabelText("feat: add contributions. octocat · 1 hour ago. 120 lines added, 30 deleted")).toBeOnTheScreen();
+	});
+
+	it("draws a leading visual before the title, leaving the row's label as it is", async () => {
+		await render(<ChangeRow {...ROW} leading={<Text>avatar</Text>} />);
+
+		expect(screen.getByText("avatar", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByText("avatar")).toBeNull();
 		expect(screen.getByLabelText("feat: add contributions. octocat · 1 hour ago. 120 lines added, 30 deleted")).toBeOnTheScreen();
 	});
 

@@ -340,14 +340,41 @@ export const GithubContributorSchema = z.object({
 export type GithubContributor = z.output<typeof GithubContributorSchema>;
 
 /**
- * GitHub computes contributor statistics in the background: the first read
- * of a repository (or the first after a push) answers `computing`, and the
- * client asks again a little later. `ready` lists contributors by commits,
- * most first.
+ * Most recent commits the API counts itself while GitHub's statistics are not
+ * ready — ten pages of GitHub's largest history page.
  */
-export const GithubContributorStatsSchema = z.discriminatedUnion("status", [
-	z.object({ status: z.literal("computing") }),
-	z.object({ status: z.literal("ready"), contributors: z.array(GithubContributorSchema).max(GITHUB_CONTRIBUTORS_MAX) }),
+export const GITHUB_CONTRIBUTORS_HISTORY_MAX_COMMITS = 1_000;
+
+/**
+ * What the totals were counted from. `statistics`: GitHub's own contributor
+ * statistics, the whole default branch. `history`: GitHub had not finished
+ * computing those (it recomputes them after every push, which can take a
+ * while), so the API counted the default branch's latest `commitsCounted`
+ * commits itself; `complete` when that is all of them.
+ */
+export const GithubContributorBasisSchema = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("statistics") }),
+	z.object({
+		kind: z.literal("history"),
+		commitsCounted: z.number().int().nonnegative().max(GITHUB_CONTRIBUTORS_HISTORY_MAX_COMMITS),
+		complete: z.boolean(),
+	}),
 ]);
+
+export type GithubContributorBasis = z.output<typeof GithubContributorBasisSchema>;
+
+/**
+ * Contributors by commits, most first, and what they were counted from.
+ * Merge commits and commits by authors without a GitHub account are not
+ * credited to anyone (as in GitHub's statistics).
+ *
+ * `status` is always `ready`. App builds from before the API counted history
+ * itself also knew `computing` and read `status` first, so it stays.
+ */
+export const GithubContributorStatsSchema = z.object({
+	status: z.literal("ready"),
+	basis: GithubContributorBasisSchema,
+	contributors: z.array(GithubContributorSchema).max(GITHUB_CONTRIBUTORS_MAX),
+});
 
 export type GithubContributorStats = z.output<typeof GithubContributorStatsSchema>;

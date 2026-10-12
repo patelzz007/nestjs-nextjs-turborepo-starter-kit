@@ -10,6 +10,7 @@ import {
 	type GithubCommitFileDiff,
 	type GithubCommitFileStatus,
 	type GithubContributor,
+	type GithubContributorBasis,
 	type GithubLanguageShare,
 	type GithubRepositoryList,
 	type GithubRepositoryListItem,
@@ -17,9 +18,10 @@ import {
 	type GithubRepositorySummary,
 } from "@workspace/shared";
 
-import type { DetailItem } from "../../components/detail-list";
+import type { LanguageShare } from "../../components/language-breakdown";
 import type { StatTile } from "../../components/stat-tiles";
 import { formatRelativeTime } from "../../lib/time-format";
+import { languageLogoOf } from "./language-logos";
 
 /** Shown when the phone cannot open a GitHub page (a commit, a profile). */
 export const OPEN_GITHUB_FAILED_MESSAGE = "Couldn't open GitHub. Try again from a browser.";
@@ -49,9 +51,26 @@ export function summaryTiles(summary: GithubRepositorySummary): StatTile[] {
 	];
 }
 
-/** Each language and its share of the code ("TypeScript: 82.4%"). */
-export function languageItems(languages: readonly GithubLanguageShare[]): DetailItem[] {
-	return languages.map((language: GithubLanguageShare): DetailItem => ({ label: language.name, value: `${String(language.percent)}%` }));
+/**
+ * The alpha appended to a language's `#rrggbb` for its logo tile: about 16%,
+ * a tint that keeps the foreground-coloured logo legible in both themes.
+ */
+const LANGUAGE_TINT_ALPHA = "29";
+
+/** How many characters of its name stand in for a language without a logo ("C#", "Po"). */
+const MONOGRAM_LENGTH = 2;
+
+/** Each language with its share ("82.4%"), its colours and its logo — or a monogram when it has none. */
+export function languageShares(languages: readonly GithubLanguageShare[]): LanguageShare[] {
+	return languages.map((language: GithubLanguageShare): LanguageShare => ({
+		name: language.name,
+		percent: language.percent,
+		percentLabel: `${String(language.percent)}%`,
+		color: language.color,
+		tint: language.color === null ? null : `${language.color}${LANGUAGE_TINT_ALPHA}`,
+		logoPath: languageLogoOf(language.name)?.path ?? null,
+		monogram: language.name.slice(0, MONOGRAM_LENGTH),
+	}));
 }
 
 /** "Last push 2 hours ago", or `null` for a repository nobody has pushed to. */
@@ -63,6 +82,17 @@ export function lastPushLabel(summary: GithubRepositorySummary, nowMs: number): 
 export function commitMeta(commit: GithubCommit, nowMs: number): string {
 	const parts = [commit.author.login ?? commit.author.name, formatRelativeTime(commit.committedAt, nowMs)];
 	return (commit.changedFiles === null ? parts : [...parts, countOf(commit.changedFiles, "file", "files")]).join(META_SEPARATOR);
+}
+
+/**
+ * Said above the contributors when the API counted only the latest commits
+ * itself (GitHub was still preparing its statistics); `null` when the totals
+ * cover the whole history.
+ */
+export function contributorBasisNote(basis: GithubContributorBasis): string | null {
+	return basis.kind === "history" && !basis.complete
+		? `Counted from the latest ${countOf(basis.commitsCounted, "commit", "commits")} while GitHub prepares its full statistics.`
+		: null;
 }
 
 /** "12 commits". */

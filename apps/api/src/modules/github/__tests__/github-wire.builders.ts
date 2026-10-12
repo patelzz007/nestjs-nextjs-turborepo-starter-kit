@@ -3,6 +3,8 @@
 
 import type {
 	GithubCommitDetailWire,
+	GithubContributionCommitWire,
+	GithubContributionHistoryWire,
 	GithubCommitFileWire,
 	GithubCommitHistoryWire,
 	GithubCommitNodeWire,
@@ -106,4 +108,19 @@ export function commitDetailWire(overrides: Partial<GithubCommitDetailWire> = {}
 		files: [commitFileWire()],
 		...overrides,
 	};
+}
+
+/** One commit as contribution history reads it: by `login` (`null`: no GitHub account), one parent unless `parents` says otherwise. */
+export function contributionCommit(login: string | null, additions: number, deletions: number, parents = 1): GithubContributionCommitWire {
+	return {
+		additions,
+		deletions,
+		parents: { totalCount: parents },
+		author: { user: login === null ? null : { login, avatarUrl: `https://avatars.githubusercontent.com/${login}`, url: `https://github.com/${login}` } },
+	};
+}
+
+/** One page of contribution history; `endCursor` set means there is a next page. */
+export function contributionHistory(nodes: readonly GithubContributionCommitWire[], endCursor: string | null = null): GithubContributionHistoryWire {
+	return { pageInfo: { hasNextPage: endCursor !== null, endCursor }, nodes: [...nodes] };
 }

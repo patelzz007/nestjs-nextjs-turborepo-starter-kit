@@ -39,6 +39,9 @@ export const GITHUB_CACHE_MAX_ENTRIES = 500;
  */
 export const GITHUB_COMMIT_CACHE_MAX_ENTRIES = 50;
 
+/** GitHub's largest GraphQL history page — contribution history is read in pages this size. */
+export const GITHUB_HISTORY_PAGE_MAX = 100;
+
 /** GitHub's `Link` header: a commit with more files than one page names the next page `rel="next"`. */
 export const GITHUB_LINK_HEADER = "link";
 

@@ -61,7 +61,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		for (const expected of [
 			"pnpm turbo run lint",
 			"pnpm turbo run typecheck",
-			"pnpm turbo run test",
+			"pnpm turbo run test --concurrency=1",
 			"pnpm turbo run build",
 			"pnpm --filter @workspace/api db:check-rls-manifest",
 			"pnpm turbo run deps:check",

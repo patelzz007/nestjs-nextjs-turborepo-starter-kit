@@ -58,6 +58,32 @@ query RepositoryCommits($owner: String!, $name: String!, $first: Int!, $after: S
 }`;
 
 /**
+ * One page of the default branch's history as contribution totals need it:
+ * each commit's line counts, its parent count (merge commits are not credited,
+ * as in GitHub's statistics) and the GitHub account of its author.
+ */
+export const GITHUB_CONTRIBUTION_HISTORY_QUERY = `
+query RepositoryContributions($owner: String!, $name: String!, $first: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    defaultBranchRef {
+      target {
+        ... on Commit {
+          history(first: $first, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              additions
+              deletions
+              parents { totalCount }
+              author { user { login avatarUrl url } }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+/**
  * The token account's own public, non-fork repositories and the public
  * repositories it recently contributed commits or pull requests to (GitHub
  * keeps roughly the last year for `repositoriesContributedTo`).

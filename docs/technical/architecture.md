@@ -160,7 +160,10 @@ runs in a transaction whose PostgreSQL settings name the user, organization and 
   `tsc` only type-checks. Fastify replaced Express entirely.
 - Next.js apps compile `@workspace/shared`, `client` and `ui` from source (`transpilePackages`); the
   API consumes the built `dist/` of `@workspace/shared` (Turbo builds it first).
-- Turbo caches `build`, `lint`, `typecheck` and `test`; `dev`, `db:*` and `deps:*` are uncached.
+- Turbo caches `build`, `lint` and `typecheck` — except every task of
+  `@workspace/shared`, `@workspace/api-client` and `@workspace/messaging`, which always run. `test`,
+  `dev`, `db:*` and `deps:*` are never cached, and CI keeps no cache between runs
+  ([CI → Caching](./operations/ci.md#caching)).
 
 ## Related
 

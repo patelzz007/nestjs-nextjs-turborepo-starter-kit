@@ -32857,7 +32857,7 @@
     },
     "/api/v1/github/repositories/{owner}/{repository}/contributors": {
       "get": {
-        "description": "GitHub computes these in the background: `{ status: \"computing\" }` means ask again in a few seconds. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.",
+        "description": "From GitHub's contributor statistics (`basis.kind: \"statistics\"`, the whole default branch). GitHub recomputes those after every push; until they are ready the API counts the default branch's latest commits itself, at most 1,000 (`basis.kind: \"history\"`, `complete` when that is all of them). Merge commits and commits by authors without a GitHub account are credited to no one. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.",
         "operationId": "GithubController_getContributorStats",
         "parameters": [
           {
@@ -32896,86 +32896,111 @@
                 "schema": {
                   "properties": {
                     "data": {
-                      "oneOf": [
-                        {
-                          "properties": {
-                            "status": {
-                              "enum": [
-                                "computing"
-                              ],
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "status"
-                          ],
-                          "type": "object"
-                        },
-                        {
-                          "properties": {
-                            "contributors": {
-                              "items": {
-                                "properties": {
-                                  "additions": {
-                                    "maximum": 9007199254740991,
-                                    "minimum": 0,
-                                    "type": "integer"
-                                  },
-                                  "avatarUrl": {
-                                    "format": "uri",
-                                    "nullable": true,
-                                    "type": "string"
-                                  },
-                                  "commits": {
-                                    "maximum": 9007199254740991,
-                                    "minimum": 0,
-                                    "type": "integer"
-                                  },
-                                  "deletions": {
-                                    "maximum": 9007199254740991,
-                                    "minimum": 0,
-                                    "type": "integer"
-                                  },
-                                  "htmlUrl": {
-                                    "format": "uri",
-                                    "type": "string"
-                                  },
-                                  "login": {
-                                    "description": "GitHub account login",
-                                    "example": "octocat",
-                                    "maxLength": 44,
-                                    "minLength": 1,
-                                    "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?$",
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "login",
-                                  "avatarUrl",
-                                  "htmlUrl",
-                                  "commits",
-                                  "additions",
-                                  "deletions"
-                                ],
-                                "type": "object"
+                      "properties": {
+                        "basis": {
+                          "oneOf": [
+                            {
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "statistics"
+                                  ],
+                                  "type": "string"
+                                }
                               },
-                              "maxItems": 100,
-                              "type": "array"
-                            },
-                            "status": {
-                              "enum": [
-                                "ready"
+                              "required": [
+                                "kind"
                               ],
-                              "type": "string"
+                              "type": "object"
+                            },
+                            {
+                              "properties": {
+                                "commitsCounted": {
+                                  "maximum": 1000,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "complete": {
+                                  "type": "boolean"
+                                },
+                                "kind": {
+                                  "enum": [
+                                    "history"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "commitsCounted",
+                                "complete"
+                              ],
+                              "type": "object"
                             }
+                          ]
+                        },
+                        "contributors": {
+                          "items": {
+                            "properties": {
+                              "additions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "avatarUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "commits": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "deletions": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "htmlUrl": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "login": {
+                                "description": "GitHub account login",
+                                "example": "octocat",
+                                "maxLength": 44,
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "login",
+                              "avatarUrl",
+                              "htmlUrl",
+                              "commits",
+                              "additions",
+                              "deletions"
+                            ],
+                            "type": "object"
                           },
-                          "required": [
-                            "status",
-                            "contributors"
+                          "maxItems": 100,
+                          "type": "array"
+                        },
+                        "status": {
+                          "enum": [
+                            "ready"
                           ],
-                          "type": "object"
+                          "type": "string"
                         }
-                      ]
+                      },
+                      "required": [
+                        "status",
+                        "basis",
+                        "contributors"
+                      ],
+                      "type": "object"
                     },
                     "meta": {
                       "properties": {
@@ -33016,7 +33041,7 @@
                 }
               }
             },
-            "description": "Contributor totals, or `computing` while GitHub prepares them"
+            "description": "Contributor totals, most commits first, and what they were counted from"
           },
           "4XX": {
             "content": {

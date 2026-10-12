@@ -31,9 +31,6 @@ export interface GithubResponseCacheOptions {
 	readonly maxEntries: number;
 }
 
-/** What a load produced: an answer to keep for everyone, or one only worth returning this once. */
-export type GithubLoadResult<V> = { readonly kind: "cacheable"; readonly value: V } | { readonly kind: "transient"; readonly value: V };
-
 interface CachedAnswer<V> {
 	readonly value: V;
 	readonly storedAtEpochMs: number;
@@ -51,12 +48,8 @@ export class GithubResponseCache<V> {
 		this.answers = new BoundedTtlCache<string, CachedAnswer<V>>({ maxEntries: options.maxEntries, capacityPolicy: "evict-oldest" });
 	}
 
-	/**
-	 * The answer for `key`: fresh from memory, or from `load`. A `transient`
-	 * result (GitHub still computing) is returned but not kept — and when a
-	 * previous `cacheable` answer exists, that one is returned instead.
-	 */
-	public async read(key: string, load: () => Promise<GithubLoadResult<V>>): Promise<V> {
+	/** The answer for `key`: fresh from memory, or from `load` (and then kept for everyone). */
+	public async read(key: string, load: () => Promise<V>): Promise<V> {
 		const now = this.clock.nowEpochMs();
 		const cached = this.answers.get(key, now);
 		if (cached !== null && now - cached.storedAtEpochMs < this.options.freshMs) {
@@ -73,10 +66,10 @@ export class GithubResponseCache<V> {
 		return request;
 	}
 
-	private async refresh(key: string, cached: CachedAnswer<V> | null, load: () => Promise<GithubLoadResult<V>>): Promise<V> {
-		let result: GithubLoadResult<V>;
+	private async refresh(key: string, cached: CachedAnswer<V> | null, load: () => Promise<V>): Promise<V> {
+		let value: V;
 		try {
-			result = await load();
+			value = await load();
 		} catch (error: unknown) {
 			if (cached !== null && error instanceof Error && isGithubTransientFailure(error)) {
 				this.logger.warn(`Serving the cached GitHub answer for ${key} (stored ${String(this.clock.nowEpochMs() - cached.storedAtEpochMs)} ms ago): ${error.message}`);
@@ -84,11 +77,8 @@ export class GithubResponseCache<V> {
 			}
 			throw error;
 		}
-		if (result.kind === "transient") {
-			return cached?.value ?? result.value;
-		}
 		const now = this.clock.nowEpochMs();
-		this.answers.set(key, { value: result.value, storedAtEpochMs: now }, this.options.freshMs + this.options.staleFallbackMs, now);
-		return result.value;
+		this.answers.set(key, { value, storedAtEpochMs: now }, this.options.freshMs + this.options.staleFallbackMs, now);
+		return value;
 	}
 }

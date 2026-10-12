@@ -35,7 +35,7 @@ them individually.
 | --- | --- | --- |
 | **Lint** | `turbo run lint` — zero errors **and** zero warnings in every workspace | `pnpm lint` |
 | **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**` and tool configs (`tsconfig.check.json`), and node-only `scripts/` (`tsconfig.scripts.json`) — Vitest itself never type-checks | `pnpm typecheck` |
-| **Unit tests** | `turbo run test` — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails) | `pnpm test` |
+| **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own | `pnpm test` |
 | **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm db:check-rls-manifest` |
 | **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack); `apps/mobile` has its own groups for what Expo SDK 57 pins (React 19.2, React Native, Metro, Jest 29) | `pnpm deps:check` |
@@ -125,9 +125,12 @@ The guard (`packages/tooling/scripts/check-migration-history.mjs`, rules in `scr
 
 - **pnpm store** — cached by `actions/setup-node` (`cache: pnpm`), keyed on `pnpm-lock.yaml`.
   Installs always use `--frozen-lockfile`: CI never rewrites the lockfile.
-- **Turborepo** — each turbo job restores `.turbo/cache` from the GitHub Actions cache (key per
-  job + commit, falling back to the job's latest entry). Unchanged packages replay from cache.
-  `TURBO_CACHE_MAX_AGE=7d` evicts stale entries so the restored cache cannot grow without bound.
+- **No cache between runs** — CI restores no Turborepo cache: every job runs its tasks for real,
+  so a result recorded for an earlier commit can never stand in for this one. (Within one run,
+  turbo still builds each dependency once and reuses it.) Unit tests are never cached anywhere
+  (`"cache": false` on the root `test` task), and neither is any task of `@workspace/shared`,
+  `@workspace/api-client` or `@workspace/messaging` (their own `turbo.json`), locally included:
+  everything else depends on those packages, and a stale replay of them hid real failures.
   Task hashes include each task's declared `env` (Turborepo strict env mode), so CI and local
   builds never share outputs built with different configuration.
 - Remote Caching (Vercel or self-hosted) is **not** configured. Enabling it later only needs

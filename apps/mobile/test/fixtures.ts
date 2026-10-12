@@ -205,10 +205,11 @@ export function githubCommitPageJson(items: readonly DataValue[], nextCursor: st
 	return { items: [...items], nextCursor, totalCommits: 128 };
 }
 
-/** `GET /github/repositories/:owner/:repository/contributors` once GitHub has counted them. */
-export function githubContributorsJson(logins: readonly string[] = ["octocat"]): DataValue {
+/** `GET /github/repositories/:owner/:repository/contributors`: from GitHub's statistics unless `basis` says otherwise. */
+export function githubContributorsJson(logins: readonly string[] = ["octocat"], basis: DataValue = { kind: "statistics" }): DataValue {
 	return {
 		status: "ready",
+		basis,
 		contributors: logins.map((login: string, index: number): DataValue => ({
 			login,
 			avatarUrl: null,

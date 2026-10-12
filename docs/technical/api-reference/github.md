@@ -234,7 +234,7 @@ Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000
 
 Commits and lines added/deleted per contributor of a configured repository
 
-GitHub computes these in the background: `{ status: "computing" }` means ask again in a few seconds. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.
+From GitHub's contributor statistics (`basis.kind: "statistics"`, the whole default branch). GitHub recomputes those after every push; until they are ready the API counts the default branch's latest commits itself, at most 1,000 (`basis.kind: "history"`, `complete` when that is all of them). Merge commits and commits by authors without a GitHub account are credited to no one. 404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. 503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
@@ -247,19 +247,23 @@ GitHub computes these in the background: `{ status: "computing" }` means ask aga
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 
-**Response 200 OK** — Contributor totals, or `computing` while GitHub prepares them
+**Response 200 OK** — Contributor totals, most commits first, and what they were counted from
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.⟨shape 1⟩ status` | "computing" | yes |  |
-| `data.⟨shape 2⟩ contributors` | object[] | yes | 0–100 items |
-| `data.⟨shape 2⟩ contributors[].additions` | integer | yes |  |
-| `data.⟨shape 2⟩ contributors[].avatarUrl` | string (uri) \| null | yes |  |
-| `data.⟨shape 2⟩ contributors[].commits` | integer | yes |  |
-| `data.⟨shape 2⟩ contributors[].deletions` | integer | yes |  |
-| `data.⟨shape 2⟩ contributors[].htmlUrl` | string (uri) | yes |  |
-| `data.⟨shape 2⟩ contributors[].login` | string | yes | GitHub account login; length 1–44; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\[bot\])?$` |
-| `data.⟨shape 2⟩ status` | "ready" | yes |  |
+| `data.basis` | object | yes |  |
+| `data.basis.⟨shape 1⟩ kind` | "statistics" | yes |  |
+| `data.basis.⟨shape 2⟩ commitsCounted` | integer | yes | range 0–1000 |
+| `data.basis.⟨shape 2⟩ complete` | boolean | yes |  |
+| `data.basis.⟨shape 2⟩ kind` | "history" | yes |  |
+| `data.contributors` | object[] | yes | 0–100 items |
+| `data.contributors[].additions` | integer | yes |  |
+| `data.contributors[].avatarUrl` | string (uri) \| null | yes |  |
+| `data.contributors[].commits` | integer | yes |  |
+| `data.contributors[].deletions` | integer | yes |  |
+| `data.contributors[].htmlUrl` | string (uri) | yes |  |
+| `data.contributors[].login` | string | yes | GitHub account login; length 1–44; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\[bot\])?$` |
+| `data.status` | "ready" | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

@@ -7,7 +7,17 @@ import { GithubCommitNotFoundError, GithubRepositoryNotConfiguredError, GithubUn
 import { GithubApiClient } from "./github-api.client";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { GITHUB_CLOCK, GithubContributionsService } from "./github-contributions.service";
-import { SHA_A, commitDetailWire, commitHistory, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
+import {
+	SHA_A,
+	commitDetailWire,
+	commitHistory,
+	contributionCommit,
+	contributionHistory,
+	contributorStat,
+	repositoryNode,
+	summaryNode,
+	viewerRepositories,
+} from "./__tests__/github-wire.builders";
 
 const CACHE_TTL_MS = 60_000;
 const START = 1_800_000_000_000;
@@ -17,6 +27,7 @@ interface FakeGithubApiClient {
 	readonly fetchCommitHistory: Mock<GithubApiClient["fetchCommitHistory"]>;
 	readonly fetchCommit: Mock<GithubApiClient["fetchCommit"]>;
 	readonly fetchContributorStats: Mock<GithubApiClient["fetchContributorStats"]>;
+	readonly fetchContributionHistory: Mock<GithubApiClient["fetchContributionHistory"]>;
 	readonly fetchViewerRepositories: Mock<GithubApiClient["fetchViewerRepositories"]>;
 }
 
@@ -46,6 +57,7 @@ async function setup(github: TestEnv = CONFIGURED): Promise<Harness> {
 		fetchCommitHistory: vi.fn<GithubApiClient["fetchCommitHistory"]>(() => Promise.resolve(commitHistory())),
 		fetchCommit: vi.fn<GithubApiClient["fetchCommit"]>(() => Promise.resolve({ commit: commitDetailWire(), filesTruncated: false })),
 		fetchContributorStats: vi.fn<GithubApiClient["fetchContributorStats"]>(() => Promise.resolve({ status: "ready", stats: [contributorStat("amy", [[1, 1, 1]])] })),
+		fetchContributionHistory: vi.fn<GithubApiClient["fetchContributionHistory"]>(() => Promise.resolve(contributionHistory([contributionCommit("amy", 1, 1)]))),
 		fetchViewerRepositories: vi.fn<GithubApiClient["fetchViewerRepositories"]>(() =>
 			Promise.resolve(viewerRepositories([repositoryNode("patelzz007/Site", "2026-10-01T00:00:00Z")], [repositoryNode("vercel/next.js", "2026-09-01T00:00:00Z")])),
 		),
@@ -279,20 +291,84 @@ describe("GithubContributionsService", () => {
 			const { service, client } = await setup();
 			const repository = { owner: "octo-org", repository: "hello-world" };
 
-			expect(await service.getContributorStats(repository)).toMatchObject({ status: "ready", contributors: [{ login: "amy" }] });
+			expect(await service.getContributorStats(repository)).toMatchObject({ status: "ready", basis: { kind: "statistics" }, contributors: [{ login: "amy" }] });
 			await service.getContributorStats(repository);
 
 			expect(client.fetchContributorStats).toHaveBeenCalledTimes(1);
 		});
 
-		it("asks again on the next read while GitHub is still computing", async () => {
+		it("counts the default branch's commits itself while GitHub is still computing, page by page", async () => {
 			const { service, client } = await setup();
 			const repository = { owner: "octo-org", repository: "hello-world" };
 			client.fetchContributorStats.mockResolvedValueOnce({ status: "computing" });
+			client.fetchContributionHistory
+				.mockResolvedValueOnce(contributionHistory([contributionCommit("amy", 10, 2), contributionCommit("zed", 1, 0)], "cursor-1"))
+				.mockResolvedValueOnce(contributionHistory([contributionCommit("amy", 5, 5)]));
 
-			expect(await service.getContributorStats(repository)).toEqual({ status: "computing" });
-			expect(await service.getContributorStats(repository)).toMatchObject({ status: "ready" });
+			expect(await service.getContributorStats(repository)).toEqual({
+				status: "ready",
+				basis: { kind: "history", commitsCounted: 3, complete: true },
+				contributors: [
+					{ login: "amy", avatarUrl: "https://avatars.githubusercontent.com/amy", htmlUrl: "https://github.com/amy", commits: 2, additions: 15, deletions: 7 },
+					{ login: "zed", avatarUrl: "https://avatars.githubusercontent.com/zed", htmlUrl: "https://github.com/zed", commits: 1, additions: 1, deletions: 0 },
+				],
+			});
+			expect(client.fetchContributionHistory.mock.calls).toEqual([
+				[repository, { first: 100, after: null }],
+				[repository, { first: 100, after: "cursor-1" }],
+			]);
+		});
+
+		it("stops counting at 1,000 commits and says the count is partial", async () => {
+			const { service, client } = await setup();
+			const repository = { owner: "octo-org", repository: "hello-world" };
+			const fullPage = Array.from({ length: 100 }, () => contributionCommit("amy", 1, 0));
+			client.fetchContributorStats.mockResolvedValueOnce({ status: "computing" });
+			client.fetchContributionHistory.mockImplementation(() => Promise.resolve(contributionHistory(fullPage, "more")));
+
+			const stats = await service.getContributorStats(repository);
+
+			expect(stats.basis).toEqual({ kind: "history", commitsCounted: 1000, complete: false });
+			expect(stats.contributors).toMatchObject([{ login: "amy", commits: 1000 }]);
+			expect(client.fetchContributionHistory).toHaveBeenCalledTimes(10);
+		});
+
+		it("counts an empty repository as no contributors", async () => {
+			const { service, client } = await setup();
+			client.fetchContributorStats.mockResolvedValueOnce({ status: "computing" });
+			client.fetchContributionHistory.mockResolvedValueOnce(null);
+
+			expect(await service.getContributorStats({ owner: "octo-org", repository: "hello-world" })).toEqual({
+				status: "ready",
+				basis: { kind: "history", commitsCounted: 0, complete: true },
+				contributors: [],
+			});
+		});
+
+		it("keeps the counted totals while fresh, then asks GitHub for its statistics again", async () => {
+			const { service, client, clock } = await setup();
+			const repository = { owner: "octo-org", repository: "hello-world" };
+			client.fetchContributorStats.mockResolvedValueOnce({ status: "computing" });
+
+			expect((await service.getContributorStats(repository)).basis.kind).toBe("history");
+			await service.getContributorStats(repository);
+			clock.now += CACHE_TTL_MS;
+
+			expect((await service.getContributorStats(repository)).basis).toEqual({ kind: "statistics" });
 			expect(client.fetchContributorStats).toHaveBeenCalledTimes(2);
+			expect(client.fetchContributionHistory).toHaveBeenCalledTimes(1);
+		});
+
+		it("serves the last good totals when counting fails because GitHub is unavailable", async () => {
+			const { service, client, clock } = await setup();
+			const repository = { owner: "octo-org", repository: "hello-world" };
+
+			await service.getContributorStats(repository);
+			clock.now += CACHE_TTL_MS;
+			client.fetchContributorStats.mockResolvedValueOnce({ status: "computing" });
+			client.fetchContributionHistory.mockRejectedValueOnce(new GithubUnavailableError("timeout"));
+
+			expect(await service.getContributorStats(repository)).toMatchObject({ basis: { kind: "statistics" }, contributors: [{ login: "amy" }] });
 		});
 	});
 });

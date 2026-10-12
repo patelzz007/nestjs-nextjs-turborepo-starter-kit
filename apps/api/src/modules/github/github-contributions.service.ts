@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
+	GITHUB_CONTRIBUTORS_HISTORY_MAX_COMMITS,
 	toGithubFullName,
 	type GithubCommitDetail,
 	type GithubCommitHistoryQuery,
@@ -14,22 +15,30 @@ import {
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { GithubApiClient } from "./github-api.client";
-import { GITHUB_CACHE_MAX_ENTRIES, GITHUB_COMMIT_CACHE_MAX_ENTRIES, GITHUB_STALE_FALLBACK_MS } from "./github.constants";
+import { GITHUB_CACHE_MAX_ENTRIES, GITHUB_COMMIT_CACHE_MAX_ENTRIES, GITHUB_HISTORY_PAGE_MAX, GITHUB_STALE_FALLBACK_MS } from "./github.constants";
 import { GithubRepositoryNotConfiguredError } from "./github.errors";
 import {
 	GITHUB_INTEGRATION_OFF,
 	toCommitDetail,
 	toCommitPage,
 	toConfiguredRepositoryList,
-	toContributorStats,
 	toDiscoveredRepositoryList,
+	toHistoryContributors,
 	toRepositorySummary,
+	toStatisticsContributors,
 } from "./github.mappers";
+import type { GithubContributionCommitWire } from "./github.wire-schemas";
 import { GithubResponseCache, type GithubClock, type GithubResponseCacheOptions } from "./github-response.cache";
 
 export const GITHUB_CLOCK = Symbol("GITHUB_CLOCK");
 
 export const SYSTEM_GITHUB_CLOCK: GithubClock = { nowEpochMs: (): number => Date.now() };
+
+/** The commits contributor totals were counted from, and whether they are the whole history. */
+interface ContributionHistory {
+	readonly commits: readonly GithubContributionCommitWire[];
+	readonly complete: boolean;
+}
 
 /** The one cache key of the discovered list (it does not vary per caller). */
 const DISCOVERED_LIST_KEY = "viewer";
@@ -79,25 +88,19 @@ export class GithubContributionsService {
 		if (repositories.length > 0) {
 			return toConfiguredRepositoryList(repositories);
 		}
-		return this.discoveredLists.read(DISCOVERED_LIST_KEY, async () => ({ kind: "cacheable", value: toDiscoveredRepositoryList(await this.client.fetchViewerRepositories()) }));
+		return this.discoveredLists.read(DISCOVERED_LIST_KEY, async () => toDiscoveredRepositoryList(await this.client.fetchViewerRepositories()));
 	}
 
 	public async getRepositorySummary(requested: GithubRepositoryParams): Promise<GithubRepositorySummary> {
 		const repository = await this.resolveAllowed(requested);
-		return this.summaries.read(toGithubFullName(repository), async () => ({
-			kind: "cacheable",
-			value: toRepositorySummary(repository, await this.client.fetchRepositorySummary(repository)),
-		}));
+		return this.summaries.read(toGithubFullName(repository), async () => toRepositorySummary(repository, await this.client.fetchRepositorySummary(repository)));
 	}
 
 	/** One page of the default branch's history, newest first. */
 	public async getCommitPage(requested: GithubRepositoryParams, query: GithubCommitHistoryQuery): Promise<GithubCommitPage> {
 		const repository = await this.resolveAllowed(requested);
 		const key = `${toGithubFullName(repository)}|${String(query.limit)}|${query.cursor ?? ""}`;
-		return this.commitPages.read(key, async () => ({
-			kind: "cacheable",
-			value: toCommitPage(await this.client.fetchCommitHistory(repository, { first: query.limit, after: query.cursor ?? null })),
-		}));
+		return this.commitPages.read(key, async () => toCommitPage(await this.client.fetchCommitHistory(repository, { first: query.limit, after: query.cursor ?? null })));
 	}
 
 	/**
@@ -108,23 +111,48 @@ export class GithubContributionsService {
 	public async getCommit(requested: GithubCommitParams): Promise<GithubCommitDetail> {
 		const repository = await this.resolveAllowed(requested);
 		const commit: GithubCommitParams = { ...repository, sha: requested.sha };
-		return this.commits.read(`${toGithubFullName(repository)}@${commit.sha}`, async () => ({
-			kind: "cacheable",
-			value: toCommitDetail(await this.client.fetchCommit(commit)),
-		}));
+		return this.commits.read(`${toGithubFullName(repository)}@${commit.sha}`, async () => toCommitDetail(await this.client.fetchCommit(commit)));
 	}
 
 	/**
-	 * Per-contributor totals. `computing` is never cached: GitHub is preparing
-	 * the numbers and the next read may have them (meanwhile, the previous
-	 * `ready` answer is served when there is one).
+	 * Per-contributor totals: GitHub's statistics when it has them ready.
+	 * GitHub recomputes those after every push and answers "still computing"
+	 * (sometimes for many minutes) meanwhile — then the totals are counted from
+	 * the default branch's latest commits instead, so they never wait on GitHub.
 	 */
 	public async getContributorStats(requested: GithubRepositoryParams): Promise<GithubContributorStats> {
 		const repository = await this.resolveAllowed(requested);
 		return this.contributorStats.read(toGithubFullName(repository), async () => {
-			const stats = toContributorStats(await this.client.fetchContributorStats(repository));
-			return { kind: stats.status === "ready" ? "cacheable" : "transient", value: stats };
+			const statistics = await this.client.fetchContributorStats(repository);
+			if (statistics.status === "ready") {
+				return toStatisticsContributors(statistics.stats);
+			}
+			const { commits, complete } = await this.readContributionHistory(repository);
+			return toHistoryContributors(commits, complete);
 		});
+	}
+
+	/**
+	 * The default branch's latest commits, newest first, page by page up to
+	 * {@link GITHUB_CONTRIBUTORS_HISTORY_MAX_COMMITS}; `complete` when that is
+	 * the whole history. An empty repository has none, and is complete.
+	 */
+	private async readContributionHistory(repository: GithubRepositoryParams): Promise<ContributionHistory> {
+		const commits: GithubContributionCommitWire[] = [];
+		let after: string | null = null;
+		while (commits.length < GITHUB_CONTRIBUTORS_HISTORY_MAX_COMMITS) {
+			const first = Math.min(GITHUB_HISTORY_PAGE_MAX, GITHUB_CONTRIBUTORS_HISTORY_MAX_COMMITS - commits.length);
+			const page = await this.client.fetchContributionHistory(repository, { first, after });
+			if (page === null) {
+				return { commits, complete: true };
+			}
+			commits.push(...page.nodes);
+			if (!page.pageInfo.hasNextPage || page.pageInfo.endCursor === null) {
+				return { commits, complete: true };
+			}
+			after = page.pageInfo.endCursor;
+		}
+		return { commits, complete: false };
 	}
 
 	/** The listed repository the request names (in its listed spelling), or a 404. */

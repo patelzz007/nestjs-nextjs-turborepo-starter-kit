@@ -108,6 +108,7 @@
 			"dependsOn": ["^build", "^typecheck"]
 		},
 		"test": {
+			"cache": false,
 			"dependsOn": ["^build"],
 			"env": ["TZ"]
 		},

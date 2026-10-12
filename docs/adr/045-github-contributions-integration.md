@@ -40,8 +40,16 @@ token to 5,000 requests per hour.
   → 502.
 - **In-memory cache per instance, single flight, stale on failure.** Answers are reused for
   `GITHUB_CACHE_TTL_MS` (5 min); concurrent misses share one request; for up to one hour after that,
-  the last good answer stands in when GitHub fails. GitHub's "statistics still computing" (202) is
-  passed on as `{ status: "computing" }` and never cached.
+  the last good answer stands in when GitHub fails.
+- **Contributor totals never wait on GitHub** (amended 2026-10-12). GitHub's contributor statistics
+  are used when ready (`basis: statistics`). GitHub recomputes them after every push and answers
+  202 "still computing" meanwhile — observed for 15+ minutes on a 173-commit repository — so the
+  API then counts the default branch's latest commits itself (at most 1,000, ten GraphQL pages;
+  merge commits and commits without an account credited to no one, as GitHub does) and answers
+  `basis: history` with `commitsCounted` and `complete`. The answer is cached like any other; after
+  the cache lifetime GitHub's statistics are asked for again. Originally the 202 was passed on as
+  `{ status: "computing" }` and the app polled every 5 s, which left the section empty for as long
+  as GitHub took.
 
 ## Alternatives
 

@@ -1,6 +1,7 @@
 // One change and the lines it touched: a title, a line of context, and the
-// lines added (+) and deleted (−). Presentational and data-agnostic — the
-// caller formats the text and the counts. With `onPress` the row is a link
+// lines added (+) and deleted (−) — optionally after a leading visual (who made
+// it: an avatar). Presentational and data-agnostic — the caller formats the
+// text and the counts. With `onPress` the row is a link
 // (it opens the change elsewhere); without, it is plain text.
 
 import * as React from "react";
@@ -16,14 +17,21 @@ export interface ChangeRowProps {
 	readonly deletions: string;
 	/** Read with the counts by screen readers ("120 lines added, 30 deleted"). */
 	readonly changeSummary: string;
+	/** Drawn before the title (an avatar); decorative — the label already names the change. */
+	readonly leading?: React.ReactNode;
 	readonly onPress?: () => void;
 	readonly accessibilityHint?: string;
 	readonly testID?: string;
 }
 
-export function ChangeRow({ title, meta, additions, deletions, changeSummary, onPress, accessibilityHint, testID }: ChangeRowProps): React.JSX.Element {
+export function ChangeRow({ title, meta, additions, deletions, changeSummary, leading, onPress, accessibilityHint, testID }: ChangeRowProps): React.JSX.Element {
 	const content = (
 		<>
+			{leading === undefined ? null : (
+				<View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+					{leading}
+				</View>
+			)}
 			<View className="flex-1 gap-0.5">
 				<Text className="font-sans-medium text-base text-foreground" numberOfLines={2}>
 					{title}

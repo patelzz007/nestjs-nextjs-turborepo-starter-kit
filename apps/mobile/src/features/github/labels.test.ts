@@ -24,6 +24,7 @@ import {
 	commitAuthorName,
 	commitBody,
 	commitMeta,
+	contributorBasisNote,
 	commitScreenTitle,
 	committedLabel,
 	fileStatusLabel,
@@ -33,12 +34,13 @@ import {
 	contributorMeta,
 	countOf,
 	formatCount,
-	languageItems,
+	languageShares,
 	lastPushLabel,
 	repositoryDescription,
 	repositoryListDescription,
 	summaryTiles,
 } from "./labels";
+import { languageLogoOf } from "./language-logos";
 
 const SUMMARY = GithubRepositorySummarySchema.parse(githubSummaryJson());
 
@@ -63,10 +65,24 @@ describe("GitHub contribution labels", () => {
 		]);
 	});
 
-	it("lists each language's share", () => {
-		expect(languageItems(SUMMARY.languages)).toEqual([
-			{ label: "TypeScript", value: "75%" },
-			{ label: "CSS", value: "25%" },
+	it("lists each language's share with its colours and logo", () => {
+		expect(languageShares(SUMMARY.languages)).toEqual([
+			{
+				name: "TypeScript",
+				percent: 75,
+				percentLabel: "75%",
+				color: "#3178c6",
+				tint: "#3178c629",
+				logoPath: languageLogoOf("TypeScript")?.path,
+				monogram: "Ty",
+			},
+			{ name: "CSS", percent: 25, percentLabel: "25%", color: "#663399", tint: "#66339929", logoPath: languageLogoOf("CSS")?.path, monogram: "CS" },
+		]);
+	});
+
+	it("draws a language without a logo as a monogram, and without a colour on the muted surface", () => {
+		expect(languageShares([{ name: "C#", color: null, bytes: 10, percent: 100 }])).toEqual([
+			{ name: "C#", percent: 100, percentLabel: "100%", color: null, tint: null, logoPath: null, monogram: "C#" },
 		]);
 	});
 
@@ -86,8 +102,16 @@ describe("GitHub contribution labels", () => {
 
 	it("counts a contributor's commits", () => {
 		const stats = GithubContributorStatsSchema.parse(githubContributorsJson(["octocat", "amy"]));
-		const commits = stats.status === "ready" ? stats.contributors.map(contributorMeta) : [];
+		const commits = stats.contributors.map(contributorMeta);
 		expect(commits).toEqual(["2 commits", "1 commit"]);
+	});
+
+	it("notes contributors counted from the latest commits only, and nothing for whole-history totals", () => {
+		expect(contributorBasisNote({ kind: "history", commitsCounted: 1000, complete: false })).toBe(
+			"Counted from the latest 1,000 commits while GitHub prepares its full statistics.",
+		);
+		expect(contributorBasisNote({ kind: "history", commitsCounted: 173, complete: true })).toBeNull();
+		expect(contributorBasisNote({ kind: "statistics" })).toBeNull();
 	});
 
 	it("spells out the line counts for screen readers", () => {

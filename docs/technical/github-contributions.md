@@ -64,7 +64,7 @@ Every route is `GET`, read-only (so no audit entry), and needs `READ:GITHUB`. Th
 | `/github/repositories/:owner/:repository` | Stars, forks, watchers, open issues, commit count of the default branch, last push, up to 10 languages with their share | Same — and the repository must be in the allowlist (404 otherwise) |
 | `/github/repositories/:owner/:repository/commits?cursor=&limit=` | One page (1–50, default 20) of the default branch's history, newest first: headline, author, time, **lines added / deleted**, files changed; `nextCursor` for the next page | Same |
 | `/github/repositories/:owner/:repository/commits/:sha` | One commit (full 40-character SHA): the whole message, author, parents, total lines added / deleted, and up to 100 changed files, each with its status (`added`, `removed`, `modified`, `renamed`, …), previous path after a rename, line counts and **diff** — a unified `patch` (hunks only), or `too-large` / `unavailable`; `filesTruncated` when the commit changed more files | Same; any commit of a listed repository may be read (it is as public as the repository) |
-| `/github/repositories/:owner/:repository/contributors` | `{ status: "ready", contributors }` — per contributor: commits, lines added, lines deleted, most commits first — or `{ status: "computing" }` | Same |
+| `/github/repositories/:owner/:repository/contributors` | `{ status: "ready", basis, contributors }` — per contributor: commits, lines added, lines deleted, most commits first. `basis` says what they were counted from: GitHub's statistics (`statistics`), or — while GitHub is recomputing those after a push — the API's own count of the default branch's latest commits (`history`, at most 1,000, with `commitsCounted` and `complete`) | Same |
 
 `READ:GITHUB` is a **GLOBAL** grant on the `User` role, the one exception to "every customer grant
 is OWN-scoped": the repositories are shared configuration that no user owns, so OWN scope has
@@ -86,7 +86,7 @@ proxy to every repository the token can see.
 | GitHub rejects the token, errors, or answers in an unexpected shape | Same fallback; otherwise **502** `EXTERNAL_SERVICE_ERROR` (the cause is logged, never sent) |
 | GitHub no longer shows the repository to the token | **404** — never replaced by a stale answer |
 | The repository has no commit with that SHA (GitHub's `404` / `422`) | **404** `This commit could not be found on GitHub.` — never replaced by a stale answer |
-| Contributor statistics not computed yet (GitHub's `202`) | `{ status: "computing" }`, not cached; the previous `ready` answer is served when there is one |
+| Contributor statistics not computed yet (GitHub's `202` — after every push, sometimes for many minutes) | Totals counted from the default branch's latest commits (up to 10 GraphQL pages of 100), `basis: history`, cached like any answer; GitHub's statistics are asked for again once it expires |
 
 Decisions per [rules/12](../../rules/12-observability-and-operations.md#for-every-external-dependency-decide-explicitly):
 
@@ -111,10 +111,15 @@ Decisions per [rules/12](../../rules/12-observability-and-operations.md#for-ever
   more than 8. A discovered list is headed "Public repositories of @login".
 - **Pull to refresh** on Profile reloads the section too (`refreshGithubContributions`: every GitHub
   query key is nested under the list's scope). The API may still answer from its own cache.
-- **Summary**: description, tiles for commits / stars / forks / open issues, languages with their
-  share, "Last push 2 hours ago".
+- **Summary**: description, tiles for commits / stars / forks / open issues, "Last push 2 hours
+  ago", and the **languages** as GitHub draws them: one bar split by share in each language's GitHub
+  colour, then a row per language with its **logo** (on a soft tint of that colour), name and share.
+  The logos are Simple Icons glyphs (CC0) bundled in `features/github/language-logos.ts` — about 50
+  common languages, never fetched at runtime; a language without one (C#, PowerShell) shows a
+  two-letter monogram. `language-logos.test.ts` checks every path against the pinned
+  `simple-icons` devDependency; to add a language, map its GitHub name to a slug there.
 - **Top contributors**: the five with most commits (then "Show all N contributors"), each with
-  `+added −deleted`. While GitHub is computing, a short note, and the query asks again every 5 s.
+  their GitHub **avatar** (initials when GitHub has no picture) and `+added −deleted`. When the totals were counted from the latest 1,000 commits only, a note says so ("Counted from the latest 1,000 commits while GitHub prepares its full statistics.").
 - **Recent commits**: 10 per page with `+added −deleted` and files changed; "Show older commits"
   loads the next page by its cursor. Each page is its own query, so loaded pages stay cached.
 - Tapping a **contributor** opens their GitHub profile (`Linking.openURL`).
@@ -147,7 +152,7 @@ Each part loads, fails and retries on its own; a failure shows the API's message
 | API | `apps/api/src/modules/github/` — controller, service (allowlist + caches), `GithubApiClient` (the only code that calls GitHub), wire schemas, GraphQL documents, mappers, errors |
 | Config | `GithubConfig` in `apps/api/src/config/api-config.schema.ts` |
 | Client | `apiRouter.github.*` in `packages/api-client/src/router.ts` |
-| Mobile | `features/github/` (section, commit screen, diff parsing, labels, refresh), `app/(app)/profile/` (stack, commit route), `components/select-field.tsx`, `components/change-row.tsx`, `components/stat-tiles.tsx`, `components/changed-file.tsx`, `components/diff-view.tsx`, `components/diff-stat.tsx` |
+| Mobile | `features/github/` (section, commit screen, diff parsing, labels, refresh), `app/(app)/profile/` (stack, commit route), `components/select-field.tsx`, `components/change-row.tsx`, `components/stat-tiles.tsx`, `components/changed-file.tsx`, `components/diff-view.tsx`, `components/diff-stat.tsx`, `components/language-breakdown.tsx`, `components/language-logo.tsx` |
 
 ## 6. Known limits and next steps
 

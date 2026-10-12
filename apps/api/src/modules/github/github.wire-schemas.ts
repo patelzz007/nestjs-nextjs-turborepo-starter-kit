@@ -108,6 +108,38 @@ export const GithubCommitHistoryResponseWireSchema = z.object({
 
 export type GithubCommitHistoryResponseWire = z.output<typeof GithubCommitHistoryResponseWireSchema>;
 
+// ── Contribution history (GraphQL) ─────────────────────────────────────────
+
+/** One commit as contribution totals count it. `author.user` is `null` when its email maps to no GitHub account. */
+export const GithubContributionCommitWireSchema = z.object({
+	additions: z.number().int().nonnegative(),
+	deletions: z.number().int().nonnegative(),
+	parents: TotalCountWireSchema,
+	author: z.object({ user: z.object({ login: z.string(), avatarUrl: z.url(), url: z.url() }).nullable() }).nullable(),
+});
+
+export type GithubContributionCommitWire = z.output<typeof GithubContributionCommitWireSchema>;
+
+export const GithubContributionHistoryWireSchema = z.object({
+	pageInfo: z.object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() }),
+	nodes: z.array(GithubContributionCommitWireSchema),
+});
+
+export type GithubContributionHistoryWire = z.output<typeof GithubContributionHistoryWireSchema>;
+
+export const GithubContributionHistoryResponseWireSchema = z.object({
+	data: z
+		.object({
+			repository: z
+				.object({
+					defaultBranchRef: z.object({ target: z.object({ history: GithubContributionHistoryWireSchema.optional() }).nullable() }).nullable(),
+				})
+				.nullable(),
+		})
+		.nullish(),
+	errors: GraphqlErrorsWireSchema.optional(),
+});
+
 // ── The token account's repositories (GraphQL) ──────────────────────────────
 
 export const GithubRepositoryNodeWireSchema = z.object({

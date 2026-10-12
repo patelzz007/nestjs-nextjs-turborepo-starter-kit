@@ -294,8 +294,8 @@ cd apps/web && pnpm typecheck
 cd packages/shared && pnpm typecheck
 ```
 
-> [!NOTE] Turbo caching is disabled (`"cache": false` in `turbo.json`), so typecheck always
-> runs fresh.
+> [!NOTE] Turbo never caches `@workspace/shared`'s tasks (`"cache": false` in
+> `packages/shared/turbo.json`), so its typecheck always runs fresh.
 
 ---
 

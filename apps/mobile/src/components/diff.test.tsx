@@ -3,7 +3,7 @@ import FileDiffIcon from "lucide-react-native/icons/file-diff";
 import * as React from "react";
 import { Text } from "react-native";
 
-import { Avatar } from "./avatar";
+import { Avatar, type AvatarSize } from "./avatar";
 import { ChangedFile } from "./changed-file";
 import { DiffStat } from "./diff-stat";
 import { DiffView, type DiffLine } from "./diff-view";
@@ -98,10 +98,18 @@ describe("ChangedFile", () => {
 	});
 });
 
+const INLINE_AVATAR_SIZES: readonly AvatarSize[] = ["sm", "md"];
+
 describe("Avatar sizes", () => {
-	it("draws a small avatar's initials too", async () => {
-		await render(<Avatar name="Octo Cat" imageUrl={null} size="sm" />);
+	it.each(INLINE_AVATAR_SIZES)("draws a %s avatar's initials too", async (size: AvatarSize) => {
+		await render(<Avatar name="Octo Cat" imageUrl={null} size={size} />);
 
 		expect(screen.getByLabelText("Octo Cat's initials")).toHaveTextContent("OC");
+	});
+
+	it("draws a list row's avatar picture at 32 pt", async () => {
+		await render(<Avatar name="octocat" imageUrl="https://avatars.githubusercontent.com/u/1" size="md" />);
+
+		expect(screen.getByLabelText("octocat's profile picture")).toHaveProp("width", 32);
 	});
 });

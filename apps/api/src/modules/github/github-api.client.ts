@@ -38,15 +38,23 @@ import {
 	repositoryTarget,
 	type GithubReadTarget,
 } from "./github.errors";
-import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_SUMMARY_LANGUAGES_REQUESTED, GITHUB_VIEWER_REPOSITORIES_QUERY } from "./github.queries";
+import {
+	GITHUB_COMMIT_HISTORY_QUERY,
+	GITHUB_CONTRIBUTION_HISTORY_QUERY,
+	GITHUB_REPOSITORY_SUMMARY_QUERY,
+	GITHUB_SUMMARY_LANGUAGES_REQUESTED,
+	GITHUB_VIEWER_REPOSITORIES_QUERY,
+} from "./github.queries";
 import {
 	GithubCommitDetailWireSchema,
 	GithubCommitHistoryResponseWireSchema,
+	GithubContributionHistoryResponseWireSchema,
 	GithubContributorStatsWireSchema,
 	GithubRepositorySummaryResponseWireSchema,
 	GithubViewerRepositoriesResponseWireSchema,
 	type GithubCommitDetailWire,
 	type GithubCommitHistoryWire,
+	type GithubContributionHistoryWire,
 	type GithubContributorStatWire,
 	type GithubGraphqlEnvelopeWire,
 	type GithubRepositorySummaryNodeWire,
@@ -148,6 +156,24 @@ export class GithubApiClient {
 		const response = await this.send(`${GITHUB_REST_API_URL}${path}?${query.toString()}`, { method: "GET" }, target);
 		const filesTruncated = response.headers.get(GITHUB_LINK_HEADER)?.includes(NEXT_PAGE_RELATION) ?? false;
 		return { commit: await this.parseBody(response, GithubCommitDetailWireSchema, target), filesTruncated };
+	}
+
+	/**
+	 * One page of the default branch's history with what contribution totals
+	 * need per commit; `null` for an empty repository (no default branch yet).
+	 */
+	public async fetchContributionHistory(params: GithubRepositoryParams, page: GithubCommitHistoryRequest): Promise<GithubContributionHistoryWire | null> {
+		const envelope = await this.graphql(GithubContributionHistoryResponseWireSchema, GITHUB_CONTRIBUTION_HISTORY_QUERY, repositoryTarget(params), {
+			owner: params.owner,
+			name: params.repository,
+			first: page.first,
+			after: page.after,
+		});
+		const repository = envelope.data?.repository ?? null;
+		if (repository === null) {
+			throw new GithubRepositoryNotFoundError(params);
+		}
+		return repository.defaultBranchRef?.target?.history ?? null;
 	}
 
 	/**

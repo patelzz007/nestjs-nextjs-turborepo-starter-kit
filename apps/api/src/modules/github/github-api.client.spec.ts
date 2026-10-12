@@ -5,9 +5,19 @@ import { z } from "zod";
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { GITHUB_GRAPHQL_API_URL, GITHUB_REST_API_URL, GITHUB_REST_API_VERSION } from "./github.constants";
 import { GithubCommitNotFoundError, GithubRepositoryNotFoundError, GithubResponseError, GithubUnavailableError } from "./github.errors";
-import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_VIEWER_REPOSITORIES_QUERY } from "./github.queries";
+import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_CONTRIBUTION_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_VIEWER_REPOSITORIES_QUERY } from "./github.queries";
 import { GithubApiClient, type GithubFetch } from "./github-api.client";
-import { SHA_A, commitDetailWire, commitHistory, contributorStat, repositoryNode, summaryNode, viewerRepositories } from "./__tests__/github-wire.builders";
+import {
+	SHA_A,
+	commitDetailWire,
+	commitHistory,
+	contributionCommit,
+	contributionHistory,
+	contributorStat,
+	repositoryNode,
+	summaryNode,
+	viewerRepositories,
+} from "./__tests__/github-wire.builders";
 
 const TOKEN = "github_pat_test_read_only";
 const TIMEOUT_MS = 1_234;
@@ -183,6 +193,31 @@ describe("GithubApiClient", () => {
 			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ data: { repository: null } })));
 
 			await expect(client(fetchGithub).fetchCommitHistory(REPOSITORY, { first: 20, after: null })).rejects.toBeInstanceOf(GithubRepositoryNotFoundError);
+		});
+	});
+
+	describe("fetchContributionHistory", () => {
+		it("asks for the page after the cursor and returns the default branch's history", async () => {
+			const history = contributionHistory([contributionCommit("amy", 3, 1), contributionCommit(null, 1, 1, 2)], "cursor-2");
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ data: { repository: { defaultBranchRef: { target: { history } } } } })));
+
+			expect(await client(fetchGithub).fetchContributionHistory(REPOSITORY, { first: 100, after: "cursor-1" })).toEqual(history);
+			expect(JSON.parse(z.string().parse(onlyInit(fetchGithub).body))).toEqual({
+				query: GITHUB_CONTRIBUTION_HISTORY_QUERY,
+				variables: { owner: "octo-org", name: "hello-world", first: 100, after: "cursor-1" },
+			});
+		});
+
+		it("answers null for an empty repository", async () => {
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ data: { repository: { defaultBranchRef: null } } })));
+
+			expect(await client(fetchGithub).fetchContributionHistory(REPOSITORY, { first: 100, after: null })).toBeNull();
+		});
+
+		it("reports a missing repository as not found", async () => {
+			const fetchGithub = vi.fn<GithubFetch>(() => Promise.resolve(json({ data: { repository: null } })));
+
+			await expect(client(fetchGithub).fetchContributionHistory(REPOSITORY, { first: 100, after: null })).rejects.toBeInstanceOf(GithubRepositoryNotFoundError);
 		});
 	});
 

@@ -122,7 +122,8 @@ export function staticSteps({ base, noCache }) {
 	return [
 		{ id: "lint", job: "Lint", command: "pnpm", args: turbo("lint") },
 		{ id: "typecheck", job: "Typecheck", command: "pnpm", args: turbo("typecheck") },
-		{ id: "test", job: "Unit tests", command: "pnpm", args: turbo("test") },
+		// One workspace's suite at a time (docs/technical/operations/ci.md, "Unit tests").
+		{ id: "test", job: "Unit tests", command: "pnpm", args: [...turbo("test"), "--concurrency=1"] },
 		{ id: "build", job: "Build", command: "pnpm", args: turbo("build"), env: CI_BUILD_ENV },
 		{ id: "rls-manifest", job: "RLS manifest drift", command: "pnpm", args: ["--filter", "@workspace/api", "db:check-rls-manifest"] },
 		{ id: "deps", job: "Dependency consistency", command: "pnpm", args: ["turbo", "run", "deps:check"] },

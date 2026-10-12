@@ -11,12 +11,13 @@ const TONE_CLASSES: Readonly<Record<AvatarTone, { readonly circle: string; reado
 	inverse: { circle: "bg-primary-foreground", initials: "text-primary" },
 };
 
-/** `lg` heads an account (profile, drawer); `sm` sits inline with text (a commit's author). */
-export type AvatarSize = "sm" | "lg";
+/** `lg` heads an account (profile, drawer); `md` leads a list row (a contributor); `sm` sits inline with text (a commit's author). */
+export type AvatarSize = "sm" | "md" | "lg";
 
 /** Side of the avatar per size, in points, and the classes of the initials fallback. */
 const SIZES: Readonly<Record<AvatarSize, { readonly points: number; readonly circle: string; readonly initials: string }>> = {
 	sm: { points: 24, circle: "size-6", initials: "text-xs" },
+	md: { points: 32, circle: "size-8", initials: "text-sm" },
 	lg: { points: 56, circle: "size-14", initials: "text-lg" },
 };
 
