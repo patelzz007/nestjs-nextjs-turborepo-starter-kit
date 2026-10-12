@@ -1,6 +1,7 @@
-import { ApiError, UpgradeRequiredError } from "@workspace/api-client";
+import { ApiError, apiRouter, UpgradeRequiredError } from "@workspace/api-client";
 
-import { createMobileQueryClient, minimumVersionOf, shouldRetryQuery } from "./query-client";
+import { trackQueryClient } from "../../test/query-clients";
+import { clearQueryClient, createMobileQueryClient, minimumVersionOf, shouldRetryQuery } from "./query-client";
 
 function upgradeError(details?: Record<string, string>): UpgradeRequiredError {
 	return new UpgradeRequiredError({ message: "Update", error: "APP_VERSION_UNSUPPORTED", statusCode: 426 }, details === undefined ? {} : { details });
@@ -33,7 +34,7 @@ describe("shouldRetryQuery", () => {
 describe("createMobileQueryClient", () => {
 	it("reports a 426 from any query or mutation", async () => {
 		const onUpgradeRequired = jest.fn();
-		const queryClient = createMobileQueryClient({ onUpgradeRequired });
+		const queryClient = trackQueryClient(createMobileQueryClient({ onUpgradeRequired }));
 
 		await expect(
 			queryClient.query({ queryKey: ["probe"], queryFn: (): Promise<string> => Promise.reject(upgradeError({ minimumVersion: "3.0.0" })), retry: false }),
@@ -50,9 +51,45 @@ describe("createMobileQueryClient", () => {
 
 	it("ignores every other error", async () => {
 		const onUpgradeRequired = jest.fn();
-		const queryClient = createMobileQueryClient({ onUpgradeRequired });
+		const queryClient = trackQueryClient(createMobileQueryClient({ onUpgradeRequired }));
 
 		await expect(queryClient.query({ queryKey: ["probe"], queryFn: (): Promise<string> => Promise.reject(new Error("boom")), retry: false })).rejects.toThrow("boom");
 		expect(onUpgradeRequired).not.toHaveBeenCalled();
+	});
+});
+
+describe("clearQueryClient", () => {
+	const PROFILE_KEY = apiRouter.auth.profile.queryKey(undefined);
+
+	beforeEach(() => {
+		jest.useFakeTimers();
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+	});
+
+	it("drops every query and mutation and stops their timers — where clear() leaves the mutations' running", async () => {
+		const queryClient = trackQueryClient(createMobileQueryClient({ onUpgradeRequired: jest.fn() }));
+		const runMutation = (): Promise<string> =>
+			queryClient
+				.getMutationCache()
+				.build(queryClient, { mutationFn: (): Promise<string> => Promise.resolve("done") })
+				.execute(undefined);
+
+		queryClient.setQueryData(PROFILE_KEY, "cached");
+		await runMutation();
+		queryClient.clear();
+		// The library's clear() released the query's timer but not the mutation's.
+		expect(jest.getTimerCount()).toBe(1);
+		jest.clearAllTimers();
+
+		queryClient.setQueryData(PROFILE_KEY, "cached");
+		await runMutation();
+		clearQueryClient(queryClient);
+
+		expect(jest.getTimerCount()).toBe(0);
+		expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+		expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
 	});
 });

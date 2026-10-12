@@ -33,6 +33,8 @@ export interface SidebarProps {
 	readonly onSearchQueryChange: (query: string) => void;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleItem: (itemId: string) => void;
+	/** A menu or pinned link was followed — closes the branches opened by hand. */
+	readonly onFollowLink: () => void;
 	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
 	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
 	readonly pinnedItems: readonly PanelSidebarPinnedItem[];
@@ -66,6 +68,7 @@ export function AdminSidebarPanel({
 	onSearchQueryChange,
 	expandedItems,
 	onToggleItem,
+	onFollowLink,
 	onMoveSectionUp,
 	onMoveSectionDown,
 	pinnedItems,
@@ -83,6 +86,7 @@ export function AdminSidebarPanel({
 				pathname={pathname}
 				expandedItems={expandedItems}
 				onToggleExpand={onToggleItem}
+				onFollowLink={onFollowLink}
 				renderLink={renderAdminLink}
 				renderIcon={renderAdminIcon}
 				searchQuery={searchQuery}
@@ -114,6 +118,7 @@ export function AdminSidebarPanel({
 					view={view}
 					expandedItems={expandedItems}
 					onToggleExpand={onToggleItem}
+					onFollowLink={onFollowLink}
 					renderLink={renderAdminLink}
 					renderIcon={renderAdminIcon}
 					searchQuery={searchQuery}

@@ -12,7 +12,7 @@ export const MERCHANT_SIDEBAR_MENU_DATA: SidebarMenuData = SidebarMenuDataSchema
 /** Compiled menu snapshot for non-store consumers (tests, breadcrumbs). */
 export const MERCHANT_SIDEBAR_MENU: CompiledSidebarMenuData = compileMenu(MERCHANT_SIDEBAR_MENU_DATA);
 
-/** localStorage key of the merchant sidebar preferences (rail, section order, expanded branches). */
+/** localStorage key of the merchant sidebar preferences (rail and section order; manual branch expansions are session-only). */
 export const MERCHANT_SIDEBAR_STORAGE_KEY = "merchant-sidebar-state";
 
 /** Redux DevTools instance name of the merchant sidebar store. */

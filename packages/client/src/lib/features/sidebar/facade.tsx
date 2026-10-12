@@ -82,7 +82,9 @@ export function useSidebarSectionOrder(): readonly string[] | null {
 /**
  * The nav branches open on `pathname`: `autoExpandedItems` (the route's active
  * ancestors, from `buildSidebarView`) overridden by the user's manual choices
- * made on this same page. Derived on every render — nothing resets on navigation.
+ * made on this same page since the last followed sidebar link. Derived on
+ * every render; manual choices are session-only, so a reload shows only the
+ * route's branches.
  */
 export function useSidebarExpandedItems(pathname: string, autoExpandedItems: Readonly<Record<string, boolean>>): Readonly<Record<string, boolean>> {
 	const selectForPathname = React.useCallback((state: SidebarState): Readonly<Record<string, boolean>> => selectManualExpansionFor(state, pathname), [pathname]);
@@ -102,6 +104,8 @@ export interface SidebarCommands {
 	readonly moveSectionDown: (title: string, allTitles: readonly string[]) => void;
 	/** Records a manual expand/collapse of `itemId` on the page at `pathname`. */
 	readonly setItemExpanded: (pathname: string, itemId: string, expanded: boolean) => void;
+	/** A sidebar link was followed: drops every manual expand/collapse, so only the route's branches stay open. */
+	readonly resetItemExpansion: () => void;
 	readonly setSearchQuery: (query: string) => void;
 	readonly clearSearch: () => void;
 }
@@ -128,6 +132,9 @@ export function useSidebarCommands(): SidebarCommands {
 			},
 			setItemExpanded: (pathname: string, itemId: string, expanded: boolean): void => {
 				dispatch(sidebarActions.itemExpansionChanged(pathname, itemId, expanded));
+			},
+			resetItemExpansion: (): void => {
+				dispatch(sidebarActions.linkFollowed());
 			},
 			setSearchQuery: (query: string): void => {
 				dispatch(sidebarActions.searchChanged(query));

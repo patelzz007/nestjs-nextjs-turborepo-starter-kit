@@ -38,10 +38,6 @@ function withManualExpansion(current: SidebarManualExpansion | null, pathname: s
 	return { pathname, items: keepNewest(Object.fromEntries([...others, [itemId, expanded]]), MAX_MANUAL_EXPANDED_ITEMS) };
 }
 
-function restoredManualExpansion(stored: SidebarManualExpansion | null): SidebarManualExpansion | null {
-	return stored === null ? null : { pathname: stored.pathname, items: keepNewest(stored.items, MAX_MANUAL_EXPANDED_ITEMS) };
-}
-
 /** Pure sidebar state transitions — no I/O, no browser APIs. */
 export function sidebarReducer(state: SidebarState, action: SidebarAction): SidebarState {
 	switch (action.type) {
@@ -55,17 +51,15 @@ export function sidebarReducer(state: SidebarState, action: SidebarAction): Side
 			return { ...state, sectionOrder: moveInOrder(resolveOrder(state.sectionOrder, action.allTitles), action.title, action.direction) };
 		case "[ Sidebar ] Item Expansion Changed":
 			return { ...state, manualExpansion: withManualExpansion(state.manualExpansion, action.pathname, action.itemId, action.expanded) };
+		case "[ Sidebar ] Link Followed":
+			// Following a link (even to the current page) closes every branch opened by hand: only the new route's branches stay open.
+			return { ...state, manualExpansion: null };
 		case "[ Sidebar ] Search Changed":
 			return { ...state, searchQuery: action.query };
 		case "[ Sidebar ] Search Cleared":
 			return { ...state, searchQuery: "" };
 		case "[ Sidebar ] Preferences Restored":
-			return {
-				...state,
-				isOpen: action.preferences.isOpen,
-				sectionOrder: action.preferences.sectionOrder,
-				manualExpansion: restoredManualExpansion(action.preferences.manualExpansion),
-			};
+			return { ...state, isOpen: action.preferences.isOpen, sectionOrder: action.preferences.sectionOrder };
 		default:
 			return assertNever(action, "sidebar action");
 	}

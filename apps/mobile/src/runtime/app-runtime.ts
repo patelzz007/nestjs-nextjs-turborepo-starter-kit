@@ -13,7 +13,7 @@ import { createMobileApiClient, type MobileApiClient } from "../lib/api";
 import { InvalidAppVersionError } from "../lib/app-version";
 import { buildDeviceHeaders, type DeviceDetails } from "../lib/device-headers";
 import { resolveMobileEnv, type MobileEnv, type RawMobileEnv } from "../lib/env";
-import { createMobileQueryClient } from "../lib/query-client";
+import { clearQueryClient, createMobileQueryClient } from "../lib/query-client";
 import { SecureStoreTokenProvider } from "../lib/secure-store-token-provider";
 import type { ThemePreference } from "../lib/secure-store";
 import { forgetEnrollment, isEnrollmentUnchanged } from "../features/app-lock/app-lock-enrollment";
@@ -90,7 +90,7 @@ export function createAppRuntime(inputs: AppRuntimeInputs): AppRuntime {
 	});
 	const sessionStore: SessionStore = createSessionStore({
 		clearServerState: (): void => {
-			queryClient.clear();
+			clearQueryClient(queryClient);
 		},
 	});
 	const preferencesStore = createPreferencesStore({

@@ -163,7 +163,9 @@ element (`renderLink`).
 - The current page is scrolled into view once branch transitions finish (`useScrollActiveNavItem`,
   Web Animations API — no timer); `/` focuses the search (`useFocusShortcut`); the route
   announcement uses the resolved breadcrumb label.
-- Expansion state is the sidebar feature store's page-scoped `manualExpansion`
+- Expansion state is the route's branches (the current page's ancestors) plus the sidebar feature
+  store's page-scoped, session-only `manualExpansion`. Following any sidebar link clears the manual
+  choices, and a reload shows only the route's branches
   ([ADR 023](../../adr/023-client-state-feature-stores.md)). `AppPanelShell` takes `scrollResetKey`
   (the pathname) to scroll its `<main>` to the top on navigation without remounting the page.
 - Money and counts in charts and tables go through `formatMinorUnits` / `formatCount`

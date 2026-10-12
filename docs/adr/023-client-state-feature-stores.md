@@ -80,14 +80,19 @@ React.
 
      | Feature | Step | Reads | Remove on or after |
      |---|---|---|---|
-     | sidebar | 0 → 1 | `zustand/persist` envelope and the first unversioned snapshot (keeps rail + section order; drops the old unscoped expanded branches) | 2027-01-01 |
+     | sidebar | 0 → 2 | `zustand/persist` envelope and the first unversioned snapshot (keeps rail + section order; drops the old unscoped expanded branches) | 2027-01-01 |
+     | sidebar | 1 → 2 | version 1 snapshot (keeps rail + section order; drops the page-scoped `manualExpansion`, no longer persisted) | 2027-04-01 |
      | ui-preferences | 0 → 1 | bare `grid`/`list` text and the first unversioned snapshot | 2027-01-01 |
      | command palette | none | Snapshots live under a per-member key (`<key>:<memberId>`) that only version 1 ever wrote; the old unowned key is deleted, not upgraded, because its owner is unknown | — |
 
-   - **Sidebar expansion.** The sidebar stores manual expand/collapse choices for ONE page
+   - **Sidebar expansion.** The sidebar keeps manual expand/collapse choices for ONE page
      (`manualExpansion: { pathname, items }`, capped to the 20 most recently toggled). On that
      page they override route auto-expansion — so collapsing the active branch sticks — and
-     on every other page they are simply not read. Nothing resets them in an effect.
+     on every other page they are simply not read. Following a sidebar link (menu, bottom or
+     pinned — even one to the current page) dispatches `[ Sidebar ] Link Followed`, which
+     clears them, so only the new route's branches stay open. They are session-only (version 2
+     of the snapshot stores just the rail and section order): a reload shows only the route's
+     branches. Nothing resets them in an effect.
 
 5. **Placement.** The toolkit and features shared by several apps (sidebar, command palette,
    UI preferences, auth) live in `packages/client/src/lib`. A feature used by one app lives in that app's

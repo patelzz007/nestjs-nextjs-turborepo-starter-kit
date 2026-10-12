@@ -5,7 +5,7 @@ import { Text } from "react-native";
 
 import { createAppRuntime } from "../runtime/app-runtime";
 import { createDeviceAppRuntime } from "../runtime/device-runtime";
-import { markerScreen, SlotLayout, testRuntimeInputs, TEST_RAW_ENV } from "../../test/app-harness";
+import { createTestRuntime, markerScreen, SlotLayout, testRuntimeInputs, TEST_RAW_ENV } from "../../test/app-harness";
 import { memorySecureStore } from "../../test/secure-store-memory";
 import AuthLayout from "../app/(auth)/_layout";
 import ConfigErrorScreen from "../app/config-error";
@@ -45,7 +45,7 @@ describe("RootLayout", () => {
 describe("RootLayout with a valid environment", () => {
 	it("renders the app shell, which restores the session and opens sign-in", async () => {
 		memorySecureStore.seed("prefs.onboarding.completed", "true");
-		jest.mocked(createDeviceAppRuntime).mockReturnValue(createAppRuntime(testRuntimeInputs()));
+		jest.mocked(createDeviceAppRuntime).mockReturnValue(createTestRuntime());
 		const view = renderRouter(
 			{
 				_layout: RootLayout,
@@ -65,7 +65,7 @@ describe("RootLayout with a valid environment", () => {
 		// The app opens at `/`, the (app) group's Home. Signed out, the guard protects it and the
 		// router falls back to the (auth) group — a Stack of several screens with no index — which
 		// must land on sign-in, not on a sibling screen or on nothing.
-		jest.mocked(createDeviceAppRuntime).mockReturnValue(createAppRuntime(testRuntimeInputs()));
+		jest.mocked(createDeviceAppRuntime).mockReturnValue(createTestRuntime());
 		const view = renderRouter(
 			{
 				_layout: RootLayout,

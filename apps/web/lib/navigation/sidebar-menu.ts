@@ -19,7 +19,7 @@ export const USER_SIDEBAR_MENU_DATA: SidebarMenuData = applyWebRouteAuthorizatio
 /** Compiled menu snapshot for non-store consumers (tests, breadcrumbs). */
 export const USER_SIDEBAR_MENU: CompiledSidebarMenuData = compileMenu(USER_SIDEBAR_MENU_DATA);
 
-/** localStorage key of the web sidebar preferences (rail, section order, expanded branches). */
+/** localStorage key of the web sidebar preferences (rail and section order; manual branch expansions are session-only). */
 export const WEB_SIDEBAR_STORAGE_KEY = "web-sidebar-state";
 
 /** Redux DevTools instance name of the web sidebar store. */

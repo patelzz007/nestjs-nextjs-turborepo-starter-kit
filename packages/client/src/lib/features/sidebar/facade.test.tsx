@@ -65,17 +65,33 @@ describe("sidebar facade", () => {
 		expect(result.current).toBe(first);
 	});
 
-	it("restores saved preferences after mount and saves changes back", () => {
-		const saved = { isOpen: false, sectionOrder: null, manualExpansion: { pathname: PATHNAME, items: { wallet: true } } };
-		window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, snapshot: saved }));
+	it("restores saved preferences after mount and saves changes back — never the manual expansions", () => {
+		const saved = { isOpen: false, sectionOrder: ["Rewards"] };
+		window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 2, snapshot: saved }));
 
 		const { result } = renderHook(useSidebarProbe, { wrapper });
-		expect(result.current).toMatchObject({ isOpen: false, expandedItems: { rewards: true, wallet: true } });
+		expect(result.current).toMatchObject({ isOpen: false, expandedItems: { rewards: true } });
 
 		act(() => {
 			result.current.commands.open();
+			result.current.commands.setItemExpanded(PATHNAME, "wallet", true);
 		});
-		expect(window.localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify({ schemaVersion: 1, snapshot: { ...saved, isOpen: true } }));
+		expect(window.localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify({ schemaVersion: 2, snapshot: { ...saved, isOpen: true } }));
+	});
+
+	it("closes the branches opened by hand when a link is followed, keeping the route's", () => {
+		const { result } = renderHook(useSidebarProbe, { wrapper });
+
+		act(() => {
+			result.current.commands.setItemExpanded(PATHNAME, "wallet", true);
+			result.current.commands.setItemExpanded(PATHNAME, "rewards", false);
+		});
+		expect(result.current.expandedItems).toEqual({ rewards: false, wallet: true });
+
+		act(() => {
+			result.current.commands.resetItemExpansion();
+		});
+		expect(result.current.expandedItems).toEqual(AUTO_EXPANDED);
 	});
 
 	it("applies a page's manual choices on that page only — navigation needs no reset", () => {

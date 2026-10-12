@@ -1,8 +1,8 @@
 import { apiRouter, ApiError } from "@workspace/api-client";
 import { epochMs, OwnProfileSchema, type Envelope, type OwnProfile } from "@workspace/shared";
-import { QueryClient } from "@tanstack/react-query";
 
 import { profileJson } from "../../../test/fixtures";
+import { createTestQueryClient } from "../../../test/query-clients";
 import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError } from "./own-profile-cache";
 
 function envelope(version: number): Envelope<OwnProfile> {
@@ -11,7 +11,7 @@ function envelope(version: number): Envelope<OwnProfile> {
 
 describe("own profile cache", () => {
 	it("stores the updated profile and refetches /auth/me", async () => {
-		const queryClient = new QueryClient();
+		const queryClient = createTestQueryClient();
 		const invalidate = jest.spyOn(queryClient, "invalidateQueries");
 
 		await applyOwnProfileUpdated(queryClient, envelope(4));
@@ -21,7 +21,7 @@ describe("own profile cache", () => {
 	});
 
 	it("reloads the profile after a stale-version refusal only", async () => {
-		const queryClient = new QueryClient();
+		const queryClient = createTestQueryClient();
 		const invalidate = jest.spyOn(queryClient, "invalidateQueries");
 		const conflict = new ApiError({ message: "Changed", error: "CONFLICT", statusCode: 409 });
 

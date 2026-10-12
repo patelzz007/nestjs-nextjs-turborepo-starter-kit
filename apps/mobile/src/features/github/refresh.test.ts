@@ -1,11 +1,11 @@
 import { apiRouter } from "@workspace/api-client";
-import { QueryClient } from "@tanstack/react-query";
 
+import { createTestQueryClient } from "../../../test/query-clients";
 import { refreshGithubContributions } from "./refresh";
 
 describe("refreshGithubContributions", () => {
 	it("marks the repository list and every repository view stale, and nothing else", async () => {
-		const queryClient = new QueryClient();
+		const queryClient = createTestQueryClient();
 		const params = { owner: "patelzz007", repository: "site" };
 		const github = [
 			apiRouter.github.repositories.queryKey(undefined),
@@ -22,6 +22,5 @@ describe("refreshGithubContributions", () => {
 
 		expect(github.map((key) => queryClient.getQueryState(key)?.isInvalidated)).toEqual([true, true, true, true]);
 		expect(queryClient.getQueryState(profile)?.isInvalidated).toBe(false);
-		queryClient.clear();
 	});
 });

@@ -50,7 +50,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
 
 	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(USER_SIDEBAR_MENU, capabilities), [capabilities]);
 	const pinnedUrls = useCommandPalettePinnedUrls();
@@ -89,6 +89,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 				pathname={pathname}
 				expandedItems={expandedItems}
 				onToggleExpand={handleToggleExpand}
+				onFollowLink={resetItemExpansion}
 				renderLink={renderWebLink}
 				renderIcon={renderWebMenuIcon}
 				renderPinnedIcon={renderWebPaletteIcon}
@@ -104,6 +105,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 					view={view}
 					expandedItems={expandedItems}
 					onToggleExpand={handleToggleExpand}
+					onFollowLink={resetItemExpansion}
 					renderLink={renderWebLink}
 					renderIcon={renderWebMenuIcon}
 					searchQuery={searchQuery}

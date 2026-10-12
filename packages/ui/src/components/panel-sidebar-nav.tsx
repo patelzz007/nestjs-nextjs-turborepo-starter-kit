@@ -130,14 +130,15 @@ function useNavRowContext(
 	);
 }
 
-/** Following a link closes the mobile drawer (the desktop rail stays as it is). */
-function useCloseMobileSidebar(): () => void {
+/** Following a link tells the app (`onFollowLink`) and closes the mobile drawer (the desktop rail stays as it is). */
+function useFollowLinkHandler(onFollowLink: (() => void) | undefined): () => void {
 	const { isMobile, setOpenMobile } = useSidebarControls();
 	return React.useCallback((): void => {
+		onFollowLink?.();
 		if (isMobile) {
 			setOpenMobile(false);
 		}
-	}, [isMobile, setOpenMobile]);
+	}, [isMobile, onFollowLink, setOpenMobile]);
 }
 
 export interface PanelSidebarNavProps {
@@ -146,6 +147,8 @@ export interface PanelSidebarNavProps {
 	readonly pathname: string;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleExpand: (itemId: string) => void;
+	/** Called when a menu or pinned link is followed (e.g. to close the branches opened by hand). */
+	readonly onFollowLink?: (() => void) | undefined;
 	readonly renderLink: PanelSidebarRenderLink;
 	/** Renders a menu item's icon by name (the app's menu icon map). */
 	readonly renderIcon: PanelSidebarRenderIcon;
@@ -179,6 +182,7 @@ export const PanelSidebarNav = React.forwardRef<HTMLDivElement, PanelSidebarNavP
 		pathname,
 		expandedItems,
 		onToggleExpand,
+		onFollowLink,
 		renderLink,
 		renderIcon,
 		renderPinnedIcon,
@@ -194,7 +198,7 @@ export const PanelSidebarNav = React.forwardRef<HTMLDivElement, PanelSidebarNavP
 	ref,
 ): React.JSX.Element {
 	const labels = useUiKitLabels("panelSidebarNav", labelsOverride);
-	const closeMobileSidebar = useCloseMobileSidebar();
+	const handleFollowLink = useFollowLinkHandler(onFollowLink);
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const containerRef = React.useRef<HTMLDivElement>(null);
 	const setContainerRef = React.useMemo(() => mergeRefs(containerRef, ref), [ref]);
@@ -206,7 +210,7 @@ export const PanelSidebarNav = React.forwardRef<HTMLDivElement, PanelSidebarNavP
 		view,
 		expandedItems,
 		onToggleExpand,
-		closeMobileSidebar,
+		handleFollowLink,
 		renderLink,
 		renderIcon,
 		searchQuery,
@@ -289,6 +293,8 @@ export interface PanelSidebarFooterNavProps {
 	readonly view: SidebarView;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleExpand: (itemId: string) => void;
+	/** Called when a menu link is followed (e.g. to close the branches opened by hand). */
+	readonly onFollowLink?: (() => void) | undefined;
 	readonly renderLink: PanelSidebarRenderLink;
 	readonly renderIcon: PanelSidebarRenderIcon;
 	readonly searchQuery: string;
@@ -300,16 +306,16 @@ export interface PanelSidebarFooterNavProps {
 
 /** The menu's bottom items (account pages) as a second, separately named `<nav>`; renders nothing when there are none. */
 export const PanelSidebarFooterNav = React.forwardRef<HTMLElement, PanelSidebarFooterNavProps>(function PanelSidebarFooterNav(
-	{ view, expandedItems, onToggleExpand, renderLink, renderIcon, searchQuery, labels: labelsOverride, unavailableTitle },
+	{ view, expandedItems, onToggleExpand, onFollowLink, renderLink, renderIcon, searchQuery, labels: labelsOverride, unavailableTitle },
 	ref,
 ): React.JSX.Element | null {
 	const labels = useUiKitLabels("panelSidebarNav", labelsOverride);
-	const closeMobileSidebar = useCloseMobileSidebar();
+	const handleFollowLink = useFollowLinkHandler(onFollowLink);
 	const context = useNavRowContext(
 		view,
 		expandedItems,
 		onToggleExpand,
-		closeMobileSidebar,
+		handleFollowLink,
 		renderLink,
 		renderIcon,
 		searchQuery,

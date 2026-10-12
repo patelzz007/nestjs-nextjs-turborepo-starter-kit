@@ -64,13 +64,16 @@ const SidebarStateSchema = z.object({
 	searchQuery: z.string(),
 });
 
-/** What the store writes to localStorage (version 1) — `searchQuery` optional so tests can assert its absence. */
+/** What the store writes to localStorage (version 2) — session-only fields optional so tests can assert their absence. */
 const StoredPreferencesSchema = z.object({
-	schemaVersion: z.literal(1),
+	schemaVersion: z.literal(2),
 	snapshot: z.object({
 		isOpen: z.boolean(),
 		sectionOrder: z.array(z.string()).nullable(),
-		manualExpansion: z.object({ pathname: z.string(), items: z.record(z.string(), z.boolean()) }).nullable(),
+		manualExpansion: z
+			.object({ pathname: z.string(), items: z.record(z.string(), z.boolean()) })
+			.nullable()
+			.optional(),
 		searchQuery: z.string().optional(),
 	}),
 });
@@ -137,7 +140,7 @@ interface HarnessProps {
 function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU, status, profileMenu }: HarnessProps): React.JSX.Element {
 	const searchQuery = useSidebarSearchQuery();
 	const sectionOrder = useSidebarSectionOrder();
-	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const view: SidebarView = React.useMemo(() => buildSidebarView({ menu, pathname, sectionOrder, searchQuery }), [menu, pathname, sectionOrder, searchQuery]);
 	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
 	const handleToggleItem = React.useCallback(
@@ -161,6 +164,7 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 				onSearchQueryChange={setSearchQuery}
 				expandedItems={expandedItems}
 				onToggleItem={handleToggleItem}
+				onFollowLink={resetItemExpansion}
 				onMoveSectionUp={moveSectionUp}
 				onMoveSectionDown={moveSectionDown}
 				pinnedItems={pinnedItems}
@@ -338,13 +342,38 @@ describe("Sidebar", () => {
 		expect(expandedItems()["main-settings"]).toBe(true);
 	});
 
-	it("restores this page's manual expansions after a reload (the store restores after mount, nothing resets them)", () => {
-		const first = renderSidebar({ pathname: "/" });
+	it("closes every branch opened by hand when a link is followed, leaving only the new page's branch open", () => {
+		const { rerender } = renderSidebar({ pathname: "/" });
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		fireEvent.click(screen.getByRole("button", { name: "Docs Home" }));
+		expect(expandedItems()).toEqual({ "main-settings": true, "docs-docs-home": true });
+
+		fireEvent.click(link("Getting Started"));
+		rerender(sidebarTree({ pathname: "/docs/getting-started" }));
+
+		expect(expandedItems()).toEqual({ "docs-docs-home": true });
+		expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-expanded")).toBe("false");
+	});
+
+	it("closes branches opened by hand even when the followed link is the current page", () => {
+		renderSidebar({ pathname: "/docs/getting-started" });
+		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		expect(expandedItems()["main-settings"]).toBe(true);
+
+		fireEvent.click(link("Getting Started"));
+
+		expect(expandedItems()).toEqual({ "docs-docs-home": true });
+	});
+
+	it("shows only the route's branches after a reload — manual expansions are session-only", () => {
+		const first = renderSidebar({ pathname: "/docs/getting-started" });
+		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		fireEvent.click(screen.getByRole("button", { name: "Docs Home" }));
+		expect(expandedItems()).toEqual({ "main-settings": true, "docs-docs-home": false });
 		first.unmount();
 
-		renderSidebar({ pathname: "/" });
-		expect(expandedItems()["main-settings"]).toBe(true);
+		renderSidebar({ pathname: "/docs/getting-started" });
+		expect(expandedItems()).toEqual({ "docs-docs-home": true });
 	});
 
 	it("renders a disabled parent as an unavailable row that does not toggle", () => {
@@ -516,15 +545,27 @@ describe("Sidebar preferences persistence", () => {
 		expect(readSidebarState()).toEqual({ isOpen: false, sectionOrder: ["Docs", "Main"], expandedItems: {}, searchQuery: "" });
 	});
 
+	it("migrates a version 1 snapshot — keeping the rail and section order, dropping its manual expansions", () => {
+		localStorage.setItem(
+			ADMIN_SIDEBAR_STORAGE_KEY,
+			JSON.stringify({ schemaVersion: 1, snapshot: { isOpen: false, sectionOrder: ["Docs", "Main"], manualExpansion: { pathname: "/", items: { "main-settings": true } } } }),
+		);
+
+		renderSidebar({ pathname: "/" });
+
+		expect(readSidebarState()).toEqual({ isOpen: false, sectionOrder: ["Docs", "Main"], expandedItems: {}, searchQuery: "" });
+		expect(readStoredPreferences()).toEqual({ schemaVersion: 2, snapshot: { isOpen: false, sectionOrder: ["Docs", "Main"] } });
+	});
+
 	it("ignores a corrupted payload and starts from the defaults", () => {
-		localStorage.setItem(ADMIN_SIDEBAR_STORAGE_KEY, JSON.stringify({ schemaVersion: 1, snapshot: { isOpen: "nope", sectionOrder: 42, manualExpansion: null } }));
+		localStorage.setItem(ADMIN_SIDEBAR_STORAGE_KEY, JSON.stringify({ schemaVersion: 2, snapshot: { isOpen: "nope", sectionOrder: 42 } }));
 
 		renderSidebar({ pathname: "/" });
 
 		expect(readSidebarState()).toEqual({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
 	});
 
-	it("saves this page's expansions and the section order but never the search text", () => {
+	it("saves the rail and section order but never the manual expansions or the search text", () => {
 		renderSidebar({ pathname: "/" });
 
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
@@ -533,8 +574,7 @@ describe("Sidebar preferences persistence", () => {
 		expect(readSidebarState().searchQuery).toBe("security");
 
 		const stored = readStoredPreferences();
-		expect(stored.snapshot).toMatchObject({ isOpen: true, sectionOrder: ["Docs", "Main"], manualExpansion: { pathname: "/", items: { "main-settings": true } } });
-		expect(stored.snapshot).not.toHaveProperty("searchQuery");
+		expect(stored.snapshot).toEqual({ isOpen: true, sectionOrder: ["Docs", "Main"] });
 	});
 });
 

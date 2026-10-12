@@ -41,6 +41,19 @@ export function shouldRetryQuery(failureCount: number, error: Error): boolean {
 	return failureCount < MAX_QUERY_RETRIES && !isClientError(error);
 }
 
+/**
+ * Drops every cached query AND mutation and stops their garbage-collection
+ * timers. `QueryClient.clear()` destroys the queries but only drops the
+ * mutations, whose timers would keep each dropped mutation (variables,
+ * result) alive for `gcTime` — so each mutation is destroyed first.
+ */
+export function clearQueryClient(queryClient: QueryClient): void {
+	for (const mutation of queryClient.getMutationCache().getAll()) {
+		mutation.destroy();
+	}
+	queryClient.clear();
+}
+
 export interface MobileQueryClientOptions {
 	/** A request was refused with 426: the app must show the update screen. */
 	readonly onUpgradeRequired: (minimumVersion: string | null) => void;

@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { parseStoredJson, UNVERSIONED_STORAGE_FORMAT, type FeaturePersistenceOptions } from "../../state/feature-persistence";
 import { createFeatureStore, type FeatureStore } from "../../state/feature-store";
 import { sidebarActions, type SidebarAction } from "./actions";
@@ -7,7 +9,9 @@ import {
 	INITIAL_SIDEBAR_STATE,
 	LegacySidebarPreferencesSchema,
 	SIDEBAR_PREFERENCES_VERSION,
+	SIDEBAR_PREFERENCES_VERSION_1,
 	SidebarPreferencesSchema,
+	SidebarPreferencesV1Schema,
 	type SidebarPreferences,
 	type SidebarState,
 } from "./state";
@@ -28,22 +32,39 @@ export function createSidebarStore(devtoolsName: string, initialIsOpen?: boolean
 }
 
 /**
- * Unversioned data (before 2026-10) → version 1: keeps the rail and section
+ * Unversioned data (before 2026-10) → the current version: keeps the rail and section
  * order, drops the old unscoped expanded branches.
  * Removal: delete on or after 2027-01-01 (ADR 023, "Persisted formats").
  */
 function upgradeUnversionedSidebarPreferences(storedText: string): SidebarPreferences | null {
 	const legacy = parseStoredJson(storedText, LegacySidebarPreferencesSchema);
-	return legacy === null ? null : { isOpen: legacy.isOpen, sectionOrder: legacy.sectionOrder, manualExpansion: null };
+	return legacy === null ? null : { isOpen: legacy.isOpen, sectionOrder: legacy.sectionOrder };
 }
 
-/** The rail, section order and this page's manual expansions survive a reload; the search text does not. */
+/** Version 1 envelope — the snapshot is read through the version 1 schema. */
+const SidebarPreferencesV1EnvelopeSchema = z.object({ schemaVersion: z.literal(SIDEBAR_PREFERENCES_VERSION_1), snapshot: SidebarPreferencesV1Schema });
+
+/**
+ * Version 1 (2026-10) → version 2: keeps the rail and section order, drops the
+ * page-scoped manual expansions (no longer persisted — a reload shows only the
+ * route's branches).
+ * Removal: delete on or after 2027-04-01 (ADR 023, "Persisted formats").
+ */
+function upgradeVersion1SidebarPreferences(storedText: string): SidebarPreferences | null {
+	const envelope = parseStoredJson(storedText, SidebarPreferencesV1EnvelopeSchema);
+	return envelope === null ? null : { isOpen: envelope.snapshot.isOpen, sectionOrder: envelope.snapshot.sectionOrder };
+}
+
+/** The rail and section order survive a reload; the search text and manual expansions do not. */
 export function sidebarPersistence(storageKey: string): FeaturePersistenceOptions<SidebarState, SidebarAction, SidebarPreferences> {
 	return {
 		key: storageKey,
 		version: SIDEBAR_PREFERENCES_VERSION,
 		schema: SidebarPreferencesSchema,
-		migrations: [{ fromVersion: UNVERSIONED_STORAGE_FORMAT, upgrade: upgradeUnversionedSidebarPreferences }],
+		migrations: [
+			{ fromVersion: UNVERSIONED_STORAGE_FORMAT, upgrade: upgradeUnversionedSidebarPreferences },
+			{ fromVersion: SIDEBAR_PREFERENCES_VERSION_1, upgrade: upgradeVersion1SidebarPreferences },
+		],
 		select: selectPreferences,
 		restore: sidebarActions.preferencesRestored,
 	};

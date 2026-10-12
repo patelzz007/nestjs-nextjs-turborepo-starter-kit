@@ -42,6 +42,8 @@ What counts as a boundary in `apps/mobile`, and how it is faked:
 | Theme engine | `jest.mock("uniwind", …)` where a test asserts the theme |
 | Navigation | NOT mocked — screens render inside Expo Router's test router (`renderInApp` in `apps/mobile/test/app-harness.tsx`, built on `expo-router/testing-library`) with the real app runtime, stores and providers |
 
+Every TanStack Query client a mobile test creates is disposed after the test: get one from `createTestRuntime()` or `createTestQueryClient()`, or wrap any other in `trackQueryClient()` (`apps/mobile/test/query-clients.ts`). `jest.setup.ts` unmounts the rendered trees, then disposes the clients through the app's `clearQueryClient`. Never `new QueryClient()` in a test directly: an untracked client's cache timers (`gcTime`, 5 minutes) outlive the test and Jest has to force-exit its worker.
+
 Platform-neutral logic does not get a Jest test in the app: it lives in `packages/shared` / `packages/api-client` and is tested there with Vitest. Run the mobile suites with `pnpm --filter @workspace/mobile test` (which also runs `expo install --check`); they are part of `pnpm run test` like every other workspace.
 
 ## Test pyramid

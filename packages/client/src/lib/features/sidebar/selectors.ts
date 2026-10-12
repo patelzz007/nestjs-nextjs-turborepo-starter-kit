@@ -33,11 +33,14 @@ export function selectSearchQuery(state: SidebarState): string {
 	return state.searchQuery;
 }
 
-/** What is written to storage — named field by field, so the session-only search text is never persisted. */
+/**
+ * What is written to storage — named field by field, so the session-only
+ * search text and manual expansions are never persisted (a reload shows only
+ * the route's branches).
+ */
 export function selectPreferences(state: SidebarState): SidebarPreferences {
 	return {
 		isOpen: state.isOpen,
 		sectionOrder: state.sectionOrder === null ? null : [...state.sectionOrder],
-		manualExpansion: state.manualExpansion === null ? null : { pathname: state.manualExpansion.pathname, items: { ...state.manualExpansion.items } },
 	};
 }

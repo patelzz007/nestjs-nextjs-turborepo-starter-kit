@@ -4,7 +4,7 @@ import { sidebarActions } from "./actions";
 import { sidebarReducer } from "./reducer";
 import { selectPreferences, resolveExpandedItems, selectManualExpansionFor } from "./selectors";
 import { UNVERSIONED_STORAGE_FORMAT } from "../../state/feature-persistence";
-import { INITIAL_SIDEBAR_STATE, MAX_MANUAL_EXPANDED_ITEMS, SidebarPreferencesSchema, type SidebarState } from "./state";
+import { INITIAL_SIDEBAR_STATE, MAX_MANUAL_EXPANDED_ITEMS, SIDEBAR_PREFERENCES_VERSION_1, SidebarPreferencesSchema, type SidebarState } from "./state";
 import { sidebarPersistence } from "./store";
 
 const TITLES: readonly string[] = ["Rewards", "Wallet", "Insights"];
@@ -78,23 +78,27 @@ describe("sidebarReducer", () => {
 		expect(current.manualExpansion?.items["item-5"]).toBe(false);
 	});
 
+	it("drops every manual choice when a link is followed, whichever page they were made on", () => {
+		const manual = sidebarReducer(
+			sidebarReducer(state({ isOpen: false, searchQuery: "rew" }), sidebarActions.itemExpansionChanged("/p", "wallet", true)),
+			sidebarActions.itemExpansionChanged("/p", "rewards", false),
+		);
+
+		expect(sidebarReducer(manual, sidebarActions.linkFollowed())).toEqual({ ...manual, manualExpansion: null });
+		expect(sidebarReducer(state(), sidebarActions.linkFollowed()).manualExpansion).toBeNull();
+	});
+
 	it("sets and clears the search text", () => {
 		const searching = sidebarReducer(state(), sidebarActions.searchChanged("wal"));
 		expect(searching.searchQuery).toBe("wal");
 		expect(sidebarReducer(searching, sidebarActions.searchCleared()).searchQuery).toBe("");
 	});
 
-	it("restores persisted preferences without touching the session-only search, capping stored choices to the newest", () => {
-		const storedItems = Object.fromEntries(Array.from({ length: MAX_MANUAL_EXPANDED_ITEMS + 2 }, (_, index: number): [string, boolean] => [`item-${String(index)}`, true]));
-		const restored = sidebarReducer(
-			state({ searchQuery: "rew" }),
-			sidebarActions.preferencesRestored({ isOpen: false, sectionOrder: ["Wallet", "Rewards", "Insights"], manualExpansion: { pathname: "/p", items: storedItems } }),
-		);
+	it("restores persisted preferences without touching the session-only search or manual choices", () => {
+		const current = sidebarReducer(state({ searchQuery: "rew" }), sidebarActions.itemExpansionChanged("/p", "wallet", true));
+		const restored = sidebarReducer(current, sidebarActions.preferencesRestored({ isOpen: false, sectionOrder: ["Wallet", "Rewards", "Insights"] }));
 
-		expect(restored.isOpen).toBe(false);
-		expect(restored.sectionOrder).toEqual(["Wallet", "Rewards", "Insights"]);
-		expect(restored.searchQuery).toBe("rew");
-		expect(Object.keys(restored.manualExpansion?.items ?? {})).toEqual(Object.keys(storedItems).slice(2));
+		expect(restored).toEqual({ ...current, isOpen: false, sectionOrder: ["Wallet", "Rewards", "Insights"] });
 	});
 });
 
@@ -116,44 +120,47 @@ describe("expanded items on a page", () => {
 });
 
 describe("selectPreferences", () => {
-	it("persists the rail, order and this page's choices — never the search text", () => {
-		const current = sidebarReducer(state({ searchQuery: "secret" }), sidebarActions.itemExpansionChanged("/p", "wallet", true));
+	it("persists the rail and order — never the search text or the manual choices", () => {
+		const current = sidebarReducer(state({ searchQuery: "secret", sectionOrder: ["Wallet"] }), sidebarActions.itemExpansionChanged("/p", "wallet", true));
 
-		const preferences = selectPreferences(current);
-
-		expect(preferences).toEqual({ isOpen: true, sectionOrder: null, manualExpansion: { pathname: "/p", items: { wallet: true } } });
-		expect(preferences).not.toHaveProperty("searchQuery");
+		expect(selectPreferences(current)).toEqual({ isOpen: true, sectionOrder: ["Wallet"] });
 	});
 });
 
 describe("SidebarPreferencesSchema", () => {
 	it("rejects tampered values and the unversioned layouts (read only by the migration step)", () => {
-		expect(SidebarPreferencesSchema.safeParse({ isOpen: "nope", sectionOrder: 42, manualExpansion: null }).success).toBe(false);
+		expect(SidebarPreferencesSchema.safeParse({ isOpen: "nope", sectionOrder: 42 }).success).toBe(false);
 		expect(SidebarPreferencesSchema.safeParse({ state: { isOpen: false }, version: 0 }).success).toBe(false);
 	});
 });
 
 describe("sidebarPersistence migrations", () => {
-	const [unversioned] = sidebarPersistence("key").migrations;
+	const [unversioned, version1] = sidebarPersistence("key").migrations;
 
-	it("has exactly one step, from unversioned data", () => {
-		expect(sidebarPersistence("key").migrations.map((step) => step.fromVersion)).toEqual([UNVERSIONED_STORAGE_FORMAT]);
+	it("has one step from unversioned data and one from version 1", () => {
+		expect(sidebarPersistence("key").migrations.map((step) => step.fromVersion)).toEqual([UNVERSIONED_STORAGE_FORMAT, SIDEBAR_PREFERENCES_VERSION_1]);
+	});
+
+	it("upgrades a version 1 snapshot, dropping its page-scoped manual expansions", () => {
+		const stored = { schemaVersion: 1, snapshot: { isOpen: false, sectionOrder: ["Docs"], manualExpansion: { pathname: "/p", items: { wallet: true } } } };
+
+		expect(version1?.upgrade(JSON.stringify(stored))).toEqual({ isOpen: false, sectionOrder: ["Docs"] });
+		expect(version1?.upgrade(JSON.stringify({ schemaVersion: 1, snapshot: { isOpen: "nope", sectionOrder: null } }))).toBeNull();
+		expect(version1?.upgrade("not json")).toBeNull();
 	});
 
 	it("upgrades the zustand/persist envelope, filling missing fields with defaults", () => {
 		expect(unversioned?.upgrade(JSON.stringify({ state: { isOpen: false, sectionOrder: ["Docs", "Main"] }, version: 0 }))).toEqual({
 			isOpen: false,
 			sectionOrder: ["Docs", "Main"],
-			manualExpansion: null,
 		});
-		expect(unversioned?.upgrade(JSON.stringify({ state: {}, version: 0 }))).toEqual({ isOpen: true, sectionOrder: null, manualExpansion: null });
+		expect(unversioned?.upgrade(JSON.stringify({ state: {}, version: 0 }))).toEqual({ isOpen: true, sectionOrder: null });
 	});
 
 	it("upgrades the first feature store's snapshot, dropping its unscoped expanded branches", () => {
 		expect(unversioned?.upgrade(JSON.stringify({ isOpen: false, sectionOrder: null, expandedItems: { wallet: true } }))).toEqual({
 			isOpen: false,
 			sectionOrder: null,
-			manualExpansion: null,
 		});
 		expect(unversioned?.upgrade(JSON.stringify({ isOpen: "nope" }))).toBeNull();
 	});

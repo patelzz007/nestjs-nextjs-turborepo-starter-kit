@@ -69,7 +69,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
 	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
-	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
 	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, menuFilterCapabilities), [menuFilterCapabilities]);
@@ -147,6 +147,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				pathname={pathname}
 				expandedItems={expandedItems}
 				onToggleExpand={handleToggleExpand}
+				onFollowLink={resetItemExpansion}
 				renderLink={renderMerchantLink}
 				renderIcon={renderMerchantMenuIcon}
 				renderPinnedIcon={renderMerchantPaletteIcon}
@@ -211,6 +212,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 					view={view}
 					expandedItems={expandedItems}
 					onToggleExpand={handleToggleExpand}
+					onFollowLink={resetItemExpansion}
 					renderLink={renderMerchantLink}
 					renderIcon={renderMerchantMenuIcon}
 					searchQuery={searchQuery}

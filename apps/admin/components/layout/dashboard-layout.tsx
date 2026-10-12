@@ -120,7 +120,7 @@ export function DashboardLayout({
 	const { status: breadcrumbStatus } = useAdminBreadcrumb();
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const { setSearchQuery, setItemExpanded, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 	const pathname = usePathname();
 	const { capabilities, status: permissionsStatus, retry: retryPermissions } = useSessionPermissionsQuery(initialSessionPermissions);
@@ -203,6 +203,7 @@ export function DashboardLayout({
 							onSearchQueryChange={setSearchQuery}
 							expandedItems={expandedItems}
 							onToggleItem={handleToggleItem}
+							onFollowLink={resetItemExpansion}
 							onMoveSectionUp={moveSectionUp}
 							onMoveSectionDown={moveSectionDown}
 							pinnedItems={pinnedItems}

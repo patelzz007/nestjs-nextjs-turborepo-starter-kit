@@ -17,7 +17,7 @@ export const SIDEBAR_MENU_DATA: SidebarMenuData = applyMenuAuthorization(Sidebar
 /** Compiled menu snapshot for non-store consumers (tests, palette flattening). */
 export const SIDEBAR_MENU: CompiledSidebarMenuData = compileMenu(SIDEBAR_MENU_DATA);
 
-/** localStorage key of the admin sidebar preferences (rail, section order, expanded branches). */
+/** localStorage key of the admin sidebar preferences (rail and section order; manual branch expansions are session-only). */
 export const ADMIN_SIDEBAR_STORAGE_KEY = "admin-sidebar-state";
 
 /** Redux DevTools instance name of the admin sidebar store. */

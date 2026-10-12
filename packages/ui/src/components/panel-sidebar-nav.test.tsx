@@ -85,6 +85,7 @@ interface HarnessProps {
 	readonly searchQuery?: string;
 	readonly pinnedItems?: readonly PanelSidebarPinnedItem[];
 	readonly onToggleExpand?: (itemId: string) => void;
+	readonly onFollowLink?: () => void;
 	readonly onSearchQueryChange?: (query: string) => void;
 	readonly labels?: UiKitLabelsOverride<"panelSidebarNav">;
 }
@@ -95,6 +96,7 @@ function Harness({
 	searchQuery = "",
 	pinnedItems = [],
 	onToggleExpand = vi.fn(),
+	onFollowLink,
 	onSearchQueryChange = vi.fn(),
 	labels,
 }: HarnessProps): React.JSX.Element {
@@ -107,6 +109,7 @@ function Harness({
 				pathname={pathname}
 				expandedItems={merged}
 				onToggleExpand={onToggleExpand}
+				onFollowLink={onFollowLink}
 				renderLink={renderLink}
 				renderIcon={renderIcon}
 				searchQuery={searchQuery}
@@ -120,6 +123,7 @@ function Harness({
 				view={view}
 				expandedItems={merged}
 				onToggleExpand={onToggleExpand}
+				onFollowLink={onFollowLink}
 				renderLink={renderLink}
 				renderIcon={renderIcon}
 				searchQuery={searchQuery}
@@ -213,6 +217,20 @@ describe("PanelSidebarNav", () => {
 		render(<Harness pathname="/" />, { wrapper: UiKitTestProviders });
 		fireEvent.click(screen.getByRole("link", { name: "Home" }));
 		expect(mobile.setOpenMobile).not.toHaveBeenCalled();
+	});
+
+	it("tells the app when a menu, bottom or pinned link is followed — never on a branch toggle or an unavailable item", () => {
+		const onFollowLink = vi.fn<() => void>();
+		render(<Harness pathname="/settings/general" onFollowLink={onFollowLink} pinnedItems={[{ title: "Reports", url: "/reports" }]} />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		fireEvent.click(screen.getByRole("link", { name: "Billing" }));
+		expect(onFollowLink).not.toHaveBeenCalled();
+
+		fireEvent.click(screen.getByRole("link", { name: "General settings for the whole workspace" }));
+		fireEvent.click(screen.getByRole("link", { name: "Account" }));
+		fireEvent.click(screen.getByRole("link", { name: "Reports" }));
+		expect(onFollowLink).toHaveBeenCalledTimes(3);
 	});
 
 	it("renders pinned pages as links, a disabled pin as unavailable", () => {

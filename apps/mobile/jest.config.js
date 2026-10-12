@@ -14,7 +14,8 @@ module.exports = {
 		// Uniwind compiles CSS in Metro; tests render without styles.
 		"\\.css$": "<rootDir>/test/style-mock.cjs",
 	},
-	testMatch: ["<rootDir>/src/**/*.test.ts", "<rootDir>/src/**/*.test.tsx"],
+	// test/ holds the shared test helpers; their own tests live beside them.
+	testMatch: ["<rootDir>/src/**/*.test.ts", "<rootDir>/src/**/*.test.tsx", "<rootDir>/test/**/*.test.ts"],
 	clearMocks: true,
 	restoreMocks: true,
 };

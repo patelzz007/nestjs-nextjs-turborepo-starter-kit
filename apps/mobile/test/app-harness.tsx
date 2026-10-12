@@ -23,6 +23,7 @@ import type { RawMobileEnv } from "../src/lib/env";
 import type { ThemePreference } from "../src/lib/secure-store";
 import { createAppRuntime, type AppRuntimeInputs, type ReadyAppRuntime } from "../src/runtime/app-runtime";
 import { ReadyRuntimeProvider } from "../src/runtime/runtime-context";
+import { trackQueryClient } from "./query-clients";
 
 export const TEST_API_URL = "http://api.test";
 
@@ -63,6 +64,7 @@ export function createTestRuntime(overrides: TestRuntimeOverrides = {}, restored
 	if (runtime.kind !== "ready") {
 		throw new UnexpectedConfigErrorRuntime(runtime.issue.message);
 	}
+	trackQueryClient(runtime.queryClient);
 	if (restored !== null) {
 		runtime.sessionStore.dispatch(sessionActions.restored(restored));
 	}
