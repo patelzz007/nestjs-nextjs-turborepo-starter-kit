@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ApiPaginatedMetaSchema, HttpAuditLogSummarySchema, type HttpAuditLogSummary } from "@workspace/shared";
+import {
+	ApiPaginatedMetaSchema,
+	AuditTrailBackgroundEntrySchema,
+	AuditTrailRequestEntrySchema,
+	type AuditTrailBackgroundEntry,
+	type AuditTrailRequestEntry,
+} from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuditLogView from "../audit-log-table";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
-const { listQuery, detailQuery } = vi.hoisted(() => ({ listQuery: vi.fn(), detailQuery: vi.fn() }));
+const { listQuery, detailQuery, changeQuery, changesQuery } = vi.hoisted(() => ({ listQuery: vi.fn(), detailQuery: vi.fn(), changeQuery: vi.fn(), changesQuery: vi.fn() }));
 
 // The table reads its state from the address bar, as Next.js's
 // `useSearchParams` does once the History API integration has synced it.
@@ -15,7 +21,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@workspace/client/lib/auth", () => ({
-	useAuth: (): object => ({ api: { auditLogs: { list: { useQuery: listQuery }, detail: { useQuery: detailQuery } } } }),
+	useAuth: (): object => ({
+		api: {
+			auditTrail: { list: { useQuery: listQuery } },
+			auditLogs: { detail: { useQuery: detailQuery } },
+			dataChanges: { detail: { useQuery: changeQuery }, list: { useQuery: changesQuery } },
+		},
+	}),
 }));
 
 const PATH = "/audit-logs";
@@ -34,7 +46,10 @@ const META = ApiPaginatedMetaSchema.parse({
 	hasPrevious: false,
 });
 
-const ROW: HttpAuditLogSummary = HttpAuditLogSummarySchema.parse({
+const ROW: AuditTrailRequestEntry = AuditTrailRequestEntrySchema.parse({
+	kind: "REQUEST",
+	changeCount: 0,
+	changedTables: [],
 	id: RECORD_ID,
 	correlationId: "corr-1",
 	occurredAt: 1_790_000_000_000,
@@ -71,16 +86,40 @@ const ROW: HttpAuditLogSummary = HttpAuditLogSummarySchema.parse({
 	clientType: "admin",
 });
 
+const CHANGE_ID = "88888888-8888-4888-8888-888888888888";
+
+/** A background job's write: no HTTP request made it. */
+const BACKGROUND: AuditTrailBackgroundEntry = AuditTrailBackgroundEntrySchema.parse({
+	kind: "BACKGROUND",
+	id: CHANGE_ID,
+	occurredAt: 1_790_000_100_000,
+	actorKind: "SYSTEM",
+	actor: null,
+	organization: null,
+	apiKeyId: null,
+	systemOperation: "queue.email.send",
+	correlationId: "job-1",
+	databaseRole: "app_runtime",
+	operation: "UPDATE",
+	rowId: "email-1",
+	changeCount: 3,
+	changedTables: ["email_jobs", "outbox_targets"],
+});
+
 beforeEach((): void => {
 	window.history.replaceState(null, "", PATH);
 	listQuery.mockReturnValue({ data: { data: [ROW], meta: META }, isLoading: false, isFetching: false, error: null, refetch: (): Promise<void> => Promise.resolve() });
 	detailQuery.mockReturnValue({ data: undefined, isLoading: false });
+	changeQuery.mockReturnValue({ data: undefined, isLoading: false });
+	changesQuery.mockReturnValue({ data: { data: [] }, isLoading: false, isError: false });
 });
 
 afterEach((): void => {
 	cleanup();
 	listQuery.mockReset();
 	detailQuery.mockReset();
+	changeQuery.mockReset();
+	changesQuery.mockReset();
 	vi.restoreAllMocks();
 });
 
@@ -103,13 +142,10 @@ describe("AuditLogView", () => {
 	});
 
 	it("queries the URL's filters, sort and page with the audit log's page size", () => {
-		window.history.replaceState(null, "", `${PATH}?filter[outcome]=FAILED&filter[method]=PATCH&sort=-responseStatus&page=2`);
+		window.history.replaceState(null, "", `${PATH}?filter[outcome]=FAILED&filter[method]=PATCH&sort=occurredAt&page=2`);
 		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 
-		expect(listQuery).toHaveBeenLastCalledWith(
-			{ page: 2, limit: 50, sort: "-responseStatus", filter: { outcome: { eq: "FAILED" }, method: { eq: "PATCH" } } },
-			expect.anything(),
-		);
+		expect(listQuery).toHaveBeenLastCalledWith({ page: 2, limit: 50, sort: "occurredAt", filter: { outcome: { eq: "FAILED" }, method: { eq: "PATCH" } } }, expect.anything());
 		expect(screen.getByRole("combobox", { name: "Outcome" }).textContent).toContain("Failed");
 	});
 
@@ -169,6 +205,53 @@ describe("AuditLogView", () => {
 		expect(status.textContent).toBe("Loading audit log…");
 		expect(container.querySelector('[data-slot="table-skeleton"]')).not.toBeNull();
 		expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+	});
+
+	it("shows a background write in the same timeline — attributed to its job, with the rows it changed", () => {
+		listQuery.mockReturnValue({
+			data: { data: [ROW, BACKGROUND], meta: META },
+			isLoading: false,
+			isFetching: false,
+			error: null,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+
+		expect(screen.getAllByText("Database write · 3 rows").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("queue.email.send").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("email_jobs, outbox_targets").length).toBeGreaterThan(0);
+	});
+
+	it("opens a background write's row change in its own drawer (?change=)", () => {
+		listQuery.mockReturnValue({ data: { data: [BACKGROUND], meta: META }, isLoading: false, isFetching: false, error: null, refetch: (): Promise<void> => Promise.resolve() });
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+
+		const [cell] = screen.getAllByText("Database write · 3 rows");
+		fireEvent.click(cell ?? document.body);
+
+		expect(window.location.search).toBe(`?change=${CHANGE_ID}`);
+	});
+
+	it("says how many rows a request changed, and where — and nothing for a pure read", () => {
+		const writing: AuditTrailRequestEntry = { ...ROW, id: "99999999-9999-4999-8999-999999999999", changeCount: 2, changedTables: ["refresh_tokens", "users"] };
+		listQuery.mockReturnValue({
+			data: { data: [writing, ROW], meta: META },
+			isLoading: false,
+			isFetching: false,
+			error: null,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+
+		expect(screen.getAllByText("Changed 2 rows in refresh_tokens, users").length).toBeGreaterThan(0);
+		expect(screen.queryByText(/Changed 0 rows/)).toBeNull();
+	});
+
+	it("queries the source and attribution filters", () => {
+		window.history.replaceState(null, "", `${PATH}?filter[kind]=BACKGROUND&filter[actorKind]=UNATTRIBUTED`);
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+
+		expect(listQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, filter: { kind: { eq: "BACKGROUND" }, actorKind: { eq: "UNATTRIBUTED" } } }, expect.anything());
 	});
 
 	it("explains a failed load instead of showing an empty table", () => {

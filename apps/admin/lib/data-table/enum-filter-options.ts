@@ -11,6 +11,9 @@ import type {
 	AuditAuthMethod,
 	AuditHttpMethod,
 	AuditOutcome,
+	AuditTrailEntryKind,
+	DataChangeActorKind,
+	DataChangeOperation,
 	DeviceType,
 	EmailLogStatus,
 	IpAddressScope,
@@ -107,4 +110,25 @@ export const IP_ADDRESS_SCOPE_LABELS: Readonly<Record<IpAddressScope, string>> =
 	DOCUMENTATION: "Documentation range",
 	MULTICAST: "Multicast",
 	RESERVED: "Reserved",
+};
+
+export const DATA_CHANGE_OPERATION_LABELS: Readonly<Record<DataChangeOperation, string>> = {
+	INSERT: "Insert",
+	UPDATE: "Update",
+	DELETE: "Delete",
+	TRUNCATE: "Truncate",
+};
+
+/** Who a row change is attributed to (ADR 051). */
+export const DATA_CHANGE_ACTOR_KIND_LABELS: Readonly<Record<DataChangeActorKind, string>> = {
+	USER: "User",
+	API_KEY: "API key",
+	SYSTEM: "System job",
+	UNATTRIBUTED: "Unattributed",
+};
+
+/** The two kinds of audit log entry (ADR 051). */
+export const AUDIT_TRAIL_KIND_LABELS: Readonly<Record<AuditTrailEntryKind, string>> = {
+	REQUEST: "HTTP requests",
+	BACKGROUND: "Background & direct writes",
 };

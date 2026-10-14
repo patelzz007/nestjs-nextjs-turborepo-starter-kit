@@ -6,7 +6,6 @@ import { ImageCropDialog, type ImageCropSource } from "@workspace/client/lib/sto
 import { MAX_REWARD_IMAGES } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { CoverImage, type CoverImageSource } from "@workspace/ui/components/cover-image";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -14,7 +13,7 @@ import { ChevronLeft, ChevronRight, ImagePlus, X } from "lucide-react";
 import * as React from "react";
 
 /** What the merchant is told about the photos, once — the limits come from the shared upload policy. */
-const IMAGES_GUIDANCE = `Up to ${String(MAX_REWARD_IMAGES)} landscape photos of the offer — the first is the cover on every reward card. Each is cropped to 16:9 and must be at least ${String(REWARD_IMAGE_RULES.minWidth)} × ${String(REWARD_IMAGE_RULES.minHeight)} pixels (Full HD); larger photos are kept sharper, up to 4K. JPEG, PNG, WebP or AVIF.`;
+export const REWARD_IMAGES_GUIDANCE = `Up to ${String(MAX_REWARD_IMAGES)} landscape photos. The first is the cover on every reward card. Each is cropped to 16:9 and must be at least ${String(REWARD_IMAGE_RULES.minWidth)} × ${String(REWARD_IMAGE_RULES.minHeight)} pixels; JPEG, PNG, WebP or AVIF.`;
 
 type ImageItem =
 	| { readonly key: string; readonly kind: "ready"; readonly fileId: string; readonly url: string; readonly sources: readonly CoverImageSource[] }
@@ -29,7 +28,7 @@ export interface SavedRewardImage extends UploadedRewardImage {
 const CROP_DESCRIPTION =
 	"Every reward photo is landscape (16:9) and at least Full HD, so it stays sharp on every screen. Drag the photo or use the sliders to choose what shows. Zoom all the way out to show the whole photo, with a soft blur of it filling the space around it.";
 
-/** Tiles are a third of the form on wide screens, half on tablets, the full width on phones. */
+/** Tiles are a third of the form column on wide screens, half on tablets, the full width on phones. */
 const TILE_SIZES = "(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw";
 
 export interface MerchantRewardImagesFieldProps {
@@ -37,8 +36,8 @@ export interface MerchantRewardImagesFieldProps {
 	readonly organizationId: string | undefined;
 	/** The saved images in display order (editing), with their renditions, or none for a new reward. */
 	readonly initialImages: readonly SavedRewardImage[];
-	/** The ready images changed (added, removed, reordered): save their ids, in order, in the form. */
-	readonly onImagesChange: (fileIds: readonly string[]) => void;
+	/** The ready images changed (added, removed, reordered): the form saves their ids, in order; the first is the cover. */
+	readonly onImagesChange: (images: readonly SavedRewardImage[]) => void;
 	/** The form's validation message for the images (e.g. "Add at least one image"). */
 	readonly errorMessage?: string | undefined;
 	readonly disabled?: boolean;
@@ -128,15 +127,16 @@ function ImageTile({ item, index, total, disabled, onMove, onRemove }: ImageTile
 	);
 }
 
-function readyIdsOf(items: readonly ImageItem[]): readonly string[] {
-	return items.flatMap((item) => (item.kind === "ready" ? [item.fileId] : []));
+function readyImagesOf(items: readonly ImageItem[]): readonly SavedRewardImage[] {
+	return items.flatMap((item): SavedRewardImage[] => (item.kind === "ready" ? [{ fileId: item.fileId, url: item.url, sources: item.sources }] : []));
 }
 
 /**
  * The reward's photos: add several at once (picked or dropped), crop any that
  * are not 16:9, see each at once while it uploads and is checked, reorder them
  * (the first is the cover) and remove them. Uploading never changes the reward
- * by itself — the form saves the ordered `imageFileIds`.
+ * by itself — the form saves the ordered `imageFileIds`. Renders only the
+ * field's body: the editor section around it carries the visible heading.
  */
 export function MerchantRewardImagesField({
 	organizationId,
@@ -168,14 +168,15 @@ export function MerchantRewardImagesField({
 	const waitingAfterThis = Math.max(0, cropQueue.length - 1);
 
 	// The form hears about every change of the ready images after the first render (the saved images are already its value).
-	const readyKey = readyIdsOf(items).join(",");
+	const readyImages = React.useMemo((): readonly SavedRewardImage[] => readyImagesOf(items), [items]);
+	const readyKey = readyImages.map((image) => image.fileId).join(",");
 	const notifiedKey = React.useRef(readyKey);
 	React.useEffect((): void => {
 		if (readyKey !== notifiedKey.current) {
 			notifiedKey.current = readyKey;
-			onImagesChange(readyKey.length === 0 ? [] : readyKey.split(","));
+			onImagesChange(readyImages);
 		}
-	}, [onImagesChange, readyKey]);
+	}, [onImagesChange, readyImages, readyKey]);
 
 	const addNotice = React.useCallback((notice: string): void => {
 		setNotices((current) => [...current, notice]);
@@ -305,76 +306,71 @@ export function MerchantRewardImagesField({
 	);
 
 	return (
-		<Card className="border-border/80 bg-card shadow-xs">
-			<CardHeader>
-				<CardTitle>
-					<label htmlFor={inputId}>Photos</label>
-				</CardTitle>
-				<CardDescription>{IMAGES_GUIDANCE}</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-3">
-				<input
-					ref={inputRef}
-					id={inputId}
-					type="file"
-					multiple
-					accept={REWARD_IMAGE_FILE_RULES.accept}
-					className="sr-only"
-					disabled={!canAdd}
-					aria-invalid={message !== null ? true : undefined}
-					aria-describedby={message !== null ? messageId : undefined}
-					onChange={handleInputChange}
-				/>
+		<div className="space-y-3">
+			<label htmlFor={inputId} className="sr-only">
+				Photos
+			</label>
+			<input
+				ref={inputRef}
+				id={inputId}
+				type="file"
+				multiple
+				accept={REWARD_IMAGE_FILE_RULES.accept}
+				className="sr-only"
+				disabled={!canAdd}
+				aria-invalid={message !== null ? true : undefined}
+				aria-describedby={message !== null ? messageId : undefined}
+				onChange={handleInputChange}
+			/>
 
-				<ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Reward photos">
-					{items.map((item, index) => (
-						<ImageTile key={item.key} item={item} index={index} total={items.length} disabled={disabled} onMove={handleMove} onRemove={handleRemove} />
+			<ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Reward photos">
+				{items.map((item, index) => (
+					<ImageTile key={item.key} item={item} index={index} total={items.length} disabled={disabled} onMove={handleMove} onRemove={handleRemove} />
+				))}
+				{taken < MAX_REWARD_IMAGES ? (
+					<li>
+						<button
+							type="button"
+							data-slot="reward-images-dropzone"
+							data-dragging={isDragging ? true : undefined}
+							disabled={!canAdd}
+							onClick={openPicker}
+							onDragOver={handleDragOver}
+							onDragLeave={handleDragLeave}
+							onDrop={handleDrop}
+							className={cn(
+								"flex aspect-video w-full flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 text-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none",
+								message !== null ? "border-destructive/60" : "border-border",
+								isDragging ? "border-primary bg-primary/5" : "bg-muted/40 hover:border-primary/50 hover:bg-muted/60",
+							)}>
+							{readingCount > 0 ? (
+								<Spinner className="size-6 text-muted-foreground" aria-hidden="true" />
+							) : (
+								<ImagePlus className="size-6 text-muted-foreground" aria-hidden="true" />
+							)}
+							<span className="text-sm font-medium text-foreground">{items.length === 0 ? "Add photos" : "Add more photos"}</span>
+							<span className="text-xs text-muted-foreground">Click to choose, or drop photos here</span>
+							<span className="text-xs text-muted-foreground tabular-nums">{`${String(items.length)} of ${String(MAX_REWARD_IMAGES)} added`}</span>
+						</button>
+					</li>
+				) : null}
+			</ul>
+
+			<p role="status" aria-live="polite" className="sr-only">
+				{isUploading ? "Uploading photos" : null}
+			</p>
+			{notices.length > 0 ? (
+				<ul role="alert" className="space-y-1 text-sm text-destructive">
+					{notices.map((notice, index) => (
+						<li key={`${String(index)}-${notice}`}>{notice}</li>
 					))}
-					{taken < MAX_REWARD_IMAGES ? (
-						<li>
-							<button
-								type="button"
-								data-slot="reward-images-dropzone"
-								data-dragging={isDragging ? true : undefined}
-								disabled={!canAdd}
-								onClick={openPicker}
-								onDragOver={handleDragOver}
-								onDragLeave={handleDragLeave}
-								onDrop={handleDrop}
-								className={cn(
-									"flex aspect-video w-full flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 text-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none",
-									message !== null ? "border-destructive/60" : "border-border",
-									isDragging ? "border-primary bg-primary/5" : "bg-muted/40 hover:border-primary/50 hover:bg-muted/60",
-								)}>
-								{readingCount > 0 ? (
-									<Spinner className="size-6 text-muted-foreground" aria-hidden="true" />
-								) : (
-									<ImagePlus className="size-6 text-muted-foreground" aria-hidden="true" />
-								)}
-								<span className="text-sm font-medium text-foreground">{items.length === 0 ? "Add photos" : "Add more photos"}</span>
-								<span className="text-xs text-muted-foreground">Click to choose, or drop photos here</span>
-								<span className="text-xs text-muted-foreground tabular-nums">{`${String(items.length)} of ${String(MAX_REWARD_IMAGES)} added`}</span>
-							</button>
-						</li>
-					) : null}
 				</ul>
-
-				<p role="status" aria-live="polite" className="sr-only">
-					{isUploading ? "Uploading photos" : null}
+			) : null}
+			{message !== null ? (
+				<p id={messageId} role="alert" className="text-sm text-destructive">
+					{message}
 				</p>
-				{notices.length > 0 ? (
-					<ul role="alert" className="space-y-1 text-sm text-destructive">
-						{notices.map((notice, index) => (
-							<li key={`${String(index)}-${notice}`}>{notice}</li>
-						))}
-					</ul>
-				) : null}
-				{message !== null ? (
-					<p id={messageId} role="alert" className="text-sm text-destructive">
-						{message}
-					</p>
-				) : null}
-			</CardContent>
+			) : null}
 			<ImageCropDialog
 				source={currentCrop}
 				rules={REWARD_IMAGE_RULES}
@@ -385,6 +381,6 @@ export function MerchantRewardImagesField({
 				onCropped={handleCropped}
 				onSkip={finishCrop}
 			/>
-		</Card>
+		</div>
 	);
 }

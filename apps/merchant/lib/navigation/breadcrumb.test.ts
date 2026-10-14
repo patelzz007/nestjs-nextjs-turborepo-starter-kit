@@ -28,13 +28,19 @@ describe("resolveMerchantTrail", () => {
 		expect(trailOf(routes.account)).toEqual([{ label: "Account", href: undefined }]);
 	});
 
-	it("roots a reward edit page in the rewards list", () => {
-		const trail = trailOf(routes.rewards.edit("reward-1"));
-
-		// The reward id has no page of its own, so it is not a crumb.
-		expect(trail).toEqual([
+	it("roots a reward page in the rewards list", () => {
+		expect(trailOf(routes.rewards.detail("reward-1"))).toEqual([
 			{ label: "Rewards", href: undefined },
 			{ label: "My Rewards", href: routes.rewards.list },
+			{ label: "Reward", href: undefined },
+		]);
+	});
+
+	it("puts a reward's edit page under the reward, named by its page rather than the raw id", () => {
+		expect(trailOf(routes.rewards.edit("reward-1"))).toEqual([
+			{ label: "Rewards", href: undefined },
+			{ label: "My Rewards", href: routes.rewards.list },
+			{ label: "Reward", href: routes.rewards.detail("reward-1") },
 			{ label: "Edit reward", href: undefined },
 		]);
 	});

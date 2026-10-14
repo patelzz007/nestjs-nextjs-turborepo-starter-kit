@@ -1,16 +1,21 @@
 "use client";
 
-import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
-import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
-import { useActiveOrganizationId } from "@/features/tenant-context/facade";
-import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
-import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
+import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
+import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { MerchantRewardEditorLayout, RewardPageBackLink } from "@/components/rewards/merchant-reward-editor-layout";
+import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
+import type { SavedRewardImage } from "@/components/rewards/merchant-reward-images-field";
+import { MerchantRewardPreview } from "@/components/rewards/merchant-reward-preview";
+import { MerchantRewardUnavailable } from "@/components/rewards/merchant-reward-unavailable";
+import type { RewardVoucherCover } from "@/components/rewards/reward-voucher";
+import { useActiveOrganizationId, useMerchantLocation } from "@/features/tenant-context/facade";
+import { describeRewardStores } from "@/lib/rewards/presentation";
+import { upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
+import { isRewardEditable, useMerchantReward } from "@/lib/rewards/use-merchant-reward";
+import { orgRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/auth";
-import { useAuthorization } from "@workspace/client/lib/auth/can";
 import {
 	MERCHANT_CAPABILITY,
 	mapMerchantUpdateRewardFormToInput,
@@ -19,17 +24,16 @@ import {
 	type Envelope,
 	type MerchantRewardFormValues,
 	type RewardResponse,
-	type RewardType,
 } from "@workspace/shared";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { Button } from "@workspace/ui/components/button";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { orgRoutes } from "@/lib/routes";
-import { ArrowLeft, BarChart3, Loader2, Save } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 export interface MerchantEditRewardPageViewProps {
 	readonly orgSlug: string;
@@ -41,39 +45,68 @@ export interface MerchantEditRewardPageViewProps {
 	readonly initialRewards?: Envelope<RewardResponse[]> | undefined;
 }
 
-const REWARD_LOAD_FAILED_MESSAGE = "This reward could not be loaded. Try again.";
-
-function isRewardEditable(status: RewardResponse["status"]): boolean {
-	return status === "DRAFT" || status === "PENDING_REVIEW";
-}
-
-/** Reward detail route — viewing needs `merchant:view_rewards`; edit/submit need `merchant:manage_rewards`. */
+/** Edit-reward route — requires `merchant:manage_rewards` (the update endpoint); viewing a reward is its own page. */
 export function MerchantEditRewardPageView(props: MerchantEditRewardPageViewProps): React.JSX.Element {
 	return (
-		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<MerchantRewardEditorPageSkeleton mode="edit" />}>
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards} loading={<MerchantRewardEditorPageSkeleton />}>
 			<MerchantEditRewardPageContent {...props} />
 		</MerchantCapabilityGate>
 	);
 }
 
 function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
-	const { api } = useAuth();
-	const organizationId = useActiveOrganizationId();
-	const queryClient = useQueryClient();
-	const { can } = useAuthorization();
+	const state = useMerchantReward(orgSlug, rewardId, initialRewards);
+	const routes = orgRoutes(orgSlug);
 
-	// Seeded by the server and cached: no second fetch on mount (the server's answer is fresh).
-	const rewardsQuery = api.organizations.rewards.list.useQuery(
-		{ orgSlug },
-		{
-			...initialDataOption(initialRewards),
-			staleTime: REWARDS_STALE_TIME_MS,
-			retry: retryTransientFailures,
-		},
+	if (state.kind === "loading") {
+		return <MerchantRewardEditorPageSkeleton />;
+	}
+	if (state.kind !== "ready") {
+		return <MerchantRewardUnavailable state={state} rewardsHref={routes.rewards.list} />;
+	}
+	if (!isRewardEditable(state.reward.status)) {
+		return <MerchantRewardLocked orgSlug={orgSlug} reward={state.reward} />;
+	}
+	return <MerchantRewardEditForm orgSlug={orgSlug} reward={state.reward} />;
+}
+
+interface MerchantRewardEditFormProps {
+	readonly orgSlug: string;
+	readonly reward: RewardResponse;
+}
+
+/** A live or ended reward keeps its offer: say so, and lead back to the reward. */
+function MerchantRewardLocked({ orgSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
+	const detailHref = orgRoutes(orgSlug).rewards.detail(reward.id);
+	return (
+		<div className="flex flex-col gap-6">
+			<RewardPageBackLink href={detailHref} label="Back to reward" />
+			<MerchantSurfacePanel className="flex flex-col items-start gap-3 px-6 py-8">
+				<h1 className="text-xl font-semibold tracking-tight text-foreground">{"This reward can't be edited"}</h1>
+				<p className="max-w-prose text-sm text-muted-foreground">
+					{"Customers may already hold it, so its offer stays as it was published. Rewards can be edited while they're drafts or in review."}
+				</p>
+				<Link href={detailHref} className={cn(buttonVariants({ variant: "outline" }))}>
+					View reward
+				</Link>
+			</MerchantSurfacePanel>
+		</div>
 	);
-	const reward = rewardsQuery.data?.data.find((row) => row.id === rewardId);
-	const isResolvingReward = reward === undefined && (rewardsQuery.isLoading || rewardsQuery.isFetching);
-	const formValues = React.useMemo((): MerchantRewardFormValues | undefined => (reward === undefined ? undefined : mapRewardResponseToFormValues(reward)), [reward]);
+}
+
+/** The editor, mounted once the reward is known: its fields start from the saved reward. */
+function MerchantRewardEditForm({ orgSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
+	const { api } = useAuth();
+	const queryClient = useQueryClient();
+	const router = useRouter();
+	const organizationId = useActiveOrganizationId();
+	const { accessibleLocations } = useMerchantLocation();
+	const routes = orgRoutes(orgSlug);
+	const detailHref = routes.rewards.detail(reward.id);
+	// The photos as the editor holds them: the first is the cover the preview draws.
+	const [images, setImages] = React.useState<readonly RewardVoucherCover[]>(reward.images);
+	const [cover] = images;
+	const formValues = React.useMemo((): MerchantRewardFormValues => mapRewardResponseToFormValues(reward), [reward]);
 
 	const {
 		register,
@@ -85,205 +118,96 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 		resolver: zodResolver(MerchantUpdateRewardFormSchema),
 		// The form follows the server's reward (no effect + reset): a refetch updates the fields the
 		// merchant has not touched and keeps every unsaved edit.
-		...(formValues === undefined ? {} : { values: formValues }),
+		values: formValues,
 		resetOptions: { keepDirtyValues: true },
 	});
-
-	const selectedType = useWatch({ control, name: "rewardType" });
-	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
-	const canEdit = canManageRewards && reward !== undefined && isRewardEditable(reward.status);
-	const canPublish = canManageRewards && reward?.status === "DRAFT";
-	const rewardsPath = orgRoutes(orgSlug).rewards.list;
 
 	const updateMutation = api.organizations.rewards.update.useMutation({
 		onSuccess: (response): void => {
 			upsertMerchantRewardInListCache(queryClient, orgSlug, response.data);
-			toastMessage.success({ title: "Reward updated", description: "Your changes have been saved." });
+			toastMessage.success({ title: "Changes saved", description: "The reward shows your latest edits." });
+			router.push(routes.rewards.detail(response.data.id), { scroll: false });
 		},
 		onError: (): void => {
-			toastMessage.error({ title: "Update failed", description: "Could not save reward changes." });
+			toastMessage.error({ title: "Changes not saved", description: "Check your connection and try again." });
 		},
 	});
 
-	const publishMutation = api.organizations.rewards.publish.useMutation({
-		onSuccess: (response): void => {
-			upsertMerchantRewardInListCache(queryClient, orgSlug, response.data);
-			toastMessage.success({ title: "Submitted for review", description: "Your reward is now pending approval." });
-			void invalidateMerchantRewardsListCache(queryClient, orgSlug);
-		},
-		onError: (): void => {
-			toastMessage.error({ title: "Submit failed", description: "Could not submit reward for review." });
-		},
-	});
-
-	const handleTypeSelect = React.useCallback(
-		(rewardType: RewardType): void => {
-			setValue("rewardType", rewardType, { shouldValidate: true });
+	const handleImagesChange = React.useCallback(
+		(nextImages: readonly SavedRewardImage[]): void => {
+			setValue(
+				"imageFileIds",
+				nextImages.map((image) => image.fileId),
+				{ shouldValidate: true, shouldDirty: true },
+			);
+			setImages(nextImages);
 		},
 		[setValue],
 	);
 
-	const onSubmit = React.useCallback(
-		(form: MerchantRewardFormValues): void => {
-			const payload = mapMerchantUpdateRewardFormToInput(form);
-			void updateMutation.mutateAsync({ orgSlug, rewardId, ...payload });
-		},
-		[orgSlug, rewardId, updateMutation],
-	);
-
+	const { mutate } = updateMutation;
 	const handleFormSubmit = React.useCallback(
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
-			void handleSubmit(onSubmit)(event);
+			void handleSubmit((form): void => {
+				mutate({ orgSlug, rewardId: reward.id, ...mapMerchantUpdateRewardFormToInput(form) });
+			})(event);
 		},
-		[handleSubmit, onSubmit],
+		[handleSubmit, mutate, orgSlug, reward.id],
 	);
 
-	const handleMaxClaimsChange = React.useCallback(
-		(value: string | null): void => {
-			if (value !== null) {
-				setValue("maxClaimsPerUser", Number(value), { shouldValidate: true });
-			}
-		},
-		[setValue],
-	);
-
-	const refetchRewards = rewardsQuery.refetch;
-	const handleRetry = React.useCallback((): void => {
-		void refetchRewards();
-	}, [refetchRewards]);
-
-	const handlePublish = React.useCallback((): void => {
-		void publishMutation.mutateAsync({ orgSlug, rewardId });
-	}, [orgSlug, publishMutation, rewardId]);
-
-	if (isResolvingReward) {
-		return <MerchantRewardEditorPageSkeleton mode="edit" />;
-	}
-
-	if (reward === undefined && rewardsQuery.isError) {
-		return (
-			<div className="mx-auto space-y-6">
-				<h1 className="text-2xl font-bold tracking-tight text-foreground">Could not load this reward</h1>
-				<p role="alert" className="text-muted-foreground">
-					{userSafeErrorMessage(rewardsQuery.error, REWARD_LOAD_FAILED_MESSAGE)}
-				</p>
-				<Button type="button" onClick={handleRetry}>
-					Try again
-				</Button>
-			</div>
-		);
-	}
-
-	if (reward === undefined) {
-		return (
-			<div className="mx-auto space-y-6">
-				<h1 className="text-2xl font-bold tracking-tight text-foreground">Reward not found</h1>
-				<p className="text-muted-foreground">This reward may have been removed or you may not have access.</p>
-				<Link href={rewardsPath}>
-					<Button type="button" variant="outline">
-						Back to rewards
-					</Button>
-				</Link>
-			</div>
-		);
-	}
+	const stores = describeRewardStores(reward);
+	const isSaving = updateMutation.isPending;
 
 	return (
-		<div className="mx-auto space-y-6">
-			<div className="mb-2 flex flex-wrap items-center gap-4">
-				<Link href={rewardsPath}>
-					<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
-						<ArrowLeft className="size-5" aria-hidden="true" />
-					</Button>
-				</Link>
-				<div className="flex flex-1 flex-wrap items-center gap-3">
-					<div>
-						<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">{canManageRewards ? "Edit Reward" : "View Reward"}</h1>
-						<p className="mt-1 text-muted-foreground">{canEdit ? "Update your reward campaign details" : "View reward details and performance"}</p>
-					</div>
-					<MerchantRewardStatusBadge status={reward.status} />
-				</div>
-			</div>
-
-			{canManageRewards ? null : <MerchantReadOnlyNotice>Your role can view this reward but not edit it or submit it for review.</MerchantReadOnlyNotice>}
-
-			<form onSubmit={handleFormSubmit} className="space-y-6">
+		<MerchantRewardEditorLayout
+			heading="Edit reward"
+			description="Changes show in the preview as you make them. Nothing changes for customers until you save."
+			back={{ href: detailHref, label: "Back to reward" }}
+			status={reward.status}
+			onSubmit={handleFormSubmit}
+			fields={
 				<MerchantRewardFormFields
 					register={register}
 					control={control}
 					errors={errors}
 					setValue={setValue}
-					selectedType={selectedType}
-					onTypeSelect={handleTypeSelect}
-					onMaxClaimsChange={handleMaxClaimsChange}
 					organizationId={organizationId}
 					initialImages={reward.images}
-					readOnly={!canEdit}
+					onImagesChange={handleImagesChange}
+					stores={
+						accessibleLocations.length > 1 ? (
+							<p className="text-sm text-muted-foreground">
+								<span className="font-medium text-foreground" title={stores.fullLabel}>
+									{stores.label}.
+								</span>{" "}
+								Stores are set when a reward is created.
+							</p>
+						) : null
+					}
+					disabled={isSaving}
 				/>
-
-				<Card className="border-border/80 bg-card shadow-xs">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<BarChart3 className="size-5 text-primary" aria-hidden="true" />
-							Performance
-						</CardTitle>
-						<CardDescription>Claims, redemptions, and inventory for this reward</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<dl className="grid gap-4 sm:grid-cols-3">
-							<div className="rounded-lg border border-border bg-background p-4">
-								<dt className="text-xs tracking-wide text-muted-foreground uppercase">Claims</dt>
-								<dd className="mt-1 text-2xl font-semibold text-foreground tabular-nums">{reward.claimCount}</dd>
-							</div>
-							<div className="rounded-lg border border-border bg-background p-4">
-								<dt className="text-xs tracking-wide text-muted-foreground uppercase">Redemptions</dt>
-								<dd className="mt-1 text-2xl font-semibold text-foreground tabular-nums">{reward.redemptionCount}</dd>
-							</div>
-							<div className="rounded-lg border border-border bg-background p-4">
-								<dt className="text-xs tracking-wide text-muted-foreground uppercase">Category</dt>
-								<dd className="mt-1 text-lg font-medium text-foreground capitalize">{reward.category}</dd>
-							</div>
-						</dl>
-						<MerchantInventoryBar remaining={reward.quantityRemaining} total={reward.quantityTotal} />
-					</CardContent>
-				</Card>
-
-				{canEdit ? (
-					<div className="flex flex-wrap items-center justify-end gap-4">
-						<Link href={rewardsPath}>
-							<Button type="button" variant="outline">
+			}
+			preview={
+				<MerchantRewardPreview
+					control={control}
+					category={reward.category}
+					status={reward.status}
+					cover={cover}
+					stores={stores}
+					activity={{ claimCount: reward.claimCount, redemptionCount: reward.redemptionCount }}
+					actions={
+						<div className="grid grid-cols-2 gap-2">
+							<Link href={detailHref} className={cn(buttonVariants({ variant: "outline" }))}>
 								Cancel
+							</Link>
+							<Button type="submit" disabled={isSaving}>
+								{isSaving ? <Spinner className="size-4" aria-hidden="true" /> : null}
+								{isSaving ? "Saving…" : "Save changes"}
 							</Button>
-						</Link>
-						{canPublish ? (
-							<Button type="button" variant="secondary" disabled={publishMutation.isPending} onClick={handlePublish}>
-								{publishMutation.isPending ? "Submitting…" : "Submit for review"}
-							</Button>
-						) : null}
-						<Button type="submit" disabled={updateMutation.isPending} className="gap-2">
-							{updateMutation.isPending ? (
-								<>
-									<Loader2 className="size-4 animate-spin" aria-hidden="true" />
-									Saving...
-								</>
-							) : (
-								<>
-									<Save className="size-4" aria-hidden="true" />
-									Save changes
-								</>
-							)}
-						</Button>
-					</div>
-				) : (
-					<div className="flex justify-end">
-						<Link href={rewardsPath}>
-							<Button type="button" variant="outline">
-								Back to rewards
-							</Button>
-						</Link>
-					</div>
-				)}
-			</form>
-		</div>
+						</div>
+					}
+				/>
+			}
+		/>
 	);
 }

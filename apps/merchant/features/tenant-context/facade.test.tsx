@@ -17,6 +17,7 @@ import {
 	TenantContextProvider,
 	useActiveLocationFilter,
 	useActiveOrganizationId,
+	useActiveOrganizationName,
 	useActiveLocationId,
 	useMerchantLocation,
 	useTenantContextCommands,
@@ -119,6 +120,15 @@ describe("tenant-context facade", () => {
 	it("exposes the active organization's id from the context, and nothing before it has loaded", () => {
 		const { result, rerender } = renderHook(useActiveOrganizationId, { wrapper });
 		expect(result.current).toBe(TWO_STORE_CONTEXT.organization.id);
+
+		contextQuery.mockReturnValue(contextQueryState(undefined));
+		rerender();
+		expect(result.current).toBeUndefined();
+	});
+
+	it("exposes the active organization's name from the context, and nothing before it has loaded", () => {
+		const { result, rerender } = renderHook(useActiveOrganizationName, { wrapper });
+		expect(result.current).toBe(TWO_STORE_CONTEXT.organization.displayName);
 
 		contextQuery.mockReturnValue(contextQueryState(undefined));
 		rerender();

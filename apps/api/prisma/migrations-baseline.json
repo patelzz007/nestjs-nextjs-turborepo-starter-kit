@@ -1,5 +1,5 @@
 {
-	"baseline": "20261014144428_init",
+	"baseline": "20261014164959_init",
 	"reason": "Pre-release reset: all earlier migrations were regenerated into one baseline from schema.prisma before any shared or deployed database ran them.",
 	"since": "2026-10-14"
 }

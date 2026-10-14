@@ -1,4 +1,4 @@
-import type { AuditLogUser, HttpAuditLogDetail, JsonValue } from "@workspace/shared";
+import type { AuditLogUser, HttpAuditLogDetail } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import type * as React from "react";
@@ -8,82 +8,18 @@ import { countryFlag, countryName } from "@/lib/format/country";
 import { auditLogListHref } from "@/lib/url-state/audit-logs";
 
 import { AuditActorCell, AuditAuthMethodBadge, AuditDeviceBadge, AuditIpScopeBadge, AuditMethodBadge, AuditOutcomeBadge, describeClientSoftware } from "./audit-log-badges";
-
-/** Indentation of the pretty-printed payloads. */
-const JSON_INDENT_SPACES = 2;
-/** What an absent value renders as. */
-const NOT_RECORDED = "—";
-
-/** `page`: the full-width detail page; `drawer`: the narrower side panel of the table. */
-export type AuditLogRecordLayout = "page" | "drawer";
-
-/** The field grid of each section, per layout — shared with the record's loading skeleton so both line up. */
-export const AUDIT_LOG_RECORD_GRID_BY_LAYOUT: Readonly<Record<AuditLogRecordLayout, string>> = {
-	page: "sm:grid-cols-2 lg:grid-cols-3",
-	drawer: "sm:grid-cols-2",
-};
+import { NOT_RECORDED, orDash, RecordField, RecordPayload, RecordSection, type AuditRecordLayout } from "./record-layout";
 
 /** The three payload panels' grid, per layout. */
-export const AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT: Readonly<Record<AuditLogRecordLayout, string>> = {
+export const AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT: Readonly<Record<AuditRecordLayout, string>> = {
 	page: "lg:grid-cols-3",
 	drawer: "",
 };
 
-/** One labelled value; `mono` for ids, addresses and raw header values. */
-function Field({ label, children, mono = false }: { readonly label: string; readonly children: React.ReactNode; readonly mono?: boolean }): React.JSX.Element {
-	return (
-		<div className="min-w-0 space-y-1">
-			<dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
-			<dd className={cn("text-sm break-all", mono && "font-mono")}>{children}</dd>
-		</div>
-	);
-}
-
-/** A value, or the "not recorded" dash. */
-function orDash(value: string | number | null): string {
-	return value === null ? NOT_RECORDED : String(value);
-}
-
-function Section({
-	title,
-	description,
-	layout,
-	children,
-}: {
-	readonly title: string;
-	readonly description: string;
-	readonly layout: AuditLogRecordLayout;
-	readonly children: React.ReactNode;
-}): React.JSX.Element {
-	return (
-		<section className="space-y-3 rounded-lg border bg-card p-4">
-			<div>
-				<h3 className="text-sm font-semibold">{title}</h3>
-				<p className="text-xs text-muted-foreground">{description}</p>
-			</div>
-			<dl className={cn("grid gap-4", AUDIT_LOG_RECORD_GRID_BY_LAYOUT[layout])}>{children}</dl>
-		</section>
-	);
-}
-
-/** A redacted JSON payload, pretty-printed; `null` = nothing was stored. */
-function Payload({ title, value }: { readonly title: string; readonly value: JsonValue | null }): React.JSX.Element {
-	return (
-		<section className="min-w-0 space-y-2 rounded-lg border bg-card p-4">
-			<h3 className="text-sm font-semibold">{title}</h3>
-			{value === null ? (
-				<p className="text-sm text-muted-foreground">Nothing recorded.</p>
-			) : (
-				<pre className="max-h-96 overflow-auto rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">{JSON.stringify(value, null, JSON_INDENT_SPACES)}</pre>
-			)}
-		</section>
-	);
-}
-
 /** A user named by the record, with a link to everything they did. */
 function UserField({ label, user }: { readonly label: string; readonly user: AuditLogUser | null }): React.JSX.Element {
 	return (
-		<Field label={label}>
+		<RecordField label={label}>
 			{user === null ? (
 				NOT_RECORDED
 			) : (
@@ -95,7 +31,7 @@ function UserField({ label, user }: { readonly label: string; readonly user: Aud
 					</Link>
 				</span>
 			)}
-		</Field>
+		</RecordField>
 	);
 }
 
@@ -115,7 +51,7 @@ function describeLocation(record: Pick<HttpAuditLogDetail, "geoCountry" | "geoRe
  * and where, with which credential, what was sent and what came back. Ids link
  * back to the table filtered by that actor / organization / correlation id.
  */
-export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditLogDetail; readonly layout: AuditLogRecordLayout }): React.JSX.Element {
+export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditLogDetail; readonly layout: AuditRecordLayout }): React.JSX.Element {
 	const software: string | null = describeClientSoftware(record);
 	return (
 		<div className="space-y-4">
@@ -129,22 +65,22 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 				<AuditActorCell entry={record} />
 			</header>
 
-			<Section title="Who" description="The verified principal — never what the client claimed." layout={layout}>
+			<RecordSection title="Who" description="The verified principal — never what the client claimed." layout={layout}>
 				<UserField label="Actor" user={record.actor} />
 				<UserField label="Impersonated by" user={record.impersonator} />
-				<Field label="Impersonation session" mono>
+				<RecordField label="Impersonation session" mono>
 					{orDash(record.impersonationSessionId)}
-				</Field>
-				<Field label="Credential">
+				</RecordField>
+				<RecordField label="Credential">
 					<AuditAuthMethodBadge authMethod={record.authMethod} />
-				</Field>
-				<Field label="API key" mono>
+				</RecordField>
+				<RecordField label="API key" mono>
 					{orDash(record.apiKeyId)}
-				</Field>
-				<Field label="POS terminal" mono>
+				</RecordField>
+				<RecordField label="POS terminal" mono>
 					{orDash(record.terminalId)}
-				</Field>
-				<Field label="Organization">
+				</RecordField>
+				<RecordField label="Organization">
 					{record.organization === null ? (
 						NOT_RECORDED
 					) : (
@@ -152,30 +88,30 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 							{record.organization.name ?? record.organization.id}
 						</Link>
 					)}
-				</Field>
-				<Field label="Store" mono>
+				</RecordField>
+				<RecordField label="Store" mono>
 					{orDash(record.storeId)}
-				</Field>
-				<Field label="Location" mono>
+				</RecordField>
+				<RecordField label="Location" mono>
 					{orDash(record.locationId)}
-				</Field>
-			</Section>
+				</RecordField>
+			</RecordSection>
 
-			<Section title="When" description="Server clock, shown in your time zone." layout={layout}>
-				<Field label="Received">{formatDateTimeWithSeconds(record.occurredAt)}</Field>
-				<Field label="Completed">{formatDateTimeWithSeconds(record.completedAt)}</Field>
-				<Field label="Duration">{record.durationMs} ms</Field>
-				<Field label="Recorded">{formatDateTimeWithSeconds(record.createdAt)}</Field>
-			</Section>
+			<RecordSection title="When" description="Server clock, shown in your time zone." layout={layout}>
+				<RecordField label="Received">{formatDateTimeWithSeconds(record.occurredAt)}</RecordField>
+				<RecordField label="Completed">{formatDateTimeWithSeconds(record.completedAt)}</RecordField>
+				<RecordField label="Duration">{record.durationMs} ms</RecordField>
+				<RecordField label="Recorded">{formatDateTimeWithSeconds(record.createdAt)}</RecordField>
+			</RecordSection>
 
-			<Section
+			<RecordSection
 				title="Device & location"
 				description="Parsed from the User-Agent (what the client claimed) and the address; the location comes from the CDN edge, so it is empty when the API is not behind one."
 				layout={layout}>
-				<Field label="Device">{record.deviceType === null ? NOT_RECORDED : <AuditDeviceBadge deviceType={record.deviceType} />}</Field>
-				<Field label="Browser / client · OS">{software ?? NOT_RECORDED}</Field>
-				<Field label="Device model">{orDash(record.deviceModel)}</Field>
-				<Field label="IP address" mono>
+				<RecordField label="Device">{record.deviceType === null ? NOT_RECORDED : <AuditDeviceBadge deviceType={record.deviceType} />}</RecordField>
+				<RecordField label="Browser / client · OS">{software ?? NOT_RECORDED}</RecordField>
+				<RecordField label="Device model">{orDash(record.deviceModel)}</RecordField>
+				<RecordField label="IP address" mono>
 					{record.ipAddress === null ? (
 						NOT_RECORDED
 					) : (
@@ -184,67 +120,67 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 							{record.ipVersion === null ? null : <span className="text-xs text-muted-foreground">IPv{record.ipVersion}</span>}
 						</span>
 					)}
-				</Field>
-				<Field label="Address class">{record.ipScope === null ? NOT_RECORDED : <AuditIpScopeBadge scope={record.ipScope} />}</Field>
-				<Field label="Location">{describeLocation(record)}</Field>
-				<Field label="Client time zone" mono>
+				</RecordField>
+				<RecordField label="Address class">{record.ipScope === null ? NOT_RECORDED : <AuditIpScopeBadge scope={record.ipScope} />}</RecordField>
+				<RecordField label="Location">{describeLocation(record)}</RecordField>
+				<RecordField label="Client time zone" mono>
 					{orDash(record.geoTimeZone)}
-				</Field>
-				<Field label="User agent" mono>
+				</RecordField>
+				<RecordField label="User agent" mono>
 					{orDash(record.userAgent)}
-				</Field>
-			</Section>
+				</RecordField>
+			</RecordSection>
 
-			<Section title="Request headers" description="As sent (unverified) — the IP honours trusted proxies only." layout={layout}>
-				<Field label="Client app">{orDash(record.clientType)}</Field>
-				<Field label="Origin" mono>
+			<RecordSection title="Request headers" description="As sent (unverified) — the IP honours trusted proxies only." layout={layout}>
+				<RecordField label="Client app">{orDash(record.clientType)}</RecordField>
+				<RecordField label="Origin" mono>
 					{orDash(record.origin)}
-				</Field>
-				<Field label="Referer" mono>
+				</RecordField>
+				<RecordField label="Referer" mono>
 					{orDash(record.referer)}
-				</Field>
-				<Field label="Accept-Language" mono>
+				</RecordField>
+				<RecordField label="Accept-Language" mono>
 					{orDash(record.acceptLanguage)}
-				</Field>
-				<Field label="Host" mono>
+				</RecordField>
+				<RecordField label="Host" mono>
 					{orDash(record.host)}
-				</Field>
-				<Field label="HTTP version" mono>
+				</RecordField>
+				<RecordField label="HTTP version" mono>
 					{orDash(record.httpVersion)}
-				</Field>
-				<Field label="Content type" mono>
+				</RecordField>
+				<RecordField label="Content type" mono>
 					{orDash(record.requestContentType)}
-				</Field>
-				<Field label="Request size">{record.requestBytes === null ? NOT_RECORDED : `${String(record.requestBytes)} bytes`}</Field>
-				<Field label="Idempotency key" mono>
+				</RecordField>
+				<RecordField label="Request size">{record.requestBytes === null ? NOT_RECORDED : `${String(record.requestBytes)} bytes`}</RecordField>
+				<RecordField label="Idempotency key" mono>
 					{orDash(record.idempotencyKey)}
-				</Field>
-			</Section>
+				</RecordField>
+			</RecordSection>
 
-			<Section title="Tracing" description="How to find this request in logs, traces and the domain audit tables." layout={layout}>
-				<Field label="Correlation id" mono>
+			<RecordSection title="Tracing" description="How to find this request in logs, traces and the domain audit tables." layout={layout}>
+				<RecordField label="Correlation id" mono>
 					<Link href={auditLogListHref({ correlationId: record.correlationId })} className="text-primary hover:underline">
 						{record.correlationId}
 					</Link>
-				</Field>
-				<Field label="Trace id" mono>
+				</RecordField>
+				<RecordField label="Trace id" mono>
 					{orDash(record.traceId)}
-				</Field>
-				<Field label="Error code" mono>
+				</RecordField>
+				<RecordField label="Error code" mono>
 					{orDash(record.errorCode)}
-				</Field>
-				<Field label="RLS bypasses (system operations)" mono>
+				</RecordField>
+				<RecordField label="RLS bypasses (system operations)" mono>
 					{record.systemOperations.length === 0 ? "None" : record.systemOperations.join(", ")}
-				</Field>
-				<Field label="Audit record id" mono>
+				</RecordField>
+				<RecordField label="Audit record id" mono>
 					{record.id}
-				</Field>
-			</Section>
+				</RecordField>
+			</RecordSection>
 
 			<div className={cn("grid gap-4", AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT[layout])}>
-				<Payload title="Route params & query" value={record.requestParams} />
-				<Payload title="Request body" value={record.requestBody} />
-				<Payload title="Response body" value={record.responseBody} />
+				<RecordPayload title="Route params & query" value={record.requestParams} />
+				<RecordPayload title="Request body" value={record.requestBody} />
+				<RecordPayload title="Response body" value={record.responseBody} />
 			</div>
 			<p className="text-xs text-muted-foreground">
 				Payloads were redacted before they were stored: secrets read [REDACTED], personal data is masked, non-JSON bodies are omitted and anything over 16 KiB is replaced by a

@@ -36,6 +36,8 @@ export const SEARCH_ALIAS_MAP: Readonly<Record<string, readonly string[]>> = {
 	activity: ["Audit log"],
 	history: ["Audit log"],
 	forensics: ["Audit log"],
+	database: ["Audit log"],
+	changes: ["Audit log"],
 	catalog: ["Products", "Categories"],
 	products: ["Products"],
 	categories: ["Categories"],

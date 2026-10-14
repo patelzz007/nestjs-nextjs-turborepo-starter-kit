@@ -77,6 +77,8 @@ import {
 	GithubRepositorySummarySchema,
 } from "../schemas/domain/github/github-contributions";
 import { UuidParamSchema } from "../schemas/domain/platform/param-schemas";
+import { AuditTrailEntrySchema, AuditTrailListQuerySchema } from "../schemas/domain/platform/audit-trail";
+import { DataChangeLogDetailSchema, DataChangeLogIdParamSchema, DataChangeLogListQuerySchema, DataChangeLogSummarySchema } from "../schemas/domain/platform/data-change-log";
 import { HttpAuditLogDetailSchema, HttpAuditLogIdParamSchema, HttpAuditLogListQuerySchema, HttpAuditLogSummarySchema } from "../schemas/domain/platform/http-audit-log";
 import { EmailLogListQuerySchema, EmailLogEntrySchema, EmailPreviewListResponseSchema, EmailPreviewSchema, EmailSendResultSchema } from "../schemas/email/email";
 import { CapabilityCatalogQuerySchema, CapabilityCatalogResponseSchema } from "../schemas/domain/rbac/capabilities";
@@ -654,6 +656,22 @@ export const apiContract = {
 	auditLogs: {
 		list: defineContract({ method: "GET", path: apiRoutes.auditLogs.list, input: HttpAuditLogListQuerySchema, response: paginatedResponse(HttpAuditLogSummarySchema) }),
 		detail: defineContract({ method: "GET", path: apiRoutes.auditLogs.detail, input: HttpAuditLogIdParamSchema, response: singleResponse(HttpAuditLogDetailSchema) }),
+	},
+
+	// ── The audit log's timeline ────────────────────────────────────────
+	// HTTP requests (with the rows each changed) and database writes no
+	// request made, as one list (ADR 051). Every read is itself recorded.
+	auditTrail: {
+		list: defineContract({ method: "GET", path: apiRoutes.auditTrail.list, input: AuditTrailListQuerySchema, response: paginatedResponse(AuditTrailEntrySchema) }),
+	},
+
+	// ── Row-level data-change trail ─────────────────────────────────────
+	// Read-only admin viewer over `data_change_logs` (ADR 051): every row
+	// INSERT / UPDATE / DELETE / TRUNCATE with redacted before / after images.
+	// Every read is itself recorded as a sensitive read.
+	dataChanges: {
+		list: defineContract({ method: "GET", path: apiRoutes.dataChanges.list, input: DataChangeLogListQuerySchema, response: paginatedResponse(DataChangeLogSummarySchema) }),
+		detail: defineContract({ method: "GET", path: apiRoutes.dataChanges.detail, input: DataChangeLogIdParamSchema, response: singleResponse(DataChangeLogDetailSchema) }),
 	},
 
 	// ── Email templates & delivery logs ────────────────────────────────

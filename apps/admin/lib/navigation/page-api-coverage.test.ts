@@ -67,8 +67,21 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 		],
 	],
 	[ROUTES.emails.log, [{ endpoint: "GET /notifications/email-log", permission: PERMISSION.EMAIL.LIST }]],
-	[ROUTES.auditLogs.list, [{ endpoint: "GET /admin/audit-logs", permission: PERMISSION.AUDIT_LOG.LIST }]],
-	[ROUTE_PATTERNS.auditLogs.detail, [{ endpoint: "GET /admin/audit-logs/:id", permission: PERMISSION.AUDIT_LOG.READ }]],
+	[ROUTES.auditLogs.list, [{ endpoint: "GET /admin/audit-trail", permission: PERMISSION.AUDIT_LOG.LIST }]],
+	[
+		ROUTE_PATTERNS.auditLogs.detail,
+		[
+			{ endpoint: "GET /admin/audit-logs/:id", permission: PERMISSION.AUDIT_LOG.READ },
+			{ endpoint: "GET /admin/data-changes", permission: PERMISSION.AUDIT_LOG.LIST },
+		],
+	],
+	[
+		ROUTE_PATTERNS.auditLogs.change,
+		[
+			{ endpoint: "GET /admin/data-changes/:id", permission: PERMISSION.AUDIT_LOG.READ },
+			{ endpoint: "GET /admin/data-changes", permission: PERMISSION.AUDIT_LOG.LIST },
+		],
+	],
 	[ROUTES.geography.index, [{ endpoint: "GET /geo/stats + the active tab's list", permission: PERMISSION.GEO.READ }]],
 	[ROUTES.merchants.list, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	// The live email preview renders on load; the send (POST /admin/invites) needs the same MANAGE.

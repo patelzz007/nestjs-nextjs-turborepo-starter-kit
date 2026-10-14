@@ -11,6 +11,7 @@ export const DASHBOARD_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading:
 export const ANALYTICS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading analytics…" };
 export const AUDIT_LOG_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading audit log…" };
 export const AUDIT_RECORD_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading audit record…" };
+export const DATA_CHANGE_RECORD_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading row change…" };
 export const PRODUCTS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading products…" };
 export const PRODUCT_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading product…" };
 export const NEW_PRODUCT_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading product form…" };

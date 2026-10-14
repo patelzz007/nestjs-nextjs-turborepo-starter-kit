@@ -56,11 +56,6 @@ function renderLocationFields(context: OrganizationContextResponse): void {
 	);
 }
 
-/** The Availability trigger's value slot — scoped so an open popup's option text is never matched. */
-function availabilityValueText(): string | null | undefined {
-	return screen.getByRole("combobox").querySelector("[data-slot='select-value']")?.textContent;
-}
-
 afterEach((): void => {
 	cleanup();
 	contextQuery.mockReset();
@@ -68,31 +63,25 @@ afterEach((): void => {
 });
 
 describe("MerchantRewardLocationFields", () => {
-	it("shows the human availability label in the closed trigger, never the raw scope enum", (): void => {
+	it("offers all stores or some stores as two choices, starting on all stores with no store picker", (): void => {
 		renderLocationFields(TWO_STORE_CONTEXT);
-		expect(screen.queryByRole("option")).toBeNull();
-		expect(availabilityValueText()).toBe("All stores");
-		expect(screen.getByRole("combobox").textContent).not.toContain("ALL_LOCATIONS");
+		expect(screen.getByRole("radio", { name: /All stores/u }).getAttribute("aria-checked")).toBe("true");
+		expect(screen.getByRole("radio", { name: /Only some stores/u }).getAttribute("aria-checked")).toBe("false");
+		expect(screen.queryByRole("checkbox")).toBeNull();
 	});
 
-	it("labels the trigger with the chosen option and reveals the store picker for selected stores", (): void => {
+	it("reveals a checkbox per store once only some stores are chosen", (): void => {
 		renderLocationFields(TWO_STORE_CONTEXT);
 		act((): void => {
-			fireEvent.click(screen.getByRole("combobox"));
+			fireEvent.click(screen.getByRole("radio", { name: /Only some stores/u }));
 		});
-		// A real mouse press: base-ui only commits a click that started on the item.
-		const selectedOnly = screen.getByRole("option", { name: "Selected stores only" });
-		act((): void => {
-			fireEvent.pointerDown(selectedOnly, { pointerType: "mouse" });
-			fireEvent.click(selectedOnly);
-		});
-		expect(availabilityValueText()).toBe("Selected stores only");
+		expect(screen.getByRole("radio", { name: /Only some stores/u }).getAttribute("aria-checked")).toBe("true");
 		expect(screen.getByRole("checkbox", { name: STORE_A.name })).toBeTruthy();
 		expect(screen.getByRole("checkbox", { name: STORE_B.name })).toBeTruthy();
 	});
 
 	it("renders nothing for a single-store organization", (): void => {
 		renderLocationFields(organizationContextFixture({ locations: [STORE_A_LOCATION] }));
-		expect(screen.queryByRole("combobox")).toBeNull();
+		expect(screen.queryByRole("radiogroup")).toBeNull();
 	});
 });

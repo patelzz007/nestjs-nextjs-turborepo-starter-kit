@@ -6,10 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuditLogDrawer } from "../audit-log-drawer";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 
-const { detailQuery } = vi.hoisted(() => ({ detailQuery: vi.fn() }));
+const { detailQuery, changesQuery } = vi.hoisted(() => ({ detailQuery: vi.fn(), changesQuery: vi.fn() }));
 
+// The record's "Database changes" panel lists the rows the request changed (GET /admin/data-changes).
 vi.mock("@workspace/client/lib/auth", () => ({
-	useAuth: (): object => ({ api: { auditLogs: { detail: { useQuery: detailQuery } } } }),
+	useAuth: (): object => ({ api: { auditLogs: { detail: { useQuery: detailQuery } }, dataChanges: { list: { useQuery: changesQuery } } } }),
 }));
 
 const RECORD_ID = "55555555-5555-4555-8555-555555555555";
@@ -67,6 +68,7 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 });
 
 beforeEach((): void => {
+	changesQuery.mockReturnValue({ data: { data: [] }, isLoading: false, isError: false });
 	detailQuery.mockReturnValue({ data: { data: RECORD }, isLoading: false });
 });
 

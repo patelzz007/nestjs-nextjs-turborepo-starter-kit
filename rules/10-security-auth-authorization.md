@@ -184,6 +184,8 @@ interface AuditLogEntry {
 
 ### Implementation approach
 
+In this repository the trail has two layers, joined by correlation id: the global HTTP audit row per request (ADR 025) and, underneath it, one `data_change_logs` row per row INSERT / UPDATE / DELETE / TRUNCATE, written by a database trigger in the same transaction with the full redacted row before and after (ADR 051). You never write either by hand. What you DO owe: run every write inside the request's RLS context (`TenantTransactionService`, or a named system operation for background work) so the change is attributed — a change recorded as `UNATTRIBUTED` from application code is a bug — and classify any new secret-bearing column in `prisma/rls/data-change-capture.ts` (the apply fails until you do).
+
 Write audit entries from a shared NestJS interceptor applied globally (or to every state-changing route), not by hand inside each controller method — an audit log that depends on every developer remembering to add a line of logging code to every new endpoint will, eventually, have gaps exactly where they matter most.
 
 ```ts

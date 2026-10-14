@@ -15,6 +15,7 @@ import MerchantDashboardLoading from "@/app/orgs/[orgSlug]/dashboard/loading";
 import MerchantOrganizationLoading from "@/app/orgs/[orgSlug]/loading";
 import MerchantRedemptionsLoading from "@/app/orgs/[orgSlug]/redemptions/loading";
 import MerchantEditRewardLoading from "@/app/orgs/[orgSlug]/rewards/[rewardId]/edit/loading";
+import MerchantRewardDetailLoading from "@/app/orgs/[orgSlug]/rewards/[rewardId]/loading";
 import MerchantRewardsLoading from "@/app/orgs/[orgSlug]/rewards/loading";
 import MerchantCreateRewardLoading from "@/app/orgs/[orgSlug]/rewards/new/loading";
 import MerchantSettingsLoading from "@/app/orgs/[orgSlug]/settings/loading";
@@ -38,6 +39,7 @@ import {
 	MERCHANT_REDEMPTIONS_LOADING_LABELS,
 	MERCHANT_REWARD_EDITOR_LOADING_LABELS,
 	MERCHANT_REWARD_LOADING_LABELS,
+	REWARD_EDITOR_SKELETON_SECTIONS,
 	MERCHANT_REWARDS_LOADING_LABELS,
 	MERCHANT_SETTINGS_LOADING_LABELS,
 	MERCHANT_TEAM_LOADING_LABELS,
@@ -211,17 +213,28 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		element: <MerchantCreateRewardLoading />,
 		labels: MERCHANT_REWARD_EDITOR_LOADING_LABELS,
 		landmarks: [
-			{ selector: slot("reward-stores-skeleton"), count: 1 },
+			{ selector: slot("reward-editor-section-skeleton"), count: REWARD_EDITOR_SKELETON_SECTIONS },
+			{ selector: slot("reward-preview-skeleton"), count: 1 },
 			{ selector: slot("reward-performance-skeleton"), count: 0 },
+		],
+	},
+	{
+		route: "/orgs/[orgSlug]/rewards/[rewardId]",
+		element: <MerchantRewardDetailLoading />,
+		labels: MERCHANT_REWARD_LOADING_LABELS,
+		landmarks: [
+			{ selector: slot("reward-performance-skeleton"), count: 1 },
+			{ selector: slot("reward-preview-skeleton"), count: 0 },
 		],
 	},
 	{
 		route: "/orgs/[orgSlug]/rewards/[rewardId]/edit",
 		element: <MerchantEditRewardLoading />,
-		labels: MERCHANT_REWARD_LOADING_LABELS,
+		labels: MERCHANT_REWARD_EDITOR_LOADING_LABELS,
 		landmarks: [
-			{ selector: slot("reward-performance-skeleton"), count: 1 },
-			{ selector: slot("reward-stores-skeleton"), count: 0 },
+			{ selector: slot("reward-editor-section-skeleton"), count: REWARD_EDITOR_SKELETON_SECTIONS },
+			{ selector: slot("reward-preview-skeleton"), count: 1 },
+			{ selector: slot("reward-performance-skeleton"), count: 0 },
 		],
 	},
 	{

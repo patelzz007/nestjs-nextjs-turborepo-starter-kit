@@ -9,6 +9,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { AuditLogRecord } from "@/components/audit-logs/audit-log-record";
+import { RequestDataChanges } from "@/components/audit-logs/request-data-changes";
 import { AuditLogDrawerSkeleton } from "@/components/loading/audit-log-skeletons";
 import { ROUTES } from "@/lib/routes";
 
@@ -24,8 +25,8 @@ export interface AuditLogDrawerProps {
 /**
  * The audit log's details drawer: the complete record of the row the admin
  * clicked, fetched on open (`GET /admin/audit-logs/:id`, READ AUDIT_LOG — the
- * API records the opening as a sensitive read), with a link to the record's
- * own page. The selection lives in the URL, so a drawer can be shared.
+ * API records the opening as a sensitive read), the rows the request changed
+ * in the database, and a link to the record's own page. The selection lives in the URL, so a drawer can be shared.
  */
 export function AuditLogDrawer({ recordId, onClose }: AuditLogDrawerProps): React.JSX.Element {
 	const { api } = useAuth();
@@ -61,7 +62,10 @@ export function AuditLogDrawer({ recordId, onClose }: AuditLogDrawerProps): Reac
 					) : record === undefined ? (
 						<p className="py-10 text-sm text-destructive">Could not load this audit record.</p>
 					) : (
-						<AuditLogRecord record={record} layout="drawer" />
+						<div className="space-y-4">
+							<AuditLogRecord record={record} layout="drawer" />
+							<RequestDataChanges correlationId={record.correlationId} />
+						</div>
 					)}
 				</div>
 			</SheetContent>

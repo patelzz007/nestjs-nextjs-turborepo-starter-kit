@@ -129,8 +129,13 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	},
 	// POST /sample-category (CREATE)
 	{ prefix: ROUTES.catalog.categories.create, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.CREATE] } },
-	// GET /admin/audit-logs/:id (READ AUDIT_LOG) — one complete record, payloads included.
-	{ prefix: ROUTE_PATTERNS.auditLogs.detail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ] } },
+	// GET /admin/data-changes/:id (READ AUDIT_LOG) — one complete row change, row images included —
+	// plus GET /admin/data-changes (LIST AUDIT_LOG): the other rows the same request / job changed.
+	// Listed before the request record's pattern: `/audit-logs/changes/x` must not match `/audit-logs/[id]`.
+	{ prefix: ROUTE_PATTERNS.auditLogs.change, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST], mode: "all" } },
+	// GET /admin/audit-logs/:id (READ AUDIT_LOG) — one complete record, payloads included —
+	// plus GET /admin/data-changes (LIST AUDIT_LOG): the rows the request changed.
+	{ prefix: ROUTE_PATTERNS.auditLogs.detail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST], mode: "all" } },
 	// GET /product/:id, GET /sample-category/:id (READ)
 	{ prefix: ROUTE_PATTERNS.catalog.products.detail, authorization: { permissions: [PERMISSION.PRODUCT.READ] } },
 	{ prefix: ROUTE_PATTERNS.catalog.categories.detail, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ] } },

@@ -39,6 +39,7 @@ describe("orgRoutes", () => {
 		expect(routes.dashboard).toBe("/orgs/acme-coffee/dashboard");
 		expect(routes.rewards.list).toBe("/orgs/acme-coffee/rewards");
 		expect(routes.rewards.new).toBe("/orgs/acme-coffee/rewards/new");
+		expect(routes.rewards.detail(REWARD_ID)).toBe(`/orgs/acme-coffee/rewards/${REWARD_ID}`);
 		expect(routes.rewards.edit(REWARD_ID)).toBe(`/orgs/acme-coffee/rewards/${REWARD_ID}/edit`);
 		expect(routes.redemptions).toBe("/orgs/acme-coffee/redemptions");
 		expect(routes.analytics).toBe("/orgs/acme-coffee/analytics");
@@ -57,6 +58,7 @@ describe("orgRoutes", () => {
 	});
 
 	it("encodes dynamic segments so an id cannot escape its segment", () => {
+		expect(ORG_ROUTES.rewards.detail("a/b?c")).toBe("/rewards/a%2Fb%3Fc");
 		expect(ORG_ROUTES.rewards.edit("a/b?c")).toBe("/rewards/a%2Fb%3Fc/edit");
 		expect(orgRoot("a/b")).toBe("/orgs/a%2Fb");
 	});

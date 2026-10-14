@@ -37,7 +37,7 @@ export interface MerchantRewardListRowProps {
 
 /** Dense row for scanning many offers — the same facts as the grid card, in columns. The whole row opens the reward. */
 export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewardListRowProps): React.JSX.Element {
-	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.edit(reward.id));
+	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.detail(reward.id));
 	const ended = isRewardEnded(reward.status);
 	const stores = describeRewardStores(reward);
 	const { locale } = PLATFORM_DISPLAY_REGION;

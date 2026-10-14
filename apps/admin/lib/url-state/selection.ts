@@ -3,9 +3,15 @@
 // back/forward moves between selections — with the URL as the only copy.
 
 import { defineUrlState, optionalUrlParam } from "@workspace/client/lib/url-state/url-state";
-import { AdminLocationRequestResponseSchema, EmailTemplateKeySchema, HttpAuditLogSummarySchema, MerchantOrgResponseSchema } from "@workspace/shared";
+import {
+	AdminLocationRequestResponseSchema,
+	DataChangeLogSummarySchema,
+	EmailTemplateKeySchema,
+	HttpAuditLogSummarySchema,
+	MerchantOrgResponseSchema,
+} from "@workspace/shared";
 
-import { AUDIT_LOG_RECORD_PARAM, EMAIL_TEMPLATE_KEY_PARAM, MERCHANT_VERIFICATION_ORGANIZATION_PARAM, REVIEW_REQUEST_PARAM } from "@/lib/routes";
+import { AUDIT_LOG_RECORD_PARAM, DATA_CHANGE_RECORD_PARAM, EMAIL_TEMPLATE_KEY_PARAM, MERCHANT_VERIFICATION_ORGANIZATION_PARAM, REVIEW_REQUEST_PARAM } from "@/lib/routes";
 
 /** `/merchants/verification?organizationId=` — the merchant open in the KYB review panel. */
 export const KYB_REVIEW_URL_STATE = defineUrlState(
@@ -32,3 +38,11 @@ export type StoreRequestsUrlState = typeof STORE_REQUESTS_URL_STATE.defaults;
 export const AUDIT_LOG_RECORD_URL_STATE = defineUrlState({ record: optionalUrlParam(HttpAuditLogSummarySchema.shape.id) }, { urlKeys: { record: AUDIT_LOG_RECORD_PARAM } });
 
 export type AuditLogRecordUrlState = typeof AUDIT_LOG_RECORD_URL_STATE.defaults;
+
+/** `/audit-logs?change=` — the background row change open in the drawer (kept apart from the table state, so opening one never resets paging). */
+export const DATA_CHANGE_RECORD_URL_STATE = defineUrlState(
+	{ change: optionalUrlParam(DataChangeLogSummarySchema.shape.id) },
+	{ urlKeys: { change: DATA_CHANGE_RECORD_PARAM } },
+);
+
+export type DataChangeRecordUrlState = typeof DATA_CHANGE_RECORD_URL_STATE.defaults;

@@ -16,6 +16,7 @@ export const OrgPageRouteSchema = z.enum([
 	"/dashboard",
 	"/rewards",
 	"/rewards/new",
+	"/rewards/[rewardId]",
 	"/rewards/[rewardId]/edit",
 	"/redemptions",
 	"/analytics",
@@ -82,8 +83,10 @@ export const ORG_PAGE_RULES: Readonly<Record<OrgPageRoute, OrgPageRule>> = {
 	"/rewards": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
 	// POST /orgs/:orgSlug/rewards (merchant:manage_rewards).
 	"/rewards/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
-	// Readable with merchant:view_rewards; the form is read-only without merchant:manage_rewards.
-	"/rewards/[rewardId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
+	// GET /orgs/:orgSlug/rewards (merchant:view_rewards) — the read-only reward page; its edit and submit actions need merchant:manage_rewards in-page.
+	"/rewards/[rewardId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
+	// PATCH /orgs/:orgSlug/rewards/:rewardId (merchant:manage_rewards).
+	"/rewards/[rewardId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
 	// GET /orgs/:orgSlug/redemptions (merchant:view_redemptions).
 	"/redemptions": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRedemptions] } },
 	// GET /orgs/:orgSlug/analytics (merchant:view_analytics).

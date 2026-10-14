@@ -4,7 +4,8 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type * as React from "react";
 
-import { AUDIT_LOG_RECORD_GRID_BY_LAYOUT, AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT, type AuditLogRecordLayout } from "@/components/audit-logs/audit-log-record";
+import { AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT } from "@/components/audit-logs/audit-log-record";
+import { AUDIT_RECORD_GRID_BY_LAYOUT, type AuditRecordLayout } from "@/components/audit-logs/record-layout";
 import { AUDIT_RECORD_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { BadgeSkeleton, LabelledValueGridSkeleton } from "@/components/loading/skeleton-parts";
 
@@ -20,14 +21,14 @@ const AUDIT_RECORD_SECTIONS: readonly { readonly key: string; readonly fields: n
 const AUDIT_RECORD_PAYLOAD_PANELS = 3;
 
 /** One bordered record section: title, one-line description, its field grid. */
-function RecordSectionSkeleton({ fields, layout }: { readonly fields: number; readonly layout: AuditLogRecordLayout }): React.JSX.Element {
+function RecordSectionSkeleton({ fields, layout }: { readonly fields: number; readonly layout: AuditRecordLayout }): React.JSX.Element {
 	return (
 		<div data-skeleton="audit-log-record-section" className="flex flex-col gap-3 rounded-lg border bg-card p-4">
 			<div className="flex flex-col gap-1.5">
 				<Skeleton variant="text" className="h-3.5 w-28" />
 				<Skeleton variant="text" className="h-3 w-72 max-w-full" />
 			</div>
-			<LabelledValueGridSkeleton count={fields} className={AUDIT_LOG_RECORD_GRID_BY_LAYOUT[layout]} />
+			<LabelledValueGridSkeleton count={fields} className={AUDIT_RECORD_GRID_BY_LAYOUT[layout]} />
 		</div>
 	);
 }
@@ -37,7 +38,7 @@ function RecordSectionSkeleton({ fields, layout }: { readonly fields: number; re
  * labelled sections and the three payload panels — the same grids per layout,
  * so the record lands exactly where its skeleton stood.
  */
-export function AuditLogRecordSkeleton({ layout }: { readonly layout: AuditLogRecordLayout }): React.JSX.Element {
+export function AuditLogRecordSkeleton({ layout }: { readonly layout: AuditRecordLayout }): React.JSX.Element {
 	return (
 		<div data-skeleton="audit-log-record" className="flex flex-col gap-4">
 			<div className="flex flex-col gap-2">

@@ -113,7 +113,8 @@ describe("merchant route table ↔ app/ pages", () => {
 	it("discovers the page files it guards", () => {
 		expect(PAGE_PATTERNS.length).toBeGreaterThan(0);
 		expect(hasPage("/orgs/any-org/rewards/any-id/edit")).toBe(true);
-		expect(hasPage("/orgs/any-org/rewards/any-id")).toBe(false);
+		expect(hasPage("/orgs/any-org/rewards/any-id")).toBe(true);
+		expect(hasPage("/orgs/any-org/rewards/any-id/history")).toBe(false);
 	});
 
 	it.each(APP_STATIC_ROUTES)("top-level route %s has a page", (route: string): void => {
@@ -124,7 +125,8 @@ describe("merchant route table ↔ app/ pages", () => {
 		expect(hasPage(orgPath(ORG_SLUG, route))).toBe(true);
 	});
 
-	it("has a page for the dynamic reward edit route and the org root", () => {
+	it("has a page for the dynamic reward view and edit routes and the org root", () => {
+		expect(hasPage(orgRoutes(ORG_SLUG).rewards.detail(SAMPLE_REWARD_ID))).toBe(true);
 		expect(hasPage(orgRoutes(ORG_SLUG).rewards.edit(SAMPLE_REWARD_ID))).toBe(true);
 		expect(hasPage(orgRoutes(ORG_SLUG).root)).toBe(true);
 	});

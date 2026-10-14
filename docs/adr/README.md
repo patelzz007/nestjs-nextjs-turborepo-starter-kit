@@ -66,6 +66,7 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [048](./048-mobile-analytics-screen.md) | Mobile Analytics tab: UI only, token-coloured SVG charts, sample data in the API's dashboard shape | Accepted — implemented (2026-10-12) |
 | [049](./049-shared-app-shell-and-sidebar-motion.md) | One app shell for admin, web and merchant (app shell 3); the sidebar moves on one spring the layout follows | Accepted — implemented (2026-10-12) |
 | [050](./050-server-rendered-session.md) | The auth store starts from the session the server rendered for (`/auth/me` + `/auth/permissions` asked during the render), so nothing that depends on who is signed in pops in after load | Accepted — implemented (2026-10-12) |
+| [051](./051-database-change-audit-trail.md) | Every row change on every captured table is recorded by a database trigger in the same transaction — full before / after, redacted — attributed from the session and joined to its HTTP request; both shown as one audit-log timeline | Accepted — implemented (2026-10-14) |
 | [RabbitMQ](./rabbitmq-placeholder.md) | RabbitMQ as infrastructure placeholder only | Accepted |
 
 ## Pending decisions

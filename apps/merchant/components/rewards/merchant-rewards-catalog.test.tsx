@@ -253,7 +253,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		const live = within(panel());
 
 		expect(live.getByText("10% off")).toBeDefined();
-		expect(live.getByRole("link", { name: "Nyonya kuih sampler, manage reward" }).getAttribute("href")).toBe(resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.edit(LIVE_ID)));
+		expect(live.getByRole("link", { name: "Nyonya kuih sampler, manage reward" }).getAttribute("href")).toBe(resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.detail(LIVE_ID)));
 		expect(live.queryByRole("button")).toBeNull();
 	});
 

@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { HttpAuditLogDetailSchema, type HttpAuditLogDetail } from "@workspace/shared";
+import { DataChangeLogSummarySchema, HttpAuditLogDetailSchema, type HttpAuditLogDetail } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuditLogDetailView from "../audit-log-detail";
 
-const { detailQuery } = vi.hoisted(() => ({ detailQuery: vi.fn() }));
+const { detailQuery, changesQuery } = vi.hoisted(() => ({ detailQuery: vi.fn(), changesQuery: vi.fn() }));
 
+// The record's "Database changes" panel lists the rows the request changed (GET /admin/data-changes).
 vi.mock("@workspace/client/lib/auth", () => ({
-	useAuth: (): object => ({ api: { auditLogs: { detail: { useQuery: detailQuery } } } }),
+	useAuth: (): object => ({ api: { auditLogs: { detail: { useQuery: detailQuery } }, dataChanges: { list: { useQuery: changesQuery } } } }),
 }));
 
 const RECORD_ID = "55555555-5555-4555-8555-555555555555";
@@ -69,6 +70,7 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 });
 
 beforeEach((): void => {
+	changesQuery.mockReturnValue({ data: { data: [] }, isLoading: false, isError: false });
 	detailQuery.mockReturnValue({ data: { data: RECORD }, isLoading: false, isError: false });
 });
 
@@ -115,6 +117,46 @@ describe("AuditLogDetailView", () => {
 		expect(screen.getByRole("link", { name: ACTOR_ID }).getAttribute("href")).toBe(`/audit-logs?filter[actorUserId]=${ACTOR_ID}`);
 		expect(screen.getByRole("link", { name: "Kopi Corner" }).getAttribute("href")).toBe(`/audit-logs?filter[organizationId]=${ORGANIZATION_ID}`);
 		expect(screen.getByRole("link", { name: "corr-1" }).getAttribute("href")).toBe("/audit-logs?filter[correlationId]=corr-1");
+	});
+
+	it("lists the rows the request changed in the database, in write order, each linking to its before / after", () => {
+		const changeId = "88888888-8888-4888-8888-888888888888";
+		changesQuery.mockReturnValue({
+			data: {
+				data: [
+					DataChangeLogSummarySchema.parse({
+						id: changeId,
+						changeSequence: 9,
+						occurredAt: 1_790_000_000_020,
+						transactionId: 77,
+						tableName: "product",
+						operation: "INSERT",
+						rowId: "42",
+						changedColumns: [],
+						actorKind: "USER",
+						actor: null,
+						organization: null,
+						apiKeyId: null,
+						systemOperation: null,
+						correlationId: "corr-1",
+						databaseRole: "app_runtime",
+					}),
+				],
+			},
+			isLoading: false,
+			isError: false,
+		});
+		render(<AuditLogDetailView id={RECORD_ID} />);
+
+		expect(changesQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, sort: "occurredAt", filter: { correlationId: { eq: "corr-1" } } }, expect.anything());
+		expect(screen.getByRole("heading", { name: "Database changes" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: /Insert product 42/ }).getAttribute("href")).toBe(`/audit-logs/changes/${changeId}`);
+	});
+
+	it("says when the request changed no rows", () => {
+		render(<AuditLogDetailView id={RECORD_ID} />);
+
+		expect(screen.getByText("No rows were changed.")).toBeTruthy();
 	});
 
 	it("shows the full-page record's skeleton while the record loads", () => {

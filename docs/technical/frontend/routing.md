@@ -40,8 +40,9 @@ consistent across the three Next.js apps.
   once in `@workspace/shared` `APP_LINKS` (`packages/shared/src/app-links.ts`), and the apps'
   `routes.ts` reuse those constants. Rename such a page and both change together.
 - **Breadcrumbs** come from the sidebar menu (`resolveSidebarMenuTrail`); below the deepest menu
-  match, each app's `resolvePage` decides which URL segments are real pages (others — like the
-  id in `/rewards/<id>/edit` — produce no crumb). A data-driven page names its final crumb with
+  match, each app's `resolvePage` decides which URL segments are real pages (a segment with no
+  page of its own produces no crumb; the merchant's `/rewards/<id>/edit` reads Rewards › Reward ›
+  Edit reward because `/rewards/<id>` is the reward's own page). A data-driven page names its final crumb with
   the breadcrumb context's `setTailLabel(name)`; labels are scoped to the pathname they were set on.
   When the page's data has no entity name, its static crumb label matches the page heading (web's
   wallet claim page reads `My Wallet › Show at checkout`), and back links use the parent crumb's name.
@@ -60,7 +61,7 @@ consistent across the three Next.js apps.
   `/geography`, `/catalog/{products,categories}`, `/settings/{billing,access}` (platform),
   `/account/{profile,security}` (personal). Full table: [Admin panel](./admin-panel.md).
 - **merchant** — org-scoped under `/orgs/[orgSlug]`: `dashboard`, `rewards` (`?status=live|review|drafts|ended`
-  status tab — none opens the first tab with rewards; `new`, `[rewardId]/edit`), `redemptions` (`?page=`), `analytics`, `terminals` (POS terminal pairing), `api-keys` (`?status=` key filter), `settings` (organization index:
+  status tab — none opens the first tab with rewards; `new`, `[rewardId]` (the read-only reward page: offer, performance, details, and its edit / submit-for-review actions), `[rewardId]/edit` (the editor — viewing and editing are separate pages, never one form toggled read-only)), `redemptions` (`?page=`), `analytics`, `terminals` (POS terminal pairing), `api-keys` (`?status=` key filter), `settings` (organization index:
   `team`, `locations`, `verification`), `account` (personal). Top-level entry points: `/` and `/account` resolve the organization
   server-side; `/onboarding`, `/team-invite`, `/auth/*` (login, forgot-password, reset-password — the
   same paths as every app, from `APP_LINKS.auth`).

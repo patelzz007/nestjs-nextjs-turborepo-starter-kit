@@ -99,6 +99,7 @@ const ROLES_AND_GUEST: readonly (OrganizationMembershipRole | undefined)[] = [..
 describe("org route map ↔ app/orgs/[orgSlug] pages", () => {
 	it("discovers the org pages it guards", () => {
 		expect(ORG_PAGES.map((page) => page.route)).toContain("/settings/team");
+		expect(ORG_PAGES.map((page) => page.route)).toContain("/rewards/[rewardId]");
 		expect(ORG_PAGES.map((page) => page.route)).toContain("/rewards/[rewardId]/edit");
 	});
 
@@ -148,12 +149,13 @@ describe("resolveOrgPageRoute", () => {
 		["/settings/team", "/settings/team"],
 		["/settings/team?tab=invites", "/settings/team"],
 		["/rewards/new", "/rewards/new"],
+		["/rewards/3f1c2b8e", "/rewards/[rewardId]"],
 		["/rewards/3f1c2b8e/edit", "/rewards/[rewardId]/edit"],
 	] satisfies [string, OrgPageRoute][])("maps %s to %s", (path, route) => {
 		expect(resolveOrgPageRoute(path)).toBe(route);
 	});
 
-	it.each(["/settings/kyb", "/rewards/3f1c2b8e", "/support"])("returns undefined for %s (no page) so callers fail closed", (path) => {
+	it.each(["/settings/kyb", "/rewards/3f1c2b8e/history", "/support"])("returns undefined for %s (no page) so callers fail closed", (path) => {
 		expect(resolveOrgPageRoute(path)).toBeUndefined();
 		expect(canOpenOrgPath(path, () => true)).toBe(false);
 	});

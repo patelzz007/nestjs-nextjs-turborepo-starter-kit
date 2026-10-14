@@ -71,7 +71,7 @@ hold even though `99-app-runtime-grants.sql` grants DML on every table:
 
 | Tables | Withheld | Why |
 | --- | --- | --- |
-| `audit_logs`, `impersonation_audit_logs`, `mfa_recovery_audit_logs` | `UPDATE`, `DELETE` | Append-only audit trails |
+| `audit_logs`, `data_change_logs`, `impersonation_audit_logs`, `mfa_recovery_audit_logs` | `UPDATE`, `DELETE` | Append-only audit trails |
 | `impersonation_sessions`, `regions`, `subregions`, `countries`, `states`, `cities` | `DELETE` | Never hard-deleted |
 
 `db:apply-security` revokes them in the same transaction as the blanket grant and verifies the live
@@ -121,3 +121,29 @@ bare `prisma migrate reset` recreates the schema without them. Re-apply the secu
 
 [Database](../database.md) · [Threat model](./threat-model.md) ·
 [Data classification](./data-classification.md) · `apps/api/prisma/rls/README.md`
+
+## Row-level data-change trail (ADR 051)
+
+Every table in `public` except the declared exemptions carries two triggers, generated and
+installed by `pnpm db:apply-security` (`prisma/rls/data-change-capture.ts`):
+
+- `data_change_capture` (AFTER INSERT / UPDATE / DELETE, per row) and
+  `data_change_capture_truncate` (AFTER TRUNCATE, per statement) append one `data_change_logs`
+  row per change **in the same transaction** — a change and its record commit or roll back together.
+- The trigger function is `SECURITY INVOKER`: `database_role` is the role that really wrote the
+  row (`app_runtime`, a system operation's role, the owner during a migration or a manual `psql`
+  session). The attribution — user, organization, API key, system operation, purpose, correlation
+  id — is read from the same `app.*` session variables the RLS policies read.
+- `data_change_logs` accepts an INSERT only while a trigger runs (`pg_trigger_depth() > 0`); the
+  application role cannot create functions or triggers, so it can neither forge nor pre-write a
+  record. UPDATE / DELETE are withheld (append-only); SELECT is bypass-only
+  (`audit.data_change.read`).
+- Capture is the default: a table created by a later migration is captured on the next apply.
+  Leaving one out takes an entry in `DATA_CHANGE_CAPTURE_EXEMPTIONS` with a reason, and every
+  column whose name looks like secret material must be classified (`DATA_CHANGE_SECRET_COLUMNS`
+  → `[REDACTED]`, or `DATA_CHANGE_NON_SECRET_COLUMNS` with the reason) — the apply and the unit
+  suite fail otherwise.
+- A role that writes a captured table must hold INSERT on `data_change_logs` (`app_runtime` does
+  through the blanket grant). The analytics consumer's role writes only exempt tables; if it ever
+  writes a captured one its write fails until it is granted — fail closed, never unrecorded.
+

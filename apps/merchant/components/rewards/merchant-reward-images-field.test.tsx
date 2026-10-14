@@ -51,6 +51,8 @@ beforeAll((): void => {
 let objectUrlCount = 0;
 beforeEach((): void => {
 	objectUrlCount = 0;
+	reportedImages = undefined;
+	onImagesChange.mockReset();
 	URL.createObjectURL = vi.fn((): string => {
 		objectUrlCount += 1;
 		return `blob:local-${String(objectUrlCount)}`;
@@ -73,11 +75,21 @@ function prepared(file: File): ImageIntake {
 	return { kind: "prepared", file: new File([new Uint8Array(8)], file.name.replace(/\.\w+$/u, ".webp"), { type: "image/webp" }) };
 }
 
-function renderField(initialImages: readonly SavedRewardImage[] = []): ReturnType<typeof vi.fn> {
-	const onImagesChange = vi.fn();
+/** The images the field last reported, in full (the live preview reads the cover's URL from them). */
+let reportedImages: readonly SavedRewardImage[] | undefined;
+/** Hears the reported images' ids, in order — what the form saves. */
+const onImagesChange = vi.fn<(fileIds: readonly string[]) => void>();
+
+function handleImagesChange(images: readonly SavedRewardImage[]): void {
+	reportedImages = images;
+	onImagesChange(images.map((image) => image.fileId));
+}
+
+/** Renders the field; the returned mock hears the reported images' ids. */
+function renderField(initialImages: readonly SavedRewardImage[] = []): typeof onImagesChange {
 	render(
 		<UiKitTestProviders>
-			<MerchantRewardImagesField organizationId={ORGANIZATION_ID} initialImages={initialImages} onImagesChange={onImagesChange} />
+			<MerchantRewardImagesField organizationId={ORGANIZATION_ID} initialImages={initialImages} onImagesChange={handleImagesChange} />
 		</UiKitTestProviders>,
 	);
 	return onImagesChange;
@@ -123,6 +135,8 @@ describe("MerchantRewardImagesField", () => {
 		await waitFor((): void => {
 			expect(onImagesChange).toHaveBeenLastCalledWith(["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]);
 		});
+		// The full images travel with the ids, so the editor's preview can draw the cover straight away.
+		expect(reportedImages?.map((image) => image.url)).toEqual(["https://cdn.example.com/one.webp", "https://cdn.example.com/two.webp"]);
 		expect(mutateAsync.mock.calls.map(([input]) => [input.organizationId, input.file.name])).toEqual([
 			[ORGANIZATION_ID, "one.webp"],
 			[ORGANIZATION_ID, "two.webp"],

@@ -555,6 +555,41 @@ export type {
 	HttpAuditLogListSortField,
 	HttpAuditLogSummary,
 } from "./domain/platform/http-audit-log";
+export {
+	AUDIT_TRAIL_MAX_LISTED_TABLES,
+	AuditTrailBackgroundEntrySchema,
+	AuditTrailEntryKindSchema,
+	AuditTrailEntrySchema,
+	AuditTrailListQuerySchema,
+	AuditTrailRequestEntrySchema,
+	auditTrailListQuery,
+} from "./domain/platform/audit-trail";
+export type {
+	AuditTrailBackgroundEntry,
+	AuditTrailEntry,
+	AuditTrailEntryKind,
+	AuditTrailListQuery,
+	AuditTrailListSortField,
+	AuditTrailRequestEntry,
+} from "./domain/platform/audit-trail";
+export {
+	DataChangeActorKindSchema,
+	DataChangeLogDetailSchema,
+	DataChangeLogIdParamSchema,
+	DataChangeLogListQuerySchema,
+	DataChangeLogSummarySchema,
+	DataChangeOperationSchema,
+	dataChangeLogListQuery,
+} from "./domain/platform/data-change-log";
+export type {
+	DataChangeActorKind,
+	DataChangeLogDetail,
+	DataChangeLogIdParam,
+	DataChangeLogListQuery,
+	DataChangeLogListSortField,
+	DataChangeLogSummary,
+	DataChangeOperation,
+} from "./domain/platform/data-change-log";
 export { ErrorResponseSchema, MessageResponseSchema, OkResponseSchema, SuccessAckResponseSchema } from "./api/message";
 export type { ErrorResponse, MessageResponse, OkResponse, SuccessAckResponse } from "./api/message";
 export { PaginationSchema } from "./api/pagination";

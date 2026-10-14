@@ -10,18 +10,21 @@ import {
 	AuditAuthMethodSchema,
 	AuditHttpMethodSchema,
 	AuditOutcomeSchema,
+	auditTrailListQuery,
+	AuditTrailEntryKindSchema,
+	DataChangeActorKindSchema,
 	DeviceTypeSchema,
-	httpAuditLogListQuery,
 	IpAddressScopeSchema,
+	type AuditTrailBackgroundEntry,
+	type AuditTrailEntry,
 	type Envelope,
-	type HttpAuditLogSummary,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { RefreshCw, X } from "lucide-react";
+import { Database, RefreshCw } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -33,6 +36,9 @@ import {
 	AuditOutcomeBadge,
 	describeClientSoftware,
 } from "@/components/audit-logs/audit-log-badges";
+import { DataChangeActorCell, DataChangeOperationBadge } from "@/components/audit-logs/data-change-badges";
+import { DataChangeDrawer } from "@/components/audit-logs/data-change-drawer";
+import { IdFilterChip } from "@/components/audit-logs/id-filter-chip";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { AUDIT_LOG_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { AUDIT_LOG_TABLE_PAGE, TablePageSkeleton } from "@/components/loading/table-page-skeleton";
@@ -40,6 +46,8 @@ import {
 	AUDIT_AUTH_METHOD_LABELS,
 	AUDIT_HTTP_METHOD_LABELS,
 	AUDIT_OUTCOME_LABELS,
+	AUDIT_TRAIL_KIND_LABELS,
+	DATA_CHANGE_ACTOR_KIND_LABELS,
 	DEVICE_TYPE_LABELS,
 	enumFilterOptions,
 	IP_ADDRESS_SCOPE_LABELS,
@@ -49,75 +57,267 @@ import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { countryFlag, countryName } from "@/lib/format/country";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
-import { AUDIT_LOG_PAGE_SIZE_OPTIONS, AUDIT_LOG_URL_STATE, isAuditLogFiltered, toAuditLogListQuery, type AuditLogUrlState } from "@/lib/url-state/audit-logs";
-import { AUDIT_LOG_RECORD_URL_STATE } from "@/lib/url-state/selection";
+import {
+	AUDIT_LOG_FILTER_KEYS,
+	AUDIT_LOG_PAGE_SIZE_OPTIONS,
+	AUDIT_LOG_URL_STATE,
+	isAuditLogFiltered,
+	toAuditLogListQuery,
+	type AuditLogUrlState,
+} from "@/lib/url-state/audit-logs";
+import { AUDIT_LOG_RECORD_URL_STATE, DATA_CHANGE_RECORD_URL_STATE } from "@/lib/url-state/selection";
 
 import { AuditLogDrawer } from "./audit-log-drawer";
 
-/** The select filters the toolbar offers (the id filters arrive from the record's links). */
+/**
+ * The select filters the toolbar offers (the id filters arrive from links).
+ * The request-only ones (outcome … address class) leave only requests; "Attributed
+ * to" leaves only background writes — the API applies the same rule.
+ */
 const SELECT_FILTERS: Filter[] = [
+	{ key: "kind", label: "Source", options: enumFilterOptions(AuditTrailEntryKindSchema.options, AUDIT_TRAIL_KIND_LABELS) },
 	{ key: "outcome", label: "Outcome", options: enumFilterOptions(AuditOutcomeSchema.options, AUDIT_OUTCOME_LABELS) },
 	{ key: "method", label: "Method", options: enumFilterOptions(AuditHttpMethodSchema.options, AUDIT_HTTP_METHOD_LABELS) },
 	{ key: "authMethod", label: "Credential", options: enumFilterOptions(AuditAuthMethodSchema.options, AUDIT_AUTH_METHOD_LABELS) },
 	{ key: "deviceType", label: "Device", options: enumFilterOptions(DeviceTypeSchema.options, DEVICE_TYPE_LABELS) },
 	{ key: "ipScope", label: "Address class", options: enumFilterOptions(IpAddressScopeSchema.options, IP_ADDRESS_SCOPE_LABELS) },
+	{ key: "actorKind", label: "Attributed to", options: enumFilterOptions(DataChangeActorKindSchema.options, DATA_CHANGE_ACTOR_KIND_LABELS) },
 ];
+
+/** The id filters — each shown as a removable chip while set. */
+type IdFilterKey = "actorUserId" | "organizationId" | "correlationId" | "tableName" | "rowId";
+const ID_FILTER_LABELS: Readonly<Record<IdFilterKey, string>> = {
+	actorUserId: "Actor",
+	organizationId: "Organization",
+	correlationId: "Correlation",
+	tableName: "Table",
+	rowId: "Row",
+};
+const ID_FILTER_KEYS: readonly IdFilterKey[] = ["actorUserId", "organizationId", "correlationId", "tableName", "rowId"];
 
 /** The URL state with every filter, the search and the paging reset. */
 const CLEARED_FILTERS: Partial<AuditLogUrlState> = {
+	...Object.fromEntries(AUDIT_LOG_FILTER_KEYS.map((key) => [key, undefined])),
 	search: undefined,
-	outcome: undefined,
-	method: undefined,
-	authMethod: undefined,
-	deviceType: undefined,
-	ipScope: undefined,
-	actorUserId: undefined,
-	organizationId: undefined,
-	correlationId: undefined,
 	page: LIST_FIRST_PAGE,
 	cursor: undefined,
 };
 
-function getAuditLogRowId(entry: HttpAuditLogSummary): string {
+function getEntryRowId(entry: AuditTrailEntry): string {
 	return entry.id;
 }
 
-/** One id filter set from a detail-page link, shown as a removable chip. */
-function IdFilterChip({ label, value, onClear }: { readonly label: string; readonly value: string; readonly onClear: () => void }): React.JSX.Element {
+/** `Changed 3 rows in users, refresh_tokens` — `null` when the entry changed nothing (a read). */
+function describeChanges(entry: AuditTrailEntry): string | null {
+	if (entry.changeCount === 0) {
+		return null;
+	}
+	const rows: string = entry.changeCount === 1 ? "1 row" : `${String(entry.changeCount)} rows`;
+	return `Changed ${rows} in ${entry.changedTables.join(", ")}`;
+}
+
+/** Two-line activity: a title line (badges + what) and one muted detail line, each truncated — rows stay one height. */
+function ActivityLines({ title, detail, changes }: { readonly title: React.ReactNode; readonly detail: string; readonly changes: string | null }): React.JSX.Element {
 	return (
-		<span className="inline-flex items-center gap-1.5 rounded-full border border-input bg-muted px-2.5 py-1 text-xs">
-			<span className="text-muted-foreground">{label}</span>
-			<code className="max-w-40 truncate font-mono">{value}</code>
-			<button type="button" onClick={onClear} aria-label={`Remove the ${label} filter`} className="rounded-full p-0.5 hover:bg-background">
-				<X className="size-3" />
-			</button>
-		</span>
+		<div className="max-w-xl min-w-0 space-y-0.5">
+			<div className="flex min-w-0 items-center gap-2">{title}</div>
+			<p className="truncate font-mono text-xs text-muted-foreground" title={detail}>
+				{detail}
+			</p>
+			{changes === null ? null : (
+				<p className="truncate text-xs text-foreground/80" title={changes}>
+					{changes}
+				</p>
+			)}
+		</div>
+	);
+}
+
+/** What happened: the request, or the database write no request made. */
+function ActivityCell({ entry }: { readonly entry: AuditTrailEntry }): React.JSX.Element {
+	if (entry.kind === "REQUEST") {
+		return (
+			<ActivityLines
+				title={
+					<>
+						<AuditMethodBadge method={entry.method} />
+						<span className="truncate font-mono text-xs font-medium" title={entry.endpoint}>
+							{entry.endpoint}
+						</span>
+					</>
+				}
+				detail={entry.path}
+				changes={describeChanges(entry)}
+			/>
+		);
+	}
+	return <BackgroundActivity entry={entry} />;
+}
+
+/** A single change reads as the change itself; a job's changes read as one database write. */
+function BackgroundActivity({ entry }: { readonly entry: AuditTrailBackgroundEntry }): React.JSX.Element {
+	const icon = <Database className="size-3.5 shrink-0 text-muted-foreground" aria-label="Database write" />;
+	if (entry.changeCount === 1) {
+		return (
+			<ActivityLines
+				title={
+					<>
+						{icon}
+						<DataChangeOperationBadge operation={entry.operation} />
+						<span className="truncate font-mono text-xs font-medium">{entry.changedTables.join(", ")}</span>
+					</>
+				}
+				detail={entry.rowId ?? "whole table"}
+				changes={null}
+			/>
+		);
+	}
+	return (
+		<ActivityLines
+			title={
+				<>
+					{icon}
+					<span className="truncate text-xs font-medium">Database write · {entry.changeCount} rows</span>
+				</>
+			}
+			detail={entry.changedTables.join(", ")}
+			changes={null}
+		/>
+	);
+}
+
+/** Who acted, with the organization underneath. */
+function ActorCell({ entry }: { readonly entry: AuditTrailEntry }): React.JSX.Element {
+	return (
+		<div className="max-w-56 min-w-0 space-y-0.5">
+			{entry.kind === "REQUEST" ? <AuditActorCell entry={entry} /> : <DataChangeActorCell entry={entry} />}
+			{entry.organization === null ? null : (
+				<p className="truncate text-xs text-muted-foreground" title={entry.organization.id}>
+					{entry.organization.name ?? entry.organization.id}
+				</p>
+			)}
+		</div>
+	);
+}
+
+/** How a request ended; a background write has no HTTP outcome — it committed. */
+function ResultCell({ entry }: { readonly entry: AuditTrailEntry }): React.JSX.Element {
+	if (entry.kind === "BACKGROUND") {
+		return <span className="text-xs text-muted-foreground">Committed</span>;
+	}
+	return (
+		<div className="flex flex-col items-start gap-1">
+			<AuditOutcomeBadge outcome={entry.outcome} status={entry.responseStatus} />
+			{entry.errorCode === null ? null : <code className="max-w-40 truncate text-xs text-destructive">{entry.errorCode}</code>}
+		</div>
+	);
+}
+
+/** Two lines: device + credential, then address + class + country; a background write shows its database role. */
+function ClientCell({ entry }: { readonly entry: AuditTrailEntry }): React.JSX.Element {
+	if (entry.kind === "BACKGROUND") {
+		return <span className="font-mono text-xs text-muted-foreground">{entry.databaseRole}</span>;
+	}
+	const software: string | null = describeClientSoftware(entry);
+	return (
+		<div className="max-w-64 min-w-0 space-y-1 text-xs" title={entry.userAgent ?? undefined}>
+			<div className="flex min-w-0 items-center gap-1">
+				{entry.deviceType === null ? null : <AuditDeviceBadge deviceType={entry.deviceType} />}
+				<AuditAuthMethodBadge authMethod={entry.authMethod} />
+				{software === null ? null : <span className="truncate text-muted-foreground">{software}</span>}
+			</div>
+			<div className="flex min-w-0 items-center gap-1 text-muted-foreground">
+				<span className="truncate font-mono">{entry.ipAddress ?? "—"}</span>
+				{entry.ipScope === null ? null : <AuditIpScopeBadge scope={entry.ipScope} />}
+				{entry.geoCountry === null ? null : (
+					<span className="truncate" title={countryName(entry.geoCountry)}>
+						{countryFlag(entry.geoCountry) ?? entry.geoCountry} {entry.geoCity ?? countryName(entry.geoCountry)}
+					</span>
+				)}
+			</div>
+		</div>
+	);
+}
+
+/** The chip of one id filter, clearing exactly that filter. */
+function IdFilterChipFor({
+	filterKey,
+	value,
+	onClear,
+}: {
+	readonly filterKey: IdFilterKey;
+	readonly value: string;
+	readonly onClear: (key: IdFilterKey) => void;
+}): React.JSX.Element {
+	const handleClear = React.useCallback((): void => {
+		onClear(filterKey);
+	}, [filterKey, onClear]);
+	return <IdFilterChip label={ID_FILTER_LABELS[filterKey]} value={value} onClear={handleClear} />;
+}
+
+/** One entry as a phone-width card. */
+function AuditTrailMobileCard({ entry }: { readonly entry: AuditTrailEntry }): React.JSX.Element {
+	const changes = { label: "Changes", value: entry.changeCount === 0 ? "None" : `${String(entry.changeCount)} · ${entry.changedTables.join(", ")}` };
+	if (entry.kind === "BACKGROUND") {
+		return (
+			<DataTableMobileCard
+				item={entry}
+				title="Database write"
+				subtitle={formatDateTimeWithSeconds(entry.occurredAt)}
+				badge={<DataChangeOperationBadge operation={entry.operation} />}
+				fields={[{ label: "Attributed to", value: entry.actor?.email ?? entry.systemOperation ?? DATA_CHANGE_ACTOR_KIND_LABELS[entry.actorKind] }, changes]}
+			/>
+		);
+	}
+	return (
+		<DataTableMobileCard
+			item={entry}
+			title={`${entry.method} ${entry.endpoint}`}
+			subtitle={formatDateTimeWithSeconds(entry.occurredAt)}
+			badge={<AuditOutcomeBadge outcome={entry.outcome} status={entry.responseStatus} />}
+			fields={[
+				{ label: "Actor", value: entry.actor?.email ?? entry.actor?.id ?? (entry.apiKeyId === null ? "Anonymous" : "API key") },
+				{ label: "IP", value: entry.ipAddress ?? "—" },
+				changes,
+				...(entry.errorCode === null ? [] : [{ label: "Error", value: entry.errorCode }]),
+			]}
+		/>
 	);
 }
 
 /**
- * Audit log — the admin viewer of the global HTTP audit trail.
+ * Audit log — ONE timeline of everything that happened (ADR 025 + ADR 051):
+ * every HTTP request (reads included, with the rows it changed) and every
+ * database write no request made (jobs, schedulers, CLIs, manual SQL).
  *
- * The page owns the data (`GET /admin/audit-logs`), the columns and the
+ * The page owns the data (`GET /admin/audit-trail`), the columns and the
  * presentation; search, filters, sort and page live in the URL
- * (lib/url-state/audit-logs), so a filtered view can be shared. Clicking a row
- * opens its complete record in a drawer (`?record=`). Viewing this page is
- * itself audited by the API.
+ * (lib/url-state/audit-logs), so a filtered view can be shared. Clicking a
+ * request opens its record (`?record=`), a background write its row change
+ * (`?change=`), each in a drawer. Viewing this page is itself audited.
  */
-export default function AuditLogView({ initialPage }: { readonly initialPage?: PrefetchedQuery<Envelope<HttpAuditLogSummary[]>> | undefined }): React.JSX.Element {
+export default function AuditLogView({ initialPage }: { readonly initialPage?: PrefetchedQuery<Envelope<AuditTrailEntry[]>> | undefined }): React.JSX.Element {
 	const { api } = useAuth();
 	const [urlState, updateUrlState] = useUrlState(AUDIT_LOG_URL_STATE);
-	// The record open in the drawer — its own URL param, so opening one never resets the table's paging.
-	const [selection, updateSelection] = useUrlState(AUDIT_LOG_RECORD_URL_STATE);
+	// The record / change open in a drawer — their own URL params, so opening one never resets the table's paging.
+	const [recordSelection, updateRecordSelection] = useUrlState(AUDIT_LOG_RECORD_URL_STATE);
+	const [changeSelection, updateChangeSelection] = useUrlState(DATA_CHANGE_RECORD_URL_STATE);
 	const handleRowClick = React.useCallback(
-		(entry: HttpAuditLogSummary): void => {
-			updateSelection({ record: entry.id });
+		(entry: AuditTrailEntry): void => {
+			if (entry.kind === "REQUEST") {
+				updateRecordSelection({ record: entry.id });
+			} else {
+				updateChangeSelection({ change: entry.id });
+			}
 		},
-		[updateSelection],
+		[updateRecordSelection, updateChangeSelection],
 	);
-	const handleDrawerClose = React.useCallback((): void => {
-		updateSelection({ record: undefined });
-	}, [updateSelection]);
+	const handleRecordClose = React.useCallback((): void => {
+		updateRecordSelection({ record: undefined });
+	}, [updateRecordSelection]);
+	const handleChangeClose = React.useCallback((): void => {
+		updateChangeSelection({ change: undefined });
+	}, [updateChangeSelection]);
 	const isFiltered: boolean = isAuditLogFiltered(urlState);
 
 	const commitSearch = React.useCallback(
@@ -133,23 +333,23 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 	}, [updateUrlState]);
 
 	const stateKey: string = AUDIT_LOG_URL_STATE.serialize(urlState);
-	const logQuery = api.auditLogs.list.useQuery(toAuditLogListQuery(urlState), {
+	const trailQuery = api.auditTrail.list.useQuery(toAuditLogListQuery(urlState), {
 		placeholderData: keepPreviousData,
 		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
 	});
 
 	// Stable rows reference (rule 16 — avoid re-renders via new array identity).
-	const rows = React.useMemo(() => logQuery.data?.data ?? [], [logQuery.data]);
-	const totalCount: number = readPaginatedTotal(logQuery.data?.meta, rows.length);
-	const isRefetching: boolean = logQuery.isFetching && !logQuery.isLoading;
+	const rows = React.useMemo(() => trailQuery.data?.data ?? [], [trailQuery.data]);
+	const totalCount: number = readPaginatedTotal(trailQuery.data?.meta, rows.length);
+	const isRefetching: boolean = trailQuery.isFetching && !trailQuery.isLoading;
 	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
 		state: urlState,
 		update: updateUrlState,
-		sortSpec: httpAuditLogListQuery,
+		sortSpec: auditTrailListQuery,
 		totalCount,
-		nextCursor: readPaginatedNextCursor(logQuery.data?.meta),
+		nextCursor: readPaginatedNextCursor(trailQuery.data?.meta),
 		resetKey: AUDIT_LOG_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
-		getRowId: getAuditLogRowId,
+		getRowId: getEntryRowId,
 		onClearFilters: handleClearFilters,
 		isFiltered,
 	});
@@ -158,7 +358,9 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 		(filterKey: string, value: string | null): void => {
 			const option: string = value ?? "";
 			const reset = { page: LIST_FIRST_PAGE, cursor: undefined };
-			if (filterKey === "outcome") {
+			if (filterKey === "kind") {
+				updateUrlState({ kind: parseFilterOption(option, AuditTrailEntryKindSchema), ...reset });
+			} else if (filterKey === "outcome") {
 				updateUrlState({ outcome: parseFilterOption(option, AuditOutcomeSchema), ...reset });
 			} else if (filterKey === "method") {
 				updateUrlState({ method: parseFilterOption(option, AuditHttpMethodSchema), ...reset });
@@ -168,6 +370,8 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 				updateUrlState({ deviceType: parseFilterOption(option, DeviceTypeSchema), ...reset });
 			} else if (filterKey === "ipScope") {
 				updateUrlState({ ipScope: parseFilterOption(option, IpAddressScopeSchema), ...reset });
+			} else if (filterKey === "actorKind") {
+				updateUrlState({ actorKind: parseFilterOption(option, DataChangeActorKindSchema), ...reset });
 			}
 		},
 		[updateUrlState],
@@ -175,38 +379,36 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 
 	const manualColumnFilters = React.useMemo(
 		(): Readonly<Record<string, string>> => ({
+			kind: urlState.kind ?? ALL_FILTER_OPTION,
 			outcome: urlState.outcome ?? ALL_FILTER_OPTION,
 			method: urlState.method ?? ALL_FILTER_OPTION,
 			authMethod: urlState.authMethod ?? ALL_FILTER_OPTION,
 			deviceType: urlState.deviceType ?? ALL_FILTER_OPTION,
 			ipScope: urlState.ipScope ?? ALL_FILTER_OPTION,
+			actorKind: urlState.actorKind ?? ALL_FILTER_OPTION,
 		}),
-		[urlState.outcome, urlState.method, urlState.authMethod, urlState.deviceType, urlState.ipScope],
+		[urlState.kind, urlState.outcome, urlState.method, urlState.authMethod, urlState.deviceType, urlState.ipScope, urlState.actorKind],
 	);
 
-	const clearActor = React.useCallback((): void => {
-		updateUrlState({ actorUserId: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
-	}, [updateUrlState]);
-	const clearOrganization = React.useCallback((): void => {
-		updateUrlState({ organizationId: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
-	}, [updateUrlState]);
-	const clearCorrelation = React.useCallback((): void => {
-		updateUrlState({ correlationId: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
-	}, [updateUrlState]);
+	const clearIdFilter = React.useCallback(
+		(key: IdFilterKey): void => {
+			updateUrlState({ [key]: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+		},
+		[updateUrlState],
+	);
+	const activeIdFilters: readonly { readonly key: IdFilterKey; readonly value: string }[] = ID_FILTER_KEYS.flatMap((key: IdFilterKey) => {
+		const value: string | undefined = urlState[key];
+		return value === undefined ? [] : [{ key, value }];
+	});
 
 	const searchToolbar = React.useMemo(
 		(): React.JSX.Element => (
-			<DataTableSearchToolbar
-				value={searchDraft}
-				onChange={setSearchDraft}
-				placeholder="Search path, endpoint, error code, IP, correlation id..."
-				ariaLabel="Search audit log"
-			/>
+			<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder="Search path, endpoint, table name, correlation id..." ariaLabel="Search audit log" />
 		),
 		[searchDraft, setSearchDraft],
 	);
 
-	const columns = React.useMemo<ColumnDef<DataTableFeatures, HttpAuditLogSummary>[]>(
+	const columns = React.useMemo<ColumnDef<DataTableFeatures, AuditTrailEntry>[]>(
 		() => [
 			{
 				accessorKey: "occurredAt",
@@ -216,113 +418,46 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 				cell: ({ row }): React.JSX.Element => (
 					<div className="whitespace-nowrap tabular-nums">
 						<p>{formatDateTimeWithSeconds(row.original.occurredAt)}</p>
-						<p className="text-xs text-muted-foreground">{row.original.durationMs} ms</p>
+						{row.original.kind === "REQUEST" ? <p className="text-xs text-muted-foreground">{row.original.durationMs} ms</p> : null}
 					</div>
 				),
 			},
 			{
-				accessorKey: "endpoint",
-				header: "Request",
-				enableSorting: true,
+				id: "activity",
+				header: "Activity",
 				enableHiding: false,
-				cell: ({ row }): React.JSX.Element => (
-					<div className="max-w-md min-w-0">
-						<div className="flex items-center gap-2">
-							<AuditMethodBadge method={row.original.method} />
-							<span className="truncate font-mono text-xs font-medium" title={row.original.endpoint}>
-								{row.original.endpoint}
-							</span>
-						</div>
-						<p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={row.original.path}>
-							{row.original.path}
-						</p>
-					</div>
-				),
-			},
-			{
-				accessorKey: "responseStatus",
-				header: "Outcome",
-				enableSorting: true,
-				cell: ({ row }): React.JSX.Element => (
-					<div className="flex flex-col items-start gap-1">
-						<AuditOutcomeBadge outcome={row.original.outcome} status={row.original.responseStatus} />
-						{row.original.errorCode === null ? null : <code className="text-xs text-destructive">{row.original.errorCode}</code>}
-					</div>
-				),
+				cell: ({ row }): React.JSX.Element => <ActivityCell entry={row.original} />,
 			},
 			{
 				id: "actor",
 				header: "Actor",
-				cell: ({ row }): React.JSX.Element => <AuditActorCell entry={row.original} />,
+				cell: ({ row }): React.JSX.Element => <ActorCell entry={row.original} />,
 			},
 			{
-				id: "organization",
-				header: "Organization",
-				cell: ({ row }): React.JSX.Element => (
-					<span className="text-muted-foreground">{row.original.organization === null ? "—" : (row.original.organization.name ?? row.original.organization.id)}</span>
-				),
-			},
-			{
-				id: "device",
-				header: "Device",
-				cell: ({ row }): React.JSX.Element => (
-					<div className="flex max-w-48 min-w-0 flex-col items-start gap-1 text-xs">
-						{row.original.deviceType === null ? <span className="text-muted-foreground">—</span> : <AuditDeviceBadge deviceType={row.original.deviceType} />}
-						<span className="truncate text-muted-foreground" title={row.original.userAgent ?? undefined}>
-							{describeClientSoftware(row.original) ?? "—"}
-						</span>
-					</div>
-				),
+				id: "result",
+				header: "Result",
+				cell: ({ row }): React.JSX.Element => <ResultCell entry={row.original} />,
 			},
 			{
 				id: "client",
 				header: "Client",
-				cell: ({ row }): React.JSX.Element => (
-					<div className="flex flex-col items-start gap-1 text-xs">
-						<span className="font-mono">{row.original.ipAddress ?? "—"}</span>
-						<div className="flex flex-wrap gap-1">
-							{row.original.ipScope === null ? null : <AuditIpScopeBadge scope={row.original.ipScope} />}
-							<AuditAuthMethodBadge authMethod={row.original.authMethod} />
-						</div>
-						{row.original.geoCountry === null ? null : (
-							<span className="text-muted-foreground" title={countryName(row.original.geoCountry)}>
-								{countryFlag(row.original.geoCountry) ?? row.original.geoCountry} {row.original.geoCity ?? countryName(row.original.geoCountry)}
-							</span>
-						)}
-					</div>
-				),
+				cell: ({ row }): React.JSX.Element => <ClientCell entry={row.original} />,
 			},
 		],
 		[],
 	);
 
-	const mobileCardRender = React.useCallback(
-		(item: HttpAuditLogSummary): React.ReactNode => (
-			<DataTableMobileCard
-				item={item}
-				title={`${item.method} ${item.endpoint}`}
-				subtitle={formatDateTimeWithSeconds(item.occurredAt)}
-				badge={<AuditOutcomeBadge outcome={item.outcome} status={item.responseStatus} />}
-				fields={[
-					{ label: "Actor", value: item.actor?.email ?? item.actor?.id ?? (item.apiKeyId === null ? "Anonymous" : "API key") },
-					{ label: "IP", value: item.ipAddress ?? "—" },
-					{ label: "Duration", value: `${String(item.durationMs)} ms` },
-					...(item.errorCode === null ? [] : [{ label: "Error", value: item.errorCode }]),
-				]}
-			/>
-		),
-		[],
-	);
+	const mobileCardRender = React.useCallback((entry: AuditTrailEntry): React.ReactNode => <AuditTrailMobileCard entry={entry} />, []);
 
 	const handleRefresh = React.useCallback((): void => {
-		void logQuery.refetch();
-	}, [logQuery]);
+		void trailQuery.refetch();
+	}, [trailQuery]);
 
-	if (logQuery.isLoading && rows.length === 0) {
+	if (trailQuery.isLoading && rows.length === 0) {
 		return <TablePageSkeleton labels={AUDIT_LOG_LOADING_LABELS} shape={AUDIT_LOG_TABLE_PAGE} />;
 	}
 
-	if (logQuery.error !== null && rows.length === 0) {
+	if (trailQuery.error !== null && rows.length === 0) {
 		return (
 			<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
 				Failed to load the audit log — check that the API is running and that your role grants audit-log access.
@@ -335,9 +470,11 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 			<header className="flex flex-wrap items-start justify-between gap-4">
 				<div>
 					<h1 className="text-2xl font-semibold tracking-tight text-foreground">Audit log</h1>
-					<p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-						Every request to the API — reads included, successful or refused — with who did it, from which device and where, with which credential, what was sent and what came
-						back. Secrets are redacted and personal data masked before anything is stored. Records can never be edited or deleted, and opening this page is itself recorded.
+					<p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+						Everything that happened, in one timeline: every request to the API — reads included, successful or refused — with who did it, from which device and where, what
+						was sent and what came back; and every row it changed in the database, with the row before and after. Database writes no request made — background jobs, scripts,
+						direct SQL — appear here too. Secrets are redacted and personal data masked before anything is stored; records can never be edited or deleted, and opening this
+						page is itself recorded.
 					</p>
 				</div>
 				<Button variant="outline" size="sm" onClick={handleRefresh} className="gap-1.5">
@@ -348,13 +485,13 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 
 			<Card>
 				<CardHeader className="pb-3">
-					<CardTitle className="text-base">Records</CardTitle>
-					<CardDescription>{totalCount} records · newest first unless you sort a column · click a row for its details</CardDescription>
-					{urlState.actorUserId === undefined && urlState.organizationId === undefined && urlState.correlationId === undefined ? null : (
+					<CardTitle className="text-base">Activity</CardTitle>
+					<CardDescription>{totalCount} entries · newest first unless you sort by time · click an entry for its details</CardDescription>
+					{activeIdFilters.length === 0 ? null : (
 						<div className="flex flex-wrap gap-2 pt-2">
-							{urlState.actorUserId === undefined ? null : <IdFilterChip label="Actor" value={urlState.actorUserId} onClear={clearActor} />}
-							{urlState.organizationId === undefined ? null : <IdFilterChip label="Organization" value={urlState.organizationId} onClear={clearOrganization} />}
-							{urlState.correlationId === undefined ? null : <IdFilterChip label="Correlation" value={urlState.correlationId} onClear={clearCorrelation} />}
+							{activeIdFilters.map(({ key, value }) => (
+								<IdFilterChipFor key={key} filterKey={key} value={value} onClear={clearIdFilter} />
+							))}
 						</div>
 					)}
 				</CardHeader>
@@ -379,7 +516,8 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 				</CardContent>
 			</Card>
 
-			<AuditLogDrawer recordId={selection.record} onClose={handleDrawerClose} />
+			<AuditLogDrawer recordId={recordSelection.record} onClose={handleRecordClose} />
+			<DataChangeDrawer changeId={changeSelection.change} onClose={handleChangeClose} />
 		</div>
 	);
 }

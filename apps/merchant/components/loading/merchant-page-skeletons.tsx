@@ -11,6 +11,7 @@ import {
 } from "@/components/loading/merchant-skeleton-parts";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { REWARD_EDITOR_GRID_CLASS } from "@/components/rewards/merchant-reward-editor-layout";
 import { MerchantRewardsCatalogSkeleton } from "@/components/rewards/merchant-rewards-catalog";
 import { MerchantRewardsSummaryStripSkeleton } from "@/components/rewards/merchant-rewards-summary-strip";
 import { TERMINAL_ROW_ACTIONS, TERMINAL_ROW_GRID, TERMINAL_ROW_TEXT_CELLS } from "@/components/terminals/terminal-row-grid";
@@ -23,7 +24,6 @@ import { AppShellHeaderSkeleton, PanelSidebarSkeleton, type AppShellHeaderSkelet
 import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
 import { SecuritySettingsPanelSkeleton } from "@workspace/client/lib/auth/mfa/security-settings-panel-skeleton";
 import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/merchant/kyb/verification-skeleton";
-import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { ChartSkeleton, FormSkeleton, ListSkeleton, PageHeaderSkeleton, ProseSkeleton, StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
@@ -97,16 +97,17 @@ const GUIDE_STEPS = 3;
 export const REDEMPTION_STAT_CARDS = 2;
 /** Redemption rows while the log loads. */
 export const REDEMPTION_SKELETON_ROWS = 5;
-/** Reward-type tiles in the reward editor (one per reward type). */
-const REWARD_TYPE_TILES = 5;
-/** "Basic information" fields: title, description, value, minimum purchase. */
-const REWARD_BASIC_FIELDS = 4;
-/** "Limits & duration" fields: start, expiry, total available, max claims per user. */
-const REWARD_LIMIT_FIELDS = 4;
-/** Reward performance tiles: claims, redemptions, category. */
-const REWARD_PERFORMANCE_TILES = 3;
-/** Store checkboxes in the reward editor's store availability card. */
-const REWARD_STORE_OPTIONS = 2;
+/** Reward-type choices in the reward editor (one per reward type). */
+const REWARD_TYPE_CHOICES = 5;
+/** Sections the editor skeleton draws: the offer, its photos, and when and how many. */
+export const REWARD_EDITOR_SKELETON_SECTIONS = 3;
+/** Paired fields in the editor's offer and schedule sections (value and minimum spend; start, end, stock, per customer). */
+const REWARD_OFFER_PAIRED_FIELDS = 2;
+const REWARD_SCHEDULE_FIELDS = 4;
+/** Facts in the reward page's details list: runs, per customer, minimum spend, stores, category. */
+const REWARD_DETAIL_ROWS = 5;
+/** Counts in the reward page's performance row: claimed, redeemed (stock is drawn as a meter). */
+const REWARD_PERFORMANCE_COUNTS = 2;
 /** Organization-settings link cards: team, locations, verification. */
 const SETTINGS_LINK_CARDS = 4;
 /** Store-location cards while the locations load. */
@@ -390,92 +391,153 @@ export function MerchantRewardsPageSkeleton(): React.JSX.Element {
 	);
 }
 
-/** Which reward page the editor skeleton stands in for. */
-export type MerchantRewardEditorMode = "create" | "edit";
-
-export interface MerchantRewardEditorPageSkeletonProps {
-	readonly mode: MerchantRewardEditorMode;
+/** One field: its label over its input. */
+function RewardFieldSkeleton({ tall = false }: { readonly tall?: boolean }): React.JSX.Element {
+	return (
+		<div className="flex flex-col gap-2">
+			<Skeleton variant="text" className="h-3.5 w-24" />
+			<Skeleton className={cn("w-full rounded-md", tall ? "h-20" : "h-9")} />
+		</div>
+	);
 }
 
-/** A form card of the editor: its title and description, then label-over-input fields. */
-function RewardFormCardSkeleton({ fields, columns }: { readonly fields: number; readonly columns: 1 | 2 }): React.JSX.Element {
-	return <FormSkeleton fields={fields} columns={columns} withActions={false} className="border-border/80 shadow-xs" />;
+/** One section of the editor panel: its heading and line, then its body. */
+function RewardEditorSectionSkeleton({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+	return (
+		<div data-slot="reward-editor-section-skeleton" className="flex flex-col gap-5 border-border px-5 py-6 not-first:border-t sm:px-7 sm:py-7">
+			<MerchantHeadingSkeleton />
+			{children}
+		</div>
+	);
+}
+
+/** A voucher's silhouette: the 16:9 cover, the offer and title, the tear line and the stub. */
+function RewardVoucherSkeleton(): React.JSX.Element {
+	return (
+		<div data-slot="reward-voucher-skeleton" className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+			<Skeleton className="aspect-video w-full rounded-none" />
+			<div className="flex flex-col gap-3 px-5 pt-4 pb-5">
+				<Skeleton variant="text" className="h-3 w-16" />
+				<Skeleton className="h-7 w-28" />
+				<Skeleton variant="text" className="h-4 w-44" />
+			</div>
+			<div className="flex flex-col gap-3 border-t border-dashed border-border px-5 py-4">
+				<Skeleton className="h-1.5 w-full rounded-full" />
+				<Skeleton variant="text" className="h-3 w-32" />
+			</div>
+		</div>
+	);
 }
 
 /**
- * `/rewards/new` and `/rewards/[rewardId]/edit`: the back button and title,
- * the reward-type picker, the "Basic information" and "Limits & duration"
- * cards, then — creating — store availability and the draft switch, or —
- * editing — the performance card; and the action row.
+ * `/rewards/new` and `/rewards/[rewardId]/edit`: the way back and the title,
+ * then the form panel (the offer, photos, schedule and terms sections) beside
+ * the preview column (the voucher, the checklist and the save buttons).
  */
-export function MerchantRewardEditorPageSkeleton({ mode }: MerchantRewardEditorPageSkeletonProps): React.JSX.Element {
+export function MerchantRewardEditorPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={mode === "create" ? MERCHANT_REWARD_EDITOR_LOADING_LABELS : MERCHANT_REWARD_LOADING_LABELS} className="flex flex-col gap-6">
-			<div className="mb-2 flex flex-wrap items-center gap-4">
-				<Skeleton className="size-9 rounded-md" />
-				<div className="flex flex-col gap-2">
-					<Skeleton className="h-8 w-48" />
-					<Skeleton variant="text" className="h-4 w-64 max-w-full" />
-				</div>
-				{mode === "edit" ? <Skeleton className="h-5 w-20 rounded-full" /> : null}
+		<SkeletonRegion labels={MERCHANT_REWARD_EDITOR_LOADING_LABELS} className="flex flex-col gap-6">
+			<div className="flex flex-col gap-2">
+				<Skeleton variant="text" className="h-4 w-20" />
+				<Skeleton className="h-8 w-48" />
+				<Skeleton variant="text" className="h-4 w-80 max-w-full" />
 			</div>
-			<Card className="border-border/80 shadow-xs">
-				<CardHeader>
-					<MerchantHeadingSkeleton />
-				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-						{placeholderKeys("type", REWARD_TYPE_TILES).map((key): React.JSX.Element => (
-							<Skeleton key={key} data-slot="reward-type-skeleton" className="h-20 rounded-lg" />
-						))}
-					</div>
-				</CardContent>
-			</Card>
-			<RewardFormCardSkeleton fields={REWARD_BASIC_FIELDS} columns={1} />
-			<RewardFormCardSkeleton fields={REWARD_LIMIT_FIELDS} columns={2} />
-			{mode === "create" ? (
-				<>
-					<Card data-slot="reward-stores-skeleton" className="border-border/80 shadow-xs">
-						<CardHeader>
-							<MerchantHeadingSkeleton />
-						</CardHeader>
-						<CardContent className="grid gap-3 sm:grid-cols-2">
-							{placeholderKeys("store", REWARD_STORE_OPTIONS).map((key): React.JSX.Element => (
-								<Skeleton key={key} className="h-14 rounded-lg" />
-							))}
-						</CardContent>
-					</Card>
-					<Card className="border-border/80 shadow-xs">
-						<CardContent className="flex items-center gap-3 p-6">
-							<Skeleton variant="circular" className="h-5 w-9" />
-							<div className="flex flex-col gap-2">
-								<Skeleton variant="text" className="h-4 w-28" />
-								<Skeleton variant="text" className="h-3.5 w-56" />
-							</div>
-						</CardContent>
-					</Card>
-				</>
-			) : (
-				<Card data-slot="reward-performance-skeleton" className="border-border/80 shadow-xs">
-					<CardHeader>
-						<MerchantHeadingSkeleton />
-					</CardHeader>
-					<CardContent className="flex flex-col gap-4">
-						<div className="grid gap-4 sm:grid-cols-3">
-							{placeholderKeys("tile", REWARD_PERFORMANCE_TILES).map((key): React.JSX.Element => (
-								<div key={key} className="flex flex-col gap-2 rounded-lg border border-border p-4">
-									<Skeleton variant="text" className="h-3 w-24" />
-									<Skeleton className="h-7 w-16" />
-								</div>
+			<div className={REWARD_EDITOR_GRID_CLASS}>
+				<MerchantSurfacePanel className="min-w-0">
+					<RewardEditorSectionSkeleton>
+						<div className="flex flex-wrap gap-2">
+							{placeholderKeys("type", REWARD_TYPE_CHOICES).map((key, index): React.JSX.Element => (
+								<Skeleton key={key} data-slot="reward-type-skeleton" className={cn("h-11 rounded-lg", cycledWidth(["w-32", "w-28", "w-32", "w-36", "w-40"], index))} />
 							))}
 						</div>
-						<Skeleton className="h-2 w-full rounded-full" />
-					</CardContent>
-				</Card>
-			)}
-			<div className="flex flex-wrap items-center justify-end gap-4">
-				<Skeleton className="h-9 w-20" />
-				<Skeleton className="h-9 w-36" />
+						<div className="grid gap-5 sm:grid-cols-2">
+							{placeholderKeys("offer", REWARD_OFFER_PAIRED_FIELDS).map((key): React.JSX.Element => (
+								<RewardFieldSkeleton key={key} />
+							))}
+						</div>
+						<RewardFieldSkeleton />
+						<RewardFieldSkeleton tall />
+					</RewardEditorSectionSkeleton>
+					<RewardEditorSectionSkeleton>
+						<Skeleton className="aspect-video w-full rounded-lg sm:w-1/2 lg:w-1/3" />
+					</RewardEditorSectionSkeleton>
+					<RewardEditorSectionSkeleton>
+						<div className="grid gap-5 sm:grid-cols-2">
+							{placeholderKeys("schedule", REWARD_SCHEDULE_FIELDS).map((key): React.JSX.Element => (
+								<RewardFieldSkeleton key={key} />
+							))}
+						</div>
+					</RewardEditorSectionSkeleton>
+				</MerchantSurfacePanel>
+				<div data-slot="reward-preview-skeleton" className="flex flex-col gap-4">
+					<Skeleton variant="text" className="h-4 w-36" />
+					<RewardVoucherSkeleton />
+					<Skeleton className="h-20 w-full rounded-xl" />
+					<div className="grid grid-cols-2 gap-2">
+						<Skeleton className="h-9" />
+						<Skeleton className="h-9" />
+					</div>
+				</div>
+			</div>
+		</SkeletonRegion>
+	);
+}
+
+/**
+ * `/rewards/[rewardId]`: the way back, the gallery beside the offer, title and
+ * actions, the performance row, then the details list beside the terms.
+ */
+export function MerchantRewardDetailPageSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_REWARD_LOADING_LABELS} className={PAGE_STACK}>
+			<Skeleton variant="text" className="h-4 w-20" />
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-10">
+				<Skeleton className="aspect-video w-full rounded-xl" />
+				<div className="flex flex-col gap-5 lg:pt-2">
+					<Skeleton className="h-5 w-24 rounded-full" />
+					<div className="flex flex-col gap-3">
+						<Skeleton className="h-11 w-48" />
+						<Skeleton className="h-7 w-64 max-w-full" />
+						<Skeleton variant="text" className="h-4 w-full" />
+						<Skeleton variant="text" className="h-4 w-3/4" />
+					</div>
+					<Skeleton className="h-9 w-36" />
+				</div>
+			</div>
+			<div data-slot="reward-performance-skeleton" className="flex flex-col gap-3">
+				<Skeleton variant="text" className="h-4 w-28" />
+				<MerchantSurfacePanel className="grid divide-y divide-border sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] sm:divide-x sm:divide-y-0">
+					{placeholderKeys("count", REWARD_PERFORMANCE_COUNTS).map((key): React.JSX.Element => (
+						<div key={key} className="flex flex-col gap-2 px-5 py-4 sm:px-6">
+							<Skeleton className="h-7 w-14" />
+							<Skeleton variant="text" className="h-3.5 w-20" />
+						</div>
+					))}
+					<div className="flex flex-col justify-center gap-2 px-5 py-4 sm:px-6">
+						<Skeleton variant="text" className="h-3 w-24" />
+						<Skeleton className="h-1.5 w-full rounded-full" />
+					</div>
+				</MerchantSurfacePanel>
+			</div>
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+				<div className="flex flex-col gap-3">
+					<Skeleton variant="text" className="h-4 w-20" />
+					<MerchantSurfacePanel className="flex flex-col divide-y divide-border px-5 py-2 sm:px-6">
+						{placeholderKeys("detail", REWARD_DETAIL_ROWS).map((key, index): React.JSX.Element => (
+							<div key={key} className="flex gap-4 py-3">
+								<Skeleton variant="text" className="h-4 w-28" />
+								<Skeleton variant="text" className={cn("h-4", cycledWidth(["w-40", "w-24", "w-32"], index))} />
+							</div>
+						))}
+					</MerchantSurfacePanel>
+				</div>
+				<div className="flex flex-col gap-3">
+					<Skeleton variant="text" className="h-4 w-40" />
+					<MerchantSurfacePanel className="flex flex-col gap-2 px-5 py-4 sm:px-6">
+						<Skeleton variant="text" className="h-4 w-full" />
+						<Skeleton variant="text" className="h-4 w-2/3" />
+					</MerchantSurfacePanel>
+				</div>
 			</div>
 		</SkeletonRegion>
 	);

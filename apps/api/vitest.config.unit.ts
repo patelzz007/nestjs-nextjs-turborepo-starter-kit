@@ -17,5 +17,9 @@ export default defineConfig({
 		// external calls (Resend, Prisma) are mocked.
 		testTimeout: 15_000,
 		hookTimeout: 15_000,
+		// Exposes `globalThis.gc` so a spec can force a real major GC when that is
+		// what it tests (post-gc-heap-probe.spec.ts), instead of waiting for V8 to
+		// choose one — which made the outcome depend on machine load.
+		execArgv: ["--expose-gc"],
 	},
 });

@@ -3,14 +3,14 @@ title: "ADR 025: One Global, Append-Only HTTP Audit Log"
 tags: ["adr", "security", "audit", "rls", "nestjs"]
 description: "Every HTTP request — reads included — produces exactly one complete, redacted, append-only audit row — written by a global interceptor (success) and the global exception filter (failure), or inside the handler's own transaction."
 author: "Backend Team"
-lastUpdated: 1791504000000
+lastUpdated: 1791936000000
 coverImage: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&h=630&fit=crop"
 order: 25
 ---
 
 # ADR 025: One Global, Append-Only HTTP Audit Log
 
-**Status:** Accepted (retention decision added 2026-10-04; request metadata, the admin viewer, auditing every request and device / location / search added 2026-10-06)
+**Status:** Accepted (retention decision added 2026-10-04; request metadata, the admin viewer, auditing every request and device / location / search added 2026-10-06; row-level changes linked 2026-10-14)
 **Date:** 2026-10-03
 **Deciders:** Backend Team
 
@@ -96,6 +96,11 @@ left no record, and failed or guard-rejected attempts left none at all.
   foreign keys: an id that no longer resolves is still shown). **Every read is itself recorded**
   as a sensitive read (`AuditTrailService.recordSensitiveRead`) BEFORE the data is released; if
   that row cannot be written the read fails.
+- **Row-level changes (added 2026-10-14, ADR 051).** This row records the request; what the
+  request changed in the database — every row inserted, updated or deleted, with its full
+  redacted before / after — is recorded by database triggers in `data_change_logs`, joined to
+  this row by `correlation_id`. The admin audit log shows both stores as ONE timeline
+  (`GET /admin/audit-trail`); a request's record lists its changes under "Database changes".
 - **Domain audit tables stay.** They record domain events (a role assigned, a policy published,
   an impersonation started) with domain fields. `audit_logs` records the HTTP request that caused
   them; both carry the same `correlation_id`, which is how an investigator joins them.

@@ -3,5 +3,5 @@ import type * as React from "react";
 
 /** `/orgs/[orgSlug]/rewards/[rewardId]/edit` while the server prefetches the reward. */
 export default function MerchantEditRewardLoading(): React.JSX.Element {
-	return <MerchantRewardEditorPageSkeleton mode="edit" />;
+	return <MerchantRewardEditorPageSkeleton />;
 }

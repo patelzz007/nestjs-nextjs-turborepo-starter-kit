@@ -4,50 +4,65 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { HeapSample } from "./heap-growth-detector";
 import { NodePostGcHeapProbe } from "./post-gc-heap-probe";
 
-/** Upper bound for the allocation churn below to provoke a major GC. */
-const MAJOR_GC_TIMEOUT_MS = 20_000;
-const CHURN_BATCH = 200_000;
+/**
+ * GC performance entries reach observers asynchronously, a few event-loop turns
+ * after the collection. This bounds how many turns a spec waits for one.
+ */
+const MAX_DELIVERY_TURNS = 200;
 
-/** Allocates short-lived strings (plus a little retained data) until `done()` or the timeout. */
-async function churnUntil(done: () => boolean): Promise<void> {
-	const retained: string[][] = [];
-	const deadline = Date.now() + MAJOR_GC_TIMEOUT_MS;
-	while (!done() && Date.now() < deadline) {
-		const garbage: string[] = Array.from({ length: CHURN_BATCH }, (_: string | undefined, index: number): string => `entry-${String(index)}`);
-		retained.push(garbage.slice(0, 1_000));
-		await new Promise<void>((resolve): void => {
-			setImmediate(resolve);
-		});
+/** The `gc()` that `--expose-gc` installs (apps/api/vitest.config.unit.ts passes it to every worker). */
+function exposedGc(): NodeJS.GCFunction {
+	const { gc } = globalThis;
+	if (gc === undefined) {
+		throw new Error("globalThis.gc is missing: run the API unit specs with --expose-gc (apps/api/vitest.config.unit.ts execArgv)");
+	}
+	return gc;
+}
+
+/** Forces a real major (mark-compact) collection — the event the probe reports. */
+function runMajorGc(): void {
+	exposedGc()({ type: "major", execution: "sync" });
+}
+
+async function nextTurn(): Promise<void> {
+	await new Promise<void>((resolve): void => {
+		setImmediate(resolve);
+	});
+}
+
+/** Yields to the event loop until `delivered()` or the delivery bound. */
+async function awaitDelivery(delivered: () => boolean): Promise<void> {
+	for (let turn = 0; turn < MAX_DELIVERY_TURNS && !delivered(); turn += 1) {
+		await nextTurn();
 	}
 }
 
 describe("NodePostGcHeapProbe", () => {
-	it(
-		"reports heapUsed right after a real major GC, and nothing once stopped",
-		async () => {
-			const probe = new NodePostGcHeapProbe();
-			const samples: HeapSample[] = [];
-			const witnessed: HeapSample[] = [];
-			const stop = probe.start((sample: HeapSample): void => {
-				samples.push(sample);
-			});
-			// A second, independent subscription proves major GCs keep happening after `stop()`.
-			const stopWitness = new NodePostGcHeapProbe().start((sample: HeapSample): void => {
-				witnessed.push(sample);
-			});
+	it("reports heapUsed right after a real major GC, and nothing once stopped", async () => {
+		const probe = new NodePostGcHeapProbe();
+		const samples: HeapSample[] = [];
+		const witnessed: HeapSample[] = [];
+		const stop = probe.start((sample: HeapSample): void => {
+			samples.push(sample);
+		});
+		// A second, independent subscription proves a major GC still happened after `stop()`.
+		const stopWitness = new NodePostGcHeapProbe().start((sample: HeapSample): void => {
+			witnessed.push(sample);
+		});
 
-			await churnUntil((): boolean => samples.length > 0);
-			stop();
-			const countAtStop = samples.length;
-			const witnessedAtStop = witnessed.length;
-			await churnUntil((): boolean => witnessed.length > witnessedAtStop + 1);
-			stopWitness();
+		runMajorGc();
+		await awaitDelivery((): boolean => samples.length > 0);
+		stop();
+		const countAtStop = samples.length;
+		const witnessedAtStop = witnessed.length;
 
-			expect(countAtStop).toBeGreaterThan(0);
-			expect(samples[LIST_SLOT_INDEX.first]?.heapUsedBytes).toBeGreaterThan(0);
-			expect(witnessed.length).toBeGreaterThan(witnessedAtStop + 1);
-			expect(samples).toHaveLength(countAtStop);
-		},
-		2 * MAJOR_GC_TIMEOUT_MS + 5_000,
-	);
+		runMajorGc();
+		await awaitDelivery((): boolean => witnessed.length > witnessedAtStop);
+		stopWitness();
+
+		expect(countAtStop).toBeGreaterThan(0);
+		expect(samples[LIST_SLOT_INDEX.first]?.heapUsedBytes).toBeGreaterThan(0);
+		expect(witnessed.length).toBeGreaterThan(witnessedAtStop);
+		expect(samples).toHaveLength(countAtStop);
+	});
 });

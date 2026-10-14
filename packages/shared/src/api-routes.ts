@@ -102,6 +102,17 @@ export const apiRoutes = {
 		detail: "/admin/audit-logs/:id",
 	},
 
+	// ── The audit log's timeline: requests + background writes (admin) ───
+	auditTrail: {
+		list: "/admin/audit-trail",
+	},
+
+	// ── Row-level data-change trail (admin viewer) ───────────────────────
+	dataChanges: {
+		list: "/admin/data-changes",
+		detail: "/admin/data-changes/:id",
+	},
+
 	// ── GitHub contributions (read-only, server-configured repositories) ──
 	github: {
 		repositories: "/github/repositories",

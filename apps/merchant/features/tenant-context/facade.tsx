@@ -226,8 +226,22 @@ export function useMerchantLocation(): MerchantLocationState {
  * shared organization-context query, never stored.
  */
 export function useActiveOrganizationId(): string | undefined {
+	return useActiveOrganizationSummary()?.id;
+}
+
+/**
+ * The active organization's display name (`undefined` until its context has
+ * loaded) — e.g. to shorten store names that repeat it. Read from the shared
+ * organization-context query, never stored.
+ */
+export function useActiveOrganizationName(): string | undefined {
+	return useActiveOrganizationSummary()?.displayName;
+}
+
+/** The active organization as the shared organization-context query has it (`undefined` until loaded). */
+function useActiveOrganizationSummary(): OrganizationContextResponse["organization"] | undefined {
 	const { api } = useAuth();
 	const { orgSlug, initialOrganizationContext } = useTenantScope();
 	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
-	return contextQuery.data?.data.organization.id;
+	return contextQuery.data?.data.organization;
 }

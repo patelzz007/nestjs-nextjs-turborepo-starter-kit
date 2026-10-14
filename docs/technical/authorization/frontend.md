@@ -226,8 +226,8 @@ export default async function OrganizationTeamPage({ params }: Props): Promise<R
 |---|---|---|
 | `/` | open (redirects to the dashboard) | — |
 | `/dashboard` | `viewDashboard` | denied page |
-| `/rewards`, `/rewards/[rewardId]/edit` | `viewRewards`; changing needs `manageRewards` | denied page; read-only form / create hidden |
-| `/rewards/new` | `manageRewards` | denied page |
+| `/rewards`, `/rewards/[rewardId]` | `viewRewards`; the edit and submit-for-review actions need `manageRewards` | denied page; actions / create hidden |
+| `/rewards/new`, `/rewards/[rewardId]/edit` | `manageRewards` | denied page |
 | `/redemptions` | `viewRedemptions` | denied page (no query is sent) |
 | `/analytics` | `viewAnalytics` | denied page (no query is sent) |
 | `/terminals` | `manageApiKeys` (a paired till receives an API key) | denied page (no query is sent) |

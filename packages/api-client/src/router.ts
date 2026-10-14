@@ -569,6 +569,17 @@ export const apiRouter = {
 		detail: defineQuery(apiContract.auditLogs.detail, { scope: ({ id }: { readonly id: string }): ApiQueryKey => ["audit-logs", "detail", id] }),
 	},
 
+	// ── The audit log's timeline (requests + background writes) ──────────────
+	auditTrail: {
+		list: defineQuery(apiContract.auditTrail.list, { scope: (): ApiQueryKey => ["audit-trail", "list"] }),
+	},
+
+	// ── Row-level data-change trail (admin viewer) ────────────────────────────
+	dataChanges: {
+		list: defineQuery(apiContract.dataChanges.list, { scope: (): ApiQueryKey => ["data-changes", "list"] }),
+		detail: defineQuery(apiContract.dataChanges.detail, { scope: ({ id }: { readonly id: string }): ApiQueryKey => ["data-changes", "detail", id] }),
+	},
+
 	// ── Email template preview procedures ─────────────────────────────────────
 	email: {
 		previewList: defineQuery(apiContract.email.previewList, { scope: (): ApiQueryKey => ["email", "preview-list"] }),

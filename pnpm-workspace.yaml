@@ -110,59 +110,47 @@ auditConfig:
     - GHSA-86w9-cpqp-85rv
 
 minimumReleaseAgeExclude:
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - "@expo/cli@57.0.29"
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - "@expo/cli@57.0.30"
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - "@expo/fingerprint@0.20.14"
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - "@expo/metro-runtime@57.0.17"
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - "@expo/inline-modules@0.1.8"
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - "@expo/prebuild-config@57.0.19"
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - "@expo/local-build-cache-provider@57.0.9"
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - "@expo/ui@57.0.24"
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - "@expo/prebuild-config@57.0.18"
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo-asset@57.0.20
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - "@expo/ui@57.0.23"
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo-constants@57.0.22
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - babel-preset-expo@57.0.15
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo-linking@57.0.13
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - expo-modules-autolinking@57.0.15
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo-modules-autolinking@57.0.16
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - expo-modules-core@57.0.22
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo-modules-core@57.0.23
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - expo-modules-jsi@57.1.2
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo-router@57.0.27
+  # Expo SDK 57 patch release (published 2026-10-14 16:31–16:38 UTC), taken before the one-day
   # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - expo-router@57.0.26
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
-  # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - expo-splash-screen@57.0.10
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
-  # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - expo@57.0.28
-  # Expo SDK 57 patch release (published 2026-10-12 14:25–14:32 UTC), taken before the one-day
-  # cooldown because `expo install --check` in apps/mobile's test script requires the SDK's
-  # latest patches. Past the cooldown from 2026-10-13 14:32 UTC; delete this entry on or after 2026-10-14.
-  - jest-expo@57.0.6
+  # latest patches. Past the cooldown from 2026-10-15 16:38 UTC; delete this entry on or after 2026-10-16.
+  - expo@57.0.29

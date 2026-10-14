@@ -1,36 +1,52 @@
-import type { RewardType } from "@workspace/shared";
+import { REWARD_VALUE_CURRENCY } from "@workspace/client/lib/rewards/reward-offer";
+import { assertNever, type RewardType, type SaleCurrency } from "@workspace/shared";
 import { Award, Gift, Percent, Sparkles, TrendingUp, type LucideIcon } from "lucide-react";
 
 export interface RewardTypeOption {
 	readonly value: RewardType;
 	readonly label: string;
 	readonly icon: LucideIcon;
-	readonly description: string;
-	readonly tone: string;
 }
 
+/** The kinds of reward a merchant can offer, in the order the editor lists them. */
 export const REWARD_TYPE_OPTIONS: readonly RewardTypeOption[] = [
-	{ value: "DISCOUNT", label: "Discount", icon: Percent, description: "Percentage or fixed amount off", tone: "text-info" },
-	{ value: "FREE_ITEM", label: "Free Item", icon: Gift, description: "Complimentary product or service", tone: "text-success" },
-	{ value: "CASHBACK", label: "Cashback", icon: TrendingUp, description: "Money back on purchase", tone: "text-warning" },
-	{ value: "POINTS", label: "Bonus Points", icon: Award, description: "Extra loyalty points", tone: "text-chart-4" },
-	{ value: "BOGO", label: "Buy One Get One", icon: Sparkles, description: "BOGO or similar deals", tone: "text-primary" },
+	{ value: "DISCOUNT", label: "Discount", icon: Percent },
+	{ value: "FREE_ITEM", label: "Free item", icon: Gift },
+	{ value: "CASHBACK", label: "Cashback", icon: TrendingUp },
+	{ value: "POINTS", label: "Bonus points", icon: Award },
+	{ value: "BOGO", label: "Buy one, get one", icon: Sparkles },
 ];
 
 export const MAX_CLAIMS_OPTIONS: readonly number[] = [1, 2, 3, 5, 10];
 
-export function getRewardValueLabel(rewardType: RewardType): string {
+/** How each sale currency is written before an amount in a field ("RM" for MYR) — a new currency must name its symbol here. */
+const CURRENCY_SYMBOL: Readonly<Record<SaleCurrency, string>> = { MYR: "RM" };
+
+/** How the reward's value field reads for one reward type: its label and the unit around the number. */
+export interface RewardValueField {
+	readonly label: string;
+	/** Shown before the number ("RM"). */
+	readonly prefix?: string;
+	/** Shown after the number ("%", "points"). */
+	readonly suffix?: string;
+}
+
+export function getRewardValueField(rewardType: RewardType): RewardValueField {
 	switch (rewardType) {
 		case "DISCOUNT":
-			return "Discount Value (%)";
+			return { label: "Discount", suffix: "%" };
 		case "CASHBACK":
-			return "Cashback Amount (RM)";
+			return { label: "Cashback", prefix: CURRENCY_SYMBOL[REWARD_VALUE_CURRENCY] };
 		case "POINTS":
-			return "Bonus Points";
+			return { label: "Bonus points", suffix: "points" };
 		case "FREE_ITEM":
+			return { label: "Items given", suffix: "items" };
 		case "BOGO":
-			return "Quantity";
+			return { label: "Free items per purchase", suffix: "items" };
 		default:
-			return "Value";
+			return assertNever(rewardType, "reward type");
 	}
 }
+
+/** The minimum spend is set in the same currency as cashback. */
+export const MIN_SPEND_PREFIX = CURRENCY_SYMBOL[REWARD_VALUE_CURRENCY];

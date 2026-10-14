@@ -1,8 +1,8 @@
-import { HttpAuditLogListQuerySchema } from "@workspace/shared";
+import { AuditTrailListQuerySchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { AUDIT_LOG_PAGE_SIZE, AUDIT_LOG_URL_STATE, auditLogListHref, isAuditLogFiltered, toAuditLogListQuery } from "./audit-logs";
-import { AUDIT_LOG_RECORD_URL_STATE } from "./selection";
+import { AUDIT_LOG_RECORD_URL_STATE, DATA_CHANGE_RECORD_URL_STATE } from "./selection";
 
 const ACTOR_ID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 const ORGANIZATION_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
@@ -12,7 +12,7 @@ describe("audit log URL state", () => {
 		const input = toAuditLogListQuery(
 			AUDIT_LOG_URL_STATE.parse({
 				page: "3",
-				sort: "-responseStatus",
+				sort: "occurredAt",
 				search: "203.0.113",
 				"filter[outcome]": "FAILED",
 				"filter[method]": "DELETE",
@@ -26,7 +26,7 @@ describe("audit log URL state", () => {
 		expect(input).toEqual({
 			page: 3,
 			limit: AUDIT_LOG_PAGE_SIZE,
-			sort: "-responseStatus",
+			sort: "occurredAt",
 			search: "203.0.113",
 			filter: {
 				outcome: { eq: "FAILED" },
@@ -37,7 +37,7 @@ describe("audit log URL state", () => {
 				correlationId: { eq: "corr-123" },
 			},
 		});
-		expect(HttpAuditLogListQuerySchema.safeParse(input).success).toBe(true);
+		expect(AuditTrailListQuerySchema.safeParse(input).success).toBe(true);
 	});
 
 	it("drops hostile or unknown values instead of sending them to the API", () => {
@@ -92,7 +92,7 @@ describe("audit log device / network filters and the drawer selection", () => {
 		const input = toAuditLogListQuery(AUDIT_LOG_URL_STATE.parse({ "filter[deviceType]": "MOBILE", "filter[ipScope]": "PRIVATE" }));
 
 		expect(input).toEqual({ page: 1, limit: AUDIT_LOG_PAGE_SIZE, filter: { deviceType: { eq: "MOBILE" }, ipScope: { eq: "PRIVATE" } } });
-		expect(HttpAuditLogListQuerySchema.safeParse(input).success).toBe(true);
+		expect(AuditTrailListQuerySchema.safeParse(input).success).toBe(true);
 		expect(isAuditLogFiltered(AUDIT_LOG_URL_STATE.parse({ "filter[deviceType]": "BOT" }))).toBe(true);
 	});
 
@@ -105,5 +105,37 @@ describe("audit log device / network filters and the drawer selection", () => {
 
 	it("drops a record param that is not a record id", () => {
 		expect(AUDIT_LOG_RECORD_URL_STATE.parse({ record: "not-an-id" }).record).toBeUndefined();
+	});
+});
+
+describe("audit log timeline filters (requests + background writes)", () => {
+	it("maps the source, attribution and row-history filters", () => {
+		const input = toAuditLogListQuery(
+			AUDIT_LOG_URL_STATE.parse({ "filter[kind]": "BACKGROUND", "filter[actorKind]": "UNATTRIBUTED", "filter[tableName]": "users", "filter[rowId]": ACTOR_ID }),
+		);
+
+		expect(input).toEqual({
+			page: 1,
+			limit: AUDIT_LOG_PAGE_SIZE,
+			filter: { kind: { eq: "BACKGROUND" }, actorKind: { eq: "UNATTRIBUTED" }, tableName: { eq: "users" }, rowId: { eq: ACTOR_ID } },
+		});
+		expect(AuditTrailListQuerySchema.safeParse(input).success).toBe(true);
+	});
+
+	it("links to one row's history", () => {
+		expect(auditLogListHref({ tableName: "users", rowId: ACTOR_ID })).toBe(`/audit-logs?filter[tableName]=users&filter[rowId]=${ACTOR_ID}`);
+	});
+
+	it("sorts by time only — a column sort of the old request-only table is dropped, not sent", () => {
+		expect(toAuditLogListQuery(AUDIT_LOG_URL_STATE.parse({ sort: "-responseStatus" }))).toEqual({ page: 1, limit: AUDIT_LOG_PAGE_SIZE });
+	});
+
+	it("drops an unknown source", () => {
+		expect(toAuditLogListQuery(AUDIT_LOG_URL_STATE.parse({ "filter[kind]": "EMAIL" }))).toEqual({ page: 1, limit: AUDIT_LOG_PAGE_SIZE });
+	});
+
+	it("keeps the open background change in its own param, apart from the request record", () => {
+		expect(DATA_CHANGE_RECORD_URL_STATE.parse({ change: ACTOR_ID }).change).toBe(ACTOR_ID);
+		expect(DATA_CHANGE_RECORD_URL_STATE.parse({ change: "nope" }).change).toBeUndefined();
 	});
 });

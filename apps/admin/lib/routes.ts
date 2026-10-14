@@ -84,10 +84,12 @@ export interface GeographyRoutes {
 }
 
 export interface AuditLogsRoutes {
-	/** The audit trail table — every state-changing request and sensitive read. */
+	/** The audit log — one timeline of every HTTP request and every database write no request made (ADR 051). */
 	readonly list: string;
-	/** One complete audit record (payloads included). */
+	/** One complete HTTP request record (payloads included). */
 	readonly detail: RouteBuilder;
+	/** One complete row change (the redacted row before and after). */
+	readonly change: RouteBuilder;
 }
 
 export interface CatalogRoutes {
@@ -163,6 +165,8 @@ export const EMAIL_TEMPLATE_KEY_PARAM = "key";
 export const REVIEW_REQUEST_PARAM = "requestId";
 /** The audit record open in the audit log's drawer (`/audit-logs?record=`). */
 export const AUDIT_LOG_RECORD_PARAM = "record";
+/** The row change open in the audit log's drawer (`/audit-logs?change=`). */
+export const DATA_CHANGE_RECORD_PARAM = "change";
 /** The active tab of the geography browser (`/geography?tab=states`). */
 export const GEOGRAPHY_TAB_PARAM = "tab";
 
@@ -175,6 +179,8 @@ const REWARDS_REVIEW = `${REWARDS}/review`;
 const EMAILS = "/emails";
 const EMAIL_TEMPLATES = `${EMAILS}/templates`;
 const AUDIT_LOGS = "/audit-logs";
+/** Row changes live under the audit log (`/audit-logs/changes/[id]`). */
+const AUDIT_LOG_CHANGES = `${AUDIT_LOGS}/changes`;
 const CATALOG = "/catalog";
 const SETTINGS = "/settings";
 const ACCOUNT = "/account";
@@ -219,6 +225,7 @@ export const ROUTES: AdminRoutes = {
 	auditLogs: {
 		list: AUDIT_LOGS,
 		detail: (id: string): string => childPath(AUDIT_LOGS, id),
+		change: (id: string): string => childPath(AUDIT_LOG_CHANGES, id),
 	},
 	catalog: {
 		index: CATALOG,
@@ -244,7 +251,7 @@ export interface CrudRoutePatterns {
 
 export interface AdminRoutePatterns {
 	readonly users: { readonly detail: string };
-	readonly auditLogs: { readonly detail: string };
+	readonly auditLogs: { readonly detail: string; readonly change: string };
 	readonly rewards: { readonly reviewDetail: string };
 	readonly catalog: {
 		readonly products: CrudRoutePatterns;
@@ -267,7 +274,7 @@ function crudRoutePatterns(list: string): CrudRoutePatterns {
  */
 export const ROUTE_PATTERNS: AdminRoutePatterns = {
 	users: { detail: `${USERS}/${routeParam(ID_PARAM)}` },
-	auditLogs: { detail: `${AUDIT_LOGS}/${routeParam(ID_PARAM)}` },
+	auditLogs: { detail: `${AUDIT_LOGS}/${routeParam(ID_PARAM)}`, change: `${AUDIT_LOG_CHANGES}/${routeParam(ID_PARAM)}` },
 	rewards: { reviewDetail: `${REWARDS_REVIEW}/${routeParam(ID_PARAM)}` },
 	catalog: {
 		products: crudRoutePatterns(ROUTES.catalog.products.list),

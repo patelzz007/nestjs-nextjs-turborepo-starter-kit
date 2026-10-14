@@ -23,12 +23,13 @@ export { withTrailTailLabel };
 
 /** Crumb labels for org pages the sidebar has no item for (otherwise the humanized URL segment is used). */
 const ORG_PAGE_CRUMB_LABELS: Readonly<Partial<Record<OrgPageRoute, string>>> = {
+	"/rewards/[rewardId]": "Reward",
 	"/rewards/[rewardId]/edit": "Edit reward",
 };
 
 /**
- * Below the deepest sidebar match, only real org pages become crumbs — so the
- * reward id in `/rewards/<id>/edit` (no page of its own) is not a crumb.
+ * Below the deepest sidebar match, only real org pages become crumbs — so
+ * `/rewards/<id>/edit` reads Rewards › Reward › Edit reward, never the raw id.
  */
 function resolveMerchantTrailPage(orgRelativePath: string): SidebarTrailPage | null {
 	const route = resolveOrgPageRoute(orgRelativePath);

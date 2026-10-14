@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { AccessControlPageSkeleton, PermissionGroupsSkeleton, RoleRowsSkeleton } from "@/components/loading/access-control-skeletons";
 import { ProfilePageSkeleton, SecurityPageSkeleton } from "@/components/loading/account-skeletons";
 import { AuditLogDetailPageSkeleton, AuditLogDrawerSkeleton, AuditLogRecordSkeleton } from "@/components/loading/audit-log-skeletons";
+import { DataChangeDetailPageSkeleton, DataChangeDrawerSkeleton, DataChangeRecordSkeleton } from "@/components/loading/data-change-skeletons";
 import {
 	CATEGORY_DETAIL_SHAPE,
 	CATEGORY_FORM_SHAPE,
@@ -181,6 +182,35 @@ describe("audit log skeletons", () => {
 
 		render(<AuditLogDetailPageSkeleton />, { wrapper: UiKitTestProviders });
 		expect(onlyStatus().querySelector('[data-skeleton="audit-log-record"]')).not.toBeNull();
+	});
+});
+
+describe("data change skeletons", () => {
+	/** Who, When, Database connection, Tracing. */
+	const RECORD_SECTIONS = 4;
+
+	it("draws the before / after table and the record's four sections", () => {
+		const { container } = render(<DataChangeRecordSkeleton layout="page" />);
+
+		expect(count(container, '[data-skeleton="data-change-diff"]')).toBe(1);
+		expect(count(container, '[data-skeleton="data-change-record-section"]')).toBe(RECORD_SECTIONS);
+	});
+
+	it("uses the page layout's three-column grids on the page, the drawer's two-column ones in the drawer", () => {
+		const { container, rerender } = render(<DataChangeRecordSkeleton layout="page" />);
+		expect(container.querySelector('[data-skeleton="data-change-record-section"] .lg\\:grid-cols-3')).not.toBeNull();
+
+		rerender(<DataChangeRecordSkeleton layout="drawer" />);
+		expect(container.querySelector('[data-skeleton="data-change-record-section"] .lg\\:grid-cols-3')).toBeNull();
+	});
+
+	it("announces the row change in the drawer and on its own page", () => {
+		render(<DataChangeDrawerSkeleton />, { wrapper: UiKitTestProviders });
+		expect(onlyStatus().textContent).toBe("Loading row change…");
+		cleanup();
+
+		render(<DataChangeDetailPageSkeleton />, { wrapper: UiKitTestProviders });
+		expect(onlyStatus().querySelector('[data-skeleton="data-change-record"]')).not.toBeNull();
 	});
 });
 

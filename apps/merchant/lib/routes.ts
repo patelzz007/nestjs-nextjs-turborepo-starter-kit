@@ -3,7 +3,7 @@
  * (links, redirects, proxy route lists, palette items, breadcrumbs).
  *
  * Conventions:
- * - Plural, kebab-case nouns. CRUD: list `/x`, create `/x/new`, edit `/x/[id]/edit`.
+ * - Plural, kebab-case nouns. CRUD: list `/x`, create `/x/new`, view `/x/[id]`, edit `/x/[id]/edit`.
  * - Business pages live under the organization scope `/orgs/[orgSlug]`.
  *   `ORG_ROUTES` holds those paths **relative to the org scope** (they are the
  *   URLs used by `data/merchant-sidebar-menu.json` and the command palette);
@@ -37,6 +37,8 @@ export function toAppPath(value: string): AppPath {
 export interface OrgRewardRoutes {
 	readonly list: AppPath;
 	readonly new: AppPath;
+	/** The reward's read-only page: what customers see, its performance and its lifecycle actions. */
+	readonly detail: (rewardId: string) => AppPath;
 	readonly edit: (rewardId: string) => AppPath;
 }
 
@@ -99,6 +101,7 @@ export const ORG_ROUTES: OrgRouteTable = {
 	rewards: {
 		list: "/rewards",
 		new: "/rewards/new",
+		detail: (rewardId: string): AppPath => `/rewards/${encodeURIComponent(rewardId)}`,
 		edit: (rewardId: string): AppPath => `/rewards/${encodeURIComponent(rewardId)}/edit`,
 	},
 	redemptions: "/redemptions",
@@ -199,6 +202,7 @@ export function resolveOrgHref(slug: string | undefined, path: AppPath): AppPath
 export interface OrgRewardHrefs {
 	readonly list: AppPath;
 	readonly new: AppPath;
+	readonly detail: (rewardId: string) => AppPath;
 	readonly edit: (rewardId: string) => AppPath;
 }
 
@@ -230,6 +234,7 @@ export function orgRoutes(slug: string): OrgHrefs {
 		rewards: {
 			list: orgPath(slug, ORG_ROUTES.rewards.list),
 			new: orgPath(slug, ORG_ROUTES.rewards.new),
+			detail: (rewardId: string): AppPath => orgPath(slug, ORG_ROUTES.rewards.detail(rewardId)),
 			edit: (rewardId: string): AppPath => orgPath(slug, ORG_ROUTES.rewards.edit(rewardId)),
 		},
 		redemptions: orgPath(slug, ORG_ROUTES.redemptions),

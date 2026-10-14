@@ -122,7 +122,8 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	// @RequirePermission API routes.
 	["/analytics", needs(PERMISSION.ANALYTICS.READ)],
 	["/audit-logs", needs(PERMISSION.AUDIT_LOG.LIST)],
-	["/audit-logs/[id]", needs(PERMISSION.AUDIT_LOG.READ)],
+	["/audit-logs/[id]", needsAll(PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST)],
+	["/audit-logs/changes/[id]", needsAll(PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST)],
 	["/catalog/products", needs(PERMISSION.PRODUCT.LIST)],
 	["/catalog/products/new", needsAll(PERMISSION.PRODUCT.CREATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ)],
 	["/catalog/products/[id]", needs(PERMISSION.PRODUCT.READ)],

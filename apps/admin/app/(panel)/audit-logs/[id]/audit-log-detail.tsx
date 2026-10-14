@@ -8,6 +8,7 @@ import Link from "next/link";
 import type * as React from "react";
 
 import { AuditLogRecord } from "@/components/audit-logs/audit-log-record";
+import { RequestDataChanges } from "@/components/audit-logs/request-data-changes";
 import { AuditLogDetailPageSkeleton } from "@/components/loading/audit-log-skeletons";
 import { ROUTES } from "@/lib/routes";
 
@@ -19,7 +20,8 @@ export interface AuditLogDetailViewProps {
 
 /**
  * `/audit-logs/[id]` — one complete audit record on its own page (the table's
- * drawer shows the same record; this page is the shareable, printable form).
+ * drawer shows the same record; this page is the shareable, printable form),
+ * followed by the rows the request changed in the database.
  */
 export default function AuditLogDetailView({ id, initialRecord }: AuditLogDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
@@ -48,6 +50,7 @@ export default function AuditLogDetailView({ id, initialRecord }: AuditLogDetail
 				Back to audit log
 			</Link>
 			<AuditLogRecord record={record} layout="page" />
+			<RequestDataChanges correlationId={record.correlationId} />
 		</div>
 	);
 }
