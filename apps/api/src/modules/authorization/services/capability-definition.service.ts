@@ -3,10 +3,14 @@ import type { CapabilityScope } from "@prisma/client";
 import { CapabilityDefinitionSchema, type CapabilityDefinition, type CapabilitySlug, CapabilitySlugSchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
-import { derivePlatformCapabilityRows } from "../reference-data/platform-capability-rows";
-import { SystemPrismaService } from "../../../prisma/system-prisma.service";
+import type { SystemOperation } from "../../../prisma/system-operation.registry";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { convergePlatformCapabilities, type PlatformCapabilityConvergence } from "../reference-data/platform-capability-rows";
 
 type CatalogCache = ReadonlyMap<CapabilityScope, readonly CapabilityDefinition[]>;
+
+/** The allowlisted system operation the boot sync runs under (system-operation.registry.ts). */
+export const CAPABILITY_CATALOG_SYNC_OPERATION: SystemOperation = "authorization.capability_catalog.sync";
 
 /**
  * Generic capability catalog — reads from `capability_definitions`.
@@ -19,7 +23,7 @@ export class CapabilityDefinitionService implements OnModuleInit {
 
 	public constructor(
 		private readonly prisma: PrismaService,
-		private readonly systemDb: SystemPrismaService,
+		private readonly tenantTx: TenantTransactionService,
 	) {}
 
 	public async onModuleInit(): Promise<void> {
@@ -62,18 +66,19 @@ export class CapabilityDefinitionService implements OnModuleInit {
 		return null;
 	}
 
+	/**
+	 * Boot sync: converge the PLATFORM capability definitions to the permission catalog in ONE
+	 * attributed transaction (`authorization.capability_catalog.sync`). Only missing or changed rows
+	 * are written, so an up-to-date database records no change (ADR 051).
+	 */
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
-		const rows = await derivePlatformCapabilityRows(this.systemDb);
-		for (const row of rows) {
-			await this.systemDb.capabilityDefinition.upsert({
-				where: { slug: row.slug },
-				create: { ...row, scope: "PLATFORM" },
-				update: { ...row, updatedAt: Date.now() },
-			});
-		}
+		const change: PlatformCapabilityConvergence = await this.tenantTx.withSystemOperation(
+			{ operation: CAPABILITY_CATALOG_SYNC_OPERATION, reason: "Converge platform capability definitions to the permission catalog at boot", actorUserId: null },
+			async (tx) => convergePlatformCapabilities(tx),
+		);
 
 		this.invalidateCache();
-		this.logger.log(`Synced ${String(rows.length)} platform capability definition(s) from permissions`);
+		this.logger.log(`Platform capability definitions: ${String(change.created)} created, ${String(change.updated)} updated`);
 	}
 
 	private async loadCatalogCache(): Promise<CatalogCache> {

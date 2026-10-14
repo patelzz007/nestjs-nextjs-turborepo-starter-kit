@@ -10,6 +10,8 @@ import { AuditTrailService } from "../../../common/audit/audit-trail.service";
 import { RequestContextService } from "../../../common/context/request-context";
 import { ResourceNotFoundError } from "../../../platform/persistence/persistence.errors";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
+import { toAuditLogReferences } from "../audit-references";
+import { AuditReferenceRepository } from "../repositories/audit-reference.repository";
 import { HttpAuditLogRepository, type AuditLogSummaryRow } from "../repositories/http-audit-log.repository";
 import { AUDIT_READ_OPERATION, HttpAuditLogQueryService } from "./http-audit-log-query.service";
 
@@ -79,7 +81,8 @@ const FULL_ROW: AuditLog = {
 const LIST_QUERY = HttpAuditLogListQuerySchema.parse({});
 
 describe("HttpAuditLogQueryService", () => {
-	const repository = { list: vi.fn(), findById: vi.fn(), findUsers: vi.fn(), findOrganizations: vi.fn() };
+	const repository = { list: vi.fn(), findById: vi.fn() };
+	const references = { load: vi.fn() };
 	const tenantTx = { withSystemOperation: vi.fn() };
 	const tx = { marker: "transaction-client" };
 	let service: HttpAuditLogQueryService;
@@ -90,14 +93,16 @@ describe("HttpAuditLogQueryService", () => {
 		tenantTx.withSystemOperation.mockImplementation(async (_context: object, work: (client: typeof tx) => Promise<object | null>) => work(tx));
 		repository.list.mockResolvedValue({ items: [SUMMARY_ROW], total: 1, page: 1, totalPages: 1, nextCursor: null, hasNext: false, hasPrevious: false });
 		repository.findById.mockResolvedValue(FULL_ROW);
-		repository.findUsers.mockResolvedValue([{ id: ACTOR_ID, email: "admin@example.com", fullName: "Admin" }]);
-		repository.findOrganizations.mockResolvedValue([{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }]);
+		references.load.mockResolvedValue(
+			toAuditLogReferences([{ id: ACTOR_ID, email: "admin@example.com", fullName: "Admin" }], [{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }]),
+		);
 		audit = createAuditTrailDouble(new RequestContextService());
 
 		const moduleRef = await Test.createTestingModule({
 			providers: [
 				HttpAuditLogQueryService,
 				{ provide: HttpAuditLogRepository, useValue: repository },
+				{ provide: AuditReferenceRepository, useValue: references },
 				{ provide: TenantTransactionService, useValue: tenantTx },
 				{ provide: AuditTrailService, useValue: audit.auditTrail },
 			],
@@ -119,8 +124,7 @@ describe("HttpAuditLogQueryService", () => {
 		it("returns the page with actor and organization names resolved", async () => {
 			const page = await service.list(VIEWER_ID, LIST_QUERY, await captureFastifyRequest({ headers: {} }));
 
-			expect(repository.findUsers).toHaveBeenCalledWith([ACTOR_ID], tx);
-			expect(repository.findOrganizations).toHaveBeenCalledWith([ORGANIZATION_ID], tx);
+			expect(references.load).toHaveBeenCalledWith({ userIds: [ACTOR_ID], organizationIds: [ORGANIZATION_ID] }, tx);
 			expect(page).toMatchObject({ total: 1, limit: LIST_QUERY.limit });
 			expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({
 				id: RECORD_ID,

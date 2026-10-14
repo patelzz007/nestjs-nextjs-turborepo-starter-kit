@@ -1,14 +1,8 @@
 import type { AuditLog } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import {
-	referencedOrganizationIds,
-	referencedUserIds,
-	toAuditLogReferences,
-	toHttpAuditLogDetail,
-	toHttpAuditLogSummary,
-	type AuditLogReferences,
-} from "./http-audit-log.mapper";
+import { toAuditLogReferences, type AuditLogReferences } from "./audit-references";
+import { httpAuditLogReferenceIds, toHttpAuditLogDetail, toHttpAuditLogSummary } from "./http-audit-log.mapper";
 
 const OCCURRED_AT = 1_790_812_800_000;
 const DURATION_MS = 37;
@@ -79,19 +73,17 @@ const REFERENCES: AuditLogReferences = toAuditLogReferences(
 	[{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }],
 );
 
-describe("referencedUserIds / referencedOrganizationIds", () => {
-	it("collects each distinct non-null id once", () => {
+describe("httpAuditLogReferenceIds", () => {
+	it("collects each distinct non-null actor / impersonator and organization id once", () => {
 		const rows = [auditRow(), auditRow({ impersonatorUserId: null }), auditRow({ actorUserId: null, organizationId: null })];
 
-		expect(referencedUserIds(rows)).toEqual([ACTOR_ID, IMPERSONATOR_ID]);
-		expect(referencedOrganizationIds(rows)).toEqual([ORGANIZATION_ID]);
+		expect(httpAuditLogReferenceIds(rows)).toEqual({ userIds: [ACTOR_ID, IMPERSONATOR_ID], organizationIds: [ORGANIZATION_ID] });
 	});
 
 	it("returns nothing for anonymous, untenanted rows", () => {
 		const rows = [auditRow({ actorUserId: null, impersonatorUserId: null, organizationId: null })];
 
-		expect(referencedUserIds(rows)).toEqual([]);
-		expect(referencedOrganizationIds(rows)).toEqual([]);
+		expect(httpAuditLogReferenceIds(rows)).toEqual({ userIds: [], organizationIds: [] });
 	});
 });
 

@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { PermissionActionSchema, PermissionResourceSchema, toPlatformCapabilitySlug } from "@workspace/shared";
+import { nowEpochMs, PermissionActionSchema, PermissionResourceSchema, toPlatformCapabilitySlug } from "@workspace/shared";
 
 /** One PLATFORM capability definition, derived from the permission that owns it. */
 export interface PlatformCapabilityRow {
@@ -58,4 +58,50 @@ export async function derivePlatformCapabilityRows(reader: PermissionReader, onl
 		});
 	}
 	return rows;
+}
+
+/** How many PLATFORM capability rows a convergence created and corrected. */
+export interface PlatformCapabilityConvergence {
+	readonly created: number;
+	readonly updated: number;
+}
+
+/**
+ * Converge `capability_definitions` (PLATFORM) to the permissions in `tx`: create the missing rows and
+ * correct the ones whose derived fields differ — and write NOTHING else, so a run against an up-to-date
+ * catalog leaves the table (and the data-change trail, ADR 051) untouched. The ONE writer of these rows:
+ * the reference-data loader (with the registry keys) and the API's boot sync (every permission) both
+ * call it, each inside its own allowlisted system-operation transaction.
+ */
+export async function convergePlatformCapabilities(tx: Prisma.TransactionClient, onlyKeys?: ReadonlySet<string>): Promise<PlatformCapabilityConvergence> {
+	const existing = new Map((await tx.capabilityDefinition.findMany()).map((row) => [row.slug, row]));
+	const now: number = nowEpochMs();
+	let created = 0;
+	let updated = 0;
+	for (const entry of await derivePlatformCapabilityRows(tx, onlyKeys)) {
+		const row = existing.get(entry.slug);
+		const data = {
+			scope: "PLATFORM",
+			label: entry.label,
+			description: entry.description,
+			groupName: entry.groupName,
+			isSystem: entry.isSystem,
+			permissionId: entry.permissionId,
+		} satisfies Prisma.CapabilityDefinitionUncheckedUpdateInput;
+		if (row === undefined) {
+			await tx.capabilityDefinition.create({ data: { slug: entry.slug, ...data } });
+			created += 1;
+		} else if (
+			row.scope !== data.scope ||
+			row.label !== data.label ||
+			row.description !== data.description ||
+			row.groupName !== data.groupName ||
+			row.isSystem !== data.isSystem ||
+			row.permissionId !== data.permissionId
+		) {
+			await tx.capabilityDefinition.update({ where: { id: row.id }, data: { ...data, updatedAt: now } });
+			updated += 1;
+		}
+	}
+	return { created, updated };
 }

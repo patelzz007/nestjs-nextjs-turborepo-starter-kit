@@ -13,6 +13,8 @@ import type { ProfileActor } from "./profile-actor";
 
 /** The one system operation a profile write runs under — `audit_logs` accepts inserts only with a named bypass. */
 export const OWN_PROFILE_UPDATE_OPERATION: SystemOperation = "auth.profile.update";
+/** Why a profile edit runs under {@link OWN_PROFILE_UPDATE_OPERATION} (`app.actor_purpose` of its transaction). */
+export const OWN_PROFILE_UPDATE_REASON = "User edits their own profile";
 
 /** Picks the editable fields out of the validated body (the `version` is the lock token, never a column write). */
 function toChanges(input: UpdateOwnProfileInput): OwnProfileChanges {
@@ -59,7 +61,7 @@ export class OwnProfileService {
 		}
 
 		const updated: OwnProfile = await this.tenantTx.withSystemOperation(
-			{ operation: OWN_PROFILE_UPDATE_OPERATION, reason: "User edits their own profile", actorUserId: actor.userId },
+			{ operation: OWN_PROFILE_UPDATE_OPERATION, reason: OWN_PROFILE_UPDATE_REASON, actorUserId: actor.userId },
 			async (tx): Promise<OwnProfile> => {
 				const applied: boolean = await this.repository.updateIfVersionMatches(tx, actor.userId, input.version, toChanges(input));
 				if (!applied) {

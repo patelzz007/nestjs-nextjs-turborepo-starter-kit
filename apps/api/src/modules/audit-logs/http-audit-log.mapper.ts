@@ -1,60 +1,15 @@
 import type { AuditLog } from "@prisma/client";
-import {
-	epochMs,
-	HttpAuditLogDetailSchema,
-	HttpAuditLogSummarySchema,
-	type AuditLogOrganization,
-	type AuditLogUser,
-	type HttpAuditLogDetail,
-	type HttpAuditLogSummary,
-} from "@workspace/shared";
+import { epochMs, HttpAuditLogDetailSchema, HttpAuditLogSummarySchema, type HttpAuditLogDetail, type HttpAuditLogSummary } from "@workspace/shared";
 
-import type { AuditLogOrganizationRow, AuditLogSummaryRow, AuditLogUserRow } from "./repositories/http-audit-log.repository";
+import { distinctReferenceIds, toAuditLogOrganization, toAuditLogUser, type AuditLogReferenceIds, type AuditLogReferences } from "./audit-references";
+import type { AuditLogSummaryRow } from "./repositories/http-audit-log.repository";
 
-/** The user and organization rows a page of audit records references, keyed by id. */
-export interface AuditLogReferences {
-	readonly users: ReadonlyMap<string, AuditLogUserRow>;
-	readonly organizations: ReadonlyMap<string, AuditLogOrganizationRow>;
-}
-
-type UserReferencingRow = Pick<AuditLogSummaryRow, "actorUserId" | "impersonatorUserId">;
-type OrganizationReferencingRow = Pick<AuditLogSummaryRow, "organizationId">;
-
-function distinct(ids: readonly (string | null)[]): string[] {
-	return [...new Set(ids.filter((id): id is string => id !== null))];
-}
-
-/** Every distinct actor / impersonator id the rows name. */
-export function referencedUserIds(rows: readonly UserReferencingRow[]): string[] {
-	return distinct(rows.flatMap((row) => [row.actorUserId, row.impersonatorUserId]));
-}
-
-/** Every distinct organization id the rows name. */
-export function referencedOrganizationIds(rows: readonly OrganizationReferencingRow[]): string[] {
-	return distinct(rows.map((row) => row.organizationId));
-}
-
-/** Index looked-up rows by id. */
-export function toAuditLogReferences(users: readonly AuditLogUserRow[], organizations: readonly AuditLogOrganizationRow[]): AuditLogReferences {
+/** Every distinct actor / impersonator and organization id the rows name. */
+export function httpAuditLogReferenceIds(rows: readonly Pick<AuditLogSummaryRow, "actorUserId" | "impersonatorUserId" | "organizationId">[]): AuditLogReferenceIds {
 	return {
-		users: new Map(users.map((user): [string, AuditLogUserRow] => [user.id, user])),
-		organizations: new Map(organizations.map((organization): [string, AuditLogOrganizationRow] => [organization.id, organization])),
+		userIds: distinctReferenceIds(rows.flatMap((row) => [row.actorUserId, row.impersonatorUserId])),
+		organizationIds: distinctReferenceIds(rows.map((row) => row.organizationId)),
 	};
-}
-
-function toUser(id: string | null, references: AuditLogReferences): AuditLogUser | null {
-	if (id === null) {
-		return null;
-	}
-	const user: AuditLogUserRow | undefined = references.users.get(id);
-	return { id, email: user?.email ?? null, fullName: user?.fullName ?? null };
-}
-
-function toOrganization(id: string | null, references: AuditLogReferences): AuditLogOrganization | null {
-	if (id === null) {
-		return null;
-	}
-	return { id, name: references.organizations.get(id)?.displayName ?? null };
 }
 
 /** A list row → the public summary contract (bigint epochs → numbers, ids → resolved references). */
@@ -75,11 +30,11 @@ export function toHttpAuditLogSummary(row: AuditLogSummaryRow, references: Audit
 		responseStatus: row.responseStatus,
 		errorCode: row.errorCode,
 		authMethod: row.authMethod,
-		actor: toUser(row.actorUserId, references),
-		impersonator: toUser(row.impersonatorUserId, references),
+		actor: toAuditLogUser(row.actorUserId, references),
+		impersonator: toAuditLogUser(row.impersonatorUserId, references),
 		apiKeyId: row.apiKeyId,
 		terminalId: row.terminalId,
-		organization: toOrganization(row.organizationId, references),
+		organization: toAuditLogOrganization(row.organizationId, references),
 		storeId: row.storeId,
 		locationId: row.locationId,
 		ipAddress: row.ipAddress,

@@ -27,14 +27,12 @@ import { classifyIpAddress, type IpClassification, type IpVersion } from "../htt
 import { UNAUDITED_PROBE_ROUTES } from "../http/probe-routes";
 import { parseUserAgent, type ParsedUserAgent } from "../http/user-agent";
 import { redactSecrets, redactUrl } from "../logging/redaction";
+import { AUDIT_PAYLOAD_MAX_BYTES, isEmailField, isPersonalDataField, PII_MASK } from "./audit-data-policy";
 import { readFirstHeader } from "../utils/http-headers";
 import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../utils/serialize-pre-serialization-value";
 
 /** Methods without a default 201: Nest answers every method but POST with 200. */
 const POST_METHOD = "POST";
-
-/** Largest serialized payload (UTF-8 bytes) stored per JSON column; larger ones become a truncation marker. */
-export const AUDIT_PAYLOAD_MAX_BYTES = 16_384;
 
 /** Column budgets (prisma/schema.prisma `AuditLog`). */
 const AUDIT_METHOD_MAX_LENGTH = 10;
@@ -57,36 +55,6 @@ const ContentLengthSchema = z.coerce.number().int().nonnegative().max(POSTGRES_I
 
 /** Endpoint recorded when Fastify matched no route (unknown path → 404). */
 export const UNMATCHED_ENDPOINT = "(unmatched)";
-
-/** Replacement for a personal-data value in an audit payload. */
-export const PII_MASK = "[PII]";
-
-/**
- * Personal-data field names (matched case-insensitively, ignoring `-`/`_`).
- * The actor is identified by id; payload copies of personal data are masked
- * (rules/10 → "keep PII in them redacted or tokenized from the start").
- * Email addresses keep their first character and domain so an investigator
- * can still tell two invitations apart.
- */
-const PII_FIELD_NAMES: ReadonlySet<string> = new Set<string>([
-	"email",
-	"contactemail",
-	"phone",
-	"phonenumber",
-	"mobile",
-	"fullname",
-	"firstname",
-	"lastname",
-	"address",
-	"addressline1",
-	"addressline2",
-	"dateofbirth",
-	"nric",
-	"passportnumber",
-	"nationalid",
-]);
-
-const EMAIL_FIELD_NAMES: ReadonlySet<string> = new Set<string>(["email", "contactemail"]);
 
 const EmailSchema = z.email();
 
@@ -159,10 +127,6 @@ export function defaultSuccessStatus(method: string): number {
 	return method.toUpperCase() === POST_METHOD ? HttpStatus.CREATED : HttpStatus.OK;
 }
 
-function normalizeFieldName(key: string): string {
-	return key.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 function maskEmail(value: string): string {
 	const at: number = value.lastIndexOf("@");
 	return `${value.slice(0, 1)}***${value.slice(at)}`;
@@ -176,11 +140,10 @@ function maskPersonalData(value: JsonValue): JsonValue {
 		return value.map((item: JsonValue): JsonValue => maskPersonalData(item));
 	}
 	const entries: [string, JsonValue][] = Object.entries(value).flatMap(([key, child]): [string, JsonValue][] => {
-		const normalized: string = normalizeFieldName(key);
-		if (!PII_FIELD_NAMES.has(normalized) || child === null) {
+		if (!isPersonalDataField(key) || child === null) {
 			return [[key, maskPersonalData(child)]];
 		}
-		const email = EMAIL_FIELD_NAMES.has(normalized) ? EmailSchema.safeParse(child) : undefined;
+		const email = isEmailField(key) ? EmailSchema.safeParse(child) : undefined;
 		return [[key, email?.success === true ? maskEmail(email.data) : PII_MASK]];
 	});
 	return Object.fromEntries(entries);

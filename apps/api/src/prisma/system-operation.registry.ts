@@ -47,6 +47,8 @@ export const SystemOperationSchema = z.enum([
 	// ── Platform infrastructure ──────────────────────────────────────────
 	"audit.http_request.record",
 	"audit.http_request.read",
+	"audit.data_change.read",
+	"audit.trail.read",
 	"http.idempotency",
 	"idempotency.retention",
 	"outbox.publish",
@@ -57,6 +59,7 @@ export const SystemOperationSchema = z.enum([
 	"tenancy.default_organization.verify",
 	"geo.reference_data.write",
 	"reference_data.sync",
+	"authorization.capability_catalog.sync",
 	// ── Background jobs (one per queue / schedule) ───────────────────────
 	"queue.email.send",
 	"queue.storage.cleanup",
@@ -156,6 +159,12 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	"audit.http_request.read": runtime(
 		"Read the bypass-only audit_logs table (and the actor / organization names its rows reference) for the admin audit viewer — only after the AUDIT_LOG permission check",
 	),
+	"audit.trail.read": runtime(
+		"Read both bypass-only audit stores (audit_logs + data_change_logs) as one timeline for the admin audit log — only after the AUDIT_LOG permission check",
+	),
+	"audit.data_change.read": runtime(
+		"Read the bypass-only data_change_logs table (and the actor / organization names its rows reference) for the admin data-change viewer — only after the AUDIT_LOG permission check",
+	),
 	"http.idempotency": runtime("Acquire, replay, complete and release Idempotency-Key records (bypass-only idempotency table)"),
 	"idempotency.retention": runtime("Purge Idempotency-Key records expired past their retention grace"),
 	"outbox.publish": runtime("Outbox dispatcher: claim, publish and advance outbox rows"),
@@ -165,6 +174,9 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	"tenant.enumerate": { description: "List active organization ids for scheduler fan-out", role: "app_enumerator" },
 	"tenancy.default_organization.verify": runtime("Boot check: the single-tenant DEFAULT_ORGANIZATION_ID names a live organization"),
 	"geo.reference_data.write": runtime("SuperAdmin create/update/soft-delete/import of geo reference data (bypass-only writes)"),
+	"authorization.capability_catalog.sync": runtime(
+		"API boot: converge the PLATFORM capability definitions to the permission catalog — creates missing rows and corrects changed ones, writes nothing else",
+	),
 	"reference_data.sync": runtime(
 		"CLI/seed only (db:sync-reference-data): converge the platform reference data — permission catalog, system roles, their grants and the merchant capability catalog — one section per transaction, with an audit row per change",
 	),

@@ -6,6 +6,7 @@ import { auditDeviceFields, auditNetworkFields, toAuditPayload, UNMATCHED_ENDPOI
 import type { RequestContext } from "../../src/common/context/request-context";
 import { buildIdempotencyScope, hashIdempotentRequest } from "../../src/platform/idempotency/idempotency-request";
 import { IDEMPOTENCY_RETENTION_MS } from "../../src/platform/idempotency/idempotency.constants";
+import { withSeedAttribution } from "./attributed-session";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { SEED_DEVICE_PROFILES } from "./device-sessions";
@@ -70,7 +71,13 @@ export interface HttpAuditSeedActors {
 }
 
 /** A paired POS till of the KL merchant, with its store — the machine principal of the POS audit row. */
-async function findPairedTill(): Promise<{ readonly apiKeyId: string; readonly terminalId: string; readonly locationId: string; readonly storeId: string | null } | null> {
+async function findPairedTill(): Promise<{
+	readonly id: string;
+	readonly apiKeyId: string;
+	readonly terminalId: string;
+	readonly locationId: string;
+	readonly storeId: string | null;
+} | null> {
 	const till = await prisma.organizationTerminal.findFirst({
 		where: { organizationId: ORGANIZATION_SEED_IDS.klOrganization, isDeleted: false, apiKeyId: { not: null } },
 		orderBy: { createdAt: "asc" },
@@ -79,7 +86,7 @@ async function findPairedTill(): Promise<{ readonly apiKeyId: string; readonly t
 		return null;
 	}
 	const store = await prisma.store.findFirst({ where: { locationId: till.locationId, isDeleted: false } });
-	return { apiKeyId: till.apiKeyId, terminalId: till.terminalId, locationId: till.locationId, storeId: store?.id ?? null };
+	return { id: till.id, apiKeyId: till.apiKeyId, terminalId: till.terminalId, locationId: till.locationId, storeId: store?.id ?? null };
 }
 
 export interface HttpAuditSeedSummary {
@@ -224,13 +231,18 @@ function defaultRequestMetadata(fields: SeedAuditFields): SeedRequestMetadata {
 	};
 }
 
+/** The correlation id of demo request #`index` — what its seeded row changes join it by (attributed-session.ts). */
+export function seedAuditCorrelationId(index: number): string {
+	return `seed-${deterministicUuid(`${HTTP_AUDIT_NAMESPACE}.correlation`, String(index))}`;
+}
+
 /**
  * One demo request's audit row: the deterministic id, correlation id, clock and
  * client of request #`index` (each number is used once across the seed modules).
  */
 export function entry(index: number, fields: SeedAuditFields): { readonly id: string; readonly row: HttpAuditEntry } {
 	const occurredAt: number = SEED_AUDIT_BASE_EPOCH_MS + index * SEED_AUDIT_STEP_MS;
-	const correlationId = `seed-${deterministicUuid(`${HTTP_AUDIT_NAMESPACE}.correlation`, String(index))}`;
+	const correlationId: string = seedAuditCorrelationId(index);
 	const stated = { ...defaultRequestMetadata(fields), ...fields };
 	return {
 		id: deterministicUuid(HTTP_AUDIT_NAMESPACE, String(index)),
@@ -244,6 +256,35 @@ export function entry(index: number, fields: SeedAuditFields): { readonly id: st
 			completedAt: occurredAt + SEED_AUDIT_DURATION_MS,
 		},
 	};
+}
+
+/** The POS till's checkout request on the shared seeded audit clock. */
+const POS_CHECKOUT_REQUEST = 3;
+
+/**
+ * What the API-key guard writes on every call from a registered till
+ * (`MerchantTerminalRepository.touchLastSeen`): `last_seen_at` = the request
+ * time — run under the till's API-key session, so its change record joins the
+ * seeded checkout request. Skipped once the till already shows that call, so
+ * re-seeding writes (and records) nothing new.
+ */
+async function recordPosTerminalCall(till: { readonly id: string; readonly apiKeyId: string }, requestIndex: number): Promise<void> {
+	const lastSeenAt: number = SEED_AUDIT_BASE_EPOCH_MS + requestIndex * SEED_AUDIT_STEP_MS;
+	await withSeedAttribution(
+		{
+			correlationId: seedAuditCorrelationId(requestIndex),
+			actorUserId: null,
+			organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+			apiKeyId: till.apiKeyId,
+			systemOperation: null,
+			actorPurpose: null,
+		},
+		async (tx) =>
+			tx.organizationTerminal.updateMany({
+				where: { id: till.id, OR: [{ lastSeenAt: null }, { lastSeenAt: { not: BigInt(lastSeenAt) } }] },
+				data: { lastSeenAt: BigInt(lastSeenAt) },
+			}),
+	);
 }
 
 /** Audit columns of a request with no tenant scope. */
@@ -459,7 +500,7 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 	const till = await findPairedTill();
 	if (till !== null) {
 		rows.push(
-			entry(3, {
+			entry(POS_CHECKOUT_REQUEST, {
 				method: "POST",
 				endpoint: `${API_VERSION_PREFIX}/redemptions/checkout`,
 				path: `${API_VERSION_PREFIX}/redemptions/checkout`,
@@ -479,6 +520,7 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 				systemOperations: ["route.rls_bypass"],
 			}),
 		);
+		await recordPosTerminalCall(till, POS_CHECKOUT_REQUEST);
 	}
 	// The impersonated request (a refused profile edit) is seeded with the rest
 	// of the self-service profile history by `seedOwnProfileHistory` (own-profile.ts).

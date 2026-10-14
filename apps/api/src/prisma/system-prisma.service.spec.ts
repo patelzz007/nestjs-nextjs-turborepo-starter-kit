@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { createTestTypedConfig } from "../../test/support/test-api-env";
 
-import { DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
+import { DATABASE_APPLICATION_NAME, DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
 import { buildSystemPoolConfig } from "./system-prisma.service";
 
 const POOL_MAX = 7;
 const IDLE_TIMEOUT_MS = 12_345;
 
 describe("buildSystemPoolConfig", () => {
-	it("bounds the system pool with the validated limits and a connect timeout", () => {
+	it("bounds the system pool with the validated limits and a connect timeout, and names its connections", () => {
 		const config = createTestTypedConfig({ DB_POOL_MAX: String(POOL_MAX), DB_IDLE_TIMEOUT_MS: String(IDLE_TIMEOUT_MS) });
 
 		expect(buildSystemPoolConfig(config)).toEqual({
@@ -18,6 +18,7 @@ describe("buildSystemPoolConfig", () => {
 			idleTimeoutMillis: IDLE_TIMEOUT_MS,
 			allowExitOnIdle: config.database.allowExitOnIdle,
 			connectionTimeoutMillis: DATABASE_CONNECT_TIMEOUT_MS,
+			application_name: DATABASE_APPLICATION_NAME.system,
 		});
 	});
 });

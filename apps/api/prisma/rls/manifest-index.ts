@@ -70,6 +70,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"inbox_processed_events",
 		"inbox_dead_letters",
 		"audit_logs",
+		"data_change_logs",
 		"platform_resource_idempotency_records",
 		"permission_audit_logs",
 		"authorization_audits",

@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { DependencyUnavailableError } from "../common/errors/app-error";
 import { TypedConfigService } from "../config/typed-config.service";
+import { DATABASE_APPLICATION_NAME } from "./database-pool.constants";
 import { RlsPool } from "./rls-pool";
 
 /** Result of one connection attempt — a value, never a rejection. */
@@ -27,6 +28,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 			max: config.database.poolMax,
 			idleTimeoutMillis: config.database.idleTimeoutMs,
 			allowExitOnIdle: config.database.allowExitOnIdle,
+			application_name: DATABASE_APPLICATION_NAME.request,
 		});
 		const adapter = new PrismaPg(pool);
 

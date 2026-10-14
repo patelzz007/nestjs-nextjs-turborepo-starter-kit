@@ -69,6 +69,7 @@ BEGIN
     'inbox_processed_events',
     'inbox_dead_letters',
     'audit_logs',
+    'data_change_logs',
     'platform_resource_idempotency_records'
   ]
   LOOP
@@ -748,6 +749,24 @@ CREATE POLICY audit_logs_insert ON public.audit_logs
 
 DROP POLICY IF EXISTS audit_logs_select ON public.audit_logs;
 CREATE POLICY audit_logs_select ON public.audit_logs
+  FOR SELECT
+  USING (app_rls_bypass());
+
+-- Row-level data-change trail (docs/adr/051-database-change-audit-trail.md):
+-- append-only. Rows are INSERTed ONLY by the generated `data_change_capture`
+-- triggers (prisma/rls/data-change-capture.ts, applied by scripts/apply-rls.ts
+-- after this bundle): `pg_trigger_depth() > 0` is true only while a trigger
+-- runs, and app_runtime cannot create triggers or functions, so application
+-- SQL can never forge or pre-write a change record. Reading is bypass-only
+-- (the admin viewer's `audit.data_change.read`); UPDATE/DELETE are withheld
+-- from app_runtime (prisma/rls/withheld-privileges.ts).
+DROP POLICY IF EXISTS data_change_logs_insert ON public.data_change_logs;
+CREATE POLICY data_change_logs_insert ON public.data_change_logs
+  FOR INSERT
+  WITH CHECK (pg_trigger_depth() > 0);
+
+DROP POLICY IF EXISTS data_change_logs_select ON public.data_change_logs;
+CREATE POLICY data_change_logs_select ON public.data_change_logs
   FOR SELECT
   USING (app_rls_bypass());
 

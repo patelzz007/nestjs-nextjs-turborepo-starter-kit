@@ -27,6 +27,7 @@ const NEVER_DELETED: readonly WithheldPrivilege[] = ["DELETE"];
 export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly WithheldPrivilege[]>> = {
 	// ── Append-only audit trails (rules/10 → "Storage and immutability") ──
 	audit_logs: APPEND_ONLY,
+	data_change_logs: APPEND_ONLY,
 	impersonation_audit_logs: APPEND_ONLY,
 	mfa_recovery_audit_logs: APPEND_ONLY,
 	// ── Never deleted: ended via `ended_at`, kept as forensic record ──

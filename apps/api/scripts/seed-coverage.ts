@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { PRISMA_MIGRATIONS_TABLE } from "../prisma/rls/data-change-capture.js";
 import { SeedCoverageExemptionSchema, type SeedCoverageExemption } from "../prisma/seed/coverage-exemptions.js";
 
 /**
@@ -13,9 +14,6 @@ import { SeedCoverageExemptionSchema, type SeedCoverageExemption } from "../pris
  * Postgres catalog; any disagreement between the two is reported too, so a new
  * model, a new column or a stale generated client can never slip past the check.
  */
-
-/** Prisma's own bookkeeping table: it is not part of `schema.prisma`. */
-export const PRISMA_MIGRATIONS_TABLE = "_prisma_migrations";
 
 /** One table as `schema.prisma` declares it (model + its scalar/enum columns). */
 export interface SchemaTable {

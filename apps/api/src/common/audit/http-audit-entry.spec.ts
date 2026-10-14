@@ -3,16 +3,8 @@ import { describe, expect, it } from "vitest";
 import { captureFastifyRequest } from "../../../test/support/fastify-request";
 import type { RequestContext, RequestPrincipal } from "../context/request-context";
 import { REDACTED } from "../logging/redaction";
-import {
-	AUDIT_PAYLOAD_MAX_BYTES,
-	buildHttpAuditEntry,
-	defaultSuccessStatus,
-	isAuditedRoute,
-	PII_MASK,
-	toAuditPayload,
-	toWireJson,
-	UNMATCHED_ENDPOINT,
-} from "./http-audit-entry";
+import { AUDIT_PAYLOAD_MAX_BYTES, PII_MASK } from "./audit-data-policy";
+import { buildHttpAuditEntry, defaultSuccessStatus, isAuditedRoute, toAuditPayload, toWireJson, UNMATCHED_ENDPOINT } from "./http-audit-entry";
 
 const RECEIVED_AT = 1_790_812_800_000;
 const COMPLETED_AT = RECEIVED_AT + 25;

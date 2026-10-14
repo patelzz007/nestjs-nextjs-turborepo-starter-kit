@@ -119,6 +119,17 @@ interface RequestContextSlot {
 const requestContextStorage: AsyncLocalStorage<RequestContextSlot> = new AsyncLocalStorage<RequestContextSlot>();
 
 /**
+ * The current request's correlation id, or `undefined` outside a request — for
+ * the one caller that runs below Nest's injector: the database pool checkout
+ * (`prisma/rls-pool.ts`), which stamps it on every connection so a row change
+ * outside an explicit transaction still joins its request (ADR 051).
+ * Everything else reads it through {@link RequestContextService}.
+ */
+export function currentRequestCorrelationId(): string | undefined {
+	return requestContextStorage.getStore()?.current.correlationId;
+}
+
+/**
  * The single accessor for the request context. Stateless (the store is
  * module-level), so every instance sees the same context; inject it through
  * the global `RequestContextModule`.
@@ -150,7 +161,7 @@ export class RequestContextService {
 
 	/** The current request's correlation id, or `undefined` outside a request. */
 	public correlationId(): string | undefined {
-		return this.current()?.correlationId;
+		return currentRequestCorrelationId();
 	}
 
 	/**

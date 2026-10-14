@@ -55,12 +55,6 @@ export const AUDIT_LOG_SUMMARY_SELECT = {
 /** One list row (no payloads, no detail-only metadata). */
 export type AuditLogSummaryRow = Prisma.AuditLogGetPayload<{ select: typeof AUDIT_LOG_SUMMARY_SELECT }>;
 
-/** A user an audit row names, as the viewer shows it. */
-export type AuditLogUserRow = Prisma.UserGetPayload<{ select: { id: true; email: true; fullName: true } }>;
-
-/** An organization an audit row is scoped to, as the viewer shows it. */
-export type AuditLogOrganizationRow = Prisma.OrganizationGetPayload<{ select: { id: true; displayName: true } }>;
-
 // ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
 
 const AUDIT_LOG_SORT_COLUMNS: SortColumns<HttpAuditLogListSortField, Prisma.AuditLogOrderByWithRelationInput> = {
@@ -133,9 +127,8 @@ export function buildHttpAuditLogListOrder(query: HttpAuditLogListQuery): ListOr
  * Read-side access to the global HTTP audit trail (`audit_logs`) for the admin
  * viewer. The table is append-only and bypass-only under RLS: this repository
  * never writes, and every read runs on the caller's `audit.http_request.read`
- * system-operation transaction (`db`). It also resolves the user and
- * organization names the rows reference — there are no foreign keys, so a
- * reference that no longer resolves is simply absent from the result.
+ * system-operation transaction (`db`). The names its rows reference are
+ * resolved by `AuditReferenceRepository`.
  */
 @Injectable()
 export class HttpAuditLogRepository {
@@ -154,21 +147,5 @@ export class HttpAuditLogRepository {
 	/** One complete row, or `null` when no row has this id. */
 	public async findById(id: string, db: Prisma.TransactionClient): Promise<AuditLog | null> {
 		return db.auditLog.findUnique({ where: { id } });
-	}
-
-	/** The users with these ids — soft-deleted ones included: an audit record outlives its actor. */
-	public async findUsers(ids: readonly string[], db: Prisma.TransactionClient): Promise<readonly AuditLogUserRow[]> {
-		if (ids.length === 0) {
-			return [];
-		}
-		return db.user.findMany({ where: { id: { in: [...ids] } }, select: { id: true, email: true, fullName: true } });
-	}
-
-	/** The organizations with these ids — soft-deleted ones included. */
-	public async findOrganizations(ids: readonly string[], db: Prisma.TransactionClient): Promise<readonly AuditLogOrganizationRow[]> {
-		if (ids.length === 0) {
-			return [];
-		}
-		return db.organization.findMany({ where: { id: { in: [...ids] } }, select: { id: true, displayName: true } });
 	}
 }

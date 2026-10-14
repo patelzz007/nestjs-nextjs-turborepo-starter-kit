@@ -4,7 +4,7 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 import { Pool, type PoolConfig } from "pg";
 
 import { TypedConfigService } from "../config/typed-config.service";
-import { DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
+import { DATABASE_APPLICATION_NAME, DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
 
 /**
  * Pool settings for the system client — the same validated limits as the
@@ -21,6 +21,7 @@ export function buildSystemPoolConfig(config: TypedConfigService): PoolConfig {
 		idleTimeoutMillis: config.database.idleTimeoutMs,
 		allowExitOnIdle: config.database.allowExitOnIdle,
 		connectionTimeoutMillis: DATABASE_CONNECT_TIMEOUT_MS,
+		application_name: DATABASE_APPLICATION_NAME.system,
 	};
 }
 

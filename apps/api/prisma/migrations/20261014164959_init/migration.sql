@@ -173,6 +173,12 @@ CREATE TYPE "AuditAuthMethod" AS ENUM ('BEARER_TOKEN', 'SESSION_COOKIE', 'REFRES
 CREATE TYPE "IpAddressScope" AS ENUM ('PUBLIC', 'PRIVATE', 'LOOPBACK', 'LINK_LOCAL', 'SHARED', 'DOCUMENTATION', 'MULTICAST', 'RESERVED');
 
 -- CreateEnum
+CREATE TYPE "DataChangeOperation" AS ENUM ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE');
+
+-- CreateEnum
+CREATE TYPE "DataChangeActorKind" AS ENUM ('USER', 'API_KEY', 'SYSTEM', 'UNATTRIBUTED');
+
+-- CreateEnum
 CREATE TYPE "IdempotencyRecordStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED');
 
 -- CreateTable
@@ -1723,6 +1729,34 @@ CREATE TABLE "audit_logs" (
 );
 
 -- CreateTable
+CREATE TABLE "data_change_logs" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "change_sequence" BIGSERIAL NOT NULL,
+    "occurred_at" BIGINT NOT NULL,
+    "transaction_id" BIGINT NOT NULL,
+    "table_name" VARCHAR(63) NOT NULL,
+    "operation" "DataChangeOperation" NOT NULL,
+    "row_id" VARCHAR(512),
+    "changed_columns" TEXT[],
+    "old_data" JSONB,
+    "new_data" JSONB,
+    "actor_kind" "DataChangeActorKind" NOT NULL,
+    "actor_user_id" VARCHAR(64),
+    "organization_id" VARCHAR(64),
+    "api_key_id" VARCHAR(64),
+    "system_operation" VARCHAR(100),
+    "actor_purpose" VARCHAR(512),
+    "correlation_id" VARCHAR(64),
+    "database_role" VARCHAR(63) NOT NULL,
+    "login_role" VARCHAR(63) NOT NULL,
+    "application_name" VARCHAR(64),
+    "client_address" VARCHAR(64),
+    "created_at" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+
+    CONSTRAINT "data_change_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "platform_resource_idempotency_records" (
     "id" TEXT NOT NULL,
     "scope" VARCHAR(200) NOT NULL,
@@ -2522,6 +2556,30 @@ CREATE INDEX "audit_logs_user_agent_trgm_idx" ON "audit_logs" USING GIN ("user_a
 
 -- CreateIndex
 CREATE INDEX "audit_logs_occurred_at_idx" ON "audit_logs"("occurred_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "data_change_logs_change_sequence_key" ON "data_change_logs"("change_sequence");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_occurred_at_idx" ON "data_change_logs"("occurred_at");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_correlation_id_idx" ON "data_change_logs"("correlation_id");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_table_name_row_id_occurred_at_idx" ON "data_change_logs"("table_name", "row_id", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_actor_user_id_occurred_at_idx" ON "data_change_logs"("actor_user_id", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_organization_id_occurred_at_idx" ON "data_change_logs"("organization_id", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_actor_kind_occurred_at_idx" ON "data_change_logs"("actor_kind", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "data_change_logs_transaction_id_idx" ON "data_change_logs"("transaction_id");
 
 -- CreateIndex
 CREATE INDEX "platform_resource_idempotency_expires_at_idx" ON "platform_resource_idempotency_records"("expires_at");

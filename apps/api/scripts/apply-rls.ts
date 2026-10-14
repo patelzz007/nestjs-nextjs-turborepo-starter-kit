@@ -4,6 +4,15 @@ import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { z } from "zod";
 
+import {
+	buildDataChangeCaptureSql,
+	DATA_CHANGE_ROW_TRIGGER,
+	DATA_CHANGE_TRUNCATE_TRIGGER,
+	planDataChangeCapture,
+	PRISMA_MIGRATIONS_TABLE,
+	type DataChangeCatalogTable,
+	type DataChangeCapturePlan,
+} from "../prisma/rls/data-change-capture.js";
 import { APP_RUNTIME_ROLE, buildWithheldPrivilegeRevocationSql, listWithheldPrivileges, type WithheldPrivilegeEntry } from "../prisma/rls/withheld-privileges.js";
 import { buildRlsApplyPlan } from "./rls-apply-plan.js";
 
@@ -145,6 +154,68 @@ async function assertPrivilegesWithheld(pool: Pool, withheld: readonly WithheldP
 	}
 }
 
+const CatalogTableRowSchema = z.object({
+	name: z.string(),
+	primary_key_columns: z.array(z.string()),
+	columns: z.array(z.string()),
+});
+
+/** Every ordinary / partitioned table in `public` (Prisma's bookkeeping table aside) with its primary key and columns. */
+async function readDataChangeCatalog(pool: Pool): Promise<DataChangeCatalogTable[]> {
+	const result = await pool.query(
+		`SELECT c.relname AS name,
+		        COALESCE((SELECT array_agg(a.attname::text ORDER BY k.position)
+		                    FROM pg_index i
+		                    CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, position)
+		                    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+		                   WHERE i.indrelid = c.oid AND i.indisprimary), ARRAY[]::text[]) AS primary_key_columns,
+		        (SELECT array_agg(a.attname::text ORDER BY a.attnum)
+		           FROM pg_attribute a
+		          WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped) AS columns
+		   FROM pg_class c
+		   JOIN pg_namespace n ON n.oid = c.relnamespace
+		  WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND c.relname <> $1
+		  ORDER BY c.relname`,
+		[PRISMA_MIGRATIONS_TABLE],
+	);
+	return z
+		.array(CatalogTableRowSchema)
+		.parse(result.rows)
+		.map((row): DataChangeCatalogTable => ({ name: row.name, primaryKeyColumns: row.primary_key_columns, columns: row.columns }));
+}
+
+const TriggerRowSchema = z.object({ table: z.string(), trigger: z.string() });
+
+/** Fails unless every captured table carries both capture triggers and no exempt table carries either. */
+async function assertDataChangeCaptureInstalled(pool: Pool, plan: DataChangeCapturePlan): Promise<void> {
+	const result = await pool.query(
+		`SELECT c.relname AS table, t.tgname AS trigger
+		   FROM pg_trigger t
+		   JOIN pg_class c ON c.oid = t.tgrelid
+		   JOIN pg_namespace n ON n.oid = c.relnamespace
+		  WHERE n.nspname = 'public' AND NOT t.tgisinternal AND t.tgenabled <> 'D' AND t.tgname IN ($1, $2)`,
+		[DATA_CHANGE_ROW_TRIGGER, DATA_CHANGE_TRUNCATE_TRIGGER],
+	);
+	const installed = new Set(
+		z
+			.array(TriggerRowSchema)
+			.parse(result.rows)
+			.map((row): string => `${row.table}.${row.trigger}`),
+	);
+	const triggers: readonly string[] = [DATA_CHANGE_ROW_TRIGGER, DATA_CHANGE_TRUNCATE_TRIGGER];
+	const missing = plan.captured.flatMap((table): string[] =>
+		triggers.map((trigger: string): string => `${table.name}.${trigger}`).filter((key: string): boolean => !installed.has(key)),
+	);
+	const unexpected = plan.exempt.flatMap((table: string): string[] =>
+		triggers.map((trigger: string): string => `${table}.${trigger}`).filter((key: string): boolean => installed.has(key)),
+	);
+	if (missing.length > 0 || unexpected.length > 0) {
+		throw new Error(
+			`Data-change capture is not installed as planned. Missing (or disabled): ${missing.join(", ") || "none"}. On exempt tables: ${unexpected.join(", ") || "none"}.`,
+		);
+	}
+}
+
 /**
  * Apply the RLS SQL via the Node `pg` driver.
  *
@@ -153,7 +224,9 @@ async function assertPrivilegesWithheld(pool: Pool, withheld: readonly WithheldP
  * use-before-definition BEFORE any SQL runs — so ordering bugs fail here
  * instead of against a fresh database. The privileges withheld from
  * `app_runtime` (`prisma/rls/withheld-privileges.ts`) are revoked with the
- * final grants file and then verified against the live catalog.
+ * final grants file and then verified against the live catalog. Last, the
+ * row-level data-change capture triggers (`prisma/rls/data-change-capture.ts`)
+ * are planned against the live catalog, installed, and verified.
  *
  * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
  */
@@ -174,6 +247,14 @@ export async function applyRowLevelSecurity(): Promise<void> {
 
 		await assertPrivilegesWithheld(pool, withheld);
 		console.log(`  ✓ ${String(withheld.length)} tables keep their withheld ${APP_RUNTIME_ROLE} privileges`);
+
+		// Row-level data-change capture (prisma/rls/data-change-capture.ts): planned against the live catalog, so a table
+		// created by a migration since the last apply is captured now — or the apply fails on its unclassified columns.
+		const capturePlan: DataChangeCapturePlan = planDataChangeCapture(await readDataChangeCatalog(pool));
+		console.log("  → data-change capture triggers");
+		await runSqlInTransaction(pool, buildDataChangeCaptureSql(capturePlan));
+		await assertDataChangeCaptureInstalled(pool, capturePlan);
+		console.log(`  ✓ ${String(capturePlan.captured.length)} tables capture every row change (${String(capturePlan.exempt.length)} declared exempt)`);
 		console.log("RLS applied successfully.");
 	} finally {
 		await pool.end();

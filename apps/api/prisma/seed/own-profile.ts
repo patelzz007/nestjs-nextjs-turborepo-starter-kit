@@ -6,10 +6,11 @@ import { toAuditPayload } from "../../src/common/audit/http-audit-entry";
 import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../../src/modules/auth/constants/impersonation.constants";
 import { ImpersonationAuditAction } from "../../src/modules/auth/repositories/impersonation-session.repository";
 import { PROFILE_UPDATE_DURING_IMPERSONATION_MESSAGE } from "../../src/modules/auth/profile/own-profile.errors";
-import { OWN_PROFILE_UPDATE_OPERATION } from "../../src/modules/auth/profile/own-profile.service";
+import { OWN_PROFILE_UPDATE_OPERATION, OWN_PROFILE_UPDATE_REASON } from "../../src/modules/auth/profile/own-profile.service";
+import { withSeedAttribution } from "./attributed-session";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
-import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT } from "./http-audit";
+import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT, seedAuditCorrelationId } from "./http-audit";
 
 // ---------------------------------------------------------------------------
 // Self-service profile history (`PATCH /auth/profile`) — development scenario.
@@ -24,9 +25,10 @@ import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT } from "./http-audit";
 //     the impersonator's id and the impersonation session it ran under, and no
 //     change to the profile. The session (started a minute before, stopped a
 //     minute after) and its START / STOP rows are seeded with it.
-// Idempotent: the version is SET (not incremented) on the account's natural key
-// (email), and the audit rows are upserted by their deterministic ids with an
-// empty update (append-only, like the app).
+// Idempotent: the version is SET (not incremented), and only when it differs —
+// under the edit request's own session (attributed-session.ts), so the change
+// record joins that request — and the audit rows are upserted by their
+// deterministic ids with an empty update (append-only, like the app).
 // ---------------------------------------------------------------------------
 
 /** Demo request numbers on the shared seeded audit clock (http-audit.ts uses 0–3). */
@@ -57,9 +59,22 @@ export interface OwnProfileSeedSummary {
 }
 
 export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promise<OwnProfileSeedSummary> {
-	const customer = await prisma.user.update({
-		where: { email: actors.customerEmail },
-		data: { profileVersion: EDITED_PROFILE_VERSION },
+	const { id: customerId } = await prisma.user.findUniqueOrThrow({ where: { email: actors.customerEmail }, select: { id: true } });
+	// The edit itself, under the session the API's PATCH ran in — its change record joins the seeded request.
+	// Only a profile not yet at the edited version is written, so re-seeding records no second edit.
+	await withSeedAttribution(
+		{
+			correlationId: seedAuditCorrelationId(OWN_PROFILE_EDIT_REQUEST),
+			actorUserId: customerId,
+			organizationId: null,
+			apiKeyId: null,
+			systemOperation: OWN_PROFILE_UPDATE_OPERATION,
+			actorPurpose: OWN_PROFILE_UPDATE_REASON,
+		},
+		async (tx) => tx.user.updateMany({ where: { id: customerId, profileVersion: { not: EDITED_PROFILE_VERSION } }, data: { profileVersion: EDITED_PROFILE_VERSION } }),
+	);
+	const customer = await prisma.user.findUniqueOrThrow({
+		where: { id: customerId },
 		select: { id: true, email: true, fullName: true, createdAt: true, updatedAt: true },
 	});
 	// The response the API answered the edit with — built and validated with the endpoint's own contract.

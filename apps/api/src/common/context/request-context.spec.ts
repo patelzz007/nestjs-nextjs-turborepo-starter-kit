@@ -3,7 +3,7 @@ import { Socket } from "node:net";
 
 import { describe, expect, it } from "vitest";
 
-import { RequestContextService, type RequestContextSeed } from "./request-context";
+import { currentRequestCorrelationId, RequestContextService, type RequestContextSeed } from "./request-context";
 
 const SEED: RequestContextSeed = { correlationId: "corr-ctx-1", ip: "203.0.113.7", userAgent: "vitest", edgeLocation: undefined };
 
@@ -13,7 +13,12 @@ describe("RequestContextService", () => {
 	it("is empty outside a request", () => {
 		expect(service.current()).toBeUndefined();
 		expect(service.correlationId()).toBeUndefined();
+		expect(currentRequestCorrelationId()).toBeUndefined();
 		expect(service.logFields()).toBeUndefined();
+	});
+
+	it("exposes the request's correlation id to code below the injector (the pool checkout)", () => {
+		expect(service.run(SEED, () => currentRequestCorrelationId())).toBe("corr-ctx-1");
 	});
 
 	it("opens a context with the request-start fields; traceId mirrors the correlation id", () => {

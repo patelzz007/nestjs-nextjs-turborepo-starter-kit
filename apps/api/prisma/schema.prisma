@@ -2871,6 +2871,88 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+/// The kind of row change one `data_change_logs` row records.
+enum DataChangeOperation {
+  INSERT
+  UPDATE
+  DELETE
+  /// A whole-table `TRUNCATE` (statement level: no row id, no row images).
+  TRUNCATE
+}
+
+/// Who a recorded row change is attributed to, from the session variables the change ran under.
+enum DataChangeActorKind {
+  /// `app.current_user_id` was set — a signed-in user (an impersonation session's target user;
+  /// the impersonator is on the HTTP audit row with the same correlation id).
+  USER
+  /// `app.current_api_key_id` was set — a merchant API key (POS terminal or integration).
+  API_KEY
+  /// No user or key, but an allowlisted system operation — background work (jobs, schedulers, the outbox).
+  SYSTEM
+  /// None of the above: a write the application did not attribute (a migration, the seed, a manual
+  /// `psql` session, or a code path that skipped its context — which is itself a finding).
+  UNATTRIBUTED
+}
+
+/// Row-level data-change trail (docs/adr/051-database-change-audit-trail.md): one row per
+/// INSERT / UPDATE / DELETE on every captured table, plus one per TRUNCATE, written by the
+/// generated `data_change_capture` triggers (prisma/rls/data-change-capture.ts) in the SAME
+/// transaction as the change — so a change can never commit without its record. Captures writes
+/// from every path: HTTP requests, queue jobs, schedulers, consumers, CLIs and manual SQL.
+/// `old_data` / `new_data` are the full row images, secret columns `[REDACTED]`, personal data
+/// masked and oversized values replaced by a truncation marker. `correlation_id` joins a change
+/// to the HTTP request (`audit_logs`) that caused it.
+/// RLS: INSERT only from inside a trigger (`pg_trigger_depth() > 0`); SELECT bypass-only (the
+/// admin viewer reads it under `audit.data_change.read`); UPDATE/DELETE withheld from app_runtime.
+/// Not a business entity: never soft-deleted, never updated. Seed: prisma/seed/data-changes.ts.
+model DataChangeLog {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Monotonic write order — orders the changes of one transaction exactly.
+  changeSequence  BigInt              @unique @default(autoincrement()) @map("change_sequence")
+  /// When the row changed (`clock_timestamp()`, epoch ms).
+  occurredAt      BigInt              @map("occurred_at")
+  /// PostgreSQL transaction id (`txid_current()`): the changes that committed together.
+  transactionId   BigInt              @map("transaction_id")
+  tableName       String              @map("table_name") @db.VarChar(63)
+  operation       DataChangeOperation
+  /// The changed row's primary key (composite keys joined with `/`); NULL for TRUNCATE.
+  rowId           String?             @map("row_id") @db.VarChar(512)
+  /// UPDATE: the columns whose value changed (before redaction, so a changed secret is still listed). Empty otherwise.
+  changedColumns  String[]            @map("changed_columns")
+  /// The row before the change (UPDATE, DELETE).
+  oldData         Json?               @map("old_data")
+  /// The row after the change (INSERT, UPDATE).
+  newData         Json?               @map("new_data")
+  actorKind       DataChangeActorKind @map("actor_kind")
+  actorUserId     String?             @map("actor_user_id") @db.VarChar(64)
+  organizationId  String?             @map("organization_id") @db.VarChar(64)
+  apiKeyId        String?             @map("api_key_id") @db.VarChar(64)
+  /// The allowlisted system operation (RLS bypass) the change ran under.
+  systemOperation String?             @map("system_operation") @db.VarChar(100)
+  /// Why the transaction ran (`app.actor_purpose`: the tenant purpose, or the system operation's reason).
+  actorPurpose    String?             @map("actor_purpose") @db.VarChar(512)
+  /// The request (or job) correlation id — joins `audit_logs.correlation_id`.
+  correlationId   String?             @map("correlation_id") @db.VarChar(64)
+  /// The PostgreSQL role that executed the statement (`app_runtime`, a system operation's role, the owner …).
+  databaseRole    String              @map("database_role") @db.VarChar(63)
+  /// The role the connection logged in as (`session_user`).
+  loginRole       String              @map("login_role") @db.VarChar(63)
+  /// The connecting client's `application_name` (`prisma-seed`, `psql`, …).
+  applicationName String?             @map("application_name") @db.VarChar(64)
+  /// The connecting client's address; NULL over a Unix socket.
+  clientAddress   String?             @map("client_address") @db.VarChar(64)
+  createdAt       BigInt              @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+
+  @@index([occurredAt])
+  @@index([correlationId])
+  @@index([tableName, rowId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([organizationId, occurredAt])
+  @@index([actorKind, occurredAt])
+  @@index([transactionId])
+  @@map("data_change_logs")
+}
+
 /// Lifecycle of an idempotency record (platform/idempotency, docs/technical/api/routes.md → Idempotency).
 enum IdempotencyRecordStatus {
   /// A request holding this key is executing; duplicates get 409 IDEMPOTENCY_REQUEST_IN_PROGRESS until `expiresAt` (the lease).

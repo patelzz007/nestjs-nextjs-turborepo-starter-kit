@@ -2,7 +2,7 @@ import type { Permission, Prisma, Role, RolePermission } from "@prisma/client";
 import { getPermissionDefinitions, nowEpochMs } from "@workspace/shared";
 
 import { MERCHANT_CAPABILITY_CATALOG } from "./merchant-capability-catalog";
-import { derivePlatformCapabilityRows } from "./platform-capability-rows";
+import { convergePlatformCapabilities } from "./platform-capability-rows";
 import { NO_CHANGE, type ReferenceDataSection, type SectionChange } from "./reference-data.types";
 import { SYSTEM_ROLE_CATALOG, type PermissionSelector, type SystemRoleDefinition } from "./system-role-catalog";
 
@@ -172,42 +172,13 @@ export class MerchantCapabilitySection implements ReferenceDataSection {
 
 /**
  * The PLATFORM capability definitions, derived from the permission catalog and linked to their permission
- * (`permission_id`). The API also syncs them at boot; both go through {@link derivePlatformCapabilityRows}.
+ * (`permission_id`). The API also syncs them at boot; both go through {@link convergePlatformCapabilities}.
  */
 export class PlatformCapabilitySection implements ReferenceDataSection {
 	public readonly name = "platform-capabilities";
 
 	public async sync(tx: Tx): Promise<SectionChange> {
-		const existing = new Map((await tx.capabilityDefinition.findMany()).map((row) => [row.slug, row]));
-		const now: number = nowEpochMs();
-		let created = 0;
-		let updated = 0;
-
-		for (const entry of await derivePlatformCapabilityRows(tx, registryPermissionKeys())) {
-			const row = existing.get(entry.slug);
-			const data = {
-				scope: "PLATFORM",
-				label: entry.label,
-				description: entry.description,
-				groupName: entry.groupName,
-				isSystem: entry.isSystem,
-				permissionId: entry.permissionId,
-			} satisfies Prisma.CapabilityDefinitionUncheckedUpdateInput;
-			if (row === undefined) {
-				await tx.capabilityDefinition.create({ data: { slug: entry.slug, ...data } });
-				created += 1;
-			} else if (
-				row.scope !== data.scope ||
-				row.label !== data.label ||
-				row.description !== data.description ||
-				row.groupName !== data.groupName ||
-				row.isSystem !== data.isSystem ||
-				row.permissionId !== data.permissionId
-			) {
-				await tx.capabilityDefinition.update({ where: { id: row.id }, data: { ...data, updatedAt: now } });
-				updated += 1;
-			}
-		}
+		const { created, updated } = await convergePlatformCapabilities(tx, registryPermissionKeys());
 		return { ...NO_CHANGE, created, updated };
 	}
 }

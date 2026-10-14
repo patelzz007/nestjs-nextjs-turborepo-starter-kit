@@ -2,7 +2,11 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { ThrownErrorSchema } from "@workspace/shared";
 
+import { currentRequestCorrelationId } from "../common/context/request-context";
 import { currentRlsContextOrUnscoped, rlsSessionVariables } from "./rls-context";
+
+/** `app.correlation_id` outside a request: SQL has no "absent" for a setting, and the readers treat `''` as NULL. */
+const UNSET_CORRELATION_ID = "";
 
 /** Fail checkout instead of hanging until Fastify's plugin timeout. */
 const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
@@ -70,13 +74,22 @@ export class RlsPool extends Pool {
 	}
 }
 
+/** The one thing the checkout needs from a connection: run a parameterized statement (a `pg` `PoolClient` is one). */
+export interface RlsSessionConnection {
+	query(sql: string, values: string[]): Promise<object>;
+}
+
 /**
  * Stamp a checked-out connection with the RLS scope: the role (`SET ROLE` to
  * the scope's role — `app_runtime`, or a system operation's narrower role),
  * then the session variables the policies read. `set_config('role', …)` is
  * `SET ROLE` with a bind parameter; the value is always a `DatabaseRole`.
+ * The current request's correlation id is stamped too (`''` outside a
+ * request), so the data-change trail (ADR 051) can join a row change made
+ * outside a `TenantTransactionService` transaction to its HTTP request; a
+ * transaction overrides it transaction-locally.
  */
-export async function applyRlsSession(client: Pick<PoolClient, "query">): Promise<void> {
+export async function applyRlsSession(client: RlsSessionConnection): Promise<void> {
 	const ctx = currentRlsContextOrUnscoped();
 	if (ctx.kind === "user" && ctx.requireExplicitContext && ctx.organizationId === null) {
 		throw new Error("Tenant database access requires organization context — use TenantTransactionService");
@@ -89,4 +102,5 @@ export async function applyRlsSession(client: Pick<PoolClient, "query">): Promis
 	await client.query("SELECT set_config('app.system_operation', $1, false)", [session.systemOperation]);
 	await client.query("SELECT set_config('app.current_api_key_id', $1, false)", [session.currentApiKeyId]);
 	await client.query("SELECT set_config('app.current_api_key_location_id', $1, false)", [session.currentApiKeyLocationId]);
+	await client.query("SELECT set_config('app.correlation_id', $1, false)", [currentRequestCorrelationId() ?? UNSET_CORRELATION_ID]);
 }

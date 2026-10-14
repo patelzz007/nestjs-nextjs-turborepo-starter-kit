@@ -8,14 +8,9 @@ import { mapListResult, toPaginatedServiceResult } from "../../../platform/persi
 import { ResourceNotFoundError } from "../../../platform/persistence/persistence.errors";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
-import {
-	referencedOrganizationIds,
-	referencedUserIds,
-	toAuditLogReferences,
-	toHttpAuditLogDetail,
-	toHttpAuditLogSummary,
-	type AuditLogReferences,
-} from "../http-audit-log.mapper";
+import type { AuditLogReferences } from "../audit-references";
+import { httpAuditLogReferenceIds, toHttpAuditLogDetail, toHttpAuditLogSummary } from "../http-audit-log.mapper";
+import { AuditReferenceRepository } from "../repositories/audit-reference.repository";
 import { HttpAuditLogRepository, type AuditLogSummaryRow } from "../repositories/http-audit-log.repository";
 
 /** Allowlisted system operation every audit-trail read runs under (system-operation.registry.ts). */
@@ -37,6 +32,7 @@ export const AUDIT_READ_OPERATION = "audit.http_request.read";
 export class HttpAuditLogQueryService {
 	public constructor(
 		private readonly repository: HttpAuditLogRepository,
+		private readonly references: AuditReferenceRepository,
 		private readonly tenantTx: TenantTransactionService,
 		private readonly auditTrail: AuditTrailService,
 	) {}
@@ -47,7 +43,7 @@ export class HttpAuditLogQueryService {
 			{ operation: AUDIT_READ_OPERATION, reason: "Admin audit viewer list", actorUserId: actorId },
 			async (tx: Prisma.TransactionClient): Promise<RepositoryListResult<HttpAuditLogSummary>> => {
 				const rows: RepositoryListResult<AuditLogSummaryRow> = await this.repository.list(query, tx);
-				const references: AuditLogReferences = await this.loadReferences(rows.items, tx);
+				const references: AuditLogReferences = await this.references.load(httpAuditLogReferenceIds(rows.items), tx);
 				return mapListResult(rows, (row: AuditLogSummaryRow): HttpAuditLogSummary => toHttpAuditLogSummary(row, references));
 			},
 		);
@@ -63,7 +59,7 @@ export class HttpAuditLogQueryService {
 			{ operation: AUDIT_READ_OPERATION, reason: "Admin audit viewer detail", actorUserId: actorId },
 			async (tx: Prisma.TransactionClient): Promise<HttpAuditLogDetail | null> => {
 				const row: AuditLog | null = await this.repository.findById(id, tx);
-				return row === null ? null : toHttpAuditLogDetail(row, await this.loadReferences([row], tx));
+				return row === null ? null : toHttpAuditLogDetail(row, await this.references.load(httpAuditLogReferenceIds([row]), tx));
 			},
 		);
 		if (detail === null) {
@@ -73,12 +69,5 @@ export class HttpAuditLogQueryService {
 			auditLogView: { view: "detail", auditLogId: detail.id, correlationId: detail.correlationId },
 		});
 		return detail;
-	}
-
-	private async loadReferences(rows: readonly AuditLogSummaryRow[], tx: Prisma.TransactionClient): Promise<AuditLogReferences> {
-		// Sequential: an interactive transaction runs its statements on one connection anyway.
-		const users = await this.repository.findUsers(referencedUserIds(rows), tx);
-		const organizations = await this.repository.findOrganizations(referencedOrganizationIds(rows), tx);
-		return toAuditLogReferences(users, organizations);
 	}
 }
