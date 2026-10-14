@@ -33,3 +33,28 @@ export function isWebTokenAuthPath(pathname: string): boolean {
 export function isWebGuestBrowsablePath(pathname: string): boolean {
 	return !isWebProtectedPath(pathname) && !isWebAuthPath(pathname);
 }
+
+/** Characters that end the path part of a URL (query string / fragment). */
+const PATH_TERMINATOR_PATTERN = /[?#]/;
+
+/** The path part of an in-app URL, without its query string or fragment. */
+function pathnameOf(url: string): string {
+	const [pathname = url] = url.split(PATH_TERMINATOR_PATTERN);
+	return pathname;
+}
+
+/**
+ * Whether a `?redirect=` target is safe to send a freshly signed-in member to:
+ * the home page or a signed-in page (its query string kept). Anything else —
+ * including protocol-relative `//host` and `/\host` URLs, which browsers treat
+ * as another origin — is refused, and the caller falls back to the browse page.
+ * The proxy (signed-in visitor on /auth/login) and the login page (after
+ * sign-in) both use this one rule.
+ */
+export function isAllowedWebPostLoginRedirect(redirect: string): boolean {
+	if (!redirect.startsWith("/") || redirect.startsWith("//") || redirect.startsWith("/\\")) {
+		return false;
+	}
+	const pathname = pathnameOf(redirect);
+	return pathname === ROUTES.home || isWebProtectedPath(pathname);
+}

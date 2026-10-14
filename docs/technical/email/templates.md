@@ -84,6 +84,10 @@ supply content:
   only (no trailing arrow). The base template's tests enforce these.
 - **Tokens:** `EMAIL_THEME` mirrors the web brand theme (`apps/web/app/web-theme.css`) as hex —
   mail clients support neither `oklch()` nor CSS variables. **Change both together.**
+- **Preview text:** `getPreviewText()` is the hidden preheader inbox lists and phone notifications
+  show beside the subject. The shell pads it with invisible filler (`PREHEADER_FILLER`), so the
+  snippet ends there instead of reading on into the logo, app name and code. Put the one useful
+  line (for codes: the code itself) in it.
 - **Tone:** each template sets `accent`, which picks a palette in `ACCENT_PALETTES` (the eyebrow's dot
   and text, and the tinted blocks): `indigo`
   (brand: account, product), `green` (success), `amber` (a security change worth a look), `red`
@@ -98,7 +102,7 @@ supply content:
   | `highlight(title, subtitle?)` | The one thing the reader must notice |
   | `callout(title, body)` | Guidance in the tone's colour ("Wasn't you?") |
   | `steps(items)` | A numbered how-to |
-  | `otpCodeBlock(code)` | One-time codes, one tile per character |
+  | `otpCodeBlock(code)` | One-time codes: the whole code as one spaced-out string in one tile, so it copies in one tap and inbox snippets never read it cell by cell |
   | `ctaInBody(context)` with `ctaPlacement = "in-body"` | The button mid-body; otherwise the shell renders `getCta()` after the body |
   | `linkBlock(href)` | The "button not working?" raw-link fallback |
 

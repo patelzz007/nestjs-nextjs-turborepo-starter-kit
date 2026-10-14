@@ -9,7 +9,7 @@
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
 import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
-import { isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/lib/auth/routes";
+import { isAllowedWebPostLoginRedirect, isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/lib/auth/routes";
 import { LOGIN_REDIRECT_PARAM, ROUTES } from "@/lib/routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { serverEnv } from "@/lib/env/env.server";
@@ -154,7 +154,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	// still run when the user already has a session (common right after signup).
 	if (isAuthRoute && isAuthenticated && !isWebTokenAuthPath(pathname)) {
 		const redirectPath: string | null = request.nextUrl.searchParams.get(LOGIN_REDIRECT_PARAM);
-		const targetPath: string = redirectPath !== null && (isWebProtectedPath(redirectPath) || redirectPath === ROUTES.home) ? redirectPath : DEFAULT_AUTHENTICATED_PATH;
+		const targetPath: string = redirectPath !== null && isAllowedWebPostLoginRedirect(redirectPath) ? redirectPath : DEFAULT_AUTHENTICATED_PATH;
 
 		return applyRotatedCookies(NextResponse.redirect(new URL(targetPath, request.url)), rotatedCookies);
 	}

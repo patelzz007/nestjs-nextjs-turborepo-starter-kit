@@ -128,6 +128,24 @@ export interface EmailStep {
  * props, pass to `EmailSenderService.send()` — nothing is read from the
  * environment and nothing is fetched.
  */
+/**
+ * Invisible filler placed after the preheader. Inbox previews and mobile
+ * notifications (Gmail especially) show a snippet of ~100–200 characters:
+ * when the preheader is shorter, the client tops the snippet up with the
+ * body's first visible text — the logo monogram, the app name and, in OTP
+ * emails, every code tile on its own line. Zero-width joiners and
+ * non-breaking spaces fill that budget without showing anything.
+ */
+const PREHEADER_FILLER_UNIT = "&#847;&zwnj;&nbsp;";
+/** Enough units to exhaust the longest client snippet (each unit counts as about two characters). */
+const PREHEADER_FILLER_UNITS = 120;
+export const PREHEADER_FILLER: string = PREHEADER_FILLER_UNIT.repeat(PREHEADER_FILLER_UNITS);
+
+/** Space between the code's characters, in px; added to the left padding so the code stays centred. */
+const OTP_LETTER_SPACING_PX = 10;
+/** Horizontal padding inside the code tile, in px. */
+const OTP_TILE_PADDING_X_PX = 22;
+
 export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 	/** Validated-at-construction props; re-validated by the sender before send. */
 	public readonly props: TProps;
@@ -309,19 +327,17 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
         </table>`;
 	}
 
-	/** A one-time code as separate character tiles (table layout for every client). */
+	/**
+	 * A one-time code as ONE string in one tile, spaced out for reading. A
+	 * single text node is what makes it copy as "482916" in one tap, and keeps
+	 * inbox snippets and screen readers from reading it as separate cells.
+	 */
 	protected otpCodeBlock(code: string | number): string {
-		// Grapheme-safe split (codes are digits today; this stays correct for any character).
-		const characters: readonly string[] = Array.from(new Intl.Segmenter("en", { granularity: "grapheme" }).segment(String(code)), (part): string => part.segment);
-		const tiles: string = characters
-			.map(
-				(character: string): string =>
-					`<td class="email-otp-tile" align="center" style="width: 44px; height: 54px; background: ${EMAIL_THEME.panel}; border-radius: 10px; font-family: ${EMAIL_THEME.monoStack}; font-size: 26px; font-weight: 700; color: ${EMAIL_THEME.heading}; text-align: center;">${this.escape(character)}</td><td style="width: 8px;"></td>`,
-			)
-			.join("");
 		return `
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 8px auto 20px auto;">
-          <tr>${tiles}</tr>
+          <tr>
+            <td class="email-otp-tile" align="center" style="padding: 14px ${String(OTP_TILE_PADDING_X_PX)}px 14px ${String(OTP_TILE_PADDING_X_PX + OTP_LETTER_SPACING_PX)}px; background: ${EMAIL_THEME.panel}; border-radius: 10px; font-family: ${EMAIL_THEME.monoStack}; font-size: 30px; font-weight: 700; line-height: 36px; letter-spacing: ${String(OTP_LETTER_SPACING_PX)}px; color: ${EMAIL_THEME.heading}; text-align: center; white-space: nowrap;">${this.escape(String(code))}</td>
+          </tr>
         </table>`;
 	}
 
@@ -391,7 +407,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
   </style>
 </head>
 <body class="email-body" style="margin: 0; padding: 0; background-color: ${theme.canvas}; font-family: ${theme.fontStack}; -webkit-font-smoothing: antialiased;">
-  <span style="display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all;">${this.escape(this.getPreviewText(context))}</span>
+  <span style="display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all;">${this.escape(this.getPreviewText(context))}${PREHEADER_FILLER}</span>
   <table role="presentation" class="email-canvas" width="100%" cellpadding="0" cellspacing="0" bgcolor="${theme.canvas}" style="width: 100%; background-color: ${theme.canvas};">
     <tr>
       <td align="center" style="padding: 32px 12px 40px 12px;">

@@ -2565,3 +2565,242 @@ Includes the redacted request params, request body and response body.
 
 > [!WARNING]
 > No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/audit-trail
+
+List the audit trail (newest first)
+
+HTTP requests (with how many rows each changed) and background database writes as one timeline.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:AUDIT_LOG`.
+- Operation id `AuditTrailController_list` · [source](../../../apps/api/src/modules/audit-logs/audit-trail.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt. Default: -occurredAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: kind, actorUserId, organizationId, correlationId, tableName, rowId, occurredAt, outcome, method, authMethod, deviceType, ipScope, actorKind |
+| `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+
+**Response 200 OK** — Paginated timeline entries; pagination is in `meta`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].⟨shape 1⟩ actor` | object \| null | yes |  |
+| `data[].⟨shape 1⟩ actor.email` | string \| null | yes |  |
+| `data[].⟨shape 1⟩ actor.fullName` | string \| null | yes |  |
+| `data[].⟨shape 1⟩ actor.id` | string | yes | length 1–64 |
+| `data[].⟨shape 1⟩ apiKeyId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 1⟩ authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "REFRESH_BODY" \| "API_KEY" \| null | yes |  |
+| `data[].⟨shape 1⟩ browserName` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ browserVersion` | string \| null | yes | at most 32 characters |
+| `data[].⟨shape 1⟩ changeCount` | integer | yes |  |
+| `data[].⟨shape 1⟩ changedTables` | string[] | yes | 0–10 items |
+| `data[].⟨shape 1⟩ clientType` | string \| null | yes | at most 32 characters |
+| `data[].⟨shape 1⟩ completedAt` | integer | yes |  |
+| `data[].⟨shape 1⟩ correlationId` | string | yes | length 1–64 |
+| `data[].⟨shape 1⟩ deviceModel` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ deviceType` | "DESKTOP" \| "MOBILE" \| "TABLET" \| "BOT" \| "UNKNOWN" \| null | yes |  |
+| `data[].⟨shape 1⟩ durationMs` | integer | yes |  |
+| `data[].⟨shape 1⟩ endpoint` | string | yes | length 1–512 |
+| `data[].⟨shape 1⟩ errorCode` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ geoCity` | string \| null | yes | at most 128 characters |
+| `data[].⟨shape 1⟩ geoCountry` | string \| null | yes | exactly 2 characters |
+| `data[].⟨shape 1⟩ geoRegion` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ geoTimeZone` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ id` | string (uuid) | yes |  |
+| `data[].⟨shape 1⟩ impersonator` | object \| null | yes |  |
+| `data[].⟨shape 1⟩ impersonator.email` | string \| null | yes |  |
+| `data[].⟨shape 1⟩ impersonator.fullName` | string \| null | yes |  |
+| `data[].⟨shape 1⟩ impersonator.id` | string | yes | length 1–64 |
+| `data[].⟨shape 1⟩ ipAddress` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ ipScope` | "PUBLIC" \| "PRIVATE" \| "LOOPBACK" \| "LINK_LOCAL" \| "SHARED" \| "DOCUMENTATION" \| "MULTICAST" \| "RESERVED" \| null | yes |  |
+| `data[].⟨shape 1⟩ ipVersion` | 4 \| 6 \| null | yes |  |
+| `data[].⟨shape 1⟩ kind` | "REQUEST" | yes |  |
+| `data[].⟨shape 1⟩ locationId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 1⟩ method` | string | yes | length 1–10 |
+| `data[].⟨shape 1⟩ occurredAt` | integer | yes |  |
+| `data[].⟨shape 1⟩ organization` | object \| null | yes |  |
+| `data[].⟨shape 1⟩ organization.id` | string | yes | length 1–64 |
+| `data[].⟨shape 1⟩ organization.name` | string \| null | yes |  |
+| `data[].⟨shape 1⟩ osName` | string \| null | yes | at most 64 characters |
+| `data[].⟨shape 1⟩ osVersion` | string \| null | yes | at most 32 characters |
+| `data[].⟨shape 1⟩ outcome` | "SUCCEEDED" \| "FAILED" | yes |  |
+| `data[].⟨shape 1⟩ path` | string | yes | length 1–2048 |
+| `data[].⟨shape 1⟩ responseStatus` | integer | yes | range 100–599 |
+| `data[].⟨shape 1⟩ storeId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 1⟩ terminalId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 1⟩ userAgent` | string \| null | yes | at most 512 characters |
+| `data[].⟨shape 2⟩ actor` | object \| null | yes |  |
+| `data[].⟨shape 2⟩ actor.email` | string \| null | yes |  |
+| `data[].⟨shape 2⟩ actor.fullName` | string \| null | yes |  |
+| `data[].⟨shape 2⟩ actor.id` | string | yes | length 1–64 |
+| `data[].⟨shape 2⟩ actorKind` | "USER" \| "API_KEY" \| "SYSTEM" \| "UNATTRIBUTED" | yes |  |
+| `data[].⟨shape 2⟩ apiKeyId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 2⟩ changeCount` | integer | yes |  |
+| `data[].⟨shape 2⟩ changedTables` | string[] | yes | 0–10 items |
+| `data[].⟨shape 2⟩ correlationId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 2⟩ databaseRole` | string | yes | length 1–63 |
+| `data[].⟨shape 2⟩ id` | string (uuid) | yes |  |
+| `data[].⟨shape 2⟩ kind` | "BACKGROUND" | yes |  |
+| `data[].⟨shape 2⟩ occurredAt` | integer | yes |  |
+| `data[].⟨shape 2⟩ operation` | "INSERT" \| "UPDATE" \| "DELETE" \| "TRUNCATE" | yes |  |
+| `data[].⟨shape 2⟩ organization` | object \| null | yes |  |
+| `data[].⟨shape 2⟩ organization.id` | string | yes | length 1–64 |
+| `data[].⟨shape 2⟩ organization.name` | string \| null | yes |  |
+| `data[].⟨shape 2⟩ rowId` | string \| null | yes | at most 512 characters |
+| `data[].⟨shape 2⟩ systemOperation` | string \| null | yes | length 1–100 |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/data-changes
+
+List row changes (newest first)
+
+Change metadata only — open one record for the redacted row before and after.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:AUDIT_LOG`.
+- Operation id `DataChangesController_list` · [source](../../../apps/api/src/modules/audit-logs/data-changes.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt. Default: -occurredAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: tableName, operation, actorKind, actorUserId, organizationId, apiKeyId, systemOperation, correlationId, rowId, transactionId, occurredAt |
+| `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+
+**Response 200 OK** — Paginated row-change records; pagination is in `meta`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].actor` | object \| null | yes |  |
+| `data[].actor.email` | string \| null | yes |  |
+| `data[].actor.fullName` | string \| null | yes |  |
+| `data[].actor.id` | string | yes | length 1–64 |
+| `data[].actorKind` | "USER" \| "API_KEY" \| "SYSTEM" \| "UNATTRIBUTED" | yes |  |
+| `data[].apiKeyId` | string \| null | yes | length 1–64 |
+| `data[].changeSequence` | integer | yes |  |
+| `data[].changedColumns` | string[] | yes | 0–1600 items |
+| `data[].correlationId` | string \| null | yes | length 1–64 |
+| `data[].databaseRole` | string | yes | length 1–63 |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].occurredAt` | integer | yes |  |
+| `data[].operation` | "INSERT" \| "UPDATE" \| "DELETE" \| "TRUNCATE" | yes |  |
+| `data[].organization` | object \| null | yes |  |
+| `data[].organization.id` | string | yes | length 1–64 |
+| `data[].organization.name` | string \| null | yes |  |
+| `data[].rowId` | string \| null | yes | at most 512 characters |
+| `data[].systemOperation` | string \| null | yes | length 1–100 |
+| `data[].tableName` | string | yes | length 1–63 |
+| `data[].transactionId` | integer | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/data-changes/{id}
+
+Get one complete row-change record
+
+Includes the redacted row images before and after the change.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `READ:AUDIT_LOG`.
+- Operation id `DataChangesController_get` · [source](../../../apps/api/src/modules/audit-logs/data-changes.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | path | string (uuid) | yes |  |
+
+**Response 200 OK** — The complete row-change record
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.actor` | object \| null | yes |  |
+| `data.actor.email` | string \| null | yes |  |
+| `data.actor.fullName` | string \| null | yes |  |
+| `data.actor.id` | string | yes | length 1–64 |
+| `data.actorKind` | "USER" \| "API_KEY" \| "SYSTEM" \| "UNATTRIBUTED" | yes |  |
+| `data.actorPurpose` | string \| null | yes | length 1–512 |
+| `data.apiKeyId` | string \| null | yes | length 1–64 |
+| `data.applicationName` | string \| null | yes | length 1–64 |
+| `data.changeSequence` | integer | yes |  |
+| `data.changedColumns` | string[] | yes | 0–1600 items |
+| `data.clientAddress` | string \| null | yes | length 1–64 |
+| `data.correlationId` | string \| null | yes | length 1–64 |
+| `data.createdAt` | integer | yes |  |
+| `data.databaseRole` | string | yes | length 1–63 |
+| `data.id` | string (uuid) | yes |  |
+| `data.loginRole` | string | yes | length 1–63 |
+| `data.newData` | any JSON \| null | yes |  |
+| `data.occurredAt` | integer | yes |  |
+| `data.oldData` | any JSON \| null | yes |  |
+| `data.operation` | "INSERT" \| "UPDATE" \| "DELETE" \| "TRUNCATE" | yes |  |
+| `data.organization` | object \| null | yes |  |
+| `data.organization.id` | string | yes | length 1–64 |
+| `data.organization.name` | string \| null | yes |  |
+| `data.rowId` | string \| null | yes | at most 512 characters |
+| `data.systemOperation` | string \| null | yes | length 1–100 |
+| `data.tableName` | string | yes | length 1–63 |
+| `data.transactionId` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.

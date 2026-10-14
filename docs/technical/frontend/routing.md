@@ -111,7 +111,10 @@ Every signed-in web page (everything under `/rewardhub`, and `/hello`) calls
 `await guardWebPage("<its own path>")` (`apps/web/lib/auth/page-guard.ts`) before it fetches or
 renders. Without both session cookies (access + refresh) it redirects to
 `/auth/login?redirect=<path>`; the login route's proxy refresh restores a refresh-only session and
-sends the user back. It runs per page, not in the layout (layouts do not re-render on client
+sends the user back, and otherwise the login page returns the member to `<path>` once they sign in.
+Both the proxy and the login page accept a target only through `isAllowedWebPostLoginRedirect`
+(`apps/web/lib/auth/routes.ts`: the home page or a signed-in page, never another origin), falling
+back to `/rewardhub`. It runs per page, not in the layout (layouts do not re-render on client
 navigation), and it backs up the proxy rather than replacing it. A test scans `app/` and fails
 when a protected page lacks the call.
 

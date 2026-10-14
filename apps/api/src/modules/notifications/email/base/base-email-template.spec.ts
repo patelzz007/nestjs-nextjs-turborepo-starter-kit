@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { BaseEmailPropsSchema } from "@workspace/shared";
 
-import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "./base-email-template";
+import { BaseEmailTemplate, PREHEADER_FILLER, type CtaConfig, type EmailAccent } from "./base-email-template";
 import type { EmailRenderContext } from "./email-render-context";
 import { PasswordResetEmailTemplate } from "../templates/password-reset-email.template";
 
@@ -71,6 +71,16 @@ describe("BaseEmailTemplate", () => {
 		expect(html).toContain("<title>Test subject</title>");
 		expect(html).toContain("Preview line");
 		expect(html).toContain(context.appName);
+	});
+
+	it("pads the hidden preheader so inbox snippets end at the preview line instead of reading on into the body", () => {
+		const html = new TestTemplate({ to: "a@b.com", fullName: "Sam" }).renderHtml(context);
+		const preheaderStart = html.indexOf("Preview line");
+		const fillerStart = html.indexOf(PREHEADER_FILLER, preheaderStart);
+		expect(fillerStart).toBe(preheaderStart + "Preview line".length);
+		// The filler sits inside the hidden span, before any visible content (the brand monogram and app name).
+		expect(html.indexOf("</span>", fillerStart)).toBe(fillerStart + PREHEADER_FILLER.length);
+		expect(fillerStart).toBeLessThan(html.indexOf(context.appName, html.indexOf("<body")));
 	});
 
 	it("renders the CTA button with the escaped href", () => {
@@ -142,8 +152,9 @@ describe("BaseEmailTemplate building blocks", () => {
 		expect(html).toContain("https://app.example.com/x?a=1&amp;b=2");
 	});
 
-	it("renders a one-time code as one tile per character", () => {
-		expect(html.match(/class="email-otp-tile"/g)).toHaveLength(6);
+	it("renders a one-time code as one string in one tile, so it copies in one go and never reads as separate cells", () => {
+		expect(html.match(/class="email-otp-tile"/g)).toHaveLength(1);
+		expect(html).toMatch(/class="email-otp-tile"[^>]*>482916<\/td>/);
 	});
 
 	it("renders an in-body CTA exactly once (the shell does not add a second), and keeps it in the plain-text twin", () => {
