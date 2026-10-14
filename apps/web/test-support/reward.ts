@@ -1,19 +1,28 @@
-import { RewardResponseSchema, type RewardResponse } from "@workspace/shared";
+import { z } from "zod";
+import { RewardResponseSchema, type RewardImageResponse, type RewardResponse } from "@workspace/shared";
 
 const FIXTURE_NOW_MS = 1_790_000_000_000;
 const FIXTURE_TTL_MS = 30 * 86_400_000;
 const FIXTURE_QUANTITY = 50;
 /** The cover the fixture carries — a stable, schema-valid https URL a test can assert on. */
-export const FIXTURE_COVER_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/cover.jpg";
+export const FIXTURE_COVER_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/cover.webp";
 
-/** The fields a case may override — plain values; the schema parse brands them. */
-export interface RewardFixtureOverrides {
-	readonly title?: string;
-	readonly organizationName?: string;
-	readonly organizationLogoUrl?: string | null;
-	readonly quantityRemaining?: number;
-	readonly coverImageUrl?: string;
+/** One reward image as the API returns it: its URL, size and renditions (for `srcset`). */
+export function rewardImageFixture(fileId: string, url: string): RewardImageResponse {
+	return {
+		fileId,
+		url,
+		width: 3840,
+		height: 2160,
+		sources: [
+			{ width: 640, url: url.replace(/\.webp$/u, "-640.webp") },
+			{ width: 3840, url },
+		],
+	};
 }
+
+/** The fields a case may override — plain values (the schema parse brands them). */
+export type RewardFixtureOverrides = Partial<z.input<typeof RewardResponseSchema>>;
 
 /** A complete, schema-valid consumer reward; `overrides` set only what a case is about. */
 export function buildRewardResponse(overrides: RewardFixtureOverrides = {}): RewardResponse {
@@ -22,6 +31,7 @@ export function buildRewardResponse(overrides: RewardFixtureOverrides = {}): Rew
 		organizationId: "00000000-0000-4000-8000-0000000000aa",
 		organizationName: "Brew & Bean KL",
 		organizationLogoUrl: null,
+		organizationLogoSources: [],
 		title: "Free coffee",
 		description: "One free latte",
 		rewardType: "FREE_ITEM",
@@ -29,8 +39,7 @@ export function buildRewardResponse(overrides: RewardFixtureOverrides = {}): Rew
 		termsConditions: null,
 		rewardKind: "CONSUMER",
 		category: "cafe",
-		coverFileId: "00000000-0000-4000-8000-0000000000c1",
-		coverImageUrl: FIXTURE_COVER_IMAGE_URL,
+		images: [rewardImageFixture("00000000-0000-4000-8000-0000000000c1", FIXTURE_COVER_IMAGE_URL)],
 		quantityTotal: FIXTURE_QUANTITY,
 		quantityRemaining: FIXTURE_QUANTITY,
 		quantityReserved: 0,

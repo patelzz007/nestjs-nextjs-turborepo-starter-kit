@@ -19,7 +19,8 @@ import {
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
-import { rewardCoverSeedId } from "../prisma/seed/reward-covers";
+import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
+import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { sha256Hex } from "../src/common/crypto/sha256";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
@@ -143,10 +144,11 @@ describe("Merchant store scope (e2e)", () => {
 		);
 
 		await query(
-			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, cover_file_id, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
-       VALUES ($1, $2, 'E2E store-scope reward', 'Created by merchant-location-scope.e2e-spec.ts', 'DISCOUNT', 10, 'restaurant', $4, 10, 10, $3, 'PUBLISHED', false)`,
-			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, Date.now() + 30 * DAY_MS, rewardCoverSeedId("weekend-dinner")],
+			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
+       VALUES ($1, $2, 'E2E store-scope reward', 'Created by merchant-location-scope.e2e-spec.ts', 'DISCOUNT', 10, 'restaurant', 10, 10, $3, 'PUBLISHED', false)`,
+			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, Date.now() + 30 * DAY_MS],
 		);
+		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, "weekend-dinner")]);
 		await insertRedemption(katilRedemptionId, KATIL, KATIL_BILL_MINOR);
 		await insertRedemption(beruangRedemptionId, BERUANG, BERUANG_BILL_MINOR);
 
@@ -224,7 +226,7 @@ describe("Merchant store scope (e2e)", () => {
 				rewardType: "DISCOUNT",
 				rewardValue: 5,
 				category: "restaurant",
-				coverFileId: rewardCoverSeedId("weekend-dinner"),
+				imageFileIds: [rewardCoverImageSeedId("weekend-dinner"), rewardCoverImageSeedId("heritage-set")],
 				quantityTotal: 5,
 				expiryDate: Date.now() + 30 * DAY_MS,
 			};
@@ -236,15 +238,15 @@ describe("Merchant store scope (e2e)", () => {
 			const otherStore = await post(storeAdmin, "/rewards", { ...base, locationScopeType: "SELECTED", locationIds: [KATIL] });
 			expect(otherStore.statusCode).toBe(403);
 
-			// Its own store, but another organization's cover: refused before anything is written.
+			// Its own store, but one of the images belongs to another organization: refused before anything is written.
 			const foreignCover = await post(storeAdmin, "/rewards", {
 				...base,
-				coverFileId: rewardCoverSeedId("free-coffee"),
+				imageFileIds: [rewardCoverImageSeedId("weekend-dinner"), rewardCoverImageSeedId("free-coffee")],
 				locationScopeType: "SELECTED",
 				locationIds: [BERUANG],
 			});
 			expect(foreignCover.statusCode).toBe(400);
-			expect(errorCodeOf(foreignCover)).toBe("REWARD_COVER_INVALID");
+			expect(errorCodeOf(foreignCover)).toBe("REWARD_IMAGES_INVALID");
 		});
 
 		it("hides an organization-wide reward from a store-limited member's edits (404)", async () => {

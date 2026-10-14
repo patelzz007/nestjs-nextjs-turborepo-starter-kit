@@ -4,7 +4,6 @@ import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { Envelope, HttpAuditLogDetail } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/button";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 
@@ -36,7 +35,6 @@ export default function AuditLogDetailView({ id, initialRecord }: AuditLogDetail
 		return (
 			<div className="space-y-4">
 				<Link href={ROUTES.auditLogs.list} className={buttonVariants({ variant: "outline" })}>
-					<ArrowLeft className="mr-2 size-4" />
 					Back to audit log
 				</Link>
 				<p className="text-destructive">Could not load this audit record.</p>
@@ -47,7 +45,6 @@ export default function AuditLogDetailView({ id, initialRecord }: AuditLogDetail
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-6">
 			<Link href={ROUTES.auditLogs.list} className={buttonVariants({ variant: "outline", size: "sm" })}>
-				<ArrowLeft className="mr-2 size-4" />
 				Back to audit log
 			</Link>
 			<AuditLogRecord record={record} layout="page" />

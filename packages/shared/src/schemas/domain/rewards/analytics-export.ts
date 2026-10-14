@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 
+import { safeFileNameSegment } from "../../../lib/file-name";
 import { OrganizationLocationFilterSchema } from "../organization/location-filter";
 import { analyticsExportRangeShape, type AnalyticsInterval, validateAnalyticsRange } from "./analytics-range";
 import { localDateInTimeZone } from "./analytics-time-zone";
@@ -70,12 +71,10 @@ export const AnalyticsErrorCodeSchema = z.enum([
 
 export type AnalyticsErrorCode = z.output<typeof AnalyticsErrorCodeSchema>;
 
-/** Characters kept in a file-name segment; anything else becomes `-`. */
-const UNSAFE_FILE_NAME_SEGMENT = /[^a-z0-9-]+/g;
-/** Longest subject segment kept in a file name. */
-const MAX_FILE_NAME_SUBJECT_LENGTH = 64;
 /** Prefix of every export file name. */
 const EXPORT_FILE_NAME_PREFIX = "analytics";
+/** The subject segment when the subject has no safe character. */
+const EXPORT_FILE_NAME_FALLBACK_SUBJECT = "report";
 
 /** The file-name subject of the admin's platform-wide report. */
 export const ADMIN_ANALYTICS_EXPORT_SUBJECT = "platform";
@@ -92,15 +91,6 @@ export interface AnalyticsExportFileNameInput {
 	readonly format: AnalyticsExportFormat;
 }
 
-/** Lower-cases `value` and keeps only `[a-z0-9-]`, so the name is safe in every OS and in a header. */
-function fileNameSegment(value: string): string {
-	const cleaned = value
-		.toLowerCase()
-		.replace(UNSAFE_FILE_NAME_SEGMENT, "-")
-		.replace(/^-+|-+$/g, "");
-	return cleaned.slice(0, MAX_FILE_NAME_SUBJECT_LENGTH) || "report";
-}
-
 /**
  * The deterministic download name of an export:
  * `analytics_<subject>_<first day>_<last day>_<interval>.<ext>`, days in the
@@ -109,5 +99,5 @@ function fileNameSegment(value: string): string {
 export function analyticsExportFileName(input: AnalyticsExportFileNameInput): string {
 	const firstDay = localDateInTimeZone(input.fromMs, input.timeZone);
 	const lastDay = localDateInTimeZone(input.toMs - 1, input.timeZone);
-	return `${EXPORT_FILE_NAME_PREFIX}_${fileNameSegment(input.subject)}_${firstDay}_${lastDay}_${input.interval}.${ANALYTICS_EXPORT_FILE_EXTENSIONS[input.format]}`;
+	return `${EXPORT_FILE_NAME_PREFIX}_${safeFileNameSegment(input.subject, EXPORT_FILE_NAME_FALLBACK_SUBJECT)}_${firstDay}_${lastDay}_${input.interval}.${ANALYTICS_EXPORT_FILE_EXTENSIONS[input.format]}`;
 }

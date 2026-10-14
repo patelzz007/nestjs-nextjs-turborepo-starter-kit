@@ -176,6 +176,8 @@ describe("org page rules per membership role", () => {
 		expect(isOrgPageRuleSatisfied(ORG_PAGE_RULES["/settings"], isGranted)).toBe(settings);
 		expect(isOrgPageRuleSatisfied(ORG_PAGE_RULES["/settings/team"], isGranted)).toBe(team);
 		expect(isOrgPageRuleSatisfied(ORG_PAGE_RULES["/settings/locations"], isGranted)).toBe(locations);
+		// Store branding is readable wherever store locations are (both need merchant:view_locations).
+		expect(isOrgPageRuleSatisfied(ORG_PAGE_RULES["/settings/branding"], isGranted)).toBe(locations);
 		expect(isOrgPageRuleSatisfied(ORG_PAGE_RULES["/settings/verification"], isGranted)).toBe(verification);
 	});
 

@@ -11,26 +11,22 @@ import {
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { Envelope, RewardResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { CoverImage } from "@workspace/ui/components/cover-image";
-import { Label } from "@workspace/ui/components/label";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { toastMessage } from "@workspace/ui/components/toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { Check, Maximize2, X } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 import { PENDING_REWARDS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { PendingRewardItemsSkeleton } from "@/components/loading/rewards-skeletons";
-import { toastMutationError } from "@/lib/api/mutation-error";
-import { formatDateTime } from "@/lib/format/dates";
+import { ROUTES } from "@/lib/routes";
 import { REWARDS_REVIEW_URL_STATE, toPendingRewardsListQuery } from "@/lib/url-state/rewards-review";
+
+/** The queue draws each reward's cover as a small thumbnail (`w-20`, `sm:w-28`). */
+const QUEUE_THUMBNAIL_SIZES = "7rem";
 
 export interface PendingRewardsPanelProps {
 	/** The API's own envelope (real pagination meta) of the page the server rendered, bound to that URL state. */
@@ -75,71 +71,41 @@ function PendingRewardsStatus({ status, onRetry }: { readonly status: PendingRew
 	}
 }
 
-interface PendingRewardCoverProps {
-	readonly title: string;
-	readonly coverImageUrl: string;
-}
-
 /**
- * The reward's cover, which reviewers moderate along with the copy. The whole
- * frame opens the full-size image in a new tab; the image itself is decorative
- * because the title sits right next to it and the link carries the name.
+ * One reward waiting in the queue — just enough to recognise it: its cover,
+ * title and merchant. Everything a decision needs is a click away, on the
+ * reward's own page.
  */
-function PendingRewardCover({ title, coverImageUrl }: PendingRewardCoverProps): React.JSX.Element {
+function PendingRewardRow({ reward }: { readonly reward: RewardResponse }): React.JSX.Element {
+	const [cover] = reward.images;
+	const titleId = `pending-reward-title-${reward.id}`;
 	return (
-		<a
-			href={coverImageUrl}
-			target="_blank"
-			rel="noopener noreferrer"
-			aria-label={`Open cover image of ${title}`}
-			className="group relative block self-start overflow-hidden rounded-md border outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-			<CoverImage src={coverImageUrl} className="transition-opacity group-hover:opacity-90" />
-			<span
-				aria-hidden="true"
-				className="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-md border bg-background/90 text-foreground shadow-sm backdrop-blur-sm">
-				<Maximize2 className="size-3.5" />
-			</span>
-		</a>
+		<li>
+			<article aria-labelledby={titleId} className="flex items-center gap-3 rounded-lg border p-3 sm:gap-4">
+				<CoverImage src={cover?.url} sources={cover?.sources} sizes={QUEUE_THUMBNAIL_SIZES} className="w-20 shrink-0 rounded-md border sm:w-28" />
+				<div className="min-w-0 flex-1 space-y-0.5">
+					<h2 id={titleId} className="truncate font-medium">
+						{reward.title}
+					</h2>
+					<p className="truncate text-sm text-muted-foreground">{reward.organizationName ?? "Merchant"}</p>
+				</div>
+				<Link
+					href={ROUTES.rewards.reviewDetail(reward.id)}
+					aria-label={`View more about ${reward.title}`}
+					className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}>
+					View more
+				</Link>
+			</article>
+		</li>
 	);
 }
 
 export default function PendingRewardsPanel({ initialPage }: PendingRewardsPanelProps): React.JSX.Element {
 	const { api } = useAuth();
-	const queryClient = useQueryClient();
-	const [rejectingId, setRejectingId] = React.useState<string | null>(null);
-	const [rejectReason, setRejectReason] = React.useState<string>("");
 
 	const [urlState, updateUrlState] = useUrlState(REWARDS_REVIEW_URL_STATE);
 	const stateKey: string = REWARDS_REVIEW_URL_STATE.serialize(urlState);
 	const pendingQuery = api.rewardsAdmin.pendingRewards.useQuery(toPendingRewardsListQuery(urlState), initialDataOption(prefetchedDataFor(initialPage, stateKey)));
-
-	const invalidatePending = React.useCallback(async (): Promise<void> => {
-		await queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.pendingRewards.scopeKey(undefined) });
-	}, [queryClient]);
-
-	const approveMutation = api.rewardsAdmin.approveReward.useMutation({
-		onSuccess: async () => {
-			toastMessage.success({ title: "Reward approved", description: "The reward is now published." });
-			setRejectingId(null);
-			setRejectReason("");
-			await invalidatePending();
-		},
-		onError: (error) => {
-			toastMutationError("Approval failed", error);
-		},
-	});
-
-	const rejectMutation = api.rewardsAdmin.rejectReward.useMutation({
-		onSuccess: async () => {
-			toastMessage.success({ title: "Reward rejected", description: "Returned to draft for merchant edits." });
-			setRejectingId(null);
-			setRejectReason("");
-			await invalidatePending();
-		},
-		onError: (error) => {
-			toastMutationError("Rejection failed", error);
-		},
-	});
 
 	const rewards = pendingQuery.data?.data ?? [];
 	const meta = pendingQuery.data?.meta;
@@ -161,147 +127,29 @@ export default function PendingRewardsPanel({ initialPage }: PendingRewardsPanel
 		void refetch();
 	}, [refetch]);
 
-	const handleApprove = React.useCallback(
-		(rewardId: string): void => {
-			approveMutation.mutate({ rewardId });
-		},
-		[approveMutation],
-	);
-
-	const handleStartReject = React.useCallback((rewardId: string): void => {
-		setRejectingId(rewardId);
-		setRejectReason("");
-	}, []);
-
-	const handleCancelReject = React.useCallback((): void => {
-		setRejectingId(null);
-		setRejectReason("");
-	}, []);
-
-	const handleRejectReasonChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>): void => {
-		setRejectReason(event.target.value);
-	}, []);
-
-	const handleConfirmReject = React.useCallback(
-		(rewardId: string): void => {
-			const trimmed = rejectReason.trim();
-			rejectMutation.mutate(trimmed.length > 0 ? { rewardId, reason: trimmed } : { rewardId });
-		},
-		[rejectMutation, rejectReason],
-	);
-
-	const handleApproveClick = React.useCallback(
-		(event: React.MouseEvent<HTMLButtonElement>): void => {
-			const rewardId = event.currentTarget.dataset.rewardId;
-			if (rewardId !== undefined) {
-				handleApprove(rewardId);
-			}
-		},
-		[handleApprove],
-	);
-
-	const handleStartRejectClick = React.useCallback(
-		(event: React.MouseEvent<HTMLButtonElement>): void => {
-			const rewardId = event.currentTarget.dataset.rewardId;
-			if (rewardId !== undefined) {
-				handleStartReject(rewardId);
-			}
-		},
-		[handleStartReject],
-	);
-
-	const handleConfirmRejectClick = React.useCallback(
-		(event: React.MouseEvent<HTMLButtonElement>): void => {
-			const rewardId = event.currentTarget.dataset.rewardId;
-			if (rewardId !== undefined) {
-				handleConfirmReject(rewardId);
-			}
-		},
-		[handleConfirmReject],
-	);
-
-	const isBusy = approveMutation.isPending || rejectMutation.isPending;
 	const queueStatus: PendingRewardsQueueStatus = resolveQueueStatus(pendingQuery.isError, pendingQuery.isLoading, rewards.length);
 
 	return (
 		<div className="space-y-6">
 			<header>
 				<h1 className="text-2xl font-semibold tracking-tight">Pending rewards</h1>
-				<p className="text-sm text-muted-foreground">Approve or reject consumer rewards submitted by merchants for moderation.</p>
+				<p className="text-sm text-muted-foreground">Rewards merchants have submitted, waiting for a decision before customers can see them.</p>
 			</header>
 
 			<Card>
 				<CardHeader>
 					<CardTitle>Moderation queue ({pendingTotal})</CardTitle>
-					<CardDescription>Rewards in PENDING_REVIEW status. Referrer rewards publish together when the primary reward is approved.</CardDescription>
+					<CardDescription>Oldest first. Open a reward to check it in full, then approve or reject it.</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<PendingRewardsStatus status={queueStatus} onRetry={handleRetry} />
-					{rewards.map((reward) => (
-						<div key={reward.id} className="space-y-4 rounded-lg border p-4">
-							<div className="grid gap-4 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-								<PendingRewardCover title={reward.title} coverImageUrl={reward.coverImageUrl} />
-								<div className="min-w-0 space-y-4">
-									<div className="flex flex-wrap items-start justify-between gap-3">
-										<div className="min-w-0 space-y-1">
-											<p className="font-medium">{reward.title}</p>
-											<p className="text-sm text-muted-foreground">{reward.description}</p>
-											<div className="flex flex-wrap gap-2 pt-1">
-												<Badge variant="outline">{reward.organizationName ?? "Merchant"}</Badge>
-												<Badge variant="secondary">{reward.rewardType}</Badge>
-												<Badge variant="outline">{reward.status}</Badge>
-											</div>
-										</div>
-										{/* `POST /admin/rewards/:id/{approve,reject}` require MANAGE on REWARD — this page's own route rule, enforced by the route guard. */}
-										<div className="flex shrink-0 gap-2">
-											<Button size="sm" variant="default" disabled={isBusy} data-reward-id={reward.id} onClick={handleApproveClick}>
-												<Check className="mr-1 size-4" />
-												Approve
-											</Button>
-											<Button size="sm" variant="outline" disabled={isBusy} data-reward-id={reward.id} onClick={handleStartRejectClick}>
-												<X className="mr-1 size-4" />
-												Reject
-											</Button>
-										</div>
-									</div>
-									<dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-										<div>
-											<dt className="font-medium text-foreground">Quantity</dt>
-											<dd>
-												{reward.quantityRemaining} / {reward.quantityTotal} left
-											</dd>
-										</div>
-										<div>
-											<dt className="font-medium text-foreground">Expires</dt>
-											<dd>{formatDateTime(reward.expiryDate)}</dd>
-										</div>
-										<div>
-											<dt className="font-medium text-foreground">Category</dt>
-											<dd>{reward.category}</dd>
-										</div>
-										<div>
-											<dt className="font-medium text-foreground">Reward ID</dt>
-											<dd className="font-mono wrap-break-word">{reward.id}</dd>
-										</div>
-									</dl>
-								</div>
-							</div>
-							{rejectingId === reward.id ? (
-								<div className="space-y-2 rounded-md border border-dashed p-3">
-									<Label htmlFor={`reject-reason-${reward.id}`}>Rejection reason (optional)</Label>
-									<Textarea id={`reject-reason-${reward.id}`} value={rejectReason} onChange={handleRejectReasonChange} placeholder="Tell the merchant what to fix…" rows={3} />
-									<div className="flex gap-2">
-										<Button size="sm" variant="destructive" disabled={isBusy} data-reward-id={reward.id} onClick={handleConfirmRejectClick}>
-											Confirm reject
-										</Button>
-										<Button size="sm" variant="ghost" disabled={isBusy} onClick={handleCancelReject}>
-											Cancel
-										</Button>
-									</div>
-								</div>
-							) : null}
-						</div>
-					))}
+					{rewards.length > 0 ? (
+						<ul className="flex flex-col gap-3">
+							{rewards.map((reward) => (
+								<PendingRewardRow key={reward.id} reward={reward} />
+							))}
+						</ul>
+					) : null}
 					{totalPages > LIST_FIRST_PAGE ? (
 						<nav aria-label="Moderation queue pages" className="flex items-center justify-between gap-3 pt-2 text-sm text-muted-foreground">
 							<span>

@@ -31,6 +31,7 @@ import StoreRequestsLoading from "../merchants/store-requests/loading";
 import MerchantVerificationLoading from "../merchants/verification/loading";
 import RewardsLoading from "../rewards/loading";
 import RewardsReviewLoading from "../rewards/review/loading";
+import RewardReviewDetailLoading from "../rewards/review/[id]/loading";
 import AccessControlLoading from "../settings/access/loading";
 import SettingsLoading from "../settings/loading";
 import PanelCatchAllLoading from "../[...slug]/loading";
@@ -136,6 +137,12 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 	},
 	{ route: "/rewards", loadingView: RewardsLoading, announcement: "Loading pending rewards…", landmarks: [PAGE_HEADER, '[data-skeleton="pending-reward"]'] },
 	{ route: "/rewards/review", loadingView: RewardsReviewLoading, announcement: "Loading pending rewards…", landmarks: [PAGE_HEADER, '[data-skeleton="pending-reward"]'] },
+	{
+		route: "/rewards/review/[id]",
+		loadingView: RewardReviewDetailLoading,
+		announcement: "Loading reward…",
+		landmarks: ['[data-skeleton="reward-review-header"]', '[data-skeleton="reward-review-photo"]', '[data-skeleton="reward-review-details"]'],
+	},
 	{ route: "/settings", loadingView: SettingsLoading, announcement: "Loading access control…", landmarks: [PAGE_HEADER, '[data-skeleton="role-row"]'] },
 	{ route: "/settings/access", loadingView: AccessControlLoading, announcement: "Loading access control…", landmarks: [PAGE_HEADER, '[data-skeleton="role-row"]'] },
 	{ route: "/users", loadingView: UsersLoading, announcement: "Loading users…", landmarks: [PAGE_HEADER, TABLE] },

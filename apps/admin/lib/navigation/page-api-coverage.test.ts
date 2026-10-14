@@ -76,6 +76,7 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 	[ROUTES.merchants.verification, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	[ROUTES.merchants.storeRequests, [{ endpoint: "GET /admin/organizations/location-requests", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	[ROUTES.rewards.review, [{ endpoint: "GET /admin/rewards/pending", permission: PERMISSION.REWARD.MANAGE }]],
+	[ROUTE_PATTERNS.rewards.reviewDetail, [{ endpoint: "GET /admin/rewards/:rewardId", permission: PERMISSION.REWARD.MANAGE }]],
 	// Each tab (roles list, permissions list, checker) is shown and queried only with its own permission.
 	[ROUTES.settings.access, []],
 	// Any signed-in admin: the page reads (and edits) only the caller's own profile.

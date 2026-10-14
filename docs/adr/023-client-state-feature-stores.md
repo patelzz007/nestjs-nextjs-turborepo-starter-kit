@@ -88,11 +88,15 @@ React.
    - **Sidebar expansion.** The sidebar keeps manual expand/collapse choices for ONE page
      (`manualExpansion: { pathname, items }`, capped to the 20 most recently toggled). On that
      page they override route auto-expansion — so collapsing the active branch sticks — and
-     on every other page they are simply not read. Following a sidebar link (menu, bottom or
-     pinned — even one to the current page) dispatches `[ Sidebar ] Link Followed`, which
-     clears them, so only the new route's branches stay open. They are session-only (version 2
-     of the snapshot stores just the rail and section order): a reload shows only the route's
-     branches. Nothing resets them in an effect.
+     on every other page they are simply not read. They are dropped when the route really
+     changes — `useSidebarExpandedItems` dispatches `[ Sidebar ] Route Changed` from an effect on
+     the pathname, the one place the store follows the URL (an external system) — so returning
+     to a page later starts from its route. Following a sidebar link (menu, bottom or pinned)
+     dispatches `[ Sidebar ] Link Followed` with where it leads: a link to the page already shown
+     clears them at once (nothing will navigate); a link to another page changes nothing, so a
+     branch never folds away under the pointer while its page loads (clearing on the click
+     closed the branch before the navigation happened). They are session-only (version 2 of the
+     snapshot stores just the rail and section order): a reload shows only the route's branches.
 
 5. **Placement.** The toolkit and features shared by several apps (sidebar, command palette,
    UI preferences, auth) live in `packages/client/src/lib`. A feature used by one app lives in that app's

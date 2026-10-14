@@ -38,6 +38,11 @@ function withManualExpansion(current: SidebarManualExpansion | null, pathname: s
 	return { pathname, items: keepNewest(Object.fromEntries([...others, [itemId, expanded]]), MAX_MANUAL_EXPANDED_ITEMS) };
 }
 
+/** The state without any hand-made expand/collapse choice (unchanged when there is none). */
+function withoutManualExpansion(state: SidebarState): SidebarState {
+	return state.manualExpansion === null ? state : { ...state, manualExpansion: null };
+}
+
 /** Pure sidebar state transitions — no I/O, no browser APIs. */
 export function sidebarReducer(state: SidebarState, action: SidebarAction): SidebarState {
 	switch (action.type) {
@@ -52,8 +57,13 @@ export function sidebarReducer(state: SidebarState, action: SidebarAction): Side
 		case "[ Sidebar ] Item Expansion Changed":
 			return { ...state, manualExpansion: withManualExpansion(state.manualExpansion, action.pathname, action.itemId, action.expanded) };
 		case "[ Sidebar ] Link Followed":
-			// Following a link (even to the current page) closes every branch opened by hand: only the new route's branches stay open.
-			return { ...state, manualExpansion: null };
+			// A link to the page already shown navigates nowhere, so it resets the hand-opened branches now. A link to
+			// another page changes nothing yet: the branches stay as they are while that page loads (closing them on the
+			// click would fold the menu away under the pointer), and are dropped when the route really changes.
+			return action.targetPathname === action.currentPathname ? withoutManualExpansion(state) : state;
+		case "[ Sidebar ] Route Changed":
+			// Choices made on another page never applied here: drop them, so returning to that page later starts from its route.
+			return state.manualExpansion !== null && state.manualExpansion.pathname !== action.pathname ? withoutManualExpansion(state) : state;
 		case "[ Sidebar ] Search Changed":
 			return { ...state, searchQuery: action.query };
 		case "[ Sidebar ] Search Cleared":

@@ -1,4 +1,4 @@
-import type { RewardResponse } from "@workspace/shared";
+import type { RewardImageSource, RewardResponse } from "@workspace/shared";
 
 /** How many offers the landing hero previews. */
 export const FEATURED_OFFER_LIMIT = 3;
@@ -9,8 +9,10 @@ export interface FeaturedOffer {
 	readonly title: string;
 	readonly merchantName: string | undefined;
 	readonly category: string;
-	/** The offer's cover — the preview's thumbnail. */
-	readonly coverImageUrl: string;
+	/** The offer's cover (its first image) — the preview's thumbnail; `null` if it has none to show. */
+	readonly coverImageUrl: string | null;
+	/** The cover's renditions, for `srcset`. */
+	readonly coverSources: readonly RewardImageSource[];
 	readonly remaining: number;
 	readonly total: number;
 	readonly expiryDate: number;
@@ -27,16 +29,20 @@ export function selectFeaturedOffers(rewards: readonly RewardResponse[], now: nu
 		.filter((reward: RewardResponse): boolean => reward.quantityRemaining > 0 && reward.expiryDate > now)
 		.sort((left: RewardResponse, right: RewardResponse): number => left.expiryDate - right.expiryDate)
 		.slice(0, limit)
-		.map((reward: RewardResponse): FeaturedOffer => ({
-			id: reward.id,
-			title: reward.title,
-			merchantName: reward.organizationName,
-			category: reward.category,
-			coverImageUrl: reward.coverImageUrl,
-			remaining: reward.quantityRemaining,
-			total: reward.quantityTotal,
-			expiryDate: reward.expiryDate,
-		}));
+		.map((reward: RewardResponse): FeaturedOffer => {
+			const [cover] = reward.images;
+			return {
+				id: reward.id,
+				title: reward.title,
+				merchantName: reward.organizationName,
+				category: reward.category,
+				coverImageUrl: cover?.url ?? null,
+				coverSources: cover?.sources ?? [],
+				remaining: reward.quantityRemaining,
+				total: reward.quantityTotal,
+				expiryDate: reward.expiryDate,
+			};
+		});
 }
 
 /** How many merchants the landing strip names. */

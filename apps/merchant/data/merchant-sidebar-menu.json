@@ -196,6 +196,12 @@
           "authorization": { "permissions": ["merchant:view_locations"] }
         },
         {
+          "title": "Branding",
+          "url": "/settings/branding",
+          "icon": "Palette",
+          "authorization": { "permissions": ["merchant:view_locations"] }
+        },
+        {
           "title": "Verification",
           "url": "/settings/verification",
           "icon": "ShieldCheck",

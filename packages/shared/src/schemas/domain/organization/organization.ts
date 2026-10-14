@@ -4,6 +4,7 @@ import { EpochMsSchema } from "../../api/common";
 import { CanonicalEmailSchema } from "../../api/email-address";
 import { defineListQuery, listFilter } from "../../api/list-query";
 import { strongPassword } from "../../auth/password";
+import { ImageSourceSchema } from "../platform/storage";
 import { IanaTimeZoneSchema } from "../rewards/analytics-time-zone";
 import { KybStatusSchema, PilotCitySchema } from "../rewards/rewards-enums";
 
@@ -336,13 +337,28 @@ export const OrganizationMerchantProfileResponseSchema = z.object({
 export type OrganizationMerchantProfileResponse = z.output<typeof OrganizationMerchantProfileResponseSchema>;
 
 /**
+ * An organization's store logo: its `STORE_LOGO` file (to replace or remove it
+ * through `/files`) and the public URL it is shown from.
+ */
+export const OrganizationLogoResponseSchema = z.object({
+	fileId: z.uuid(),
+	url: z.url({ protocol: /^https?$/ }),
+	/** Its served sizes, smallest first, for `srcset` (empty for a logo uploaded before logos had renditions). */
+	sources: z.array(ImageSourceSchema),
+});
+
+export type OrganizationLogoResponse = z.output<typeof OrganizationLogoResponseSchema>;
+
+/**
  * The organization as its own members see it in the context: the summary plus
  * the IANA zone the merchant operates in (`Organization.timeZone`) — the zone
  * merchant analytics cut days, weeks and months in, so a screen can resolve a
- * date range in it before asking for a report.
+ * date range in it before asking for a report — and its store logo.
  */
 export const OrganizationContextSummaryResponseSchema = OrganizationSummaryResponseSchema.extend({
 	timeZone: IanaTimeZoneSchema,
+	/** The organization's live store logo, or `null` (screens show a name monogram). */
+	logo: OrganizationLogoResponseSchema.nullable(),
 });
 
 export type OrganizationContextSummaryResponse = z.output<typeof OrganizationContextSummaryResponseSchema>;

@@ -29,6 +29,7 @@ describe("decideOrgPageAccess", () => {
 		expect(decideOrgPageAccess(membershipsAs(role), TEST_ORG_SLUG, "/settings/team").allowed).toBe(team);
 		expect(decideOrgPageAccess(membershipsAs(role), TEST_ORG_SLUG, "/settings/verification").allowed).toBe(verification);
 		expect(decideOrgPageAccess(membershipsAs(role), TEST_ORG_SLUG, "/settings/locations").allowed).toBe(true);
+		expect(decideOrgPageAccess(membershipsAs(role), TEST_ORG_SLUG, "/settings/branding").allowed).toBe(true);
 	});
 
 	it("returns the page's denial copy", () => {

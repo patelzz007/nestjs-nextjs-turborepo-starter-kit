@@ -1,6 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 
 import { getApiConfig } from "./api-config";
+import { PublicUrlResolver } from "./public-url.resolver";
 import { TenancyConfigService } from "./tenancy.config";
 import { TypedConfigService } from "./typed-config.service";
 
@@ -21,7 +22,7 @@ import { TypedConfigService } from "./typed-config.service";
  */
 @Global()
 @Module({
-	providers: [{ provide: TypedConfigService, useFactory: (): TypedConfigService => new TypedConfigService(getApiConfig()) }, TenancyConfigService],
-	exports: [TypedConfigService, TenancyConfigService],
+	providers: [{ provide: TypedConfigService, useFactory: (): TypedConfigService => new TypedConfigService(getApiConfig()) }, TenancyConfigService, PublicUrlResolver],
+	exports: [TypedConfigService, TenancyConfigService, PublicUrlResolver],
 })
 export class ConfigModule {}

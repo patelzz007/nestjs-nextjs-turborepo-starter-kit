@@ -12,6 +12,7 @@ import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer } from "@workspace/ui/components/panel-sidebar-nav";
@@ -43,6 +44,8 @@ function renderWebMenuIcon(iconName: string | undefined, className: string): Rea
 export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
+	// The picture comes from the own profile, which every avatar change reloads — so the sidebar shows it at once.
+	const avatar = useOwnAvatar();
 	const { capabilities, isAuthenticated } = useWebSession();
 	const router = useRouter();
 	const canAccessPath = useCanAccessWebPath();
@@ -50,13 +53,20 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 
 	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(USER_SIDEBAR_MENU, capabilities), [capabilities]);
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
 	const view = React.useMemo(() => buildSidebarView({ menu: filteredMenu, pathname, sectionOrder, searchQuery }), [filteredMenu, pathname, sectionOrder, searchQuery]);
 	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
+	// A followed link tells the store where it leads: a link to this page resets the branches opened by hand now, one to another page once the route changes.
+	const handleFollowLink = React.useCallback(
+		(href: string): void => {
+			followLink(pathname, href);
+		},
+		[followLink, pathname],
+	);
 	const pinnedItems = React.useMemo(() => resolveWebPinnedMenuItems(pinnedUrls, accessiblePaletteItems(canAccessPath)), [pinnedUrls, canAccessPath]);
 
 	const handleToggleExpand = React.useCallback(
@@ -89,7 +99,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 				pathname={pathname}
 				expandedItems={expandedItems}
 				onToggleExpand={handleToggleExpand}
-				onFollowLink={resetItemExpansion}
+				onFollowLink={handleFollowLink}
 				renderLink={renderWebLink}
 				renderIcon={renderWebMenuIcon}
 				renderPinnedIcon={renderWebPaletteIcon}
@@ -105,7 +115,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 					view={view}
 					expandedItems={expandedItems}
 					onToggleExpand={handleToggleExpand}
-					onFollowLink={resetItemExpansion}
+					onFollowLink={handleFollowLink}
 					renderLink={renderWebLink}
 					renderIcon={renderWebMenuIcon}
 					searchQuery={searchQuery}
@@ -115,7 +125,7 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 					<ImpersonateUserPanel />
 				</div>
 				{displayName !== null ? (
-					<AppShellSidebarAccount name={displayName} email={user?.email} onLogout={handleLogout} menuItems={profileMenuItems} />
+					<AppShellSidebarAccount name={displayName} email={user?.email} avatar={avatar} onLogout={handleLogout} menuItems={profileMenuItems} />
 				) : (
 					<div className="flex items-center justify-between gap-2 px-2 py-1">
 						<p className="text-xs text-muted-foreground">Browse as guest</p>

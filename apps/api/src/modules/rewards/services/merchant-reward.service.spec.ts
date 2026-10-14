@@ -8,13 +8,15 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
-import { RewardCoverUnavailableError, RewardRepository } from "../repositories/reward.repository";
+import { RewardImagesUnavailableError, RewardRepository } from "../repositories/reward.repository";
 import { MerchantContextService } from "./merchant-context.service";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { ALL_LOCATIONS_SCOPE, selectedLocationsScope } from "../types/merchant-location-scope";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
 
 vi.mock("../../../prisma/prisma.service", () => ({
 	PrismaService: class {},
@@ -76,6 +78,7 @@ describe("MerchantRewardService maintenance events (transactional outbox)", () =
 			moduleRef.get(OrganizationRepository),
 			moduleRef.get(RewardNotificationService),
 			moduleRef.get(PlatformOutboxService),
+			createTestPublicUrls(),
 		);
 	});
 
@@ -153,6 +156,7 @@ describe("MerchantRewardService.getReward (store scope)", () => {
 		const moduleRef = await Test.createTestingModule({
 			providers: [
 				MerchantRewardService,
+				{ provide: PublicUrlResolver, useValue: createTestPublicUrls() },
 				{ provide: RewardRepository, useValue: rewardRepository },
 				{ provide: RewardClaimRepository, useValue: {} },
 				{ provide: RewardRedemptionRepository, useValue: {} },
@@ -183,14 +187,15 @@ describe("MerchantRewardService.getReward (store scope)", () => {
 	});
 });
 
-describe("MerchantRewardService reward cover", () => {
+describe("MerchantRewardService reward images", () => {
 	const COVER_ID = "6b7c8d9e-0f1a-4b2c-8d3e-4f5a6b7c8d9e";
+	const SECOND_IMAGE_ID = "7c8d9e0f-1a2b-4c3d-9e4f-5a6b7c8d9e0f";
 	const REFERRER_ID = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
 	const actor = { kind: "user", userId: USER_ID, organizationId: ORGANIZATION_ID, orgSlug: "brew" } satisfies MerchantActor;
 	const rewardRepository = {
 		findOrgConsumerReward: vi.fn<RewardRepository["findOrgConsumerReward"]>(),
 		updateReward: vi.fn<RewardRepository["updateReward"]>(),
-		updateRewardWithCover: vi.fn<RewardRepository["updateRewardWithCover"]>(),
+		updateRewardWithImages: vi.fn<RewardRepository["updateRewardWithImages"]>(),
 		createConsumerReward: vi.fn<RewardRepository["createConsumerReward"]>(),
 		countOrganizationLocations: vi.fn<RewardRepository["countOrganizationLocations"]>(),
 		findUniqueOrThrowWithOrganization: vi.fn<RewardRepository["findUniqueOrThrowWithOrganization"]>(),
@@ -204,6 +209,7 @@ describe("MerchantRewardService reward cover", () => {
 		const moduleRef = await Test.createTestingModule({
 			providers: [
 				MerchantRewardService,
+				{ provide: PublicUrlResolver, useValue: createTestPublicUrls() },
 				{ provide: RewardRepository, useValue: rewardRepository },
 				{ provide: RewardClaimRepository, useValue: {} },
 				{ provide: RewardRedemptionRepository, useValue: {} },
@@ -232,18 +238,23 @@ describe("MerchantRewardService reward cover", () => {
 		rewardRepository.countOrganizationLocations.mockResolvedValue(1);
 	});
 
-	it("swaps the cover of the reward and its referrer reward in one checked write, scoped to the caller's organization", async () => {
-		rewardRepository.updateRewardWithCover.mockResolvedValue(undefined);
+	it("replaces the images of the reward and its referrer reward in one checked write, scoped to the caller's organization and recording who changed them", async () => {
+		rewardRepository.updateRewardWithImages.mockResolvedValue(undefined);
 		rewardRepository.findUniqueOrThrowWithOrganization.mockRejectedValue(new Error("stop after the write"));
 		const service = await createService();
 
-		await expect(service.updateReward(actor, REWARD_ID, { coverFileId: COVER_ID, title: "New title" })).rejects.toThrow("stop after the write");
+		await expect(service.updateReward(actor, REWARD_ID, { imageFileIds: [COVER_ID, SECOND_IMAGE_ID], title: "New title" })).rejects.toThrow("stop after the write");
 
-		expect(rewardRepository.updateRewardWithCover).toHaveBeenCalledWith(REWARD_ID, REFERRER_ID, { title: "New title" }, { organizationId: ORGANIZATION_ID, fileId: COVER_ID });
+		expect(rewardRepository.updateRewardWithImages).toHaveBeenCalledWith(
+			REWARD_ID,
+			REFERRER_ID,
+			{ title: "New title" },
+			{ organizationId: ORGANIZATION_ID, fileIds: [COVER_ID, SECOND_IMAGE_ID], actorId: USER_ID },
+		);
 		expect(rewardRepository.updateReward).not.toHaveBeenCalled();
 	});
 
-	it("leaves the cover alone when an edit does not name one", async () => {
+	it("leaves the images alone when an edit does not list them", async () => {
 		rewardRepository.updateReward.mockResolvedValue(undefined);
 		rewardRepository.findUniqueOrThrowWithOrganization.mockRejectedValue(new Error("stop after the write"));
 		const service = await createService();
@@ -251,17 +262,17 @@ describe("MerchantRewardService reward cover", () => {
 		await expect(service.updateReward(actor, REWARD_ID, { title: "New title" })).rejects.toThrow("stop after the write");
 
 		expect(rewardRepository.updateReward).toHaveBeenCalledWith(REWARD_ID, { title: "New title" });
-		expect(rewardRepository.updateRewardWithCover).not.toHaveBeenCalled();
+		expect(rewardRepository.updateRewardWithImages).not.toHaveBeenCalled();
 	});
 
-	it("answers 400 REWARD_COVER_INVALID when the cover is not one of the organization's ready covers — on edit and on create", async () => {
-		rewardRepository.updateRewardWithCover.mockRejectedValue(new RewardCoverUnavailableError(COVER_ID));
-		rewardRepository.createConsumerReward.mockRejectedValue(new RewardCoverUnavailableError(COVER_ID));
+	it("answers 400 REWARD_IMAGES_INVALID when an image is not one of the organization's ready images — on edit and on create", async () => {
+		rewardRepository.updateRewardWithImages.mockRejectedValue(new RewardImagesUnavailableError([COVER_ID]));
+		rewardRepository.createConsumerReward.mockRejectedValue(new RewardImagesUnavailableError([COVER_ID]));
 		const service = await createService();
-		const invalidCover = { response: { error: "REWARD_COVER_INVALID" } };
+		const invalidImages = { response: { error: "REWARD_IMAGES_INVALID" } };
 
-		await expect(service.updateReward(actor, REWARD_ID, { coverFileId: COVER_ID })).rejects.toBeInstanceOf(BadRequestException);
-		await expect(service.updateReward(actor, REWARD_ID, { coverFileId: COVER_ID })).rejects.toMatchObject(invalidCover);
+		await expect(service.updateReward(actor, REWARD_ID, { imageFileIds: [COVER_ID] })).rejects.toBeInstanceOf(BadRequestException);
+		await expect(service.updateReward(actor, REWARD_ID, { imageFileIds: [COVER_ID] })).rejects.toMatchObject(invalidImages);
 		await expect(
 			service.createReward(actor, {
 				title: "Free kuih",
@@ -269,7 +280,7 @@ describe("MerchantRewardService reward cover", () => {
 				rewardType: "FREE_ITEM",
 				rewardValue: 1,
 				category: "food",
-				coverFileId: COVER_ID,
+				imageFileIds: [COVER_ID, SECOND_IMAGE_ID],
 				quantityTotal: 10,
 				expiryDate: epochMs(1_794_614_400_000),
 				referralsEnabled: false,
@@ -277,7 +288,7 @@ describe("MerchantRewardService reward cover", () => {
 				locationScopeType: "ALL_LOCATIONS",
 				locationIds: [],
 			}),
-		).rejects.toMatchObject(invalidCover);
-		expect(rewardRepository.createConsumerReward).toHaveBeenCalledWith(expect.objectContaining({ coverFileId: COVER_ID, organizationId: ORGANIZATION_ID }), []);
+		).rejects.toMatchObject(invalidImages);
+		expect(rewardRepository.createConsumerReward).toHaveBeenCalledWith(expect.objectContaining({ organizationId: ORGANIZATION_ID }), [COVER_ID, SECOND_IMAGE_ID], []);
 	});
 });

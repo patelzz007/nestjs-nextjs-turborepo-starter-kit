@@ -242,10 +242,15 @@ export const apiRoutes = {
 		invites: "/admin/invites",
 		invitesPreviewEmail: "/admin/invites/preview-email",
 		rewardsPending: "/admin/rewards/pending",
+		/** One reward in full, any status — the moderation detail page. */
+		rewardDetail: "/admin/rewards/:rewardId",
 		merchants: "/admin/merchants",
 		organizationDetail: "/admin/merchants/:organizationId",
 		rewardApprove: "/admin/rewards/:rewardId/approve",
 		rewardReject: "/admin/rewards/:rewardId/reject",
+		/** A short-lived signed URL that downloads one of a reward's images (the original upload). */
+		rewardImageDownload: "/admin/rewards/:rewardId/images/:fileId/download",
+		rewardImagesArchive: "/admin/rewards/:rewardId/images/archive",
 		organizationKyb: "/admin/merchants/:organizationId/kyb",
 		locationRequests: "/admin/location-requests",
 		organizationLocationCreate: "/admin/merchants/:organizationId/locations",

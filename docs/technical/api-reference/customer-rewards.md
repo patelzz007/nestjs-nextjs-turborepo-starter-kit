@@ -34,7 +34,7 @@ Browse published consumer rewards
 | `limit` | query | integer | no | Page size (default 10, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiryDate, title. Default: -createdAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, organizationId |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
 **Response 200 OK** — Paginated marketplace rewards
@@ -44,18 +44,27 @@ Browse published consumer rewards
 | `data` | object[] | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
-| `data[].coverFileId` | string (uuid) | yes |  |
-| `data[].coverImageUrl` | string (uri) | yes |  |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
 | `data[].id` | string (uuid) | yes |  |
+| `data[].images` | object[] | yes | 1–10 items |
+| `data[].images[].fileId` | string (uuid) | yes |  |
+| `data[].images[].height` | integer | yes |  |
+| `data[].images[].sources` | object[] | yes | 1–∞ items |
+| `data[].images[].sources[].url` | string (uri) | yes |  |
+| `data[].images[].sources[].width` | integer | yes |  |
+| `data[].images[].url` | string (uri) | yes |  |
+| `data[].images[].width` | integer | yes |  |
 | `data[].isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data[].organizationId` | string (uuid) | yes |  |
+| `data[].organizationLogoSources` | object[] | yes |  |
+| `data[].organizationLogoSources[].url` | string (uri) | yes |  |
+| `data[].organizationLogoSources[].width` | integer | yes |  |
 | `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data[].organizationName` | string | no |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -215,18 +224,27 @@ Get published reward detail
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |

@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (226 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (230 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 226 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 230 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 > [!NOTE]
 > This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
@@ -23,11 +23,11 @@ Every endpoint of `apps/api` — 226 operations, 214 with a sample captured from
 | --- | --- | --- |
 | [Auth, sessions and account security](./auth-and-sessions.md) | 40 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions, policies and audit](./access-control.md) | 33 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
-| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 15 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
+| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 18 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
 | [Merchant organizations (portal API)](./merchant-organizations.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
 | [Customer rewards and claims](./customer-rewards.md) | 12 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
 | [Point of sale (machine-to-machine)](./pos.md) | 3 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill. Authenticated with a merchant API key. |
-| [Files and object storage](./files.md) | 9 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
+| [Files and object storage](./files.md) | 10 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
 | [Geography reference data](./geography.md) | 31 | Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export. |
 | [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
@@ -123,7 +123,10 @@ Every endpoint of `apps/api` — 226 operations, 214 with a sample captured from
 | PATCH | [`/api/v1/admin/merchants/{organizationId}/kyb`](./platform-admin.md#patch-apiv1adminmerchantsorganizationidkyb) | Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejectionReason) |
 | POST | [`/api/v1/admin/merchants/{organizationId}/locations`](./platform-admin.md#post-apiv1adminmerchantsorganizationidlocations) | Create an organization store location |
 | PATCH | [`/api/v1/admin/merchants/{organizationId}/locations/{locationId}/review`](./platform-admin.md#patch-apiv1adminmerchantsorganizationidlocationslocationidreview) | Approve or reject an organization store location request |
+| GET | [`/api/v1/admin/rewards/{rewardId}`](./platform-admin.md#get-apiv1adminrewardsrewardid) | Get one reward in full, whatever its status (moderation detail) |
 | POST | [`/api/v1/admin/rewards/{rewardId}/approve`](./platform-admin.md#post-apiv1adminrewardsrewardidapprove) | Approve a pending reward (no body required) |
+| GET | [`/api/v1/admin/rewards/{rewardId}/images/{fileId}/download`](./platform-admin.md#get-apiv1adminrewardsrewardidimagesfileiddownload) | Get a short-lived signed URL that downloads one of a reward's images (the original upload) |
+| GET | [`/api/v1/admin/rewards/{rewardId}/images/archive`](./platform-admin.md#get-apiv1adminrewardsrewardidimagesarchive) | Download every image of a reward as one ZIP of the original uploads, in display order |
 | POST | [`/api/v1/admin/rewards/{rewardId}/reject`](./platform-admin.md#post-apiv1adminrewardsrewardidreject) | Reject a pending reward |
 | GET | [`/api/v1/admin/rewards/pending`](./platform-admin.md#get-apiv1adminrewardspending) | List rewards pending moderation (oldest first, paginated) |
 | POST | [`/api/v1/admin/organizations/invites`](./merchant-organizations.md#post-apiv1adminorganizationsinvites) |  |
@@ -196,6 +199,7 @@ Every endpoint of `apps/api` — 226 operations, 214 with a sample captured from
 | GET | [`/api/v1/files/{fileId}/download-url`](./files.md#get-apiv1filesfileiddownload-url) | Get a short-lived download URL for a private file |
 | GET | [`/api/v1/files/{fileId}/local-public`](./files.md#get-apiv1filesfileidlocal-public) | Serve a READY public asset from local storage (development only) |
 | POST | [`/api/v1/files/{fileId}/local-upload`](./files.md#post-apiv1filesfileidlocal-upload) | Receive a browser multipart upload for a signed local-storage ticket (development only) |
+| GET | [`/api/v1/files/{fileId}/variants/{variant}/local-public`](./files.md#get-apiv1filesfileidvariantsvariantlocal-public) | Serve a rendition of a READY public image from local storage (development only) |
 | GET | [`/api/v1/files/local-download`](./files.md#get-apiv1fileslocal-download) | Download a private object through a signed, expiring local-storage link (development only) |
 | POST | [`/api/v1/files/processing-callback`](./files.md#post-apiv1filesprocessing-callback) | External processing callback for file lifecycle updates |
 | POST | [`/api/v1/files/upload-url`](./files.md#post-apiv1filesupload-url) | Create a browser upload ticket |

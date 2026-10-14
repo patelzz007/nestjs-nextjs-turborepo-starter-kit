@@ -17,10 +17,11 @@ import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/comm
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { resolveActiveOrganizationMembership } from "@/lib/session/server-capabilities";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
@@ -62,6 +63,8 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
 	const { can } = useAuthorization();
+	// The picture comes from the own profile, which every avatar change reloads.
+	const avatar = useOwnAvatar();
 	const { capabilities: menuFilterCapabilities } = useMerchantAuthorizationStatus();
 	const { status: breadcrumbStatus } = useMerchantBreadcrumb();
 	const activeMembership = resolveActiveOrganizationMembership(memberships, organizationSlug);
@@ -69,7 +72,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
 	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
-	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
 	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, menuFilterCapabilities), [menuFilterCapabilities]);
@@ -78,6 +81,13 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 
 	const view = React.useMemo(() => buildSidebarView({ menu: resolvedMenu, pathname, sectionOrder, searchQuery }), [resolvedMenu, pathname, sectionOrder, searchQuery]);
 	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
+	// A followed link tells the store where it leads: a link to this page resets the branches opened by hand now, one to another page once the route changes.
+	const handleFollowLink = React.useCallback(
+		(href: string): void => {
+			followLink(pathname, href);
+		},
+		[followLink, pathname],
+	);
 
 	const pinnedItems = React.useMemo(
 		(): readonly PanelSidebarPinnedItem[] =>
@@ -136,7 +146,11 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 		[accountPath, apiKeysPath, can, dashboardPath, isEnrollmentLocked, navigate, settingsPath],
 	);
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
-	const formatStoreValue = React.useCallback((slug: string): string => memberships.find((row) => row.organizationSlug === slug)?.displayName ?? slug, [memberships]);
+	// Feeds both the store switcher's `items` (the closed trigger's label) and its rendered options.
+	const storeOptions = React.useMemo(
+		(): readonly SelectOption<string>[] => memberships.map((row): SelectOption<string> => ({ value: row.organizationSlug, label: row.displayName })),
+		[memberships],
+	);
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden text-sidebar-foreground">
@@ -147,7 +161,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				pathname={pathname}
 				expandedItems={expandedItems}
 				onToggleExpand={handleToggleExpand}
-				onFollowLink={resetItemExpansion}
+				onFollowLink={handleFollowLink}
 				renderLink={renderMerchantLink}
 				renderIcon={renderMerchantMenuIcon}
 				renderPinnedIcon={renderMerchantPaletteIcon}
@@ -190,14 +204,14 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 							{memberships.length > 1 ? (
 								<div className="mt-3 space-y-1">
 									<Label className="text-xs">Switch store</Label>
-									<Select<string> value={organizationSlug ?? ""} onValueChange={handleStoreChange}>
+									<Select<string> items={storeOptions} value={organizationSlug ?? null} onValueChange={handleStoreChange}>
 										<SelectTrigger className="w-full min-w-0">
-											<SelectValue placeholder="Select store" formatValue={formatStoreValue} />
+											<SelectValue placeholder="Select store" />
 										</SelectTrigger>
 										<SelectContent>
-											{memberships.map((row) => (
-												<SelectItem key={row.organizationId} value={row.organizationSlug}>
-													{row.displayName}
+											{storeOptions.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
 												</SelectItem>
 											))}
 										</SelectContent>
@@ -212,7 +226,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 					view={view}
 					expandedItems={expandedItems}
 					onToggleExpand={handleToggleExpand}
-					onFollowLink={resetItemExpansion}
+					onFollowLink={handleFollowLink}
 					renderLink={renderMerchantLink}
 					renderIcon={renderMerchantMenuIcon}
 					searchQuery={searchQuery}
@@ -222,7 +236,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				<div className={view.bottomItems.length > 0 ? "px-2 pt-2" : "px-2 pb-2"}>
 					<ImpersonateUserPanel />
 				</div>
-				<AppShellSidebarAccount name={profileName} email={profileEmail} onLogout={handleLogout} menuItems={profileMenuItems} />
+				<AppShellSidebarAccount name={profileName} email={profileEmail} avatar={avatar} onLogout={handleLogout} menuItems={profileMenuItems} />
 			</SidebarFooter>
 
 			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} />

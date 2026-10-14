@@ -11,6 +11,10 @@
 //   - `shortcut` (e.g. "⌘K") to open + focus the trigger (feature 4)
 //     — parsing lives in `lib/shortcut.ts`, shared with Combobox
 //   - `formatValue` / `placeholder` on `SelectValue` (features 5 + 6)
+//   - a REQUIRED `items` list of `{ value, label }` on the Root: base-ui
+//     only mounts the `SelectItem`s while the popup is open, so `items` is
+//     the only way the closed trigger, live region and typeahead can show
+//     an option's label instead of its raw value (e.g. "ALL_LOCATIONS")
 //   - `SelectClear` pointer-assisted clear button (feature 7) — a
 //     span with `role="button"` (a real <button> inside the trigger
 //     <button> would be invalid HTML); the smart component renders it
@@ -40,7 +44,7 @@ import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels
 import * as React from "react";
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
-import { describeSelection, SelectContext, type SelectContextValue, type SelectSize } from "./select-context";
+import { describeSelection, SelectContext, type SelectContextValue, type SelectOption, type SelectSize } from "./select-context";
 
 // ── SSR guard ──────────────────────────────────────────────────────────────
 
@@ -61,7 +65,15 @@ export interface SelectRef {
 
 // ── Root ────────────────────────────────────────────────────────────────────
 
-export interface SelectProps<Value, Multiple extends boolean | undefined = false> extends SelectPrimitive.Root.Props<Value, Multiple> {
+export interface SelectProps<Value, Multiple extends boolean | undefined = false> extends Omit<SelectPrimitive.Root.Props<Value, Multiple>, "items"> {
+	/**
+	 * Every option's value and human label — required. base-ui renders the
+	 * `SelectItem`s only while the popup is open, so this list is what the
+	 * closed trigger (`SelectValue`), the live region and typeahead read the
+	 * selected option's label from. Map the same options array into both
+	 * `items` and the `SelectItem` children so the two can never disagree.
+	 */
+	readonly items: readonly SelectOption<Value>[];
 	/** The imperative handle. */
 	readonly ref?: React.Ref<SelectRef>;
 	/** Density of the trigger and items. */
@@ -86,9 +98,10 @@ export interface SelectProps<Value, Multiple extends boolean | undefined = false
  * threads a config context into the parts. Uses React 19's ref-as-a-prop for
  * the generic handle (a generic forwardRef would lose its type parameters).
  *
- * `itemToStringLabel` passes straight through to base-ui: when the stored
- * value differs from the displayed label (e.g. value "js", label "JavaScript")
- * it keeps the trigger, the live region and typeahead in sync with the label.
+ * `items` passes straight through to base-ui, which resolves the selected
+ * value's label from it (value "js" shows "JavaScript"). `itemToStringLabel`
+ * is base-ui's escape hatch for object values and, when set, wins over
+ * `items` — both feed the live region through `describeSelection`.
  */
 function Select<Value, Multiple extends boolean | undefined = false>({
 	ref,
@@ -102,6 +115,7 @@ function Select<Value, Multiple extends boolean | undefined = false>({
 	defaultOpen = false,
 	onOpenChange: onOpenChangeProp,
 	onValueChange: onValueChangeProp,
+	items,
 	itemToStringLabel,
 	...props
 }: SelectProps<Value, Multiple>): React.JSX.Element {
@@ -119,10 +133,10 @@ function Select<Value, Multiple extends boolean | undefined = false>({
 
 	const handleValueChange: NonNullable<SelectPrimitive.Root.Props<Value, Multiple>["onValueChange"]> = useCallback(
 		(value, details) => {
-			setLiveLabel(describeSelection(value, itemToStringLabel, labels));
+			setLiveLabel(describeSelection(value, items, itemToStringLabel, labels));
 			onValueChangeProp?.(value, details);
 		},
-		[itemToStringLabel, labels, onValueChangeProp],
+		[items, itemToStringLabel, labels, onValueChangeProp],
 	);
 
 	const handleOpenChange = useCallback(
@@ -194,7 +208,7 @@ function Select<Value, Multiple extends boolean | undefined = false>({
 
 	return (
 		<SelectContext.Provider value={contextValue}>
-			<SelectPrimitive.Root open={open} onOpenChange={handleOpenChange} onValueChange={handleValueChange} itemToStringLabel={itemToStringLabel} {...props} />
+			<SelectPrimitive.Root open={open} onOpenChange={handleOpenChange} onValueChange={handleValueChange} items={items} itemToStringLabel={itemToStringLabel} {...props} />
 			{/* Feature 8: sr-only selection announcement. */}
 			<span aria-live="polite" data-slot="select-live-region" className="sr-only">
 				{liveLabel}
@@ -241,6 +255,6 @@ export {
 	SelectValue,
 } from "./select-parts";
 
-export { selectSizeSchema, type SelectLabels } from "./select-context";
+export { selectSizeSchema, type SelectLabels, type SelectOption } from "./select-context";
 
 export { Select };

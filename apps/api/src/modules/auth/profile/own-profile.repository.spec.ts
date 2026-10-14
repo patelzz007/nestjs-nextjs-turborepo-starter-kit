@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { OwnProfileRepository } from "./own-profile.repository";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 const USER_ID = "7d3e9a10-2b4c-4d6e-8f01-23456789abcd";
 const AVATAR_FILE_ID = "1b2c3d4e-5f60-4718-89ab-cdef01234567";
 const AVATAR_URL = "https://cdn.example.com/users/7d3e9a10/avatar/1b2c3d4e.png";
+const AVATAR_THUMBNAIL_URL = "https://cdn.example.com/users/7d3e9a10/avatar/thumbnail/1b2c3d4e.webp";
+const AVATAR_MEDIUM_URL = "https://cdn.example.com/users/7d3e9a10/avatar/medium/1b2c3d4e.webp";
 const CREATED_AT_MS = 1_788_000_000_000;
 const UPDATED_AT_MS = 1_788_253_200_000;
 const AVATAR_BOUND_AT_MS = 1_788_100_000_000;
@@ -17,7 +20,12 @@ interface AvatarRow {
 	readonly fileId: string;
 	readonly isDeleted: boolean;
 	readonly updatedAt: bigint;
-	readonly file: { readonly status: string; readonly isDeleted: boolean; readonly publicPath: string | null };
+	readonly file: {
+		readonly status: string;
+		readonly isDeleted: boolean;
+		readonly publicPath: string | null;
+		readonly variants: readonly { readonly width: number | null; readonly publicPath: string | null }[];
+	};
 }
 
 interface UserRow {
@@ -63,7 +71,15 @@ const LIVE_AVATAR: AvatarRow = {
 	fileId: AVATAR_FILE_ID,
 	isDeleted: false,
 	updatedAt: BigInt(AVATAR_BOUND_AT_MS),
-	file: { status: "READY", isDeleted: false, publicPath: AVATAR_URL },
+	file: {
+		status: "READY",
+		isDeleted: false,
+		publicPath: AVATAR_URL,
+		variants: [
+			{ width: 128, publicPath: AVATAR_THUMBNAIL_URL },
+			{ width: 256, publicPath: AVATAR_MEDIUM_URL },
+		],
+	},
 };
 
 function userRow(avatar: AvatarRow | null): UserRow {
@@ -80,7 +96,7 @@ function userRow(avatar: AvatarRow | null): UserRow {
 
 function repository(): { readonly repository: OwnProfileRepository; readonly prisma: PrismaService } {
 	const prisma = new PrismaService(createTestTypedConfig());
-	return { repository: new OwnProfileRepository(prisma), prisma };
+	return { repository: new OwnProfileRepository(prisma, createTestPublicUrls()), prisma };
 }
 
 describe("OwnProfileRepository", () => {
@@ -114,11 +130,34 @@ describe("OwnProfileRepository", () => {
 				id: USER_ID,
 				email: "user@example.com",
 				fullName: "Regular User",
-				avatar: { fileId: AVATAR_FILE_ID, url: AVATAR_URL, updatedAt: AVATAR_BOUND_AT_MS },
+				avatar: {
+					fileId: AVATAR_FILE_ID,
+					url: AVATAR_URL,
+					sources: [
+						{ width: 128, url: AVATAR_THUMBNAIL_URL },
+						{ width: 256, url: AVATAR_MEDIUM_URL },
+					],
+					updatedAt: AVATAR_BOUND_AT_MS,
+				},
 				version: 1,
 				createdAt: CREATED_AT_MS,
 				updatedAt: UPDATED_AT_MS,
 			});
+		});
+
+		it("joins an avatar saved by the local driver (a path on this API) to the API's public address", async () => {
+			const localPath = `/api/v1/files/${AVATAR_FILE_ID}/local-public`;
+			mocks.row = userRow({
+				...LIVE_AVATAR,
+				file: { ...LIVE_AVATAR.file, publicPath: localPath, variants: [{ width: 128, publicPath: `/api/v1/files/${AVATAR_FILE_ID}/variants/THUMBNAIL/local-public` }] },
+			});
+
+			const avatar = (await repository().repository.findLive(USER_ID))?.avatar;
+
+			const { publicUrl } = createTestTypedConfig().http;
+			expect(avatar?.url).toBe(`${publicUrl}${localPath}`);
+			expect(avatar?.sources).toEqual([{ width: 128, url: `${publicUrl}/api/v1/files/${AVATAR_FILE_ID}/variants/THUMBNAIL/local-public` }]);
+			expect(avatar?.url).toMatch(/^https?:\/\//u);
 		});
 
 		it.each<[string, AvatarRow]>([

@@ -434,17 +434,31 @@ CREATE POLICY stored_files_owner ON public.stored_files
   USING (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)) OR app_rls_bypass())
   WITH CHECK (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)) OR app_rls_bypass());
 
--- A reward's cover is readable by whoever can read the reward (marketplace
--- shoppers, claim holders, members): the EXISTS runs under rewards_read, so
--- cover visibility follows reward visibility exactly. Read-only, and only for
--- public REWARD_COVER files — every other file stays owner/member-scoped.
+-- A reward's images are readable by whoever can read the reward (marketplace
+-- shoppers, claim holders, members): the EXISTS runs under rewards_read (through
+-- reward_images_read), so image visibility follows reward visibility exactly.
+-- Read-only, and only for public REWARD_IMAGE files — every other file stays
+-- owner/member-scoped.
 DROP POLICY IF EXISTS stored_files_reward_cover_read ON public.stored_files;
-CREATE POLICY stored_files_reward_cover_read ON public.stored_files
+DROP POLICY IF EXISTS stored_files_reward_image_read ON public.stored_files;
+CREATE POLICY stored_files_reward_image_read ON public.stored_files
   FOR SELECT
   USING (
-    category = 'REWARD_COVER'
+    category = 'REWARD_IMAGE'
     AND visibility = 'PUBLIC'
-    AND EXISTS (SELECT 1 FROM public.rewards r WHERE r.cover_file_id = stored_files.id)
+    AND EXISTS (SELECT 1 FROM public.reward_images ri WHERE ri.file_id = stored_files.id AND ri.is_deleted = false)
+  );
+
+-- A public reward image's renditions are readable whenever the image itself is
+-- (the EXISTS runs under stored_files RLS, so it follows stored_files_reward_image_read).
+DROP POLICY IF EXISTS file_variants_reward_image_read ON public.file_variants;
+CREATE POLICY file_variants_reward_image_read ON public.file_variants
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.stored_files sf
+      WHERE sf.id = file_variants.file_id AND sf.category = 'REWARD_IMAGE' AND sf.visibility = 'PUBLIC'
+    )
   );
 
 DROP POLICY IF EXISTS file_variants_file ON public.file_variants;
@@ -558,6 +572,25 @@ CREATE POLICY reward_location_scopes_read ON public.reward_location_scopes
 
 DROP POLICY IF EXISTS reward_location_scopes_write ON public.reward_location_scopes;
 CREATE POLICY reward_location_scopes_write ON public.reward_location_scopes
+  FOR ALL
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
+
+ALTER TABLE public.reward_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reward_images FORCE ROW LEVEL SECURITY;
+
+-- An image row is visible exactly when its reward is (the EXISTS runs under rewards_read).
+DROP POLICY IF EXISTS reward_images_read ON public.reward_images;
+CREATE POLICY reward_images_read ON public.reward_images
+  FOR SELECT
+  USING (
+    app_rls_bypass()
+    OR app_tenant_org_member(organization_id)
+    OR EXISTS (SELECT 1 FROM public.rewards r WHERE r.id = reward_images.reward_id)
+  );
+
+DROP POLICY IF EXISTS reward_images_write ON public.reward_images;
+CREATE POLICY reward_images_write ON public.reward_images
   FOR ALL
   USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
   WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());

@@ -64,7 +64,10 @@ export interface MerchantsRoutes {
 export interface RewardsRoutes {
 	/** Section prefix — redirects to `review`. */
 	readonly index: string;
+	/** The moderation queue — a compact list; each row opens `reviewDetail`. */
 	readonly review: string;
+	/** One reward in full, where it is approved or rejected. */
+	readonly reviewDetail: RouteBuilder;
 }
 
 export interface EmailsRoutes {
@@ -168,6 +171,7 @@ const USERS = "/users";
 const MERCHANTS = "/merchants";
 const MERCHANT_VERIFICATION = `${MERCHANTS}/verification`;
 const REWARDS = "/rewards";
+const REWARDS_REVIEW = `${REWARDS}/review`;
 const EMAILS = "/emails";
 const EMAIL_TEMPLATES = `${EMAILS}/templates`;
 const AUDIT_LOGS = "/audit-logs";
@@ -200,7 +204,8 @@ export const ROUTES: AdminRoutes = {
 	},
 	rewards: {
 		index: REWARDS,
-		review: `${REWARDS}/review`,
+		review: REWARDS_REVIEW,
+		reviewDetail: (id: string): string => childPath(REWARDS_REVIEW, id),
 	},
 	emails: {
 		index: EMAILS,
@@ -240,6 +245,7 @@ export interface CrudRoutePatterns {
 export interface AdminRoutePatterns {
 	readonly users: { readonly detail: string };
 	readonly auditLogs: { readonly detail: string };
+	readonly rewards: { readonly reviewDetail: string };
 	readonly catalog: {
 		readonly products: CrudRoutePatterns;
 		readonly categories: CrudRoutePatterns;
@@ -262,6 +268,7 @@ function crudRoutePatterns(list: string): CrudRoutePatterns {
 export const ROUTE_PATTERNS: AdminRoutePatterns = {
 	users: { detail: `${USERS}/${routeParam(ID_PARAM)}` },
 	auditLogs: { detail: `${AUDIT_LOGS}/${routeParam(ID_PARAM)}` },
+	rewards: { reviewDetail: `${REWARDS_REVIEW}/${routeParam(ID_PARAM)}` },
 	catalog: {
 		products: crudRoutePatterns(ROUTES.catalog.products.list),
 		categories: crudRoutePatterns(ROUTES.catalog.categories.list),

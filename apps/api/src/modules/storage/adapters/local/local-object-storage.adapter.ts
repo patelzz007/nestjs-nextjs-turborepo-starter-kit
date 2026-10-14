@@ -164,14 +164,17 @@ export class LocalObjectStorageAdapter implements ObjectStorage, PublicDelivery 
 	}
 
 	/**
-	 * Public assets are served by file id (`GET /files/:fileId/local-public`), which
-	 * looks the file up and only serves READY public files — never a raw path.
+	 * Public assets are served by file id (`GET /files/:fileId/local-public`, and a
+	 * rendition at `GET /files/:fileId/variants/:variant/local-public`), which looks
+	 * the file up and only serves READY public files — never a raw path. The
+	 * stored reference is that path alone, without this API's address: the
+	 * address clients reach the API at is added when it is served
+	 * (`PublicUrlResolver`), so a picture saved on one network still shows on another.
 	 */
 	public publishAsset(input: PublicAssetPublicationInput): Promise<PublicAssetPublicationResult> {
-		return Promise.resolve({
-			publicUrl: `${this.config.http.publicUrl}${apiPath("/files")}/${encodeURIComponent(input.fileId)}/local-public`,
-			revision: input.locator.revision ?? null,
-		});
+		const fileUrl = `${apiPath("/files")}/${encodeURIComponent(input.fileId)}`;
+		const variantSegment = input.variant === undefined ? "" : `/variants/${input.variant}`;
+		return Promise.resolve({ publicUrl: `${fileUrl}${variantSegment}/local-public`, revision: input.locator.revision ?? null });
 	}
 
 	/**

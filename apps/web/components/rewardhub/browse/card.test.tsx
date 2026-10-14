@@ -83,3 +83,13 @@ describe("RewardCard cover", () => {
 		expect(screen.getByText("Unavailable")).toBeDefined();
 	});
 });
+
+describe("RewardCard action", () => {
+	it("labels the action with text alone — no trailing arrow icon", () => {
+		render(<RewardCard reward={buildRewardResponse()} />);
+
+		const action = screen.getByRole("link", { name: "View offer" });
+		expect(action.textContent).toBe("View offer");
+		expect(action.querySelector("svg")).toBeNull();
+	});
+});

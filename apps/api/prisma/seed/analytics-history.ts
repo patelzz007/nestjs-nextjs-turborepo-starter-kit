@@ -22,7 +22,7 @@
 
 import { DAY_MS, DEFAULT_SALE_CURRENCY } from "@workspace/shared";
 import type { Prisma, RewardClaimStatus, RewardRedemptionMethod, RewardStatus, RewardType } from "@prisma/client";
-import { rewardCoverSeedId, type RewardCoverSlug } from "./reward-covers";
+import { linkRewardImages, type RewardImageSetSlug } from "./reward-images";
 
 import { sha256Hex } from "../../src/common/crypto/sha256";
 import { API_KEY_PREFIX_LENGTH } from "../../src/modules/rewards/services/merchant-api-key.service";
@@ -96,8 +96,8 @@ export interface HistoryReward {
 	readonly rewardType: RewardType;
 	readonly rewardValue: number;
 	readonly category: string;
-	/** The seeded cover (reward-covers.ts) the reward shows. */
-	readonly coverSlug: RewardCoverSlug;
+	/** The seeded photo set (reward-images.ts) the reward shows. */
+	readonly imageSet: RewardImageSetSlug;
 	/** `null` = offered at every store of the organization. */
 	readonly locationIds: readonly string[] | null;
 	readonly minSpendMinor: number;
@@ -149,7 +149,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardType: "FREE_ITEM",
 		rewardValue: 1,
 		category: "cafe",
-		coverSlug: "coffee-refill",
+		imageSet: "coffee-refill",
 		locationIds: null,
 		minSpendMinor: 0,
 		startDaysAgo: 380,
@@ -164,7 +164,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardType: "DISCOUNT",
 		rewardValue: 20,
 		category: "food",
-		coverSlug: "pastry-coffee",
+		imageSet: "pastry-coffee",
 		locationIds: null,
 		minSpendMinor: 1_200,
 		startDaysAgo: 365,
@@ -179,7 +179,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardType: "CASHBACK",
 		rewardValue: 3,
 		category: "beverage",
-		coverSlug: "latte-art",
+		imageSet: "latte-art",
 		locationIds: null,
 		minSpendMinor: 1_500,
 		startDaysAgo: 170,
@@ -193,7 +193,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardType: "DISCOUNT",
 		rewardValue: 12,
 		category: "restaurant",
-		coverSlug: "heritage-set",
+		imageSet: "heritage-set",
 		locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil, ORGANIZATION_SEED_IDS.mlkLocationBeruang],
 		minSpendMinor: 3_500,
 		startDaysAgo: 375,
@@ -208,7 +208,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardType: "FREE_ITEM",
 		rewardValue: 1,
 		category: "restaurant",
-		coverSlug: "family-dessert",
+		imageSet: "family-dessert",
 		locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil],
 		minSpendMinor: 6_000,
 		startDaysAgo: 300,
@@ -223,7 +223,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardType: "FREE_ITEM",
 		rewardValue: 1,
 		category: "beverage",
-		coverSlug: "brunch-drink",
+		imageSet: "brunch-drink",
 		locationIds: [ORGANIZATION_SEED_IDS.mlkLocationBeruang],
 		minSpendMinor: 3_500,
 		startDaysAgo: 240,
@@ -439,7 +439,6 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 				termsConditions: "One per bill. Not combinable with other rewards.",
 				rewardKind: "CONSUMER",
 				category: reward.category,
-				coverFileId: rewardCoverSeedId(reward.coverSlug),
 				minSpendMinor: reward.minSpendMinor,
 				quantityTotal,
 				quantityRemaining: quantityTotal - redeemed,
@@ -455,6 +454,7 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 				createdAt: window.startMs - DAY_MS,
 			},
 		});
+		await linkRewardImages([{ rewardId: rewardId(reward.key), organizationId: reward.organizationId, slug: reward.imageSet }]);
 		if (reward.locationIds !== null) {
 			await prisma.rewardLocationScope.createMany({
 				data: reward.locationIds.map((locationId) => ({ rewardId: rewardId(reward.key), organizationId: reward.organizationId, locationId })),

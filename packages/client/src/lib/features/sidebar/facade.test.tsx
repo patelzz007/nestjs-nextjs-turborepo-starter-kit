@@ -3,7 +3,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SidebarStoreProvider, useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery } from "./facade";
+import { SidebarStoreProvider, useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, pathnameOf } from "./facade";
 
 const STORAGE_KEY = "test-sidebar-state";
 const PATHNAME = "/rewardhub/wallet";
@@ -79,7 +79,7 @@ describe("sidebar facade", () => {
 		expect(window.localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify({ schemaVersion: 2, snapshot: { ...saved, isOpen: true } }));
 	});
 
-	it("closes the branches opened by hand when a link is followed, keeping the route's", () => {
+	it("closes the branches opened by hand when a link to the page already shown is followed, keeping the route's", () => {
 		const { result } = renderHook(useSidebarProbe, { wrapper });
 
 		act(() => {
@@ -89,12 +89,35 @@ describe("sidebar facade", () => {
 		expect(result.current.expandedItems).toEqual({ rewards: false, wallet: true });
 
 		act(() => {
-			result.current.commands.resetItemExpansion();
+			result.current.commands.followLink(PATHNAME, `${PATHNAME}?tab=all#top`);
 		});
 		expect(result.current.expandedItems).toEqual(AUTO_EXPANDED);
 	});
 
-	it("applies a page's manual choices on that page only — navigation needs no reset", () => {
+	it("keeps a branch opened by hand while its link's page loads, and drops it once the route has changed", () => {
+		function useNavigatingProbe(pathname: string): { readonly expandedItems: Readonly<Record<string, boolean>>; readonly commands: ReturnType<typeof useSidebarCommands> } {
+			return { expandedItems: useSidebarExpandedItems(pathname, AUTO_EXPANDED), commands: useSidebarCommands() };
+		}
+		const { result, rerender } = renderHook(({ pathname }: { readonly pathname: string }) => useNavigatingProbe(pathname), {
+			wrapper,
+			initialProps: { pathname: PATHNAME },
+		});
+
+		act(() => {
+			result.current.commands.setItemExpanded(PATHNAME, "wallet", true);
+		});
+		// Following a child link of the opened branch: the branch must not fold away before the page changes.
+		act(() => {
+			result.current.commands.followLink(PATHNAME, "/rewardhub/wallet/history");
+		});
+		expect(result.current.expandedItems).toEqual({ ...AUTO_EXPANDED, wallet: true });
+
+		rerender({ pathname: "/rewardhub/wallet/history" });
+		rerender({ pathname: PATHNAME });
+		expect(result.current.expandedItems).toEqual(AUTO_EXPANDED);
+	});
+
+	it("applies a page's manual choices on that page only, and drops them once the route changes", () => {
 		function useNavigatingProbe(pathname: string): { readonly expandedItems: Readonly<Record<string, boolean>>; readonly commands: ReturnType<typeof useSidebarCommands> } {
 			return { expandedItems: useSidebarExpandedItems(pathname, AUTO_EXPANDED), commands: useSidebarCommands() };
 		}
@@ -111,8 +134,9 @@ describe("sidebar facade", () => {
 		rerender({ pathname: "/rewardhub/other" });
 		expect(result.current.expandedItems).toEqual({ rewards: true });
 
+		// Back on the first page, its old choices are gone: they were dropped when the route changed.
 		rerender({ pathname: PATHNAME });
-		expect(result.current.expandedItems).toEqual({ rewards: false });
+		expect(result.current.expandedItems).toEqual({ rewards: true });
 	});
 
 	it("gives each provider its own store", () => {
@@ -182,5 +206,13 @@ describe("sidebar open state across a reload", () => {
 			result.current.commands.toggle();
 		});
 		expect(cookieValue()).toBe("true");
+	});
+});
+
+describe("pathnameOf", () => {
+	it("is a sidebar link's path, without its query or fragment", () => {
+		expect(pathnameOf("/rewardhub/wallet")).toBe("/rewardhub/wallet");
+		expect(pathnameOf("/rewardhub/wallet?tab=all")).toBe("/rewardhub/wallet");
+		expect(pathnameOf("/rewardhub/wallet#history")).toBe("/rewardhub/wallet");
 	});
 });

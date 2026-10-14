@@ -8,15 +8,30 @@ import type {
 	AdminMerchantListQuery,
 	AdminPendingRewardListQuery,
 	AdminRejectRewardInput,
+	AdminRewardImageDownloadResponse,
+	AdminRewardImagePathInput,
+	AdminRewardImagesArchivePathInput,
+	AdminRewardPathInput,
 	MerchantOrgResponse,
 	PaginatedServiceResult,
 	RewardResponse,
 } from "@workspace/shared";
-import { LIST_SLOT_INDEX, EmailPreview, EmailRenderContextSchema, EpochMsSchema, APP_LINKS, PILOT_CITY_LABELS } from "@workspace/shared";
+import {
+	LIST_SLOT_INDEX,
+	EmailPreview,
+	EmailRenderContextSchema,
+	EpochMsSchema,
+	APP_LINKS,
+	PILOT_CITY_LABELS,
+	REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
+	safeFileNameSegment,
+} from "@workspace/shared";
 
+import type { FileAttachment } from "../../../common/http/file-attachment.reply";
 import { parsePrismaInputJson } from "../../../common/utils/prisma-json";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
+import { FileService } from "../../files/services/file.service";
 import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
@@ -30,9 +45,12 @@ import { mapOrganizationToAdminDetailResponse, mapOrganizationToAdminResponse, m
 import { MerchantKybDocumentService } from "./merchant-kyb-document.service";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
 
 const INVITE_TTL_DAYS = 7;
 const INVITE_PREVIEW_TOKEN = "preview-invite-token";
+/** The archive name's reward segment when the title has no file-name-safe character. */
+const REWARD_ARCHIVE_FALLBACK_NAME = "reward";
 
 @Injectable()
 export class RewardsAdminService {
@@ -41,11 +59,13 @@ export class RewardsAdminService {
 		private readonly organizationLocationRepository: OrganizationLocationRepository,
 		private readonly organizationProvisioning: OrganizationProvisioningService,
 		private readonly kybDocumentService: MerchantKybDocumentService,
+		private readonly fileService: FileService,
 		private readonly rewardRepository: RewardRepository,
 		private readonly merchantRewardService: MerchantRewardService,
 		private readonly notificationService: RewardNotificationService,
 		private readonly emailSender: EmailSenderService,
 		private readonly config: TypedConfigService,
+		private readonly publicUrls: PublicUrlResolver,
 		private readonly logService: LogService,
 	) {}
 
@@ -134,9 +154,57 @@ export class RewardsAdminService {
 	public async listPendingRewards(query: AdminPendingRewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
 		const result = await this.rewardRepository.listPendingReview(query);
 		return toPaginatedServiceResult(
-			mapListResult(result, (row) => mapRewardToResponse(row, row.organization)),
+			mapListResult(result, (row) => mapRewardToResponse(row, row.organization, this.publicUrls.resolve)),
 			query,
 		);
+	}
+
+	/**
+	 * One consumer reward in full, whatever its status — reviewers open it from
+	 * the moderation queue, and keep the page after approving or rejecting it.
+	 * The caller authorized `MANAGE REWARD`; a missing or deleted reward is a 404.
+	 */
+	public async getReward(input: AdminRewardPathInput): Promise<RewardResponse> {
+		const reward = await this.rewardRepository.findConsumerWithOrganization(input.rewardId);
+		if (reward === null) {
+			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });
+		}
+		return mapRewardToResponse(reward, reward.organization, this.publicUrls.resolve);
+	}
+
+	/**
+	 * A short-lived signed URL that downloads one of a reward's images as its
+	 * original upload (an attachment named after the uploaded file). The caller
+	 * authorized `MANAGE REWARD`; any other file id is a 404, whoever owns it.
+	 */
+	public async getRewardImageDownload(input: AdminRewardImagePathInput): Promise<AdminRewardImageDownloadResponse> {
+		const file = await this.rewardRepository.findRewardImageFile(input.rewardId, input.fileId);
+		if (file === null) {
+			throw new NotFoundException({ message: "Reward image not found", error: "REWARD_IMAGE_NOT_FOUND" });
+		}
+		const download = await this.fileService.createDownloadUrl(file, "attachment");
+		if (download.downloadUrl === null || download.expiresAt === null) {
+			throw new NotFoundException({ message: "Reward image not found", error: "REWARD_IMAGE_NOT_FOUND" });
+		}
+		return { fileId: file.id, fileName: file.originalName, downloadUrl: download.downloadUrl, expiresAt: download.expiresAt };
+	}
+
+	/**
+	 * Every image of a reward in one ZIP of the original uploads, in display
+	 * order, named after the reward (`20-off-weekend-brunch-photos.zip`). The
+	 * caller authorized `MANAGE REWARD`; a reward that does not exist or has no
+	 * image is a 404 before a byte is sent.
+	 */
+	public async getRewardImagesArchive(input: AdminRewardImagesArchivePathInput): Promise<FileAttachment> {
+		const reward = await this.rewardRepository.findRewardImageFiles(input.rewardId);
+		if (reward === null || reward.files.length === 0) {
+			throw new NotFoundException({ message: "Reward image not found", error: "REWARD_IMAGE_NOT_FOUND" });
+		}
+		return {
+			fileName: `${safeFileNameSegment(reward.title, REWARD_ARCHIVE_FALLBACK_NAME)}-photos.zip`,
+			contentType: REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
+			body: this.fileService.createZipArchive(reward.files),
+		};
 	}
 
 	public async approveReward(adminUserId: string, rewardId: string): Promise<RewardResponse> {
@@ -152,7 +220,7 @@ export class RewardsAdminService {
 		}
 
 		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.organization);
+		return mapRewardToResponse(refreshed, refreshed.organization, this.publicUrls.resolve);
 	}
 
 	public async rejectReward(adminUserId: string, rewardId: string, input: AdminRejectRewardInput): Promise<RewardResponse> {
@@ -170,7 +238,7 @@ export class RewardsAdminService {
 		}
 
 		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.organization);
+		return mapRewardToResponse(refreshed, refreshed.organization, this.publicUrls.resolve);
 	}
 
 	public async updateMerchantKyb(organizationId: string, input: AdminKybUpdateInput): Promise<void> {

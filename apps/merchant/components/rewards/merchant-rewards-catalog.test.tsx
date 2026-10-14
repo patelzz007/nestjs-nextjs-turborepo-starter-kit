@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { UI_PREFERENCES_VERSION, UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
@@ -7,26 +7,50 @@ import type { RewardResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantRewardsCatalog, REWARDS_CATALOG_LOADING_LABELS } from "@/components/rewards/merchant-rewards-catalog";
+import { REWARD_STATUS_GROUPS } from "@/lib/rewards/presentation";
 import { ORG_ROUTES, resolveOrgHref } from "@/lib/routes";
 import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { REWARD_FIXTURE_COVER_URL, rewardFixture } from "@/test/rewards";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
 const ORG_SLUG = "jonker-street-kitchen";
+const REWARDS_PATH = resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.list);
+const CREATE_REWARD_HREF = resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.new);
 
+// The open tab is read from the address bar, as Next.js's `useSearchParams`
+// does once its History API integration has synced it.
 vi.mock("next/navigation", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useParams: (): Record<string, string> => ({ orgSlug: ORG_SLUG }) };
+	return {
+		...actual,
+		useParams: (): Record<string, string> => ({ orgSlug: ORG_SLUG }),
+		useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
+	};
 });
 
-function renderCatalog(isLoading = false, rewards: readonly RewardResponse[] = []): void {
-	render(
+interface RenderCatalogOptions {
+	readonly isLoading?: boolean;
+	readonly canManageRewards?: boolean;
+}
+
+function catalogElement(rewards: readonly RewardResponse[], { isLoading = false, canManageRewards = true }: RenderCatalogOptions): React.JSX.Element {
+	return (
 		<UiKitTestProviders>
 			<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
-				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} canManageRewards />
+				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} canManageRewards={canManageRewards} createRewardHref={CREATE_REWARD_HREF} />
 			</UiPreferencesStoreProvider>
-		</UiKitTestProviders>,
+		</UiKitTestProviders>
 	);
+}
+
+/** Renders the catalog; `rerender` re-reads the URL after the catalog wrote it (as Next.js does on a History API write). */
+function renderCatalog(isLoading = false, rewards: readonly RewardResponse[] = [], options: Omit<RenderCatalogOptions, "isLoading"> = {}): { readonly rerender: () => void } {
+	const view = render(catalogElement(rewards, { ...options, isLoading }));
+	return {
+		rerender: (): void => {
+			view.rerender(catalogElement(rewards, { ...options, isLoading }));
+		},
+	};
 }
 
 function isPressed(name: string): boolean {
@@ -40,23 +64,25 @@ function listColumnHeader(): HTMLElement | null {
 
 beforeEach((): void => {
 	window.localStorage.clear();
+	window.history.replaceState(null, "", REWARDS_PATH);
 });
 
 afterEach((): void => {
 	cleanup();
 	window.localStorage.clear();
+	vi.restoreAllMocks();
 });
 
 describe("MerchantRewardsCatalog layout preference", () => {
 	it("shows the grid until the member picks a layout", () => {
-		renderCatalog();
+		renderCatalog(false, [rewardFixture()]);
 
 		expect(isPressed("Grid view")).toBe(true);
 		expect(listColumnHeader()).toBeNull();
 	});
 
 	it("switches to the list and remembers the choice", () => {
-		renderCatalog();
+		renderCatalog(false, [rewardFixture()]);
 
 		act(() => {
 			fireEvent.click(screen.getByRole("button", { name: "List view" }));
@@ -72,7 +98,7 @@ describe("MerchantRewardsCatalog layout preference", () => {
 	it("keeps the layout the older view-mode helper saved as a bare string", () => {
 		window.localStorage.setItem(MERCHANT_UI_PREFERENCES_STORAGE_KEY, "list");
 
-		renderCatalog();
+		renderCatalog(false, [rewardFixture()]);
 
 		expect(isPressed("List view")).toBe(true);
 		expect(listColumnHeader()).not.toBeNull();
@@ -85,7 +111,14 @@ describe("MerchantRewardsCatalog loading", () => {
 
 		expect(busyRegionAnnouncements()).toEqual([REWARDS_CATALOG_LOADING_LABELS.loading]);
 		expect(document.querySelector('[data-slot="rewards-grid-skeleton"]')).not.toBeNull();
-		expect(screen.queryByText("0 rewards")).toBeNull();
+		expect(screen.queryByRole("tab")).toBeNull();
+	});
+
+	it("draws the tab bar's bones, out of the accessibility tree, until the counts are known", () => {
+		renderCatalog(true);
+
+		expect(document.querySelector('[data-slot="rewards-tabs-skeleton"]')?.closest('[aria-hidden="true"]')).not.toBeNull();
+		expect(screen.queryByRole("tablist")).toBeNull();
 	});
 
 	it("draws list rows instead when the member chose the list layout", () => {
@@ -107,34 +140,117 @@ describe("MerchantRewardsCatalog loading", () => {
 	});
 });
 
-describe("MerchantRewardsCatalog sections", () => {
+describe("MerchantRewardsCatalog status tabs", () => {
 	const LIVE_ID = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
 	const REWARDS: readonly RewardResponse[] = [
 		rewardFixture({ id: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e", title: "Old cendol giveaway", status: "EXPIRED", quantityRemaining: 0 }),
 		rewardFixture({ id: LIVE_ID, title: "Nyonya kuih sampler", rewardType: "DISCOUNT", rewardValue: 10, quantityRemaining: 5, quantityTotal: 50 }),
 		rewardFixture({ id: "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f", title: "Lunch set draft", status: "DRAFT" }),
+		rewardFixture({ id: "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a", title: "Disabled teh tarik deal", status: "DISABLED" }),
 	];
 
-	function sectionTitles(): string[] {
-		return screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+	function tabNames(): (string | null)[] {
+		return screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"));
 	}
 
-	function section(name: RegExp): HTMLElement {
-		return screen.getByRole("region", { name });
+	function selectedTab(): string | null | undefined {
+		return screen
+			.getAllByRole("tab")
+			.find((tab) => tab.getAttribute("aria-selected") === "true")
+			?.getAttribute("aria-label");
 	}
 
-	it("groups the cards by status — live first, ended last — each section counting its rewards", () => {
+	function panel(): HTMLElement {
+		return screen.getByRole("tabpanel");
+	}
+
+	it("shows one tab per status, in order, each counting its rewards — empty ones included", () => {
 		renderCatalog(false, REWARDS);
 
-		expect(sectionTitles()).toEqual(["Live1", "Drafts1", "Ended1"]);
-		expect(within(section(/^Live/u)).getByText("Nyonya kuih sampler")).toBeDefined();
-		expect(within(section(/^Ended/u)).getByText("Old cendol giveaway")).toBeDefined();
-		expect(screen.getByText("3 rewards")).toBeDefined();
+		expect(screen.getByRole("tablist", { name: "Reward status" })).toBeDefined();
+		expect(tabNames()).toEqual(["Live, 1 reward", "In review, 0 rewards", "Drafts, 1 reward", "Ended, 2 rewards"]);
+	});
+
+	it("opens on live rewards and shows only that tab's rewards", () => {
+		renderCatalog(false, REWARDS);
+
+		expect(selectedTab()).toBe("Live, 1 reward");
+		expect(within(panel()).getByText("Nyonya kuih sampler")).toBeDefined();
+		expect(screen.queryByText("Lunch set draft")).toBeNull();
+		expect(screen.queryByText("Old cendol giveaway")).toBeNull();
+	});
+
+	it("opens on the first tab with rewards when nothing is live", () => {
+		renderCatalog(false, [rewardFixture({ title: "Lunch set draft", status: "DRAFT" })]);
+
+		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(within(panel()).getByText("Lunch set draft")).toBeDefined();
+		expect(window.location.search).toBe("");
+	});
+
+	it("opens the tab the URL names, so a shared link lands on the same rewards", () => {
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=ended`);
+		renderCatalog(false, REWARDS);
+
+		expect(selectedTab()).toBe("Ended, 2 rewards");
+		expect(within(panel()).getByText("Old cendol giveaway")).toBeDefined();
+		expect(within(panel()).getByText("Disabled teh tarik deal")).toBeDefined();
+		expect(screen.queryByText("Nyonya kuih sampler")).toBeNull();
+	});
+
+	it("falls back to the first tab with rewards for an unknown status in the URL", () => {
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=archived`);
+		renderCatalog(false, REWARDS);
+
+		expect(selectedTab()).toBe("Live, 1 reward");
+		expect(within(panel()).getByText("Nyonya kuih sampler")).toBeDefined();
+	});
+
+	it("pushes the chosen tab to the URL, so Back returns to the previous one", () => {
+		const pushState = vi.spyOn(window.history, "pushState");
+		const view = renderCatalog(false, REWARDS);
+
+		act(() => {
+			fireEvent.click(screen.getByRole("tab", { name: "Drafts, 1 reward" }));
+		});
+		view.rerender();
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(window.location.search).toBe("?status=drafts");
+		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(within(panel()).getByText("Lunch set draft")).toBeDefined();
+	});
+
+	it("explains an empty tab and offers the next step", () => {
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=review`);
+		const view = renderCatalog(false, REWARDS);
+
+		expect(within(panel()).getByRole("heading", { name: "Nothing waiting for review" })).toBeDefined();
+		act(() => {
+			fireEvent.click(within(panel()).getByRole("button", { name: "Open drafts" }));
+		});
+		view.rerender();
+
+		expect(window.location.search).toBe("?status=drafts");
+		expect(selectedTab()).toBe("Drafts, 1 reward");
+	});
+
+	it("links an empty tab to the reward editor for members who manage rewards, and offers nothing to the rest", () => {
+		const onlyEnded: readonly RewardResponse[] = [rewardFixture({ status: "EXPIRED" })];
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=live`);
+		renderCatalog(false, onlyEnded);
+
+		expect(within(panel()).getByRole("heading", { name: "No live rewards" })).toBeDefined();
+		expect(within(panel()).getByRole("link", { name: "Create a reward" }).getAttribute("href")).toBe(CREATE_REWARD_HREF);
+
+		cleanup();
+		renderCatalog(false, onlyEnded, { canManageRewards: false });
+		expect(within(panel()).queryByRole("link")).toBeNull();
 	});
 
 	it("leads each card with the offer and opens the reward from the whole card", () => {
 		renderCatalog(false, REWARDS);
-		const live = within(section(/^Live/u));
+		const live = within(panel());
 
 		expect(live.getByText("10% off")).toBeDefined();
 		expect(live.getByRole("link", { name: "Nyonya kuih sampler, manage reward" }).getAttribute("href")).toBe(resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.edit(LIVE_ID)));
@@ -143,35 +259,58 @@ describe("MerchantRewardsCatalog sections", () => {
 
 	it("shows the branch, not the business name, and flags stock running low", () => {
 		renderCatalog(false, REWARDS);
-		const live = within(section(/^Live/u));
 
-		expect(live.getByText("Bukit Katil")).toBeDefined();
-		expect(live.getByText("5 of 50 left").closest('[data-slot="reward-stock"]')?.getAttribute("data-level")).toBe("low");
-		expect(within(section(/^Ended/u)).getByText("Sold out")).toBeDefined();
+		expect(within(panel()).getByText("Bukit Katil")).toBeDefined();
+		expect(within(panel()).getByText("5 of 50 left").closest('[data-slot="reward-stock"]')?.getAttribute("data-level")).toBe("low");
 	});
 
-	it("shows every reward's cover in the grid and as a thumbnail in the list, quietened once the reward has ended", () => {
+	it("quietens the covers of ended rewards", () => {
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=ended`);
 		renderCatalog(false, REWARDS);
-		const covers = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-slot="cover-image"]')];
+		const covers = [...panel().querySelectorAll<HTMLElement>('[data-slot="cover-image"]')];
 
-		expect(covers()).toHaveLength(REWARDS.length);
-		expect(covers().map((cover) => cover.querySelector("img")?.getAttribute("src"))).toEqual(REWARDS.map(() => REWARD_FIXTURE_COVER_URL));
-		const endedCover = section(/^Ended/u).querySelector<HTMLElement>('[data-slot="cover-image"]');
-		expect(endedCover?.className).toContain("grayscale");
-		expect(section(/^Live/u).querySelector<HTMLElement>('[data-slot="cover-image"]')?.className).not.toContain("grayscale");
+		expect(covers.map((cover) => cover.querySelector("img")?.getAttribute("src"))).toEqual([REWARD_FIXTURE_COVER_URL, REWARD_FIXTURE_COVER_URL]);
+		expect(covers.every((cover) => cover.className.includes("grayscale"))).toBe(true);
+		expect(within(panel()).getByText("Sold out")).toBeDefined();
+	});
+
+	it("keeps the tabs, the open tab and the links in the list layout", () => {
+		window.localStorage.setItem(MERCHANT_UI_PREFERENCES_STORAGE_KEY, "list");
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=ended`);
+		renderCatalog(false, REWARDS);
+
+		expect(tabNames()).toHaveLength(REWARD_STATUS_GROUPS.length);
+		expect(selectedTab()).toBe("Ended, 2 rewards");
+		expect(panel().querySelectorAll('[data-slot="reward-row"]')).toHaveLength(2);
+		expect(panel().querySelectorAll('[data-slot="reward-row"] [data-slot="cover-image"]')).toHaveLength(2);
+		expect(within(panel()).getByText("Inventory")).toBeDefined();
+	});
+
+	it("keeps the open tab when the member switches layout", () => {
+		window.history.replaceState(null, "", `${REWARDS_PATH}?status=drafts`);
+		renderCatalog(false, REWARDS);
 
 		act(() => {
 			fireEvent.click(screen.getByRole("button", { name: "List view" }));
 		});
-		expect(document.querySelectorAll('[data-slot="reward-row"] [data-slot="cover-image"]')).toHaveLength(REWARDS.length);
+
+		expect(selectedTab()).toBe("Drafts, 1 reward");
+		expect(panel().querySelectorAll('[data-slot="reward-row"]')).toHaveLength(1);
 	});
 
-	it("keeps the same sections and links in the list layout", () => {
-		window.localStorage.setItem(MERCHANT_UI_PREFERENCES_STORAGE_KEY, "list");
+	it("moves focus between tabs with the arrow keys, without opening them", async () => {
 		renderCatalog(false, REWARDS);
+		const live = screen.getByRole("tab", { name: "Live, 1 reward" });
 
-		expect(sectionTitles()).toEqual(["Live1", "Drafts1", "Ended1"]);
-		expect(document.querySelectorAll('[data-slot="reward-row"]')).toHaveLength(REWARDS.length);
-		expect(within(section(/^Live/u)).getByRole("link", { name: "Nyonya kuih sampler, manage reward" })).toBeDefined();
+		act(() => {
+			live.focus();
+		});
+		fireEvent.keyDown(live, { key: "ArrowRight" });
+
+		await waitFor((): void => {
+			expect(document.activeElement?.getAttribute("aria-label")).toBe("In review, 0 rewards");
+		});
+		expect(selectedTab()).toBe("Live, 1 reward");
+		expect(window.location.search).toBe("");
 	});
 });

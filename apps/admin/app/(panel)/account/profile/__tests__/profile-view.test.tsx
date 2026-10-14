@@ -47,6 +47,17 @@ vi.mock("@workspace/client/lib/auth/profile/use-profile-avatar", () => ({
 	useRemoveProfileAvatar: (): object => ({ mutate: state.removeAvatar, isPending: false }),
 }));
 
+// A picked photo that already meets the avatar rules goes straight to the upload (the crop step has its own tests).
+vi.mock("@workspace/client/lib/storage/use-image-pick", () => ({
+	useImagePick: ({ onPrepared }: { readonly onPrepared: (file: File) => void }): object => ({
+		pick: onPrepared,
+		cropSource: null,
+		isReading: false,
+		handleCropped: vi.fn(),
+		handleSkip: vi.fn(),
+	}),
+}));
+
 vi.mock("@workspace/client/lib/auth/profile/use-own-profile", () => ({
 	useOwnProfile: (): object => ({ data: state.profile, isError: state.isError }),
 	useUpdateOwnProfile: (options: UpdateOptionsStub): object => {
@@ -100,14 +111,14 @@ describe("ProfileView", () => {
 	});
 
 	it("shows the profile's identity", () => {
-		render(<ProfileView />);
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("superadmin@example.com")).toBeTruthy();
 		expect(screen.getByText("SA")).toBeTruthy();
 	});
 
 	it("saves the edit with the version the form was loaded at (optimistic lock)", async () => {
-		render(<ProfileView />);
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
 		fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "Platform Owner" } });
 		fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
@@ -119,7 +130,7 @@ describe("ProfileView", () => {
 
 	it("toasts the API's failure with the profile-specific message (409, impersonation)", () => {
 		const errorToast = vi.spyOn(toastMessage, "error").mockImplementation(() => "toast-id");
-		render(<ProfileView />);
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
 		state.options.current?.onError(new ApiError({ message: "changed", error: "CONFLICT", statusCode: 409 }));
 
@@ -128,7 +139,7 @@ describe("ProfileView", () => {
 
 	it("toasts success with the saved name", () => {
 		const successToast = vi.spyOn(toastMessage, "success").mockImplementation(() => "toast-id");
-		render(<ProfileView />);
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
 		state.options.current?.onSuccess?.({ ...PROFILE, fullName: "Platform Owner", version: 4 });
 
@@ -136,17 +147,17 @@ describe("ProfileView", () => {
 	});
 
 	it("uploads a picked image as the caller's own avatar", () => {
-		render(<ProfileView />);
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 		const image = new File([new Uint8Array(8)], "me.png", { type: "image/png" });
 
-		fireEvent.change(screen.getByLabelText("Avatar image"), { target: { files: [image] } });
+		fireEvent.change(screen.getByLabelText("Profile picture"), { target: { files: [image] } });
 
 		expect(state.uploadAvatar).toHaveBeenCalledWith({ userId: PROFILE.id, file: image });
 	});
 
 	it("removes the live avatar by its file id", () => {
-		state.profile = { data: { ...PROFILE, avatar: { fileId: AVATAR_FILE_ID, url: "https://cdn.example.com/a.png", updatedAt: epochMs(1_788_253_200_000) } } };
-		render(<ProfileView />);
+		state.profile = { data: { ...PROFILE, avatar: { fileId: AVATAR_FILE_ID, url: "https://cdn.example.com/a.png", sources: [], updatedAt: epochMs(1_788_253_200_000) } } };
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 
@@ -165,10 +176,10 @@ describe("ProfileView", () => {
 
 	it("is read-only during impersonation", () => {
 		state.isImpersonating = true;
-		render(<ProfileView />);
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("You are impersonating this user: the profile is read-only.")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(true);
-		expect(screen.getByRole("button", { name: "Upload avatar" }).hasAttribute("disabled")).toBe(true);
+		expect(screen.getByRole("button", { name: "Upload photo" }).hasAttribute("disabled")).toBe(true);
 	});
 });

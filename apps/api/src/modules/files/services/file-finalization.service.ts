@@ -3,6 +3,7 @@ import type { StoredFile } from "@prisma/client";
 import { assertNever, DocumentMimeTypeSchema, FileProcessingResultSchema, type FileProcessingResult, type StorageObjectLocator } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { UnreadableImageError } from "../../storage/domain/image-processor.port";
 import type { MalwareScanResult } from "../../storage/domain/malware-scanner.port";
 import type { ObjectStorage } from "../../storage/domain/object-storage.port";
 import type { PublicDelivery } from "../../storage/domain/public-delivery.port";
@@ -15,11 +16,13 @@ import {
 	StoredFileRepository,
 	type StoredFileBinding,
 	type StoredFileStatusFields,
+	type StoredFileVariantInput,
 } from "../repositories/stored-file.repository";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import type { FileVerdictOutcome } from "../lifecycle/file-lifecycle-listener";
 import { FileLifecycleListenerRegistry } from "../lifecycle/file-lifecycle-listener.registry";
 import { resolveStorageOwnerId } from "./file-ownership.util";
+import { ImageObjectMissingError, ImageRenditionService } from "./image-rendition.service";
 import { isPublicFile } from "./file-visibility.util";
 
 /** Verdicts that attach nothing (quarantine, failure, KYB evidence). */
@@ -29,6 +32,13 @@ const NO_BINDING: StoredFileBinding = { kind: "NONE" };
 interface ReadyScanRecord {
 	readonly scanStatus: "CLEAN" | "NOT_SCANNED";
 	readonly scanResult: string;
+}
+
+/** Where a promotion put the file's bytes, and whether this attempt made that copy (so may delete it on failure). */
+interface PromotedObject {
+	readonly locator: StorageObjectLocator;
+	readonly revision: string | null;
+	readonly copiedByThisAttempt: boolean;
 }
 
 /** What happened to a verdict: applied, or ignored because the file had already left SCANNING. */
@@ -51,6 +61,7 @@ export class FileFinalizationService {
 		@Inject(PUBLIC_DELIVERY) private readonly publicDelivery: PublicDelivery,
 		private readonly transactions: TenantTransactionService,
 		private readonly listeners: FileLifecycleListenerRegistry,
+		private readonly renditions: ImageRenditionService,
 	) {}
 
 	/** Applies what the configured scanner reported for a file awaiting its verdict. */
@@ -148,8 +159,23 @@ export class FileFinalizationService {
 			throw error;
 		}
 
+		// The staging object stays until the verdict commits: if this attempt fails part-way, the row
+		// still names bytes that exist, so a retry runs the whole promotion again instead of failing
+		// the upload as "missing".
 		const promoted = await this.promoteObject(file, alreadyAtFinalPath);
-		const publicPath = isPublicFile(file) ? await this.publish(file, promoted.locator) : null;
+		let publicPath: string | null;
+		let variants: readonly StoredFileVariantInput[];
+		try {
+			publicPath = isPublicFile(file) ? await this.publish(file, promoted.locator) : null;
+			variants = await this.renditions.renderAndPublish(file, promoted.locator);
+		} catch (error) {
+			if (error instanceof UnreadableImageError || error instanceof ImageObjectMissingError) {
+				await this.discardPromoted(file, promoted.locator);
+				return this.failScan(file, error.message);
+			}
+			await this.undoFailedAttempt(file, promoted, []);
+			throw error;
+		}
 		const fields: StoredFileStatusFields = {
 			storagePath: promoted.locator.path,
 			objectGeneration: promoted.revision,
@@ -162,20 +188,51 @@ export class FileFinalizationService {
 
 		let ready: boolean;
 		try {
-			ready = await this.decide(file, "READY", fields, binding);
+			ready = await this.decide(file, "READY", fields, binding, variants);
 		} catch (error) {
 			if (error instanceof StoredFileBindingTargetMissingError) {
+				await this.renditions.discard(variants, file.id);
 				await this.discardPromoted(file, promoted.locator);
 				return this.failScan(file, error.message);
 			}
+			await this.undoFailedAttempt(file, promoted, variants);
 			throw error;
 		}
 		if (!ready) {
 			// Deleted or decided while we were promoting: drop the copies we just made.
+			await this.renditions.discard(variants, file.id);
 			await this.discardPromoted(file, promoted.locator);
+			await this.deleteStagingObject(file);
 			return "SKIPPED";
 		}
+		// Committed: the row now names the final key, so the staging copy is no longer needed.
+		await this.deleteStagingObject(file);
 		return "READY";
+	}
+
+	/**
+	 * Before a failed attempt's error is rethrown for a retry: withdraws what the
+	 * attempt published and deletes the copy it made, leaving the file exactly as
+	 * the attempt found it. An object the attempt did not create (the row's own,
+	 * or a processing worker's copy) is kept — the retry needs it. A cleanup that
+	 * fails is logged and the original error is still the one rethrown.
+	 */
+	private async undoFailedAttempt(file: StoredFile, promoted: PromotedObject, variants: readonly StoredFileVariantInput[]): Promise<void> {
+		try {
+			await this.renditions.discard(variants, file.id);
+			if (isPublicFile(file)) {
+				await this.publicDelivery.unpublishAsset({ locator: promoted.locator, fileId: file.id });
+			}
+			if (promoted.copiedByThisAttempt) {
+				await this.storage.deleteObject(promoted.locator);
+			}
+		} catch (cleanupError) {
+			this.logger.error({
+				event: "files.promotion_undo_failed",
+				fileId: file.id,
+				error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+			});
+		}
 	}
 
 	/**
@@ -184,7 +241,13 @@ export class FileFinalizationService {
 	 * every category listener's reaction (FileLifecycleListener), so they commit
 	 * or roll back together. `false` when the file had already left SCANNING.
 	 */
-	private async decide(file: StoredFile, outcome: FileVerdictOutcome, fields: StoredFileStatusFields, binding: StoredFileBinding = NO_BINDING): Promise<boolean> {
+	private async decide(
+		file: StoredFile,
+		outcome: FileVerdictOutcome,
+		fields: StoredFileStatusFields,
+		binding: StoredFileBinding = NO_BINDING,
+		variants: readonly StoredFileVariantInput[] = [],
+	): Promise<boolean> {
 		return this.transactions.withSystemOperation(
 			{ operation: "files.scan_verdict.apply", reason: `Apply the ${outcome} scan verdict to an uploaded file`, actorUserId: null },
 			async (tx): Promise<boolean> => {
@@ -193,6 +256,7 @@ export class FileFinalizationService {
 					return false;
 				}
 				await this.repository.bindInTx(tx, file.id, binding);
+				await this.repository.upsertVariantsInTx(tx, file.id, variants);
 				await this.listeners.notifyInTx(tx, {
 					fileId: file.id,
 					category: file.category,
@@ -223,28 +287,29 @@ export class FileFinalizationService {
 			case "MERCHANT_KYB":
 				// KYB evidence is attached explicitly when the merchant submits it for review.
 				return { kind: "NONE" };
-			case "REWARD_COVER":
-				// A cover is attached when a reward names it (`coverFileId`), which needs the file READY first.
+			case "REWARD_IMAGE":
+				// An image is attached when a reward lists it (`imageFileIds`), which needs the file READY first.
 				return { kind: "NONE" };
 			default:
 				return assertNever(file.category, "file category");
 		}
 	}
 
-	/** Copies the staging object to its durable final key (or adopts the worker's copy) and removes the staging object. */
-	private async promoteObject(file: StoredFile, alreadyAtFinalPath: boolean): Promise<{ readonly locator: StorageObjectLocator; readonly revision: string | null }> {
+	/**
+	 * Copies the staging object to its durable final key (or adopts the worker's copy).
+	 * The staging object is kept: it is removed only once the verdict commits.
+	 */
+	private async promoteObject(file: StoredFile, alreadyAtFinalPath: boolean): Promise<PromotedObject> {
 		const sourceLocator = locatorFromStoredFile(file, this.config.storage.provider);
 		const destinationLocator = toStorageObjectLocator(sourceLocator.provider, sourceLocator.container, buildFinalStoragePath(this.pathInput(file)));
 		if (file.storagePath === destinationLocator.path) {
-			return { locator: sourceLocator, revision: file.objectRevision ?? file.objectGeneration };
+			return { locator: sourceLocator, revision: file.objectRevision ?? file.objectGeneration, copiedByThisAttempt: false };
 		}
 		if (alreadyAtFinalPath) {
-			await this.deleteStagingObject(file);
-			return { locator: destinationLocator, revision: file.objectRevision ?? file.objectGeneration };
+			return { locator: destinationLocator, revision: file.objectRevision ?? file.objectGeneration, copiedByThisAttempt: false };
 		}
 		const copied = await this.storage.copyObject(sourceLocator, destinationLocator);
-		await this.deleteStagingObject(file);
-		return { locator: copied.locator, revision: copied.revision };
+		return { locator: copied.locator, revision: copied.revision, copiedByThisAttempt: true };
 	}
 
 	private async publish(file: StoredFile, locator: StorageObjectLocator): Promise<string> {

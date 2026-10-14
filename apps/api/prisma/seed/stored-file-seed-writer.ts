@@ -9,8 +9,12 @@
 //     MALWARE_SCANNER=none files are READY + NOT_SCANNED, never CLEAN;
 //   - public files (per the category's `FILE_CATEGORY_POLICIES` visibility)
 //     carry the URL the provider's PublicDelivery returns;
+//   - images whose category has pixel rules (reward images, avatars, logos) are
+//     checked and rendered by the API's own ImageRenditionService: a seed image
+//     that breaks its rules fails the seed, and every rendition is real and published;
 //   - a deleted file was deleted by a user: the file AND every row that pointed
-//     at it are soft-deleted with the same `deleted_by`, and the bytes removed.
+//     at it are soft-deleted with the same `deleted_by`, and the bytes (with its
+//     renditions') removed.
 // Every row is upserted on its id, so a re-run converges.
 
 import type { Prisma } from "@prisma/client";
@@ -21,6 +25,8 @@ import { TypedConfigService } from "../../src/config/typed-config.service";
 import { LocalTransferTokenService } from "../../src/modules/storage/adapters/local/local-transfer-token.service";
 import { createMalwareScanner } from "../../src/modules/storage/adapters/scanners/malware-scanner.factory";
 import type { MalwareScanner } from "../../src/modules/storage/domain/malware-scanner.port";
+import { ImageRenditionService } from "../../src/modules/files/services/image-rendition.service";
+import { SharpImageProcessor } from "../../src/modules/storage/adapters/images/sharp-image-processor";
 import { createStorageAdapter, type StorageAdapter } from "../../src/modules/storage/factory/storage-adapter.factory";
 import { buildFinalStoragePath } from "../../src/modules/storage/utils/file-path.util";
 import { toStorageObjectLocator } from "../../src/modules/storage/utils/storage-locator.util";
@@ -28,7 +34,7 @@ import { prisma } from "./client";
 import { sha256BytesHex } from "./helpers";
 
 /** The categories seeds store bytes for. */
-export type SeedFileCategory = Extract<FileCategory, "MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO" | "REWARD_COVER">;
+export type SeedFileCategory = Extract<FileCategory, "MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO" | "REWARD_IMAGE">;
 
 /** The MIME types of the seed files on disk / in memory (each matches its magic bytes). */
 export type SeedFileMimeType = "application/pdf" | "image/png" | "image/webp";
@@ -112,6 +118,8 @@ export function createSeedFileWriter(): SeedFileWriter {
 	const storage = createStorageAdapter(config, new LocalTransferTokenService());
 	const scanner = createMalwareScanner(config.storage.malwareScanner);
 	const locatorFor = (path: string): ReturnType<typeof toStorageObjectLocator> => toStorageObjectLocator(provider, container, path);
+	// Images with pixel rules go through the API's own checks and renditions (sharp), exactly as uploads do.
+	const renditions = new ImageRenditionService(config, storage, storage, new SharpImageProcessor());
 
 	const uploadSeedObject = async (input: Parameters<StorageAdapter["upload"]>[0]): ReturnType<StorageAdapter["upload"]> => {
 		try {
@@ -133,6 +141,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 			? (await storage.publishAsset({ locator: uploaded.locator, fileId: object.id, mimeType: object.mimeType, fileName: object.fileName })).publicUrl
 			: null;
 		const stored: StoredSeedObject = { storagePath, revision: uploaded.revision, publicPath };
+		const dimensions = await renditions.inspectUpload({ category: object.category }, uploaded.locator);
 		const scan = await scanRecordFor(scanner, object, storage, stored, locatorFor);
 		const checksum = sha256BytesHex(object.bytes);
 		const row = {
@@ -151,6 +160,8 @@ export function createSeedFileWriter(): SeedFileWriter {
 			publicPath,
 			objectRevision: uploaded.revision,
 			objectGeneration: uploaded.revision,
+			imageWidth: dimensions?.width ?? null,
+			imageHeight: dimensions?.height ?? null,
 			status: "READY",
 			scanStatus: scan.scanStatus,
 			scannedAt: daysAgo(object.uploadedDaysAgo),
@@ -165,12 +176,22 @@ export function createSeedFileWriter(): SeedFileWriter {
 			deletedAt: null,
 			deletedBy: null,
 		} satisfies Prisma.StoredFileUncheckedCreateInput;
-		await prisma.storedFile.upsert({ where: { id: object.id }, create: row, update: row });
+		const file = await prisma.storedFile.upsert({ where: { id: object.id }, create: row, update: row });
+		for (const variant of await renditions.renderAndPublish(file, uploaded.locator)) {
+			const variantRow = { ...variant, fileId: file.id, isDeleted: false, deletedAt: null, deletedBy: null } satisfies Prisma.FileVariantUncheckedCreateInput;
+			await prisma.fileVariant.upsert({ where: { fileId_kind: { fileId: file.id, kind: variant.kind } }, create: variantRow, update: variantRow });
+		}
 		return stored;
 	};
 
 	const deleteFile = async (fileId: string, stored: StoredSeedObject, deletedBy: string, deletedDaysAgo: number): Promise<void> => {
 		const deletedAt = daysAgo(deletedDaysAgo);
+		// Its renditions go with it, as `DELETE /files/:id` withdraws and removes them.
+		const variants = await prisma.fileVariant.findMany({ where: { fileId, isDeleted: false }, select: { storagePath: true } });
+		for (const variant of variants) {
+			await storage.unpublishAsset({ locator: locatorFor(variant.storagePath), fileId });
+			await storage.deleteObject(locatorFor(variant.storagePath));
+		}
 		const softDelete = { isDeleted: true, deletedAt, deletedBy, updatedAt: deletedAt };
 		await prisma.storedFile.update({ where: { id: fileId }, data: { status: "DELETED", ...softDelete } });
 		await prisma.productImage.updateMany({ where: { fileId }, data: { ...softDelete, isPrimary: false } });

@@ -78,14 +78,29 @@ describe("sidebarReducer", () => {
 		expect(current.manualExpansion?.items["item-5"]).toBe(false);
 	});
 
-	it("drops every manual choice when a link is followed, whichever page they were made on", () => {
+	it("keeps the hand-opened branches when a link to another page is followed, so they do not fold away while it loads", () => {
+		const manual = sidebarReducer(state({ isOpen: false, searchQuery: "rew" }), sidebarActions.itemExpansionChanged("/p", "wallet", true));
+
+		expect(sidebarReducer(manual, sidebarActions.linkFollowed("/p", "/p/child"))).toBe(manual);
+	});
+
+	it("drops every manual choice at once when a link to the page already shown is followed (nothing will navigate)", () => {
 		const manual = sidebarReducer(
 			sidebarReducer(state({ isOpen: false, searchQuery: "rew" }), sidebarActions.itemExpansionChanged("/p", "wallet", true)),
 			sidebarActions.itemExpansionChanged("/p", "rewards", false),
 		);
 
-		expect(sidebarReducer(manual, sidebarActions.linkFollowed())).toEqual({ ...manual, manualExpansion: null });
-		expect(sidebarReducer(state(), sidebarActions.linkFollowed()).manualExpansion).toBeNull();
+		expect(sidebarReducer(manual, sidebarActions.linkFollowed("/p", "/p"))).toEqual({ ...manual, manualExpansion: null });
+		expect(sidebarReducer(state(), sidebarActions.linkFollowed("/p", "/p")).manualExpansion).toBeNull();
+	});
+
+	it("drops the choices made on another page once the route changes, and keeps this page's", () => {
+		const manual = sidebarReducer(state(), sidebarActions.itemExpansionChanged("/p", "wallet", true));
+
+		expect(sidebarReducer(manual, sidebarActions.routeChanged("/p/child")).manualExpansion).toBeNull();
+		expect(sidebarReducer(manual, sidebarActions.routeChanged("/p"))).toBe(manual);
+		const empty = state();
+		expect(sidebarReducer(empty, sidebarActions.routeChanged("/p"))).toBe(empty);
 	});
 
 	it("sets and clears the search text", () => {

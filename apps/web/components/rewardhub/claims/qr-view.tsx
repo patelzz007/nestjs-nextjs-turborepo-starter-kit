@@ -55,7 +55,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 			<WebPageHeader title="Show at checkout" description="Let the cashier scan your QR code, or read out the backup code if scanning fails." />
 
 			<Link href={ROUTES.rewardHub.wallet} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
-				← My Wallet
+				Back to My Wallet
 			</Link>
 
 			<WebSurfacePanel className="p-5 sm:p-6">

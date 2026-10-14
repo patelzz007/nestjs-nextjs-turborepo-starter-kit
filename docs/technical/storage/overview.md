@@ -48,11 +48,18 @@ sequenceDiagram
     API->>API: PENDING → SCANNING (once; a second complete gets 409)
     API->>Q: scan (inline when Redis is not configured)
     Q->>Q: malware scanner verdict
-    Q->>S: promote staging/… → final key (kyb/, products/, users/, stores/)
+    Q->>S: copy staging/… → final key (kyb/, products/, users/, stores/)
     Q->>S: public categories: publish (S3 copies to the CloudFront origin bucket)
     Q->>API: READY (bound to product / store / avatar / KYB) — or QUARANTINED / FAILED
+    Q->>S: after READY commits: delete the staging/… object
     B->>API: GET /files/{fileId}/download-url → short-lived signed URL (READY only)
 ```
+
+The staging object is deleted only after the READY transaction commits. If an attempt fails
+part-way (a storage or database error, a crashed render), it withdraws what it published and
+deletes the copy it made, and the row still names the staging object, so the queue's retry runs
+the promotion again from the start. Deleting the staging object first would leave the row
+pointing at nothing and fail the retry as "uploaded object is missing".
 
 ## Categories
 
@@ -60,32 +67,106 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | `MERCHANT_KYB` | private (signed links only) | 25 MB | PDF, JPEG, PNG, WebP |
 | `PRODUCT_IMAGE`, `STORE_BANNER` | public | 25 MB | JPEG, PNG, WebP, AVIF |
-| `STORE_LOGO`, `USER_AVATAR`, `REWARD_COVER` | public | 10 MB | JPEG, PNG, WebP, AVIF |
+| `STORE_LOGO`, `USER_AVATAR` | public | 10 MB | JPEG, PNG, WebP, AVIF — exactly 1:1 (square), at least 256 × 256 |
+| `REWARD_IMAGE` | public | 10 MB | JPEG, PNG, WebP, AVIF — exactly 16:9, at least 1920 × 1080 |
 
 Source of truth: `FILE_CATEGORY_POLICIES` in `packages/shared/src/schemas/domain/platform/storage.ts`.
 Uploads are a single request; chunked S3 multipart upload (retrying only failed parts) is **not
 implemented yet** and is required before allowing much larger files.
 
-## Reward covers
+## Reward images
 
-Every reward shows a cover image (`rewards.cover_file_id`, required).
+Every reward shows 1–10 photos in order (`reward_images`, position 0 is the cover). Shared rules:
+`MAX_REWARD_IMAGES` and `FILE_CATEGORY_POLICIES.REWARD_IMAGE.imageRules` in `packages/shared`.
 
-- **Upload first, then save.** The merchant uploads a `REWARD_COVER` file to the organization
-  (`merchant:manage_rewards`); it goes through the normal ticket → upload → complete → scan path and
-  is bound to nothing (`StoredFileBinding` `NONE`). The reward then names it in `coverFileId` on
-  create or edit.
-- **Checked on every save.** `RewardRepository` locks the file row (`FOR UPDATE`) and requires the
-  organization's own READY, public, published, live `REWARD_COVER` inside the reward write's
-  transaction; otherwise the API answers `400 REWARD_COVER_INVALID`. A referrer reward shares its
-  consumer reward's cover.
+- **Sharp by construction.** Every image is exactly 16:9 (±0.5%) and at least 1920 × 1080 (Full HD).
+  The merchant console crops a picked photo to 16:9 in the browser (`ImageCropper` cannot zoom
+  in past Full HD; zoomed all the way out it shows the whole photo, centred, the room around it
+  filled with a blurred copy of the photo, so a photo too small to fill a Full HD frame is still
+  usable whole) and uploads the crop as WebP at its own size, capped at the widest rendition
+  (3840 × 2160) and rounded down to whole 16:9 units (`preparedImageSize`), so a larger photo keeps
+  its extra detail and a smaller one is never upscaled; the API never trusts that: at `complete` it decodes
+  the stored bytes with sharp and answers `400 FILE_IMAGE_DIMENSIONS_INVALID` (wrong shape or too
+  small) or `400 FILE_IMAGE_UNREADABLE` before the file can be scanned or used. The width and height
+  are recorded on the file (`stored_files.image_width/height`).
+- **Renditions.** When the file is promoted to READY the API renders WebP renditions from the
+  original (auto-oriented, metadata stripped, Lanczos, quality 85): `THUMBNAIL` 640, `MEDIUM` 1280,
+  `LARGE` 1920, `XLARGE` 2560, `UHD` 3840 — only those no wider than the stored original
+  (`renditionsForWidth`, read from the stored bytes), so a Full HD upload stops at `LARGE` and is never
+  served as an upscaled copy — recorded in `file_variants` with their size and
+  published next to the original. `RewardResponse.images[]` carries each image's `url`, size and
+  `sources[]`, which clients render as `srcset`/`sizes`, so a phone downloads ~100 KB, not 4K.
+  A failed render fails the promotion and withdraws whatever was published.
+- **Upload first, then save.** The merchant uploads `REWARD_IMAGE` files to the organization
+  (`merchant:manage_rewards`); each goes ticket → upload → complete (pixel check) → scan → READY and
+  is bound to nothing (`StoredFileBinding` `NONE`). The reward names them, in order, in
+  `imageFileIds` on create or edit (`1`–`10`, no duplicates).
+- **Checked on every save.** `RewardRepository` locks the file rows (`FOR UPDATE`) and requires
+  each to be the organization's own READY, public, published, live `REWARD_IMAGE` inside the
+  reward write's transaction; otherwise `400 REWARD_IMAGES_INVALID`. An edit soft-deletes the
+  previous rows and writes the new order. A referrer reward shares its consumer reward's images.
 - **Never deleted while in use.** `DELETE /files/:id` takes the same row lock and answers
-  `409 FILE_IN_USE_AS_REWARD_COVER` while a live reward shows the file, so a save and a delete cannot
-  interleave and every reward always has a URL (`RewardResponse.coverImageUrl`).
-- **Readable with the reward.** RLS policy `stored_files_reward_cover_read` lets a session read a
-  cover's file row exactly when it can read a reward using it (marketplace shoppers, claim holders,
-  members).
-- Keys: `stores/{organizationId}/reward-covers/{fileId}.{ext}`. Seed photos live in
-  `apps/api/prisma/seed/assets/reward-covers/` (Unsplash License, credits in `CREDITS.md`).
+  `409 FILE_IN_USE_AS_REWARD_IMAGE` while a live reward shows the file, so a save and a delete
+  cannot interleave and every reward always has a cover.
+- **Readable with the reward.** RLS policies `stored_files_reward_image_read` and
+  `file_variants_reward_image_read` let a session read an image's file and rendition rows exactly
+  when it can read a live reward showing it (marketplace shoppers, claim holders, members);
+  `reward_images` itself follows its reward (`reward_images_read`, plus the API-key principal's
+  policies).
+- **Downloadable by reviewers.** `GET /admin/rewards/:rewardId/images/:fileId/download`
+  (`MANAGE REWARD`, the moderation permission) signs a short-lived URL for the image's original
+  upload with `Content-Disposition: attachment`, named after the uploaded file. Only a live image of
+  that live reward resolves (`404 REWARD_IMAGE_NOT_FOUND` otherwise), so a reviewer needs no file
+  capability in the merchant's organization.
+- **Downloadable all at once.** `GET /admin/rewards/:rewardId/images/archive` (`MANAGE REWARD`)
+  streams every live image of the reward as one ZIP (`<reward-title>-photos.zip`) of the original
+  uploads, in display order, as entries `1-<original name>`, `2-…` (names through
+  `sanitizeFileName`, so no entry carries a path). `FileService.createZipArchive` builds it with
+  `zipArchiveStream` (`apps/api/src/modules/storage/utils/zip-archive.util.ts`, fflate): entries are
+  stored, not recompressed (WebP, JPEG and PDF are compressed already), and each object is opened
+  only when the archive reaches it, so memory stays at a chunk or two whatever the photos weigh. A
+  reward that does not exist or has no image is a JSON `404 REWARD_IMAGE_NOT_FOUND` before any
+  byte is sent; an object missing from storage mid-way aborts the response instead of ending a
+  truncated archive. Any other set of already-authorized files (KYB evidence, say) can reuse
+  `createZipArchive`.
+- Keys: originals at `stores/{organizationId}/reward-images/{fileId}.{ext}`, renditions at
+  `stores/{organizationId}/reward-images/{kind}/{fileId}.webp`. Seed photos (4K WebP — above the
+  Full HD minimum, so they get every rendition — one folder per
+  set, `01` is the cover) live in `apps/api/prisma/seed/assets/reward-images/` with `manifest.json`
+  (Unsplash License, credits in `CREDITS.md`); the seed stores, checks and renders them through
+  the same `ImageRenditionService`.
+
+
+## Avatars and store logos
+
+A profile picture (`USER_AVATAR`) and a store logo (`STORE_LOGO`) are square, at least 256 × 256
+(`FILE_CATEGORY_POLICIES.<category>.imageRules`), checked like reward images: in the browser
+first, then on the stored bytes at `complete` (`400 FILE_IMAGE_DIMENSIONS_INVALID`, "Images must be
+1:1 (square)."). Renditions: `THUMBNAIL` 128, `MEDIUM` 256, `LARGE` 512 for both, plus `XLARGE`
+1024 for logos — only those no wider than the original.
+
+- **One crop flow everywhere** (`packages/client/src/lib/storage`): `takeImage(file, rules)` reads
+  the picked photo (refused / prepared at once / needs a crop), `useImagePick` holds a photo for
+  `ImageCropDialog` and releases its bitmap and preview URL, and `ImageSlotField` is the preview
+  with upload / replace / remove. Reward photos, avatars and logos all use them; the dialog zooms
+  out to the whole photo over a blurred copy of it, so a wide wordmark logo keeps every letter.
+- **Avatar:** `ProfileAvatarEditor` (`lib/auth/profile`) on the admin profile page and the web
+  account settings; bound to the uploader on READY.
+- **Store logo:** `/orgs/{slug}/settings/branding` in the merchant console (`merchant:view_locations`
+  to see it, `merchant:manage_locations` to change it — the API's `STORE_LOGO` rule). Bound as the
+  organization's `LOGO` asset on READY, replacing the previous one; `GET /orgs/:orgSlug/context`
+  returns it as `organization.logo` (`{ fileId, url, sources }` or `null`) and reward responses as
+  `organizationLogoUrl` + `organizationLogoSources`, both through `ORGANIZATION_LOGO_ASSETS_SELECT`.
+  The upload ticket's `assetType` must match the category (`LOGO` for `STORE_LOGO`, `BANNER` for
+  `STORE_BANNER`); a mismatch is a `400`.
+- **Served in their renditions.** Avatars (`GET /auth/profile` → `avatar.sources`) and logos carry
+  their renditions, smallest first (`ImageSource[]`, `toImageSources`); every place that draws one
+  sets `srcset` + `sizes` for the size it is drawn (`UserAvatar`, `EntityAvatar`, `ImageSlotField`,
+  `fixedImageSizes`), so a 28 px sidebar avatar downloads the 128 px rendition, not the original.
+- **In the app shell.** The sidebar account, the profile menu and the web landing menu show the
+  picture through `useOwnAvatar` (`lib/auth/profile`), which reads `GET /auth/profile` — the query
+  every avatar upload or removal reloads, so the shell updates at once and after a refresh. A
+  restricted session (email or two-factor setup pending) cannot read the profile and shows initials.
 
 ## Statuses
 
@@ -201,6 +282,16 @@ environment), but it behaves like a presigned-URL provider:
   expired → `403`; the file must still be READY at that key, otherwise `404`. Served with the file's
   own `Content-Type`, `X-Content-Type-Options: nosniff` and a sanitized `Content-Disposition`
   (ASCII fallback plus RFC 5987 `filename*`).
+- **Public links are saved as paths.** The local driver saves a public file's link as a path on
+  the API (`/api/v1/files/{fileId}[/variants/{kind}]/local-public`), never with the API's address;
+  `PublicUrlResolver` (`src/config/public-url.resolver.ts`) joins it to the API's public address
+  (`http.publicUrl`) whenever the link is served — profile avatars, store logos, reward images and
+  file records alike. A saved picture therefore survives an address change (another Wi-Fi, a
+  tunnel, `API_PUBLIC_URL`). S3 and Firebase save absolute CDN URLs, which pass through unchanged.
+  The address is never the listen wildcard: with `HOST=0.0.0.0` and no `API_PUBLIC_URL`, development
+  uses this machine's LAN address, so a phone (Expo Go) can open the links too. Rows saved before
+  this with an address are repaired once by `pnpm --filter @workspace/api
+  storage:repair-local-public-paths` (dry run; add `-- --apply`), which touches local-driver rows only.
 - **Public assets:** `GET /files/{fileId}/local-public` serves READY public files by id. It plays
   the CDN's role, so it sends the same `Cache-Control: public, max-age=86400` as the CloudFront copy
   (`PUBLIC_ASSET_CACHE_CONTROL`) and is exempt from the credential-guarding `strict` rate limit (the

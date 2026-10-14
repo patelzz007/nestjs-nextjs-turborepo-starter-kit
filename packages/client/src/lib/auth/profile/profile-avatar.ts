@@ -1,8 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { FILE_CATEGORY_POLICIES, type FileCategoryPolicy } from "@workspace/shared";
+import { FILE_CATEGORY_POLICIES, type FileCategoryPolicy, type ImageRules } from "@workspace/shared";
 
 import { apiRouter } from "../../api/endpoints";
-import { assertImageFileAllowed, ImageFileRejectedError, imageFileRules, type ImageFileRejection } from "../../storage/image-file-rules";
+import { assertImageFileAllowed, ImageFileRejectedError, imageFileRules, requireImageRules, type ImageFileRejection } from "../../storage/image-file-rules";
 
 // ============================================
 // lib/auth/profile/profile-avatar.ts — avatar rules shared by every app
@@ -21,6 +21,12 @@ export const AVATAR_ACCEPT: string = AVATAR_FILE_RULES.accept;
 
 /** The largest avatar, in whole MiB, for messages. */
 export const AVATAR_MAX_MEBIBYTES: number = AVATAR_FILE_RULES.maxMebibytes;
+
+/** Square, at least 256 × 256 — a picked photo of another shape is cropped first (the API re-checks the stored pixels). */
+export const AVATAR_IMAGE_RULES: ImageRules = requireImageRules(AVATAR_FILE_POLICY);
+
+/** The limits shown under the avatar controls — from the shared avatar policy. */
+export const AVATAR_HINT = `A square photo, at least ${String(AVATAR_IMAGE_RULES.minWidth)} × ${String(AVATAR_IMAGE_RULES.minHeight)} pixels — any other photo is cropped first. JPEG, PNG, WebP or AVIF, up to ${String(AVATAR_MAX_MEBIBYTES)} MB.`;
 
 /** Why a picked file cannot be an avatar (the generic image rejection). */
 export type AvatarFileRejection = ImageFileRejection;

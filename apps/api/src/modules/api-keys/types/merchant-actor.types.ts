@@ -23,3 +23,8 @@ export interface MerchantApiKeyActor {
 export type MerchantActor = MerchantUserActor | MerchantApiKeyActor;
 
 export const MERCHANT_ACTOR_KEY = "merchantActor";
+
+/** Who to record as having made a change (`deleted_by`, audit trails): the member, or the API key for machine calls. */
+export function merchantActorAuditId(actor: MerchantActor): string {
+	return actor.kind === "user" ? actor.userId : actor.apiKeyId;
+}

@@ -1,9 +1,9 @@
 import { FILE_CATEGORY_POLICIES } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { assertImageFileAllowed, ImageFileRejectedError, imageFileRules, type ImageFileRejection } from "./image-file-rules";
+import { assertImageFileAllowed, ImageFileRejectedError, imageFileRules, type ImageFileRejection, requireImageRules } from "./image-file-rules";
 
-const COVER_POLICY = FILE_CATEGORY_POLICIES.REWARD_COVER;
+const COVER_POLICY = FILE_CATEGORY_POLICIES.REWARD_IMAGE;
 
 function rejection(file: File): ImageFileRejection | "accepted" | "unexpected" {
 	try {
@@ -39,5 +39,15 @@ describe("image file rules", () => {
 		expect(() => {
 			assertImageFileAllowed(fileOf(COVER_POLICY.maxBytes + 1, "image/png"), COVER_POLICY);
 		}).toThrow("The image must be at most 10 MB.");
+	});
+});
+
+describe("requireImageRules", () => {
+	it("returns a category's pixel rules", () => {
+		expect(requireImageRules(FILE_CATEGORY_POLICIES.STORE_LOGO)).toMatchObject({ aspectWidth: 1, aspectHeight: 1 });
+	});
+
+	it("refuses a category without pixel rules, naming it", () => {
+		expect(() => requireImageRules(FILE_CATEGORY_POLICIES.MERCHANT_KYB)).toThrow("The MERCHANT_KYB policy must declare image rules");
 	});
 });

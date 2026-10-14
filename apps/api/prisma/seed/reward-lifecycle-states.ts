@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import { rewardCoverSeedId } from "./reward-covers";
+import { linkRewardImages } from "./reward-images";
 
 import { DAY_MS } from "@workspace/shared";
 
@@ -203,7 +203,6 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				coverFileId: rewardCoverSeedId("cake"),
 				quantityTotal: 500,
 				quantityRemaining: 500,
 				expiryDate: now + 30 * DAY_MS,
@@ -224,7 +223,6 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 				rewardValue: 15,
 				rewardKind: "CONSUMER",
 				category: "restaurant",
-				coverFileId: rewardCoverSeedId("durian"),
 				quantityTotal: 40,
 				quantityRemaining: 40,
 				expiryDate: now + 20 * DAY_MS,
@@ -235,6 +233,10 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 			},
 		],
 	});
+	await linkRewardImages([
+		{ rewardId: id("kl-reward-rejected"), organizationId: context.klOrganizationId, slug: "cake" },
+		{ rewardId: id("mlk-reward-deleted"), organizationId: context.mlkOrganizationId, slug: "durian" },
+	]);
 }
 
 /**

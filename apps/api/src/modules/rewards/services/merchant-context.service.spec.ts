@@ -12,6 +12,7 @@ import { OrganizationContextService } from "../../organization/services/organiza
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { MerchantContextService } from "./merchant-context.service";
 import { RequestContextService } from "../../../common/context/request-context";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 vi.mock("../../organization/services/organization-context.service", () => ({
 	OrganizationContextService: class {},
@@ -43,7 +44,7 @@ function serviceAs(role: OrganizationMembershipRole): ServiceUnderTest {
 	const tenantTx = new TenantTransactionService(createTestPrisma(), new RequestContextService());
 	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
 	const audit = new OrganizationAuditService();
-	const organizationContext = new OrganizationContextService(tenantTx, cedar, audit);
+	const organizationContext = new OrganizationContextService(tenantTx, cedar, audit, createTestPublicUrls());
 	const organizationRewardAuth = new OrganizationRewardAuthService(tenantTx, organizationContext, cedar, audit);
 	vi.spyOn(organizationRewardAuth, "resolveOrganizationFromSlug").mockResolvedValue({
 		organizationId: "org-1",
@@ -137,7 +138,7 @@ function scopedService(locationScopeType: "ALL_LOCATIONS" | "SELECTED", location
 	const tenantTx = new TenantTransactionService(createTestPrisma(), new RequestContextService());
 	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
 	const audit = new OrganizationAuditService();
-	const organizationContext = new OrganizationContextService(tenantTx, cedar, audit);
+	const organizationContext = new OrganizationContextService(tenantTx, cedar, audit, createTestPublicUrls());
 	const assertAccessibleLocation = vi.fn().mockResolvedValue(undefined);
 	Object.assign(organizationContext, {
 		assertAccessibleLocation,

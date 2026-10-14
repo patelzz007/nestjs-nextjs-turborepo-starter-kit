@@ -16,11 +16,14 @@ import { KpiStatCard, type KpiChange } from "./kpi-stat-card";
 import { LockoutCountdown } from "./lockout-countdown";
 import { PasswordInput } from "./password-input";
 import { PasswordStrengthMeter } from "./password-strength-meter";
-import { Select, SelectClear, SelectClearAll, SelectTrigger, SelectValue } from "./select";
+import { Select, SelectClear, SelectClearAll, type SelectOption, SelectTrigger, SelectValue } from "./select";
 import { Sheet, SheetContent, SheetTitle } from "./sheet";
 import { TimeSeriesChart, type TimeSeriesDefinition, type TimeSeriesPoint } from "./time-series-chart";
 import { Toaster, createToastManager } from "./toast";
 import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+
+/** The select case only checks copy, so it renders without options. */
+const NO_SELECT_OPTIONS: readonly SelectOption<string>[] = [];
 
 /**
  * One kit component per label family: it must read its copy from the
@@ -210,7 +213,7 @@ const CASES: readonly LabelFamilyCase[] = [
 	{
 		family: "select",
 		element: (override) => (
-			<Select labels={override === undefined ? undefined : { clearSelection: override }}>
+			<Select items={NO_SELECT_OPTIONS} labels={override === undefined ? undefined : { clearSelection: override }}>
 				<SelectTrigger>
 					<SelectValue />
 					<SelectClear onClear={noop} />

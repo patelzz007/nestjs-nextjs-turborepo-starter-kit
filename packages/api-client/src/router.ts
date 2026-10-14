@@ -690,6 +690,10 @@ export const apiRouter = {
 
 	rewardsAdmin: {
 		pendingRewards: defineQuery(apiContract.rewardsAdmin.pendingRewards, { scope: (): ApiQueryKey => ["rewards-admin", "pending"] }),
+		/** One reward in full (the moderation detail page); its key prefixes the reward's image downloads. */
+		getReward: defineQuery(apiContract.rewardsAdmin.getReward, {
+			scope: ({ rewardId }: { readonly rewardId: string }): ApiQueryKey => ["rewards-admin", "rewards", rewardId],
+		}),
 		listOrganizations: defineQuery(apiContract.rewardsAdmin.listOrganizations, { scope: (): ApiQueryKey => ["rewards-admin", "organizations"] }),
 		getOrganization: defineQuery(apiContract.rewardsAdmin.getOrganization, {
 			scope: ({ organizationId }: AdminOrganizationScope): ApiQueryKey => ["rewards-admin", "organization", organizationId],
@@ -702,6 +706,10 @@ export const apiRouter = {
 		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, { scope: (): ApiQueryKey => ["rewards-admin", "analytics", "sales"] }),
 		/** The platform analytics dashboard; the export is `apiDownloads.rewardsAdmin.analyticsExport`. */
 		analyticsDashboard: defineQuery(apiContract.rewardsAdmin.analyticsDashboard, { scope: (): ApiQueryKey => ["rewards-admin", "analytics", "dashboard"] }),
+		/** A signed URL that downloads one image of a reward — fetched on demand (`fetchOrThrow`), it expires. */
+		downloadRewardImage: defineQuery(apiContract.rewardsAdmin.downloadRewardImage, {
+			scope: ({ rewardId }: { readonly rewardId: string }): ApiQueryKey => ["rewards-admin", "rewards", rewardId, "images", "download"],
+		}),
 		approveReward: defineMutation(apiContract.rewardsAdmin.approveReward),
 		rejectReward: defineMutation(apiContract.rewardsAdmin.rejectReward),
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb),

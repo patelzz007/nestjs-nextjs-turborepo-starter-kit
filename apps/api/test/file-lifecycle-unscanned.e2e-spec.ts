@@ -7,6 +7,7 @@ import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 
 // The app exactly as configured for e2e: local driver, MALWARE_SCANNER=none
 // (test/setup-env.ts → TEST_E2E_STORAGE). No scanner exists, so a file must
@@ -18,10 +19,8 @@ const ADMIN_EMAIL = "admin@example.com";
 const ADMIN_PASSWORD = "Admin@123";
 const POLL_ATTEMPTS = 100;
 const POLL_INTERVAL_MS = 100;
-const PNG_BYTES: Buffer = Buffer.from(
-	"89504e470d0a1a0a0000000d4948445200000001000000010806000000" + "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082",
-	"hex",
-);
+/** The avatar uploaded throughout: a real square image, so it passes the avatar's pixel rules at `complete`. */
+const PNG_BYTES: Buffer = AVATAR_PNG_BYTES;
 const TicketSchema = CreateFileUploadUrlResponseSchema.extend({ fields: z.object({ key: z.string(), token: z.string() }).strict() });
 
 describe("File lifecycle with MALWARE_SCANNER=none (e2e)", () => {

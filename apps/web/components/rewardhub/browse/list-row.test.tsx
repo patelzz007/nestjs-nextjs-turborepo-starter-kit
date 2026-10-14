@@ -46,3 +46,14 @@ describe("RewardListRow cover", () => {
 		expect(thumbnail?.querySelector("[data-slot=entity-avatar]")).not.toBeNull();
 	});
 });
+
+describe("RewardListRow action", () => {
+	it("shows the action's text at every width, with no trailing arrow icon", () => {
+		const reward = buildRewardResponse();
+		render(<RewardListRow reward={reward} />);
+
+		const action = screen.getByRole("link", { name: `View ${reward.title}` });
+		expect(action.textContent).toBe("View");
+		expect(action.querySelector("svg")).toBeNull();
+	});
+});

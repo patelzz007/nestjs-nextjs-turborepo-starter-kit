@@ -56,11 +56,11 @@ consistent across the three Next.js apps.
   search, filters and page in the query string (`?search=&filter[city]=&filter[category]=&page=`);
   the wallet keeps its page there (`/rewardhub/wallet?page=&cursor=`).
 - **admin** — grouped by domain: `/analytics` (the platform dashboard; `?range=`, `?from=&to=`, `?interval=` — the shared `ANALYTICS_URL_STATE`, see [Analytics dashboards](./analytics-charts.md); the old `/analytics/sales` redirects here), `/users` (+ `/[id]`, `/mfa-recovery`), `/merchants`
-  (+ `/invites`, `/verification`, `/store-requests`), `/rewards/review`, `/emails/{templates,log}`,
+  (+ `/invites`, `/verification`, `/store-requests`), `/rewards/review` (+ `/[id]`), `/emails/{templates,log}`,
   `/geography`, `/catalog/{products,categories}`, `/settings/{billing,access}` (platform),
   `/account/{profile,security}` (personal). Full table: [Admin panel](./admin-panel.md).
-- **merchant** — org-scoped under `/orgs/[orgSlug]`: `dashboard`, `rewards` (`new`,
-  `[rewardId]/edit`), `redemptions` (`?page=`), `analytics`, `terminals` (POS terminal pairing), `api-keys` (`?status=` key filter), `settings` (organization index:
+- **merchant** — org-scoped under `/orgs/[orgSlug]`: `dashboard`, `rewards` (`?status=live|review|drafts|ended`
+  status tab — none opens the first tab with rewards; `new`, `[rewardId]/edit`), `redemptions` (`?page=`), `analytics`, `terminals` (POS terminal pairing), `api-keys` (`?status=` key filter), `settings` (organization index:
   `team`, `locations`, `verification`), `account` (personal). Top-level entry points: `/` and `/account` resolve the organization
   server-side; `/onboarding`, `/team-invite`, `/auth/*` (login, forgot-password, reset-password — the
   same paths as every app, from `APP_LINKS.auth`).

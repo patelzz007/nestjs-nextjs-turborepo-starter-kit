@@ -8,7 +8,8 @@ import { AccessRestrictedNotice } from "@/components/common/access-restricted-no
 import { KYB_MERCHANT_LOADING_LABELS, KYB_QUEUE_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { KybMerchantCardSkeleton, KybQueueItemsSkeleton } from "@/components/loading/merchant-skeletons";
 import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "@workspace/client/lib/merchant/kyb/document-preview-dialog";
-import { openExternalDocument, triggerBrowserDownload } from "@workspace/client/lib/merchant/kyb/document-utils";
+import { openExternalDocument } from "@workspace/client/lib/merchant/kyb/document-utils";
+import { triggerBrowserDownload } from "@workspace/client/lib/storage/browser-download";
 import { MerchantKybStoredDocumentList } from "@workspace/client/lib/merchant/kyb/stored-document-list";
 import type {
 	Envelope,

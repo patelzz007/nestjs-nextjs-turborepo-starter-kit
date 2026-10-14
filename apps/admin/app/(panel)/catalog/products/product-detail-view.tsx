@@ -7,7 +7,7 @@ import { PERMISSION, type Envelope, type Product } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { CatalogDetailPageSkeleton, PRODUCT_DETAIL_SHAPE } from "@/components/loading/catalog-skeletons";
 import { PRODUCT_LOADING_LABELS } from "@/components/loading/loading-labels";
@@ -48,7 +48,6 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 		return (
 			<div className="space-y-4">
 				<Link href={ROUTES.catalog.products.list} className={buttonVariants({ variant: "outline" })}>
-					<ArrowLeft className="mr-2 size-4" />
 					{"Back to products"}
 				</Link>
 				<p className="text-destructive">{"Could not load this product."}</p>
@@ -60,7 +59,6 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 		<div className="space-y-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<Link href={ROUTES.catalog.products.list} className={buttonVariants({ variant: "outline" })}>
-					<ArrowLeft className="mr-2 size-4" />
 					{"Back to products"}
 				</Link>
 				{canUpdate ? (

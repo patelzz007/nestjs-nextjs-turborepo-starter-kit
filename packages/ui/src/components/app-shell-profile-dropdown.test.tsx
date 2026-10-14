@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { UI_KIT_LABELS_EN } from "../lib/labels/en";
 import type { UiKitLabels } from "../lib/labels/ui-kit-labels";
+import { stubLoadedImages } from "../testing/loaded-image-stub";
 import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
 import { AppShellProfileDropdown } from "./app-shell-profile-dropdown";
 import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
@@ -77,5 +78,15 @@ describe("AppShellProfileDropdown", () => {
 
 	it("throws without a UiKitLabelsProvider", (): void => {
 		expect(() => render(<AppShellProfileDropdown name="Ada" onLogout={vi.fn()} />)).toThrow('"appShellProfileDropdown" labels');
+	});
+
+	it("shows the person's picture on the trigger and in the open menu, each at the size it is drawn", (): void => {
+		const restoreImages = stubLoadedImages();
+		const picture = { url: "https://cdn.example.com/users/ada/avatar.webp", sources: [{ width: 128, url: "https://cdn.example.com/users/ada/thumbnail.webp" }] };
+		render(<AppShellProfileDropdown open name="Ada Lovelace" avatar={picture} onLogout={vi.fn()} />, { wrapper: UiKitTestProviders });
+
+		const sizes = [...document.querySelectorAll('[data-slot="user-avatar"] img')].map((image) => image.getAttribute("sizes"));
+		expect(sizes).toEqual(expect.arrayContaining(["32px", "56px"]));
+		restoreImages();
 	});
 });

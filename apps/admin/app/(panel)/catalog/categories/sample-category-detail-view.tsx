@@ -7,7 +7,7 @@ import { PERMISSION, type Envelope, type SampleCategory } from "@workspace/share
 import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { CATEGORY_DETAIL_SHAPE, CatalogDetailPageSkeleton } from "@/components/loading/catalog-skeletons";
 import { CATEGORY_LOADING_LABELS } from "@/components/loading/loading-labels";
@@ -47,7 +47,6 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 		return (
 			<div className="space-y-4">
 				<Link href={ROUTES.catalog.categories.list} className={buttonVariants({ variant: "outline" })}>
-					<ArrowLeft className="mr-2 size-4" />
 					{"Back to categories"}
 				</Link>
 				<p className="text-destructive">{"Could not load this category."}</p>
@@ -59,7 +58,6 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 		<div className="space-y-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<Link href={ROUTES.catalog.categories.list} className={buttonVariants({ variant: "outline" })}>
-					<ArrowLeft className="mr-2 size-4" />
 					{"Back to categories"}
 				</Link>
 				{canUpdate ? (

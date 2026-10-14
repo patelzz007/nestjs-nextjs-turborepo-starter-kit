@@ -17,6 +17,7 @@ import {
 	SelectGroup,
 	SelectItem,
 	SelectLabel,
+	type SelectOption,
 	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
@@ -52,6 +53,32 @@ const TEAMS: readonly DemoOption[] = [
 	{ value: "support", label: "Support", group: "Operations" },
 ];
 
+/** Generic two-option list for the size / disabled / width demos. */
+const DEMO_OPTIONS: readonly SelectOption<string>[] = [
+	{ value: "a", label: "Option A" },
+	{ value: "b", label: "Option B" },
+];
+
+/** The single-option list for the disabled / width demos. */
+const SINGLE_DEMO_OPTION: SelectOption<string> = { value: "a", label: "Option A" };
+const SINGLE_DEMO_OPTIONS: readonly SelectOption<string>[] = [SINGLE_DEMO_OPTION];
+
+const ENVIRONMENTS: readonly SelectOption<string>[] = [
+	{ value: "prod", label: "Production" },
+	{ value: "staging", label: "Staging" },
+];
+
+/** The roles demo: empty until "Create role" adds the custom role. */
+const CUSTOM_ROLE: SelectOption<string> = { value: "custom", label: "Custom role" };
+const REMOVE_ROLE: SelectOption<string> = { value: "none", label: "Remove role" };
+const ROLE_OPTIONS: readonly SelectOption<string>[] = [CUSTOM_ROLE, REMOVE_ROLE];
+const NO_OPTIONS: readonly SelectOption<string>[] = [];
+
+/** The label of `value` in `options`, or `fallback` when nothing is selected. */
+function optionLabel(options: readonly SelectOption<string>[], value: string | null, fallback: string): string {
+	return options.find((option) => option.value === value)?.label ?? fallback;
+}
+
 const DEPARTMENTS: readonly string[] = ["Engineering", "Product", "Operations"];
 
 const SIZES: readonly ("sm" | "default" | "lg")[] = ["sm", "default", "lg"];
@@ -69,8 +96,6 @@ const teamFormSchema = z.object({
 
 type TeamFormValues = z.infer<typeof teamFormSchema>;
 
-const TEAM_VALUES: readonly string[] = ["platform", "data", "growth", "design", "support"];
-
 const teamFormDefaultValues: TeamFormValues = { language: "", teams: [] };
 
 /** Named render-prop (rule 16: no inline arrows in props). */
@@ -81,10 +106,9 @@ function formatTeamLabel(value: string): string {
 export function SelectShowcase(): React.JSX.Element {
 	// Single-select (controlled value).
 	const [language, setLanguage] = useState<string | null>("ts");
-	const languageLabel = LANGUAGES.find((option) => option.value === language)?.label ?? "none";
-
-	// value → label map so the trigger shows the label, never the raw value.
-	const labelOf = useCallback((value: string): string => LANGUAGES.find((option) => option.value === value)?.label ?? value, []);
+	// `items={LANGUAGES}` on each Select is what makes the trigger show the
+	// label ("TypeScript"), never the raw value ("ts").
+	const languageLabel = optionLabel(LANGUAGES, language, "none");
 
 	// Clear: the smart component owns the outcome (rule 9/10) — set value to null.
 	const handleClearLanguage = useCallback((): void => {
@@ -93,8 +117,11 @@ export function SelectShowcase(): React.JSX.Element {
 
 	// Empty + CTA (feature 2): the smart component owns the "create" outcome.
 	const [role, setRole] = useState<string | null>(null);
+	const [hasCustomRole, setHasCustomRole] = useState<boolean>(false);
+	const roleOptions = hasCustomRole ? ROLE_OPTIONS : NO_OPTIONS;
 	const handleCreateRole = useCallback((): void => {
-		setRole("custom");
+		setHasCustomRole(true);
+		setRole(CUSTOM_ROLE.value);
 		toastMessage.success({ title: "Created a custom role (demo)" });
 	}, []);
 
@@ -103,8 +130,8 @@ export function SelectShowcase(): React.JSX.Element {
 	const groupedTeams = React.useMemo(() => groupOptions(TEAMS), []);
 
 	// ── Multi-select (feature: multiple) ──────────────────────────────────────
-	// `formatTeamLabel` is a module-scope function — referentially stable, so it
-	// satisfies `itemToStringLabel` directly (no extra useCallback wrapper).
+	// `items={TEAMS}` labels the trigger and live region; `formatTeamLabel` (a
+	// module-scope, referentially stable function) labels the chips.
 	const [teams, setTeams] = useState<string[]>(["platform", "data"]);
 	const removeTeam = useCallback((value: string): void => {
 		setTeams((current) => current.filter((item) => item !== value));
@@ -173,7 +200,7 @@ export function SelectShowcase(): React.JSX.Element {
 	// arrows in props). Each returns the controlled Select for its field.
 	const renderLanguageField = useCallback(
 		({ field, fieldState }: { readonly field: ControllerRenderProps<TeamFormValues, "language">; readonly fieldState: ControllerFieldState }): React.JSX.Element => (
-			<Select value={field.value} onValueChange={field.onChange} itemToStringLabel={labelOf} invalid={fieldState.invalid} ariaLabel="Language">
+			<Select items={LANGUAGES} value={field.value} onValueChange={field.onChange} invalid={fieldState.invalid} ariaLabel="Language">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick a language…" />
 					{field.value !== "" ? <SelectClear onClear={clearLanguageField} /> : null}
@@ -187,13 +214,13 @@ export function SelectShowcase(): React.JSX.Element {
 				</SelectContent>
 			</Select>
 		),
-		[labelOf, clearLanguageField],
+		[clearLanguageField],
 	);
 
 	const renderTeamsField = useCallback(
 		({ field, fieldState }: { readonly field: ControllerRenderProps<TeamFormValues, "teams">; readonly fieldState: ControllerFieldState }): React.JSX.Element => (
 			<div className="flex items-center gap-2">
-				<Select multiple value={field.value} onValueChange={field.onChange} itemToStringLabel={formatTeamLabel} invalid={fieldState.invalid} ariaLabel="Teams">
+				<Select multiple items={TEAMS} value={field.value} onValueChange={field.onChange} invalid={fieldState.invalid} ariaLabel="Teams">
 					<SelectTrigger>
 						{field.value.length > 0 ? (
 							<SelectChips>
@@ -206,9 +233,9 @@ export function SelectShowcase(): React.JSX.Element {
 						)}
 					</SelectTrigger>
 					<SelectContent>
-						{TEAM_VALUES.map((value) => (
-							<SelectItem key={value} value={value}>
-								{formatTeamLabel(value)}
+						{TEAMS.map((option) => (
+							<SelectItem key={option.value} value={option.value}>
+								{option.label}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -230,7 +257,7 @@ export function SelectShowcase(): React.JSX.Element {
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">default · clearable</p>
-						<Select value={language} onValueChange={setLanguage} itemToStringLabel={labelOf} shortcut="⌘K">
+						<Select items={LANGUAGES} value={language} onValueChange={setLanguage} shortcut="⌘K">
 							<SelectTrigger>
 								<SelectValue placeholder="Pick a language…" />
 								{language !== null ? <SelectClear onClear={handleClearLanguage} /> : null}
@@ -255,13 +282,16 @@ export function SelectShowcase(): React.JSX.Element {
 							{SIZES.map((size) => (
 								<div key={size} className="flex items-center gap-2">
 									<span className="w-14 shrink-0 text-xs text-muted-foreground">{size}</span>
-									<Select size={size}>
+									<Select items={DEMO_OPTIONS} size={size}>
 										<SelectTrigger>
 											<SelectValue placeholder="Pick…" />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="a">Option A</SelectItem>
-											<SelectItem value="b">Option B</SelectItem>
+											{DEMO_OPTIONS.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
 										</SelectContent>
 									</Select>
 								</div>
@@ -280,18 +310,18 @@ export function SelectShowcase(): React.JSX.Element {
 				<CardContent className="grid gap-4">
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">Roles — empty until you create one</p>
-						<Select value={role} onValueChange={setRole}>
+						<Select items={roleOptions} value={role} onValueChange={setRole}>
 							<SelectTrigger>
 								<SelectValue placeholder="Assign a role…" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectArrow />
-								{role === "custom" ? (
+								{hasCustomRole ? (
 									<>
-										<SelectItem value="custom">Custom role</SelectItem>
+										<SelectItem value={CUSTOM_ROLE.value}>{CUSTOM_ROLE.label}</SelectItem>
 										<SelectSeparator />
-										<SelectItem value="none" variant="destructive">
-											Remove role
+										<SelectItem value={REMOVE_ROLE.value} variant="destructive">
+											{REMOVE_ROLE.label}
 										</SelectItem>
 									</>
 								) : null}
@@ -299,7 +329,7 @@ export function SelectShowcase(): React.JSX.Element {
 							</SelectContent>
 						</Select>
 						<p className="text-xs text-muted-foreground">
-							Selected: <span className="font-medium text-foreground">{role ?? "none"}</span>
+							Selected: <span className="font-medium text-foreground">{optionLabel(roleOptions, role, "none")}</span>
 						</p>
 					</div>
 				</CardContent>
@@ -312,7 +342,7 @@ export function SelectShowcase(): React.JSX.Element {
 					<CardDescription>Groups + labels (improvement 20) · separators</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-4">
-					<Select value={team} onValueChange={setTeam}>
+					<Select items={TEAMS} value={team} onValueChange={setTeam}>
 						<SelectTrigger>
 							<SelectValue placeholder="Pick a team…" />
 						</SelectTrigger>
@@ -330,7 +360,7 @@ export function SelectShowcase(): React.JSX.Element {
 						</SelectContent>
 					</Select>
 					<p className="text-xs text-muted-foreground">
-						Selected: <span className="font-medium text-foreground">{team ?? "none"}</span>
+						Selected: <span className="font-medium text-foreground">{optionLabel(TEAMS, team, "none")}</span>
 					</p>
 				</CardContent>
 			</Card>
@@ -344,49 +374,52 @@ export function SelectShowcase(): React.JSX.Element {
 				<CardContent className="grid gap-4">
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">loading — options arrive later</p>
-						<Select loading>
+						<Select items={ENVIRONMENTS} loading>
 							<SelectTrigger>
 								<SelectValue placeholder="Fetching environments…" />
 							</SelectTrigger>
 							<SelectContent loadingLabel="Fetching environments…">
-								<SelectItem value="prod">Production</SelectItem>
-								<SelectItem value="staging">Staging</SelectItem>
+								{ENVIRONMENTS.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>
 
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">disabled</p>
-						<Select disabled>
+						<Select items={SINGLE_DEMO_OPTIONS} disabled>
 							<SelectTrigger>
 								<SelectValue placeholder="Locked for this role" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="a">Option A</SelectItem>
+								<SelectItem value={SINGLE_DEMO_OPTION.value}>{SINGLE_DEMO_OPTION.label}</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
 
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">full width (default)</p>
-						<Select>
+						<Select items={SINGLE_DEMO_OPTIONS}>
 							<SelectTrigger>
 								<SelectValue placeholder="This trigger stretches…" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="a">Option A</SelectItem>
+								<SelectItem value={SINGLE_DEMO_OPTION.value}>{SINGLE_DEMO_OPTION.label}</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
 
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">compact (fullWidth=false)</p>
-						<Select>
+						<Select items={SINGLE_DEMO_OPTIONS}>
 							<SelectTrigger fullWidth={false}>
 								<SelectValue placeholder="Fits content…" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="a">Option A</SelectItem>
+								<SelectItem value={SINGLE_DEMO_OPTION.value}>{SINGLE_DEMO_OPTION.label}</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
@@ -403,7 +436,7 @@ export function SelectShowcase(): React.JSX.Element {
 					<div className="space-y-2">
 						<p className="text-sm text-muted-foreground">Teams (maxChips=2)</p>
 						<div className="flex items-center gap-2">
-							<Select multiple value={teams} onValueChange={setTeams} itemToStringLabel={formatTeamLabel}>
+							<Select multiple items={TEAMS} value={teams} onValueChange={setTeams}>
 								<SelectTrigger>
 									{teams.length > 0 ? (
 										<SelectChips maxChips={2}>
@@ -416,9 +449,9 @@ export function SelectShowcase(): React.JSX.Element {
 									)}
 								</SelectTrigger>
 								<SelectContent>
-									{TEAM_VALUES.map((value) => (
-										<SelectItem key={value} value={value}>
-											{formatTeamLabel(value)}
+									{TEAMS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
 										</SelectItem>
 									))}
 								</SelectContent>

@@ -469,7 +469,7 @@ service, then acts.
 | `PRODUCT_IMAGE` | upload: `PRODUCT:UPDATE` on that product (kernel); afterwards the uploader | the uploader |
 | `STORE_LOGO`, `STORE_BANNER` | `merchant:manage_locations` (`OWNER`, `ADMIN`) | any active member (`merchant:view_locations`) |
 | `MERCHANT_KYB` | `merchant:manage_verification` (`OWNER`) | `merchant:manage_verification` (`OWNER`) |
-| `REWARD_COVER` | `merchant:manage_rewards` | `merchant:view_rewards` (the published copy itself is public) |
+| `REWARD_IMAGE` | `merchant:manage_rewards` | `merchant:view_rewards` (the published copy and its renditions are public); reviewers open the reward (`GET /admin/rewards/:rewardId`, any status) and download the original through `GET /admin/rewards/:rewardId/images/:fileId/download`, or all of a reward's originals as one ZIP through `GET /admin/rewards/:rewardId/images/archive` (`MANAGE REWARD`) |
 | SuperAdmin | any | any |
 
 - **Same check as the rest of the merchant API.** Organization capabilities that guard an action go

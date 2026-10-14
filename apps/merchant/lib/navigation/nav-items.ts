@@ -1,4 +1,18 @@
-import { BarChart3, CircleUser, KeyRound, LayoutDashboard, MapPin, MonitorSmartphone, ScanLine, Settings, ShieldCheck, Ticket, Users, type LucideIcon } from "lucide-react";
+import {
+	BarChart3,
+	CircleUser,
+	KeyRound,
+	LayoutDashboard,
+	MapPin,
+	MonitorSmartphone,
+	Palette,
+	ScanLine,
+	Settings,
+	ShieldCheck,
+	Ticket,
+	Users,
+	type LucideIcon,
+} from "lucide-react";
 
 import type { CapabilitySlug } from "@workspace/shared";
 
@@ -89,9 +103,9 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		title: "Organization settings",
 		url: ORG_ROUTES.settings.index,
 		section: "Settings",
-		description: "Team, locations, and verification",
+		description: "Team, locations, branding, and verification",
 		icon: Settings,
-		keywords: ["settings", "organization", "team", "locations", "verification", "kyb"],
+		keywords: ["settings", "organization", "team", "locations", "branding", "logo", "verification", "kyb"],
 	},
 	{
 		id: "settings-team",
@@ -110,6 +124,15 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Stores under this organization",
 		icon: MapPin,
 		keywords: ["locations", "stores", "branches", "address"],
+	},
+	{
+		id: "settings-branding",
+		title: "Store branding",
+		url: ORG_ROUTES.settings.branding,
+		section: "Settings",
+		description: "Your store's logo",
+		icon: Palette,
+		keywords: ["branding", "logo", "brand", "image", "store"],
 	},
 	{
 		id: "settings-verification",

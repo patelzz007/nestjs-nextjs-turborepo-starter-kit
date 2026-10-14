@@ -1,15 +1,17 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
+import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { CircleUserRound, LogOut, Settings, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
 import { ROUTES } from "@/lib/routes";
+
+/** The card's avatar: `h-14`, 56 px. */
+const PROFILE_AVATAR_PX = 56;
 
 export interface Profile01Props {
 	readonly user: SidebarUser;
@@ -30,7 +32,6 @@ interface ProfileMenuItem {
  */
 export function Profile01({ user, onLogout }: Profile01Props): React.JSX.Element {
 	const router = useRouter();
-	const initials = getUserInitials(user.name);
 	const canAccessRoute = useCanAccessRoute();
 
 	// Links go through the route guard's rules: a page the session cannot open is not offered.
@@ -65,9 +66,7 @@ export function Profile01({ user, onLogout }: Profile01Props): React.JSX.Element
 				<div className="mb-6 flex items-start gap-4">
 					<div className="relative shrink-0">
 						<div className="relative h-14 w-14 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-							<Avatar className="h-full w-full">
-								<AvatarFallback className="rounded-full text-base font-semibold">{initials}</AvatarFallback>
-							</Avatar>
+							<UserAvatar name={user.name} image={user.avatar} drawnSize={PROFILE_AVATAR_PX} className="h-full w-full" fallbackClassName="text-base font-semibold" />
 						</div>
 					</div>
 

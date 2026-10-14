@@ -50,7 +50,7 @@ export function OrganizationSettingsIndexView({ orgSlug }: OrganizationSettingsI
 
 	return (
 		<div className="space-y-8">
-			<AnalyticsPageHeader title="Organization settings" description="Configure your team, store locations, and business verification." />
+			<AnalyticsPageHeader title="Organization settings" description="Configure your team, store locations, branding, and business verification." />
 			{canManageTeam ? (
 				<SettingsLinkCard
 					title="Team & access"
@@ -65,6 +65,14 @@ export function OrganizationSettingsIndexView({ orgSlug }: OrganizationSettingsI
 					description="View every store site under this organization and your location access scope."
 					href={routes.settings.locations}
 					actionLabel="View locations"
+				/>
+			) : null}
+			{canViewLocations ? (
+				<SettingsLinkCard
+					title="Store branding"
+					description="Upload your store's logo, shown with your rewards in Reward Hub."
+					href={routes.settings.branding}
+					actionLabel="View branding"
 				/>
 			) : null}
 			{canManageVerification ? (

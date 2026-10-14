@@ -75,18 +75,49 @@ export function useSelectLabels(): SelectLabels {
 }
 
 /**
+ * One option of a Select: the stored `value` and the human `label` shown for
+ * it. The Root's `items` is a list of these — base-ui only mounts the popup
+ * (and so the `SelectItem` children) while it is open, so the closed trigger,
+ * the live region and typeahead can only learn an option's label from `items`.
+ * Without it they fall back to the raw value (e.g. "ALL_LOCATIONS").
+ */
+export interface SelectOption<Value> {
+	readonly value: Value;
+	readonly label: string;
+}
+
+/**
+ * The label for one selected value, resolved in base-ui's own order (see
+ * `resolveSelectedLabel` in `@base-ui/react`): `itemToStringLabel`, then the
+ * matching `items` entry, then the stringified value as a last resort for a
+ * value that is not among the options. Keeps the live region in lockstep with
+ * what `SelectValue` renders in the trigger.
+ */
+export function resolveSelectOptionLabel<Value>(value: Value, items: readonly SelectOption<Value>[], itemToStringLabel: ((itemValue: Value) => string) | undefined): string {
+	if (itemToStringLabel !== undefined) {
+		return itemToStringLabel(value);
+	}
+	return items.find((item) => Object.is(item.value, value))?.label ?? String(value);
+}
+
+/**
  * Describes a selection for the sr-only live region. Takes a plain, narrowable
  * union (base-ui's conditional `SelectValueType` can't be narrowed via
- * `Array.isArray`). Uses `itemToStringLabel` when available so the announcement
- * matches what the trigger shows (the label, never the raw value).
+ * `Array.isArray`). Resolves each value through `resolveSelectOptionLabel` so
+ * the announcement matches what the trigger shows (the label, never the raw value).
  */
-export function describeSelection<Value>(value: Value | Value[] | null, itemToStringLabel: ((itemValue: Value) => string) | undefined, labels: SelectLabels): string {
+export function describeSelection<Value>(
+	value: Value | Value[] | null,
+	items: readonly SelectOption<Value>[],
+	itemToStringLabel: ((itemValue: Value) => string) | undefined,
+	labels: SelectLabels,
+): string {
 	if (isArrayValue(value)) {
-		const joined = value.map((item) => itemToStringLabel?.(item) ?? String(item)).join(SELECTION_LABEL_SEPARATOR);
+		const joined = value.map((item) => resolveSelectOptionLabel(item, items, itemToStringLabel)).join(SELECTION_LABEL_SEPARATOR);
 		return labels.selectedMany(value.length, joined);
 	}
 	if (value == null) {
 		return labels.nothingSelected;
 	}
-	return labels.selectedOne(itemToStringLabel?.(value) ?? String(value));
+	return labels.selectedOne(resolveSelectOptionLabel(value, items, itemToStringLabel));
 }

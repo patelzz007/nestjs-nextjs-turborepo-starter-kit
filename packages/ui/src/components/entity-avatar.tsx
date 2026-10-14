@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/av
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import { fixedImageSizes, imageSrcSet, type ImageSourceEntry } from "@workspace/ui/lib/media/image-sources";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
@@ -90,6 +91,8 @@ export interface EntityAvatarProps extends Omit<React.ComponentPropsWithoutRef<"
 	readonly name: string;
 	/** Logo URL; `null`/omitted (or an image that fails to load) shows the monogram. */
 	readonly src?: string | null | undefined;
+	/** The logo's renditions, smallest first — served with `srcset` at the size the mark is drawn. */
+	readonly sources?: readonly ImageSourceEntry[] | undefined;
 	/**
 	 * Accessible name, `<img alt>` semantics: defaults to `name`. Pass `""` when
 	 * the name is already rendered as adjacent text — the mark is then
@@ -104,7 +107,13 @@ export interface EntityAvatarProps extends Omit<React.ComponentPropsWithoutRef<"
  * `object-contain` on a neutral surface (never cropped); until a logo has
  * loaded — or if it fails — the monogram is shown.
  */
-const EntityAvatar = React.forwardRef<HTMLSpanElement, EntityAvatarProps>(function EntityAvatar({ name, src, alt, size, shape, className, ...props }, ref): React.JSX.Element {
+/** How wide each size draws the mark, in CSS pixels (`size-8` … `size-16`) — the `sizes` of its `srcset`. */
+const ENTITY_AVATAR_PX: Readonly<Record<NonNullable<EntityAvatarProps["size"]>, number>> = { sm: 32, md: 40, lg: 48, xl: 64 };
+
+const EntityAvatar = React.forwardRef<HTMLSpanElement, EntityAvatarProps>(function EntityAvatar(
+	{ name, src, sources, alt, size, shape, className, ...props },
+	ref,
+): React.JSX.Element {
 	const accessibleName = alt ?? name;
 	const isDecorative = accessibleName.length === 0;
 	const hasImage = src !== null && src !== undefined && src.length > 0;
@@ -116,6 +125,8 @@ const EntityAvatar = React.forwardRef<HTMLSpanElement, EntityAvatarProps>(functi
 				<AvatarImage
 					keepMounted
 					src={src}
+					srcSet={imageSrcSet(sources)}
+					sizes={fixedImageSizes(ENTITY_AVATAR_PX[size ?? "md"])}
 					alt={accessibleName}
 					loading="lazy"
 					decoding="async"

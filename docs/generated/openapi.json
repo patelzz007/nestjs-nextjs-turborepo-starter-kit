@@ -7656,15 +7656,6 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
-                          "coverFileId": {
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
-                          "coverImageUrl": {
-                            "format": "uri",
-                            "type": "string"
-                          },
                           "createdAt": {
                             "description": "Epoch milliseconds when the record was created",
                             "example": 1786300000000,
@@ -7691,6 +7682,67 @@
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
+                          },
+                          "images": {
+                            "items": {
+                              "properties": {
+                                "fileId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "height": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "sources": {
+                                  "items": {
+                                    "properties": {
+                                      "url": {
+                                        "format": "uri",
+                                        "type": "string"
+                                      },
+                                      "width": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "minItems": 1,
+                                  "type": "array"
+                                },
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "url",
+                                "width",
+                                "height",
+                                "sources"
+                              ],
+                              "type": "object"
+                            },
+                            "maxItems": 10,
+                            "minItems": 1,
+                            "type": "array"
                           },
                           "isDeleted": {
                             "description": "Soft-delete flag — false means the record is active",
@@ -7722,6 +7774,28 @@
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
+                          },
+                          "organizationLogoSources": {
+                            "items": {
+                              "properties": {
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "width",
+                                "url"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "organizationLogoUrl": {
                             "format": "uri",
@@ -7853,6 +7927,7 @@
                           "id",
                           "organizationId",
                           "organizationLogoUrl",
+                          "organizationLogoSources",
                           "title",
                           "description",
                           "rewardType",
@@ -7860,8 +7935,7 @@
                           "termsConditions",
                           "rewardKind",
                           "category",
-                          "coverFileId",
-                          "coverImageUrl",
+                          "images",
                           "quantityTotal",
                           "quantityRemaining",
                           "quantityReserved",
@@ -8009,9 +8083,9 @@
         ]
       }
     },
-    "/api/v1/admin/rewards/{rewardId}/approve": {
-      "post": {
-        "operationId": "RewardsAdminRewardsController_approveReward",
+    "/api/v1/admin/rewards/{rewardId}": {
+      "get": {
+        "operationId": "RewardsAdminRewardsController_getReward",
         "parameters": [
           {
             "in": "path",
@@ -8024,18 +8098,8 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RewardsEmptyBodyDto"
-              }
-            }
-          },
-          "required": false
-        },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -8049,15 +8113,6 @@
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
                           "type": "integer"
-                        },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
                         },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
@@ -8085,6 +8140,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -8116,6 +8232,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -8247,6 +8385,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -8254,8 +8393,422 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
+                        "quantityTotal",
+                        "quantityRemaining",
+                        "quantityReserved",
+                        "startDate",
+                        "expiryDate",
+                        "status",
+                        "claimCount",
+                        "redemptionCount",
+                        "referralsEnabled",
+                        "referralPoolTotal",
+                        "referralPoolRemaining",
+                        "referrerRewardId",
+                        "rules",
+                        "locationScopeType",
+                        "locationIds"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The reward"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Get one reward in full, whatever its status (moderation detail)",
+        "tags": [
+          "Rewards Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/rewards/{rewardId}/approve": {
+      "post": {
+        "operationId": "RewardsAdminRewardsController_approveReward",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rewardId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RewardsEmptyBodyDto"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "category": {
+                          "type": "string"
+                        },
+                        "claimCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "description": "Epoch milliseconds when the record was created",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "deletedAt": {
+                          "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "expiryDate": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "isDeleted": {
+                          "description": "Soft-delete flag — false means the record is active",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "locationIds": {
+                          "items": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "locationNames": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "locationScopeType": {
+                          "enum": [
+                            "ALL_LOCATIONS",
+                            "SELECTED"
+                          ],
+                          "type": "string"
+                        },
+                        "organizationId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "organizationLogoUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "organizationName": {
+                          "type": "string"
+                        },
+                        "quantityRemaining": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "quantityReserved": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "quantityTotal": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "redemptionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "referralPoolRemaining": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "referralPoolTotal": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "referralsEnabled": {
+                          "type": "boolean"
+                        },
+                        "referrerRewardId": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "rewardKind": {
+                          "enum": [
+                            "CONSUMER",
+                            "REFERRER"
+                          ],
+                          "type": "string"
+                        },
+                        "rewardType": {
+                          "enum": [
+                            "DISCOUNT",
+                            "FREE_ITEM",
+                            "CASHBACK",
+                            "POINTS",
+                            "BOGO"
+                          ],
+                          "type": "string"
+                        },
+                        "rewardValue": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "rules": {
+                          "nullable": true,
+                          "properties": {
+                            "maxUsePerUser": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "minSpendMyr": {
+                              "minimum": 0,
+                              "type": "number"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "shareUrl": {
+                          "format": "uri",
+                          "type": "string"
+                        },
+                        "startDate": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "status": {
+                          "enum": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "EXPIRED",
+                            "DISABLED"
+                          ],
+                          "type": "string"
+                        },
+                        "termsConditions": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "Epoch milliseconds when the record was last updated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "createdAt",
+                        "updatedAt",
+                        "isDeleted",
+                        "deletedAt",
+                        "id",
+                        "organizationId",
+                        "organizationLogoUrl",
+                        "organizationLogoSources",
+                        "title",
+                        "description",
+                        "rewardType",
+                        "rewardValue",
+                        "termsConditions",
+                        "rewardKind",
+                        "category",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -8350,6 +8903,204 @@
         ]
       }
     },
+    "/api/v1/admin/rewards/{rewardId}/images/archive": {
+      "get": {
+        "operationId": "RewardsAdminRewardsController_downloadRewardImagesArchive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rewardId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The ZIP archive (Content-Disposition: attachment)"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Download every image of a reward as one ZIP of the original uploads, in display order",
+        "tags": [
+          "Rewards Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/rewards/{rewardId}/images/{fileId}/download": {
+      "get": {
+        "operationId": "RewardsAdminRewardsController_getRewardImageDownload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rewardId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "downloadUrl": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "fileId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "fileName": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "fileId",
+                        "fileName",
+                        "downloadUrl",
+                        "expiresAt"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Signed download URL of the image"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Get a short-lived signed URL that downloads one of a reward's images (the original upload)",
+        "tags": [
+          "Rewards Admin"
+        ]
+      }
+    },
     "/api/v1/admin/rewards/{rewardId}/reject": {
       "post": {
         "operationId": "RewardsAdminRewardsController_rejectReward",
@@ -8406,15 +9157,6 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
-                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -8441,6 +9183,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -8472,6 +9275,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -8603,6 +9428,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -8610,8 +9436,7 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -16757,6 +17582,29 @@
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                               "type": "string"
                             },
+                            "sources": {
+                              "description": "Its served sizes, smallest first, for `srcset` (empty for an avatar uploaded before avatars had renditions)",
+                              "items": {
+                                "properties": {
+                                  "url": {
+                                    "format": "uri",
+                                    "type": "string"
+                                  },
+                                  "width": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "width",
+                                  "url"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
                             "updatedAt": {
                               "description": "When this avatar was bound to the profile (epoch ms)",
                               "maximum": 9007199254740991,
@@ -16772,6 +17620,7 @@
                           "required": [
                             "fileId",
                             "url",
+                            "sources",
                             "updatedAt"
                           ],
                           "type": "object"
@@ -16943,6 +17792,29 @@
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                               "type": "string"
                             },
+                            "sources": {
+                              "description": "Its served sizes, smallest first, for `srcset` (empty for an avatar uploaded before avatars had renditions)",
+                              "items": {
+                                "properties": {
+                                  "url": {
+                                    "format": "uri",
+                                    "type": "string"
+                                  },
+                                  "width": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "width",
+                                  "url"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
                             "updatedAt": {
                               "description": "When this avatar was bound to the profile (epoch ms)",
                               "maximum": 9007199254740991,
@@ -16958,6 +17830,7 @@
                           "required": [
                             "fileId",
                             "url",
+                            "sources",
                             "updatedAt"
                           ],
                           "type": "object"
@@ -22292,7 +23165,9 @@
                             "ORIGINAL",
                             "THUMBNAIL",
                             "MEDIUM",
-                            "LARGE"
+                            "LARGE",
+                            "XLARGE",
+                            "UHD"
                           ],
                           "type": "string"
                         },
@@ -22458,7 +23333,7 @@
                       "STORE_BANNER",
                       "USER_AVATAR",
                       "MERCHANT_KYB",
-                      "REWARD_COVER"
+                      "REWARD_IMAGE"
                     ],
                     "type": "string"
                   },
@@ -22790,7 +23665,7 @@
                                 "STORE_BANNER",
                                 "USER_AVATAR",
                                 "MERCHANT_KYB",
-                                "REWARD_COVER"
+                                "REWARD_IMAGE"
                               ],
                               "type": "string"
                             },
@@ -23006,7 +23881,7 @@
                                 "STORE_BANNER",
                                 "USER_AVATAR",
                                 "MERCHANT_KYB",
-                                "REWARD_COVER"
+                                "REWARD_IMAGE"
                               ],
                               "type": "string"
                             },
@@ -23443,6 +24318,54 @@
           }
         ],
         "summary": "Receive a browser multipart upload for a signed local-storage ticket (development only)",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/v1/files/{fileId}/variants/{variant}/local-public": {
+      "get": {
+        "operationId": "LocalStorageTransferController_localPublicVariant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "variant",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ORIGINAL",
+                "THUMBNAIL",
+                "MEDIUM",
+                "LARGE",
+                "XLARGE",
+                "UHD"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object bytes"
+          }
+        },
+        "security": [
+          {},
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Serve a rendition of a READY public image from local storage (development only)",
         "tags": [
           "Files"
         ]
@@ -36056,7 +36979,7 @@
                                 "STORE_BANNER",
                                 "USER_AVATAR",
                                 "MERCHANT_KYB",
-                                "REWARD_COVER"
+                                "REWARD_IMAGE"
                               ],
                               "type": "string"
                             },
@@ -39348,6 +40271,48 @@
                               ],
                               "type": "string"
                             },
+                            "logo": {
+                              "nullable": true,
+                              "properties": {
+                                "fileId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sources": {
+                                  "items": {
+                                    "properties": {
+                                      "url": {
+                                        "format": "uri",
+                                        "type": "string"
+                                      },
+                                      "width": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "url",
+                                "sources"
+                              ],
+                              "type": "object"
+                            },
                             "primaryLocationId": {
                               "format": "uuid",
                               "nullable": true,
@@ -39379,7 +40344,8 @@
                             "primaryLocationId",
                             "createdAt",
                             "updatedAt",
-                            "timeZone"
+                            "timeZone",
+                            "logo"
                           ],
                           "type": "object"
                         },
@@ -42381,15 +43347,6 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
-                          "coverFileId": {
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
-                          "coverImageUrl": {
-                            "format": "uri",
-                            "type": "string"
-                          },
                           "createdAt": {
                             "description": "Epoch milliseconds when the record was created",
                             "example": 1786300000000,
@@ -42416,6 +43373,67 @@
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
+                          },
+                          "images": {
+                            "items": {
+                              "properties": {
+                                "fileId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "height": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "sources": {
+                                  "items": {
+                                    "properties": {
+                                      "url": {
+                                        "format": "uri",
+                                        "type": "string"
+                                      },
+                                      "width": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "minItems": 1,
+                                  "type": "array"
+                                },
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "url",
+                                "width",
+                                "height",
+                                "sources"
+                              ],
+                              "type": "object"
+                            },
+                            "maxItems": 10,
+                            "minItems": 1,
+                            "type": "array"
                           },
                           "isDeleted": {
                             "description": "Soft-delete flag — false means the record is active",
@@ -42447,6 +43465,28 @@
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
+                          },
+                          "organizationLogoSources": {
+                            "items": {
+                              "properties": {
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "width",
+                                "url"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "organizationLogoUrl": {
                             "format": "uri",
@@ -42578,6 +43618,7 @@
                           "id",
                           "organizationId",
                           "organizationLogoUrl",
+                          "organizationLogoSources",
                           "title",
                           "description",
                           "rewardType",
@@ -42585,8 +43626,7 @@
                           "termsConditions",
                           "rewardKind",
                           "category",
-                          "coverFileId",
-                          "coverImageUrl",
+                          "images",
                           "quantityTotal",
                           "quantityRemaining",
                           "quantityReserved",
@@ -42724,11 +43764,6 @@
                     ],
                     "type": "string"
                   },
-                  "coverFileId": {
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                    "type": "string"
-                  },
                   "description": {
                     "maxLength": 5000,
                     "minLength": 1,
@@ -42738,6 +43773,16 @@
                     "maximum": 9007199254740991,
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "imageFileIds": {
+                    "items": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "type": "array"
                   },
                   "locationIds": {
                     "default": [],
@@ -42830,7 +43875,7 @@
                   "rewardType",
                   "rewardValue",
                   "category",
-                  "coverFileId",
+                  "imageFileIds",
                   "quantityTotal",
                   "expiryDate"
                 ],
@@ -42855,15 +43900,6 @@
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
                           "type": "integer"
-                        },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
                         },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
@@ -42891,6 +43927,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -42922,6 +44019,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -43053,6 +44172,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -43060,8 +44180,7 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -43207,15 +44326,6 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
-                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -43242,6 +44352,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -43273,6 +44444,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -43404,6 +44597,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -43411,8 +44605,7 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -43546,11 +44739,6 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "coverFileId": {
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                    "type": "string"
-                  },
                   "description": {
                     "maxLength": 5000,
                     "minLength": 1,
@@ -43560,6 +44748,16 @@
                     "maximum": 9007199254740991,
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "imageFileIds": {
+                    "items": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "type": "array"
                   },
                   "quantityTotal": {
                     "maximum": 9007199254740991,
@@ -43648,15 +44846,6 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
-                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -43683,6 +44872,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -43714,6 +44964,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -43845,6 +45117,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -43852,8 +45125,7 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -44009,15 +45281,6 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
-                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -44044,6 +45307,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -44075,6 +45399,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -44206,6 +45552,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -44213,8 +45560,7 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",
@@ -49343,13 +50689,13 @@
             }
           },
           {
-            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city",
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, organizationId",
             "in": "query",
             "name": "filter",
             "required": false,
             "schema": {
               "additionalProperties": false,
-              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city",
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, organizationId",
               "properties": {
                 "category": {
                   "additionalProperties": false,
@@ -49410,6 +50756,17 @@
                     }
                   },
                   "type": "object"
+                },
+                "organizationId": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -49446,15 +50803,6 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
-                          "coverFileId": {
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
-                          "coverImageUrl": {
-                            "format": "uri",
-                            "type": "string"
-                          },
                           "createdAt": {
                             "description": "Epoch milliseconds when the record was created",
                             "example": 1786300000000,
@@ -49481,6 +50829,67 @@
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
+                          },
+                          "images": {
+                            "items": {
+                              "properties": {
+                                "fileId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "height": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "sources": {
+                                  "items": {
+                                    "properties": {
+                                      "url": {
+                                        "format": "uri",
+                                        "type": "string"
+                                      },
+                                      "width": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": [
+                                      "width",
+                                      "url"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "minItems": 1,
+                                  "type": "array"
+                                },
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "fileId",
+                                "url",
+                                "width",
+                                "height",
+                                "sources"
+                              ],
+                              "type": "object"
+                            },
+                            "maxItems": 10,
+                            "minItems": 1,
+                            "type": "array"
                           },
                           "isDeleted": {
                             "description": "Soft-delete flag — false means the record is active",
@@ -49512,6 +50921,28 @@
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
+                          },
+                          "organizationLogoSources": {
+                            "items": {
+                              "properties": {
+                                "url": {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "width",
+                                "url"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           },
                           "organizationLogoUrl": {
                             "format": "uri",
@@ -49643,6 +51074,7 @@
                           "id",
                           "organizationId",
                           "organizationLogoUrl",
+                          "organizationLogoSources",
                           "title",
                           "description",
                           "rewardType",
@@ -49650,8 +51082,7 @@
                           "termsConditions",
                           "rewardKind",
                           "category",
-                          "coverFileId",
-                          "coverImageUrl",
+                          "images",
                           "quantityTotal",
                           "quantityRemaining",
                           "quantityReserved",
@@ -49828,15 +51259,6 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
-                        "coverFileId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "coverImageUrl": {
-                          "format": "uri",
-                          "type": "string"
-                        },
                         "createdAt": {
                           "description": "Epoch milliseconds when the record was created",
                           "example": 1786300000000,
@@ -49863,6 +51285,67 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "images": {
+                          "items": {
+                            "properties": {
+                              "fileId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "height": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sources": {
+                                "items": {
+                                  "properties": {
+                                    "url": {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "width",
+                                    "url"
+                                  ],
+                                  "type": "object"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                              },
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fileId",
+                              "url",
+                              "width",
+                              "height",
+                              "sources"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 10,
+                          "minItems": 1,
+                          "type": "array"
                         },
                         "isDeleted": {
                           "description": "Soft-delete flag — false means the record is active",
@@ -49894,6 +51377,28 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                           "type": "string"
+                        },
+                        "organizationLogoSources": {
+                          "items": {
+                            "properties": {
+                              "url": {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              "width": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "url"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "organizationLogoUrl": {
                           "format": "uri",
@@ -50025,6 +51530,7 @@
                         "id",
                         "organizationId",
                         "organizationLogoUrl",
+                        "organizationLogoSources",
                         "title",
                         "description",
                         "rewardType",
@@ -50032,8 +51538,7 @@
                         "termsConditions",
                         "rewardKind",
                         "category",
-                        "coverFileId",
-                        "coverImageUrl",
+                        "images",
                         "quantityTotal",
                         "quantityRemaining",
                         "quantityReserved",

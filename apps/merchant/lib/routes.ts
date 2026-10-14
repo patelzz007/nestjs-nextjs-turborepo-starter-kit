@@ -44,6 +44,7 @@ export interface OrgSettingsRoutes {
 	readonly index: AppPath;
 	readonly team: AppPath;
 	readonly locations: AppPath;
+	readonly branding: AppPath;
 	readonly verification: AppPath;
 }
 
@@ -109,6 +110,7 @@ export const ORG_ROUTES: OrgRouteTable = {
 		index: "/settings",
 		team: "/settings/team",
 		locations: "/settings/locations",
+		branding: "/settings/branding",
 		verification: "/settings/verification",
 	},
 };
@@ -126,6 +128,7 @@ export const ORG_STATIC_ROUTES: readonly AppPath[] = [
 	ORG_ROUTES.settings.index,
 	ORG_ROUTES.settings.team,
 	ORG_ROUTES.settings.locations,
+	ORG_ROUTES.settings.branding,
 	ORG_ROUTES.settings.verification,
 ];
 
@@ -203,6 +206,7 @@ export interface OrgSettingsHrefs {
 	readonly index: AppPath;
 	readonly team: AppPath;
 	readonly locations: AppPath;
+	readonly branding: AppPath;
 	readonly verification: AppPath;
 }
 
@@ -238,6 +242,7 @@ export function orgRoutes(slug: string): OrgHrefs {
 			index: orgPath(slug, ORG_ROUTES.settings.index),
 			team: orgPath(slug, ORG_ROUTES.settings.team),
 			locations: orgPath(slug, ORG_ROUTES.settings.locations),
+			branding: orgPath(slug, ORG_ROUTES.settings.branding),
 			verification: orgPath(slug, ORG_ROUTES.settings.verification),
 		},
 	};

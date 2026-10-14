@@ -28,6 +28,7 @@ describe("merchant nav authorization", () => {
 			"settings",
 			"settings-team",
 			"settings-locations",
+			"settings-branding",
 			"settings-verification",
 			"account",
 		]);
@@ -46,7 +47,8 @@ describe("merchant nav authorization", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")));
 		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map((item) => item.id);
 
-		expect(ids).toEqual(["dashboard", "analytics", "rewards", "redemptions", "settings", "settings-locations", "account"]);
+		// Cashiers can see the store logo (merchant:view_locations); only changing it needs merchant:manage_locations.
+		expect(ids).toEqual(["dashboard", "analytics", "rewards", "redemptions", "settings", "settings-locations", "settings-branding", "account"]);
 		expect(buildMerchantPaletteItems(can).map((item) => item.id)).toEqual(ids);
 	});
 

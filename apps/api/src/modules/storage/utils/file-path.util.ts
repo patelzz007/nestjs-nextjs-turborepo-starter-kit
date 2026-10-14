@@ -65,7 +65,7 @@ const CATEGORY_KEY_LAYOUT: Readonly<Record<FileCategory, CategoryKeyLayout>> = {
 	STORE_BANNER: { root: "stores", folder: "banner", variantsReplaceFolder: false },
 	USER_AVATAR: { root: "users", folder: "avatar", variantsReplaceFolder: false },
 	MERCHANT_KYB: { root: "kyb", folder: null, variantsReplaceFolder: false },
-	REWARD_COVER: { root: "stores", folder: "reward-covers", variantsReplaceFolder: false },
+	REWARD_IMAGE: { root: "stores", folder: "reward-images", variantsReplaceFolder: false },
 };
 
 /** `<root>/<ownerId>[/<folder>]` — the directory a category's original files live in. */

@@ -14,7 +14,7 @@ import { IconTile, type IconTileTone } from "@workspace/ui/components/icon-tile"
 import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { ArrowRight, BarChart3, Building2, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
+import { BarChart3, Building2, ChevronRight, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -49,7 +49,7 @@ function OrgNavLink({ href, title, description, icon, tone, external = false }: 
 				</div>
 				<p className="text-sm text-muted-foreground">{description}</p>
 			</div>
-			<ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+			<ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
 		</Link>
 	);
 }

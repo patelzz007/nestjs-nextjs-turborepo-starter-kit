@@ -2,7 +2,7 @@
 // or implement the real classes/ports, so specs stay fully type-checked.
 import { Readable } from "node:stream";
 
-import type { Prisma, StoredFile } from "@prisma/client";
+import type { FileVariant, Prisma, StoredFile } from "@prisma/client";
 import type { FileCategory, FileStatus, StorageObjectLocator } from "@workspace/shared";
 
 import { createTestPrisma } from "./test-service-graph";
@@ -26,9 +26,13 @@ import {
 	StoredFileRepository,
 	type StoredFileBinding,
 	type StoredFileDeletion,
+	type StoredFileVariantInput,
 	type StoredFileDbClient,
 	type StoredFileStatusFields,
 } from "../../src/modules/files/repositories/stored-file.repository";
+import { ImageRenditionService } from "../../src/modules/files/services/image-rendition.service";
+import { ImageProcessor, UnreadableImageError, type ImageDimensions, type RenderedImage } from "../../src/modules/storage/domain/image-processor.port";
+import type { TypedConfigService } from "../../src/config/typed-config.service";
 import { RequestContextService } from "../../src/common/context/request-context";
 import { FileLifecycleListener, type FileVerdictEvent } from "../../src/modules/files/lifecycle/file-lifecycle-listener";
 import { FileLifecycleListenerRegistry } from "../../src/modules/files/lifecycle/file-lifecycle-listener.registry";
@@ -57,6 +61,8 @@ export function storedFile(overrides: Partial<StoredFile> = {}): StoredFile {
 		storagePath: `staging/kyb/${ORG_ID}/${FILE_ID}-licence.pdf`,
 		publicPath: null,
 		objectGeneration: null,
+		imageWidth: null,
+		imageHeight: null,
 		status: "SCANNING",
 		scanStatus: "SCANNING",
 		scannedAt: null,
@@ -79,8 +85,10 @@ export class InMemoryStoredFileRepository extends StoredFileRepository {
 	public readonly bindings: StoredFileBinding[] = [];
 	public readonly softDeletedBy: string[] = [];
 	public kybSubmitted = false;
-	/** Files a live reward shows as its cover — deleting them is refused. */
-	public readonly rewardCoverFileIds = new Set<string>();
+	/** Recorded renditions (file_variants rows). */
+	public readonly variants: FileVariant[] = [];
+	/** Files a live reward shows among its images — deleting them is refused. */
+	public readonly rewardImageFileIds = new Set<string>();
 
 	public constructor(...files: StoredFile[]) {
 		super(createTestPrisma());
@@ -120,8 +128,8 @@ export class InMemoryStoredFileRepository extends StoredFileRepository {
 	}
 
 	public override softDeleteWithReferences(id: string, deletedBy: string): Promise<StoredFileDeletion> {
-		if (this.rewardCoverFileIds.has(id)) {
-			return Promise.resolve("IN_USE_AS_REWARD_COVER");
+		if (this.rewardImageFileIds.has(id)) {
+			return Promise.resolve("IN_USE_AS_REWARD_IMAGE");
 		}
 		const row = this.rows.get(id);
 		if (row === undefined || row.isDeleted) {
@@ -130,6 +138,27 @@ export class InMemoryStoredFileRepository extends StoredFileRepository {
 		this.rows.set(id, { ...row, status: "DELETED", isDeleted: true, deletedBy });
 		this.softDeletedBy.push(deletedBy);
 		return Promise.resolve("DELETED");
+	}
+
+	public override listLiveVariants(fileId: string): Promise<FileVariant[]> {
+		return Promise.resolve(this.variants.filter((variant) => variant.fileId === fileId && !variant.isDeleted));
+	}
+
+	public override upsertVariantsInTx(_tx: StoredFileDbClient, fileId: string, variants: readonly StoredFileVariantInput[]): Promise<void> {
+		const recordedAt = BigInt(Date.now());
+		for (const variant of variants) {
+			this.variants.push({
+				...variant,
+				id: `${fileId}-${variant.kind}`,
+				fileId,
+				isDeleted: false,
+				deletedAt: null,
+				deletedBy: null,
+				createdAt: recordedAt,
+				updatedAt: recordedAt,
+			});
+		}
+		return Promise.resolve();
 	}
 
 	public override hasKybSubmissionReference(): Promise<boolean> {
@@ -148,6 +177,8 @@ export class InMemoryStoredFileRepository extends StoredFileRepository {
 			scanStatus: fields.scanStatus ?? row.scanStatus,
 			scannedAt: fields.scannedAt ?? row.scannedAt,
 			scanResult: fields.scanResult ?? row.scanResult,
+			imageWidth: fields.imageWidth ?? row.imageWidth,
+			imageHeight: fields.imageHeight ?? row.imageHeight,
 		});
 	}
 }
@@ -266,4 +297,29 @@ export class RecordingFileListener extends FileLifecycleListener {
 
 export function listenerRegistry(...listeners: FileLifecycleListener[]): FileLifecycleListenerRegistry {
 	return new FileLifecycleListenerRegistry({ getProviders: () => listeners.map((instance: FileLifecycleListener) => ({ instance })) });
+}
+
+/**
+ * Stands in for sharp: reports the size a test sets and "renders" a tiny
+ * buffer per rendition, recording every request — so the image pipeline runs
+ * for real against in-memory storage without decoding pixels.
+ */
+export class FakeImageProcessor extends ImageProcessor {
+	public dimensions: ImageDimensions = { width: 3840, height: 2160 };
+	public unreadable = false;
+	public readonly rendered: ImageDimensions[] = [];
+
+	public inspect(): Promise<ImageDimensions> {
+		return this.unreadable ? Promise.reject(new UnreadableImageError({ cause: new Error("fake") })) : Promise.resolve(this.dimensions);
+	}
+
+	public render(_bytes: Buffer, width: number, height: number): Promise<RenderedImage> {
+		this.rendered.push({ width, height });
+		return Promise.resolve({ bytes: Buffer.from(`webp-${String(width)}x${String(height)}`), width, height, mimeType: "image/webp" });
+	}
+}
+
+/** The real rendition service over in-memory storage and a fake processor. */
+export function imageRenditionsFor(config: TypedConfigService, storage: InMemoryObjectStorage, processor: ImageProcessor = new FakeImageProcessor()): ImageRenditionService {
+	return new ImageRenditionService(config, storage, storage, processor);
 }

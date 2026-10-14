@@ -5,7 +5,7 @@ import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
-import { rewardCoverSeedId } from "../prisma/seed/reward-covers";
+import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { sha256Hex } from "../src/common/crypto/sha256";
 import { anonymousRlsContext, apiKeyRlsContext, rlsSessionVariables, type RlsContext } from "../src/prisma/rls-context";
 
@@ -177,10 +177,13 @@ describe("API key RLS principal (e2e)", () => {
 		for (const [key, organizationId] of fixtureRewards) {
 			await asBypass((client) =>
 				client.query(
-					`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, cover_file_id, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
-           VALUES ($1, $2, 'E2E RLS reward', 'Created by api-key-rls-principal.e2e-spec.ts', 'DISCOUNT', 5, 'cafe', $4, 5, 5, $3, 'DRAFT', false)`,
-					[rewardIds[key], organizationId, now + DAY_MS, rewardCoverSeedId(key === "kl" ? "free-coffee" : "jonker-lunch-set")],
+					`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
+           VALUES ($1, $2, 'E2E RLS reward', 'Created by api-key-rls-principal.e2e-spec.ts', 'DISCOUNT', 5, 'cafe', 5, 5, $3, 'DRAFT', false)`,
+					[rewardIds[key], organizationId, now + DAY_MS],
 				),
+			);
+			await asBypass((client) =>
+				client.query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardIds[key], organizationId, key === "kl" ? "free-coffee" : "jonker-lunch-set")]),
 			);
 		}
 		klKeyId = await createKey(KL_ORG, null);

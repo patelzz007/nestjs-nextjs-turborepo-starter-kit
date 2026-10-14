@@ -13,6 +13,7 @@ import { OrganizationContextService } from "../../organization/services/organiza
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { FILE_AUTHORIZATION_OPERATION, FileAuthorizationService } from "./file-authorization.service";
 import { RequestContextService } from "../../../common/context/request-context";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 const mocks = vi.hoisted(() => ({
 	authorize: vi.fn(),
@@ -68,6 +69,8 @@ function storedFile(category: FileCategory, overrides: Partial<StoredFile> = {})
 		storagePath: "orgs/org-1/f.png",
 		publicPath: null,
 		objectGeneration: null,
+		imageWidth: null,
+		imageHeight: null,
 		status: "READY",
 		scanStatus: null,
 		scannedAt: null,
@@ -95,7 +98,7 @@ function build(): ServiceUnderTest {
 	const tenantTx = new TenantTransactionService(prisma, new RequestContextService());
 	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
 	const audit = new OrganizationAuditService();
-	const organizationAuth = new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit), cedar, audit);
+	const organizationAuth = new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit, createTestPublicUrls()), cedar, audit);
 	const requireCedarAction = vi.fn().mockResolvedValue(undefined);
 	vi.spyOn(organizationAuth, "requireCedarAction").mockImplementation(requireCedarAction);
 	return { service: new FileAuthorizationService(createTestAuthorizationKernel(prisma), tenantTx, organizationAuth), requireCedarAction };

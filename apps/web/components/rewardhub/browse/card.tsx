@@ -9,11 +9,11 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
-import { ArrowUpRight, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { rewardTypeLabel } from "@/lib/rewards/reward-type-label";
-import { REWARD_CARD_COVER_RATIO } from "@/lib/rewards/reward-cover";
+import { rewardTypeLabel } from "@workspace/client/lib/rewards/reward-offer";
+import { REWARD_CARD_COVER_RATIO, REWARD_CARD_COVER_SIZES } from "@/lib/rewards/reward-cover";
 import { childPath, ROUTE_PREFIXES } from "@/lib/routes";
 
 export interface RewardCardProps {
@@ -29,6 +29,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.rewardHub
 	const percentLeft = reward.quantityTotal > 0 ? Math.round((reward.quantityRemaining / reward.quantityTotal) * 100) : 0;
 	const isLowStock = percentLeft > 0 && percentLeft <= 20;
 	const isSoldOut = reward.quantityRemaining === 0;
+	const [cover] = reward.images;
 
 	return (
 		<article
@@ -39,7 +40,9 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.rewardHub
 			{/* Edge to edge: the card's own radius and overflow round the cover's top corners. */}
 			<div className="relative overflow-hidden border-b border-border/80">
 				<CoverImage
-					src={reward.coverImageUrl}
+					src={cover?.url}
+					sources={cover?.sources}
+					sizes={REWARD_CARD_COVER_SIZES}
 					ratio={REWARD_CARD_COVER_RATIO}
 					priority={priority}
 					fallback={<RewardCategoryVisual category={reward.category} className="size-8" />}
@@ -83,19 +86,9 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.rewardHub
 			<div className="border-t border-border/80 p-3">
 				<Link
 					href={childPath(detailPathPrefix, reward.id)}
-					className={cn(
-						buttonVariants({ variant: isSoldOut ? "outline" : "default" }),
-						"w-full justify-center gap-2",
-						isSoldOut ? "pointer-events-none opacity-60" : undefined,
-					)}
+					className={cn(buttonVariants({ variant: isSoldOut ? "outline" : "default" }), "w-full justify-center", isSoldOut ? "pointer-events-none opacity-60" : undefined)}
 					aria-disabled={isSoldOut}>
 					{isSoldOut ? "Unavailable" : "View offer"}
-					{!isSoldOut ? (
-						<ArrowUpRight
-							className="size-3.5 opacity-80 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none"
-							aria-hidden="true"
-						/>
-					) : null}
 				</Link>
 			</div>
 		</article>

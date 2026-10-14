@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { EpochMsSchema } from "../api/common";
 import { OptimisticVersionSchema } from "../domain/catalog/catalog-fields";
+import { ImageSourceSchema } from "../domain/platform/storage";
 
 // ── Own profile (self-service) ─────────────────────────────────────────────
 //
@@ -81,6 +82,7 @@ export const OwnProfileAvatarSchema = z
 	.object({
 		fileId: z.uuid().meta({ description: "The stored file (`GET /files/:fileId`, `DELETE /files/:fileId`)" }),
 		url: z.url().meta({ description: "Public URL of the avatar image" }),
+		sources: z.array(ImageSourceSchema).meta({ description: "Its served sizes, smallest first, for `srcset` (empty for an avatar uploaded before avatars had renditions)" }),
 		updatedAt: EpochMsSchema.meta({ description: "When this avatar was bound to the profile (epoch ms)" }),
 	})
 	.meta({ description: "The profile's current avatar. Response schema: unknown keys are stripped, never rejected (ADR 022)." });

@@ -25,6 +25,7 @@ export const MERCHANT_INVITES_LOADING_LABELS: SkeletonRegionLabelsOverride = { l
 export const STORE_REQUESTS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading store requests…" };
 export const KYB_REVIEW_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading KYB review…" };
 export const PENDING_REWARDS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading pending rewards…" };
+export const REWARD_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading reward…" };
 export const ACCESS_CONTROL_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading access control…" };
 export const USERS_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading users…" };
 export const USER_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading user…" };

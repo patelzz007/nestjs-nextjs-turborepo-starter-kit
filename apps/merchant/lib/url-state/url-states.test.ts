@@ -12,6 +12,7 @@ import { STORE_A } from "@/test/terminals";
 
 import { API_KEYS_URL_STATE } from "./api-keys";
 import { REDEMPTIONS_URL_STATE, toRedemptionsQuery } from "./redemptions";
+import { REWARDS_URL_STATE } from "./rewards";
 
 /** The contract input of `GET /orgs/:orgSlug/redemptions`. */
 const RedemptionsRequestSchema = z.intersection(OrganizationSlugParamSchema, MerchantRedemptionListQuerySchema);
@@ -51,5 +52,22 @@ describe("REDEMPTIONS_URL_STATE", () => {
 		const input = toRedemptionsQuery(TEST_ORG_SLUG, undefined, REDEMPTIONS_URL_STATE.parse({ page: "2", cursor: "abc", sort: "redeemedAt" }));
 
 		expect(input).toEqual({ orgSlug: TEST_ORG_SLUG, page: 2, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, sort: "redeemedAt", locationId: undefined });
+	});
+});
+
+describe("REWARDS_URL_STATE", () => {
+	it("leaves the tab to the catalog when the URL names none, and keeps the URL clean", () => {
+		expect(REWARDS_URL_STATE.parse({})).toEqual({ status: undefined });
+		expect(REWARDS_URL_STATE.serialize({ status: undefined })).toBe("");
+	});
+
+	it("reads and writes every status tab", () => {
+		expect(REWARDS_URL_STATE.parse({ status: "review" })).toEqual({ status: "review" });
+		expect(REWARDS_URL_STATE.serialize({ status: "ended" })).toBe("status=ended");
+	});
+
+	it("ignores a status that is not a tab — the API's status names included", () => {
+		expect(REWARDS_URL_STATE.parse({ status: "PUBLISHED" })).toEqual({ status: undefined });
+		expect(REWARDS_URL_STATE.parse({ status: ["drafts", "live"] })).toEqual({ status: "drafts" });
 	});
 });

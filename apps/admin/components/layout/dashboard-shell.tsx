@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
+import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
 import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
 
 import { Button } from "@workspace/ui/components/button";
@@ -69,6 +70,8 @@ export function DashboardShell({
 	// `useTrailDocumentTitle` + `ShellBreadcrumb`), so it lives here — one
 	// level above `DashboardLayout` — not inside it.
 	const pathname = usePathname();
+	// The picture comes from the own profile, which every avatar change reloads — so the shell shows it at once.
+	const avatar = useOwnAvatar();
 
 	// `GET /auth/me` returns the full user record; the shell only needs the
 	// sidebar identity shape (name/email). The JWT-decoded `initialUser` covers
@@ -120,7 +123,7 @@ export function DashboardShell({
 			<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName={ADMIN_SIDEBAR_DEVTOOLS_NAME} initialIsOpen={initialSidebarOpen}>
 				<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} ownerId={authUser?.id ?? null} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
 					<DashboardLayout
-						user={{ name: resolvedUser.name, email: resolvedUser.email }}
+						user={{ name: resolvedUser.name, email: resolvedUser.email, avatar }}
 						onLogout={handleLogout}
 						footerActions={footerActions}
 						initialSessionPermissions={initialSessionPermissions}

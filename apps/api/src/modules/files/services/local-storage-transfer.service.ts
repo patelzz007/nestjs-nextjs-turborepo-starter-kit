@@ -4,7 +4,7 @@ import type { Readable } from "node:stream";
 import type { MultipartFile } from "@fastify/multipart";
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, PayloadTooLargeException } from "@nestjs/common";
 import type { StoredFile } from "@prisma/client";
-import { FILE_CATEGORY_POLICIES, getFileCategoryPolicy, type FileCategoryPolicy, type FileDownloadDisposition } from "@workspace/shared";
+import { FILE_CATEGORY_POLICIES, getFileCategoryPolicy, type FileCategoryPolicy, type FileDownloadDisposition, type FileVariantKind } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 
@@ -14,7 +14,7 @@ import { LocalTransferTokenError, LocalTransferTokenService, type LocalUploadTok
 import type { ObjectStorage } from "../../storage/domain/object-storage.port";
 import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
 import { assertAllowedUploadMime, UploadContentRejectedError } from "../../storage/utils/magic-bytes.util";
-import { locatorFromStoredFile } from "../../storage/utils/storage-locator.util";
+import { locatorFromFileVariant, locatorFromStoredFile } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 
 /** Largest object any category accepts — the hard multipart limit before the ticket's own limit is known. */
@@ -67,6 +67,20 @@ export class LocalStorageTransferService {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
 		return this.open(file, "inline", file.originalName);
+	}
+
+	/** A published rendition of a READY public file (e.g. a reward image's 1280-wide WebP). */
+	public async downloadPublicVariant(fileId: string, kind: FileVariantKind): Promise<LocalObjectDownload> {
+		this.assertEnabled();
+		const variant = await this.repository.findReadyPublicVariant(fileId, kind);
+		if (variant === null) {
+			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
+		}
+		const stream = await this.storage.getObjectStream(locatorFromFileVariant(variant, this.config.storage.provider));
+		if (stream === null) {
+			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
+		}
+		return { stream, mimeType: variant.mimeType, disposition: "inline", fileName: `${fileId}-${kind.toLowerCase()}.webp` };
 	}
 
 	/**

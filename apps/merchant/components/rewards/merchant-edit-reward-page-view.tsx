@@ -217,7 +217,7 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 					onTypeSelect={handleTypeSelect}
 					onMaxClaimsChange={handleMaxClaimsChange}
 					organizationId={organizationId}
-					initialCoverUrl={reward.coverImageUrl}
+					initialImages={reward.images}
 					readOnly={!canEdit}
 				/>
 

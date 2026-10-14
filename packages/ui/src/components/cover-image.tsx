@@ -5,11 +5,15 @@ import { useImageLoadingStatus } from "@workspace/ui/hooks/use-image-loading-sta
 import { useNearViewport } from "@workspace/ui/hooks/use-near-viewport";
 import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { imageSrcSet, type ImageSourceEntry } from "@workspace/ui/lib/media/image-sources";
 import { ImageOff } from "lucide-react";
 import * as React from "react";
 
 /** The default cover shape — wide, like the 1200×675 covers uploads are cropped for. */
 export const COVER_IMAGE_DEFAULT_RATIO = 16 / 9;
+
+/** One rendition of a cover image: its width in pixels and URL. */
+export type CoverImageSource = ImageSourceEntry;
 
 type CoverImageState = "loading" | "loaded" | "error";
 
@@ -26,6 +30,13 @@ export interface CoverImageProps extends Omit<React.ComponentPropsWithoutRef<"di
 	readonly ratio?: number | undefined;
 	/** Loads the image before it scrolls into view — for the first, above-the-fold cover only. */
 	readonly priority?: boolean | undefined;
+	/**
+	 * Renditions of the same image by width (any order), rendered as `srcset`
+	 * so each screen downloads the smallest one that is still sharp for it.
+	 */
+	readonly sources?: readonly CoverImageSource[] | undefined;
+	/** `sizes` for `sources`: how wide the frame is drawn (default: the full viewport width). */
+	readonly sizes?: string | undefined;
 	/** Shown in place of the image when there is none or it fails to load. */
 	readonly fallback?: React.ReactNode;
 }
@@ -39,7 +50,7 @@ export interface CoverImageProps extends Omit<React.ComponentPropsWithoutRef<"di
  * The ref reaches the frame.
  */
 const CoverImage = React.forwardRef<HTMLDivElement, CoverImageProps>(function CoverImage(
-	{ src, alt = "", ratio = COVER_IMAGE_DEFAULT_RATIO, priority = false, fallback, className, ...props },
+	{ src, alt = "", ratio = COVER_IMAGE_DEFAULT_RATIO, priority = false, sources, sizes, fallback, className, ...props },
 	ref,
 ): React.JSX.Element {
 	const hasSource = src !== null && src !== undefined && src.length > 0;
@@ -47,7 +58,10 @@ const CoverImage = React.forwardRef<HTMLDivElement, CoverImageProps>(function Co
 	const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
 	const frameRef = React.useMemo(() => mergeRefs<HTMLDivElement>(setFrame, ref), [ref]);
 	const isNearViewport = useNearViewport(frame, priority);
-	const loadingStatus = useImageLoadingStatus(src, isNearViewport);
+	const srcSet = imageSrcSet(sources);
+	const resolvedSizes = srcSet === undefined ? undefined : (sizes ?? "100vw");
+	// The tracker asks for the same rendition the <img> will, so each image is downloaded once.
+	const loadingStatus = useImageLoadingStatus(src, isNearViewport, { srcSet, sizes: resolvedSizes });
 	const state: CoverImageState = loadingStatus === "loaded" ? "loaded" : loadingStatus === "error" ? "error" : "loading";
 	const showFallback = !hasSource || state === "error";
 
@@ -62,6 +76,8 @@ const CoverImage = React.forwardRef<HTMLDivElement, CoverImageProps>(function Co
 			{hasSource && state !== "error" ? (
 				<img
 					src={src}
+					srcSet={srcSet}
+					sizes={resolvedSizes}
 					alt={alt}
 					loading={priority ? "eager" : "lazy"}
 					decoding="async"

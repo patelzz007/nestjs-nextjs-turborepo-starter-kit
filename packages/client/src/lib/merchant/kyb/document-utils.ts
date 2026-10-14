@@ -41,15 +41,6 @@ export function openExternalDocument(url: string): void {
 	window.open(url, "_blank", "noopener,noreferrer");
 }
 
-/** Trigger a local download using a presigned URL with Content-Disposition: attachment. */
-export function triggerBrowserDownload(url: string, fileName: string): void {
-	const anchor = document.createElement("a");
-	anchor.href = url;
-	anchor.download = fileName;
-	anchor.rel = "noopener noreferrer";
-	anchor.click();
-}
-
 /** How a member sees one malware-scan status of a KYB document. */
 export interface KybScanStatusPresentation {
 	readonly label: string;

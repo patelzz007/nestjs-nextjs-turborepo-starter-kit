@@ -5,6 +5,7 @@ import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../../api/commo
 import { CanonicalEmailSchema } from "../../api/email-address";
 import { defineListQuery, LIST_MAX_LIMIT, listFilter, ListSearchSchema } from "../../api/list-query";
 import { OrganizationLocationFilterSchema } from "../organization/location-filter";
+import { ImageSourceSchema } from "../platform/storage";
 import {
 	OrganizationLifecycleStateSchema,
 	OrganizationLocationResponseSchema,
@@ -44,6 +45,8 @@ export const rewardListQuery = defineListQuery({
 	filter: {
 		category: listFilter.enumeration(RewardCategorySchema, { eq: true, in: true }),
 		city: listFilter.enumeration(PilotCitySchema, { eq: true, in: true }),
+		/** One merchant's live offers (e.g. "More from this merchant" on a reward page). */
+		organizationId: listFilter.uuid({ eq: true }),
 	},
 	params: { search: ListSearchSchema },
 	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
@@ -290,11 +293,19 @@ const RewardValueSchema = z.number().nonnegative();
 const RewardTermsSchema = z.string().max(5000);
 const RewardQuantitySchema = z.number().int().min(1);
 const RewardReferralPoolSchema = z.number().int().min(1);
+/** How many images a reward may show (the first is its cover). */
+export const MAX_REWARD_IMAGES = 10;
+
 /**
- * The reward's cover image: a READY, public `REWARD_COVER` file uploaded to the
- * same organization (`POST /files/upload-url`). Required — every reward shows one.
+ * The reward's images, in display order (the first is the cover): READY,
+ * public `REWARD_IMAGE` files uploaded to the same organization
+ * (`POST /files/upload-url`). One to {@link MAX_REWARD_IMAGES}, each once.
  */
-const RewardCoverFileIdSchema = z.uuid({ error: "Add a cover image" });
+const RewardImageFileIdsSchema = z
+	.array(z.uuid({ error: "Upload the image again" }))
+	.min(1, { error: "Add at least one image" })
+	.max(MAX_REWARD_IMAGES, { error: `Add up to ${String(MAX_REWARD_IMAGES)} images` })
+	.refine((fileIds: readonly string[]): boolean => new Set(fileIds).size === fileIds.length, { error: "Each image can be added once" });
 
 export const MerchantCreateRewardSchema = z
 	.object({
@@ -304,7 +315,7 @@ export const MerchantCreateRewardSchema = z
 		rewardValue: RewardValueSchema,
 		termsConditions: RewardTermsSchema.optional(),
 		category: RewardCategorySchema,
-		coverFileId: RewardCoverFileIdSchema,
+		imageFileIds: RewardImageFileIdsSchema,
 		quantityTotal: RewardQuantitySchema,
 		startDate: EpochMsSchema.optional(),
 		expiryDate: EpochMsSchema,
@@ -337,7 +348,7 @@ export const MerchantRewardFormFieldsSchema = z
 		rewardType: RewardTypeSchema,
 		title: RewardTitleSchema,
 		description: RewardDescriptionSchema,
-		coverFileId: RewardCoverFileIdSchema,
+		imageFileIds: RewardImageFileIdsSchema,
 		rewardValue: RewardValueSchema,
 		minPurchase: z.number().nonnegative().optional(),
 		termsConditions: RewardTermsSchema.optional(),
@@ -412,7 +423,7 @@ export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFor
 		rewardValue: form.rewardValue,
 		termsConditions: form.termsConditions,
 		category,
-		coverFileId: form.coverFileId,
+		imageFileIds: form.imageFileIds,
 		quantityTotal: form.quantityTotal,
 		startDate: parseRewardDateInputToEpochMs(form.startDate),
 		expiryDate: parseRewardDateInputToEpochMs(form.expiryDate),
@@ -431,7 +442,7 @@ export function mapMerchantUpdateRewardFormToInput(form: MerchantRewardFormValue
 		rewardType: form.rewardType,
 		rewardValue: form.rewardValue,
 		termsConditions: form.termsConditions ?? null,
-		coverFileId: form.coverFileId,
+		imageFileIds: form.imageFileIds,
 		quantityTotal: form.quantityTotal,
 		startDate: parseRewardDateInputToEpochMs(form.startDate),
 		expiryDate: parseRewardDateInputToEpochMs(form.expiryDate),
@@ -447,7 +458,7 @@ export function mapRewardResponseToFormValues(reward: RewardResponse): MerchantR
 		rewardType: reward.rewardType,
 		title: reward.title,
 		description: reward.description,
-		coverFileId: reward.coverFileId,
+		imageFileIds: reward.images.map((image) => image.fileId),
 		rewardValue: reward.rewardValue,
 		minPurchase: rules?.minSpendMyr,
 		termsConditions: reward.termsConditions ?? undefined,
@@ -465,7 +476,7 @@ export const MerchantUpdateRewardSchema = z
 		rewardType: RewardTypeSchema.optional(),
 		rewardValue: RewardValueSchema.optional(),
 		termsConditions: RewardTermsSchema.nullable().optional(),
-		coverFileId: RewardCoverFileIdSchema.optional(),
+		imageFileIds: RewardImageFileIdsSchema.optional(),
 		quantityTotal: RewardQuantitySchema.optional(),
 		startDate: EpochMsSchema.nullable().optional(),
 		expiryDate: EpochMsSchema.optional(),
@@ -648,6 +659,50 @@ export const AdminRejectRewardPathInputSchema = AdminRejectRewardSchema.extend({
 
 export type AdminRejectRewardPathInput = z.output<typeof AdminRejectRewardPathInputSchema>;
 
+/** One reward, as the admin moderation detail route names it (`/admin/rewards/:rewardId`). */
+export const AdminRewardPathInputSchema = z
+	.object({
+		rewardId: z.uuid(),
+	})
+	.strict();
+
+export type AdminRewardPathInput = z.output<typeof AdminRewardPathInputSchema>;
+
+/** One image of a reward, as the admin download route names it (`/admin/rewards/:rewardId/images/:fileId/download`). */
+export const AdminRewardImagePathInputSchema = z
+	.object({
+		rewardId: z.uuid(),
+		fileId: z.uuid(),
+	})
+	.strict();
+
+export type AdminRewardImagePathInput = z.output<typeof AdminRewardImagePathInputSchema>;
+
+/**
+ * A short-lived signed URL that downloads a reward image's original upload
+ * (16:9 at 4K) as an attachment named `fileName`.
+ */
+export const AdminRewardImageDownloadResponseSchema = z.object({
+	fileId: z.uuid(),
+	fileName: z.string().min(1),
+	downloadUrl: z.string().min(1),
+	expiresAt: EpochMsSchema,
+});
+
+export type AdminRewardImageDownloadResponse = z.output<typeof AdminRewardImageDownloadResponseSchema>;
+
+/** A reward whose images the admin archive route downloads together (`/admin/rewards/:rewardId/images/archive`). */
+export const AdminRewardImagesArchivePathInputSchema = z
+	.object({
+		rewardId: z.uuid(),
+	})
+	.strict();
+
+export type AdminRewardImagesArchivePathInput = z.output<typeof AdminRewardImagesArchivePathInputSchema>;
+
+/** The media type of a reward's image archive: one ZIP of the original uploads, in display order. */
+export const REWARD_IMAGES_ARCHIVE_CONTENT_TYPE = "application/zip";
+
 export const AdminMerchantIdParamSchema = z
 	.object({
 		organizationId: z.uuid(),
@@ -709,6 +764,29 @@ export const OrganizationRewardMembershipResponseSchema = z.object({
 
 export type OrganizationRewardMembershipResponse = z.output<typeof OrganizationRewardMembershipResponseSchema>;
 
+/** An http(s) URL — image URLs are rendered straight into `<img src>` / `srcset`. */
+const ImageUrlSchema = ImageSourceSchema.shape.url;
+
+/** One rendition of a reward image, for `srcset`: its width in pixels and URL (the shared image source). */
+export const RewardImageSourceSchema = ImageSourceSchema;
+
+export type RewardImageSource = z.output<typeof RewardImageSourceSchema>;
+
+/**
+ * One image of a reward: the 16:9 original's size, its renditions from
+ * smallest to largest (render with `srcset`/`sizes` so each screen downloads
+ * what it needs), and `url`, the largest rendition, for plain `<img src>`.
+ */
+export const RewardImageResponseSchema = z.object({
+	fileId: z.uuid(),
+	url: ImageUrlSchema,
+	width: z.number().int().positive(),
+	height: z.number().int().positive(),
+	sources: z.array(RewardImageSourceSchema).min(1),
+});
+
+export type RewardImageResponse = z.output<typeof RewardImageResponseSchema>;
+
 export const RewardResponseSchema = BaseResponseSchema.extend({
 	id: z.uuid(),
 	organizationId: z.uuid(),
@@ -719,6 +797,8 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	 * http(s) only: it is rendered straight into an `<img src>`.
 	 */
 	organizationLogoUrl: z.url({ protocol: /^https?$/ }).nullable(),
+	/** The logo's served sizes, smallest first, for `srcset` (empty without a logo, or for one uploaded before logos had renditions). */
+	organizationLogoSources: z.array(ImageSourceSchema),
 	title: z.string(),
 	description: z.string(),
 	rewardType: RewardTypeSchema,
@@ -726,15 +806,12 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	termsConditions: z.string().nullable(),
 	rewardKind: RewardKindSchema,
 	category: z.string(),
-	/** The `REWARD_COVER` file shown on the reward. */
-	coverFileId: z.uuid(),
 	/**
-	 * Public URL of the cover image (the READY `REWARD_COVER` file's published
-	 * copy). Always present: a reward is only saved with a READY, published
-	 * cover, and a cover in use cannot be deleted. http(s) only — rendered
-	 * straight into an `<img src>`.
+	 * The reward's images in display order — the first is its cover. Always at
+	 * least one: a reward is only saved with READY, published images, and an
+	 * image in use cannot be deleted.
 	 */
-	coverImageUrl: z.url({ protocol: /^https?$/ }),
+	images: z.array(RewardImageResponseSchema).min(1).max(MAX_REWARD_IMAGES),
 	quantityTotal: z.number().int(),
 	quantityRemaining: z.number().int(),
 	quantityReserved: z.number().int(),

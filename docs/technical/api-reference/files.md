@@ -36,7 +36,7 @@ Get file metadata
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -166,7 +166,7 @@ Complete a direct upload after browser upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -374,6 +374,33 @@ Response `201 Created` (application/json):
 }
 ```
 
+### GET /api/v1/files/{fileId}/variants/{variant}/local-public
+
+Serve a rendition of a READY public image from local storage (development only)
+
+- **Public** — no session required.
+- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Operation id `LocalStorageTransferController_localPublicVariant` · [source](../../../apps/api/src/modules/files/controllers/local-storage-transfer.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `fileId` | path | string (uuid) | yes |  |
+| `variant` | path | "ORIGINAL" \| "THUMBNAIL" \| "MEDIUM" \| "LARGE" \| "XLARGE" \| "UHD" | yes |  |
+
+**Response 200 OK** — Object bytes
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### GET /api/v1/files/local-download
 
 Download a private object through a signed, expiring local-storage link (development only)
@@ -430,7 +457,7 @@ Applies an out-of-process scanner/processing result. Accepted only while the fil
 | `status` | "READY" \| "FAILED" \| "QUARANTINED" | yes |  |
 | `variants` | object[] | no |  |
 | `variants[].id` | string (uuid) | yes |  |
-| `variants[].kind` | "ORIGINAL" \| "THUMBNAIL" \| "MEDIUM" \| "LARGE" | yes |  |
+| `variants[].kind` | "ORIGINAL" \| "THUMBNAIL" \| "MEDIUM" \| "LARGE" \| "XLARGE" \| "UHD" | yes |  |
 | `variants[].mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `variants[].publicUrl` | string \| null | yes |  |
 | `variants[].sizeBytes` | integer | yes |  |
@@ -490,7 +517,7 @@ Create a browser upload ticket
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `assetType` | "LOGO" \| "BANNER" | no |  |
-| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
+| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |

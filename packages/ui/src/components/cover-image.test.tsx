@@ -112,3 +112,30 @@ describe("CoverImage", () => {
 		expect(ref.current).toBe(frame());
 	});
 });
+
+describe("CoverImage renditions", () => {
+	it("offers every rendition as srcset, smallest first, sized to the frame", (): void => {
+		render(
+			<CoverImage
+				src="https://cdn.example.com/a/uhd.webp"
+				sources={[
+					{ width: 3840, url: "https://cdn.example.com/a/uhd.webp" },
+					{ width: 640, url: "https://cdn.example.com/a/thumbnail.webp" },
+				]}
+				sizes="(min-width: 1024px) 33vw, 100vw"
+			/>,
+		);
+
+		expect(image().getAttribute("srcset")).toBe("https://cdn.example.com/a/thumbnail.webp 640w, https://cdn.example.com/a/uhd.webp 3840w");
+		expect(image().getAttribute("sizes")).toBe("(min-width: 1024px) 33vw, 100vw");
+	});
+
+	it("falls back to the full viewport width, and sends no srcset without renditions", (): void => {
+		const { rerender } = render(<CoverImage src="https://cdn.example.com/a/uhd.webp" sources={[{ width: 640, url: "https://cdn.example.com/a/thumbnail.webp" }]} />);
+		expect(image().getAttribute("sizes")).toBe("100vw");
+
+		rerender(<CoverImage src="https://cdn.example.com/a/uhd.webp" />);
+		expect(image().hasAttribute("srcset")).toBe(false);
+		expect(image().hasAttribute("sizes")).toBe(false);
+	});
+});

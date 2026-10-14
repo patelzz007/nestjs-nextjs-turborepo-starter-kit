@@ -14,6 +14,7 @@ import type { AnalyticsRangePickerLabels } from "../../components/analytics-rang
 import type { AuthLayoutLabels } from "../../components/auth-layout";
 import type { CodeBlockLabels } from "../../components/code-block";
 import type { ComboboxLabels } from "../../components/combobox-context";
+import type { ImageCropperLabels } from "../../components/image-cropper";
 import type { KpiDirectionLabels } from "../../components/kpi-stat-card";
 import type { LockoutCountdownLabels } from "../../components/lockout-countdown";
 import type { PasswordInputLabels } from "../../components/password-input";
@@ -73,6 +74,7 @@ export interface UiKitLabels {
 	readonly codeBlock: CodeBlockLabels;
 	readonly combobox: ComboboxLabels;
 	readonly dataTable: DataTableLabels;
+	readonly imageCropper: ImageCropperLabels;
 	readonly dialog: DialogLabels;
 	readonly kpiDirection: KpiDirectionLabels;
 	readonly lockoutCountdown: LockoutCountdownLabels;

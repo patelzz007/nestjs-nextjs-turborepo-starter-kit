@@ -1,7 +1,7 @@
 "use client";
 
 import { Command as CommandPrimitive } from "cmdk";
-import { ArrowRight, ChevronDown, ChevronRight, Clock, FileText, Pin, Search, SearchX, X, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, FileText, Pin, Search, SearchX, X, Zap } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@workspace/ui/components/button";
@@ -438,13 +438,7 @@ export const AppCommandPaletteSuggestion = React.forwardRef<HTMLDivElement, AppC
 			</div>
 			<div className="max-w-64 text-center">
 				<p className="text-sm font-medium text-foreground">{labels.noResultsForQuery(query)}</p>
-				<Button
-					type="button"
-					variant="secondary"
-					size="sm"
-					onClick={onSelectSuggestion}
-					className="mt-3 gap-2 rounded-xl bg-primary/10 px-4 py-2 text-primary hover:bg-primary/15">
-					<ArrowRight className="size-4" />
+				<Button type="button" variant="secondary" size="sm" onClick={onSelectSuggestion} className="mt-3 rounded-xl bg-primary/10 px-4 py-2 text-primary hover:bg-primary/15">
 					<span>{labels.didYouMean(suggestion.title)}</span>
 				</Button>
 			</div>

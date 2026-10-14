@@ -17,6 +17,10 @@ describe("buildCorsOptions", () => {
 		expect(options.allowedHeaders).toEqual(["Content-Type", "Accept", "X-Client-Type", "X-Mutation-Intent", "Idempotency-Key"]);
 	});
 
+	it("lets browser code read a download's file name and a rate limit's wait, cross-origin", () => {
+		expect(options.exposedHeaders).toEqual(["Content-Disposition", "Retry-After"]);
+	});
+
 	it("no longer allows the retired X-Merchant-Org-Id header", () => {
 		expect(CORS_ALLOWED_HEADERS.map((header) => header.toLowerCase())).not.toContain("x-merchant-org-id");
 	});

@@ -37,8 +37,8 @@ export interface PanelSidebarNavItemProps {
 	readonly activeItems: Readonly<Record<string, boolean>>;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleExpand: (itemId: string) => void;
-	/** Runs when a link is followed (e.g. closes the mobile drawer). Navigation itself is the link's. */
-	readonly onNavigate?: (() => void) | undefined;
+	/** Runs when a link is followed, with its `href` (e.g. closes the mobile drawer). Navigation itself is the link's. */
+	readonly onNavigate?: ((href: string) => void) | undefined;
 	readonly renderLink: PanelSidebarRenderLink;
 	readonly renderIcon: PanelSidebarRenderIcon;
 	readonly searchQuery: string;
@@ -127,8 +127,8 @@ export const PanelSidebarNavItem = React.forwardRef<HTMLLIElement, PanelSidebarN
 	}, [isDisabled, item.id, onToggleExpand]);
 
 	const handleFollowLink = React.useCallback((): void => {
-		onNavigate?.();
-	}, [onNavigate]);
+		onNavigate?.(item.url);
+	}, [item.url, onNavigate]);
 
 	const label = (
 		<span className="flex min-w-0 items-center">

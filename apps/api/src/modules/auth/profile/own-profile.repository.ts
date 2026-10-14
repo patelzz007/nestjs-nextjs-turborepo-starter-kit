@@ -2,11 +2,13 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { epochMs, nowEpochMs, OwnProfileSchema, type OwnProfile, type OwnProfileAvatar, type OwnProfileEditableFields } from "@workspace/shared";
 
+import { PublicUrlResolver, type PublicUrlResolve } from "../../../config/public-url.resolver";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { IMAGE_RENDITIONS_SELECT, toImageSources } from "../../files/utils/image-sources.util";
 
 /**
  * Everything the own-profile payload is built from — the user row and its
- * avatar binding (`user_avatars` → `stored_files`), in ONE query.
+ * avatar binding (`user_avatars` → `stored_files` → its renditions), in ONE query.
  */
 const OWN_PROFILE_SELECT = {
 	id: true,
@@ -20,7 +22,7 @@ const OWN_PROFILE_SELECT = {
 			fileId: true,
 			isDeleted: true,
 			updatedAt: true,
-			file: { select: { status: true, isDeleted: true, publicPath: true } },
+			file: { select: { status: true, isDeleted: true, publicPath: true, variants: IMAGE_RENDITIONS_SELECT } },
 		},
 	},
 } satisfies Prisma.UserSelect;
@@ -38,19 +40,23 @@ export type OwnProfileChanges = Partial<OwnProfileEditableFields>;
  * READY (scanned) public image. A soft-deleted binding or file, or one still
  * awaiting its scan verdict, is no avatar at all.
  */
-function toLiveAvatar(avatar: OwnProfileRow["avatar"]): OwnProfileAvatar | null {
-	if (avatar === null || avatar.isDeleted || avatar.file.isDeleted || avatar.file.status !== "READY" || avatar.file.publicPath === null) {
+function toLiveAvatar(avatar: OwnProfileRow["avatar"], resolve: PublicUrlResolve): OwnProfileAvatar | null {
+	if (avatar === null || avatar.isDeleted || avatar.file.isDeleted || avatar.file.status !== "READY") {
 		return null;
 	}
-	return { fileId: avatar.fileId, url: avatar.file.publicPath, updatedAt: epochMs(Number(avatar.updatedAt)) };
+	const url = resolve(avatar.file.publicPath);
+	if (url === null) {
+		return null;
+	}
+	return { fileId: avatar.fileId, url, sources: toImageSources(avatar.file.variants, resolve), updatedAt: epochMs(Number(avatar.updatedAt)) };
 }
 
-function toOwnProfile(row: OwnProfileRow): OwnProfile {
+function toOwnProfile(row: OwnProfileRow, resolve: PublicUrlResolve): OwnProfile {
 	return OwnProfileSchema.parse({
 		id: row.id,
 		email: row.email,
 		fullName: row.fullName,
-		avatar: toLiveAvatar(row.avatar),
+		avatar: toLiveAvatar(row.avatar, resolve),
 		version: row.profileVersion,
 		createdAt: Number(row.createdAt),
 		updatedAt: Number(row.updatedAt),
@@ -71,12 +77,15 @@ function toUserUpdate(changes: OwnProfileChanges): Prisma.UserUpdateManyMutation
  */
 @Injectable()
 export class OwnProfileRepository {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(
+		private readonly prisma: PrismaService,
+		private readonly publicUrls: PublicUrlResolver,
+	) {}
 
 	/** The live user's profile, or `null` when the account does not exist (or is soft-deleted). */
 	public async findLive(userId: string, db: OwnProfileDbClient = this.prisma): Promise<OwnProfile | null> {
 		const row: OwnProfileRow | null = await db.user.findFirst({ where: { id: userId, isDeleted: false }, select: OWN_PROFILE_SELECT });
-		return row === null ? null : toOwnProfile(row);
+		return row === null ? null : toOwnProfile(row, this.publicUrls.resolve);
 	}
 
 	/** Whether a live account with this id exists (tells a vanished row from a stale version). */

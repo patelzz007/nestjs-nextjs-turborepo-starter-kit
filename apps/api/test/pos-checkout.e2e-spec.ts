@@ -18,7 +18,7 @@ import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/o
 import { DEMO_MERCHANT_API_KEYS, REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { POS_CODE_MAX_FAILURES } from "../src/modules/rewards/services/pos-code-lockout.service";
 import { sha256Hex } from "../src/common/crypto/sha256";
-import { rewardCoverSeedId } from "../prisma/seed/reward-covers";
+import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { RewardCodeHasher } from "../src/modules/rewards/crypto/reward-code-hasher";
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
@@ -136,9 +136,9 @@ describe("POS checkout (e2e)", () => {
 	): Promise<void> {
 		const referred = options.referrerRewardId !== undefined;
 		await query(
-			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, reward_kind, category, cover_file_id, min_spend_minor,
+			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, reward_kind, category, min_spend_minor,
          quantity_total, quantity_remaining, expiry_date, status, referrals_enabled, referral_pool_total, referral_pool_remaining, referrer_reward_id, location_scope_type)
-       VALUES ($1, $2, $3, 'Created by pos-checkout.e2e-spec.ts', 'DISCOUNT', 10, $4, 'cafe', $11, $5, 50, 50, $6, 'PUBLISHED', $7, $8, $8, $9, $10)`,
+       VALUES ($1, $2, $3, 'Created by pos-checkout.e2e-spec.ts', 'DISCOUNT', 10, $4, 'cafe', $5, 50, 50, $6, 'PUBLISHED', $7, $8, $8, $9, $10)`,
 			[
 				id,
 				ORGANIZATION_SEED_IDS.klOrganization,
@@ -150,9 +150,9 @@ describe("POS checkout (e2e)", () => {
 				referred ? 1 : null,
 				options.referrerRewardId ?? null,
 				options.scope ?? "ALL_LOCATIONS",
-				rewardCoverSeedId("free-coffee"),
 			],
 		);
+		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(id, ORGANIZATION_SEED_IDS.klOrganization, "free-coffee")]);
 		if (options.scope === "SELECTED") {
 			await query(`INSERT INTO public.reward_location_scopes (id, organization_id, reward_id, location_id) VALUES ($1, $2, $3, $4)`, [
 				randomUUID(),

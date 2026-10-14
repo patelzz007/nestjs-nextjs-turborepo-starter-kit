@@ -15,17 +15,18 @@ import type {
 import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
 import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
-import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
+import { merchantActorAuditId, type MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
-import { RewardCoverUnavailableError, RewardRepository, type RewardOrgConsumerSummary } from "../repositories/reward.repository";
+import { RewardImagesUnavailableError, RewardRepository, type RewardOrgConsumerSummary } from "../repositories/reward.repository";
 import { isRewardWithinScope } from "../utils/merchant-location-scope.util";
 import { toStoredRewardRules } from "../utils/reward-rules.util";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { MerchantContextService } from "./merchant-context.service";
 import { RewardNotificationService } from "./reward-notification.service";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
 
 const AUTO_PUBLISH_MS = 24 * 60 * 60 * 1000;
 const REFERRER_REWARD_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -40,13 +41,14 @@ export class MerchantRewardService {
 		private readonly organizationRepository: OrganizationRepository,
 		private readonly notificationService: RewardNotificationService,
 		private readonly outbox: PlatformOutboxService,
+		private readonly publicUrls: PublicUrlResolver,
 	) {}
 
 	public async listRewards(actor: MerchantActor, query: MerchantRewardListQuery = {}): Promise<RewardResponse[]> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_rewards");
 		const scope = await this.merchantContext.resolveLocationScope(actor, query.locationId);
 		const rows = await this.rewardRepository.listConsumerByOrganization(actor.organizationId, scope);
-		return rows.map((row) => mapRewardToResponse(row, row.organization));
+		return rows.map((row) => mapRewardToResponse(row, row.organization, this.publicUrls.resolve));
 	}
 
 	/** One reward as the merchant sees it; a reward not offered at any of the caller's stores is 404, exactly as it is absent from {@link listRewards}. */
@@ -57,7 +59,7 @@ export class MerchantRewardService {
 		if (row === null) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });
 		}
-		return mapRewardToResponse(row, row.organization);
+		return mapRewardToResponse(row, row.organization, this.publicUrls.resolve);
 	}
 
 	public async createReward(actor: MerchantActor, input: MerchantCreateRewardInput): Promise<RewardResponse> {
@@ -73,7 +75,7 @@ export class MerchantRewardService {
 		const now = Date.now();
 		const autoPublishAt = saveAsDraft ? null : now + AUTO_PUBLISH_MS;
 
-		const reward = await this.withCoverCheck(() =>
+		const reward = await this.withImageCheck(() =>
 			this.rewardRepository.createConsumerReward(
 				{
 					organizationId: orgId,
@@ -84,7 +86,6 @@ export class MerchantRewardService {
 					termsConditions: input.termsConditions ?? null,
 					rewardKind: "CONSUMER",
 					category: input.category,
-					coverFileId: input.coverFileId,
 					...(input.rules === undefined ? {} : toStoredRewardRules(input.rules)),
 					quantityTotal: input.quantityTotal,
 					quantityRemaining: input.quantityTotal,
@@ -98,6 +99,7 @@ export class MerchantRewardService {
 					referralPoolRemaining: referralPoolTotal,
 					locationScopeType,
 				},
+				input.imageFileIds,
 				locationIds,
 			),
 		);
@@ -106,27 +108,28 @@ export class MerchantRewardService {
 			const referrerTitle = input.referrerRewardTitle ?? `${input.title} — Referrer bonus`;
 			const referrerExpiry = Math.min(input.expiryDate, Date.now() + REFERRER_REWARD_MAX_TTL_MS);
 
-			const referrerReward = await this.rewardRepository.createReferrerReward({
-				organizationId: orgId,
-				title: referrerTitle,
-				description: `Referrer reward for ${input.title}`,
-				rewardType: input.rewardType,
-				rewardValue: input.rewardValue,
-				termsConditions: input.termsConditions ?? null,
-				rewardKind: "REFERRER",
-				category: input.category,
-				// The referrer reward shows the same cover as the reward it is earned through.
-				coverFileId: input.coverFileId,
-				quantityTotal: referralPoolTotal,
-				quantityRemaining: referralPoolTotal,
-				expiryDate: referrerExpiry,
-				status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
-				submittedForReviewAt: saveAsDraft ? null : now,
-				autoPublishAt,
-				referralsEnabled: false,
-				parentConsumerRewardId: reward.id,
-				locationScopeType,
-			});
+			const referrerReward = await this.rewardRepository.createReferrerReward(
+				{
+					organizationId: orgId,
+					title: referrerTitle,
+					description: `Referrer reward for ${input.title}`,
+					rewardType: input.rewardType,
+					rewardValue: input.rewardValue,
+					termsConditions: input.termsConditions ?? null,
+					rewardKind: "REFERRER",
+					category: input.category,
+					quantityTotal: referralPoolTotal,
+					quantityRemaining: referralPoolTotal,
+					expiryDate: referrerExpiry,
+					status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
+					submittedForReviewAt: saveAsDraft ? null : now,
+					autoPublishAt,
+					referralsEnabled: false,
+					parentConsumerRewardId: reward.id,
+					locationScopeType,
+				},
+				input.imageFileIds,
+			);
 
 			if (locationScopeType === "SELECTED" && locationIds.length > 0) {
 				await this.rewardRepository.replaceLocationScopes(referrerReward.id, orgId, locationIds);
@@ -136,18 +139,18 @@ export class MerchantRewardService {
 		}
 
 		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.organization);
+		return mapRewardToResponse(refreshed, refreshed.organization, this.publicUrls.resolve);
 	}
 
-	/** A cover that is not one of the organization's ready, published reward-cover images is the caller's mistake (400). */
-	private async withCoverCheck<TResult>(write: () => Promise<TResult>): Promise<TResult> {
+	/** An image that is not one of the organization's ready, published reward images is the caller's mistake (400). */
+	private async withImageCheck<TResult>(write: () => Promise<TResult>): Promise<TResult> {
 		try {
 			return await write();
 		} catch (error) {
-			if (error instanceof RewardCoverUnavailableError) {
+			if (error instanceof RewardImagesUnavailableError) {
 				throw new BadRequestException({
-					message: "The cover image is not ready or does not belong to this organization. Upload it again.",
-					error: "REWARD_COVER_INVALID",
+					message: "One or more images are not ready or do not belong to this organization. Upload them again.",
+					error: "REWARD_IMAGES_INVALID",
 				});
 			}
 			throw error;
@@ -250,11 +253,11 @@ export class MerchantRewardService {
 			updateData.referralPoolRemaining = input.referralPoolTotal;
 		}
 
-		if (input.coverFileId === undefined) {
+		if (input.imageFileIds === undefined) {
 			await this.rewardRepository.updateReward(reward.id, updateData);
 		} else {
-			const cover = { organizationId: actor.organizationId, fileId: input.coverFileId };
-			await this.withCoverCheck(() => this.rewardRepository.updateRewardWithCover(reward.id, reward.referrerRewardId, updateData, cover));
+			const images = { organizationId: actor.organizationId, fileIds: input.imageFileIds, actorId: merchantActorAuditId(actor) };
+			await this.withImageCheck(() => this.rewardRepository.updateRewardWithImages(reward.id, reward.referrerRewardId, updateData, images));
 		}
 
 		if (input.referrerRewardTitle !== undefined && reward.referrerRewardId !== null) {
@@ -262,7 +265,7 @@ export class MerchantRewardService {
 		}
 
 		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.organization);
+		return mapRewardToResponse(refreshed, refreshed.organization, this.publicUrls.resolve);
 	}
 
 	public async publishReward(actor: MerchantActor, rewardId: string): Promise<RewardResponse> {
@@ -291,7 +294,7 @@ export class MerchantRewardService {
 		}
 
 		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.organization);
+		return mapRewardToResponse(refreshed, refreshed.organization, this.publicUrls.resolve);
 	}
 
 	public async listRedemptions(actor: MerchantActor, query: MerchantRedemptionListQuery): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {

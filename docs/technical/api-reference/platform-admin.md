@@ -1331,6 +1331,83 @@ Response `200 OK` (application/json):
 }
 ```
 
+### GET /api/v1/admin/rewards/{rewardId}
+
+Get one reward in full, whatever its status (moderation detail)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `MANAGE:REWARD`.
+- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Operation id `RewardsAdminRewardsController_getReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `rewardId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** — The reward
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.category` | string | yes |  |
+| `data.claimCount` | integer | yes | min -9007199254740991 |
+| `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.description` | string | yes |  |
+| `data.expiryDate` | integer | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
+| `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.locationIds` | string (uuid)[] | yes |  |
+| `data.locationNames` | string[] | no |  |
+| `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
+| `data.organizationLogoUrl` | string (uri) \| null | yes |  |
+| `data.organizationName` | string | no |  |
+| `data.quantityRemaining` | integer | yes | min -9007199254740991 |
+| `data.quantityReserved` | integer | yes | min -9007199254740991 |
+| `data.quantityTotal` | integer | yes | min -9007199254740991 |
+| `data.redemptionCount` | integer | yes | min -9007199254740991 |
+| `data.referralPoolRemaining` | integer \| null | yes | min -9007199254740991 |
+| `data.referralPoolTotal` | integer \| null | yes | min -9007199254740991 |
+| `data.referralsEnabled` | boolean | yes |  |
+| `data.referrerRewardId` | string (uuid) \| null | yes |  |
+| `data.rewardKind` | "CONSUMER" \| "REFERRER" | yes |  |
+| `data.rewardType` | "DISCOUNT" \| "FREE_ITEM" \| "CASHBACK" \| "POINTS" \| "BOGO" | yes |  |
+| `data.rewardValue` | integer | yes |  |
+| `data.rules` | object \| null | yes |  |
+| `data.rules.maxUsePerUser` | integer | no |  |
+| `data.rules.minSpendMyr` | number | no | range 0–∞ |
+| `data.shareUrl` | string (uri) | no |  |
+| `data.startDate` | integer \| null | yes |  |
+| `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.termsConditions` | string \| null | yes |  |
+| `data.title` | string | yes |  |
+| `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### POST /api/v1/admin/rewards/{rewardId}/approve
 
 Approve a pending reward (no body required)
@@ -1357,18 +1434,27 @@ _No fields._
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -1461,6 +1547,72 @@ Response `201 Created` (application/json):
 }
 ```
 
+### GET /api/v1/admin/rewards/{rewardId}/images/{fileId}/download
+
+Get a short-lived signed URL that downloads one of a reward's images (the original upload)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `MANAGE:REWARD`.
+- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Operation id `RewardsAdminRewardsController_getRewardImageDownload` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `rewardId` | path | string (uuid) | yes |  |
+| `fileId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** — Signed download URL of the image
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.downloadUrl` | string | yes | at least 1 characters |
+| `data.expiresAt` | integer | yes |  |
+| `data.fileId` | string (uuid) | yes |  |
+| `data.fileName` | string | yes | at least 1 characters |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/rewards/{rewardId}/images/archive
+
+Download every image of a reward as one ZIP of the original uploads, in display order
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `MANAGE:REWARD`.
+- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Operation id `RewardsAdminRewardsController_downloadRewardImagesArchive` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `rewardId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** — The ZIP archive (Content-Disposition: attachment) (`application/zip`)
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### POST /api/v1/admin/rewards/{rewardId}/reject
 
 Reject a pending reward
@@ -1490,18 +1642,27 @@ Reject a pending reward
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -1623,18 +1784,27 @@ List rewards pending moderation (oldest first, paginated)
 | `data` | object[] | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
-| `data[].coverFileId` | string (uuid) | yes |  |
-| `data[].coverImageUrl` | string (uri) | yes |  |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
 | `data[].id` | string (uuid) | yes |  |
+| `data[].images` | object[] | yes | 1–10 items |
+| `data[].images[].fileId` | string (uuid) | yes |  |
+| `data[].images[].height` | integer | yes |  |
+| `data[].images[].sources` | object[] | yes | 1–∞ items |
+| `data[].images[].sources[].url` | string (uri) | yes |  |
+| `data[].images[].sources[].width` | integer | yes |  |
+| `data[].images[].url` | string (uri) | yes |  |
+| `data[].images[].width` | integer | yes |  |
 | `data[].isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data[].organizationId` | string (uuid) | yes |  |
+| `data[].organizationLogoSources` | object[] | yes |  |
+| `data[].organizationLogoSources[].url` | string (uri) | yes |  |
+| `data[].organizationLogoSources[].width` | integer | yes |  |
 | `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data[].organizationName` | string | no |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |

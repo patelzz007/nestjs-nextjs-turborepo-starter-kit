@@ -58,6 +58,7 @@ export const MERCHANT_REWARD_EDITOR_LOADING_LABELS: UiKitLabelsOverride<"skeleto
 export const MERCHANT_REWARD_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading reward…" };
 export const MERCHANT_SETTINGS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading settings…" };
 export const MERCHANT_LOCATIONS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading store locations…" };
+export const MERCHANT_BRANDING_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading store branding…" };
 export const MERCHANT_TEAM_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading team…" };
 export const MERCHANT_VERIFICATION_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading business verification…" };
 export const MERCHANT_ACCOUNT_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading account…" };
@@ -107,7 +108,7 @@ const REWARD_PERFORMANCE_TILES = 3;
 /** Store checkboxes in the reward editor's store availability card. */
 const REWARD_STORE_OPTIONS = 2;
 /** Organization-settings link cards: team, locations, verification. */
-const SETTINGS_LINK_CARDS = 3;
+const SETTINGS_LINK_CARDS = 4;
 /** Store-location cards while the locations load. */
 export const LOCATION_SKELETON_CARDS = 4;
 /** Team members while the roster loads. */
@@ -378,22 +379,13 @@ export function MerchantRedemptionsPageSkeleton(): React.JSX.Element {
 
 // ── Rewards ──────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/rewards`: header with "New reward", the summary strip, the catalog toolbar and the reward grid. */
+/** `/orgs/[orgSlug]/rewards`: header with "New reward", the summary strip, the status tabs with the layout switch, and the reward grid. */
 export function MerchantRewardsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_REWARDS_LOADING_LABELS} className={PAGE_STACK}>
 			<MerchantPageHeaderSkeleton actions={1} />
 			<MerchantRewardsSummaryStripSkeleton />
-			<div className="flex flex-col gap-4">
-				<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
-					<div className="flex flex-col gap-2">
-						<Skeleton variant="text" className="h-3.5 w-24" />
-						<Skeleton variant="text" className="h-3 w-64 max-w-full" />
-					</div>
-					<Skeleton className="h-8 w-20" />
-				</div>
-				<MerchantRewardsCatalogSkeleton viewMode="grid" />
-			</div>
+			<MerchantRewardsCatalogSkeleton viewMode="grid" />
 		</SkeletonRegion>
 	);
 }
@@ -545,6 +537,35 @@ export function MerchantLocationsPageSkeleton(): React.JSX.Element {
 		<SkeletonRegion labels={MERCHANT_LOCATIONS_LOADING_LABELS} className={PAGE_STACK}>
 			<MerchantPageHeaderSkeleton actions={1} />
 			<OrganizationLocationsSkeleton />
+		</SkeletonRegion>
+	);
+}
+
+/** The store-logo panel: its heading, then the logo tile beside its controls and the limits. */
+export function StoreLogoSkeleton(): React.JSX.Element {
+	return (
+		<MerchantSurfacePanel className="flex flex-col gap-4 p-5 sm:p-6">
+			<div className="flex flex-col gap-1.5">
+				<Skeleton variant="text" className="h-4.5 w-24" />
+				<Skeleton variant="text" className="h-4 w-80 max-w-full" />
+			</div>
+			<div className="flex items-center gap-4" data-slot="store-logo-skeleton">
+				<Skeleton className="size-16 rounded-xl" />
+				<div className="flex flex-col gap-2">
+					<Skeleton className="h-8 w-32" />
+					<Skeleton variant="text" className="h-3 w-72 max-w-full" />
+				</div>
+			</div>
+		</MerchantSurfacePanel>
+	);
+}
+
+/** `/orgs/[orgSlug]/settings/branding`: header and the store-logo panel. */
+export function MerchantBrandingPageSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_BRANDING_LOADING_LABELS} className={PAGE_STACK}>
+			<MerchantPageHeaderSkeleton />
+			<StoreLogoSkeleton />
 		</SkeletonRegion>
 	);
 }

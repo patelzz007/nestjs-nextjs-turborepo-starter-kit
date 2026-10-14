@@ -174,7 +174,7 @@ describe("audit and email logs", () => {
 });
 
 describe("rewards", () => {
-	it("only lists live consumer rewards in the marketplace and filters city through the merchant profile", () => {
+	it("only lists live consumer rewards in the marketplace, filtering city through the merchant profile and by merchant", () => {
 		const query = RewardListQuerySchema.parse({ filter: { category: "cafe", city: { in: "MELAKA" } } });
 		expect(buildMarketplaceWhere(query, NOW)).toEqual({
 			AND: [
@@ -183,6 +183,7 @@ describe("rewards", () => {
 				{ organization: { merchantProfile: { city: { in: ["MELAKA"] } } } },
 			],
 		});
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { organizationId: ORG_ID } }), NOW).AND).toContainEqual({ organizationId: { equals: ORG_ID } });
 		expect(buildMarketplaceOrder(RewardListQuerySchema.parse({ sort: "expiryDate" })).orderBy).toEqual([{ expiryDate: "asc" }, { id: "asc" }]);
 	});
 

@@ -34,13 +34,13 @@ Conventions and the shared rules: [Routing](./routing.md). Paths come from `apps
 | `/users`, `/users/[id]` | Users directory + profile (RBAC panel, **impersonate**) — super-admin |
 | `/users/mfa-recovery` | MFA recovery request queue — super-admin |
 | `/merchants` (+ `/invites`, `/verification`, `/store-requests`) | Merchants, merchant invites, KYB verification queue, store requests |
-| `/rewards/review` (`/rewards` redirects) | Rewards awaiting review |
+| `/rewards/review`, `/rewards/review/[id]` (`/rewards` redirects) | The moderation queue (`MANAGE:REWARD`): a compact list — cover, title, merchant — whose **View more** opens the reward's page. That page (`GET /admin/rewards/:rewardId`, any status) shows the photos (carousel, full-size viewer, download one or all as a ZIP), the copy and every condition, and approves or rejects the reward while it is pending review, then returns to the queue |
 | `/emails/templates`, `/emails/log` (`/emails` redirects) | Email template previews (`?key=`) + delivery log |
 | `/geography` | Geographic reference data |
 | `/audit-logs`, `/audit-logs/[id]` | The global HTTP audit trail (`LIST:AUDIT_LOG` / `READ:AUDIT_LOG`): filterable table (outcome, method, credential, device, address class, trigram-indexed search; actor / organization / correlation id from a record's links — all in the URL) with colour-coded chips. Clicking a row opens the complete record in a drawer (`?record=`, shareable); `/audit-logs/[id]` is the same record as its own page (`components/audit-logs/audit-log-record.tsx` renders both). Every view is itself audited by the API |
 | `/catalog/products`, `/catalog/categories` (`/new`, `/[id]`, `/[id]/edit`; `/catalog` redirects) | Example CRUD resources |
 | `/settings/access` (`/settings` redirects to it) | Platform settings: roles, permissions, permission checker |
-| `/account/profile` | The signed-in admin's own profile: avatar + name, edited with `PATCH /auth/profile` (server-prefetched `GET /auth/profile`, TanStack Form on the shared `OwnProfileEditableFieldsSchema`, read-only while impersonating). Open to every signed-in admin; listed in `page-api-coverage.test.ts` as an own-record call |
+| `/account/profile` | The signed-in admin's own profile: avatar (the shared `ProfileAvatarEditor` — square, cropped first unless it already is) + name, edited with `PATCH /auth/profile` (server-prefetched `GET /auth/profile`, TanStack Form on the shared `OwnProfileEditableFieldsSchema`, read-only while impersonating). Open to every signed-in admin; listed in `page-api-coverage.test.ts` as an own-record call |
 | `/account/security` (`/account` redirects to it) | The signed-in admin's password and 2FA (email verification / MFA enrollment lands here) |
 | `/[...slug]` | Unknown paths → the in-shell 404 |
 

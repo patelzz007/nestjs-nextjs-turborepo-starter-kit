@@ -6,10 +6,10 @@ import { CoverImage } from "@workspace/ui/components/cover-image";
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
-import { ArrowDown, ArrowRight, ChevronRight, Gift, Home, MapPin, QrCode, Search, Ticket, Wallet } from "lucide-react";
+import { ChevronRight, Gift, Home, MapPin, QrCode, Search, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { REWARD_LIST_ROW_COVER_RATIO } from "@/lib/rewards/reward-cover";
+import { REWARD_LIST_ROW_COVER_RATIO, REWARD_THUMBNAIL_SIZES } from "@/lib/rewards/reward-cover";
 import { landingSectionPath, LANDING_SECTION_IDS, publicRewardDetailPath } from "@/lib/routes";
 
 /** Cities in the pilot — the only places offers are redeemable today. */
@@ -64,11 +64,9 @@ export function LandingHero({ featuredOffers, liveOfferCount, secondaryAction }:
 					<div className={cn("mt-9 flex flex-col gap-3 sm:flex-row", !hasPreview && "justify-center")}>
 						<Link href={landingSectionPath(LANDING_SECTION_IDS.rewards)} className={cn(buttonVariants({ size: "lg" }), "h-12 min-w-44 px-5 shadow-lg shadow-primary/25")}>
 							Browse offers
-							<ArrowDown className="size-4" aria-hidden="true" />
 						</Link>
 						<Link href={secondaryAction.href} className={cn(buttonVariants({ size: "lg", variant: "outline" }), "h-12 min-w-44 bg-background/70 px-5 backdrop-blur-sm")}>
 							{secondaryAction.label}
-							<ArrowRight className="size-4" aria-hidden="true" />
 						</Link>
 					</div>
 
@@ -179,6 +177,8 @@ function PhonePreview({ offers }: PhonePreviewProps): React.JSX.Element {
 										{/* The hero sits above the fold, so its first cover loads eagerly. */}
 										<CoverImage
 											src={offer.coverImageUrl}
+											sources={offer.coverSources}
+											sizes={REWARD_THUMBNAIL_SIZES}
 											ratio={REWARD_LIST_ROW_COVER_RATIO}
 											priority={index === 0}
 											fallback={<RewardCategoryVisual category={offer.category} className="size-5 text-primary" />}

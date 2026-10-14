@@ -28,6 +28,7 @@ import { KafkaSecurityEnvShape, listKafkaSecurityEnvIssues, toKafkaSecurityOptio
 import { z } from "zod";
 
 import { TrustProxyEnvSchema } from "../common/http/client-ip";
+import { resolveApiPublicUrl } from "./api-public-url";
 
 import {
 	AppVersionEnvSchema,
@@ -343,7 +344,10 @@ export interface RuntimeConfig {
 export interface HttpConfig {
 	readonly host: string;
 	readonly port: number;
-	/** Base URL the API is reachable at (local-storage download/upload links). */
+	/**
+	 * Base URL clients reach the API at (local-storage downloads, uploads and
+	 * public images) — never a listen wildcard (`resolveApiPublicUrl`).
+	 */
 	readonly publicUrl: string;
 	/** Proxies whose `X-Forwarded-For` is trusted (IPs, CIDRs, presets); empty = trust none (common/http/client-ip.ts). */
 	readonly trustedProxies: readonly string[];
@@ -910,7 +914,8 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 		http: {
 			host: env.HOST,
 			port: env.PORT,
-			publicUrl: env.API_PUBLIC_URL ?? `http://${env.HOST}:${String(env.PORT)}`,
+			// Never the listen wildcard (0.0.0.0 is unreachable for a client): see api-public-url.ts.
+			publicUrl: resolveApiPublicUrl({ configuredUrl: env.API_PUBLIC_URL, host: env.HOST, port: env.PORT, isDevelopment: nodeEnv === NodeEnvSchema.enum.development }),
 			trustedProxies: env.TRUST_PROXY,
 			corsOrigins: env.CORS_ORIGINS,
 			cookieDomain: env.COOKIE_DOMAIN,

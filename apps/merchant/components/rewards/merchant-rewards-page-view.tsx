@@ -146,7 +146,7 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 					}
 				/>
 			) : (
-				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} canManageRewards={canManageRewards} />
+				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} canManageRewards={canManageRewards} createRewardHref={createRewardPath} />
 			)}
 		</div>
 	);

@@ -17,6 +17,7 @@ import { ProfileUpdateDuringImpersonationError } from "./own-profile.errors";
 import { OWN_PROFILE_UPDATE_OPERATION, OwnProfileService } from "./own-profile.service";
 import { OwnProfileWritePolicy } from "./own-profile-write.policy";
 import type { ProfileActor } from "./profile-actor";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 const USER_ID = "7d3e9a10-2b4c-4d6e-8f01-23456789abcd";
 const CREATED_AT_MS = 1_788_000_000_000;
@@ -82,7 +83,7 @@ interface Harness {
 function harness(): Harness {
 	const requestContext = new RequestContextService();
 	const prisma = createTestPrisma();
-	const profiles = new InMemoryProfiles(prisma);
+	const profiles = new InMemoryProfiles(prisma, createTestPublicUrls());
 	const transactions = new InlineTransactions(prisma, requestContext);
 	const { auditTrail } = createAuditTrailDouble(requestContext);
 	const recordInTransaction = vi.spyOn(auditTrail, "recordInTransaction").mockResolvedValue();

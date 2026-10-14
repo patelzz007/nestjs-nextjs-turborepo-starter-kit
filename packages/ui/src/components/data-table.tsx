@@ -25,7 +25,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { Input } from "@workspace/ui/components/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { Checkbox } from "@workspace/ui/components/checkbox";
@@ -852,35 +852,29 @@ const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 		[filter, onFilterChange],
 	);
 
-	const labelFor = useCallback(
-		(option: { readonly value: string; readonly label: string }): string => {
-			const count = facetedCounts.get(option.value);
-			return count !== undefined ? `${option.label} (${String(count)})` : option.label;
-		},
-		[facetedCounts],
-	);
-
-	const formatFilterValue = useCallback(
-		(selected: string): string => {
-			if (selected === "all") {
-				return `All (${String(totalFilteredRows)})`;
-			}
-			const option = filter.options.find((entry) => entry.value === selected);
-			return option?.label ?? selected;
-		},
-		[filter.options, totalFilteredRows],
+	// One option list feeds both the Root's `items` (the closed trigger's label)
+	// and the rendered `SelectItem`s, so the trigger always shows exactly the
+	// selected item's text — faceted count included.
+	const options = useMemo(
+		(): readonly SelectOption<string>[] => [
+			{ value: "all", label: `All (${String(totalFilteredRows)})` },
+			...filter.options.map((option): SelectOption<string> => {
+				const count = facetedCounts.get(option.value);
+				return { value: option.value, label: count !== undefined ? `${option.label} (${String(count)})` : option.label };
+			}),
+		],
+		[facetedCounts, filter.options, totalFilteredRows],
 	);
 
 	return (
-		<Select<string> value={value} onValueChange={handleValueChange}>
+		<Select<string> value={value} onValueChange={handleValueChange} items={options}>
 			<SelectTrigger className="h-9 w-full text-sm sm:w-44" aria-label={filter.label}>
-				<SelectValue placeholder={filter.label} formatValue={formatFilterValue} />
+				<SelectValue placeholder={filter.label} />
 			</SelectTrigger>
 			<SelectContent>
-				<SelectItem value="all">All ({String(totalFilteredRows)})</SelectItem>
-				{filter.options.map((option) => (
+				{options.map((option) => (
 					<SelectItem key={option.value} value={option.value}>
-						{labelFor(option)}
+						{option.label}
 					</SelectItem>
 				))}
 			</SelectContent>
@@ -1001,15 +995,17 @@ const PageSizeSelect = React.memo(function PageSizeSelect({ pageSize, options, o
 		[onPageSizeChange],
 	);
 
+	const sizeOptions = useMemo((): readonly SelectOption<string>[] => options.map((size): SelectOption<string> => ({ value: String(size), label: String(size) })), [options]);
+
 	return (
-		<Select<string> value={String(pageSize)} onValueChange={handleValueChange}>
+		<Select<string> value={String(pageSize)} onValueChange={handleValueChange} items={sizeOptions}>
 			<SelectTrigger className="w-20">
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
-				{options.map((size) => (
-					<SelectItem key={size} value={String(size)}>
-						{size}
+				{sizeOptions.map((option) => (
+					<SelectItem key={option.value} value={option.value}>
+						{option.label}
 					</SelectItem>
 				))}
 			</SelectContent>

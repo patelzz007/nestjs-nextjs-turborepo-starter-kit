@@ -54,7 +54,7 @@ import { AnalyticsDashboardService } from "../analytics/analytics-dashboard.serv
 import { ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION, ANALYTICS_EXPORT_OPERATION_DESCRIPTION } from "../analytics/analytics-api-docs";
 import { AnalyticsExportRateLimitGuard } from "../analytics/analytics-export-rate-limit.guard";
 import { AnalyticsExportService } from "../analytics/analytics-export.service";
-import { sendAnalyticsExport } from "../analytics/analytics-export.reply";
+import { sendFileAttachment } from "../../../common/http/file-attachment.reply";
 
 @ApiTags("Organization RewardHub")
 @ApiBearerAuth()
@@ -349,6 +349,6 @@ export class OrganizationAnalyticsController {
 		@Req() request: FastifyRequest,
 		@Res() reply: FastifyReply,
 	): Promise<void> {
-		await sendAnalyticsExport(reply, await this.exports.exportMerchantReport(actor, query, request));
+		await sendFileAttachment(reply, await this.exports.exportMerchantReport(actor, query, request));
 	}
 }

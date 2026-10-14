@@ -3,7 +3,7 @@
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import {
 	API_KEY_SCOPE_OPTIONS,
 	ORGANIZATION_WIDE_STORE_CHOICE,
@@ -44,6 +44,12 @@ export interface CreateApiKeyCardProps {
 /** The organization-wide choice, as the store field names it. */
 const ORGANIZATION_WIDE_LABEL = "Every store (organization-wide)";
 
+/** The shared scope options as `{ value, label }` — the scope select's `items` and its rendered options. */
+const API_KEY_SCOPE_SELECT_OPTIONS: readonly SelectOption<string>[] = API_KEY_SCOPE_OPTIONS.map((option): SelectOption<string> => ({
+	value: option.scope,
+	label: option.label,
+}));
+
 function FieldError({ id, message }: { readonly id: string; readonly message: string | undefined }): React.JSX.Element | null {
 	return message === undefined ? null : (
 		<p id={id} role="alert" className="text-xs text-destructive">
@@ -70,12 +76,15 @@ export function CreateApiKeyCard({
 	const storeError = fieldErrorMessage(submissionError, "store");
 	const formError = formErrorMessage(submissionError);
 	const scopeDescription = API_KEY_SCOPE_OPTIONS.find((option) => option.scope === scope)?.description;
-	const storeLabel = React.useCallback(
-		(choice: string): string =>
-			choice === ORGANIZATION_WIDE_STORE_CHOICE ? ORGANIZATION_WIDE_LABEL : (storeChoices.stores.find((store) => store.id === choice)?.name ?? choice),
-		[storeChoices.stores],
+	// One option list per select feeds both its `items` (the closed trigger's
+	// label) and its rendered `SelectItem`s, so the two never disagree.
+	const storeOptions = React.useMemo(
+		(): readonly SelectOption<string>[] => [
+			...storeChoices.stores.map((store: ApiKeyStoreOption): SelectOption<string> => ({ value: store.id, label: store.name })),
+			...(storeChoices.allowOrganizationWide ? [{ value: ORGANIZATION_WIDE_STORE_CHOICE, label: ORGANIZATION_WIDE_LABEL }] : []),
+		],
+		[storeChoices],
 	);
-	const scopeLabel = React.useCallback((value: string): string => API_KEY_SCOPE_OPTIONS.find((option) => option.scope === value)?.label ?? value, []);
 	const handleStoreChoiceChange = React.useCallback(
 		(choice: string | null): void => {
 			if (choice !== null) {
@@ -129,19 +138,19 @@ export function CreateApiKeyCard({
 						<Select<string>
 							value={storeChoice === "" ? null : storeChoice}
 							onValueChange={handleStoreChoiceChange}
+							items={storeOptions}
 							required
 							disabled={hasNoStore}
 							invalid={storeError !== undefined}>
 							<SelectTrigger id="key-store" aria-describedby={storeError === undefined ? "key-store-hint" : "key-store-hint key-store-error"}>
-								<SelectValue placeholder="Choose a store" formatValue={storeLabel} />
+								<SelectValue placeholder="Choose a store" />
 							</SelectTrigger>
 							<SelectContent>
-								{storeChoices.stores.map((store: ApiKeyStoreOption): React.JSX.Element => (
-									<SelectItem key={store.id} value={store.id}>
-										{store.name}
+								{storeOptions.map((option): React.JSX.Element => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
 									</SelectItem>
 								))}
-								{storeChoices.allowOrganizationWide ? <SelectItem value={ORGANIZATION_WIDE_STORE_CHOICE}>{ORGANIZATION_WIDE_LABEL}</SelectItem> : null}
 							</SelectContent>
 						</Select>
 						<p id="key-store-hint" className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -152,13 +161,13 @@ export function CreateApiKeyCard({
 					</div>
 					<div className="grid gap-2">
 						<Label htmlFor="key-scope">Access</Label>
-						<Select<string> value={scope} onValueChange={handleScopeChange}>
+						<Select<string> items={API_KEY_SCOPE_SELECT_OPTIONS} value={scope} onValueChange={handleScopeChange}>
 							<SelectTrigger id="key-scope" aria-describedby="key-scope-hint">
-								<SelectValue formatValue={scopeLabel} />
+								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{API_KEY_SCOPE_OPTIONS.map((option): React.JSX.Element => (
-									<SelectItem key={option.scope} value={option.scope}>
+								{API_KEY_SCOPE_SELECT_OPTIONS.map((option): React.JSX.Element => (
+									<SelectItem key={option.value} value={option.value}>
 										{option.label}
 									</SelectItem>
 								))}

@@ -4,15 +4,19 @@ import type { PaginatedServiceResult, RewardListQuery, RewardResponse } from "@w
 import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { RewardRepository } from "../repositories/reward.repository";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
 
 @Injectable()
 export class ConsumerRewardsService {
-	public constructor(private readonly repository: RewardRepository) {}
+	public constructor(
+		private readonly repository: RewardRepository,
+		private readonly publicUrls: PublicUrlResolver,
+	) {}
 
 	public async listMarketplace(query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
 		const result = await this.repository.listMarketplace(query);
 		return toPaginatedServiceResult(
-			mapListResult(result, (row) => mapRewardToResponse(row, row.organization)),
+			mapListResult(result, (row) => mapRewardToResponse(row, row.organization, this.publicUrls.resolve)),
 			query,
 		);
 	}
@@ -24,6 +28,6 @@ export class ConsumerRewardsService {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });
 		}
 
-		return mapRewardToResponse(reward, reward.organization);
+		return mapRewardToResponse(reward, reward.organization, this.publicUrls.resolve);
 	}
 }

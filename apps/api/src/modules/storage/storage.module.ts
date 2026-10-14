@@ -3,9 +3,11 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "../../config/config.module";
 import { TypedConfigService } from "../../config/typed-config.service";
 
+import { SharpImageProcessor } from "./adapters/images/sharp-image-processor";
 import { LocalTransferTokenService } from "./adapters/local/local-transfer-token.service";
 import { createMalwareScanner } from "./adapters/scanners/malware-scanner.factory";
 import type { CdnCacheInvalidator } from "./domain/cdn-cache.port";
+import { ImageProcessor } from "./domain/image-processor.port";
 import type { MalwareScanner } from "./domain/malware-scanner.port";
 import { ACTIVE_STORAGE_ADAPTER, CDN_CACHE_INVALIDATOR, MALWARE_SCANNER, OBJECT_STORAGE, PUBLIC_DELIVERY } from "./domain/storage.tokens";
 import { createCdnCacheInvalidator } from "./factory/cdn-cache-invalidator.factory";
@@ -14,6 +16,8 @@ import { createStorageAdapter, type StorageAdapter } from "./factory/storage-ada
 @Module({
 	imports: [ConfigModule],
 	providers: [
+		// Reads and renders upload images (dimension checks, published renditions).
+		{ provide: ImageProcessor, useFactory: (): ImageProcessor => new SharpImageProcessor() },
 		{
 			// One signing key per process, shared by the local adapter (signs) and the local transfer endpoints (verify).
 			provide: LocalTransferTokenService,
@@ -43,6 +47,6 @@ import { createStorageAdapter, type StorageAdapter } from "./factory/storage-ada
 			inject: [TypedConfigService],
 		},
 	],
-	exports: [OBJECT_STORAGE, PUBLIC_DELIVERY, MALWARE_SCANNER, CDN_CACHE_INVALIDATOR, LocalTransferTokenService],
+	exports: [OBJECT_STORAGE, PUBLIC_DELIVERY, MALWARE_SCANNER, CDN_CACHE_INVALIDATOR, LocalTransferTokenService, ImageProcessor],
 })
 export class StorageModule {}

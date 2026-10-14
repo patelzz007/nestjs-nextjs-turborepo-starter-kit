@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { ImageSourceSchema } from "@workspace/shared";
 import { z } from "zod";
 
 /**
@@ -36,6 +37,11 @@ export type {
 export const SidebarUserSchema = z.object({
 	name: z.string().min(1),
 	email: z.string(),
+	/** Their profile picture and its renditions — absent until the profile loads, `null` when they have none (initials show). */
+	avatar: z
+		.object({ url: z.string(), sources: z.array(ImageSourceSchema) })
+		.nullable()
+		.optional(),
 });
 
 export type SidebarUser = z.output<typeof SidebarUserSchema>;

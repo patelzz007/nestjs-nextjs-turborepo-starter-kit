@@ -3,7 +3,8 @@
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { RewardStockMeter } from "@/components/rewards/reward-stock-meter";
-import { describeRewardStores, formatRewardEnd, formatRewardOffer, isRewardEnded } from "@/lib/rewards/presentation";
+import { describeRewardStores, formatRewardEnd, isRewardEnded } from "@/lib/rewards/presentation";
+import { formatRewardOffer } from "@workspace/client/lib/rewards/reward-offer";
 import { ORG_ROUTES } from "@/lib/routes";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { CoverImage } from "@workspace/ui/components/cover-image";
@@ -26,6 +27,8 @@ const FACT_CELL_CLASS = "col-start-2 lg:col-start-auto";
 
 /** The list thumbnail's shape — squarer than the 16:9 card cover so it stays legible at row height. */
 const THUMBNAIL_RATIO = 4 / 3;
+/** The thumbnail is drawn about 10rem wide at most — the smallest rendition is plenty. */
+const THUMBNAIL_SIZES = "160px";
 
 export interface MerchantRewardListRowProps {
 	readonly reward: RewardResponse;
@@ -39,6 +42,7 @@ export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewa
 	const stores = describeRewardStores(reward);
 	const { locale } = PLATFORM_DISPLAY_REGION;
 	const endLabel = formatRewardEnd(reward);
+	const [cover] = reward.images;
 
 	return (
 		<article
@@ -48,7 +52,9 @@ export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewa
 				REWARD_LIST_COLUMNS_CLASS,
 			)}>
 			<CoverImage
-				src={reward.coverImageUrl}
+				src={cover?.url}
+				sources={cover?.sources}
+				sizes={THUMBNAIL_SIZES}
 				ratio={THUMBNAIL_RATIO}
 				className={cn("row-span-4 self-start rounded-lg border border-border lg:row-span-1 lg:self-center", ended ? "opacity-80 grayscale" : null)}
 			/>

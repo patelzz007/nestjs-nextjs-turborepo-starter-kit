@@ -41,7 +41,14 @@ const FRENCH_LABELS: UiKitLabelsOverride<"carousel"> = {
 /** A label set whose `carousel` family differs from English — proves the provider supplies the copy. */
 const GERMAN_LABELS: UiKitLabels = {
 	...UI_KIT_LABELS_EN,
-	carousel: { carouselRoleDescription: "Karussell", slideRoleDescription: "Folie", previousSlide: "Vorherige Folie", nextSlide: "Nächste Folie" },
+	carousel: {
+		carouselRoleDescription: "Karussell",
+		slideRoleDescription: "Folie",
+		previousSlide: "Vorherige Folie",
+		nextSlide: "Nächste Folie",
+		slidePosition: (position: number, total: number): string => `Bild ${String(position)} von ${String(total)}`,
+		goToSlide: (position: number): string => `Bild ${String(position)} zeigen`,
+	},
 };
 
 function OneSlideCarousel(): React.JSX.Element {

@@ -262,6 +262,11 @@ import {
 	RewardNotificationListResponseSchema,
 	RewardResponseListSchema,
 	RewardResponseSchema,
+	AdminRewardImageDownloadResponseSchema,
+	AdminRewardImagePathInputSchema,
+	AdminRewardImagesArchivePathInputSchema,
+	AdminRewardPathInputSchema,
+	REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
 } from "../schemas/domain/rewards/rewards-entities";
 import {
 	MerchantKybDocumentDownloadResponseSchema,
@@ -1228,6 +1233,13 @@ export const apiContract = {
 			input: AdminPendingRewardListQuerySchema,
 			response: paginatedResponse(RewardResponseSchema),
 		}),
+		/** One reward in full, whatever its status — reviewers open it from the moderation queue. */
+		getReward: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.rewardDetail,
+			input: AdminRewardPathInputSchema,
+			response: singleResponse(RewardResponseSchema),
+		}),
 		listOrganizations: defineContract({
 			method: "GET",
 			path: apiRoutes.rewardsAdmin.merchants,
@@ -1257,6 +1269,20 @@ export const apiContract = {
 			path: apiRoutes.rewardsAdmin.rewardApprove,
 			input: z.object({ rewardId: UuidParamSchema }).strict(),
 			response: singleResponse(RewardResponseSchema),
+		}),
+		/** One of a reward's images, downloaded as its original upload — reviewers check photos at full resolution. */
+		downloadRewardImage: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.rewardImageDownload,
+			input: AdminRewardImagePathInputSchema,
+			response: singleResponse(AdminRewardImageDownloadResponseSchema),
+		}),
+		/** Every image of a reward in one ZIP (original uploads, in display order) — fetch it with `fetchDownload`. */
+		downloadRewardImagesArchive: defineFileContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.rewardImagesArchive,
+			input: AdminRewardImagesArchivePathInputSchema,
+			response: fileResponse([REWARD_IMAGES_ARCHIVE_CONTENT_TYPE]),
 		}),
 		rejectReward: defineContract({
 			method: "POST",

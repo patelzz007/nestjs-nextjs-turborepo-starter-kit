@@ -82,11 +82,16 @@ export function useSidebarSectionOrder(): readonly string[] | null {
 /**
  * The nav branches open on `pathname`: `autoExpandedItems` (the route's active
  * ancestors, from `buildSidebarView`) overridden by the user's manual choices
- * made on this same page since the last followed sidebar link. Derived on
+ * made on this same page (dropped when the route changes). Derived on
  * every render; manual choices are session-only, so a reload shows only the
  * route's branches.
  */
 export function useSidebarExpandedItems(pathname: string, autoExpandedItems: Readonly<Record<string, boolean>>): Readonly<Record<string, boolean>> {
+	const { dispatch } = sidebarContext.useFeatureStore();
+	// The route (URL state) is the source of truth: once it really changes, choices made on the previous page are dropped.
+	React.useEffect((): void => {
+		dispatch(sidebarActions.routeChanged(pathname));
+	}, [dispatch, pathname]);
 	const selectForPathname = React.useCallback((state: SidebarState): Readonly<Record<string, boolean>> => selectManualExpansionFor(state, pathname), [pathname]);
 	const manualExpansion = sidebarContext.useFeatureSelector(selectForPathname);
 	return React.useMemo(() => resolveExpandedItems(autoExpandedItems, manualExpansion), [autoExpandedItems, manualExpansion]);
@@ -104,13 +109,23 @@ export interface SidebarCommands {
 	readonly moveSectionDown: (title: string, allTitles: readonly string[]) => void;
 	/** Records a manual expand/collapse of `itemId` on the page at `pathname`. */
 	readonly setItemExpanded: (pathname: string, itemId: string, expanded: boolean) => void;
-	/** A sidebar link was followed: drops every manual expand/collapse, so only the route's branches stay open. */
-	readonly resetItemExpansion: () => void;
+	/**
+	 * A sidebar link to `href` was followed from the page at `currentPathname`.
+	 * A link to that same page resets the hand-opened branches at once; one to
+	 * another page keeps them until the route changes (`useSidebarExpandedItems`).
+	 */
+	readonly followLink: (currentPathname: string, href: string) => void;
 	readonly setSearchQuery: (query: string) => void;
 	readonly clearSearch: () => void;
 }
 
 /** Stable command functions (same identity for the provider's lifetime — safe in effect deps). */
+/** The path of a sidebar link's `href`, without its query or fragment — what a page is told apart by. */
+export function pathnameOf(href: string): string {
+	const [path = href] = href.split(/[?#]/u);
+	return path;
+}
+
 export function useSidebarCommands(): SidebarCommands {
 	const { dispatch } = sidebarContext.useFeatureStore();
 	return React.useMemo(
@@ -133,8 +148,8 @@ export function useSidebarCommands(): SidebarCommands {
 			setItemExpanded: (pathname: string, itemId: string, expanded: boolean): void => {
 				dispatch(sidebarActions.itemExpansionChanged(pathname, itemId, expanded));
 			},
-			resetItemExpansion: (): void => {
-				dispatch(sidebarActions.linkFollowed());
+			followLink: (currentPathname: string, href: string): void => {
+				dispatch(sidebarActions.linkFollowed(currentPathname, pathnameOf(href)));
 			},
 			setSearchQuery: (query: string): void => {
 				dispatch(sidebarActions.searchChanged(query));

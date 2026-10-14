@@ -3,14 +3,24 @@ import { describe, expect, it } from "vitest";
 import { epochMs } from "../../api/common";
 
 import { MerchantKybDocumentRecordSchema, MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "./rewards-kyb";
-import { MerchantCreateRewardSchema, RewardResponseSchema, type RewardResponse } from "./rewards-entities";
+import { MAX_REWARD_IMAGES, MerchantCreateRewardSchema, RewardResponseSchema, type RewardImageResponse, type RewardResponse } from "./rewards-entities";
 import { KybDocumentScanStatusSchema, RewardRulesResponseSchema, RewardRulesSchema, type RewardRules } from "./rewards-enums";
 
 // Response schemas are OPEN (ADR 022): the API strips unknown keys and clients
 // tolerate additive fields. Request schemas sharing the same fields stay CLOSED.
 
-const COVER_FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
-const COVER_URL = `https://cdn.example.com/stores/org/reward-covers/${COVER_FILE_ID}.webp`;
+const IMAGE_FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
+const IMAGE_URL = `https://cdn.example.com/stores/org/reward-images/${IMAGE_FILE_ID}/uhd.webp`;
+const IMAGE: RewardImageResponse = {
+	fileId: IMAGE_FILE_ID,
+	url: IMAGE_URL,
+	width: 3840,
+	height: 2160,
+	sources: [
+		{ width: 640, url: `https://cdn.example.com/stores/org/reward-images/${IMAGE_FILE_ID}/thumbnail.webp` },
+		{ width: 3840, url: IMAGE_URL },
+	],
+};
 const CREATED_AT_MS = 1_786_300_000_000;
 const EXPIRY_MS = 1_786_400_000_000;
 const MIN_SPEND_MYR = 20;
@@ -33,6 +43,7 @@ const reward: RewardResponse = {
 	id: REWARD_ID,
 	organizationId: ORGANIZATION_ID,
 	organizationLogoUrl: null,
+	organizationLogoSources: [],
 	title: "Free coffee",
 	description: "One free coffee",
 	rewardType: "FREE_ITEM",
@@ -40,8 +51,7 @@ const reward: RewardResponse = {
 	termsConditions: null,
 	rewardKind: "CONSUMER",
 	category: "food",
-	coverFileId: COVER_FILE_ID,
-	coverImageUrl: COVER_URL,
+	images: [IMAGE],
 	quantityTotal: QUANTITY_TOTAL,
 	quantityRemaining: QUANTITY_TOTAL,
 	quantityReserved: 0,
@@ -105,7 +115,7 @@ describe("reward rules", () => {
 			rewardType: "FREE_ITEM",
 			rewardValue: REWARD_VALUE,
 			category: "food",
-			coverFileId: COVER_FILE_ID,
+			imageFileIds: [IMAGE_FILE_ID],
 			quantityTotal: QUANTITY_TOTAL,
 			expiryDate: EXPIRY_MS,
 		};
@@ -135,12 +145,13 @@ describe("RewardResponseSchema", () => {
 		expect(RewardResponseSchema.safeParse(withoutLogo).success).toBe(false);
 	});
 
-	it("requires a cover image, as an http(s) URL", () => {
-		const { coverImageUrl, ...withoutCover } = reward;
-		expect(coverImageUrl).toBe(COVER_URL);
-		expect(RewardResponseSchema.safeParse(withoutCover).success).toBe(false);
-		expect(RewardResponseSchema.safeParse({ ...reward, coverImageUrl: "javascript:alert(1)" }).success).toBe(false);
-		expect(RewardResponseSchema.safeParse({ ...reward, coverImageUrl: "/covers/kuih.webp" }).success).toBe(false);
+	it("requires at least one image, each with http(s) URLs", () => {
+		const { images, ...withoutImages } = reward;
+		expect(images).toEqual([IMAGE]);
+		expect(RewardResponseSchema.safeParse(withoutImages).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, images: [] }).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, images: [{ ...IMAGE, url: "javascript:alert(1)" }] }).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, images: [{ ...IMAGE, sources: [{ width: 640, url: "/reward-images/a.webp" }] }] }).success).toBe(false);
 	});
 
 	it("rejects a non-http(s) or relative logo URL", () => {
@@ -161,20 +172,29 @@ describe("MerchantKybProfileResponseSchema", () => {
 	});
 });
 
-describe("reward cover on create", () => {
-	it("refuses a reward without a cover, naming what is missing", () => {
-		const request = {
-			title: "Free coffee",
-			description: "One free coffee",
-			rewardType: "FREE_ITEM",
-			rewardValue: REWARD_VALUE,
-			category: "food",
-			quantityTotal: QUANTITY_TOTAL,
-			expiryDate: EXPIRY_MS,
-		};
-		const parsed = MerchantCreateRewardSchema.safeParse(request);
-		expect(parsed.success).toBe(false);
-		expect(parsed.error?.issues.map((issue) => issue.path.join("."))).toContain("coverFileId");
-		expect(MerchantCreateRewardSchema.safeParse({ ...request, coverFileId: "not-a-file" }).error?.issues.at(0)?.message).toBe("Add a cover image");
+describe("reward images on create", () => {
+	const request = {
+		title: "Free coffee",
+		description: "One free coffee",
+		rewardType: "FREE_ITEM",
+		rewardValue: REWARD_VALUE,
+		category: "food",
+		quantityTotal: QUANTITY_TOTAL,
+		expiryDate: EXPIRY_MS,
+	};
+
+	function issueMessages(imageFileIds: readonly string[] | undefined): string[] {
+		return MerchantCreateRewardSchema.safeParse({ ...request, imageFileIds }).error?.issues.map((issue) => issue.message) ?? [];
+	}
+
+	it("needs one to ten distinct images, saying which rule an attempt breaks", () => {
+		const ids = Array.from({ length: MAX_REWARD_IMAGES + 1 }, (_, index: number): string => `4e5f6a7b-8c9d-4e0f-9a1b-${String(index).padStart(12, "0")}`);
+
+		expect(MerchantCreateRewardSchema.safeParse({ ...request, imageFileIds: ids.slice(0, MAX_REWARD_IMAGES) }).success).toBe(true);
+		expect(MerchantCreateRewardSchema.safeParse(request).error?.issues.map((issue) => issue.path.join("."))).toContain("imageFileIds");
+		expect(issueMessages([])).toContain("Add at least one image");
+		expect(issueMessages(ids)).toContain("Add up to 10 images");
+		expect(issueMessages([IMAGE_FILE_ID, IMAGE_FILE_ID])).toContain("Each image can be added once");
+		expect(issueMessages(["not-a-file"])).toContain("Upload the image again");
 	});
 });

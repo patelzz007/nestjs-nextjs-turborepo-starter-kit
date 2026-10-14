@@ -30,6 +30,26 @@ describe("EntityAvatar logo", () => {
 		expect(screen.getByRole("img", { name: SHOP_NAME })).toBeDefined();
 	});
 
+	it("serves the logo from its renditions at the size the mark is drawn", (): void => {
+		render(
+			<EntityAvatar
+				name={SHOP_NAME}
+				src={LOGO_URL}
+				sources={[
+					{ width: 256, url: "https://cdn.example.com/organizations/brew-bean/medium.webp" },
+					{ width: 128, url: "https://cdn.example.com/organizations/brew-bean/thumbnail.webp" },
+				]}
+				size="sm"
+			/>,
+		);
+
+		const logo = screen.getByAltText(SHOP_NAME);
+		expect(logo.getAttribute("srcset")).toBe(
+			"https://cdn.example.com/organizations/brew-bean/thumbnail.webp 128w, https://cdn.example.com/organizations/brew-bean/medium.webp 256w",
+		);
+		expect(logo.getAttribute("sizes")).toBe("32px");
+	});
+
 	it("falls back to the monogram when the logo fails to load", (): void => {
 		render(<EntityAvatar name={SHOP_NAME} src={LOGO_URL} />);
 

@@ -12,7 +12,7 @@ import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
 import { daysAgo, daysFromNow } from "./helpers";
 import { seedCheckout, type SeedCheckoutInput } from "./reward-checkout";
-import { rewardCoverSeedId, seedRewardCovers } from "./reward-covers";
+import { linkRewardImages, seedReplacedRewardImage, seedRewardImageFiles, type RewardImageLink, type RewardImageSetSlug } from "./reward-images";
 import { seedRewardLifecycleStates } from "./reward-lifecycle-states";
 import { seedLog } from "./seed-log";
 
@@ -61,7 +61,7 @@ interface ExtraKlRewardSeed {
 	readonly rewardType: RewardType;
 	readonly rewardValue: number;
 	readonly category: string;
-	readonly coverFileId: string;
+	readonly imageSet: RewardImageSetSlug;
 	readonly quantityTotal: number;
 	readonly quantityRemaining: number;
 	readonly quantityReserved: number;
@@ -74,7 +74,7 @@ interface ExtraMlkRewardSeed {
 	readonly rewardValue: number;
 	readonly description: string;
 	readonly category: string;
-	readonly coverFileId: string;
+	readonly imageSet: RewardImageSetSlug;
 	readonly locationIds: readonly string[];
 }
 
@@ -253,14 +253,27 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 
 	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user, klPendingCashier);
 
-	// Every reward shows a cover, so the covers are uploaded before any reward is created.
-	const coverCount = await seedRewardCovers({
+	// Every reward shows images, so the photos are uploaded (and rendered) before any reward is linked to them.
+	const imageCount = await seedRewardImageFiles({
 		klOrganizationId: klOrganization.id,
 		klOwnerUserId: klOwner.id,
 		mlkOrganizationId: mlkOrganization.id,
 		mlkOwnerUserId: mlkOwner.id,
 	});
-	seedLog(`Reward covers: ${String(coverCount)} published`);
+	seedLog(`Reward images: ${String(imageCount)} published with their renditions`);
+	/** Which photo set each reward shows — linked once every reward exists. */
+	const imageLinks: RewardImageLink[] = [
+		{ rewardId: REWARD_SEED_IDS.klRewardPublished, organizationId: klOrganization.id, slug: "free-coffee" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardPublished, organizationId: mlkOrganization.id, slug: "jonker-lunch-set" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardKatilOnly, organizationId: mlkOrganization.id, slug: "iced-tea" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardBeruangOnly, organizationId: mlkOrganization.id, slug: "weekend-dinner" },
+		{ rewardId: REWARD_SEED_IDS.klRewardReferrer, organizationId: klOrganization.id, slug: "free-pastry" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardReferrer, organizationId: mlkOrganization.id, slug: "next-meal" },
+		{ rewardId: REWARD_SEED_IDS.klRewardPending, organizationId: klOrganization.id, slug: "weekend-brunch" },
+		{ rewardId: REWARD_SEED_IDS.klRewardDraft, organizationId: klOrganization.id, slug: "matcha-latte" },
+		{ rewardId: REWARD_SEED_IDS.klRewardExpired, organizationId: klOrganization.id, slug: "merdeka-coffee" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardDisabled, organizationId: mlkOrganization.id, slug: "cendol" },
+	];
 
 	const klKeyId = deterministicUuid("reward-seed-api-key", "kl-pos-simulator");
 	const mlkKeyId = deterministicUuid("reward-seed-api-key", "mlk-katil-pos");
@@ -357,7 +370,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "One per customer. Valid weekdays only.",
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				coverFileId: rewardCoverSeedId("free-coffee"),
 				minSpendMinor: 0,
 				quantityTotal: 200,
 				quantityRemaining: 142,
@@ -381,7 +393,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "Minimum spend RM35. Weekdays 11am–3pm only.",
 				rewardKind: "CONSUMER",
 				category: "restaurant",
-				coverFileId: rewardCoverSeedId("jonker-lunch-set"),
 				minSpendMinor: 3500,
 				quantityTotal: 120,
 				quantityRemaining: 95,
@@ -406,7 +417,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "Bukit Katil store only. One per customer per day.",
 				rewardKind: "CONSUMER",
 				category: "beverage",
-				coverFileId: rewardCoverSeedId("iced-tea"),
 				quantityTotal: 80,
 				quantityRemaining: 64,
 				quantityReserved: 3,
@@ -428,7 +438,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "Bukit Beruang store only. Fri–Sat 6pm–10pm.",
 				rewardKind: "CONSUMER",
 				category: "restaurant",
-				coverFileId: rewardCoverSeedId("weekend-dinner"),
 				minSpendMinor: 2500,
 				quantityTotal: 60,
 				quantityRemaining: 48,
@@ -458,7 +467,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardValue: 1,
 			rewardKind: "REFERRER",
 			category: "cafe",
-			coverFileId: rewardCoverSeedId("free-pastry"),
 			quantityTotal: 50,
 			quantityRemaining: 48,
 			quantityReserved: 1,
@@ -479,7 +487,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardValue: 15,
 			rewardKind: "REFERRER",
 			category: "restaurant",
-			coverFileId: rewardCoverSeedId("next-meal"),
 			quantityTotal: 30,
 			quantityRemaining: 29,
 			quantityReserved: 0,
@@ -513,7 +520,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardValue: 20,
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				coverFileId: rewardCoverSeedId("weekend-brunch"),
 				quantityTotal: 80,
 				quantityRemaining: 80,
 				quantityReserved: 0,
@@ -532,7 +538,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "beverage",
-				coverFileId: rewardCoverSeedId("matcha-latte"),
 				quantityTotal: 40,
 				quantityRemaining: 40,
 				quantityReserved: 0,
@@ -549,7 +554,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardValue: 31,
 				rewardKind: "CONSUMER",
 				category: "cafe",
-				coverFileId: rewardCoverSeedId("merdeka-coffee"),
 				quantityTotal: 100,
 				quantityRemaining: 12,
 				quantityReserved: 0,
@@ -566,7 +570,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "food",
-				coverFileId: rewardCoverSeedId("cendol"),
 				quantityTotal: 50,
 				quantityRemaining: 0,
 				quantityReserved: 0,
@@ -585,7 +588,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardType: "CASHBACK",
 			rewardValue: 5,
 			category: "restaurant",
-			coverFileId: rewardCoverSeedId("dine-in-cashback"),
+			imageSet: "dine-in-cashback",
 			quantityTotal: 75,
 			quantityRemaining: 60,
 			quantityReserved: 2,
@@ -596,7 +599,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardType: "POINTS",
 			rewardValue: 200,
 			category: "retail",
-			coverFileId: rewardCoverSeedId("loyalty-points-retail"),
+			imageSet: "loyalty-points-retail",
 			quantityTotal: 100,
 			quantityRemaining: 88,
 			quantityReserved: 1,
@@ -607,7 +610,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardType: "BOGO",
 			rewardValue: 1,
 			category: "food",
-			coverFileId: rewardCoverSeedId("signature-noodles"),
+			imageSet: "signature-noodles",
 			quantityTotal: 50,
 			quantityRemaining: 41,
 			quantityReserved: 1,
@@ -618,7 +621,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardType: "DISCOUNT",
 			rewardValue: 50,
 			category: "cafe",
-			coverFileId: rewardCoverSeedId("second-coffee"),
+			imageSet: "second-coffee",
 			quantityTotal: 60,
 			quantityRemaining: 44,
 			quantityReserved: 3,
@@ -629,7 +632,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardType: "FREE_ITEM",
 			rewardValue: 1,
 			category: "food",
-			coverFileId: rewardCoverSeedId("croissant"),
+			imageSet: "croissant",
 			quantityTotal: 40,
 			quantityRemaining: 31,
 			quantityReserved: 2,
@@ -640,7 +643,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardType: "FREE_ITEM",
 			rewardValue: 1,
 			category: "wellness",
-			coverFileId: rewardCoverSeedId("yoga-class"),
+			imageSet: "yoga-class",
 			quantityTotal: 25,
 			quantityRemaining: 20,
 			quantityReserved: 1,
@@ -648,7 +651,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	];
 
 	for (const [index, row] of extraKlRewards.entries()) {
-		await prisma.reward.create({
+		const created = await prisma.reward.create({
 			data: {
 				organizationId: klOrganization.id,
 				title: row.title,
@@ -658,7 +661,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "Subject to store availability.",
 				rewardKind: "CONSUMER",
 				category: row.category,
-				coverFileId: row.coverFileId,
 				quantityTotal: row.quantityTotal,
 				quantityRemaining: row.quantityRemaining,
 				quantityReserved: row.quantityReserved,
@@ -667,6 +669,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				referralsEnabled: false,
 			},
 		});
+		imageLinks.push({ rewardId: created.id, organizationId: klOrganization.id, slug: row.imageSet });
 	}
 
 	const extraMlkRewards: readonly ExtraMlkRewardSeed[] = [
@@ -676,7 +679,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardValue: 1,
 			description: "Three-piece kuih platter. Bukit Katil only.",
 			category: "food",
-			coverFileId: rewardCoverSeedId("nyonya-kuih"),
+			imageSet: "nyonya-kuih",
 			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil],
 		},
 		{
@@ -685,7 +688,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			rewardValue: 15,
 			description: "15% off your dinner bill on live-music Friday nights. Bukit Beruang only.",
 			category: "entertainment",
-			coverFileId: rewardCoverSeedId("live-music-night"),
+			imageSet: "live-music-night",
 			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationBeruang],
 		},
 	];
@@ -701,7 +704,6 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				termsConditions: "While stocks last.",
 				rewardKind: "CONSUMER",
 				category: row.category,
-				coverFileId: row.coverFileId,
 				quantityTotal: 35,
 				quantityRemaining: 28,
 				quantityReserved: 2,
@@ -711,6 +713,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				locationScopeType: "SELECTED",
 			},
 		});
+		imageLinks.push({ rewardId: reward.id, organizationId: mlkOrganization.id, slug: row.imageSet });
 		await setRewardLocationScopes(reward.id, mlkOrganization.id, row.locationIds);
 	}
 
@@ -953,6 +956,17 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			failedAttempts: 0,
 			consumedAt: daysAgo(1),
 		},
+	});
+
+	await linkRewardImages(imageLinks);
+	// The grand-opening coffee first showed a latte-art photo; the owner swapped in the current cover a week before launch.
+	await seedReplacedRewardImage({
+		rewardId: REWARD_SEED_IDS.klRewardPublished,
+		organizationId: klOrganization.id,
+		slug: "free-coffee",
+		previousSlug: "second-coffee",
+		replacedBy: klOwner.id,
+		replacedAt: BigInt(daysAgo(7)),
 	});
 
 	await seedRewardLifecycleStates({

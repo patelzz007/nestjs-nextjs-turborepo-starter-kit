@@ -1776,6 +1776,9 @@ Get the signed-in user's own profile (name, avatar, optimistic-lock version)
 | --- | --- | --- | --- |
 | `data.avatar` | object \| null | yes | The live avatar, or null when the user has none |
 | `data.avatar.fileId` | string (uuid) | yes | The stored file (`GET /files/:fileId`, `DELETE /files/:fileId`) |
+| `data.avatar.sources` | object[] | yes | Its served sizes, smallest first, for `srcset` (empty for an avatar uploaded before avatars had renditions) |
+| `data.avatar.sources[].url` | string (uri) | yes |  |
+| `data.avatar.sources[].width` | integer | yes |  |
 | `data.avatar.updatedAt` | integer | yes | When this avatar was bound to the profile (epoch ms) |
 | `data.avatar.url` | string (uri) | yes | Public URL of the avatar image |
 | `data.createdAt` | integer | yes |  |
@@ -1846,6 +1849,9 @@ Send the `version` read from GET /auth/profile: the change applies only while th
 | --- | --- | --- | --- |
 | `data.avatar` | object \| null | yes | The live avatar, or null when the user has none |
 | `data.avatar.fileId` | string (uuid) | yes | The stored file (`GET /files/:fileId`, `DELETE /files/:fileId`) |
+| `data.avatar.sources` | object[] | yes | Its served sizes, smallest first, for `srcset` (empty for an avatar uploaded before avatars had renditions) |
+| `data.avatar.sources[].url` | string (uri) | yes |  |
+| `data.avatar.sources[].width` | integer | yes |  |
 | `data.avatar.updatedAt` | integer | yes | When this avatar was bound to the profile (epoch ms) |
 | `data.avatar.url` | string (uri) | yes | Public URL of the avatar image |
 | `data.createdAt` | integer | yes |  |

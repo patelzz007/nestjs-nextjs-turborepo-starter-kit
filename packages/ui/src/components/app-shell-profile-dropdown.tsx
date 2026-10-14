@@ -1,12 +1,12 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import type { ResponsiveImage } from "@workspace/ui/lib/media/image-sources";
 import type { AppShellProfileDropdownLabels } from "@workspace/ui/lib/shell/labels";
 import { LogOut, MoveUpRight } from "lucide-react";
 import * as React from "react";
@@ -23,6 +23,8 @@ export interface AppShellProfileMenuItem {
 export interface AppShellProfileDropdownProps {
 	readonly name: string;
 	readonly email?: string | null;
+	/** The person's profile picture; `null`/omitted shows their initials. */
+	readonly avatar?: ResponsiveImage | null | undefined;
 	readonly menuItems?: readonly AppShellProfileMenuItem[];
 	readonly onLogout: () => void;
 	/** Controlled open state of the menu; omit for an uncontrolled menu. */
@@ -44,15 +46,20 @@ const PROFILE_TRIGGER_RENDER = <Button variant="ghost" size="icon" className="ro
 export interface AppShellProfileMenuProps {
 	readonly name: string;
 	readonly email?: string | null | undefined;
+	/** The person's profile picture; `null`/omitted shows their initials. */
+	readonly avatar?: ResponsiveImage | null | undefined;
 	readonly menuItems: readonly AppShellProfileMenuItem[];
 	readonly onLogout: () => void;
 	readonly logoutLabel: string;
 }
 
 /** The profile menu's panel — identity, the app's items, log out. The dropdown and the sidebar account row both show it. */
-export function AppShellProfileMenu({ name, email, menuItems, onLogout, logoutLabel }: AppShellProfileMenuProps): React.JSX.Element {
-	const initials = getUserInitials(name);
+/** The menu header's avatar: `size-14`, 56 px. */
+const MENU_AVATAR_PX = 56;
+/** The dropdown trigger's avatar: `size-8`, 32 px. */
+const TRIGGER_AVATAR_PX = 32;
 
+export function AppShellProfileMenu({ name, email, avatar, menuItems, onLogout, logoutLabel }: AppShellProfileMenuProps): React.JSX.Element {
 	const handleLogout = React.useCallback((): void => {
 		onLogout();
 	}, [onLogout]);
@@ -65,9 +72,7 @@ export function AppShellProfileMenu({ name, email, menuItems, onLogout, logoutLa
 				<div className="mb-6 flex items-start gap-4">
 					<div className="relative shrink-0">
 						<div className="relative size-14 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-							<Avatar className="size-full">
-								<AvatarFallback className="rounded-full text-base font-semibold">{initials}</AvatarFallback>
-							</Avatar>
+							<UserAvatar name={name} image={avatar} drawnSize={MENU_AVATAR_PX} className="size-full" fallbackClassName="text-base font-semibold" />
 							<div className="absolute -right-0.5 -bottom-0.5 size-4 rounded-full bg-success shadow-sm ring-2 ring-background" />
 						</div>
 					</div>
@@ -119,22 +124,19 @@ export function AppShellProfileMenu({ name, email, menuItems, onLogout, logoutLa
 
 /** Avatar trigger that opens the shared profile dropdown panel. The ref reaches the wrapper `<div>`. */
 export const AppShellProfileDropdown = React.forwardRef<HTMLDivElement, AppShellProfileDropdownProps>(function AppShellProfileDropdown(
-	{ name, email, menuItems = NO_MENU_ITEMS, onLogout, open, onOpenChange, labels: labelsOverride, className },
+	{ name, email, avatar, menuItems = NO_MENU_ITEMS, onLogout, open, onOpenChange, labels: labelsOverride, className },
 	ref,
 ): React.JSX.Element {
 	const labels = useUiKitLabels("appShellProfileDropdown", labelsOverride);
-	const initials = getUserInitials(name);
 
 	return (
 		<div ref={ref} data-slot="app-shell-profile-dropdown" className={cn("ml-1 md:ml-3", className)}>
 			<DropdownMenu open={open} onOpenChange={onOpenChange}>
 				<DropdownMenuTrigger render={PROFILE_TRIGGER_RENDER} aria-label={labels.openMenuAriaLabel}>
-					<Avatar className="size-8">
-						<AvatarFallback className="rounded-full text-xs">{initials}</AvatarFallback>
-					</Avatar>
+					<UserAvatar name={name} image={avatar} drawnSize={TRIGGER_AVATAR_PX} className="size-8" fallbackClassName="text-xs" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" sideOffset={PROFILE_MENU_SIDE_OFFSET} className="w-80 overflow-hidden p-0 sm:w-96">
-					<AppShellProfileMenu name={name} email={email} menuItems={menuItems} onLogout={onLogout} logoutLabel={labels.logout} />
+					<AppShellProfileMenu name={name} email={email} avatar={avatar} menuItems={menuItems} onLogout={onLogout} logoutLabel={labels.logout} />
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</div>

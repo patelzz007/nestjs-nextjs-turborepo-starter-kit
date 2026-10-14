@@ -5,9 +5,10 @@ import { z } from "zod";
  * auto-expansion (the active item's ancestors) is the default everywhere;
  * these choices override it, but only on the page they were made on — on any
  * other page they are simply not read, so branches opened for the previous
- * route never stay open. Following a sidebar link clears them (even a link to
- * the current page), and they are never persisted, so a reload shows only the
- * route's branches. Keys are in the order they were last toggled (newest last).
+ * route never stay open. They are cleared when the route changes — not when a
+ * link is clicked, so a branch never folds away while its page loads — and by
+ * a link to the page already shown; they are never persisted, so a reload
+ * shows only the route's branches. Keys are in the order they were last toggled (newest last).
  */
 export interface SidebarManualExpansion {
 	readonly pathname: string;

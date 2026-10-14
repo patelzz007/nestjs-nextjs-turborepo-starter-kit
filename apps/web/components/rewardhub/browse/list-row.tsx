@@ -9,11 +9,11 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
-import { ArrowUpRight, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { rewardTypeLabel } from "@/lib/rewards/reward-type-label";
-import { REWARD_LIST_ROW_COVER_RATIO } from "@/lib/rewards/reward-cover";
+import { rewardTypeLabel } from "@workspace/client/lib/rewards/reward-offer";
+import { REWARD_LIST_ROW_COVER_RATIO, REWARD_THUMBNAIL_SIZES } from "@/lib/rewards/reward-cover";
 import { childPath, ROUTE_PREFIXES } from "@/lib/routes";
 
 export interface RewardListRowProps {
@@ -27,6 +27,7 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.reward
 	const percentLeft = reward.quantityTotal > 0 ? Math.round((reward.quantityRemaining / reward.quantityTotal) * 100) : 0;
 	const isLowStock = percentLeft > 0 && percentLeft <= 20;
 	const isSoldOut = reward.quantityRemaining === 0;
+	const [cover] = reward.images;
 
 	return (
 		<article
@@ -37,7 +38,9 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.reward
 			{/* The merchant's mark sits on the thumbnail's corner: the cover shows the offer, the mark who offers it. */}
 			<div className="relative shrink-0">
 				<CoverImage
-					src={reward.coverImageUrl}
+					src={cover?.url}
+					sources={cover?.sources}
+					sizes={REWARD_THUMBNAIL_SIZES}
 					ratio={REWARD_LIST_ROW_COVER_RATIO}
 					fallback={<RewardCategoryVisual category={reward.category} className="size-5" />}
 					className={cn("w-20 rounded-lg sm:w-24", isSoldOut ? "grayscale" : undefined)}
@@ -77,13 +80,12 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.reward
 				href={childPath(detailPathPrefix, reward.id)}
 				className={cn(
 					buttonVariants({ variant: isSoldOut ? "outline" : "default", size: "sm" }),
-					"h-9 shrink-0 gap-1.5 px-3 sm:px-3.5",
+					"h-9 shrink-0 px-3 sm:px-3.5",
 					isSoldOut ? "pointer-events-none opacity-60" : undefined,
 				)}
 				aria-disabled={isSoldOut}
 				aria-label={isSoldOut ? `${reward.title} unavailable` : `View ${reward.title}`}>
-				<span className="hidden sm:inline">{isSoldOut ? "Unavailable" : "View"}</span>
-				{!isSoldOut ? <ArrowUpRight className="size-3.5 opacity-80" aria-hidden="true" /> : null}
+				{isSoldOut ? "Unavailable" : "View"}
 			</Link>
 		</article>
 	);

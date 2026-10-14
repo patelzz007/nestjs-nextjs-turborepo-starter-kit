@@ -3,7 +3,7 @@
 import { FieldError } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Switch } from "@workspace/ui/components/switch";
 import { Textarea } from "@workspace/ui/components/textarea";
 import * as React from "react";
@@ -105,16 +105,22 @@ export function OptionSelectField<TOption extends string>({
 		},
 		[onChange, options],
 	);
+	// One `{ value, label }` list feeds both the Root's `items` (the trigger's
+	// label) and the rendered options, so the two can never disagree.
+	const selectOptions = React.useMemo(
+		(): readonly SelectOption<TOption>[] => options.map((option): SelectOption<TOption> => ({ value: option, label: labelOf(option) })),
+		[labelOf, options],
+	);
 	return (
 		<FieldShell id={id} label={label} errors={errors}>
-			<Select value={value} onValueChange={handleValueChange}>
+			<Select items={selectOptions} value={value} onValueChange={handleValueChange}>
 				<SelectTrigger id={id} className="w-full">
-					<SelectValue>{labelOf(value)}</SelectValue>
+					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
-					{options.map((option) => (
-						<SelectItem key={option} value={option}>
-							{labelOf(option)}
+					{selectOptions.map((option) => (
+						<SelectItem key={option.value} value={option.value}>
+							{option.label}
 						</SelectItem>
 					))}
 				</SelectContent>

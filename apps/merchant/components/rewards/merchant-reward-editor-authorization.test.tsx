@@ -10,6 +10,8 @@ import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 import { MERCHANT_REWARD_EDITOR_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
+import { rewardFixture } from "@/test/rewards";
+import { epochMs, type RewardResponse } from "@workspace/shared";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
@@ -50,23 +52,20 @@ vi.mock("@/components/rewards/merchant-reward-location-fields", () => ({
 	MerchantRewardLocationFields: (): React.JSX.Element => <p>location fields</p>,
 }));
 
-const DRAFT_REWARD = {
+const DRAFT_REWARD: RewardResponse = rewardFixture({
 	id: REWARD_ID,
 	title: "Free latte",
 	description: "One free latte",
-	rewardType: "FREE_ITEM",
 	rewardValue: 12,
-	rules: null,
-	termsConditions: null,
-	startDate: 1_767_225_600_000,
-	expiryDate: 1_769_904_000_000,
+	startDate: epochMs(1_767_225_600_000),
+	expiryDate: epochMs(1_769_904_000_000),
 	quantityTotal: 100,
 	quantityRemaining: 80,
 	claimCount: 20,
 	redemptionCount: 10,
 	category: "cafe",
 	status: "DRAFT",
-};
+});
 
 function renderWithQueryClient(ui: React.ReactElement, role: "OWNER" | "CASHIER" | "MEMBER" | undefined, isLoading = false): void {
 	renderWithAuthorization(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>, { role, isLoading });

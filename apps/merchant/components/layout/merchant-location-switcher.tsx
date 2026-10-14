@@ -4,11 +4,13 @@ import { resolveLocationShortLabel } from "@/lib/org/location-display";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { useMerchantLocation, useTenantContextCommands, type TenantContextCommands } from "@/features/tenant-context/facade";
 import { Button } from "@workspace/ui/components/button";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger } from "@workspace/ui/components/select";
 import { MapPin } from "lucide-react";
 import * as React from "react";
 
 const ALL_LOCATIONS_VALUE = "all";
+
+const ALL_LOCATIONS_LABEL = "All locations";
 
 interface AccessibleLocation {
 	readonly id: string;
@@ -31,7 +33,7 @@ function resolveLocationSelection(
 	canSelectAllLocations: boolean,
 ): { readonly shortLabel: string; readonly fullLabel: string } {
 	if (locationId === undefined) {
-		const label = canSelectAllLocations ? "All locations" : "Select location";
+		const label = canSelectAllLocations ? ALL_LOCATIONS_LABEL : "Select location";
 		return { shortLabel: label, fullLabel: label };
 	}
 
@@ -66,6 +68,16 @@ export function MerchantLocationSwitcher(): React.JSX.Element | null {
 		[accessibleLocations, canSelectAllLocations, locationId],
 	);
 
+	// The trigger renders its own short label; `items` gives the live region and
+	// typeahead each choice's full name instead of a raw location id.
+	const locationOptions = React.useMemo(
+		(): readonly SelectOption<string>[] => [
+			...(canSelectAllLocations ? [{ value: ALL_LOCATIONS_VALUE, label: ALL_LOCATIONS_LABEL }] : []),
+			...accessibleLocations.map((location): SelectOption<string> => ({ value: location.id, label: location.name })),
+		],
+		[accessibleLocations, canSelectAllLocations],
+	);
+
 	if (isLoading || accessibleLocations.length === 0) {
 		return null;
 	}
@@ -90,7 +102,7 @@ export function MerchantLocationSwitcher(): React.JSX.Element | null {
 
 	return (
 		<div className="hidden max-w-[min(18rem,42vw)] md:block">
-			<Select value={selectValue} onValueChange={handleValueChange}>
+			<Select items={locationOptions} value={selectValue} onValueChange={handleValueChange}>
 				<SelectTrigger
 					className="h-9 w-full max-w-[min(18rem,42vw)] rounded-full border-border bg-card px-3"
 					aria-label={`Active store location: ${selectedLocation.fullLabel}`}
@@ -101,7 +113,7 @@ export function MerchantLocationSwitcher(): React.JSX.Element | null {
 					</div>
 				</SelectTrigger>
 				<SelectContent align="end" className="min-w-[min(18rem,80vw)]">
-					{canSelectAllLocations ? <SelectItem value={ALL_LOCATIONS_VALUE}>All locations</SelectItem> : null}
+					{canSelectAllLocations ? <SelectItem value={ALL_LOCATIONS_VALUE}>{ALL_LOCATIONS_LABEL}</SelectItem> : null}
 					{accessibleLocations.map((location) => (
 						<SelectItem key={location.id} value={location.id}>
 							<div className="flex flex-col gap-0.5 py-0.5">

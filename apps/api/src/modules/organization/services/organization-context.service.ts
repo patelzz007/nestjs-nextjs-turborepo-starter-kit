@@ -5,8 +5,10 @@ import { LIST_SLOT_INDEX, epochMs, IanaTimeZoneSchema, UuidParamSchema, type Org
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
 import { mapOrganizationLocationToResponse } from "../utils/organization-location-mapper.util";
+import { mapOrganizationLogo, ORGANIZATION_LOGO_ASSETS_SELECT } from "../utils/organization-logo.util";
 import { mapMembershipToResponse } from "../utils/organization-membership-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
 
 export interface ResolvedOrganizationContext {
 	readonly organizationId: string;
@@ -22,6 +24,7 @@ export class OrganizationContextService {
 		private readonly tenantTx: TenantTransactionService,
 		private readonly cedar: CedarPolicyEvaluatorService,
 		private readonly audit: OrganizationAuditService,
+		private readonly publicUrls: PublicUrlResolver,
 	) {}
 
 	/** Resolve slug or organization id → organization id for pre-membership flows (uniform not-found). */
@@ -102,6 +105,7 @@ export class OrganizationContextService {
 					include: {
 						locations: { where: { isDeleted: false } },
 						merchantProfile: true,
+						assets: ORGANIZATION_LOGO_ASSETS_SELECT,
 					},
 				});
 
@@ -122,6 +126,7 @@ export class OrganizationContextService {
 						updatedAt: epochMs(Number(org.updatedAt)),
 						// The zone merchant analytics are cut in — validated, never passed through unchecked.
 						timeZone: IanaTimeZoneSchema.parse(org.timeZone),
+						logo: mapOrganizationLogo(org.assets, this.publicUrls.resolve),
 					},
 					membership: resolved.membership,
 					locations: org.locations.map((l) => mapOrganizationLocationToResponse(l)),

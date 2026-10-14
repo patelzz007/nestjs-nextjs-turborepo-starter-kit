@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import type { AuthUser } from "@workspace/client/lib/auth";
+import type { OwnAvatarImage } from "@workspace/client/lib/auth/profile/use-own-avatar";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -24,8 +25,19 @@ vi.mock("@workspace/ui/components/shell-theme-toggle", () => ({
 	ShellThemeToggle: (): null => null,
 }));
 
+/** The member's profile picture as the own-profile query returns it (`null`: initials). */
+let currentAvatar: OwnAvatarImage | null;
+
+vi.mock("@workspace/client/lib/auth/profile/use-own-avatar", () => ({
+	useOwnAvatar: (): OwnAvatarImage | null => currentAvatar,
+}));
+
 vi.mock("@workspace/ui/components/app-shell-profile-dropdown", () => ({
-	AppShellProfileDropdown: ({ name }: { readonly name: string }): React.JSX.Element => <button type="button">{name}</button>,
+	AppShellProfileDropdown: ({ name, avatar }: { readonly name: string; readonly avatar: OwnAvatarImage | null }): React.JSX.Element => (
+		<button type="button" data-avatar={avatar?.url ?? "initials"}>
+			{name}
+		</button>
+	),
 }));
 
 const MEMBER: AuthUser = {
@@ -53,6 +65,7 @@ function renderActions(session: WebSessionState): void {
 
 beforeEach((): void => {
 	currentUser = null;
+	currentAvatar = null;
 });
 
 afterEach((): void => {
@@ -72,6 +85,14 @@ describe("LandingAuthActions", () => {
 
 		expect(screen.getByRole("button", { name: "Ada Member" })).toBeDefined();
 		expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
+	});
+
+	it("shows the member's profile picture on the menu's trigger", () => {
+		currentUser = MEMBER;
+		currentAvatar = { url: "https://cdn.example.com/users/ada/avatar.webp", sources: [{ width: 128, url: "https://cdn.example.com/users/ada/thumbnail.webp" }] };
+		renderActions(signedInSession());
+
+		expect(screen.getByRole("button", { name: "Ada Member" }).getAttribute("data-avatar")).toBe("https://cdn.example.com/users/ada/avatar.webp");
 	});
 
 	it("never shows Sign in to a member whose session is not verified yet (check running, or the API unreachable)", () => {

@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
 import { assertNever } from "@workspace/shared";
-import type { FileCategory, FileStatus, StorageProvider, StoredObjectScanStatus } from "@workspace/shared";
-import type { Prisma, PrismaClient, StoredFile } from "@prisma/client";
+import type { FileCategory, FileStatus, FileVariantKind, StorageProvider, StoredObjectScanStatus } from "@workspace/shared";
+import type { FileVariant, Prisma, PrismaClient, StoredFile } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { sanitizePostgresText } from "../../storage/utils/sanitize-postgres-text.util";
@@ -45,6 +45,9 @@ export interface StoredFileStatusFields {
 	readonly scanStatus?: StoredObjectScanStatus;
 	readonly scannedAt?: bigint;
 	readonly scanResult?: string;
+	/** An image's displayed size, read from the stored bytes when the upload is verified. */
+	readonly imageWidth?: number;
+	readonly imageHeight?: number;
 }
 
 /** Where a READY file is attached once its scan passes. */
@@ -55,8 +58,24 @@ export type StoredFileBinding =
 	| { readonly kind: "NONE" };
 
 /** The binding target of a READY transition no longer exists (e.g. the product was removed mid-scan). */
+/** One published rendition, as recorded in `file_variants`. */
+export interface StoredFileVariantInput {
+	readonly kind: FileVariantKind;
+	readonly mimeType: string;
+	readonly sizeBytes: number;
+	readonly width: number;
+	readonly height: number;
+	readonly storageProvider: StorageProvider;
+	readonly storageContainer: string;
+	readonly storageBucket: string;
+	readonly storagePath: string;
+	readonly publicPath: string;
+	readonly objectRevision: string | null;
+	readonly objectGeneration: string | null;
+}
+
 /** What `softDeleteWithReferences` did. */
-export type StoredFileDeletion = "DELETED" | "ALREADY_DELETED" | "IN_USE_AS_REWARD_COVER";
+export type StoredFileDeletion = "DELETED" | "ALREADY_DELETED" | "IN_USE_AS_REWARD_IMAGE";
 
 export class StoredFileBindingTargetMissingError extends Error {
 	public constructor(public readonly binding: StoredFileBinding) {
@@ -112,6 +131,29 @@ export class StoredFileRepository {
 		});
 	}
 
+	/** A live rendition of a live, READY, public file — what the local driver serves at a variant URL. */
+	public async findReadyPublicVariant(fileId: string, kind: FileVariantKind): Promise<FileVariant | null> {
+		return this.prisma.fileVariant.findFirst({
+			where: { fileId, kind, isDeleted: false, file: { isDeleted: false, status: "READY", visibility: "PUBLIC" } },
+		});
+	}
+
+	/** The live renditions of a file (to withdraw and delete with it). */
+	public async listLiveVariants(fileId: string): Promise<FileVariant[]> {
+		return this.prisma.fileVariant.findMany({ where: { fileId, isDeleted: false } });
+	}
+
+	/**
+	 * Records a file's renditions inside the verdict transaction (so READY and
+	 * its renditions commit together); a re-run replaces earlier rows per kind.
+	 */
+	public async upsertVariantsInTx(tx: StoredFileDbClient, fileId: string, variants: readonly StoredFileVariantInput[]): Promise<void> {
+		for (const variant of variants) {
+			const row = { ...variant, fileId, isDeleted: false, deletedAt: null, deletedBy: null };
+			await tx.fileVariant.upsert({ where: { fileId_kind: { fileId, kind: variant.kind } }, create: row, update: row });
+		}
+	}
+
 	/**
 	 * PENDING → SCANNING for the uploader, exactly once. Two concurrent
 	 * completions race on this row; only one sees `true`.
@@ -142,17 +184,17 @@ export class StoredFileRepository {
 	/**
 	 * Soft-deletes a live file and every row that points at it, in one
 	 * transaction, recording who deleted them. A file that a live reward shows
-	 * as its cover is refused: the file row is locked first and reward saves
-	 * lock it too (`lockLiveRewardCover`), so a save and a delete never interleave.
+	 * among its images is refused: the file row is locked first and reward saves
+	 * lock it too (`lockUsableRewardImages`), so a save and a delete never interleave.
 	 */
 	public async softDeleteWithReferences(id: string, deletedBy: string): Promise<StoredFileDeletion> {
 		const deletedAt = BigInt(Date.now());
 		const softDelete = { isDeleted: true, deletedAt, deletedBy, updatedAt: deletedAt };
 		return this.prisma.$transaction(async (tx: StoredFileDbClient): Promise<StoredFileDeletion> => {
 			await tx.$queryRaw`SELECT id FROM "stored_files" WHERE id = ${id} FOR UPDATE`;
-			const coverUses = await tx.reward.count({ where: { coverFileId: id, isDeleted: false } });
-			if (coverUses > 0) {
-				return "IN_USE_AS_REWARD_COVER";
+			const imageUses = await tx.rewardImage.count({ where: { fileId: id, isDeleted: false, reward: { isDeleted: false } } });
+			if (imageUses > 0) {
+				return "IN_USE_AS_REWARD_IMAGE";
 			}
 			const file = await tx.storedFile.updateMany({
 				where: { id, isDeleted: false },

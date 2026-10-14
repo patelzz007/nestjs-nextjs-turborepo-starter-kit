@@ -5,13 +5,14 @@ import type { MerchantRewardFormValues, OrganizationLocationScopeType } from "@w
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { MapPin } from "lucide-react";
 import * as React from "react";
 import type { Control, FieldErrors, UseFormSetValue } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
-const LOCATION_SCOPE_OPTIONS: readonly { readonly value: OrganizationLocationScopeType; readonly label: string }[] = [
+/** Feeds both the Select's `items` (the closed trigger's label) and its rendered options. */
+const LOCATION_SCOPE_OPTIONS: readonly SelectOption<OrganizationLocationScopeType>[] = [
 	{ value: "ALL_LOCATIONS", label: "All stores" },
 	{ value: "SELECTED", label: "Selected stores only" },
 ];
@@ -93,7 +94,7 @@ export function MerchantRewardLocationFields({ control, errors, setValue, disabl
 			<CardContent className="space-y-4">
 				<div className="space-y-2">
 					<Label htmlFor="reward-location-scope">Availability</Label>
-					<Select value={locationScopeType} onValueChange={handleScopeChange} disabled={disabled}>
+					<Select items={LOCATION_SCOPE_OPTIONS} value={locationScopeType} onValueChange={handleScopeChange} disabled={disabled}>
 						<SelectTrigger id="reward-location-scope">
 							<SelectValue placeholder="Select availability" />
 						</SelectTrigger>

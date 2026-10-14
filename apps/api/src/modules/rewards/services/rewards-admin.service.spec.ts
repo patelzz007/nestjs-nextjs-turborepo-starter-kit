@@ -1,9 +1,13 @@
+import { Readable } from "node:stream";
+
 import { Test } from "@nestjs/testing";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { EpochMsSchema, LIST_SLOT_INDEX } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { storedFile } from "../../../../test/support/file-lifecycle-fakes";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
+import { FileService } from "../../files/services/file.service";
 import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { OrganizationLocationRepository } from "../../organization/repositories/organization-location.repository";
@@ -15,6 +19,8 @@ import { MerchantInviteEmailTemplate } from "../../notifications/email/templates
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 import { RewardsAdminService } from "./rewards-admin.service";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 vi.mock("../../../prisma/prisma.service", () => ({ PrismaService: class {} }));
 
@@ -27,17 +33,21 @@ interface ServiceDoubles {
 	readonly provisioning?: Pick<OrganizationProvisioningService, "provisionFromRewardHubAdminInvite">;
 	readonly emailSender?: Pick<EmailSenderService, "send">;
 	readonly logService?: Pick<LogService, "warn" | "info">;
+	readonly rewardRepository?: Partial<Pick<RewardRepository, "findRewardImageFile" | "findRewardImageFiles" | "findConsumerWithOrganization">>;
+	readonly fileService?: Partial<Pick<FileService, "createDownloadUrl" | "createZipArchive">>;
 }
 
 async function compileService(doubles: ServiceDoubles): Promise<RewardsAdminService> {
 	const moduleRef = await Test.createTestingModule({
 		providers: [
 			RewardsAdminService,
+			{ provide: PublicUrlResolver, useValue: createTestPublicUrls() },
 			{ provide: OrganizationRepository, useValue: {} },
 			{ provide: OrganizationLocationRepository, useValue: {} },
 			{ provide: OrganizationProvisioningService, useValue: doubles.provisioning ?? {} },
 			{ provide: MerchantKybDocumentService, useValue: {} },
-			{ provide: RewardRepository, useValue: {} },
+			{ provide: RewardRepository, useValue: doubles.rewardRepository ?? {} },
+			{ provide: FileService, useValue: doubles.fileService ?? {} },
 			{ provide: MerchantRewardService, useValue: {} },
 			{ provide: RewardNotificationService, useValue: {} },
 			{ provide: EmailSenderService, useValue: doubles.emailSender ?? {} },
@@ -112,5 +122,115 @@ describe("RewardsAdminService.previewMerchantInviteEmail", () => {
 
 		expect(preview.to).toBe(MerchantInviteEmailTemplate.sampleProps.to);
 		expect(preview.html).not.toContain(INVITE_TOKEN);
+	});
+});
+
+describe("RewardsAdminService.getReward", () => {
+	const REWARD_ID = "5b2c7e19-0d4a-4e8f-9a3b-6c1d2e3f4a5b";
+	const rewardRepository = { findConsumerWithOrganization: vi.fn<RewardRepository["findConsumerWithOrganization"]>() };
+	let service: RewardsAdminService;
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		service = await compileService({ rewardRepository });
+	});
+
+	it("is a 404 for a reward that does not exist (or was deleted)", async () => {
+		rewardRepository.findConsumerWithOrganization.mockResolvedValue(null);
+
+		await expect(service.getReward({ rewardId: REWARD_ID })).rejects.toMatchObject({ response: { error: "REWARD_NOT_FOUND" } });
+		expect(rewardRepository.findConsumerWithOrganization).toHaveBeenCalledWith(REWARD_ID);
+	});
+});
+
+describe("RewardsAdminService.getRewardImageDownload", () => {
+	const REWARD_ID = "3e0f5d8b-9c4a-4f6b-8a6d-4c5b6a7f8e9d";
+	const FILE_ID = "4f1a6e9c-ad5b-4a7c-9b7e-5d6c7b8a9f0e";
+	const DOWNLOAD_TTL_MS = 300_000;
+	const rewardRepository = { findRewardImageFile: vi.fn<RewardRepository["findRewardImageFile"]>() };
+	const fileService = { createDownloadUrl: vi.fn<FileService["createDownloadUrl"]>() };
+	let service: RewardsAdminService;
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		service = await compileService({ rewardRepository, fileService });
+	});
+
+	it("downloads the original upload as an attachment named after it", async () => {
+		const file = storedFile({ id: FILE_ID, originalName: "teh-tarik.webp", category: "REWARD_IMAGE" });
+		const expiresAt = EpochMsSchema.parse(Date.now() + DOWNLOAD_TTL_MS);
+		rewardRepository.findRewardImageFile.mockResolvedValue(file);
+		fileService.createDownloadUrl.mockResolvedValue({ fileId: FILE_ID, status: "READY", downloadUrl: "https://files.example.com/signed", expiresAt });
+
+		await expect(service.getRewardImageDownload({ rewardId: REWARD_ID, fileId: FILE_ID })).resolves.toEqual({
+			fileId: FILE_ID,
+			fileName: "teh-tarik.webp",
+			downloadUrl: "https://files.example.com/signed",
+			expiresAt,
+		});
+		expect(rewardRepository.findRewardImageFile).toHaveBeenCalledWith(REWARD_ID, FILE_ID);
+		expect(fileService.createDownloadUrl).toHaveBeenCalledWith(file, "attachment");
+	});
+
+	it("is a 404 for a file that is not one of the reward's live images", async () => {
+		rewardRepository.findRewardImageFile.mockResolvedValue(null);
+
+		await expect(service.getRewardImageDownload({ rewardId: REWARD_ID, fileId: FILE_ID })).rejects.toMatchObject({
+			response: { error: "REWARD_IMAGE_NOT_FOUND" },
+		});
+		expect(fileService.createDownloadUrl).not.toHaveBeenCalled();
+	});
+
+	it("is a 404 when storage has no URL for the file", async () => {
+		rewardRepository.findRewardImageFile.mockResolvedValue(storedFile({ id: FILE_ID, category: "REWARD_IMAGE" }));
+		fileService.createDownloadUrl.mockResolvedValue({ fileId: FILE_ID, status: "PROCESSING", downloadUrl: null, expiresAt: null });
+
+		await expect(service.getRewardImageDownload({ rewardId: REWARD_ID, fileId: FILE_ID })).rejects.toMatchObject({
+			response: { error: "REWARD_IMAGE_NOT_FOUND" },
+		});
+	});
+});
+
+describe("RewardsAdminService.getRewardImagesArchive", () => {
+	const REWARD_ID = "3e0f5d8b-9c4a-4f6b-8a6d-4c5b6a7f8e9d";
+	const rewardRepository = { findRewardImageFiles: vi.fn<RewardRepository["findRewardImageFiles"]>() };
+	const fileService = { createZipArchive: vi.fn<FileService["createZipArchive"]>() };
+	let service: RewardsAdminService;
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		service = await compileService({ rewardRepository, fileService });
+	});
+
+	it("archives the reward's images in display order, named after the reward", async () => {
+		const files = [storedFile({ category: "REWARD_IMAGE" }), storedFile({ category: "REWARD_IMAGE" })];
+		const body = Readable.from([Buffer.from("PK")]);
+		rewardRepository.findRewardImageFiles.mockResolvedValue({ title: "20% off weekend brunch", files });
+		fileService.createZipArchive.mockReturnValue(body);
+
+		await expect(service.getRewardImagesArchive({ rewardId: REWARD_ID })).resolves.toEqual({
+			fileName: "20-off-weekend-brunch-photos.zip",
+			contentType: "application/zip",
+			body,
+		});
+		expect(rewardRepository.findRewardImageFiles).toHaveBeenCalledWith(REWARD_ID);
+		expect(fileService.createZipArchive).toHaveBeenCalledWith(files);
+	});
+
+	it("names the archive generically when the title has no file-name-safe character", async () => {
+		rewardRepository.findRewardImageFiles.mockResolvedValue({ title: "咖啡", files: [storedFile({ category: "REWARD_IMAGE" })] });
+		fileService.createZipArchive.mockReturnValue(Readable.from([]));
+
+		await expect(service.getRewardImagesArchive({ rewardId: REWARD_ID })).resolves.toMatchObject({ fileName: "reward-photos.zip" });
+	});
+
+	it.each([
+		["does not exist", null],
+		["has no image", { title: "Free teh tarik", files: [] }],
+	])("is a 404 before any byte is sent when the reward %s", async (_case, found) => {
+		rewardRepository.findRewardImageFiles.mockResolvedValue(found);
+
+		await expect(service.getRewardImagesArchive({ rewardId: REWARD_ID })).rejects.toMatchObject({ response: { error: "REWARD_IMAGE_NOT_FOUND" } });
+		expect(fileService.createZipArchive).not.toHaveBeenCalled();
 	});
 });

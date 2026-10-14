@@ -34,7 +34,8 @@ export interface SidebarProps {
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleItem: (itemId: string) => void;
 	/** A menu or pinned link was followed — closes the branches opened by hand. */
-	readonly onFollowLink: () => void;
+	/** A menu or pinned link was followed, with its `href`. */
+	readonly onFollowLink: (href: string) => void;
 	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
 	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
 	readonly pinnedItems: readonly PanelSidebarPinnedItem[];
@@ -128,6 +129,7 @@ export function AdminSidebarPanel({
 				<AppShellSidebarAccount
 					name={user.name}
 					email={user.email}
+					avatar={user.avatar}
 					onLogout={onLogout}
 					status={status}
 					{...(profileMenu === undefined ? {} : { menuContent: profileMenu })}

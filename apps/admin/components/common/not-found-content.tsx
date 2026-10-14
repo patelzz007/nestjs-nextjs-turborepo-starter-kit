@@ -1,4 +1,3 @@
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -29,7 +28,6 @@ export function AdminNotFoundContent({
 				<Link
 					href={backHref}
 					className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-					<ArrowLeft className="size-4" />
 					{backLabel}
 				</Link>
 			}

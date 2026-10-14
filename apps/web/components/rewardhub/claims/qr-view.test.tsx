@@ -75,7 +75,7 @@ describe("ClaimQrView", () => {
 
 		const parentLabel = claimTrailLabels().at(0);
 		expect(parentLabel).toBe("My Wallet");
-		const back = screen.getByRole("link", { name: `← ${parentLabel ?? ""}` });
+		const back = screen.getByRole("link", { name: `Back to ${parentLabel ?? ""}` });
 		expect(back.getAttribute("href")).toBe(ROUTES.rewardHub.wallet);
 	});
 

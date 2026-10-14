@@ -1,7 +1,7 @@
 import { Controller, Get, HttpStatus, Post, Req, Res } from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { apiPath, SuccessAckResponseSchema, UuidParamSchema, type SuccessAckResponse } from "@workspace/shared";
+import { apiPath, FileVariantKindSchema, SuccessAckResponseSchema, UuidParamSchema, type SuccessAckResponse } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
@@ -16,6 +16,7 @@ import { PUBLIC_ASSET_CACHE_CONTROL } from "../../storage/domain/public-delivery
 import { LocalStorageTransferService, type LocalObjectDownload } from "../services/local-storage-transfer.service";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
+const FileVariantParamsSchema = z.object({ fileId: UuidParamSchema, variant: FileVariantKindSchema }).strict();
 /** Upper bound for a transfer token in a query string. */
 const MAX_TOKEN_LENGTH = 4_096;
 const LocalDownloadQuerySchema = z.object({ [LOCAL_DOWNLOAD_TOKEN_PARAM]: z.string().min(1).max(MAX_TOKEN_LENGTH) }).strict();
@@ -73,6 +74,18 @@ export class LocalStorageTransferController {
 	@ApiOkResponse({ description: "Object bytes" })
 	public async localPublic(@ZodParams(FileIdParamSchema) params: z.output<typeof FileIdParamSchema>, @Res() reply: FastifyReply): Promise<void> {
 		await sendObject(reply, await this.transfers.downloadPublic(params.fileId), PUBLIC_ASSET_CACHE_CONTROL);
+	}
+
+	@Public()
+	@RlsBypass()
+	@SkipEnvelope()
+	// A rendition of a public image — cached and throttled exactly like the file itself (above).
+	@SkipThrottle({ strict: true })
+	@Get(":fileId/variants/:variant/local-public")
+	@ApiOperation({ summary: "Serve a rendition of a READY public image from local storage (development only)" })
+	@ApiOkResponse({ description: "Object bytes" })
+	public async localPublicVariant(@ZodParams(FileVariantParamsSchema) params: z.output<typeof FileVariantParamsSchema>, @Res() reply: FastifyReply): Promise<void> {
+		await sendObject(reply, await this.transfers.downloadPublicVariant(params.fileId, params.variant), PUBLIC_ASSET_CACHE_CONTROL);
 	}
 
 	@Public()

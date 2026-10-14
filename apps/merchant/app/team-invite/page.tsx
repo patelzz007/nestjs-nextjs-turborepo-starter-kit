@@ -27,7 +27,7 @@ import { PasswordInput } from "@workspace/ui/components/password-input";
 import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { ArrowLeft, Mail, MapPin, Shield, Users } from "lucide-react";
+import { Mail, MapPin, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -420,7 +420,6 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
-						<ArrowLeft className="size-4" aria-hidden="true" />
 						Back home
 					</Link>
 
@@ -451,7 +450,6 @@ function InvalidInviteCard(): JSX.Element {
 					<p className="text-sm text-muted-foreground">This link is missing a token or has already been used. Ask your organization admin to send a new team invitation.</p>
 				</div>
 				<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
-					<ArrowLeft className="size-4" aria-hidden="true" />
 					Back home
 				</Link>
 			</div>

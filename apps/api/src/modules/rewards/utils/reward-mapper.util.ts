@@ -3,7 +3,9 @@ import type { Organization, OrganizationLifecycleState, OrganizationMerchantProf
 import {
 	EpochMsSchema,
 	JsonObjectSchema,
+	RewardImageResponseSchema,
 	RewardResponseSchema,
+	type RewardImageResponse,
 	type AdminMerchantDetailResponse,
 	type EpochMs,
 	type JsonObject,
@@ -14,6 +16,9 @@ import {
 } from "@workspace/shared";
 import type { OrganizationAdminDetailRow } from "../../organization/repositories/organization.repository";
 import { rewardRulesFromStorage } from "./reward-rules.util";
+import { toImageSources } from "../../files/utils/image-sources.util";
+import type { OrganizationLogoAssetRows } from "../../organization/utils/organization-logo.util";
+import type { PublicUrlResolve } from "../../../config/public-url.resolver";
 
 function epochFromDb(value: bigint | number | null | undefined): EpochMs | null {
 	if (value === null || value === undefined) {
@@ -89,41 +94,70 @@ interface RewardLocationScopeRow {
 	readonly location: { readonly name: string } | null;
 }
 
+/** One live reward image as the repositories select it: its file's size and published renditions (ascending width). */
+interface RewardImageRow {
+	readonly fileId: string;
+	readonly file: {
+		readonly imageWidth: number | null;
+		readonly imageHeight: number | null;
+		readonly variants: readonly { readonly width: number | null; readonly publicPath: string | null }[];
+	};
+}
+
 type RewardWithLocationScopes = Reward & {
 	readonly locationScopes?: readonly RewardLocationScopeRow[];
-	/** The cover's published copy — every reward query that builds a response selects it. */
-	readonly coverFile: { readonly publicPath: string | null };
+	/** The live images in display order — every reward query that builds a response selects them. */
+	readonly images: readonly RewardImageRow[];
 };
 
-/** A reward's cover has no valid public URL — impossible while saves validate the cover and in-use covers cannot be deleted. */
-export class RewardCoverUrlMissingError extends Error {
-	public constructor(public readonly rewardId: string) {
-		super(`Reward ${rewardId} has no published cover image`);
-		this.name = "RewardCoverUrlMissingError";
+/**
+ * A reward image has no recorded size or published renditions — impossible
+ * while saves only accept READY images (renditions commit with READY) and
+ * images in use cannot be deleted.
+ */
+export class RewardImageUnavailableError extends Error {
+	public constructor(
+		public readonly rewardId: string,
+		public readonly fileId: string | null,
+	) {
+		super(fileId === null ? `Reward ${rewardId} has no images` : `Reward ${rewardId} image ${fileId} has no published renditions`);
+		this.name = "RewardImageUnavailableError";
 	}
 }
 
-/** The response contract's own rule for a cover URL — the stored value is re-checked against it. */
-const RewardCoverUrlSchema = RewardResponseSchema.shape.coverImageUrl;
-
 /**
- * The cover URL for a reward response. A cover is validated (READY, public,
- * published) on every save and cannot be deleted while a live reward uses it,
- * so a missing or invalid URL is a broken invariant and fails loudly.
+ * The response shape of one reward image, re-checked against the contract
+ * (http(s) URLs). A broken invariant fails loudly instead of sending a blank image.
  */
-export function resolveRewardCoverUrl(reward: Pick<RewardWithLocationScopes, "id" | "coverFile">): string {
-	const parsed = RewardCoverUrlSchema.safeParse(reward.coverFile.publicPath);
+export function mapRewardImage(rewardId: string, image: RewardImageRow, resolve: PublicUrlResolve): RewardImageResponse {
+	const sources = toImageSources(image.file.variants, resolve);
+	const largest = sources.at(-1);
+	const parsed = RewardImageResponseSchema.safeParse({
+		fileId: image.fileId,
+		url: largest?.url,
+		width: image.file.imageWidth,
+		height: image.file.imageHeight,
+		sources,
+	});
 	if (!parsed.success) {
-		throw new RewardCoverUrlMissingError(reward.id);
+		throw new RewardImageUnavailableError(rewardId, image.fileId);
 	}
 	return parsed.data;
+}
+
+/** All of a reward's images, in display order; a reward without any is a broken invariant. */
+export function mapRewardImages(reward: Pick<RewardWithLocationScopes, "id" | "images">, resolve: PublicUrlResolve): RewardImageResponse[] {
+	if (reward.images.length === 0) {
+		throw new RewardImageUnavailableError(reward.id, null);
+	}
+	return reward.images.map((image) => mapRewardImage(reward.id, image, resolve));
 }
 
 /** The organization fields a reward response carries — the shape the reward repository's include selects. */
 export interface RewardOrganizationSummary {
 	readonly displayName: string;
-	/** Live, READY `LOGO` assets with a public URL (0 or 1 — `(organizationId, assetType)` is unique). */
-	readonly assets: readonly { readonly file: { readonly publicPath: string | null } }[];
+	/** Live, READY `LOGO` assets with a public URL and their renditions (0 or 1 — `(organizationId, assetType)` is unique). */
+	readonly assets: OrganizationLogoAssetRows;
 }
 
 /** The response contract's own rule for a logo URL — the stored value is re-checked against it. */
@@ -135,8 +169,8 @@ const OrganizationLogoUrlSchema = RewardResponseSchema.shape.organizationLogoUrl
  * absolute http(s) URL) also degrades to `null`, deliberately: a bad logo
  * must cost the merchant their logo, not fail the whole reward list.
  */
-export function resolveOrganizationLogoUrl(organization: RewardOrganizationSummary | undefined): string | null {
-	const publicPath = organization?.assets.at(0)?.file.publicPath ?? null;
+export function resolveOrganizationLogoUrl(organization: RewardOrganizationSummary | undefined, resolve: PublicUrlResolve): string | null {
+	const publicPath = resolve(organization?.assets.at(0)?.file.publicPath ?? null);
 	if (publicPath === null) {
 		return null;
 	}
@@ -144,7 +178,11 @@ export function resolveOrganizationLogoUrl(organization: RewardOrganizationSumma
 	return parsed.success ? parsed.data : null;
 }
 
-export function mapRewardToResponse(reward: RewardWithLocationScopes, organization?: RewardOrganizationSummary): RewardResponse {
+/**
+ * A reward as the API returns it. `resolve` turns each stored image reference
+ * (its photos, the merchant logo) into the URL a client opens.
+ */
+export function mapRewardToResponse(reward: RewardWithLocationScopes, organization: RewardOrganizationSummary | undefined, resolve: PublicUrlResolve): RewardResponse {
 	const locationScopes = reward.locationScopes ?? [];
 	const resolvedScopes = locationScopes.flatMap((scope) => {
 		if (scope.location === null) {
@@ -155,12 +193,15 @@ export function mapRewardToResponse(reward: RewardWithLocationScopes, organizati
 	});
 	const locationIds = resolvedScopes.map((scope) => scope.locationId);
 	const locationNames = resolvedScopes.map((scope) => scope.name);
+	const logoUrl = resolveOrganizationLogoUrl(organization, resolve);
 
 	return {
 		id: reward.id,
 		organizationId: reward.organizationId,
 		organizationName: organization?.displayName,
-		organizationLogoUrl: resolveOrganizationLogoUrl(organization),
+		organizationLogoUrl: logoUrl,
+		// The logo's renditions go with its URL: no logo, no sources.
+		organizationLogoSources: logoUrl === null ? [] : toImageSources(organization?.assets.at(0)?.file.variants ?? [], resolve),
 		title: reward.title,
 		description: reward.description,
 		rewardType: reward.rewardType,
@@ -168,8 +209,7 @@ export function mapRewardToResponse(reward: RewardWithLocationScopes, organizati
 		termsConditions: reward.termsConditions,
 		rewardKind: reward.rewardKind,
 		category: reward.category,
-		coverFileId: reward.coverFileId,
-		coverImageUrl: resolveRewardCoverUrl(reward),
+		images: mapRewardImages(reward, resolve),
 		quantityTotal: reward.quantityTotal,
 		quantityRemaining: reward.quantityRemaining,
 		quantityReserved: reward.quantityReserved,

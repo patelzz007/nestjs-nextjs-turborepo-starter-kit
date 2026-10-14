@@ -41,7 +41,7 @@ interface NavRowContext {
 	readonly activeItems: Readonly<Record<string, boolean>>;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleExpand: (itemId: string) => void;
-	readonly onNavigate?: (() => void) | undefined;
+	readonly onNavigate?: ((href: string) => void) | undefined;
 	readonly renderLink: PanelSidebarRenderLink;
 	readonly renderIcon: PanelSidebarRenderIcon;
 	readonly searchQuery: string;
@@ -84,6 +84,10 @@ const DISABLED_PINNED_ROW_RENDER = <span role="link" aria-disabled="true" tabInd
 function PinnedRow({ pinned, isActive, renderIcon, context }: PinnedRowProps): React.JSX.Element {
 	const isDisabled = pinned.disabled === true;
 	const tooltip = React.useMemo(() => ({ children: isDisabled ? context.unavailableTitle : pinned.title }), [isDisabled, context.unavailableTitle, pinned.title]);
+	const { onNavigate } = context;
+	const handleFollowLink = React.useCallback((): void => {
+		onNavigate?.(pinned.url);
+	}, [onNavigate, pinned.url]);
 	const content = (
 		<>
 			{renderIcon(pinned.icon, "size-4")}
@@ -102,7 +106,7 @@ function PinnedRow({ pinned, isActive, renderIcon, context }: PinnedRowProps): R
 					isActive={isActive}
 					aria-current={isActive ? "page" : undefined}
 					title={pinned.title}
-					onClick={context.onNavigate}
+					onClick={handleFollowLink}
 					tooltip={tooltip}>
 					{content}
 				</SidebarMenuButton>
@@ -116,7 +120,7 @@ function useNavRowContext(
 	view: SidebarView,
 	expandedItems: Readonly<Record<string, boolean>>,
 	onToggleExpand: (itemId: string) => void,
-	onNavigate: () => void,
+	onNavigate: (href: string) => void,
 	renderLink: PanelSidebarRenderLink,
 	renderIcon: PanelSidebarRenderIcon,
 	searchQuery: string,
@@ -130,15 +134,18 @@ function useNavRowContext(
 	);
 }
 
-/** Following a link tells the app (`onFollowLink`) and closes the mobile drawer (the desktop rail stays as it is). */
-function useFollowLinkHandler(onFollowLink: (() => void) | undefined): () => void {
+/** Following a link tells the app (`onFollowLink`, with the link's `href`) and closes the mobile drawer (the desktop rail stays as it is). */
+function useFollowLinkHandler(onFollowLink: ((href: string) => void) | undefined): (href: string) => void {
 	const { isMobile, setOpenMobile } = useSidebarControls();
-	return React.useCallback((): void => {
-		onFollowLink?.();
-		if (isMobile) {
-			setOpenMobile(false);
-		}
-	}, [isMobile, onFollowLink, setOpenMobile]);
+	return React.useCallback(
+		(href: string): void => {
+			onFollowLink?.(href);
+			if (isMobile) {
+				setOpenMobile(false);
+			}
+		},
+		[isMobile, onFollowLink, setOpenMobile],
+	);
 }
 
 export interface PanelSidebarNavProps {
@@ -147,8 +154,8 @@ export interface PanelSidebarNavProps {
 	readonly pathname: string;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleExpand: (itemId: string) => void;
-	/** Called when a menu or pinned link is followed (e.g. to close the branches opened by hand). */
-	readonly onFollowLink?: (() => void) | undefined;
+	/** Called with a menu or pinned link's `href` when it is followed (the app decides what that does to its branches). */
+	readonly onFollowLink?: ((href: string) => void) | undefined;
 	readonly renderLink: PanelSidebarRenderLink;
 	/** Renders a menu item's icon by name (the app's menu icon map). */
 	readonly renderIcon: PanelSidebarRenderIcon;
@@ -293,8 +300,8 @@ export interface PanelSidebarFooterNavProps {
 	readonly view: SidebarView;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
 	readonly onToggleExpand: (itemId: string) => void;
-	/** Called when a menu link is followed (e.g. to close the branches opened by hand). */
-	readonly onFollowLink?: (() => void) | undefined;
+	/** Called with a menu link's `href` when it is followed (the app decides what that does to its branches). */
+	readonly onFollowLink?: ((href: string) => void) | undefined;
 	readonly renderLink: PanelSidebarRenderLink;
 	readonly renderIcon: PanelSidebarRenderIcon;
 	readonly searchQuery: string;

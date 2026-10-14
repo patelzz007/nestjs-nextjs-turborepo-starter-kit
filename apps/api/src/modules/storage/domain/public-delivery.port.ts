@@ -1,4 +1,4 @@
-import type { DocumentMimeType, StorageObjectLocator } from "@workspace/shared";
+import type { DocumentMimeType, FileVariantKind, StorageObjectLocator } from "@workspace/shared";
 
 export interface PublicAssetPublicationInput {
 	/** The promoted (final-key) object in the private container. */
@@ -7,9 +7,16 @@ export interface PublicAssetPublicationInput {
 	readonly fileId: string;
 	readonly mimeType: DocumentMimeType;
 	readonly fileName: string;
+	/** The rendition being published (an image variant at its own key); absent for the file itself. */
+	readonly variant?: FileVariantKind | undefined;
 }
 
 export interface PublicAssetPublicationResult {
+	/**
+	 * What is stored as the asset's `public_path`: an absolute CDN / bucket URL,
+	 * or — the local driver — a path on this API, joined to the API's public
+	 * address only when served (`PublicUrlResolver`), so it survives an address change.
+	 */
 	readonly publicUrl: string;
 	readonly revision: string | null;
 }

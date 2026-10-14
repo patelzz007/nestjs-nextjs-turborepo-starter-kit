@@ -9,6 +9,7 @@ import {
 	AdminOrganizationLocationCreateSchema,
 	AdminOrganizationLocationReviewPathInputSchema,
 	AdminOrganizationLocationReviewSchema,
+	AdminRewardImageDownloadResponseSchema,
 	apiContract,
 	apiPath,
 	FileDownloadDispositionSchema,
@@ -42,7 +43,7 @@ import { AnalyticsDashboardService } from "../analytics/analytics-dashboard.serv
 import { ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION, ANALYTICS_EXPORT_OPERATION_DESCRIPTION } from "../analytics/analytics-api-docs";
 import { AnalyticsExportRateLimitGuard } from "../analytics/analytics-export-rate-limit.guard";
 import { AnalyticsExportService } from "../analytics/analytics-export.service";
-import { sendAnalyticsExport } from "../analytics/analytics-export.reply";
+import { sendFileAttachment } from "../../../common/http/file-attachment.reply";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
@@ -95,6 +96,17 @@ export class RewardsAdminRewardsController {
 		return this.rewardsAdminService.listPendingRewards(query);
 	}
 
+	// Fastify matches the static `pending` segment before `:rewardId`, whatever the declaration order.
+	@RequirePermission("MANAGE", "REWARD")
+	@Get(":rewardId")
+	@ApiOperation({ summary: "Get one reward in full, whatever its status (moderation detail)" })
+	@ZodResponse(RewardResponseSchema, { description: "The reward" })
+	public getReward(
+		@ZodParams(apiContract.rewardsAdmin.getReward.input) params: z.output<typeof apiContract.rewardsAdmin.getReward.input>,
+	): ReturnType<RewardsAdminService["getReward"]> {
+		return this.rewardsAdminService.getReward(params);
+	}
+
 	@RequirePermission("MANAGE", "REWARD")
 	@Post(":rewardId/approve")
 	@ApiOperation({ summary: "Approve a pending reward (no body required)" })
@@ -105,6 +117,29 @@ export class RewardsAdminRewardsController {
 		@ZodParams(apiContract.rewardsAdmin.approveReward.input) params: { rewardId: string },
 	): ReturnType<RewardsAdminService["approveReward"]> {
 		return this.rewardsAdminService.approveReward(user.sub, params.rewardId);
+	}
+
+	/** Reviewers check a reward's photos at full resolution; the URL downloads the original upload and expires. */
+	@RequirePermission("MANAGE", "REWARD")
+	@Get(":rewardId/images/:fileId/download")
+	@ApiOperation({ summary: "Get a short-lived signed URL that downloads one of a reward's images (the original upload)" })
+	@ZodResponse(AdminRewardImageDownloadResponseSchema, { description: "Signed download URL of the image" })
+	public getRewardImageDownload(
+		@ZodParams(apiContract.rewardsAdmin.downloadRewardImage.input) params: z.output<typeof apiContract.rewardsAdmin.downloadRewardImage.input>,
+	): ReturnType<RewardsAdminService["getRewardImageDownload"]> {
+		return this.rewardsAdminService.getRewardImageDownload(params);
+	}
+
+	/** Reviewers save every photo of a reward at once: one ZIP of the original uploads, streamed. */
+	@RequirePermission("MANAGE", "REWARD")
+	@Get(":rewardId/images/archive")
+	@ApiOperation({ summary: "Download every image of a reward as one ZIP of the original uploads, in display order" })
+	@ZodFileResponse(apiContract.rewardsAdmin.downloadRewardImagesArchive.response, { description: "The ZIP archive (Content-Disposition: attachment)" })
+	public async downloadRewardImagesArchive(
+		@ZodParams(apiContract.rewardsAdmin.downloadRewardImagesArchive.input) params: z.output<typeof apiContract.rewardsAdmin.downloadRewardImagesArchive.input>,
+		@Res() reply: FastifyReply,
+	): Promise<void> {
+		await sendFileAttachment(reply, await this.rewardsAdminService.getRewardImagesArchive(params));
 	}
 
 	@RequirePermission("MANAGE", "REWARD")
@@ -272,6 +307,6 @@ export class RewardsAdminAnalyticsController {
 		@Req() request: FastifyRequest,
 		@Res() reply: FastifyReply,
 	): Promise<void> {
-		await sendAnalyticsExport(reply, await this.exports.exportPlatformReport(query, request));
+		await sendFileAttachment(reply, await this.exports.exportPlatformReport(query, request));
 	}
 }

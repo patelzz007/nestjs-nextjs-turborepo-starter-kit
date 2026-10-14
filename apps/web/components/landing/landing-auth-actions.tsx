@@ -2,6 +2,7 @@
 
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { useAuthCommands, useAuthUser } from "@workspace/client/lib/auth";
+import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
 import { AppShellProfileDropdown } from "@workspace/ui/components/app-shell-profile-dropdown";
 import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -23,6 +24,7 @@ export function LandingAuthActions(): React.JSX.Element {
 	// The profile comes from the auth facade (the root session check restores
 	// it; a guest makes no request) — never re-synced from here.
 	const user = useAuthUser();
+	const avatar = useOwnAvatar();
 	// True while the server saw a session cookie and the client has no verdict yet.
 	const { isAuthenticated: mayBeSignedIn } = useWebSession();
 	const { logout } = useAuthCommands();
@@ -63,7 +65,7 @@ export function LandingAuthActions(): React.JSX.Element {
 		<div className="flex items-center gap-2 sm:gap-3">
 			<ShellThemeToggle />
 			{user !== null ? (
-				<AppShellProfileDropdown name={user.fullName} email={user.email} menuItems={profileMenuItems} onLogout={handleLogout} />
+				<AppShellProfileDropdown name={user.fullName} email={user.email} avatar={avatar} menuItems={profileMenuItems} onLogout={handleLogout} />
 			) : mayBeSignedIn ? (
 				<Skeleton variant="circular" className="size-8" aria-hidden="true" />
 			) : (

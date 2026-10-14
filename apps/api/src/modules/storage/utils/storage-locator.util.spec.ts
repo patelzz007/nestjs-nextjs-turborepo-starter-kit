@@ -20,6 +20,8 @@ function storedFile(overrides: Partial<StoredFile>): StoredFile {
 		storagePath: "staging/a.pdf",
 		publicPath: null,
 		objectGeneration: null,
+		imageWidth: null,
+		imageHeight: null,
 		status: FileStatus.READY,
 		scanStatus: null,
 		scannedAt: null,

@@ -58,6 +58,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"organization_kyb_files",
 		"rewards",
 		"reward_location_scopes",
+		"reward_images",
 		"reward_audit_logs",
 		"resource_acls",
 	],

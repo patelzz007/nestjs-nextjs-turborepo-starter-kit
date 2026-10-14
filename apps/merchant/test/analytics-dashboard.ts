@@ -24,6 +24,7 @@ export function buildMerchantDashboard(overrides: Partial<MerchantAnalyticsDashb
 			from: MERCHANT_RANGE_FROM_MS,
 			to: MERCHANT_RANGE_TO_MS,
 			timeZone: "Asia/Kuala_Lumpur",
+			logo: null,
 			interval: "day",
 			previousFrom: MERCHANT_RANGE_FROM_MS - 2 * DAY_MS,
 			previousTo: MERCHANT_RANGE_FROM_MS,

@@ -13,8 +13,11 @@ import {
 	UPLOADER_ID,
 	listenerRegistry,
 	storedFile,
+	FakeImageProcessor,
+	imageRenditionsFor,
 } from "../../../../test/support/file-lifecycle-fakes";
 import { createTestTypedConfig } from "../../../../test/support/test-api-env";
+import { UnreadableImageError, type RenderedImage } from "../../storage/domain/image-processor.port";
 import { FileFinalizationService } from "./file-finalization.service";
 
 const CONTAINER = "local-private-bucket";
@@ -36,7 +39,8 @@ function setup(...files: Parameters<typeof storedFile>[0][]): Fixture {
 	storage.put({ container: CONTAINER, path: STAGING_PATH }, PDF_BYTES);
 	const transactions = new ImmediateTransactions();
 	const kybListener = new RecordingFileListener(["MERCHANT_KYB"]);
-	const service = new FileFinalizationService(createTestTypedConfig({ STORAGE_PROVIDER: "local" }), repository, storage, storage, transactions, listenerRegistry(kybListener));
+	const config = createTestTypedConfig({ STORAGE_PROVIDER: "local" });
+	const service = new FileFinalizationService(config, repository, storage, storage, transactions, listenerRegistry(kybListener), imageRenditionsFor(config, storage));
 	return { service, repository, storage, transactions, kybListener };
 }
 
@@ -94,6 +98,7 @@ describe("FileFinalizationService.applyScanResult", () => {
 		await expect(service.applyScanResult(snapshot, { outcome: "CLEAN", engine: "scanner", detail: "OK" })).resolves.toBe("SKIPPED");
 
 		expect(storage.has(CONTAINER, FINAL_PATH)).toBe(false);
+		expect(storage.has(CONTAINER, STAGING_PATH)).toBe(false);
 	});
 
 	it("binds a product image to the product persisted on the file — never one parsed from the object key", async () => {
@@ -237,3 +242,117 @@ describe("FileFinalizationService verdict events", () => {
 		expect(kybListener.received).toEqual([]);
 	});
 });
+
+describe("FileFinalizationService renditions of an image with pixel rules (REWARD_IMAGE)", () => {
+	const IMAGE_STAGING_PATH = `staging/stores/${ORG_ID}/reward-images/${FILE_ID}-kuih.webp`;
+
+	function imageSetup(processor: FakeImageProcessor): {
+		readonly service: FileFinalizationService;
+		readonly repository: InMemoryStoredFileRepository;
+		readonly storage: InMemoryObjectStorage;
+	} {
+		const repository = new InMemoryStoredFileRepository(
+			storedFile({
+				category: "REWARD_IMAGE",
+				visibility: "PUBLIC",
+				mimeType: "image/webp",
+				originalName: "kuih.webp",
+				organizationId: ORG_ID,
+				storagePath: IMAGE_STAGING_PATH,
+			}),
+		);
+		const storage = new InMemoryObjectStorage();
+		storage.put({ container: CONTAINER, path: IMAGE_STAGING_PATH }, Buffer.from("RIFF0000WEBPVP8 "));
+		const config = createTestTypedConfig({ STORAGE_PROVIDER: "local" });
+		const service = new FileFinalizationService(
+			config,
+			repository,
+			storage,
+			storage,
+			new ImmediateTransactions(),
+			listenerRegistry(),
+			imageRenditionsFor(config, storage, processor),
+		);
+		return { service, repository, storage };
+	}
+
+	it("renders, stores, publishes and records every rendition (exact 16:9 sizes) in the READY transaction", async () => {
+		const processor = new FakeImageProcessor();
+		const { service, repository, storage } = imageSetup(processor);
+
+		await expect(service.applyScanResult(repository.rows.get(FILE_ID) ?? storedFile(), { outcome: "NOT_SCANNED", engine: "none", reason: "no scanner" })).resolves.toBe(
+			"READY",
+		);
+
+		expect(processor.rendered).toEqual([
+			{ width: 640, height: 360 },
+			{ width: 1280, height: 720 },
+			{ width: 1920, height: 1080 },
+			{ width: 2560, height: 1440 },
+			{ width: 3840, height: 2160 },
+		]);
+		expect(repository.variants.map((variant) => [variant.kind, variant.width, variant.height, variant.mimeType])).toEqual([
+			["THUMBNAIL", 640, 360, "image/webp"],
+			["MEDIUM", 1280, 720, "image/webp"],
+			["LARGE", 1920, 1080, "image/webp"],
+			["XLARGE", 2560, 1440, "image/webp"],
+			["UHD", 3840, 2160, "image/webp"],
+		]);
+		expect(storage.has(CONTAINER, `stores/${ORG_ID}/reward-images/uhd/${FILE_ID}.webp`)).toBe(true);
+		expect(repository.variants.every((variant) => variant.publicPath !== null)).toBe(true);
+		expect(repository.rows.get(FILE_ID)?.status).toBe("READY");
+	});
+
+	it("fails the upload (never READY, no renditions) when the image cannot be rendered", async () => {
+		const failing = new FailingRenderProcessor();
+		const { service, repository } = imageSetup(failing);
+
+		await expect(service.applyScanResult(repository.rows.get(FILE_ID) ?? storedFile(), { outcome: "NOT_SCANNED", engine: "none", reason: "no scanner" })).resolves.toBe(
+			"FAILED",
+		);
+
+		expect(repository.rows.get(FILE_ID)?.status).toBe("FAILED");
+		expect(repository.variants).toEqual([]);
+	});
+
+	it("keeps the staging bytes through a crash mid-promotion, undoes its own copies, and succeeds on the retry", async () => {
+		const processor = new CrashOnceProcessor();
+		const { service, repository, storage } = imageSetup(processor);
+		const finalPath = `stores/${ORG_ID}/reward-images/${FILE_ID}.webp`;
+		const scanning = repository.rows.get(FILE_ID) ?? storedFile();
+
+		await expect(service.applyScanResult(scanning, { outcome: "NOT_SCANNED", engine: "none", reason: "no scanner" })).rejects.toThrow("renderer crashed");
+
+		expect(repository.rows.get(FILE_ID)).toMatchObject({ status: "SCANNING", storagePath: IMAGE_STAGING_PATH });
+		expect(storage.has(CONTAINER, IMAGE_STAGING_PATH)).toBe(true);
+		expect(storage.has(CONTAINER, finalPath)).toBe(false);
+		expect(storage.published.has(FILE_ID)).toBe(false);
+
+		await expect(service.applyScanResult(repository.rows.get(FILE_ID) ?? storedFile(), { outcome: "NOT_SCANNED", engine: "none", reason: "no scanner" })).resolves.toBe(
+			"READY",
+		);
+		expect(repository.rows.get(FILE_ID)).toMatchObject({ status: "READY", storagePath: finalPath });
+		expect(storage.has(CONTAINER, finalPath)).toBe(true);
+		expect(storage.has(CONTAINER, IMAGE_STAGING_PATH)).toBe(false);
+	});
+});
+
+/** The first render crashes as a programming error would (not an unreadable image); every later one works. */
+class CrashOnceProcessor extends FakeImageProcessor {
+	private crashed = false;
+
+	public override render(bytes: Buffer, width: number, height: number): Promise<RenderedImage> {
+		if (!this.crashed) {
+			this.crashed = true;
+			return Promise.reject(new TypeError("renderer crashed"));
+		}
+		return super.render(bytes, width, height);
+	}
+}
+
+/** Decodes, but every render fails — a corrupt image that slipped past the header check. */
+class FailingRenderProcessor extends FakeImageProcessor {
+	public override render(): Promise<RenderedImage> {
+		return Promise.reject(new UnreadableImageError({ cause: new Error("corrupt") }));
+	}
+}

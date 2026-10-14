@@ -84,7 +84,12 @@ describe("OwnProfileSchema", () => {
 		id: USER_ID,
 		email: "user@example.com",
 		fullName: "Regular User",
-		avatar: { fileId: AVATAR_FILE_ID, url: "https://cdn.example.com/users/avatar.png", updatedAt: UPDATED_AT_MS },
+		avatar: {
+			fileId: AVATAR_FILE_ID,
+			url: "https://cdn.example.com/users/avatar.png",
+			sources: [{ width: 128, url: "https://cdn.example.com/users/thumbnail/avatar.webp" }],
+			updatedAt: UPDATED_AT_MS,
+		},
 		version: 1,
 		createdAt: CREATED_AT_MS,
 		updatedAt: UPDATED_AT_MS,
@@ -96,6 +101,10 @@ describe("OwnProfileSchema", () => {
 
 	it("parses a profile without an avatar", () => {
 		expect(OwnProfileSchema.parse({ ...profile, avatar: null }).avatar).toBeNull();
+	});
+
+	it("rejects an avatar rendition whose URL is not http(s)", () => {
+		expect(OwnProfileSchema.safeParse({ ...profile, avatar: { ...profile.avatar, sources: [{ width: 128, url: "javascript:alert(1)" }] } }).success).toBe(false);
 	});
 
 	it("rejects an avatar whose URL is not absolute", () => {

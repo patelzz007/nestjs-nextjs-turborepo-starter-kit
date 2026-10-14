@@ -24,6 +24,7 @@ describe("ROUTES", () => {
 
 	it("encodes dynamic path segments", () => {
 		expect(ROUTES.users.detail("a/b c")).toBe("/users/a%2Fb%20c");
+		expect(ROUTES.rewards.reviewDetail("a/b")).toBe("/rewards/review/a%2Fb");
 		expect(ROUTES.catalog.products.edit("x?y")).toBe("/catalog/products/x%3Fy/edit");
 	});
 
@@ -36,6 +37,7 @@ describe("ROUTES", () => {
 	it("nests every section's pages under the section prefix", () => {
 		expect(isPathWithin(ROUTES.merchants.storeRequests, ROUTES.merchants.list)).toBe(true);
 		expect(isPathWithin(ROUTES.rewards.review, ROUTES.rewards.index)).toBe(true);
+		expect(isPathWithin(ROUTES.rewards.reviewDetail("reward-1"), ROUTES.rewards.review)).toBe(true);
 		expect(isPathWithin(ROUTES.emails.log, ROUTES.emails.index)).toBe(true);
 		expect(isPathWithin(ROUTES.catalog.categories.list, ROUTES.catalog.index)).toBe(true);
 		expect(isPathWithin(ROUTES.account.security, ROUTES.account.index)).toBe(true);

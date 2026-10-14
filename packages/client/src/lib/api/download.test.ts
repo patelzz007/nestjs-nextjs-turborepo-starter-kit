@@ -45,6 +45,8 @@ describe("apiDownloads", () => {
 		expect(apiDownloads.organizations.analyticsExport).toEqual(defineDownload(apiContract.organizations.analyticsExport));
 		expect(apiDownloads.organizations.analyticsExport.contentTypes).toEqual(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES));
 		expect(apiDownloads.rewardsAdmin.analyticsExport.path).toBe("/admin/analytics/export");
+		expect(apiDownloads.rewardsAdmin.rewardImagesArchive).toEqual(defineDownload(apiContract.rewardsAdmin.downloadRewardImagesArchive));
+		expect(apiDownloads.rewardsAdmin.rewardImagesArchive.contentTypes).toEqual(["application/zip"]);
 	});
 });
 

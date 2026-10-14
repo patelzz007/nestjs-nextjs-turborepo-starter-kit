@@ -28,6 +28,13 @@ const { rewardsListQuery, contextQuery } = vi.hoisted(() => ({
 	contextQuery: vi.fn<() => ContextQueryState>(),
 }));
 
+// The catalog's open tab is read from the address bar, as Next.js's
+// `useSearchParams` does once its History API integration has synced it.
+vi.mock("next/navigation", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("next/navigation")>();
+	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
+});
+
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
 		api: { organizations: { rewards: { list: { useQuery: rewardsListQuery } }, context: { useQuery: contextQuery } } },

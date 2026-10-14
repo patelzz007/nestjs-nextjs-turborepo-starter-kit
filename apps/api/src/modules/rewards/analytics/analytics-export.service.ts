@@ -1,5 +1,3 @@
-import type { Readable } from "node:stream";
-
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import {
 	ANALYTICS_EXPORT_CONTENT_TYPES,
@@ -11,19 +9,13 @@ import {
 import type { FastifyRequest } from "fastify";
 
 import { AuditTrailService } from "../../../common/audit/audit-trail.service";
+import type { FileAttachment } from "../../../common/http/file-attachment.reply";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { ANALYTICS_CLOCK, AnalyticsDashboardService, type AnalyticsClock } from "./analytics-dashboard.service";
 import { reportRowCounts, type AnalyticsReport } from "./report/analytics-report";
 import { buildMerchantReport, buildPlatformReport } from "./report/analytics-report.builder";
 import { AnalyticsReportRendererRegistry } from "./report/renderers/analytics-report-renderer.registry";
-
-/** A rendered export, ready to stream: what the controller sends. */
-export interface AnalyticsExportFile {
-	readonly fileName: string;
-	readonly contentType: string;
-	readonly body: Readable;
-}
 
 /** Which report an audit row describes. */
 type ExportedReportKind = "merchant" | "platform";
@@ -48,14 +40,14 @@ export class AnalyticsExportService {
 	) {}
 
 	/** The merchant report of `actor`'s organization (and store scope). `request` is the HTTP request the audit row describes. */
-	public async exportMerchantReport(actor: MerchantActor, query: MerchantAnalyticsExportQuery, request: FastifyRequest): Promise<AnalyticsExportFile> {
+	public async exportMerchantReport(actor: MerchantActor, query: MerchantAnalyticsExportQuery, request: FastifyRequest): Promise<FileAttachment> {
 		const { dashboard, subject } = await this.dashboards.buildMerchantDashboard(actor, query);
 		const report = buildMerchantReport(dashboard, subject, this.provenance());
 		return this.release("merchant", report, query.format, request);
 	}
 
 	/** The platform report (the controller has enforced `READ ANALYTICS`). */
-	public async exportPlatformReport(query: AdminAnalyticsExportQuery, request: FastifyRequest): Promise<AnalyticsExportFile> {
+	public async exportPlatformReport(query: AdminAnalyticsExportQuery, request: FastifyRequest): Promise<FileAttachment> {
 		const dashboard = await this.dashboards.getAdminDashboard(query);
 		const report = buildPlatformReport(dashboard, this.provenance());
 		return this.release("platform", report, query.format, request);
@@ -70,7 +62,7 @@ export class AnalyticsExportService {
 	 * header is sent), then writes the audit row — only after both succeed is
 	 * the stream handed to the controller.
 	 */
-	private async release(kind: ExportedReportKind, report: AnalyticsReport, format: AnalyticsExportFormat, request: FastifyRequest): Promise<AnalyticsExportFile> {
+	private async release(kind: ExportedReportKind, report: AnalyticsReport, format: AnalyticsExportFormat, request: FastifyRequest): Promise<FileAttachment> {
 		const fileName = analyticsExportFileName({
 			subject: report.subjectKey,
 			fromMs: report.range.from,

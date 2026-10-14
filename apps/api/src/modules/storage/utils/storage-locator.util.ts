@@ -1,4 +1,4 @@
-import type { StoredFile } from "@prisma/client";
+import type { FileVariant, StoredFile } from "@prisma/client";
 import { StorageObjectLocatorSchema, StorageProviderSchema, type StorageObjectLocator, type StorageProvider } from "@workspace/shared";
 
 export function inferStorageProviderFromContainer(container: string): StorageProvider {
@@ -29,6 +29,20 @@ export function locatorFromStoredFile(file: StoredFile, activeProvider: StorageP
 		container: file.storageContainer ?? file.storageBucket,
 		path: file.storagePath,
 		revision: file.objectRevision ?? file.objectGeneration ?? null,
+	});
+}
+
+/** Where an image rendition lives — the same neutral-first column reading as {@link locatorFromStoredFile}. */
+export function locatorFromFileVariant(variant: FileVariant, activeProvider: StorageProvider): StorageObjectLocator {
+	const provider = StorageProviderSchema.parse(variant.storageProvider ?? inferStorageProviderFromContainer(variant.storageContainer ?? variant.storageBucket));
+	if (provider !== activeProvider) {
+		throw new Error(`Variant ${variant.id} is stored on provider "${provider}" but active provider is "${activeProvider}"`);
+	}
+	return StorageObjectLocatorSchema.parse({
+		provider,
+		container: variant.storageContainer ?? variant.storageBucket,
+		path: variant.storagePath,
+		revision: variant.objectRevision ?? variant.objectGeneration ?? null,
 	});
 }
 

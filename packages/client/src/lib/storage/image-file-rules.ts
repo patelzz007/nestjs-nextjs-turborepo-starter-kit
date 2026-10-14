@@ -1,4 +1,4 @@
-import { ImageMimeTypeSchema, type DocumentMimeType, type FileCategoryPolicy, type ImageMimeType } from "@workspace/shared";
+import { ImageMimeTypeSchema, type DocumentMimeType, type FileCategoryPolicy, type ImageMimeType, type ImageRules } from "@workspace/shared";
 
 // ============================================
 // lib/storage/image-file-rules.ts — what an image upload may be, checked before uploading
@@ -51,4 +51,12 @@ export function assertImageFileAllowed(file: File, policy: FileCategoryPolicy): 
 	if (file.size > policy.maxBytes) {
 		throw new ImageFileRejectedError("too_large", `The image must be at most ${String(imageFileRules(policy).maxMebibytes)} MB.`);
 	}
+}
+
+/** The pixel rules of a category that must have them (avatars, logos, reward images) — a policy without them is a programming error. */
+export function requireImageRules(policy: FileCategoryPolicy): ImageRules {
+	if (policy.imageRules === undefined) {
+		throw new Error(`The ${policy.category} policy must declare image rules`);
+	}
+	return policy.imageRules;
 }

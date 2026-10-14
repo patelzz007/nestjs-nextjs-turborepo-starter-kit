@@ -82,6 +82,7 @@
 		"./lib/*.ts": "./src/lib/*.ts",
 		"./components/code-block-highlight": "./src/components/code-block-highlight.ts",
 		"./components/*": "./src/components/*.tsx",
+		"./testing/loaded-image-stub": "./src/testing/loaded-image-stub.ts",
 		"./testing/*": "./src/testing/*.tsx",
 		"./hooks/*": "./src/hooks/*.ts",
 		"./fonts/*": "./src/fonts/*.ts"

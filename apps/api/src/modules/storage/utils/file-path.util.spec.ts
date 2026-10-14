@@ -68,11 +68,11 @@ describe("file-path.util", () => {
 		expect(path).toBe("users/user-1/avatar/thumbnail/file-3.webp");
 	});
 
-	it("keeps reward covers in their own folder under the organization", () => {
-		const input: BuildFileObjectPathInput = { category: "REWARD_COVER", ownerId: "org-1", fileId: "file-4", fileName: "Kuih platter.webp", mimeType: "image/webp" };
-		expect(buildStagingPath(input)).toBe("staging/stores/org-1/reward-covers/file-4-Kuih platter.webp");
-		expect(buildFinalStoragePath(input)).toBe("stores/org-1/reward-covers/file-4.webp");
-		expect(buildPublicVariantPath({ ...input, variant: "THUMBNAIL" })).toBe("stores/org-1/reward-covers/thumbnail/file-4.webp");
+	it("keeps reward images in their own folder under the organization", () => {
+		const input: BuildFileObjectPathInput = { category: "REWARD_IMAGE", ownerId: "org-1", fileId: "file-4", fileName: "Kuih platter.webp", mimeType: "image/webp" };
+		expect(buildStagingPath(input)).toBe("staging/stores/org-1/reward-images/file-4-Kuih platter.webp");
+		expect(buildFinalStoragePath(input)).toBe("stores/org-1/reward-images/file-4.webp");
+		expect(buildPublicVariantPath({ ...input, variant: "THUMBNAIL" })).toBe("stores/org-1/reward-images/thumbnail/file-4.webp");
 	});
 
 	it("nests variants under the category folder, except products, whose variants replace the original folder", () => {

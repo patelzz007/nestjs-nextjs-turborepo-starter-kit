@@ -14,6 +14,7 @@ import {
 	List,
 	MapPin,
 	MonitorSmartphone,
+	Palette,
 	PieChart,
 	Play,
 	PlusCircle,
@@ -49,4 +50,5 @@ export const MERCHANT_MENU_ICON_MAP: Readonly<Record<string, LucideIcon>> = {
 	ShieldCheck,
 	CircleUser,
 	MonitorSmartphone,
+	Palette,
 };

@@ -306,14 +306,16 @@ The same default chain runs on a laptop; pick one, in order of preference:
 ## Public assets and CloudFront
 
 Every upload is written to the **private container**. When a public file (`PRODUCT_IMAGE`,
-`STORE_LOGO`, `STORE_BANNER`, `USER_AVATAR`, `REWARD_COVER`) becomes READY:
+`STORE_LOGO`, `STORE_BANNER`, `USER_AVATAR`, `REWARD_IMAGE`) becomes READY:
 
 1. the staging object is promoted to its final key in the private bucket (`products/…`, `stores/…`, `users/…`);
 2. the adapter copies that object into the **public-origin bucket** under the same key
    (`CopyObject`, `Content-Type` of the file, `Content-Disposition: inline`,
    `Cache-Control: public, max-age=86400`, SSE-S3);
 3. the file's `publicUrl` is `https://<STORAGE_CLOUDFRONT_PUBLIC_DOMAIN>/<key>`, served by CloudFront
-   through Origin Access Control.
+   through Origin Access Control;
+4. for a `REWARD_IMAGE`, its WebP renditions (640 up to the original's width, at most 3840, see `overview.md` → Reward images)
+   are written and published the same way under `…/reward-images/{kind}/{fileId}.webp`.
 
 If the READY transition does not commit (the file was deleted meanwhile, or its product disappeared),
 the public copy is withdrawn together with the promoted object (its URL was never returned, so

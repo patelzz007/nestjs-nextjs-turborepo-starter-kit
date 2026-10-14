@@ -13,4 +13,14 @@ describe("optionalNumberInput", () => {
 		expect(optionalNumberInput("12.5")).toBe(12.5);
 		expect(optionalNumberInput("abc")).toBeNaN();
 	});
+
+	it("keeps a default value that is already a number, as an edited reward's saved minimum spend is", () => {
+		expect(optionalNumberInput(30)).toBe(30);
+		expect(optionalNumberInput(0)).toBe(0);
+	});
+
+	it("treats an absent default value as not given", () => {
+		expect(optionalNumberInput(undefined)).toBeUndefined();
+		expect(optionalNumberInput(null)).toBeUndefined();
+	});
 });

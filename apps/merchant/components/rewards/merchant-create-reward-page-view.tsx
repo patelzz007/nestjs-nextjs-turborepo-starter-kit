@@ -26,10 +26,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { addDays, format } from "date-fns";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { orgRoutes } from "@/lib/routes";
+import type { SavedRewardImage } from "@/components/rewards/merchant-reward-images-field";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm, useWatch } from "react-hook-form";
+
+/** A new reward starts without photos. */
+const NO_IMAGES: readonly SavedRewardImage[] = [];
 
 function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipleLocations: boolean): MerchantRewardFormValues {
 	const startDate = new Date();
@@ -39,8 +43,8 @@ function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipl
 		rewardType: "DISCOUNT",
 		title: "",
 		description: "",
-		// Empty until a cover is uploaded — the schema then asks for one ("Add a cover image").
-		coverFileId: "",
+		// Empty until a photo is uploaded — the schema then asks for one ("Add at least one image").
+		imageFileIds: [],
 		rewardValue: 0,
 		startDate: format(startDate, "yyyy-MM-dd"),
 		expiryDate: format(expiryDate, "yyyy-MM-dd"),
@@ -162,7 +166,7 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 					onTypeSelect={handleTypeSelect}
 					onMaxClaimsChange={handleMaxClaimsChange}
 					organizationId={organizationId}
-					initialCoverUrl={null}
+					initialImages={NO_IMAGES}
 				/>
 
 				<MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={createMutation.isPending} />

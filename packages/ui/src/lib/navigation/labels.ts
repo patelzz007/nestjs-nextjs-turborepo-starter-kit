@@ -26,4 +26,8 @@ export interface CarouselLabels {
 	readonly slideRoleDescription: string;
 	readonly previousSlide: string;
 	readonly nextSlide: string;
+	/** A slide's position for assistive technology, e.g. "Image 2 of 5". */
+	readonly slidePosition: (position: number, total: number) => string;
+	/** The dot that jumps to a slide, e.g. "Show image 2". */
+	readonly goToSlide: (position: number) => string;
 }

@@ -32,7 +32,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -47,7 +47,7 @@ export const TEAM_MEMBERS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> 
 /** What the invitations panel announces while they load. */
 export const TEAM_INVITES_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading invitations…" };
 
-const INVITE_ROLES: readonly { readonly value: OrganizationMembershipRole; readonly label: string }[] = [
+const INVITE_ROLES: readonly SelectOption<OrganizationMembershipRole>[] = [
 	{ value: "ADMIN", label: "Admin" },
 	{ value: "MEMBER", label: "Member" },
 	{ value: "CASHIER", label: "Cashier" },
@@ -62,7 +62,7 @@ const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
 	CASHIER: "Cashier",
 };
 
-const LOCATION_SCOPE_OPTIONS: readonly { readonly value: OrganizationLocationScopeType; readonly label: string }[] = [
+const LOCATION_SCOPE_OPTIONS: readonly SelectOption<OrganizationLocationScopeType>[] = [
 	{ value: "ALL_LOCATIONS", label: "All locations" },
 	{ value: "SELECTED", label: "Selected locations" },
 ];
@@ -355,7 +355,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="invite-role">Role</Label>
-							<Select value={values.role} onValueChange={handleRoleChange} disabled={inviteMutation.isPending}>
+							<Select items={INVITE_ROLES} value={values.role} onValueChange={handleRoleChange} disabled={inviteMutation.isPending}>
 								<SelectTrigger id="invite-role">
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
@@ -373,7 +373,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 					<div className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
 						<div className="space-y-2">
 							<Label htmlFor="invite-location-scope">Location access</Label>
-							<Select value={values.locationScopeType} onValueChange={handleLocationScopeChange} disabled={inviteMutation.isPending}>
+							<Select items={LOCATION_SCOPE_OPTIONS} value={values.locationScopeType} onValueChange={handleLocationScopeChange} disabled={inviteMutation.isPending}>
 								<SelectTrigger id="invite-location-scope">
 									<SelectValue placeholder="Select location scope" />
 								</SelectTrigger>

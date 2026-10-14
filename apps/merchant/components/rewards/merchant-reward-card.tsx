@@ -3,7 +3,8 @@
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { RewardStockMeter } from "@/components/rewards/reward-stock-meter";
-import { describeRewardStores, formatRewardEnd, formatRewardOffer, isRewardEnded } from "@/lib/rewards/presentation";
+import { describeRewardStores, formatRewardEnd, isRewardEnded } from "@/lib/rewards/presentation";
+import { formatRewardOffer } from "@workspace/client/lib/rewards/reward-offer";
 import { ORG_ROUTES } from "@/lib/routes";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { CoverImage } from "@workspace/ui/components/cover-image";
@@ -39,6 +40,9 @@ const NOTCH_RIM_CLASS =
 const HALF_CLASS =
 	"border-border bg-card transition-[border-color] duration-200 group-hover:border-foreground/20 motion-reduce:transition-none dark:group-hover:border-foreground/25";
 
+/** How wide a card's cover is drawn: a third of the catalog on wide screens, half on tablets, full width on phones. */
+const CARD_COVER_SIZES = "(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw";
+
 /** Grid tile for a merchant reward: its cover and offer, then stock, activity, stores and end date. The whole card opens the reward. */
 export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardCardProps): React.JSX.Element {
 	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.edit(reward.id));
@@ -46,13 +50,14 @@ export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardC
 	const stores = describeRewardStores(reward);
 	const { locale } = PLATFORM_DISPLAY_REGION;
 	const endLabel = formatRewardEnd(reward);
+	const [cover] = reward.images;
 
 	return (
 		<article
 			data-slot="reward-card"
 			className="group relative flex h-full flex-col overflow-hidden rounded-xl shadow-xs has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-2 has-[a:focus-visible]:ring-offset-background">
 			<div className={cn(HALF_CLASS, OFFER_HALF_NOTCHES, "flex flex-1 flex-col rounded-t-xl border border-b-0")}>
-				<CoverImage src={reward.coverImageUrl} className={cn("rounded-t-[inherit]", ended ? "opacity-80 grayscale" : null)} />
+				<CoverImage src={cover?.url} sources={cover?.sources} sizes={CARD_COVER_SIZES} className={cn("rounded-t-[inherit]", ended ? "opacity-80 grayscale" : null)} />
 				<div className="flex flex-1 flex-col gap-4 px-5 pt-4 pb-5">
 					<div className="flex items-center justify-between gap-3">
 						<p className="truncate text-xs text-muted-foreground capitalize">

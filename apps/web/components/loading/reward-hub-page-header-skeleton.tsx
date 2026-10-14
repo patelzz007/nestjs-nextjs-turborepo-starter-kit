@@ -23,7 +23,7 @@ export function RewardHubPageHeaderSkeleton({ className }: RewardHubPageHeaderSk
 	);
 }
 
-/** Bones for the ghost "← Back to …" link under a `WebPageHeader` (a `sm` button, pulled up by `-mt-4`). */
+/** Bones for the ghost "Back to …" link under a `WebPageHeader` (a `sm` button, pulled up by `-mt-4`). */
 export function RewardHubBackLinkSkeleton(): React.JSX.Element {
 	return <Skeleton className="-mt-4 h-9 w-32" />;
 }

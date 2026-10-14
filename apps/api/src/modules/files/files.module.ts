@@ -23,6 +23,7 @@ import { FileScanService } from "./services/file-scan.service";
 import { FileService } from "./services/file.service";
 import { InlineStorageTaskDispatcher } from "./services/inline-storage-task-dispatcher";
 import { LocalStorageTransferService } from "./services/local-storage-transfer.service";
+import { ImageRenditionService } from "./services/image-rendition.service";
 import { QueuedStorageTaskDispatcher, STORAGE_CDN_INVALIDATE_QUEUE, STORAGE_DELETE_QUEUE, STORAGE_SCAN_QUEUE } from "./services/queued-storage-task-dispatcher";
 import {
 	StorageCdnInvalidationProcessor,
@@ -73,6 +74,7 @@ const storageTaskProviders: Provider[] = hasRedis
 		FileScanService,
 		FileAuthorizationService,
 		LocalStorageTransferService,
+		ImageRenditionService,
 		{
 			// Category listeners (FileLifecycleListener providers in feature modules) are discovered, never imported here.
 			provide: FileLifecycleListenerRegistry,
@@ -81,6 +83,6 @@ const storageTaskProviders: Provider[] = hasRedis
 		},
 		...storageTaskProviders,
 	],
-	exports: [StoredFileRepository, FileService],
+	exports: [StoredFileRepository, FileService, ImageRenditionService],
 })
 export class FilesModule {}

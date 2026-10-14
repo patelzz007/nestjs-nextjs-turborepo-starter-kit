@@ -120,7 +120,7 @@ export function DashboardLayout({
 	const { status: breadcrumbStatus } = useAdminBreadcrumb();
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 	const pathname = usePathname();
 	const { capabilities, status: permissionsStatus, retry: retryPermissions } = useSessionPermissionsQuery(initialSessionPermissions);
@@ -155,6 +155,13 @@ export function DashboardLayout({
 	const pinnedItems = React.useMemo(() => resolvePinnedMenuItems(pinnedUrls, searchableItems), [pinnedUrls, searchableItems]);
 
 	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
+	// A followed link tells the store where it leads: a link to this page resets the branches opened by hand now, one to another page once the route changes.
+	const handleFollowLink = React.useCallback(
+		(href: string): void => {
+			followLink(pathname, href);
+		},
+		[followLink, pathname],
+	);
 
 	const handleToggleItem = React.useCallback(
 		(itemId: string): void => {
@@ -203,7 +210,7 @@ export function DashboardLayout({
 							onSearchQueryChange={setSearchQuery}
 							expandedItems={expandedItems}
 							onToggleItem={handleToggleItem}
-							onFollowLink={resetItemExpansion}
+							onFollowLink={handleFollowLink}
 							onMoveSectionUp={moveSectionUp}
 							onMoveSectionDown={moveSectionDown}
 							pinnedItems={pinnedItems}

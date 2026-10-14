@@ -1,15 +1,18 @@
 // How the rewards catalog (grid and list) presents a reward: which status
-// section it belongs to, how its offer reads, where it can be redeemed and how
+// tab it belongs to, how its offer reads, where it can be redeemed and how
 // much stock is left. Pure functions — both layouts read the same answers, so
 // switching layout never changes what a reward says.
 
-import { assertNever, PLATFORM_DISPLAY_REGION, type RewardResponse, type RewardStatus, type RewardType, type SaleCurrency } from "@workspace/shared";
+import { PLATFORM_DISPLAY_REGION, type RewardResponse, type RewardStatus } from "@workspace/shared";
 import type { StatusTone } from "@workspace/ui/components/status-badge";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { formatCount } from "@workspace/ui/lib/format/number";
+import { z } from "zod";
 
-/** Status sections of the catalog, in the order they are shown. */
-export type RewardStatusGroupId = "live" | "review" | "drafts" | "ended";
+/** Status tabs of the catalog, in the order they are shown — also the `?status=` values of its URL (`REWARDS_URL_STATE`). */
+export const RewardStatusGroupIdSchema = z.enum(["live", "review", "drafts", "ended"]);
+
+export type RewardStatusGroupId = z.infer<typeof RewardStatusGroupIdSchema>;
 
 export interface RewardStatusGroupDefinition {
 	readonly id: RewardStatusGroupId;
@@ -26,7 +29,7 @@ export const REWARD_STATUS_GROUPS: readonly RewardStatusGroupDefinition[] = [
 	{ id: "ended", title: "Ended", tone: "muted" },
 ];
 
-/** The section every status belongs to — expired and disabled offers have both stopped. */
+/** The tab every status belongs to — expired and disabled offers have both stopped. */
 const STATUS_GROUP: Readonly<Record<RewardStatus, RewardStatusGroupId>> = {
 	PUBLISHED: "live",
 	PENDING_REVIEW: "review",
@@ -39,11 +42,14 @@ export interface RewardStatusGroup extends RewardStatusGroupDefinition {
 	readonly rewards: readonly RewardResponse[];
 }
 
-/** The non-empty status sections in display order; rewards keep the API's order within a section. */
+/** Every status group in display order, empty ones included (each is a tab); rewards keep the API's order within a group. */
 export function groupRewardsByStatus(rewards: readonly RewardResponse[]): readonly RewardStatusGroup[] {
-	return REWARD_STATUS_GROUPS.map((group): RewardStatusGroup => ({ ...group, rewards: rewards.filter((reward) => STATUS_GROUP[reward.status] === group.id) })).filter(
-		(group) => group.rewards.length > 0,
-	);
+	return REWARD_STATUS_GROUPS.map((group): RewardStatusGroup => ({ ...group, rewards: rewards.filter((reward) => STATUS_GROUP[reward.status] === group.id) }));
+}
+
+/** The group the catalog opens on when the URL names none: the first one with rewards (live, unless nothing is live), else live. */
+export function defaultRewardStatusGroupId(groups: readonly RewardStatusGroup[]): RewardStatusGroupId {
+	return groups.find((group) => group.rewards.length > 0)?.id ?? RewardStatusGroupIdSchema.enum.live;
 }
 
 /** Whether the offer can still be claimed — ended offers are drawn quieter. */
@@ -51,42 +57,8 @@ export function isRewardEnded(status: RewardStatus): boolean {
 	return STATUS_GROUP[status] === "ended";
 }
 
-/** Rewards carry cashback in whole units of the platform's currency (the editor asks for "Cashback Amount (RM)"). */
-export const REWARD_VALUE_CURRENCY: SaleCurrency = "MYR";
-
-/** Cashback is set in whole currency units, so it is shown without decimals. */
-const WHOLE_CURRENCY_FRACTION_DIGITS = 0;
-
-function formatWholeCurrency(amount: number): string {
-	return new Intl.NumberFormat(PLATFORM_DISPLAY_REGION.locale, {
-		style: "currency",
-		currency: REWARD_VALUE_CURRENCY,
-		maximumFractionDigits: WHOLE_CURRENCY_FRACTION_DIGITS,
-		minimumFractionDigits: WHOLE_CURRENCY_FRACTION_DIGITS,
-	}).format(amount);
-}
-
-/** A free-item reward with a quantity above one gives several items. */
+/** One store is named "1 store", more are counted. */
 const SINGLE_ITEM = 1;
-
-/** What the customer gets, in their words — the headline of a reward card ("10% off", "Free item"). */
-export function formatRewardOffer(rewardType: RewardType, rewardValue: number): string {
-	const { locale } = PLATFORM_DISPLAY_REGION;
-	switch (rewardType) {
-		case "DISCOUNT":
-			return `${formatCount(rewardValue, locale)}% off`;
-		case "CASHBACK":
-			return `${formatWholeCurrency(rewardValue)} cashback`;
-		case "POINTS":
-			return `${formatCount(rewardValue, locale)} bonus points`;
-		case "FREE_ITEM":
-			return rewardValue > SINGLE_ITEM ? `${formatCount(rewardValue, locale)} free items` : "Free item";
-		case "BOGO":
-			return "Buy one, get one";
-		default:
-			return assertNever(rewardType, "reward type");
-	}
-}
 
 /** Separators a store name may put between the business and the branch ("Jonker Street Kitchen — Bukit Katil"). */
 const BRANCH_SEPARATOR = /^[\s–—:|-]+/u;

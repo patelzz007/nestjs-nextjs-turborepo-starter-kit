@@ -10,7 +10,9 @@ import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 import { ApiError } from "@workspace/client/lib/api/use-api";
-import type { MerchantRewardFormValues } from "@workspace/shared";
+import { epochMs, type MerchantRewardFormValues, type RewardResponse } from "@workspace/shared";
+import { optionalNumberInput } from "@/lib/forms/optional-number-input";
+import { rewardFixture } from "@/test/rewards";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
@@ -39,34 +41,32 @@ interface FormFieldsStubProps {
 	readonly register: UseFormRegister<MerchantRewardFormValues>;
 }
 
-// Two real, registered inputs stand in for the full form.
+// Real, registered inputs stand in for the full form — the minimum spend read as the real form reads it.
 vi.mock("@/components/rewards/merchant-reward-form-fields", () => ({
 	MerchantRewardFormFields: ({ register }: FormFieldsStubProps): React.JSX.Element => (
 		<>
 			<input aria-label="Title" {...register("title")} />
 			<input aria-label="Description" {...register("description")} />
+			<input aria-label="Minimum purchase" type="number" {...register("minPurchase", { setValueAs: optionalNumberInput })} />
 		</>
 	),
 }));
 
-function draftReward(description: string): object {
-	return {
+function draftReward(description: string): RewardResponse {
+	return rewardFixture({
 		id: REWARD_ID,
 		title: "Free latte",
 		description,
-		rewardType: "FREE_ITEM",
 		rewardValue: 12,
-		rules: null,
-		termsConditions: null,
-		startDate: 1_767_225_600_000,
-		expiryDate: 1_769_904_000_000,
+		startDate: epochMs(1_767_225_600_000),
+		expiryDate: epochMs(1_769_904_000_000),
 		quantityTotal: 100,
 		quantityRemaining: 80,
 		claimCount: 20,
 		redemptionCount: 10,
 		category: "cafe",
 		status: "DRAFT",
-	};
+	});
 }
 
 function listReturns(description: string): void {
@@ -94,6 +94,20 @@ describe("MerchantEditRewardPageView form", () => {
 
 		expect(screen.getByLabelText("Title")).toHaveProperty("value", "Two free lattes");
 		expect(screen.getByLabelText("Description")).toHaveProperty("value", "Updated elsewhere");
+	});
+
+	it("opens a reward with a saved minimum spend, showing that amount", () => {
+		rewardsListQuery.mockReturnValue({
+			data: { data: [rewardFixture({ ...draftReward("One free latte"), rules: { minSpendMyr: 30 } })] },
+			isLoading: false,
+			isFetching: false,
+			isError: false,
+			error: null,
+			refetch: vi.fn(),
+		});
+		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+
+		expect(screen.getByLabelText("Minimum purchase")).toHaveProperty("value", "30");
 	});
 
 	it("uses the cache instead of refetching on every mount", () => {

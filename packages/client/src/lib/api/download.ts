@@ -1,5 +1,5 @@
 // ============================================
-// lib/api/download.ts - typed FILE downloads (analytics exports)
+// lib/api/download.ts - typed FILE downloads (analytics exports, image archives)
 // ============================================
 // A file route (`defineFileContract` + `fileResponse(...)` in @workspace/shared)
 // answers the file itself, not the JSON envelope, so it is not a query: the
@@ -60,6 +60,8 @@ export const apiDownloads = {
 	rewardsAdmin: {
 		/** `GET /admin/analytics/export` — the platform report (`format`: csv | xlsx | pdf; `from` / `to` required). */
 		analyticsExport: defineDownload(apiContract.rewardsAdmin.analyticsExport),
+		/** `GET /admin/rewards/:rewardId/images/archive` — every image of a reward in one ZIP of the original uploads. */
+		rewardImagesArchive: defineDownload(apiContract.rewardsAdmin.downloadRewardImagesArchive),
 	},
 };
 

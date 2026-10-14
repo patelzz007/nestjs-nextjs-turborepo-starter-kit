@@ -16,6 +16,7 @@ import {
 	SelectGroup,
 	SelectItem,
 	SelectLabel,
+	type SelectOption,
 	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
@@ -25,10 +26,22 @@ import {
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 
-/** Value→label map used across the value/label and RHF-clear tests (rule 16: stable function). */
-function labelOf(value: string): string {
-	return value === "js" ? "JavaScript" : value === "ts" ? "TypeScript" : value === "py" ? "Python" : value;
-}
+/** The language options shared by the value/label, live-region and RHF-clear tests. */
+const LANGUAGE_OPTIONS: readonly SelectOption<string>[] = [
+	{ value: "ts", label: "TypeScript" },
+	{ value: "js", label: "JavaScript" },
+	{ value: "py", label: "Python" },
+];
+
+/** A single generic option for the behaviour tests that never read a label. */
+const OPTION_A: readonly SelectOption<string>[] = [{ value: "a", label: "Option A" }];
+
+const TEAM_OPTIONS: readonly SelectOption<string>[] = [
+	{ value: "platform", label: "Platform" },
+	{ value: "data", label: "Data" },
+];
+
+const NO_OPTIONS: readonly SelectOption<string>[] = [];
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {
@@ -59,7 +72,7 @@ function SingleSelectHarness({ onValueChange }: { readonly onValueChange?: (valu
 		[onValueChange],
 	);
 	return (
-		<Select value={value} onValueChange={handleChange} ariaLabel="Pick a language">
+		<Select items={LANGUAGE_OPTIONS} value={value} onValueChange={handleChange} ariaLabel="Pick a language">
 			<SelectTrigger>
 				<SelectValue placeholder="Choose…" />
 			</SelectTrigger>
@@ -92,7 +105,7 @@ describe("Select", () => {
 					<button type="button" onClick={handleFocus}>
 						Focus select
 					</button>
-					<Select ref={ref} ariaLabel="Target">
+					<Select items={OPTION_A} ref={ref} ariaLabel="Target">
 						<SelectTrigger>
 							<SelectValue placeholder="Pick…" />
 						</SelectTrigger>
@@ -112,7 +125,7 @@ describe("Select", () => {
 	it("threads the size variant onto the trigger via data-size (improvement 2)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		render(
-			<Select size="sm" ariaLabel="Compact">
+			<Select items={OPTION_A} size="sm" ariaLabel="Compact">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -129,7 +142,7 @@ describe("Select", () => {
 	it("shows a loading row with the provided label when loading (feature 1)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		render(
-			<Select loading defaultOpen ariaLabel="Loading select">
+			<Select items={OPTION_A} loading defaultOpen ariaLabel="Loading select">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -147,7 +160,7 @@ describe("Select", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		const onAction = vi.fn();
 		render(
-			<Select defaultOpen ariaLabel="Empty select">
+			<Select items={NO_OPTIONS} defaultOpen ariaLabel="Empty select">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -165,7 +178,7 @@ describe("Select", () => {
 	it("opens on the keyboard shortcut and closes via Escape (feature 4)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		render(
-			<Select shortcut="⌘K" ariaLabel="Shortcut select">
+			<Select items={OPTION_A} shortcut="⌘K" ariaLabel="Shortcut select">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -200,10 +213,10 @@ describe("Select", () => {
 
 		const liveRegion = container.querySelector('[data-slot="select-live-region"]');
 		expect(liveRegion).toBeTruthy();
-		expect(liveRegion?.textContent).toBe("Selected ts");
+		expect(liveRegion?.textContent).toBe("Selected TypeScript");
 	});
 
-	it("renders a value→label map via itemToStringLabel so the trigger shows the label (feature 5)", () => {
+	it("renders the label from the Root's items so the trigger shows the label (feature 5)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 		function LabelHarness(): React.JSX.Element {
@@ -212,7 +225,7 @@ describe("Select", () => {
 				setValue(next);
 			}, []);
 			return (
-				<Select value={value} onValueChange={handleChange} itemToStringLabel={labelOf} ariaLabel="Label select">
+				<Select items={LANGUAGE_OPTIONS} value={value} onValueChange={handleChange} ariaLabel="Label select">
 					<SelectTrigger>
 						<SelectValue placeholder="Pick…" />
 					</SelectTrigger>
@@ -246,7 +259,7 @@ describe("Select", () => {
 		function ClearHarness(): React.JSX.Element {
 			const [value, setValue] = useState<string | null>("a");
 			return (
-				<Select value={value} onValueChange={setValue} ariaLabel="Clearable">
+				<Select items={OPTION_A} value={value} onValueChange={setValue} ariaLabel="Clearable">
 					<SelectTrigger>
 						<SelectValue placeholder="Pick…" />
 						{value !== null ? <SelectClear onClear={onClear} /> : null}
@@ -264,14 +277,16 @@ describe("Select", () => {
 			fireEvent.click(clear);
 		});
 		expect(onClear).toHaveBeenCalledTimes(1);
-		// The popup must NOT have opened (the click was stopped).
-		expect(screen.queryByText("Option A")).toBeNull();
+		// The popup must NOT have opened (the click was stopped). Query the option
+		// role: the trigger itself now (correctly) shows the "Option A" label.
+		expect(screen.getByRole("combobox", { name: "Clearable" }).getAttribute("aria-expanded")).toBe("false");
+		expect(screen.queryByRole("option", { name: "Option A" })).toBeNull();
 	});
 
 	it("renders groups, labels and separators (improvements 15 + 20)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		render(
-			<Select defaultOpen ariaLabel="Grouped">
+			<Select items={TEAM_OPTIONS} defaultOpen ariaLabel="Grouped">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -294,7 +309,7 @@ describe("Select", () => {
 	it("forwards disabled to the trigger (improvement 18)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		render(
-			<Select disabled ariaLabel="Disabled select">
+			<Select items={OPTION_A} disabled ariaLabel="Disabled select">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -317,7 +332,7 @@ describe("Select", () => {
 	it("threads the invalid state to the trigger as aria-invalid (rule 18)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		render(
-			<Select invalid ariaLabel="Invalid select">
+			<Select items={OPTION_A} invalid ariaLabel="Invalid select">
 				<SelectTrigger>
 					<SelectValue placeholder="Pick…" />
 				</SelectTrigger>
@@ -341,7 +356,7 @@ describe("Select", () => {
 			}, []);
 			return (
 				<div>
-					<Select multiple value={values} onValueChange={setValues} ariaLabel="Teams">
+					<Select multiple items={TEAM_OPTIONS} value={values} onValueChange={setValues} ariaLabel="Teams">
 						<SelectTrigger>
 							{values.length > 0 ? (
 								<SelectChips>
@@ -379,7 +394,7 @@ describe("Select", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		const removeValue = vi.fn();
 		render(
-			<Select multiple defaultOpen ariaLabel="Capped">
+			<Select multiple items={OPTION_A} defaultOpen ariaLabel="Capped">
 				<SelectTrigger>
 					<SelectChips maxChips={1}>
 						<SelectChip value="a" label="Alpha" onRemove={removeValue} />
@@ -421,7 +436,7 @@ describe("Select", () => {
 				setValue(next ?? "");
 			}, []);
 			return (
-				<Select value={value} onValueChange={handleChange} itemToStringLabel={labelOf} ariaLabel="Language">
+				<Select items={LANGUAGE_OPTIONS} value={value} onValueChange={handleChange} ariaLabel="Language">
 					<SelectTrigger>
 						<SelectValue placeholder="Pick a language…" />
 						{value !== "" ? <SelectClear onClear={clear} /> : null}

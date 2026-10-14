@@ -22,11 +22,12 @@ afterEach((): void => {
 });
 
 describe("OrganizationSettingsIndexView", () => {
-	it("links owners to team, locations, verification, and their personal account", () => {
+	it("links owners to team, locations, branding, verification, and their personal account", () => {
 		renderAs("OWNER");
 
 		expect(hrefOf("Manage team")).toBe(routes.settings.team);
 		expect(hrefOf("View locations")).toBe(routes.settings.locations);
+		expect(hrefOf("View branding")).toBe(routes.settings.branding);
 		expect(hrefOf("View verification")).toBe(routes.settings.verification);
 		expect(hrefOf("Account")).toBe(routes.account);
 	});
@@ -38,12 +39,13 @@ describe("OrganizationSettingsIndexView", () => {
 		expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
 	});
 
-	it("shows cashiers only the locations card", () => {
+	it("shows cashiers only the locations and branding cards", () => {
 		renderAs("CASHIER");
 
 		expect(screen.queryByRole("link", { name: "Manage team" })).toBeNull();
 		expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
 		expect(hrefOf("View locations")).toBe(routes.settings.locations);
+		expect(hrefOf("View branding")).toBe(routes.settings.branding);
 	});
 
 	it("shows policy admins and members only the locations card", () => {
@@ -63,5 +65,6 @@ describe("OrganizationSettingsIndexView", () => {
 		expect(screen.queryByRole("link", { name: "Manage team" })).toBeNull();
 		expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
 		expect(screen.queryByRole("link", { name: "View locations" })).toBeNull();
+		expect(screen.queryByRole("link", { name: "View branding" })).toBeNull();
 	});
 });

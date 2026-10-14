@@ -35,8 +35,10 @@ export interface SelectValueProps {
 
 /**
  * Renders the currently selected value's label. When `formatValue` is set the
- * wrapper takes over rendering (so the placeholder can be styled muted too);
- * otherwise base-ui resolves the label from the selected item natively.
+ * wrapper takes over rendering (rich content such as avatars/badges, with a
+ * muted placeholder); otherwise base-ui resolves the label from the Root's
+ * required `items` list. It cannot read it from the `SelectItem` children —
+ * those are only mounted while the popup is open.
  */
 export const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps & { readonly className?: string; readonly children?: React.ReactNode }>(function SelectValue(
 	{ className, formatValue, placeholder, children },

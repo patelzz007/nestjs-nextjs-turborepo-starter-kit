@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { Prisma, Reward } from "@prisma/client";
+import { Prisma, type Reward, type StoredFile } from "@prisma/client";
 
 import {
 	adminPendingRewardListQuery,
@@ -16,35 +16,35 @@ import { buildListOrder, type ListOrder, type SortColumns } from "../../../platf
 import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { ORGANIZATION_LOGO_ASSETS_SELECT } from "../../organization/utils/organization-logo.util";
 import type { MerchantLocationScope } from "../types/merchant-location-scope";
 import { rewardAvailabilityWhere } from "../utils/merchant-location-scope.util";
 import { appendRewardAuditLog } from "./reward-audit-log.repository";
 
 /**
- * The merchant's logo, fetched in the same query as the reward (no N+1): the
- * organization's live `LOGO` asset whose file finished processing and has a
- * public URL. `(organizationId, assetType)` is unique, so this is 0 or 1 row.
- *
- * The file conditions live in the relation filter (not only in the mapper) so
- * an asset whose `stored_files` row is hidden by RLS is excluded up front
- * instead of tripping Prisma's required-relation check on `file`.
+ * A reward's live images in display order, each with its published renditions
+ * (every reward has at least one: `imageFileIds` is required and checked on
+ * every save, and an image in use cannot be deleted).
  */
-const ORGANIZATION_LOGO_ASSETS_SELECT = {
-	where: {
-		assetType: "LOGO",
-		isDeleted: false,
-		file: { status: "READY", isDeleted: false, publicPath: { not: null } },
+const REWARD_IMAGES_SELECT = {
+	where: { isDeleted: false },
+	orderBy: { position: "asc" },
+	select: {
+		fileId: true,
+		file: {
+			select: {
+				imageWidth: true,
+				imageHeight: true,
+				variants: { where: { isDeleted: false }, orderBy: { width: "asc" }, select: { width: true, publicPath: true } },
+			},
+		},
 	},
-	select: { file: { select: { publicPath: true } } },
-	take: 1,
-} satisfies Prisma.Organization$assetsArgs;
-
-/** The cover's published URL — every reward has one (`coverFileId` is required and validated on every save). */
-const REWARD_COVER_FILE_SELECT = { select: { publicPath: true } } satisfies Prisma.StoredFileDefaultArgs;
+} satisfies Prisma.Reward$imagesArgs;
 
 const REWARD_WITH_ORGANIZATION_INCLUDE = {
+	// The merchant's logo comes in the same query as the reward (no N+1).
 	organization: { select: { displayName: true, assets: ORGANIZATION_LOGO_ASSETS_SELECT } },
-	coverFile: REWARD_COVER_FILE_SELECT,
+	images: REWARD_IMAGES_SELECT,
 	locationScopes: {
 		where: { location: { isDeleted: false } },
 		select: {
@@ -56,43 +56,64 @@ const REWARD_WITH_ORGANIZATION_INCLUDE = {
 
 export type RewardWithOrganization = Prisma.RewardGetPayload<{ include: typeof REWARD_WITH_ORGANIZATION_INCLUDE }>;
 
-/** The cover a reward names is not one of the organization's ready, published `REWARD_COVER` images. */
-export class RewardCoverUnavailableError extends Error {
-	public constructor(public readonly fileId: string) {
-		super(`File ${fileId} cannot be used as a reward cover`);
-		this.name = "RewardCoverUnavailableError";
+/** An image a reward names is not one of the organization's ready, published `REWARD_IMAGE`s. */
+export class RewardImagesUnavailableError extends Error {
+	public constructor(public readonly fileIds: readonly string[]) {
+		super(`Files ${fileIds.join(", ")} cannot all be used as reward images`);
+		this.name = "RewardImagesUnavailableError";
 	}
 }
 
-/** A reward-cover check inside a write: the file to lock and the organization it must belong to. */
-export interface RewardCoverCheck {
+/** The images a write sets on a reward, in display order, and who sets them. */
+export interface RewardImageSet {
 	readonly organizationId: string;
-	readonly fileId: string;
+	readonly fileIds: readonly string[];
+	/** Recorded as `deleted_by` on the image rows the write replaces. */
+	readonly actorId: string;
 }
 
 type RewardWriteClient = Prisma.TransactionClient;
 
 /**
- * Locks the cover file row and checks it is usable: this organization's
- * READY, public, published, live `REWARD_COVER`. The same row lock is taken by
- * file deletion (`StoredFileRepository.softDeleteWithReferences`), so a reward
- * can never be saved naming a cover that is being deleted, nor a cover deleted
- * while a save names it.
+ * Locks every image file row of a write and checks each is usable: this
+ * organization's READY, public, published, live `REWARD_IMAGE`. The same row
+ * lock is taken by file deletion (`StoredFileRepository.softDeleteWithReferences`),
+ * so a reward can never be saved naming an image that is being deleted, nor an
+ * image deleted while a save names it.
  */
-async function lockUsableRewardCover(tx: RewardWriteClient, check: RewardCoverCheck): Promise<void> {
+async function lockUsableRewardImages(tx: RewardWriteClient, organizationId: string, fileIds: readonly string[]): Promise<void> {
 	const locked = await tx.$queryRaw<{ id: string }[]>`
 		SELECT id FROM "stored_files"
-		WHERE id = ${check.fileId}
-			AND organization_id = ${check.organizationId}
-			AND category = 'REWARD_COVER'
+		WHERE id IN (${Prisma.join([...fileIds])})
+			AND organization_id = ${organizationId}
+			AND category = 'REWARD_IMAGE'
 			AND visibility = 'PUBLIC'
 			AND status = 'READY'
 			AND is_deleted = false
 			AND public_path IS NOT NULL
+		ORDER BY id
 		FOR UPDATE`;
-	if (locked.length !== 1) {
-		throw new RewardCoverUnavailableError(check.fileId);
+	if (locked.length !== new Set(fileIds).size) {
+		const usable = new Set(locked.map((row) => row.id));
+		throw new RewardImagesUnavailableError(fileIds.filter((fileId) => !usable.has(fileId)));
 	}
+}
+
+/** Writes a reward's image rows in display order (position 0 is the cover). */
+async function createRewardImageRows(tx: RewardWriteClient, rewardId: string, organizationId: string, fileIds: readonly string[]): Promise<void> {
+	await tx.rewardImage.createMany({
+		data: fileIds.map((fileId, position) => ({ rewardId, organizationId, fileId, position })),
+	});
+}
+
+/** Replaces a reward's live images: the old rows are soft-deleted (kept as history), the new ones written in order. */
+async function replaceRewardImageRows(tx: RewardWriteClient, rewardId: string, images: RewardImageSet): Promise<void> {
+	const deletedAt = BigInt(Date.now());
+	await tx.rewardImage.updateMany({
+		where: { rewardId, isDeleted: false },
+		data: { isDeleted: true, deletedAt, deletedBy: images.actorId, updatedAt: deletedAt },
+	});
+	await createRewardImageRows(tx, rewardId, images.organizationId, images.fileIds);
 }
 
 /** The organization's live consumer rewards available at a store of `scope` (the AUTHORIZED store scope). */
@@ -137,6 +158,7 @@ export function buildMarketplaceWhere(query: RewardListQuery, now = BigInt(Date.
 			{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: now } },
 			...fieldWhere(toPrismaEqualityFilter(filter?.category), (category) => ({ category })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ organization: { merchantProfile: { city } } })),
+			...fieldWhere(toPrismaEqualityFilter(filter?.organizationId), (organizationId) => ({ organizationId })),
 			...(query.search !== undefined
 				? [
 						{
@@ -257,14 +279,19 @@ export class RewardRepository {
 		});
 	}
 
-	/** Creates the reward (and its store scope) after locking and checking its cover; throws {@link RewardCoverUnavailableError}. */
-	public async createConsumerReward(data: Prisma.RewardUncheckedCreateInput, locationIds: readonly string[]): Promise<RewardWithOrganization> {
+	/**
+	 * Creates the reward with its images (in order) and store scope, after
+	 * locking and checking the images; throws {@link RewardImagesUnavailableError}.
+	 */
+	public async createConsumerReward(
+		data: Prisma.RewardUncheckedCreateInput,
+		imageFileIds: readonly string[],
+		locationIds: readonly string[],
+	): Promise<RewardWithOrganization> {
 		return this.prisma.$transaction(async (tx) => {
-			await lockUsableRewardCover(tx, { organizationId: data.organizationId, fileId: data.coverFileId });
-			const reward = await tx.reward.create({
-				data,
-				include: REWARD_WITH_ORGANIZATION_INCLUDE,
-			});
+			await lockUsableRewardImages(tx, data.organizationId, imageFileIds);
+			const reward = await tx.reward.create({ data });
+			await createRewardImageRows(tx, reward.id, reward.organizationId, imageFileIds);
 
 			if (reward.locationScopeType === "SELECTED" && locationIds.length > 0) {
 				await tx.rewardLocationScope.createMany({
@@ -274,14 +301,9 @@ export class RewardRepository {
 						locationId,
 					})),
 				});
-
-				return tx.reward.findUniqueOrThrow({
-					where: { id: reward.id },
-					include: REWARD_WITH_ORGANIZATION_INCLUDE,
-				});
 			}
 
-			return reward;
+			return tx.reward.findUniqueOrThrow({ where: { id: reward.id }, include: REWARD_WITH_ORGANIZATION_INCLUDE });
 		});
 	}
 
@@ -315,22 +337,27 @@ export class RewardRepository {
 		return rows.map((row) => row.id);
 	}
 
-	public async createReferrerReward(data: Prisma.RewardUncheckedCreateInput): Promise<Reward> {
-		return this.prisma.reward.create({ data });
+	/** Creates a referrer reward showing the same images as the consumer reward it is earned through (already checked and locked by it). */
+	public async createReferrerReward(data: Prisma.RewardUncheckedCreateInput, imageFileIds: readonly string[]): Promise<Reward> {
+		return this.prisma.$transaction(async (tx) => {
+			const reward = await tx.reward.create({ data });
+			await createRewardImageRows(tx, reward.id, reward.organizationId, imageFileIds);
+			return reward;
+		});
 	}
 
 	/**
-	 * Points the reward — and its referrer reward, which shares the cover — at a
-	 * new cover, together with `data`, after locking and checking the cover;
-	 * throws {@link RewardCoverUnavailableError}.
+	 * Updates the reward with `data` and replaces its images — and those of its
+	 * referrer reward, which shows the same ones — after locking and checking
+	 * the new images; throws {@link RewardImagesUnavailableError}.
 	 */
-	public async updateRewardWithCover(rewardId: string, referrerRewardId: string | null, data: Prisma.RewardUpdateInput, cover: RewardCoverCheck): Promise<void> {
-		const coverFile = { connect: { id: cover.fileId } };
+	public async updateRewardWithImages(rewardId: string, referrerRewardId: string | null, data: Prisma.RewardUpdateInput, images: RewardImageSet): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
-			await lockUsableRewardCover(tx, cover);
-			await tx.reward.update({ where: { id: rewardId }, data: { ...data, coverFile } });
+			await lockUsableRewardImages(tx, images.organizationId, images.fileIds);
+			await tx.reward.update({ where: { id: rewardId }, data });
+			await replaceRewardImageRows(tx, rewardId, images);
 			if (referrerRewardId !== null) {
-				await tx.reward.update({ where: { id: referrerRewardId }, data: { coverFile } });
+				await replaceRewardImageRows(tx, referrerRewardId, images);
 			}
 		});
 	}
@@ -381,11 +408,58 @@ export class RewardRepository {
 		});
 	}
 
+	/** One live consumer reward with its organization, images and stores, whatever its status (admin moderation detail). */
+	public async findConsumerWithOrganization(rewardId: string): Promise<RewardWithOrganization | null> {
+		return this.prisma.reward.findFirst({
+			where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" },
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
+		});
+	}
+
 	public async findPendingReviewById(rewardId: string): Promise<RewardPendingReviewSummary | null> {
 		return this.prisma.reward.findFirst({
 			where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" },
 			select: { id: true, title: true, organizationId: true, referrerRewardId: true, status: true },
 		});
+	}
+
+	/**
+	 * The stored file behind one live image of a live consumer reward — `null`
+	 * when the file is not (or no longer) one of that reward's images, or is not
+	 * READY. Reward images are READY before they can be attached, so a `null`
+	 * here means the pair is wrong, not that processing is pending.
+	 */
+	public async findRewardImageFile(rewardId: string, fileId: string): Promise<StoredFile | null> {
+		const image = await this.prisma.rewardImage.findFirst({
+			where: {
+				rewardId,
+				fileId,
+				isDeleted: false,
+				reward: { isDeleted: false, rewardKind: "CONSUMER" },
+				file: { isDeleted: false, status: "READY" },
+			},
+			select: { file: true },
+		});
+		return image?.file ?? null;
+	}
+
+	/**
+	 * A live consumer reward's title and the stored files of its live, READY
+	 * images in display order — `null` when there is no such reward.
+	 */
+	public async findRewardImageFiles(rewardId: string): Promise<{ readonly title: string; readonly files: StoredFile[] } | null> {
+		const reward = await this.prisma.reward.findFirst({
+			where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" },
+			select: {
+				title: true,
+				images: {
+					where: { isDeleted: false, file: { isDeleted: false, status: "READY" } },
+					orderBy: { position: "asc" },
+					select: { file: true },
+				},
+			},
+		});
+		return reward === null ? null : { title: reward.title, files: reward.images.map((image) => image.file) };
 	}
 
 	public async listPendingAutoPublish(now: number): Promise<RewardWithOrganization[]> {

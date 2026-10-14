@@ -5,7 +5,8 @@ import { Button } from "@workspace/ui/components/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
 import * as React from "react";
 
-import { isKybDocumentPreviewable, openExternalDocument, triggerBrowserDownload } from "./document-utils";
+import { triggerBrowserDownload } from "../../storage/browser-download";
+import { isKybDocumentPreviewable, openExternalDocument } from "./document-utils";
 
 export interface MerchantKybDocumentPreviewState {
 	readonly fileName: string;

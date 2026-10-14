@@ -18,6 +18,7 @@ import MerchantEditRewardLoading from "@/app/orgs/[orgSlug]/rewards/[rewardId]/e
 import MerchantRewardsLoading from "@/app/orgs/[orgSlug]/rewards/loading";
 import MerchantCreateRewardLoading from "@/app/orgs/[orgSlug]/rewards/new/loading";
 import MerchantSettingsLoading from "@/app/orgs/[orgSlug]/settings/loading";
+import MerchantBrandingLoading from "@/app/orgs/[orgSlug]/settings/branding/loading";
 import MerchantLocationsLoading from "@/app/orgs/[orgSlug]/settings/locations/loading";
 import MerchantTeamLoading from "@/app/orgs/[orgSlug]/settings/team/loading";
 import MerchantVerificationLoading from "@/app/orgs/[orgSlug]/settings/verification/loading";
@@ -32,6 +33,7 @@ import {
 	MERCHANT_ANALYTICS_LOADING_LABELS,
 	MERCHANT_API_KEYS_LOADING_LABELS,
 	MERCHANT_DASHBOARD_LOADING_LABELS,
+	MERCHANT_BRANDING_LOADING_LABELS,
 	MERCHANT_LOCATIONS_LOADING_LABELS,
 	MERCHANT_REDEMPTIONS_LOADING_LABELS,
 	MERCHANT_REWARD_EDITOR_LOADING_LABELS,
@@ -77,8 +79,8 @@ afterEach((): void => {
 const DASHBOARD_LINK_COLUMNS = 2;
 /** The analytics page's time-series charts. */
 const ANALYTICS_CHARTS = 4;
-/** The organization-settings link cards: team, locations, verification. */
-const SETTINGS_LINK_CARDS = 3;
+/** The organization-settings link cards: team, locations, branding, verification. */
+const SETTINGS_LINK_CARDS = 4;
 /** The invitation's detail rows: role, invited email, location access. */
 const INVITE_DETAILS = 3;
 
@@ -200,6 +202,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		labels: MERCHANT_REWARDS_LOADING_LABELS,
 		landmarks: [
 			{ selector: slot("rewards-summary-skeleton"), count: 1 },
+			{ selector: slot("rewards-tabs-skeleton"), count: 1 },
 			{ selector: slot("rewards-grid-skeleton"), count: 1 },
 		],
 	},
@@ -232,6 +235,12 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		element: <MerchantLocationsLoading />,
 		labels: MERCHANT_LOCATIONS_LOADING_LABELS,
 		landmarks: [{ selector: slot("location-card-skeleton"), count: LOCATION_SKELETON_CARDS }],
+	},
+	{
+		route: "/orgs/[orgSlug]/settings/branding",
+		element: <MerchantBrandingLoading />,
+		labels: MERCHANT_BRANDING_LOADING_LABELS,
+		landmarks: [{ selector: slot("store-logo-skeleton"), count: 1 }],
 	},
 	{
 		route: "/orgs/[orgSlug]/settings/team",

@@ -5,7 +5,6 @@
 // ============================================
 "use client";
 
-import { ArrowLeft } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../lib/core/utils";
@@ -121,12 +120,10 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 						<div className="md:hidden">
 							{onBack ? (
 								<Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={onBack}>
-									<ArrowLeft className="size-4" />
 									{labels.mobileBack}
 								</Button>
 							) : (
 								<a href={backHref} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "flex items-center gap-2")}>
-									<ArrowLeft className="size-4" aria-hidden="true" />
 									{labels.mobileBack}
 								</a>
 							)}
@@ -144,12 +141,10 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 							<div className="mb-6 hidden md:block">
 								{onBack ? (
 									<Button variant="ghost" size="sm" className="-ml-2 flex items-center gap-2" onClick={onBack}>
-										<ArrowLeft className="size-4" />
 										{backLabel}
 									</Button>
 								) : (
 									<a href={backHref} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 flex items-center gap-2")}>
-										<ArrowLeft className="size-4" aria-hidden="true" />
 										{backLabel}
 									</a>
 								)}

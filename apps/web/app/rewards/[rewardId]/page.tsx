@@ -1,5 +1,6 @@
 import { RewardDetailView } from "@/components/rewardhub/detail/view";
 import { loadRewardDetail } from "@/lib/rewards/reward-detail-server";
+import { ROUTE_PREFIXES } from "@/lib/routes";
 import * as React from "react";
 
 import { PublicRewardDetailFrame } from "./public-reward-detail-frame";
@@ -13,7 +14,7 @@ export default async function PublicRewardDetailPage({ params }: { readonly para
 
 	return (
 		<PublicRewardDetailFrame>
-			<RewardDetailView rewardId={reward.data.id} initialReward={reward} />
+			<RewardDetailView rewardId={reward.data.id} initialReward={reward} detailPathPrefix={ROUTE_PREFIXES.publicRewards} />
 		</PublicRewardDetailFrame>
 	);
 }

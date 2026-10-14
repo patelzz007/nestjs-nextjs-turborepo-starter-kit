@@ -1,22 +1,28 @@
 "use client";
 
-import { MerchantRewardCoverField } from "@/components/rewards/merchant-reward-cover-field";
+import { MerchantRewardImagesField } from "@/components/rewards/merchant-reward-images-field";
 import { MAX_CLAIMS_OPTIONS, REWARD_TYPE_OPTIONS, getRewardValueLabel } from "@/components/rewards/merchant-reward-form.constants";
 import { optionalNumberInput } from "@/lib/forms/optional-number-input";
-import type { UploadedRewardCover } from "@/lib/rewards/use-upload-reward-cover";
+import type { SavedRewardImage } from "@/components/rewards/merchant-reward-images-field";
 import type { MerchantRewardFormValues, RewardType } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { DatePicker } from "@workspace/ui/components/date-picker";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Tag } from "lucide-react";
 import * as React from "react";
 import type { Control, ControllerRenderProps, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
+
+/** The per-user claim limits as `{ value, label }` — the select's `items` and its rendered options. */
+const MAX_CLAIMS_SELECT_OPTIONS: readonly SelectOption<string>[] = MAX_CLAIMS_OPTIONS.map((option): SelectOption<string> => ({
+	value: String(option),
+	label: String(option),
+}));
 
 interface RewardTypeOptionButtonProps {
 	readonly type: (typeof REWARD_TYPE_OPTIONS)[number];
@@ -61,10 +67,10 @@ export interface MerchantRewardFormFieldsProps {
 	readonly selectedType: RewardType;
 	readonly onTypeSelect: (rewardType: RewardType) => void;
 	readonly onMaxClaimsChange: (value: string | null) => void;
-	/** The organization covers are uploaded to (`undefined` while it loads). */
+	/** The organization photos are uploaded to (`undefined` while it loads). */
 	readonly organizationId: string | undefined;
-	/** The saved cover's URL when editing; `null` for a new reward. */
-	readonly initialCoverUrl: string | null;
+	/** The saved photos in display order when editing; none for a new reward. */
+	readonly initialImages: readonly SavedRewardImage[];
 	readonly readOnly?: boolean;
 }
 
@@ -77,16 +83,16 @@ export function MerchantRewardFormFields({
 	onTypeSelect,
 	onMaxClaimsChange,
 	organizationId,
-	initialCoverUrl,
+	initialImages,
 	readOnly = false,
 }: MerchantRewardFormFieldsProps): React.JSX.Element {
 	const maxClaimsPerUser = useWatch({ control, name: "maxClaimsPerUser" });
 	const startDate = useWatch({ control, name: "startDate" });
 	const fieldDisabled = readOnly;
 
-	const handleCoverUploaded = React.useCallback(
-		(cover: UploadedRewardCover): void => {
-			setValue("coverFileId", cover.fileId, { shouldValidate: true, shouldDirty: true });
+	const handleImagesChange = React.useCallback(
+		(fileIds: readonly string[]): void => {
+			setValue("imageFileIds", [...fileIds], { shouldValidate: true, shouldDirty: true });
 		},
 		[setValue],
 	);
@@ -180,14 +186,13 @@ export function MerchantRewardFormFields({
 				</CardContent>
 			</Card>
 
-			<MerchantRewardCoverField
+			<MerchantRewardImagesField
 				organizationId={organizationId}
-				initialPreviewUrl={initialCoverUrl}
-				onCoverUploaded={handleCoverUploaded}
-				errorMessage={errors.coverFileId?.message}
+				initialImages={initialImages}
+				onImagesChange={handleImagesChange}
+				errorMessage={errors.imageFileIds?.message}
 				disabled={fieldDisabled}
 			/>
-			<input type="hidden" {...register("coverFileId")} />
 
 			<Card className="border-border/80 bg-card shadow-xs">
 				<CardHeader>
@@ -218,14 +223,14 @@ export function MerchantRewardFormFields({
 
 						<div className="space-y-2">
 							<Label htmlFor="maxClaimsPerUser">Max Claims Per User</Label>
-							<Select<string> value={String(maxClaimsPerUser)} onValueChange={onMaxClaimsChange} disabled={fieldDisabled}>
+							<Select<string> items={MAX_CLAIMS_SELECT_OPTIONS} value={String(maxClaimsPerUser)} onValueChange={onMaxClaimsChange} disabled={fieldDisabled}>
 								<SelectTrigger id="maxClaimsPerUser">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									{MAX_CLAIMS_OPTIONS.map((option) => (
-										<SelectItem key={option} value={String(option)}>
-											{option}
+									{MAX_CLAIMS_SELECT_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
 										</SelectItem>
 									))}
 								</SelectContent>

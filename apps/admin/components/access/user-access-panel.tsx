@@ -11,7 +11,7 @@ import { AccessPermissionTree } from "@/components/access/access-permission-tree
 import { UserDetailButton } from "@/components/users/user-detail-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectEmpty, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectEmpty, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { useQueryClient } from "@tanstack/react-query";
 import { Shield } from "lucide-react";
@@ -105,7 +105,11 @@ export function UserAccessPanel({
 	const assignedRoleIds: Set<string> = new Set<string>(user.roles.map((role) => role.id));
 	const directPermissionIds: Set<string> = new Set<string>(user.directPermissionIds);
 
-	const availableRoles: readonly RoleListItem[] = rolesCatalog.filter((role) => !assignedRoleIds.has(role.id) && role.isActive);
+	// The assignable roles as `{ value: id, label: name }` — the Select's `items`
+	// (so the closed trigger shows the role name, never its id) and its options.
+	const assignableRoleOptions: readonly SelectOption<string>[] = rolesCatalog
+		.filter((role: RoleListItem) => !assignedRoleIds.has(role.id) && role.isActive)
+		.map((role: RoleListItem): SelectOption<string> => ({ value: role.id, label: role.name }));
 	const directGrants = permissionsCatalog.filter((perm) => directPermissionIds.has(perm.id));
 	const catalogPermissionTree = buildPermissionTree(permissionsCatalog);
 	const directGrantTree = buildPermissionTree(directGrants);
@@ -210,15 +214,15 @@ export function UserAccessPanel({
 								<div className="flex flex-wrap items-end gap-3 border-t border-dashed pt-4">
 									<div className="min-w-[200px] flex-1 space-y-1">
 										<Label htmlFor="assign-role">Add role</Label>
-										<Select value={assignRoleId} onValueChange={handleAssignRoleChange}>
+										<Select items={assignableRoleOptions} value={assignRoleId} onValueChange={handleAssignRoleChange}>
 											<SelectTrigger id="assign-role" className="w-full">
 												<SelectValue placeholder="Select role…" />
 											</SelectTrigger>
 											<SelectContent>
-												{availableRoles.length === 0 ? <SelectEmpty text="No roles available to assign" /> : null}
-												{availableRoles.map((role) => (
-													<SelectItem key={role.id} value={role.id}>
-														{role.name}
+												{assignableRoleOptions.length === 0 ? <SelectEmpty text="No roles available to assign" /> : null}
+												{assignableRoleOptions.map((option) => (
+													<SelectItem key={option.value} value={option.value}>
+														{option.label}
 													</SelectItem>
 												))}
 											</SelectContent>

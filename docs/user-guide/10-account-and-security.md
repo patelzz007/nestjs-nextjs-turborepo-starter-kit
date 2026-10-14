@@ -34,10 +34,22 @@ flowchart TD
 
 ## Profile and avatar
 
-**Account → Profile** (all three apps) edits your full name. Edits use a version number so two
-tabs cannot overwrite each other silently. A profile picture is uploaded straight to storage and
-becomes visible once its checks pass ([Object storage](../technical/storage/overview.md)). While
-an administrator is impersonating you, your profile cannot be edited.
+**Account → Profile** (admin panel) edits your full name. Edits use a version number so two
+tabs cannot overwrite each other silently.
+
+Your profile picture is set on **Account → Profile** (admin panel) and **Account settings**
+(web app, `/rewardhub/account`):
+
+1. **Upload photo** (or **Replace photo**) and pick an image: JPEG, PNG, WebP or AVIF, up to 10 MB.
+2. A profile picture is square, at least 256 × 256 pixels. A square photo is used as it is; any
+   other photo opens **Crop your profile picture**: drag it or use the sliders to choose what
+   shows. Zoom all the way out to keep the whole photo, with a soft blur of it filling the space
+   around it. **Cancel** keeps your current picture.
+3. The picture is uploaded straight to storage and shows once its checks pass
+   ([Object storage](../technical/storage/overview.md)). **Remove** deletes it; your initials
+   show instead.
+
+While an administrator is impersonating you, your profile and picture cannot be changed.
 
 ## Password
 

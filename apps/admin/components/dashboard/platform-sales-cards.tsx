@@ -18,7 +18,6 @@ import { DEFAULT_SALE_CURRENCY, PERMISSION, PLATFORM_DISPLAY_REGION, UTC_TIME_ZO
 import { AnalyticsPanel } from "@workspace/ui/components/analytics-panel";
 import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
 import { buttonVariants } from "@workspace/ui/components/button";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -60,7 +59,6 @@ function PlatformSalesCardsContent(): React.JSX.Element {
 				</div>
 				<Link href={ROUTES.analytics.index} className={buttonVariants({ variant: "ghost", size: "sm" })}>
 					View analytics
-					<ArrowRight aria-hidden="true" />
 				</Link>
 			</div>
 			<AnalyticsKpiGrid

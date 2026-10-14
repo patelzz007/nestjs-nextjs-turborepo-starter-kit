@@ -26,14 +26,23 @@ function SettingsSectionSkeleton({ className, children }: { readonly className?:
 }
 
 /**
- * `/rewardhub/account` while the session check runs: the settings header,
- * then the security sections in their grid — email verification, password,
- * two-factor, signed-in devices and MFA recovery.
+ * `/rewardhub/account` while the session check runs: the settings header, the
+ * profile picture, then the security sections in their grid — email
+ * verification, password, two-factor, signed-in devices and MFA recovery.
  */
 export function AccountSettingsSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={ACCOUNT_SETTINGS_LOADING_LABELS} className="flex flex-col gap-8">
 			<PageHeaderSkeleton />
+			<SettingsSectionSkeleton>
+				<div className="flex items-center gap-4" data-skeleton="profile-picture">
+					<Skeleton className="size-16 rounded-full" />
+					<div className="space-y-2">
+						<Skeleton className="h-8 w-32" />
+						<Skeleton variant="text" className="h-3 w-64 max-w-full" />
+					</div>
+				</div>
+			</SettingsSectionSkeleton>
 			<div className="grid gap-8 lg:grid-cols-2">
 				<SettingsSectionSkeleton className="lg:col-span-2">
 					<div className="flex flex-wrap items-center justify-between gap-4">

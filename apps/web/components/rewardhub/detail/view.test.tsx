@@ -9,21 +9,8 @@ import { RewardDetailView } from "@/components/rewardhub/detail/view";
 import { expectSingleLoadingStatus } from "@/test-support/skeleton";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
-
-/** Only the reward fields the detail view reads. */
-interface RewardStub {
-	readonly id: string;
-	readonly organizationName: string;
-	readonly organizationLogoUrl: string | null;
-	readonly title: string;
-	readonly description: string;
-	readonly category: string;
-	readonly coverImageUrl: string;
-	readonly rewardType: string;
-	readonly status: string;
-	readonly quantityRemaining: number;
-	readonly expiryDate: number;
-}
+import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL, rewardImageFixture, type RewardFixtureOverrides } from "@/test-support/reward";
+import type { RewardResponse } from "@workspace/shared";
 
 interface CheckoutStub {
 	readonly hasAcceptedLegal: boolean;
@@ -36,12 +23,13 @@ interface MutationStub {
 	readonly mutateAsync: () => Promise<void>;
 }
 
-const REWARD_ID = "reward-1";
+const REWARD_ID = "00000000-0000-4000-8000-000000000001";
 const DAY_MS = 86_400_000;
-const COVER_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/cover.jpg";
+const SECOND_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/counter.webp";
 
-const { rewardUseQuery, legalStatusUseQuery } = vi.hoisted(() => ({
-	rewardUseQuery: vi.fn<() => { readonly data: { readonly data: RewardStub } | undefined; readonly isLoading: boolean; readonly refetch: () => Promise<void> }>(),
+const { rewardUseQuery, legalStatusUseQuery, rewardListUseQuery } = vi.hoisted(() => ({
+	rewardUseQuery: vi.fn<() => { readonly data: { readonly data: RewardResponse } | undefined; readonly isLoading: boolean; readonly refetch: () => Promise<void> }>(),
+	rewardListUseQuery: vi.fn<(query: object) => { readonly data: { readonly data: readonly RewardResponse[] } | undefined }>(),
 	legalStatusUseQuery: vi.fn<() => { readonly data: { readonly data: CheckoutStub } | undefined; readonly refetch: () => Promise<void> }>(),
 }));
 
@@ -52,13 +40,13 @@ function mutationStub(): MutationStub {
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): {
 		readonly api: {
-			readonly rewards: { readonly detail: { readonly useQuery: typeof rewardUseQuery } };
+			readonly rewards: { readonly detail: { readonly useQuery: typeof rewardUseQuery }; readonly list: { readonly useQuery: typeof rewardListUseQuery } };
 			readonly legal: { readonly status: { readonly useQuery: typeof legalStatusUseQuery }; readonly accept: { readonly useMutation: () => MutationStub } };
 			readonly claims: { readonly otp: { readonly useMutation: () => MutationStub }; readonly create: { readonly useMutation: () => MutationStub } };
 		};
 	} => ({
 		api: {
-			rewards: { detail: { useQuery: rewardUseQuery } },
+			rewards: { detail: { useQuery: rewardUseQuery }, list: { useQuery: rewardListUseQuery } },
 			legal: { status: { useQuery: legalStatusUseQuery }, accept: { useMutation: mutationStub } },
 			claims: { otp: { useMutation: mutationStub }, create: { useMutation: mutationStub } },
 		},
@@ -70,21 +58,15 @@ vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: (): void => undefined }),
 }));
 
-function buildReward(overrides: Partial<RewardStub> = {}): RewardStub {
-	return {
+function buildReward(overrides: RewardFixtureOverrides = {}): RewardResponse {
+	return buildRewardResponse({
 		id: REWARD_ID,
 		organizationName: "Brew & Bean KL",
-		organizationLogoUrl: null,
 		title: "Free coffee",
-		description: "One free latte",
 		category: "food",
-		coverImageUrl: COVER_IMAGE_URL,
-		rewardType: "FREE_ITEM",
-		status: "PUBLISHED",
-		quantityRemaining: 10,
-		expiryDate: Date.now() + DAY_MS,
+		expiryDate: Date.now() + 10 * DAY_MS,
 		...overrides,
-	};
+	});
 }
 
 function renderView(session: WebSessionState): void {
@@ -99,6 +81,8 @@ function renderView(session: WebSessionState): void {
 beforeEach(() => {
 	rewardUseQuery.mockReset();
 	legalStatusUseQuery.mockReset();
+	rewardListUseQuery.mockReset();
+	rewardListUseQuery.mockReturnValue({ data: { data: [] } });
 	rewardUseQuery.mockReturnValue({ data: { data: buildReward() }, isLoading: false, refetch: (): Promise<void> => Promise.resolve() });
 	legalStatusUseQuery.mockReturnValue({
 		data: { data: { hasAcceptedLegal: false, phoneVerified: false, phone: null } },
@@ -180,6 +164,7 @@ describe("RewardDetailView merchant identity", () => {
 			<WebSessionTestProvider session={GUEST_SESSION_STATE}>
 				<RewardDetailView rewardId={REWARD_ID} />
 			</WebSessionTestProvider>,
+			{ wrapper: UiKitTestProviders },
 		);
 
 		expect(screen.getByText("Brew & Bean KL")).toBeDefined();
@@ -194,20 +179,163 @@ describe("RewardDetailView merchant identity", () => {
 	});
 });
 
-describe("RewardDetailView cover", () => {
-	it("leads the offer with its cover as a hero, loaded eagerly because it is above the fold", () => {
+/** The photo carousel (Embla) observes sizes and slide visibility — jsdom implements neither. */
+class NoopObserver {
+	public observe(): void {
+		return undefined;
+	}
+	public unobserve(): void {
+		return undefined;
+	}
+	public disconnect(): void {
+		return undefined;
+	}
+}
+
+describe("RewardDetailView gallery", () => {
+	beforeEach((): void => {
+		vi.stubGlobal("ResizeObserver", NoopObserver);
+		vi.stubGlobal("IntersectionObserver", NoopObserver);
+		window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn() });
+	});
+
+	it("leads with the cover, eagerly loaded, offering every rendition", () => {
 		renderView(GUEST_SESSION_STATE);
 
 		const cover = document.querySelector<HTMLImageElement>("[data-slot=cover-image] img");
-		expect(cover?.getAttribute("src")).toBe(COVER_IMAGE_URL);
-		expect(cover?.getAttribute("alt")).toBe("");
+		expect(cover?.getAttribute("src")).toBe(FIXTURE_COVER_IMAGE_URL);
+		expect(cover?.getAttribute("srcset")).toContain(`${FIXTURE_COVER_IMAGE_URL} 3840w`);
+		expect(cover?.getAttribute("alt")).toBe("Free coffee — cover photo");
 		expect(cover?.getAttribute("loading")).toBe("eager");
+		expect(document.querySelector("[data-slot=image-carousel]")).toBeNull();
 	});
 
-	it("keeps the merchant's mark alongside the cover", () => {
+	it("shows several photos as a carousel, cover first, the rest loaded lazily", () => {
+		rewardUseQuery.mockReturnValue({
+			data: {
+				data: buildReward({
+					images: [
+						rewardImageFixture("00000000-0000-4000-8000-0000000000c1", FIXTURE_COVER_IMAGE_URL),
+						rewardImageFixture("00000000-0000-4000-8000-0000000000c2", SECOND_IMAGE_URL),
+					],
+				}),
+			},
+			isLoading: false,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
 		renderView(GUEST_SESSION_STATE);
 
-		expect(document.querySelector("[data-slot=cover-image]")).not.toBeNull();
-		expect(screen.getByText("BK")).toBeDefined();
+		expect(document.querySelector("[data-slot=image-carousel]")).not.toBeNull();
+		const images = [...document.querySelectorAll<HTMLImageElement>("[data-slot=cover-image] img")];
+		expect(images.map((image) => [image.getAttribute("src"), image.getAttribute("loading")])).toEqual([
+			[FIXTURE_COVER_IMAGE_URL, "eager"],
+			[SECOND_IMAGE_URL, "lazy"],
+		]);
+		expect(screen.getByRole("button", { name: "Show image 2" })).toBeDefined();
+	});
+});
+
+describe("RewardDetailView offer details", () => {
+	it("states the offer, its stock and its end date as the page's heading block", () => {
+		rewardUseQuery.mockReturnValue({
+			data: { data: buildReward({ rewardType: "DISCOUNT", rewardValue: 15, quantityTotal: 50, quantityRemaining: 8, claimCount: 42 }) },
+			isLoading: false,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByRole("heading", { level: 1, name: "Free coffee" })).toBeDefined();
+		expect(screen.getByText("15% off")).toBeDefined();
+		expect(screen.getByText("Discount")).toBeDefined();
+		expect(screen.getByText("8 of 50 left")).toBeDefined();
+		expect(screen.getByText("Almost gone")).toBeDefined();
+		expect(screen.getByText("42")).toBeDefined();
+	});
+
+	it("names the reward type only where the offer does not already say it", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getAllByText("Free item")).toHaveLength(1);
+	});
+
+	it("flags an offer ending within days", () => {
+		rewardUseQuery.mockReturnValue({
+			data: { data: buildReward({ expiryDate: Date.now() + 2 * DAY_MS - 1000 }) },
+			isLoading: false,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByText("Ending soon")).toBeDefined();
+		expect(screen.getByText("(2 days left)")).toBeDefined();
+	});
+
+	it("explains how a claimed offer is used", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByRole("heading", { name: "How it works" })).toBeDefined();
+		expect(screen.getByText("Show it before you pay")).toBeDefined();
+	});
+
+	it("spells out the fine print: stores, minimum spend, per-person limit and terms", () => {
+		rewardUseQuery.mockReturnValue({
+			data: {
+				data: buildReward({
+					rules: { minSpendMyr: 30, maxUsePerUser: 2 },
+					termsConditions: "Dine-in only.",
+					locationScopeType: "SELECTED",
+					locationIds: ["00000000-0000-4000-8000-0000000000d1"],
+					locationNames: ["Brew & Bean KL — Bangsar"],
+				}),
+			},
+			isLoading: false,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByText("Brew & Bean KL — Bangsar")).toBeDefined();
+		// Testing Library normalises the no-break space Intl puts after the currency symbol.
+		expect(screen.getByText("RM 30 on one bill")).toBeDefined();
+		expect(screen.getByText("Up to 2 per person")).toBeDefined();
+		expect(screen.getByText("Dine-in only.")).toBeDefined();
+	});
+
+	it("says plainly when there is no minimum, one per person and no extra terms", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByText("Any Brew & Bean KL store")).toBeDefined();
+		expect(screen.getByText("None — use it on any bill")).toBeDefined();
+		expect(screen.getByText("One per person")).toBeDefined();
+		expect(screen.getByText("No extra terms from the merchant.")).toBeDefined();
+	});
+
+	it("has no back link of its own — the page around it provides navigation", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.queryByRole("link", { name: /back/iu })).toBeNull();
+	});
+});
+
+describe("RewardDetailView more from the merchant", () => {
+	it("lists the merchant's other live offers, linking to the same kind of detail page", () => {
+		const other = buildRewardResponse({ id: "00000000-0000-4000-8000-000000000002", title: "Free croissant" });
+		rewardListUseQuery.mockReturnValue({ data: { data: [buildReward(), other] } });
+		render(
+			<WebSessionTestProvider session={GUEST_SESSION_STATE}>
+				<RewardDetailView rewardId={REWARD_ID} detailPathPrefix="/rewards" />
+			</WebSessionTestProvider>,
+			{ wrapper: UiKitTestProviders },
+		);
+
+		expect(screen.getByRole("heading", { name: "More from Brew & Bean KL" })).toBeDefined();
+		expect(screen.getByText("Free croissant")).toBeDefined();
+		expect(screen.getAllByRole("link", { name: "View offer" }).map((link) => link.getAttribute("href"))).toEqual([`/rewards/${other.id}`]);
+		expect(rewardListUseQuery).toHaveBeenCalledWith(expect.objectContaining({ filter: { organizationId: { eq: "00000000-0000-4000-8000-0000000000aa" } } }));
+	});
+
+	it("leaves the section out when the merchant has nothing else live", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.queryByRole("heading", { name: /^More from/u })).toBeNull();
 	});
 });

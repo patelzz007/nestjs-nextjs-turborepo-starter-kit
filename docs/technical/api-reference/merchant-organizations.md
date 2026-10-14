@@ -285,6 +285,12 @@ Response `201 Created` (application/json):
 | `data.organization.displayName` | string | yes |  |
 | `data.organization.id` | string (uuid) | yes |  |
 | `data.organization.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.organization.logo` | object \| null | yes |  |
+| `data.organization.logo.fileId` | string (uuid) | yes |  |
+| `data.organization.logo.sources` | object[] | yes |  |
+| `data.organization.logo.sources[].url` | string (uri) | yes |  |
+| `data.organization.logo.sources[].width` | integer | yes |  |
+| `data.organization.logo.url` | string (uri) | yes |  |
 | `data.organization.primaryLocationId` | string (uuid) \| null | yes |  |
 | `data.organization.slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data.organization.timeZone` | string | yes | length 1–64 |
@@ -1752,7 +1758,7 @@ Complete an invite-authorized KYB document upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_COVER" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -2418,18 +2424,27 @@ List organization rewards
 | `data` | object[] | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
-| `data[].coverFileId` | string (uuid) | yes |  |
-| `data[].coverImageUrl` | string (uri) | yes |  |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
 | `data[].id` | string (uuid) | yes |  |
+| `data[].images` | object[] | yes | 1–10 items |
+| `data[].images[].fileId` | string (uuid) | yes |  |
+| `data[].images[].height` | integer | yes |  |
+| `data[].images[].sources` | object[] | yes | 1–∞ items |
+| `data[].images[].sources[].url` | string (uri) | yes |  |
+| `data[].images[].sources[].width` | integer | yes |  |
+| `data[].images[].url` | string (uri) | yes |  |
+| `data[].images[].width` | integer | yes |  |
 | `data[].isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data[].organizationId` | string (uuid) | yes |  |
+| `data[].organizationLogoSources` | object[] | yes |  |
+| `data[].organizationLogoSources[].url` | string (uri) | yes |  |
+| `data[].organizationLogoSources[].width` | integer | yes |  |
 | `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data[].organizationName` | string | no |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -2570,9 +2585,9 @@ Create a draft reward
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" | yes |  |
-| `coverFileId` | string (uuid) | yes |  |
 | `description` | string | yes | length 1–5000 |
 | `expiryDate` | integer | yes |  |
+| `imageFileIds` | string (uuid)[] | yes | 1–10 items |
 | `locationIds` | string (uuid)[] | no | default `[]` |
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
 | `quantityTotal` | integer | yes | min 1 |
@@ -2595,18 +2610,27 @@ Create a draft reward
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -2738,18 +2762,27 @@ Read one organization reward (404 when not offered at any of the caller's stores
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -2855,9 +2888,9 @@ Update a draft or pending reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `coverFileId` | string (uuid) | no |  |
 | `description` | string | no | length 1–5000 |
 | `expiryDate` | integer | no |  |
+| `imageFileIds` | string (uuid)[] | no | 1–10 items |
 | `quantityTotal` | integer | no | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
 | `referralsEnabled` | boolean | no |  |
@@ -2877,18 +2910,27 @@ Update a draft or pending reward
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
@@ -3009,18 +3051,27 @@ _No fields._
 | --- | --- | --- | --- |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
-| `data.coverFileId` | string (uuid) | yes |  |
-| `data.coverImageUrl` | string (uri) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
+| `data.images` | object[] | yes | 1–10 items |
+| `data.images[].fileId` | string (uuid) | yes |  |
+| `data.images[].height` | integer | yes |  |
+| `data.images[].sources` | object[] | yes | 1–∞ items |
+| `data.images[].sources[].url` | string (uri) | yes |  |
+| `data.images[].sources[].width` | integer | yes |  |
+| `data.images[].url` | string (uri) | yes |  |
+| `data.images[].width` | integer | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
 | `data.organizationId` | string (uuid) | yes |  |
+| `data.organizationLogoSources` | object[] | yes |  |
+| `data.organizationLogoSources[].url` | string (uri) | yes |  |
+| `data.organizationLogoSources[].width` | integer | yes |  |
 | `data.organizationLogoUrl` | string (uri) \| null | yes |  |
 | `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |

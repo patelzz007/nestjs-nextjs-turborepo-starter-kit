@@ -19,6 +19,7 @@ import { OrganizationAuditService } from "./organization-audit.service";
 import { OrganizationContextService } from "./organization-context.service";
 import { OrganizationRewardAuthService } from "./organization-reward-auth.service";
 import { RequestContextService } from "../../../common/context/request-context";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 const mocks = vi.hoisted(() => ({
 	policyFindMany: vi.fn(),
@@ -54,7 +55,7 @@ function service(): OrganizationRewardAuthService {
 	const tenantTx = new TenantTransactionService(createTestPrisma(), new RequestContextService());
 	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
 	const audit = new OrganizationAuditService();
-	return new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit), cedar, audit);
+	return new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit, createTestPublicUrls()), cedar, audit);
 }
 
 /** The caller's live membership row as the tenant transaction reads it (scope rows included). */

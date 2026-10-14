@@ -76,4 +76,26 @@ describe("useImageLoadingStatus", () => {
 		expect(removed).toHaveBeenCalled();
 		expect(result.current).toBe("loading");
 	});
+
+	it("gives the detached copy the element's srcset and sizes, so it fetches the same rendition — not the full-size src too", () => {
+		renderHook(() => useImageLoadingStatus("https://cdn.example.com/a/uhd.webp", true, { srcSet: "https://cdn.example.com/a/640.webp 640w", sizes: "50vw" }));
+
+		const image = latestImage();
+		expect(image.getAttribute("srcset")).toBe("https://cdn.example.com/a/640.webp 640w");
+		expect(image.getAttribute("sizes")).toBe("50vw");
+		expect(image.getAttribute("src")).toBe("https://cdn.example.com/a/uhd.webp");
+	});
+
+	it("starts over when the renditions change, even if src stays the same", () => {
+		const { result, rerender } = renderHook(({ srcSet }: { readonly srcSet: string }) => useImageLoadingStatus("https://cdn.example.com/a/uhd.webp", true, { srcSet }), {
+			initialProps: { srcSet: "https://cdn.example.com/a/640.webp 640w" },
+		});
+		act((): void => {
+			latestImage().dispatchEvent(new Event("load"));
+		});
+		expect(result.current).toBe("loaded");
+
+		rerender({ srcSet: "https://cdn.example.com/b/640.webp 640w" });
+		expect(result.current).toBe("loading");
+	});
 });

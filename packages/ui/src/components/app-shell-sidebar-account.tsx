@@ -5,15 +5,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspa
 import { AppShellProfileMenu, type AppShellProfileMenuItem } from "@workspace/ui/components/app-shell-profile-dropdown";
 import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import type { ResponsiveImage } from "@workspace/ui/lib/media/image-sources";
 import { ChevronsUpDown, LogOut } from "lucide-react";
 import * as React from "react";
 
 export interface AppShellSidebarAccountProps {
 	readonly name: string;
 	readonly email?: string | null | undefined;
+	/** The person's profile picture; `null`/omitted shows their initials. */
+	readonly avatar?: ResponsiveImage | null | undefined;
 	readonly onLogout: () => void;
 	/** The app's profile menu items, shown in the shared profile menu (with log out). */
 	readonly menuItems?: readonly AppShellProfileMenuItem[];
@@ -38,7 +41,7 @@ const FOOTER_ICON_BUTTON_CLASS = "text-muted-foreground hover:bg-sidebar-accent 
  * beside it. The ref reaches the wrapper `<div>`.
  */
 export const AppShellSidebarAccount = React.forwardRef<HTMLDivElement, AppShellSidebarAccountProps>(function AppShellSidebarAccount(
-	{ name, email, onLogout, menuItems = NO_MENU_ITEMS, menuContent, status, labels: labelsOverride, className },
+	{ name, email, avatar, onLogout, menuItems = NO_MENU_ITEMS, menuContent, status, labels: labelsOverride, className },
 	ref,
 ): React.JSX.Element {
 	const labels = useUiKitLabels("appShellProfileDropdown", labelsOverride);
@@ -55,11 +58,11 @@ export const AppShellSidebarAccount = React.forwardRef<HTMLDivElement, AppShellS
 							/>
 						}
 						aria-label={`${labels.openMenuAriaLabel}, ${name}`}>
-						<AccountIdentity name={name} email={email} />
+						<AccountIdentity name={name} email={email} avatar={avatar} />
 						<ChevronsUpDown className="ms-auto size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align="start" sideOffset={8} className="w-[320px] overflow-hidden p-0 sm:w-80">
-						{menuContent ?? <AppShellProfileMenu name={name} email={email} menuItems={menuItems} onLogout={onLogout} logoutLabel={labels.logout} />}
+						{menuContent ?? <AppShellProfileMenu name={name} email={email} avatar={avatar} menuItems={menuItems} onLogout={onLogout} logoutLabel={labels.logout} />}
 					</DropdownMenuContent>
 				</DropdownMenu>
 				<ShellThemeToggle size="icon-xs" className={FOOTER_ICON_BUTTON_CLASS} />
@@ -74,15 +77,23 @@ export const AppShellSidebarAccount = React.forwardRef<HTMLDivElement, AppShellS
 interface AccountIdentityProps {
 	readonly name: string;
 	readonly email?: string | null | undefined;
+	readonly avatar?: ResponsiveImage | null | undefined;
 }
 
-/** The signed-in person: initials, name and email, truncated with the full text as a tooltip. */
-function AccountIdentity({ name, email }: AccountIdentityProps): React.JSX.Element {
+/** The row's avatar: `size-7`, 28 px. */
+const ACCOUNT_AVATAR_PX = 28;
+
+/** The signed-in person: their picture (or initials), name and email, truncated with the full text as a tooltip. */
+function AccountIdentity({ name, email, avatar }: AccountIdentityProps): React.JSX.Element {
 	return (
 		<span className="flex min-w-0 items-center gap-2.5">
-			<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
-				{getUserInitials(name)}
-			</span>
+			<UserAvatar
+				name={name}
+				image={avatar}
+				drawnSize={ACCOUNT_AVATAR_PX}
+				className="size-7 ring-1 ring-sidebar-border/50"
+				fallbackClassName="bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground"
+			/>
 			<span className="min-w-0">
 				<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground" title={name}>
 					{name}

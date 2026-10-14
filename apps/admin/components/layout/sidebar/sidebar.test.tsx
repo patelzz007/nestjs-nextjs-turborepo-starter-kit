@@ -140,7 +140,7 @@ interface HarnessProps {
 function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU, status, profileMenu }: HarnessProps): React.JSX.Element {
 	const searchQuery = useSidebarSearchQuery();
 	const sectionOrder = useSidebarSectionOrder();
-	const { setSearchQuery, setItemExpanded, resetItemExpansion, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const view: SidebarView = React.useMemo(() => buildSidebarView({ menu, pathname, sectionOrder, searchQuery }), [menu, pathname, sectionOrder, searchQuery]);
 	const expandedItems = useSidebarExpandedItems(pathname, view.routeState.autoExpandedItems);
 	const handleToggleItem = React.useCallback(
@@ -148,6 +148,12 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 			setItemExpanded(pathname, itemId, expandedItems[itemId] !== true);
 		},
 		[expandedItems, pathname, setItemExpanded],
+	);
+	const handleFollowLink = React.useCallback(
+		(href: string): void => {
+			followLink(pathname, href);
+		},
+		[followLink, pathname],
 	);
 
 	return (
@@ -164,7 +170,7 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 				onSearchQueryChange={setSearchQuery}
 				expandedItems={expandedItems}
 				onToggleItem={handleToggleItem}
-				onFollowLink={resetItemExpansion}
+				onFollowLink={handleFollowLink}
 				onMoveSectionUp={moveSectionUp}
 				onMoveSectionDown={moveSectionDown}
 				pinnedItems={pinnedItems}
@@ -330,7 +336,7 @@ describe("Sidebar", () => {
 		expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-expanded")).toBe("false");
 	});
 
-	it("keeps a page's manual expansions only on that page — no reset on mount or navigation", () => {
+	it("keeps a page's manual expansions only on that page — none on mount, dropped once the route changes", () => {
 		const { rerender } = renderSidebar({ pathname: "/" });
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 		expect(expandedItems()["main-settings"]).toBe(true);
@@ -338,17 +344,22 @@ describe("Sidebar", () => {
 		rerender(sidebarTree({ pathname: "/docs" }));
 		expect(expandedItems()["main-settings"]).toBeUndefined();
 
+		// Back on the first page, the branch it had opened by hand stays closed: choices are dropped when the route changes.
 		rerender(sidebarTree({ pathname: "/" }));
-		expect(expandedItems()["main-settings"]).toBe(true);
+		expect(expandedItems()["main-settings"]).toBeUndefined();
 	});
 
-	it("closes every branch opened by hand when a link is followed, leaving only the new page's branch open", () => {
+	it("keeps every branch open while a followed link's page loads, then leaves only the new page's branch open", () => {
 		const { rerender } = renderSidebar({ pathname: "/" });
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 		fireEvent.click(screen.getByRole("button", { name: "Docs Home" }));
 		expect(expandedItems()).toEqual({ "main-settings": true, "docs-docs-home": true });
 
 		fireEvent.click(link("Getting Started"));
+		// While the page loads, nothing folds away under the pointer: the followed link's branch stays open.
+		expect(expandedItems()).toEqual({ "main-settings": true, "docs-docs-home": true });
+		expect(screen.getByRole("button", { name: "Docs Home" }).getAttribute("aria-expanded")).toBe("true");
+
 		rerender(sidebarTree({ pathname: "/docs/getting-started" }));
 
 		expect(expandedItems()).toEqual({ "docs-docs-home": true });

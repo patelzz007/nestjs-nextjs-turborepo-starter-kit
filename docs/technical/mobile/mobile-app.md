@@ -1263,7 +1263,10 @@ are none in `EXPO_PUBLIC_*`, but the screen does not print values regardless).
   restricted to email verification gets its own screen (`verify-email`: resend the link, "I've
   verified my email" refreshes).
 - **Profile (10.8):** name editing with the optimistic-lock `version`; the avatar is shown but
-  uploading one from the phone is a next step (`apps/mobile/README.md`).
+  uploading one from the phone is a next step (`apps/mobile/README.md`). In development the
+  picture's link uses the API's public address, which is this machine's LAN address when the API
+  listens on `0.0.0.0` — the same address Expo Go reaches the API at — so the phone can load it
+  (`docs/technical/storage/overview.md` → Local driver).
 - **Settings (10.9):** sign out always clears the tokens, even when the API cannot be reached.
 - **Security (10.10):** the API has no "turn 2FA off" endpoint (the web security panel has none), so
   an enabled 2FA shows as **On** with no off switch, and a role that forces 2FA shows up as the

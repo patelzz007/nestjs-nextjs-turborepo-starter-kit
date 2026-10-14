@@ -235,6 +235,7 @@ export default async function OrganizationTeamPage({ params }: Props): Promise<R
 | `/settings` | any of `manageTeam`, `viewLocations`, `manageVerification` | denied page; each card shows only with its page's capability |
 | `/settings/team` | `manageTeam` (`OWNER`, `ADMIN`) | "Team access required" |
 | `/settings/locations` | `viewLocations` (every member); add / resubmit store needs `manageLocations` | denied page; action hidden + read-only notice |
+| `/settings/branding` | `viewLocations` (every member); uploading or removing the logo needs `manageLocations` (the API's `STORE_LOGO` rule) | denied page; controls disabled + read-only notice |
 | `/settings/verification` | `manageVerification` (`OWNER` only — the API enforces the same) | "Owner access required" |
 | `/account` | open (personal account; enrollment sessions must reach it) | — |
 

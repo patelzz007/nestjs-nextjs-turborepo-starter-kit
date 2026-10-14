@@ -19,9 +19,12 @@ import { FileAuthorizationService } from "../services/file-authorization.service
 import { FileFinalizationService } from "../services/file-finalization.service";
 import { FileScanService } from "../services/file-scan.service";
 import { FileService } from "../services/file.service";
+import { ImageRenditionService } from "../services/image-rendition.service";
+import { SharpImageProcessor } from "../../storage/adapters/images/sharp-image-processor";
 import { InlineStorageTaskDispatcher } from "../services/inline-storage-task-dispatcher";
 import { FilesController } from "./files.controller";
 import { RequestContextService } from "../../../common/context/request-context";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 const mocks = vi.hoisted(() => ({ applyProcessingResult: vi.fn() }));
 
@@ -42,6 +45,7 @@ function controllerWith(env: TestEnv = {}): FilesController {
 	const config = createTestTypedConfig(env);
 	const prisma = createTestPrisma(config);
 	const storage = new LocalObjectStorageAdapter(config, new LocalTransferTokenService());
+	const renditions = new ImageRenditionService(config, storage, storage, new SharpImageProcessor());
 	const repository = new StoredFileRepository(prisma);
 	const tenantTx = new TenantTransactionService(prisma, new RequestContextService());
 	const cedar = new CedarPolicyEvaluatorService(tenantTx, new CedarWasmPolicyEngine());
@@ -53,6 +57,7 @@ function controllerWith(env: TestEnv = {}): FilesController {
 		storage,
 		tenantTx,
 		new FileLifecycleListenerRegistry({ getProviders: (): readonly { readonly instance: object }[] => [] }),
+		renditions,
 	);
 	const dispatcher = new InlineStorageTaskDispatcher(
 		new FileScanService(config, repository, finalization, storage, new NoMalwareScanner()),
@@ -61,11 +66,11 @@ function controllerWith(env: TestEnv = {}): FilesController {
 	);
 	return new FilesController(
 		config,
-		new FileService(config, repository, finalization, dispatcher, storage, storage),
+		new FileService(config, repository, finalization, dispatcher, storage, storage, renditions),
 		new FileAuthorizationService(
 			createTestAuthorizationKernel(prisma),
 			tenantTx,
-			new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit), cedar, audit),
+			new OrganizationRewardAuthService(tenantTx, new OrganizationContextService(tenantTx, cedar, audit, createTestPublicUrls()), cedar, audit),
 		),
 	);
 }

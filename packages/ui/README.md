@@ -287,6 +287,9 @@ Composes `Avatar`; data-agnostic (`name` + optional `src`, nothing domain-specif
 A cropped image in a fixed aspect ratio — reward covers on cards, list thumbnails and detail
 heroes. Data-agnostic (`src`, nothing domain-specific).
 
+- **Renditions** — `sources` (`{ width, url }[]`, any order) become `srcset`, and `sizes` says how
+  wide the frame is drawn (default `100vw`), so each screen downloads the smallest sharp rendition.
+
 - **Frame first** — `AspectRatio` (`ratio`, default 16:9) keeps the size while loading, so nothing
   shifts; the image fills it (`object-cover`).
 - **Loading** — tracked off-element (`useImageLoadingStatus`), started as the frame nears the
@@ -299,8 +302,71 @@ heroes. Data-agnostic (`src`, nothing domain-specific).
   it. Pass a description when the image is the only thing saying what it shows.
 
 ```tsx
-<CoverImage src={reward.coverImageUrl} priority={index === 0} className="rounded-t-[inherit]" />
+const [cover] = reward.images;
+<CoverImage src={cover?.url} sources={cover?.sources} sizes="(min-width: 1280px) 33vw, 100vw" priority={index === 0} className="rounded-t-[inherit]" />
 ```
+
+## Image carousel (`image-carousel.tsx`)
+
+A gallery of same-shaped images on `Carousel`: one image renders as a plain `CoverImage`; several
+get previous/next buttons, a position counter and a dot per image (arrow keys move too). Slides
+are labelled from the `carousel` label family (`slidePosition`, `goToSlide`); only the first shown
+loads eagerly, and only with `priority`. Data-agnostic — map your images to `{ id, src, sources, alt }`.
+`startIndex` picks the first image shown (fixed for the carousel's life — remount with a `key` to
+start elsewhere) and `onSelectedIndexChange` reports the shown image, e.g. to open a full-size
+viewer on the same photo (the admin moderation queue does).
+
+```tsx
+<ImageCarousel images={reward.images.map((image) => ({ id: image.fileId, src: image.url, sources: image.sources }))} sizes="45rem" priority />
+```
+
+## Image cropper (`image-cropper.tsx`)
+
+Chooses a fixed-shape region of a photo, in the photo's own pixels (controlled `value`/`onValueChange`
+with a `CropArea` from `lib/media/crop-area`). The frame shows exactly the crop; sliders zoom and move
+it ("Left to right" / "Top to bottom" appear only when the photo has room that way) and dragging
+is the pointer shortcut. It never leaves the photo and never gets narrower than `minCropWidth`, so
+the result keeps the resolution its use needs (reward images: 1920 px, Full HD). Zooming out stops
+when the photo fills the frame, unless `zoomOutLimit="whole-photo"`: then it goes on until the entire
+photo shows, centred, over a blurred copy of itself (`exportPreparedImage` in `packages/client` draws
+the same fill). Copy comes from the `imageCropper` label family.
+
+```tsx
+<ImageCropper src={previewUrl} bounds={{ width, height }} aspect={16 / 9} minCropWidth={1920} zoomOutLimit="whole-photo" value={area} onValueChange={setArea} />
+```
+
+## Select (`select.tsx`)
+
+Base UI's Select only mounts the popup — and so the `SelectItem` children — while it is open. The
+closed trigger (`SelectValue`), the sr-only live region and typeahead therefore cannot read an
+option's label from its item; without help they show the raw value (`ALL_LOCATIONS`, a role id).
+The Root's **`items` prop is required** for that reason: a list of `SelectOption<Value>`
+(`{ value, label }`). Map one options array into both `items` and the rendered items, so the
+trigger always shows exactly the selected item's text:
+
+```tsx
+const SCOPE_OPTIONS: readonly SelectOption<LocationScope>[] = [
+	{ value: "ALL_LOCATIONS", label: "All stores" },
+	{ value: "SELECTED", label: "Selected stores only" },
+];
+
+<Select items={SCOPE_OPTIONS} value={scope} onValueChange={handleScopeChange}>
+	<SelectTrigger id="scope">
+		<SelectValue placeholder="Select availability" />
+	</SelectTrigger>
+	<SelectContent>
+		{SCOPE_OPTIONS.map((option) => (
+			<SelectItem key={option.value} value={option.value}>
+				{option.label}
+			</SelectItem>
+		))}
+	</SelectContent>
+</Select>;
+```
+
+`SelectValue`'s `formatValue` is for rich trigger content (avatars, badges), not for mapping a value
+to its label — `items` already does that. `itemToStringLabel` stays available for object values and
+wins over `items`, as it does in Base UI.
 
 ## Formatting dates, counts and money (`lib/format/`)
 

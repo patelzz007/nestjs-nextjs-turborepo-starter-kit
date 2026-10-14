@@ -24,6 +24,7 @@ export const OrgPageRouteSchema = z.enum([
 	"/settings",
 	"/settings/team",
 	"/settings/locations",
+	"/settings/branding",
 	"/settings/verification",
 	"/account",
 ]);
@@ -100,6 +101,8 @@ export const ORG_PAGE_RULES: Readonly<Record<OrgPageRoute, OrgPageRule>> = {
 	"/settings/team": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	// Reads the member-wide org context; requesting stores needs merchant:manage_locations in-page.
 	"/settings/locations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
+	// Reads the logo from the member-wide org context; uploading or removing it (POST /files, DELETE /files/:id) needs merchant:manage_locations in-page.
+	"/settings/branding": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
 	// GET/PATCH /orgs/:orgSlug/kyb (merchant:manage_verification, owner-only).
 	"/settings/verification": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageVerification] }, denial: OWNER_ONLY_VERIFICATION_DENIAL },
 	"/account": { kind: "open", reason: "Personal account (password, 2FA, email) — restricted enrollment sessions must always reach it." },

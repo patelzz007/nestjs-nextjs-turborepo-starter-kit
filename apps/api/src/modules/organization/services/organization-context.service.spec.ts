@@ -8,6 +8,8 @@ import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/
 import { mapMembershipLocationScope } from "../utils/organization-membership-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 import { OrganizationContextService } from "./organization-context.service";
+import { PublicUrlResolver } from "../../../config/public-url.resolver";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 vi.mock("../../../prisma/tenant-transaction.service", () => ({ TenantTransactionService: class {} }));
 vi.mock("../../authorization-cedar/services/cedar-policy-evaluator.service", () => ({ CedarPolicyEvaluatorService: class {} }));
@@ -75,6 +77,7 @@ describe("OrganizationContextService.resolveBySlug", () => {
 		const moduleRef = await Test.createTestingModule({
 			providers: [
 				OrganizationContextService,
+				{ provide: PublicUrlResolver, useValue: createTestPublicUrls() },
 				OrganizationAuditService,
 				{ provide: TenantTransactionService, useValue: tenantTx },
 				{ provide: CedarPolicyEvaluatorService, useValue: cedar },

@@ -48,6 +48,7 @@ describe("orgRoutes", () => {
 		expect(routes.settings.index).toBe("/orgs/acme-coffee/settings");
 		expect(routes.settings.team).toBe("/orgs/acme-coffee/settings/team");
 		expect(routes.settings.locations).toBe("/orgs/acme-coffee/settings/locations");
+		expect(routes.settings.branding).toBe("/orgs/acme-coffee/settings/branding");
 		expect(routes.settings.verification).toBe("/orgs/acme-coffee/settings/verification");
 	});
 

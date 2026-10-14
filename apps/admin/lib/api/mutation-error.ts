@@ -12,6 +12,7 @@
 // roles", "Role … is not assigned to user …").
 
 import { ApiError } from "@workspace/client/lib/api/api-request";
+import { ApiDownloadError, DownloadErrorCodeSchema } from "@workspace/client/lib/api/download";
 import { ApiErrorCodes, StandardApiErrorCodeSchema, type ApiErrorCode, type StandardApiErrorCode } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 
@@ -41,6 +42,9 @@ function messageForCode(code: string, overrides: MutationErrorMessages): string 
 
 /** The message to show for a failed mutation: domain override → transport-level code message → server message → generic fallback. */
 export function resolveMutationErrorMessage(error: Error, overrides: MutationErrorMessages = {}): string {
+	if (error instanceof ApiDownloadError) {
+		return resolveDownloadErrorMessage(error, overrides);
+	}
 	if (!(error instanceof ApiError)) {
 		return UNKNOWN_MUTATION_ERROR_MESSAGE;
 	}
@@ -49,6 +53,22 @@ export function resolveMutationErrorMessage(error: Error, overrides: MutationErr
 		return byCode;
 	}
 	return error.message.length > 0 ? error.message : UNKNOWN_MUTATION_ERROR_MESSAGE;
+}
+
+/**
+ * A failed file download (`api.download`) answers like a mutation: the API's
+ * code and client-safe message — except the client's own transport codes
+ * (`NETWORK_ERROR`, `UNEXPECTED_CONTENT_TYPE`, …), whose text is not meant for people.
+ */
+function resolveDownloadErrorMessage(error: ApiDownloadError, overrides: MutationErrorMessages): string {
+	const byCode = messageForCode(error.code, overrides);
+	if (byCode !== undefined) {
+		return byCode;
+	}
+	if (DownloadErrorCodeSchema.safeParse(error.code).success || error.message.length === 0) {
+		return UNKNOWN_MUTATION_ERROR_MESSAGE;
+	}
+	return error.message;
 }
 
 /** Shows an error toast titled `title` ("Could not assign role") with the resolved reason as its description. */

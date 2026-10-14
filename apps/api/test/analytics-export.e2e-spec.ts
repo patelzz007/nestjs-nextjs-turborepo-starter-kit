@@ -12,7 +12,7 @@ import { LIST_SLOT_INDEX, ANALYTICS_EXPORT_CONTENT_TYPES, ANALYTICS_EXPORT_RATE_
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { sha256Hex } from "../src/common/crypto/sha256";
 import { REPORT_FONT_FAMILIES } from "../src/modules/rewards/analytics/report/fonts/report-fonts";
-import { rewardCoverSeedId } from "../prisma/seed/reward-covers";
+import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { createE2eApp, login, markSeedUserEmailVerified, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { pdfTextRuns } from "./support/report-files";
 
@@ -128,10 +128,11 @@ describe("Analytics exports (e2e)", () => {
 		ownerId = z.string().parse(users.rows.find((row) => row.email === "jonker.owner@melaka-rewards.demo")?.id);
 
 		await pool.query(
-			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, cover_file_id, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled, start_date)
-			 VALUES ($1, $2, $3, 'Created by analytics-export.e2e-spec.ts', 'DISCOUNT', 5, 'restaurant', $6, 10, 9, $4, 'PUBLISHED', false, $5)`,
-			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, HOSTILE_TITLE, TO + DAY_MS, FROM - DAY_MS, rewardCoverSeedId("heritage-set")],
+			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled, start_date)
+			 VALUES ($1, $2, $3, 'Created by analytics-export.e2e-spec.ts', 'DISCOUNT', 5, 'restaurant', 10, 9, $4, 'PUBLISHED', false, $5)`,
+			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, HOSTILE_TITLE, TO + DAY_MS, FROM - DAY_MS],
 		);
+		await pool.query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, "heritage-set")]);
 		await pool.query(
 			`INSERT INTO public.reward_claims (id, user_id, reward_id, redemption_token_hash, backup_code_hash, status, claimed_at, claim_expires_at)
 			 VALUES ($1, $2, $3, $4, $5, 'EXPIRED', $6, $7)`,

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Readable } from "node:stream";
 
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { StoredFile } from "@prisma/client";
@@ -19,6 +20,7 @@ import {
 } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { UnreadableImageError, type ImageDimensions } from "../../storage/domain/image-processor.port";
 import type { ObjectStorage } from "../../storage/domain/object-storage.port";
 import type { PublicDelivery } from "../../storage/domain/public-delivery.port";
 import { OBJECT_STORAGE, PUBLIC_DELIVERY } from "../../storage/domain/storage.tokens";
@@ -26,11 +28,14 @@ import { buildStagingPath } from "../../storage/utils/file-path.util";
 import { assertAllowedUploadMime, MAGIC_BYTES_PREFIX_LENGTH, UploadContentRejectedError } from "../../storage/utils/magic-bytes.util";
 import { digestStream, readStreamPrefix } from "../../storage/utils/object-stream.util";
 import { legacyBucketFieldsFromLocator, locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
+import { zipArchiveEntryName, zipArchiveStream } from "../../storage/utils/zip-archive.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { FileFinalizationService } from "./file-finalization.service";
+import { ImageRenditionService, ImageRulesViolationError } from "./image-rendition.service";
 import { FileOwnerUnresolvedError, resolveUploadOwnerId } from "./file-ownership.util";
 import { isPublicFile } from "./file-visibility.util";
 import { StorageTaskDispatcher } from "./storage-task-dispatcher";
+import { resolveStoredPublicUrl } from "../../../config/public-url.resolver";
 
 const PRESIGNED_UPLOAD_TTL_SECONDS = 300;
 const MS_PER_SECOND = 1_000;
@@ -52,6 +57,7 @@ export class FileService {
 		private readonly dispatcher: StorageTaskDispatcher,
 		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
 		@Inject(PUBLIC_DELIVERY) private readonly publicDelivery: PublicDelivery,
+		private readonly renditions: ImageRenditionService,
 	) {}
 
 	public async createUploadUrl(userId: string, input: CreateFileUploadUrlInput): Promise<CreateFileUploadUrlResponse> {
@@ -140,11 +146,13 @@ export class FileService {
 			throw new BadRequestException({ message: "Object checksum mismatch", error: "FILE_OBJECT_CHECKSUM_MISMATCH" });
 		}
 		await this.assertContentMatchesDeclaredType(file, locator);
+		const dimensions = await this.inspectImage(file, locator);
 
 		const claimed = await this.repository.claimPendingForScan(fileId, userId, {
 			actualChecksum: resolvedChecksum,
 			objectGeneration: head.revision,
 			objectRevision: head.revision,
+			...(dimensions === null ? {} : { imageWidth: dimensions.width, imageHeight: dimensions.height }),
 		});
 		if (!claimed) {
 			throw new ConflictException({ message: "Upload already completed", error: "FILE_UPLOAD_ALREADY_COMPLETED" });
@@ -186,20 +194,37 @@ export class FileService {
 	}
 
 	/**
+	 * Streams already-authorized files as one ZIP of their original uploads, in
+	 * the given order (entries `01-<original name>`, `02-…`). Each object is
+	 * opened only when the archive reaches it, so one is open at a time; an
+	 * object missing from storage fails the stream rather than ending it early.
+	 */
+	public createZipArchive(files: readonly StoredFile[]): Readable {
+		return zipArchiveStream(
+			files.map((file, index) => ({
+				name: zipArchiveEntryName(index + 1, files.length, file.originalName),
+				modifiedAt: Number(file.createdAt),
+				open: (): Promise<Readable> => this.openStoredObject(file),
+			})),
+		);
+	}
+
+	/**
 	 * Soft-deletes an already-authorized file together with every record that
 	 * references it (product image, store asset, avatar, KYB link), withdraws a
 	 * published public asset at once (a deleted file is never served publicly,
 	 * on any provider), then dispatches the delayed physical delete of the
-	 * private original. Submitted KYB evidence is retained, and an image a live
-	 * reward shows as its cover is refused.
+	 * private original and its renditions. Submitted KYB evidence is retained, and
+	 * an image a live reward shows is refused.
 	 */
 	public async deleteStoredFile(file: StoredFile, actorUserId: string): Promise<void> {
 		if (file.category === "MERCHANT_KYB" && (await this.repository.hasKybSubmissionReference(file.id))) {
 			throw new ConflictException({ message: "Submitted verification evidence is retained and cannot be deleted", error: "KYB_EVIDENCE_RETAINED" });
 		}
+		const variants = await this.repository.listLiveVariants(file.id);
 		const deletion = await this.repository.softDeleteWithReferences(file.id, actorUserId);
-		if (deletion === "IN_USE_AS_REWARD_COVER") {
-			throw new ConflictException({ message: "This image is the cover of a reward. Choose another cover first.", error: "FILE_IN_USE_AS_REWARD_COVER" });
+		if (deletion === "IN_USE_AS_REWARD_IMAGE") {
+			throw new ConflictException({ message: "This image is shown on a reward. Remove it from the reward first.", error: "FILE_IN_USE_AS_REWARD_IMAGE" });
 		}
 		if (deletion === "ALREADY_DELETED") {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
@@ -214,6 +239,14 @@ export class FileService {
 			container: locator.container,
 			path: locator.path,
 		});
+		// Renditions go with their image: withdrawn now, their bytes removed by the same delayed job.
+		for (const variant of variants) {
+			const variantLocator = this.renditions.locatorOf(variant);
+			if (variant.publicPath !== null) {
+				await this.withdrawPublicAsset(file, variantLocator);
+			}
+			await this.dispatcher.dispatchPhysicalDelete({ fileId: file.id, provider: variantLocator.provider, container: variantLocator.container, path: variantLocator.path });
+		}
 	}
 
 	/**
@@ -243,9 +276,17 @@ export class FileService {
 			sizeBytes: file.sizeBytes,
 			status: file.status,
 			scanStatus: file.scanStatus,
-			publicUrl: file.publicPath,
+			publicUrl: resolveStoredPublicUrl(file.publicPath, this.config.http.publicUrl),
 			uploadedAt: EpochMsSchema.parse(Number(file.createdAt)),
 		});
+	}
+
+	private async openStoredObject(file: StoredFile): Promise<Readable> {
+		const stream = await this.storage.getObjectStream(locatorFromStoredFile(file, this.config.storage.provider));
+		if (stream === null) {
+			throw new Error(`The stored object of file ${file.id} is missing`);
+		}
+		return stream;
 	}
 
 	private async streamChecksum(locator: StorageObjectLocator): Promise<string> {
@@ -268,6 +309,21 @@ export class FileService {
 		} catch (error) {
 			if (error instanceof UploadContentRejectedError) {
 				throw new BadRequestException({ message: error.message, error: "FILE_CONTENT_TYPE_MISMATCH" });
+			}
+			throw error;
+		}
+	}
+
+	/** An image category's pixel rules, checked on the stored bytes (`null`: the category has none). */
+	private async inspectImage(file: StoredFile, locator: StorageObjectLocator): Promise<ImageDimensions | null> {
+		try {
+			return await this.renditions.inspectUpload(file, locator);
+		} catch (error) {
+			if (error instanceof ImageRulesViolationError) {
+				throw new BadRequestException({ message: error.message, error: "FILE_IMAGE_DIMENSIONS_INVALID" });
+			}
+			if (error instanceof UnreadableImageError) {
+				throw new BadRequestException({ message: "The image could not be read. Upload a JPEG, PNG, WebP or AVIF photo.", error: "FILE_IMAGE_UNREADABLE" });
 			}
 			throw error;
 		}

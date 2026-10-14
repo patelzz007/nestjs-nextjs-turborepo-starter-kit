@@ -19,6 +19,7 @@ import { OwnProfileService } from "./own-profile.service";
 import { OwnProfileWritePolicy } from "./own-profile-write.policy";
 import type { ProfileActor } from "./profile-actor";
 import { ProfileController } from "./profile.controller";
+import { createTestPublicUrls } from "../../../../test/support/public-urls";
 
 const USER_ID = "7d3e9a10-2b4c-4d6e-8f01-23456789abcd";
 const SUPER_ADMIN_ID = "0a1b2c3d-4e5f-4061-8728-394a5b6c7d8e";
@@ -68,7 +69,7 @@ function controller(): { readonly controller: ProfileController; readonly servic
 	const requestContext = new RequestContextService();
 	const prisma = createTestPrisma();
 	const service = new RecordingProfileService(
-		new OwnProfileRepository(prisma),
+		new OwnProfileRepository(prisma, createTestPublicUrls()),
 		new OwnProfileWritePolicy(),
 		new TenantTransactionService(prisma, requestContext),
 		createAuditTrailDouble(requestContext).auditTrail,

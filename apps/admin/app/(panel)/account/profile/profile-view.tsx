@@ -2,16 +2,13 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { ApiError } from "@workspace/client/lib/api/api-request";
-import { AVATAR_ACCEPT, AVATAR_MAX_MEBIBYTES } from "@workspace/client/lib/auth/profile/profile-avatar";
+import { ProfileAvatarEditor } from "@workspace/client/lib/auth/profile/profile-avatar-editor";
 import { useOwnProfile, useUpdateOwnProfile } from "@workspace/client/lib/auth/profile/use-own-profile";
-import { useRemoveProfileAvatar, useUploadProfileAvatar } from "@workspace/client/lib/auth/profile/use-profile-avatar";
 import { ApiErrorCodes, OWN_PROFILE_ERROR_CODES, type Envelope, type OwnProfile, type OwnProfileEditableFields } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import * as React from "react";
 
-import { ProfileAvatarField } from "@/components/account/profile-avatar-field";
 import { ProfileForm } from "@/components/account/profile-form";
 import { ProfilePageSkeleton } from "@/components/loading/account-skeletons";
 import { toastMutationError, type MutationErrorMessages } from "@/lib/api/mutation-error";
@@ -27,9 +24,6 @@ export interface ProfileViewProps {
 	readonly initialProfile?: Envelope<OwnProfile> | undefined;
 }
 
-/** The limits shown under the avatar controls — from the shared avatar policy. */
-export const AVATAR_HINT = `JPEG, PNG, WebP or AVIF, up to ${String(AVATAR_MAX_MEBIBYTES)} MB.`;
-
 /**
  * Avatar failures: an API error goes through the shared code → message map;
  * the client's typed upload failures (bad file, storage unreachable / CORS,
@@ -43,48 +37,14 @@ export function toastAvatarError(title: string, error: Error): void {
 	toastMessage.error({ title, description: error.message });
 }
 
+function showAvatarSuccess(title: string): void {
+	toastMessage.success({ title });
+}
+
 function ProfileAvatar({ profile, isReadOnly }: { readonly profile: OwnProfile; readonly isReadOnly: boolean }): React.JSX.Element {
-	const upload = useUploadProfileAvatar({
-		onSuccess: (): void => {
-			toastMessage.success({ title: "Avatar updated" });
-		},
-		onError: (error: Error): void => {
-			toastAvatarError("Could not update your avatar", error);
-		},
-	});
-	const remove = useRemoveProfileAvatar({
-		onSuccess: (): void => {
-			toastMessage.success({ title: "Avatar removed" });
-		},
-		onError: (error: Error): void => {
-			toastAvatarError("Could not remove your avatar", error);
-		},
-	});
-
-	const handlePick = React.useCallback(
-		(file: File): void => {
-			upload.mutate({ userId: profile.id, file });
-		},
-		[profile.id, upload],
-	);
-	const handleRemove = React.useCallback((): void => {
-		if (profile.avatar !== null) {
-			remove.mutate({ fileId: profile.avatar.fileId });
-		}
-	}, [profile.avatar, remove]);
-
 	return (
 		<div className="space-y-2">
-			<ProfileAvatarField
-				avatarUrl={profile.avatar?.url ?? null}
-				initials={getUserInitials(profile.fullName)}
-				accept={AVATAR_ACCEPT}
-				hint={AVATAR_HINT}
-				isBusy={upload.isPending || remove.isPending}
-				isReadOnly={isReadOnly}
-				onPick={handlePick}
-				onRemove={handleRemove}
-			/>
+			<ProfileAvatarEditor profile={profile} isReadOnly={isReadOnly} onSuccess={showAvatarSuccess} onError={toastAvatarError} />
 			<p className="truncate text-sm text-muted-foreground">{profile.email}</p>
 		</div>
 	);

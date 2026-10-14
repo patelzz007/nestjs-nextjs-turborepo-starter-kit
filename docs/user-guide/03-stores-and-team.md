@@ -1,6 +1,6 @@
 ---
 title: "3. Stores and team"
-description: "Request, approve, reject, edit and close stores; invite staff, give them roles and stores, approve access requests and remove someone from a store."
+description: "Request, approve, reject, edit and close stores; set the store logo; invite staff, give them roles and stores, approve access requests and remove someone from a store."
 order: 4
 author: "Product & Platform Team"
 lastUpdated: 1791072000000
@@ -55,6 +55,20 @@ Only a **rejected** request can be edited; saving it sends it back to the admin 
 - claims customers already hold stay valid until they expire and can be redeemed at any other
   open store of the reward;
 - sales and redemption history are kept.
+
+## Store logo
+
+**Settings → Branding** (`/orgs/<slug>/settings/branding`) sets the logo shown with your rewards in
+Reward Hub. Without one, the initials of your store are shown.
+
+1. **Upload logo** (or **Replace logo**) and pick an image: JPEG, PNG, WebP or AVIF, up to 10 MB.
+2. A logo is square, at least 256 × 256 pixels. A square image is used as it is; any other image
+   opens **Crop your logo**. Zoom all the way out to keep a wide wordmark whole, with a soft blur of
+   it filling the space around it. **Cancel** keeps your current logo.
+3. **Remove** deletes the logo.
+
+Every member can see the logo; changing it needs the *manage locations* capability (owners and
+admins). Other roles see the page read-only.
 
 ## Team
 

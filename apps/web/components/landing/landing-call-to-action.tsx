@@ -1,6 +1,5 @@
 import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -26,7 +25,6 @@ export function LandingCallToAction({ heading, description, action }: LandingCal
 					<p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-pretty text-primary-foreground/85 sm:text-base">{description}</p>
 					<Link href={action.href} className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "mt-8 min-w-48")}>
 						{action.label}
-						<ArrowRight className="size-4" aria-hidden="true" />
 					</Link>
 				</div>
 			</div>

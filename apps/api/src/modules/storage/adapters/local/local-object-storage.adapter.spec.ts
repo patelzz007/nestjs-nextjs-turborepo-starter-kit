@@ -89,12 +89,16 @@ describe("LocalObjectStorageAdapter", () => {
 		await expect(adapter.headObject(LOCATOR)).resolves.toMatchObject({ sizeBytes: 8 });
 	});
 
-	it("publishes public assets by file id, never by raw object path", async () => {
+	it("publishes public assets by file id, never by raw object path — as a path on this API, without its address", async () => {
 		const adapter = new LocalObjectStorageAdapter(createTestTypedConfig({ HOST: "127.0.0.1", PORT: "8080" }), tokens, root);
 
+		// The address is added when the link is served (PublicUrlResolver), so a saved picture survives an address change.
 		await expect(adapter.publishAsset({ locator: LOCATOR, fileId: FILE_ID, mimeType: "image/png", fileName: "a.png" })).resolves.toEqual({
-			publicUrl: `http://127.0.0.1:8080/api/v1/files/${FILE_ID}/local-public`,
+			publicUrl: `/api/v1/files/${FILE_ID}/local-public`,
 			revision: null,
+		});
+		await expect(adapter.publishAsset({ locator: LOCATOR, fileId: FILE_ID, mimeType: "image/webp", fileName: "a.png", variant: "THUMBNAIL" })).resolves.toMatchObject({
+			publicUrl: `/api/v1/files/${FILE_ID}/variants/THUMBNAIL/local-public`,
 		});
 	});
 });

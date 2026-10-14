@@ -2,20 +2,36 @@ import type { RewardResponse, RewardStatus } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import {
+	defaultRewardStatusGroupId,
 	describeRewardStock,
 	describeRewardStores,
 	formatRewardEnd,
-	formatRewardOffer,
 	groupRewardsByStatus,
 	isRewardEnded,
 	LOW_STOCK_SHARE,
 	REWARD_STATUS_GROUPS,
+	RewardStatusGroupIdSchema,
 	shortStoreName,
 } from "@/lib/rewards/presentation";
 import { rewardFixture } from "@/test/rewards";
 
+describe("defaultRewardStatusGroupId", () => {
+	it("opens on live rewards when there are any", () => {
+		expect(defaultRewardStatusGroupId(groupRewardsByStatus([rewardFixture({ status: "DRAFT" }), rewardFixture({ status: "PUBLISHED" })]))).toBe("live");
+	});
+
+	it("opens on the first group with rewards when nothing is live", () => {
+		expect(defaultRewardStatusGroupId(groupRewardsByStatus([rewardFixture({ status: "EXPIRED" }), rewardFixture({ status: "PENDING_REVIEW" })]))).toBe("review");
+		expect(defaultRewardStatusGroupId(groupRewardsByStatus([rewardFixture({ status: "DISABLED" })]))).toBe("ended");
+	});
+
+	it("opens on live for an empty catalog", () => {
+		expect(defaultRewardStatusGroupId(groupRewardsByStatus([]))).toBe("live");
+	});
+});
+
 describe("groupRewardsByStatus", () => {
-	it("orders sections live, in review, drafts, ended — and leaves out empty ones", () => {
+	it("orders the groups live, in review, drafts, ended — keeping empty ones, since each is a tab", () => {
 		const rewards = [
 			rewardFixture({ title: "Draft", status: "DRAFT" }),
 			rewardFixture({ title: "Expired", status: "EXPIRED" }),
@@ -26,17 +42,21 @@ describe("groupRewardsByStatus", () => {
 
 		const groups = groupRewardsByStatus(rewards);
 
-		expect(groups.map((group) => group.id)).toEqual(["live", "drafts", "ended"]);
-		expect(groups.map((group) => group.rewards.map((reward) => reward.title))).toEqual([["Live A", "Live B"], ["Draft"], ["Expired", "Disabled"]]);
+		expect(groups.map((group) => group.id)).toEqual(["live", "review", "drafts", "ended"]);
+		expect(groups.map((group) => group.rewards.map((reward) => reward.title))).toEqual([["Live A", "Live B"], [], ["Draft"], ["Expired", "Disabled"]]);
 	});
 
-	it("puts every status in exactly one section, each with a title and tone", () => {
+	it("puts every status in exactly one group, each with a title and tone", () => {
 		const statuses: readonly RewardStatus[] = ["PUBLISHED", "PENDING_REVIEW", "DRAFT", "EXPIRED", "DISABLED"];
 		const groups = groupRewardsByStatus(statuses.map((status) => rewardFixture({ status })));
 
 		expect(groups.flatMap((group) => group.rewards)).toHaveLength(statuses.length);
 		expect(REWARD_STATUS_GROUPS.map((group) => group.title)).toEqual(["Live", "In review", "Drafts", "Ended"]);
-		expect(groupRewardsByStatus([])).toEqual([]);
+		expect(groupRewardsByStatus([]).map((group) => group.rewards)).toEqual([[], [], [], []]);
+	});
+
+	it("declares one URL value per group, in display order", () => {
+		expect(REWARD_STATUS_GROUPS.map((group) => group.id)).toEqual(RewardStatusGroupIdSchema.options);
 	});
 
 	it("treats expired and disabled rewards as ended", () => {
@@ -44,22 +64,6 @@ describe("groupRewardsByStatus", () => {
 		expect(isRewardEnded("DISABLED")).toBe(true);
 		expect(isRewardEnded("PUBLISHED")).toBe(false);
 		expect(isRewardEnded("DRAFT")).toBe(false);
-	});
-});
-
-describe("formatRewardOffer", () => {
-	it("says what the customer gets", () => {
-		expect(formatRewardOffer("DISCOUNT", 10)).toBe("10% off");
-		// Intl separates the currency symbol with a no-break space, so the amount never wraps away from it.
-		expect(formatRewardOffer("CASHBACK", 15)).toBe("RM\u00a015 cashback");
-		expect(formatRewardOffer("POINTS", 1500)).toBe("1,500 bonus points");
-		expect(formatRewardOffer("BOGO", 1)).toBe("Buy one, get one");
-	});
-
-	it("reads one free item (or an unset quantity) as 'Free item' and counts several", () => {
-		expect(formatRewardOffer("FREE_ITEM", 0)).toBe("Free item");
-		expect(formatRewardOffer("FREE_ITEM", 1)).toBe("Free item");
-		expect(formatRewardOffer("FREE_ITEM", 3)).toBe("3 free items");
 	});
 });
 

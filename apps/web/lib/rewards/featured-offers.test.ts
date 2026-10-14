@@ -2,10 +2,11 @@ import { LIST_SLOT_INDEX, RewardResponseSchema, type RewardResponse } from "@wor
 import { describe, expect, it } from "vitest";
 
 import { FEATURED_OFFER_LIMIT, selectFeaturedOffers, selectMerchantNames } from "@/lib/rewards/featured-offers";
+import { rewardImageFixture } from "@/test-support/reward";
 
 const NOW = 1_790_000_000_000;
 const DAY_MS = 86_400_000;
-const COVER_IMAGE_URL = "https://cdn.example.com/rewards/offer/cover.jpg";
+const COVER_IMAGE = rewardImageFixture("00000000-0000-4000-8000-0000000000c1", "https://cdn.example.com/rewards/offer/cover.webp");
 
 let sequence = 0;
 
@@ -25,6 +26,7 @@ function reward(overrides: RewardOverrides = {}): RewardResponse {
 		organizationId: "00000000-0000-4000-8000-0000000000aa",
 		organizationName: "Brew & Bean KL",
 		organizationLogoUrl: null,
+		organizationLogoSources: [],
 		title: `Offer ${String(sequence)}`,
 		description: "A reward",
 		rewardType: "FREE_ITEM",
@@ -32,8 +34,7 @@ function reward(overrides: RewardOverrides = {}): RewardResponse {
 		termsConditions: null,
 		rewardKind: "CONSUMER",
 		category: "cafe",
-		coverFileId: "00000000-0000-4000-8000-0000000000c1",
-		coverImageUrl: COVER_IMAGE_URL,
+		images: [COVER_IMAGE],
 		quantityTotal: 50,
 		quantityRemaining: 20,
 		quantityReserved: 0,
@@ -70,7 +71,8 @@ describe("selectFeaturedOffers", () => {
 			title: "Soonest",
 			merchantName: "Brew & Bean KL",
 			category: "cafe",
-			coverImageUrl: COVER_IMAGE_URL,
+			coverImageUrl: COVER_IMAGE.url,
+			coverSources: COVER_IMAGE.sources,
 			remaining: 20,
 			total: 50,
 			expiryDate: NOW + DAY_MS,

@@ -37,7 +37,10 @@ const EXPECTED_ORGANIZATION_INCLUDE = {
 				isDeleted: false,
 				file: { status: "READY", isDeleted: false, publicPath: { not: null } },
 			},
-			select: { file: { select: { publicPath: true } } },
+			select: {
+				fileId: true,
+				file: { select: { publicPath: true, variants: { where: { isDeleted: false }, orderBy: { width: "asc" }, select: { width: true, publicPath: true } } } },
+			},
 			take: 1,
 		},
 	},

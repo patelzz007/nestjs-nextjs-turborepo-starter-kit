@@ -84,6 +84,14 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 		slideRoleDescription: "slide",
 		previousSlide: "Previous slide",
 		nextSlide: "Next slide",
+		slidePosition: (position: number, total: number): string => `Image ${String(position)} of ${String(total)}`,
+		goToSlide: (position: number): string => `Show image ${String(position)}`,
+	},
+	imageCropper: {
+		region: "Crop preview",
+		zoom: "Zoom",
+		horizontal: "Left to right",
+		vertical: "Top to bottom",
 	},
 	codeBlock: {
 		copy: "Copy code",

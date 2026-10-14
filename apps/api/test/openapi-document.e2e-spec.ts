@@ -412,7 +412,12 @@ describe("OpenAPI document (e2e)", () => {
 			const passThrough: string[] = [...routes.values()].filter((route: RouteHandler): boolean => route.isPassThrough).map((route: RouteHandler): string => route.handler);
 			expect(missing).toEqual([]);
 			// The deliberate exclusions — adding one is a reviewed decision (docs/technical/api/response-contracts.md).
-			expect(passThrough.sort()).toEqual(["EmailLogController.stream", "LocalStorageTransferController.localDownload", "LocalStorageTransferController.localPublic"]);
+			expect(passThrough.sort()).toEqual([
+				"EmailLogController.stream",
+				"LocalStorageTransferController.localDownload",
+				"LocalStorageTransferController.localPublic",
+				"LocalStorageTransferController.localPublicVariant",
+			]);
 		});
 
 		it("sends exactly the status the contract documents (no stray @HttpCode overriding it)", () => {
@@ -468,6 +473,7 @@ describe("OpenAPI document (e2e)", () => {
 			expect(fileRoutes.map((route: RouteHandler): string => route.handler).sort()).toEqual([
 				"OrganizationAnalyticsController.exportReport",
 				"RewardsAdminAnalyticsController.exportReport",
+				"RewardsAdminRewardsController.downloadRewardImagesArchive",
 			]);
 			expect(problems).toEqual([]);
 		});

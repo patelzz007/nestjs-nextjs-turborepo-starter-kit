@@ -4,11 +4,17 @@ import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-s
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import * as React from "react";
 
-/** Reward Hub account security settings. */
+import { ProfilePictureSection } from "./profile-picture-section";
+
+/** Reward Hub account settings: the profile picture, then account security. */
 export function RewardHubSettingsView(): React.JSX.Element {
 	return (
 		<div className="space-y-8">
-			<AnalyticsPageHeader title="Account settings" description="Verify your email, manage your password, and configure two-factor authentication." />
+			<AnalyticsPageHeader
+				title="Account settings"
+				description="Set your profile picture, verify your email, manage your password, and configure two-factor authentication."
+			/>
+			<ProfilePictureSection />
 			<SecuritySettingsPanel />
 		</div>
 	);

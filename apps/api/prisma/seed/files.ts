@@ -12,9 +12,9 @@
 
 import type { Prisma } from "@prisma/client";
 import { DAY_MS } from "@workspace/shared";
+import sharp from "sharp";
 
 import { sha256Hex } from "../../src/common/crypto/sha256";
-import { buildPublicVariantPath } from "../../src/modules/storage/utils/file-path.util";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { ORGANIZATION_SEED_IDS } from "./organizations";
@@ -39,7 +39,6 @@ export const FILE_SEED_IDS = Object.freeze({
 	deletedProductImageRow: deterministicUuid(NAMESPACE, "product-001-deleted-image-row"),
 	deletedAvatar: deterministicUuid(NAMESPACE, "kl-owner-deleted-avatar"),
 	deletedAvatarRow: deterministicUuid(NAMESPACE, "kl-owner-deleted-avatar-row"),
-	deletedAvatarThumbnail: deterministicUuid(NAMESPACE, "kl-owner-deleted-avatar-thumbnail"),
 	deletedLogo: deterministicUuid(NAMESPACE, "kl-deleted-logo"),
 	deletedLogoAsset: deterministicUuid(NAMESPACE, "kl-deleted-logo-asset"),
 });
@@ -51,6 +50,16 @@ const PNG_BYTES: Buffer = Buffer.from(
 	"hex",
 );
 
+/** Side of the seeded avatar and logo: square and above the 256 px minimum of their image rules. */
+const SEED_SQUARE_IMAGE_SIDE = 512;
+
+/** A plain square PNG that meets the avatar and logo rules, so it is checked and rendered like an upload. */
+function squareImagePng(): Promise<Buffer> {
+	return sharp({ create: { width: SEED_SQUARE_IMAGE_SIDE, height: SEED_SQUARE_IMAGE_SIDE, channels: 3, background: { r: 0, g: 122, b: 77 } } })
+		.png()
+		.toBuffer();
+}
+
 function daysAgo(days: number): bigint {
 	return BigInt(Date.now() - days * DAY_MS);
 }
@@ -61,7 +70,8 @@ export interface FileSeedSummary {
 }
 
 export async function seedFileLifecycle(): Promise<FileSeedSummary> {
-	const { provider, container, storage, locatorFor, uploadSeedObject, seedReadyFile, deleteFile } = createSeedFileWriter();
+	const { provider, seedReadyFile, deleteFile } = createSeedFileWriter();
+	const squarePng = await squareImagePng();
 
 	const klOwnerMembership = requireRow(
 		(await prisma.organizationMembership.findUnique({ where: { id: ORGANIZATION_SEED_IDS.klOwnerMembership }, include: { user: true } })) ?? undefined,
@@ -165,55 +175,21 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	await prisma.productImage.upsert({ where: { id: secondImage.id }, create: secondImage, update: secondImage });
 	await deleteFile(FILE_SEED_IDS.deletedProductImage, deletedProductImage, admin.id, 4);
 
-	// ── Deleted by their owner: an avatar (with its thumbnail variant) and a store logo ──
+	// ── Deleted by their owner: an avatar (with its renditions) and a store logo ──
 	const avatar = await seedReadyFile({
 		id: FILE_SEED_IDS.deletedAvatar,
 		category: "USER_AVATAR",
 		ownerId: klOwner.id,
 		fileName: "old-avatar.png",
 		mimeType: "image/png",
-		bytes: PNG_BYTES,
+		bytes: squarePng,
 		uploadedById: klOwner.id,
 		organizationId: null,
 		uploadedDaysAgo: 15,
 	});
 	const avatarRow = { id: FILE_SEED_IDS.deletedAvatarRow, userId: klOwner.id, fileId: FILE_SEED_IDS.deletedAvatar, isDeleted: false, deletedAt: null, deletedBy: null };
 	await prisma.userAvatar.upsert({ where: { userId: klOwner.id }, create: avatarRow, update: avatarRow });
-	const thumbnailPath = buildPublicVariantPath({
-		category: "USER_AVATAR",
-		ownerId: klOwner.id,
-		fileId: FILE_SEED_IDS.deletedAvatar,
-		fileName: "old-avatar.png",
-		mimeType: "image/png",
-		variant: "THUMBNAIL",
-	});
-	const thumbnail = await uploadSeedObject({ locator: locatorFor(thumbnailPath), buffer: PNG_BYTES, mimeType: "image/png" });
-	const thumbnailPublished = await storage.publishAsset({
-		locator: thumbnail.locator,
-		fileId: FILE_SEED_IDS.deletedAvatar,
-		mimeType: "image/png",
-		fileName: "old-avatar-thumbnail.png",
-	});
-	const thumbnailRow = {
-		id: FILE_SEED_IDS.deletedAvatarThumbnail,
-		fileId: FILE_SEED_IDS.deletedAvatar,
-		kind: "THUMBNAIL",
-		mimeType: "image/png",
-		sizeBytes: PNG_BYTES.length,
-		storageProvider: provider,
-		storageContainer: container,
-		storageBucket: container,
-		storagePath: thumbnailPath,
-		publicPath: thumbnailPublished.publicUrl,
-		objectRevision: thumbnail.revision,
-		objectGeneration: thumbnail.revision,
-		isDeleted: false,
-		deletedAt: null,
-		deletedBy: null,
-	} satisfies Prisma.FileVariantUncheckedCreateInput;
-	await prisma.fileVariant.upsert({ where: { fileId_kind: { fileId: thumbnailRow.fileId, kind: thumbnailRow.kind } }, create: thumbnailRow, update: thumbnailRow });
 	await deleteFile(FILE_SEED_IDS.deletedAvatar, avatar, klOwner.id, 3);
-	await storage.deleteObject(locatorFor(thumbnailPath));
 
 	const logo = await seedReadyFile({
 		id: FILE_SEED_IDS.deletedLogo,
@@ -221,7 +197,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 		ownerId: klOrganizationId,
 		fileName: "old-logo.png",
 		mimeType: "image/png",
-		bytes: PNG_BYTES,
+		bytes: squarePng,
 		uploadedById: klOwner.id,
 		organizationId: klOrganizationId,
 		uploadedDaysAgo: 15,

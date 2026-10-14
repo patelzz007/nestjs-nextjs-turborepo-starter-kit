@@ -10,6 +10,7 @@ import { LocalTransferTokenService } from "../src/modules/storage/adapters/local
 import { MALWARE_SCANNER } from "../src/modules/storage/domain/storage.tokens";
 import { EICAR_TEST_SIGNATURE, EicarSignatureTestScanner } from "./support/eicar-signature-test-scanner";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 
 // Runs on the local disk driver (forced for every e2e run by test/setup-env.ts →
 // TEST_E2E_STORAGE). The configured scanner is MALWARE_SCANNER=none; this spec
@@ -24,10 +25,8 @@ const VERDICT_POLL_ATTEMPTS = 100;
 const VERDICT_POLL_INTERVAL_MS = 100;
 const TERMINAL_STATUSES: ReadonlySet<FileStatus> = new Set<FileStatus>(["READY", "QUARANTINED", "FAILED"]);
 
-const PNG_BYTES: Buffer = Buffer.from(
-	"89504e470d0a1a0a0000000d4948445200000001000000010806000000" + "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082",
-	"hex",
-);
+/** The avatar uploaded throughout: a real square image, so it passes the avatar's pixel rules at `complete`. */
+const PNG_BYTES: Buffer = AVATAR_PNG_BYTES;
 /** Passes the PNG magic-byte check, carries the EICAR test string: only the scanner can catch it. */
 const EICAR_PNG_BYTES: Buffer = Buffer.concat([PNG_BYTES, Buffer.from(EICAR_TEST_SIGNATURE, "latin1")]);
 

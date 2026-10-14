@@ -1392,6 +1392,7 @@ model Organization {
   assets                   OrganizationAsset[]
   terminals                OrganizationTerminal[]
   storedFiles              StoredFile[]                          @relation("StoredFileOrganization")
+  rewardImages             RewardImage[]
   membershipLocationScopes OrganizationMembershipLocationScope[]
   invitationLocationScopes OrganizationInvitationLocationScope[]
   rewardLocationScopes     RewardLocationScope[]
@@ -1902,8 +1903,8 @@ enum FileCategory {
   STORE_BANNER
   USER_AVATAR
   MERCHANT_KYB
-  /// A reward's cover image — uploaded to the organization, then named by `Reward.coverFileId`.
-  REWARD_COVER
+  /// A reward image (16:9, at least 4K) — uploaded to the organization, then listed in `RewardImage`.
+  REWARD_IMAGE
 }
 
 enum FileVisibility {
@@ -1922,11 +1923,14 @@ enum OrganizationAssetType {
   BANNER
 }
 
+/// Renditions of an image, smallest to largest; the widths of each category live in its shared `imageRules`.
 enum FileVariantKind {
   ORIGINAL
   THUMBNAIL
   MEDIUM
   LARGE
+  XLARGE
+  UHD
 }
 
 enum RewardType {
@@ -1988,6 +1992,9 @@ model StoredFile {
   storagePath      String                 @map("storage_path") @db.VarChar(500)
   publicPath       String?                @map("public_path") @db.VarChar(500)
   objectGeneration String?                @map("object_generation") @db.VarChar(64)
+  /// Pixel size of an image upload, read from the stored bytes when it is verified (null for documents).
+  imageWidth       Int?                   @map("image_width")
+  imageHeight      Int?                   @map("image_height")
   status           FileStatus             @default(PENDING)
   scanStatus       KybDocumentScanStatus? @map("scan_status")
   scannedAt        BigInt?                @map("scanned_at")
@@ -2010,7 +2017,7 @@ model StoredFile {
   organizationAssets OrganizationAsset[]
   userAvatar         UserAvatar?
   kybFiles           OrganizationKybFile[]
-  rewardCovers       Reward[]              @relation("RewardCover")
+  rewardImages       RewardImage[]
 
   @@index([uploadedById])
   @@index([organizationId])
@@ -2034,6 +2041,9 @@ model FileVariant {
   storagePath      String           @map("storage_path") @db.VarChar(500)
   publicPath       String?          @map("public_path") @db.VarChar(500)
   objectGeneration String?          @map("object_generation") @db.VarChar(64)
+  /// Pixel size of an image rendition (null for non-image variants).
+  width            Int?
+  height           Int?
   isDeleted        Boolean          @default(false) @map("is_deleted")
   deletedAt        BigInt?          @map("deleted_at")
   deletedBy        String?          @map("deleted_by")
@@ -2222,9 +2232,6 @@ model Reward {
   termsConditions        String?                       @map("terms_conditions") @db.Text
   rewardKind             RewardKind                    @default(CONSUMER) @map("reward_kind")
   category               String                        @db.VarChar(100)
-  /// The cover image (a READY, PUBLIC `REWARD_COVER` stored file of the same organization).
-  /// Required; a referrer reward shares its consumer reward's cover. The file cannot be deleted while a live reward uses it.
-  coverFileId            String                        @map("cover_file_id")
   /// Reward rules other than the minimum spend (e.g. `maxUsePerUser`); validated by `RewardRulesSchema`.
   rules                  Json?
   /// Minimum bill, in integer minor units (sen), for redeeming this reward; null = no minimum.
@@ -2264,16 +2271,46 @@ model Reward {
   claims               RewardClaim[]
   referrals            RewardReferral[]
   locationScopes       RewardLocationScope[]
-  coverFile            StoredFile            @relation("RewardCover", fields: [coverFileId], references: [id], onDelete: Restrict)
+  /// The reward's images in display order (1–10 live rows; position 0 is the cover).
+  images               RewardImage[]
 
   @@index([organizationId])
-  @@index([coverFileId])
   @@index([status])
   @@index([category])
   @@index([expiryDate])
   @@index([autoPublishAt])
   @@index([rewardKind])
   @@map("rewards")
+}
+
+/// RLS: organization members write; readable whenever its reward is readable.
+/// One image of a reward, in display order. Replacing a reward's images soft-deletes the old rows and
+/// inserts the new ones in the same transaction; the files are READY, PUBLIC `REWARD_IMAGE`s of the
+/// same organization (checked under a row lock on every write).
+model RewardImage {
+  id             String  @id @default(uuid())
+  organizationId String  @map("organization_id")
+  rewardId       String  @map("reward_id")
+  fileId         String  @map("file_id")
+  /// 0-based display position; position 0 is the reward's cover.
+  position       Int
+  isDeleted      Boolean @default(false) @map("is_deleted")
+  deletedAt      BigInt? @map("deleted_at")
+  deletedBy      String? @map("deleted_by")
+  createdAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reward       Reward       @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  file         StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  /// One live image per position, and a file at most once per reward.
+  @@unique([rewardId, position], map: "reward_images_live_position_key", where: { isDeleted: false })
+  @@unique([rewardId, fileId], map: "reward_images_live_file_key", where: { isDeleted: false })
+  @@index([rewardId])
+  @@index([fileId])
+  @@index([organizationId])
+  @@map("reward_images")
 }
 
 /// RLS: organization members — which stores a reward is available at.

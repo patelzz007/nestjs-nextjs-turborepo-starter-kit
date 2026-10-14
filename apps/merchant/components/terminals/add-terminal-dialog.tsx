@@ -6,7 +6,7 @@ import { POS_TERMINAL_ID_MAX_LENGTH, POS_TERMINAL_NAME_MAX_LENGTH, type Merchant
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
 import { Plus } from "lucide-react";
 import * as React from "react";
@@ -67,7 +67,11 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, submissionError, o
 	const handleStoreChange = React.useCallback((value: string | null): void => {
 		setStoreId(value ?? "");
 	}, []);
-	const storeName = React.useCallback((id: string): string => stores.find((store) => store.id === id)?.name ?? id, [stores]);
+	// Feeds both the store select's `items` (the closed trigger's label) and its rendered options.
+	const storeOptions = React.useMemo(
+		(): readonly SelectOption<string>[] => stores.map((store: TerminalStoreOption): SelectOption<string> => ({ value: store.id, label: store.name })),
+		[stores],
+	);
 
 	const handleSubmit = React.useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
@@ -105,14 +109,20 @@ function AddTerminalForm({ stores, defaultStoreId, isPending, submissionError, o
 				</div>
 				<div className="grid gap-2">
 					<Label htmlFor="terminal-store">Store</Label>
-					<Select<string> value={storeId === "" ? null : storeId} onValueChange={handleStoreChange} disabled={stores.length === 0} required invalid={storeError !== undefined}>
+					<Select<string>
+						items={storeOptions}
+						value={storeId === "" ? null : storeId}
+						onValueChange={handleStoreChange}
+						disabled={stores.length === 0}
+						required
+						invalid={storeError !== undefined}>
 						<SelectTrigger id="terminal-store" {...(storeError === undefined ? {} : { "aria-describedby": "terminal-store-error" })}>
-							<SelectValue placeholder="Choose a store" formatValue={storeName} />
+							<SelectValue placeholder="Choose a store" />
 						</SelectTrigger>
 						<SelectContent>
-							{stores.map((store: TerminalStoreOption): React.JSX.Element => (
-								<SelectItem key={store.id} value={store.id}>
-									{store.name}
+							{storeOptions.map((option): React.JSX.Element => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
 								</SelectItem>
 							))}
 						</SelectContent>

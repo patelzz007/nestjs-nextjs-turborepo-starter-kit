@@ -146,6 +146,20 @@ DROP POLICY IF EXISTS reward_location_scopes_api_key_insert ON public.reward_loc
 CREATE POLICY reward_location_scopes_api_key_insert ON public.reward_location_scopes
   FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access(organization_id));
 
+DROP POLICY IF EXISTS reward_images_api_key_read ON public.reward_images;
+CREATE POLICY reward_images_api_key_read ON public.reward_images
+  FOR SELECT TO app_runtime USING (app_api_key_org_access(organization_id));
+
+DROP POLICY IF EXISTS reward_images_api_key_insert ON public.reward_images;
+CREATE POLICY reward_images_api_key_insert ON public.reward_images
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access(organization_id));
+
+DROP POLICY IF EXISTS reward_images_api_key_update ON public.reward_images;
+CREATE POLICY reward_images_api_key_update ON public.reward_images
+  FOR UPDATE TO app_runtime
+  USING (app_api_key_org_access(organization_id))
+  WITH CHECK (app_api_key_org_access(organization_id));
+
 -- ── claims of the organization's rewards (POS lookup, PENDING → REDEEMED, referrer credit)
 
 DROP POLICY IF EXISTS reward_claims_api_key_read ON public.reward_claims;

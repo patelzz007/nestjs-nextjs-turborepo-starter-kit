@@ -1,4 +1,5 @@
 import { ApiError } from "@workspace/client/lib/api/api-request";
+import { ApiDownloadError } from "@workspace/client/lib/api/download";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -25,6 +26,16 @@ describe("resolveMutationErrorMessage", () => {
 
 	it("falls back to the server's client-safe message for an unmapped code", () => {
 		expect(resolveMutationErrorMessage(apiError("REWARD_OUT_OF_STOCK", "This reward is out of stock", 409))).toBe("This reward is out of stock");
+	});
+
+	it("keeps a failed download's client-safe API reason, and maps its transport codes", () => {
+		expect(resolveMutationErrorMessage(new ApiDownloadError({ code: "REWARD_IMAGE_NOT_FOUND", statusCode: 404, message: "Reward image not found" }))).toBe(
+			"Reward image not found",
+		);
+		expect(resolveMutationErrorMessage(new ApiDownloadError({ code: "UNAUTHORIZED", statusCode: 401, message: "Unauthorized" }))).toBe(
+			STANDARD_MUTATION_ERROR_MESSAGES.UNAUTHORIZED,
+		);
+		expect(resolveMutationErrorMessage(new ApiDownloadError({ code: "NETWORK_ERROR", statusCode: 0, message: "Failed to fetch" }))).toBe(UNKNOWN_MUTATION_ERROR_MESSAGE);
 	});
 
 	it("uses the generic fallback for a non-API failure", () => {
