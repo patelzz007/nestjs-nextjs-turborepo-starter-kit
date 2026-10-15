@@ -13,30 +13,66 @@ import { CardHeadingSkeleton } from "@/components/loading/skeleton-parts";
 /** `ProfileForm`: full name. */
 const PROFILE_FORM_FIELDS = 1;
 
-/** `/account/profile`: header, then the personal-details card — avatar + upload/remove, the name field, save. */
+/** Facts in the identity header: member since, last edited, permissions. */
+const PROFILE_FACTS = 3;
+const PROFILE_FACT_SLOTS: readonly number[] = [...Array<number>(PROFILE_FACTS).keys()];
+/** Rows in the access panel while roles load. */
+const ACCESS_ROWS = 2;
+
+/**
+ * `/account/profile`: the identity header (avatar, name, email, roles, the
+ * facts strip), then the personal-details card beside the access panel.
+ */
 export function ProfilePageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={PROFILE_LOADING_LABELS} className="flex w-full flex-col gap-6">
-			<PageHeaderSkeleton />
-			<Card className="max-w-2xl">
-				<CardHeader>
-					<CardHeadingSkeleton />
-				</CardHeader>
-				<CardContent className="flex flex-col gap-6">
-					<div data-skeleton="profile-avatar" className="flex items-center gap-4">
-						<Skeleton variant="circular" className="size-16" />
-						<div className="flex flex-col gap-2">
-							<div className="flex gap-2">
-								<Skeleton className="h-8 w-28" />
-								<Skeleton className="h-8 w-20" />
-							</div>
-							<Skeleton variant="text" className="h-3 w-48" />
-						</div>
+		<SkeletonRegion labels={PROFILE_LOADING_LABELS} className="flex w-full flex-col gap-8">
+			<div data-skeleton="profile-identity" className="flex flex-col gap-6">
+				<div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+					<Skeleton variant="circular" className="size-22" />
+					<div className="flex flex-col gap-2">
+						<Skeleton className="h-9 w-64" />
+						<Skeleton variant="text" className="h-3 w-48" />
+						<Skeleton className="h-5 w-24" />
 					</div>
-					<FormSkeleton surface="plain" fields={PROFILE_FORM_FIELDS} withActions={false} />
-					<Skeleton className="h-9 w-32" />
-				</CardContent>
-			</Card>
+				</div>
+				<div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:grid-cols-3">
+					{PROFILE_FACT_SLOTS.map((slot: number): React.JSX.Element => (
+						<div key={slot} className="flex flex-col gap-2">
+							<Skeleton variant="text" className="h-3 w-20" />
+							<Skeleton variant="text" className="h-4 w-28" />
+						</div>
+					))}
+				</div>
+			</div>
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+				<Card>
+					<CardHeader>
+						<CardHeadingSkeleton />
+					</CardHeader>
+					<CardContent className="flex flex-col gap-6">
+						<div data-skeleton="profile-avatar" className="flex items-center gap-4">
+							<Skeleton variant="circular" className="size-16" />
+							<div className="flex flex-col gap-2">
+								<div className="flex gap-2">
+									<Skeleton className="h-8 w-28" />
+									<Skeleton className="h-8 w-20" />
+								</div>
+								<Skeleton variant="text" className="h-3 w-48" />
+							</div>
+						</div>
+						<FormSkeleton surface="plain" fields={PROFILE_FORM_FIELDS} withActions={false} />
+						<Skeleton className="h-9 w-32" />
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader>
+						<CardHeadingSkeleton />
+					</CardHeader>
+					<CardContent>
+						<ListSkeleton rows={ACCESS_ROWS} surface="plain" withHeading={false} />
+					</CardContent>
+				</Card>
+			</div>
 		</SkeletonRegion>
 	);
 }

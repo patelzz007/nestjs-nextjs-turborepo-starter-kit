@@ -68,6 +68,8 @@ the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
 1. Writes a throwaway `apps/api/.env`. Signing secrets are random per run and masked in logs.
    Redis, Kafka and RabbitMQ are deliberately unset — the API falls back to in-memory caches and
    skips broker integrations, which the e2e suite does not exercise.
+   GitHub pull requests are on (`GITHUB_CREDENTIAL_ENCRYPTION_KEYS`, a random key ring), so the
+   seed can seal its demo GitHub links and step 4a finds `github_account_links` populated.
 2. Builds the API's workspace dependencies (`turbo run build --filter=@workspace/api^...`).
 3. `pnpm db:deploy` — `prisma migrate deploy` **then** `db:apply-security` (RLS). A migration that
    does not apply cleanly to an empty database fails here.

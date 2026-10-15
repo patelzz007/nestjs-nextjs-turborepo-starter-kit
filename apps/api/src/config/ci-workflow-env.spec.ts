@@ -31,6 +31,7 @@ const SHELL_VARIABLES: Readonly<Record<string, string>> = {
 	mfa_key: Buffer.alloc(SECRET_BYTES, 1).toString("base64"),
 	reward_code_key: Buffer.alloc(SECRET_BYTES, 3).toString("base64"),
 	tenant_master_key: Buffer.alloc(SECRET_BYTES, 2).toString("base64"),
+	github_credential_key: Buffer.alloc(SECRET_BYTES, 4).toString("base64"),
 };
 
 function workflowEnv(): Record<string, string> {
@@ -53,6 +54,10 @@ function workflowEnv(): Record<string, string> {
 describe(".github/actions/write-api-ci-env — CI API env", () => {
 	it("passes the API config schema", () => {
 		expect(parseApiConfig(workflowEnv()).runtime.nodeEnv).toBe("test");
+	});
+
+	it("turns GitHub pull requests on, so the seed fills github_account_links for the seed coverage check", () => {
+		expect(parseApiConfig(workflowEnv()).github.credentialEncryptionKeys).not.toBeNull();
 	});
 
 	it("only references shell variables the job defines", () => {

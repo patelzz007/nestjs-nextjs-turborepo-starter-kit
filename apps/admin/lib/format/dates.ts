@@ -39,6 +39,13 @@ const DATE_TIME_FORMATTER = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
 	minute: "2-digit",
 });
 
+const DATE_FORMATTER = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+	timeZone: DISPLAY_TIME_ZONE,
+	year: "numeric",
+	month: "short",
+	day: "numeric",
+});
+
 const DATE_TIME_WITH_SECONDS_FORMATTER = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
 	timeZone: DISPLAY_TIME_ZONE,
 	year: "numeric",
@@ -54,6 +61,11 @@ const UTC_SHORT_DATE_FORMATTER = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
 	month: "short",
 	day: "numeric",
 });
+
+/** "14 Aug 2026" (Malaysia time) — a day, where the time of day does not matter (member since). */
+export function formatDate(ms: number): string {
+	return DATE_FORMATTER.format(ms);
+}
 
 /** "14 Aug 2026, 1:33 am" (Malaysia time) — the default table/card timestamp label. */
 export function formatDateTime(ms: number): string {

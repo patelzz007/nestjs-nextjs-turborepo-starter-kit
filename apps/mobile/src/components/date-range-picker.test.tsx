@@ -44,7 +44,8 @@ describe("DateRangePicker", () => {
 	it("opens on the range it is given, its ends and its days marked", async () => {
 		await renderPicker();
 
-		expect(screen.getByText("October 2026")).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Month: October" })).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Year: 2026" })).toBeOnTheScreen();
 		expect(screen.getByLabelText("Start: 1 Oct 2026")).toBeOnTheScreen();
 		expect(screen.getByLabelText("End: 5 Oct 2026")).toBeOnTheScreen();
 		expect(screen.getByTestId("day-2026-10-01")).toHaveAccessibleName("Thursday, 1 October 2026, start");
@@ -72,9 +73,23 @@ describe("DateRangePicker", () => {
 		expect(screen.getByTestId("day-2026-10-13")).toBeDisabled();
 		expect(screen.getByRole("button", { name: "Next month" })).toBeDisabled();
 		await fireEvent.press(screen.getByRole("button", { name: "Previous month" }));
-		expect(screen.getByText("September 2026")).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Month: September" })).toBeOnTheScreen();
 		expect(screen.getByTestId("day-2026-09-09")).toBeDisabled();
 		expect(screen.getByRole("button", { name: "Previous month" })).toBeDisabled();
+	});
+
+	it("jumps to a chosen year and month, keeping the range picked so far", async () => {
+		await renderPicker({ minDate: "2020-01-01" });
+
+		await fireEvent.press(screen.getByRole("button", { name: "Year: 2026" }));
+		await fireEvent.press(screen.getByTestId("year-2021"));
+		await fireEvent.press(screen.getByRole("button", { name: "Month: October" }));
+		await fireEvent.press(screen.getByTestId("month-3"));
+
+		expect(screen.getByRole("button", { name: "Month: March" })).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Year: 2021" })).toBeOnTheScreen();
+		expect(screen.getByTestId("day-2021-03-15")).toHaveAccessibleName("Monday, 15 March 2021");
+		expect(screen.getByLabelText("Start: 1 Oct 2026")).toBeOnTheScreen();
 	});
 
 	it("says why a range cannot be applied, and holds Apply back", async () => {

@@ -66,7 +66,11 @@ describe("useAuditTrailLive", () => {
 		renderHook(() => useAuditTrailLive(), { wrapper: queryClientWrapper(new QueryClient()) });
 
 		expect(FakeEventSource.latest?.url).toBe(auditTrailEventsUrl());
-		expect(auditTrailEventsUrl()).toMatch(/\/admin\/audit-trail\/events$/u);
+		expect(new URL(auditTrailEventsUrl()).pathname).toMatch(/\/admin\/audit-trail\/events$/u);
+	});
+
+	it("declares the admin client type, so the API reads the admin's session cookie (EventSource cannot send X-Client-Type)", () => {
+		expect(new URL(auditTrailEventsUrl()).searchParams.get("client_type")).toBe("admin");
 	});
 
 	it("reports the connection opening, for the Live pill", () => {

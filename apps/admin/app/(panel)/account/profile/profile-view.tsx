@@ -4,13 +4,25 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { ProfileAvatarEditor } from "@workspace/client/lib/auth/profile/profile-avatar-editor";
 import { useOwnProfile, useUpdateOwnProfile } from "@workspace/client/lib/auth/profile/use-own-profile";
-import { ApiErrorCodes, OWN_PROFILE_ERROR_CODES, type Envelope, type OwnProfile, type OwnProfileEditableFields } from "@workspace/shared";
+import {
+	ApiErrorCodes,
+	OWN_PROFILE_ERROR_CODES,
+	type Envelope,
+	type OwnProfile,
+	type OwnProfileEditableFields,
+	type PermissionDetailsResponse,
+	type SlimRoleResponse,
+} from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 
+import { ProfileAccessPanel } from "@/components/account/profile-access-panel";
+import { ProfileDemoDates } from "@/components/account/profile-demo-dates";
 import { ProfileForm } from "@/components/account/profile-form";
+import { ProfileIdentityHeader } from "@/components/account/profile-identity-header";
 import { ProfilePageSkeleton } from "@/components/loading/account-skeletons";
+import { summarizeAccess } from "@/lib/account/access-summary";
 import { toastMutationError, type MutationErrorMessages } from "@/lib/api/mutation-error";
 
 /** Messages for the codes `PATCH /auth/profile` can answer besides the standard ones. */
@@ -41,21 +53,19 @@ function showAvatarSuccess(title: string): void {
 	toastMessage.success({ title });
 }
 
-function ProfileAvatar({ profile, isReadOnly }: { readonly profile: OwnProfile; readonly isReadOnly: boolean }): React.JSX.Element {
-	return (
-		<div className="space-y-2">
-			<ProfileAvatarEditor profile={profile} isReadOnly={isReadOnly} onSuccess={showAvatarSuccess} onError={toastAvatarError} />
-			<p className="truncate text-sm text-muted-foreground">{profile.email}</p>
-		</div>
-	);
-}
+const NO_ROLES: readonly SlimRoleResponse[] = [];
+const NO_PERMISSIONS: readonly PermissionDetailsResponse[] = [];
 
 /** `/account/profile` — the signed-in admin's own profile (smart: owns the query, the mutation and the toasts). */
 export function ProfileView({ initialProfile }: ProfileViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const profileQuery = useOwnProfile(initialProfile);
 	const sessionQuery = api.auth.permissions.useQuery(undefined);
-	const isImpersonating = sessionQuery.data?.data.isImpersonating === true;
+	const session = sessionQuery.data?.data;
+	const isImpersonating = session?.isImpersonating === true;
+	const roles = session?.roles ?? NO_ROLES;
+	const permissions = session?.permissions ?? NO_PERMISSIONS;
+	const access = React.useMemo(() => summarizeAccess(permissions), [permissions]);
 	const updateProfile = useUpdateOwnProfile({
 		onSuccess: (profile: OwnProfile): void => {
 			toastMessage.success({ title: "Profile saved", description: profile.fullName });
@@ -91,29 +101,32 @@ export function ProfileView({ initialProfile }: ProfileViewProps): React.JSX.Ele
 	}
 
 	return (
-		<div className="flex w-full flex-col gap-6">
-			<div>
-				<h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-				<p className="mt-1 text-sm text-muted-foreground">How you appear across the platform.</p>
+		<div className="flex w-full flex-col gap-8">
+			<ProfileIdentityHeader profile={profile} roles={roles} permissionCount={access.permissionCount} isImpersonating={isImpersonating} />
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+				<div className="flex min-w-0 flex-col gap-6">
+					<Card>
+						<CardHeader>
+							<CardTitle>Personal details</CardTitle>
+							<CardDescription>
+								{isImpersonating ? "You are impersonating this user: the profile is read-only." : "Your name and photo are shown to your team and in the emails you send."}
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							<ProfileAvatarEditor profile={profile} isReadOnly={isImpersonating} onSuccess={showAvatarSuccess} onError={toastAvatarError} />
+							<ProfileForm
+								key={`${profile.id}:${String(profile.version)}`}
+								initialValues={{ fullName: profile.fullName }}
+								isPending={updateProfile.isPending}
+								isReadOnly={isImpersonating}
+								onSubmit={handleSubmit}
+							/>
+						</CardContent>
+					</Card>
+					<ProfileDemoDates />
+				</div>
+				<ProfileAccessPanel roles={roles} access={access} className="lg:sticky lg:top-6" />
 			</div>
-			<Card className="max-w-2xl">
-				<CardHeader>
-					<CardTitle>Personal details</CardTitle>
-					<CardDescription>
-						{isImpersonating ? "You are impersonating this user: the profile is read-only." : "Your name is shown to your team and in the emails you send."}
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-6">
-					<ProfileAvatar profile={profile} isReadOnly={isImpersonating} />
-					<ProfileForm
-						key={`${profile.id}:${String(profile.version)}`}
-						initialValues={{ fullName: profile.fullName }}
-						isPending={updateProfile.isPending}
-						isReadOnly={isImpersonating}
-						onSubmit={handleSubmit}
-					/>
-				</CardContent>
-			</Card>
 		</div>
 	);
 }

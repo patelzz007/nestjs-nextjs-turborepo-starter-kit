@@ -95,7 +95,11 @@ are drawn without a charting library, and where the screen lives in the navigati
 
 - **Custom dates.** The range control gains "Custom": a bottom sheet with a month calendar
   (`DateRangePicker`, generic; calendar maths in `src/lib/calendar.ts`) where the customer taps a
-  start and an end day. The rules are the web's custom-range rules (`packages/client`
+  start and an end day. Its header (`CalendarNavigator`, generic, shared with `DateField` / `MultiDateField` — see
+  [Date pickers](../technical/frontend/date-pickers.md)) shows the month and the year as
+  buttons: tapping either swaps the days for the months of that year or the years in range, so a far
+  month is two taps away rather than one arrow tap per month (the web `Calendar` gets the same through
+  its month / year dropdowns). The rules are the web's custom-range rules (`packages/client`
   `checkCustomRange`, which the app may not import, so `customRangeIssueOf` mirrors it): in order and
   at most `MAX_ANALYTICS_RANGE_DAYS` (366, the API's limit, in the API's words). Two rules belong to
   the picker: the range ends by today, and it starts at most two years back. The selection is a

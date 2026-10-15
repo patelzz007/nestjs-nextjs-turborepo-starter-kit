@@ -227,6 +227,13 @@ Swagger UI sends **`X-Client-Type: admin` by default** (`swaggerClientTypeInterc
 2. "Try it out" — the browser attaches the httpOnly `adminAccessToken` cookie
    (`withCredentials`).
 
+**Live streams (SSE) declare the client type in the query.** The browser's `EventSource`
+cannot set headers, so a stream URL carries `?client_type=admin` (`CLIENT_TYPE_QUERY_PARAM`
+from `@workspace/shared`; the admin's `liveEventsUrl` adds it). Without it the API reads the
+consumer web app's `accessToken` cookie, so an admin stream fails with 401 on every connect.
+Each reconnect then refreshes the session, which fills the audit log with `POST /auth/refresh`
+and `GET …/events` 401 rows while the page never updates.
+
 To act as a web or merchant session instead, set **X-Client-Type** under **Authorize** to
 `web` / `merchant` (persisted across reloads). A token entered under **bearer** takes
 priority over any cookie. Every operation declares this, derived from the same `@Public()`

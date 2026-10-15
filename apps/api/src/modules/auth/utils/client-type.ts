@@ -1,10 +1,7 @@
-import { AuthClientTypeSchema, CLIENT_TYPE_HEADER, FastifyQuerySchema, type AuthClientType } from "@workspace/shared";
+import { AuthClientTypeSchema, CLIENT_TYPE_HEADER, CLIENT_TYPE_QUERY_PARAM, FastifyQuerySchema, type AuthClientType } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { readFirstHeader, readQueryParam } from "../../../common/utils/http-headers";
-
-/** `?client_type=` — the fallback for callers that cannot set `X-Client-Type` (Swagger UI's "Try it out"). */
-const CLIENT_TYPE_QUERY_PARAM = "client_type";
 
 /** The client type of a request that declares none (or an unknown one): the consumer web app, as before client types existed. */
 export const DEFAULT_CLIENT_TYPE: AuthClientType = AuthClientTypeSchema.enum.web;

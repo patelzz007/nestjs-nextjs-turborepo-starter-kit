@@ -2,12 +2,13 @@
 
 import { Calendar } from "@workspace/ui/components/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover";
-import { formatDateInputString, parseDateInputString } from "@workspace/ui/lib/form/date-input";
+import { parseOptionalDate, useCalendarBounds } from "@workspace/ui/lib/form/calendar-bounds";
+import { formatDateInputString } from "@workspace/ui/lib/form/date-input";
 import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
 import { inputVariants } from "@workspace/ui/lib/form/field-variants";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { VariantProps } from "class-variance-authority";
-import { format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import * as React from "react";
 
@@ -24,11 +25,6 @@ interface CalendarSelectionProps {
 }
 
 const NO_SELECTION: CalendarSelectionProps = {};
-
-/** Parses an optional `yyyy-MM-dd` prop; empty/absent/invalid strings yield `undefined`. */
-function parseOptionalDate(value: string | undefined): Date | undefined {
-	return value !== undefined && value.length > 0 ? parseDateInputString(value) : undefined;
-}
 
 export interface DatePickerProps extends VariantProps<typeof inputVariants> {
 	readonly id?: string;
@@ -96,8 +92,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 	const value = isValueControlled ? valueProp : valueState;
 
 	const selectedDate = React.useMemo(() => parseOptionalDate(value), [value]);
-	const minDate = React.useMemo(() => parseOptionalDate(fromDate), [fromDate]);
-	const maxDate = React.useMemo(() => parseOptionalDate(toDate), [toDate]);
+	const { boundsProps, isDateDisabled } = useCalendarBounds(fromDate, toDate);
 	const state = resolveFieldState({ disabled, loading, ariaInvalid });
 	// `defaultMonth` cannot be `undefined` under exactOptionalPropertyTypes, so
 	// the pair is omitted entirely when nothing is selected (memoised: stable identity).
@@ -131,20 +126,6 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 		[handleOpenChange, isValueControlled, onValueChange],
 	);
 
-	const isDateDisabled = React.useCallback(
-		(date: Date): boolean => {
-			const day = startOfDay(date);
-			if (minDate !== undefined && day < startOfDay(minDate)) {
-				return true;
-			}
-			if (maxDate !== undefined && day > startOfDay(maxDate)) {
-				return true;
-			}
-			return false;
-		},
-		[minDate, maxDate],
-	);
-
 	return (
 		<Popover open={open} onOpenChange={handleOpenChange}>
 			<PopoverTrigger
@@ -170,7 +151,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 				}
 			/>
 			<PopoverContent className="w-auto p-0" align="start">
-				<Calendar mode="single" onSelect={handleSelect} disabled={isDateDisabled} {...selectionProps} />
+				<Calendar mode="single" onSelect={handleSelect} disabled={isDateDisabled} {...boundsProps} {...selectionProps} />
 			</PopoverContent>
 			{name !== undefined ? <input type="hidden" name={name} value={value ?? ""} readOnly /> : null}
 		</Popover>

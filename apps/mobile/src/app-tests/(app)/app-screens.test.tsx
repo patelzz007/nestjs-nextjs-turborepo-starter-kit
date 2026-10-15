@@ -242,6 +242,23 @@ describe("Profile (§10.8)", () => {
 		).toBeOnTheScreen();
 	});
 
+	it("shows the demo date pickers, keeping what is picked on the screen and sending nothing", async () => {
+		const api = stubApi({ "GET /auth/profile": ok(profileJson()) });
+		await renderSignedIn({ profile: ProfileScreen }, "/profile");
+
+		expect(await screen.findByText("Demo only — these dates are not saved.")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByTestId("profile-birth-date"));
+		await fireEvent.press(screen.getByRole("button", { name: /^Year: / }));
+		await fireEvent.press(screen.getByTestId("year-1990"));
+		await fireEvent.press(screen.getByRole("button", { name: /^Month: / }));
+		await fireEvent.press(screen.getByTestId("month-3"));
+		await fireEvent.press(screen.getByTestId("day-1990-03-15"));
+
+		expect(screen.getByRole("button", { name: "Date of birth, 15 March 1990" })).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Available days, none picked" })).toBeOnTheScreen();
+		expect(api.callsTo("PATCH /auth/profile")).toHaveLength(0);
+	});
+
 	it("validates with the shared schema", async () => {
 		const api = stubApi({ "GET /auth/profile": ok(profileJson()) });
 		await renderSignedIn({ profile: ProfileScreen }, "/profile");

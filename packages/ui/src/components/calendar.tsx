@@ -1,14 +1,29 @@
 "use client";
 
 import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { CalendarCaptionDropdowns } from "@workspace/ui/components/calendar-caption";
 import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { addYears, endOfYear, startOfYear } from "date-fns";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
 import * as React from "react";
-import { DayPicker, getDefaultClassNames, type ChevronProps, type DayButton, type Locale } from "react-day-picker";
+import { DayPicker, getDefaultClassNames, type ChevronProps, type DayButton, type Locale, type MonthCaptionProps } from "react-day-picker";
 
 /** react-day-picker's static base class names — computed once, not per render. */
 const DEFAULT_CLASS_NAMES = getDefaultClassNames();
+
+/**
+ * How far back and ahead the year dropdown reaches when the caller sets no
+ * `startMonth` / `endMonth`: back far enough for a date of birth, ahead far
+ * enough for an end date. Callers with real limits pass their own months.
+ */
+const DEFAULT_YEARS_BACK = 100;
+const DEFAULT_YEARS_AHEAD = 10;
+
+/** Whether this caption layout lists the years, and so needs navigation bounds. */
+function hasYearDropdown(captionLayout: React.ComponentProps<typeof DayPicker>["captionLayout"]): boolean {
+	return captionLayout === "dropdown" || captionLayout === "dropdown-years";
+}
 
 const Calendar = React.forwardRef<
 	HTMLDivElement,
@@ -16,9 +31,37 @@ const Calendar = React.forwardRef<
 		buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 	}
 >(function Calendar(
-	{ className, classNames, showOutsideDays = true, captionLayout = "label", buttonVariant = "ghost", locale, formatters, components, ...props },
+	{
+		className,
+		classNames,
+		showOutsideDays = true,
+		captionLayout = "dropdown",
+		buttonVariant = "ghost",
+		locale,
+		formatters,
+		components,
+		startMonth,
+		endMonth,
+		today,
+		...props
+	},
 	ref,
 ): React.JSX.Element {
+	// The month and year are dropdowns by default, so any month is a pick away
+	// rather than one arrow click per month. react-day-picker's own default end
+	// for the year list is the current year, which would hide future dates, so
+	// both bounds are set here unless the caller sets them.
+	const navigationBounds = React.useMemo(() => {
+		if (!hasYearDropdown(captionLayout)) {
+			return { startMonth, endMonth };
+		}
+		const anchor = today ?? new Date();
+		return {
+			startMonth: startMonth ?? startOfYear(addYears(anchor, -DEFAULT_YEARS_BACK)),
+			endMonth: endMonth ?? endOfYear(addYears(anchor, DEFAULT_YEARS_AHEAD)),
+		};
+	}, [captionLayout, endMonth, startMonth, today]);
+
 	const calendarComponents = React.useMemo(
 		() => ({
 			Root: ({ className: rootClassName, rootRef, ...rootProps }: React.ComponentProps<"div"> & { rootRef?: React.Ref<HTMLDivElement> }): React.JSX.Element => (
@@ -39,9 +82,21 @@ const Calendar = React.forwardRef<
 					<div className="flex size-(--cell-size) items-center justify-center text-center">{children}</div>
 				</td>
 			),
+			// The month / year dropdowns are the UI kit's Select, not react-day-picker's native <select>s.
+			...(captionLayout === "label"
+				? {}
+				: {
+						MonthCaption: (captionProps: MonthCaptionProps): React.JSX.Element => (
+							<CalendarCaptionDropdowns
+								{...captionProps}
+								showMonths={captionLayout === "dropdown" || captionLayout === "dropdown-months"}
+								showYears={hasYearDropdown(captionLayout)}
+							/>
+						),
+					}),
 			...components,
 		}),
-		[components, locale, ref],
+		[captionLayout, components, locale, ref],
 	);
 
 	const calendarFormatters = React.useMemo(
@@ -58,16 +113,30 @@ const Calendar = React.forwardRef<
 			root: cn("w-fit", DEFAULT_CLASS_NAMES.root),
 			months: cn("relative flex flex-col gap-4 md:flex-row", DEFAULT_CLASS_NAMES.months),
 			month: cn("flex w-full flex-col gap-4", DEFAULT_CLASS_NAMES.month),
-			nav: cn("absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1", DEFAULT_CLASS_NAMES.nav),
-			button_previous: cn(buttonVariants({ variant: buttonVariant }), "size-(--cell-size) p-0 select-none aria-disabled:opacity-50", DEFAULT_CLASS_NAMES.button_previous),
-			button_next: cn(buttonVariants({ variant: buttonVariant }), "size-(--cell-size) p-0 select-none aria-disabled:opacity-50", DEFAULT_CLASS_NAMES.button_next),
+			// The nav bar spans the caption row on top of it: only its buttons take clicks, so the month / year dropdowns between them stay clickable.
+			nav: cn("pointer-events-none absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1", DEFAULT_CLASS_NAMES.nav),
+			button_previous: cn(
+				buttonVariants({ variant: buttonVariant }),
+				"pointer-events-auto size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+				DEFAULT_CLASS_NAMES.button_previous,
+			),
+			button_next: cn(
+				buttonVariants({ variant: buttonVariant }),
+				"pointer-events-auto size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+				DEFAULT_CLASS_NAMES.button_next,
+			),
 			month_caption: cn("flex h-(--cell-size) w-full items-center justify-center px-(--cell-size)", DEFAULT_CLASS_NAMES.month_caption),
 			dropdowns: cn("flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-sm font-medium", DEFAULT_CLASS_NAMES.dropdowns),
-			dropdown_root: cn("relative rounded-(--cell-radius)", DEFAULT_CLASS_NAMES.dropdown_root),
+			dropdown_root: cn(
+				"relative rounded-(--cell-radius) hover:bg-accent has-focus-visible:ring-3 has-focus-visible:ring-ring/50 data-[disabled=true]:opacity-50",
+				DEFAULT_CLASS_NAMES.dropdown_root,
+			),
 			dropdown: cn("absolute inset-0 bg-popover opacity-0", DEFAULT_CLASS_NAMES.dropdown),
 			caption_label: cn(
 				"font-medium select-none",
-				captionLayout === "label" ? "text-sm" : "flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
+				captionLayout === "label"
+					? "text-sm"
+					: "flex h-(--cell-size) items-center gap-1 rounded-(--cell-radius) ps-2 pe-1 text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
 				DEFAULT_CLASS_NAMES.caption_label,
 			),
 			month_grid: cn("w-full border-collapse", DEFAULT_CLASS_NAMES.month_grid),
@@ -109,6 +178,9 @@ const Calendar = React.forwardRef<
 				className,
 			)}
 			captionLayout={captionLayout}
+			{...(navigationBounds.startMonth === undefined ? {} : { startMonth: navigationBounds.startMonth })}
+			{...(navigationBounds.endMonth === undefined ? {} : { endMonth: navigationBounds.endMonth })}
+			{...(today === undefined ? {} : { today })}
 			locale={locale}
 			formatters={calendarFormatters}
 			classNames={calendarClassNames}

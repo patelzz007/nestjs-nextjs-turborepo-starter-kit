@@ -1,7 +1,7 @@
 import { PilotCitySchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { DISPLAY_TIME_ZONE, formatDateTime, formatDateTimeWithSeconds, formatUtcShortDate } from "@/lib/format/dates";
+import { DISPLAY_TIME_ZONE, formatDate, formatDateTime, formatDateTimeWithSeconds, formatUtcShortDate } from "@/lib/format/dates";
 import { formatCatalogAmount, formatCoordinate, formatCoordinatePair, formatCount } from "@/lib/format/numbers";
 import { pilotCityLabel } from "@/lib/format/pilot-city";
 
@@ -13,6 +13,7 @@ describe("timestamp formatters", () => {
 		expect(DISPLAY_TIME_ZONE).toBe("Asia/Kuala_Lumpur");
 		expect(formatDateTime(LATE_UTC_EVENING_MS)).toMatch(/^14 Aug 2026, 1:33\sam$/);
 		expect(formatDateTimeWithSeconds(LATE_UTC_EVENING_MS)).toMatch(/^14 Aug 2026, 1:33:15\sam$/);
+		expect(formatDate(LATE_UTC_EVENING_MS)).toBe("14 Aug 2026");
 	});
 
 	it("label an analytics bucket by its UTC calendar day", () => {

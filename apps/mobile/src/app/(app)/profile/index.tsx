@@ -5,7 +5,8 @@
 // OwnProfileEditableFieldsSchema and the optimistic-lock `version`. The avatar
 // is shown; uploading one from the phone is a next step (README). Below it,
 // the GitHub contributions of the API's configured repositories (hidden when
-// that integration is off).
+// that integration is off). Under the editor, a "Dates (demo)" card shows the
+// date pickers (date of birth, available days) — demo only, nothing is saved.
 
 import { useForm } from "@tanstack/react-form";
 import { OwnProfileEditableFieldsSchema, type OwnProfile } from "@workspace/shared";
@@ -23,6 +24,7 @@ import { ErrorState } from "../../../components/states";
 import { TextField } from "../../../components/text-field";
 import { GithubContributionsSection } from "../../../features/github/github-contributions-section";
 import { refreshGithubContributions } from "../../../features/github/refresh";
+import { DemoDatesSection } from "../../../features/profile/demo-dates-section";
 import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError, STALE_PROFILE_MESSAGE } from "../../../features/profile/own-profile-cache";
 import { useToast } from "../../../features/toast/facade";
 import { useApi } from "../../../lib/api-context";
@@ -47,6 +49,7 @@ export default function ProfileScreen(): React.JSX.Element {
 			{profile.isError ? <ErrorState message={errorMessageOf(profile.error)} retryLabel="Try again" onRetry={refetch} /> : null}
 			{/* Keyed by version: the form restarts from the stored values after every save or reload. */}
 			{current === undefined ? null : <ProfileEditor key={current.version} profile={current} />}
+			{current === undefined ? null : <DemoDatesSection />}
 			<GithubContributionsSection />
 		</Screen>
 	);

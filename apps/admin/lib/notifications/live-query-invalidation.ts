@@ -7,13 +7,22 @@ import type { QueryKey } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { API_BASE_URL, API_URL_PREFIX } from "@workspace/client/lib/api/config";
 import { useAuthCommands } from "@workspace/client/lib/auth";
+import { AuthClientTypeSchema, CLIENT_TYPE_QUERY_PARAM } from "@workspace/shared";
 import { useEffect, useState } from "react";
 
 import { DEFAULT_RECONNECT_BACKOFF, ReconnectingEventStream, type LiveState, type ReconnectScheduler } from "@/lib/notifications/reconnecting-event-stream";
 
-/** The absolute URL of an API stream route (`apiRoutes.…events`). */
+/**
+ * The absolute URL of an API stream route (`apiRoutes.…events`), declaring the
+ * admin client type in the query: `EventSource` cannot send `X-Client-Type`,
+ * and without it the API reads the consumer web app's access-token cookie
+ * instead of the admin's — every connection then fails with 401, and each
+ * reconnect refreshes the session, filling the audit log with auth requests.
+ */
 export function liveEventsUrl(route: string): string {
-	return new URL(`${API_URL_PREFIX}${route}`, API_BASE_URL).toString();
+	const url = new URL(`${API_URL_PREFIX}${route}`, API_BASE_URL);
+	url.searchParams.set(CLIENT_TYPE_QUERY_PARAM, AuthClientTypeSchema.enum.admin);
+	return url.toString();
 }
 
 const BROWSER_SCHEDULER: ReconnectScheduler = {

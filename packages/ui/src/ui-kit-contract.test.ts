@@ -124,6 +124,7 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/checkbox.tsx",
 		"components/collection-shared.tsx",
 		"components/date-picker.tsx",
+		"components/multi-date-picker.tsx",
 		"components/field.tsx",
 		"components/form-shell.tsx",
 		"components/input-group.tsx",

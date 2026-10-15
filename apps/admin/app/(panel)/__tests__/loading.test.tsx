@@ -163,7 +163,8 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		route: "/account/profile",
 		loadingView: AccountProfileLoading,
 		announcement: "Loading profile…",
-		landmarks: [PAGE_HEADER, '[data-skeleton="profile-avatar"]', '[data-slot="form-skeleton"]'],
+		// The profile opens on an identity header (avatar, name, roles, facts) instead of a plain page header.
+		landmarks: ['[data-skeleton="profile-identity"]', '[data-skeleton="profile-avatar"]', '[data-slot="form-skeleton"]'],
 	},
 	{
 		route: "/account/security",

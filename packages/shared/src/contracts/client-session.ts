@@ -11,6 +11,13 @@ import type { CookieNames } from "../schemas/auth/cookies";
 export const CLIENT_TYPE_HEADER = "X-Client-Type";
 
 /**
+ * Query parameter that declares the client type when the caller cannot set
+ * {@link CLIENT_TYPE_HEADER}: the browser's `EventSource` (live SSE streams)
+ * and Swagger UI's "Try it out". The header wins when both are present.
+ */
+export const CLIENT_TYPE_QUERY_PARAM = "client_type";
+
+/**
  * Header the mobile app sends on every request with its own semantic version
  * (`AppVersionSchema`). The API rejects a `mobile` request whose version is
  * missing, malformed or below `MOBILE_MIN_SUPPORTED_VERSION` with 426

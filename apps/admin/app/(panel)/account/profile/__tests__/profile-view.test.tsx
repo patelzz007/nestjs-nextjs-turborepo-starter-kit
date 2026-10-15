@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { epochMs, type OwnProfile, type UpdateOwnProfileInput } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -38,7 +38,25 @@ const state = vi.hoisted((): ViewState => ({
 
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
-		api: { auth: { permissions: { useQuery: (): object => ({ data: { data: { isImpersonating: state.isImpersonating } } }) } } },
+		api: {
+			auth: {
+				permissions: {
+					useQuery: (): object => ({
+						data: {
+							data: {
+								isImpersonating: state.isImpersonating,
+								roles: [{ id: "role-1", name: "Super Admin", description: "Full access to the platform." }],
+								permissions: [
+									{ id: "perm-1", action: "LIST", resource: "USER", description: null, group: "Users" },
+									{ id: "perm-2", action: "LIST", resource: "AUDIT_LOG", description: null, group: "Audit" },
+									{ id: "perm-3", action: "UPDATE", resource: "USER", description: null, group: "Users" },
+								],
+							},
+						},
+					}),
+				},
+			},
+		},
 	}),
 }));
 
@@ -113,8 +131,27 @@ describe("ProfileView", () => {
 	it("shows the profile's identity", () => {
 		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(screen.getByLabelText("Full name").getAttribute("value"));
 		expect(screen.getByText("superadmin@example.com")).toBeTruthy();
-		expect(screen.getByText("SA")).toBeTruthy();
+		// The initials stand in for the missing picture in the header and in the photo editor.
+		expect(screen.getAllByText("SA")).toHaveLength(2);
+		expect(within(screen.getByRole("list", { name: "Your roles" })).getByText("Super Admin")).toBeTruthy();
+	});
+
+	it("shows what the roles allow: permissions, the areas they cover, and the way to sign-in security", () => {
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
+
+		expect(screen.getByText("Full access to the platform.")).toBeTruthy();
+		expect(screen.getByText("Permissions").nextElementSibling?.textContent).toBe("3");
+		const areas = within(screen.getByRole("list", { name: "Areas you can work in" })).getAllByRole("listitem");
+		expect(areas.map((area: HTMLElement): string => area.textContent)).toStrictEqual(["Audit", "Users"]);
+		expect(screen.getByRole("link", { name: "Password and two-factor" }).getAttribute("href")).toBe("/account/security");
+	});
+
+	it("marks the impersonated session in the header", () => {
+		state.isImpersonating = true;
+		render(<ProfileView />, { wrapper: UiKitTestProviders });
+		expect(within(screen.getByRole("list", { name: "Your roles" })).getByText("Impersonating")).toBeTruthy();
 	});
 
 	it("saves the edit with the version the form was loaded at (optimistic lock)", async () => {
