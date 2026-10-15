@@ -78,7 +78,19 @@ the server log, not a queryable table, at a volume no viewer could use.
   have different shapes, one request makes many changes, and they are written at different
   moments (the trigger inside the transaction, the HTTP row after the response) — merging them
   into one table would leave most columns empty and couple the two write paths.
-- **APIs.** `GET /admin/audit-trail` (the timeline), `GET /admin/audit-logs/:id` (a request) and
+- **Search and live updates (decided 2026-10-15).** The page's search also finds entries by who
+  acted: the actor's user id exactly, or part of their email address or full name (matched in
+  `users`, deleted accounts included). The page updates live: every audit entry the database writes
+  `NOTIFY`s `audit_trail` (`prisma/rls/95-audit-trail-notify.sql`) — once per request row, once per
+  statement of captured changes — and the API, holding one `LISTEN` connection while anyone has the
+  page open, streams a "something changed" frame over SSE (`GET /admin/audit-trail/events`, same
+  permission as the list, at most one frame per two seconds), on which the page refetches its list.
+  The signal comes from the database because the trail has writers the API never sees (jobs,
+  scripts, manual SQL), and it works across API instances. Reads of the audit log itself do not
+  signal: viewing the log is audited, and signalling those reads would make every open page
+  refetch forever. The filter dropdowns carry their names ("Source: All"), and a server-paged table
+  no longer shows the page's row count as if it were a total.
+- **APIs.** `GET /admin/audit-trail` (the timeline), `GET /admin/audit-trail/events` (its live signal), `GET /admin/audit-logs/:id` (a request) and
   `GET /admin/data-changes` / `:id` (a request's or job's changes; one change) — all admin-panel
   access + `LIST` / `READ AUDIT_LOG`, under `audit.trail.read` / `audit.http_request.read` /
   `audit.data_change.read`; every read is itself recorded as a sensitive read.
@@ -123,6 +135,7 @@ the server log, not a queryable table, at a volume no viewer could use.
 - `apps/api/scripts/apply-rls.ts` — installs and verifies the triggers against the live catalog
 - `apps/api/prisma/rls.sql` (`data_change_logs_*` policies), `prisma/rls/withheld-privileges.ts`
 - `apps/api/src/modules/audit-logs/` — the read side; `packages/shared/src/schemas/domain/platform/data-change-log.ts` — its contract
-- `apps/api/src/modules/audit-logs/repositories/audit-trail.repository.ts` — the timeline query
+- `apps/api/src/modules/audit-logs/repositories/audit-trail.repository.ts` — the timeline query (and its actor search)
+- `apps/api/prisma/rls/95-audit-trail-notify.sql`, `apps/api/src/modules/audit-logs/events/` — the live signal; `apps/admin/lib/notifications/audit-trail-live.ts` — the page's subscription
 - `apps/admin/app/(panel)/audit-logs/` (the one audit page, `changes/[id]`), `apps/admin/components/audit-logs/`
 - ADR 012 (system operations), ADR 017 (request context), ADR 025 (HTTP audit log)

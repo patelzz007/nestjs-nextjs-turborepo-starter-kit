@@ -24,6 +24,7 @@ How these endpoints fit together: [Stores and team guide](../../user-guide/03-st
 - **SuperAdmin only.**
 - **Permission** `CREATE:MERCHANT_ORG`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationAdminController_createInvite` · [source](../../../apps/api/src/modules/organization/controllers/organization-admin.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -37,7 +38,7 @@ How these endpoints fit together: [Stores and team guide](../../user-guide/03-st
 | `intendedRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | no | default `"OWNER"` |
 | `slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 
-**Response 201 Created** — Organization invite created
+**Response 201 Created** (`application/json`) — Organization invite created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -93,6 +94,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_requestAccess` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -107,7 +109,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- |
 | `message` | string | no | at most 500 characters |
 
-**Response 201 Created** — Organization access request created
+**Response 201 Created** (`application/json`) — Organization access request created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -165,6 +167,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_reviewAccessRequest` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -184,7 +187,7 @@ Response `201 Created` (application/json):
 | `⟨shape 1⟩ role` | "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 | `⟨shape 2⟩ approve` | false | yes |  |
 
-**Response 201 Created** — Organization access request reviewed
+**Response 201 Created** (`application/json`) — Organization access request reviewed
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -236,6 +239,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_getContext` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -244,7 +248,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** — Organization context for the signed-in member
+**Response 200 OK** (`application/json`) — Organization context for the signed-in member
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -380,6 +384,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_createLocation` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -396,7 +401,7 @@ Response `200 OK` (application/json):
 | `contactPhone` | string | no | length 1–20 |
 | `name` | string | yes | length 1–200 |
 
-**Response 201 Created** — Organization store location requested
+**Response 201 Created** (`application/json`) — Organization store location requested
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -468,6 +473,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_updateLocation` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -485,7 +491,7 @@ Response `201 Created` (application/json):
 | `contactPhone` | string | no | length 1–20 |
 | `name` | string | yes | length 1–200 |
 
-**Response 200 OK** — Rejected organization store location resubmitted
+**Response 200 OK** (`application/json`) — Rejected organization store location resubmitted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -557,6 +563,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_closeLocation` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -572,7 +579,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- |
 | `reason` | string | yes | length 1–500 |
 
-**Response 201 Created** — Store closed: soft-deleted with its memberships, terminals and keys revoked
+**Response 201 Created** (`application/json`) — Store closed: soft-deleted with its memberships, terminals and keys revoked
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -633,6 +640,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_listMembers` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -641,7 +649,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** — Organization member roster
+**Response 200 OK** (`application/json`) — Organization member roster
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -724,6 +732,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_removeMemberFromStore` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -740,7 +749,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- |
 | `allowNoStores` | boolean | no | default `false` |
 
-**Response 201 Created** — Team member removed from one store
+**Response 201 Created** (`application/json`) — Team member removed from one store
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -794,6 +803,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_inviteMember` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -811,7 +821,7 @@ Response `201 Created` (application/json):
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
 | `role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 
-**Response 201 Created** — Organization team invitation sent
+**Response 201 Created** (`application/json`) — Organization team invitation sent
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -865,6 +875,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_listMemberInvites` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -873,7 +884,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** — Pending organization team invitations
+**Response 200 OK** (`application/json`) — Pending organization team invitations
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -940,6 +951,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_revokeMemberInvite` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -949,7 +961,7 @@ Response `200 OK` (application/json):
 | `orgSlug` | path | string | yes |  |
 | `inviteId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Organization team invitation revoked
+**Response 201 Created** (`application/json`) — Organization team invitation revoked
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -992,6 +1004,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationController_updateOwnMembership` · [source](../../../apps/api/src/modules/organization/controllers/organization.controller.ts)
 
 **Parameters**
@@ -1006,7 +1019,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- |
 | `displayName` | string \| null | yes | length 1–100 |
 
-**Response 200 OK** — The signed-in member's own membership after setting (or, with null, clearing) their display name in this organization
+**Response 200 OK** (`application/json`) — The signed-in member's own membership after setting (or, with null, clearing) their display name in this organization
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1071,6 +1084,7 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTeamInviteController_acceptTeamInvite` · [source](../../../apps/api/src/modules/organization/controllers/organization-team-invite.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1079,7 +1093,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- |
 | `token` | string | yes | length 16–256 |
 
-**Response 201 Created** — Team invite accepted and membership created
+**Response 201 Created** (`application/json`) — Team invite accepted and membership created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1128,6 +1142,7 @@ Response `201 Created` (application/json):
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTeamInviteController_registerAndAcceptTeamInvite` · [source](../../../apps/api/src/modules/organization/controllers/organization-team-invite.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1138,7 +1153,7 @@ Response `201 Created` (application/json):
 | `password` | string | yes | at least 8 characters |
 | `token` | string | yes | length 16–256 |
 
-**Response 201 Created** — Create a staff account from a team invite and sign in
+**Response 201 Created** (`application/json`) — Create a staff account from a team invite and sign in
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1302,6 +1317,7 @@ Response `201 Created` (application/json):
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTeamInviteController_validateTeamInvite` · [source](../../../apps/api/src/modules/organization/controllers/organization-team-invite.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1310,7 +1326,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- |
 | `token` | string | yes | length 16–256 |
 
-**Response 201 Created** — Team invite preview when the token is valid
+**Response 201 Created** (`application/json`) — Team invite preview when the token is valid
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1384,6 +1400,7 @@ List organization memberships for the current user
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRewardMembershipsController_listMemberships` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -1392,7 +1409,7 @@ List organization memberships for the current user
 | --- | --- | --- | --- | --- |
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** — Organization reward hub memberships
+**Response 200 OK** (`application/json`) — Organization reward hub memberships
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1449,9 +1466,10 @@ Response `200 OK` (application/json):
 List RewardHub organization memberships for the current user
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationMembershipsBootstrapController_listMemberships` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
-**Response 200 OK** — Organization reward hub memberships
+**Response 200 OK** (`application/json`) — Organization reward hub memberships
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1510,6 +1528,7 @@ Complete merchant onboarding — links OWNER membership and platform User role
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_completeOnboarding` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1533,7 +1552,7 @@ Complete merchant onboarding — links OWNER membership and platform User role
 | `taxId` | string | yes | length 1–100 |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Organization linked to the account
+**Response 201 Created** (`application/json`) — Organization linked to the account
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1600,6 +1619,7 @@ Scan status of this onboarding's KYB uploads (same document window as the upload
 - **Public** — no session required.
 - Rate limit: `ONBOARDING_STATUS_THROTTLE_LIMIT` requests per `ONBOARDING_STATUS_THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_documentStatus` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1609,7 +1629,7 @@ Scan status of this onboarding's KYB uploads (same document window as the upload
 | `fileIds` | string (uuid)[] | yes | 1–5 items |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — This onboarding's requested KYB uploads with their scan status
+**Response 201 Created** (`application/json`) — This onboarding's requested KYB uploads with their scan status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1683,6 +1703,7 @@ Attach onboarding KYB documents and submit the merchant for admin review
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_submitDocuments` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1692,7 +1713,7 @@ Attach onboarding KYB documents and submit the merchant for admin review
 | `documentFileIds` | string (uuid)[] | yes | 1–5 items |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Onboarding KYB documents submitted for review
+**Response 201 Created** (`application/json`) — Onboarding KYB documents submitted for review
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1743,6 +1764,7 @@ Complete an invite-authorized KYB document upload
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_completeDocumentUpload` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1753,12 +1775,12 @@ Complete an invite-authorized KYB document upload
 | `fileId` | string (uuid) | yes |  |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Onboarding KYB document upload finalized
+**Response 201 Created** (`application/json`) — Onboarding KYB document upload finalized
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -1823,6 +1845,7 @@ Complete invite-authorized KYB document uploads in one request
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_completeDocumentUploads` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1834,7 +1857,7 @@ Complete invite-authorized KYB document uploads in one request
 | `completions[].fileId` | string (uuid) | yes |  |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Onboarding KYB document uploads finalized
+**Response 201 Created** (`application/json`) — Onboarding KYB document uploads finalized
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1889,6 +1912,7 @@ Create an invite-authorized KYB document upload ticket
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_createDocumentUploadUrl` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1901,7 +1925,7 @@ Create an invite-authorized KYB document upload ticket
 | `sizeBytes` | integer | yes |  |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Signed upload ticket for onboarding KYB documents
+**Response 201 Created** (`application/json`) — Signed upload ticket for onboarding KYB documents
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1966,6 +1990,7 @@ Create invite-authorized KYB document upload tickets in one request
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_createDocumentUploadUrls` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1979,7 +2004,7 @@ Create invite-authorized KYB document upload tickets in one request
 | `files[].sizeBytes` | integer | yes |  |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Signed upload tickets for onboarding KYB documents
+**Response 201 Created** (`application/json`) — Signed upload tickets for onboarding KYB documents
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2053,6 +2078,7 @@ Validate a merchant onboarding invite token
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MerchantOnboardingController_validateInvite` · [source](../../../apps/api/src/modules/rewards/controllers/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2061,7 +2087,7 @@ Validate a merchant onboarding invite token
 | --- | --- | --- | --- |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Invite preview when the token is valid
+**Response 201 Created** (`application/json`) — Invite preview when the token is valid
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2118,6 +2144,7 @@ Get the organization KYB profile (owner only)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationKybController_getProfile` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2126,7 +2153,7 @@ Get the organization KYB profile (owner only)
 | --- | --- | --- | --- | --- |
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** — Organization KYB profile
+**Response 200 OK** (`application/json`) — Organization KYB profile
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2218,6 +2245,7 @@ Submit or resubmit business verification details (owner only)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationKybController_submitKyb` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2239,7 +2267,7 @@ Submit or resubmit business verification details (owner only)
 | `registrationNo` | string | yes | length 1–100 |
 | `taxId` | string | yes | length 1–100 |
 
-**Response 200 OK** — Updated organization KYB profile
+**Response 200 OK** (`application/json`) — Updated organization KYB profile
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2346,6 +2374,7 @@ Get a short-lived signed download URL for a CLEAN KYB document (owner only)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationKybController_downloadDocument` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2356,7 +2385,7 @@ Get a short-lived signed download URL for a CLEAN KYB document (owner only)
 | `documentId` | path | string (uuid) | yes |  |
 | `disposition` | query | "inline" \| "attachment" | no |  |
 
-**Response 200 OK** — Signed download URL or scan status
+**Response 200 OK** (`application/json`) — Signed download URL or scan status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2408,6 +2437,7 @@ List organization rewards
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRewardsController_listRewards` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2417,7 +2447,7 @@ List organization rewards
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Rewards for the organization
+**Response 200 OK** (`application/json`) — Rewards for the organization
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2572,6 +2602,7 @@ Create a draft reward
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRewardsController_createReward` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2604,7 +2635,7 @@ Create a draft reward
 | `termsConditions` | string | no | at most 5000 characters |
 | `title` | string | yes | length 1–200 |
 
-**Response 201 Created** — Created reward
+**Response 201 Created** (`application/json`) — Created reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2747,6 +2778,7 @@ Read one organization reward (404 when not offered at any of the caller's stores
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRewardsController_getReward` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2756,7 +2788,7 @@ Read one organization reward (404 when not offered at any of the caller's stores
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 | `rewardId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Reward
+**Response 200 OK** (`application/json`) — Reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2875,6 +2907,7 @@ Update a draft or pending reward
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRewardsController_updateReward` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -2904,7 +2937,7 @@ Update a draft or pending reward
 | `termsConditions` | string \| null | no | at most 5000 characters |
 | `title` | string | no | length 1–200 |
 
-**Response 200 OK** — Updated reward
+**Response 200 OK** (`application/json`) — Updated reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3032,6 +3065,7 @@ Submit reward for moderation review (no body required)
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRewardsController_publishReward` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -3045,7 +3079,7 @@ Submit reward for moderation review (no body required)
 
 _No fields._
 
-**Response 201 Created** — Reward pending review
+**Response 201 Created** (`application/json`) — Reward pending review
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3171,6 +3205,7 @@ List the organization's POS terminals
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_list` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3185,7 +3220,7 @@ List the organization's POS terminals
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Paginated POS terminals; pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated POS terminals; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3285,6 +3320,7 @@ Register a POS terminal at a store and get its one-time pairing code
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_create` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3301,7 +3337,7 @@ Register a POS terminal at a store and get its one-time pairing code
 | `name` | string | yes | length 1–100 |
 | `terminalId` | string | no | length 1–100; pattern `^[A-Za-z0-9][A-Za-z0-9._:-]*$` |
 
-**Response 201 Created** — Terminal registered; the pairing code is shown once
+**Response 201 Created** (`application/json`) — Terminal registered; the pairing code is shown once
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3383,6 +3419,7 @@ Read one POS terminal (404 outside the caller's stores)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_get` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3392,7 +3429,7 @@ Read one POS terminal (404 outside the caller's stores)
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — POS terminal
+**Response 200 OK** (`application/json`) — POS terminal
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3460,6 +3497,7 @@ Remove a POS terminal and revoke its API key
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_remove` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3469,7 +3507,7 @@ Remove a POS terminal and revoke its API key
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Terminal removed
+**Response 200 OK** (`application/json`) — Terminal removed
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3514,6 +3552,7 @@ Issue a new pairing code (first pairing, expired code, or re-pair — the old ke
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_issuePairingCode` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3527,7 +3566,7 @@ Issue a new pairing code (first pairing, expired code, or re-pair — the old ke
 
 _No fields._
 
-**Response 201 Created** — New pairing code (shown once)
+**Response 201 Created** (`application/json`) — New pairing code (shown once)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3605,6 +3644,7 @@ Read the organization's POS terminal policy
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_getSettings` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3613,7 +3653,7 @@ Read the organization's POS terminal policy
 | --- | --- | --- | --- | --- |
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** — POS terminal settings
+**Response 200 OK** (`application/json`) — POS terminal settings
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3657,6 +3697,7 @@ Turn 'only allow registered terminals' on or off
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_updateSettings` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3671,7 +3712,7 @@ Turn 'only allow registered terminals' on or off
 | --- | --- | --- | --- |
 | `requireRegisteredTerminals` | boolean | yes |  |
 
-**Response 200 OK** — POS terminal settings updated
+**Response 200 OK** (`application/json`) — POS terminal settings updated
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3720,6 +3761,7 @@ Count the organization's live POS terminals per status, within the caller's stor
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationTerminalsController_summary` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Parameters**
@@ -3729,7 +3771,7 @@ Count the organization's live POS terminals per status, within the caller's stor
 | `orgSlug` | path | string \| string (uuid) | yes |  |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Terminal counts per status and stores covered
+**Response 200 OK** (`application/json`) — Terminal counts per status and stores covered
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3785,6 +3827,7 @@ List organization API keys
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationApiKeysController_listKeys` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -3799,7 +3842,7 @@ List organization API keys
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: revokedAt |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Paginated API key summaries; pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated API key summaries; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3890,6 +3933,7 @@ Create a POS API key
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationApiKeysController_createKey` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -3906,7 +3950,7 @@ Create a POS API key
 | `name` | string | no | length 1–100 |
 | `scope` | "POS" \| "INTEGRATION" | no | default `"POS"` |
 
-**Response 201 Created** — API key created (shown once)
+**Response 201 Created** (`application/json`) — API key created (shown once)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3965,6 +4009,7 @@ Revoke a POS API key (no body required)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationApiKeysController_revokeKey` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -3978,7 +4023,7 @@ Revoke a POS API key (no body required)
 
 _No fields._
 
-**Response 201 Created** — API key revoked
+**Response 201 Created** (`application/json`) — API key revoked
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -4028,6 +4073,7 @@ List organization redemptions
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationRedemptionsController_listRedemptions` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -4042,7 +4088,7 @@ List organization redemptions
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: redeemedAt |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Paginated redemption history
+**Response 200 OK** (`application/json`) — Paginated redemption history
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -4120,6 +4166,7 @@ Organization reward performance analytics
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationAnalyticsController_getAnalytics` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -4131,7 +4178,7 @@ Organization reward performance analytics
 | `to` | query | integer | no |  |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Summary metrics, trends, and top rewards
+**Response 200 OK** (`application/json`) — Summary metrics, trends, and top rewards
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -4305,6 +4352,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `OrganizationAnalyticsController_getDashboard` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**
@@ -4317,7 +4365,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 | `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Merchant analytics dashboard
+**Response 200 OK** (`application/json`) — Merchant analytics dashboard
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -4556,6 +4604,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Also accepts an **INTEGRATION-scope merchant API key**.
+- Content type: no request body; returns `application/pdf` · `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` · `text/csv; charset=utf-8` (errors are always `application/json`)
 - Operation id `OrganizationAnalyticsController_exportReport` · [source](../../../apps/api/src/modules/rewards/controllers/organization-rewards.controller.ts)
 
 **Parameters**

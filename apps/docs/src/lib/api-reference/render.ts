@@ -261,6 +261,19 @@ function renderSample(endpoint: Endpoint, inputs: ApiReferenceInputs): string {
 	return parts.join("\n");
 }
 
+/**
+ * What an endpoint accepts and returns. JSON unless the operation says
+ * otherwise: the API reads and writes `application/json` everywhere (errors
+ * included), so only a file upload or download names another type.
+ */
+export function contentTypeLine(endpoint: Endpoint): string {
+	const requestTypes = Object.keys(endpoint.operation.requestBody?.content ?? {});
+	const accepts = requestTypes.length === 0 ? "no request body" : `accepts ${requestTypes.map((mediaType) => code(mediaType)).join(" · ")}`;
+	const responseTypes = successResponse(endpoint)?.mediaTypes ?? [];
+	const returns = (responseTypes.length === 0 ? [JSON_MEDIA_TYPE] : responseTypes).map((mediaType) => code(mediaType)).join(" · ");
+	return `Content type: ${accepts}; returns ${returns} (errors are always ${code(JSON_MEDIA_TYPE)})`;
+}
+
 function renderEndpoint(endpoint: Endpoint, inputs: ApiReferenceInputs): string {
 	const registry: SchemaRegistry = inputs.document.components.schemas;
 	const { operation } = endpoint;
@@ -271,6 +284,7 @@ function renderEndpoint(endpoint: Endpoint, inputs: ApiReferenceInputs): string 
 	if (operation.description !== undefined) parts.push(operation.description, "");
 	parts.push(...accessLines(endpoint, access).map((line) => `- ${line}`));
 	parts.push(...behaviourLines(access, endpoint.method).map((line) => `- ${line}`));
+	parts.push(`- ${contentTypeLine(endpoint)}`);
 	parts.push(`- Operation id ${code(operation.operationId)}${access === undefined ? "" : ` · [source](../../../${access.sourceFile})`}`, "");
 
 	const parameters = operation.parameters.filter((parameter) => parameter.in !== "cookie");
@@ -290,7 +304,7 @@ function renderEndpoint(endpoint: Endpoint, inputs: ApiReferenceInputs): string 
 	if (success !== undefined) {
 		const label = `${success.status} ${HTTP_STATUS_TEXT[success.status] ?? ""}`.trim();
 		if (success.schema !== undefined && success.mediaType === JSON_MEDIA_TYPE) {
-			parts.push(`**Response ${label}** — ${success.description}`, "", fieldTable(responseRows(success.schema, registry)));
+			parts.push(`**Response ${label}** (${code(JSON_MEDIA_TYPE)}) — ${success.description}`, "", fieldTable(responseRows(success.schema, registry)));
 		} else {
 			const mediaTypes = success.mediaTypes.map((mediaType) => code(mediaType)).join(" · ");
 			parts.push(`**Response ${label}** — ${success.description}${mediaTypes.length === 0 ? "" : ` (${mediaTypes})`}`, "");
@@ -349,6 +363,8 @@ function renderIndex(byPage: ReadonlyMap<ReferencePage, readonly Endpoint[]>, in
 		"# API reference",
 		"",
 		`Every endpoint of \`apps/api\` — ${String(total)} operations, ${String(captured)} with a sample captured from a freshly seeded API (\`${inputs.samples.capturedFrom}\`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the \`X-Client-Type\` and \`X-Mutation-Intent\` headers, errors and list queries apply to every endpoint below.`,
+		"",
+		`**Content type.** Every endpoint takes and returns ${code(JSON_MEDIA_TYPE)} unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always ${code(JSON_MEDIA_TYPE)}.`,
 		"",
 		"> [!NOTE]",
 		"> This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).",

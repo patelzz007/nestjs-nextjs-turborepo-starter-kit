@@ -36,4 +36,18 @@ describe("Button", () => {
 		await render(<Button ref={ref} label="Go" variant="ghost" onPress={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});
+
+	it("has a compact size whose touch area still reaches 44 pt", async () => {
+		await render(<Button label="View on GitHub" size="sm" onPress={jest.fn()} />);
+
+		const button = screen.getByRole("button", { name: "View on GitHub" });
+		expect(button).toHaveProp("className", expect.stringContaining("min-h-9"));
+		expect(button).toHaveProp("hitSlop", 4);
+	});
+
+	it("keeps its label on one line, whatever width it is given", async () => {
+		await render(<Button label="Review changes" variant="secondary" onPress={jest.fn()} />);
+
+		expect(screen.getByText("Review changes")).toHaveProp("numberOfLines", 1);
+	});
 });

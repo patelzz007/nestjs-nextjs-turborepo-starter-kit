@@ -23,6 +23,7 @@ How these endpoints fit together: [Object storage guide](../storage/overview.md)
 Get file metadata
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_getFile` · [source](../../../apps/api/src/modules/files/controllers/files.controller.ts)
 
 **Parameters**
@@ -31,12 +32,12 @@ Get file metadata
 | --- | --- | --- | --- | --- |
 | `fileId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — File metadata
+**Response 200 OK** (`application/json`) — File metadata
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -95,6 +96,7 @@ Soft-delete a file and queue physical deletion
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_deleteFile` · [source](../../../apps/api/src/modules/files/controllers/files.controller.ts)
 
 **Parameters**
@@ -103,7 +105,7 @@ Soft-delete a file and queue physical deletion
 | --- | --- | --- | --- | --- |
 | `fileId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — File queued for deletion
+**Response 200 OK** (`application/json`) — File queued for deletion
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -147,6 +149,7 @@ Complete a direct upload after browser upload
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_completeUpload` · [source](../../../apps/api/src/modules/files/controllers/files.controller.ts)
 
 **Parameters**
@@ -161,12 +164,12 @@ Complete a direct upload after browser upload
 | --- | --- | --- | --- |
 | `checksumSha256` | string | yes | exactly 64 characters |
 
-**Response 201 Created** — Upload verified and queued for processing
+**Response 201 Created** (`application/json`) — Upload verified and queued for processing
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |
@@ -230,6 +233,7 @@ Response `201 Created` (application/json):
 Get a short-lived download URL for a private file
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_getDownloadUrl` · [source](../../../apps/api/src/modules/files/controllers/files.controller.ts)
 
 **Parameters**
@@ -238,7 +242,7 @@ Get a short-lived download URL for a private file
 | --- | --- | --- | --- | --- |
 | `fileId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Signed download URL
+**Response 200 OK** (`application/json`) — Signed download URL
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -287,6 +291,7 @@ Serve a READY public asset from local storage (development only)
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localPublic` · [source](../../../apps/api/src/modules/files/controllers/local-storage-transfer.controller.ts)
 
 **Parameters**
@@ -323,6 +328,7 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localUpload` · [source](../../../apps/api/src/modules/files/controllers/local-storage-transfer.controller.ts)
 
 **Parameters**
@@ -331,7 +337,7 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 | --- | --- | --- | --- | --- |
 | `fileId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Local upload stored
+**Response 201 Created** (`application/json`) — Local upload stored
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -380,6 +386,7 @@ Serve a rendition of a READY public image from local storage (development only)
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localPublicVariant` · [source](../../../apps/api/src/modules/files/controllers/local-storage-transfer.controller.ts)
 
 **Parameters**
@@ -407,6 +414,7 @@ Download a private object through a signed, expiring local-storage link (develop
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localDownload` · [source](../../../apps/api/src/modules/files/controllers/local-storage-transfer.controller.ts)
 
 **Parameters**
@@ -444,6 +452,7 @@ Applies an out-of-process scanner/processing result. Accepted only while the fil
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_processingCallback` · [source](../../../apps/api/src/modules/files/controllers/files.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -462,7 +471,7 @@ Applies an out-of-process scanner/processing result. Accepted only while the fil
 | `variants[].publicUrl` | string \| null | yes |  |
 | `variants[].sizeBytes` | integer | yes |  |
 
-**Response 201 Created** — Processing result applied
+**Response 201 Created** (`application/json`) — Processing result applied
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -510,6 +519,7 @@ Create a browser upload ticket
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_createUploadUrl` · [source](../../../apps/api/src/modules/files/controllers/files.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -517,7 +527,7 @@ Create a browser upload ticket
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `assetType` | "LOGO" \| "BANNER" | no |  |
-| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" | yes |  |
+| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" | yes |  |
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
@@ -526,7 +536,7 @@ Create a browser upload ticket
 | `sizeBytes` | integer | yes |  |
 | `userId` | string (uuid) | no |  |
 
-**Response 201 Created** — Browser upload ticket created
+**Response 201 Created** (`application/json`) — Browser upload ticket created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

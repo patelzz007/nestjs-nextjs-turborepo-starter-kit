@@ -30,19 +30,23 @@ src/
     _layout.tsx      root layout: stylesheet, app runtime, root guard
     config-error.tsx, update-required.tsx, lock.tsx
     (auth)/          sign-in, verify-device, two-factor, sign-up, forgot-password, enroll-two-factor, verify-email
-    (app)/           tabs: index (Home), analytics (sample data), search (placeholder), profile/ (index, commit), settings/ (index, appearance, security,
+    (app)/           tabs: index (Home), analytics (sample data), search (placeholder), profile/ (index, commit, and the pull-request
+                     screens: pull-requests, pull-request, pull-request-files, pull-request-commits, pull-request-commit, github-account), settings/ (index, appearance, security,
                      devices, app-lock, two-factor) — under the floating tab bar
   components/        presentational: data-agnostic, controlled, accessible, token-styled
   features/          session (root guard state machine), preferences (theme, app lock settings), app-lock,
                      auth (login steps, sign out, refresh), two-factor (enrollment flow), devices, profile,
                      github (the Profile's GitHub contributions section and a commit's diff screen),
+                     github-pull-requests (an admin's GitHub pull requests with their own token: list, conversation,
+                     files with line-comment threads, commits and their diffs, edit histories, comments and reviews
+                     posted to GitHub, the token screen — ADR 052),
                      analytics (the Analytics tab: range presets, sample history, dashboard and insights, presentation — ADR 048),
                      navigation (the tab registry, the screens' header titles, the tab bar adapter, the app drawer),
                      app-shell (every signed-in screen's frame: status, drawer and the page header — ADR 046),
                      app-drawer (the drawer's open state), app-status (online / offline and the access
                      token countdown — the admin topbar's indicators, in the page header and the drawer)
   lib/               env, api client, Secure Store registry + token provider, app version, device headers,
-                     query client, error messages, the feature-store toolkit (lib/state), motion springs,
+                     query client, error messages, idempotency keys for writes, the feature-store toolkit (lib/state), motion springs,
                      haptics, keyboard visibility, tab-bar clearance
   runtime/           the app runtime built once per start, the providers, the root guard, route names
   app-tests/         the route screens' tests, mirroring src/app — NEVER put a file other than a
@@ -84,17 +88,17 @@ dev machine's address: set `EXPO_PUBLIC_API_URL` to an address the phone can rea
 
 ### Commands
 
-| Command | What it does |
-| --- | --- |
-| `pnpm --filter @workspace/mobile dev` | `expo start` (same as `pnpm dev:mobile` from the root) |
-| `pnpm --filter @workspace/mobile lint` | ESLint, zero warnings |
-| `pnpm --filter @workspace/mobile typecheck` | `tsc --noEmit` with the repo's strict flags |
-| `pnpm --filter @workspace/mobile test` | jest-expo suites, then `expo install --check` (SDK version drift fails) |
-| `pnpm --filter @workspace/mobile build` | `expo export --platform ios --platform android` into `dist/` — the CI bundle check (no Xcode / Android Studio needed) |
+| Command                                     | What it does                                                                                                          |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @workspace/mobile dev`       | `expo start` (same as `pnpm dev:mobile` from the root)                                                                |
+| `pnpm --filter @workspace/mobile lint`      | ESLint, zero warnings                                                                                                 |
+| `pnpm --filter @workspace/mobile typecheck` | `tsc --noEmit` with the repo's strict flags                                                                           |
+| `pnpm --filter @workspace/mobile test`      | jest-expo suites, then `expo install --check` (SDK version drift fails)                                               |
+| `pnpm --filter @workspace/mobile build`     | `expo export --platform ios --platform android` into `dist/` — the CI bundle check (no Xcode / Android Studio needed) |
 
 ### Adding a dependency
 
-- **Expo-managed** (anything `npx expo install` knows — expo-*, react-native-*, React itself):
+- **Expo-managed** (anything `npx expo install` knows — expo-_, react-native-_, React itself):
   `cd apps/mobile && npx expo install <package>`. Never `pnpm add` them: the SDK pins their versions
   and `expo install --check` fails on drift.
 - **Everything else**: `pnpm --filter @workspace/mobile add <package>@<latest stable>`.
@@ -123,7 +127,8 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
   [`rules/27`](../../rules/27-array-index-readability.md), [`rules/28`](../../rules/28-runtime-validation.md).
 - Tests: jest-expo, the one exception to Vitest — [`rules/11`](../../rules/11-testing-vitest.md#the-one-exception-to-vitest-appsmobile-uses-jest-expo).
   Screens are tested inside Expo Router's test router with the real runtime (`renderInApp`); only
-  `fetch` and native modules are faked.
+  `fetch` and native modules are faked (`jest.setup.ts`: the secure store, network, crypto, files and
+  uploads in `test/expo-file-system-fake.ts`, the photo library in `test/expo-image-picker-fake.ts`).
 - Styling: Uniwind token utilities only ([ADR 032](../../docs/adr/032-uniwind-for-mobile-styling.md));
   tokens come from `packages/tokens` (`pnpm tokens:generate`), never edited here.
 - Third-party components ignore `className` until wrapped with `withUniwind` (see
@@ -227,15 +232,15 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
 `EXPO_PUBLIC_*` values are bundled into the app and are **public** — never put a secret there.
 Details: [`docs/technical/configuration/frontend.md` §10](../../docs/technical/configuration/frontend.md#10-the-mobile-app-appsmobile).
 
-| Variable | Purpose | Required |
-| --- | --- | --- |
-| `EXPO_PUBLIC_API_URL` | The API's absolute URL (`https://` outside development) | Outside development |
-| `EXPO_PUBLIC_API_PORT` | Development: the API's port on the dev machine (default `8080`) | No |
-| `EXPO_PUBLIC_IOS_STORE_URL` / `EXPO_PUBLIC_ANDROID_STORE_URL` | Store pages for the update screen | No |
-| `MOBILE_APP_NAME` | Display name (default `Starter`) | No |
-| `MOBILE_APP_SLUG` | Expo slug (default `starter`) | No |
-| `MOBILE_BUNDLE_ID` | iOS bundle id and Android package (default `com.example.starter`) | No |
-| `MOBILE_SCHEME` | Deep-link scheme (default `starter`) | No |
+| Variable                                                      | Purpose                                                           | Required            |
+| ------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------- |
+| `EXPO_PUBLIC_API_URL`                                         | The API's absolute URL (`https://` outside development)           | Outside development |
+| `EXPO_PUBLIC_API_PORT`                                        | Development: the API's port on the dev machine (default `8080`)   | No                  |
+| `EXPO_PUBLIC_IOS_STORE_URL` / `EXPO_PUBLIC_ANDROID_STORE_URL` | Store pages for the update screen                                 | No                  |
+| `MOBILE_APP_NAME`                                             | Display name (default `Starter`)                                  | No                  |
+| `MOBILE_APP_SLUG`                                             | Expo slug (default `starter`)                                     | No                  |
+| `MOBILE_BUNDLE_ID`                                            | iOS bundle id and Android package (default `com.example.starter`) | No                  |
+| `MOBILE_SCHEME`                                               | Deep-link scheme (default `starter`)                              | No                  |
 
 ### Configuration
 
@@ -246,14 +251,14 @@ restart Expo / rebuild.
 
 ## Expo Go limitations
 
-| Limitation | Effect here |
-| --- | --- |
-| No Face ID in Expo Go (iPhone) | The app lock uses the **device passcode** instead. Expected, not a bug; a real build uses Face ID (`faceIDPermission` is set in `app.config.ts`). Android uses fingerprint / face as enrolled. |
-| No remote push notifications | Push is out of scope |
-| No universal / app links | Email links (verification, password reset) open the web pages |
-| No custom native modules | Only modules Expo Go ships are used |
-| Icons and splash screens are Expo Go's | Verify them in a real build |
-| Simulators/emulators | Biometric enrollment is simulated; check the app lock on real phones |
+| Limitation                             | Effect here                                                                                                                                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No Face ID in Expo Go (iPhone)         | The app lock uses the **device passcode** instead. Expected, not a bug; a real build uses Face ID (`faceIDPermission` is set in `app.config.ts`). Android uses fingerprint / face as enrolled. |
+| No remote push notifications           | Push is out of scope                                                                                                                                                                           |
+| No universal / app links               | Email links (verification, password reset) open the web pages                                                                                                                                  |
+| No custom native modules               | Only modules Expo Go ships are used                                                                                                                                                            |
+| Icons and splash screens are Expo Go's | Verify them in a real build                                                                                                                                                                    |
+| Simulators/emulators                   | Biometric enrollment is simulated; check the app lock on real phones                                                                                                                           |
 
 App-lock limits worth knowing: "biometrics changed" is detected from what `expo-local-authentication`
 exposes (the enrolled security level and authentication types). It notices biometrics being
@@ -264,14 +269,14 @@ before it paints — a real build can add `FLAG_SECURE` (`expo-screen-capture`) 
 
 ## Next steps (not in the starter)
 
-| Next step | Where it plugs in |
-| --- | --- |
-| Push notifications | Needs a development build and a push provider decision; a notification module in the API; ask for permission in context (rules/04) |
-| Offline mode | TanStack Query persistence + an ADR on conflicts, retries and storage encryption (rules/04, "Offline behavior") |
-| Deep links / universal links | `MOBILE_SCHEME` is set; add associated domains in a real build; validate every link's params with zod |
-| Mobile end-to-end tests | Maestro flows in `apps/mobile/e2e`, run against a development build |
-| Approximate location in the device list | The API's `SessionLocationResolver` adapter (GeoIP provider is a pending decision) |
-| EAS builds and store submission | Add `eas.json` with `development` / `preview` / `production` profiles; set `EXPO_PUBLIC_API_URL` and the store URLs per profile; crash reporting before the first store build |
-| Avatar upload from the phone | The web profile uploads through the file pipeline (`POST /files/upload-url` → `complete`); the phone shows the avatar but does not upload yet (needs `expo-image-picker`) |
-| Search | Replace `src/app/(app)/search.tsx` (a `ComingSoon` placeholder) with a search field and results from the product's own source; server-backed search needs a contract, an authorized paginated endpoint and a TanStack Query screen |
-| Leaving Expo Go | `npx expo run:ios` / `run:android` (or EAS) for development builds; native folders stay generated (`npx expo prebuild`), never committed |
+| Next step                               | Where it plugs in                                                                                                                                                                                                                  |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Push notifications                      | Needs a development build and a push provider decision; a notification module in the API; ask for permission in context (rules/04)                                                                                                 |
+| Offline mode                            | TanStack Query persistence + an ADR on conflicts, retries and storage encryption (rules/04, "Offline behavior")                                                                                                                    |
+| Deep links / universal links            | `MOBILE_SCHEME` is set; add associated domains in a real build; validate every link's params with zod                                                                                                                              |
+| Mobile end-to-end tests                 | Maestro flows in `apps/mobile/e2e`, run against a development build                                                                                                                                                                |
+| Approximate location in the device list | The API's `SessionLocationResolver` adapter (GeoIP provider is a pending decision)                                                                                                                                                 |
+| EAS builds and store submission         | Add `eas.json` with `development` / `preview` / `production` profiles; set `EXPO_PUBLIC_API_URL` and the store URLs per profile; crash reporting before the first store build                                                      |
+| Avatar upload from the phone            | The phone uploads through the same file pipeline already (`src/lib/file-upload.ts`, used for GitHub comment pictures, with `expo-image-picker`); the avatar needs a square crop before `USER_AVATAR` accepts it                    |
+| Search                                  | Replace `src/app/(app)/search.tsx` (a `ComingSoon` placeholder) with a search field and results from the product's own source; server-backed search needs a contract, an authorized paginated endpoint and a TanStack Query screen |
+| Leaving Expo Go                         | `npx expo run:ios` / `run:android` (or EAS) for development builds; native folders stay generated (`npx expo prebuild`), never committed                                                                                           |

@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { EmailPreviewListResponse } from "@workspace/shared";
+import { IDEMPOTENCY_KEY_HEADER, type EmailPreviewListResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiRequestContext } from "../request";
 import { apiRouter } from "../router";
 import { jsonResponse, type FetchImpl } from "../testing";
-import { createQueryProcedure } from "./hooks";
+import { createMutationProcedure, createQueryProcedure } from "./hooks";
 
 const CONTEXT: ApiRequestContext = { baseUrl: "http://api.test", clientType: "admin" };
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
@@ -99,5 +99,56 @@ describe("ClientQueryProcedure.usePrefetch", () => {
 			expect(fetchMock).toHaveBeenCalledTimes(1);
 		});
 		expect(queryClient.getQueryData(apiRouter.email.previewList.queryKey(undefined))).toBeUndefined();
+	});
+});
+
+describe("ClientMutationProcedure.useIdempotentMutation", () => {
+	const PULL_REQUEST = { owner: "octo-org", repository: "hello-world", number: 42 };
+	const COMMENT = {
+		id: "IC_new",
+		author: { login: "octocat", avatarUrl: null },
+		body: "Thanks!",
+		images: [],
+		reactions: [],
+		reactionSubject: { type: "issueComment", commentId: "6186769145" },
+		createdAt: META.timestamp,
+		lastEditedAt: null,
+		viewerCanUpdate: true,
+		viewerDidAuthor: true,
+		htmlUrl: "https://github.com/octo-org/hello-world/pull/42#issuecomment-1",
+	};
+	const addComment = createMutationProcedure(CONTEXT, apiRouter.githubPullRequests.addComment);
+
+	function headerOf(call: Parameters<FetchImpl>, name: string): string | null {
+		const [, init] = call;
+		return new Headers(init?.headers).get(name);
+	}
+
+	it("sends the call's key as the Idempotency-Key header, and the same key again on a retry", async () => {
+		const fetchMock = vi.fn<FetchImpl>(() => Promise.resolve(jsonResponse(201, { success: true, data: COMMENT, meta: META })));
+		vi.stubGlobal("fetch", fetchMock);
+		const { result } = renderHook(() => addComment.useIdempotentMutation(), { wrapper: wrapperFor(new QueryClient()) });
+
+		await act(async (): Promise<void> => {
+			await result.current.mutateAsync({ input: { ...PULL_REQUEST, body: "Thanks!" }, idempotencyKey: "draft-key-0001" });
+			await result.current.mutateAsync({ input: { ...PULL_REQUEST, body: "Thanks!" }, idempotencyKey: "draft-key-0001" });
+		});
+
+		expect(fetchMock.mock.calls.map((call) => headerOf(call, IDEMPOTENCY_KEY_HEADER))).toEqual(["draft-key-0001", "draft-key-0001"]);
+		await waitFor((): void => {
+			expect(result.current.data?.data).toEqual(COMMENT);
+		});
+	});
+
+	it("sends no key from a plain useMutation", async () => {
+		const fetchMock = vi.fn<FetchImpl>(() => Promise.resolve(jsonResponse(201, { success: true, data: COMMENT, meta: META })));
+		vi.stubGlobal("fetch", fetchMock);
+		const { result } = renderHook(() => addComment.useMutation(), { wrapper: wrapperFor(new QueryClient()) });
+
+		await act(async (): Promise<void> => {
+			await result.current.mutateAsync({ ...PULL_REQUEST, body: "Thanks!" });
+		});
+
+		expect(fetchMock.mock.calls.map((call) => headerOf(call, IDEMPOTENCY_KEY_HEADER))).toEqual([null]);
 	});
 });

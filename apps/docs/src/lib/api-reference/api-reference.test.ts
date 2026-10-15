@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { extractEndpointAccess } from "./endpoint-access";
 import { ApiSamplesFileSchema, isCapturedSample, listEndpoints, OpenApiDocumentSchema, type Endpoint } from "./openapi";
 import { pageForTags, REFERENCE_PAGES } from "./pages";
-import { accessLines, endpointHeading, headingAnchor, renderApiReference } from "./render";
+import { accessLines, contentTypeLine, endpointHeading, headingAnchor, renderApiReference } from "./render";
 import { constraintNotes, resolveSchema, schemaRows, typeLabel } from "./schema-table";
 
 const CONTROLLER = `
@@ -213,6 +213,31 @@ describe("renderApiReference", () => {
 		});
 		const pos = renderApiReference({ document, access: ACCESS, samples: SAMPLES }).get("pos.md") ?? "";
 		expect(pos).toContain("**Response 200 OK** — The report file (`text/csv` · `application/pdf`)");
+	});
+
+	it("states every endpoint's content type: JSON unless the operation names another", () => {
+		expect(contentTypeLine(endpoint("RedemptionsController_checkout"))).toBe(
+			"Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)",
+		);
+		const files = renderApiReference({ document: DOCUMENT, access: ACCESS, samples: SAMPLES });
+		expect(files.get("pos.md")).toContain("- Content type: accepts `application/json`; returns `application/json`");
+		expect(files.get("pos.md")).toMatch(/\*\*Response 2\d\d [A-Za-z ]+\*\* \(`application\/json`\) — /u);
+	});
+
+	it("says a body-less endpoint takes no request body, and names a download's own types", () => {
+		const document = OpenApiDocumentSchema.parse({
+			paths: {
+				"/api/v1/redemptions/export": {
+					get: {
+						operationId: "RedemptionsController_checkout",
+						tags: ["Redemptions"],
+						responses: { "200": { description: "The report file", content: { "text/csv": { schema: { type: "string", format: "binary" } } } } },
+					},
+				},
+			},
+		});
+		const pos = renderApiReference({ document, access: ACCESS, samples: SAMPLES }).get("pos.md") ?? "";
+		expect(pos).toContain("- Content type: no request body; returns `text/csv` (errors are always `application/json`)");
 	});
 
 	it("refuses an operation whose tag has no page", () => {

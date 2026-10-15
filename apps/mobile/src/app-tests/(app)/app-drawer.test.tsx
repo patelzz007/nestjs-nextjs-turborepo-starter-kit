@@ -1,8 +1,8 @@
 import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 
-import { ok, stubApi } from "../../../test/api-stub";
+import { fail, ok, stubApi } from "../../../test/api-stub";
 import { createTestRuntime, markerScreen, renderInApp } from "../../../test/app-harness";
-import { profileJson, userJson } from "../../../test/fixtures";
+import { githubAccountLinkedJson, profileJson, userJson } from "../../../test/fixtures";
 import { testAccessToken } from "../../../test/jwt";
 import { memorySecureStore } from "../../../test/secure-store-memory";
 import AppTabsLayout from "../../app/(app)/_layout";
@@ -10,6 +10,7 @@ import HomeScreen from "../../app/(app)/index";
 import SearchScreen from "../../app/(app)/search";
 // The whole module: the router reads `unstable_settings` (Settings first in its stack) from it, as in the app.
 import * as SettingsLayoutModule from "../../app/(app)/settings/_layout";
+import * as ProfileLayoutModule from "../../app/(app)/profile/_layout";
 
 /** Long enough for a tab switch's transition to have run its course. */
 const SWITCH_SETTLED_MS = 1000;
@@ -192,5 +193,62 @@ describe("app drawer (ADR 038)", () => {
 		await renderSignedIn("/search");
 
 		expect(await screen.findByRole("button", { name: "Open menu" })).toBeOnTheScreen();
+	});
+});
+
+describe("app drawer: GitHub pull requests (ADR 052)", () => {
+	/** The Profile tab as a stack, so the drawer can push the pull-request screens onto it. */
+	const GITHUB_SCREENS = {
+		"(app)/_layout": AppTabsLayout,
+		"(app)/index": HomeScreen,
+		"(app)/search": SearchScreen,
+		"(app)/settings/_layout": SettingsLayoutModule,
+		"(app)/settings/index": markerScreen("settings screen"),
+		"(app)/profile/_layout": ProfileLayoutModule,
+		"(app)/profile/index": markerScreen("profile screen"),
+		"(app)/profile/pull-requests": markerScreen("pull requests screen"),
+		"(app)/profile/github-account": markerScreen("github token screen"),
+	};
+
+	async function renderWithGithub(): Promise<void> {
+		const runtime = createTestRuntime({}, { status: "signedIn", session: { scope: "full" } });
+		await runtime.tokenProvider.saveTokens({ accessToken: testAccessToken(), refreshToken: "refresh-1" });
+		await renderInApp(runtime, GITHUB_SCREENS, "/");
+	}
+
+	it("shows a GitHub section to someone the API lets use pull requests, with the token's state", async () => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /github/account": ok(githubAccountLinkedJson()) });
+		await renderWithGithub();
+
+		const drawer = await openDrawer();
+
+		expect(await drawer.findByRole("header", { name: "GitHub" })).toBeOnTheScreen();
+		expect(drawer.getByRole("button", { name: "Pull requests" })).toBeOnTheScreen();
+		expect(drawer.getByRole("button", { name: "GitHub token, Linked" })).toBeOnTheScreen();
+	});
+
+	it("opens the pull requests from the drawer", async () => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /github/account": ok({ status: "unlinked" }) });
+		await renderWithGithub();
+		const drawer = await openDrawer();
+
+		await fireEvent.press(await drawer.findByRole("button", { name: "Pull requests" }));
+
+		expect(await screen.findByText("pull requests screen")).toBeOnTheScreen();
+	});
+
+	it.each([
+		["the API refuses them (not an admin)", fail(403, "FORBIDDEN", "Forbidden")],
+		["the server has pull requests off", ok({ status: "off" })],
+	])("hides the GitHub section when %s", async (_case, account) => {
+		stubApi({ "GET /auth/me": ok(userJson()), "GET /auth/profile": ok(profileJson()), "GET /github/account": account });
+		await renderWithGithub();
+
+		const drawer = await openDrawer();
+
+		expect(await drawer.findByRole("header", { name: "Preferences" })).toBeOnTheScreen();
+		await waitFor(() => {
+			expect(drawer.queryByRole("header", { name: "GitHub" })).toBeNull();
+		});
 	});
 });

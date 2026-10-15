@@ -14,6 +14,7 @@
 		"dev:api": "turbo dev --filter @workspace/api --log-prefix=none",
 		"dev:merchant": "turbo dev --filter @workspace/merchant --log-prefix=none",
 		"dev:mobile": "turbo dev --filter @workspace/mobile --log-prefix=none",
+		"dev:tunnel": "python3 apps/api/scripts/start-tunnel.py",
 		"lint": "turbo lint",
 		"format": "turbo format",
 		"typecheck": "turbo typecheck",

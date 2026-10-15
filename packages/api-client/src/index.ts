@@ -47,6 +47,20 @@ export {
 	REQUEST_ABORTED_ERROR,
 	type HttpMethod,
 } from "./http";
+export {
+	FILE_READY_INITIAL_DELAY_MS,
+	FILE_READY_MAX_DELAY_MS,
+	FILE_READY_TIMEOUT_MS,
+	FileProcessingError,
+	FileWaitAbortedError,
+	pollWithBackoff,
+	waitForFileReady,
+	type FileProcessingFailureKind,
+	type FileStatusReader,
+	type PollingOptions,
+	type PollVerdict,
+	type WaitForFileReadyOptions,
+} from "./file-readiness";
 export { createRefreshCooldown, REFRESH_TRANSIENT_COOLDOWN_MS, RefreshResultSchema, type RefreshCall, type RefreshResult } from "./refresh";
 export {
 	createApiRequestContext,
@@ -92,6 +106,10 @@ export {
 	eachRouterEntry,
 	isErasedProcedureDef,
 	isRouterSubtree,
+	GITHUB_PULL_REQUESTS_QUERY_ROOT,
+	githubPullRequestScopeKey,
+	githubPullRequestsRootKey,
+	githubLiveUpdatesKey,
 	mapRouterTree,
 	resolveRequest,
 	type AdminOrganizationScope,
@@ -100,6 +118,7 @@ export {
 	type ErasedMutationDef,
 	type ErasedProcedureDef,
 	type ErasedQueryDef,
+	type GithubPullRequestScope,
 	type GithubRepositoryScope,
 	type MappedRouterTree,
 	type MutationDef,

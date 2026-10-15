@@ -26,7 +26,7 @@ import type { PublicDelivery } from "../../storage/domain/public-delivery.port";
 import { OBJECT_STORAGE, PUBLIC_DELIVERY } from "../../storage/domain/storage.tokens";
 import { buildStagingPath } from "../../storage/utils/file-path.util";
 import { assertAllowedUploadMime, MAGIC_BYTES_PREFIX_LENGTH, UploadContentRejectedError } from "../../storage/utils/magic-bytes.util";
-import { digestStream, readStreamPrefix } from "../../storage/utils/object-stream.util";
+import { digestStream, readStreamFully, readStreamPrefix } from "../../storage/utils/object-stream.util";
 import { legacyBucketFieldsFromLocator, locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { zipArchiveEntryName, zipArchiveStream } from "../../storage/utils/zip-archive.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
@@ -164,8 +164,13 @@ export class FileService {
 	}
 
 	/** Loads a live file record (404 otherwise). Callers authorize the operation before acting on it. */
+	/** A live file, or `null` when there is none (never uploaded, or deleted). */
+	public async findFile(fileId: string): Promise<StoredFile | null> {
+		return this.repository.findById(fileId);
+	}
+
 	public async requireFile(fileId: string): Promise<StoredFile> {
-		const file = await this.repository.findById(fileId);
+		const file = await this.findFile(fileId);
 		if (file === null) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
@@ -191,6 +196,18 @@ export class FileService {
 			downloadUrl,
 			expiresAt: EpochMsSchema.parse(this.config.storage.downloadTtlSeconds * MS_PER_SECOND + Date.now()),
 		};
+	}
+
+	/**
+	 * The bytes of an already-authorized READY file, read whole — for a feature
+	 * that hands the file on (a GitHub comment picture is committed to its
+	 * repository). Refused past `maxBytes` (`StreamTooLargeError`).
+	 */
+	public async readStoredBytes(file: StoredFile, maxBytes: number): Promise<Buffer> {
+		if (file.status !== "READY") {
+			throw new ConflictException({ message: "The file is not ready yet", error: "FILE_NOT_READY" });
+		}
+		return readStreamFully(await this.openStoredObject(file), maxBytes);
 	}
 
 	/**

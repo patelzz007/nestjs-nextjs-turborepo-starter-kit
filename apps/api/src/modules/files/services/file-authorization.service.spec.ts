@@ -123,6 +123,17 @@ describe("FileAuthorizationService uploads", () => {
 		await expect(service.assertCanUpload(actor, input({ userId: "user-2" }))).rejects.toBeInstanceOf(ForbiddenException);
 	});
 
+	it("lets you attach images to GitHub comments only for yourself, with UPDATE:GITHUB_PULL_REQUEST", async () => {
+		const { service } = build();
+
+		await expect(service.assertCanUpload(actor, input({ category: "GITHUB_COMMENT_IMAGE", userId: "user-1" }))).resolves.toBeUndefined();
+		expect(mocks.authorize).toHaveBeenCalledWith({ subject: { userId: "user-1", isSuperAdmin: false }, action: "UPDATE", resource: "GITHUB_PULL_REQUEST" });
+		await expect(service.assertCanUpload(actor, input({ category: "GITHUB_COMMENT_IMAGE", userId: "user-2" }))).rejects.toBeInstanceOf(ForbiddenException);
+
+		mocks.authorize.mockRejectedValue(new AuthorizationException());
+		await expect(service.assertCanUpload(actor, input({ category: "GITHUB_COMMENT_IMAGE", userId: "user-1" }))).rejects.toBeInstanceOf(AuthorizationException);
+	});
+
 	it("requires PRODUCT:UPDATE through the kernel for product images", async () => {
 		mocks.authorize.mockRejectedValue(new AuthorizationException());
 
@@ -235,6 +246,8 @@ describe("FileAuthorizationService existing files", () => {
 		await expect(service.assertCanDelete(actor, storedFile("PRODUCT_IMAGE"))).resolves.toBeUndefined();
 		await expect(service.assertCanRead({ id: "user-2", isSuperAdmin: false }, avatar)).rejects.toBeInstanceOf(ForbiddenException);
 		await expect(service.assertCanDelete({ id: "user-2", isSuperAdmin: false }, avatar)).rejects.toBeInstanceOf(ForbiddenException);
+		await expect(service.assertCanRead(actor, storedFile("GITHUB_COMMENT_IMAGE"))).resolves.toBeUndefined();
+		await expect(service.assertCanDelete({ id: "user-2", isSuperAdmin: false }, storedFile("GITHUB_COMMENT_IMAGE"))).rejects.toBeInstanceOf(ForbiddenException);
 		expect(mocks.membershipFindFirst).not.toHaveBeenCalled();
 	});
 

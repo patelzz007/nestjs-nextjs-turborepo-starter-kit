@@ -15,6 +15,7 @@ import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { EMAIL_LOG_PAGE_SIZE_OPTIONS, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "@/lib/url-state/email-log";
 import { useEmailLogLive } from "@/lib/notifications/email-log-live";
+import { LivePill } from "@/components/common/live-pill";
 import type { LiveState } from "@/lib/notifications/reconnecting-event-stream";
 import { formatDateTime } from "@/lib/format/dates";
 import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
@@ -57,41 +58,6 @@ function EmailStatusBadge({ entry }: { readonly entry: EmailLogEntry }): React.J
 }
 
 // ── Live pill ──────────────────────────────────────────────────────────────
-
-/**
- * Connection indicator for the SSE live stream — a pulsing dot + label.
- * `open` = updates flow instantly; `connecting` = initial connect or an
- * auto-reconnect after a drop; `closed` = not expected to recover.
- */
-function LivePill({ state }: { readonly state: LiveState }): React.JSX.Element {
-	const meta: Readonly<Record<LiveState, { readonly label: string; readonly dot: string; readonly text: string; readonly title: string }>> = {
-		open: {
-			label: "Live",
-			dot: "bg-success",
-			text: "text-success",
-			title: "Connected — the log updates automatically the instant a webhook flips a status.",
-		},
-		connecting: {
-			label: "Connecting…",
-			dot: "bg-warning",
-			text: "text-warning",
-			title: "Connecting to the live stream — updates resume automatically once connected.",
-		},
-		closed: {
-			label: "Offline",
-			dot: "bg-muted-foreground",
-			text: "text-muted-foreground",
-			title: "Live stream unavailable — use Refresh to pull the latest rows.",
-		},
-	};
-	const current = meta[state];
-	return (
-		<span title={current.title} className={`inline-flex items-center gap-1.5 rounded-full border border-input bg-card px-2.5 py-1 text-xs font-medium ${current.text}`}>
-			<span className={`size-1.5 animate-pulse rounded-full ${current.dot}`} />
-			{current.label}
-		</span>
-	);
-}
 
 // ── Smart page component ──────────────────────────────────────────────────
 
@@ -269,7 +235,7 @@ export default function EmailLogPage({ initialPage }: { readonly initialPage?: P
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<LivePill state={liveState} />
+					<LivePill state={liveState} openTitle="Connected — the log updates automatically the instant a webhook flips a status." />
 					<Button variant="outline" size="sm" onClick={handleRefresh} className="gap-1.5">
 						<RefreshCw className="size-3.5" />
 						Refresh

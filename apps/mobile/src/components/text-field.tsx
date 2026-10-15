@@ -35,6 +35,8 @@ export interface TextFieldProps extends PassThroughInputProps {
 	readonly hint?: string;
 	readonly placeholder?: string;
 	readonly testID?: string;
+	/** Several lines (a comment, a review): taller, wrapping, starting at the top. */
+	readonly multiline?: boolean;
 }
 
 /** Border per state: an error outranks focus. Token utilities only. */
@@ -46,7 +48,7 @@ function borderClassOf(hasError: boolean, isFocused: boolean): string {
 }
 
 export const TextField = React.forwardRef<TextInput, TextFieldProps>(function TextField(
-	{ label, value, onChange, normalize, onBlur, onFocus, error, hint, placeholder, testID, secureTextEntry, ...inputProps },
+	{ label, value, onChange, normalize, onBlur, onFocus, error, hint, placeholder, testID, secureTextEntry, multiline = false, ...inputProps },
 	ref,
 ): React.JSX.Element {
 	const hasError = error !== undefined && error.length > 0;
@@ -91,7 +93,9 @@ export const TextField = React.forwardRef<TextInput, TextFieldProps>(function Te
 					testID={testID}
 					secureTextEntry={isMasked}
 					placeholderTextColorClassName="accent-muted-foreground"
-					className={`min-h-12 rounded-xl border bg-card px-3.5 py-3 font-sans text-base text-foreground ${isPassword ? "pr-12" : ""} ${borderClassOf(hasError, isFocused)}`}
+					multiline={multiline}
+					textAlignVertical={multiline ? "top" : "center"}
+					className={`rounded-xl border bg-card px-3.5 py-3 font-sans text-base text-foreground ${multiline ? "min-h-28" : "min-h-12"} ${isPassword ? "pr-12" : ""} ${borderClassOf(hasError, isFocused)}`}
 					{...inputProps}
 				/>
 				{isPassword ? (

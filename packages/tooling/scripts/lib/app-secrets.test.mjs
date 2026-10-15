@@ -6,6 +6,7 @@ import {
 	KEY_RINGS,
 	MFA_KEYS_VARIABLE,
 	REWARD_CODE_HASH_KEYS_VARIABLE,
+	GITHUB_CREDENTIAL_KEYS_VARIABLE,
 	SIGNING_SECRET_BYTES,
 	TENANT_MASTER_KEY,
 	appendKeyRingVersion,
@@ -173,7 +174,7 @@ describe("messages", () => {
 	it("prints a fresh block with a version-1 ring and every variable", () => {
 		const values = fixedValues();
 		const block = formatFreshEnvBlock(values);
-		for (const key of [...APP_SECRET_KEYS, MFA_KEYS_VARIABLE, REWARD_CODE_HASH_KEYS_VARIABLE, TENANT_MASTER_KEY]) {
+		for (const key of [...APP_SECRET_KEYS, MFA_KEYS_VARIABLE, REWARD_CODE_HASH_KEYS_VARIABLE, GITHUB_CREDENTIAL_KEYS_VARIABLE, TENANT_MASTER_KEY]) {
 			expect(block).toContain(`${key}=`);
 		}
 		expect(block).toContain(`${MFA_KEYS_VARIABLE}='${JSON.stringify({ 1: values.keyRingKeys[MFA_KEYS_VARIABLE] })}'`);

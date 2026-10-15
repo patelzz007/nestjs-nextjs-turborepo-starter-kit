@@ -833,6 +833,12 @@ const ColumnVisibilityMenu = memoGeneric(function ColumnVisibilityMenu<TData ext
 interface ColumnFilterSelectProps {
 	readonly filter: Filter;
 	readonly value: string;
+	/**
+	 * Counts are only true on a client-side table, which holds every row. A
+	 * server-paged table holds one page, so "All (50)" would count the page,
+	 * not the matches — it shows plain "All" instead.
+	 */
+	readonly showCounts: boolean;
 	readonly totalFilteredRows: number;
 	readonly facetedCounts: ReadonlyMap<string, number>;
 	readonly onFilterChange: (filterKey: string, value: string | null) => void;
@@ -841,6 +847,7 @@ interface ColumnFilterSelectProps {
 const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 	filter,
 	value,
+	showCounts,
 	totalFilteredRows,
 	facetedCounts,
 	onFilterChange,
@@ -857,19 +864,26 @@ const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 	// selected item's text — faceted count included.
 	const options = useMemo(
 		(): readonly SelectOption<string>[] => [
-			{ value: "all", label: `All (${String(totalFilteredRows)})` },
+			{ value: "all", label: showCounts ? `All (${String(totalFilteredRows)})` : "All" },
 			...filter.options.map((option): SelectOption<string> => {
-				const count = facetedCounts.get(option.value);
+				const count = showCounts ? facetedCounts.get(option.value) : undefined;
 				return { value: option.value, label: count !== undefined ? `${option.label} (${String(count)})` : option.label };
 			}),
 		],
-		[facetedCounts, filter.options, totalFilteredRows],
+		[facetedCounts, filter.options, showCounts, totalFilteredRows],
 	);
 
+	// The filter's name stays visible in front of its choice ("Source: All"), so a row of
+	// dropdowns never reads as a row of identical "All"s.
 	return (
 		<Select<string> value={value} onValueChange={handleValueChange} items={options}>
-			<SelectTrigger className="h-9 w-full text-sm sm:w-44" aria-label={filter.label}>
-				<SelectValue placeholder={filter.label} />
+			<SelectTrigger className="h-9 w-full text-sm sm:w-auto sm:min-w-44" aria-label={filter.label}>
+				<span className="flex min-w-0 items-center gap-1.5">
+					<span className="shrink-0 text-muted-foreground" data-slot="filter-label">
+						{filter.label}:
+					</span>
+					<SelectValue placeholder={filter.label} className="truncate font-medium" />
+				</span>
 			</SelectTrigger>
 			<SelectContent>
 				{options.map((option) => (
@@ -2426,6 +2440,7 @@ export function DataTable<TData extends RowData>({
 										key={filter.key}
 										filter={filter}
 										value={getFilterValue(filter.key)}
+										showCounts={!isServerMode}
 										totalFilteredRows={totalFilteredRows}
 										facetedCounts={isServerMode ? EMPTY_FACETED_COUNTS : (filterFacetedCounts[filter.key] ?? EMPTY_FACETED_COUNTS)}
 										onFilterChange={handleFilterChange}

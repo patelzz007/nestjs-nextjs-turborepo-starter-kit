@@ -1,7 +1,15 @@
+import { Prisma } from "@prisma/client";
 import { AuditTrailListQuerySchema, type AuditTrailListQuery } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { backgroundEntryConditions, buildAuditTrailOrder, buildAuditTrailTimeline, dataChangeGroupKey, requestEntryConditions } from "./audit-trail.repository";
+import {
+	actorSearchSql,
+	backgroundEntryConditions,
+	buildAuditTrailOrder,
+	buildAuditTrailTimeline,
+	dataChangeGroupKey,
+	requestEntryConditions,
+} from "./audit-trail.repository";
 
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -36,7 +44,14 @@ describe("requestEntryConditions", () => {
 	});
 
 	it("matches the search literally — LIKE wildcards in it are escaped", () => {
-		expect(requestEntryConditions(query({ search: "50%_off" })).values).toEqual(["%50\\%\\_off%", "%50\\%\\_off%", "50%_off"]);
+		expect(requestEntryConditions(query({ search: "50%_off" })).values).toEqual(["%50\\%\\_off%", "%50\\%\\_off%", "50%_off", "50%_off", "%50\\%\\_off%", "%50\\%\\_off%"]);
+	});
+
+	it("finds a request by who made it: their user id, or part of their email or name", () => {
+		const conditions = requestEntryConditions(query({ search: "alice@example" }));
+
+		expect(sqlText(conditions)).toContain('a.actor_user_id = $4 OR a.actor_user_id IN (SELECT u.id FROM public.users u WHERE u.email ILIKE $5 OR u."fullName" ILIKE $6)');
+		expect(conditions.values).toEqual(["%alice@example%", "%alice@example%", "alice@example", "alice@example", "%alice@example%", "%alice@example%"]);
 	});
 
 	it("excludes every request when the query asks for background entries", () => {
@@ -89,5 +104,20 @@ describe("dataChangeGroupKey", () => {
 	it("groups by correlation id, else by database transaction", () => {
 		expect(dataChangeGroupKey({ correlationId: "job-1", transactionId: BigInt(5) })).toBe("job-1");
 		expect(dataChangeGroupKey({ correlationId: null, transactionId: BigInt(5) })).toBe("tx:5");
+	});
+});
+
+describe("actorSearchSql", () => {
+	it("matches the actor id exactly and an email or name by part, with LIKE wildcards taken literally", () => {
+		const fragment = actorSearchSql(Prisma.sql`d.actor_user_id`, "a_b");
+		expect(fragment.values).toEqual(["a_b", "%a\\_b%", "%a\\_b%"]);
+	});
+});
+
+describe("backgroundEntryConditions search", () => {
+	it("keeps a job whole when any of its changes was made by the person searched for", () => {
+		const conditions = backgroundEntryConditions(query({ search: ACTOR_ID }));
+
+		expect(sqlText(conditions?.groups ?? { text: "" })).toContain("d.actor_user_id IN (SELECT u.id FROM public.users u WHERE u.email ILIKE");
 	});
 });

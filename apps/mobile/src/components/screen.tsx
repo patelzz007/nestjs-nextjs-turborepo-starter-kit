@@ -8,11 +8,14 @@
 // update) the screen draws its own title at the top of the content.
 
 import * as React from "react";
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
+import { KeyboardAvoidingView } from "./keyboard-avoiding-view";
+
 import { usePageHeaderClearance } from "../lib/page-header-clearance";
+import { useKeyboardVisible } from "../lib/use-keyboard-visible";
 import { useTabBarClearance } from "../lib/use-tab-bar-clearance";
 import { Heading, MutedText } from "./text";
 
@@ -35,12 +38,12 @@ export interface ScreenProps {
  */
 const StyledSafeAreaView = withUniwind(SafeAreaView);
 
-/** iOS lifts the content above the keyboard by padding; Android resizes the window itself. */
-const KEYBOARD_BEHAVIOR = Platform.select<"padding" | undefined>({ ios: "padding", default: undefined });
-
 export function Screen({ title, description, children, refreshing = false, onRefresh, testID }: ScreenProps): React.JSX.Element {
 	// Inside the tabs, the floating tab bar covers the bottom of the screen: the content ends above it.
-	const tabBarClearance = useTabBarClearance();
+	const barClearance = useTabBarClearance();
+	// While the keyboard is up it covers the tab bar: the room kept for the bar would only be empty space above the keyboard.
+	const keyboardVisible = useKeyboardVisible();
+	const tabBarClearance = keyboardVisible ? 0 : barClearance;
 	const clearanceStyle = React.useMemo((): { readonly height: number } => ({ height: tabBarClearance }), [tabBarClearance]);
 	// Inside the app shell the header covers the top (status bar included): the content starts below it.
 	const headerClearance = usePageHeaderClearance();
@@ -58,7 +61,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 	return (
 		<StyledSafeAreaView edges={hasHeader ? ["left", "right"] : ["top", "left", "right"]} className="flex-1 bg-background" testID={testID}>
 			<View className="flex-1">
-				<KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} className="flex-1">
+				<KeyboardAvoidingView className="flex-1">
 					<ScrollView
 						testID={testID === undefined ? undefined : `${testID}-content`}
 						keyboardShouldPersistTaps="handled"

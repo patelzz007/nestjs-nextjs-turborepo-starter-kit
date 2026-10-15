@@ -15,7 +15,8 @@ export function stripFileExtension(fileName: string): string {
 	return fileName.slice(0, lastDot);
 }
 
-function extensionForMimeType(mimeType: string): string {
+/** The file extension object keys use for a type (`jpg`, `png`, …). */
+export function extensionForMimeType(mimeType: string): string {
 	if (mimeType === "image/jpeg") {
 		return "jpg";
 	}
@@ -66,6 +67,7 @@ const CATEGORY_KEY_LAYOUT: Readonly<Record<FileCategory, CategoryKeyLayout>> = {
 	USER_AVATAR: { root: "users", folder: "avatar", variantsReplaceFolder: false },
 	MERCHANT_KYB: { root: "kyb", folder: null, variantsReplaceFolder: false },
 	REWARD_IMAGE: { root: "stores", folder: "reward-images", variantsReplaceFolder: false },
+	GITHUB_COMMENT_IMAGE: { root: "users", folder: "github-comment-images", variantsReplaceFolder: false },
 };
 
 /** `<root>/<ownerId>[/<folder>]` — the directory a category's original files live in. */

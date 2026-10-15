@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { API_VERSION_PREFIX, apiRoutes, AuditTrailEntrySchema, JsonValueSchema, LIST_SLOT_INDEX } from "@workspace/shared";
-import { Pool } from "pg";
+import { Client, Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -90,6 +90,26 @@ describe("Audit trail timeline (e2e)", () => {
 		expect(entry?.changeCount).toBeGreaterThan(0);
 	});
 
+	it("finds a request by who made it: part of their email, part of their name, or their user id", async () => {
+		const response = await app.inject({
+			method: "POST",
+			url: `${API_VERSION_PREFIX}/geo/regions`,
+			headers: mutationHeaders({ cookie: cookie(superAdmin) }),
+			payload: { name: `${REGION_PREFIX}${randomUUID().slice(0, 8)}` },
+		});
+		expect(response.statusCode, response.body).toBe(201);
+		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
+		const actor = z
+			.object({ id: z.string(), fullName: z.string() })
+			.parse((await pool.query('SELECT id, "fullName" FROM public.users WHERE email = $1', ["superadmin@example.com"])).rows.at(LIST_SLOT_INDEX.first));
+		const scoped = (search: string): Promise<TrailPage> => trail({ search, "filter[correlationId][eq]": correlationId });
+
+		expect((await scoped("SUPERADMIN@example")).meta.total).toBe(1);
+		expect((await scoped(actor.fullName.slice(0, 5))).meta.total).toBe(1);
+		expect((await scoped(actor.id)).meta.total).toBe(1);
+		expect((await scoped("nobody-by-this-name")).meta.total).toBe(0);
+	});
+
 	it("groups a background job's writes into one entry, attributed to its system operation", async () => {
 		const correlationId = `trail-e2e-${randomUUID()}`;
 		await backgroundJob(correlationId, [`${REGION_PREFIX}job-a`, `${REGION_PREFIX}job-b`]);
@@ -157,5 +177,88 @@ describe("Audit trail timeline (e2e)", () => {
 		expect(result.rows).toHaveLength(1);
 		expect(row?.responseBody).toMatchObject({ auditTrailView: { returned: 3 } });
 		expect(row?.systemOperations).toContain("audit.trail.read");
+	});
+
+	describe("live signal (NOTIFY audit_trail, SSE)", () => {
+		/** How long a test waits to be sure a notification did NOT come. */
+		const QUIET_MS = 400;
+
+		/** A LISTENing session that collects notifications. */
+		async function listener(): Promise<{ readonly received: string[]; readonly close: () => Promise<void> }> {
+			const client = new Client({ connectionString: DATABASE_URL });
+			const received: string[] = [];
+			await client.connect();
+			client.on("notification", (message): void => {
+				received.push(message.payload ?? "");
+			});
+			await client.query("LISTEN audit_trail");
+			return { received, close: (): Promise<void> => client.end() };
+		}
+
+		async function until(condition: () => boolean, timeoutMs = 5_000): Promise<void> {
+			const deadline = Date.now() + timeoutMs;
+			while (!condition()) {
+				if (Date.now() > deadline) {
+					throw new Error("timed out");
+				}
+				await new Promise((resolve) => setTimeout(resolve, 20));
+			}
+		}
+
+		it("signals a background write and a changing request, but not a read of the audit log itself", async () => {
+			const listening = await listener();
+			try {
+				await backgroundJob(randomUUID(), [`${REGION_PREFIX}${randomUUID().slice(0, 8)}`]);
+				await until(() => listening.received.includes("data_change_logs"));
+
+				listening.received.length = 0;
+				await trail({});
+				await new Promise((resolve) => setTimeout(resolve, QUIET_MS));
+				expect(listening.received).toEqual([]);
+
+				const response = await app.inject({
+					method: "POST",
+					url: `${API_VERSION_PREFIX}/geo/regions`,
+					headers: mutationHeaders({ cookie: cookie(superAdmin) }),
+					payload: { name: `${REGION_PREFIX}${randomUUID().slice(0, 8)}` },
+				});
+				expect(response.statusCode, response.body).toBe(201);
+				await until(() => listening.received.includes("audit_logs"));
+			} finally {
+				await listening.close();
+			}
+		});
+
+		it("streams a frame to an open audit log page when an entry is written", async () => {
+			await app.listen(0, "127.0.0.1");
+			const controller = new AbortController();
+			const response = await fetch(`${await app.getUrl()}${API_VERSION_PREFIX}${apiRoutes.auditTrail.events}`, {
+				headers: { cookie: cookie(superAdmin), accept: "text/event-stream" },
+				signal: controller.signal,
+			});
+			expect(response.status).toBe(200);
+			expect(response.headers.get("content-type")).toContain("text/event-stream");
+			const reader = response.body?.getReader();
+			if (reader === undefined) {
+				throw new Error("no stream body");
+			}
+			try {
+				// The listener connects when the stream subscribes; give it a moment before writing.
+				await new Promise((resolve) => setTimeout(resolve, QUIET_MS));
+				await backgroundJob(randomUUID(), [`${REGION_PREFIX}${randomUUID().slice(0, 8)}`]);
+				const decoder = new TextDecoder();
+				let text = "";
+				while (!text.includes("updatedAt")) {
+					const chunk = await reader.read();
+					if (chunk.done) {
+						break;
+					}
+					text += decoder.decode(chunk.value);
+				}
+				expect(text).toMatch(/data: \{"updatedAt":\d+\}/u);
+			} finally {
+				controller.abort();
+			}
+		});
 	});
 });

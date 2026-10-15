@@ -147,6 +147,14 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 
 	// GitHub contributions (read-only views of the server-configured repositories)
 	{ action: "READ", resource: "GITHUB", description: "View contributions of the configured GitHub repositories", group: "GitHub" },
+	// GitHub pull requests (each admin's own linked token — ADR 052)
+	{ action: "READ", resource: "GITHUB_PULL_REQUEST", description: "View GitHub pull requests with your own linked token", group: "GitHub" },
+	{
+		action: "UPDATE",
+		resource: "GITHUB_PULL_REQUEST",
+		description: "Link your GitHub token; comment on, review, close and reopen pull requests as yourself",
+		group: "GitHub",
+	},
 
 	// Merchant orgs
 	{ action: "CREATE", resource: "MERCHANT_ORG", description: "Create merchant organizations", group: "Merchant" },

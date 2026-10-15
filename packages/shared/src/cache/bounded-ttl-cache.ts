@@ -110,6 +110,12 @@ export class BoundedTtlCache<K, V> {
 		return removed;
 	}
 
+	/** Remove every entry whose key matches `predicate` (expired or not). Returns the number removed. */
+	public deleteWhere(predicate: (key: K) => boolean): number {
+		const matching: K[] = [...this._store.keys()].filter(predicate);
+		return this.deleteMany(matching);
+	}
+
 	public clear(): void {
 		this._store.clear();
 		this._insertionOrder.length = 0;

@@ -32,9 +32,14 @@ export type FileStatus = z.output<typeof FileStatusSchema>;
 /**
  * What a stored file is for. `REWARD_IMAGE` is one of the (1–10) images a
  * merchant shows on a reward: uploaded to the organization first, then named
- * in the reward's `imageFileIds` (the first is the cover).
+ * in the reward's `imageFileIds` (the first is the cover). `GITHUB_COMMENT_IMAGE`
+ * is a picture an admin attaches to a GitHub comment from the app (ADR 052):
+ * GitHub has no API for its own uploads, so it is uploaded here first — checked
+ * like any upload — and committed to the repository only when a comment that
+ * links it is posted; this copy is then deleted. One no comment used is
+ * deleted once its `stagingRetentionMs` has passed.
  */
-export const FileCategorySchema = z.enum(["PRODUCT_IMAGE", "STORE_LOGO", "STORE_BANNER", "USER_AVATAR", "MERCHANT_KYB", "REWARD_IMAGE"]);
+export const FileCategorySchema = z.enum(["PRODUCT_IMAGE", "STORE_LOGO", "STORE_BANNER", "USER_AVATAR", "MERCHANT_KYB", "REWARD_IMAGE", "GITHUB_COMMENT_IMAGE"]);
 
 export type FileCategory = z.output<typeof FileCategorySchema>;
 
@@ -109,6 +114,11 @@ export const FileCategoryPolicySchema = z
 		generatesVariants: z.boolean(),
 		/** Pixel rules every image of the category must meet (absent: any size). */
 		imageRules: ImageRulesSchema.optional(),
+		/**
+		 * For a staging category — a copy a later step consumes, then deletes — how long a READY
+		 * file is kept after upload; the hourly storage sweep deletes it then. Absent: kept until deleted.
+		 */
+		stagingRetentionMs: z.number().int().positive().optional(),
 	})
 	.strict();
 
@@ -190,6 +200,18 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 				{ kind: "UHD", width: 3840 },
 			],
 		},
+	},
+	GITHUB_COMMENT_IMAGE: {
+		category: "GITHUB_COMMENT_IMAGE",
+		// Private: only a staging copy — the picture lives in the repository, where GitHub decides who sees it.
+		visibility: "PRIVATE",
+		// GitHub's own limit for an image in a comment, and within rules/20's single-shot upload size.
+		maxBytes: 10_485_760,
+		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+		// Never served from here; GitHub serves the committed copy.
+		generatesVariants: false,
+		// A day: the comment it was attached for is written in one sitting (the app keeps no drafts).
+		stagingRetentionMs: 86_400_000,
 	},
 	MERCHANT_KYB: {
 		category: "MERCHANT_KYB",
@@ -334,6 +356,9 @@ export const CreateFileUploadUrlSchema = z
 		}
 		if (value.category === "USER_AVATAR" && value.userId === undefined) {
 			ctx.addIssue({ code: "custom", message: "userId is required for USER_AVATAR uploads", path: ["userId"] });
+		}
+		if (value.category === "GITHUB_COMMENT_IMAGE" && value.userId === undefined) {
+			ctx.addIssue({ code: "custom", message: "userId is required for GITHUB_COMMENT_IMAGE uploads", path: ["userId"] });
 		}
 		if (value.category === "REWARD_IMAGE" && value.organizationId === undefined) {
 			ctx.addIssue({ code: "custom", message: "organizationId is required for REWARD_IMAGE uploads", path: ["organizationId"] });

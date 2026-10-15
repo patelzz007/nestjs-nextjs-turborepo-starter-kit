@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "FileCategory" ADD VALUE 'GITHUB_COMMENT_IMAGE';

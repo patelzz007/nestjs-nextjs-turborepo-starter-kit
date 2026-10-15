@@ -413,7 +413,11 @@ describe("OpenAPI document (e2e)", () => {
 			expect(missing).toEqual([]);
 			// The deliberate exclusions — adding one is a reviewed decision (docs/technical/api/response-contracts.md).
 			expect(passThrough.sort()).toEqual([
+				"AuditTrailController.stream",
 				"EmailLogController.stream",
+				"GithubLiveUpdatesController.stream",
+				"GithubPicturesController.file",
+				"GithubPicturesController.upload",
 				"LocalStorageTransferController.localDownload",
 				"LocalStorageTransferController.localPublic",
 				"LocalStorageTransferController.localPublicVariant",

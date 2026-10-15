@@ -69,6 +69,7 @@ pointing at nothing and fail the retry as "uploaded object is missing".
 | `PRODUCT_IMAGE`, `STORE_BANNER` | public | 25 MB | JPEG, PNG, WebP, AVIF |
 | `STORE_LOGO`, `USER_AVATAR` | public | 10 MB | JPEG, PNG, WebP, AVIF — exactly 1:1 (square), at least 256 × 256 |
 | `REWARD_IMAGE` | public | 10 MB | JPEG, PNG, WebP, AVIF — exactly 16:9, at least 1920 × 1080 |
+| `GITHUB_COMMENT_IMAGE` | private | 10 MB | JPEG, PNG, WebP — any size; no renditions. A staging copy of a picture attached to a GitHub comment from the mobile app: committed to the pull request's repository when a comment linking it is posted, then deleted; one never posted is deleted by the hourly sweep after a day (`stagingRetentionMs`) ([GitHub pull requests](../github-pull-requests.md#attaching-pictures)). Upload needs `UPDATE:GITHUB_PULL_REQUEST` and `userId` = the caller; key `users/{userId}/github-comment-images/{fileId}.{ext}` |
 
 Source of truth: `FILE_CATEGORY_POLICIES` in `packages/shared/src/schemas/domain/platform/storage.ts`.
 Uploads are a single request; chunked S3 multipart upload (retrying only failed parts) is **not

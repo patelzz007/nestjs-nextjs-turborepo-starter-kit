@@ -74,7 +74,8 @@ export type AuditTrailEntry = z.output<typeof AuditTrailEntrySchema>;
  * - Request-only filters (`outcome`, `method`, `authMethod`, `deviceType`, `ipScope`) leave only
  *   requests; `actorKind` (who a background write is attributed to) leaves only background entries.
  * - `search` matches a request's path / route template, or a background entry's table (prefix);
- *   a correlation id matches either exactly.
+ *   a correlation id matches either exactly; and either kind by who acted — the actor's user id
+ *   exactly, or part of their email address or full name.
  */
 export const auditTrailListQuery = defineListQuery({
 	sortable: ["occurredAt"],

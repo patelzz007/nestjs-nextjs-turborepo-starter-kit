@@ -6,7 +6,8 @@ import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { GITHUB_GRAPHQL_API_URL, GITHUB_REST_API_URL, GITHUB_REST_API_VERSION } from "./github.constants";
 import { GithubCommitNotFoundError, GithubRepositoryNotFoundError, GithubResponseError, GithubUnavailableError } from "./github.errors";
 import { GITHUB_COMMIT_HISTORY_QUERY, GITHUB_CONTRIBUTION_HISTORY_QUERY, GITHUB_REPOSITORY_SUMMARY_QUERY, GITHUB_VIEWER_REPOSITORIES_QUERY } from "./github.queries";
-import { GithubApiClient, type GithubFetch } from "./github-api.client";
+import { GithubApiClient } from "./github-api.client";
+import { GithubHttpTransport, type GithubFetch } from "./github-http.transport";
 import {
 	SHA_A,
 	commitDetailWire,
@@ -36,7 +37,7 @@ function client(fetchGithub: GithubFetch, token: string | null = TOKEN): GithubA
 		...(token === null ? {} : { GITHUB_TOKEN: token, GITHUB_REPOSITORIES: "octo-org/hello-world" }),
 		GITHUB_REQUEST_TIMEOUT_MS: String(TIMEOUT_MS),
 	});
-	return new GithubApiClient(config, fetchGithub);
+	return new GithubApiClient(config, new GithubHttpTransport(config, fetchGithub));
 }
 
 /** The init of the only request the fake received. */

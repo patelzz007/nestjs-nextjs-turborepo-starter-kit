@@ -73,6 +73,17 @@ function likeLiteral(value: string): string {
 	return value.replace(/[\\%_]/g, (character: string): string => `\\${character}`);
 }
 
+/**
+ * The search matched against who acted: the actor's user id exactly, or any
+ * account whose email or full name contains it. The audit stores keep bare
+ * ids (a record outlives its actor), so the people are matched in `users` —
+ * deleted accounts included, because the id on the record is the fact.
+ */
+export function actorSearchSql(actorColumn: Prisma.Sql, search: string): Prisma.Sql {
+	const pattern = `%${likeLiteral(search)}%`;
+	return Prisma.sql`(${actorColumn} = ${search} OR ${actorColumn} IN (SELECT u.id FROM public.users u WHERE u.email ILIKE ${pattern} OR u."fullName" ILIKE ${pattern}))`;
+}
+
 /** True when the query sets a filter only HTTP requests have — background entries are then out. */
 function hasRequestOnlyFilter(filter: AuditTrailListQuery["filter"]): boolean {
 	return [filter?.outcome, filter?.method, filter?.authMethod, filter?.deviceType, filter?.ipScope].some((value) => value !== undefined);
@@ -102,7 +113,9 @@ export function requestEntryConditions(query: AuditTrailListQuery): Prisma.Sql {
 		...(changedRow.length === 0 ? [] : [Prisma.sql`EXISTS (SELECT 1 FROM public.data_change_logs d WHERE d.correlation_id = a.correlation_id AND ${allOf(changedRow)})`]),
 		...(query.search === undefined
 			? []
-			: [Prisma.sql`(a.path ILIKE ${`%${likeLiteral(query.search)}%`} OR a.endpoint ILIKE ${`%${likeLiteral(query.search)}%`} OR a.correlation_id = ${query.search})`]),
+			: [
+					Prisma.sql`(a.path ILIKE ${`%${likeLiteral(query.search)}%`} OR a.endpoint ILIKE ${`%${likeLiteral(query.search)}%`} OR a.correlation_id = ${query.search} OR ${actorSearchSql(Prisma.sql`a.actor_user_id`, query.search)})`,
+				]),
 	]);
 }
 
@@ -132,7 +145,9 @@ export function backgroundEntryConditions(query: AuditTrailListQuery): { readonl
 			...(changedRow.length === 0 ? [] : [Prisma.sql`bool_or(${allOf(changedRow)})`]),
 			...(query.search === undefined
 				? []
-				: [Prisma.sql`bool_or(d.table_name LIKE ${`${likeLiteral(query.search)}%`} OR d.row_id = ${query.search} OR d.correlation_id = ${query.search})`]),
+				: [
+						Prisma.sql`bool_or(d.table_name LIKE ${`${likeLiteral(query.search)}%`} OR d.row_id = ${query.search} OR d.correlation_id = ${query.search} OR ${actorSearchSql(Prisma.sql`d.actor_user_id`, query.search)})`,
+					]),
 		]),
 	};
 }

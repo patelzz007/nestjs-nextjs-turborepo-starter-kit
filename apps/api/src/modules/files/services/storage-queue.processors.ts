@@ -2,6 +2,7 @@ import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { Job, Queue } from "bullmq";
 import {
+	FILE_CATEGORY_POLICIES,
 	QUEUE_NAMES,
 	StorageCdnInvalidationJobSchema,
 	StorageCleanupJobSchema,
@@ -19,6 +20,7 @@ import { CDN_CACHE_INVALIDATOR, OBJECT_STORAGE } from "../../storage/domain/stor
 import { toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { FileScanService } from "./file-scan.service";
+import { FileService } from "./file.service";
 import { toCdnInvalidationRequest } from "./cdn-invalidation.util";
 import { STORAGE_CDN_INVALIDATE_QUEUE, STORAGE_DELETE_QUEUE, STORAGE_SCAN_QUEUE } from "./queued-storage-task-dispatcher";
 import { StorageTaskDispatcher } from "./storage-task-dispatcher";
@@ -30,6 +32,9 @@ const STORAGE_CLEANUP_SCHEDULER_ID = "storage-cleanup";
 const STALE_PENDING_MAX_AGE_MS = 60 * 60 * 1000;
 /** A scan that has produced no verdict for this long lost its job (or outlived its retries) and is re-dispatched. */
 const STALE_SCANNING_MAX_AGE_MS = 30 * 60 * 1000;
+/** What the cleanup sweep reads of its (payload-free) job. */
+export type StorageCleanupJob = Pick<Job, "data">;
+
 /** `deletedBy` recorded when the sweep removes an abandoned upload. */
 export const STORAGE_CLEANUP_ACTOR = "system:storage-cleanup";
 
@@ -56,7 +61,9 @@ export class StorageQueueScheduler implements OnModuleInit {
 }
 
 /**
- * Hourly sweep: deletes abandoned PENDING uploads and re-dispatches scans whose
+ * Hourly sweep: deletes abandoned PENDING uploads, deletes staging copies
+ * nothing consumed within their category's `stagingRetentionMs` (a picture
+ * attached to a GitHub comment that was never posted), and re-dispatches scans whose
  * verdict is overdue. One file's failure is logged and left for the next sweep
  * (its row is unchanged, so it is picked up again) — it never aborts the batch.
  */
@@ -69,18 +76,36 @@ export class StorageCleanupProcessor extends WorkerHost {
 		private readonly repository: StoredFileRepository,
 		private readonly dispatcher: StorageTaskDispatcher,
 		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+		private readonly files: FileService,
 	) {
 		super();
 	}
 
-	public async process(job: Job): Promise<void> {
+	public async process(job: StorageCleanupJob): Promise<void> {
 		await runWithSystemRlsContext("queue.storage.cleanup", async (): Promise<void> => this.handle(job));
 	}
 
-	private async handle(job: Job): Promise<void> {
+	private async handle(job: StorageCleanupJob): Promise<void> {
 		StorageCleanupJobSchema.parse(job.data);
 		await this.cleanStalePending();
+		await this.cleanExpiredStaging();
 		await this.redispatchStaleScans();
+	}
+
+	private async cleanExpiredStaging(): Promise<void> {
+		for (const { category, stagingRetentionMs } of Object.values(FILE_CATEGORY_POLICIES)) {
+			if (stagingRetentionMs === undefined) {
+				continue;
+			}
+			for (const file of await this.repository.listExpiredStaging(category, stagingRetentionMs)) {
+				try {
+					await this.files.deleteStoredFile(file, STORAGE_CLEANUP_ACTOR);
+					this.logger.log(`Cleaned unused ${category} file ${file.id}`);
+				} catch (error) {
+					this.logger.error(`Failed to clean unused ${category} file ${file.id}: ${String(error)}`);
+				}
+			}
+		}
 	}
 
 	private async cleanStalePending(): Promise<void> {

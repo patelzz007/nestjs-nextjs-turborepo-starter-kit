@@ -1,9 +1,12 @@
 // The app drawer's menu (ADR 038), in display order: the five tabs first, then
 // the account and preference screens that otherwise sit two taps deep under
-// Settings. Labels use the same words as the screens they open. Two-factor
+// Settings, and — for people the API lets use them — the GitHub pull-request
+// screens. Labels use the same words as the screens they open. Two-factor
 // authentication is reached through Security: its own route is an enrollment
 // flow, not a settings page.
 
+import GitPullRequestIcon from "lucide-react-native/icons/git-pull-request";
+import KeyRoundIcon from "lucide-react-native/icons/key-round";
 import LockKeyholeIcon from "lucide-react-native/icons/lock-keyhole";
 import PaletteIcon from "lucide-react-native/icons/palette";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
@@ -12,6 +15,7 @@ import SmartphoneIcon from "lucide-react-native/icons/smartphone";
 import type { DrawerSectionTone } from "../../components/drawer-menu";
 import type { LucideIcon } from "../../components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
+import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
 export interface DrawerDestination {
@@ -57,6 +61,16 @@ export const DRAWER_GROUPS: readonly DrawerDestinationGroup[] = [
 		],
 	},
 ];
+
+/** GitHub pull requests (ADR 052): shown only to people the API lets use them. */
+export const GITHUB_DRAWER_GROUP: DrawerDestinationGroup = {
+	title: "GitHub",
+	tone: "teal",
+	destinations: [
+		{ label: PULL_REQUESTS_TITLE, icon: GitPullRequestIcon, route: ROUTES.pullRequests, isTab: false },
+		{ label: GITHUB_ACCOUNT_TITLE, icon: KeyRoundIcon, route: ROUTES.githubAccount, isTab: false },
+	],
+};
 
 const TAB_ROUTES: ReadonlySet<string> = new Set(APP_TABS.map((tab: AppTab): string => tab.route));
 

@@ -26,6 +26,7 @@ Returns the terminal's own API key (shown once). Send it as X-API-Key on every r
 
 - **Public** — no session required.
 - Rate limit: `PAIRING_ATTEMPTS_PER_WINDOW` requests per `PAIRING_WINDOW_MS` ms per client IP (strict limiter).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PosTerminalsController_pair` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -34,7 +35,7 @@ Returns the terminal's own API key (shown once). Send it as X-API-Key on every r
 | --- | --- | --- | --- |
 | `pairingCode` | string | yes | exactly 8 characters; pattern `^[A-HJ-NP-Z2-9]{8}$` |
 
-**Response 201 Created** — Terminal paired
+**Response 201 Created** (`application/json`) — Terminal paired
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -100,6 +101,7 @@ POS checkout: after payment, record the bill and redeem every presented reward (
 Send the bill total in minor units (sen) and up to 10 QR tokens / backup codes of ONE customer. Retrying with the same idempotencyKey and body replays the original result; a different body with a used key is rejected (409 IDEMPOTENCY_KEY_REUSED).
 
 - **Merchant API key** — `X-API-Key: mk_live_…` (or `Authorization: Bearer mk_live_…`). No cookie, no session.
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RedemptionsController_checkout` · [source](../../../apps/api/src/modules/rewards/controllers/redemptions.controller.ts)
 
 **Parameters**
@@ -119,7 +121,7 @@ Send the bill total in minor units (sen) and up to 10 QR tokens / backup codes o
 | `currency` | "MYR" | yes |  |
 | `idempotencyKey` | string (uuid) | yes |  |
 
-**Response 201 Created** — Bill recorded and rewards redeemed
+**Response 201 Created** (`application/json`) — Bill recorded and rewards redeemed
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -195,6 +197,7 @@ Response `201 Created` (application/json):
 POS validate QR or backup code
 
 - **Merchant API key** — `X-API-Key: mk_live_…` (or `Authorization: Bearer mk_live_…`). No cookie, no session.
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RedemptionsController_validate` · [source](../../../apps/api/src/modules/rewards/controllers/redemptions.controller.ts)
 
 **Parameters**
@@ -210,7 +213,7 @@ POS validate QR or backup code
 | `backupCode` | string | no | exactly 8 characters; pattern `^[A-HJ-NP-Z2-9]{8}$` |
 | `token` | string | no | length 16–512 |
 
-**Response 201 Created** — Redemption preview
+**Response 201 Created** (`application/json`) — Redemption preview
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

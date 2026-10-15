@@ -4,12 +4,13 @@
 // page instead of a frame after it. A screen whose title depends on its params
 // (two-factor: turn on, or new backup codes) resolves it from them.
 
-import { GithubCommitShaSchema } from "@workspace/shared";
+import { GithubCommitShaSchema, GithubPullRequestNumberSchema, GithubRepositoryNameSchema } from "@workspace/shared";
 import { z } from "zod";
 
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { DEVICES_COPY } from "../devices/labels";
 import { commitScreenTitle } from "../github/labels";
+import { COMMITS_TITLE, FILES_CHANGED_TITLE, GITHUB_ACCOUNT_TITLE, pullRequestScreenTitle, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
 import { twoFactorEnrollmentTitleOf } from "../two-factor/labels";
 import { TwoFactorEnrollmentModeSchema } from "../two-factor/two-factor-enrollment";
 import { APP_TABS, type AppTab } from "./app-tabs";
@@ -33,13 +34,34 @@ const SHORT_SHA_LENGTH = 7;
 /** `?sha=` of the commit screen; anything that is not a full SHA leaves the title plain. */
 const CommitTitleParamsSchema = z.object({ sha: GithubCommitShaSchema.nullable().catch(null) }).catch({ sha: null });
 
+/** `?repository=&number=` of the pull-request screen; a link that names none leaves the title plain. */
+const PullRequestTitleParamsSchema = z
+	.object({ repository: GithubRepositoryNameSchema.nullable().catch(null), number: GithubPullRequestNumberSchema.nullable().catch(null) })
+	.catch({ repository: null, number: null });
+
+/** "Commit 4f2a9c1" — the Profile's commits and a pull request's alike; plainly "Commit" when the link carries no SHA. */
+function commitTitle(params: ScreenParams): string {
+	return commitScreenTitle(CommitTitleParamsSchema.parse(params).sha?.slice(0, SHORT_SHA_LENGTH) ?? null);
+}
+
+function pullRequestTitle(params: ScreenParams): string {
+	const parsed = PullRequestTitleParamsSchema.parse(params);
+	return pullRequestScreenTitle(parsed.repository, parsed.number);
+}
+
 const SUB_SCREEN_TITLES: ReadonlyMap<AppRoute, ScreenTitle> = new Map<AppRoute, ScreenTitle>([
 	[ROUTES.security, fixed("Security")],
 	[ROUTES.devices, fixed(DEVICES_COPY.title)],
 	[ROUTES.appearance, fixed("Appearance")],
 	[ROUTES.appLock, fixed("App lock")],
 	[ROUTES.twoFactorSetup, (params: ScreenParams): string => twoFactorEnrollmentTitleOf(TwoFactorTitleParamsSchema.parse(params).mode)],
-	[ROUTES.githubCommit, (params: ScreenParams): string => commitScreenTitle(CommitTitleParamsSchema.parse(params).sha?.slice(0, SHORT_SHA_LENGTH) ?? null)],
+	[ROUTES.githubCommit, commitTitle],
+	[ROUTES.pullRequests, fixed(PULL_REQUESTS_TITLE)],
+	[ROUTES.pullRequest, pullRequestTitle],
+	[ROUTES.pullRequestFiles, fixed(FILES_CHANGED_TITLE)],
+	[ROUTES.pullRequestCommits, fixed(COMMITS_TITLE)],
+	[ROUTES.pullRequestCommit, commitTitle],
+	[ROUTES.githubAccount, fixed(GITHUB_ACCOUNT_TITLE)],
 ]);
 
 const TITLES: ReadonlyMap<string, ScreenTitle> = new Map<string, ScreenTitle>([

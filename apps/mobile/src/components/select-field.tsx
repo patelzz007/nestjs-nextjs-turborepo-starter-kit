@@ -5,14 +5,13 @@
 // options and the choice. Opening, closing and the search text are the
 // field's own display state; the search starts empty every time it opens.
 
-import CheckIcon from "lucide-react-native/icons/check";
 import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
-import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, type ListRenderItemInfo } from "react-native";
+import { FlatList, Pressable, Text, TextInput, View, type ListRenderItemInfo } from "react-native";
 
+import { BottomSheet, SheetOptionRow } from "./bottom-sheet";
 import { Icon } from "./icon";
-import { Label, MutedText, Subheading } from "./text";
+import { Label, MutedText } from "./text";
 
 export interface SelectOption<TValue extends string> {
 	readonly value: TValue;
@@ -35,9 +34,6 @@ export interface SelectFieldProps<TValue extends string> {
 	readonly disabled?: boolean;
 	readonly testID?: string;
 }
-
-/** iOS lifts the sheet above the keyboard by padding; Android resizes the window itself. */
-const KEYBOARD_BEHAVIOR = Platform.OS === "ios" ? "padding" : undefined;
 
 /** The options whose label or description contains `query` (case-insensitive); all of them for an empty query. */
 export function filterSelectOptions<TValue extends string>(options: readonly SelectOption<TValue>[], query: string): readonly SelectOption<TValue>[] {
@@ -83,7 +79,9 @@ export function SelectField<TValue extends string>({
 		[onChange, value],
 	);
 	const renderOption = React.useCallback(
-		({ item }: ListRenderItemInfo<SelectOption<TValue>>): React.JSX.Element => <SelectOptionRow option={item} selected={item.value === value} onSelect={choose} />,
+		({ item }: ListRenderItemInfo<SelectOption<TValue>>): React.JSX.Element => (
+			<SheetOptionRow value={item.value} label={item.label} description={item.description} selected={item.value === value} onSelect={choose} />
+		),
 		[choose, value],
 	);
 	const keyOf = React.useCallback((option: SelectOption<TValue>): string => option.value, []);
@@ -113,71 +111,29 @@ export function SelectField<TValue extends string>({
 				<Icon icon={ChevronDownIcon} size="md" colorClassName="accent-muted-foreground" />
 			</Pressable>
 
-			<Modal visible={open} transparent animationType="slide" onRequestClose={closeSheet}>
-				<KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} className="flex-1 justify-end">
-					<Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={closeSheet} className="absolute inset-0 bg-scrim opacity-50" />
-					<View accessibilityViewIsModal className="max-h-[80%] gap-3 rounded-t-2xl border border-border bg-popover px-4 pt-4 pb-8">
-						<View className="flex-row items-center justify-between">
-							<Subheading>{label}</Subheading>
-							<Pressable
-								accessibilityRole="button"
-								accessibilityLabel={`Close ${label.toLowerCase()}`}
-								onPress={closeSheet}
-								hitSlop={8}
-								className="size-11 items-center justify-center rounded-full active:opacity-60">
-								<Icon icon={XIcon} size="md" colorClassName="accent-muted-foreground" />
-							</Pressable>
-						</View>
-						{searchable ? (
-							<TextInput
-								accessibilityLabel={`Search ${label.toLowerCase()}`}
-								value={query}
-								onChangeText={setQuery}
-								placeholder={searchPlaceholder}
-								placeholderTextColorClassName="accent-muted-foreground"
-								autoCapitalize="none"
-								autoCorrect={false}
-								returnKeyType="search"
-								className="min-h-11 rounded-xl border border-input bg-card px-3.5 py-2.5 font-sans text-base text-foreground"
-							/>
-						) : null}
-						<FlatList
-							data={shown}
-							keyExtractor={keyOf}
-							renderItem={renderOption}
-							keyboardShouldPersistTaps="handled"
-							ListEmptyComponent={<MutedText>{noMatchesMessage}</MutedText>}
-						/>
-					</View>
-				</KeyboardAvoidingView>
-			</Modal>
+			{/* The options are their own (virtualized) scroll, under a search box that stays put. */}
+			<BottomSheet visible={open} title={label} onClose={closeSheet} scrollsItself>
+				{searchable ? (
+					<TextInput
+						accessibilityLabel={`Search ${label.toLowerCase()}`}
+						value={query}
+						onChangeText={setQuery}
+						placeholder={searchPlaceholder}
+						placeholderTextColorClassName="accent-muted-foreground"
+						autoCapitalize="none"
+						autoCorrect={false}
+						returnKeyType="search"
+						className="min-h-11 rounded-xl border border-input bg-card px-3.5 py-2.5 font-sans text-base text-foreground"
+					/>
+				) : null}
+				<FlatList
+					data={shown}
+					keyExtractor={keyOf}
+					renderItem={renderOption}
+					keyboardShouldPersistTaps="handled"
+					ListEmptyComponent={<MutedText>{noMatchesMessage}</MutedText>}
+				/>
+			</BottomSheet>
 		</View>
-	);
-}
-
-interface SelectOptionRowProps<TValue extends string> {
-	readonly option: SelectOption<TValue>;
-	readonly selected: boolean;
-	readonly onSelect: (value: TValue) => void;
-}
-
-function SelectOptionRow<TValue extends string>({ option, selected, onSelect }: SelectOptionRowProps<TValue>): React.JSX.Element {
-	const select = React.useCallback((): void => {
-		onSelect(option.value);
-	}, [onSelect, option.value]);
-	return (
-		<Pressable
-			accessibilityRole="radio"
-			accessibilityLabel={option.label}
-			accessibilityHint={option.description}
-			accessibilityState={{ checked: selected }}
-			onPress={select}
-			className="min-h-12 flex-row items-center gap-3 border-b border-border py-3 active:opacity-70">
-			<View className="flex-1 gap-0.5">
-				<Text className={`text-base text-foreground ${selected ? "font-sans-semibold" : "font-sans"}`}>{option.label}</Text>
-				{option.description === undefined ? null : <Text className="font-sans text-sm text-muted-foreground">{option.description}</Text>}
-			</View>
-			{selected ? <Icon icon={CheckIcon} size="md" colorClassName="accent-primary" /> : null}
-		</Pressable>
 	);
 }

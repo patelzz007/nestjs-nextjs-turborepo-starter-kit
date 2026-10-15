@@ -79,13 +79,13 @@ without re-opening a settled decision.
 
 ### Who this is for
 
-| Reader | What to read |
-| --- | --- |
-| Implementing a piece | Its section (5–9), then [section 19](#19-acceptance-checklists) for its checklist |
-| Reviewing a PR for a piece | [Section 2](#2-decision-summary), the piece's section, its checklist |
-| Building a product feature on the mobile shell later | Sections 4, 9, 10, 13, 15 |
-| Security review | Sections 7, 8, 11, 12 |
-| New to the repo | Sections 1–4 first, then [`docs/technical/architecture.md`](../architecture.md) |
+| Reader                                               | What to read                                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Implementing a piece                                 | Its section (5–9), then [section 19](#19-acceptance-checklists) for its checklist |
+| Reviewing a PR for a piece                           | [Section 2](#2-decision-summary), the piece's section, its checklist              |
+| Building a product feature on the mobile shell later | Sections 4, 9, 10, 13, 15                                                         |
+| Security review                                      | Sections 7, 8, 11, 12                                                             |
+| New to the repo                                      | Sections 1–4 first, then [`docs/technical/architecture.md`](../architecture.md)   |
 
 ---
 
@@ -94,40 +94,40 @@ without re-opening a settled decision.
 Every row is settled. "ADR" means the reasoning and alternatives are recorded in a decision
 record; everything else is recorded here.
 
-| # | Topic | Decision | Record |
-| --- | --- | --- | --- |
-| 1 | Audience | Generic starter shell first; consumer features later | this page |
-| 2 | Platforms | iOS and Android; Expo's web target off | this page |
-| 3 | Accounts and builds | Free Expo account for Expo Go sign-in only; no EAS, no store pipeline | this page |
-| 4 | Development runtime | Expo Go; native folders generated, never committed | this page |
-| 5 | Expo SDK | Latest **stable** SDK that Expo Go runs: **SDK 57** today, 58 when stable | this page |
-| 6 | Dependency versions | Expo packages pinned by `npx expo install`, enforced by `--check`; everything else latest stable under syncpack | this page |
-| 7 | React version | `apps/mobile` gets its own syncpack version group (SDK 57 = React 19.2) | this page |
-| 8 | Styling | Uniwind (free tier) on Tailwind v4 | [ADR 032](../../adr/032-uniwind-for-mobile-styling.md) |
-| 9 | Design tokens | `packages/tokens` generates committed CSS for web and mobile | [ADR 030](../../adr/030-shared-design-token-source.md) |
-| 10 | Token format | Same names and values on both platforms, two thin wrappers | [ADR 030](../../adr/030-shared-design-token-source.md) |
-| 11 | API client | `packages/api-client` (core + `/react` entry) shared by web and mobile | this page |
-| 12 | Mobile auth transport | `mobile` client type; tokens in response bodies; refresh token in request body | [ADR 029](../../adr/029-mobile-client-body-token-transport.md) |
-| 13 | Session lifetime | Same refresh lifetime as web (`JWT_REFRESH_EXPIRY`) | this page |
-| 14 | Token refresh on mobile | `packages/api-client` single-flight refresh, retry once, then "session expired" | this page |
-| 15 | Storage | `expo-secure-store` for tokens **and** preferences; no AsyncStorage | this page |
-| 16 | API address | Dev: Expo's host address + API port. Otherwise `EXPO_PUBLIC_API_URL`, zod-checked, config error screen | this page |
-| 17 | Forced upgrade | `X-App-Version` header, `MOBILE_MIN_SUPPORTED_VERSION`, 426, blocking screen | [ADR 033](../../adr/033-mobile-forced-upgrade.md) |
-| 18 | Navigation | Expo Router: `(auth)` stack, `(app)` tabs, root guard | this page |
-| 19 | Starter screens | Full sign-in flow, sign-up, forgot password, Home, Analytics (sample data — [ADR 048](../../adr/048-mobile-analytics-screen.md)), Search (placeholder), Profile, Settings, Security — under the floating tab bar ([ADR 036](../../adr/036-mobile-floating-tab-bar.md)) | this page |
-| 20 | 2FA enrollment on phone | "Open in authenticator app" link + copyable secret + QR | this page |
-| 21 | Email-link flows | Reset password and email verification finish on the web pages | this page |
-| 22 | Theme | System / Light / Dark, default System | this page |
-| 23 | App lock | Opt-in biometric lock, passcode fallback, 60 s default timeout, device-only | this page, [glossary](../../../rules/22-glossary.md) |
-| 24 | Device list | On every client (web, merchant, admin, mobile), full details, revoke one, sign out everywhere | this page |
-| 25 | Single-device sign-out | Immediate, via `sid` in access tokens | [ADR 034](../../adr/034-immediate-per-session-revocation.md) |
-| 26 | Revocation attribution | `deletedBy` on sessions (user id or system marker) | [ADR 034](../../adr/034-immediate-per-session-revocation.md) |
-| 27 | Location | GeoIP port with a `none` implementation; provider is a pending decision | [ADR index](../../adr/README.md#pending-decisions) |
-| 28 | Tests | jest-expo + `@testing-library/react-native` for `apps/mobile` only | [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md) |
-| 29 | Lint | `packages/eslint-config/react-native.js`; `apps/mobile` in import boundaries | this page |
-| 30 | CI | Lint, typecheck, tests, `expo install --check`, `expo export` bundle check | this page |
-| 31 | Mobile e2e | Not in the starter; Maestro documented as next step | this page |
-| 32 | Delivery | Five pieces in order: tokens → api-client → mobile client type → device sessions → mobile app | this page |
+| #   | Topic                   | Decision                                                                                                                                                                                                                                                               | Record                                                         |
+| --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1   | Audience                | Generic starter shell first; consumer features later                                                                                                                                                                                                                   | this page                                                      |
+| 2   | Platforms               | iOS and Android; Expo's web target off                                                                                                                                                                                                                                 | this page                                                      |
+| 3   | Accounts and builds     | Free Expo account for Expo Go sign-in only; no EAS, no store pipeline                                                                                                                                                                                                  | this page                                                      |
+| 4   | Development runtime     | Expo Go; native folders generated, never committed                                                                                                                                                                                                                     | this page                                                      |
+| 5   | Expo SDK                | Latest **stable** SDK that Expo Go runs: **SDK 57** today, 58 when stable                                                                                                                                                                                              | this page                                                      |
+| 6   | Dependency versions     | Expo packages pinned by `npx expo install`, enforced by `--check`; everything else latest stable under syncpack                                                                                                                                                        | this page                                                      |
+| 7   | React version           | `apps/mobile` gets its own syncpack version group (SDK 57 = React 19.2)                                                                                                                                                                                                | this page                                                      |
+| 8   | Styling                 | Uniwind (free tier) on Tailwind v4                                                                                                                                                                                                                                     | [ADR 032](../../adr/032-uniwind-for-mobile-styling.md)         |
+| 9   | Design tokens           | `packages/tokens` generates committed CSS for web and mobile                                                                                                                                                                                                           | [ADR 030](../../adr/030-shared-design-token-source.md)         |
+| 10  | Token format            | Same names and values on both platforms, two thin wrappers                                                                                                                                                                                                             | [ADR 030](../../adr/030-shared-design-token-source.md)         |
+| 11  | API client              | `packages/api-client` (core + `/react` entry) shared by web and mobile                                                                                                                                                                                                 | this page                                                      |
+| 12  | Mobile auth transport   | `mobile` client type; tokens in response bodies; refresh token in request body                                                                                                                                                                                         | [ADR 029](../../adr/029-mobile-client-body-token-transport.md) |
+| 13  | Session lifetime        | Same refresh lifetime as web (`JWT_REFRESH_EXPIRY`)                                                                                                                                                                                                                    | this page                                                      |
+| 14  | Token refresh on mobile | `packages/api-client` single-flight refresh, retry once, then "session expired"                                                                                                                                                                                        | this page                                                      |
+| 15  | Storage                 | `expo-secure-store` for tokens **and** preferences; no AsyncStorage                                                                                                                                                                                                    | this page                                                      |
+| 16  | API address             | Dev: Expo's host address + API port. Otherwise `EXPO_PUBLIC_API_URL`, zod-checked, config error screen                                                                                                                                                                 | this page                                                      |
+| 17  | Forced upgrade          | `X-App-Version` header, `MOBILE_MIN_SUPPORTED_VERSION`, 426, blocking screen                                                                                                                                                                                           | [ADR 033](../../adr/033-mobile-forced-upgrade.md)              |
+| 18  | Navigation              | Expo Router: `(auth)` stack, `(app)` tabs, root guard                                                                                                                                                                                                                  | this page                                                      |
+| 19  | Starter screens         | Full sign-in flow, sign-up, forgot password, Home, Analytics (sample data — [ADR 048](../../adr/048-mobile-analytics-screen.md)), Search (placeholder), Profile, Settings, Security — under the floating tab bar ([ADR 036](../../adr/036-mobile-floating-tab-bar.md)) | this page                                                      |
+| 20  | 2FA enrollment on phone | "Open in authenticator app" link + copyable secret + QR                                                                                                                                                                                                                | this page                                                      |
+| 21  | Email-link flows        | Reset password and email verification finish on the web pages                                                                                                                                                                                                          | this page                                                      |
+| 22  | Theme                   | System / Light / Dark, default System                                                                                                                                                                                                                                  | this page                                                      |
+| 23  | App lock                | Opt-in biometric lock, passcode fallback, 60 s default timeout, device-only                                                                                                                                                                                            | this page, [glossary](../../../rules/22-glossary.md)           |
+| 24  | Device list             | On every client (web, merchant, admin, mobile), full details, revoke one, sign out everywhere                                                                                                                                                                          | this page                                                      |
+| 25  | Single-device sign-out  | Immediate, via `sid` in access tokens                                                                                                                                                                                                                                  | [ADR 034](../../adr/034-immediate-per-session-revocation.md)   |
+| 26  | Revocation attribution  | `deletedBy` on sessions (user id or system marker)                                                                                                                                                                                                                     | [ADR 034](../../adr/034-immediate-per-session-revocation.md)   |
+| 27  | Location                | GeoIP port with a `none` implementation; provider is a pending decision                                                                                                                                                                                                | [ADR index](../../adr/README.md#pending-decisions)             |
+| 28  | Tests                   | jest-expo + `@testing-library/react-native` for `apps/mobile` only                                                                                                                                                                                                     | [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)         |
+| 29  | Lint                    | `packages/eslint-config/react-native.js`; `apps/mobile` in import boundaries                                                                                                                                                                                           | this page                                                      |
+| 30  | CI                      | Lint, typecheck, tests, `expo install --check`, `expo export` bundle check                                                                                                                                                                                             | this page                                                      |
+| 31  | Mobile e2e              | Not in the starter; Maestro documented as next step                                                                                                                                                                                                                    | this page                                                      |
+| 32  | Delivery                | Five pieces in order: tokens → api-client → mobile client type → device sessions → mobile app                                                                                                                                                                          | this page                                                      |
 
 ---
 
@@ -136,13 +136,13 @@ record; everything else is recorded here.
 These terms are defined in [`rules/22-glossary.md`](../../../rules/22-glossary.md) under
 "Domain terms" and are used with exactly those meanings on this page.
 
-| Term | Meaning (short) | Do not say |
-| --- | --- | --- |
-| **Client type** | The kind of app a request comes from: `web`, `admin`, `merchant`, `mobile`. Decides how tokens travel, never permissions. | client, platform, app type |
-| **Mobile app** | The iOS and Android app built with Expo. | native app, Expo app, the app |
-| **Device session** | One signed-in device's session; can be signed out alone or with all others. | login, token, connection |
-| **Minimum supported app version** | The oldest mobile app version the API still serves. | min version, force update, kill switch |
-| **App lock** | Optional on-device biometric or passcode check guarding a signed-in mobile app. | biometric login, Face ID login, PIN login |
+| Term                              | Meaning (short)                                                                                                           | Do not say                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Client type**                   | The kind of app a request comes from: `web`, `admin`, `merchant`, `mobile`. Decides how tokens travel, never permissions. | client, platform, app type                |
+| **Mobile app**                    | The iOS and Android app built with Expo.                                                                                  | native app, Expo app, the app             |
+| **Device session**                | One signed-in device's session; can be signed out alone or with all others.                                               | login, token, connection                  |
+| **Minimum supported app version** | The oldest mobile app version the API still serves.                                                                       | min version, force update, kill switch    |
+| **App lock**                      | Optional on-device biometric or passcode check guarding a signed-in mobile app.                                           | biometric login, Face ID login, PIN login |
 
 Two more phrases recur:
 
@@ -293,10 +293,10 @@ packages/tokens/
 
 `pnpm tokens:generate` (a root script delegating to the package) writes both files:
 
-| Output | Wrapper | Consumed by |
-| --- | --- | --- |
-| `generated/web.css` | `:root { … }` for light, `.dark { … }` for dark, plus the `@theme inline` mapping | `packages/ui/src/styles/*` (imports it) |
-| `generated/mobile.css` | `@layer theme { :root { @variant light { … } @variant dark { … } } }` plus `@theme` | `apps/mobile/global.css` (imports it) |
+| Output                 | Wrapper                                                                             | Consumed by                             |
+| ---------------------- | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| `generated/web.css`    | `:root { … }` for light, `.dark { … }` for dark, plus the `@theme inline` mapping   | `packages/ui/src/styles/*` (imports it) |
+| `generated/mobile.css` | `@layer theme { :root { @variant light { … } @variant dark { … } } }` plus `@theme` | `apps/mobile/global.css` (imports it)   |
 
 Rules the generator enforces (it exits non-zero on any violation):
 
@@ -404,11 +404,11 @@ packages/api-client/
 ```ts
 // Shape only — the real code follows the repo's no-cast, explicit-return-type rules.
 interface ApiClientConfig {
-	readonly baseUrl: string;                 // each app resolves it its own way
-	readonly clientType: AuthClientType;      // "web" | "admin" | "merchant" | "mobile"
+	readonly baseUrl: string; // each app resolves it its own way
+	readonly clientType: AuthClientType; // "web" | "admin" | "merchant" | "mobile"
 	readonly transport: CookieTransport | TokenTransport;
-	readonly appVersion?: string;             // mobile only → X-App-Version
-	readonly onSessionExpired?: () => void;   // token transport: refresh failed for good
+	readonly appVersion?: string; // mobile only → X-App-Version
+	readonly onSessionExpired?: () => void; // token transport: refresh failed for good
 }
 
 interface TokenTransport {
@@ -558,17 +558,17 @@ See [section 19, piece 2](#piece-2-packagesapi-client).
 
 ### 7.2 Changes
 
-| Area | Change |
-| --- | --- |
-| Client type enum | Add `mobile` to `AuthClientTypeSchema`. `AUTH_COOKIE_NAMES` stays browser-only (no cookie pair for `mobile`). |
-| Token delivery | `SetAuthCookiesInterceptor` (or a sibling selected by client type) leaves the tokens **in the response body** when the request's client type is `mobile`; it sets cookies for every other type, exactly as today. |
-| Response contracts | Login, login verification (`/auth/verify-login`), 2FA completion (`/auth/login/2fa`, `/auth/login/backup-code`), forced-enrollment completion and `/auth/refresh` get a **token-bearing response variant** in `packages/shared`, documented in OpenAPI. Browser responses are unchanged. |
-| Refresh input | For `mobile`, `refresh-token.guard.ts` reads `{ refreshToken }` from a zod-validated body. For browser types it reads only the cookie. A body token on a browser client type is rejected, never silently accepted. |
-| Logout | `/auth/logout` and `/auth/logout-all` accept the refresh token in the body for `mobile`, mirroring refresh; browser types keep the cookie and the cookie-clearing interceptor. |
-| 2FA setup response | `/auth/2fa/setup` additionally returns `otpAuthUrl` (the `otpauth://` link the server already builds for the QR code), so the phone can hand it to an authenticator app ([section 10.5](#105-forced-2fa-enrollment-and-2fa-setup)). Web ignores it. |
-| Forced upgrade | New config `MOBILE_MIN_SUPPORTED_VERSION` (semver, validated in `api-config.schema.ts`, documented in `.env.example`). A global guard rejects `mobile` requests whose `X-App-Version` is missing, malformed or lower than the minimum with **426** in the standard error envelope (code `APP_VERSION_UNSUPPORTED`). Browser types are never checked. |
-| Audit | Nothing new to build: the global HTTP audit log ([ADR 025](../../adr/025-global-http-audit-log.md)) already records client type, device, IP and the request. The token fields in mobile response bodies are **redacted** in the audit record like every other secret. |
-| Rate limits | Unchanged; the same auth throttles apply per client type. |
+| Area               | Change                                                                                                                                                                                                                                                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client type enum   | Add `mobile` to `AuthClientTypeSchema`. `AUTH_COOKIE_NAMES` stays browser-only (no cookie pair for `mobile`).                                                                                                                                                                                                                                        |
+| Token delivery     | `SetAuthCookiesInterceptor` (or a sibling selected by client type) leaves the tokens **in the response body** when the request's client type is `mobile`; it sets cookies for every other type, exactly as today.                                                                                                                                    |
+| Response contracts | Login, login verification (`/auth/verify-login`), 2FA completion (`/auth/login/2fa`, `/auth/login/backup-code`), forced-enrollment completion and `/auth/refresh` get a **token-bearing response variant** in `packages/shared`, documented in OpenAPI. Browser responses are unchanged.                                                             |
+| Refresh input      | For `mobile`, `refresh-token.guard.ts` reads `{ refreshToken }` from a zod-validated body. For browser types it reads only the cookie. A body token on a browser client type is rejected, never silently accepted.                                                                                                                                   |
+| Logout             | `/auth/logout` and `/auth/logout-all` accept the refresh token in the body for `mobile`, mirroring refresh; browser types keep the cookie and the cookie-clearing interceptor.                                                                                                                                                                       |
+| 2FA setup response | `/auth/2fa/setup` additionally returns `otpAuthUrl` (the `otpauth://` link the server already builds for the QR code), so the phone can hand it to an authenticator app ([section 10.5](#105-forced-2fa-enrollment-and-2fa-setup)). Web ignores it.                                                                                                  |
+| Forced upgrade     | New config `MOBILE_MIN_SUPPORTED_VERSION` (semver, validated in `api-config.schema.ts`, documented in `.env.example`). A global guard rejects `mobile` requests whose `X-App-Version` is missing, malformed or lower than the minimum with **426** in the standard error envelope (code `APP_VERSION_UNSUPPORTED`). Browser types are never checked. |
+| Audit              | Nothing new to build: the global HTTP audit log ([ADR 025](../../adr/025-global-http-audit-log.md)) already records client type, device, IP and the request. The token fields in mobile response bodies are **redacted** in the audit record like every other secret.                                                                                |
+| Rate limits        | Unchanged; the same auth throttles apply per client type.                                                                                                                                                                                                                                                                                            |
 
 ### 7.3 How the server decides the transport
 
@@ -587,13 +587,13 @@ separate setting later; the starter keeps one knob.
 
 ### 7.5 Error codes the mobile app must handle
 
-| HTTP | Code | Meaning | App behavior |
-| --- | --- | --- | --- |
-| 401 | (token expired) | Access token expired | Single-flight refresh, retry once |
-| 401 | (refresh failed) | Refresh expired, reused or revoked | Clear tokens, sign-in screen, "session ended" |
-| 403 | (various) | Authenticated but not allowed | Show the error; never refresh |
-| 426 | `APP_VERSION_UNSUPPORTED` | App older than `MOBILE_MIN_SUPPORTED_VERSION` | Blocking update screen |
-| 429 | (throttled) | Rate limited | Show retry-after message |
+| HTTP | Code                      | Meaning                                       | App behavior                                  |
+| ---- | ------------------------- | --------------------------------------------- | --------------------------------------------- |
+| 401  | (token expired)           | Access token expired                          | Single-flight refresh, retry once             |
+| 401  | (refresh failed)          | Refresh expired, reused or revoked            | Clear tokens, sign-in screen, "session ended" |
+| 403  | (various)                 | Authenticated but not allowed                 | Show the error; never refresh                 |
+| 426  | `APP_VERSION_UNSUPPORTED` | App older than `MOBILE_MIN_SUPPORTED_VERSION` | Blocking update screen                        |
+| 429  | (throttled)               | Rate limited                                  | Show retry-after message                      |
 
 ### 7.6 Tests
 
@@ -675,7 +675,7 @@ See [section 19, piece 3](#piece-3-mobile-client-type).
 ### 8.1 What exists today
 
 - `GET /auth/sessions` returns the caller's active sessions as `{ id, deviceInfo, ipAddress,
-  expiresAt, createdAt }` (`SessionSchema`).
+expiresAt, createdAt }` (`SessionSchema`).
 - Sessions are `RefreshToken` rows with `deviceInfo` (a raw string), `ipAddress`, `expiresAt`,
   soft-delete fields `isDeleted` / `deletedAt`, and rotation fields. There is **no** `deletedBy`,
   no client type, no last-active time and no way to tell the current session.
@@ -691,22 +691,22 @@ See [section 19, piece 3](#piece-3-mobile-client-type).
 Every detail is stored as its own column (generated migration, seeded per the repo rules), never
 packed into one text field.
 
-| Column (logical) | Source | Trust | Shown as |
-| --- | --- | --- | --- |
-| `clientType` | validated `X-Client-Type` | server-classified | "Mobile app", "Web", "Merchant", "Admin" |
-| `browserName`, `browserVersion` | parsed User-Agent ([`user-agent.ts`](../../../apps/api/src/common/http/user-agent.ts)) | client-reported | "Chrome 141" |
-| `osName`, `osVersion` | parsed User-Agent | client-reported | "macOS 16.1", "iOS 26.0" |
-| `deviceType` | parsed User-Agent (`DeviceTypeSchema`) | client-reported | icon: desktop / mobile / tablet |
-| `deviceModel`, `deviceName` | mobile only: `expo-device`, sent in a header | client-reported, display only | "Bishen's iPhone 15 Pro" |
-| `appVersion` | mobile only: `X-App-Version` | client-reported | "App 1.4.0" |
-| `signInMethod` | the login flow that created the session | server | "Password + 2FA", "Backup code", "New-device code" |
-| `ipAddress` | request IP at sign-in (existing) | server-observed | "203.0.113.24" |
-| `lastIpAddress` | request IP at the most recent refresh | server-observed | "Last seen from 198.51.100.7" |
-| `createdAt` | existing | server | "Signed in 3 Oct 2026" |
-| `lastActiveAt` | set on every refresh | server | "Active 5 minutes ago" |
-| `expiresAt` | existing | server | "Expires in 6 days" |
-| `deletedBy` | user id, or a system marker | server | not shown in the list (revoked sessions are hidden) |
-| `location` | GeoIP port, `none` for now | server | hidden while the port returns nothing |
+| Column (logical)                | Source                                                                                 | Trust                         | Shown as                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------- |
+| `clientType`                    | validated `X-Client-Type`                                                              | server-classified             | "Mobile app", "Web", "Merchant", "Admin"            |
+| `browserName`, `browserVersion` | parsed User-Agent ([`user-agent.ts`](../../../apps/api/src/common/http/user-agent.ts)) | client-reported               | "Chrome 141"                                        |
+| `osName`, `osVersion`           | parsed User-Agent                                                                      | client-reported               | "macOS 16.1", "iOS 26.0"                            |
+| `deviceType`                    | parsed User-Agent (`DeviceTypeSchema`)                                                 | client-reported               | icon: desktop / mobile / tablet                     |
+| `deviceModel`, `deviceName`     | mobile only: `expo-device`, sent in a header                                           | client-reported, display only | "Bishen's iPhone 15 Pro"                            |
+| `appVersion`                    | mobile only: `X-App-Version`                                                           | client-reported               | "App 1.4.0"                                         |
+| `signInMethod`                  | the login flow that created the session                                                | server                        | "Password + 2FA", "Backup code", "New-device code"  |
+| `ipAddress`                     | request IP at sign-in (existing)                                                       | server-observed               | "203.0.113.24"                                      |
+| `lastIpAddress`                 | request IP at the most recent refresh                                                  | server-observed               | "Last seen from 198.51.100.7"                       |
+| `createdAt`                     | existing                                                                               | server                        | "Signed in 3 Oct 2026"                              |
+| `lastActiveAt`                  | set on every refresh                                                                   | server                        | "Active 5 minutes ago"                              |
+| `expiresAt`                     | existing                                                                               | server                        | "Expires in 6 days"                                 |
+| `deletedBy`                     | user id, or a system marker                                                            | server                        | not shown in the list (revoked sessions are hidden) |
+| `location`                      | GeoIP port, `none` for now                                                             | server                        | hidden while the port returns nothing               |
 
 Client-reported values are **shown as-is and trusted for nothing else**: they never influence
 authorization, rate limits or risk decisions. They are length-limited and validated as plain
@@ -718,13 +718,13 @@ mobile examples).
 
 ### 8.3 `deletedBy` values
 
-| Value | When |
-| --- | --- |
-| the user's id | The user signed out, revoked a device from the list, or chose "sign out everywhere" |
-| an admin's id | An admin action that revokes a user's sessions (existing RBAC revocations) |
-| `system:rotation-reuse` | Refresh-token reuse detected; the family is revoked |
-| `system:logout-all` | A system-initiated sign-out of every device (for example after a password reset) |
-| `system:expired-cleanup` | The expiry cleanup job soft-deletes expired sessions |
+| Value                    | When                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| the user's id            | The user signed out, revoked a device from the list, or chose "sign out everywhere" |
+| an admin's id            | An admin action that revokes a user's sessions (existing RBAC revocations)          |
+| `system:rotation-reuse`  | Refresh-token reuse detected; the family is revoked                                 |
+| `system:logout-all`      | A system-initiated sign-out of every device (for example after a password reset)    |
+| `system:expired-cleanup` | The expiry cleanup job soft-deletes expired sessions                                |
 
 System markers are a closed zod enum in `packages/shared`; free-form strings are rejected.
 
@@ -743,12 +743,12 @@ System markers are a closed zod enum in `packages/shared`; free-form strings are
 
 ### 8.5 Endpoints
 
-| Method and path | Purpose | Notes |
-| --- | --- | --- |
-| `GET /auth/sessions` | List the caller's active sessions | Response gains every column in 8.2 plus `isCurrent` |
+| Method and path                         | Purpose                             | Notes                                                                                                                                                                                                                                 |
+| --------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /auth/sessions`                    | List the caller's active sessions   | Response gains every column in 8.2 plus `isCurrent`                                                                                                                                                                                   |
 | `POST /auth/sessions/:sessionId/revoke` | Revoke one of the caller's sessions | 404 for sessions that are not the caller's (never 403, to avoid confirming ids); soft-deletes with `deletedBy` = caller; audits; invalidates `sid` on every instance after commit; revoking the current session behaves like sign-out |
-| `POST /auth/logout` | Sign out the current session | unchanged semantics; `deletedBy` = caller |
-| `POST /auth/logout-all` | Sign out everywhere | unchanged semantics (already immediate); `deletedBy` = caller |
+| `POST /auth/logout`                     | Sign out the current session        | unchanged semantics; `deletedBy` = caller                                                                                                                                                                                             |
+| `POST /auth/logout-all`                 | Sign out everywhere                 | unchanged semantics (already immediate); `deletedBy` = caller                                                                                                                                                                         |
 
 `isCurrent` is computed from the `sid` of the request's access token, so it is correct on both
 transports.
@@ -866,21 +866,21 @@ tests in [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md).
 
 ### 9.1 Stack and versions
 
-| Concern | Choice | Version policy |
-| --- | --- | --- |
-| Framework | Expo | **SDK 57** (latest stable that Expo Go runs); move to 58 when stable |
-| Runtime | React Native 0.86, React 19.2 | whatever SDK 57 pins; mobile has its own syncpack version group |
-| Navigation | Expo Router | SDK-pinned via `npx expo install` |
-| Styling | Uniwind (free) + Tailwind v4 | latest stable Uniwind; Tailwind v4 shared with web |
-| Server state | TanStack Query via `@workspace/api-client/react` | same major as web |
-| UI state | Zustand feature stores ([ADR 023](../../adr/023-client-state-feature-stores.md)) | same major as web |
-| Forms | TanStack Form ([ADR 019](../../adr/019-tanstack-form-standard.md)) with shared zod schemas | same major as web |
-| Validation | zod from `@workspace/shared` | exact repo pin |
-| Secure storage | `expo-secure-store` | SDK-pinned |
-| Biometrics | `expo-local-authentication` | SDK-pinned |
-| Device details | `expo-device`, `expo-application` | SDK-pinned |
-| Connectivity | `expo-network` (the online / offline pill, §10.16) | SDK-pinned |
-| Tests | jest-expo `~57.0.2` + `@react-native/jest-preset` 0.86.x + `@testing-library/react-native` | 57.0.0 has a known install failure; pin `~57.0.2` |
+| Concern        | Choice                                                                                     | Version policy                                                       |
+| -------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Framework      | Expo                                                                                       | **SDK 57** (latest stable that Expo Go runs); move to 58 when stable |
+| Runtime        | React Native 0.86, React 19.2                                                              | whatever SDK 57 pins; mobile has its own syncpack version group      |
+| Navigation     | Expo Router                                                                                | SDK-pinned via `npx expo install`                                    |
+| Styling        | Uniwind (free) + Tailwind v4                                                               | latest stable Uniwind; Tailwind v4 shared with web                   |
+| Server state   | TanStack Query via `@workspace/api-client/react`                                           | same major as web                                                    |
+| UI state       | Zustand feature stores ([ADR 023](../../adr/023-client-state-feature-stores.md))           | same major as web                                                    |
+| Forms          | TanStack Form ([ADR 019](../../adr/019-tanstack-form-standard.md)) with shared zod schemas | same major as web                                                    |
+| Validation     | zod from `@workspace/shared`                                                               | exact repo pin                                                       |
+| Secure storage | `expo-secure-store`                                                                        | SDK-pinned                                                           |
+| Biometrics     | `expo-local-authentication`                                                                | SDK-pinned                                                           |
+| Device details | `expo-device`, `expo-application`                                                          | SDK-pinned                                                           |
+| Connectivity   | `expo-network` (the online / offline pill, §10.16)                                         | SDK-pinned                                                           |
+| Tests          | jest-expo `~57.0.2` + `@react-native/jest-preset` 0.86.x + `@testing-library/react-native` | 57.0.0 has a known install failure; pin `~57.0.2`                    |
 
 Expo-managed packages are always installed with `npx expo install <pkg>`, never `pnpm add`, so
 they match the SDK. `npx expo install --check` runs in tests and CI and fails on a mismatch.
@@ -938,13 +938,13 @@ components in `components/` receive props only.
 
 `app.config.ts` reads identity from environment variables validated with zod at config time:
 
-| Variable | Purpose | Default (placeholder) |
-| --- | --- | --- |
-| `MOBILE_APP_NAME` | Display name | `Starter` |
-| `MOBILE_APP_SLUG` | Expo slug | `starter` |
-| `MOBILE_BUNDLE_ID` | iOS bundle identifier and Android package | `com.example.starter` |
-| `MOBILE_SCHEME` | Deep-link scheme (router default links only) | `starter` |
-| `EXPO_PUBLIC_API_URL` | API base URL outside development | none (required outside development) |
+| Variable              | Purpose                                      | Default (placeholder)               |
+| --------------------- | -------------------------------------------- | ----------------------------------- |
+| `MOBILE_APP_NAME`     | Display name                                 | `Starter`                           |
+| `MOBILE_APP_SLUG`     | Expo slug                                    | `starter`                           |
+| `MOBILE_BUNDLE_ID`    | iOS bundle identifier and Android package    | `com.example.starter`               |
+| `MOBILE_SCHEME`       | Deep-link scheme (router default links only) | `starter`                           |
+| `EXPO_PUBLIC_API_URL` | API base URL outside development             | none (required outside development) |
 
 `app.config.ts` also sets the `faceIDPermission` text for `expo-local-authentication` so real
 iOS builds can use Face ID ([section 11](#11-the-app-lock)). Products built on the starter
@@ -966,11 +966,11 @@ bundled into the app and therefore **public**; no secret is ever configured this
 
 ### 9.5 Resolving the API address
 
-| Situation | Address |
-| --- | --- |
+| Situation              | Address                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Development in Expo Go | The dev machine's host that Expo Go is connected to (from Expo's host URI) + the API port from `EXPO_PUBLIC_API_PORT` (default the API's dev port). `localhost` is never used: on a phone it means the phone. |
-| Anything else | `EXPO_PUBLIC_API_URL`, required; validated as an `https://` URL outside development |
-| Missing or invalid | The config error screen with the exact variable name and an example value |
+| Anything else          | `EXPO_PUBLIC_API_URL`, required; validated as an `https://` URL outside development                                                                                                                           |
+| Missing or invalid     | The config error screen with the exact variable name and an example value                                                                                                                                     |
 
 ### 9.6 Navigation and the root guard
 
@@ -990,13 +990,13 @@ stateDiagram-v2
   SignedOut --> UpgradeRequired: 426
 ```
 
-| State | Routes allowed |
-| --- | --- |
-| `ConfigError` | `config-error` only |
+| State             | Routes allowed                               |
+| ----------------- | -------------------------------------------- |
+| `ConfigError`     | `config-error` only                          |
 | `UpgradeRequired` | `update-required` only (cannot be dismissed) |
-| `SignedOut` | `(auth)` group only |
-| `Locked` | `lock` only |
-| `SignedIn` | `(app)` group only |
+| `SignedOut`       | `(auth)` group only                          |
+| `Locked`          | `lock` only                                  |
+| `SignedIn`        | `(app)` group only                           |
 
 The guard reads the session store and redirects; screens never decide where to go after
 authentication on their own. Route params are parsed with zod
@@ -1006,14 +1006,14 @@ authentication on their own. Route params are parsed with zod
 
 One typed key registry, so nothing is stored under an ad-hoc key:
 
-| Key | Value | Notes |
-| --- | --- | --- |
-| `auth.accessToken` | string | short-lived |
-| `auth.refreshToken` | string | read only after the app lock is satisfied |
-| `prefs.theme` | `"system" \| "light" \| "dark"` | zod-validated on read; default `system` |
-| `prefs.appLock.enabled` | boolean | default `false` |
-| `prefs.appLock.timeoutMs` | number | default `60000` |
-| `prefs.appLock.enrolledBiometrics` | fingerprint of the enrolled biometric set (if the platform exposes one) | used to detect changed biometrics |
+| Key                                | Value                                                                   | Notes                                     |
+| ---------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------- |
+| `auth.accessToken`                 | string                                                                  | short-lived                               |
+| `auth.refreshToken`                | string                                                                  | read only after the app lock is satisfied |
+| `prefs.theme`                      | `"system" \| "light" \| "dark"`                                         | zod-validated on read; default `system`   |
+| `prefs.appLock.enabled`            | boolean                                                                 | default `false`                           |
+| `prefs.appLock.timeoutMs`          | number                                                                  | default `60000`                           |
+| `prefs.appLock.enrolledBiometrics` | fingerprint of the enrolled biometric set (if the platform exposes one) | used to detect changed biometrics         |
 
 Every read goes through zod; a corrupt or unexpected value is treated as absent and overwritten
 with the default, never cast.
@@ -1153,7 +1153,7 @@ roles, focus order) and with large text.
 ### 10.4 Sign up
 
 - Native form for `POST /auth/signup` with the shared signup schema.
-- On success: a confirmation screen saying "We sent a verification link to *email*. Open it on
+- On success: a confirmation screen saying "We sent a verification link to _email_. Open it on
   any device, then come back and sign in." Email verification finishes on the **web** page the
   link opens; deep links are out of scope.
 
@@ -1175,7 +1175,7 @@ Used both for forced enrollment during sign-in and for turning 2FA on from Secur
 ### 10.6 Forgot password
 
 - Native form that requests the reset email (`POST /auth/forgot-password`).
-- Confirmation: "If an account exists for *email*, we sent a reset link. Open it on any device to
+- Confirmation: "If an account exists for _email_, we sent a reset link. Open it on any device to
   choose a new password, then come back and sign in." The reset itself finishes on the **web**
   page. The response is identical whether or not the account exists (no account enumeration).
 
@@ -1197,6 +1197,17 @@ every changed file with a GitHub-style diff. Hidden when the
 integration is off or the account lacks `READ:GITHUB` — see
 [GitHub contributions §4](../github-contributions.md#4-mobile-profile-section).
 
+**GitHub pull requests** (ADR 052, 2026-10-15): for admins, the drawer's GitHub section opens the
+pull-request list, a pull request (one scroll like GitHub's app: header, merge line, description,
+labels, reviewers, commits and files rows, the conversation on a GitHub-style line, GitHub's merge
+box (review, checks, conflicts) and the comment box with "Review changes" beside "Comment" — both
+posted to GitHub), its changed files with line-comment threads in the diff, its commits and each
+commit's diff, and the GitHub token screen. These screens sit on the Profile
+tab's stack. Comments show their pictures (those GitHub shows only to signed-in readers through the API, signed in) and emoji reactions, which can be
+added and taken away; the comment box attaches a photo from the library (`src/lib/file-upload.ts`,
+the same upload pipeline as the web apps), committed to the repository; with live updates on, the screen
+updates by itself (`src/lib/server-events.ts`). See [GitHub pull requests §6](../github-pull-requests.md#6-the-mobile-app).
+
 ### 10.9 Settings
 
 - **Appearance:** System / Light / Dark (radio list). Applied immediately via `Uniwind.setTheme`
@@ -1210,13 +1221,13 @@ integration is off or the account lacks `READ:GITHUB` — see
 
 Same capabilities as the web security panel, on the same endpoints:
 
-| Item | Behavior |
-| --- | --- |
-| Change password | Current + new password with the shared password schema; success may revoke other sessions per existing API behavior, and the device list refreshes |
-| Two-factor authentication | Turn on (10.5 flow) or off; users whose role forces 2FA see it locked on, exactly like web |
-| Backup codes | Show remaining count; generate new codes (shown once, copy and share) |
-| Signed-in devices | 10.11 |
-| Sign out everywhere | Confirmation naming the consequence: every device, every app, including this one |
+| Item                      | Behavior                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Change password           | Current + new password with the shared password schema; success may revoke other sessions per existing API behavior, and the device list refreshes |
+| Two-factor authentication | Turn on (10.5 flow) or off; users whose role forces 2FA see it locked on, exactly like web                                                         |
+| Backup codes              | Show remaining count; generate new codes (shown once, copy and share)                                                                              |
+| Signed-in devices         | 10.11                                                                                                                                              |
+| Sign out everywhere       | Confirmation naming the consequence: every device, every app, including this one                                                                   |
 
 ### 10.11 Signed-in devices
 
@@ -1294,13 +1305,13 @@ places inside the `(app)` group:
 
 One `AppStatusProvider` (`src/features/app-status/facade.tsx`) derives both, once, for every pill:
 
-| Concern | Behaviour |
-| --- | --- |
-| Connectivity | `expo-network`'s state (`src/lib/use-network-reading.ts`). Offline only when the OS says so (`isConnected` or `isInternetReachable` false); before its first answer the app counts as online, as the admin does. |
-| Session | `GET /session` through the api-client, so a 401 runs the single-flight refresh and retries. A silent refresh shows as `expiresAt` moving forward: the pill reads "Refreshed" with the tone's full border for 2 s. |
-| Countdown | Computed on the device from `expiresAt`, re-read every second **only while the app is in the foreground** (`useAppActive`). A verified session stays verified when a later re-check fails (offline): the countdown is still right. |
-| Re-checks | On return to the foreground, when the connection comes back, and once when the countdown reaches zero — the request that refreshes the expired token. No steady polling. |
-| Failure | "Check failed" (unreachable) or "Expired" (401 after refresh — the api-client also ends the session, so the root guard leaves for sign-in). |
+| Concern      | Behaviour                                                                                                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connectivity | `expo-network`'s state (`src/lib/use-network-reading.ts`). Offline only when the OS says so (`isConnected` or `isInternetReachable` false); before its first answer the app counts as online, as the admin does.                   |
+| Session      | `GET /session` through the api-client, so a 401 runs the single-flight refresh and retries. A silent refresh shows as `expiresAt` moving forward: the pill reads "Refreshed" with the tone's full border for 2 s.                  |
+| Countdown    | Computed on the device from `expiresAt`, re-read every second **only while the app is in the foreground** (`useAppActive`). A verified session stays verified when a later re-check fails (offline): the countdown is still right. |
+| Re-checks    | On return to the foreground, when the connection comes back, and once when the countdown reaches zero — the request that refreshes the expired token. No steady polling.                                                           |
+| Failure      | "Check failed" (unreachable) or "Expired" (401 after refresh — the api-client also ends the session, so the root guard leaves for sign-in).                                                                                        |
 
 This is a status display, not offline support: nothing here queues writes or changes how queries
 behave offline (rules/04, offline behaviour). Wiring TanStack Query's `onlineManager` to the same
@@ -1319,17 +1330,17 @@ exists. Its job is to stop someone who picks up an unlocked phone from opening t
 
 ### 11.2 Behavior
 
-| Aspect | Decision |
-| --- | --- |
-| Default | Off |
-| Turning it on | Settings → App lock; requires one successful biometric/passcode check first |
-| When it asks | Cold start, and on returning from the background after the timeout |
-| Timeout | Choice of Immediately / 1 minute / 5 minutes; **default 60 seconds** |
-| Method | Biometrics (Face ID, Touch ID, fingerprint), with the OS **device passcode** as fallback |
-| Cancel | The lock screen offers only **Try again** or **Sign out**; there is no way past it |
-| Biometrics removed or changed | The lock turns itself off and the user must sign in again with their password |
-| Tokens | The refresh token is not read from Secure Store until the lock is satisfied |
-| Server | No API change, no audit event (device-only) |
+| Aspect                        | Decision                                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| Default                       | Off                                                                                      |
+| Turning it on                 | Settings → App lock; requires one successful biometric/passcode check first              |
+| When it asks                  | Cold start, and on returning from the background after the timeout                       |
+| Timeout                       | Choice of Immediately / 1 minute / 5 minutes; **default 60 seconds**                     |
+| Method                        | Biometrics (Face ID, Touch ID, fingerprint), with the OS **device passcode** as fallback |
+| Cancel                        | The lock screen offers only **Try again** or **Sign out**; there is no way past it       |
+| Biometrics removed or changed | The lock turns itself off and the user must sign in again with their password            |
+| Tokens                        | The refresh token is not read from Secure Store until the lock is satisfied              |
+| Server                        | No API change, no audit event (device-only)                                              |
 
 ### 11.3 State machine
 
@@ -1348,12 +1359,12 @@ stateDiagram-v2
 
 ### 11.4 Platform notes
 
-| Where | What the user sees |
-| --- | --- |
+| Where                                              | What the user sees                                                                     |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Real iPhone, **real build** (development or store) | Face ID / Touch ID; passcode fallback. Requires `faceIDPermission` in `app.config.ts`. |
-| Real iPhone, **Expo Go** | **Device passcode**, not Face ID: Expo Go cannot use Face ID. Expected, not a bug. |
-| Real Android phone (Expo Go or a real build) | Fingerprint (or face, where the device supports it); passcode fallback |
-| iOS Simulator / Android emulator | Simulated enrollment only; biometrics are not enforced |
+| Real iPhone, **Expo Go**                           | **Device passcode**, not Face ID: Expo Go cannot use Face ID. Expected, not a bug.     |
+| Real Android phone (Expo Go or a real build)       | Fingerprint (or face, where the device supports it); passcode fallback                 |
+| iOS Simulator / Android emulator                   | Simulated enrollment only; biometrics are not enforced                                 |
 
 `expo-secure-store`'s own `requireAuthentication` option is **not** used: it is unsupported in
 Expo Go when biometrics are available, and the lock is implemented with
@@ -1392,18 +1403,18 @@ Expo Go when biometrics are available, and the lock is implemented with
 
 ### 12.1 Threats and mitigations
 
-| Threat | Mitigation |
-| --- | --- |
-| Token theft from device storage | Tokens only in `expo-secure-store` (Keychain / Keystore); never in AsyncStorage, logs or state persisted elsewhere |
-| Stolen or lost phone, unlocked | App lock (opt-in); single-device revoke from any other client, effective immediately |
-| Stolen phone, locked | OS lock + Secure Store protection; revoke from another device |
-| Refresh token replay | Rotation on every refresh + reuse detection revokes the family (`deletedBy` = `system:rotation-reuse`) |
-| Browser page requesting body tokens | Transport chosen server-side by client type; a browser declaring `mobile` gets no cookies and gains nothing |
-| Old app versions with known bugs | `MOBILE_MIN_SUPPORTED_VERSION` + 426 |
-| Spoofed device details | Client-reported values are display-only, length-limited, validated, rendered as text |
-| Account enumeration via forgot password | Identical response whether or not the account exists (existing behavior) |
-| Secrets in the bundle | `EXPO_PUBLIC_*` is public; no secret is configured through it |
-| Revoked device keeps working for minutes | `sid` claim + revoked-session check on every request |
+| Threat                                   | Mitigation                                                                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Token theft from device storage          | Tokens only in `expo-secure-store` (Keychain / Keystore); never in AsyncStorage, logs or state persisted elsewhere |
+| Stolen or lost phone, unlocked           | App lock (opt-in); single-device revoke from any other client, effective immediately                               |
+| Stolen phone, locked                     | OS lock + Secure Store protection; revoke from another device                                                      |
+| Refresh token replay                     | Rotation on every refresh + reuse detection revokes the family (`deletedBy` = `system:rotation-reuse`)             |
+| Browser page requesting body tokens      | Transport chosen server-side by client type; a browser declaring `mobile` gets no cookies and gains nothing        |
+| Old app versions with known bugs         | `MOBILE_MIN_SUPPORTED_VERSION` + 426                                                                               |
+| Spoofed device details                   | Client-reported values are display-only, length-limited, validated, rendered as text                               |
+| Account enumeration via forgot password  | Identical response whether or not the account exists (existing behavior)                                           |
+| Secrets in the bundle                    | `EXPO_PUBLIC_*` is public; no secret is configured through it                                                      |
+| Revoked device keeps working for minutes | `sid` claim + revoked-session check on every request                                                               |
 
 ### 12.2 What the server still decides
 
@@ -1428,14 +1439,14 @@ section summarizing 12.1 when piece 3 lands.
 
 ## 13. Testing strategy
 
-| Layer | Runner | What is covered |
-| --- | --- | --- |
-| `packages/tokens` | Vitest | schemas, theme parity, deterministic output, staleness of committed CSS |
-| `packages/api-client` | Vitest | request/response validation, error mapping, cookie and token transports, single-flight refresh, retry-once, session-expired path, 426 path, query keys |
-| `packages/shared` | Vitest | new schemas: client type, token-bearing responses, session details, `deletedBy` markers |
-| `apps/api` | Vitest unit + e2e | transport selection, refresh source rules, version guard, `sid` issuance and rejection, revoke endpoint (own vs others, idempotency, race with refresh), list fields, seed coverage |
-| `packages/client` | Vitest | device list section: rendering, revoke flow, sign out everywhere, empty/error states |
-| `apps/mobile` | jest-expo + `@testing-library/react-native` | every screen's states, the root guard transitions, the app lock state machine (with `expo-local-authentication` mocked), Secure Store wrapper validation, env parsing, theme persistence |
+| Layer                 | Runner                                      | What is covered                                                                                                                                                                          |
+| --------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/tokens`     | Vitest                                      | schemas, theme parity, deterministic output, staleness of committed CSS                                                                                                                  |
+| `packages/api-client` | Vitest                                      | request/response validation, error mapping, cookie and token transports, single-flight refresh, retry-once, session-expired path, 426 path, query keys                                   |
+| `packages/shared`     | Vitest                                      | new schemas: client type, token-bearing responses, session details, `deletedBy` markers                                                                                                  |
+| `apps/api`            | Vitest unit + e2e                           | transport selection, refresh source rules, version guard, `sid` issuance and rejection, revoke endpoint (own vs others, idempotency, race with refresh), list fields, seed coverage      |
+| `packages/client`     | Vitest                                      | device list section: rendering, revoke flow, sign out everywhere, empty/error states                                                                                                     |
+| `apps/mobile`         | jest-expo + `@testing-library/react-native` | every screen's states, the root guard transitions, the app lock state machine (with `expo-local-authentication` mocked), Secure Store wrapper validation, env parsing, theme persistence |
 
 Rules that apply to every layer ([`rules/11`](../../../rules/11-testing-vitest.md), with the
 jest-expo exception from [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)):
@@ -1454,12 +1465,12 @@ is open, sign out everywhere from the phone while merchant web is open.
 
 ### 14.1 Tasks for `apps/mobile`
 
-| Turbo task | Command | Purpose |
-| --- | --- | --- |
-| `lint` | `eslint --max-warnings=0` | same zero-warning gate as every workspace |
-| `typecheck` | `tsc --noEmit` | strict flags from the shared TypeScript config |
-| `test` | `jest` (jest-expo) + `npx expo install --check` | tests and SDK version alignment |
-| `build` | `npx expo export --platform ios --platform android` | bundle check: proves Metro resolves every workspace package in the pnpm workspace, without Xcode or Android Studio |
+| Turbo task  | Command                                             | Purpose                                                                                                            |
+| ----------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `lint`      | `eslint --max-warnings=0`                           | same zero-warning gate as every workspace                                                                          |
+| `typecheck` | `tsc --noEmit`                                      | strict flags from the shared TypeScript config                                                                     |
+| `test`      | `jest` (jest-expo) + `npx expo install --check`     | tests and SDK version alignment                                                                                    |
+| `build`     | `npx expo export --platform ios --platform android` | bundle check: proves Metro resolves every workspace package in the pnpm workspace, without Xcode or Android Studio |
 
 CI's existing `pnpm turbo run lint|typecheck|test|build` jobs pick the new workspace up
 automatically. `turbo.json` gains the `expo export` output folder in `build.outputs` and any
@@ -1467,10 +1478,10 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 
 ### 14.2 Root scripts
 
-| Script | Purpose |
-| --- | --- |
-| `pnpm tokens:generate` | regenerate token CSS (piece 1) |
-| `pnpm dev:mobile` | start Expo for the mobile app (`turbo dev --filter @workspace/mobile`) |
+| Script                 | Purpose                                                                |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `pnpm tokens:generate` | regenerate token CSS (piece 1)                                         |
+| `pnpm dev:mobile`      | start Expo for the mobile app (`turbo dev --filter @workspace/mobile`) |
 
 ### 14.3 Dependency hygiene
 
@@ -1512,13 +1523,13 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 
 ### 15.4 Known Expo Go limitations
 
-| Limitation | Effect on the starter |
-| --- | --- |
-| No Face ID | App lock uses the passcode on iPhone in Expo Go (section 11.4) |
-| No remote push notifications | Push is out of scope |
-| No universal / app links | Email links open the web; deep links are out of scope |
-| No third-party native modules | Only Expo-included modules are used |
-| Icons and splash screens are not testable | Verify them later in a real build |
+| Limitation                                | Effect on the starter                                          |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| No Face ID                                | App lock uses the passcode on iPhone in Expo Go (section 11.4) |
+| No remote push notifications              | Push is out of scope                                           |
+| No universal / app links                  | Email links open the web; deep links are out of scope          |
+| No third-party native modules             | Only Expo-included modules are used                            |
+| Icons and splash screens are not testable | Verify them later in a real build                              |
 
 ### 15.5 Leaving Expo Go later
 
@@ -1530,52 +1541,52 @@ generated (`npx expo prebuild`), not committed, so the switch does not change th
 
 ## 16. Documentation that changes with this work
 
-| Document | Change | Piece |
-| --- | --- | --- |
-| [`rules/04-mobile-expo.md`](../../../rules/04-mobile-expo.md) | NativeWind → Uniwind (ADR 032), Expo Go workflow, jest-expo (ADR 031), body token transport (ADR 029), app lock, forced upgrade | 5 |
-| [`rules/11-testing-vitest.md`](../../../rules/11-testing-vitest.md) | Note the jest-expo exception for `apps/mobile` | 5 |
-| [`rules/01-repository-architecture.md`](../../../rules/01-repository-architecture.md) | Add `packages/tokens` and `packages/api-client`; correct the allowed edges for `apps/mobile` | 1, 2, 5 |
-| [`rules/07-ui-system.md`](../../../rules/07-ui-system.md) | Tokens come from `packages/tokens`; generated CSS is never hand-edited | 1 |
-| [`docs/technical/security/authentication.md`](../security/authentication.md) | Mobile client type and body transport | 3 |
-| [`docs/technical/security/token-refresh.md`](../security/token-refresh.md) | Token-transport refresh, single flight, `sid` revocation | 2, 3, 4 |
-| [`docs/technical/configuration/api.md`](../configuration/api.md) | `MOBILE_MIN_SUPPORTED_VERSION`; `SESSION_LOCATION_PROVIDER`, `SESSION_LOCATION_TIMEOUT_MS` | 3, 4 |
-| [`docs/technical/configuration/frontend.md`](../configuration/frontend.md) | `EXPO_PUBLIC_*` variables and app identity variables | 5 |
-| [`docs/technical/database.md`](../database.md) | Session columns and seed coverage | 4 |
-| API reference (auth and sessions) | New endpoint, new response fields, token-bearing variants | 3, 4 |
-| `apps/mobile/README.md` | Run instructions, Expo Go notes, limitations, next steps | 5 |
-| This page | Mark each piece "implemented" and correct anything the work changed | every piece |
+| Document                                                                              | Change                                                                                                                          | Piece       |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| [`rules/04-mobile-expo.md`](../../../rules/04-mobile-expo.md)                         | NativeWind → Uniwind (ADR 032), Expo Go workflow, jest-expo (ADR 031), body token transport (ADR 029), app lock, forced upgrade | 5           |
+| [`rules/11-testing-vitest.md`](../../../rules/11-testing-vitest.md)                   | Note the jest-expo exception for `apps/mobile`                                                                                  | 5           |
+| [`rules/01-repository-architecture.md`](../../../rules/01-repository-architecture.md) | Add `packages/tokens` and `packages/api-client`; correct the allowed edges for `apps/mobile`                                    | 1, 2, 5     |
+| [`rules/07-ui-system.md`](../../../rules/07-ui-system.md)                             | Tokens come from `packages/tokens`; generated CSS is never hand-edited                                                          | 1           |
+| [`docs/technical/security/authentication.md`](../security/authentication.md)          | Mobile client type and body transport                                                                                           | 3           |
+| [`docs/technical/security/token-refresh.md`](../security/token-refresh.md)            | Token-transport refresh, single flight, `sid` revocation                                                                        | 2, 3, 4     |
+| [`docs/technical/configuration/api.md`](../configuration/api.md)                      | `MOBILE_MIN_SUPPORTED_VERSION`; `SESSION_LOCATION_PROVIDER`, `SESSION_LOCATION_TIMEOUT_MS`                                      | 3, 4        |
+| [`docs/technical/configuration/frontend.md`](../configuration/frontend.md)            | `EXPO_PUBLIC_*` variables and app identity variables                                                                            | 5           |
+| [`docs/technical/database.md`](../database.md)                                        | Session columns and seed coverage                                                                                               | 4           |
+| API reference (auth and sessions)                                                     | New endpoint, new response fields, token-bearing variants                                                                       | 3, 4        |
+| `apps/mobile/README.md`                                                               | Run instructions, Expo Go notes, limitations, next steps                                                                        | 5           |
+| This page                                                                             | Mark each piece "implemented" and correct anything the work changed                                                             | every piece |
 
 ---
 
 ## 17. Out of scope and next steps
 
-| Item | Why not now | Where it plugs in later |
-| --- | --- | --- |
-| Push notifications | Expo Go has no remote push; needs a dev build and a push provider decision | `rules/04` push section; a notification module in the API |
-| Offline mode | `rules/04` requires an ADR before claiming offline support | TanStack Query persistence + an ADR on conflict handling |
-| Deep links / universal links | Not available in Expo Go | `MOBILE_SCHEME` is already configured; add associated domains in a real build |
-| Mobile e2e tests | Simulators in CI; Detox needs native builds | Maestro flows in `apps/mobile/e2e`, run against a dev build |
-| GeoIP location | External dependency and account | `SessionLocationResolver` adapter + pending decision |
-| EAS builds and store submission | Paid accounts and credentials; the deploying team's choice | Add `eas.json` with development / preview / production profiles |
-| Product features (rewards, claims) | Starter shell first | New route groups under `(app)` using existing consumer endpoints |
-| Longer mobile sessions | One knob is enough for the starter | A separate refresh lifetime setting for `mobile` |
+| Item                               | Why not now                                                                | Where it plugs in later                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Push notifications                 | Expo Go has no remote push; needs a dev build and a push provider decision | `rules/04` push section; a notification module in the API                     |
+| Offline mode                       | `rules/04` requires an ADR before claiming offline support                 | TanStack Query persistence + an ADR on conflict handling                      |
+| Deep links / universal links       | Not available in Expo Go                                                   | `MOBILE_SCHEME` is already configured; add associated domains in a real build |
+| Mobile e2e tests                   | Simulators in CI; Detox needs native builds                                | Maestro flows in `apps/mobile/e2e`, run against a dev build                   |
+| GeoIP location                     | External dependency and account                                            | `SessionLocationResolver` adapter + pending decision                          |
+| EAS builds and store submission    | Paid accounts and credentials; the deploying team's choice                 | Add `eas.json` with development / preview / production profiles               |
+| Product features (rewards, claims) | Starter shell first                                                        | New route groups under `(app)` using existing consumer endpoints              |
+| Longer mobile sessions             | One knob is enough for the starter                                         | A separate refresh lifetime setting for `mobile`                              |
 
 ---
 
 ## 18. Risks and how we contain them
 
-| Risk | Likelihood | Impact | Containment |
-| --- | --- | --- | --- |
-| Generated web CSS differs subtly from today's | Medium | Visible color shifts | Exact value diff before switching; visual check of three apps in both themes |
-| `api-client` extraction changes web behavior | Medium | Auth or request regressions | Move + re-export in one PR; existing tests move unchanged; no behavior change allowed in piece 2 |
-| Body tokens leak into a browser path | Low | Weaker web security | Server-side transport selection by client type; tests that browser types never receive body tokens |
-| `sid` check adds latency | Low | Slower requests | Served from the existing token-state cache; no hot-path query |
-| Expo Go and SDK drift (store builds lag) | Medium | Developers cannot open the app | Target only stable SDKs Expo Go runs; document upgrade steps |
-| React version split (19.2 mobile vs 19.3 web) | Certain until SDK 58 | Two React versions in the lockfile | Explicit syncpack group; disappears when SDK 58 is stable |
-| Uniwind free tier gaps | Low | Missing styling features | ADR 032 lists the escape hatch (Pro needs dev builds) |
-| pnpm isolated linker breaks a React Native library | Low | Metro resolution errors | `expo export` bundle check in CI catches it; hoisting only with a recorded reason |
-| Client-reported device details are misleading | Certain (by nature) | Confusing labels | Shown as reported, never trusted; server-observed fields shown alongside |
-| Raising the minimum app version locks out users on old OS versions | Medium | Users cannot use the app | Release checklist step before raising the minimum (ADR 033) |
+| Risk                                                               | Likelihood           | Impact                             | Containment                                                                                        |
+| ------------------------------------------------------------------ | -------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Generated web CSS differs subtly from today's                      | Medium               | Visible color shifts               | Exact value diff before switching; visual check of three apps in both themes                       |
+| `api-client` extraction changes web behavior                       | Medium               | Auth or request regressions        | Move + re-export in one PR; existing tests move unchanged; no behavior change allowed in piece 2   |
+| Body tokens leak into a browser path                               | Low                  | Weaker web security                | Server-side transport selection by client type; tests that browser types never receive body tokens |
+| `sid` check adds latency                                           | Low                  | Slower requests                    | Served from the existing token-state cache; no hot-path query                                      |
+| Expo Go and SDK drift (store builds lag)                           | Medium               | Developers cannot open the app     | Target only stable SDKs Expo Go runs; document upgrade steps                                       |
+| React version split (19.2 mobile vs 19.3 web)                      | Certain until SDK 58 | Two React versions in the lockfile | Explicit syncpack group; disappears when SDK 58 is stable                                          |
+| Uniwind free tier gaps                                             | Low                  | Missing styling features           | ADR 032 lists the escape hatch (Pro needs dev builds)                                              |
+| pnpm isolated linker breaks a React Native library                 | Low                  | Metro resolution errors            | `expo export` bundle check in CI catches it; hoisting only with a recorded reason                  |
+| Client-reported device details are misleading                      | Certain (by nature)  | Confusing labels                   | Shown as reported, never trusted; server-observed fields shown alongside                           |
+| Raising the minimum app version locks out users on old OS versions | Medium               | Users cannot use the app           | Release checklist step before raising the minimum (ADR 033)                                        |
 
 ---
 
@@ -1650,60 +1661,61 @@ touches shared packages.
 
 ### 20.1 Request headers
 
-| Header | Sent by | Value | Read by |
-| --- | --- | --- | --- |
-| `X-Client-Type` | every client | `web` \| `admin` \| `merchant` \| `mobile` | auth interceptors and guards, audit |
-| `Authorization` | mobile (and API keys / tools) | `Bearer <access token>` | `auth.guard.ts` |
-| `X-App-Version` | mobile | semver of the installed app | version guard (426), session details |
-| `X-Device-Model`, `X-Device-Name` | mobile (sign-in and refresh) | model and device name from `expo-device`, percent-encoded UTF-8 (`encodeSessionDeviceHeaderValue`) | session details (display only; an invalid value is dropped) |
+| Header                            | Sent by                       | Value                                                                                              | Read by                                                     |
+| --------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `X-Client-Type`                   | every client                  | `web` \| `admin` \| `merchant` \| `mobile`                                                         | auth interceptors and guards, audit                         |
+| `Authorization`                   | mobile (and API keys / tools) | `Bearer <access token>`                                                                            | `auth.guard.ts`                                             |
+| `X-App-Version`                   | mobile                        | semver of the installed app                                                                        | version guard (426), session details                        |
+| `X-Device-Model`, `X-Device-Name` | mobile (sign-in and refresh)  | model and device name from `expo-device`, percent-encoded UTF-8 (`encodeSessionDeviceHeaderValue`) | session details (display only; an invalid value is dropped) |
 
 ### 20.2 Configuration
 
-| Variable | Where | Required | Purpose |
-| --- | --- | --- | --- |
-| `MOBILE_MIN_SUPPORTED_VERSION` | API | yes (has a default of the first release) | forced upgrade threshold |
-| `SESSION_LOCATION_PROVIDER` | API | no (`none`) | the `SessionLocationResolver` adapter (8.7) |
-| `SESSION_LOCATION_TIMEOUT_MS` | API | no (`300`) | location lookup budget at sign-in |
-| `EXPO_PUBLIC_API_URL` | mobile | outside development | API base URL |
-| `EXPO_PUBLIC_API_PORT` | mobile | no | API port used with the dev host in development |
-| `MOBILE_APP_NAME` | mobile (`app.config.ts`) | no | display name |
-| `MOBILE_APP_SLUG` | mobile | no | Expo slug |
-| `MOBILE_BUNDLE_ID` | mobile | no | bundle id / package name |
-| `MOBILE_SCHEME` | mobile | no | deep-link scheme |
+| Variable                       | Where                    | Required                                 | Purpose                                        |
+| ------------------------------ | ------------------------ | ---------------------------------------- | ---------------------------------------------- |
+| `MOBILE_MIN_SUPPORTED_VERSION` | API                      | yes (has a default of the first release) | forced upgrade threshold                       |
+| `SESSION_LOCATION_PROVIDER`    | API                      | no (`none`)                              | the `SessionLocationResolver` adapter (8.7)    |
+| `SESSION_LOCATION_TIMEOUT_MS`  | API                      | no (`300`)                               | location lookup budget at sign-in              |
+| `EXPO_PUBLIC_API_URL`          | mobile                   | outside development                      | API base URL                                   |
+| `EXPO_PUBLIC_API_PORT`         | mobile                   | no                                       | API port used with the dev host in development |
+| `MOBILE_APP_NAME`              | mobile (`app.config.ts`) | no                                       | display name                                   |
+| `MOBILE_APP_SLUG`              | mobile                   | no                                       | Expo slug                                      |
+| `MOBILE_BUNDLE_ID`             | mobile                   | no                                       | bundle id / package name                       |
+| `MOBILE_SCHEME`                | mobile                   | no                                       | deep-link scheme                               |
 
 ### 20.3 Endpoints the mobile shell uses
 
-| Endpoint | Screen |
-| --- | --- |
-| `POST /auth/login` | Sign in |
-| `POST /auth/verify-login` | Verify device |
-| `POST /auth/login/2fa`, `POST /auth/login/backup-code` | Two-factor |
-| `POST /auth/2fa/setup`, `POST /auth/2fa/enable` | Enroll / turn on 2FA |
-| `POST /auth/2fa/rotate`, `GET /auth/2fa/backup-codes/remaining` | Backup codes |
-| `POST /auth/signup` | Sign up |
-| `POST /auth/forgot-password` | Forgot password |
-| `GET /auth/me` | Home, Profile |
-| `GET /github/repositories`, `GET /github/repositories/:owner/:repository`, `…/commits`, `…/commits/:sha`, `…/contributors` | Profile: GitHub contributions and a commit's screen |
-| `GET /session` | Status pills: the token countdown (§10.16) |
-| `POST /auth/change-password` | Security |
-| `POST /auth/refresh` | api-client (automatic) |
-| `GET /auth/sessions` | Signed-in devices |
-| `POST /auth/sessions/:sessionId/revoke` | Signed-in devices |
-| `POST /auth/logout`, `POST /auth/logout-all` | Settings, Security |
+| Endpoint                                                                                                                                                                                                                                                           | Screen                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `POST /auth/login`                                                                                                                                                                                                                                                 | Sign in                                                     |
+| `POST /auth/verify-login`                                                                                                                                                                                                                                          | Verify device                                               |
+| `POST /auth/login/2fa`, `POST /auth/login/backup-code`                                                                                                                                                                                                             | Two-factor                                                  |
+| `POST /auth/2fa/setup`, `POST /auth/2fa/enable`                                                                                                                                                                                                                    | Enroll / turn on 2FA                                        |
+| `POST /auth/2fa/rotate`, `GET /auth/2fa/backup-codes/remaining`                                                                                                                                                                                                    | Backup codes                                                |
+| `POST /auth/signup`                                                                                                                                                                                                                                                | Sign up                                                     |
+| `POST /auth/forgot-password`                                                                                                                                                                                                                                       | Forgot password                                             |
+| `GET /auth/me`                                                                                                                                                                                                                                                     | Home, Profile                                               |
+| `GET /github/repositories`, `GET /github/repositories/:owner/:repository`, `…/commits`, `…/commits/:sha`, `…/contributors`                                                                                                                                         | Profile: GitHub contributions and a commit's screen         |
+| `GET`/`PUT`/`DELETE /github/account`, `GET /github/pull-requests`, `…/:owner/:repository/:number` (and `/timeline`, `/commits`, `/commits/:sha`, `/files`, `/review-threads`, `/status`), `POST …/comments`, `POST …/reviews`, `PUT …/reactions`, `POST …/merge`, `POST …/pictures`, `GET /github/content-edits/:nodeId`, `GET`/`PUT`/`DELETE /github/live-updates/:owner/:repository` and its `/events` stream (SSE over `expo/fetch`), `GET /github/pictures/file` and `GET /github/pictures/uploads/:attachmentId` (pictures GitHub shows only to signed-in readers, asked for signed in); `POST /files/upload-url`, `POST /files/:id/complete`, `GET /files/:id` (comment pictures) | Drawer: GitHub pull requests and the GitHub token (ADR 052) |
+| `GET /session`                                                                                                                                                                                                                                                     | Status pills: the token countdown (§10.16)                  |
+| `POST /auth/change-password`                                                                                                                                                                                                                                       | Security                                                    |
+| `POST /auth/refresh`                                                                                                                                                                                                                                               | api-client (automatic)                                      |
+| `GET /auth/sessions`                                                                                                                                                                                                                                               | Signed-in devices                                           |
+| `POST /auth/sessions/:sessionId/revoke`                                                                                                                                                                                                                            | Signed-in devices                                           |
+| `POST /auth/logout`, `POST /auth/logout-all`                                                                                                                                                                                                                       | Settings, Security                                          |
 
 (The exact turn-off-2FA endpoint is whatever the web security panel uses today; mobile calls the
 same one.)
 
 ### 20.4 New and changed ADRs
 
-| ADR | Title |
-| --- | --- |
-| [029](../../adr/029-mobile-client-body-token-transport.md) | Mobile is a client type with body-delivered tokens |
-| [030](../../adr/030-shared-design-token-source.md) | One platform-neutral design token source |
-| [031](../../adr/031-jest-expo-for-mobile-tests.md) | jest-expo for the mobile app's tests |
-| [032](../../adr/032-uniwind-for-mobile-styling.md) | Uniwind (free) for mobile styling |
-| [033](../../adr/033-mobile-forced-upgrade.md) | Minimum supported mobile app version (forced upgrade) |
-| [034](../../adr/034-immediate-per-session-revocation.md) | Immediate per-session revocation (`sid` in access tokens) |
+| ADR                                                        | Title                                                     |
+| ---------------------------------------------------------- | --------------------------------------------------------- |
+| [029](../../adr/029-mobile-client-body-token-transport.md) | Mobile is a client type with body-delivered tokens        |
+| [030](../../adr/030-shared-design-token-source.md)         | One platform-neutral design token source                  |
+| [031](../../adr/031-jest-expo-for-mobile-tests.md)         | jest-expo for the mobile app's tests                      |
+| [032](../../adr/032-uniwind-for-mobile-styling.md)         | Uniwind (free) for mobile styling                         |
+| [033](../../adr/033-mobile-forced-upgrade.md)              | Minimum supported mobile app version (forced upgrade)     |
+| [034](../../adr/034-immediate-per-session-revocation.md)   | Immediate per-session revocation (`sid` in access tokens) |
 
 ---
 
@@ -1716,13 +1728,13 @@ it, so the reasoning survives.
 
 ### Round 1: scope
 
-| Question | Answer |
-| --- | --- |
-| Who is the app for? | A generic starter shell for now |
-| Which platforms? | iOS and Android |
-| Expo account and builds? | No EAS, no store pipeline for now |
-| Where do terms go? | `rules/22-glossary.md`, new "Domain terms" section |
-| Where do decisions go? | New ADRs in `docs/adr/`, continuing the numbering |
+| Question                 | Answer                                             |
+| ------------------------ | -------------------------------------------------- |
+| Who is the app for?      | A generic starter shell for now                    |
+| Which platforms?         | iOS and Android                                    |
+| Expo account and builds? | No EAS, no store pipeline for now                  |
+| Where do terms go?       | `rules/22-glossary.md`, new "Domain terms" section |
+| Where do decisions go?   | New ADRs in `docs/adr/`, continuing the numbering  |
 
 Facts found before round 2: no mobile code existed; `rules/04` already prescribed Expo Router,
 TanStack Query, Zustand, NativeWind and Secure Store; the API issued tokens only as cookies; the
@@ -1730,17 +1742,17 @@ repo pins React 19.3.0 and Tailwind v4; `packages/ui` is web-only with CSS-only 
 
 ### Round 2: foundations
 
-| Question | Answer |
-| --- | --- |
-| How does the phone sign in? | Fourth client type `mobile` with body tokens (ADR 029) |
-| Run and build without an account? | Expo Go |
-| React version? | Mobile gets its own syncpack version group |
-| Styling engine? | Uniwind instead of NativeWind (ADR 032) |
-| Design tokens? | `packages/tokens` generating both platforms (ADR 030) |
-| API calls? | Extract `packages/api-client` |
-| Test runner? | jest-expo for mobile (ADR 031) |
-| Starter scope? | Full sign-in flow, profile, settings |
-| Lint? | `react-native.js` config, import boundaries |
+| Question                          | Answer                                                 |
+| --------------------------------- | ------------------------------------------------------ |
+| How does the phone sign in?       | Fourth client type `mobile` with body tokens (ADR 029) |
+| Run and build without an account? | Expo Go                                                |
+| React version?                    | Mobile gets its own syncpack version group             |
+| Styling engine?                   | Uniwind instead of NativeWind (ADR 032)                |
+| Design tokens?                    | `packages/tokens` generating both platforms (ADR 030)  |
+| API calls?                        | Extract `packages/api-client`                          |
+| Test runner?                      | jest-expo for mobile (ADR 031)                         |
+| Starter scope?                    | Full sign-in flow, profile, settings                   |
+| Lint?                             | `react-native.js` config, import boundaries            |
 
 Facts found before round 3: Uniwind's free tier runs in Expo Go, uses Tailwind v4 and supports
 oklch; Expo Go now requires an Expo account sign-in (SDK 57); Expo SDK 57 pins React 19.2;
@@ -1748,20 +1760,20 @@ pnpm workspaces work with Expo without hoisting.
 
 ### Round 3: behavior
 
-| Question | Answer |
-| --- | --- |
-| Mobile session lifetime | Same as web |
-| Who refreshes tokens | `packages/api-client`, single flight |
-| API address | Expo dev host in development; `EXPO_PUBLIC_API_URL` otherwise, zod-checked, error screen |
-| Navigation | `(auth)` stack and `(app)` tabs with a root guard |
-| Preferences storage | Secure Store for everything |
-| Generated CSS | Committed, with a staleness check |
-| api-client split | Core + `/react`, shared query keys |
-| Out of scope | Push, offline, deep links out; **biometric unlock in** |
-| Forced upgrade | Minimal mechanism with 426 (ADR 033) |
-| SDK version | Latest stable |
-| Expo account | Free account for Expo Go sign-in |
-| Token format | One format, two wrappers |
+| Question                | Answer                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| Mobile session lifetime | Same as web                                                                              |
+| Who refreshes tokens    | `packages/api-client`, single flight                                                     |
+| API address             | Expo dev host in development; `EXPO_PUBLIC_API_URL` otherwise, zod-checked, error screen |
+| Navigation              | `(auth)` stack and `(app)` tabs with a root guard                                        |
+| Preferences storage     | Secure Store for everything                                                              |
+| Generated CSS           | Committed, with a staleness check                                                        |
+| api-client split        | Core + `/react`, shared query keys                                                       |
+| Out of scope            | Push, offline, deep links out; **biometric unlock in**                                   |
+| Forced upgrade          | Minimal mechanism with 426 (ADR 033)                                                     |
+| SDK version             | Latest stable                                                                            |
+| Expo account            | Free account for Expo Go sign-in                                                         |
+| Token format            | One format, two wrappers                                                                 |
 
 Facts found before round 4: SDK 58 is in beta only (latest stable is 57); Expo Go on iPhone
 cannot run beta SDKs without `eas go`; Face ID does not work in Expo Go;
@@ -1769,26 +1781,26 @@ cannot run beta SDKs without `eas go`; Face ID does not work in Expo Go;
 
 ### Round 4: app lock and versions
 
-| Question | Answer |
-| --- | --- |
-| What the lock protects | An app lock on a signed-in device, opt-in |
-| Failure handling | Passcode fallback; Try again or Sign out only; auto-off when biometrics change |
-| Timeout | Default 60 seconds |
-| Server involvement | None |
-| "Latest packages" | Latest stable SDK; `expo install --check` enforced |
-| Theme | System / Light / Dark |
-| App identity | Env-driven, zod-checked placeholders |
-| SDK | 57 now, 58 when stable |
-| Face ID in Expo Go | Passcode instead is acceptable; fingerprint on Android |
+| Question               | Answer                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| What the lock protects | An app lock on a signed-in device, opt-in                                      |
+| Failure handling       | Passcode fallback; Try again or Sign out only; auto-off when biometrics change |
+| Timeout                | Default 60 seconds                                                             |
+| Server involvement     | None                                                                           |
+| "Latest packages"      | Latest stable SDK; `expo install --check` enforced                             |
+| Theme                  | System / Light / Dark                                                          |
+| App identity           | Env-driven, zod-checked placeholders                                           |
+| SDK                    | 57 now, 58 when stable                                                         |
+| Face ID in Expo Go     | Passcode instead is acceptable; fingerprint on Android                         |
 
 ### Round 5: account flows
 
-| Question | Answer |
-| --- | --- |
-| 2FA setup on the phone | Authenticator link + copyable secret + QR |
+| Question                    | Answer                                                |
+| --------------------------- | ----------------------------------------------------- |
+| 2FA setup on the phone      | Authenticator link + copyable secret + QR             |
 | Sign-up and forgot password | Native request screens; email links finish on the web |
-| Security settings | Same capabilities as web on the same endpoints |
-| Device list | Yes, with per-device sign-out and sign out everywhere |
+| Security settings           | Same capabilities as web on the same endpoints        |
+| Device list                 | Yes, with per-device sign-out and sign out everywhere |
 
 Facts found before round 6: `GET /auth/sessions` exists but there is no revoke-one endpoint, no
 web screen, no client type, last-active or current-session marker, and no `deletedBy` on
@@ -1796,19 +1808,19 @@ sessions; access tokens are not tied to a session.
 
 ### Rounds 6 and 7: device sessions
 
-| Question | Answer |
-| --- | --- |
+| Question                                           | Answer                                                     |
+| -------------------------------------------------- | ---------------------------------------------------------- |
 | Sign out everywhere across merchant web and mobile | Already immediate on every client type (confirmed in code) |
-| Single-device sign-out | Immediate via `sid` (ADR 034) |
-| Details per device | Everything available, as separate columns |
-| Device list on web | Yes, in the shared security panel |
-| Record who revoked | `deletedBy` with system markers |
-| Location | GeoIP port with `none`; provider is a pending decision |
+| Single-device sign-out                             | Immediate via `sid` (ADR 034)                              |
+| Details per device                                 | Everything available, as separate columns                  |
+| Device list on web                                 | Yes, in the shared security panel                          |
+| Record who revoked                                 | `deletedBy` with system markers                            |
+| Location                                           | GeoIP port with `none`; provider is a pending decision     |
 
 ### Round 8: delivery
 
-| Question | Answer |
-| --- | --- |
-| Order | Five pieces: tokens → api-client → mobile client type → device sessions → mobile app |
-| Mobile CI | Lint, typecheck, jest-expo, `expo install --check`, `expo export` |
-| Mobile e2e | Not in the starter; Maestro documented |
+| Question   | Answer                                                                               |
+| ---------- | ------------------------------------------------------------------------------------ |
+| Order      | Five pieces: tokens → api-client → mobile client type → device sessions → mobile app |
+| Mobile CI  | Lint, typecheck, jest-expo, `expo install --check`, `expo export`                    |
+| Mobile e2e | Not in the starter; Maestro documented                                               |

@@ -343,6 +343,22 @@ This repository's mechanism is already in place ([ADR 033](../docs/adr/033-mobil
    assumption that covers both.
 ```
 
+## The keyboard — one keyboard-avoiding view, sheets included
+
+```text
+❌ DON'T import React Native's own KeyboardAvoidingView. On Android it
+   hears of the keyboard only through the activity's window; a sheet
+   (BottomSheet) is a Modal — a window of its own, drawn edge to edge,
+   which the keyboard never resizes — so a field in a sheet ends up
+   under the keyboard.
+
+✅ DO use components/keyboard-avoiding-view.tsx (react-native-keyboard-
+   controller, whose KeyboardProvider is mounted once in
+   src/app/_layout.tsx): it follows the keyboard in every window. Screen,
+   AuthPage and BottomSheet already use it, and a sheet's body scrolls,
+   so a tall form stays reachable above the keyboard.
+```
+
 ## React Native performance rules
 
 ```tsx

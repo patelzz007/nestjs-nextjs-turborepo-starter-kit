@@ -69,6 +69,7 @@ function organizationRule(category: FileCategory): OrganizationFileRule | null {
 			return ORGANIZATION_FILE_RULES[category];
 		case "PRODUCT_IMAGE":
 		case "USER_AVATAR":
+		case "GITHUB_COMMENT_IMAGE":
 			return null;
 	}
 }
@@ -84,6 +85,8 @@ function organizationRule(category: FileCategory): OrganizationFileRule | null {
  * - MERCHANT_KYB  → every action needs `merchant:manage_verification` (owner-only)
  * - REWARD_IMAGE  → upload/complete/delete need `merchant:manage_rewards`; reading needs
  *   `merchant:view_rewards` (the published copy is public — this guards metadata and signed URLs)
+ * - GITHUB_COMMENT_IMAGE → upload only for the caller's own account and with
+ *   `UPDATE:GITHUB_PULL_REQUEST` (the permission that posts the comment); afterwards the uploader
  *
  * Organization capabilities that guard an API action go through
  * {@link OrganizationRewardAuthService.requireMembershipCapability} — the
@@ -108,6 +111,12 @@ export class FileAuthorizationService {
 				if (input.userId !== actor.id) {
 					throw forbidden("upload", "Cannot upload an avatar for another user");
 				}
+				return;
+			case "GITHUB_COMMENT_IMAGE":
+				if (input.userId !== actor.id) {
+					throw forbidden("upload", "Cannot upload an image for another user");
+				}
+				await this.kernel.authorize({ subject: { userId: actor.id, isSuperAdmin: false }, action: "UPDATE", resource: "GITHUB_PULL_REQUEST" });
 				return;
 			case "PRODUCT_IMAGE":
 				if (input.productId === undefined) {

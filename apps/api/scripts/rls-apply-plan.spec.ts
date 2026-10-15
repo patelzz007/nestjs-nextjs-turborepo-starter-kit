@@ -17,6 +17,7 @@ describe("RLS apply plan", () => {
 			"prisma/rls.sql",
 			"prisma/rls/40-api-key-principal.sql",
 			"prisma/rls/90-analytics-consumer.sql",
+			"prisma/rls/95-audit-trail-notify.sql",
 			"prisma/rls/99-app-runtime-grants.sql",
 		]);
 	});

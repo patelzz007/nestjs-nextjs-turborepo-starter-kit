@@ -9,9 +9,10 @@
 // 3. Stale on failure: when GitHub is down, slow or rate-limiting, an answer
 //    up to `staleFallbackMs` past its freshness is served instead of an error.
 //
-// Per API instance, in memory (`BoundedTtlCache`): the data is public-repository
-// metadata, a lost cache only costs one GitHub read, and each instance is
-// bounded to one read per key per `freshMs` — far below GitHub's 5,000/hour.
+// Per API instance, in memory (`BoundedTtlCache`): a lost cache only costs one
+// GitHub read, and each instance is bounded to one read per key per `freshMs` —
+// far below GitHub's 5,000/hour. Answers that change (pull requests) are
+// dropped with `invalidate` when a write or a webhook says they did.
 
 import type { Logger } from "@nestjs/common";
 import { BoundedTtlCache } from "@workspace/shared";
@@ -39,6 +40,8 @@ interface CachedAnswer<V> {
 export class GithubResponseCache<V> {
 	private readonly answers: BoundedTtlCache<string, CachedAnswer<V>>;
 	private readonly inFlight: Map<string, Promise<V>> = new Map<string, Promise<V>>();
+	/** Bumped by every {@link invalidate}: a read that began before one is answered but not kept. */
+	private invalidationEpoch = 0;
 
 	public constructor(
 		private readonly options: GithubResponseCacheOptions,
@@ -59,14 +62,31 @@ export class GithubResponseCache<V> {
 		if (pending !== undefined) {
 			return pending;
 		}
-		const request = this.refresh(key, cached, load).finally((): void => {
-			this.inFlight.delete(key);
+		const request: Promise<V> = this.refresh(key, cached, load).finally((): void => {
+			// An invalidation may have replaced this read with a newer one — leave that one in place.
+			if (this.inFlight.get(key) === request) {
+				this.inFlight.delete(key);
+			}
 		});
 		this.inFlight.set(key, request);
 		return request;
 	}
 
+	/**
+	 * Drops every answer whose key matches `matches` — the next read asks GitHub
+	 * again. A read already on its way to GitHub still answers its caller but is
+	 * not kept (it may predate the change), and the next caller starts a new one.
+	 */
+	public invalidate(matches: (key: string) => boolean): void {
+		this.invalidationEpoch += 1;
+		this.answers.deleteWhere(matches);
+		for (const key of [...this.inFlight.keys()].filter(matches)) {
+			this.inFlight.delete(key);
+		}
+	}
+
 	private async refresh(key: string, cached: CachedAnswer<V> | null, load: () => Promise<V>): Promise<V> {
+		const epochAtStart = this.invalidationEpoch;
 		let value: V;
 		try {
 			value = await load();
@@ -77,8 +97,10 @@ export class GithubResponseCache<V> {
 			}
 			throw error;
 		}
-		const now = this.clock.nowEpochMs();
-		this.answers.set(key, { value, storedAtEpochMs: now }, this.options.freshMs + this.options.staleFallbackMs, now);
+		if (epochAtStart === this.invalidationEpoch) {
+			const now = this.clock.nowEpochMs();
+			this.answers.set(key, { value, storedAtEpochMs: now }, this.options.freshMs + this.options.staleFallbackMs, now);
+		}
 		return value;
 	}
 }

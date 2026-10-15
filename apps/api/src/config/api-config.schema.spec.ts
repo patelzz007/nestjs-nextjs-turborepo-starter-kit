@@ -444,13 +444,44 @@ describe("API env schema", () => {
 	describe("GitHub contributions", () => {
 		const TOKEN = "github_pat_test_read_only";
 
-		it("is off by default: no token, no repositories, a 5 s request budget and a 5 min cache", () => {
-			expect(parse({ GITHUB_TOKEN: undefined, GITHUB_REPOSITORIES: undefined }).github).toEqual({
+		it("is off by default: no token, no repositories, a 5 s request budget and a 5 min cache — and no pull requests", () => {
+			expect(parse({ GITHUB_TOKEN: undefined, GITHUB_REPOSITORIES: undefined, GITHUB_CREDENTIAL_ENCRYPTION_KEYS: undefined }).github).toEqual({
 				token: null,
 				repositories: [],
 				requestTimeoutMs: 5_000,
 				cacheTtlMs: 300_000,
+				credentialEncryptionKeys: null,
+				webhook: null,
 			});
+		});
+
+		describe("live updates (GITHUB_WEBHOOK_URL + GITHUB_WEBHOOK_SECRET)", () => {
+			const URL = "https://api.example.com/api/v1/github/webhook";
+			const SECRET = "0123456789abcdef0123456789abcdef";
+
+			it("reads both together", () => {
+				expect(parse({ GITHUB_WEBHOOK_URL: URL, GITHUB_WEBHOOK_SECRET: SECRET }).github.webhook).toEqual({ url: URL, secret: SECRET });
+			});
+
+			it.each([
+				[{ GITHUB_WEBHOOK_URL: URL }, /GITHUB_WEBHOOK_SECRET/],
+				[{ GITHUB_WEBHOOK_SECRET: SECRET }, /GITHUB_WEBHOOK_URL/],
+				[{ GITHUB_WEBHOOK_URL: "http://api.example.com/api/v1/github/webhook", GITHUB_WEBHOOK_SECRET: SECRET }, /must be https/],
+				[{ GITHUB_WEBHOOK_URL: URL, GITHUB_WEBHOOK_SECRET: "short" }, /at least 32 characters/],
+				[{ GITHUB_WEBHOOK_URL: URL, GITHUB_WEBHOOK_SECRET: SECRET, GITHUB_CREDENTIAL_ENCRYPTION_KEYS: undefined }, /GITHUB_CREDENTIAL_ENCRYPTION_KEYS/],
+			])("refuses %j", (overrides: Readonly<Record<string, string | undefined>>, message: RegExp) => {
+				expect(() => parse(overrides)).toThrow(message);
+			});
+		});
+
+		it("reads the pull-request token key ring as versioned 32-byte keys", () => {
+			const keys = { 1: "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=" };
+
+			expect(parse({ GITHUB_CREDENTIAL_ENCRYPTION_KEYS: JSON.stringify(keys) }).github.credentialEncryptionKeys).toEqual(keys);
+		});
+
+		it.each(['{"1":"too-short"}', "{}", "not json"])("refuses the key ring %j", (value: string) => {
+			expect(() => parse({ GITHUB_CREDENTIAL_ENCRYPTION_KEYS: value })).toThrow(/GITHUB_CREDENTIAL_ENCRYPTION_KEYS/);
 		});
 
 		it("splits GITHUB_REPOSITORIES into owner and repository, in the configured order", () => {

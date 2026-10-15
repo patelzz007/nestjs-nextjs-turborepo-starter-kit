@@ -20,6 +20,11 @@ vi.mock("next/navigation", () => ({
 	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
+// The live stream is its own boundary (lib/notifications/audit-trail-live.test.ts): here it is connected.
+vi.mock("@/lib/notifications/audit-trail-live", () => ({
+	useAuditTrailLive: (): string => "open",
+}));
+
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
 		api: {
@@ -124,6 +129,12 @@ afterEach((): void => {
 });
 
 describe("AuditLogView", () => {
+	it("says the log is live, so new activity needs no refresh", () => {
+		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+
+		expect(screen.getByRole("status").textContent).toBe("Live");
+	});
+
 	it("renders who did what, when, from which device and where, and how it ended", () => {
 		render(<AuditLogView />, { wrapper: UiKitTestProviders });
 

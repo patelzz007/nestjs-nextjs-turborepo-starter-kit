@@ -290,6 +290,9 @@ export class FileFinalizationService {
 			case "REWARD_IMAGE":
 				// An image is attached when a reward lists it (`imageFileIds`), which needs the file READY first.
 				return { kind: "NONE" };
+			case "GITHUB_COMMENT_IMAGE":
+				// Nothing here points at it: the comment on GitHub links to its public address.
+				return { kind: "NONE" };
 			default:
 				return assertNever(file.category, "file category");
 		}

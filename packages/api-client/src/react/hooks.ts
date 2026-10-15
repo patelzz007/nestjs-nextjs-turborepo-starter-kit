@@ -16,7 +16,7 @@ import {
 	type UseMutationOptions,
 	type UseMutationResult,
 } from "@tanstack/react-query";
-import type { DataValue, SerializableInput } from "@workspace/shared";
+import { IDEMPOTENCY_KEY_HEADER, type DataValue, type SerializableInput } from "@workspace/shared";
 import { useCallback } from "react";
 
 import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse, type ProcedureCallOptions } from "../request";
@@ -35,10 +35,23 @@ export interface ClientQueryProcedure<Input, Resp> {
 	fetchOrThrow(input: Input, options?: ProcedureCallOptions): Promise<Resp>;
 }
 
-/** A mutation procedure on the client — `.useMutation()` / `.mutate()`. */
+/**
+ * One call of an idempotent mutation: the input, and the key that makes a
+ * retry safe. The caller keeps one key per thing the person is sending (a
+ * draft) and sends it again on a retry, so the API answers the first result
+ * instead of acting twice; a new draft gets a new key.
+ */
+export interface IdempotentMutationCall<Input> {
+	readonly input: Input;
+	readonly idempotencyKey: string;
+}
+
+/** A mutation procedure on the client — `.useMutation()` / `.useIdempotentMutation()` / `.mutate()`. */
 export interface ClientMutationProcedure<Input, Resp> {
 	useMutation(mutationOptions?: UseMutationOptions<Resp, Error, Input>): UseMutationResult<Resp, Error, Input>;
-	mutate(input: Input): Promise<Resp>;
+	/** Sends each call's key as the `Idempotency-Key` header, for endpoints marked `@Idempotent()`. */
+	useIdempotentMutation(mutationOptions?: UseMutationOptions<Resp, Error, IdempotentMutationCall<Input>>): UseMutationResult<Resp, Error, IdempotentMutationCall<Input>>;
+	mutate(input: Input, options?: ProcedureCallOptions): Promise<Resp>;
 }
 
 /** Recursively maps the router tree to client procedures with React hooks. */
@@ -93,7 +106,13 @@ export function createMutationProcedure<Input extends SerializableInput, Resp ex
 				mutationFn: (input: Input): Promise<Resp> => caller.mutate(input),
 				...mutationOptions,
 			}),
-		mutate: (input: Input): Promise<Resp> => caller.mutate(input),
+		useIdempotentMutation: (mutationOptions?): UseMutationResult<Resp, Error, IdempotentMutationCall<Input>> =>
+			rqUseMutation<Resp, Error, IdempotentMutationCall<Input>>({
+				mutationFn: ({ input, idempotencyKey }: IdempotentMutationCall<Input>): Promise<Resp> =>
+					caller.mutate(input, { headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey } }),
+				...mutationOptions,
+			}),
+		mutate: (input: Input, options?: ProcedureCallOptions): Promise<Resp> => caller.mutate(input, options),
 	};
 }
 

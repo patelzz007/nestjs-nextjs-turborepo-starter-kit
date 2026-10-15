@@ -26,9 +26,10 @@ List the GitHub repositories the API may read
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GithubController_listRepositories` · [source](../../../apps/api/src/modules/github/github.controller.ts)
 
-**Response 200 OK** — The repositories the API may read (empty when the integration is off)
+**Response 200 OK** (`application/json`) — The repositories the API may read (empty when the integration is off)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -62,6 +63,7 @@ Summary of a configured repository: stars, forks, languages, commit count, last 
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GithubController_getRepositorySummary` · [source](../../../apps/api/src/modules/github/github.controller.ts)
 
 **Parameters**
@@ -71,7 +73,7 @@ Summary of a configured repository: stars, forks, languages, commit count, last 
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 
-**Response 200 OK** — Repository summary
+**Response 200 OK** (`application/json`) — Repository summary
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -117,6 +119,7 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GithubController_getCommitPage` · [source](../../../apps/api/src/modules/github/github.controller.ts)
 
 **Parameters**
@@ -128,7 +131,7 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 | `cursor` | query | string | no | `nextCursor` of the previous page; omit for the newest commits |
 | `limit` | query | integer | no | Commits per page (1-50) |
 
-**Response 200 OK** — Commits, newest first, and the cursor of the next page
+**Response 200 OK** (`application/json`) — Commits, newest first, and the cursor of the next page
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -171,6 +174,7 @@ Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GithubController_getCommit` · [source](../../../apps/api/src/modules/github/github.controller.ts)
 
 **Parameters**
@@ -181,7 +185,7 @@ Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000
 | `repository` | path | string | yes | GitHub repository name |
 | `sha` | path | string | yes | Full commit SHA (40 lowercase hex characters) |
 
-**Response 200 OK** — The commit and its changed files
+**Response 200 OK** (`application/json`) — The commit and its changed files
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -238,6 +242,7 @@ From GitHub's contributor statistics (`basis.kind: "statistics"`, the whole defa
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GithubController_getContributorStats` · [source](../../../apps/api/src/modules/github/github.controller.ts)
 
 **Parameters**
@@ -247,7 +252,7 @@ From GitHub's contributor statistics (`basis.kind: "statistics"`, the whole defa
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 
-**Response 200 OK** — Contributor totals, most commits first, and what they were counted from
+**Response 200 OK** (`application/json`) — Contributor totals, most commits first, and what they were counted from
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

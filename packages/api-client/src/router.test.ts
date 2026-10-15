@@ -2,7 +2,19 @@ import { apiContract, epochMs, MERCHANT_TERMINALS_PAGE_SIZE, type SerializableIn
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { apiRouter, isErasedProcedureDef, isRouterSubtree, mapRouterTree, resolveRequest, type ApiQueryKey, type ErasedQueryDef, type RouterTreeMapper } from "./router";
+import {
+	apiRouter,
+	GITHUB_PULL_REQUESTS_QUERY_ROOT,
+	githubPullRequestScopeKey,
+	githubPullRequestsRootKey,
+	isErasedProcedureDef,
+	isRouterSubtree,
+	mapRouterTree,
+	resolveRequest,
+	type ApiQueryKey,
+	type ErasedQueryDef,
+	type RouterTreeMapper,
+} from "./router";
 
 /** A router node: every value of the router tree is an object (a procedure def or a nested router). */
 const RouterNodeShapeSchema = z.object({});
@@ -34,6 +46,9 @@ const SCOPE_PROBE: SerializableInput = {
 	claimId: "claim-probe",
 	fileId: "file-probe",
 	id: "id-probe",
+	owner: "owner-probe",
+	repository: "repository-probe",
+	number: 1,
 };
 
 function startsWith(key: ApiQueryKey, prefix: ApiQueryKey): boolean {
@@ -256,6 +271,22 @@ describe("resolveRequest path parameters", () => {
 		});
 	});
 
+	it("puts a pull request's number in its path and its files page in the query string", () => {
+		const pullRequest = { owner: OWNER, repository: REPOSITORY, number: 42 };
+
+		expect(resolveRequest(apiRouter.githubPullRequests.detail.path, pullRequest)).toEqual({ url: `/github/pull-requests/${OWNER}/${REPOSITORY}/42` });
+		expect(resolveRequest(apiRouter.githubPullRequests.files.path, { ...pullRequest, page: 2 })).toEqual({
+			url: `/github/pull-requests/${OWNER}/${REPOSITORY}/42/files?page=2`,
+		});
+		expect(resolveRequest(apiRouter.githubPullRequests.timeline.path, { ...pullRequest, cursor: "c2" })).toEqual({
+			url: `/github/pull-requests/${OWNER}/${REPOSITORY}/42/timeline?cursor=c2`,
+		});
+		const sha = "0123456789abcdef0123456789abcdef01234567";
+		expect(resolveRequest(apiRouter.githubPullRequests.commit.path, { ...pullRequest, sha })).toEqual({
+			url: `/github/pull-requests/${OWNER}/${REPOSITORY}/42/commits/${sha}`,
+		});
+	});
+
 	it("percent-encodes a parameter value", () => {
 		expect(resolveRequest(apiRouter.auth.adminUserDetail.path, { userId: "a/b c" })).toEqual({ url: "/auth/admin/users/a%2Fb%20c" });
 	});
@@ -288,5 +319,40 @@ describe("apiRouter.github query keys", () => {
 		for (const key of keys) {
 			expect(key.slice(0, scope.length)).toEqual(scope);
 		}
+	});
+});
+
+describe("GitHub pull-request query keys", () => {
+	const pullRequest = { owner: "octo-org", repository: "hello-world", number: 42 };
+
+	it("nests every view of one pull request under its scope key", () => {
+		const scope = githubPullRequestScopeKey(pullRequest);
+		const views = [
+			apiRouter.githubPullRequests.detail.queryKey(pullRequest),
+			apiRouter.githubPullRequests.timeline.queryKey({ ...pullRequest, cursor: "c2" }),
+			apiRouter.githubPullRequests.commits.queryKey(pullRequest),
+			apiRouter.githubPullRequests.files.queryKey({ ...pullRequest, page: 1 }),
+			apiRouter.githubPullRequests.reviewThreads.queryKey(pullRequest),
+			apiRouter.githubPullRequests.commit.queryKey({ ...pullRequest, sha: "0123456789abcdef0123456789abcdef01234567" }),
+		];
+
+		for (const key of views) {
+			expect(key.slice(0, scope.length)).toEqual(scope);
+		}
+		expect(githubPullRequestScopeKey({ ...pullRequest, number: 7 })).not.toEqual(scope);
+	});
+
+	it("starts every pull-request key with one root, so a token change reloads them all", () => {
+		const keys = [
+			apiRouter.githubPullRequests.account.queryKey(undefined),
+			apiRouter.githubPullRequests.list.queryKey({ filter: "yours", state: "open" }),
+			apiRouter.githubPullRequests.detail.queryKey(pullRequest),
+			apiRouter.githubPullRequests.contentEdits.queryKey({ nodeId: "IC_abc" }),
+		];
+
+		for (const [root] of keys) {
+			expect(root).toBe(GITHUB_PULL_REQUESTS_QUERY_ROOT);
+		}
+		expect(githubPullRequestsRootKey()).toEqual([GITHUB_PULL_REQUESTS_QUERY_ROOT]);
 	});
 });

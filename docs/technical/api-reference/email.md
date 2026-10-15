@@ -25,6 +25,7 @@ List sent emails
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:EMAIL`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailLogController_list` · [source](../../../apps/api/src/modules/notifications/email/email-log.controller.ts)
 
 **Parameters**
@@ -38,7 +39,7 @@ List sent emails
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, templateKey, createdAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated EmailLog rows; pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated EmailLog rows; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -123,9 +124,10 @@ Live EmailLog update stream (SSE)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:EMAIL`.
+- Content type: no request body; returns `text/event-stream` (errors are always `application/json`)
 - Operation id `EmailLogController_stream` · [source](../../../apps/api/src/modules/notifications/email/email-log.controller.ts)
 
-**Response 200 OK** — text/event-stream; one `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract)
+**Response 200 OK** — One `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract) (`text/event-stream`)
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -147,9 +149,10 @@ List email template metadata
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:EMAIL`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailPreviewController_list` · [source](../../../apps/api/src/modules/notifications/email/email-preview.controller.ts)
 
-**Response 200 OK** — Metadata for every registered email template
+**Response 200 OK** (`application/json`) — Metadata for every registered email template
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -213,6 +216,7 @@ Render one email template preview
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:EMAIL`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailPreviewController_detail` · [source](../../../apps/api/src/modules/notifications/email/email-preview.controller.ts)
 
 **Parameters**
@@ -221,7 +225,7 @@ Render one email template preview
 | --- | --- | --- | --- | --- |
 | `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
 
-**Response 200 OK** — Rendered preview for one template
+**Response 200 OK** (`application/json`) — Rendered preview for one template
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -288,6 +292,7 @@ Send one email template (sample props)
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `CREATE:EMAIL`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailPreviewController_sendTest` · [source](../../../apps/api/src/modules/notifications/email/email-preview.controller.ts)
 
 **Parameters**
@@ -296,7 +301,7 @@ Send one email template (sample props)
 | --- | --- | --- | --- | --- |
 | `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
 
-**Response 201 Created** — Outcome of the send attempt
+**Response 201 Created** (`application/json`) — Outcome of the send attempt
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -350,9 +355,10 @@ Response `201 Created` (application/json):
 Webhook endpoint info (GET is not the delivery path)
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailWebhookController_info` · [source](../../../apps/api/src/modules/notifications/email/email-webhook.controller.ts)
 
-**Response 200 OK** — Explains the endpoint
+**Response 200 OK** (`application/json`) — Explains the endpoint
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -400,6 +406,7 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailWebhookController_receive` · [source](../../../apps/api/src/modules/notifications/email/email-webhook.controller.ts)
 
 **Parameters**
@@ -434,7 +441,7 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 | `data.tags` | object | no |  |
 | `type` | "email.sent" \| "email.delivered" \| "email.bounced" \| "email.complained" \| "email.failed" \| "email.delivery_delayed" \| "email.opened" \| "email.clicked" \| "email.forwarded" | yes |  |
 
-**Response 200 OK** — Webhook accepted
+**Response 200 OK** (`application/json`) — Webhook accepted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

@@ -137,6 +137,8 @@ export const SystemOperationSchema = z.enum([
 	"pos.terminal.pair",
 	"files.authorization",
 	"files.scan_verdict.apply",
+	"github.webhook.subscriptions",
+	"github.webhook.deliveries",
 ]);
 export type SystemOperation = z.output<typeof SystemOperationSchema>;
 
@@ -282,6 +284,12 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"rewards.sales.merchant_summary": runtime(
 		"Read merchant names/categories for sales breakdowns (customer spending, admin top merchants) — ids come from sales the caller may already see",
+	),
+	"github.webhook.subscriptions": runtime(
+		"Read and change which repositories have live updates (bypass-only github_webhook_subscriptions) — only after the caller's GITHUB_PULL_REQUEST check",
+	),
+	"github.webhook.deliveries": runtime(
+		"Record a GitHub webhook delivery and announce its change (bypass-only github_webhook_deliveries) — only after the delivery's signature is verified; also prunes old deliveries",
 	),
 	"files.authorization": runtime("Resolve the caller's organization membership role to authorize a file operation"),
 	"files.scan_verdict.apply": runtime(

@@ -2,11 +2,15 @@
 // _layout.tsx - the root layout: stylesheet, app runtime, root guard (§9.4, §9.6)
 // ============================================
 // The Uniwind stylesheet is imported HERE (ADR 032), never in the entry file.
+// `KeyboardProvider` wraps everything, the configuration-error screen
+// included: every keyboard-avoiding view (components/keyboard-avoiding-view.tsx)
+// reads the keyboard from it, in the app's window and in every sheet's.
 
 import "../../global.css";
 
 import * as SplashScreen from "expo-splash-screen";
 import * as React from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { useAppFonts } from "../lib/fonts";
 import { createDeviceAppRuntime } from "../runtime/device-runtime";
@@ -37,10 +41,16 @@ export default function RootLayout(): React.JSX.Element | null {
 			return null;
 		}
 		return (
-			<ConfigIssueProvider issue={runtime.issue}>
-				<RootStack route="config-error" />
-			</ConfigIssueProvider>
+			<KeyboardProvider>
+				<ConfigIssueProvider issue={runtime.issue}>
+					<RootStack route="config-error" />
+				</ConfigIssueProvider>
+			</KeyboardProvider>
 		);
 	}
-	return <AppShell runtime={runtime} fontsReady={fontsReady} />;
+	return (
+		<KeyboardProvider>
+			<AppShell runtime={runtime} fontsReady={fontsReady} />
+		</KeyboardProvider>
+	);
 }

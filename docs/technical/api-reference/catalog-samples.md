@@ -1,7 +1,7 @@
 ---
 title: "API reference — Sample catalog (products and categories)"
 description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk."
-order: 12
+order: 13
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -24,6 +24,7 @@ List Products
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:PRODUCT`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_list` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Parameters**
@@ -37,7 +38,7 @@ List Products
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: isActive, isFeatured, categoryId, brand, price, stockQuantity, createdAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated list of products
+**Response 200 OK** (`application/json`) — Paginated list of products
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -157,6 +158,7 @@ Create Product (send an Idempotency-Key header to make retries safe)
 - **Permission** `CREATE:PRODUCT`.
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_create` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Parameters**
@@ -184,7 +186,7 @@ Create Product (send an Idempotency-Key header to make retries safe)
 | `stockQuantity` | integer | no |  |
 | `weightGrams` | integer \| null | no |  |
 
-**Response 201 Created** — Created product
+**Response 201 Created** (`application/json`) — Created product
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -274,6 +276,7 @@ Get Product by id
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PRODUCT`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_get` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Parameters**
@@ -282,7 +285,7 @@ Get Product by id
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Product detail
+**Response 200 OK** (`application/json`) — Product detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -363,6 +366,7 @@ Update Product
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PRODUCT`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_update` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Parameters**
@@ -391,7 +395,7 @@ Update Product
 | `version` | integer | yes | The product `version` this edit is based on (optimistic lock) |
 | `weightGrams` | integer \| null | no |  |
 
-**Response 200 OK** — Updated product
+**Response 200 OK** (`application/json`) — Updated product
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -479,6 +483,7 @@ Soft delete Product
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:PRODUCT`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_delete` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Parameters**
@@ -487,7 +492,7 @@ Soft delete Product
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Product deleted
+**Response 200 OK** (`application/json`) — Product deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -533,6 +538,7 @@ Restore Product
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PRODUCT`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_restore` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Parameters**
@@ -541,7 +547,7 @@ Restore Product
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Restored product
+**Response 201 Created** (`application/json`) — Restored product
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -623,6 +629,7 @@ Bulk create products
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:PRODUCT`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_bulkCreate` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -645,7 +652,7 @@ Bulk create products
 | `items[].stockQuantity` | integer | no |  |
 | `items[].weightGrams` | integer \| null | no |  |
 
-**Response 201 Created** — Created products
+**Response 201 Created** (`application/json`) — Created products
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -743,6 +750,7 @@ Bulk soft delete products
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:PRODUCT`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ProductController_bulkDelete` · [source](../../../apps/api/src/modules/product/product.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -751,7 +759,7 @@ Bulk soft delete products
 | --- | --- | --- | --- |
 | `ids` | string (uuid)[] | yes | 1–100 items |
 
-**Response 201 Created** — Bulk delete result
+**Response 201 Created** (`application/json`) — Bulk delete result
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -806,6 +814,7 @@ List SampleCategories
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:SAMPLE_CATEGORY`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_list` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Parameters**
@@ -819,7 +828,7 @@ List SampleCategories
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: isActive, createdAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated list of samplecategories
+**Response 200 OK** (`application/json`) — Paginated list of samplecategories
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -911,6 +920,7 @@ Create SampleCategory
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:SAMPLE_CATEGORY`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_create` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -923,7 +933,7 @@ Create SampleCategory
 | `slug` | string | yes | length 1–200; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `sortOrder` | integer | no |  |
 
-**Response 201 Created** — Created samplecategory
+**Response 201 Created** (`application/json`) — Created samplecategory
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -993,6 +1003,7 @@ Get SampleCategory by id
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:SAMPLE_CATEGORY`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_get` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Parameters**
@@ -1001,7 +1012,7 @@ Get SampleCategory by id
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — SampleCategory detail
+**Response 200 OK** (`application/json`) — SampleCategory detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1064,6 +1075,7 @@ Update SampleCategory
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:SAMPLE_CATEGORY`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_update` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Parameters**
@@ -1083,7 +1095,7 @@ Update SampleCategory
 | `sortOrder` | integer | no |  |
 | `version` | integer | yes | The category `version` this edit is based on (optimistic lock) |
 
-**Response 200 OK** — Updated samplecategory
+**Response 200 OK** (`application/json`) — Updated samplecategory
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1153,6 +1165,7 @@ Soft delete SampleCategory
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:SAMPLE_CATEGORY`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_delete` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Parameters**
@@ -1161,7 +1174,7 @@ Soft delete SampleCategory
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — SampleCategory deleted
+**Response 200 OK** (`application/json`) — SampleCategory deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1207,6 +1220,7 @@ Restore SampleCategory
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:SAMPLE_CATEGORY`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_restore` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Parameters**
@@ -1215,7 +1229,7 @@ Restore SampleCategory
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Restored samplecategory
+**Response 201 Created** (`application/json`) — Restored samplecategory
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1279,6 +1293,7 @@ Bulk create samplecategories
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:SAMPLE_CATEGORY`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_bulkCreate` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1292,7 +1307,7 @@ Bulk create samplecategories
 | `items[].slug` | string | yes | length 1–200; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `items[].sortOrder` | integer | no |  |
 
-**Response 201 Created** — Created samplecategories
+**Response 201 Created** (`application/json`) — Created samplecategories
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1369,6 +1384,7 @@ Bulk soft delete samplecategories
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:SAMPLE_CATEGORY`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SampleCategoryController_bulkDelete` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1377,7 +1393,7 @@ Bulk soft delete samplecategories
 | --- | --- | --- | --- |
 | `ids` | string (uuid)[] | yes | 1–100 items |
 
-**Response 201 Created** — Bulk delete result
+**Response 201 Created** (`application/json`) — Bulk delete result
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

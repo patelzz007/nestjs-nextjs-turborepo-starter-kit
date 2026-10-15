@@ -105,6 +105,8 @@ export const apiRoutes = {
 	// ── The audit log's timeline: requests + background writes (admin) ───
 	auditTrail: {
 		list: "/admin/audit-trail",
+		/** Server-Sent Events: a signal per burst of new entries (no JSON contract — a stream). */
+		events: "/admin/audit-trail/events",
 	},
 
 	// ── Row-level data-change trail (admin viewer) ───────────────────────
@@ -120,6 +122,33 @@ export const apiRoutes = {
 		repositoryCommits: "/github/repositories/:owner/:repository/commits",
 		repositoryCommit: "/github/repositories/:owner/:repository/commits/:sha",
 		repositoryContributors: "/github/repositories/:owner/:repository/contributors",
+	},
+
+	// ── GitHub pull requests (each admin's own linked token — ADR 052) ──
+	githubPullRequests: {
+		account: "/github/account",
+		list: "/github/pull-requests",
+		detail: "/github/pull-requests/:owner/:repository/:number",
+		timeline: "/github/pull-requests/:owner/:repository/:number/timeline",
+		commits: "/github/pull-requests/:owner/:repository/:number/commits",
+		commit: "/github/pull-requests/:owner/:repository/:number/commits/:sha",
+		comments: "/github/pull-requests/:owner/:repository/:number/comments",
+		reviews: "/github/pull-requests/:owner/:repository/:number/reviews",
+		reactions: "/github/pull-requests/:owner/:repository/:number/reactions",
+		pictures: "/github/pull-requests/:owner/:repository/:number/pictures",
+		merge: "/github/pull-requests/:owner/:repository/:number/merge",
+		events: "/github/pull-requests/events",
+		liveUpdates: "/github/live-updates/:owner/:repository",
+		status: "/github/pull-requests/:owner/:repository/:number/status",
+		files: "/github/pull-requests/:owner/:repository/:number/files",
+		reviewThreads: "/github/pull-requests/:owner/:repository/:number/review-threads",
+		contentEdits: "/github/content-edits/:nodeId",
+	},
+
+	// ── Pictures GitHub shows only to signed-in readers, for the app (ADR 052) ──
+	githubPictures: {
+		file: "/github/pictures/file",
+		upload: "/github/pictures/uploads/:attachmentId",
 	},
 
 	// ── Geo ────────────────────────────────────────────────────────────

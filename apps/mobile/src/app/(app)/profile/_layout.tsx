@@ -1,5 +1,6 @@
 // Profile: a stack inside the Profile tab (rules/04, nested layouts) — the
-// profile, then a GitHub commit opened from its commit history.
+// profile, then a GitHub commit opened from its commit history, and the
+// GitHub pull-request screens (ADR 052) opened from the drawer.
 
 import { Stack } from "expo-router";
 import * as React from "react";

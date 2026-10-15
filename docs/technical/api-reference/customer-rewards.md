@@ -24,6 +24,7 @@ Browse published consumer rewards
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerRewardsController_listRewards` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-rewards.controller.ts)
 
 **Parameters**
@@ -37,7 +38,7 @@ Browse published consumer rewards
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, organizationId |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated marketplace rewards
+**Response 200 OK** (`application/json`) — Paginated marketplace rewards
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -210,6 +211,7 @@ Get published reward detail
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerRewardsController_getReward` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-rewards.controller.ts)
 
 **Parameters**
@@ -218,7 +220,7 @@ Get published reward detail
 | --- | --- | --- | --- | --- |
 | `rewardId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Reward detail
+**Response 200 OK** (`application/json`) — Reward detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -337,6 +339,7 @@ Response `200 OK` (application/json):
 List my reward claims
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_listClaims` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-claims.controller.ts)
 
 **Parameters**
@@ -349,7 +352,7 @@ List my reward claims
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: claimedAt, createdAt. Default: -claimedAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status |
 
-**Response 200 OK** — Paginated claims
+**Response 200 OK** (`application/json`) — Paginated claims
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -446,6 +449,7 @@ Claim a reward after OTP verification
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_createClaim` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-claims.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -457,7 +461,7 @@ Claim a reward after OTP verification
 | `phone` | string | yes | length 8–20 |
 | `rewardId` | string (uuid) | yes |  |
 
-**Response 201 Created** — Claim created with backup code
+**Response 201 Created** (`application/json`) — Claim created with backup code
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -536,6 +540,7 @@ Response `201 Created` (application/json):
 Refresh QR payload for an active claim
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_getClaimQr` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-claims.controller.ts)
 
 **Parameters**
@@ -544,7 +549,7 @@ Refresh QR payload for an active claim
 | --- | --- | --- | --- | --- |
 | `claimId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — QR payload and backup code
+**Response 200 OK** (`application/json`) — QR payload and backup code
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -592,6 +597,7 @@ Response `200 OK` (application/json):
 Reward activity analytics for the signed-in user
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_getAnalytics` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-claims.controller.ts)
 
 **Parameters**
@@ -602,7 +608,7 @@ Reward activity analytics for the signed-in user
 | `to` | query | integer | no |  |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** — Claims, redemptions, and referral metrics
+**Response 200 OK** (`application/json`) — Claims, redemptions, and referral metrics
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -788,6 +794,7 @@ My analytics dashboard: custom range + interval, compared totals, series, spendi
 Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_getAnalyticsDashboard` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-claims.controller.ts)
 
 **Parameters**
@@ -798,7 +805,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 | `to` | query | integer | no | Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`. |
 | `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
 
-**Response 200 OK** — Customer analytics dashboard
+**Response 200 OK** (`application/json`) — Customer analytics dashboard
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1097,6 +1104,7 @@ Request claim OTP (emailed to your account — no SMS in dev)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_requestOtp` · [source](../../../apps/api/src/modules/rewards/controllers/consumer-claims.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1106,7 +1114,7 @@ Request claim OTP (emailed to your account — no SMS in dev)
 | `phone` | string | yes | length 8–20 |
 | `rewardId` | string (uuid) | yes |  |
 
-**Response 201 Created** — OTP sent
+**Response 201 Created** (`application/json`) — OTP sent
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1158,6 +1166,7 @@ Accept rewards terms and privacy policy
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardLegalController_acceptLegal` · [source](../../../apps/api/src/modules/rewards/controllers/reward-legal.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1167,7 +1176,7 @@ Accept rewards terms and privacy policy
 | `privacyVersion` | string | yes | length 1–32 |
 | `termsVersion` | string | yes | length 1–32 |
 
-**Response 201 Created** — Legal acceptance recorded
+**Response 201 Created** (`application/json`) — Legal acceptance recorded
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1216,9 +1225,10 @@ Response `201 Created` (application/json):
 Get rewards legal acceptance and verified phone status
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardLegalController_getStatus` · [source](../../../apps/api/src/modules/rewards/controllers/reward-legal.controller.ts)
 
-**Response 200 OK** — Claim checkout status for the signed-in user
+**Response 200 OK** (`application/json`) — Claim checkout status for the signed-in user
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1269,6 +1279,7 @@ Response `200 OK` (application/json):
 List in-app reward notifications
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardNotificationsController_listNotifications` · [source](../../../apps/api/src/modules/rewards/controllers/reward-notifications.controller.ts)
 
 **Parameters**
@@ -1281,7 +1292,7 @@ List in-app reward notifications
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: readAt |
 
-**Response 200 OK** — Notifications with unread count
+**Response 200 OK** (`application/json`) — Notifications with unread count
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1355,6 +1366,7 @@ Mark reward notifications as read
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardNotificationsController_markRead` · [source](../../../apps/api/src/modules/rewards/controllers/reward-notifications.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1364,7 +1376,7 @@ Mark reward notifications as read
 | `markAll` | boolean | no |  |
 | `notificationIds` | string (uuid)[] | no |  |
 
-**Response 201 Created** — Notifications marked read
+**Response 201 Created** (`application/json`) — Notifications marked read
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

@@ -1,7 +1,7 @@
 ---
 title: "API reference — System: health and version"
 description: "Liveness, readiness and deep health probes and the API version manifest."
-order: 13
+order: 14
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -23,9 +23,10 @@ How these endpoints fit together: [Observability](../operations/observability.md
 Welcome message
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `HealthController_getHello` · [source](../../../apps/api/src/modules/health/health.controller.ts)
 
-**Response 200 OK** — Welcome message
+**Response 200 OK** (`application/json`) — Welcome message
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -65,9 +66,10 @@ Response `200 OK` (application/json):
 Health check (includes DB status) — deprecated alias, prefer /health/live and /health/ready
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `HealthController_getHealth` · [source](../../../apps/api/src/modules/health/health.controller.ts)
 
-**Response 200 OK** — Current service health status
+**Response 200 OK** (`application/json`) — Current service health status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -110,9 +112,10 @@ Response `200 OK` (application/json):
 Deep health check (DB + filesystem + external services)
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `HealthController_getDeepHealth` · [source](../../../apps/api/src/modules/health/health.controller.ts)
 
-**Response 200 OK** — Detailed health status with per-service probes
+**Response 200 OK** (`application/json`) — Detailed health status with per-service probes
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -182,9 +185,10 @@ Response `200 OK` (application/json):
 Liveness probe — process is up (never touches the database)
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `HealthController_getLiveness` · [source](../../../apps/api/src/modules/health/health.controller.ts)
 
-**Response 200 OK** — The process is alive
+**Response 200 OK** (`application/json`) — The process is alive
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -227,9 +231,10 @@ Response `200 OK` (application/json):
 Readiness probe — startup finished, database and critical dependencies reachable
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `HealthController_getReadiness` · [source](../../../apps/api/src/modules/health/health.controller.ts)
 
-**Response 200 OK** — The instance can serve traffic
+**Response 200 OK** (`application/json`) — The instance can serve traffic
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -290,9 +295,10 @@ Response `200 OK` (application/json):
 API version manifest (current, supported, docs)
 
 - **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `VersionController_getVersion` · [source](../../../apps/api/src/modules/health/version.controller.ts)
 
-**Response 200 OK** — Version negotiation manifest
+**Response 200 OK** (`application/json`) — Version negotiation manifest
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

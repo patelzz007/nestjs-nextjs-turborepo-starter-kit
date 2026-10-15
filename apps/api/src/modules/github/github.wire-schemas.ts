@@ -18,7 +18,7 @@ export const GithubGraphqlErrorWireSchema = z.object({
 
 export type GithubGraphqlErrorWire = z.output<typeof GithubGraphqlErrorWireSchema>;
 
-const GraphqlErrorsWireSchema = z.array(GithubGraphqlErrorWireSchema);
+export const GraphqlErrorsWireSchema = z.array(GithubGraphqlErrorWireSchema);
 
 /** The part of every GraphQL envelope the client checks before reading `data`. */
 export interface GithubGraphqlEnvelopeWire {
@@ -27,7 +27,7 @@ export interface GithubGraphqlEnvelopeWire {
 
 // ── Repository summary (GraphQL) ──────────────────────────────────────────
 
-const TotalCountWireSchema = z.object({ totalCount: z.number().int().nonnegative() });
+export const TotalCountWireSchema = z.object({ totalCount: z.number().int().nonnegative() });
 
 export const GithubRepositorySummaryNodeWireSchema = z.object({
 	description: z.string().nullable(),

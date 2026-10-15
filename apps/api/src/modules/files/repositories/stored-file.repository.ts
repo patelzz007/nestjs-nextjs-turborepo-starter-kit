@@ -279,10 +279,15 @@ export class StoredFileRepository {
 		return db.storedFile.findMany({ where: { id: { in: [...ids] }, isDeleted: false } });
 	}
 
-	private async listOlderThan(statuses: readonly FileStatus[], olderThanMs: number): Promise<StoredFile[]> {
+	/** READY files of a staging category (`stagingRetentionMs`) that nothing consumed in time: the sweep deletes them. */
+	public async listExpiredStaging(category: FileCategory, olderThanMs: number): Promise<StoredFile[]> {
+		return this.listOlderThan(["READY"], olderThanMs, category);
+	}
+
+	private async listOlderThan(statuses: readonly FileStatus[], olderThanMs: number, category?: FileCategory): Promise<StoredFile[]> {
 		const cutoff = BigInt(Date.now() - olderThanMs);
 		return this.prisma.storedFile.findMany({
-			where: { status: { in: [...statuses] }, isDeleted: false, updatedAt: { lt: cutoff } },
+			where: { status: { in: [...statuses] }, isDeleted: false, updatedAt: { lt: cutoff }, ...(category === undefined ? {} : { category }) },
 			orderBy: { updatedAt: "asc" },
 			take: STALE_SWEEP_PAGE_SIZE,
 		});

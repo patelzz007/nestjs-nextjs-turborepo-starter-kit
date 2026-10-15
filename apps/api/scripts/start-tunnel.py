@@ -16,6 +16,12 @@ re-run):
    events silently die after every tunnel restart and statuses stick at
    "sent".
 
+2. GitHub live pull-request updates are wired to `<new-url>/api/v1/github/webhook`
+   (`pnpm --filter @workspace/api github:webhook-tunnel`): GITHUB_WEBHOOK_URL
+   (and, if missing, GITHUB_WEBHOOK_SECRET) is written to apps/api/.env, and
+   every repository already turned on is re-pointed on GitHub. Restart the API
+   afterwards so it reads the new address.
+
 None of the wiring is fatal: if a step fails (no API key, Resend down, …)
 the tunnel still starts and the script prints the URL + the exact webhook
 URL to paste manually in the Resend dashboard.
@@ -35,6 +41,10 @@ API_ENV_PATH = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__f
 TUNNEL_URL_PATTERN = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 WEBHOOK_PATH = "/notifications/email-webhook"
 TUNNEL_LOG_PATH = "/tmp/cloudflared.log"
+# A quick tunnel must not read ~/.cloudflared/config.yml: when a NAMED tunnel is configured there, its
+# ingress rules apply to the quick tunnel too, and its catch-all answers every *.trycloudflare.com
+# request with 404. The quick tunnel gets this empty config instead.
+QUICK_TUNNEL_CONFIG_PATH = "/tmp/cloudflared-quick-tunnel.yml"
 # Resend sits behind Cloudflare's edge, which 403s the default
 # `Python-urllib/3.x` User-Agent — send a real one so the API call passes.
 HTTP_USER_AGENT = "start-tunnel.py (email-dev)"
@@ -128,6 +138,20 @@ def auto_wire(tracking_url: str) -> None:
         print(f"WARN: RESEND_API_KEY not found in {API_ENV_PATH} — skipping webhook re-point. Paste this URL in the Resend dashboard: {tracking_url}{WEBHOOK_PATH}", flush=True)
 
 
+def wire_github_webhooks(tracking_url: str) -> None:
+    """Point GitHub live updates at the new tunnel (github-webhook-tunnel.ts). Non-fatal."""
+    api_dir: str = os.path.dirname(API_ENV_PATH)
+    try:
+        # Through a shell: `pnpm` may be a shell script without a shebang (version managers, shims),
+        # which Python cannot exec directly. The URL is passed as an argument, never interpolated.
+        result = subprocess.run(["/bin/sh", "-c", 'pnpm --silent github:webhook-tunnel "$1"', "sh", tracking_url], cwd=api_dir, timeout=120, check=False)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        print(f"WARN: could not wire GitHub live updates — {error}. Run: pnpm --filter @workspace/api github:webhook-tunnel {tracking_url}", flush=True)
+        return
+    if result.returncode != 0:
+        print(f"WARN: wiring GitHub live updates failed (exit {result.returncode}). Run: pnpm --filter @workspace/api github:webhook-tunnel {tracking_url}", flush=True)
+
+
 def wait_for_tunnel_url(timeout_seconds: int = 30) -> str | None:
     """Poll the cloudflared log until a tunnel URL appears (newest match)."""
     deadline: float = time.time() + timeout_seconds
@@ -160,9 +184,13 @@ def spawn_cloudflared() -> None:
     pid2: int = os.fork()
     if pid2 > 0:
         os._exit(0)
+    with open(QUICK_TUNNEL_CONFIG_PATH, "w", encoding="utf-8") as config_file:
+        config_file.write("# Quick tunnel: no ingress rules — everything goes to --url.\n")
     subprocess.Popen(
         [
             "cloudflared",
+            "--config",
+            QUICK_TUNNEL_CONFIG_PATH,
             "tunnel",
             "--url",
             "http://localhost:8080",
@@ -193,6 +221,7 @@ def main() -> int:
     print(f"Tunnel URL: {url}", flush=True)
     print(f"Webhook URL: {url}{WEBHOOK_PATH}", flush=True)
     auto_wire(url)
+    wire_github_webhooks(url)
     return 0
 
 

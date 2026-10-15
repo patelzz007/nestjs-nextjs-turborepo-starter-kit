@@ -47,3 +47,27 @@ export async function readStreamPrefix(stream: Readable, length: number): Promis
 	}
 	return Buffer.concat(chunks).subarray(0, length);
 }
+
+/** The stream held more bytes than the caller allows. */
+export class StreamTooLargeError extends Error {
+	public constructor(public readonly maxBytes: number) {
+		super(`The object is larger than ${String(maxBytes)} bytes`);
+		this.name = "StreamTooLargeError";
+	}
+}
+
+/** Reads a whole stream into memory — refused past `maxBytes` (the stream is released), so a caller's bound always holds. */
+export async function readStreamFully(stream: Readable, maxBytes: number): Promise<Buffer> {
+	const chunks: Buffer[] = [];
+	let collected = 0;
+	for await (const chunk of stream) {
+		const buffer = streamChunkToBuffer(StreamChunkSchema.parse(chunk));
+		collected += buffer.length;
+		if (collected > maxBytes) {
+			stream.destroy();
+			throw new StreamTooLargeError(maxBytes);
+		}
+		chunks.push(buffer);
+	}
+	return Buffer.concat(chunks);
+}

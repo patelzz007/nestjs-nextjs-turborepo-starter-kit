@@ -10,6 +10,8 @@ export const NOW_MS = 1_791_504_000_000;
 const HOUR_MS = 3_600_000;
 
 interface UserOverrides {
+	/** A real UUID, for requests whose schema checks the user id (an upload for yourself). */
+	readonly id?: string;
 	readonly twoFactorEnabled?: boolean;
 	readonly fullName?: string;
 	readonly isEmailVerified?: boolean;
@@ -17,7 +19,7 @@ interface UserOverrides {
 
 export function userJson(overrides: UserOverrides = {}): DataValue {
 	return {
-		id: "user-1",
+		id: overrides.id ?? "user-1",
 		email: "member@example.com",
 		fullName: overrides.fullName ?? "Alex Morgan",
 		isActive: true,
@@ -218,5 +220,138 @@ export function githubContributorsJson(logins: readonly string[] = ["octocat"], 
 			additions: 1000,
 			deletions: 250,
 		})),
+	};
+}
+
+// ── GitHub pull requests (ADR 052) ─────────────────────────────────────────
+
+/** `GET /github/account` with a working token linked as octocat (no expiry). */
+export function githubAccountLinkedJson(health: "active" | "rejected" = "active"): Readonly<Record<string, DataValue>> {
+	return { status: "linked", login: "octocat", avatarUrl: null, health, linkedAt: NOW_MS - HOUR_MS, tokenExpiresAt: null };
+}
+
+/** Pull request `number` of octo-org/hello-world, open, by octocat. */
+export function githubPullRequestJson(number: number, overrides: Readonly<Record<string, DataValue>> = {}): Readonly<Record<string, DataValue>> {
+	return {
+		owner: "octo-org",
+		repository: "hello-world",
+		number,
+		title: `Pull request ${String(number)}`,
+		state: "open",
+		isDraft: false,
+		author: { login: "octocat", avatarUrl: null },
+		createdAt: NOW_MS - HOUR_MS,
+		updatedAt: NOW_MS - HOUR_MS,
+		commentCount: 2,
+		reviewDecision: null,
+		labels: [{ name: "bug", color: "d73a4a" }],
+		htmlUrl: `https://github.com/octo-org/hello-world/pull/${String(number)}`,
+		...overrides,
+	};
+}
+
+/** `GET /github/pull-requests`. */
+export function githubPullRequestPageJson(items: readonly DataValue[], nextCursor: string | null = null): DataValue {
+	return { items: [...items], nextCursor, totalCount: items.length };
+}
+
+/** A comment by `login`, never edited unless `lastEditedAt` says so. */
+export function githubCommentJson(id: string, body: string, overrides: Readonly<Record<string, DataValue>> = {}): Readonly<Record<string, DataValue>> {
+	return {
+		id,
+		author: { login: "hubot", avatarUrl: null },
+		body,
+		images: [],
+		reactions: [],
+		reactionSubject: { type: "issueComment", commentId: "6186769145" },
+		createdAt: NOW_MS - HOUR_MS,
+		lastEditedAt: null,
+		viewerCanUpdate: false,
+		viewerDidAuthor: false,
+		htmlUrl: `https://github.com/octo-org/hello-world/pull/42#issuecomment-${id}`,
+		...overrides,
+	};
+}
+
+/** `GET /github/pull-requests/octo-org/hello-world/42`: three commits from `feature/login` into `main`, a comment and a label event. */
+export function githubPullRequestDetailJson(overrides: Readonly<Record<string, DataValue>> = {}): DataValue {
+	return {
+		...githubPullRequestJson(42, { title: "Add the login screen", reviewDecision: "reviewRequired" }),
+		id: "PR_kwDOtest42",
+		body: "Adds **the login screen**.",
+		bodyImages: [],
+		reactions: [],
+		bodyLastEditedAt: NOW_MS - HOUR_MS,
+		baseRef: "main",
+		headRef: "feature/login",
+		headOwner: null,
+		additions: 120,
+		deletions: 30,
+		changedFiles: 2,
+		commitCount: 3,
+		requestedReviewers: [{ login: "monalisa", avatarUrl: null }],
+		mergedAt: null,
+		closedAt: null,
+		viewerDidAuthor: true,
+		viewerCanUpdate: true,
+		timeline: {
+			items: [
+				{ type: "comment", comment: githubCommentJson("IC_first", "Looks good to me.") },
+				{ type: "event", kind: "labeled", actor: { login: "octocat", avatarUrl: null }, createdAt: NOW_MS - HOUR_MS, detail: "bug" },
+			],
+			nextCursor: null,
+		},
+		...overrides,
+	};
+}
+
+/** A line comment on `src/app.ts`, right side, line 2 (`const b = 2;` in {@link GITHUB_COMMIT_PATCH}). */
+export function githubReviewThreadJson(id: string, overrides: Readonly<Record<string, DataValue>> = {}): DataValue {
+	return {
+		id,
+		path: "src/app.ts",
+		line: 2,
+		originalLine: 2,
+		side: "right",
+		isResolved: false,
+		isOutdated: false,
+		comments: [
+			{
+				...githubCommentJson(`RC_${id}`, `Why two? (${id})`),
+				path: "src/app.ts",
+				line: 2,
+				originalLine: 2,
+				diffHunk: GITHUB_COMMIT_PATCH,
+			},
+		],
+		...overrides,
+	};
+}
+
+/** `GET …/files`: one modified file (`src/app.ts` unless `path` says otherwise) with {@link GITHUB_COMMIT_PATCH}. */
+export function githubPullRequestFilesJson(nextPage: number | null = null, path = "src/app.ts"): DataValue {
+	return {
+		files: [{ path, previousPath: null, status: "modified", additions: 2, deletions: 1, diff: { kind: "patch", patch: GITHUB_COMMIT_PATCH } }],
+		nextPage,
+		headSha: "a".repeat(40),
+	};
+}
+
+/** `GET …/42/status`: checks passed, no conflicts, and merging by any method, squash suggested. */
+export function githubPullRequestStatusJson(overrides: Readonly<Record<string, DataValue>> = {}, merge: Readonly<Record<string, DataValue>> = {}): DataValue {
+	return {
+		checks: { kind: "summary", state: "success", successful: 3, failed: 0, pending: 0, skipped: 1 },
+		mergeability: "mergeable",
+		merge: {
+			headSha: "a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0",
+			state: "clean",
+			methods: ["merge", "squash", "rebase"],
+			defaultMethod: "squash",
+			headBranch: "feature/login",
+			canDeleteHeadBranch: true,
+			deletesBranchOnMerge: false,
+			...merge,
+		},
+		...overrides,
 	};
 }

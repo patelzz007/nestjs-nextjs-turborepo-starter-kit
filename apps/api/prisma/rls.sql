@@ -50,6 +50,7 @@ BEGIN
     'two_factor_pending_setups',
     'two_factor_login_challenges',
     'mfa_recovery_requests',
+    'github_account_links',
     'user_roles',
     'user_permissions',
     'role_permissions',
@@ -70,7 +71,9 @@ BEGIN
     'inbox_dead_letters',
     'audit_logs',
     'data_change_logs',
-    'platform_resource_idempotency_records'
+    'platform_resource_idempotency_records',
+    'github_webhook_subscriptions',
+    'github_webhook_deliveries'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -139,6 +142,12 @@ CREATE POLICY backup_codes_own ON public.backup_codes
 
 DROP POLICY IF EXISTS two_factor_pending_setups_own ON public.two_factor_pending_setups;
 CREATE POLICY two_factor_pending_setups_own ON public.two_factor_pending_setups
+  USING (app_owns(user_id))
+  WITH CHECK (app_owns(user_id));
+
+-- An admin's own GitHub token (ADR 052): only its owner's session reads or writes it.
+DROP POLICY IF EXISTS github_account_links_own ON public.github_account_links;
+CREATE POLICY github_account_links_own ON public.github_account_links
   USING (app_owns(user_id))
   WITH CHECK (app_owns(user_id));
 
@@ -269,6 +278,19 @@ CREATE POLICY email_logs_insert ON public.email_logs FOR INSERT WITH CHECK (true
 CREATE POLICY email_logs_select ON public.email_logs FOR SELECT USING (app_rls_bypass());
 CREATE POLICY email_logs_update ON public.email_logs FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
 CREATE POLICY email_logs_delete ON public.email_logs FOR DELETE USING (app_rls_bypass());
+
+-- GitHub live updates (ADR 052): platform plumbing, reached only through the allowlisted system
+-- operations `github.webhook.subscriptions` (after the caller's GITHUB_PULL_REQUEST check) and
+-- `github.webhook.deliveries` (after a delivery's signature is verified).
+DROP POLICY IF EXISTS github_webhook_subscriptions_bypass ON public.github_webhook_subscriptions;
+CREATE POLICY github_webhook_subscriptions_bypass ON public.github_webhook_subscriptions
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS github_webhook_deliveries_bypass ON public.github_webhook_deliveries;
+CREATE POLICY github_webhook_deliveries_bypass ON public.github_webhook_deliveries
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
 
 -- Resend delivery-webhook history (one row per verified webhook delivery). Written
 -- and read only by the signature-verified webhook route (@RlsBypass) — bypass-only.

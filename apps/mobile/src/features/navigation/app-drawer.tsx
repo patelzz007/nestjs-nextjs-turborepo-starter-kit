@@ -17,12 +17,14 @@ import { useApi } from "../../lib/api-context";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { useReadyRuntime } from "../../runtime/runtime-context";
 import { useAppDrawerCommands, useAppDrawerOpen } from "../app-drawer/facade";
+import { useGithubPullRequestAccess } from "../github-pull-requests/github-pull-request-access";
+import { accountRowValue } from "../github-pull-requests/labels";
 import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
 import { SignOutDialog } from "../auth/sign-out-dialog";
 import { useSignOutConfirmation } from "../auth/use-sign-out-confirmation";
 import { useAppLockEnabled, useThemePreference } from "../preferences/facade";
 import { THEME_LABELS } from "../preferences/labels";
-import { DRAWER_GROUPS, DRAWER_TABS, isTabRoot, type DrawerDestination, type DrawerDestinationGroup } from "./drawer-destinations";
+import { DRAWER_GROUPS, DRAWER_TABS, GITHUB_DRAWER_GROUP, isTabRoot, type DrawerDestination, type DrawerDestinationGroup } from "./drawer-destinations";
 
 export interface AppDrawerProps {
 	/** The tabs. */
@@ -57,6 +59,8 @@ function AppDrawerPanel(): React.JSX.Element {
 	const theme = useThemePreference();
 	const appLockEnabled = useAppLockEnabled();
 	const signOut = useSignOutConfirmation();
+	const github = useGithubPullRequestAccess();
+	const githubAccountValue = github.kind === "available" ? accountRowValue(github.account) : undefined;
 	const me = api.auth.me.useQuery(undefined);
 	const profile = api.auth.profile.useQuery(undefined);
 	const user = me.data?.data;
@@ -96,10 +100,14 @@ function AppDrawerPanel(): React.JSX.Element {
 			if (route === ROUTES.appLock) {
 				return appLockEnabled ? "On" : "Off";
 			}
+			if (route === ROUTES.githubAccount) {
+				return githubAccountValue;
+			}
 			return undefined;
 		},
-		[appLockEnabled, theme],
+		[appLockEnabled, githubAccountValue, theme],
 	);
+	const groups = github.kind === "available" ? [...DRAWER_GROUPS, GITHUB_DRAWER_GROUP] : DRAWER_GROUPS;
 
 	const version = buildNumber === null ? `Version ${appVersion}` : `Version ${appVersion} (${buildNumber})`;
 
@@ -126,7 +134,7 @@ function AppDrawerPanel(): React.JSX.Element {
 						<DestinationRow key={destination.route} destination={destination} value={undefined} selected={destination.route === pathname} onOpen={open} />
 					))}
 				</DrawerSection>
-				{DRAWER_GROUPS.map((group: DrawerDestinationGroup): React.JSX.Element => (
+				{groups.map((group: DrawerDestinationGroup): React.JSX.Element => (
 					<DrawerSection key={group.title} heading={{ title: group.title, tone: group.tone }}>
 						{group.destinations.map((destination: DrawerDestination): React.JSX.Element => (
 							<DestinationRow key={destination.route} destination={destination} value={valueOf(destination.route)} selected={destination.route === pathname} onOpen={open} />

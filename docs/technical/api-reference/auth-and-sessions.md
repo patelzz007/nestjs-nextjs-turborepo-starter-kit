@@ -23,9 +23,10 @@ How these endpoints fit together: [Account security guide](../../user-guide/10-a
 Count unused backup codes for the authenticated user
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_getBackupCodesRemaining` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
-**Response 200 OK** — Unused backup code count
+**Response 200 OK** (`application/json`) — Unused backup code count
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -69,6 +70,7 @@ Confirm 2FA enrollment with a TOTP code
 - **Policy** `UPDATE:USER (own record only)` — User can enable their own 2FA.
 - Rate limit: 5 requests per 60 s per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_enableTwoFactor` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -77,7 +79,7 @@ Confirm 2FA enrollment with a TOTP code
 | --- | --- | --- | --- |
 | `token` | string | yes | exactly 6 characters; pattern `^\d{6}$` |
 
-**Response 200 OK** — 2FA enabled
+**Response 200 OK** (`application/json`) — 2FA enabled
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -129,6 +131,7 @@ Rotate 2FA after confirming password and current TOTP or backup code
 - **Policy** `UPDATE:USER (own record only)` — User can rotate their own 2FA.
 - Rate limit: 5 requests per 60 s per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_rotateTwoFactor` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -139,7 +142,7 @@ Rotate 2FA after confirming password and current TOTP or backup code
 | `password` | string | yes | at least 1 characters |
 | `token` | string | no | exactly 6 characters; pattern `^\d{6}$` |
 
-**Response 200 OK** — New TOTP secret, QR code, otpauth:// key URI and backup codes
+**Response 200 OK** (`application/json`) — New TOTP secret, QR code, otpauth:// key URI and backup codes
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -200,13 +203,14 @@ Start 2FA enrollment: generate a pending TOTP secret, QR code and backup codes
 - **Policy** `UPDATE:USER (own record only)` — User can start their own 2FA enrollment.
 - Rate limit: 5 requests per 60 s per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_startSetup` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
 _No fields._
 
-**Response 201 Created** — TOTP secret, QR code, otpauth:// key URI and backup codes (pending until confirmed via /2fa/enable)
+**Response 201 Created** (`application/json`) — TOTP secret, QR code, otpauth:// key URI and backup codes (pending until confirmed via /2fa/enable)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -262,6 +266,7 @@ Verify a backup code while authenticated
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_verifyBackupCode` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -270,7 +275,7 @@ Verify a backup code while authenticated
 | --- | --- | --- | --- |
 | `backupCode` | string | yes | exactly 16 characters; pattern `^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{16}$` |
 
-**Response 200 OK** — Whether the backup code was valid
+**Response 200 OK** (`application/json`) — Whether the backup code was valid
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -320,6 +325,7 @@ SuperAdmin: list MFA recovery requests
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `MfaRecoveryController_listRecoveryRequests` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
 
 **Parameters**
@@ -332,7 +338,7 @@ SuperAdmin: list MFA recovery requests
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: requestedAt, createdAt. Default: -requestedAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, userId |
 
-**Response 200 OK** — Paginated MFA recovery requests
+**Response 200 OK** (`application/json`) — Paginated MFA recovery requests
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -429,6 +435,7 @@ SuperAdmin: approve or deny an MFA recovery request
 - **Policy** `UPDATE:USER` — SuperAdmin can review MFA recovery requests.
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MfaRecoveryController_reviewRecovery` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -439,7 +446,7 @@ SuperAdmin: approve or deny an MFA recovery request
 | `notes` | string | no |  |
 | `requestId` | string (uuid) | yes |  |
 
-**Response 200 OK** — Reviewed recovery request status
+**Response 200 OK** (`application/json`) — Reviewed recovery request status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -495,6 +502,7 @@ SuperAdmin: list all users with roles and lockout status
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `LIST:USER`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_getAdminUsersList` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -508,7 +516,7 @@ SuperAdmin: list all users with roles and lockout status
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, role, referrerId, referralStatus |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated admin user list
+**Response 200 OK** (`application/json`) — Paginated admin user list
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -649,6 +657,7 @@ SuperAdmin: get detailed user info including security state
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `READ:USER`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_getAdminUserDetail` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -657,7 +666,7 @@ SuperAdmin: get detailed user info including security state
 | --- | --- | --- | --- | --- |
 | `userId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Full user detail with lockout status
+**Response 200 OK** (`application/json`) — Full user detail with lockout status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -773,6 +782,7 @@ SuperAdmin: unlock a locked user account
 - **Policy** `UPDATE:USER` — SuperAdmin can unlock any user account.
 - Requires a **verified email address**.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_unlockUser` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -781,7 +791,7 @@ SuperAdmin: unlock a locked user account
 | --- | --- | --- | --- | --- |
 | `userId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Account unlocked
+**Response 200 OK** (`application/json`) — Account unlocked
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -828,6 +838,7 @@ Change password for the authenticated user
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — User can only change their own password.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_changePassword` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -838,7 +849,7 @@ Change password for the authenticated user
 | `currentPassword` | string | yes | at least 1 characters |
 | `newPassword` | string | yes | at least 8 characters |
 
-**Response 200 OK** — Password changed successfully
+**Response 200 OK** (`application/json`) — Password changed successfully
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -891,6 +902,7 @@ Request a password reset email
 - **Public** — no session required.
 - Rate limit: 3 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_forgotPassword` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -906,7 +918,7 @@ Request a password reset email
 | --- | --- | --- | --- |
 | `email` | string (email) | yes | The email address associated with the user account; at most 100 characters |
 
-**Response 200 OK** — Password reset email sent (if account exists)
+**Response 200 OK** (`application/json`) — Password reset email sent (if account exists)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -954,6 +966,7 @@ Authenticate with email and password
 - **Public** — no session required.
 - Rate limit: 5 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_login` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -970,7 +983,7 @@ Authenticate with email and password
 | `email` | string (email) | yes | User email address; at most 100 characters |
 | `password` | string | yes | User password; at least 1 characters |
 
-**Response 201 Created** — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+**Response 201 Created** (`application/json`) — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1134,6 +1147,7 @@ Complete login with a TOTP code
 - **Public** — no session required.
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_loginWithTwoFactor` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1143,7 +1157,7 @@ Complete login with a TOTP code
 | `tempToken` | string | yes | at least 1 characters |
 | `token` | string | yes | exactly 6 characters; pattern `^\d{6}$` |
 
-**Response 200 OK** — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+**Response 200 OK** (`application/json`) — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1313,6 +1327,7 @@ Complete login with a one-time backup code
 - **Public** — no session required.
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `TwoFactorController_loginWithBackupCode` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1322,7 +1337,7 @@ Complete login with a one-time backup code
 | `backupCode` | string | yes | exactly 16 characters; pattern `^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{16}$` |
 | `tempToken` | string | yes | at least 1 characters |
 
-**Response 200 OK** — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+**Response 200 OK** (`application/json`) — Login result — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1490,9 +1505,10 @@ Response `200 OK` (application/json):
 Get the currently authenticated user's profile
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_getMe` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
-**Response 200 OK** — Current user profile
+**Response 200 OK** (`application/json`) — Current user profile
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1572,6 +1588,7 @@ Initiate an admin-reviewed MFA recovery request
 - **Policy** `UPDATE:USER (own record only)` — User can initiate MFA recovery for their own account.
 - Rate limit: 3 requests per 60 s per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `MfaRecoveryController_initiateRecovery` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1580,7 +1597,7 @@ Initiate an admin-reviewed MFA recovery request
 | --- | --- | --- | --- |
 | `reason` | string | no |  |
 
-**Response 200 OK** — Recovery request status
+**Response 200 OK** (`application/json`) — Recovery request status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1632,9 +1649,10 @@ Response `200 OK` (application/json):
 Get the current MFA recovery request status
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `MfaRecoveryController_getRecoveryStatus` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
 
-**Response 200 OK** — Recovery request status
+**Response 200 OK** (`application/json`) — Recovery request status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1678,9 +1696,10 @@ Response `200 OK` (application/json):
 Get the current session's roles and permissions
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_getSessionPermissions` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
-**Response 200 OK** — Session RBAC payload
+**Response 200 OK** (`application/json`) — Session RBAC payload
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1768,9 +1787,10 @@ Get the signed-in user's own profile (name, avatar, optimistic-lock version)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `READ:PROFILE (own record only)` — A user reads their own profile.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ProfileController_getOwnProfile` · [source](../../../apps/api/src/modules/auth/profile/profile.controller.ts)
 
-**Response 200 OK** — The signed-in user's own profile
+**Response 200 OK** (`application/json`) — The signed-in user's own profile
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1834,6 +1854,7 @@ Send the `version` read from GET /auth/profile: the change applies only while th
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:PROFILE (own record only)` — A user edits their own profile (never during impersonation).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ProfileController_updateOwnProfile` · [source](../../../apps/api/src/modules/auth/profile/profile.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1843,7 +1864,7 @@ Send the `version` read from GET /auth/profile: the change applies only while th
 | `fullName` | string | no | The user's full name (trimmed) |
 | `version` | integer | yes | The profile `version` this edit is based on (optimistic lock) |
 
-**Response 200 OK** — The updated profile, with its new version
+**Response 200 OK** (`application/json`) — The updated profile, with its new version
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1915,6 +1936,7 @@ Resend email verification link
 - **Public** — no session required.
 - Rate limit: 3 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_resendVerification` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -1930,7 +1952,7 @@ Resend email verification link
 | --- | --- | --- | --- |
 | `email` | string (email) | yes | The email address to resend verification to; at most 100 characters |
 
-**Response 200 OK** — Verification email resent
+**Response 200 OK** (`application/json`) — Verification email resent
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1978,6 +2000,7 @@ Reset password using a valid reset token
 - **Public** — no session required.
 - Rate limit: 5 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_resetPassword` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1987,7 +2010,7 @@ Reset password using a valid reset token
 | `password` | string | yes | New password (min 8 chars, upper+lower+number+special); at least 8 characters |
 | `token` | string | yes | The password reset token received via email; at least 1 characters |
 
-**Response 200 OK** — Password reset successful
+**Response 200 OK** (`application/json`) — Password reset successful
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2037,6 +2060,7 @@ Register a new user account
 - **Public** — no session required.
 - Rate limit: 3 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_signup` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Parameters**
@@ -2055,7 +2079,7 @@ Register a new user account
 | `password` | string | yes | User password (must meet complexity requirements); at least 8 characters |
 | `referralCode` | string \| null | no | Optional signup referral code from another user (consumer web signup only); at most 8 characters |
 
-**Response 201 Created** — User registered
+**Response 201 Created** (`application/json`) — User registered
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2105,9 +2129,10 @@ Response `201 Created` (application/json):
 Referrer dashboard: current code and shareability
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SignupReferralController_dashboard` · [source](../../../apps/api/src/modules/auth/signup-referrals/signup-referral.controller.ts)
 
-**Response 200 OK** — Signup referral code state
+**Response 200 OK** (`application/json`) — Signup referral code state
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2131,6 +2156,7 @@ Referrer dashboard: current code and shareability
 People who registered with the caller's referral code
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SignupReferralController_referees` · [source](../../../apps/api/src/modules/auth/signup-referrals/signup-referral.controller.ts)
 
 **Parameters**
@@ -2143,7 +2169,7 @@ People who registered with the caller's referral code
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
 
-**Response 200 OK** — Signup referral referees
+**Response 200 OK** (`application/json`) — Signup referral referees
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2177,6 +2203,7 @@ Validate a password reset token without consuming it
 - **Public** — no session required.
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_validateResetToken` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2185,7 +2212,7 @@ Validate a password reset token without consuming it
 | --- | --- | --- | --- |
 | `token` | string | yes | at least 1 characters |
 
-**Response 200 OK** — Whether the reset token is valid
+**Response 200 OK** (`application/json`) — Whether the reset token is valid
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2232,6 +2259,7 @@ Verify email address using a verification token
 
 - **Public** — no session required.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_verifyEmail` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2240,7 +2268,7 @@ Verify email address using a verification token
 | --- | --- | --- | --- |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** — Email verified
+**Response 201 Created** (`application/json`) — Email verified
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2290,6 +2318,7 @@ Complete login with an email verification code
 - **Public** — no session required.
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthController_verifyLogin` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2299,7 +2328,7 @@ Complete login with an email verification code
 | `code` | string | yes | exactly 6 characters; pattern `^\d{6}$` |
 | `verificationId` | string | yes | at least 1 characters |
 
-**Response 200 OK** — Login result after verification — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+**Response 200 OK** (`application/json`) — Login result after verification — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2413,6 +2442,7 @@ Complete login with an email verification code
 Logout from the current device (idempotent — always clears a browser client's auth cookies; client type mobile presents its refresh token as { refreshToken })
 
 - **Refresh-token cookie** — sent automatically by the browser after login.
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SessionsController_logout` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2421,7 +2451,7 @@ Logout from the current device (idempotent — always clears a browser client's 
 | --- | --- | --- | --- |
 | `refreshToken` | string | no | Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie); length 1–4096 |
 
-**Response 201 Created** — Logged out from current device
+**Response 201 Created** (`application/json`) — Logged out from current device
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2463,6 +2493,7 @@ Response `201 Created` (application/json):
 Logout from all devices, on every client type (refresh token: the httpOnly cookie for browser client types, { refreshToken } for client type mobile)
 
 - **Refresh-token cookie** — sent automatically by the browser after login.
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SessionsController_logoutAll` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2471,7 +2502,7 @@ Logout from all devices, on every client type (refresh token: the httpOnly cooki
 | --- | --- | --- | --- |
 | `refreshToken` | string | no | Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie); length 1–4096 |
 
-**Response 201 Created** — Logged out from all devices
+**Response 201 Created** (`application/json`) — Logged out from all devices
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2514,6 +2545,7 @@ Rotate the session tokens (refresh token: the httpOnly cookie for browser client
 
 - **Refresh-token cookie** — sent automatically by the browser after login.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SessionsController_refreshToken` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2522,7 +2554,7 @@ Rotate the session tokens (refresh token: the httpOnly cookie for browser client
 | --- | --- | --- | --- |
 | `refreshToken` | string | no | Required for client type `mobile`; must be absent for browser client types (their refresh token is the httpOnly cookie); length 1–4096 |
 
-**Response 200 OK** — Tokens rotated — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
+**Response 200 OK** (`application/json`) — Tokens rotated — browser client types: tokens set as httpOnly cookies, never in the body; client type mobile: tokens returned in the body with tokenTransport: body
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2570,9 +2602,10 @@ List the caller's signed-in devices (every client type): the current one first, 
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `READ:USER (own record only)` — A user lists their own device sessions.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SessionsController_getSessions` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
 
-**Response 200 OK** — The caller's active device sessions
+**Response 200 OK** (`application/json`) — The caller's active device sessions
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2653,6 +2686,7 @@ Revokes one of the caller's device sessions: its refresh token stops working at 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — A user signs out one of their own devices (never during impersonation).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SessionsController_revokeSession` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
 
 **Parameters**
@@ -2661,7 +2695,7 @@ Revokes one of the caller's device sessions: its refresh token stops working at 
 | --- | --- | --- | --- | --- |
 | `sessionId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — The session is revoked (or already was)
+**Response 201 Created** (`application/json`) — The session is revoked (or already was)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2689,9 +2723,10 @@ Revokes one of the caller's device sessions: its refresh token stops working at 
 Current session status (requires a valid access token)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SessionStatusController_getSession` · [source](../../../apps/api/src/modules/sessions/session-status.controller.ts)
 
-**Response 200 OK** — Authenticated session identity + token expiry
+**Response 200 OK** (`application/json`) — Authenticated session identity + token expiry
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2750,6 +2785,7 @@ SuperAdmin: impersonate another user
 - Requires a **full session** (email verified and, where required, 2FA enrolled).
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ImpersonationController_impersonate` · [source](../../../apps/api/src/modules/impersonation/impersonation.controller.ts)
 
 **Parameters**
@@ -2758,7 +2794,7 @@ SuperAdmin: impersonate another user
 | --- | --- | --- | --- | --- |
 | `userId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Impersonation started — the impersonation token is set as an httpOnly cookie
+**Response 201 Created** (`application/json`) — Impersonation started — the impersonation token is set as an httpOnly cookie
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2850,9 +2886,10 @@ Stop impersonating and restore the original admin session
 - Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ImpersonationController_stopImpersonation` · [source](../../../apps/api/src/modules/impersonation/impersonation.controller.ts)
 
-**Response 201 Created** — Impersonation ended — the admin token is restored as an httpOnly cookie
+**Response 201 Created** (`application/json`) — Impersonation ended — the admin token is restored as an httpOnly cookie
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2895,6 +2932,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SupportAccessController_approve` · [source](../../../apps/api/src/modules/support-access/support-access.controller.ts)
 
 **Parameters**
@@ -2903,7 +2941,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `grantId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Support access grant approved
+**Response 201 Created** (`application/json`) — Support access grant approved
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2949,6 +2987,7 @@ Response `201 Created` (application/json):
 - **SuperAdmin only.**
 - **Policy** `DELETE:USER` — SuperAdmin can revoke support access.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `SupportAccessController_revoke` · [source](../../../apps/api/src/modules/support-access/support-access.controller.ts)
 
 **Parameters**
@@ -2957,7 +2996,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `grantId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Support access grant revoked
+**Response 201 Created** (`application/json`) — Support access grant revoked
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3004,6 +3043,7 @@ Response `201 Created` (application/json):
 - **Permission** `CREATE:USER`.
 - **Policy** `CREATE:USER` — SuperAdmin can request support access.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `SupportAccessController_requestGrant` · [source](../../../apps/api/src/modules/support-access/support-access.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -3016,7 +3056,7 @@ Response `201 Created` (application/json):
 | `reason` | string | yes | length 10–2000 |
 | `ticketRef` | string | no | at most 120 characters |
 
-**Response 201 Created** — Support access grant requested
+**Response 201 Created** (`application/json`) — Support access grant requested
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

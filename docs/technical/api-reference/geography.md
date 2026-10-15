@@ -24,6 +24,7 @@ Autocomplete search across all geo entities
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_autocomplete` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -34,7 +35,7 @@ Autocomplete search across all geo entities
 | `country` | query | string | no | ISO 3166-1 alpha-2 country code to scope results |
 | `limit` | query | integer | no | Max results (1-20) |
 
-**Response 200 OK** — Matching geo items
+**Response 200 OK** (`application/json`) — Matching geo items
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -84,6 +85,7 @@ Preview cascade delete impact
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_cascadePreview` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -93,7 +95,7 @@ Preview cascade delete impact
 | `entity` | query | "region" \| "subregion" \| "country" \| "state" | yes | Entity type (region, subregion, country, state) |
 | `id` | query | integer | yes | Entity ID |
 
-**Response 200 OK** — Cascade preview with affected entity counts
+**Response 200 OK** (`application/json`) — Cascade preview with affected entity counts
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -149,6 +151,7 @@ List cities
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_listCities` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -163,7 +166,7 @@ List cities
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 | `include` | query | string | no | Comma-separated related entities to include (e.g. states,cities) |
 
-**Response 200 OK** — Paginated list of cities
+**Response 200 OK** (`application/json`) — Paginated list of cities
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -321,6 +324,7 @@ Create a city
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_createCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -340,7 +344,7 @@ Create a city
 | `translations` | any JSON | no |  |
 | `wikiDataId` | string | no | at most 255 characters |
 
-**Response 201 Created** — Created city
+**Response 201 Created** (`application/json`) — Created city
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -424,6 +428,7 @@ Get city by ID
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_getCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -432,7 +437,7 @@ Get city by ID
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — City detail
+**Response 200 OK** (`application/json`) — City detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -506,6 +511,7 @@ Update a city
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_updateCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -531,7 +537,7 @@ Update a city
 | `translations` | any JSON \| null | no |  |
 | `wikiDataId` | string \| null | no | at most 255 characters |
 
-**Response 200 OK** — Updated city
+**Response 200 OK** (`application/json`) — Updated city
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -611,6 +617,7 @@ Delete a city
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_deleteCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -619,7 +626,7 @@ Delete a city
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — City deleted
+**Response 200 OK** (`application/json`) — City deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -664,6 +671,7 @@ List countries
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_listCountries` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -678,7 +686,7 @@ List countries
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 | `include` | query | string | no | Comma-separated related entities to include (e.g. states,cities) |
 
-**Response 200 OK** — Paginated list of countries
+**Response 200 OK** (`application/json`) — Paginated list of countries
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -885,6 +893,7 @@ Create a country
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_createCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -918,7 +927,7 @@ Create a country
 | `translations` | any JSON | no |  |
 | `wikiDataId` | string | no | at most 255 characters |
 
-**Response 201 Created** — Created country
+**Response 201 Created** (`application/json`) — Created country
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1026,6 +1035,7 @@ Get country by ID
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_getCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1034,7 +1044,7 @@ Get country by ID
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — Country detail
+**Response 200 OK** (`application/json`) — Country detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1171,6 +1181,7 @@ Update a country
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_updateCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1210,7 +1221,7 @@ Update a country
 | `translations` | any JSON \| null | no |  |
 | `wikiDataId` | string \| null | no | at most 255 characters |
 
-**Response 200 OK** — Updated country
+**Response 200 OK** (`application/json`) — Updated country
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1318,6 +1329,7 @@ Delete a country
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_deleteCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1326,7 +1338,7 @@ Delete a country
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — Country deleted
+**Response 200 OK** (`application/json`) — Country deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1371,6 +1383,7 @@ Export the cities of the matching countries (rows are always JSON; `format=csv` 
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_exportData` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1381,7 +1394,7 @@ Export the cities of the matching countries (rows are always JSON; `format=csv` 
 | `countryCode` | query | string | no | Filter by ISO 3166-1 alpha-2 country code |
 | `regionId` | query | integer | no | Filter by region ID |
 
-**Response 200 OK** — City rows of every country matching countryCode / regionId
+**Response 200 OK** (`application/json`) — City rows of every country matching countryCode / regionId
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1476,6 +1489,7 @@ Bulk import geo data
 - **Permission** `CREATE:GEO`.
 - **Policy** `CREATE:GEO` — Import geo data.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_importData` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1486,7 +1500,7 @@ Bulk import geo data
 | `entity` | "region" \| "subregion" \| "country" \| "state" \| "city" | yes |  |
 | `upsert` | boolean | no | default `false` |
 
-**Response 201 Created** — Import result with created/updated/skipped counts
+**Response 201 Created** (`application/json`) — Import result with created/updated/skipped counts
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1552,6 +1566,7 @@ Validate geo import data without inserting
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_validateImport` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1561,7 +1576,7 @@ Validate geo import data without inserting
 | `data` | object[] | yes | 1–10000 items |
 | `entity` | "region" \| "subregion" \| "country" \| "state" \| "city" | yes |  |
 
-**Response 201 Created** — Validation result with row-level errors
+**Response 201 Created** (`application/json`) — Validation result with row-level errors
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1626,6 +1641,7 @@ List regions
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_listRegions` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1640,7 +1656,7 @@ List regions
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 | `include` | query | string | no | Comma-separated related entities to include (e.g. states,cities) |
 
-**Response 200 OK** — Paginated list of regions
+**Response 200 OK** (`application/json`) — Paginated list of regions
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1799,6 +1815,7 @@ Create a region
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_createRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1810,7 +1827,7 @@ Create a region
 | `translations` | any JSON | no |  |
 | `wikiDataId` | string | no | at most 255 characters |
 
-**Response 201 Created** — Created region
+**Response 201 Created** (`application/json`) — Created region
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1872,6 +1889,7 @@ Get region by ID
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_getRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1880,7 +1898,7 @@ Get region by ID
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — Region detail
+**Response 200 OK** (`application/json`) — Region detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1956,6 +1974,7 @@ Update a region
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_updateRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -1973,7 +1992,7 @@ Update a region
 | `translations` | any JSON | no |  |
 | `wikiDataId` | string \| null | no | at most 255 characters |
 
-**Response 200 OK** — Updated region
+**Response 200 OK** (`application/json`) — Updated region
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2037,6 +2056,7 @@ Delete a region
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_deleteRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -2045,7 +2065,7 @@ Delete a region
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — Region deleted
+**Response 200 OK** (`application/json`) — Region deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2090,6 +2110,7 @@ List states
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_listStates` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -2104,7 +2125,7 @@ List states
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 | `include` | query | string | no | Comma-separated related entities to include (e.g. states,cities) |
 
-**Response 200 OK** — Paginated list of states
+**Response 200 OK** (`application/json`) — Paginated list of states
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2310,6 +2331,7 @@ Create a state
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_createState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2333,7 +2355,7 @@ Create a state
 | `type` | string | no | at most 191 characters |
 | `wikiDataId` | string | no | at most 255 characters |
 
-**Response 201 Created** — Created state
+**Response 201 Created** (`application/json`) — Created state
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2421,6 +2443,7 @@ Get state by ID
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_getState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -2429,7 +2452,7 @@ Get state by ID
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — State detail
+**Response 200 OK** (`application/json`) — State detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2531,6 +2554,7 @@ Update a state
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_updateState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -2560,7 +2584,7 @@ Update a state
 | `type` | string \| null | no | at most 191 characters |
 | `wikiDataId` | string \| null | no | at most 255 characters |
 
-**Response 200 OK** — Updated state
+**Response 200 OK** (`application/json`) — Updated state
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2648,6 +2672,7 @@ Delete a state
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_deleteState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -2656,7 +2681,7 @@ Delete a state
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — State deleted
+**Response 200 OK** (`application/json`) — State deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2701,9 +2726,10 @@ Get geo entity counts
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_getStats` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
-**Response 200 OK** — Entity counts for regions, subregions, countries, states, and cities
+**Response 200 OK** (`application/json`) — Entity counts for regions, subregions, countries, states, and cities
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2754,6 +2780,7 @@ List subregions
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_listSubregions` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -2768,7 +2795,7 @@ List subregions
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 | `include` | query | string | no | Comma-separated related entities to include (e.g. states,cities) |
 
-**Response 200 OK** — Paginated list of subregions
+**Response 200 OK** (`application/json`) — Paginated list of subregions
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2925,6 +2952,7 @@ Create a subregion
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_createSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2937,7 +2965,7 @@ Create a subregion
 | `translations` | any JSON | no |  |
 | `wikiDataId` | string | no | at most 255 characters |
 
-**Response 201 Created** — Created subregion
+**Response 201 Created** (`application/json`) — Created subregion
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3002,6 +3030,7 @@ Get subregion by ID
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_getSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -3010,7 +3039,7 @@ Get subregion by ID
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — Subregion detail
+**Response 200 OK** (`application/json`) — Subregion detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3086,6 +3115,7 @@ Update a subregion
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_updateSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -3104,7 +3134,7 @@ Update a subregion
 | `translations` | any JSON | no |  |
 | `wikiDataId` | string \| null | no | at most 255 characters |
 
-**Response 200 OK** — Updated subregion
+**Response 200 OK** (`application/json`) — Updated subregion
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -3170,6 +3200,7 @@ Delete a subregion
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `GeoController_deleteSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
 
 **Parameters**
@@ -3178,7 +3209,7 @@ Delete a subregion
 | --- | --- | --- | --- | --- |
 | `id` | path | integer | yes |  |
 
-**Response 200 OK** — Subregion deleted
+**Response 200 OK** (`application/json`) — Subregion deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

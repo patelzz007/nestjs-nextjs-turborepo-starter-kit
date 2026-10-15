@@ -41,8 +41,9 @@ export const TEST_API_SWITCHES: TestEnv = {
 
 /**
  * Data-coupled secrets: the keys that WROTE rows already in the database. The seed wraps tenant
- * data keys with the master key, encrypts TOTP secrets with the MFA key ring and stores claim /
- * pairing codes as HMACs under the reward-code key ring — so an e2e run must use the same keys as
+ * data keys with the master key, encrypts TOTP secrets with the MFA key ring, stores claim /
+ * pairing codes as HMACs under the reward-code key ring and encrypts the demo linked GitHub token
+ * with the GitHub credential key ring — so an e2e run must use the same keys as
  * the seed did. They are still secrets (`.env.example` ships them empty; `pnpm secrets:generate`
  * fills them); only the e2e precedence differs from {@link TEST_API_SECRETS}.
  */
@@ -53,6 +54,8 @@ export const TEST_API_DATA_KEYS: TestEnv = {
 	MFA_ENCRYPTION_KEYS: '{"1":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}',
 	// 32 bytes of 0x02, base64 — TEST-ONLY reward code HMAC key ring.
 	REWARD_CODE_HASH_KEYS: '{"1":"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="}',
+	// 32 bytes of 0x03, base64 — TEST-ONLY GitHub linked-token key ring (the seed links a demo token with it).
+	GITHUB_CREDENTIAL_ENCRYPTION_KEYS: '{"1":"AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM="}',
 };
 
 /**

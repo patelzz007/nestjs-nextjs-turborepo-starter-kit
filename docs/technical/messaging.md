@@ -242,7 +242,7 @@ SELECT consumer, COUNT(*), MIN(processed_at) AS oldest FROM inbox_processed_even
 | `claims.expire-referrer` | Expire referrer credit claims |
 | `rewards.referral-credit-notify` | Deliver pending "referrer reward credited" emails (credit committed by the POS checkout; `reward_referrals.credit_notified_at IS NULL`) |
 | `outbox.publish` | Sweep outbox → Kafka |
-| `storage.cleanup` / `storage.delete` | Stale upload cleanup / object deletion |
+| `storage.cleanup` / `storage.delete` | Stale upload cleanup (hourly: abandoned `PENDING` uploads, overdue scans, and READY staging copies past their category's `stagingRetentionMs` — a GitHub comment picture never posted) / object deletion |
 | `idempotency.retention` | Hourly purge of expired `Idempotency-Key` records (see [Retention](#retention)) |
 | `outbox.retention` | Hourly purge of settled `outbox_events` rows (see [Retention](#retention)) |
 | `storage.scan` | Malware scan of uploaded objects |

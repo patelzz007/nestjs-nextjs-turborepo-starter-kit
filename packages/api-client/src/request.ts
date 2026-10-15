@@ -152,9 +152,9 @@ export interface QueryCaller<Input, Resp> {
 
 /** One mutation leaf — `.mutate()` throws on failure; `.fetch()` returns the envelope. */
 export interface MutationCaller<Input, Resp> {
-	mutate(input: Input): Promise<Resp>;
-	fetch(input: Input): Promise<ApiResponse<Resp>>;
-	fetchOrThrow(input: Input): Promise<Resp>;
+	mutate(input: Input, options?: ProcedureCallOptions): Promise<Resp>;
+	fetch(input: Input, options?: ProcedureCallOptions): Promise<ApiResponse<Resp>>;
+	fetchOrThrow(input: Input, options?: ProcedureCallOptions): Promise<Resp>;
 }
 
 /** Recursively maps a router tree to tRPC-style caller leaves. */
@@ -398,6 +398,7 @@ export function fetchMutation<Input extends SerializableInput, Resp extends Data
 	context: ApiRequestContext,
 	def: MutationDef<Input, Resp>,
 	input: Input,
+	options?: ProcedureCallOptions,
 ): Promise<ApiResponse<Resp>> {
 	const parsed: Input = def.inputSchema.parse(input);
 	const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
@@ -406,7 +407,7 @@ export function fetchMutation<Input extends SerializableInput, Resp extends Data
 		baseUrl: context.baseUrl,
 		method: def.method,
 		path: url,
-		headers: procedureHeaders(context, def),
+		headers: procedureHeaders(context, def, options),
 		body: finalBody,
 		responseSchema: def.responseSchema,
 		onUnauthorized: context.onUnauthorized,
@@ -420,8 +421,9 @@ export async function fetchMutationOrThrow<Input extends SerializableInput, Resp
 	context: ApiRequestContext,
 	def: MutationDef<Input, Resp>,
 	input: Input,
+	options?: ProcedureCallOptions,
 ): Promise<Resp> {
-	return throwOnFailure(await fetchMutation(context, def, input));
+	return throwOnFailure(await fetchMutation(context, def, input, options));
 }
 
 /**
@@ -485,9 +487,9 @@ export function createMutationCaller<Input extends SerializableInput, Resp exten
 	def: MutationDef<Input, Resp>,
 ): MutationCaller<Input, Resp> {
 	return {
-		mutate: (input): Promise<Resp> => fetchMutationOrThrow(context, def, input),
-		fetch: (input): Promise<ApiResponse<Resp>> => fetchMutation(context, def, input),
-		fetchOrThrow: (input): Promise<Resp> => fetchMutationOrThrow(context, def, input),
+		mutate: (input, options): Promise<Resp> => fetchMutationOrThrow(context, def, input, options),
+		fetch: (input, options): Promise<ApiResponse<Resp>> => fetchMutation(context, def, input, options),
+		fetchOrThrow: (input, options): Promise<Resp> => fetchMutationOrThrow(context, def, input, options),
 	};
 }
 

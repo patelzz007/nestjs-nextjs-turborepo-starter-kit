@@ -9,6 +9,7 @@
 		"start": "node dist/main.js",
 		"db:push": "dotenv run -q -- prisma db push --accept-data-loss && pnpm db:apply-security",
 		"db:apply-security": "dotenv run -q -- tsx scripts/apply-rls.ts",
+		"github:webhook-tunnel": "dotenv run -q -- tsx scripts/github-webhook-tunnel.ts",
 		"db:rls": "pnpm db:apply-security",
 		"db:check-rls-manifest": "tsx scripts/check-rls-manifest.ts",
 		"db:check-drift": "dotenv run -q -- tsx scripts/check-migration-drift.ts",

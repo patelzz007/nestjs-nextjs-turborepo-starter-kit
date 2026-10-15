@@ -96,6 +96,14 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		tags: ["GitHub"],
 	},
 	{
+		slug: "github-pull-requests",
+		title: "GitHub pull requests",
+		description:
+			"Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves.",
+		guide: { label: "GitHub pull requests guide", href: "../github-pull-requests.md" },
+		tags: ["GitHub pull requests"],
+	},
+	{
 		slug: "catalog-samples",
 		title: "Sample catalog (products and categories)",
 		description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk.",

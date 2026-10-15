@@ -131,4 +131,42 @@ describe("GithubResponseCache", () => {
 
 		await expect(cache.read("key", failing(unavailable))).rejects.toBe(unavailable);
 	});
+
+	describe("invalidate", () => {
+		it("drops only the answers it matches, so the next read of those asks GitHub again", async () => {
+			const { cache } = setup();
+			await cache.read("pr-7:detail", cacheable("old detail"));
+			await cache.read("pr-9:detail", cacheable("other"));
+
+			cache.invalidate((key: string): boolean => key.startsWith("pr-7:"));
+
+			expect(await cache.read("pr-7:detail", cacheable("new detail"))).toBe("new detail");
+			const untouched = vi.fn(cacheable("reloaded"));
+			expect(await cache.read("pr-9:detail", untouched)).toBe("other");
+			expect(untouched).not.toHaveBeenCalled();
+		});
+
+		it("answers a read that was on its way to GitHub, but does not keep what may predate the change", async () => {
+			const { cache } = setup();
+			let finishOldRead: (value: string) => void = (): void => undefined;
+			const oldRead = cache.read(
+				"pr-7:detail",
+				(): Promise<string> =>
+					new Promise<string>((resolve): void => {
+						finishOldRead = resolve;
+					}),
+			);
+
+			cache.invalidate((key: string): boolean => key.startsWith("pr-7:"));
+			const newRead = cache.read("pr-7:detail", cacheable("after the change"));
+			finishOldRead("before the change");
+
+			expect(await oldRead).toBe("before the change");
+			expect(await newRead).toBe("after the change");
+			// The newer answer is the one kept.
+			const reload = vi.fn(cacheable("unused"));
+			expect(await cache.read("pr-7:detail", reload)).toBe("after the change");
+			expect(reload).not.toHaveBeenCalled();
+		});
+	});
 });

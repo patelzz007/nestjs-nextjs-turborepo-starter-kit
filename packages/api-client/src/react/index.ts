@@ -14,4 +14,5 @@ export {
 	type ClientMutationProcedure,
 	type ClientQueryProcedure,
 	type ClientRouterTree,
+	type IdempotentMutationCall,
 } from "./hooks";

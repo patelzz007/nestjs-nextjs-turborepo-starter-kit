@@ -65,6 +65,7 @@ export const PERMISSION: PermissionRegistry = {
 	LOCATION: actionSlugs("LOCATION"),
 	STORE: actionSlugs("STORE"),
 	GITHUB: actionSlugs("GITHUB"),
+	GITHUB_PULL_REQUEST: actionSlugs("GITHUB_PULL_REQUEST"),
 };
 
 /**

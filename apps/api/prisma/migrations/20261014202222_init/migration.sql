@@ -29,7 +29,7 @@ CREATE TYPE "MfaRecoveryRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'DENIED',
 CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'LIST', 'MANAGE');
 
 -- CreateEnum
-CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT', 'DEVTOOLS', 'ORDER', 'PAYMENT', 'INVENTORY', 'ORGANIZATION', 'LOCATION', 'STORE', 'GITHUB');
+CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT', 'DEVTOOLS', 'ORDER', 'PAYMENT', 'INVENTORY', 'ORGANIZATION', 'LOCATION', 'STORE', 'GITHUB', 'GITHUB_PULL_REQUEST');
 
 -- CreateEnum
 CREATE TYPE "PermissionScope" AS ENUM ('GLOBAL', 'ORGANIZATION', 'STORE', 'LOCATION', 'RESOURCE', 'OWN');
@@ -180,6 +180,9 @@ CREATE TYPE "DataChangeActorKind" AS ENUM ('USER', 'API_KEY', 'SYSTEM', 'UNATTRI
 
 -- CreateEnum
 CREATE TYPE "IdempotencyRecordStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED');
+
+-- CreateEnum
+CREATE TYPE "GithubAccountLinkStatus" AS ENUM ('ACTIVE', 'REJECTED');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -1813,6 +1816,26 @@ CREATE TABLE "product" (
     CONSTRAINT "product_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "github_account_links" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "github_user_id" BIGINT NOT NULL,
+    "github_login" VARCHAR(39) NOT NULL,
+    "token_ciphertext" TEXT NOT NULL,
+    "token_key_version" INTEGER NOT NULL,
+    "token_expires_at" BIGINT,
+    "status" "GithubAccountLinkStatus" NOT NULL DEFAULT 'ACTIVE',
+    "linked_at" BIGINT NOT NULL,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "deleted_by" TEXT,
+    "created_at" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+
+    CONSTRAINT "github_account_links_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -2587,6 +2610,9 @@ CREATE INDEX "platform_resource_idempotency_expires_at_idx" ON "platform_resourc
 -- CreateIndex
 CREATE UNIQUE INDEX "platform_resource_idempotency_scope_key" ON "platform_resource_idempotency_records"("scope", "idempotency_key");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "github_account_links_user_id_key" ON "github_account_links"("user_id");
+
 -- AddForeignKey
 ALTER TABLE "roles" ADD CONSTRAINT "roles_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -2973,3 +2999,6 @@ ALTER TABLE "reward_audit_logs" ADD CONSTRAINT "reward_audit_logs_organization_i
 
 -- AddForeignKey
 ALTER TABLE "product" ADD CONSTRAINT "product_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "sample_category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "github_account_links" ADD CONSTRAINT "github_account_links_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -27,6 +27,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ANALYTICS`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminAnalyticsController_getDashboard` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -37,7 +38,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 | `to` | query | integer | no | Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`. |
 | `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
 
-**Response 200 OK** — Platform analytics dashboard
+**Response 200 OK** (`application/json`) — Platform analytics dashboard
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -314,6 +315,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ANALYTICS`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/pdf` · `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` · `text/csv; charset=utf-8` (errors are always `application/json`)
 - Operation id `RewardsAdminAnalyticsController_exportReport` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -360,6 +362,7 @@ Platform-wide sales: paid POS bills, compared with the previous period, plus top
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ANALYTICS`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminAnalyticsController_getSales` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -369,7 +372,7 @@ Platform-wide sales: paid POS bills, compared with the previous period, plus top
 | `from` | query | integer | no |  |
 | `to` | query | integer | no |  |
 
-**Response 200 OK** — Platform sales analytics
+**Response 200 OK** (`application/json`) — Platform sales analytics
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -495,6 +498,7 @@ Create merchant invite
 - **Permission** `MANAGE:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminInvitesController_createInvite` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -505,7 +509,7 @@ Create merchant invite
 | `city` | "KUALA_LUMPUR" \| "MELAKA" | yes |  |
 | `email` | string (email) | yes | at most 100 characters |
 
-**Response 201 Created** — Invite created with token
+**Response 201 Created** (`application/json`) — Invite created with token
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -564,6 +568,7 @@ Renders the invite email for a business name and pilot city, for a live preview 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminInvitesController_previewInviteEmail` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -573,7 +578,7 @@ Renders the invite email for a business name and pilot city, for a live preview 
 | `businessName` | query | string | no |  |
 | `city` | query | "KUALA_LUMPUR" \| "MELAKA" | yes |  |
 
-**Response 200 OK** — Rendered invite email preview
+**Response 200 OK** (`application/json`) — Rendered invite email preview
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -640,6 +645,7 @@ List pending organization store location requests
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminLocationRequestsController_listLocationRequests` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -652,7 +658,7 @@ List pending organization store location requests
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, name. Default: createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status |
 
-**Response 200 OK** — Paginated location requests
+**Response 200 OK** (`application/json`) — Paginated location requests
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -756,6 +762,7 @@ List merchant organizations
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminMerchantsController_listMerchants` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -769,7 +776,7 @@ List merchant organizations
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: city, kybStatus, status |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated merchant org list
+**Response 200 OK** (`application/json`) — Paginated merchant org list
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -876,6 +883,7 @@ Get merchant organization detail for KYB review
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminMerchantsController_getMerchant` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -884,7 +892,7 @@ Get merchant organization detail for KYB review
 | --- | --- | --- | --- | --- |
 | `organizationId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Merchant org detail with KYB payload
+**Response 200 OK** (`application/json`) — Merchant org detail with KYB payload
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1014,6 +1022,7 @@ Get a short-lived signed download URL for a merchant KYB document
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminMerchantsController_downloadDocument` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1024,7 +1033,7 @@ Get a short-lived signed download URL for a merchant KYB document
 | `documentId` | path | string (uuid) | yes |  |
 | `disposition` | query | "inline" \| "attachment" | no |  |
 
-**Response 200 OK** — Signed download URL or scan status
+**Response 200 OK** (`application/json`) — Signed download URL or scan status
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1076,6 +1085,7 @@ Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejecti
 - **Permission** `MANAGE:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminMerchantsController_updateKyb` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1098,7 +1108,7 @@ Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejecti
 | `kybFields.taxId` | string | no | length 1–100 |
 | `kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 
-**Response 200 OK** — KYB updated
+**Response 200 OK** (`application/json`) — KYB updated
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1153,6 +1163,7 @@ Create an organization store location
 - **Permission** `MANAGE:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminMerchantsController_createLocation` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1171,7 +1182,7 @@ Create an organization store location
 | `contactPhone` | string | no | length 1–20 |
 | `name` | string | yes | length 1–200 |
 
-**Response 201 Created** — Organization location created
+**Response 201 Created** (`application/json`) — Organization location created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1248,6 +1259,7 @@ Approve or reject an organization store location request
 - **Permission** `MANAGE:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminMerchantsController_reviewLocation` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1264,7 +1276,7 @@ Approve or reject an organization store location request
 | `approve` | boolean | yes |  |
 | `rejectionReason` | string | no | length 1–2000 |
 
-**Response 200 OK** — Organization location reviewed
+**Response 200 OK** (`application/json`) — Organization location reviewed
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1338,6 +1350,7 @@ Get one reward in full, whatever its status (moderation detail)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminRewardsController_getReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1346,7 +1359,7 @@ Get one reward in full, whatever its status (moderation detail)
 | --- | --- | --- | --- | --- |
 | `rewardId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — The reward
+**Response 200 OK** (`application/json`) — The reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1416,6 +1429,7 @@ Approve a pending reward (no body required)
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminRewardsController_approveReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1428,7 +1442,7 @@ Approve a pending reward (no body required)
 
 _No fields._
 
-**Response 201 Created** — Approved reward
+**Response 201 Created** (`application/json`) — Approved reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1554,6 +1568,7 @@ Get a short-lived signed URL that downloads one of a reward's images (the origin
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminRewardsController_getRewardImageDownload` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1563,7 +1578,7 @@ Get a short-lived signed URL that downloads one of a reward's images (the origin
 | `rewardId` | path | string (uuid) | yes |  |
 | `fileId` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Signed download URL of the image
+**Response 200 OK** (`application/json`) — Signed download URL of the image
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1591,6 +1606,7 @@ Download every image of a reward as one ZIP of the original uploads, in display 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/zip` (errors are always `application/json`)
 - Operation id `RewardsAdminRewardsController_downloadRewardImagesArchive` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1621,6 +1637,7 @@ Reject a pending reward
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminRewardsController_rejectReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1636,7 +1653,7 @@ Reject a pending reward
 | `reason` | string | no | at most 2000 characters |
 | `rewardId` | string (uuid) | yes |  |
 
-**Response 201 Created** — Reward returned to draft
+**Response 201 Created** (`application/json`) — Reward returned to draft
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1765,6 +1782,7 @@ List rewards pending moderation (oldest first, paginated)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RewardsAdminRewardsController_listPendingRewards` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
 
 **Parameters**
@@ -1777,7 +1795,7 @@ List rewards pending moderation (oldest first, paginated)
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
 
-**Response 200 OK** — One page of pending rewards
+**Response 200 OK** (`application/json`) — One page of pending rewards
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

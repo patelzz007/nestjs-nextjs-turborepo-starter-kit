@@ -16,9 +16,12 @@ interface OwnerFields {
 	readonly userId: string | null;
 }
 
-/** Object keys are namespaced by the resource that owns the file: product, organization, or (avatar) user. */
+/** Categories whose files belong to a person (their avatar, the pictures they attach to GitHub comments), not to an organization. */
+const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>(["USER_AVATAR", "GITHUB_COMMENT_IMAGE"]);
+
+/** Object keys are namespaced by the resource that owns the file: product, organization, or user. */
 function resolveOwner(fields: OwnerFields): string {
-	const owner = fields.category === "PRODUCT_IMAGE" ? fields.productId : fields.category === "USER_AVATAR" ? fields.userId : fields.organizationId;
+	const owner = fields.category === "PRODUCT_IMAGE" ? fields.productId : USER_OWNED_CATEGORIES.has(fields.category) ? fields.userId : fields.organizationId;
 	if (owner === null) {
 		throw new FileOwnerUnresolvedError(fields.category);
 	}

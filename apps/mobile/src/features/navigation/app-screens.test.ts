@@ -38,6 +38,28 @@ describe("screenTitleOf", () => {
 		expect(screenTitleOf(ROUTES.githubCommit, { sha: [sha, sha] })).toBe("Commit");
 	});
 
+	it("names a pull request by its repository and number, plainly when the link carries none", () => {
+		expect(screenTitleOf(ROUTES.pullRequest, { owner: "octo-org", repository: "hello-world", number: "42" })).toBe("hello-world #42");
+		expect(screenTitleOf(ROUTES.pullRequest, {})).toBe("Pull request");
+		expect(screenTitleOf(ROUTES.pullRequest, { repository: "hello-world", number: "zero" })).toBe("Pull request");
+	});
+
+	it("names a pull request's commit by its short SHA, like the Profile's commits", () => {
+		const sha = "4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39";
+
+		expect(screenTitleOf(ROUTES.pullRequestCommit, { owner: "octo-org", repository: "hello-world", number: "42", sha })).toBe("Commit 4f2a9c1");
+		expect(screenTitleOf(ROUTES.pullRequestCommit, {})).toBe("Commit");
+	});
+
+	it("titles the other GitHub pull-request screens", () => {
+		expect([ROUTES.pullRequests, ROUTES.pullRequestFiles, ROUTES.pullRequestCommits, ROUTES.githubAccount].map((route) => screenTitleOf(route, {}))).toEqual([
+			"Pull requests",
+			"Files changed",
+			"Commits",
+			"GitHub token",
+		]);
+	});
+
 	it("has no title for a path the app does not have", () => {
 		expect(screenTitleOf("/nowhere", {})).toBe("");
 	});

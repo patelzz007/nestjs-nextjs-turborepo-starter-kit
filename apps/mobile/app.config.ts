@@ -38,6 +38,8 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/;
 
 /** What iOS shows when the app lock first asks for Face ID (real builds only; Expo Go cannot use Face ID). */
 const FACE_ID_PERMISSION = "Allow $(PRODUCT_NAME) to use Face ID to unlock the app.";
+/** Photos are only picked to attach to a GitHub comment; the camera and microphone are never used, so they are blocked. */
+const PHOTOS_PERMISSION = "Allow $(PRODUCT_NAME) to attach your photos to the comments you write.";
 
 const AppIdentityEnvSchema = z.object({
 	MOBILE_APP_NAME: z.string().trim().min(1).max(APP_NAME_MAX_LENGTH).default("Starter"),
@@ -113,6 +115,7 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			"expo-router",
 			"expo-secure-store",
 			["expo-local-authentication", { faceIDPermission: FACE_ID_PERMISSION }],
+			["expo-image-picker", { photosPermission: PHOTOS_PERMISSION, cameraPermission: false, microphonePermission: false }],
 			["expo-splash-screen", { ...splash, dark: splash }],
 		],
 	};

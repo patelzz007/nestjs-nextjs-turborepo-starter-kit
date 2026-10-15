@@ -238,14 +238,7 @@ export function toHistoryContributors(commits: readonly GithubContributionCommit
  * file is `too-large`, so one answer stays small enough for a phone.
  */
 export function toCommitDetail({ commit, filesTruncated }: GithubCommitDetailResult): GithubCommitDetail {
-	const listed = commit.files.slice(0, GITHUB_COMMIT_FILES_MAX);
-	const files: GithubCommitFile[] = [];
-	let diffBudget = GITHUB_COMMIT_DIFF_MAX_LENGTH;
-	for (const file of listed) {
-		const diff = toFileDiff(file, diffBudget);
-		diffBudget -= diff.kind === "patch" ? diff.patch.length : 0;
-		files.push(toCommitFile(file, diff));
-	}
+	const files = toChangedFiles(commit.files);
 	const message = commit.commit.message.slice(0, GITHUB_COMMIT_MESSAGE_MAX_LENGTH);
 	const [headline = ""] = message.split(LINE_BREAK);
 	const user = commit.author;
@@ -268,6 +261,22 @@ export function toCommitDetail({ commit, filesTruncated }: GithubCommitDetailRes
 		files,
 		filesTruncated,
 	};
+}
+
+/**
+ * The first {@link GITHUB_COMMIT_FILES_MAX} changed files with their diffs,
+ * each diff within its own limit and all of them within one shared budget (in
+ * GitHub's order) — a commit's files, and a page of a pull request's files.
+ */
+export function toChangedFiles(wireFiles: readonly GithubCommitFileWire[]): GithubCommitFile[] {
+	const files: GithubCommitFile[] = [];
+	let diffBudget = GITHUB_COMMIT_DIFF_MAX_LENGTH;
+	for (const file of wireFiles.slice(0, GITHUB_COMMIT_FILES_MAX)) {
+		const diff = toFileDiff(file, diffBudget);
+		diffBudget -= diff.kind === "patch" ? diff.patch.length : 0;
+		files.push(toCommitFile(file, diff));
+	}
+	return files;
 }
 
 function toCommitParent(parent: GithubCommitDetailWire["parents"][number]): GithubCommitParent {

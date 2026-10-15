@@ -31,7 +31,8 @@ export interface SystemRoleDefinition {
  * and flat (no parent): hierarchy is for extension patterns, never organisational rank.
  *
  * - SuperAdmin: the full matrix (the `isSuperAdmin` flag on the user row still bypasses checks; the role is for assigned operators).
- * - Admin: the admin panel except DELETE:USER and MANAGE:SYSTEM_SETTINGS (granted directly where needed).
+ * - Admin: the admin panel except DELETE:USER and MANAGE:SYSTEM_SETTINGS (granted directly where needed), plus
+ *   GitHub pull requests with their own linked token (ADR 052 — no other role gets them).
  * - Manager: a limited admin panel (team lead): no RBAC, system settings, geo or email tools.
  * - User: customer app only, every grant OWN-scoped except READ:GITHUB (the configured repositories are shared,
  *   not owned — every signed-in person sees the same contributions), no ADMIN_DASHBOARD.
@@ -61,7 +62,8 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "REWARD", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
 			matchesAny(p, "MERCHANT_ORG", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
 			matchesAny(p, "STORE", ["CREATE", "READ", "UPDATE", "LIST"]) ||
-			matches(p, "READ", "GITHUB"),
+			matches(p, "READ", "GITHUB") ||
+			matchesAny(p, "GITHUB_PULL_REQUEST", ["READ", "UPDATE"]),
 	},
 	{
 		name: "Manager",

@@ -93,6 +93,7 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	api_key_usage_logs: LOG_REASON,
 	email_logs: LOG_REASON,
 	email_delivery_events: LOG_REASON,
+	github_webhook_deliveries: `${LOG_REASON} One row per GitHub webhook delivery, kept to ignore redeliveries.`,
 	analytics_events: "Telemetry projected from domain events by the analytics consumer; the domain writes behind each event are captured.",
 	outbox_events: MESSAGING_REASON,
 	inbox_processed_events: MESSAGING_REASON,
@@ -117,6 +118,7 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	reward_referrals: ["attribution_token", "referee_device_hash"],
 	tenant_encryption_keys: ["wrapped_key"],
 	urls: ["password_hash"],
+	github_account_links: ["token_ciphertext"],
 };
 
 const KEY_VERSION_REASON = "The version number of the key that encrypted a secret: it names a key and holds no key material.";
@@ -130,6 +132,10 @@ export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Re
 	},
 	two_factor_pending_setups: {
 		secret_key_version: KEY_VERSION_REASON,
+	},
+	github_account_links: {
+		token_key_version: KEY_VERSION_REASON,
+		token_expires_at: "When GitHub expires the linked token (epoch ms): a date the app shows to its owner, not part of the credential.",
 	},
 	authorization_policy_versions: {
 		content_hash: "SHA-256 of a published authorization policy document: identifies the version, derived from non-secret content.",

@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (233 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (259 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1791158400000
@@ -12,7 +12,9 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 233 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 259 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+
+**Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
 > [!NOTE]
 > This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
@@ -22,7 +24,7 @@ Every endpoint of `apps/api` — 233 operations, 214 with a sample captured from
 | Page | Endpoints | Covers |
 | --- | --- | --- |
 | [Auth, sessions and account security](./auth-and-sessions.md) | 40 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
-| [Roles, permissions, policies and audit](./access-control.md) | 36 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
+| [Roles, permissions, policies and audit](./access-control.md) | 37 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 18 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
 | [Merchant organizations (portal API)](./merchant-organizations.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
 | [Customer rewards and claims](./customer-rewards.md) | 12 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
@@ -31,6 +33,7 @@ Every endpoint of `apps/api` — 233 operations, 214 with a sample captured from
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
 | [Geography reference data](./geography.md) | 31 | Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export. |
 | [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
+| [GitHub pull requests](./github-pull-requests.md) | 25 | Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
 | [System: health and version](./system.md) | 6 | Liveness, readiness and deep health probes and the API version manifest. |
 
@@ -82,6 +85,7 @@ Every endpoint of `apps/api` — 233 operations, 214 with a sample captured from
 | GET | [`/api/v1/admin/audit-logs`](./access-control.md#get-apiv1adminaudit-logs) | List audit records (newest first) |
 | GET | [`/api/v1/admin/audit-logs/{id}`](./access-control.md#get-apiv1adminaudit-logsid) | Get one complete audit record |
 | GET | [`/api/v1/admin/audit-trail`](./access-control.md#get-apiv1adminaudit-trail) | List the audit trail (newest first) |
+| GET | [`/api/v1/admin/audit-trail/events`](./access-control.md#get-apiv1adminaudit-trailevents) | Live audit trail update stream (SSE) |
 | GET | [`/api/v1/admin/data-changes`](./access-control.md#get-apiv1admindata-changes) | List row changes (newest first) |
 | GET | [`/api/v1/admin/data-changes/{id}`](./access-control.md#get-apiv1admindata-changesid) | Get one complete row-change record |
 | GET | [`/api/v1/admin/permissions`](./access-control.md#get-apiv1adminpermissions) |  |
@@ -249,6 +253,31 @@ Every endpoint of `apps/api` — 233 operations, 214 with a sample captured from
 | GET | [`/api/v1/github/repositories/{owner}/{repository}/commits`](./github.md#get-apiv1githubrepositoriesownerrepositorycommits) | One page of a configured repository's commit history with lines added/deleted per commit |
 | GET | [`/api/v1/github/repositories/{owner}/{repository}/commits/{sha}`](./github.md#get-apiv1githubrepositoriesownerrepositorycommitssha) | One commit of a configured repository: its message, parents and every changed file with its diff |
 | GET | [`/api/v1/github/repositories/{owner}/{repository}/contributors`](./github.md#get-apiv1githubrepositoriesownerrepositorycontributors) | Commits and lines added/deleted per contributor of a configured repository |
+| GET | [`/api/v1/github/account`](./github-pull-requests.md#get-apiv1githubaccount) | Your GitHub link |
+| PUT | [`/api/v1/github/account`](./github-pull-requests.md#put-apiv1githubaccount) | Link (or replace) your fine-grained GitHub token |
+| DELETE | [`/api/v1/github/account`](./github-pull-requests.md#delete-apiv1githubaccount) | Forget your GitHub token |
+| GET | [`/api/v1/github/content-edits/{nodeId}`](./github-pull-requests.md#get-apiv1githubcontent-editsnodeid) | Every saved version of a comment, review or pull request description |
+| GET | [`/api/v1/github/live-updates/{owner}/{repository}`](./github-pull-requests.md#get-apiv1githublive-updatesownerrepository) | Whether a repository's pull requests update live |
+| PUT | [`/api/v1/github/live-updates/{owner}/{repository}`](./github-pull-requests.md#put-apiv1githublive-updatesownerrepository) | Turn a repository's live updates on |
+| DELETE | [`/api/v1/github/live-updates/{owner}/{repository}`](./github-pull-requests.md#delete-apiv1githublive-updatesownerrepository) | Turn a repository's live updates off |
+| GET | [`/api/v1/github/live-updates/{owner}/{repository}/events`](./github-pull-requests.md#get-apiv1githublive-updatesownerrepositoryevents) | One repository's pull-request changes, live (SSE) |
+| GET | [`/api/v1/github/pictures/file`](./github-pull-requests.md#get-apiv1githubpicturesfile) | A picture kept in a repository, read with your GitHub token |
+| GET | [`/api/v1/github/pictures/uploads/{attachmentId}`](./github-pull-requests.md#get-apiv1githubpicturesuploadsattachmentid) | An upload to a private repository, shown in a comment |
+| GET | [`/api/v1/github/pull-requests`](./github-pull-requests.md#get-apiv1githubpull-requests) | One page of your pull requests |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumber) | One pull request with the first page of its conversation |
+| POST | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/comments`](./github-pull-requests.md#post-apiv1githubpull-requestsownerrepositorynumbercomments) | Comment on a pull request's conversation |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/commits`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumbercommits) | A pull request's commits, oldest first |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/commits/{sha}`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumbercommitssha) | One of a pull request's commits with its changed files and diffs |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/files`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumberfiles) | One page of a pull request's changed files with their diffs |
+| POST | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/merge`](./github-pull-requests.md#post-apiv1githubpull-requestsownerrepositorynumbermerge) | Merge a pull request, and optionally delete its branch |
+| POST | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/pictures`](./github-pull-requests.md#post-apiv1githubpull-requestsownerrepositorynumberpictures) | Commit an uploaded picture to the repository, to link from a comment |
+| PUT | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/reactions`](./github-pull-requests.md#put-apiv1githubpull-requestsownerrepositorynumberreactions) | Set your emoji reaction on a pull request or one of its comments, on or off |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/review-threads`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumberreview-threads) | The conversations on lines of a pull request's diff |
+| POST | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/reviews`](./github-pull-requests.md#post-apiv1githubpull-requestsownerrepositorynumberreviews) | Review a pull request: comment, approve or request changes |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/status`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumberstatus) | A pull request's merge box: checks and conflicts |
+| GET | [`/api/v1/github/pull-requests/{owner}/{repository}/{number}/timeline`](./github-pull-requests.md#get-apiv1githubpull-requestsownerrepositorynumbertimeline) | A later page of a pull request's conversation |
+| GET | [`/api/v1/github/webhook`](./github-pull-requests.md#get-apiv1githubwebhook) | What this address is (GitHub posts webhook deliveries here) |
+| POST | [`/api/v1/github/webhook`](./github-pull-requests.md#post-apiv1githubwebhook) | Receive a GitHub webhook delivery |
 | GET | [`/api/v1/product`](./catalog-samples.md#get-apiv1product) | List Products |
 | POST | [`/api/v1/product`](./catalog-samples.md#post-apiv1product) | Create Product (send an Idempotency-Key header to make retries safe) |
 | GET | [`/api/v1/product/{id}`](./catalog-samples.md#get-apiv1productid) | Get Product by id |

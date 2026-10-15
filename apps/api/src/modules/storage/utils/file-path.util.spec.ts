@@ -75,6 +75,12 @@ describe("file-path.util", () => {
 		expect(buildPublicVariantPath({ ...input, variant: "THUMBNAIL" })).toBe("stores/org-1/reward-images/thumbnail/file-4.webp");
 	});
 
+	it("keeps GitHub comment images in their own folder under the uploader", () => {
+		const input: BuildFileObjectPathInput = { category: "GITHUB_COMMENT_IMAGE", ownerId: "user-1", fileId: "file-6", fileName: "screenshot.png", mimeType: "image/png" };
+		expect(buildStagingPath(input)).toBe("staging/users/user-1/github-comment-images/file-6-screenshot.png");
+		expect(buildFinalStoragePath(input)).toBe("users/user-1/github-comment-images/file-6.png");
+	});
+
 	it("nests variants under the category folder, except products, whose variants replace the original folder", () => {
 		const product: BuildFileObjectPathInput = { category: "PRODUCT_IMAGE", ownerId: "product-1", fileId: "file-5", fileName: "photo.png", mimeType: "image/png" };
 		expect(buildPublicVariantPath({ ...product, variant: "MEDIUM" })).toBe("products/product-1/medium/file-5.png");

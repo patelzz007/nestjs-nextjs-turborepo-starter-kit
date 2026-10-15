@@ -40,6 +40,7 @@ import { DataChangeActorCell, DataChangeOperationBadge } from "@/components/audi
 import { DataChangeDrawer } from "@/components/audit-logs/data-change-drawer";
 import { IdFilterChip } from "@/components/audit-logs/id-filter-chip";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
+import { LivePill } from "@/components/common/live-pill";
 import { AUDIT_LOG_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { AUDIT_LOG_TABLE_PAGE, TablePageSkeleton } from "@/components/loading/table-page-skeleton";
 import {
@@ -57,6 +58,7 @@ import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
 import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { countryFlag, countryName } from "@/lib/format/country";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
+import { useAuditTrailLive } from "@/lib/notifications/audit-trail-live";
 import {
 	AUDIT_LOG_FILTER_KEYS,
 	AUDIT_LOG_PAGE_SIZE_OPTIONS,
@@ -319,6 +321,8 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 		updateChangeSelection({ change: undefined });
 	}, [updateChangeSelection]);
 	const isFiltered: boolean = isAuditLogFiltered(urlState);
+	// New entries refetch the page on their own (SSE); Refresh stays for when the stream is down.
+	const liveState = useAuditTrailLive();
 
 	const commitSearch = React.useCallback(
 		(value: string): void => {
@@ -403,7 +407,12 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 
 	const searchToolbar = React.useMemo(
 		(): React.JSX.Element => (
-			<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder="Search path, endpoint, table name, correlation id..." ariaLabel="Search audit log" />
+			<DataTableSearchToolbar
+				value={searchDraft}
+				onChange={setSearchDraft}
+				placeholder="Search by email, name, user id, path, table or correlation id..."
+				ariaLabel="Search audit log"
+			/>
 		),
 		[searchDraft, setSearchDraft],
 	);
@@ -477,10 +486,13 @@ export default function AuditLogView({ initialPage }: { readonly initialPage?: P
 						page is itself recorded.
 					</p>
 				</div>
-				<Button variant="outline" size="sm" onClick={handleRefresh} className="gap-1.5">
-					<RefreshCw className="size-3.5" />
-					Refresh
-				</Button>
+				<div className="flex items-center gap-2">
+					<LivePill state={liveState} openTitle="Connected — new activity appears here on its own, no refresh needed." />
+					<Button variant="outline" size="sm" onClick={handleRefresh} className="gap-1.5">
+						<RefreshCw className="size-3.5" />
+						Refresh
+					</Button>
+				</div>
 			</header>
 
 			<Card>

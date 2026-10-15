@@ -27,20 +27,31 @@ export class GcmEnvelopeError extends Error {
 	}
 }
 
-export function gcmEncrypt(key: Buffer, plaintext: Buffer): GcmEnvelope {
+/**
+ * Encrypts `plaintext`. `aad` (additional authenticated data) is not stored but
+ * must be passed again to decrypt — binding the ciphertext to a context such as
+ * its owner, so a ciphertext copied elsewhere does not decrypt.
+ */
+export function gcmEncrypt(key: Buffer, plaintext: Buffer, aad?: Buffer): GcmEnvelope {
 	const iv = randomBytes(GCM_IV_BYTES);
 	const cipher = createCipheriv(ALGORITHM, key, iv, { authTagLength: GCM_AUTH_TAG_BYTES });
+	if (aad !== undefined) {
+		cipher.setAAD(aad);
+	}
 	const data = Buffer.concat([cipher.update(plaintext), cipher.final()]);
 	return { iv, tag: cipher.getAuthTag(), data };
 }
 
-/** Decrypts and authenticates; throws when the tag does not verify (wrong key or tampered data). */
-export function gcmDecrypt(key: Buffer, envelope: GcmEnvelope): Buffer {
+/** Decrypts and authenticates; throws when the tag does not verify (wrong key, wrong `aad`, or tampered data). */
+export function gcmDecrypt(key: Buffer, envelope: GcmEnvelope, aad?: Buffer): Buffer {
 	if (envelope.iv.length !== GCM_IV_BYTES || envelope.tag.length !== GCM_AUTH_TAG_BYTES) {
 		throw new GcmEnvelopeError("Malformed envelope: unexpected IV or authentication tag length");
 	}
 	const decipher = createDecipheriv(ALGORITHM, key, envelope.iv, { authTagLength: GCM_AUTH_TAG_BYTES });
 	decipher.setAuthTag(envelope.tag);
+	if (aad !== undefined) {
+		decipher.setAAD(aad);
+	}
 	try {
 		return Buffer.concat([decipher.update(envelope.data), decipher.final()]);
 	} catch (error) {

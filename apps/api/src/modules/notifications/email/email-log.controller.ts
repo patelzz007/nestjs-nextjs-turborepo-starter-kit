@@ -1,10 +1,11 @@
 import { Controller, Get, Sse } from "@nestjs/common";
 import type { MessageEvent } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { interval, map, merge, type Observable } from "rxjs";
 
 import { apiContract, apiPath, EmailLogEntrySchema, nowEpochMs, type EmailLogEntry, type EmailLogListQuery, type PaginatedServiceResult } from "@workspace/shared";
 
+import { ApiEventStreamResponse } from "../../../common/decorators/api-event-stream.decorator";
 import { ZodListQuery } from "../../../common/decorators/zod-request.decorators";
 import { ZodPaginatedResponse } from "../../../common/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
@@ -62,8 +63,7 @@ export class EmailLogController {
 	@RequirePermission("LIST", "EMAIL")
 	@Sse("events")
 	@ApiOperation({ summary: "Live EmailLog update stream (SSE)" })
-	@ApiProduces("text/event-stream")
-	@ApiOkResponse({ description: "text/event-stream; one `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract)" })
+	@ApiEventStreamResponse("One `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract)")
 	public stream(): Observable<MessageEvent> {
 		return merge(
 			this.emailLogEvents.observeUpdates().pipe(map((): MessageEvent => ({ data: { updatedAt: nowEpochMs() } }))),

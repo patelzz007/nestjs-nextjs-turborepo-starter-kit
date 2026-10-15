@@ -30,6 +30,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"two_factor_login_challenges",
 		"mfa_recovery_requests",
 		"user_avatars",
+		"github_account_links",
 	],
 	rbac_catalog: ["roles", "permissions", "capability_definitions", "role_permissions", "user_roles", "user_permissions", "policy_definitions"],
 	organization_tenant: [
@@ -77,6 +78,8 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"impersonation_sessions",
 		"mfa_recovery_audit_logs",
 		"product_images",
+		"github_webhook_subscriptions",
+		"github_webhook_deliveries",
 	],
 	geo_reference: ["regions", "subregions", "countries", "states", "cities"],
 	user_identity: ["users"],

@@ -133,6 +133,7 @@ enum PermissionResource {
   LOCATION
   STORE
   GITHUB
+  GITHUB_PULL_REQUEST
 }
 
 enum PermissionScope {
@@ -256,6 +257,8 @@ model User {
   rewardNotifications                    RewardNotification[]
   rewardAuditLogs                        RewardAuditLog[]
   avatar                                 UserAvatar?
+  githubAccountLink                      GithubAccountLink?
+  githubWebhookSubscriptions             GithubWebhookSubscription[]
   storedFilesUploaded                    StoredFile[]                    @relation("StoredFileUploader")
 
   @@index([pendingAttributionToken])
@@ -1905,6 +1908,8 @@ enum FileCategory {
   MERCHANT_KYB
   /// A reward image (16:9, at least 4K) — uploaded to the organization, then listed in `RewardImage`.
   REWARD_IMAGE
+  /// A picture an admin attaches to a GitHub comment from the app (ADR 052) — public, linked from the comment.
+  GITHUB_COMMENT_IMAGE
 }
 
 enum FileVisibility {
@@ -3030,4 +3035,82 @@ model Product {
   storedFiles      StoredFile[]    @relation("StoredFileProduct")
 
   @@map("product")
+}
+
+/// Whether a linked GitHub token still works: GitHub answering 401 for it marks it REJECTED (ADR 052).
+enum GithubAccountLinkStatus {
+  ACTIVE
+  REJECTED
+}
+
+/// An admin's own fine-grained GitHub token, used to read and act on pull requests as them (ADR 052).
+/// One row per user: linking again replaces the token in place, unlinking soft-deletes the row.
+/// The token is AES-256-GCM encrypted (`iv:tag:ciphertext`) with GITHUB_CREDENTIAL_ENCRYPTION_KEYS
+/// version `token_key_version`, the owner's user id as additional authenticated data.
+/// RLS: own row — `app_owns(user_id)`.
+model GithubAccountLink {
+  id              String                  @id @default(uuid())
+  userId          String                  @unique @map("user_id")
+  /// GitHub's numeric id of the token's account (stable across login renames).
+  githubUserId    BigInt                  @map("github_user_id")
+  /// The token account's login at link time (GitHub logins are at most 39 characters).
+  githubLogin     String                  @map("github_login") @db.VarChar(39)
+  tokenCiphertext String                  @map("token_ciphertext") @db.Text
+  tokenKeyVersion Int                     @map("token_key_version")
+  /// Epoch ms when GitHub expires the token; null for a token without an expiry.
+  tokenExpiresAt  BigInt?                 @map("token_expires_at")
+  status          GithubAccountLinkStatus @default(ACTIVE)
+  /// Epoch ms when the current token was linked (a re-link resets it; being marked REJECTED does not).
+  linkedAt        BigInt                  @map("linked_at")
+  isDeleted       Boolean                 @default(false) @map("is_deleted")
+  deletedAt       BigInt?                 @map("deleted_at")
+  deletedBy       String?                 @map("deleted_by")
+  createdAt       BigInt                  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt       BigInt                  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("github_account_links")
+}
+
+/// A webhook the API registered on one repository so its pull requests update live in the apps (ADR 052).
+/// One row per repository, shared by every admin: turning live updates off soft-deletes it, turning them
+/// on again restores it with the new hook. Owner and repository are stored lower-case (GitHub matches
+/// them case-insensitively).
+model GithubWebhookSubscription {
+  id           String  @id @default(uuid())
+  owner        String  @db.VarChar(39)
+  repository   String  @db.VarChar(100)
+  /// GitHub's id of the hook — what turning live updates off deletes.
+  githubHookId BigInt  @map("github_hook_id")
+  /// The admin whose token registered the hook.
+  createdBy    String  @map("created_by")
+  isDeleted    Boolean @default(false) @map("is_deleted")
+  deletedAt    BigInt? @map("deleted_at")
+  deletedBy    String? @map("deleted_by")
+  createdAt    BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("created_at")
+  updatedAt    BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")) @map("updated_at")
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([owner, repository])
+  @@index([createdBy])
+  @@map("github_webhook_subscriptions")
+}
+
+/// One verified GitHub webhook delivery (ADR 052), kept so a redelivery of it is recognised and ignored.
+/// Append-only; deliveries older than the retention window are pruned.
+model GithubWebhookDelivery {
+  /// GitHub's `X-GitHub-Delivery` id.
+  deliveryId        String @id @map("delivery_id") @db.VarChar(64)
+  /// GitHub's `X-GitHub-Event` (`pull_request`, `issue_comment`, …).
+  event             String @db.VarChar(64)
+  owner             String @db.VarChar(39)
+  repository        String @db.VarChar(100)
+  /// The pull request it is about; null for an event about the repository (`ping`).
+  pullRequestNumber Int?   @map("pull_request_number")
+  receivedAt        BigInt @map("received_at")
+
+  @@index([receivedAt])
+  @@map("github_webhook_deliveries")
 }

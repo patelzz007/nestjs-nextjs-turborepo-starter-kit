@@ -7,6 +7,8 @@
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { LineCounts } from "./line-counts";
+
 export interface ChangeRowProps {
 	readonly title: string;
 	/** Context under the title ("octocat · 2 hours ago"). */
@@ -40,10 +42,7 @@ export function ChangeRow({ title, meta, additions, deletions, changeSummary, le
 					{meta}
 				</Text>
 			</View>
-			<View className="items-end gap-0.5" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-				<Text className="font-mono text-sm text-success-foreground">+{additions}</Text>
-				<Text className="font-mono text-sm text-destructive-foreground">−{deletions}</Text>
-			</View>
+			<LineCounts additions={additions} deletions={deletions} direction="column" />
 		</>
 	);
 	const label = `${title}. ${meta}. ${changeSummary}`;

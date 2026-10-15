@@ -18,6 +18,8 @@ import { seedKernelDecisionAudits } from "../kernel-decision-audit";
 import { seedOrganizationReviewStates } from "../organization-review-states";
 import { seedTenantPolicyRevision } from "../tenant-policy-revision";
 import { seedHttpAuditTrail } from "../http-audit";
+import { seedGithubAccountLinks } from "../github-account-links";
+import { seedGithubWebhooks } from "../github-webhooks";
 import { seedOwnProfileHistory } from "../own-profile";
 import { seedAnalyticsIngest } from "../analytics-ingest";
 import { seedPlatformRecords } from "../platform-records";
@@ -245,6 +247,18 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding self-service profile history (an own edit + a refused impersonated edit)...");
 	const profileSummary = await seedOwnProfileHistory({ superAdminId: superAdminUser.id, customerEmail: customerUser.email });
 	seedLog(`✅ ${String(profileSummary.editedProfiles)} edited profile, ${String(profileSummary.auditRows)} audit_logs rows`);
+
+	seedLog("Seeding GitHub pull-request links (an expired, rejected token; an unlinked one)...");
+	const githubLinks = await seedGithubAccountLinks({ adminId: adminUser.id, superAdminId: superAdminUser.id }, Date.now());
+	seedLog(
+		githubLinks.status === "seeded"
+			? `✅ ${String(githubLinks.links)} GitHub account links${githubLinks.kept > 0 ? ` (${String(githubLinks.kept)} developer's own link kept as it is)` : ""}`
+			: "⚠️ GitHub account links skipped: GITHUB_CREDENTIAL_ENCRYPTION_KEYS is not set (run `pnpm secrets:generate`)",
+	);
+
+	seedLog("Seeding GitHub live updates (one repository on, one turned off, two deliveries)...");
+	const githubWebhooks = await seedGithubWebhooks({ adminId: adminUser.id, superAdminId: superAdminUser.id }, Date.now());
+	seedLog(`✅ ${String(githubWebhooks.subscriptions)} live-update subscriptions, ${String(githubWebhooks.deliveries)} webhook deliveries`);
 
 	seedLog("Seeding platform records (logs, outbox history, slug history, soft-deleted catalog/URL rows)...");
 	const platformRecords = await seedPlatformRecords({ superAdminId: superAdminUser.id, adminId: adminUser.id, userId: customerUser.id });

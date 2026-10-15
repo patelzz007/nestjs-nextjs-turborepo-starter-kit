@@ -76,6 +76,21 @@ describe("BoundedTtlCache", () => {
 		expect(cache.get("b", 0)).toBe("2");
 	});
 
+	it("deleteWhere removes the keys a predicate matches and keeps the insertion order of the rest", () => {
+		const cache = new BoundedTtlCache<string, string>({ maxEntries: 3, defaultTtlMs: 1000 });
+		cache.set("user-1:pr-7:detail", "a", 1000, 0);
+		cache.set("user-2:pr-7:files", "b", 1000, 0);
+		cache.set("user-1:pr-9:detail", "c", 1000, 0);
+
+		expect(cache.deleteWhere((key: string): boolean => key.includes(":pr-7:"))).toBe(2);
+		expect(cache.get("user-1:pr-9:detail", 0)).toBe("c");
+		expect(cache.size).toBe(1);
+		// The removed keys left the eviction order too: two more entries fit before the oldest is evicted.
+		cache.set("d", "4", 1000, 0);
+		cache.set("e", "5", 1000, 0);
+		expect(cache.get("user-1:pr-9:detail", 0)).toBe("c");
+	});
+
 	it("clear removes every entry", () => {
 		const cache = new BoundedTtlCache<string, string>({ maxEntries: 5, defaultTtlMs: 1000 });
 		cache.set("a", "1", 1000, 0);

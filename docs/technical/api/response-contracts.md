@@ -31,9 +31,9 @@ Decision record: [ADR 022](../../adr/022-response-contracts.md). Request-side co
 
 ## 1. The two envelopes
 
-| Kind | Contract leaf | API decorator | Wire body |
-|---|---|---|---|
-| single | `singleResponse(Schema)` | `@ZodResponse(Schema)` | `{ success: true, data, meta: { correlationId, timestamp } }` |
+| Kind      | Contract leaf                   | API decorator                       | Wire body                                                                                                                               |
+| --------- | ------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| single    | `singleResponse(Schema)`        | `@ZodResponse(Schema)`              | `{ success: true, data, meta: { correlationId, timestamp } }`                                                                           |
 | paginated | `paginatedResponse(ItemSchema)` | `@ZodPaginatedResponse(ItemSchema)` | `{ success: true, data: Item[], meta: { limit, total, page, totalPages, nextCursor, hasNext, hasPrevious, correlationId, timestamp } }` |
 
 Paginated is for list-grammar endpoints ([List queries](./list-queries.md)): the handler returns a
@@ -85,6 +85,7 @@ monitors key on the HTTP status only, so they keep the standard envelope. Errors
 
    `status` (default `200`) is sent and documented — do not add `@HttpCode`. Keep specific error
    docs if they help a reader (`@ApiResponse({ status: 409, type: ApiErrorResponseDto, description })`).
+
 4. **Map in the service, not the controller.** The decorator only compiles when the handler's return
    type fits the schema's input. A Prisma row with `bigint` epochs, `Date`, `Decimal` or `Json`
    columns is mapped to the DTO in the repository / service (`epochMs(Number(row.createdAt))`).
@@ -104,17 +105,20 @@ monitors key on the HTTP status only, so they keep the standard envelope. Errors
 - **No contract → no response.** A JSON route without a response decorator answers 500 before its
   handler runs (`MissingResponseContractError`); the OpenAPI e2e test stops that from merging.
 - **Pass-through by design:** `@Sse()` streams and `@SkipEnvelope()` routes that write their own
-  reply — today `EmailLogController.stream` and the three local-storage transfer routes (the
+  reply — today `EmailLogController.stream`, `AuditTrailController.stream` (the audit log's live
+  signal), `GithubLiveUpdatesController.stream` (a repository's live pull-request changes),
+  `GithubAssetsController.asset` (a repository picture behind a signed link, raw bytes) and the
+  three local-storage transfer routes (the
   signed private download, a public asset, and a public image's rendition) — plus the
   declared file downloads (`@ZodFileResponse`: the analytics exports). The e2e test pins both
   lists; extending either is a reviewed decision.
 
 ## 4. Why response schemas are never `.strict()`
 
-| | `.strict()` response | open (strip) response |
-|---|---|---|
-| Service returns an extra internal field | 500 for every caller | field silently removed — never leaks |
-| API adds a field, old client deployed | old client's parse fails | old client ignores it |
+|                                         | `.strict()` response     | open (strip) response                |
+| --------------------------------------- | ------------------------ | ------------------------------------ |
+| Service returns an extra internal field | 500 for every caller     | field silently removed — never leaks |
+| API adds a field, old client deployed   | old client's parse fails | old client ignores it                |
 
 So response objects (and objects nested in them) are plain `z.object`. Request schemas stay
 `.strict()`; if a response schema is the base of a request schema, split them or apply `.strict()`
@@ -155,15 +159,15 @@ Every transport result is an `ApiResponse<T>`: a discriminated union on `kind`, 
 `ToDiscoUnion` (`@workspace/shared`). `ok`, `status`, `data` and `error` keep their meaning, so
 `if (result.ok)` still narrows; `kind` names the case:
 
-| `kind` | `ok` | `status` | `error` |
-| --- | --- | --- | --- |
-| `success` | `true` | the 2xx status | — (`data` is the parsed envelope) |
-| `httpError` | `false` | the non-2xx status | the API's error body (`ApiError`) or its text |
-| `contract` | `false` | the real status | `ApiResponseContractError` (JSON) / `ApiDownloadError` (file of the wrong type) |
-| `network` | `false` | `0` | the thrown error |
-| `aborted` | `false` | `0` | `"aborted"` |
-| `sessionUnavailable` | `false` | `401` | `SessionRefreshUnavailableError` — the refresh got no verdict; the session stands |
-| `unauthorized` | `false` | `401` | `"Unauthorized"` — the session ended and `onUnauthorized` ran |
+| `kind`               | `ok`    | `status`           | `error`                                                                           |
+| -------------------- | ------- | ------------------ | --------------------------------------------------------------------------------- |
+| `success`            | `true`  | the 2xx status     | — (`data` is the parsed envelope)                                                 |
+| `httpError`          | `false` | the non-2xx status | the API's error body (`ApiError`) or its text                                     |
+| `contract`           | `false` | the real status    | `ApiResponseContractError` (JSON) / `ApiDownloadError` (file of the wrong type)   |
+| `network`            | `false` | `0`                | the thrown error                                                                  |
+| `aborted`            | `false` | `0`                | `"aborted"`                                                                       |
+| `sessionUnavailable` | `false` | `401`              | `SessionRefreshUnavailableError` — the refresh got no verdict; the session stands |
+| `unauthorized`       | `false` | `401`              | `"Unauthorized"` — the session ended and `onUnauthorized` ran                     |
 
 SSR prefetches classify it as `{ kind: "schema", message: "<path>: <issue>" }`.
 

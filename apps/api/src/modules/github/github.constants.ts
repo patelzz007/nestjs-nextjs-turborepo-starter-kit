@@ -17,6 +17,9 @@ export const GITHUB_REST_API_VERSION = "2022-11-28";
 /** GitHub's JSON media type (`Accept`). */
 export const GITHUB_JSON_MEDIA_TYPE = "application/vnd.github+json";
 
+/** Asks GitHub's contents API for a file's own bytes instead of its JSON description. */
+export const GITHUB_RAW_MEDIA_TYPE = "application/vnd.github.raw+json";
+
 const MS_PER_HOUR = 60 * 60 * 1_000;
 
 /**

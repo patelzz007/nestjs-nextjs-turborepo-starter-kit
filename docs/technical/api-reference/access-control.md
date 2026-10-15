@@ -22,9 +22,10 @@ How these endpoints fit together: [Authorization overview](../authorization/over
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:ROLE`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_list` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
-**Response 200 OK** — List of roles
+**Response 200 OK** (`application/json`) — List of roles
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -90,6 +91,7 @@ Response `200 OK` (application/json):
 - **Policy** `CREATE:ROLE` — Create new role.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_create` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -100,7 +102,7 @@ Response `200 OK` (application/json):
 | `name` | string | yes | Role name; at most 100 characters |
 | `parentId` | string (uuid) | no | Parent role ID for role hierarchy |
 
-**Response 201 Created** — Created role
+**Response 201 Created** (`application/json`) — Created role
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -190,6 +192,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ROLE`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_detail` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -198,7 +201,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Role detail (404 NOT_FOUND when no live role has that id)
+**Response 200 OK** (`application/json`) — Role detail (404 NOT_FOUND when no live role has that id)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -282,6 +285,7 @@ Response `200 OK` (application/json):
 - **Permission** `UPDATE:ROLE`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_update` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -298,7 +302,7 @@ Response `200 OK` (application/json):
 | `isActive` | boolean | no | Whether the role is active |
 | `name` | string | no | Updated role name; at most 100 characters |
 
-**Response 200 OK** — Updated role
+**Response 200 OK** (`application/json`) — Updated role
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -388,6 +392,7 @@ Response `200 OK` (application/json):
 - **Permission** `DELETE:ROLE`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_remove` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -396,7 +401,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Role deleted
+**Response 200 OK** (`application/json`) — Role deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -440,6 +445,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_setParent` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -454,7 +460,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- |
 | `parentId` | string (uuid) \| null | yes | New parent role ID (null to remove parent) |
 
-**Response 200 OK** — Parent role updated
+**Response 200 OK** (`application/json`) — Parent role updated
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -543,6 +549,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_syncPermissions` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -557,7 +564,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- |
 | `permissionIds` | string (uuid)[] | yes | List of permission IDs to assign or remove; 1–∞ items |
 
-**Response 201 Created** — Role permissions synced
+**Response 201 Created** (`application/json`) — Role permissions synced
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -608,6 +615,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_restore` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -616,7 +624,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Restored role
+**Response 201 Created** (`application/json`) — Restored role
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -700,6 +708,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_validateAssignment` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Parameters**
@@ -715,7 +724,7 @@ Response `201 Created` (application/json):
 | `roleIds` | string (uuid)[] | yes | Role IDs to simulate assigning |
 | `userId` | string (uuid) | yes | User ID to validate assignment for |
 
-**Response 201 Created** — Conflict validation result
+**Response 201 Created** (`application/json`) — Conflict validation result
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -769,6 +778,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ROLE`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_preview` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -778,7 +788,7 @@ Response `201 Created` (application/json):
 | `roleIds` | string (uuid)[] | yes | Role IDs to simulate assigning |
 | `userId` | string (uuid) | yes | User ID to validate assignment for |
 
-**Response 201 Created** — Preview of what permissions would change
+**Response 201 Created** (`application/json`) — Preview of what permissions would change
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -853,6 +863,7 @@ Response `201 Created` (application/json):
 - **Policy** `UPDATE:USER` — Assign role to user.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_assignRoleToUser` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -862,7 +873,7 @@ Response `201 Created` (application/json):
 | `roleId` | string (uuid) | yes | Role ID |
 | `userId` | string (uuid) | yes | User ID |
 
-**Response 201 Created** — Role assigned to user
+**Response 201 Created** (`application/json`) — Role assigned to user
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -913,6 +924,7 @@ Response `201 Created` (application/json):
 - **Permission** `UPDATE:ROLE`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_removeRoleFromUser` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -922,7 +934,7 @@ Response `201 Created` (application/json):
 | `roleId` | string (uuid) | yes | Role ID |
 | `userId` | string (uuid) | yes | User ID |
 
-**Response 201 Created** — Role removed from user
+**Response 201 Created** (`application/json`) — Role removed from user
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -973,6 +985,7 @@ Response `201 Created` (application/json):
 - **Permission** `UPDATE:ROLE`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `RolesController_syncUserRoles` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -982,7 +995,7 @@ Response `201 Created` (application/json):
 | `roleIds` | string (uuid)[] | yes | Complete list of role IDs the user should have |
 | `userId` | string (uuid) | yes | User ID |
 
-**Response 201 Created** — User roles synced
+**Response 201 Created** (`application/json`) — User roles synced
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1035,9 +1048,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:PERMISSION`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_list` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
-**Response 200 OK** — List of permissions
+**Response 200 OK** (`application/json`) — List of permissions
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1047,7 +1061,7 @@ Response `201 Created` (application/json):
 | `data.items[].group` | string \| null | yes |  |
 | `data.items[].id` | string | yes |  |
 | `data.items[].isSystem` | boolean | yes |  |
-| `data.items[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `data.items[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `data.total` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1106,6 +1120,7 @@ Response `200 OK` (application/json):
 - **Policy** `CREATE:PERMISSION` — Create new permission.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_create` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1115,9 +1130,9 @@ Response `200 OK` (application/json):
 | `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action this permission grants |
 | `description` | string | no | Permission description |
 | `group` | string | no | Permission group/category |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes | The resource this permission applies to |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes | The resource this permission applies to |
 
-**Response 201 Created** — Created permission
+**Response 201 Created** (`application/json`) — Created permission
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1130,7 +1145,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1190,6 +1205,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PERMISSION`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_detail` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Parameters**
@@ -1198,7 +1214,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Permission detail (404 NOT_FOUND when no live permission has that id)
+**Response 200 OK** (`application/json`) — Permission detail (404 NOT_FOUND when no live permission has that id)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1211,7 +1227,7 @@ Response `201 Created` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1265,6 +1281,7 @@ Response `200 OK` (application/json):
 - **Policy** `UPDATE:PERMISSION` — Update permission.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_update` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Parameters**
@@ -1280,7 +1297,7 @@ Response `200 OK` (application/json):
 | `description` | string | no | Updated permission description |
 | `group` | string | no | Updated permission group |
 
-**Response 200 OK** — Updated permission
+**Response 200 OK** (`application/json`) — Updated permission
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1293,7 +1310,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1352,6 +1369,7 @@ Response `200 OK` (application/json):
 - **Permission** `DELETE:PERMISSION`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_remove` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Parameters**
@@ -1360,7 +1378,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — Permission deleted
+**Response 200 OK** (`application/json`) — Permission deleted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1405,6 +1423,7 @@ Response `200 OK` (application/json):
 - **Permission** `UPDATE:PERMISSION`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_restore` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Parameters**
@@ -1413,7 +1432,7 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Restored permission
+**Response 201 Created** (`application/json`) — Restored permission
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1426,7 +1445,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1479,6 +1498,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PERMISSION`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_checkPermission` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1486,10 +1506,10 @@ Response `201 Created` (application/json):
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action to check |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes | The resource to check against |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes | The resource to check against |
 | `userId` | string (uuid) | yes | User ID to check permissions for |
 
-**Response 201 Created** — Permission check result with grant provenance
+**Response 201 Created** (`application/json`) — Permission check result with grant provenance
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1543,9 +1563,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:PERMISSION`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_listGroups` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
-**Response 200 OK** — List of permission groups
+**Response 200 OK** (`application/json`) — List of permission groups
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1591,6 +1612,7 @@ Response `200 OK` (application/json):
 - **Permission** `UPDATE:PERMISSION`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_grantToUser` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1602,7 +1624,7 @@ Response `200 OK` (application/json):
 | `permissionId` | string (uuid) | yes | Permission ID |
 | `userId` | string (uuid) | yes | User ID |
 
-**Response 201 Created** — Direct permission granted to user
+**Response 201 Created** (`application/json`) — Direct permission granted to user
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1654,6 +1676,7 @@ Response `201 Created` (application/json):
 - **Permission** `UPDATE:PERMISSION`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_revokeFromUser` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1665,7 +1688,7 @@ Response `201 Created` (application/json):
 | `permissionId` | string (uuid) | yes | Permission ID |
 | `userId` | string (uuid) | yes | User ID |
 
-**Response 201 Created** — Direct permission revoked from user
+**Response 201 Created** (`application/json`) — Direct permission revoked from user
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1716,6 +1739,7 @@ Response `201 Created` (application/json):
 - **Permission** `UPDATE:PERMISSION`.
 - Rate limit: 10 requests per 60 s per client IP (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PermissionsController_syncUserPermissions` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1725,7 +1749,7 @@ Response `201 Created` (application/json):
 | `permissionIds` | string (uuid)[] | yes | Complete list of permission IDs the user should have |
 | `userId` | string (uuid) | yes | User ID |
 
-**Response 201 Created** — User permissions synced
+**Response 201 Created** (`application/json`) — User permissions synced
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1780,6 +1804,7 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthorizationDecisionsController_decide` · [source](../../../apps/api/src/modules/authorization/kernel/authorization-decisions.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1788,17 +1813,17 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | --- | --- | --- | --- |
 | `checks` | object[] | yes | 1–50 items |
 | `checks[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `checks[].resourceId` | string | no | length 1–64 |
 
-**Response 200 OK** — One decision per requested check, in request order
+**Response 200 OK** (`application/json`) — One decision per requested check, in request order
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.results` | object[] | yes |  |
 | `data.results[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
 | `data.results[].allowed` | boolean | yes |  |
-| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `data.results[].resourceId` | string | no | length 1–64 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1864,6 +1889,7 @@ Admin: step-by-step explanation of an authorization decision
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PERMISSION`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuthorizationDecisionsController_explain` · [source](../../../apps/api/src/modules/authorization/kernel/authorization-decisions.controller.ts)
 
 **Parameters**
@@ -1871,14 +1897,14 @@ Admin: step-by-step explanation of an authorization decision
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
 | `action` | query | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+17 more) | yes |  |
+| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
 | `resourceId` | query | string | no |  |
 | `userId` | query | string | no |  |
 | `organizationId` | query | string | no |  |
 | `storeId` | query | string | no |  |
 | `locationId` | query | string | no |  |
 
-**Response 200 OK** — The decision with every evaluation step
+**Response 200 OK** (`application/json`) — The decision with every evaluation step
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1968,6 +1994,7 @@ Response `200 OK` (application/json):
 - **SuperAdmin only.**
 - **Permission** `MANAGE:SYSTEM_SETTINGS`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PolicyControlPlaneController_createDraft` · [source](../../../apps/api/src/modules/authorization-cedar/controllers/policy-control-plane.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -1982,7 +2009,7 @@ Response `200 OK` (application/json):
 | `organizationId` | string (uuid) | no |  |
 | `scope` | "PLATFORM_GUARDRAIL" \| "PLATFORM" \| "TENANT" | yes |  |
 
-**Response 201 Created** — Policy draft created
+**Response 201 Created** (`application/json`) — Policy draft created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2044,6 +2071,7 @@ Response `201 Created` (application/json):
 - **SuperAdmin only.**
 - **Permission** `MANAGE:SYSTEM_SETTINGS`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `PolicyControlPlaneController_simulate` · [source](../../../apps/api/src/modules/authorization-cedar/controllers/policy-control-plane.controller.ts)
 
 **Parameters**
@@ -2052,7 +2080,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- | --- |
 | `draftId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** — Policy simulation result
+**Response 201 Created** (`application/json`) — Policy simulation result
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2138,6 +2166,7 @@ Response `201 Created` (application/json):
 - **SuperAdmin only.**
 - **Permission** `MANAGE:SYSTEM_SETTINGS`.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `PolicyControlPlaneController_publish` · [source](../../../apps/api/src/modules/authorization-cedar/controllers/policy-control-plane.controller.ts)
 
 **Request body** (`application/json`, required)
@@ -2147,7 +2176,7 @@ Response `201 Created` (application/json):
 | `approvalNote` | string | no | at most 500 characters |
 | `draftId` | string (uuid) | yes |  |
 
-**Response 201 Created** — Published policy version (approved by a second SuperAdmin)
+**Response 201 Created** (`application/json`) — Published policy version (approved by a second SuperAdmin)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2201,6 +2230,7 @@ List capability catalog entries (optionally filtered by scope)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `CapabilitiesCatalogController_listCatalog` · [source](../../../apps/api/src/modules/authorization/controllers/capabilities-catalog.controller.ts)
 
 **Parameters**
@@ -2209,7 +2239,7 @@ List capability catalog entries (optionally filtered by scope)
 | --- | --- | --- | --- | --- |
 | `scope` | query | "PLATFORM" \| "MERCHANT" \| "ADMIN" | no |  |
 
-**Response 200 OK** — Capability definitions
+**Response 200 OK** (`application/json`) — Capability definitions
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2279,6 +2309,7 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:AUDIT_LOG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuditController_list` · [source](../../../apps/api/src/modules/authorization/admin/audit.controller.ts)
 
 **Parameters**
@@ -2291,7 +2322,7 @@ Response `200 OK` (application/json):
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: action, actorId, targetUserId, targetRoleId, createdAt |
 
-**Response 200 OK** — Paginated audit log entries (newest first); pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated audit log entries (newest first); pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2395,6 +2426,7 @@ Request metadata only — open one record for its redacted payloads.
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuditLogsController_list` · [source](../../../apps/api/src/modules/audit-logs/audit-logs.controller.ts)
 
 **Parameters**
@@ -2408,7 +2440,7 @@ Request metadata only — open one record for its redacted payloads.
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: outcome, method, authMethod, responseStatus, endpoint, errorCode, actorUserId, impersonatorUserId, organizationId, apiKeyId, ipAddress, ipScope, deviceType, browserName, osName, geoCountry, correlationId, occurredAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated audit records; pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated audit records; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2484,6 +2516,7 @@ Includes the redacted request params, request body and response body.
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:AUDIT_LOG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuditLogsController_get` · [source](../../../apps/api/src/modules/audit-logs/audit-logs.controller.ts)
 
 **Parameters**
@@ -2492,7 +2525,7 @@ Includes the redacted request params, request body and response body.
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — The complete audit record
+**Response 200 OK** (`application/json`) — The complete audit record
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2575,6 +2608,7 @@ HTTP requests (with how many rows each changed) and background database writes a
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `AuditTrailController_list` · [source](../../../apps/api/src/modules/audit-logs/audit-trail.controller.ts)
 
 **Parameters**
@@ -2588,7 +2622,7 @@ HTTP requests (with how many rows each changed) and background database writes a
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: kind, actorUserId, organizationId, correlationId, tableName, rowId, occurredAt, outcome, method, authMethod, deviceType, ipScope, actorKind |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated timeline entries; pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated timeline entries; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2677,6 +2711,29 @@ HTTP requests (with how many rows each changed) and background database writes a
 > [!WARNING]
 > No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
+### GET /api/v1/admin/audit-trail/events
+
+Live audit trail update stream (SSE)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:AUDIT_LOG`.
+- Content type: no request body; returns `text/event-stream` (errors are always `application/json`)
+- Operation id `AuditTrailController_stream` · [source](../../../apps/api/src/modules/audit-logs/audit-trail.controller.ts)
+
+**Response 200 OK** — One `{ updatedAt }` frame per burst of new entries, a `ping` every 25 s (no envelope, no response contract) (`text/event-stream`)
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### GET /api/v1/admin/data-changes
 
 List row changes (newest first)
@@ -2686,6 +2743,7 @@ Change metadata only — open one record for the redacted row before and after.
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `DataChangesController_list` · [source](../../../apps/api/src/modules/audit-logs/data-changes.controller.ts)
 
 **Parameters**
@@ -2699,7 +2757,7 @@ Change metadata only — open one record for the redacted row before and after.
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: tableName, operation, actorKind, actorUserId, organizationId, apiKeyId, systemOperation, correlationId, rowId, transactionId, occurredAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** — Paginated row-change records; pagination is in `meta`
+**Response 200 OK** (`application/json`) — Paginated row-change records; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2753,6 +2811,7 @@ Includes the redacted row images before and after the change.
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:AUDIT_LOG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `DataChangesController_get` · [source](../../../apps/api/src/modules/audit-logs/data-changes.controller.ts)
 
 **Parameters**
@@ -2761,7 +2820,7 @@ Includes the redacted row images before and after the change.
 | --- | --- | --- | --- | --- |
 | `id` | path | string (uuid) | yes |  |
 
-**Response 200 OK** — The complete row-change record
+**Response 200 OK** (`application/json`) — The complete row-change record
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |

@@ -93,6 +93,31 @@ export interface GithubRepositoryScope extends ScopeFields {
 	readonly repository: string;
 }
 
+/** Scope of one pull request: every view of it nests under this, so one invalidation reloads them all. */
+export interface GithubPullRequestScope extends ScopeFields {
+	readonly owner: string;
+	readonly repository: string;
+	readonly number: number;
+}
+
+/** First element of every pull-request query key: invalidating it reloads every pull-request view (after linking or unlinking). */
+export const GITHUB_PULL_REQUESTS_QUERY_ROOT = "github-pull-requests";
+
+/** The prefix of every pull-request key — invalidate it after the token is linked, replaced or removed. */
+export function githubPullRequestsRootKey(): ApiQueryKey {
+	return [GITHUB_PULL_REQUESTS_QUERY_ROOT];
+}
+
+/** The key of one repository's live-update status — set it from a turn-on/off answer. Names are compared as GitHub does, ignoring case. */
+export function githubLiveUpdatesKey(owner: string, repository: string): ApiQueryKey {
+	return [...githubPullRequestsRootKey(), "live-updates", owner.toLowerCase(), repository.toLowerCase()];
+}
+
+/** The key prefix shared by every view of one pull request — invalidate it after that pull request changes. */
+export function githubPullRequestScopeKey({ owner, repository, number }: GithubPullRequestScope): ApiQueryKey {
+	return [GITHUB_PULL_REQUESTS_QUERY_ROOT, "pull", owner, repository, number];
+}
+
 // ── Definition model (input-first, tRPC-style) ────────────────────────────
 
 /** A GET procedure: input → path params + query string, response → typed payload. */
@@ -540,6 +565,55 @@ export const apiRouter = {
 		}),
 		repositoryContributors: defineQuery(apiContract.github.repositoryContributors, {
 			scope: ({ owner, repository }: GithubRepositoryScope): ApiQueryKey => ["github", "repositories", owner, repository, "contributors"],
+		}),
+	},
+
+	// Every pull-request key starts with ["github-pull-requests"]: unlinking (or linking another account) invalidates that one scope.
+	githubPullRequests: {
+		/** The caller's GitHub link (or `off`). */
+		account: defineQuery(apiContract.githubPullRequests.account, { scope: (): ApiQueryKey => [GITHUB_PULL_REQUESTS_QUERY_ROOT, "account"] }),
+		/** Link or replace the token — then invalidate the whole `["github-pull-requests"]` scope. */
+		linkAccount: defineMutation(apiContract.githubPullRequests.linkAccount),
+		unlinkAccount: defineMutation(apiContract.githubPullRequests.unlinkAccount),
+		/** One page per filter, state and cursor (each its own cache entry). */
+		list: defineQuery(apiContract.githubPullRequests.list, { scope: (): ApiQueryKey => [GITHUB_PULL_REQUESTS_QUERY_ROOT, "list"] }),
+		detail: defineQuery(apiContract.githubPullRequests.detail, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "detail"],
+		}),
+		timeline: defineQuery(apiContract.githubPullRequests.timeline, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "timeline"],
+		}),
+		commits: defineQuery(apiContract.githubPullRequests.commits, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "commits"],
+		}),
+		/** The merge box (checks, conflicts) — under the pull request's scope, so a refresh or a write reloads it too. */
+		status: defineQuery(apiContract.githubPullRequests.status, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "status"],
+		}),
+		/** One commit of the pull request with its diff — under the pull request's scope, so a refresh of it reloads this too. */
+		commit: defineQuery(apiContract.githubPullRequests.commit, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "commit"],
+		}),
+		files: defineQuery(apiContract.githubPullRequests.files, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "files"],
+		}),
+		reviewThreads: defineQuery(apiContract.githubPullRequests.reviewThreads, {
+			scope: (scope: GithubPullRequestScope): ApiQueryKey => [...githubPullRequestScopeKey(scope), "review-threads"],
+		}),
+		/** Writes go to GitHub as the linked account; send them with `useIdempotentMutation` so a retry never posts twice. Then refresh the pull request's scope. */
+		addComment: defineMutation(apiContract.githubPullRequests.addComment),
+		submitReview: defineMutation(apiContract.githubPullRequests.submitReview),
+		setReaction: defineMutation(apiContract.githubPullRequests.setReaction),
+		attachPicture: defineMutation(apiContract.githubPullRequests.attachPicture),
+		merge: defineMutation(apiContract.githubPullRequests.merge),
+		liveUpdates: defineQuery(apiContract.githubPullRequests.liveUpdates, {
+			scope: ({ owner, repository }: { readonly owner: string; readonly repository: string }): ApiQueryKey => githubLiveUpdatesKey(owner, repository),
+		}),
+		enableLiveUpdates: defineMutation(apiContract.githubPullRequests.enableLiveUpdates),
+		disableLiveUpdates: defineMutation(apiContract.githubPullRequests.disableLiveUpdates),
+		/** A comment's saved versions — keyed by its node id. */
+		contentEdits: defineQuery(apiContract.githubPullRequests.contentEdits, {
+			scope: ({ nodeId }: { readonly nodeId: string }): ApiQueryKey => [GITHUB_PULL_REQUESTS_QUERY_ROOT, "edits", nodeId],
 		}),
 	},
 

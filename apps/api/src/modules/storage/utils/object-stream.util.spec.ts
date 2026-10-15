@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import { digestStream, readStreamPrefix } from "./object-stream.util";
+import { digestStream, readStreamFully, readStreamPrefix, StreamTooLargeError } from "./object-stream.util";
 
 const CHUNKS: [Buffer, Buffer, Buffer] = [Buffer.from("%PDF-"), Buffer.from("1.7 "), Buffer.from("body")];
 
@@ -28,5 +28,18 @@ describe("readStreamPrefix", () => {
 
 	it("returns the whole object when it is shorter than the prefix", async () => {
 		await expect(readStreamPrefix(Readable.from([Buffer.from("ab")]), 16)).resolves.toEqual(Buffer.from("ab"));
+	});
+});
+
+describe("readStreamFully", () => {
+	it("reads every chunk of a stream within the bound", async () => {
+		await expect(readStreamFully(Readable.from(CHUNKS), Buffer.concat(CHUNKS).length)).resolves.toEqual(Buffer.concat(CHUNKS));
+	});
+
+	it("refuses a stream past the bound and releases it", async () => {
+		const stream = Readable.from(CHUNKS);
+
+		await expect(readStreamFully(stream, 6)).rejects.toBeInstanceOf(StreamTooLargeError);
+		expect(stream.destroyed).toBe(true);
 	});
 });

@@ -1,21 +1,19 @@
 // ============================================
 // One GitHub commit — the commit screen's content (smart)
 // ============================================
-// Reads GET /github/repositories/:owner/:repository/commits/:sha and lays it
-// out like GitHub's commit page: the message, who committed it and when, its
+// Reads GET /github/repositories/:owner/:repository/commits/:sha (or, through
+// CommitDetailFrame, a pull request's commit with the admin's own token) and
+// lays it out like GitHub's commit page: the message, who committed it and when, its
 // SHA (tap to copy) and parents; then how many files changed, and each file
 // with its diff. Files with short diffs open expanded, the rest collapsed
 // (diff.ts), so a large commit stays quick to draw. "View on GitHub" opens the
 // commit in the browser.
 // docs/technical/github-contributions.md
 
-import type { GithubCommitDetail, GithubCommitFile, GithubCommitFileStatus, GithubCommitParams, GithubCommitParent } from "@workspace/shared";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { GithubCommitDetail, GithubCommitFile, GithubCommitParams, GithubCommitParent } from "@workspace/shared";
 import * as Clipboard from "expo-clipboard";
 import CopyIcon from "lucide-react-native/icons/copy";
-import FileDiffIcon from "lucide-react-native/icons/file-diff";
-import FileMinusIcon from "lucide-react-native/icons/file-minus";
-import FilePlusIcon from "lucide-react-native/icons/file-plus";
-import FileSymlinkIcon from "lucide-react-native/icons/file-symlink";
 import * as React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 
@@ -26,7 +24,7 @@ import { Card } from "../../components/card";
 import { ChangedFile } from "../../components/changed-file";
 import { DiffStat } from "../../components/diff-stat";
 import { DiffView } from "../../components/diff-view";
-import { Icon, type LucideIcon } from "../../components/icon";
+import { Icon } from "../../components/icon";
 import { Screen } from "../../components/screen";
 import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
 import { EmptyState, ErrorState } from "../../components/states";
@@ -36,6 +34,7 @@ import { errorMessageOf } from "../../lib/error-messages";
 import { useNow } from "../../lib/use-now";
 import { useToast } from "../toast/facade";
 import { diffStatBlocks, initiallyExpandedPaths, parsePatch } from "./diff";
+import { FILE_STATUS_ICONS } from "./file-status-icons";
 import {
 	changedFilesSummary,
 	changeSummary,
@@ -56,36 +55,31 @@ export const COMMIT_SHA_COPY_FAILED_MESSAGE = "Couldn't copy the commit SHA. Try
 /** "committed 2 hours ago" is re-read this often. */
 const RELATIVE_TIME_REFRESH_MS = 60_000;
 
-interface FileStatusIcon {
-	readonly icon: LucideIcon;
-	readonly colorClassName: string;
-}
-
-/** GitHub's file-status glyphs: added green, deleted red, moved blue, edited grey. */
-const FILE_STATUS_ICONS: Readonly<Record<GithubCommitFileStatus, FileStatusIcon>> = {
-	added: { icon: FilePlusIcon, colorClassName: "accent-success-foreground" },
-	removed: { icon: FileMinusIcon, colorClassName: "accent-destructive-foreground" },
-	renamed: { icon: FileSymlinkIcon, colorClassName: "accent-info-foreground" },
-	copied: { icon: FileSymlinkIcon, colorClassName: "accent-info-foreground" },
-	modified: { icon: FileDiffIcon, colorClassName: "accent-muted-foreground" },
-	changed: { icon: FileDiffIcon, colorClassName: "accent-muted-foreground" },
-	unchanged: { icon: FileDiffIcon, colorClassName: "accent-muted-foreground" },
-};
-
 export interface GithubCommitDetailScreenProps {
 	readonly commit: GithubCommitParams;
 }
 
+/** A configured repository's commit, read with the server's contributions token (the Profile's commit history). */
 export function GithubCommitDetailScreen({ commit }: GithubCommitDetailScreenProps): React.JSX.Element {
 	const api = useApi();
-	const detail = api.github.repositoryCommit.useQuery(commit);
+	return <CommitDetailFrame detail={api.github.repositoryCommit.useQuery(commit)} testID="github-commit" />;
+}
+
+export interface CommitDetailFrameProps {
+	/** The read of the commit — whichever endpoint (and token) it comes from. */
+	readonly detail: UseQueryResult<{ readonly data: GithubCommitDetail }>;
+	readonly testID: string;
+}
+
+/** The commit screen around any read of a commit: loading, failure, pull to refresh, then the commit. */
+export function CommitDetailFrame({ detail, testID }: CommitDetailFrameProps): React.JSX.Element {
 	const nowMs = useNow({ intervalMs: RELATIVE_TIME_REFRESH_MS, running: true });
 	const refetch = React.useCallback((): void => {
 		void detail.refetch();
 	}, [detail]);
 
 	return (
-		<Screen refreshing={detail.isRefetching} onRefresh={refetch} testID="github-commit">
+		<Screen refreshing={detail.isRefetching} onRefresh={refetch} testID={testID}>
 			{detail.isPending ? <CommitSkeleton /> : null}
 			{detail.isError ? <ErrorState message={errorMessageOf(detail.error)} retryLabel="Try again" onRetry={refetch} /> : null}
 			{/* Keyed by SHA: another commit starts with its own files expanded. */}
@@ -136,7 +130,7 @@ function CommitView({ commit, nowMs }: CommitViewProps): React.JSX.Element {
 				</View>
 			)}
 			{openFailed ? <Banner tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
-			<Button label="View on GitHub" variant="secondary" accessibilityHint="Opens the commit in your browser" onPress={openOnGithub} />
+			<Button label="View on GitHub" accessibilityHint="Opens the commit in your browser" onPress={openOnGithub} />
 		</>
 	);
 }

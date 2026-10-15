@@ -103,6 +103,8 @@ const MAX_SESSION_LOCATION_TIMEOUT_MS = 5_000;
 /** A GitHub read slower than this fails (the last good answer is served if there is one); GitHub normally answers in well under a second. */
 const DEFAULT_GITHUB_REQUEST_TIMEOUT_MS = 5 * MS_PER_SECOND;
 const MAX_GITHUB_REQUEST_TIMEOUT_MS = 30 * MS_PER_SECOND;
+/** A webhook secret no one can guess: 32 characters at least (`openssl rand -hex 32` gives 64). */
+const GITHUB_WEBHOOK_SECRET_MIN_LENGTH = 32;
 /** How long a GitHub answer is served from memory before it is read again — keeps every instance far below GitHub's 5,000 requests/hour. */
 const DEFAULT_GITHUB_CACHE_TTL_MS = 5 * MS_PER_MINUTE;
 const MAX_GITHUB_CACHE_TTL_MS = MS_PER_DAY;
@@ -235,6 +237,14 @@ export const ApiEnvInputSchema = z.object({
 	GITHUB_REPOSITORIES: GithubRepositoriesEnvSchema.optional(),
 	GITHUB_REQUEST_TIMEOUT_MS: integerEnvSchema({ min: 1, max: MAX_GITHUB_REQUEST_TIMEOUT_MS, defaultValue: DEFAULT_GITHUB_REQUEST_TIMEOUT_MS }),
 	GITHUB_CACHE_TTL_MS: integerEnvSchema({ min: 1, max: MAX_GITHUB_CACHE_TTL_MS, defaultValue: DEFAULT_GITHUB_CACHE_TTL_MS }),
+	// GitHub pull requests with each admin's own token (docs/adr/052-github-pull-requests.md)
+	GITHUB_CREDENTIAL_ENCRYPTION_KEYS: MfaEncryptionKeysEnvSchema.optional(),
+	// Live pull-request updates: GitHub's webhook receiver, as GitHub must reach it, and the shared secret it signs with.
+	GITHUB_WEBHOOK_URL: HttpUrlEnvSchema.optional(),
+	GITHUB_WEBHOOK_SECRET: z
+		.string()
+		.min(GITHUB_WEBHOOK_SECRET_MIN_LENGTH, { error: `must be at least ${String(GITHUB_WEBHOOK_SECRET_MIN_LENGTH)} characters (openssl rand -hex 32)` })
+		.optional(),
 
 	// Email
 	EMAIL_MODE: EmailModeSchema.default("send"),
@@ -420,6 +430,16 @@ export interface GithubConfig {
 	readonly requestTimeoutMs: number;
 	/** How long an answer is reused before GitHub is read again (`GITHUB_CACHE_TTL_MS`). */
 	readonly cacheTtlMs: number;
+	/**
+	 * Key ring the admins' linked tokens are encrypted with (`GITHUB_CREDENTIAL_ENCRYPTION_KEYS`,
+	 * version → base64 of 32 bytes; the highest version encrypts). `null` turns pull requests off.
+	 */
+	readonly credentialEncryptionKeys: Readonly<Record<number, string>> | null;
+	/**
+	 * Live pull-request updates (`GITHUB_WEBHOOK_URL` + `GITHUB_WEBHOOK_SECRET`): where GitHub sends
+	 * webhook deliveries, and the secret they are signed with. `null` turns live updates off.
+	 */
+	readonly webhook: { readonly url: string; readonly secret: string } | null;
 }
 
 export interface EncryptionConfig {
@@ -671,6 +691,28 @@ const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(["localhost", "127.0.0.1
  * 127.0.0.1, ::1). A production build whose `APP_URL` is loopback is someone
  * running the production bundle on their own machine, not a deployment.
  */
+/** Live updates need both halves, GitHub only delivers to https, and they ride on the linked tokens. */
+function checkGithubWebhookRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	if ((env.GITHUB_WEBHOOK_URL === undefined) !== (env.GITHUB_WEBHOOK_SECRET === undefined)) {
+		const missing: keyof ApiEnv = env.GITHUB_WEBHOOK_URL === undefined ? "GITHUB_WEBHOOK_URL" : "GITHUB_WEBHOOK_SECRET";
+		context.addIssue({
+			code: "custom",
+			path: [missing],
+			message: "must be set together with its live-updates counterpart (GITHUB_WEBHOOK_URL + GITHUB_WEBHOOK_SECRET), or leave both unset",
+		});
+	}
+	if (env.GITHUB_WEBHOOK_URL !== undefined && !env.GITHUB_WEBHOOK_URL.startsWith("https://")) {
+		context.addIssue({ code: "custom", path: ["GITHUB_WEBHOOK_URL"], message: "must be https — GitHub delivers webhooks to public https addresses only" });
+	}
+	if (env.GITHUB_WEBHOOK_URL !== undefined && env.GITHUB_CREDENTIAL_ENCRYPTION_KEYS === undefined) {
+		context.addIssue({
+			code: "custom",
+			path: ["GITHUB_CREDENTIAL_ENCRYPTION_KEYS"],
+			message: "is required when GITHUB_WEBHOOK_URL is set (webhooks are registered with the admins' linked tokens)",
+		});
+	}
+}
+
 export function isLoopbackUrl(url: string): boolean {
 	const hostname = new URL(url).hostname.toLowerCase();
 	return LOOPBACK_HOSTNAMES.has(hostname) || hostname.endsWith(".localhost");
@@ -868,6 +910,7 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 
 /** A repository list needs a token to read it with, stays small, and names each repository once (GitHub names are case-insensitive). */
 function checkGithubRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	checkGithubWebhookRules(env, context);
 	const repositories: readonly string[] = env.GITHUB_REPOSITORIES ?? [];
 	if (repositories.length === 0) {
 		return;
@@ -952,6 +995,8 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			}),
 			requestTimeoutMs: env.GITHUB_REQUEST_TIMEOUT_MS,
 			cacheTtlMs: env.GITHUB_CACHE_TTL_MS,
+			credentialEncryptionKeys: env.GITHUB_CREDENTIAL_ENCRYPTION_KEYS ?? null,
+			webhook: env.GITHUB_WEBHOOK_URL === undefined || env.GITHUB_WEBHOOK_SECRET === undefined ? null : { url: env.GITHUB_WEBHOOK_URL, secret: env.GITHUB_WEBHOOK_SECRET },
 		},
 		encryption: {
 			tenantMasterKey: env.TENANT_ENCRYPTION_MASTER_KEY,

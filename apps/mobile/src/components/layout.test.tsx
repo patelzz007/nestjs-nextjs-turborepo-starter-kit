@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { BottomTabBarHeightContext } from "expo-router/tabs";
 import * as React from "react";
+import { DeviceEventEmitter } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 import { z } from "zod";
 
@@ -19,6 +20,9 @@ const RefreshControlElementSchema = z.object({ props: z.object({ progressViewOff
 function refreshOffsetOf(testID: string): number | undefined {
 	return RefreshControlElementSchema.parse(screen.getByTestId(testID).props.refreshControl).props.progressViewOffset;
 }
+
+/** What the OS reports with a keyboard event (Jest runs as iOS, which announces the keyboard before it moves). */
+const KEYBOARD_EVENT = { endCoordinates: { screenX: 0, screenY: 500, width: 390, height: 344 }, duration: 250, easing: "keyboard" };
 
 /** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
@@ -58,6 +62,28 @@ describe("Screen", () => {
 				</BottomTabBarHeightContext>
 			</SafeAreaProvider>,
 		);
+		expect(screen.getByTestId("tab-bar-clearance")).toHaveStyle({ height: 106 });
+	});
+
+	it("drops the room for the tab bar while the keyboard covers it, so nothing empty sits above the keyboard", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<BottomTabBarHeightContext value={106}>
+					<Screen title="Home">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</BottomTabBarHeightContext>
+			</SafeAreaProvider>,
+		);
+
+		await act(() => {
+			DeviceEventEmitter.emit("keyboardWillShow", KEYBOARD_EVENT);
+		});
+		expect(screen.queryByTestId("tab-bar-clearance")).toBeNull();
+
+		await act(() => {
+			DeviceEventEmitter.emit("keyboardWillHide", KEYBOARD_EVENT);
+		});
 		expect(screen.getByTestId("tab-bar-clearance")).toHaveStyle({ height: 106 });
 	});
 

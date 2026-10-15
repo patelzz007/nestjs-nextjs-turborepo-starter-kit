@@ -110,13 +110,13 @@ run: recreating the webhook in Resend issues a **new** signing secret — update
 For a stable URL create a named Cloudflare tunnel (below).
 
 **Quick tunnel that survives the terminal — `apps/api/scripts/start-tunnel.py`.** Run
-`python3 apps/api/scripts/start-tunnel.py` from the repo root. It starts `cloudflared` fully
+`pnpm dev:tunnel` (or `python3 apps/api/scripts/start-tunnel.py`) from the repo root. It starts `cloudflared` fully
 detached (double fork + `setsid`, logging to `/tmp/cloudflared.log`), waits up to 30 seconds for the
 URL, prints it, and — when `RESEND_API_KEY` is in `apps/api/.env` — **re-points the existing Resend
 webhook** to `<url>/notifications/email-webhook` with a `PATCH`. Updating (never recreating) the
 webhook keeps its signing secret, so `RESEND_WEBHOOK_SECRET` stays valid across restarts. The step is
 non-fatal: without a key, or if Resend is unreachable, it prints the URL to paste by hand. Exit code
-`1` means no URL appeared; read the log. Stop it with `pkill -f 'cloudflared tunnel'`.
+`1` means no URL appeared; read the log. Stop it with `pkill -f 'cloudflared tunnel'`. It also wires GitHub live pull-request updates to the same tunnel ([GitHub pull requests](../github-pull-requests.md#5a-live-updates-webhooks)), and runs the quick tunnel with an empty config so a named tunnel in `~/.cloudflared/config.yml` cannot take it over.
 
 > [!WARNING]
 > Resend's update-webhook API takes the URL in the field **`endpoint`**, not `url`. A request with
