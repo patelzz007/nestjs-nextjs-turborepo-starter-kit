@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import { Text, type View } from "react-native";
 
-import { Carousel, defaultCarouselSlideLabel } from "../carousel";
+import { Carousel, clampCarouselIndex, defaultCarouselSlideLabel } from "../carousel";
 
 const PAGE_WIDTH = 300;
 const SECOND_SLIDE = 1;
@@ -117,6 +117,44 @@ describe("Carousel", () => {
 		expect(className).toContain("mt-4");
 		expect(className).toContain("gap-4");
 		expect(className).not.toContain("gap-1");
+	});
+
+	it("adds previous / next arrows on request, each reporting its neighbour and disabled at its end", async () => {
+		const onChange = jest.fn();
+		const { rerender } = await render(
+			<Carousel index={0} onChange={onChange} showControls>
+				{slides()}
+			</Carousel>,
+		);
+		expect(screen.getByRole("button", { name: "Previous slide" })).toBeDisabled();
+		await fireEvent.press(screen.getByRole("button", { name: "Next slide" }));
+		expect(onChange).toHaveBeenLastCalledWith(SECOND_SLIDE);
+
+		await rerender(
+			<Carousel index={THIRD_SLIDE} onChange={onChange} showControls previousLabel="Back" nextLabel="Forward">
+				{slides()}
+			</Carousel>,
+		);
+		expect(screen.getByRole("button", { name: "Forward" })).toBeDisabled();
+		await fireEvent.press(screen.getByRole("button", { name: "Back" }));
+		expect(onChange).toHaveBeenLastCalledWith(SECOND_SLIDE);
+	});
+
+	it("keeps the arrows without the dots", async () => {
+		await render(
+			<Carousel index={0} onChange={jest.fn()} showControls showIndicators={false}>
+				{slides()}
+			</Carousel>,
+		);
+		expect(screen.getByRole("button", { name: "Next slide" })).toBeOnTheScreen();
+		expect(screen.queryByRole("button", { name: "Slide 1 of 3" })).toBeNull();
+	});
+
+	it("clamps an index to the slides", () => {
+		expect(clampCarouselIndex(-1, SLIDE_TITLES.length)).toBe(0);
+		expect(clampCarouselIndex(SECOND_SLIDE, SLIDE_TITLES.length)).toBe(SECOND_SLIDE);
+		expect(clampCarouselIndex(SLIDE_TITLES.length, SLIDE_TITLES.length)).toBe(THIRD_SLIDE);
+		expect(clampCarouselIndex(SECOND_SLIDE, 0)).toBe(0);
 	});
 
 	it("forwards its ref", async () => {

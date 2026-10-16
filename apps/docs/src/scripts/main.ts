@@ -2,6 +2,7 @@ import { initCodeBlocks } from "./code-blocks";
 import { initDrawer } from "./drawer";
 import { initFeedback } from "./feedback";
 import { initHeader } from "./header";
+import { initMediaIslands } from "./media-islands";
 import { initMermaid } from "./mermaid";
 import { initPdfEmbeds } from "./pdf-embeds";
 import { initSearch } from "./search";
@@ -21,4 +22,5 @@ export function initSite(): void {
 	initSearch();
 	initMermaid();
 	initPdfEmbeds();
+	initMediaIslands();
 }

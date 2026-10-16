@@ -289,6 +289,20 @@ describe("Media & content demos", () => {
 		expect(reply instanceof HTMLInputElement ? reply.value : null).toBe("");
 	});
 
+	it("resizes the ImageResizer photo from the keyboard, keeping its shape until the switch frees it", () => {
+		renderFamily("family-media-content");
+		const section = sectionOf("imageResizer");
+		const corner = within(section).getByRole("button", { name: "Resize from the bottom-right corner" });
+
+		// A keyboard step is committed at once: the live and the saved size both move.
+		fireEvent.keyDown(corner, { key: "ArrowRight" });
+		expect(within(section).getAllByText("394 × 222 px")).toHaveLength(2);
+
+		fireEvent.click(within(section).getByRole("switch", { name: "Keep the aspect ratio" }));
+		fireEvent.keyDown(within(section).getByRole("button", { name: "Resize from the bottom edge" }), { key: "ArrowDown" });
+		expect(within(section).getAllByText("394 × 232 px")).toHaveLength(2);
+	});
+
 	it("opens the in-memory sample statement in the PdfViewer, with a file picker", async () => {
 		URL.createObjectURL = vi.fn((): string => "blob:http://localhost/sample");
 		URL.revokeObjectURL = vi.fn((): void => undefined);

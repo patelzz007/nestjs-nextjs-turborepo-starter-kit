@@ -1,12 +1,15 @@
 // A swipeable gallery of pictures (the web kit's `ImageCarousel`): a
-// `Carousel` whose slides are `CoverImage`s in one shared aspect ratio.
+// `Carousel` whose slides are `CoverImage`s in one shared aspect ratio, each
+// with a "2 / 5" position counter in its corner (`showCounter`), and previous /
+// next arrows on request (`showControls`). One picture renders as a plain
+// `CoverImage` — nothing to swipe, so no dots, arrows or counter.
 // Controlled like `Carousel`: the caller owns the shown picture (`index`) and
 // hears every change (`onChange`). Each picture's `alt` describes it to screen
 // readers; a missing or broken picture shows the cover's placeholder.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import type { View } from "react-native";
+import { Text, View } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Carousel, type CarouselSize } from "./carousel";
@@ -46,6 +49,13 @@ export interface ImageCarouselProps {
 	readonly ratio?: CoverImageRatio | undefined;
 	/** Names a picture's dot for screen readers: `(2, 5)` → "Slide 2 of 5". */
 	readonly slideLabel?: ((position: number, total: number) => string) | undefined;
+	/** Show the "2 / 5" counter on each picture (default on; the dots already tell screen readers the position). */
+	readonly showCounter?: boolean | undefined;
+	/** Show previous / next buttons either side of the dots. */
+	readonly showControls?: boolean | undefined;
+	/** The arrows' accessible names. */
+	readonly previousLabel?: string | undefined;
+	readonly nextLabel?: string | undefined;
 	readonly variant?: ImageCarouselVariant | undefined;
 	readonly size?: CarouselSize | undefined;
 	/** Extra classes for the container, merged last (layout: `mt-4`). */
@@ -53,30 +63,71 @@ export interface ImageCarouselProps {
 	readonly testID?: string | undefined;
 }
 
+/** A picture's place in the gallery as people count it ("2 / 5"). */
+const POSITION_OFFSET = 1;
+const ONE_PICTURE = 1;
+
 export const ImageCarousel = React.memo(
 	React.forwardRef<View, ImageCarouselProps>(function ImageCarousel(
-		{ images, index, onChange, ratio = "video", slideLabel, variant = "rounded", size = "md", className, testID },
+		{
+			images,
+			index,
+			onChange,
+			ratio = "video",
+			slideLabel,
+			showCounter = true,
+			showControls = false,
+			previousLabel,
+			nextLabel,
+			variant = "rounded",
+			size = "md",
+			className,
+			testID,
+		},
 		ref,
 	): React.JSX.Element {
+		const total = images.length;
+		const coverVariant = variant === "card" ? "flush" : "rounded";
+		const [only] = images;
+		if (total === ONE_PICTURE && only !== undefined) {
+			return (
+				<CoverImage
+					ref={ref}
+					uri={only.uri}
+					alt={only.alt}
+					ratio={ratio}
+					variant={coverVariant}
+					testID={testID === undefined ? undefined : `${testID}-${only.id}`}
+					className={cn(imageCarouselVariants({ variant }), className)}
+				/>
+			);
+		}
 		return (
 			<Carousel
 				ref={ref}
 				index={index}
 				onChange={onChange}
 				slideLabel={slideLabel}
+				showControls={showControls}
+				previousLabel={previousLabel}
+				nextLabel={nextLabel}
 				variant={variant === "card" ? "card" : "plain"}
 				size={size}
 				testID={testID}
 				className={cn(imageCarouselVariants({ variant }), className)}>
-				{images.map((image: ImageCarouselImage): React.JSX.Element => (
-					<CoverImage
-						key={image.id}
-						uri={image.uri}
-						alt={image.alt}
-						ratio={ratio}
-						variant={variant === "card" ? "flush" : "rounded"}
-						testID={testID === undefined ? undefined : `${testID}-${image.id}`}
-					/>
+				{images.map((image: ImageCarouselImage, imageIndex: number): React.JSX.Element => (
+					<View key={image.id}>
+						<CoverImage uri={image.uri} alt={image.alt} ratio={ratio} variant={coverVariant} testID={testID === undefined ? undefined : `${testID}-${image.id}`} />
+						{showCounter ? (
+							<View
+								pointerEvents="none"
+								accessibilityElementsHidden
+								importantForAccessibility="no-hide-descendants"
+								className="absolute top-3 right-3 rounded-full bg-background/80 px-2.5 py-1">
+								<Text className="font-sans-medium text-xs text-foreground">{`${String(imageIndex + POSITION_OFFSET)} / ${String(total)}`}</Text>
+							</View>
+						) : null}
+					</View>
 				))}
 			</Carousel>
 		);

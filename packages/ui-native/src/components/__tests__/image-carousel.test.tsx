@@ -52,6 +52,37 @@ describe("ImageCarousel", () => {
 		expect(screen.getByRole("image", { name: "Photo still processing" })).toBeOnTheScreen();
 	});
 
+	it("renders one picture as a plain cover: no dots, arrows or counter", async () => {
+		const [front] = IMAGES;
+		if (front === undefined) {
+			throw new Error("no fixture picture");
+		}
+		await render(<ImageCarousel images={[front]} index={0} onChange={jest.fn()} showControls className="mt-4" testID="gallery" />);
+
+		expect(screen.getByLabelText("The bag from the front")).toBeOnTheScreen();
+		expect(screen.queryAllByRole("button")).toHaveLength(0);
+		expect(screen.queryByText("1 / 1")).toBeNull();
+		expect(screen.getByTestId("gallery-front")).toHaveProp("className", expect.stringContaining("mt-4"));
+	});
+
+	it("marks each picture with its position, hidden from screen readers, unless asked not to", async () => {
+		const { rerender } = await render(<ImageCarousel images={IMAGES} index={SECOND_IMAGE} onChange={jest.fn()} />);
+		expect(screen.getByText("2 / 3", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByText("2 / 3")).toBeNull();
+
+		await rerender(<ImageCarousel images={IMAGES} index={SECOND_IMAGE} onChange={jest.fn()} showCounter={false} />);
+		expect(screen.queryByText("2 / 3", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("passes the arrows and their names through to the carousel", async () => {
+		const onChange = jest.fn();
+		await render(<ImageCarousel images={IMAGES} index={SECOND_IMAGE} onChange={onChange} showControls nextLabel="Next photo" />);
+
+		await fireEvent.press(screen.getByRole("button", { name: "Next photo" }));
+		expect(onChange).toHaveBeenCalledWith(LAST_IMAGE);
+		expect(screen.getByRole("button", { name: "Previous slide" })).toBeEnabled();
+	});
+
 	it("forwards its ref", async () => {
 		const ref = React.createRef<View>();
 		await render(<ImageCarousel ref={ref} images={IMAGES} index={0} onChange={jest.fn()} />);

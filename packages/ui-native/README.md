@@ -99,6 +99,14 @@ failure and "external" state. It draws nothing itself: the app passes the docume
 `renderPage(pageIndex, widthPx)` that returns a bitmap's address (in `apps/mobile`, the
 `modules/pdf-renderer` native module — ADR 056). Failures use the shared `PdfOpenFailure` list.
 
+`Carousel` is the native counterpart of the web kit's Embla `Carousel` (Embla needs the DOM): a
+paging `ScrollView`, controlled by `index` / `onChange`, with dots and — with `showControls` —
+previous / next buttons. `ImageCarousel` adds a "2 / 5" counter on each picture and renders a single
+picture as a plain `CoverImage`, as the web one does. `ImageResizer` is the web kit's `ImageResizer`
+on the gesture responder: eight handles with 44 pt touch areas, each an adjustable control for screen
+readers, all driven by the shared geometry in `@workspace/shared` (`resizeImageByHandle`,
+`nudgeImageSize` — ADR 057).
+
 **Mobile only, with no web counterpart:** `QrScanner` — a full-screen QR code scanner. In an Android
 build with Google Play services it opens Google's own code scanner (ML Kit); on iOS, in Expo Go,
 and on Android without Play services, it shows the kit's camera scanner (expo-camera's `CameraView` behind a

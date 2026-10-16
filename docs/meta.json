@@ -86,6 +86,8 @@
 		"technical/frontend/loading-skeletons",
 		"technical/frontend/qr-codes",
 		"technical/frontend/pdf-viewer",
+		"technical/frontend/carousel",
+		"technical/frontend/image-resizer",
 		"technical/frontend/streams",
 		"technical/tooling/typescript",
 		"technical/tooling/eslint",

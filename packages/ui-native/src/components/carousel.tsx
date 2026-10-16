@@ -1,20 +1,25 @@
 // Slides side by side, one per page (the web kit's `Carousel`): a horizontal
-// paging ScrollView with a row of page dots under it. Controlled: the caller
-// owns which slide shows (`index`) and hears every change (`onChange`), from a
-// swipe or a dot. Each dot is a button named by `slideLabel` ("Slide 2 of 5"),
-// and the current one is announced as selected.
+// paging ScrollView with a row of page dots under it — and, with
+// `showControls`, previous / next buttons either side of the dots (the web
+// kit's arrows). Controlled: the caller owns which slide shows (`index`) and
+// hears every change (`onChange`), from a swipe, a dot or an arrow. Each dot is
+// a button named by `slideLabel` ("Slide 2 of 5"), and the current one is
+// announced as selected.
 //
 //   ┌──────────────────────────┐
 //   │          slide           │   swipe left / right
 //   └──────────────────────────┘
-//             ━━ • • •               dots: the current one a pill
+//          ‹  ━━ • • •  ›            dots: the current one a pill; arrows on request
 
 import { cva, type VariantProps } from "class-variance-authority";
+import ChevronLeftIcon from "lucide-react-native/icons/chevron-left";
+import ChevronRightIcon from "lucide-react-native/icons/chevron-right";
 import * as React from "react";
 import { Pressable, ScrollView, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
 import { cn } from "../lib/cn";
 import { useReduceMotion } from "../lib/use-reduce-motion";
+import { IconButton } from "./icon-button";
 
 export const carouselVariants = cva("w-full", {
 	variants: {
@@ -60,6 +65,15 @@ export type CarouselSize = NonNullable<CarouselVariantProps["size"]>;
 const POSITION_OFFSET = 1;
 const FIRST_INDEX = 0;
 
+/** The default accessible names of the arrows (the web kit's `previousSlide` / `nextSlide`); generic and overridable. */
+export const DEFAULT_CAROUSEL_PREVIOUS_LABEL = "Previous slide";
+export const DEFAULT_CAROUSEL_NEXT_LABEL = "Next slide";
+
+/** The slide `index` is clamped to: within the slides, and the first one when there are none. */
+export function clampCarouselIndex(index: number, total: number): number {
+	return Math.min(Math.max(index, FIRST_INDEX), Math.max(total - POSITION_OFFSET, FIRST_INDEX));
+}
+
 /** The default accessible name of a slide's dot; generic and overridable. */
 export function defaultCarouselSlideLabel(position: number, total: number): string {
 	return `Slide ${String(position)} of ${String(total)}`;
@@ -76,6 +90,11 @@ export interface CarouselProps {
 	readonly slideLabel?: ((position: number, total: number) => string) | undefined;
 	/** Hide the dots when the slides carry their own position (a counter in each slide). */
 	readonly showIndicators?: boolean | undefined;
+	/** Show previous / next buttons either side of the dots (each disabled at its end). */
+	readonly showControls?: boolean | undefined;
+	/** The arrows' accessible names. */
+	readonly previousLabel?: string | undefined;
+	readonly nextLabel?: string | undefined;
 	readonly variant?: CarouselVariant | undefined;
 	readonly size?: CarouselSize | undefined;
 	/** Extra classes for the container, merged last (layout: `mt-4`). */
@@ -85,7 +104,20 @@ export interface CarouselProps {
 
 export const Carousel = React.memo(
 	React.forwardRef<View, CarouselProps>(function Carousel(
-		{ children, index, onChange, slideLabel = defaultCarouselSlideLabel, showIndicators = true, variant = "plain", size = "md", className, testID },
+		{
+			children,
+			index,
+			onChange,
+			slideLabel = defaultCarouselSlideLabel,
+			showIndicators = true,
+			showControls = false,
+			previousLabel = DEFAULT_CAROUSEL_PREVIOUS_LABEL,
+			nextLabel = DEFAULT_CAROUSEL_NEXT_LABEL,
+			variant = "plain",
+			size = "md",
+			className,
+			testID,
+		},
 		ref,
 	): React.JSX.Element {
 		const reduceMotion = useReduceMotion();
@@ -112,13 +144,20 @@ export const Carousel = React.memo(
 				if (pageWidth <= FIRST_INDEX) {
 					return;
 				}
-				const page = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / pageWidth), FIRST_INDEX), total - POSITION_OFFSET);
+				const page = clampCarouselIndex(Math.round(event.nativeEvent.contentOffset.x / pageWidth), total);
 				if (page !== index) {
 					onChange(page);
 				}
 			},
 			[index, onChange, pageWidth, total],
 		);
+
+		const showPrevious = React.useCallback((): void => {
+			onChange(clampCarouselIndex(index - POSITION_OFFSET, total));
+		}, [index, onChange, total]);
+		const showNext = React.useCallback((): void => {
+			onChange(clampCarouselIndex(index + POSITION_OFFSET, total));
+		}, [index, onChange, total]);
 
 		return (
 			<View ref={ref} testID={testID} onLayout={measure} className={cn(carouselVariants({ variant, size }), className)}>
@@ -140,18 +179,44 @@ export const Carousel = React.memo(
 						</View>
 					))}
 				</ScrollView>
-				{showIndicators ? (
-					<View className="flex-row items-center justify-center">
-						{slides.map((slide: React.ReactNode, slideIndex: number): React.JSX.Element => (
-							<CarouselDot
-								key={React.isValidElement(slide) && slide.key !== null ? slide.key : slideIndex}
-								slideIndex={slideIndex}
-								selected={slideIndex === index}
-								label={slideLabel(slideIndex + POSITION_OFFSET, total)}
-								size={size}
-								onSelect={onChange}
+				{showIndicators || showControls ? (
+					<View className="flex-row items-center justify-center gap-2">
+						{showControls ? (
+							<IconButton
+								icon={ChevronLeftIcon}
+								label={previousLabel}
+								onPress={showPrevious}
+								disabled={index <= FIRST_INDEX}
+								variant="ghost"
+								size="sm"
+								{...(testID === undefined ? {} : { testID: `${testID}-previous` })}
 							/>
-						))}
+						) : null}
+						{showIndicators ? (
+							<View className="flex-row items-center justify-center">
+								{slides.map((slide: React.ReactNode, slideIndex: number): React.JSX.Element => (
+									<CarouselDot
+										key={React.isValidElement(slide) && slide.key !== null ? slide.key : slideIndex}
+										slideIndex={slideIndex}
+										selected={slideIndex === index}
+										label={slideLabel(slideIndex + POSITION_OFFSET, total)}
+										size={size}
+										onSelect={onChange}
+									/>
+								))}
+							</View>
+						) : null}
+						{showControls ? (
+							<IconButton
+								icon={ChevronRightIcon}
+								label={nextLabel}
+								onPress={showNext}
+								disabled={index >= total - POSITION_OFFSET}
+								variant="ghost"
+								size="sm"
+								{...(testID === undefined ? {} : { testID: `${testID}-next` })}
+							/>
+						) : null}
 					</View>
 				) : null}
 			</View>

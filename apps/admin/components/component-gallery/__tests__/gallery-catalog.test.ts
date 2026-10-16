@@ -21,8 +21,8 @@ describe("component gallery catalog", () => {
 		expect(new Set(listed).size).toBe(listed.length);
 	});
 
-	it("demonstrates the 102 low-level primitives the gallery promises — 69 with live demos, 33 through their worked examples", () => {
-		expect(ALL_KEYS).toHaveLength(102);
+	it("demonstrates the 103 low-level primitives the gallery promises — 70 with live demos, 33 through their worked examples", () => {
+		expect(ALL_KEYS).toHaveLength(103);
 		expect(EXAMPLE_ONLY_KEYS.size).toBe(33);
 		for (const key of EXAMPLE_ONLY_KEYS) {
 			expect(ALL_KEYS).toContain(key);

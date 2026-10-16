@@ -8,6 +8,7 @@ import { defineConfig, fontProviders } from "astro/config";
 
 import { rehypeCodeBlock } from "./src/lib/markdown/code-block";
 import { remarkContentLinks } from "./src/lib/markdown/links";
+import { remarkMediaEmbeds } from "./src/lib/markdown/media-embeds";
 import { remarkPdfEmbed } from "./src/lib/markdown/pdf-embed";
 import { remarkQrCode } from "./src/lib/markdown/qr-code";
 import { rehypeExternalLinks, rehypeHeadingAnchors, rehypeTableWrapper } from "./src/lib/markdown/rehype-plugins";
@@ -103,13 +104,14 @@ export default defineConfig({
 	],
 	markdown: {
 		processor: unified({
-			// Order matters: links/images are rewritten before galleries and callouts; mermaid, qr and pdf fences leave before rehypeCodeBlock sees them.
+			// Order matters: links/images are rewritten before galleries and callouts; mermaid, qr, pdf and media fences leave before rehypeCodeBlock sees them.
 			remarkPlugins: [
 				[remarkContentLinks, { repoRoot: REPO_ROOT, githubBlobBase: `${GITHUB_URL}/blob/${GITHUB_BRANCH}` }],
 				remarkStripFirstHeading,
 				remarkMermaid,
 				remarkQrCode,
 				remarkPdfEmbed,
+				remarkMediaEmbeds,
 				remarkImageUrls,
 				remarkImageGallery,
 				remarkTaskMarkers,
@@ -145,6 +147,7 @@ export default defineConfig({
 				"@workspace/ui > class-variance-authority",
 				"@workspace/ui > lucide-react",
 				"@workspace/ui > @base-ui/react/button",
+				"@workspace/ui > embla-carousel-react",
 			],
 		},
 		build: {

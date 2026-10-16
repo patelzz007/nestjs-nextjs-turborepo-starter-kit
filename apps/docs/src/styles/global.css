@@ -26,6 +26,11 @@
 @source "../../../../packages/ui/src/components/code-block.tsx";
 @source "../../../../packages/ui/src/components/code-block-highlight.ts";
 @source "../../../../packages/ui/src/components/button.tsx";
+@source "../../../../packages/ui/src/components/carousel.tsx";
+@source "../../../../packages/ui/src/components/image-carousel.tsx";
+@source "../../../../packages/ui/src/components/cover-image.tsx";
+@source "../../../../packages/ui/src/components/aspect-ratio.tsx";
+@source "../../../../packages/ui/src/components/image-resizer.tsx";
 
 :root {
 	/* Accent */
@@ -1188,6 +1193,17 @@
 		margin: 0 0 16px;
 	}
 
+	/* Media islands: ```carousel / ```image-resize fences — the @workspace/ui ImageCarousel and ImageResizer, server-rendered then hydrated (src/lib/media/). */
+
+	.prose .media-island {
+		margin: 0 0 16px;
+	}
+
+	/* Prose images get rounded corners; inside a carousel or a resizer, the component shapes its own frame. */
+	.prose .media-island img {
+		border-radius: 0;
+	}
+
 	/* QR codes: ```qr fences, drawn at build time by the shared encoder (src/lib/markdown/qr-code.ts). */
 
 	.qr-code {
@@ -1942,4 +1958,13 @@
 			animation: none;
 		}
 	}
+}
+
+/*
+ * Media islands before (or without) hydration: the kit's image components fade each image in once
+ * React sees it load, so the build-time HTML holds them transparent. Until the island is hydrated —
+ * or if its script never runs — show them as they are. Unlayered, so it outranks the utility class.
+ */
+[data-media-island-root]:not([data-hydrated="true"]) img {
+	opacity: 1;
 }

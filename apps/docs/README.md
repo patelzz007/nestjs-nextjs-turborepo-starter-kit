@@ -72,6 +72,8 @@ with their order in `blog/meta.json`.
 | ```` ```mermaid ````                           | A diagram, rendered in the browser in the current theme   |
 | ```` ```qr title="Pairing QR" ````            | A scannable QR code of the fence's text, drawn at build time as inline SVG by the shared encoder (`src/lib/markdown/qr-code.ts`) |
 | ```` ```pdf title="Statement.pdf" ````        | The PDF at the fence's URL (a site path or `https://`), framed under a header with open-in-new-tab and download, drawn by the browser's own PDF engine (`src/lib/markdown/pdf-embed.ts`). `/files/pdf-viewer-sample.pdf` is a sample written at build time |
+| ```` ```carousel ratio="16/9" ````             | The `@workspace/ui` `ImageCarousel` (Embla) of the fence's images, one `![alt](url)` per line: rendered at build time, hydrated in the browser (`src/lib/markdown/media-embeds.ts`, `src/lib/media/`) |
+| ```` ```image-resize width="480" height="270" ```` | The `@workspace/ui` `ImageResizer` of the fence's one image, starting at that size and keeping its shape (`aspect="free"` lets the sides change independently) |
 | `![alt](./images/email/welcome.png)`           | The image, served from `docs/images/` at `/images/…`      |
 | A table whose cells are images                 | A responsive screenshot gallery                           |
 | `RBAC`, `RLS`, `ReBAC`, … in prose             | An `<abbr>` tooltip with the definition                   |

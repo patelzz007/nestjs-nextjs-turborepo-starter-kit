@@ -72,6 +72,7 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/breadcrumb.tsx",
 		"components/breadcrumb-trail.tsx",
 		"components/carousel.tsx",
+		"components/image-resizer.tsx",
 		"components/collapsible.tsx",
 		"components/panel-shell-content.tsx",
 		"components/panel-sidebar-header.tsx",

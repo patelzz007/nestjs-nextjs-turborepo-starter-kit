@@ -17,6 +17,7 @@ import type { ColorPickerLabels } from "../../components/color-picker-context";
 import type { DateSelectorLabels } from "../../components/date-selector";
 import type { ComboboxLabels } from "../../components/combobox-context";
 import type { ImageCropperLabels } from "../../components/image-cropper";
+import type { ImageResizerLabels } from "../../components/image-resizer";
 import type { KpiDirectionLabels } from "../../components/kpi-stat-card";
 import type { LockoutCountdownLabels } from "../../components/lockout-countdown";
 import type { PasswordInputLabels } from "../../components/password-input";
@@ -100,6 +101,7 @@ export interface UiKitLabels {
 	readonly dataTable: DataTableLabels;
 	readonly dateSelector: DateSelectorLabels;
 	readonly imageCropper: ImageCropperLabels;
+	readonly imageResizer: ImageResizerLabels;
 	readonly dialog: DialogLabels;
 	readonly gantt: GanttLabels;
 	readonly eventCalendar: EventCalendarLabels;

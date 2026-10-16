@@ -1,9 +1,21 @@
 import type { ColorDescription, ColorHueName, ColorNeutralName } from "../color/color-name";
 import type { CascaderDirection, CascaderMode } from "../../components/cascader/cascader-types";
-import { MAX_PDF_VIEWER_FILE_BYTES } from "@workspace/shared";
+import { MAX_PDF_VIEWER_FILE_BYTES, type ImageResizeHandle, type ImageSize } from "@workspace/shared";
 
 import { formatBytes } from "../format/bytes";
 import type { UiKitLabels } from "./ui-kit-labels";
+
+/** Where each image-resizer handle sits, as read out in its name. */
+const IMAGE_RESIZE_HANDLE_PLACES_EN: Readonly<Record<ImageResizeHandle, string>> = {
+	"top-left": "top-left corner",
+	top: "top edge",
+	"top-right": "top-right corner",
+	right: "right edge",
+	"bottom-right": "bottom-right corner",
+	bottom: "bottom edge",
+	"bottom-left": "bottom-left corner",
+	left: "left edge",
+};
 
 /** The cascader's root-level name — also the start of its root announcement. */
 const CASCADER_ROOT_LEVEL_EN = "Top level";
@@ -176,6 +188,11 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 		zoom: "Zoom",
 		horizontal: "Left to right",
 		vertical: "Top to bottom",
+	},
+	imageResizer: {
+		handle: (handle: ImageResizeHandle): string => `Resize from the ${IMAGE_RESIZE_HANDLE_PLACES_EN[handle]}`,
+		instructions: "Drag, or use the arrow keys. Hold Shift for larger steps; press Escape to cancel a drag.",
+		size: (size: ImageSize): string => `${String(size.width)} by ${String(size.height)} pixels`,
 	},
 	colorPicker: {
 		placeholder: "Select color",

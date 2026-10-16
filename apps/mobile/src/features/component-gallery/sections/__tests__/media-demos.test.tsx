@@ -9,7 +9,7 @@ import { MediaDemos } from "../media-demos";
 // The clipboard is the OS's: the boundary is replaced, the demo's own state is real.
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
 
-const DEMO_TITLES: readonly string[] = ["Carousel", "ImageCarousel", "CoverImage", "CodeBlock", "QrCode", "Bubble", "Message", "Attachment", "PdfViewer"];
+const DEMO_TITLES: readonly string[] = ["Carousel", "ImageCarousel", "ImageResizer", "CoverImage", "CodeBlock", "QrCode", "Bubble", "Message", "Attachment", "PdfViewer"];
 
 describe("MediaDemos", () => {
 	it("shows one demo block per component", async () => {
@@ -37,6 +37,27 @@ describe("MediaDemos", () => {
 		await fireEvent.press(gallery.getByRole("button", { name: "Slide 2 of 3" }));
 		expect(gallery.getByRole("image", { name: "The launch artwork, as a second photo" })).toBeOnTheScreen();
 		expect(gallery.queryByRole("image", { name: "The app icon, as a reward photo" })).toBeNull();
+	});
+
+	it("moves the image carousel with its arrows", async () => {
+		await render(<MediaDemos />);
+		const gallery = within(screen.getByTestId("demo-ImageCarousel"));
+
+		expect(gallery.getByRole("button", { name: "Previous slide" })).toBeDisabled();
+		await fireEvent.press(gallery.getByRole("button", { name: "Next slide" }));
+		expect(gallery.getByRole("image", { name: "The launch artwork, as a second photo" })).toBeOnTheScreen();
+	});
+
+	it("resizes the picture from a handle, keeping it square until the switch frees it", async () => {
+		await render(<MediaDemos />);
+		const demo = within(screen.getByTestId("demo-ImageResizer"));
+
+		await fireEvent(demo.getByRole("adjustable", { name: "Resize from the right edge" }), "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+		expect(demo.getByText("Size 170 × 170 · saved 170 × 170")).toBeOnTheScreen();
+
+		await fireEvent.press(demo.getByRole("switch", { name: "Keep the aspect ratio" }));
+		await fireEvent(demo.getByRole("adjustable", { name: "Resize from the right edge" }), "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+		expect(demo.getByText("Size 180 × 170 · saved 180 × 170")).toBeOnTheScreen();
 	});
 
 	it("copies the code through the clipboard and shows it copied", async () => {

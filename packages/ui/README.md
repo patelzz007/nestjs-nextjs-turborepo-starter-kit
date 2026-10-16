@@ -366,6 +366,20 @@ viewer on the same photo (the admin moderation queue does).
 <ImageCarousel images={reward.images.map((image) => ({ id: image.fileId, src: image.url, sources: image.sources }))} sizes="45rem" priority />
 ```
 
+## Image resizer (`image-resizer.tsx`)
+
+An image the user resizes by dragging handles on its corners and edges (controlled `value`/`onValueChange`,
+`onValueCommitted` once per drag or arrow-key step). Focus a handle and use the arrow keys (Shift for
+50 px steps); Escape cancels a drag. Bounds (`minWidth` … `maxHeight`) and `aspectRatio` are applied by the
+shared geometry in `@workspace/shared` (`resizeImageByHandle`), which the native kit and the docs use too.
+`handles` picks which of the eight show, `variant="ghost"` reveals them on hover or focus (always on touch),
+`fit` is `cover` / `contain` / `fill`, and copy comes from the `imageResizer` label family. See
+`docs/technical/frontend/image-resizer.md`.
+
+```tsx
+<ImageResizer src={photo.url} alt={photo.description} value={size} onValueChange={setSize} onValueCommitted={saveSize} maxWidth={720} aspectRatio={16 / 9} />
+```
+
 ## Image cropper (`image-cropper.tsx`)
 
 Chooses a fixed-shape region of a photo, in the photo's own pixels (controlled `value`/`onValueChange`

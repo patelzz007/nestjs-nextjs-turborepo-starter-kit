@@ -27,3 +27,12 @@ export function parseCodeTitle(meta: string): string | null {
 	const match = /title="(?<title>[^"]*)"/.exec(meta);
 	return match?.groups?.title ?? null;
 }
+
+/**
+ * Reads a `name="…"` attribute from a fence meta string (` ```image-resize width="480" `);
+ * `null` when absent. `name` is a fixed attribute word, never reader input.
+ */
+export function parseFenceAttribute(meta: string, name: string): string | null {
+	const match = new RegExp(`(?:^|\\s)${name}="(?<value>[^"]*)"`).exec(meta);
+	return match?.groups?.value ?? null;
+}

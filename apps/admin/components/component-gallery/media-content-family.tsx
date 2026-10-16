@@ -1,6 +1,6 @@
 "use client";
 
-import { buildTextPdf, PDF_MEDIA_TYPE } from "@workspace/shared";
+import { buildTextPdf, PDF_MEDIA_TYPE, type ImageSize } from "@workspace/shared";
 import { AspectRatio } from "@workspace/ui/components/aspect-ratio";
 import {
 	Attachment,
@@ -29,11 +29,13 @@ import {
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { ImageCarousel, type ImageCarouselImage } from "@workspace/ui/components/image-carousel";
+import { ImageResizer } from "@workspace/ui/components/image-resizer";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Message, MessageAvatar, MessageContent, MessageFooter, MessageGroup, MessageHeader } from "@workspace/ui/components/message";
 import { PdfViewer, type PdfViewerSource } from "@workspace/ui/components/pdf-viewer";
 import { QrCode } from "@workspace/ui/components/qr-code";
+import { Switch } from "@workspace/ui/components/switch";
 import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { FileText, ImageOff, RotateCcw, X } from "lucide-react";
 import * as React from "react";
@@ -236,6 +238,46 @@ function ImageCarouselDemo(): React.JSX.Element {
 			</div>
 			<DemoValue label="Photo">
 				{selectedIndex + 1} of {CAROUSEL_IMAGES.length}
+			</DemoValue>
+		</DemoSurface>
+	);
+}
+
+// ── Image resizer ───────────────────────────────────────────────────────────
+
+/** The demo photo's starting size, in CSS pixels (16 : 9). */
+const RESIZER_START_SIZE: ImageSize = { width: 384, height: 216 };
+/** The demo stays inside the gallery's narrowest content column. */
+const RESIZER_MAX_WIDTH_PX = 640;
+
+function ImageResizerDemo(): React.JSX.Element {
+	const [size, setSize] = React.useState<ImageSize>(RESIZER_START_SIZE);
+	const [savedSize, setSavedSize] = React.useState<ImageSize>(RESIZER_START_SIZE);
+	const [keepsShape, setKeepsShape] = React.useState<boolean>(true);
+
+	return (
+		<DemoSurface>
+			<div className="flex items-center gap-2">
+				<Switch id="gallery-image-resizer-aspect" checked={keepsShape} onCheckedChange={setKeepsShape} />
+				<Label htmlFor="gallery-image-resizer-aspect">Keep the aspect ratio</Label>
+			</div>
+			<div className="p-4">
+				<ImageResizer
+					src={WORKSPACE_PHOTO}
+					alt="A laptop on a desk"
+					value={size}
+					onValueChange={setSize}
+					onValueCommitted={setSavedSize}
+					maxWidth={RESIZER_MAX_WIDTH_PX}
+					aspectRatio={keepsShape ? WIDE_RATIO : undefined}
+					className="rounded-lg"
+				/>
+			</div>
+			<DemoValue label="Size">
+				{size.width} × {size.height} px
+			</DemoValue>
+			<DemoValue label="Saved (on release)">
+				{savedSize.width} × {savedSize.height} px
 			</DemoValue>
 		</DemoSurface>
 	);
@@ -547,6 +589,9 @@ export function MediaContentFamily(): React.JSX.Element {
 			</ComponentSection>
 			<ComponentSection entry={GALLERY_ENTRIES.imageCarousel} height="h-96">
 				<ImageCarouselDemo />
+			</ComponentSection>
+			<ComponentSection entry={GALLERY_ENTRIES.imageResizer} height="h-96">
+				<ImageResizerDemo />
 			</ComponentSection>
 			<ComponentSection entry={GALLERY_ENTRIES.attachment} height="h-72">
 				<AttachmentDemo />

@@ -14,10 +14,11 @@ vi.mock("../feedback", () => ({ initFeedback: (): void => void calls.push("feedb
 vi.mock("../search", () => ({ initSearch: (): void => void calls.push("search") }));
 vi.mock("../mermaid", () => ({ initMermaid: (): void => void calls.push("mermaid") }));
 vi.mock("../pdf-embeds", () => ({ initPdfEmbeds: (): void => void calls.push("pdf-embeds") }));
+vi.mock("../media-islands", () => ({ initMediaIslands: (): void => void calls.push("media-islands") }));
 
 describe("initSite", () => {
 	it("initialises every enhancement once, theme first", () => {
 		initSite();
-		expect(calls).toEqual(["theme", "header", "drawer", "sidebar", "toc", "code-blocks", "feedback", "search", "mermaid", "pdf-embeds"]);
+		expect(calls).toEqual(["theme", "header", "drawer", "sidebar", "toc", "code-blocks", "feedback", "search", "mermaid", "pdf-embeds", "media-islands"]);
 	});
 });

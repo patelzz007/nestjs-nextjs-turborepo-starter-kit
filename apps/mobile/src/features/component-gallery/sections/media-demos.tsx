@@ -1,5 +1,5 @@
 // The Components screen's media and content: Carousel, ImageCarousel,
-// CoverImage, CodeBlock, QrCode, Bubble, Message, Attachment and PdfViewer. Each example
+// ImageResizer, CoverImage, CodeBlock, QrCode, Bubble, Message, Attachment and PdfViewer. Each example
 // owns its demo state here (the kit components stay controlled); nothing is
 // sent to the API, and no picture is fetched: the gallery works offline and its
 // tests never reach the network. The pictures are the app's own bundled artwork
@@ -9,6 +9,7 @@
 import * as Clipboard from "expo-clipboard";
 import FileSpreadsheetIcon from "lucide-react-native/icons/file-spreadsheet";
 import ImageIcon from "lucide-react-native/icons/image";
+import type { ImageSize } from "@workspace/shared";
 import * as React from "react";
 import { Image, View } from "react-native";
 import { z } from "zod";
@@ -21,9 +22,11 @@ import { Carousel } from "@workspace/ui-native/components/carousel";
 import { CodeBlock } from "@workspace/ui-native/components/code-block";
 import { CoverImage } from "@workspace/ui-native/components/cover-image";
 import { ImageCarousel, type ImageCarouselImage } from "@workspace/ui-native/components/image-carousel";
+import { ImageResizer } from "@workspace/ui-native/components/image-resizer";
 import { Message } from "@workspace/ui-native/components/message";
 import { PdfViewer, type PdfViewerState } from "@workspace/ui-native/components/pdf-viewer";
 import { QrCode } from "@workspace/ui-native/components/qr-code";
+import { Switch } from "@workspace/ui-native/components/switch";
 import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
 import { ToggleGroup, type ToggleGroupOption } from "@workspace/ui-native/components/toggle-group";
 import appIcon from "../../../../assets/app-icon.png";
@@ -73,6 +76,14 @@ const REWARD_PHOTOS: readonly ImageCarouselImage[] = [
 	{ id: "store", uri: null, alt: "A photo that is still processing" },
 ];
 
+// ── ImageResizer ───────────────────────────────────────────────────────────
+
+/** The demo picture's starting size, in points (the square app icon). */
+const RESIZER_START_SIZE: ImageSize = { width: 160, height: 160 };
+/** Fits the narrowest phone's content column, with room for the handles either side. */
+const RESIZER_MAX_WIDTH_PT = 240;
+const SQUARE_RATIO = 1;
+
 // ── CodeBlock ──────────────────────────────────────────────────────────────
 
 const SIGN_IN_CODE = `const session = await auth.signIn({ email, password });
@@ -119,6 +130,9 @@ export function MediaDemos(): React.JSX.Element {
 			</DemoBlock>
 			<DemoBlock title="ImageCarousel" description="A swipeable gallery of pictures in one aspect ratio, each described for screen readers.">
 				<ImageCarouselDemo />
+			</DemoBlock>
+			<DemoBlock title="ImageResizer" description="A picture resized by dragging its corner and edge handles; screen readers step each handle.">
+				<ImageResizerDemo />
 			</DemoBlock>
 			<DemoBlock title="CoverImage" description="A picture in a fixed ratio, with a placeholder when there is none or it fails to load.">
 				<View className="flex-row gap-3">
@@ -195,7 +209,32 @@ function CarouselDemo(): React.JSX.Element {
 
 function ImageCarouselDemo(): React.JSX.Element {
 	const [index, setIndex] = React.useState(FIRST_SLIDE);
-	return <ImageCarousel images={REWARD_PHOTOS} index={index} onChange={setIndex} ratio="photo" testID="demo-image-carousel" />;
+	return <ImageCarousel images={REWARD_PHOTOS} index={index} onChange={setIndex} ratio="photo" showControls testID="demo-image-carousel" />;
+}
+
+function ImageResizerDemo(): React.JSX.Element {
+	const [size, setSize] = React.useState<ImageSize>(RESIZER_START_SIZE);
+	const [savedSize, setSavedSize] = React.useState<ImageSize>(RESIZER_START_SIZE);
+	const [keepsShape, setKeepsShape] = React.useState(true);
+	return (
+		<>
+			<Switch label="Keep the aspect ratio" checked={keepsShape} onChange={setKeepsShape} />
+			{/* Room for the handles, which reach half their touch area past the picture. */}
+			<View className="items-start p-6">
+				<ImageResizer
+					uri={APP_ICON_URI}
+					alt="The app icon, resizable"
+					value={size}
+					onChange={setSize}
+					onChangeEnd={setSavedSize}
+					maxWidth={RESIZER_MAX_WIDTH_PT}
+					maxHeight={RESIZER_MAX_WIDTH_PT}
+					aspectRatio={keepsShape ? SQUARE_RATIO : undefined}
+				/>
+			</View>
+			<MutedText>{`Size ${String(size.width)} × ${String(size.height)} · saved ${String(savedSize.width)} × ${String(savedSize.height)}`}</MutedText>
+		</>
+	);
 }
 
 function CodeBlockDemo(): React.JSX.Element {
