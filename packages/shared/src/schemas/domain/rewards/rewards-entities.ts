@@ -217,6 +217,8 @@ export const PosTerminalIdSchema = z
 	.max(POS_TERMINAL_ID_MAX_LENGTH)
 	.regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u, "Terminal id may contain letters, digits, '.', '_', ':' and '-'");
 
+export type PosTerminalId = z.output<typeof PosTerminalIdSchema>;
+
 /** Currencies a POS bill may be settled in (ISO 4217). Amounts are always integer minor units (sen). */
 export const SaleCurrencySchema = z.enum(["MYR"]);
 

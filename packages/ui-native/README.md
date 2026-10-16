@@ -92,6 +92,13 @@ which the kit's own React Native lint rules forbid.
 | `UserAvatar`, `EntityAvatar` | `Avatar` with `shape="circle"` / `shape="rounded"` |
 | `Calendar`, `DatePicker`, `MultiDatePicker` | `CalendarNavigator` + `CalendarMonthGrid`, `DateField`, `MultiDateField`, `DateRangePicker` |
 
+**Mobile only, with no web counterpart:** `QrScanner` — a full-screen QR code scanner. In an Android
+build with Google Play services it opens Google's own code scanner (ML Kit); on iOS, in Expo Go,
+and on Android without Play services, it shows the kit's camera scanner (expo-camera's `CameraView` behind a
+bracketed viewfinder, a torch toggle and a close button). It asks for the camera the moment it
+opens. Scanning is deliberately mobile only; QR codes are *generated* everywhere (`QrCode`, both
+kits). Tests mock `expo-camera` with `test/expo-camera-mock.tsx`.
+
 **Web only, with no mobile counterpart** (desktop or app-shell patterns):
 
 - App shell: `app-*`, `panel-*`, `sidebar*`, `app-command-palette`.

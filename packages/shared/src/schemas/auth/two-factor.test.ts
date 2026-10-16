@@ -6,7 +6,7 @@ const BACKUP_CODE = "ABCDEFGHJKMNPQRS";
 
 const setup: TwoFactorSetupResponse = {
 	secret: "JBSWY3DPEHPK3PXP",
-	qrCodeDataUrl: "data:image/png;base64,AAAA",
+	qrCodeDataUrl: "data:image/svg+xml;base64,AAAA",
 	otpAuthUrl: "otpauth://totp/Issuer:member%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Issuer",
 	backupCodes: Array.from({ length: BACKUP_CODE_COUNT }, (): string => BACKUP_CODE),
 };

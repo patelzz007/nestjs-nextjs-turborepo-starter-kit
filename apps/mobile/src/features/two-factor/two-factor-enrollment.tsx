@@ -7,7 +7,9 @@
 // 1. POST /auth/2fa/setup (the user starts it — one pending secret per tap), or
 //    POST /auth/2fa/rotate with the password and a current code;
 // 2. "Open in authenticator app" (the `otpauth://` link), the setup key with
-//    Copy, and the QR code for a second device;
+//    Copy, and the QR code for a second device — drawn on the phone from the
+//    same `otpauth://` URI (React Native's Image cannot show the API's SVG
+//    data URL, and a vector code stays crisp at any density);
 // 3. the code from the authenticator → POST /auth/2fa/enable;
 // 4. the backup codes: Copy all, Share, and "I saved my backup codes" before
 //    continuing.
@@ -27,13 +29,14 @@ import {
 } from "@workspace/shared";
 import * as Clipboard from "expo-clipboard";
 import * as React from "react";
-import { Image, Linking, Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 import { z } from "zod";
 
 import { Alert } from "@workspace/ui-native/components/alert";
 import { BackupCodes } from "../../components/backup-codes";
 import { Button } from "@workspace/ui-native/components/button";
 import { Card } from "@workspace/ui-native/components/card";
+import { QrCode } from "@workspace/ui-native/components/qr-code";
 import { MutedText } from "@workspace/ui-native/components/text";
 import { TextField } from "@workspace/ui-native/components/text-field";
 import { useApi } from "../../lib/api-context";
@@ -42,9 +45,6 @@ import { errorMessageOf, GENERIC_ERROR_MESSAGE } from "../../lib/error-messages"
 import { visibleFieldError } from "../../lib/form";
 import { groupSetupKey } from "./setup-key";
 import { useBackupCodeActions } from "./use-backup-code-actions";
-
-/** Side of the QR code image, in points. */
-const QR_CODE_SIZE = 200;
 
 export const NO_AUTHENTICATOR_MESSAGE =
 	"No authenticator app on this phone opened the link. Install one (for example Microsoft Authenticator or Google Authenticator), or add the account by hand with the setup key below.";
@@ -281,9 +281,7 @@ function VerifyStep({ setup, onEnabled }: VerifyStepProps): React.JSX.Element {
 				</View>
 				<View className="items-center gap-2">
 					<MutedText>Or scan this code with another device:</MutedText>
-					<View className="rounded-lg bg-qr-background p-3">
-						<Image source={{ uri: setup.qrCodeDataUrl }} accessibilityLabel="QR code for your authenticator app" width={QR_CODE_SIZE} height={QR_CODE_SIZE} />
-					</View>
+					<QrCode value={setup.otpAuthUrl} label="QR code for your authenticator app" size="lg" className="self-center" />
 				</View>
 			</Card>
 			<Card title="2. Enter the code it shows">

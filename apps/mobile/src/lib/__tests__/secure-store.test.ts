@@ -12,6 +12,11 @@ describe("the Secure Store registry", () => {
 			"prefs.appLock.timeoutMs",
 			"prefs.appLock.enrolledBiometrics",
 			"prefs.onboarding.completed",
+			"till.apiKey",
+			"till.terminalId",
+			"till.terminalName",
+			"till.locationName",
+			"till.organizationName",
 		]);
 		expect(new Set(keys).size).toBe(keys.length);
 		for (const key of keys) {

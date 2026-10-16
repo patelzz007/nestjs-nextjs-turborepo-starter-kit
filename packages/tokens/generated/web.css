@@ -139,6 +139,7 @@
 	--invert-foreground: var(--background);
 	--status-foreground: oklch(0.985 0 0);
 	--scrim: oklch(0 0 0);
+	--scrim-foreground: oklch(1 0 0);
 	--radius: 0.625rem;
 	--background: var(--palette-neutral-50);
 	--foreground: var(--palette-neutral-900);
@@ -356,6 +357,7 @@
 	--color-invert-foreground: var(--invert-foreground);
 	--color-status-foreground: var(--status-foreground);
 	--color-scrim: var(--scrim);
+	--color-scrim-foreground: var(--scrim-foreground);
 	--color-tone-green: var(--tone-green);
 	--color-tone-green-soft: var(--tone-green-soft);
 	--color-tone-blue: var(--tone-blue);

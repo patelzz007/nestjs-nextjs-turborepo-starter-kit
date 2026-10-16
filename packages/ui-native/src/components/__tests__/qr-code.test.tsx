@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react-native";
+import { encodeQr, qrMatrixToSvgPath } from "@workspace/shared";
 import * as React from "react";
 import type { View } from "react-native";
 
@@ -25,9 +26,36 @@ describe("QrCode", () => {
 		}
 		expect(code).toHaveProp("width", QR_CODE_SIZES.lg);
 		expect(code).toHaveProp("height", QR_CODE_SIZES.lg);
-		// Uniwind (a pass-through under Jest) turns these token utilities into the code's colours on a device.
-		expect(code).toHaveProp("fgColorClassName", "accent-qr-foreground");
-		expect(code).toHaveProp("bgColorClassName", "accent-qr-background");
+		// Uniwind (a pass-through under Jest) turns this token utility into the modules' colour on a device.
+		expect(code).toHaveProp("colorClassName", "accent-qr-foreground");
+	});
+
+	it("draws the shared encoder's modules as one currentColor path, with no inner quiet zone", async () => {
+		await render(<QrCode value={VALUE} label="QR" testID="qr" />);
+
+		const expected = qrMatrixToSvgPath(encodeQr(VALUE), { quietZoneModules: 0 });
+		const paths = screen.getByTestId("qr").queryAll((instance): boolean => instance.props.d !== undefined);
+		const uniquePaths = new Set(paths.map((instance): string => String(instance.props.d)));
+		expect([...uniquePaths]).toEqual([expected.path]);
+		const [path] = paths;
+		// react-native-svg hands `fill="currentColor"` to the native view as its currentColor brush.
+		expect(path).toHaveProp("fill", { type: 2 });
+		// react-native-svg splits `viewBox` into its parts on the native view.
+		const [drawing] = screen.getByTestId("qr").queryAll((instance): boolean => instance.props.vbWidth !== undefined);
+		expect(drawing).toHaveProp("minX", 0);
+		expect(drawing).toHaveProp("vbWidth", expected.viewBoxSize);
+		expect(drawing).toHaveProp("vbHeight", expected.viewBoxSize);
+	});
+
+	it("redraws when the value changes", async () => {
+		const pathOf = (): string => {
+			const [path] = screen.getByTestId("qr").queryAll((instance): boolean => instance.props.d !== undefined);
+			return String(path?.props.d);
+		};
+		await render(<QrCode value="first" label="QR" testID="qr" />);
+		const first = pathOf();
+		await render(<QrCode value="second" label="QR" testID="qr" />);
+		expect(pathOf()).not.toBe(first);
 	});
 
 	it.each([

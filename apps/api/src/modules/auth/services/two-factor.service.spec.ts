@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing";
-import { TwoFactorSetupResponseSchema } from "@workspace/shared";
+import { renderQrSvg, TwoFactorSetupResponseSchema } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -13,7 +13,7 @@ import { EmailService } from "./email.service";
 import { LoginVerificationService } from "./login-verification.service";
 import { MfaChallengeService } from "./mfa-challenge.service";
 import { SecretEncryptionService } from "./secret-encryption.service";
-import { TwoFactorService } from "./two-factor.service";
+import { TWO_FACTOR_QR_DATA_URL_PREFIX, TwoFactorService } from "./two-factor.service";
 
 const otplib = vi.hoisted(() => ({
 	generateURI: vi.fn((_options: { readonly issuer: string; readonly label: string; readonly secret: string }): string => "otpauth://totp/test"),
@@ -117,6 +117,17 @@ describe("TwoFactorService.generateSetup", () => {
 
 		expect(setup.otpAuthUrl).toBe("otpauth://totp/test");
 		expect(TwoFactorSetupResponseSchema.parse(setup).otpAuthUrl).toBe("otpauth://totp/test");
+	});
+
+	it("returns the QR code as an SVG data URL drawn by the shared encoder from that same key URI", async () => {
+		const service = await createService();
+
+		const setup = await service.generateSetup(USER_ID);
+
+		expect(setup.qrCodeDataUrl.startsWith(TWO_FACTOR_QR_DATA_URL_PREFIX)).toBe(true);
+		const svg = Buffer.from(setup.qrCodeDataUrl.slice(TWO_FACTOR_QR_DATA_URL_PREFIX.length), "base64").toString("utf8");
+		expect(svg).toBe(renderQrSvg("otpauth://totp/test"));
+		expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
 	});
 });
 

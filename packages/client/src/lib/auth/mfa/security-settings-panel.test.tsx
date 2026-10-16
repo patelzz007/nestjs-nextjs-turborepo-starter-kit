@@ -5,6 +5,8 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import {
 	BACKUP_CODE_CHARSET,
 	BACKUP_CODE_COUNT,
+	encodeQr,
+	qrMatrixToSvgPath,
 	TwoFactorSetupResponseSchema,
 	type BackupCodesRemainingResponse,
 	type EnableTwoFactorInput,
@@ -88,7 +90,7 @@ vi.mock("../index", () => {
 function setupResponseFixture(): TwoFactorSetupResponse {
 	return TwoFactorSetupResponseSchema.parse({
 		secret: "JBSWY3DPEHPK3PXP",
-		qrCodeDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+		qrCodeDataUrl: "data:image/svg+xml;base64,PHN2Zy8+",
 		otpAuthUrl: "otpauth://totp/Freebuff:member%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Freebuff",
 		backupCodes: Array.from({ length: BACKUP_CODE_COUNT }, (_, index): string => `ABCDEFGH2345678${BACKUP_CODE_CHARSET.charAt(index)}`),
 	});
@@ -152,7 +154,10 @@ describe("SecuritySettingsPanel two-factor setup", () => {
 	it("renders the QR code, the manual-entry secret and every backup code from the setup answer", async () => {
 		const setup = await startSetup();
 
-		expect(screen.getByRole("img", { name: "2FA QR code" }).getAttribute("src")).toBe(setup.qrCodeDataUrl);
+		// Drawn in the page from the key URI by the kit's QrCode (the shared encoder), not the data URL.
+		const qrCode = screen.getByRole("img", { name: "2FA QR code" });
+		expect(qrCode.dataset.slot).toBe("qr-code");
+		expect(qrCode.querySelector("path")?.getAttribute("d")).toBe(qrMatrixToSvgPath(encodeQr(setup.otpAuthUrl), { quietZoneModules: 0 }).path);
 		expect(screen.getByText(setup.secret)).toBeDefined();
 		for (const code of setup.backupCodes) {
 			expect(screen.getByText(code)).toBeDefined();

@@ -121,6 +121,24 @@ in Expo Go (betas need a private TestFlight build of Expo Go and an Apple Develo
    then test on a real iPhone and a real Android phone.
 5. Update the version references in `docs/technical/mobile/mobile-app.md` and `rules/04-mobile-expo.md`.
 
+### Trying the till (QR scanner)
+
+The till (Settings → **Till**, or the drawer's **Rewards** group) turns the phone into a POS
+terminal that scans customers' reward QR codes. To try it end to end with the seed data:
+
+1. In the merchant console (`pnpm dev:merchant`), sign in as `brew.owner@kl-rewards.demo` /
+   `BrewOwner@123`, open **Terminals** and add a terminal. Its pairing code is shown with a QR code.
+2. On the phone, open **Till** and tap **Scan pairing QR**, or type the 8-character code.
+3. On the web (`pnpm dev:web`), claim a reward and open it from **My Wallet** to show its QR code.
+4. On the phone, tap **Scan customer QR**, point the camera at it, enter the bill and tap **Redeem**.
+
+In Expo Go (on both platforms) and on iPhone this opens the app's own camera scanner, which asks
+for the camera the first time. A real Android build with Google Play services opens Google's code
+scanner instead. In Expo Go that scanner would drop you on Expo Go's home when it closes, because
+Expo Go runs each project in its own Android task. Release APK / AAB builds use Google's scanner, and
+`config-plugins/google-code-scanner-module.ts` makes Play install it with the app. Details:
+[`docs/technical/mobile/mobile-app.md` §10.17](../../docs/technical/mobile/mobile-app.md#1017-till-scan-and-redeem-rewards).
+
 ## Key conventions
 
 - Mobile rules and the decisions behind them: [`rules/04-mobile-expo.md`](../../rules/04-mobile-expo.md)

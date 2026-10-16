@@ -1,20 +1,17 @@
 "use client";
 
+import { encodeQr, qrMatrixToSvgPath, type QrSvgPath } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
-import QRCodeSVG from "react-qr-code";
 
 /** Default edge length of the code (px) — large enough for a POS scanner at arm's length. */
 const DEFAULT_QR_SIZE_PX = 200;
 
 /**
- * The modules are drawn in `currentColor` over a transparent background, so the
- * frame's `qr-foreground` / `qr-background` tokens (pure black on white in every
- * theme, packages/tokens) decide the colours — SVG presentation attributes cannot
- * read CSS variables directly.
+ * No quiet zone inside the SVG: the frame's own padding (`p-4`) and `qr-background` fill
+ * are the light margin around the code, so the modules use the whole drawing area.
  */
-const QR_MODULE_COLOR = "currentColor";
-const QR_BACKGROUND_COLOR = "transparent";
+const FRAMED_QUIET_ZONE_MODULES = 0;
 
 export interface QrCodeProps extends React.HTMLAttributes<HTMLDivElement> {
 	/** Encoded string rendered as a scannable QR (high-contrast black on white for POS scanners). */
@@ -25,8 +22,14 @@ export interface QrCodeProps extends React.HTMLAttributes<HTMLDivElement> {
 	readonly label: string;
 }
 
-/** Renders a scannable QR code — always black-on-white inside the frame for reliable merchant scanning. */
+/**
+ * Renders a scannable QR code — always black-on-white inside the frame for reliable merchant
+ * scanning. The modules come from the shared in-house encoder (`encodeQr`, ISO/IEC 18004) as
+ * one SVG path drawn in `currentColor`, so the frame's `qr-foreground` / `qr-background`
+ * tokens (pure black on white in every theme, packages/tokens) decide the colours.
+ */
 export const QrCode = React.forwardRef<HTMLDivElement, QrCodeProps>(function QrCode({ value, size = DEFAULT_QR_SIZE_PX, label, className, ...props }, ref): React.JSX.Element {
+	const { path, viewBoxSize } = React.useMemo((): QrSvgPath => qrMatrixToSvgPath(encodeQr(value), { quietZoneModules: FRAMED_QUIET_ZONE_MODULES }), [value]);
 	return (
 		<div
 			ref={ref}
@@ -35,7 +38,16 @@ export const QrCode = React.forwardRef<HTMLDivElement, QrCodeProps>(function QrC
 			role="img"
 			aria-label={label}
 			{...props}>
-			<QRCodeSVG value={value} size={size} bgColor={QR_BACKGROUND_COLOR} fgColor={QR_MODULE_COLOR} />
+			<svg
+				data-slot="qr-code-symbol"
+				width={size}
+				height={size}
+				viewBox={`0 0 ${String(viewBoxSize)} ${String(viewBoxSize)}`}
+				shapeRendering="crispEdges"
+				aria-hidden="true"
+				focusable="false">
+				<path fill="currentColor" d={path} />
+			</svg>
 		</div>
 	);
 });

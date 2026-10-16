@@ -27,6 +27,7 @@
   },
   "include": [
     "app.config.ts",
+    "config-plugins/**/*.ts",
     "index.ts",
     "jest.setup.ts",
     "src/**/*.ts",

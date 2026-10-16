@@ -3,7 +3,7 @@ title: "Technical documentation — start here"
 description: "Index of the engineering documentation: setup, architecture, dos and don'ts, the generated API reference, configuration, database, security, messaging, storage, email, frontend, tooling, operations — plus the known gaps."
 order: 1
 author: "Platform Team"
-lastUpdated: 1791158400000
+lastUpdated: 1792108800000
 coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop"
 tags: ["overview", "technical", "index"]
 ---
@@ -35,7 +35,7 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 | Authorization | [Overview](./authorization/overview.md) · [Backend kernel](./authorization/backend.md) · [RBAC internals](./authorization/rbac.md) · [Tenancy and RLS](./authorization/tenancy-and-rls.md) · [Frontend](./authorization/frontend.md) · [Recipes](./authorization/recipes.md) · [Testing](./authorization/testing.md) · [Troubleshooting](./authorization/troubleshooting.md) · [Dos and don'ts](./authorization/dos-and-donts.md) · [Change log](./authorization/changelog.md) |
 | Security | [Authentication, MFA, impersonation](./security/authentication.md) · [Token refresh](./security/token-refresh.md) · [Database security](./security/database-security.md) · [Encryption and KMS](./security/encryption-and-kms.md) · [Threat model](./security/threat-model.md) · [Data classification](./security/data-classification.md) |
 | Files and email | [Storage overview](./storage/overview.md) · [**AWS S3 setup**](./storage/aws-s3.md) · [**Firebase Storage setup**](./storage/firebase.md) · [**Resend setup**](./email/resend-setup.md) · [Email templates](./email/templates.md) |
-| Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Analytics dashboards](./frontend/analytics-charts.md) · [Toasts](./frontend/toast.md) · [Date pickers](./frontend/date-pickers.md) · [Streams (RxJS)](./frontend/streams.md) |
+| Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Analytics dashboards](./frontend/analytics-charts.md) · [Toasts](./frontend/toast.md) · [Date pickers](./frontend/date-pickers.md) · [QR codes](./frontend/qr-codes.md) · [Streams (RxJS)](./frontend/streams.md) |
 | Tooling | [TypeScript](./tooling/typescript.md) · [ESLint](./tooling/eslint.md) · [Dependencies](./tooling/dependencies.md) |
 | Operations | [CI](./operations/ci.md) · [Local infrastructure](./operations/local-infrastructure.md) · [Observability](./operations/observability.md) · [Multi-tenancy runbook](./operations/multi-tenancy-runbook.md) · [Bootstrap the first SuperAdmin](./operations/superadmin-bootstrap.md) |
 | Decisions | [Architecture decision records](../adr/README.md) |

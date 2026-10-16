@@ -9,7 +9,7 @@
 // through the schema; a corrupt or unexpected value is treated as absent and
 // removed (or overwritten with the default), never cast.
 
-import { AccessTokenValueSchema, RefreshTokenValueSchema } from "@workspace/shared";
+import { AccessTokenValueSchema, PosTerminalIdSchema, RefreshTokenValueSchema } from "@workspace/shared";
 import * as SecureStore from "expo-secure-store";
 import { z } from "zod";
 
@@ -37,6 +37,18 @@ const BIOMETRIC_FINGERPRINT_MAX_LENGTH = 64;
 /** Fingerprint of the device's enrolled authentication when the app lock was turned on (see features/app-lock). */
 export const BiometricFingerprintSchema = z.string().min(1).max(BIOMETRIC_FINGERPRINT_MAX_LENGTH);
 
+/** Longest POS terminal API key kept (the API mints far shorter ones). */
+const POS_API_KEY_MAX_LENGTH = 512;
+
+/** Longest display name kept for the paired till, its store and its business. */
+const TILL_DISPLAY_NAME_MAX_LENGTH = 200;
+
+/** The paired till's API key (features/till): a machine credential, so it lives here beside the session tokens. */
+export const PosApiKeyValueSchema = z.string().min(1).max(POS_API_KEY_MAX_LENGTH);
+
+/** A display name of the paired till, its store or its business. */
+export const TillDisplayNameSchema = z.string().min(1).max(TILL_DISPLAY_NAME_MAX_LENGTH);
+
 /** One declared Secure Store entry: its key and the schema its value must match. */
 export interface SecureStoreEntry<TValue> {
 	readonly key: string;
@@ -52,6 +64,11 @@ export const SECURE_STORE_ENTRIES = {
 	appLockTimeoutMs: { key: "prefs.appLock.timeoutMs", schema: AppLockTimeoutMsSchema },
 	appLockBiometricFingerprint: { key: "prefs.appLock.enrolledBiometrics", schema: BiometricFingerprintSchema },
 	onboardingCompleted: { key: "prefs.onboarding.completed", schema: z.boolean() },
+	tillApiKey: { key: "till.apiKey", schema: PosApiKeyValueSchema },
+	tillTerminalId: { key: "till.terminalId", schema: PosTerminalIdSchema },
+	tillTerminalName: { key: "till.terminalName", schema: TillDisplayNameSchema },
+	tillLocationName: { key: "till.locationName", schema: TillDisplayNameSchema },
+	tillOrganizationName: { key: "till.organizationName", schema: TillDisplayNameSchema },
 } satisfies Record<string, SecureStoreEntry<string | number | boolean>>;
 
 /** JSON as stored: any value a registry schema can describe. */

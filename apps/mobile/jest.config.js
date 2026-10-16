@@ -18,7 +18,7 @@ module.exports = {
 	// "Where tests live"); the route screens' tests in src/__tests__/app/ (never
 	// inside src/app/: Expo Router bundles every file there). test/ holds the
 	// shared test helpers, with their own tests in test/__tests__/.
-	testMatch: ["<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}", "<rootDir>/test/__tests__/**/*.test.ts"],
+	testMatch: ["<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}", "<rootDir>/test/__tests__/**/*.test.ts", "<rootDir>/config-plugins/__tests__/**/*.test.ts"],
 	clearMocks: true,
 	restoreMocks: true,
 };

@@ -38,8 +38,17 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/;
 
 /** What iOS shows when the app lock first asks for Face ID (real builds only; Expo Go cannot use Face ID). */
 const FACE_ID_PERMISSION = "Allow $(PRODUCT_NAME) to use Face ID to unlock the app.";
-/** Photos are only picked to attach to a GitHub comment; the camera and microphone are never used, so they are blocked. */
+/** Photos are only picked to attach to a GitHub comment; the microphone is never used, so it is blocked. */
 const PHOTOS_PERMISSION = "Allow $(PRODUCT_NAME) to attach your photos to the comments you write.";
+/**
+ * The camera reads QR codes only — the till's scanner (features/till). It is
+ * NOT blocked for expo-image-picker either: that plugin's `cameraPermission:
+ * false` adds android.permission.CAMERA to the blocked permissions, which would
+ * stop the scanner in a real build. Android's Google code scanner needs no
+ * permission at all (Play services owns the camera); iOS and the in-app
+ * scanner ask for it the moment the scanner opens.
+ */
+const CAMERA_PERMISSION = "Allow $(PRODUCT_NAME) to use the camera to scan QR codes.";
 
 const AppIdentityEnvSchema = z.object({
 	MOBILE_APP_NAME: z.string().trim().min(1).max(APP_NAME_MAX_LENGTH).default("Starter"),
@@ -115,7 +124,11 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			"expo-router",
 			"expo-secure-store",
 			["expo-local-authentication", { faceIDPermission: FACE_ID_PERMISSION }],
-			["expo-image-picker", { photosPermission: PHOTOS_PERMISSION, cameraPermission: false, microphonePermission: false }],
+			["expo-image-picker", { photosPermission: PHOTOS_PERMISSION, cameraPermission: CAMERA_PERMISSION, microphonePermission: false }],
+			// QR scanning only: no microphone, no audio recording.
+			["expo-camera", { cameraPermission: CAMERA_PERMISSION, microphonePermission: false, recordAudioAndroid: false, barcodeScannerEnabled: true }],
+			// Release builds scan with Google's code scanner: Play installs its module with the app.
+			"./config-plugins/google-code-scanner-module.ts",
 			["expo-splash-screen", { ...splash, dark: splash }],
 		],
 	};

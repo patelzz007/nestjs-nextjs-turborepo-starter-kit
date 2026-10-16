@@ -132,6 +132,16 @@ export {
 	type RouterTreeValue,
 	type ScopedQueryDef,
 } from "./router";
+export {
+	createPosCaller,
+	createPosRequestContext,
+	POS_API_KEY_HEADER,
+	POS_TERMINAL_ID_HEADER,
+	posCredentialHeaders,
+	posRouter,
+	type PosCaller,
+	type PosTerminalCredentials,
+} from "./pos";
 export { TokenProviderSchema, type TokenProvider } from "./token-provider";
 export { createTransientFailureBreaker, type TransientFailureBreaker, type TransientFailureBreakerOptions } from "./transient-failure-breaker";
 export type { AnonymousTokenRequestTransport, CookieRequestTransport, OnSessionExpired, RequestTransport, TokenRequestTransport } from "./transport";

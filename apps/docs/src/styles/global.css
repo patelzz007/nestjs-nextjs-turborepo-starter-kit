@@ -138,6 +138,10 @@
 	--type-code-block-size: 0.875rem;
 	/* Headings use the display face; falls back to the UI face if the `<Font>` tag is ever missing. */
 	--type-family-heading: var(--font-bricolage-grotesque, var(--font-geist-sans, system-ui, sans-serif));
+	/* QR codes (```qr fences): pure black on white in BOTH themes, like the apps' qr-foreground / qr-background
+	   tokens (packages/tokens semantic.ts) — a scanner needs maximum contrast. No dark override on purpose. */
+	--qr-background: var(--palette-neutral-0);
+	--qr-foreground: oklch(0 0 0);
 	color-scheme: light;
 }
 
@@ -1182,6 +1186,38 @@
 
 	.prose .code-block-island {
 		margin: 0 0 16px;
+	}
+
+	/* QR codes: ```qr fences, drawn at build time by the shared encoder (src/lib/markdown/qr-code.ts). */
+
+	.qr-code {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.qr-code svg {
+		width: 100%;
+		max-width: 200px;
+		height: auto;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+	}
+
+	.qr-code .qr-code-background {
+		fill: var(--qr-background);
+	}
+
+	.qr-code .qr-code-modules {
+		fill: var(--qr-foreground);
+	}
+
+	.qr-code figcaption {
+		color: var(--muted);
+		font-size: var(--type-size-xs);
+		overflow-wrap: anywhere;
+		text-align: center;
 	}
 
 	/* Mermaid */

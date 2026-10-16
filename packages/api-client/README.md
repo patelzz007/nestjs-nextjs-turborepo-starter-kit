@@ -13,7 +13,7 @@ Next.js server and in React Native, so it uses nothing but `fetch`, `URL`, `Form
 
 | Import | Contents | May depend on |
 | --- | --- | --- |
-| `@workspace/api-client` | `createApiClientContext`, `apiRouter` + `defineQuery` / `defineMutation`, `createCaller`, `fetchQuery` / `fetchMutation`, `fetchBodyTokenLifecycleMutation` (mobile sign out / sign out everywhere), `ApiError` / `UpgradeRequiredError` / `ApiResponseContractError`, the refresh cooldown and the transport types | `@workspace/shared`, `zod` |
+| `@workspace/api-client` | `createApiClientContext`, `apiRouter` + `defineQuery` / `defineMutation`, `createCaller`, `fetchQuery` / `fetchMutation`, `fetchBodyTokenLifecycleMutation` (mobile sign out / sign out everywhere), `createPosCaller` / `posRouter` (a POS till's calls, authorized by its terminal API key — never a session), `ApiError` / `UpgradeRequiredError` / `ApiResponseContractError`, the refresh cooldown and the transport types | `@workspace/shared`, `zod` |
 | `@workspace/api-client/react` | `buildClientRouter`, `createQueryProcedure`, `createMutationProcedure`, `createProcedureForDef` — TanStack Query hooks over the router | the core, `react`, `@tanstack/react-query` (optional peers) |
 | `@workspace/api-client/testing` | fetch stubs (`jsonResponse`, `headersOf`, `firstFetchCall`, …) and `MemoryTokenProvider` — **test suites only** | the core, `vitest` types |
 
@@ -31,6 +31,7 @@ src/
   request.ts               procedure callers, fetch + validation, the 401 pipeline (withSessionRefresh)
   refresh.ts               transient-failure cooldown, single flight, body-token refresh
   router.ts                apiRouter, defineQuery / defineMutation, query keys, resolveRequest, router walker
+  pos.ts                   posRouter + createPosCaller: pair, validate and checkout with X-API-Key / X-Terminal-Id
   errors.ts                ApiError, UpgradeRequiredError (426), SessionRefreshUnavailableError, readErrorPayload
   http.ts                  URL and header building (X-Client-Type, X-App-Version, Authorization — the
                            client type, app version and header names are the shared ones)
@@ -71,6 +72,16 @@ const context = createApiClientContext({
 	transport: { kind: "cookie", refreshSession: refreshOnce },
 	onSessionExpired: handleUnauthorized,
 });
+```
+
+```ts
+// A POS till (the mobile app's till mode): its calls carry the terminal's API key, NEVER the
+// person's session — the API reads `Authorization: Bearer` as the key first, so the session's
+// token there would be refused. `null` credentials before pairing.
+const pairing = createPosCaller(context, null);
+const paired = await pairing.pairTerminal.mutate({ pairingCode: "ABCD2345" });
+const till = createPosCaller(context, { apiKey: paired.data.apiKey, terminalId: paired.data.terminalId });
+const preview = await till.validate.mutate({ token: scannedQrPayload });
 ```
 
 A wrong config (mobile on the cookie transport, a browser type with an app version, a missing app

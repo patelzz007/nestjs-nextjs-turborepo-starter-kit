@@ -79,7 +79,8 @@ describe("Forced 2FA enrollment (§10.5)", () => {
 		await fireEvent.press(await screen.findByRole("button", { name: "Open in authenticator app" }));
 		expect(openUrl).toHaveBeenCalledWith(expect.stringMatching(/^otpauth:\/\/totp\//));
 		expect(screen.getByText("JBSW Y3DP EHPK 3PXP")).toBeOnTheScreen();
-		expect(screen.getByLabelText("QR code for your authenticator app")).toBeOnTheScreen();
+		// The QR is drawn on the phone from the same key URI (an Image cannot show the API's SVG data URL).
+		expect(screen.getByRole("image", { name: "QR code for your authenticator app" })).toBeOnTheScreen();
 
 		await fireEvent.press(screen.getByRole("button", { name: "Copy setup key" }));
 		await waitFor(() => {

@@ -3,7 +3,6 @@ import * as crypto from "crypto";
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { TwoFactorLoginChallengePurpose, type Prisma } from "@prisma/client";
 import { generateSecret, generateURI, verifySync } from "otplib";
-import * as QRCode from "qrcode";
 import type {
 	BackupCodesRemainingResponse,
 	EnableTwoFactorInput,
@@ -20,7 +19,7 @@ import type {
 	VerifyBackupCodeResponse,
 } from "@workspace/shared";
 
-import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH } from "@workspace/shared";
+import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH, renderQrSvg } from "@workspace/shared";
 import { z } from "zod";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -40,6 +39,9 @@ const SETUP_TTL_MS = 15 * 60 * 1000;
 const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
 
 const TOTP_PERIOD_SECONDS = 30;
+
+/** The setup QR is the shared encoder's standalone SVG, base64-encoded into a data URL any `<img>` can show. */
+export const TWO_FACTOR_QR_DATA_URL_PREFIX = "data:image/svg+xml;base64,";
 
 const BackupCodesHashesSchema = z.array(z.string().min(1));
 
@@ -123,7 +125,7 @@ export class TwoFactorService {
 			label: user.email,
 			secret,
 		});
-		const qrCodeDataUrl = await QRCode.toDataURL(otpAuthUrl);
+		const qrCodeDataUrl = `${TWO_FACTOR_QR_DATA_URL_PREFIX}${Buffer.from(renderQrSvg(otpAuthUrl), "utf8").toString("base64")}`;
 
 		// The key URI is returned as well as encoded in the QR code: a phone
 		// cannot scan its own screen, so the mobile app opens this link in the

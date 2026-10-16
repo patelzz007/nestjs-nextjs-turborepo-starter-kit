@@ -35,6 +35,8 @@ export const ROUTES = {
 	twoFactorSetup: "/settings/two-factor",
 	/** The UI kit's live gallery (@workspace/ui-native), opened from the drawer's Developer section. */
 	components: "/settings/components",
+	/** This phone as a POS till: pair it, then scan and redeem customers' reward QR codes (features/till). */
+	till: "/settings/till",
 } satisfies Record<string, `/${string}`>;
 
 /** Any one of the app's routes. */

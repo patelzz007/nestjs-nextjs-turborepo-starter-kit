@@ -16,6 +16,7 @@ import { useSignOut } from "../../../features/auth/use-sign-out";
 import { useSignOutConfirmation } from "../../../features/auth/use-sign-out-confirmation";
 import { useAppLockEnabled, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { THEME_LABELS } from "../../../features/preferences/labels";
+import { TILL_TITLE } from "../../../features/till/labels";
 import { ROUTES } from "../../../runtime/routes";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
 
@@ -39,6 +40,9 @@ export default function SettingsScreen(): React.JSX.Element {
 	}, [router]);
 	const openAppLock = React.useCallback((): void => {
 		router.push(ROUTES.appLock);
+	}, [router]);
+	const openTill = React.useCallback((): void => {
+		router.push(ROUTES.till);
 	}, [router]);
 
 	/** Development builds only: onboarding's "seen" flag lives in the Keychain, which outlives reinstalls (ADR 041). */
@@ -64,6 +68,9 @@ export default function SettingsScreen(): React.JSX.Element {
 					<ListRow label="Signed-in devices" onPress={openDevices} />
 					<ListRow label="App lock" value={appLockEnabled ? "On" : "Off"} onPress={openAppLock} />
 				</View>
+			</Card>
+			<Card>
+				<ListRow label={TILL_TITLE} description="Scan and redeem customers' reward QR codes" onPress={openTill} />
 			</Card>
 			<Card title="About">
 				<DetailList items={about} />

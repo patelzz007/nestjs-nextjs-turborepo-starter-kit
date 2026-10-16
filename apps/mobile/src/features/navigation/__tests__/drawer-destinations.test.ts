@@ -17,16 +17,19 @@ describe("DRAWER_TABS", () => {
 });
 
 describe("DRAWER_GROUPS", () => {
-	it("groups the screens under Settings into Account, Preferences and Developer, pushed onto the stack", () => {
-		const [account, preferences, developer] = DRAWER_GROUPS;
+	it("groups the screens under Settings into Account, Preferences, Rewards and Developer, pushed onto the stack", () => {
+		const [account, preferences, rewards, developer] = DRAWER_GROUPS;
 
-		expect(DRAWER_GROUPS).toHaveLength(3);
+		expect(DRAWER_GROUPS).toHaveLength(4);
 		expect(account?.title).toBe("Account");
 		expect(account?.tone).toBe("blue");
 		expect(routesOf(account?.destinations ?? [])).toStrictEqual(["/settings/security", "/settings/devices"]);
 		expect(preferences?.title).toBe("Preferences");
 		expect(preferences?.tone).toBe("purple");
 		expect(routesOf(preferences?.destinations ?? [])).toStrictEqual(["/settings/appearance", "/settings/app-lock"]);
+		expect(rewards?.title).toBe("Rewards");
+		expect(rewards?.tone).toBe("green");
+		expect(routesOf(rewards?.destinations ?? [])).toStrictEqual(["/settings/till"]);
 		expect(developer?.title).toBe("Developer");
 		expect(developer?.tone).toBe("amber");
 		expect(routesOf(developer?.destinations ?? [])).toStrictEqual(["/settings/components"]);

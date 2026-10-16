@@ -63,7 +63,7 @@ describe("redactSecrets", () => {
 	});
 
 	it("redacts the 2FA enrollment key URI and QR code (both carry the TOTP secret)", () => {
-		expect(redactSecrets({ secret: "S", otpAuthUrl: "otpauth://totp/x?secret=S", qrCodeDataUrl: "data:image/png;base64,AAA" })).toEqual({
+		expect(redactSecrets({ secret: "S", otpAuthUrl: "otpauth://totp/x?secret=S", qrCodeDataUrl: "data:image/svg+xml;base64,AAA" })).toEqual({
 			secret: REDACTED,
 			otpAuthUrl: REDACTED,
 			qrCodeDataUrl: REDACTED,

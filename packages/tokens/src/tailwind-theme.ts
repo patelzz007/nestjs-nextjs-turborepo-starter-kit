@@ -96,6 +96,7 @@ export const TAILWIND_THEME: TailwindTheme = {
 		"invert-foreground",
 		"status-foreground",
 		"scrim",
+		"scrim-foreground",
 		"tone-green",
 		"tone-green-soft",
 		"tone-blue",

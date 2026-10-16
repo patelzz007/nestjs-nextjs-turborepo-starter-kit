@@ -85,7 +85,7 @@ export function sessionJson(overrides: SessionJsonOverrides): DataValue {
 export function twoFactorSetupJson(): DataValue {
 	return {
 		secret: "JBSWY3DPEHPK3PXP",
-		qrCodeDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+		qrCodeDataUrl: "data:image/svg+xml;base64,PHN2Zy8+",
 		otpAuthUrl: "otpauth://totp/Starter:member%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Starter",
 		// Ten distinct codes from the backup-code alphabet (no 0/O, 1/I/L).
 		backupCodes: ["S", "T", "U", "V", "W", "X", "Y", "Z", "2", "3"].map((last: string): string => `ABCDEFGHJKMNPQR${last}`),

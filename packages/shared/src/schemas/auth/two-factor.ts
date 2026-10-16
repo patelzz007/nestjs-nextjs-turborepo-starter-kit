@@ -60,6 +60,10 @@ const OTP_AUTH_URL_MAX_LENGTH = 2048;
 /** Response from `POST /auth/2fa/setup` (and `POST /auth/2fa/rotate`). */
 export const TwoFactorSetupResponseSchema = z.object({
 	secret: z.string().min(1),
+	/**
+	 * The QR code of `otpAuthUrl` as a `data:image/svg+xml;base64,…` URL: the shared
+	 * in-house encoder's standalone SVG (`renderQrSvg`), ready for an `<img>`.
+	 */
 	qrCodeDataUrl: z.string().min(1),
 	/**
 	 * The `otpauth://` key URI the QR code encodes. A phone cannot scan its own

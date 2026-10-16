@@ -84,6 +84,7 @@
 		"technical/frontend/analytics-charts",
 		"technical/frontend/toast",
 		"technical/frontend/loading-skeletons",
+		"technical/frontend/qr-codes",
 		"technical/frontend/streams",
 		"technical/tooling/typescript",
 		"technical/tooling/eslint",

@@ -11,6 +11,7 @@ import GitPullRequestIcon from "lucide-react-native/icons/git-pull-request";
 import KeyRoundIcon from "lucide-react-native/icons/key-round";
 import LockKeyholeIcon from "lucide-react-native/icons/lock-keyhole";
 import PaletteIcon from "lucide-react-native/icons/palette";
+import ScanQrCodeIcon from "lucide-react-native/icons/scan-qr-code";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 import SmartphoneIcon from "lucide-react-native/icons/smartphone";
 
@@ -18,6 +19,7 @@ import type { DrawerSectionTone } from "../../components/drawer-menu";
 import type { LucideIcon } from "@workspace/ui-native/components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
+import { TILL_TITLE } from "../till/labels";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
 export interface DrawerDestination {
@@ -61,6 +63,11 @@ export const DRAWER_GROUPS: readonly DrawerDestinationGroup[] = [
 			{ label: "Appearance", icon: PaletteIcon, route: ROUTES.appearance, isTab: false },
 			{ label: "App lock", icon: LockKeyholeIcon, route: ROUTES.appLock, isTab: false },
 		],
+	},
+	{
+		title: "Rewards",
+		tone: "green",
+		destinations: [{ label: TILL_TITLE, icon: ScanQrCodeIcon, route: ROUTES.till, isTab: false }],
 	},
 	{
 		title: "Developer",

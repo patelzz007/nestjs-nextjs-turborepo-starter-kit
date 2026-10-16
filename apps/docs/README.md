@@ -70,6 +70,7 @@ with their order in `blog/meta.json`.
 | `> [!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!CAUTION]` | A coloured callout (emoji markers like `> ⚠️` work too) |
 | ```` ```ts title="app.ts" {2-4} ````           | A `CodeBlock` with a title, language, copy button, line numbers and lines 2–4 lit |
 | ```` ```mermaid ````                           | A diagram, rendered in the browser in the current theme   |
+| ```` ```qr title="Pairing QR" ````            | A scannable QR code of the fence's text, drawn at build time as inline SVG by the shared encoder (`src/lib/markdown/qr-code.ts`) |
 | `![alt](./images/email/welcome.png)`           | The image, served from `docs/images/` at `/images/…`      |
 | A table whose cells are images                 | A responsive screenshot gallery                           |
 | `RBAC`, `RLS`, `ReBAC`, … in prose             | An `<abbr>` tooltip with the definition                   |

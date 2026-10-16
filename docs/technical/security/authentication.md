@@ -3,7 +3,7 @@ title: "Authentication, MFA and privileged access"
 description: "Sessions and cookies, restricted vs full sessions, login verification, TOTP and backup codes, MFA recovery, token versions, impersonation and support access — how they work and what to keep in mind when changing them."
 order: 30
 author: "Platform Team"
-lastUpdated: 1791504000000
+lastUpdated: 1792108800000
 coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=630&fit=crop"
 tags: ["security", "auth", "mfa", "sessions", "impersonation", "mobile"]
 ---
@@ -134,7 +134,8 @@ more declare `@RequiresFullSession()` / `@EmailVerified()`.
 
 - TOTP secrets are encrypted with `MFA_ENCRYPTION_KEYS` (versioned AES-256 key ring; the highest
   version encrypts, older ones still decrypt, so keys rotate without re-enrollment).
-- Setup (and rotation) returns the secret, a QR data URL, the `otpauth://` key URI the QR encodes
+- Setup (and rotation) returns the secret, a QR data URL (`data:image/svg+xml;base64,…`, drawn by the
+  shared in-house encoder — [QR codes](../frontend/qr-codes.md)), the `otpauth://` key URI the QR encodes
   (`otpAuthUrl` — a phone opens it in the authenticator app because it cannot scan its own screen)
   and backup codes; enabling verifies one TOTP code. A code cannot be replayed within its 30-second
   step.

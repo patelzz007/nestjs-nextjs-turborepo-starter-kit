@@ -3,7 +3,7 @@ title: "Mobile app: design and delivery plan"
 description: "The agreed design for adding an Expo (React Native + Uniwind + TypeScript) app to the monorepo: the shared token and API-client packages it needs, the API changes for a mobile client type and device sessions, every screen, the app lock, testing, CI, and the five-piece delivery order."
 order: 1
 author: "Platform Team"
-lastUpdated: 1791504000000
+lastUpdated: 1792108800000
 coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
 tags: ["mobile", "expo", "react-native", "uniwind", "design", "sessions", "auth"]
 ---
@@ -1167,7 +1167,9 @@ Used both for forced enrollment during sign-in and for turning 2FA on from Secur
    - **Open in authenticator app**: opens `otpAuthUrl`; any installed authenticator registers the
      account. If no app handles the link, the button explains how to add the key manually.
    - **Setup key**: the secret, grouped for reading, with a **Copy** button.
-   - **QR code**, for scanning with a second device.
+   - **QR code**, for scanning with a second device. The phone draws it from `otpAuthUrl` with
+     `QrCode` (`@workspace/ui-native`, the shared encoder), because React Native's `Image` cannot
+     show the API's SVG `qrCodeDataUrl` ([QR codes](../frontend/qr-codes.md)).
 3. The user enters a code from the authenticator (`POST /auth/2fa/enable`).
 4. **Backup codes** screen: the codes with **Copy all** and **Share**, and a required "I saved my
    backup codes" confirmation before continuing.
@@ -1316,6 +1318,51 @@ One `AppStatusProvider` (`src/features/app-status/facade.tsx`) derives both, onc
 This is a status display, not offline support: nothing here queues writes or changes how queries
 behave offline (rules/04, offline behaviour). Wiring TanStack Query's `onlineManager` to the same
 connectivity is a separate decision for when offline semantics are designed.
+
+### 10.17 Till (scan and redeem rewards)
+
+`/settings/till` (Settings → Till, and the drawer's **Rewards** group) turns the phone into a POS
+till for a merchant's store. The code is in `src/features/till`; the scanner is the kit's
+`QrScanner` (`@workspace/ui-native`).
+
+- **Pairing.** In the merchant console, Terminals → add a terminal shows a one-time pairing code
+  and its QR code (`pos-pair:v1:<code>`, `buildPosPairingQrPayload` in `@workspace/shared`). The
+  till scans the QR, or the cashier types the 8 characters, and `POST /pos/terminals/pair`
+  returns the terminal's own API key. The key, the terminal id and the names shown on the screen
+  are kept in Secure Store (`till.*` entries, `src/lib/secure-store.ts`). The till belongs to the
+  merchant, not to the signed-in person: signing out leaves it paired. **Unpair this phone**
+  forgets it on the device (the merchant revokes the key in the console).
+- **Redeeming.** **Scan customer QR** reads the claim's `qrPayload` (the redemption token);
+  **Check code** takes the 8-character backup code instead. `POST /redemptions/validate` shows the
+  reward, when it expires, its minimum bill and whether it can be redeemed here (the reasons are
+  `RedemptionInvalidReasonSchema`'s, in the till's words). The cashier enters the bill, and
+  `POST /redemptions/checkout` redeems it. One Idempotency-Key per (code, bill), reused on a retry
+  and spent on success, so a lost answer never redeems twice (rules/09). The minimum-bill check on
+  the phone only spares a round trip: the API decides.
+- **Credentials.** Every till call goes through `createPosCaller` (`@workspace/api-client`): the
+  terminal's `X-API-Key` and `X-Terminal-Id`, no `Authorization` header, no cookies and no 401
+  refresh. The person's session must never reach these routes, because the API would read their
+  access token as the API key.
+- **Scanner.** In an Android build with Google Play services, Google's code scanner opens. It is
+  ML Kit's full-screen scanner and needs no camera permission, because Play services owns the
+  camera. Everywhere else the kit's camera scanner opens: iOS, Android without Play services, and
+  Expo Go on either platform. It shows the live camera behind a dimmed frame with a bracketed
+  viewfinder, a close button and a torch toggle. It asks for the camera the moment it opens, never
+  earlier, and after a refusal for good it explains and links to Settings. It reads one code per
+  opening. Google's scanner is skipped in Expo Go because Expo Go runs each project in its own
+  Android task, and expo-camera starts the scanner from the application context: closing it would
+  land on Expo Go's home instead of the app. VisionKit's iOS scanner is not used, because it has no
+  close button and cannot be styled.
+- **Permissions in `app.config.ts`.** `expo-camera` is configured with the camera only (no
+  microphone, no audio recording). `expo-image-picker` no longer passes `cameraPermission: false`,
+  because that blocks `android.permission.CAMERA` for the whole app.
+- **Which scanner each build gets.** `Constants.executionEnvironment` decides it:
+  `StoreClient` (Expo Go, or a development build) gets the in-app camera scanner, and a release
+  APK / AAB (`Standalone`, or `Bare`) gets Google's code scanner on a phone with Play services. A
+  local config plugin, `config-plugins/google-code-scanner-module.ts`, adds the manifest entry
+  `com.google.mlkit.vision.DEPENDENCIES = barcode_ui`. With it, Play installs the scanner module
+  with the app, so the first scan of a fresh install does not wait for a download. It runs only
+  when the native project is generated (`expo prebuild`, `expo run:android`, EAS Build).
 
 ## 11. The app lock
 
@@ -1528,7 +1575,8 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 | No Face ID                                | App lock uses the passcode on iPhone in Expo Go (section 11.4) |
 | No remote push notifications              | Push is out of scope                                           |
 | No universal / app links                  | Email links open the web; deep links are out of scope          |
-| No third-party native modules             | Only Expo-included modules are used                            |
+| No third-party native modules             | Only Expo-included modules are used (the till's scanner is expo-camera, which Expo Go ships) |
+| Google's code scanner returns to Expo Go's home | Expo Go uses the in-app camera scanner on Android too; real Android builds with Play services get Google's scanner (section 10.17) |
 | Icons and splash screens are not testable | Verify them later in a real build                              |
 
 ### 15.5 Leaving Expo Go later

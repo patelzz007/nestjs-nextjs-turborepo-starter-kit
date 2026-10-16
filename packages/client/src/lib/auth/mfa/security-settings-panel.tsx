@@ -10,12 +10,12 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { PasswordInput } from "@workspace/ui/components/password-input";
+import { QrCode } from "@workspace/ui/components/qr-code";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
-import { BACKUP_CODE_LENGTH, normalizeBackupCodeInput, TOTP_CODE_LENGTH } from "@workspace/shared";
-import Image from "next/image";
+import { BACKUP_CODE_LENGTH, normalizeBackupCodeInput, TOTP_CODE_LENGTH, type TwoFactorSetupResponse } from "@workspace/shared";
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 
 import { MfaRecoveryRequestPanel } from "./recovery-request-panel";
@@ -61,11 +61,12 @@ function TwoFactorSetupPanel(): JSX.Element {
 	const [message, setMessage] = useState<string | null>(null);
 	const [backupCodes, setBackupCodes] = useState<readonly string[]>([]);
 	const [secret, setSecret] = useState<string | null>(null);
-	const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+	/** The `otpauth://` key URI of the pending setup — drawn here as the QR code (the kit's `QrCode`, from the shared encoder). */
+	const [otpAuthUrl, setOtpAuthUrl] = useState<string | null>(null);
 
-	const applySetupResponse = useCallback((response: { readonly secret: string; readonly qrCodeDataUrl: string; readonly backupCodes: readonly string[] }): void => {
+	const applySetupResponse = useCallback((response: Pick<TwoFactorSetupResponse, "secret" | "otpAuthUrl" | "backupCodes">): void => {
 		setSecret(response.secret);
-		setQrCodeDataUrl(response.qrCodeDataUrl);
+		setOtpAuthUrl(response.otpAuthUrl);
 		setBackupCodes(response.backupCodes);
 		setSavedCodesConfirmed(false);
 		setToken("");
@@ -133,7 +134,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 				enableMutation.mutateAsync({ token }).then((response): void => {
 					setMessage(response.data.message);
 					setSecret(null);
-					setQrCodeDataUrl(null);
+					setOtpAuthUrl(null);
 					setBackupCodes([]);
 					setToken("");
 					setSavedCodesConfirmed(false);
@@ -205,7 +206,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 				</p>
 			) : null}
 
-			{qrCodeDataUrl === null ? (
+			{otpAuthUrl === null ? (
 				<Button type="button" onClick={handleStartSetup} loading={setupMutation.isPending}>
 					Set up authenticator app
 				</Button>
@@ -213,7 +214,7 @@ function TwoFactorSetupPanel(): JSX.Element {
 				<div className="space-y-4">
 					<p className="text-sm text-muted-foreground">Scan this QR code with Microsoft Authenticator or another TOTP app.</p>
 					<div className="flex justify-center">
-						<Image src={qrCodeDataUrl} alt="2FA QR code" width={200} height={200} className="rounded-lg border bg-white p-3" unoptimized />
+						<QrCode value={otpAuthUrl} label="2FA QR code" />
 					</div>
 					{secret !== null ? (
 						<p className="text-center text-xs text-muted-foreground">

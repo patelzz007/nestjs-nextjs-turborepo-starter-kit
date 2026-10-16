@@ -280,4 +280,6 @@ export const SHARED_COLORS: SharedColors = {
 	"status-foreground": oklch(0.985, 0, 0),
 	/* Modal backdrop tint — black in both themes, so a backdrop dims the page in dark mode too. */
 	scrim: oklch(0, 0, 0),
+	/* Text and controls drawn over the scrim or a live camera feed (the QR scanner) — white in both themes. */
+	"scrim-foreground": oklch(1, 0, 0),
 };

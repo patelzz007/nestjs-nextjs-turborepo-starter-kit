@@ -3,7 +3,7 @@ title: "Architecture decision records"
 description: "One line per decision with its status. ADRs are history: superseded ones stay, marked and linked forward."
 order: 1
 author: "Platform Team"
-lastUpdated: 1791504000000
+lastUpdated: 1792108800000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 tags: ["adr", "architecture", "decisions"]
 ---
@@ -69,6 +69,8 @@ Never delete an accepted ADR: mark it superseded and link the replacement.
 | [051](./051-database-change-audit-trail.md)         | Every row change on every captured table is recorded by a database trigger in the same transaction — full before / after, redacted — attributed from the session and joined to its HTTP request; both shown as one audit-log timeline     | Accepted — implemented (2026-10-14)                                                                                                        |
 | [052](./052-github-pull-requests.md)                | Admins link their own fine-grained GitHub token (encrypted, never returned) to read every pull request it can see, comment, review and close as themselves; verified webhooks fan changes out over SSE                                    | Accepted (2026-10-15)                                                                                                                      |
 | [053](./053-react-native-ui-kit.md)                 | Low-level React Native components move to `@workspace/ui-native`, named like the web kit and held to one mechanically checked contract; live Components galleries on admin and mobile; every front-end test lives in a `__tests__` folder | Accepted (2026-10-16)                                                                                                                      |
+| [054](./054-in-house-qr-encoder.md)                 | One in-house ISO/IEC 18004 QR encoder in `@workspace/shared` draws every QR code (web, native, the API's 2FA SVG data URL, the docs); `react-qr-code` and `qrcode` are removed                                                            | Accepted (2026-10-16)                                                                                                                      |
+| [055](./055-mobile-qr-scanning-and-till.md)         | QR codes are scanned only in the mobile app (expo-camera: Google's code scanner on Android, the kit's camera scanner elsewhere); the till pairs as a POS terminal and redeems with its API key, never a session                           | Accepted (2026-10-16)                                                                                                                      |
 | [RabbitMQ](./rabbitmq-placeholder.md)               | RabbitMQ as infrastructure placeholder only                                                                                                                                                                                               | Accepted                                                                                                                                   |
 
 ## Pending decisions

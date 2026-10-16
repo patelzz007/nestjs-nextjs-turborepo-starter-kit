@@ -2,10 +2,11 @@
 
 import { PairTerminalSnippet } from "@/components/terminals/pair-terminal-snippet";
 import { formatSecondsLeft, groupPairingCode, secondsUntil } from "@/lib/terminals/terminal-summary";
-import { nowEpochMs, POS_PAIRING_CODE_TTL_MS, type MerchantTerminalPairing } from "@workspace/shared";
+import { buildPosPairingQrPayload, nowEpochMs, POS_PAIRING_CODE_TTL_MS, type MerchantTerminalPairing } from "@workspace/shared";
 import { CodeBlockCopyButton } from "@workspace/ui/components/code-block";
 import { Button } from "@workspace/ui/components/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
+import { QrCode } from "@workspace/ui/components/qr-code";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { CheckCircle2, Hourglass, Loader2, RefreshCw } from "lucide-react";
@@ -16,6 +17,10 @@ const COUNTDOWN_TICK_MS = 1000;
 const MS_PER_SECOND = 1000;
 const FULL_PERCENT = 100;
 const PAIRING_CODE_TTL_SECONDS = POS_PAIRING_CODE_TTL_MS / MS_PER_SECOND;
+/** Edge of the pairing QR (px): comfortably scannable by a phone camera held over the screen. */
+export const PAIRING_QR_SIZE_PX = 160;
+/** What the QR offers, under it: the mobile till scans it, any other till types the code. */
+export const PAIRING_QR_CAPTION = "Scan with the mobile app's till mode, or type the code.";
 
 /** The copy button names what it copies; the rest of the code-block wording comes from the app's UI kit labels. */
 const PAIRING_CODE_COPY_LABELS: UiKitLabelsOverride<"codeBlock"> = { copy: "Copy pairing code", copied: "Pairing code copied" };
@@ -123,6 +128,13 @@ function PairingCodeContent({ pairing, isPaired, apiBaseUrl, onNewCode, isIssuin
 						<p className="mt-2 text-sm text-muted-foreground tabular-nums">
 							{phase === "expired" ? "This code can no longer be used." : `Expires in ${formatSecondsLeft(secondsLeft)}`}
 						</p>
+						{/* Only a live code is scannable: an expired one is struck through, and its QR goes with it. */}
+						{phase === "waiting" ? (
+							<figure className="mt-4 flex flex-col items-center gap-2">
+								<QrCode value={buildPosPairingQrPayload(pairing.pairingCode)} size={PAIRING_QR_SIZE_PX} label={`Pairing QR code for ${terminalName}`} />
+								<figcaption className="text-sm text-muted-foreground">{PAIRING_QR_CAPTION}</figcaption>
+							</figure>
+						) : null}
 					</div>
 					<PairTerminalSnippet apiBaseUrl={apiBaseUrl} pairingCode={pairing.pairingCode} />
 				</div>

@@ -211,6 +211,7 @@ export const SharedColorNameSchema = z.enum([
 	"invert-foreground",
 	"status-foreground",
 	"scrim",
+	"scrim-foreground",
 ]);
 export type SharedColorName = z.infer<typeof SharedColorNameSchema>;
 
