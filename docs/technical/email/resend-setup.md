@@ -3,7 +3,7 @@ title: "Set up email with Resend"
 description: "Step by step: Resend account and API key, domain verification, EMAIL_MODE, the delivery webhook (POST /notifications/email-webhook) with RESEND_WEBHOOK_SECRET, exposing it locally, verification and troubleshooting."
 order: 45
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1792108800000
 coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=1200&h=630&fit=crop"
 tags: ["email", "resend", "webhooks", "setup"]
 ---
@@ -11,16 +11,23 @@ tags: ["email", "resend", "webhooks", "setup"]
 # Set up email with Resend
 
 Transactional email (verification, password reset, invites, claim codes, security alerts) is sent
-through [Resend](https://resend.com). How the templates and the send pipeline work is in
+through [Resend](https://resend.com) on every deployed environment (dev, staging, production).
+Local development delivers into a local Mailpit inbox instead — see
+[Local email with Mailpit](./mailpit-local-inbox.md). How the templates and the send pipeline work is in
 [Email templates and pipeline](./templates.md).
 
 ## 1. Choose the mode
 
 | `EMAIL_MODE` | Behaviour | Use for |
 | --- | --- | --- |
-| `log-only` (`.env.example` default) | Renders and prints each email to the API log, no network | Local development without a Resend account |
-| `noop` | Skips delivery entirely | Fast local runs and tests |
-| `send` (schema default) | Delivers through Resend; requires `RESEND_API_KEY` | Staging, production, real local tests |
+| `send` (default) | Delivers through `EMAIL_PROVIDER` | Everything that needs a real email |
+| `log-only` | Renders and prints each email to the API log, no network | Local runs without any inbox |
+| `noop` | Skips delivery entirely | Tests |
+
+| `EMAIL_PROVIDER` | Delivers to | Use for |
+| --- | --- | --- |
+| `resend` (schema default) | Real inboxes through Resend; requires `RESEND_API_KEY` | Every deployed environment; locally, to check an email in a real inbox |
+| `mailpit` (`.env.example` default) | The local Mailpit inbox; refused unless `APP_URL` is localhost | Local development and AI-driven testing |
 
 A **deployed production** API (`NODE_ENV=production` and `APP_URL` not localhost) must use `send`
 and must set `RESEND_WEBHOOK_SECRET`; the API refuses to boot otherwise.
@@ -49,6 +56,7 @@ Resend only sends from verified domains.
    EMAIL_REPLY_TO=support@example.com              # optional
    APP_NAME="Acme Rewards"                         # shown in templates and the 2FA issuer
    EMAIL_MODE=send
+   EMAIL_PROVIDER=resend
    ```
 
 Other knobs (all optional): `EMAIL_MAX_ATTEMPTS` (default 3, jittered backoff),
@@ -159,7 +167,9 @@ prints signed headers and a body (they expire after 5 minutes; send the body byt
 
 | Symptom | Fix |
 | --- | --- |
-| API exits: `RESEND_API_KEY is required when EMAIL_MODE=send` | Set the key, or use `EMAIL_MODE=log-only` locally. |
+| API exits: `RESEND_API_KEY is required when EMAIL_MODE=send with EMAIL_PROVIDER=resend` | Set the key, or use `EMAIL_PROVIDER=mailpit` locally. |
+| API exits: `EMAIL_PROVIDER must be resend on a deployed environment` | A deployed environment always sends through Resend: set `EMAIL_PROVIDER=resend`. |
+| Nothing arrives in your real inbox locally | `EMAIL_PROVIDER=mailpit` sends to the local Mailpit (`http://localhost:8025`); switch to `resend`. |
 | Resend error `invalid_from_address` / domain not verified | `EMAIL_FROM_ADDRESS` must be on a verified domain. |
 | Webhook `403 Invalid webhook signature` | Secret in `.env` is stale (webhook recreated) or the API was not restarted. Keep exactly one `RESEND_WEBHOOK_SECRET=` line. |
 | Webhook `403 Missing webhook signature header(s)` | The request did not come from Resend (e.g. Swagger "Try it out"). Expected. |

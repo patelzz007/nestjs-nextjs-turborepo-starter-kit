@@ -138,6 +138,41 @@ export const ResendSendResponseSchema = z
 
 export type ResendSendResponse = z.output<typeof ResendSendResponseSchema>;
 
+export const MailpitAddressSchema = z.object({ Email: z.email() });
+
+export type MailpitAddress = z.output<typeof MailpitAddressSchema>;
+
+/**
+ * Body of a local Mailpit's `POST /api/v1/send` (local development only —
+ * `EMAIL_PROVIDER=mailpit`). Mailpit takes To/Cc/ReplyTo as address objects
+ * but Bcc as plain strings; keys are Mailpit's own (PascalCase).
+ */
+export const MailpitSendRequestSchema = z.object({
+	From: MailpitAddressSchema,
+	To: z.array(MailpitAddressSchema).min(1),
+	Cc: z.array(MailpitAddressSchema),
+	Bcc: z.array(z.email()),
+	ReplyTo: z.array(MailpitAddressSchema),
+	Subject: z.string(),
+	Text: z.string(),
+	HTML: z.string(),
+	Tags: z.array(z.string().min(1)),
+	Headers: z.record(z.string(), z.string()),
+});
+
+export type MailpitSendRequest = z.output<typeof MailpitSendRequestSchema>;
+
+/**
+ * Successful reply of a local Mailpit's `POST /api/v1/send` (local development
+ * only — `EMAIL_PROVIDER=mailpit`). `ID` is Mailpit's own message id.
+ */
+export const MailpitSendResponseSchema = z.object({ ID: z.string().min(1) }).loose();
+
+export type MailpitSendResponse = z.output<typeof MailpitSendResponseSchema>;
+
+/** Error reply of Mailpit's HTTP API (`{ "Error": "…" }`); anything else is reported by its HTTP status. */
+export const MailpitErrorResponseSchema = z.object({ Error: z.string() }).loose();
+
 // ── Email log status (webhook updates) ────────────────────────────────────
 
 /**

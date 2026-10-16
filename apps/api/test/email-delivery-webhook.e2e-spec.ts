@@ -4,7 +4,7 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { EMAIL_LOG_ID_TAG } from "../src/modules/notifications/email/email-sender.service";
+import { EMAIL_LOG_ID_TAG } from "../src/modules/notifications/email/transports/resend-email.transport";
 import { createE2eApp, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
 import { signResendWebhook } from "./support/resend-webhook-signature";
 

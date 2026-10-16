@@ -48,6 +48,8 @@
 		"docker:restart": "docker compose down && docker compose up -d",
 		"docker:logs": "docker compose logs -f",
 		"docker:ps": "docker compose ps",
+		"mailpit": "mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025",
+		"mail:latest": "pnpm --silent --filter @workspace/api mail:latest",
 		"dev:analytics-consumer": "turbo dev --filter @workspace/analytics-consumer --log-prefix=none"
 	},
 	"devDependencies": {

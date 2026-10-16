@@ -346,11 +346,36 @@ describe("API env schema", () => {
 			expect(captureEnvError({ MALWARE_SCANNER: undefined }).variables).toEqual(["MALWARE_SCANNER"]);
 		});
 
-		it("requires RESEND_API_KEY when EMAIL_MODE=send, but not for log-only / noop", () => {
+		it("requires RESEND_API_KEY when EMAIL_MODE=send with Resend, but not for log-only / noop", () => {
 			expect(captureEnvError({ EMAIL_MODE: "send", RESEND_API_KEY: undefined }).issues).toEqual([
-				{ variable: "RESEND_API_KEY", problem: "is required when EMAIL_MODE=send (set EMAIL_MODE=log-only or noop to run without Resend)" },
+				{
+					variable: "RESEND_API_KEY",
+					problem: "is required when EMAIL_MODE=send with EMAIL_PROVIDER=resend (use EMAIL_PROVIDER=mailpit locally, or EMAIL_MODE=log-only / noop, to run without Resend)",
+				},
 			]);
 			expect(parse({ EMAIL_MODE: "log-only", RESEND_API_KEY: undefined }).email.resendApiKey).toBeNull();
+		});
+
+		it("delivers through Resend unless EMAIL_PROVIDER says otherwise, with Mailpit on its default local port", () => {
+			expect(parse({ EMAIL_MODE: "send", RESEND_API_KEY: "re_test_only" }).email).toMatchObject({ provider: "resend", mailpitUrl: "http://localhost:8025" });
+			expect(parse({ EMAIL_PROVIDER: "mailpit", MAILPIT_URL: "http://127.0.0.1:18025/" }).email).toMatchObject({ provider: "mailpit", mailpitUrl: "http://127.0.0.1:18025" });
+			expect(captureEnvError({ EMAIL_PROVIDER: "smtp" }).variables).toEqual(["EMAIL_PROVIDER"]);
+			expect(captureEnvError({ EMAIL_PROVIDER: "mailpit", MAILPIT_URL: "localhost:8025" }).variables).toEqual(["MAILPIT_URL"]);
+		});
+
+		it("sends through a local Mailpit without a Resend key", () => {
+			expect(parse({ EMAIL_MODE: "send", EMAIL_PROVIDER: "mailpit", RESEND_API_KEY: undefined }).email).toMatchObject({
+				mode: "send",
+				provider: "mailpit",
+				resendApiKey: null,
+			});
+			expect(parse({ ...PRODUCTION, EMAIL_MODE: "send", EMAIL_PROVIDER: "mailpit" }).email.provider).toBe("mailpit");
+		});
+
+		it("refuses Mailpit on every deployed environment, whatever its NODE_ENV", () => {
+			const issue = { variable: "EMAIL_PROVIDER", problem: "must be resend on a deployed environment (the local Mailpit inbox is only allowed when APP_URL is localhost)" };
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
+			expect(captureEnvError({ NODE_ENV: "development", APP_URL: "https://dev.example.com", EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
 		});
 
 		it("forbids EMAIL_TEST_TO on a deployed production environment and requires REDIS_URL in production", () => {

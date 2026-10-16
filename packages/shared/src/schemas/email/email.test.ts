@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { EmailSendResultSchema, EmailTemplateMetaSchema, type EmailSendResult } from "./email";
+import {
+	EmailSendResultSchema,
+	EmailTemplateMetaSchema,
+	MailpitErrorResponseSchema,
+	MailpitSendRequestSchema,
+	MailpitSendResponseSchema,
+	type EmailSendResult,
+	type MailpitSendRequest,
+} from "./email";
 
 // Response schemas are OPEN (ADR 022): unknown keys are stripped, never rejected.
 // `EmailSendResultSchema` is a discriminated union on `ok`, so each variant
@@ -35,5 +43,40 @@ describe("EmailTemplateMetaSchema", () => {
 
 	it("requires the sample subject the preview header shows before the preview loads", () => {
 		expect(EmailTemplateMetaSchema.safeParse({ key: "welcome", label: "Welcome", description: "Sent after signup", sampleTo: "jane@example.com" }).success).toBe(false);
+	});
+});
+
+describe("Mailpit schemas (local development inbox)", () => {
+	const request: MailpitSendRequest = {
+		From: { Email: "noreply@example.com" },
+		To: [{ Email: "jamie@example.com" }],
+		Cc: [],
+		Bcc: ["audit@example.com"],
+		ReplyTo: [],
+		Subject: "Your sign-in code",
+		Text: "Verification code: 482913",
+		HTML: "<p>482913</p>",
+		Tags: ["login-verification"],
+		Headers: { "X-Email-Log-Id": "7c9e6679-7425-40de-944b-e07fc1f90ae7" },
+	};
+
+	it("accepts a complete send request", () => {
+		expect(MailpitSendRequestSchema.parse(request)).toEqual(request);
+	});
+
+	it("rejects a request without a recipient, with an invalid address, or with an empty tag", () => {
+		expect(MailpitSendRequestSchema.safeParse({ ...request, To: [] }).success).toBe(false);
+		expect(MailpitSendRequestSchema.safeParse({ ...request, Bcc: ["not-an-address"] }).success).toBe(false);
+		expect(MailpitSendRequestSchema.safeParse({ ...request, Tags: [""] }).success).toBe(false);
+	});
+
+	it("reads Mailpit's message id and keeps unknown reply fields", () => {
+		expect(MailpitSendResponseSchema.parse({ ID: "6QW7vrP77c9alcT3lie5fA", extra: 1 })).toEqual({ ID: "6QW7vrP77c9alcT3lie5fA", extra: 1 });
+		expect(MailpitSendResponseSchema.safeParse({ ID: "" }).success).toBe(false);
+	});
+
+	it("reads Mailpit's error reply", () => {
+		expect(MailpitErrorResponseSchema.parse({ Error: "from not set" }).Error).toBe("from not set");
+		expect(MailpitErrorResponseSchema.safeParse({ message: "nope" }).success).toBe(false);
 	});
 });

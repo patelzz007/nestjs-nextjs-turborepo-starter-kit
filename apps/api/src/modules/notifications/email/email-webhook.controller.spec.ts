@@ -11,7 +11,7 @@ import { parseApiConfig } from "../../../config/api-config";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
 import { EmailLogService } from "./email-log.service";
-import { EMAIL_LOG_ID_TAG } from "./email-sender.service";
+import { EMAIL_LOG_ID_TAG } from "./transports/resend-email.transport";
 import { EmailWebhookController } from "./email-webhook.controller";
 
 /**

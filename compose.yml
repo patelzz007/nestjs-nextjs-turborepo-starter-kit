@@ -13,7 +13,6 @@
 #   Kafka       → 127.0.0.1:9092  (IPv4 literal on purpose — see the kafka service)
 #   RabbitMQ    → localhost:5672  (AMQP)  |  http://localhost:15672  (management UI, rabbit / rabbit)
 #   Bull Board  → http://localhost:3030  (BullMQ queue dashboard)
-#   Mailpit     → localhost:1025  (SMTP)  |  http://localhost:8025  (web inbox)
 #
 # Not started by this file:
 #   PostgreSQL  — the `postgres` service below is commented out. Use a native
@@ -24,10 +23,9 @@
 #                 apps/api/.env DATABASE_URL).
 #   Object storage — there is no MinIO service. Use STORAGE_PROVIDER=local for
 #                 zero-setup storage, or a real S3 bucket (apps/api/.env.example).
-#
-# Mailpit's host ports are env-interpolated with the dev defaults shown above
-# (MAILPIT_SMTP_PORT / MAILPIT_UI_PORT) — override them in your shell or a
-# git-ignored `.env` file next to this compose file.
+#   Mailpit     — runs natively, not in Docker: `brew install mailpit`, then
+#                 `pnpm mailpit` (web inbox + API at http://localhost:8025).
+#                 The API delivers into it with EMAIL_PROVIDER=mailpit.
 #
 # Full reference: docs/technical/operations/local-infrastructure.md
 #
@@ -172,37 +170,11 @@ services:
     networks:
       - infra
 
-  mailpit:
-    # Local SMTP sink + web inbox. Nothing sent to it leaves your machine.
-    image: axllent/mailpit:v1.31.3
-    container_name: hello-world-mailpit
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
-    environment:
-      MP_DATABASE: /data/mailpit.db
-      MP_MAX_MESSAGES: 5000
-      # Accept any SMTP credentials over plain TCP — dev only.
-      MP_SMTP_AUTH_ACCEPT_ANY: "1"
-      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
-    volumes:
-      - mailpit_data:/data
-    healthcheck:
-      test: ["CMD", "/mailpit", "readyz"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks:
-      - infra
-      
 volumes:
   postgres_18_data:
   redis_data:
   kafka_data:
   rabbitmq_data:
-  mailpit_data:
 
 networks:
   infra:

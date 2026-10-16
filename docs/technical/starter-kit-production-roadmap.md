@@ -290,6 +290,7 @@ Kafka and `apps/analytics-consumer` **remain in the default template**, not hidd
 
 ```text
 pnpm docker:up     → Redis, Kafka, RabbitMQ, Mailpit, Bull Board (see compose.yml)
+pnpm mailpit       → native local email inbox (EMAIL_PROVIDER=mailpit)
 KAFKA_BROKERS unset  → API still runs; outbox events may remain pending (documented)
 analytics-consumer   → separate process; needs apps/analytics-consumer/.env
 ```

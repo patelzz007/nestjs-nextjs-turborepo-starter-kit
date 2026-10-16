@@ -90,7 +90,7 @@ packages/
 
 ## Quick start
 
-**Prerequisites:** Node 22.12+ (CI uses the 24 LTS line), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) and Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ, Bull Board and Mailpit — see [local infrastructure](./docs/technical/operations/local-infrastructure.md)).
+**Prerequisites:** Node 22.12+ (CI uses the 24 LTS line), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ and Bull Board — see [local infrastructure](./docs/technical/operations/local-infrastructure.md)), and a native Mailpit for local email (`brew install mailpit`, then `pnpm mailpit` — see [local email with Mailpit](./docs/technical/email/mailpit-local-inbox.md)).
 
 ```bash
 # Install dependencies + build shared workspace package

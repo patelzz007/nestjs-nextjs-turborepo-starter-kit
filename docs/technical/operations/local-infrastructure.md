@@ -3,7 +3,7 @@ title: "Local Infrastructure (Docker Compose)"
 tags: ["operations", "docker", "postgres", "local-development"]
 description: "Every service in compose.yml, its ports and dev credentials, how to override them, and how to fix common start-up problems."
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1792108800000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
 order: 3
 ---
@@ -28,7 +28,6 @@ pnpm docker:down     # stop and remove containers (data volumes are kept)
 | `kafka` | `apache/kafka:4.3.1` | `127.0.0.1:9092` (use the IPv4 literal, not `localhost`) | none | analytics events |
 | `rabbitmq` | `rabbitmq:4.3.5` | `localhost:5672`, UI `http://localhost:15672` | `rabbit` / `rabbit` | messaging |
 | `bull-board` | `venatum/bull-board:3.4.14` | `http://localhost:3030` | none | BullMQ dashboard |
-| `mailpit` | `axllent/mailpit:v1.31.3` | SMTP `localhost:1025`, inbox `http://localhost:8025` | any SMTP login is accepted | local email sink |
 
 **PostgreSQL is not started by default.** The `postgres` service (`postgres:18.6`, the same image
 CI uses) is commented out in `compose.yml`; use a native PostgreSQL 18 (Homebrew, apt, Postgres.app)
@@ -40,8 +39,12 @@ bucket ([AWS S3](../storage/aws-s3.md) / [Firebase](../storage/firebase.md)).
 Every service binds to `127.0.0.1` only, so the default passwords are not reachable from other
 machines on your network.
 
-> [!NOTE] Mailpit is provisioned ahead of an SMTP email adapter: today the API sends through
-> Resend, so locally use `EMAIL_MODE=log-only` (emails printed to the API log) or `noop`.
+> [!NOTE] Mailpit, the local email inbox, runs natively rather than in Docker:
+> `brew install mailpit`, then `pnpm mailpit` (inbox at `http://localhost:8025`, bound to
+> `127.0.0.1`). The API delivers into it with `EMAIL_PROVIDER=mailpit` — see
+> [Local email with Mailpit](../email/mailpit-local-inbox.md). If you still have the old
+> `hello-world-mailpit` container, remove it (`docker compose up -d --remove-orphans`), since it
+> holds the same port.
 
 ## Overriding ports and credentials
 
@@ -50,7 +53,6 @@ The newer services read these variables (shell environment, or a git-ignored `.e
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `MAILPIT_SMTP_PORT` / `MAILPIT_UI_PORT` | `1025` / `8025` | host ports |
 | `REDIS_PORT` / `KAFKA_PORT` | `6379` / `9092` | host ports (Kafka advertises `127.0.0.1:${KAFKA_PORT}`, so changing `KAFKA_PORT` only needs the same port in `KAFKA_BROKERS`) |
 | `RABBITMQ_AMQP_PORT` / `RABBITMQ_UI_PORT` / `BULL_BOARD_PORT` | `5672` / `15672` / `3030` | host ports |
 | `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` | `rabbit` / `rabbit` | applied only when the volume is first created |

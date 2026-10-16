@@ -73,6 +73,7 @@
 		"technical/storage/overview",
 		"technical/storage/aws-s3",
 		"technical/storage/firebase",
+		"technical/email/mailpit-local-inbox",
 		"technical/email/resend-setup",
 		"technical/email/templates",
 		"--- Mobile ---",

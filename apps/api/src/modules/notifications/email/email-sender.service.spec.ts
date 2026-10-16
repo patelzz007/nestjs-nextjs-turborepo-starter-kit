@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { UnrecoverableError } from "bullmq";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RequestContextService } from "../../../common/context/request-context";
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -9,8 +9,10 @@ import { LogService } from "../../logs/logs.service";
 import { EmailLogService } from "./email-log.service";
 import { EmailQueueService } from "./email-queue.service";
 import { EmailRecipientRateLimiter } from "./email-recipient-rate-limiter";
-import { EMAIL_LOG_ID_TAG, EmailSenderService } from "./email-sender.service";
+import { EmailSenderService } from "./email-sender.service";
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
+import { createEmailTransport } from "./transports/email-transport.provider";
+import { EMAIL_LOG_ID_TAG } from "./transports/resend-email.transport";
 import { createTestTypedConfig, type TestEnv } from "../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
@@ -34,6 +36,8 @@ vi.mock("resend", () => ({
 const EMAIL_LOG_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const RECIPIENT = "jamie@example.com";
 const SEND_ENV: TestEnv = { EMAIL_MODE: "send", RESEND_API_KEY: "re_test_only", EMAIL_MAX_ATTEMPTS: "3", EMAIL_TIMEOUT_MS: "100" };
+const MAILPIT_ENV: TestEnv = { EMAIL_MODE: "send", EMAIL_PROVIDER: "mailpit", MAILPIT_URL: "http://localhost:8025", EMAIL_MAX_ATTEMPTS: "3", EMAIL_TIMEOUT_MS: "100" };
+const MAILPIT_MESSAGE_ID = "6QW7vrP77c9alcT3lie5fA";
 
 function template(): VerificationEmailTemplate {
 	return new VerificationEmailTemplate({ to: RECIPIENT, verificationToken: "token-1", expiresInHours: 24 });
@@ -58,12 +62,15 @@ async function createSender(env: TestEnv, withQueue: boolean): Promise<EmailSend
 			RequestContextService,
 		],
 	}).compile();
+	const config = moduleRef.get(TypedConfigService);
+	const logService = moduleRef.get(LogService);
 	return new EmailSenderService(
-		moduleRef.get(TypedConfigService),
-		moduleRef.get(LogService),
+		config,
+		logService,
 		moduleRef.get(EmailLogService),
 		moduleRef.get(EmailRecipientRateLimiter),
 		moduleRef.get(RequestContextService),
+		createEmailTransport(config.email, logService),
 		moduleRef.get(EmailQueueService),
 	);
 }
@@ -168,7 +175,50 @@ describe("EmailSenderService", () => {
 
 			await sender.send(template(), { audit: { trigger: "admin-test-send", actorUserId: "admin-1" } });
 
-			expect(mocks.create.mock.calls.at(0)?.at(0)).toMatchObject({ metadata: { trigger: "admin-test-send", actorUserId: "admin-1", mode: "send" } });
+			expect(mocks.create.mock.calls.at(0)?.at(0)).toMatchObject({ metadata: { trigger: "admin-test-send", actorUserId: "admin-1", mode: "send", provider: "resend" } });
+		});
+	});
+
+	describe("send through a local Mailpit (EMAIL_PROVIDER=mailpit)", () => {
+		const fetchMock = vi.fn<typeof fetch>();
+
+		beforeEach(() => {
+			vi.stubGlobal("fetch", fetchMock);
+			fetchMock.mockResolvedValue(new Response(JSON.stringify({ ID: MAILPIT_MESSAGE_ID }), { status: 200 }));
+		});
+
+		afterEach(() => {
+			vi.unstubAllGlobals();
+		});
+
+		it("delivers into Mailpit, never Resend, and records the provider on the log row", async () => {
+			const sender = await createSender(MAILPIT_ENV, false);
+
+			await expect(sender.send(template())).resolves.toEqual({ ok: true, id: MAILPIT_MESSAGE_ID, mode: "send" });
+
+			expect(mocks.resendSend).not.toHaveBeenCalled();
+			expect(fetchMock).toHaveBeenCalledWith("http://localhost:8025/api/v1/send", expect.objectContaining({ method: "POST" }));
+			expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ status: "pending", metadata: { mode: "send", provider: "mailpit" } }));
+		});
+
+		it("finalizes the row without a Resend id (Mailpit sends no delivery webhooks)", async () => {
+			const sender = await createSender(MAILPIT_ENV, false);
+
+			await sender.send(template());
+
+			expect(mocks.finalizeSent).toHaveBeenCalledWith(EMAIL_LOG_ID, { templateKey: "verification", to: RECIPIENT }, null, expect.any(Number));
+		});
+
+		it("retries while Mailpit is not running, then finalizes the row as failed with a hint to start it", async () => {
+			fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+			const sender = await createSender(MAILPIT_ENV, false);
+
+			const result = await sender.send(template());
+
+			expect(result).toMatchObject({ ok: false, reason: "api-error" });
+			expect(result.ok ? undefined : result.detail).toContain("pnpm mailpit");
+			expect(fetchMock).toHaveBeenCalledTimes(3);
+			expect(mocks.finalizeFailed).toHaveBeenCalledTimes(1);
 		});
 	});
 

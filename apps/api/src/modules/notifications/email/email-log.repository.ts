@@ -148,12 +148,14 @@ export class EmailLogRepository {
 	 * `onFinalized` runs (same transaction) only for the writer that actually
 	 * finalized the attempt — a duplicate finalize is a no-op returning false.
 	 */
-	public async finalizeSent(id: string, resendId: string, onFinalized: (tx: EmailLogTransaction) => Promise<void>): Promise<boolean> {
+	public async finalizeSent(id: string, resendId: string | null, onFinalized: (tx: EmailLogTransaction) => Promise<void>): Promise<boolean> {
 		return this.write("Record an email send success", async (tx): Promise<boolean> => {
 			const now = Date.now();
 			const moved = await tx.emailLog.updateMany({ where: { id, status: "pending" }, data: { status: "sent", resendId, updatedAt: now } });
+			// Only a Resend send can have been advanced by a webhook first; without a provider id there is nothing left to store.
 			const finalized =
-				moved.count > 0 ? true : (await tx.emailLog.updateMany({ where: { id, resendId: null, status: { not: "failed" } }, data: { resendId, updatedAt: now } })).count > 0;
+				moved.count > 0 ||
+				(resendId !== null && (await tx.emailLog.updateMany({ where: { id, resendId: null, status: { not: "failed" } }, data: { resendId, updatedAt: now } })).count > 0);
 			if (finalized) {
 				await onFinalized(tx);
 			}

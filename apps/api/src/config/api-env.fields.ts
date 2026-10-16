@@ -154,6 +154,14 @@ export const EmailModeSchema = z.enum(["send", "log-only", "noop"]);
 export type EmailMode = z.output<typeof EmailModeSchema>;
 
 /**
+ * Who delivers an email when `EMAIL_MODE=send`:
+ * - `resend`  — the Resend API (every deployed environment: dev, staging, production);
+ * - `mailpit` — a local Mailpit inbox (local development only; nothing leaves the machine).
+ */
+export const EmailProviderSchema = z.enum(["resend", "mailpit"]);
+export type EmailProvider = z.output<typeof EmailProviderSchema>;
+
+/**
  * When a password login must also pass the emailed one-time code:
  * - `new-device` — only from a device not verified in the last week (default);
  * - `always`     — on every login (ignores the trusted-device cache);

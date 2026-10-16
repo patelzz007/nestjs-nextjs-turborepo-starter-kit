@@ -1,21 +1,18 @@
 import { Injectable, Optional } from "@nestjs/common";
 import { UnrecoverableError } from "bullmq";
-import { Resend } from "resend";
 
 import {
 	CaughtValueSchema,
 	EmailRenderContextSchema,
 	EmailSendResultSchema,
 	EmailTemplateKeySchema,
-	ResendSendResponseSchema,
 	type CaughtValue,
 	type EmailRenderContext,
 	type EmailSendResult,
-	type ResendSendResponse,
 } from "@workspace/shared";
 
 import { RequestContextService } from "../../../common/context/request-context";
-import { readCaughtErrorCode, readCaughtErrorMessage } from "../../../common/utils/caught-error";
+import { readCaughtErrorMessage } from "../../../common/utils/caught-error";
 import { rejectAfter } from "../../../common/utils/promise-timeout";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
@@ -24,6 +21,7 @@ import { EmailLogService, type EmailAttemptIdentity } from "./email-log.service"
 import { EmailQueueService } from "./email-queue.service";
 import { EmailRecipientRateLimiter } from "./email-recipient-rate-limiter";
 import { serializeEmailTemplateProps } from "./email-template.factory";
+import { EmailTransport, EmailTransportError, type EmailDeliveryReceipt } from "./transports/email-transport";
 
 /** Thrown when one provider call exceeds `EMAIL_TIMEOUT_MS`. */
 class EmailTimeoutError extends Error {
@@ -33,54 +31,10 @@ class EmailTimeoutError extends Error {
 	}
 }
 
-/**
- * Wraps a non-Error rejection from Resend while preserving its error code
- * (e.g. `rate_limit_exceeded`) so failures can be classified.
- */
-class ResendError extends Error {
-	public constructor(
-		message: string,
-		public readonly code: string | undefined,
-	) {
-		super(message);
-		this.name = "ResendError";
-	}
-}
-
-/**
- * Resend error codes that never succeed on retry: invalid payload, credentials,
- * account limits, or an idempotency key reused for a different payload. Every
- * other code (`application_error`, `internal_server_error`,
- * `concurrent_idempotent_requests`, network failures) is retried.
- */
-const NON_RETRYABLE_RESEND_CODES: ReadonlySet<string> = new Set([
-	"validation_error",
-	"missing_api_key",
-	"invalid_api_key",
-	"restricted_api_key",
-	"invalid_from_address",
-	"missing_required_field",
-	"invalid_parameter",
-	"invalid_attachment",
-	"invalid_access",
-	"invalid_region",
-	"not_found",
-	"method_not_allowed",
-	"security_error",
-	"invalid_idempotency_key",
-	"invalid_idempotent_request",
-	"monthly_quota_exceeded",
-	"daily_quota_exceeded",
-	"rate_limit_exceeded",
-]);
-
 /** Inline-retry backoff: 300 ms × 2^(n-2), ±40 % jitter. */
 const RETRY_BASE_DELAY_MS = 300;
 const RETRY_JITTER_MIN_FACTOR = 0.6;
 const RETRY_JITTER_SPAN = 0.8;
-
-/** Resend tag that carries the email log id — webhooks echo it, so they match the row before the send call returns. */
-export const EMAIL_LOG_ID_TAG = "email_log_id";
 
 /** Who triggered a send, recorded on the email log row (the row IS the domain audit record of the send). */
 export interface EmailSendAudit {
@@ -115,13 +69,15 @@ interface ClassifiedFailure {
  * Owns everything that is NOT template content: zod re-validation of props,
  * the `EMAIL_MODE` switch, the `EMAIL_TEST_TO` override, the per-recipient
  * rate limit, retries, the per-call timeout, PII-safe logging, and the email
- * log. Templates stay pure renderers (rule 19).
+ * log. Templates stay pure renderers (rule 19); the provider call itself is the
+ * {@link EmailTransport} that `EMAIL_PROVIDER` selects (Resend, or a local Mailpit).
  *
  * Delivery contract:
  * 1. The email log row is written FIRST (`pending`). If it cannot be written,
  *    nothing is sent (`persistence` failure) — no email leaves unlogged.
- * 2. Every provider call carries the row id as Resend `idempotencyKey`, so a
- *    retry after a timeout (inline or by the queue) can never send twice.
+ * 2. Every provider call carries the row id (Resend uses it as its
+ *    `idempotencyKey`), so a retry after a timeout — inline or by the queue —
+ *    can never send twice to a real recipient.
  * 3. Retries have ONE owner: with BullMQ, the queue (one provider call per
  *    job execution, non-retryable failures stop immediately); without it, a
  *    bounded inline loop.
@@ -132,8 +88,6 @@ interface ClassifiedFailure {
  */
 @Injectable()
 export class EmailSenderService {
-	/** `null` when RESEND_API_KEY is unset — only allowed with EMAIL_MODE=log-only/noop (enforced at boot). */
-	private readonly resend: Resend | null;
 	private readonly renderContext: EmailRenderContext;
 
 	public constructor(
@@ -142,10 +96,9 @@ export class EmailSenderService {
 		private readonly emailLogService: EmailLogService,
 		private readonly rateLimiter: EmailRecipientRateLimiter,
 		private readonly requestContext: RequestContextService,
+		private readonly transport: EmailTransport,
 		@Optional() private readonly emailQueue?: EmailQueueService,
 	) {
-		const apiKey: string | null = this.config.email.resendApiKey;
-		this.resend = apiKey === null ? null : new Resend(apiKey);
 		this.renderContext = EmailRenderContextSchema.parse({
 			appName: this.config.runtime.appName,
 			appUrl: this.config.clientApps.webUrl,
@@ -181,7 +134,13 @@ export class EmailSenderService {
 		let emailLogId: string;
 		try {
 			emailLogId = (
-				await this.emailLogService.create({ templateKey: template.key, to: effectiveTo, subject: template.subject, status: "pending", metadata: { mode, ...metadata } })
+				await this.emailLogService.create({
+					templateKey: template.key,
+					to: effectiveTo,
+					subject: template.subject,
+					status: "pending",
+					metadata: { mode, provider: this.transport.provider, ...metadata },
+				})
 			).id;
 		} catch (error) {
 			const detail = readCaughtErrorMessage(CaughtValueSchema.parse(error));
@@ -223,8 +182,8 @@ export class EmailSenderService {
 		const identity: EmailAttemptIdentity = { templateKey: template.key, to: this.effectiveRecipient(template.subject, parsed.data.to) };
 		const startedAt: number = performance.now();
 		try {
-			const resendId = await this.callProvider(emailLogId, identity.to, template, parsed.data);
-			await this.emailLogService.finalizeSent(emailLogId, identity, resendId, Math.round(performance.now() - startedAt));
+			const receipt = await this.callProvider(emailLogId, identity.to, template, parsed.data);
+			await this.emailLogService.finalizeSent(emailLogId, identity, receipt.resendId, Math.round(performance.now() - startedAt));
 		} catch (error) {
 			const failure = this.classify(CaughtValueSchema.parse(error));
 			const lastAttempt: boolean = attempt.attemptNumber >= attempt.maxAttempts;
@@ -298,10 +257,12 @@ export class EmailSenderService {
 				await this.backoff(attemptNumber);
 			}
 			try {
-				const resendId = await this.callProvider(emailLogId, attempt.to, template, props);
-				await this.finalizeSentSafely(emailLogId, attempt, resendId, Math.round(performance.now() - startedAt));
-				this.logService.info(`Sent "${template.subject}" to ${this.maskEmail(attempt.to)} (${resendId})`, { context: "EmailSenderService" });
-				return EmailSendResultSchema.parse({ ok: true, id: resendId, mode: "send" });
+				const receipt = await this.callProvider(emailLogId, attempt.to, template, props);
+				await this.finalizeSentSafely(emailLogId, attempt, receipt, Math.round(performance.now() - startedAt));
+				this.logService.info(`Sent "${template.subject}" to ${this.maskEmail(attempt.to)} via ${this.transport.provider} (${receipt.providerMessageId})`, {
+					context: "EmailSenderService",
+				});
+				return EmailSendResultSchema.parse({ ok: true, id: receipt.providerMessageId, mode: "send" });
 			} catch (error) {
 				failure = this.classify(CaughtValueSchema.parse(error));
 				if (!failure.retryable) {
@@ -316,48 +277,29 @@ export class EmailSenderService {
 	}
 
 	/**
-	 * One provider call, idempotent by the email log id: Resend replays the
-	 * original result for a repeated key instead of sending again.
+	 * One provider call through the configured transport, idempotent by the
+	 * email log id, cut off after `EMAIL_TIMEOUT_MS`.
 	 */
-	private async callProvider<TProps extends BaseEmailProps>(emailLogId: string, to: string, template: BaseEmailTemplate<TProps>, props: TProps): Promise<string> {
-		const resend: Resend | null = this.resend;
-		if (resend === null) {
-			// Unreachable in a valid deployment: EMAIL_MODE=send requires RESEND_API_KEY at boot.
-			throw new ResendError("RESEND_API_KEY is not configured — set it, or use EMAIL_MODE=log-only / noop", "missing_api_key");
-		}
-		const replyTo: string | undefined = props.replyTo ?? this.config.email.replyTo;
-		const call: Promise<ResendSendResponse> = resend.emails
-			.send(
-				{
-					from: this.config.email.fromAddress,
-					to,
-					subject: template.subject,
-					html: template.renderHtml(this.renderContext),
-					text: template.renderText(this.renderContext),
-					tags: [{ name: EMAIL_LOG_ID_TAG, value: emailLogId }],
-					...(props.cc !== undefined && props.cc.length > 0 ? { cc: [...props.cc] } : {}),
-					...(props.bcc !== undefined && props.bcc.length > 0 ? { bcc: [...props.bcc] } : {}),
-					...(replyTo === undefined ? {} : { replyTo }),
-				},
-				{ idempotencyKey: `email-log/${emailLogId}` },
-			)
-			.then((response) => ResendSendResponseSchema.parse(response));
-		let result: ResendSendResponse;
-		try {
-			// Resend's send() takes no AbortSignal — a hung call is cut by the timeout branch.
-			result = await Promise.race([call, rejectAfter<ResendSendResponse>(this.config.email.timeoutMs, new EmailTimeoutError())]);
-		} catch (error) {
-			throw this.normalizeError(CaughtValueSchema.parse(error));
-		}
-		if (result.error !== null) {
-			// Resend reports its error code in `name`.
-			throw new ResendError(result.error.message, result.error.name);
-		}
-		const id: string | undefined = result.data?.id;
-		if (id === undefined) {
-			throw new ResendError("Resend returned no email id", undefined);
-		}
-		return id;
+	private async callProvider<TProps extends BaseEmailProps>(
+		emailLogId: string,
+		to: string,
+		template: BaseEmailTemplate<TProps>,
+		props: TProps,
+	): Promise<EmailDeliveryReceipt> {
+		const delivery: Promise<EmailDeliveryReceipt> = this.transport.deliver({
+			emailLogId,
+			templateKey: template.key,
+			from: this.config.email.fromAddress,
+			to,
+			subject: template.subject,
+			html: template.renderHtml(this.renderContext),
+			text: template.renderText(this.renderContext),
+			cc: props.cc ?? [],
+			bcc: props.bcc ?? [],
+			replyTo: props.replyTo ?? this.config.email.replyTo,
+		});
+		// Not every provider SDK takes an AbortSignal — a hung call is cut by the timeout branch.
+		return Promise.race([delivery, rejectAfter<EmailDeliveryReceipt>(this.config.email.timeoutMs, new EmailTimeoutError())]);
 	}
 
 	private async backoff(attemptNumber: number): Promise<void> {
@@ -373,13 +315,16 @@ export class EmailSenderService {
 	 * (the caller would resend). The row stays `pending` and the delivery
 	 * webhook (matched by the `email_log_id` tag) moves it forward later.
 	 */
-	private async finalizeSentSafely(emailLogId: string, attempt: EmailAttemptIdentity, resendId: string, durationMs: number): Promise<void> {
+	private async finalizeSentSafely(emailLogId: string, attempt: EmailAttemptIdentity, receipt: EmailDeliveryReceipt, durationMs: number): Promise<void> {
 		try {
-			await this.emailLogService.finalizeSent(emailLogId, attempt, resendId, durationMs);
+			await this.emailLogService.finalizeSent(emailLogId, attempt, receipt.resendId, durationMs);
 		} catch (error) {
-			this.logService.error(`Email ${emailLogId} was sent (${resendId}) but its log row could not be finalized: ${readCaughtErrorMessage(CaughtValueSchema.parse(error))}`, {
-				context: "EmailSenderService",
-			});
+			this.logService.error(
+				`Email ${emailLogId} was sent (${receipt.providerMessageId}) but its log row could not be finalized: ${readCaughtErrorMessage(CaughtValueSchema.parse(error))}`,
+				{
+					context: "EmailSenderService",
+				},
+			);
 		}
 	}
 
@@ -432,25 +377,23 @@ export class EmailSenderService {
 		};
 	}
 
-	/** Coerce any rejection into an Error, preserving a Resend error code. */
-	private normalizeError(value: CaughtValue): Error {
-		if (value instanceof Error) {
-			return value;
-		}
-		return new ResendError(readCaughtErrorMessage(value), readCaughtErrorCode(value));
-	}
-
 	/** Map a provider failure to a reason, and decide whether retrying can help. */
 	private classify(value: CaughtValue): ClassifiedFailure {
 		if (value instanceof EmailTimeoutError) {
-			// Safe to retry: the idempotency key makes a repeated call replay, not resend.
+			// Safe to retry: the email log id makes a repeated Resend call replay, not resend.
 			return { reason: "timeout", detail: value.message, retryable: true };
 		}
-		const code: string | undefined = value instanceof ResendError ? value.code : readCaughtErrorCode(value);
-		if (code === "rate_limit_exceeded") {
-			return { reason: "rate-limited", detail: "Resend rate limit exceeded", retryable: false };
+		if (value instanceof EmailTransportError) {
+			switch (value.kind) {
+				case "rate-limited":
+					return { reason: "rate-limited", detail: `Email provider rate limit exceeded (${this.transport.provider})`, retryable: false };
+				case "rejected":
+					return { reason: "api-error", detail: value.message, retryable: false };
+				case "transient":
+					return { reason: "api-error", detail: value.message, retryable: true };
+			}
 		}
-		return { reason: "api-error", detail: readCaughtErrorMessage(value), retryable: code === undefined || !NON_RETRYABLE_RESEND_CODES.has(code) };
+		return { reason: "api-error", detail: readCaughtErrorMessage(value), retryable: true };
 	}
 
 	/** PII-safe recipient for logs: "jamie@example.com" → "jam***@example.com". */

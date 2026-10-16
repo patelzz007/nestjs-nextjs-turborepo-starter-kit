@@ -33,7 +33,8 @@
 		"db:studio": "dotenv run -q -- prisma studio",
 		"db:reset": "dotenv run -q -- prisma migrate reset --force && pnpm db:generate && pnpm db:apply-security && pnpm db:seed",
 		"bullmq:cleanup-repeat-jobs": "dotenv run -q -- tsx scripts/cleanup-stale-bullmq-repeat-jobs.ts --force",
-		"storage:repair-local-public-paths": "dotenv run -q -- tsx scripts/repair-local-public-paths.ts"
+		"storage:repair-local-public-paths": "dotenv run -q -- tsx scripts/repair-local-public-paths.ts",
+		"mail:latest": "dotenv run -q -- tsx scripts/mailpit-inbox.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-cloudfront": "^3.1146.0",

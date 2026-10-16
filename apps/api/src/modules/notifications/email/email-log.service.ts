@@ -101,8 +101,11 @@ export class EmailLogService {
 		return this.repository.findStatus(id);
 	}
 
-	/** Finalize a successful send once. Returns false when another writer already finalized it. */
-	public async finalizeSent(id: string, attempt: EmailAttemptIdentity, resendId: string, durationMs: number | null): Promise<boolean> {
+	/**
+	 * Finalize a successful send once. Returns false when another writer already
+	 * finalized it. `resendId` is `null` for a provider without delivery webhooks (Mailpit).
+	 */
+	public async finalizeSent(id: string, attempt: EmailAttemptIdentity, resendId: string | null, durationMs: number | null): Promise<boolean> {
 		const event = toUpdatedEvent(attempt, "sent", resendId, null, durationMs);
 		const finalized = await this.repository.finalizeSent(id, resendId, async (tx): Promise<void> => {
 			await this.outbox.enqueueInTransaction(tx, { type: "email.log.updated", payload: event });

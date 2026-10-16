@@ -17,7 +17,8 @@ tags: ["getting-started", "setup", "local-development"]
 | Node.js | ≥ 22.12 (CI uses the 24 LTS line) | `engines` in the root `package.json` |
 | pnpm | 12 (`packageManager: pnpm@12.9.1`) | `corepack enable` picks the pinned version |
 | PostgreSQL | 18 | Your own install (Homebrew, apt, Postgres.app …). The `postgres` service in `compose.yml` is commented out. |
-| Docker | any recent | For Redis, Kafka, RabbitMQ, Bull Board and Mailpit (`pnpm docker:up`) |
+| Docker | any recent | For Redis, Kafka, RabbitMQ and Bull Board (`pnpm docker:up`) |
+| Mailpit | any recent | Local email inbox: `brew install mailpit` ([Local email with Mailpit](./email/mailpit-local-inbox.md)) |
 
 Redis is optional in development (queues then run inline) but **required in production**. Kafka
 is optional (`KAFKA_BROKERS` unset = the outbox keeps events pending).
@@ -37,8 +38,9 @@ pnpm secrets:generate apps/api/.env          # fills every app-owned secret (JWT
 Then edit `apps/api/.env`:
 
 - `DATABASE_URL` — your PostgreSQL database (create it first, e.g. `createdb nestjs-nextjs-turborepo-starter-kit`).
-- `EMAIL_MODE=log-only` (the example default) prints emails into the API log; switch to `send`
-  after [setting up Resend](./email/resend-setup.md).
+- `EMAIL_MODE=send` with `EMAIL_PROVIDER=mailpit` (the example defaults) delivers every email into
+  the local Mailpit inbox; switch to `EMAIL_PROVIDER=resend` after
+  [setting up Resend](./email/resend-setup.md) to receive real emails.
 - `STORAGE_PROVIDER` unset or `local` keeps uploads in `apps/api/.object-storage/`; see
   [AWS S3](./storage/aws-s3.md) / [Firebase](./storage/firebase.md) for cloud storage.
 - `MALWARE_SCANNER=none` is required and has no default.
@@ -50,7 +52,8 @@ invalid variable by name if anything is wrong.
 ## 3. Local services and database
 
 ```bash
-pnpm docker:up        # Redis :6379, Kafka :9092, RabbitMQ :5672 (UI :15672), Bull Board :3030, Mailpit :8025
+pnpm docker:up        # Redis :6379, Kafka :9092, RabbitMQ :5672 (UI :15672), Bull Board :3030
+pnpm mailpit          # local email inbox :8025 (separate terminal, or `brew services start mailpit`)
 pnpm setup:db         # build shared → prisma generate → migrate deploy → RLS policies → development seed
 ```
 
@@ -122,7 +125,8 @@ then create named staff. Guarantees, audit rows and exit codes: [Bootstrap the f
 | `Refusing to seed` | The seed only runs against a local database with `NODE_ENV` development/test (or `--allow-destructive`). |
 | `EADDRINUSE :8080` | `pnpm kill:all` |
 | Logins return `RATE_LIMITED` | 5 attempts per minute per IP on login; wait, or raise `THROTTLE_*` locally. |
-| Login works but every page says verify your email | Seed customer accounts are unverified; use the link from the API log (`EMAIL_MODE=log-only`) or Mailpit. |
+| Login works but every page says verify your email | Seed customer accounts are unverified; open the link from Mailpit (`pnpm mail:latest --to <email>`). |
+| A sign-in code never arrives | With `EMAIL_PROVIDER=mailpit`, Mailpit must be running (`pnpm mailpit`); read the code with `pnpm mail:latest --to <email> --code`. |
 | Uploads fail with `NoSuchBucket` / CORS errors | Use `STORAGE_PROVIDER=local` offline, or follow [AWS S3](./storage/aws-s3.md#troubleshooting). |
 | `permission denied for schema public` (`42501` / `P2039`) | The security layer is missing after a bare `prisma migrate reset`: `pnpm db:apply-security`, or use `pnpm db:reset` ([Database security](./security/database-security.md#how-the-api-connects)). |
 | Prisma client does not know a new field | `pnpm db:generate` (or `pnpm db:migrate`, which regenerates), then restart the TypeScript server. |

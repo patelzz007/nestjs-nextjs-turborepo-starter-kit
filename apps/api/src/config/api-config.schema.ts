@@ -43,6 +43,7 @@ import {
 	CacheBackendSettingSchema,
 	CorsOriginsEnvSchema,
 	EmailModeSchema,
+	EmailProviderSchema,
 	jwtExpiryEnvSchema,
 	LoginVerificationModeSchema,
 	LogLevelSchema,
@@ -58,6 +59,7 @@ import {
 	type CacheBackend,
 	type CacheBackendSetting,
 	type EmailMode,
+	type EmailProvider,
 	type LoginVerificationMode,
 	type LogLevel,
 	type MalwareScannerSetting,
@@ -117,6 +119,8 @@ const MAX_EMAIL_ATTEMPTS = 10;
 const DEFAULT_EMAIL_ATTEMPTS = 3;
 const MIN_EMAIL_TIMEOUT_MS = 100;
 const DEFAULT_EMAIL_TIMEOUT_MS = 10 * MS_PER_SECOND;
+/** Where a native `mailpit` listens by default (`pnpm mailpit`): web inbox + HTTP API. */
+const DEFAULT_MAILPIT_URL = "http://localhost:8025";
 const DEFAULT_WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
 
 const DEFAULT_THROTTLE_DEFAULT_LIMIT = 300;
@@ -248,7 +252,9 @@ export const ApiEnvInputSchema = z.object({
 
 	// Email
 	EMAIL_MODE: EmailModeSchema.default("send"),
+	EMAIL_PROVIDER: EmailProviderSchema.default("resend"),
 	RESEND_API_KEY: NonEmptyEnvStringSchema.optional(),
+	MAILPIT_URL: HttpUrlEnvSchema.default(DEFAULT_MAILPIT_URL),
 	EMAIL_FROM_ADDRESS: z.email({ error: "must be an email address" }),
 	EMAIL_REPLY_TO: z.email({ error: "must be an email address" }).optional(),
 	EMAIL_TEST_TO: z.email({ error: "must be an email address" }).optional(),
@@ -459,8 +465,12 @@ export interface EncryptionConfig {
 
 export interface EmailConfig {
 	readonly mode: EmailMode;
-	/** Set whenever `mode` is `send` (enforced at parse time). */
+	/** Who delivers when `mode` is `send`. `mailpit` only ever runs on localhost (enforced at parse time). */
+	readonly provider: EmailProvider;
+	/** Set whenever `mode` is `send` with the `resend` provider (enforced at parse time). */
 	readonly resendApiKey: string | null;
+	/** Base URL of the local Mailpit (web inbox + HTTP API), trailing slashes stripped. */
+	readonly mailpitUrl: string;
 	readonly fromAddress: string;
 	readonly replyTo: string | undefined;
 	readonly testTo: string | undefined;
@@ -840,8 +850,21 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 		context.addIssue({ code: "custom", path: [issue.variable], message: issue.message });
 	}
 
-	if (env.EMAIL_MODE === "send" && env.RESEND_API_KEY === undefined) {
-		context.addIssue({ code: "custom", path: ["RESEND_API_KEY"], message: "is required when EMAIL_MODE=send (set EMAIL_MODE=log-only or noop to run without Resend)" });
+	if (env.EMAIL_MODE === "send" && env.EMAIL_PROVIDER === "resend" && env.RESEND_API_KEY === undefined) {
+		context.addIssue({
+			code: "custom",
+			path: ["RESEND_API_KEY"],
+			message: "is required when EMAIL_MODE=send with EMAIL_PROVIDER=resend (use EMAIL_PROVIDER=mailpit locally, or EMAIL_MODE=log-only / noop, to run without Resend)",
+		});
+	}
+	// Mailpit is a local inbox: on any deployed environment (dev, staging or
+	// production, whatever its NODE_ENV) real users would never receive an email.
+	if (env.EMAIL_PROVIDER === "mailpit" && !isLoopbackUrl(env.APP_URL)) {
+		context.addIssue({
+			code: "custom",
+			path: ["EMAIL_PROVIDER"],
+			message: "must be resend on a deployed environment (the local Mailpit inbox is only allowed when APP_URL is localhost)",
+		});
 	}
 	// A deployed production API must really deliver email: `log-only` would
 	// print one-time codes and reset links into the log, and `noop` would
@@ -1008,7 +1031,9 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 		},
 		email: {
 			mode: env.EMAIL_MODE,
+			provider: env.EMAIL_PROVIDER,
 			resendApiKey: env.RESEND_API_KEY ?? null,
+			mailpitUrl: env.MAILPIT_URL,
 			fromAddress: env.EMAIL_FROM_ADDRESS,
 			replyTo: env.EMAIL_REPLY_TO,
 			testTo: env.EMAIL_TEST_TO,

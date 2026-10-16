@@ -30,7 +30,7 @@ import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.d
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
 import { EmailLogService } from "./email-log.service";
-import { EMAIL_LOG_ID_TAG } from "./email-sender.service";
+import { EMAIL_LOG_ID_TAG } from "./transports/resend-email.transport";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
 
 /**

@@ -61,6 +61,17 @@ Typecheck, build, and the rest of the pipeline still run in CI (`rules/13-ci-cd-
 4. Work out ownership before writing anything: who owns the data, who validates it, who authorizes it, who persists it, who renders it. (`rules/15-feature-development-process.md`, Step 3.)
 5. For anything non-trivial, sketch a short implementation plan and identify affected packages/boundaries before touching code.
 
+## Reading emails while testing locally
+
+Locally the API delivers every email into Mailpit (`EMAIL_PROVIDER=mailpit`, run with `pnpm mailpit`), never to a real inbox. To sign in, verify an email or open an invite while driving the app, read the code or link from there — never ask a human to check their mailbox:
+
+```bash
+pnpm mail:latest --to <email> --code   # prints only the six-digit code (exit 1 if none)
+pnpm mail:latest --to <email>          # recipient, subject, codes, links and body
+```
+
+Details: `docs/technical/email/mailpit-local-inbox.md`.
+
 ## Routing table — which doc(s) to load
 
 | Task involves... | Load |
