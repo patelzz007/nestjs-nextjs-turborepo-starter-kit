@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reedSolomonGenerator, reedSolomonRemainder } from "./qr-reed-solomon";
+import { reedSolomonGenerator, reedSolomonRemainder } from "../qr-reed-solomon";
 
 /** "HELLO WORLD" as version 1-M data codewords (the widely published worked example). */
 const HELLO_WORLD_1M_DATA: readonly number[] = [32, 91, 11, 120, 209, 114, 220, 77, 67, 64, 236, 17, 236, 17, 236, 17];

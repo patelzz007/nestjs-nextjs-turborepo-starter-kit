@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { OrganizationContextSummaryResponseSchema } from "./organization";
+import { OrganizationContextSummaryResponseSchema } from "../organization";
 
 const SUMMARY = {
 	id: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",

@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { IconStack } from "./icon-stack";
+import { IconStack } from "../icon-stack";
 
 afterEach((): void => {
 	cleanup();

@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["PdfRendererModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.pdfrenderer.PdfRendererModule"]
+  }
+}

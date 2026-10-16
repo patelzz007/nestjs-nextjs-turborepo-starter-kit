@@ -2,7 +2,7 @@ import { inflateRawSync } from "node:zlib";
 
 import { describe, expect, it } from "vitest";
 
-import { deflateFixed } from "./deflate";
+import { deflateFixed } from "../deflate";
 
 describe("deflateFixed", () => {
 	it.each([

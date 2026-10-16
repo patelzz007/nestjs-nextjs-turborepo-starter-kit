@@ -8,7 +8,7 @@ import {
 	nextWeekStartInTimeZone,
 	startOfLocalDateInTimeZone,
 	startOfWeekInTimeZone,
-} from "./analytics-time-zone";
+} from "../analytics-time-zone";
 
 const HOUR_MS = 3_600_000;
 

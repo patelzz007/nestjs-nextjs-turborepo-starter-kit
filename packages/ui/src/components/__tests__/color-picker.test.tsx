@@ -17,7 +17,7 @@ import {
 	ColorPickerSwatches,
 	ColorPickerWheel,
 	useColorPicker,
-} from "./color-picker";
+} from "../color-picker";
 
 beforeEach((): void => {
 	stubResizeObserverForCalendarDropdowns();

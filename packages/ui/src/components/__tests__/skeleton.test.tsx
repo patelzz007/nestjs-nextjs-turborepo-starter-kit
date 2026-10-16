@@ -2,7 +2,7 @@ import { cleanup, render } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Skeleton } from "./skeleton";
+import { Skeleton } from "../skeleton";
 
 afterEach((): void => {
 	cleanup();

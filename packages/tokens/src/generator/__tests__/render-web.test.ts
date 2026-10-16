@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { ThemeRoleSchema } from "../schema";
-import { TOKEN_SOURCE } from "../source";
-import { readDeclarations } from "../testing/css-reader";
-import { renderWebStylesheet } from "./render-web";
+import { ThemeRoleSchema } from "../../schema";
+import { TOKEN_SOURCE } from "../../source";
+import { readDeclarations } from "../../testing/css-reader";
+import { renderWebStylesheet } from "../render-web";
 
 describe("renderWebStylesheet", () => {
 	const css = renderWebStylesheet(TOKEN_SOURCE);

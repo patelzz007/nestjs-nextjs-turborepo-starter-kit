@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { apiContract } from "../../contracts";
-import { apiRoutes } from "../../api-routes";
+import { apiContract } from "../../../contracts";
+import { apiRoutes } from "../../../api-routes";
 import {
 	OWN_PROFILE_EDITABLE_FIELDS,
 	OwnProfileEditableFieldsSchema,
@@ -10,8 +10,8 @@ import {
 	USER_FULL_NAME_MAX_LENGTH,
 	USER_FULL_NAME_MIN_LENGTH,
 	UserFullNameSchema,
-} from "./profile";
-import { UpdateUserSchema } from "./user";
+} from "../profile";
+import { UpdateUserSchema } from "../user";
 
 const USER_ID = "4f0b7c62-3f7a-4c0e-9d8e-2f6a1b3c5d7e";
 const AVATAR_FILE_ID = "9a1c2e4b-6d8f-4a0b-8c2d-4e6f8a0b2c4d";

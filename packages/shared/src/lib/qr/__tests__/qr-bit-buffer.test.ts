@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QR_CODEWORD_BITS, QrBitBuffer } from "./qr-bit-buffer";
+import { QR_CODEWORD_BITS, QrBitBuffer } from "../qr-bit-buffer";
 
 describe("QrBitBuffer", () => {
 	it("starts empty", () => {

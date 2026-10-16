@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KafkaLogContext, KafkaLogSink } from "./kafka-client-config";
-import { AggregatingKafkaLogSink, kafkaLogKey } from "./kafka-log-aggregator";
+import type { KafkaLogContext, KafkaLogSink } from "../kafka-client-config";
+import { AggregatingKafkaLogSink, kafkaLogKey } from "../kafka-log-aggregator";
 
 interface CapturedLine {
 	readonly level: "error" | "warn" | "info" | "debug";

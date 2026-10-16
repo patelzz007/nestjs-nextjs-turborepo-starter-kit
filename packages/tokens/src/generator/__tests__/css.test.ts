@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { declaration, declaredNames, DuplicateCssDeclarationError, printComment, printStylesheet, rule } from "./css";
+import { declaration, declaredNames, DuplicateCssDeclarationError, printComment, printStylesheet, rule } from "../css";
 
 describe("printStylesheet", () => {
 	it("prints the header, then each top-level rule separated by a blank line, with tab indentation and a trailing newline", () => {

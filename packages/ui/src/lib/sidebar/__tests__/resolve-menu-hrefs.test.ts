@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-import { identitySidebarResolveHref, withResolvedSidebarMenuUrls } from "./resolve-menu-hrefs";
+import { identitySidebarResolveHref, withResolvedSidebarMenuUrls } from "../resolve-menu-hrefs";
 
 describe("resolve-menu-hrefs", () => {
 	it("identity resolver leaves menu URLs unchanged", () => {

@@ -1,7 +1,7 @@
 import { SALE_CURRENCY_MINOR_UNIT_EXPONENTS, SaleCurrencySchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { formatMinorUnits, formatMinorUnitsCompact, minorToMajorUnits, minorUnitExponent } from "./money";
+import { formatMinorUnits, formatMinorUnitsCompact, minorToMajorUnits, minorUnitExponent } from "../money";
 
 /** Intl separates the currency symbol from the amount with a no-break space. */
 /** Formatters normalise every ICU space variant to a plain space (see intl-text.ts). */

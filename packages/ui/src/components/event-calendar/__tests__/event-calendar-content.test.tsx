@@ -3,11 +3,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useEventCalendarView } from "./event-calendar";
-import { DEFAULT_VIEW_COMPONENTS, EventCalendarContent } from "./event-calendar-content";
-import { EventCalendarMonthView } from "./event-calendar-month-view";
+import { useEventCalendarView } from "../event-calendar";
+import { DEFAULT_VIEW_COMPONENTS, EventCalendarContent } from "../event-calendar-content";
+import { EventCalendarMonthView } from "../event-calendar-month-view";
 import { CalendarHarness, ResizeObserverStub } from "@workspace/ui/testing/event-calendar-test-harness";
-import type { CalendarView } from "./event-calendar-types";
+import type { CalendarView } from "../event-calendar-types";
 
 beforeEach((): void => {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);

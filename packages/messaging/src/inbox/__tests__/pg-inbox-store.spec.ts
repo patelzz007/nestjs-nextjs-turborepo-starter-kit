@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONSUMER_APPLICATION_NAME, createConsumerPool } from "./pg-inbox-store";
+import { CONSUMER_APPLICATION_NAME, createConsumerPool } from "../pg-inbox-store";
 
 describe("createConsumerPool", () => {
 	const pools: { end(): Promise<void> }[] = [];

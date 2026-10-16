@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { encodeUtf8, encodeUtf8CodePoint } from "./qr-utf8";
+import { encodeUtf8, encodeUtf8CodePoint } from "../qr-utf8";
 
 describe("encodeUtf8CodePoint", () => {
 	it("encodes each sequence length at its boundaries", () => {

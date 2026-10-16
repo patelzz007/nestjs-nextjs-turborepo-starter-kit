@@ -12,7 +12,7 @@ import {
 	ProseSkeleton,
 	StatCardsSkeleton,
 	TableSkeleton,
-} from "./skeleton-patterns";
+} from "../skeleton-patterns";
 
 afterEach((): void => {
 	cleanup();

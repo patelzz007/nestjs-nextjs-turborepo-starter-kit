@@ -2,8 +2,8 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ChartContainer, ChartLegendContent, ChartStyle, ChartTooltipContent, type ChartConfig } from "./chart";
-import { LayoutTransitionProvider, useReportLayoutTransition } from "./layout-transition";
+import { ChartContainer, ChartLegendContent, ChartStyle, ChartTooltipContent, type ChartConfig } from "../chart";
+import { LayoutTransitionProvider, useReportLayoutTransition } from "../layout-transition";
 
 const NO_SERIES: ChartConfig = {};
 const CONFIG: ChartConfig = { salesMinor: { label: "Sales", color: "var(--chart-1)" } };

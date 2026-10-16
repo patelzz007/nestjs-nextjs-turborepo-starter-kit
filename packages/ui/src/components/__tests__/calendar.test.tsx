@@ -10,7 +10,7 @@ import {
 } from "@workspace/ui/testing/calendar-dropdowns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Calendar } from "./calendar";
+import { Calendar } from "../calendar";
 
 beforeEach((): void => {
 	stubResizeObserverForCalendarDropdowns();

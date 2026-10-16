@@ -5,8 +5,8 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CalendarHarness, ResizeObserverStub, testRect } from "@workspace/ui/testing/event-calendar-test-harness";
-import { EventCalendarDaysView, EventCalendarDayView, EventCalendarWeekView, minuteBlockStyle } from "./event-calendar-time-grid";
-import type { EventCalendarProposedUpdate, EventCalendarSlotDraft, EventCalendarSlotInfo, EventCalendarUpdateResult } from "./event-calendar-types";
+import { EventCalendarDaysView, EventCalendarDayView, EventCalendarWeekView, minuteBlockStyle } from "../event-calendar-time-grid";
+import type { EventCalendarProposedUpdate, EventCalendarSlotDraft, EventCalendarSlotInfo, EventCalendarUpdateResult } from "../event-calendar-types";
 
 const COLUMN_WIDTH_PX = 100;
 /** 1px per minute: a full-day column is 1440px tall. */

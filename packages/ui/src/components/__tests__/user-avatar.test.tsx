@@ -2,8 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { stubLoadedImages } from "../testing/loaded-image-stub";
-import { UserAvatar } from "./user-avatar";
+import { stubLoadedImages } from "../../testing/loaded-image-stub";
+import { UserAvatar } from "../user-avatar";
 
 const PICTURE = {
 	url: "https://cdn.example.com/users/ada/avatar.webp",

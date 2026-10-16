@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectionItemActiveSurfaceClasses, resolveCollectionItemActiveClasses, resolveCollectionItemDensityClasses, resolveMenuItemActiveClasses } from "./field-variants";
+import { collectionItemActiveSurfaceClasses, resolveCollectionItemActiveClasses, resolveCollectionItemDensityClasses, resolveMenuItemActiveClasses } from "../field-variants";
 
 describe("resolveCollectionItemDensityClasses", () => {
 	it("returns taller default density", () => {

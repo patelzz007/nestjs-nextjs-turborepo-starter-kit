@@ -9,7 +9,7 @@
  *   YYYY-MM-DD` comment.
  *
  * Two checks use this module, deliberately split:
- * - every push (tests/dependency-exceptions.test.mjs) checks the STRUCTURE
+ * - every push (__tests__/dependency-exceptions.test.mjs) checks the STRUCTURE
  *   only — each entry has a written reason and a valid date — so CI never
  *   turns red just because a calendar day passed;
  * - the scheduled `dependency-review` workflow (scripts/check-dependency-exceptions.mjs)

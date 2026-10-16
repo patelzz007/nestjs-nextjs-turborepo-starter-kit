@@ -3,17 +3,17 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels } from "../lib/labels/ui-kit-labels";
-import { createNoopSidebarStorage } from "../lib/sidebar/storage";
-import { AppPanelShell } from "./app-panel-shell";
-import { AppShellNotificationBell } from "./app-shell-notification-bell";
-import { AppShellTopbar, AppShellTopbarSearch } from "./app-shell-topbar";
-import { PanelShellContent } from "./panel-shell-content";
-import { PanelSidebarHeader } from "./panel-sidebar-header";
-import { SidebarProvider, SidebarTrigger } from "./sidebar";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { createNoopSidebarStorage } from "../../lib/sidebar/storage";
+import { AppPanelShell } from "../app-panel-shell";
+import { AppShellNotificationBell } from "../app-shell-notification-bell";
+import { AppShellTopbar, AppShellTopbarSearch } from "../app-shell-topbar";
+import { PanelShellContent } from "../panel-shell-content";
+import { PanelSidebarHeader } from "../panel-sidebar-header";
+import { SidebarProvider, SidebarTrigger } from "../sidebar";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 const STORAGE = createNoopSidebarStorage();
 const BRAND = { icon: null, title: "Acme" };

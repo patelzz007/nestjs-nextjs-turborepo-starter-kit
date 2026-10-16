@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PILOT_CITY_LABELS, PilotCitySchema } from "./rewards-enums";
+import { PILOT_CITY_LABELS, PilotCitySchema } from "../rewards-enums";
 
 describe("PILOT_CITY_LABELS", () => {
 	it("has a non-blank display name for exactly the pilot cities", () => {

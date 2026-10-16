@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { CreateProductSchema } from "./product";
-import { CreateSampleCategorySchema } from "./sample-category";
-import { CATALOG_NAME_MAX_LENGTH, PRODUCT_SKU_MAX_LENGTH } from "./catalog-fields";
+import { CreateProductSchema } from "../product";
+import { CreateSampleCategorySchema } from "../sample-category";
+import { CATALOG_NAME_MAX_LENGTH, PRODUCT_SKU_MAX_LENGTH } from "../catalog-fields";
 
 const CATEGORY_ID = "5f2d1c4b-8a7e-4b6f-9c3d-2e1f0a9b8c7d";
 const VALID_PRODUCT = { categoryId: CATEGORY_ID, name: "Ceramic Mug", price: 12.5, sku: "MUG-001", slug: "ceramic-mug" };

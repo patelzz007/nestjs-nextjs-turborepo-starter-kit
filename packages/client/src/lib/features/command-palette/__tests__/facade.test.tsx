@@ -3,8 +3,8 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { CommandPaletteStoreProvider, commandPaletteStorageKey, useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "./facade";
-import type { CommandPaletteRecentSearch } from "./state";
+import { CommandPaletteStoreProvider, commandPaletteStorageKey, useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "../facade";
+import type { CommandPaletteRecentSearch } from "../state";
 
 const BASE_KEY = "test-command-palette-state";
 const MEMBER = "member-1";

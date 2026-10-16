@@ -1,9 +1,9 @@
 import { MerchantErrorCodes } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { ApiError } from "../../api/use-api";
-import { FileProcessingError } from "../../storage/direct-upload";
-import { classifyOnboardingFailure } from "./onboarding-outcome";
+import { ApiError } from "../../../api/use-api";
+import { FileProcessingError } from "../../../storage/direct-upload";
+import { classifyOnboardingFailure } from "../onboarding-outcome";
 
 function apiError(code: string, statusCode: number): ApiError {
 	return new ApiError({ message: "x", error: code, statusCode });

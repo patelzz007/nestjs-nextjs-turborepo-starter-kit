@@ -71,6 +71,7 @@ with their order in `blog/meta.json`.
 | ```` ```ts title="app.ts" {2-4} ````           | A `CodeBlock` with a title, language, copy button, line numbers and lines 2–4 lit |
 | ```` ```mermaid ````                           | A diagram, rendered in the browser in the current theme   |
 | ```` ```qr title="Pairing QR" ````            | A scannable QR code of the fence's text, drawn at build time as inline SVG by the shared encoder (`src/lib/markdown/qr-code.ts`) |
+| ```` ```pdf title="Statement.pdf" ````        | The PDF at the fence's URL (a site path or `https://`), framed under a header with open-in-new-tab and download, drawn by the browser's own PDF engine (`src/lib/markdown/pdf-embed.ts`). `/files/pdf-viewer-sample.pdf` is a sample written at build time |
 | `![alt](./images/email/welcome.png)`           | The image, served from `docs/images/` at `/images/…`      |
 | A table whose cells are images                 | A responsive screenshot gallery                           |
 | `RBAC`, `RLS`, `ReBAC`, … in prose             | An `<abbr>` tooltip with the definition                   |

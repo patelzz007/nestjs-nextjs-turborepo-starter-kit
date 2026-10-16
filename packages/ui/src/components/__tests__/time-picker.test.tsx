@@ -14,7 +14,7 @@ import {
 	useTimePicker,
 	type TimePickerApi,
 	type TimePickerLabels,
-} from "./time-picker";
+} from "../time-picker";
 
 beforeEach((): void => {
 	stubResizeObserverForCalendarDropdowns();

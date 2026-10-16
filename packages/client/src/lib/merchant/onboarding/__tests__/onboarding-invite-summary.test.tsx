@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MERCHANT_ONBOARDING_LOADING_LABELS, MerchantOnboardingInviteSummary, MerchantOnboardingSkeleton } from "./onboarding-invite-summary";
+import { MERCHANT_ONBOARDING_LOADING_LABELS, MerchantOnboardingInviteSummary, MerchantOnboardingSkeleton } from "../onboarding-invite-summary";
 
 afterEach((): void => {
 	cleanup();

@@ -3,7 +3,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createLayoutTransitionSignal, LayoutTransitionProvider, useLayoutTransitionListener, useReportLayoutTransition } from "./layout-transition";
+import { createLayoutTransitionSignal, LayoutTransitionProvider, useLayoutTransitionListener, useReportLayoutTransition } from "../layout-transition";
 
 afterEach((): void => {
 	cleanup();

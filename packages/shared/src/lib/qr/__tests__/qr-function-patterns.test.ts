@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { qrFormatBits, qrVersionBits } from "./qr-format-info";
+import { qrFormatBits, qrVersionBits } from "../qr-format-info";
 import {
 	buildFunctionPatterns,
 	drawAlignmentPattern,
@@ -11,9 +11,9 @@ import {
 	drawVersionInfo,
 	placeCodewords,
 	QR_TIMING_LINE,
-} from "./qr-function-patterns";
-import { QrModuleGrid } from "./qr-module-grid";
-import { qrSizeForVersion, rawDataModules } from "./qr-version-table";
+} from "../qr-function-patterns";
+import { QrModuleGrid } from "../qr-module-grid";
+import { qrSizeForVersion, rawDataModules } from "../qr-version-table";
 
 /** A square region of the grid as rows of `1`/`0`. */
 function region(grid: QrModuleGrid, top: number, left: number, size: number): string[] {

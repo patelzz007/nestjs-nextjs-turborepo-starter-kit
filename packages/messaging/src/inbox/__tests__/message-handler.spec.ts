@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { AnalyticsEventRow, DeadLetterInput, InboxClaim, InboxStore, InboxTransaction } from "./inbox";
+import type { AnalyticsEventRow, DeadLetterInput, InboxClaim, InboxStore, InboxTransaction } from "../inbox";
 import {
 	ANALYTICS_CONSUMER_ID,
 	classifyProcessingFailure,
@@ -14,7 +14,7 @@ import {
 	type ConsumerLogger,
 	type KafkaRecord,
 	type MessageHandlerDeps,
-} from "./message-handler";
+} from "../message-handler";
 
 const EVENT_ID = "0b8f5a52-6a3c-4c3e-9d8e-5d8b5f0f4a11";
 const ORGANIZATION_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";

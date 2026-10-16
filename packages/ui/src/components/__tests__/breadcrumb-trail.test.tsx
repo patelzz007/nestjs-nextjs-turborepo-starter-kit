@@ -4,12 +4,12 @@ import { FileText, Home } from "lucide-react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels, UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import type { BreadcrumbItem } from "./breadcrumb-context";
-import { BreadcrumbTrail } from "./breadcrumb-trail";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels, UiKitLabelsOverride } from "../../lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import type { BreadcrumbItem } from "../breadcrumb-context";
+import { BreadcrumbTrail } from "../breadcrumb-trail";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
 afterEach((): void => {
 	cleanup();

@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { applyFilterRelative, formatFilterDate, isFilterTime, parseFilterDate, resolveFilterDate, toFilterDateValue } from "./filters-date";
-import type { FilterDateValue } from "./filters-types";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { applyFilterRelative, formatFilterDate, isFilterTime, parseFilterDate, resolveFilterDate, toFilterDateValue } from "../filters-date";
+import type { FilterDateValue } from "../filters-types";
 
 /** Wednesday 14 August 2024, noon. */
 const NOW = new Date(2024, 7, 14, 12, 0);

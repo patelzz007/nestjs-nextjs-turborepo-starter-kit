@@ -5,7 +5,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AnalyticsRangeControls, useAnalyticsRange } from "./analytics-range-controls";
+import { AnalyticsRangeControls, useAnalyticsRange } from "../analytics-range-controls";
 
 // `useSearchParams` reads the address bar, as Next.js does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({

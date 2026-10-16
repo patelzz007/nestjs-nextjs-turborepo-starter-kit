@@ -6,7 +6,7 @@ import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { RELATIVE_TIME_REFRESH_INTERVAL_MS, RelativeTime } from "./relative-time";
+import { RELATIVE_TIME_REFRESH_INTERVAL_MS, RelativeTime } from "../relative-time";
 
 const KUALA_LUMPUR: DisplayRegion = { locale: "en-MY", timeZone: "Asia/Kuala_Lumpur" };
 const MINUTE_MS = 60_000;

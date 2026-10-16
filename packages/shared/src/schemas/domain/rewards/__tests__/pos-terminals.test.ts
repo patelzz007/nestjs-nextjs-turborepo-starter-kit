@@ -7,7 +7,7 @@ import {
 	MerchantTerminalSettingsSchema,
 	POS_TERMINAL_NAME_MAX_LENGTH,
 	PosPairTerminalSchema,
-} from "./rewards-entities";
+} from "../rewards-entities";
 
 const LOCATION_ID = "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f";
 

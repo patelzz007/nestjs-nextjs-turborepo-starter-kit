@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cycledWidth, placeholderKeys } from "./placeholders";
+import { cycledWidth, placeholderKeys } from "../placeholders";
 
 describe("placeholderKeys", () => {
 	it("returns count stable, prefixed, position-based keys", (): void => {

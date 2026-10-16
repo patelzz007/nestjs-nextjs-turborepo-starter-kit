@@ -101,7 +101,7 @@ export function GalleryShell({ initialNavOpen, children }: GalleryShellProps): R
 				<div
 					inert={!navOpen}
 					aria-hidden={navOpen ? undefined : true}
-					className={cn("min-h-0 w-60 shrink-0 overflow-y-auto p-1 transition-opacity", NAV_MOTION, navOpen ? "opacity-100" : "opacity-0")}>
+					className={cn("min-h-0 w-60 overflow-y-auto overscroll-contain p-1 transition-opacity", NAV_MOTION, navOpen ? "opacity-100" : "opacity-0")}>
 					<GalleryNav />
 				</div>
 			</aside>

@@ -14,7 +14,7 @@ import {
 	resolveDayDateFormats,
 	type DateSelectorPeriodNames,
 	type ParseDateSelectorInputOptions,
-} from "./value";
+} from "../value";
 
 const NAMES: DateSelectorPeriodNames = {
 	monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],

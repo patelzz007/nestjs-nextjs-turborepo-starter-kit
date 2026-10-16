@@ -269,7 +269,7 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
 | `src/config/typed-config.service.spec.ts` | Group accessors, client-app URLs, key copies, broker/cache/storage switches |
 | `src/config/env-example.spec.ts` | `.env.example` documents every schema variable, ships secrets empty, and boots once secrets are filled |
 | `src/eslint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
-| `packages/shared/src/runtime/app-env.test.ts` | Shared building blocks |
+| `packages/shared/src/runtime/__tests__/app-env.test.ts` | Shared building blocks |
 
 Unit tests are hermetic: `test/setup-unit-env.ts` installs the TEST-ONLY
 fixture from `test/support/test-api-env.ts` and never reads `apps/api/.env`.

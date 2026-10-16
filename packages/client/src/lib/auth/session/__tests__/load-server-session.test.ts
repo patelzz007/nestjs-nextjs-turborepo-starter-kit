@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import type * as ServerApi from "../../api/server-api";
-import { loadServerSessionOutcome, serverRenderedSessionOf, type ServerSessionReader } from "./load-server-session";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import type * as ServerApi from "../../../api/server-api";
+import { loadServerSessionOutcome, serverRenderedSessionOf, type ServerSessionReader } from "../load-server-session";
 
 // `server-only` throws outside React Server Components; stub it for tests.
 vi.mock("server-only", () => ({}));
@@ -18,7 +18,7 @@ class ClassifiedQueryError extends Error {
 	}
 }
 
-vi.mock("../../api/server-api", async (importOriginal) => {
+vi.mock("../../../api/server-api", async (importOriginal) => {
 	const actual = await importOriginal<typeof ServerApi>();
 	return {
 		...actual,

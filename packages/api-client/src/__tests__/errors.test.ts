@@ -2,11 +2,11 @@ import { DataValueSchema, singleResponse, type DataValue } from "@workspace/shar
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ApiError, readErrorPayload } from "./errors";
-import type { RefreshResult } from "./refresh";
-import { createApiRequestContext, fetchQuery } from "./request";
-import { defineQuery } from "./router";
-import { jsonResponse, type FetchImpl } from "./testing";
+import { ApiError, readErrorPayload } from "../errors";
+import type { RefreshResult } from "../refresh";
+import { createApiRequestContext, fetchQuery } from "../request";
+import { defineQuery } from "../router";
+import { jsonResponse, type FetchImpl } from "../testing";
 
 function errorEnvelope(code: string, message: string, details?: Record<string, DataValue>): DataValue {
 	return {

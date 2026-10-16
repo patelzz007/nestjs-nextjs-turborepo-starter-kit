@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { EmojiPickerEmoji } from "./data";
-import { detectEmojiSupport, FULL_EMOJI_SUPPORT } from "./support";
+import type { EmojiPickerEmoji } from "../data";
+import { detectEmojiSupport, FULL_EMOJI_SUPPORT } from "../support";
 
 const EMOJIS: readonly EmojiPickerEmoji[] = [{ id: "1F600", emoji: "😀", label: "grinning face", tags: [], shortcodes: [], category: "smileys", version: 1 }];
 

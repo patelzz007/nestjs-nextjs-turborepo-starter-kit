@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AdminKybUpdateSchema, KYB_STATUSES_REQUIRING_REASON } from "./rewards-kyb";
+import { AdminKybUpdateSchema, KYB_STATUSES_REQUIRING_REASON } from "../rewards-kyb";
 
 describe("AdminKybUpdateSchema", () => {
 	it.each(KYB_STATUSES_REQUIRING_REASON)("rejects %s without a reason, and accepts it with one", (kybStatus) => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CreateFileUploadUrlSchema } from "./storage";
+import { CreateFileUploadUrlSchema } from "../storage";
 
 const ORGANIZATION_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
 const CHECKSUM = "a".repeat(64);

@@ -5,7 +5,7 @@ import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useIsClient } from "./use-is-client";
+import { useIsClient } from "../use-is-client";
 
 function Probe(): React.JSX.Element {
 	return <span>{useIsClient() ? "client" : "server"}</span>;

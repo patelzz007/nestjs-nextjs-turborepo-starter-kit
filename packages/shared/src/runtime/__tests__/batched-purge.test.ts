@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { purgeInBatches, type BatchedPurgePolicy } from "./batched-purge";
+import { purgeInBatches, type BatchedPurgePolicy } from "../batched-purge";
 
 const POLICY: BatchedPurgePolicy = { batchSize: 3, timeBudgetMs: 1_000 };
 const START_MS = 1_790_812_800_000;

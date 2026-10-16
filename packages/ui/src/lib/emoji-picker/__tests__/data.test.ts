@@ -10,7 +10,7 @@ import {
 	readLoadedEmojiPickerData,
 	resetEmojiPickerDataCache,
 	shortcodePresetsOf,
-} from "./data";
+} from "../data";
 
 const RAW_DATA = [
 	{ label: "grinning face", hexcode: "1F600", emoji: "😀", tags: ["face", "grin"], group: 0, order: 2, version: 1 },

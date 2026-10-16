@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { LIST_SLOT_INDEX } from "../../../lib/named-list-index";
+import { LIST_SLOT_INDEX } from "../../../../lib/named-list-index";
 
-import { AuthorizationCheckResultSchema, AuthorizationCheckSchema, AuthorizationDecisionsResponseSchema } from "../../../authorization/decisions.schema";
-import { AuthorizationResultSchema } from "../../../authorization/policy-dsl.schema";
-import { PolicyDraftCreatedResponseSchema, PolicyPublishResponseSchema, PolicySimulationResultSchema } from "../organization/authorization-policy";
-import { CapabilityCatalogResponseSchema } from "./capabilities";
-import { AuditLogEntrySchema } from "./rbac-audit";
-import { RbacMessageResponseSchema } from "./rbac-inspection";
+import { AuthorizationCheckResultSchema, AuthorizationCheckSchema, AuthorizationDecisionsResponseSchema } from "../../../../authorization/decisions.schema";
+import { AuthorizationResultSchema } from "../../../../authorization/policy-dsl.schema";
+import { PolicyDraftCreatedResponseSchema, PolicyPublishResponseSchema, PolicySimulationResultSchema } from "../../organization/authorization-policy";
+import { CapabilityCatalogResponseSchema } from "../capabilities";
+import { AuditLogEntrySchema } from "../rbac-audit";
+import { RbacMessageResponseSchema } from "../rbac-inspection";
 import {
 	AdminPermissionResponseSchema,
 	CheckPermissionResponseSchema,
@@ -14,7 +14,7 @@ import {
 	PermissionUpdateSchema,
 	PermissionGroupsResponseSchema,
 	PermissionListResponseSchema,
-} from "./rbac-permissions";
+} from "../rbac-permissions";
 import {
 	CreateRoleExtendedSchema,
 	RoleAssignmentPreviewSchema,
@@ -22,7 +22,7 @@ import {
 	RoleListResponseSchema,
 	RoleResponseSchema,
 	UpdateRoleSchema,
-} from "./rbac-roles";
+} from "../rbac-roles";
 
 /** A fixed epoch-ms timestamp (2026-08-23) for the fixtures. */
 const CREATED_AT_MS = 1_786_300_000_000;

@@ -3,9 +3,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { CASCADER_NO_HIGHLIGHT, createCascaderHighlightStore, useCascaderActions, useCascaderHighlight, useCascaderState } from "./cascader-context";
-import { resolveCascaderSearchLabel } from "./cascader-i18n";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { CASCADER_NO_HIGHLIGHT, createCascaderHighlightStore, useCascaderActions, useCascaderHighlight, useCascaderState } from "../cascader-context";
+import { resolveCascaderSearchLabel } from "../cascader-i18n";
 
 afterEach((): void => {
 	cleanup();

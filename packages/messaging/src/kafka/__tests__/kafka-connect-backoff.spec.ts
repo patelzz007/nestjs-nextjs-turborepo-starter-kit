@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_KAFKA_CONNECT_BACKOFF, KafkaConnectBackoffPolicySchema, kafkaConnectRetryDelayMs } from "./kafka-connect-backoff";
+import { DEFAULT_KAFKA_CONNECT_BACKOFF, KafkaConnectBackoffPolicySchema, kafkaConnectRetryDelayMs } from "../kafka-connect-backoff";
 
 const NO_JITTER = (): number => 0.5;
 const LOWEST = (): number => 0;

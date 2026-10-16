@@ -30,6 +30,22 @@ describe("GalleryShell", () => {
 		expect(screen.getByRole("button", { name: "Hide the components list" }).getAttribute("aria-expanded")).toBe("true");
 	});
 
+	it("lets the list shrink to the capped sidebar height and scroll inside it", () => {
+		render(
+			<GalleryShell initialNavOpen>
+				<p>Page body</p>
+			</GalleryShell>,
+			{ wrapper: UiKitTestProviders },
+		);
+		// jsdom has no layout, so the scroll contract is checked on its classes: a list that
+		// cannot shrink (`shrink-0`) overflows the aside's `max-h` and is clipped instead of scrolling.
+		const list = screen.getByRole("navigation", { name: "Components" }).parentElement;
+		const classes = list?.className.split(" ") ?? [];
+		expect(classes).toEqual(expect.arrayContaining(["min-h-0", "overflow-y-auto"]));
+		expect(classes).not.toContain("shrink-0");
+		expect(list?.parentElement?.className).toContain("lg:max-h-");
+	});
+
 	it("collapses to a rail and reopens, remembering each in its own cookie", () => {
 		render(
 			<GalleryShell initialNavOpen>

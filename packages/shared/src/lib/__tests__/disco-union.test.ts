@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { Prettify, ToDiscoUnion } from "./disco-union";
+import type { Prettify, ToDiscoUnion } from "../disco-union";
 
 describe("ToDiscoUnion (compile-time)", () => {
 	it("tags every variant with its name under `type`", () => {

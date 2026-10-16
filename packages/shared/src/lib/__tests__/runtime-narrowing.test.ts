@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import type { JsonValueNode } from "../schemas/runtime/json";
+import type { JsonValueNode } from "../../schemas/runtime/json";
 
-import { isArrayValue, isBigIntPrimitive, isBooleanPrimitive, isFunctionValue, isJsonPrimitive, isNumberPrimitive, isStringPrimitive } from "./runtime-narrowing";
+import { isArrayValue, isBigIntPrimitive, isBooleanPrimitive, isFunctionValue, isJsonPrimitive, isNumberPrimitive, isStringPrimitive } from "../runtime-narrowing";
 
 describe("runtime-narrowing (zod-backed guards for in-process unions)", () => {
 	it("isStringPrimitive accepts strings only", () => {

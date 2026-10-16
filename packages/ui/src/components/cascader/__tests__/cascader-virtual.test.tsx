@@ -3,13 +3,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
-import { CascaderList } from "./cascader";
-import { CascaderColumns } from "./cascader-columns";
-import type { CascaderColumn } from "./cascader-context";
+import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import { CascaderList } from "../cascader";
+import { CascaderColumns } from "../cascader-columns";
+import type { CascaderColumn } from "../cascader-context";
 import { type Produce, ProducePicker, stubCascaderResizeObserver } from "@workspace/ui/testing/cascader-test-fixtures";
-import type { CascaderNode } from "./cascader-types";
-import { CascaderVirtualColumn, CascaderVirtualItems } from "./cascader-virtual";
+import type { CascaderNode } from "../cascader-types";
+import { CascaderVirtualColumn, CascaderVirtualItems } from "../cascader-virtual";
 
 /** Rows in the long level: far more than one viewport holds. */
 const ROW_COUNT = 500;

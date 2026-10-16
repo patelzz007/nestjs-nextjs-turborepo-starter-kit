@@ -3,12 +3,12 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels, UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
-import type { PaletteSearchableItem } from "../lib/palette/types";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { AppCommandPalette, type AppCommandPaletteProps } from "./app-command-palette";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels, UiKitLabelsOverride } from "../../lib/labels/ui-kit-labels";
+import type { PaletteSearchableItem } from "../../lib/palette/types";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { AppCommandPalette, type AppCommandPaletteProps } from "../app-command-palette";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
 /** cmdk measures its list and scrolls the active item into view — jsdom implements neither. */
 class NoopResizeObserver {

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { PERMISSION, type ResourceAuthorization } from "@workspace/shared";
 
-import { Can, CapabilitiesProvider, useAuthorization, useCan } from "./can";
+import { Can, CapabilitiesProvider, useAuthorization, useCan } from "../can";
 
 const READ = PERMISSION.USER.READ;
 const DELETE = PERMISSION.USER.DELETE;

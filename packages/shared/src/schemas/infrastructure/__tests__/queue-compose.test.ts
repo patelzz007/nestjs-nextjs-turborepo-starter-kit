@@ -3,12 +3,12 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ALL_QUEUE_NAMES } from "./queue";
+import { ALL_QUEUE_NAMES } from "../queue";
 
 // compose.yml's Bull Board service lists the queues it shows (QUEUE_NAMES). YAML
 // cannot import the registry, so this keeps the two in step: a queue added to
 // QueueNameSchema without being added to Bull Board (or the reverse) fails here.
-const COMPOSE_FILE: string = path.resolve(import.meta.dirname, "../../../../../compose.yml");
+const COMPOSE_FILE: string = path.resolve(import.meta.dirname, "../../../../../../compose.yml");
 const BULL_BOARD_QUEUE_NAMES_PATTERN = /^\s+QUEUE_NAMES:\s*(?<queues>\S+)\s*$/m;
 
 describe("compose.yml Bull Board queue list", () => {

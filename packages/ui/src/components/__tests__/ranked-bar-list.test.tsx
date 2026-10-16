@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { RankedBarList, rankedBarPercent, type RankedBarItem } from "./ranked-bar-list";
+import { RankedBarList, rankedBarPercent, type RankedBarItem } from "../ranked-bar-list";
 
 afterEach((): void => {
 	cleanup();

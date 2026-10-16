@@ -171,7 +171,7 @@ it('calls onRowClick with the clicked order when a row is clicked', async () => 
 
 ## Where tests live — a `__tests__/` folder beside the code
 
-In every front-end workspace (`apps/web`, `apps/admin`, `apps/merchant`, `apps/docs`, `apps/mobile`, `packages/ui-native`) a unit test sits in a `__tests__/` folder **next to** the code it tests, never in the same folder as it:
+In every front-end app (`apps/web`, `apps/admin`, `apps/merchant`, `apps/docs`, `apps/mobile`), in `apps/aws-infrastructure`, and in **every package** under `packages/` (shared, ui, ui-native, client, api-client, tokens, messaging, tooling, eslint-config, …) a unit test sits in a `__tests__/` folder **next to** the code it tests, never in the same folder as it — and never in a differently named folder such as `tests/`:
 
 ```text
 components/account/profile-form.tsx
@@ -180,7 +180,7 @@ components/account/__tests__/profile-form.test.tsx
 
 - Next.js treats `_`-prefixed folders inside `app/` as private, so `app/**/__tests__/` never becomes a route.
 - Expo Router bundles EVERY file under `apps/mobile/src/app`, so the mobile route screens' tests mirror the route tree in `src/__tests__/app/` instead.
-- The test runners collect only `__tests__/` folders, and `packages/tooling/tests/test-placement.test.mjs` fails when a test file is outside one — a misplaced test never silently stops running.
+- The test runners collect only `__tests__/` folders, and `packages/tooling/__tests__/test-placement.test.mjs` fails when a test file is outside one — a misplaced test never silently stops running.
 - Browser suites (`e2e/`) and the API's `*.spec.ts` keep their own folders.
 
 ## Test naming

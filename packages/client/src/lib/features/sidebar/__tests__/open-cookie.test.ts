@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSidebarOpenCookie, readSidebarOpenCookie, sidebarOpenCookieName, type ReadableCookies } from "./open-cookie";
+import { parseSidebarOpenCookie, readSidebarOpenCookie, sidebarOpenCookieName, type ReadableCookies } from "../open-cookie";
 
 function cookiesOf(entries: Readonly<Record<string, string>>): ReadableCookies {
 	return {

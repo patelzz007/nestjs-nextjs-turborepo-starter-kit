@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LIST_SLOT_INDEX } from "./named-list-index";
+import { LIST_SLOT_INDEX } from "../named-list-index";
 
 describe("LIST_SLOT_INDEX", () => {
 	it("maps ordinal names to 0-based positions", () => {

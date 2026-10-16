@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { epochMs, type OwnProfile } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useOwnAvatar } from "./use-own-avatar";
+import { useOwnAvatar } from "../use-own-avatar";
 
 interface HookState {
 	sessionScope: "full" | "restricted" | "pending";
@@ -15,7 +15,7 @@ const { state, profileQuery } = vi.hoisted(() => {
 	return { state: initial, profileQuery: vi.fn() };
 });
 
-vi.mock("../index", () => ({
+vi.mock("../../index", () => ({
 	useAuth: (): object => ({
 		user: { sessionScope: state.sessionScope },
 		api: {

@@ -2,14 +2,14 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { DARK_THEME, THEMES } from "../semantic";
-import { TOKEN_SOURCE } from "../source";
-import { paletteColor } from "../value";
-import { GENERATE_COMMAND } from "./common";
-import { generateTokenStylesheets } from "./generate";
-import { findStaleStylesheets, findUnexpectedGeneratedFiles } from "./staleness";
+import { DARK_THEME, THEMES } from "../../semantic";
+import { TOKEN_SOURCE } from "../../source";
+import { paletteColor } from "../../value";
+import { GENERATE_COMMAND } from "../common";
+import { generateTokenStylesheets } from "../generate";
+import { findStaleStylesheets, findUnexpectedGeneratedFiles } from "../staleness";
 
-const GENERATED_DIRECTORY = new URL("../../generated/", import.meta.url);
+const GENERATED_DIRECTORY = new URL("../../../generated/", import.meta.url);
 
 /** What the token source generates now, rendered once for the file (it draws the 1024 px launch icons). */
 const GENERATED = generateTokenStylesheets(TOKEN_SOURCE);

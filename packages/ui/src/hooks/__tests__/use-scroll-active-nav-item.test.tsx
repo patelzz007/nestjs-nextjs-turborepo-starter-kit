@@ -3,7 +3,7 @@ import { cleanup, render } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { transitionsSettled, useScrollActiveNavItem } from "./use-scroll-active-nav-item";
+import { transitionsSettled, useScrollActiveNavItem } from "../use-scroll-active-nav-item";
 
 function Harness({ navigationKey, activeTop }: { readonly navigationKey: string; readonly activeTop: number }): React.JSX.Element {
 	const containerRef = React.useRef<HTMLDivElement>(null);

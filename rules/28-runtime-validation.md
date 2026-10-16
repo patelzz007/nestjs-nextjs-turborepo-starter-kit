@@ -144,7 +144,7 @@ if (isStringPrimitive(node)) return [node];
 
 ## ESLint & rollout
 
-- Config: `packages/eslint-config/restricted-syntax-rules.js` → `restrictedSyntaxRules` in `packages/eslint-config/base.js` (section 9). Selector tests: `packages/eslint-config/tests/configs.test.js`.
+- Config: `packages/eslint-config/restricted-syntax-rules.js` → `restrictedSyntaxRules` in `packages/eslint-config/base.js` (section 9). Selector tests: `packages/eslint-config/__tests__/configs.test.js`.
 - If lint points at your file: parse at the boundary with a zod schema, or use a shared guard for a union you already hold.
 
 ## Related docs

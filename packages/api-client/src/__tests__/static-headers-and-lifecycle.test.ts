@@ -6,11 +6,11 @@ import { apiContract, APP_VERSION_HEADER, CLIENT_TYPE_HEADER, DataValueSchema, s
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createApiClientContext, InvalidApiClientConfigError } from "./config";
-import { AUTHORIZATION_HEADER, buildUrl } from "./http";
-import { fetchBodyTokenLifecycleMutation, fetchQueryOrThrow, TokenTransportRequiredError } from "./request";
-import { apiRouter, defineQuery } from "./router";
-import { fetchCalls, firstFetchCall, headersOf, inputUrl, jsonResponse, MemoryTokenProvider, rotatedTokensBody, type FetchImpl } from "./testing";
+import { createApiClientContext, InvalidApiClientConfigError } from "../config";
+import { AUTHORIZATION_HEADER, buildUrl } from "../http";
+import { fetchBodyTokenLifecycleMutation, fetchQueryOrThrow, TokenTransportRequiredError } from "../request";
+import { apiRouter, defineQuery } from "../router";
+import { fetchCalls, firstFetchCall, headersOf, inputUrl, jsonResponse, MemoryTokenProvider, rotatedTokensBody, type FetchImpl } from "../testing";
 
 const BASE_URL = "http://api.test";
 const APP_VERSION = "1.4.0";

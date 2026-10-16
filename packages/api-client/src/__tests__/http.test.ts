@@ -1,7 +1,7 @@
 import { API_VERSION_PREFIX, APP_VERSION_HEADER, apiVersionPrefix, CLIENT_TYPE_HEADER, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { AUTHORIZATION_HEADER, appVersionHeader, bearerAuthorizationHeader, buildUrl, AbortErrorSchema, mergeProcedureHeaders, mutationIntentHeaders } from "./http";
+import { AUTHORIZATION_HEADER, appVersionHeader, bearerAuthorizationHeader, buildUrl, AbortErrorSchema, mergeProcedureHeaders, mutationIntentHeaders } from "../http";
 
 describe("buildUrl", () => {
 	it("prefixes the default API version and keeps the query string", () => {

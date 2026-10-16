@@ -21,7 +21,7 @@ import {
 	PostgresUrlEnvSchema,
 	PUBLIC_ENV_PREFIX,
 	REDACTED_ENV_VALUE,
-} from "./app-env";
+} from "../app-env";
 
 const SCOPE = "apps/test (server)";
 

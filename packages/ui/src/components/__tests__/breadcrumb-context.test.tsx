@@ -7,11 +7,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as React from "react";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels } from "../lib/labels/ui-kit-labels";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { BreadcrumbItemSchema, breadcrumbStatusSchema, createBreadcrumbContext, type BreadcrumbItem, type BreadcrumbStatus } from "./breadcrumb-context";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { BreadcrumbItemSchema, breadcrumbStatusSchema, createBreadcrumbContext, type BreadcrumbItem, type BreadcrumbStatus } from "../breadcrumb-context";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
 afterEach(() => {
 	cleanup();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, HTTP_UPGRADE_REQUIRED_STATUS, readErrorPayload, UpgradeRequiredError } from "./errors";
-import { jsonResponse } from "./testing";
+import { ApiError, HTTP_UPGRADE_REQUIRED_STATUS, readErrorPayload, UpgradeRequiredError } from "../errors";
+import { jsonResponse } from "../testing";
 
 describe("readErrorPayload: 426 Upgrade Required (ADR 033)", () => {
 	it("types an enveloped 426 as UpgradeRequiredError, still an ApiError with every field", async () => {

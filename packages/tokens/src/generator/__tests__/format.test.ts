@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hex, oklch, px, rem, stackLevel, TRANSPARENT, cubicBezier, colorToken } from "../value";
+import { hex, oklch, px, rem, stackLevel, TRANSPARENT, cubicBezier, colorToken } from "../../value";
 import {
 	formatColorLiteral,
 	formatCubicBezier,
@@ -11,7 +11,7 @@ import {
 	formatStackLevel,
 	formatVariableReference,
 	paletteVariableName,
-} from "./format";
+} from "../format";
 
 describe("formatNumber", () => {
 	it.each([

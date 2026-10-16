@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ClaimStatusBreakdownSchema, CustomerDashboardTotalsSchema } from "./analytics-dashboard";
+import { ClaimStatusBreakdownSchema, CustomerDashboardTotalsSchema } from "../analytics-dashboard";
 
 const ZERO = { value: 0, previous: 0, change: 0, changePercent: null };
 const BASE_TOTALS = { spentMinor: ZERO, visits: ZERO, averageBillMinor: ZERO, claims: ZERO, redemptions: ZERO, conversionRate: ZERO, merchants: ZERO };

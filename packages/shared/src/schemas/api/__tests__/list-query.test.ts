@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { isArrayValue } from "../../lib/runtime-narrowing";
+import { isArrayValue } from "../../../lib/runtime-narrowing";
 
 import {
 	defineListQuery,
@@ -18,7 +18,7 @@ import {
 	nestBracketQueryParams,
 	parseSortParam,
 	type RawQueryRecord,
-} from "./list-query";
+} from "../list-query";
 
 const StatusSchema = z.enum(["ACTIVE", "LOCKED", "DISABLED"]);
 const OWNER_ID = "6f1c2a52-9a3e-4d38-9a55-0d1e2f3a4b5c";

@@ -2,8 +2,8 @@
 import { TZDate } from "@date-fns/tz";
 import { describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { getViewName, makeDefaultFunctions, mergeEventCalendarI18n } from "./event-calendar-i18n";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { getViewName, makeDefaultFunctions, mergeEventCalendarI18n } from "../event-calendar-i18n";
 
 const LABELS = UI_KIT_LABELS_EN.eventCalendar;
 

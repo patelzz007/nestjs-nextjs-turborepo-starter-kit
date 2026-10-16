@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompiledSidebarMenuData } from "./sidebar-menu-schema";
-import { sidebarMenuSkeletonShape } from "./sidebar-menu-skeleton";
+import type { CompiledSidebarMenuData } from "../sidebar-menu-schema";
+import { sidebarMenuSkeletonShape } from "../sidebar-menu-skeleton";
 
 const MENU: CompiledSidebarMenuData = {
 	header: { title: "Merchant", subtitle: "Portal" },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dueExceptions, isIsoCalendarDate, parseDependencyExceptions, structuralProblems } from "./dependency-exceptions.mjs";
+import { dueExceptions, isIsoCalendarDate, parseDependencyExceptions, structuralProblems } from "../dependency-exceptions.mjs";
 
 const WORKSPACE = `packages:
   - apps/*

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { BRAND_MARK_FACETS } from "../brand";
-import { TOKEN_SOURCE } from "../source";
-import { createColorLookups, resolveColorValue } from "../resolve";
+import { BRAND_MARK_FACETS } from "../../brand";
+import { TOKEN_SOURCE } from "../../source";
+import { createColorLookups, resolveColorValue } from "../../resolve";
 import {
 	APPLE_TOUCH_ICON_SIZE,
 	DEFAULT_FAVICON_VARIANT as DEFAULT_VARIANT,
@@ -11,8 +11,8 @@ import {
 	renderFaviconIco,
 	renderFaviconSvg,
 	type FaviconVariant,
-} from "./render-favicon";
-import { formatSrgbHex } from "./srgb-hex";
+} from "../render-favicon";
+import { formatSrgbHex } from "../srgb-hex";
 
 describe("renderFaviconSvg", () => {
 	const svg = renderFaviconSvg(TOKEN_SOURCE, DEFAULT_VARIANT);

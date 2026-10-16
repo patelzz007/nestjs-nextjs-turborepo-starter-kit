@@ -104,6 +104,25 @@ describe("Screen", () => {
 		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: 123, bottom: 0 });
 	});
 
+	it("without scrolling, fills the screen below the app shell's header with its content", async () => {
+		await render(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<PageHeaderClearanceProvider value={123}>
+					<Screen scrollable={false} description="A document" testID="screen">
+						<BodyText>Pages</BodyText>
+					</Screen>
+				</PageHeaderClearanceProvider>
+			</SafeAreaProvider>,
+		);
+
+		const content = screen.getByTestId("screen-content");
+		expect(content).toHaveStyle({ paddingTop: 123 });
+		expect(content).toHaveProp("className", expect.stringContaining("flex-1"));
+		expect(content).not.toHaveProp("contentContainerStyle");
+		expect(screen.getByText("Pages")).toBeOnTheScreen();
+		expect(screen.queryByRole("header")).toBeNull();
+	});
+
 	it("drops the pull-to-refresh spinner below the app shell's header, where the content starts", async () => {
 		await render(
 			<SafeAreaProvider initialMetrics={METRICS}>

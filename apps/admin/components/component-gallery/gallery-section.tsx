@@ -18,7 +18,7 @@ import {
 } from "@/components/component-gallery/gallery-catalog";
 
 /** Reserved height of a section's demos until they mount (`LazySection`), so the page below does not jump. */
-export type DemoHeight = "h-24" | "h-40" | "h-56" | "h-72" | "h-96" | "h-[400px]";
+export type DemoHeight = "h-24" | "h-40" | "h-56" | "h-72" | "h-96" | "h-[400px]" | "h-[640px]";
 
 export interface ComponentSectionProps {
 	readonly entry: GalleryEntry;

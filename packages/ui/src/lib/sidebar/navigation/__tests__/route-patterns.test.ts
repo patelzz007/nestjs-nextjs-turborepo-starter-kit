@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findMostSpecificRoute, isDynamicRouteSegment, matchRoutePattern, routeParam, samplePathForPattern } from "./route-patterns";
+import { findMostSpecificRoute, isDynamicRouteSegment, matchRoutePattern, routeParam, samplePathForPattern } from "../route-patterns";
 
 interface Entry {
 	readonly name: string;

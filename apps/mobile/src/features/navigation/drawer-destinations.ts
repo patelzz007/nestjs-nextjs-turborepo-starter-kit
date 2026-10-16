@@ -7,6 +7,7 @@
 // flow, not a settings page.
 
 import BlocksIcon from "lucide-react-native/icons/blocks";
+import FileTextIcon from "lucide-react-native/icons/file-text";
 import GitPullRequestIcon from "lucide-react-native/icons/git-pull-request";
 import KeyRoundIcon from "lucide-react-native/icons/key-round";
 import LockKeyholeIcon from "lucide-react-native/icons/lock-keyhole";
@@ -19,6 +20,7 @@ import type { DrawerSectionTone } from "../../components/drawer-menu";
 import type { LucideIcon } from "@workspace/ui-native/components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
+import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
 import { TILL_TITLE } from "../till/labels";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
@@ -68,6 +70,11 @@ export const DRAWER_GROUPS: readonly DrawerDestinationGroup[] = [
 		title: "Rewards",
 		tone: "green",
 		destinations: [{ label: TILL_TITLE, icon: ScanQrCodeIcon, route: ROUTES.till, isTab: false }],
+	},
+	{
+		title: "Documents",
+		tone: "blue",
+		destinations: [{ label: PDF_VIEWER_TITLE, icon: FileTextIcon, route: ROUTES.pdfViewer, isTab: false }],
 	},
 	{
 		title: "Developer",

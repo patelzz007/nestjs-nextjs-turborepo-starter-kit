@@ -15,7 +15,7 @@ import {
 	generateSecretValues,
 	mergeSecretsIntoEnv,
 	parseKeyRing,
-} from "./app-secrets.mjs";
+} from "../app-secrets.mjs";
 
 /** Deterministic byte source: every call returns `size` bytes of an incrementing fill value. */
 function sequentialRandomSource() {

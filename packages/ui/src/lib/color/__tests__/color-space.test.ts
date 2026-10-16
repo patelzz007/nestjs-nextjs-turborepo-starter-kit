@@ -19,7 +19,7 @@ import {
 	withTripleAt,
 	wrapHue,
 	type ColorPickerColor,
-} from "./color-space";
+} from "../color-space";
 
 const GRAY_WITH_HUE: ColorPickerColor = { space: "hsv", channels: [210, 0, 50], alpha: 1 };
 

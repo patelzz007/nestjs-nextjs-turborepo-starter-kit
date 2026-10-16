@@ -246,4 +246,4 @@ migration and are a follow-up.
   PDF text extracted through its ToUnicode maps; all five languages in every format), the font
   registry, script segmenter and shaping, chart scale, report builder, comparison math, scope SQL,
   services, guard;
-  `packages/client/src/lib/api/download.test.ts`.
+  `packages/client/src/lib/api/__tests__/download.test.ts`.

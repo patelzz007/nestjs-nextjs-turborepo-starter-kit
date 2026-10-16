@@ -1,12 +1,12 @@
 import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import type { AuthSyncEvent } from "../../auth/session/sync";
-import { authActions } from "./actions";
-import type { AuthBroadcaster, AuthQueryCache } from "./effects";
-import { SESSION_CHECK_OK } from "./state";
-import { createAuthStore, type AuthStore } from "./store";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import type { AuthSyncEvent } from "../../../auth/session/sync";
+import { authActions } from "../actions";
+import type { AuthBroadcaster, AuthQueryCache } from "../effects";
+import { SESSION_CHECK_OK } from "../state";
+import { createAuthStore, type AuthStore } from "../store";
 
 /** A profile as the API answered it — the envelope with its real-shaped `meta`. */
 function profileEnvelope(overrides: Partial<UserResponse> = {}): Envelope<UserResponse> {

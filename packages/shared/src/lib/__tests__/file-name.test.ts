@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_FILE_NAME_SEGMENT_MAX_LENGTH, safeFileNameSegment } from "./file-name";
+import { DEFAULT_FILE_NAME_SEGMENT_MAX_LENGTH, safeFileNameSegment } from "../file-name";
 
 describe("safeFileNameSegment", () => {
 	it("lower-cases the value and turns every run of other characters into one dash", () => {

@@ -3,15 +3,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { APP_LINKS, type Envelope, type ForgotPasswordInput, type MessageResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../test/auth-fixtures";
-import { ApiError } from "../../api/use-api";
-import { ForgotPasswordForm } from "./forgot-password-form";
+import { envelopeFixture } from "../../../../test/auth-fixtures";
+import { ApiError } from "../../../api/use-api";
+import { ForgotPasswordForm } from "../forgot-password-form";
 
 const mocks = vi.hoisted(() => ({
 	forgotPassword: vi.fn<(input: ForgotPasswordInput) => Promise<Envelope<MessageResponse>>>(),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = {
 		auth: {
 			forgotPassword: {

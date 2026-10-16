@@ -3,8 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { epochMs, KybDocumentScanStatusSchema, type KybDocumentScanStatus, type MerchantKybDocumentRecord } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { formatKybScanStatus, isKybDocumentAccessible } from "./document-utils";
-import { MerchantKybStoredDocumentList } from "./stored-document-list";
+import { formatKybScanStatus, isKybDocumentAccessible } from "../document-utils";
+import { MerchantKybStoredDocumentList } from "../stored-document-list";
 
 function documentWith(scanStatus: KybDocumentScanStatus): MerchantKybDocumentRecord {
 	return { id: "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f", fileName: "registration.pdf", mimeType: "application/pdf", sizeBytes: 2048, scanStatus, uploadedAt: epochMs(0) };

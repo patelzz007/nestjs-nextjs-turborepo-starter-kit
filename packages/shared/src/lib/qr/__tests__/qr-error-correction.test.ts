@@ -7,7 +7,7 @@ import {
 	QR_ERROR_CORRECTION_LEVELS,
 	QrErrorCorrectionLevelSchema,
 	strongerErrorCorrectionLevels,
-} from "./qr-error-correction";
+} from "../qr-error-correction";
 
 describe("QrErrorCorrectionLevelSchema", () => {
 	it("accepts the four levels and nothing else", () => {

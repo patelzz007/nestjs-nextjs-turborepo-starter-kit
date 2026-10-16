@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { DEVICES_COPY } from "../devices/labels";
+import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
 import { TILL_TITLE } from "../till/labels";
 import { commitScreenTitle } from "../github/labels";
 import { COMMITS_TITLE, FILES_CHANGED_TITLE, GITHUB_ACCOUNT_TITLE, pullRequestScreenTitle, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
@@ -57,6 +58,7 @@ const SUB_SCREEN_TITLES: ReadonlyMap<AppRoute, ScreenTitle> = new Map<AppRoute, 
 	[ROUTES.appLock, fixed("App lock")],
 	[ROUTES.components, fixed("Components")],
 	[ROUTES.till, fixed(TILL_TITLE)],
+	[ROUTES.pdfViewer, fixed(PDF_VIEWER_TITLE)],
 	[ROUTES.twoFactorSetup, (params: ScreenParams): string => twoFactorEnrollmentTitleOf(TwoFactorTitleParamsSchema.parse(params).mode)],
 	[ROUTES.githubCommit, commitTitle],
 	[ROUTES.pullRequests, fixed(PULL_REQUESTS_TITLE)],

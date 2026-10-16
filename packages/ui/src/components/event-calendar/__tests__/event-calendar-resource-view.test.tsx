@@ -4,9 +4,9 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EventCalendarResourceView } from "./event-calendar-resource-view";
+import { EventCalendarResourceView } from "../event-calendar-resource-view";
 import { CalendarHarness, ResizeObserverStub, testRect, type TestEventData } from "@workspace/ui/testing/event-calendar-test-harness";
-import type { CalendarEvent, EventCalendarProposedUpdate, EventCalendarResource, EventCalendarSlotInfo, EventCalendarUpdateResult } from "./event-calendar-types";
+import type { CalendarEvent, EventCalendarProposedUpdate, EventCalendarResource, EventCalendarSlotInfo, EventCalendarUpdateResult } from "../event-calendar-types";
 
 const RESOURCES: readonly EventCalendarResource[] = [
 	{

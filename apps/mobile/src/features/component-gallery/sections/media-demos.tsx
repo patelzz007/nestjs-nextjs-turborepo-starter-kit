@@ -1,5 +1,5 @@
 // The Components screen's media and content: Carousel, ImageCarousel,
-// CoverImage, CodeBlock, QrCode, Bubble, Message and Attachment. Each example
+// CoverImage, CodeBlock, QrCode, Bubble, Message, Attachment and PdfViewer. Each example
 // owns its demo state here (the kit components stay controlled); nothing is
 // sent to the API, and no picture is fetched: the gallery works offline and its
 // tests never reach the network. The pictures are the app's own bundled artwork
@@ -22,8 +22,10 @@ import { CodeBlock } from "@workspace/ui-native/components/code-block";
 import { CoverImage } from "@workspace/ui-native/components/cover-image";
 import { ImageCarousel, type ImageCarouselImage } from "@workspace/ui-native/components/image-carousel";
 import { Message } from "@workspace/ui-native/components/message";
+import { PdfViewer, type PdfViewerState } from "@workspace/ui-native/components/pdf-viewer";
 import { QrCode } from "@workspace/ui-native/components/qr-code";
 import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
+import { ToggleGroup, type ToggleGroupOption } from "@workspace/ui-native/components/toggle-group";
 import appIcon from "../../../../assets/app-icon.png";
 import splashIcon from "../../../../assets/splash-icon.png";
 import { DemoBlock } from "../demo-block";
@@ -82,6 +84,33 @@ if (session.requiresTwoFactor) {
 
 const REDEMPTION_URL = "https://rewards.example.com/redeem/RWD-4821-KLCC";
 
+// ── PdfViewer ──────────────────────────────────────────────────────────────
+
+/** The viewer's states a gallery can show without a document: live pages need the PDF viewer screen's engine. */
+type PdfDemoState = "loading" | "failed" | "external";
+
+const PDF_DEMO_OPTIONS: readonly ToggleGroupOption<PdfDemoState>[] = [
+	{ value: "loading", label: "Loading" },
+	{ value: "failed", label: "Failed" },
+	{ value: "external", label: "Other app" },
+];
+
+const PDF_DEMO_STATES: Readonly<Record<PdfDemoState, PdfViewerState>> = {
+	loading: { status: "loading" },
+	failed: { status: "failed", failure: "password_protected" },
+	external: { status: "external" },
+};
+
+/** The gallery has no document, so no page is ever asked for. */
+function noPages(): Promise<string> {
+	return Promise.reject(new Error("The gallery shows no pages"));
+}
+
+/** The gallery's buttons do nothing: no document is handed to another app. */
+function doNothing(): void {
+	// A demo action.
+}
+
 export function MediaDemos(): React.JSX.Element {
 	return (
 		<>
@@ -124,6 +153,25 @@ export function MediaDemos(): React.JSX.Element {
 			<DemoBlock title="Attachment" description="A file chip with its detail; open it, remove it, or follow its upload.">
 				<AttachmentDemo />
 			</DemoBlock>
+			<DemoBlock title="PdfViewer" description="A PDF page under page with page and zoom controls; the app's engine draws the pages.">
+				<PdfViewerDemo />
+			</DemoBlock>
+		</>
+	);
+}
+
+function PdfViewerDemo(): React.JSX.Element {
+	const [state, setState] = React.useState<PdfDemoState>("loading");
+	const choose = React.useCallback((pressed: PdfDemoState | null): void => {
+		if (pressed !== null) {
+			setState(pressed);
+		}
+	}, []);
+	return (
+		<>
+			<ToggleGroup type="single" label="Viewer state" options={PDF_DEMO_OPTIONS} value={state} onChange={choose} size="sm" testID="pdf-demo-states" />
+			<PdfViewer state={PDF_DEMO_STATES[state]} renderPage={noPages} onRetry={doNothing} onOpenExternally={doNothing} className="h-96" />
+			<MutedText>Open Settings → PDF viewer to read a real document.</MutedText>
 		</>
 	);
 }

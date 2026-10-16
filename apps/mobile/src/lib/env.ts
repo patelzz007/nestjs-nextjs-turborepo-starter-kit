@@ -10,6 +10,9 @@
 //   bundle from + `EXPO_PUBLIC_API_PORT` (default the API's dev port). Never
 //   `localhost`: on a phone it means the phone.
 // - otherwise: `EXPO_PUBLIC_API_URL`, required, an absolute `https://` URL.
+// An explicit `EXPO_PUBLIC_API_URL` always wins; in development it may be
+// `http://`, and one without a port gets `EXPO_PUBLIC_API_PORT` (default the
+// API's dev port): `http://10.0.0.9` → `http://10.0.0.9:8080`.
 // A missing or invalid value is a `ConfigError` the root guard shows on the
 // config error screen, naming the variable and an example value.
 
@@ -40,6 +43,9 @@ export const MOBILE_ENV_EXAMPLES: Readonly<Record<MobileEnvVariable, string>> = 
 const HttpsUrlSchema = HttpUrlEnvSchema.refine((value: string): boolean => value.startsWith("https://"), { error: "must be an https:// URL" });
 
 const PortSchema = z.coerce.number().int().min(1).max(MAX_PORT);
+
+/** An `http://` URL WITHOUT a port: its origin, then the rest (`http://10.0.0.9` + `/api`). IPv6 hosts come bracketed. */
+const HTTP_URL_WITHOUT_PORT = /^(?<origin>http:\/\/(?:\[[^\]]+\]|[^/:]+))(?<rest>\/.*)?$/;
 
 /** `host:port` as Expo reports the dev server (`192.168.1.5:8081`); IPv6 hosts come bracketed. */
 const HOST_URI_PATTERN = /^(?<host>\[[^\]]+\]|[^:/]+)(?::(?<port>\d+))?/;
@@ -97,26 +103,56 @@ function parseOptionalStoreUrl(value: string | undefined): OptionalUrlResult {
 	return parsed.success ? { ok: true, url: parsed.data } : { ok: false };
 }
 
-function resolveApiBaseUrl(raw: RawMobileEnv): { readonly ok: true; readonly url: string } | { readonly ok: false; readonly result: MobileEnvResult } {
+type ApiBaseUrlResult = { readonly ok: true; readonly url: string } | { readonly ok: false; readonly result: MobileEnvResult };
+type DevPortResult = { readonly ok: true; readonly port: number } | { readonly ok: false; readonly result: MobileEnvResult };
+
+/** `EXPO_PUBLIC_API_PORT`, or the API's own dev port when it is unset. */
+function resolveDevApiPort(apiPort: string | undefined): DevPortResult {
+	const port = PortSchema.safeParse(apiPort === undefined || apiPort.trim().length === 0 ? DEFAULT_DEV_API_PORT : apiPort.trim());
+	return port.success ? { ok: true, port: port.data } : { ok: false, result: failure("EXPO_PUBLIC_API_PORT", `must be a whole number between 1 and ${String(MAX_PORT)}`) };
+}
+
+/**
+ * The explicit `EXPO_PUBLIC_API_URL`. Outside development it must be https and is used as
+ * written. In development an `http://` URL without a port gets `EXPO_PUBLIC_API_PORT`
+ * (default the API's dev port) — `http://10.0.0.9` + `8080` → `http://10.0.0.9:8080` — and
+ * a port written in the URL wins.
+ */
+function resolveConfiguredApiUrl(configuredUrl: string, raw: RawMobileEnv): ApiBaseUrlResult {
+	const schema = raw.isDevelopment ? HttpUrlEnvSchema : HttpsUrlSchema;
+	const parsed = schema.safeParse(configuredUrl);
+	if (!parsed.success) {
+		return { ok: false, result: failure("EXPO_PUBLIC_API_URL", parsed.error.issues.at(0)?.message ?? "is invalid") };
+	}
+	const withoutPort = raw.isDevelopment ? HTTP_URL_WITHOUT_PORT.exec(parsed.data) : null;
+	if (withoutPort === null) {
+		return { ok: true, url: parsed.data };
+	}
+	const port = resolveDevApiPort(raw.apiPort);
+	if (!port.ok) {
+		return port;
+	}
+	return { ok: true, url: `${withoutPort.groups?.origin ?? ""}:${String(port.port)}${withoutPort.groups?.rest ?? ""}` };
+}
+
+function resolveApiBaseUrl(raw: RawMobileEnv): ApiBaseUrlResult {
 	const configuredUrl = raw.apiUrl?.trim();
 	if (configuredUrl !== undefined && configuredUrl.length > 0) {
-		// An explicit address always wins; outside development it must be https.
-		const schema = raw.isDevelopment ? HttpUrlEnvSchema : HttpsUrlSchema;
-		const parsed = schema.safeParse(configuredUrl);
-		return parsed.success ? { ok: true, url: parsed.data } : { ok: false, result: failure("EXPO_PUBLIC_API_URL", parsed.error.issues.at(0)?.message ?? "is invalid") };
+		// An explicit address always wins over the dev machine's.
+		return resolveConfiguredApiUrl(configuredUrl, raw);
 	}
 	if (!raw.isDevelopment) {
 		return { ok: false, result: failure("EXPO_PUBLIC_API_URL", "is required outside development") };
 	}
-	const port = PortSchema.safeParse(raw.apiPort === undefined || raw.apiPort.trim().length === 0 ? DEFAULT_DEV_API_PORT : raw.apiPort.trim());
-	if (!port.success) {
-		return { ok: false, result: failure("EXPO_PUBLIC_API_PORT", `must be a whole number between 1 and ${String(MAX_PORT)}`) };
+	const port = resolveDevApiPort(raw.apiPort);
+	if (!port.ok) {
+		return port;
 	}
 	const host = readDevHost(raw.hostUri);
 	if (host === null) {
 		return { ok: false, result: failure("EXPO_PUBLIC_API_URL", "is required when Expo does not report the dev machine's address (set it to the API's LAN address)") };
 	}
-	return { ok: true, url: `http://${host}:${String(port.data)}` };
+	return { ok: true, url: `http://${host}:${String(port.port)}` };
 }
 
 /** Validates the raw inputs into a {@link MobileEnv}, or the first problem found. */

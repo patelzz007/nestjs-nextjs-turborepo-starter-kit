@@ -82,7 +82,7 @@ dropdb authz_e2e
 
 | Package / app | Covers |
 |---|---|
-| `packages/shared/src/authorization/permission.test.ts` | slugs, `MANAGE`, implicit self grants, merchant role table, strict policy schema |
+| `packages/shared/src/authorization/__tests__/permission.test.ts` | slugs, `MANAGE`, implicit self grants, merchant role table, strict policy schema |
 | `packages/client` (`can.test.tsx`, sidebar filter tests) | `can` / `cannot` / resource-aware checks, `<Can>`, six-level sidebar, any / all / cascade / disabled / feature flags |
 | `apps/admin`, `apps/merchant`, `apps/web` | each gated area with and without the capability, loading states, route guard |
 | `apps/merchant/lib/navigation/org-route-authorization.test.ts`, `lib/org/org-page-*.test.ts*` | every org page has a rule and calls `guardOrgPage` before loading data; sidebar and route map agree; sidebar per role hides exactly the denied pages; server denial rendering |

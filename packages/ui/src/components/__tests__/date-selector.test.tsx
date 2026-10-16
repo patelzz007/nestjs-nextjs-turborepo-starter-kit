@@ -6,7 +6,7 @@ import { stubResizeObserverForCalendarDropdowns } from "@workspace/ui/testing/ca
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DateSelector, type DateSelectorLabels, type DateSelectorValue } from "./date-selector";
+import { DateSelector, type DateSelectorLabels, type DateSelectorValue } from "../date-selector";
 
 function noop(): void {
 	return;

@@ -3,7 +3,7 @@ import { BRAND_MARK_FACETS, BRAND_MARK_VIEW_BOX } from "@workspace/tokens";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { BrandMark } from "./brand-mark";
+import { BrandMark } from "../brand-mark";
 
 afterEach((): void => {
 	cleanup();

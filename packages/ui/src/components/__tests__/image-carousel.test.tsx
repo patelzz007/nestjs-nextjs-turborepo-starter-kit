@@ -3,8 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { ImageCarousel, type ImageCarouselImage } from "./image-carousel";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { ImageCarousel, type ImageCarouselImage } from "../image-carousel";
 
 /** Embla observes the viewport's size and its slides' visibility — jsdom implements neither. */
 class NoopObserver {

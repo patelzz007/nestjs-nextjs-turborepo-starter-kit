@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { APP_LINKS } from "./app-links";
+import { APP_LINKS } from "../app-links";
 
 describe("APP_LINKS", () => {
 	it("builds the org-scoped merchant API-keys path, encoding the slug", () => {

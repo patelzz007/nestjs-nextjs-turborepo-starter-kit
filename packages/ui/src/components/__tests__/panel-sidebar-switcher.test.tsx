@@ -3,9 +3,9 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { PanelSidebarSwitcher, type PanelSidebarSwitcherGroup } from "./panel-sidebar-switcher";
-import { SidebarProvider } from "./sidebar";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { PanelSidebarSwitcher, type PanelSidebarSwitcherGroup } from "../panel-sidebar-switcher";
+import { SidebarProvider } from "../sidebar";
 
 afterEach((): void => {
 	cleanup();

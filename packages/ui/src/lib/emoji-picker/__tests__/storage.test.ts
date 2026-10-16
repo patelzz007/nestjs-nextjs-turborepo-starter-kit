@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseStoredRecent, parseStoredTone, readStoredValue, subscribeStoredValue, writeStoredValue } from "./storage";
+import { parseStoredRecent, parseStoredTone, readStoredValue, subscribeStoredValue, writeStoredValue } from "../storage";
 
 afterEach((): void => {
 	window.localStorage.clear();

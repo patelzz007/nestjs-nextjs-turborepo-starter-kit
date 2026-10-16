@@ -8,7 +8,7 @@ import {
 	type ImageRules,
 	largestRenditionWidth,
 	renditionsForWidth,
-} from "./storage";
+} from "../storage";
 
 function rewardImageRules(): ImageRules {
 	const rules = FILE_CATEGORY_POLICIES.REWARD_IMAGE.imageRules;

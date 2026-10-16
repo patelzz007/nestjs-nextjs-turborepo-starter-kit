@@ -5,7 +5,8 @@ export default defineConfig({
 	plugins: [react()],
 	test: {
 		environment: "node",
-		include: ["src/**/*.test.{ts,tsx}"],
+		// Tests live in `__tests__/` folders beside the code they test (rules/11 → "Where tests live").
+		include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
 		// `src/lib/api/config.ts` validates NEXT_PUBLIC_API_URL at import and
 		// fails fast when it is missing; vitest does not load `.env`, so give the
 		// tests a deterministic fixture value (never a real endpoint).

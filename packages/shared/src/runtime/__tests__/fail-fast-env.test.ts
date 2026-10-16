@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { LIST_SLOT_INDEX } from "../lib/named-list-index";
+import { LIST_SLOT_INDEX } from "../../lib/named-list-index";
 
-import { EnvValidationError, NextAppServerEnvSchema, parseEnvOrThrow } from "./app-env";
-import { INVALID_ENV_EXIT_CODE, loadEnvOrExit, type ExitProcess, type LoadEnvOrExitOptions } from "./fail-fast-env";
+import { EnvValidationError, NextAppServerEnvSchema, parseEnvOrThrow } from "../app-env";
+import { INVALID_ENV_EXIT_CODE, loadEnvOrExit, type ExitProcess, type LoadEnvOrExitOptions } from "../fail-fast-env";
 
 const SCOPE = "apps/test (server-only config)";
 /** A bad value that must never reach the error output. */

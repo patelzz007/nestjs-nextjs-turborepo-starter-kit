@@ -10,8 +10,8 @@ import {
 	selectSessionEpoch,
 	selectSessionUserId,
 	selectSignedOutReason,
-} from "./selectors";
-import { SESSION_CHECK_OK, type AuthSessionState, type SignedOutReason } from "./state";
+} from "../selectors";
+import { SESSION_CHECK_OK, type AuthSessionState, type SignedOutReason } from "../state";
 
 const UNKNOWN: AuthSessionState = { status: "unknown", epoch: 0, check: SESSION_CHECK_OK };
 const AUTHENTICATED: AuthSessionState = { status: "authenticated", userId: "user-1", epoch: 0, check: SESSION_CHECK_OK };

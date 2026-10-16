@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-import { createResilientStorage } from "./browser-storage";
+import { createResilientStorage } from "../browser-storage";
 
 /** A `Storage` whose writes fail like a full quota. */
 class QuotaFullStorage implements Storage {

@@ -17,9 +17,9 @@ import {
 } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
-import { ApiError } from "../../api/use-api";
-import { LoginForm } from "./login-form";
+import { envelopeFixture, userFixture } from "../../../../test/auth-fixtures";
+import { ApiError } from "../../../api/use-api";
+import { LoginForm } from "../login-form";
 
 type LoginAnswer = Promise<Envelope<LoginClientResponse>>;
 
@@ -44,7 +44,7 @@ vi.mock("next/navigation", () => ({
 	}),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = {
 		auth: {
 			login: { useMutation: (): { readonly mutateAsync: typeof mocks.login; readonly isPending: boolean } => ({ mutateAsync: mocks.login, isPending: false }) },

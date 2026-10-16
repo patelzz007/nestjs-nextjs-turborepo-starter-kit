@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QrDataTooLongError, QrInvalidOptionsError, QrTableLookupError } from "./qr-errors";
+import { QrDataTooLongError, QrInvalidOptionsError, QrTableLookupError } from "../qr-errors";
 
 describe("QrDataTooLongError", () => {
 	it("carries the sizes, the version and the level, and says so in its message", () => {

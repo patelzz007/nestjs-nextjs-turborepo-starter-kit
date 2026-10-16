@@ -2,9 +2,9 @@ import { QueryClient } from "@tanstack/react-query";
 import { epochMs } from "@workspace/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { envelopeFixture, META_FIXTURE, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import { apiRouter } from "../../api/endpoints";
-import { createAuthQueryCache } from "./auth-query-cache";
+import { envelopeFixture, META_FIXTURE, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import { apiRouter } from "../../../api/endpoints";
+import { createAuthQueryCache } from "../auth-query-cache";
 
 const ME_KEY = apiRouter.auth.me.queryKey(undefined);
 const PERMISSIONS_KEY = apiRouter.auth.permissions.queryKey(undefined);

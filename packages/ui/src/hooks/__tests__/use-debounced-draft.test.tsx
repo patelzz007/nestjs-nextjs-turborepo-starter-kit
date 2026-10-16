@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useDebouncedDraft, type DebouncedDraft } from "./use-debounced-draft";
+import { useDebouncedDraft, type DebouncedDraft } from "../use-debounced-draft";
 
 const DELAY_MS = 150;
 

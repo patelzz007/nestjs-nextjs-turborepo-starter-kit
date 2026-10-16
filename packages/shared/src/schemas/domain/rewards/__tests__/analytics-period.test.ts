@@ -10,7 +10,7 @@ import {
 	RewardsAnalyticsQuerySchema,
 	startOfUtcWeekMs,
 	WEEK_MS,
-} from "./analytics";
+} from "../analytics";
 
 /** Monday 2026-09-07 00:00 UTC. */
 const MONDAY = Date.UTC(2026, 8, 7);

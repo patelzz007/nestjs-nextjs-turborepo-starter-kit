@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveAuthErrorMessage } from "./errors";
-import { ApiError } from "../api/use-api";
+import { resolveAuthErrorMessage } from "../errors";
+import { ApiError } from "../../api/use-api";
 
 describe("ApiError", () => {
 	it("preserves the code, status and message from the server body", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { InvalidKafkaSecurityEnvError, KafkaSecurityEnvSchema, listKafkaSecurityEnvIssues, toKafkaSecurityOptions, type KafkaSecurityEnv } from "./kafka-security";
+import { InvalidKafkaSecurityEnvError, KafkaSecurityEnvSchema, listKafkaSecurityEnvIssues, toKafkaSecurityOptions, type KafkaSecurityEnv } from "../kafka-security";
 
 function parse(source: Readonly<Record<string, string>>): KafkaSecurityEnv {
 	return KafkaSecurityEnvSchema.parse(source);

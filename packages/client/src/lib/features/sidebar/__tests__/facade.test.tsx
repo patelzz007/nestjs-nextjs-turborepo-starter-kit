@@ -3,7 +3,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SidebarStoreProvider, useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, pathnameOf } from "./facade";
+import { SidebarStoreProvider, useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, pathnameOf } from "../facade";
 
 const STORAGE_KEY = "test-sidebar-state";
 const PATHNAME = "/rewardhub/wallet";

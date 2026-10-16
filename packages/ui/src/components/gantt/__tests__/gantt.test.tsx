@@ -19,8 +19,8 @@ import {
 	useGanttViewConfig,
 	type GanttApi,
 	type GanttInstance,
-} from "./gantt";
-import type { GanttOccurrence, GanttState } from "./gantt-types";
+} from "../gantt";
+import type { GanttOccurrence, GanttState } from "../gantt-types";
 import { GanttTestProviders, stubGanttBrowserApis, TEST_CLOCK, TEST_EVENTS, TEST_RESOURCES, TEST_TIME_ZONE, utc } from "@workspace/ui/testing/gantt-testing";
 
 const ANCHOR = utc(2026, 2, 10);

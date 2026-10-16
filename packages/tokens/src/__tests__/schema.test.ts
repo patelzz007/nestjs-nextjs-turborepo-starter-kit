@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PALETTE } from "./palette";
+import { PALETTE } from "../palette";
 import {
 	ColorValueSchema,
 	CubicBezierSchema,
@@ -15,10 +15,10 @@ import {
 	ThemeSchema,
 	ThemesSchema,
 	TokenSourceSchema,
-} from "./schema";
-import { DARK_THEME, LIGHT_THEME, THEMES } from "./semantic";
-import { TOKEN_SOURCE } from "./source";
-import { colorToken, oklch } from "./value";
+} from "../schema";
+import { DARK_THEME, LIGHT_THEME, THEMES } from "../semantic";
+import { TOKEN_SOURCE } from "../source";
+import { colorToken, oklch } from "../value";
 
 describe("the committed token source", () => {
 	it("parses against the token schema", () => {

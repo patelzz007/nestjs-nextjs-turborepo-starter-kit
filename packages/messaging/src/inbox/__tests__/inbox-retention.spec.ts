@@ -14,8 +14,8 @@ import {
 	type RetentionDeps,
 	type RetentionLedger,
 	type RetentionStore,
-} from "./inbox-retention";
-import type { ConsumerLogEntry, ConsumerLogger } from "./message-handler";
+} from "../inbox-retention";
+import type { ConsumerLogEntry, ConsumerLogger } from "../message-handler";
 
 const NOW_MS = 1_790_812_800_000;
 const MS_PER_DAY = 86_400_000;

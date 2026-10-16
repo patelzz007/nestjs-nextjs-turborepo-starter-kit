@@ -4,8 +4,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { DataTable, type DataTableFeatures, type Filter } from "./data-table";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { DataTable, type DataTableFeatures, type Filter } from "../data-table";
 
 interface Row {
 	readonly id: string;

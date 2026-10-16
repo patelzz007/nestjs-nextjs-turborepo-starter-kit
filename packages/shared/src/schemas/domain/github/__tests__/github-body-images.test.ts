@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GITHUB_BODY_IMAGES_MAX, GithubBodyImagesSchema, githubAttachmentIdOf, githubImageUrlFor, type GithubBodyImage } from "./github-body-images";
+import { GITHUB_BODY_IMAGES_MAX, GithubBodyImagesSchema, githubAttachmentIdOf, githubImageUrlFor, type GithubBodyImage } from "../github-body-images";
 
 const ID = "cb5fe4d3-85fb-4d1e-807a-1771925051be";
 const ATTACHMENT = `https://github.com/user-attachments/assets/${ID}`;

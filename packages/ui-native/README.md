@@ -17,7 +17,7 @@ state, and passes everything down.
 
 ## The contract every component meets
 
-`packages/tooling/tests/ui-native-kit-contract.test.mjs` checks the mechanical parts of this list for
+`packages/tooling/__tests__/ui-native-kit-contract.test.mjs` checks the mechanical parts of this list for
 every file in `src/components/`. It lives in the tooling package because it reads source files with Node,
 which the kit's own React Native lint rules forbid.
 
@@ -92,6 +92,13 @@ which the kit's own React Native lint rules forbid.
 | `UserAvatar`, `EntityAvatar` | `Avatar` with `shape="circle"` / `shape="rounded"` |
 | `Calendar`, `DatePicker`, `MultiDatePicker` | `CalendarNavigator` + `CalendarMonthGrid`, `DateField`, `MultiDateField`, `DateRangePicker` |
 
+`PdfViewer` is the native counterpart of the web kit's `PdfViewer`: a virtualised column of pages
+(`FlatList` with `getItemLayout`), a toolbar (previous / next page, "Page 2 of 12", zoom out / in in
+steps of the fit-width — `lib/pdf-viewer-layout.ts` — and "Open in another app") and a skeleton,
+failure and "external" state. It draws nothing itself: the app passes the document's state and a
+`renderPage(pageIndex, widthPx)` that returns a bitmap's address (in `apps/mobile`, the
+`modules/pdf-renderer` native module — ADR 056). Failures use the shared `PdfOpenFailure` list.
+
 **Mobile only, with no web counterpart:** `QrScanner` — a full-screen QR code scanner. In an Android
 build with Google Play services it opens Google's own code scanner (ML Kit); on iOS, in Expo Go,
 and on Android without Play services, it shows the kit's camera scanner (expo-camera's `CameraView` behind a
@@ -120,7 +127,7 @@ On iOS only one `Modal` can be presented at a time. A `DropdownMenu` item that o
 
 The kit runs on Hermes, which lacks `Intl.RelativeTimeFormat`, `ListFormat`, `PluralRules`,
 `DisplayNames`, `Segmenter` and `Locale`. Jest (Node) has them, so a unit test passes where a
-device would crash. `packages/tooling/tests/hermes-intl.test.mjs` blocks them (rules/04).
+device would crash. `packages/tooling/__tests__/hermes-intl.test.mjs` blocks them (rules/04).
 
 ## Tests and tooling
 

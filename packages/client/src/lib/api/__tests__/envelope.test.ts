@@ -9,7 +9,7 @@ import {
 	readPaginatedPage,
 	readPaginatedTotal,
 	readPaginatedTotalPages,
-} from "./envelope";
+} from "../envelope";
 
 const ANSWERED_AT = epochMs(1_790_812_800_000);
 const META: ApiResponseMeta = { correlationId: "corr-1", timestamp: ANSWERED_AT };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CreatePolicyDraftSchema } from "./authorization-policy";
+import { CreatePolicyDraftSchema } from "../authorization-policy";
 
 const ORGANIZATION_ID = "3f0a8c1e-2b4d-4e6f-8a9b-0c1d2e3f4a5b";
 const BUILDER_PAYLOAD = { templateId: "tenant.role_capability", parameters: { allowedRoles: ["OWNER"] } };

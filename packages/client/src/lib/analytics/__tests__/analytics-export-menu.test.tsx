@@ -4,14 +4,14 @@ import { apiContract, type AdminAnalyticsExportQuery, type AnalyticsExportFormat
 import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiDownloadError, defineDownload, type DownloadDef, type DownloadedFile } from "../api/download";
-import { AnalyticsExportMenu, describeExportFailure, formatRetryWait } from "./analytics-export-menu";
+import { ApiDownloadError, defineDownload, type DownloadDef, type DownloadedFile } from "../../api/download";
+import { AnalyticsExportMenu, describeExportFailure, formatRetryWait } from "../analytics-export-menu";
 
 const mocks = vi.hoisted(() => ({
 	download: vi.fn<(def: DownloadDef<AdminAnalyticsExportQuery>, input: AdminAnalyticsExportQuery) => Promise<DownloadedFile>>(),
 }));
 
-vi.mock("../auth", () => ({
+vi.mock("../../auth", () => ({
 	useAuth: (): { readonly api: { readonly download: typeof mocks.download } } => ({ api: { download: mocks.download } }),
 }));
 

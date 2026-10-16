@@ -4,7 +4,7 @@ import { encodeQr, qrMatrixToSvgPath } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { QrCode } from "./qr-code";
+import { QrCode } from "../qr-code";
 
 const VALUE = "https://rewardhub.example/r/ABCD2345";
 

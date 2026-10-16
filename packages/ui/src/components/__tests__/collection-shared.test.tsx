@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CollectionEmptyAction, CollectionItemLabel, CollectionLoading, CollectionOverflowPill } from "./collection-shared";
+import { CollectionEmptyAction, CollectionItemLabel, CollectionLoading, CollectionOverflowPill } from "../collection-shared";
 
 afterEach((): void => {
 	cleanup();

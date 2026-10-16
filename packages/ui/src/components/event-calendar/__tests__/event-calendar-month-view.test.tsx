@@ -4,9 +4,9 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EventCalendarMonthView } from "./event-calendar-month-view";
+import { EventCalendarMonthView } from "../event-calendar-month-view";
 import { CalendarHarness, ResizeObserverStub, testRect } from "@workspace/ui/testing/event-calendar-test-harness";
-import type { EventCalendarOccurrence, EventCalendarProposedUpdate, EventCalendarSlotDraft, EventCalendarSlotInfo, EventCalendarUpdateResult } from "./event-calendar-types";
+import type { EventCalendarOccurrence, EventCalendarProposedUpdate, EventCalendarSlotDraft, EventCalendarSlotInfo, EventCalendarUpdateResult } from "../event-calendar-types";
 
 const CELL_SIZE_PX = 100;
 

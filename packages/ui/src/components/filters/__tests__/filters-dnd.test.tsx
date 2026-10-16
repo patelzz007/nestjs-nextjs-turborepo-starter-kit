@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { cancelActiveFilterDrags, isFilterDropNoop, resolveFilterDrop, useFilterRowDrag, type FilterDropBox, type FilterDropDetails } from "./filters-dnd";
+import { cancelActiveFilterDrags, isFilterDropNoop, resolveFilterDrop, useFilterRowDrag, type FilterDropBox, type FilterDropDetails } from "../filters-dnd";
 
 function box(top: number, bottom: number, parentId: string, index: number, depth: number): FilterDropBox {
 	return { top, bottom, left: 0, right: 100, parentId, index, depth };

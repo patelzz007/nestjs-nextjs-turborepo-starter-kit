@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { LoginSchema, SignupSchema } from "../auth/auth";
-import { AdminCreateOrganizationInviteSchema, OrganizationMemberInviteSchema } from "../domain/organization/organization";
-import { MerchantCreateMemberSchema } from "../domain/rewards/rewards-kyb";
-import { AdminCreateMerchantInviteSchema } from "../domain/rewards/rewards-entities";
-import { CanonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "./email-address";
+import { LoginSchema, SignupSchema } from "../../auth/auth";
+import { AdminCreateOrganizationInviteSchema, OrganizationMemberInviteSchema } from "../../domain/organization/organization";
+import { MerchantCreateMemberSchema } from "../../domain/rewards/rewards-kyb";
+import { AdminCreateMerchantInviteSchema } from "../../domain/rewards/rewards-entities";
+import { CanonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "../email-address";
 
 describe("CanonicalEmailSchema", () => {
 	it("canonicalises an address to lower case", () => {

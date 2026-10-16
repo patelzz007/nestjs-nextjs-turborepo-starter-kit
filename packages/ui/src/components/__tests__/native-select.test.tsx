@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "./native-select";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "../native-select";
 
 afterEach((): void => {
 	cleanup();

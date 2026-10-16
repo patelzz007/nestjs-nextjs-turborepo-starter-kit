@@ -2,9 +2,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { stubLoadedImages } from "../testing/loaded-image-stub";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { AppShellSidebarAccount } from "./app-shell-sidebar-account";
+import { stubLoadedImages } from "../../testing/loaded-image-stub";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { AppShellSidebarAccount } from "../app-shell-sidebar-account";
 
 const PICTURE = { url: "https://cdn.example.com/users/ada/avatar.webp", sources: [{ width: 128, url: "https://cdn.example.com/users/ada/thumbnail.webp" }] };
 

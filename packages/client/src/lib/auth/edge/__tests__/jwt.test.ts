@@ -1,7 +1,7 @@
 import type { DataValue } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { decodeJwtPayload } from "./jwt";
+import { decodeJwtPayload } from "../jwt";
 
 /** Build a JWT string from a payload (base64url header/payload, dummy signature). */
 function makeJwt(payload: DataValue, header: DataValue = { alg: "none", typ: "JWT" }): string {

@@ -3,9 +3,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabelsOverride } from "../../lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import {
 	Questionnaire,
 	QuestionnaireActions,
@@ -22,7 +22,7 @@ import {
 	QuestionnaireSubmit,
 	QuestionnaireTitle,
 	type QuestionnaireProgressRender,
-} from "./questionnaire";
+} from "../questionnaire";
 
 const LABELS = UI_KIT_LABELS_EN.questionnaire;
 const FRENCH_NAV: UiKitLabelsOverride<"questionnaire"> = { next: "Suivant", progress: (current: number, total: number): string => `${String(current)} / ${String(total)}` };

@@ -3,11 +3,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels, UiKitLabelsOverride } from "../lib/labels/ui-kit-labels";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./carousel";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels, UiKitLabelsOverride } from "../../lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../carousel";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
 /** Embla observes the viewport's size and its slides' visibility — jsdom implements neither. */
 class NoopObserver {

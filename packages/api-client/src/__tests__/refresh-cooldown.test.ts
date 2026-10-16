@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createRefreshCooldown, type RefreshCall, type RefreshResult } from "./refresh";
+import { createRefreshCooldown, type RefreshCall, type RefreshResult } from "../refresh";
 
 const COOLDOWN_MS = 30_000;
 

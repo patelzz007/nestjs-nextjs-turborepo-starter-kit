@@ -2,7 +2,7 @@ import net from "node:net";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { acceptsConnections, describeOccupiedPorts, findOccupiedPorts, isPortInUse, LOOPBACK_HOSTS } from "./port-preflight.mjs";
+import { acceptsConnections, describeOccupiedPorts, findOccupiedPorts, isPortInUse, LOOPBACK_HOSTS } from "../port-preflight.mjs";
 
 const SERVERS = [
 	{ id: "browser:api", port: 8080 },

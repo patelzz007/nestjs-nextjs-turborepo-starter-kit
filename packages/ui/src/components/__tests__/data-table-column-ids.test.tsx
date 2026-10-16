@@ -5,8 +5,8 @@ import { Eye } from "lucide-react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { DataTable, type Action, type DataTableFeatures } from "./data-table";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { DataTable, type Action, type DataTableFeatures } from "../data-table";
 
 interface Row {
 	readonly id: string;

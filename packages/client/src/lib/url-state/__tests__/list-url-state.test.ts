@@ -1,8 +1,8 @@
 import { adminUserListQuery, AdminUserListQuerySchema, AdminUserStatusSchema, LIST_MAX_PAGE, nestBracketQueryParams, type DataValue } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { resolveRequest } from "../api/endpoints";
-import { eqFilter, listStateToListQuery, type ListSortSpec, type SortColumnAliases } from "../api/list-query";
+import { resolveRequest } from "../../api/endpoints";
+import { eqFilter, listStateToListQuery, type ListSortSpec, type SortColumnAliases } from "../../api/list-query";
 import {
 	LIST_FIRST_PAGE,
 	listFilterKey,
@@ -13,8 +13,8 @@ import {
 	listUrlParams,
 	normalizeListSortParam,
 	tableSortingToUrlSort,
-} from "./list-url-state";
-import { defineUrlState, InvalidUrlStateDefinitionError, optionalUrlParam } from "./url-state";
+} from "../list-url-state";
+import { defineUrlState, InvalidUrlStateDefinitionError, optionalUrlParam } from "../url-state";
 
 const PAGE_SIZES: readonly number[] = [10, 20, 50];
 const DEFAULT_LIMIT = 20;

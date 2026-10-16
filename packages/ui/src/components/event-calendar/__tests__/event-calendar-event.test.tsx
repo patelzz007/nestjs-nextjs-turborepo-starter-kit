@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EventCalendarViewContext, useEventCalendar, type EventCalendarRenderEventProps, type EventCalendarViewContextValue } from "./event-calendar";
+import { EventCalendarViewContext, useEventCalendar, type EventCalendarRenderEventProps, type EventCalendarViewContextValue } from "../event-calendar";
 import {
 	EVENT_CALENDAR_COLORS,
 	EVENT_CALENDAR_TONE_COLORS,
@@ -12,9 +12,9 @@ import {
 	eventCalendarEventVariants,
 	getEventToneStyle,
 	useEventCalendarEventChip,
-} from "./event-calendar-event";
+} from "../event-calendar-event";
 import { CalendarHarness, ResizeObserverStub, type TestEventData } from "@workspace/ui/testing/event-calendar-test-harness";
-import type { EventCalendarOccurrence, EventCalendarSegment } from "./event-calendar-types";
+import type { EventCalendarOccurrence, EventCalendarSegment } from "../event-calendar-types";
 
 const MONTH_CONTEXT: EventCalendarViewContextValue = { view: "month" };
 

@@ -15,7 +15,7 @@ import {
 	useEmojiPicker,
 	type EmojiPickerData,
 	type EmojiPickerI18nOverrides,
-} from "./emoji-picker";
+} from "../emoji-picker";
 import { resetEmojiPickerDataCache } from "@workspace/ui/lib/emoji-picker/data";
 
 const DATA: EmojiPickerData = {

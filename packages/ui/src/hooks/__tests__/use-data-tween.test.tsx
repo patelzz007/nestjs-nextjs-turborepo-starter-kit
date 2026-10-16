@@ -2,7 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { useDataTween } from "./use-data-tween";
+import { useDataTween } from "../use-data-tween";
 
 const FIRST_ROWS: readonly number[] = [1, 2, 3];
 const NEXT_ROWS: readonly number[] = [4, 5, 6];

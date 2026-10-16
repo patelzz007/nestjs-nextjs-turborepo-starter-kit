@@ -1,8 +1,9 @@
 "use client";
 
-import type { DocumentMimeType } from "@workspace/shared";
+import { PDF_MEDIA_TYPE, type DocumentMimeType } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
+import { PdfViewer, type PdfViewerSource } from "@workspace/ui/components/pdf-viewer";
 import * as React from "react";
 
 import { triggerBrowserDownload } from "../../storage/browser-download";
@@ -20,8 +21,17 @@ export interface MerchantKybDocumentPreviewDialogProps {
 	readonly onClose: () => void;
 }
 
+/** A PDF preview as the kit's `PdfViewer` shows it; `null` for an image or no preview. */
+function pdfViewerSource(preview: MerchantKybDocumentPreviewState | null): PdfViewerSource | null {
+	if (preview?.mimeType !== PDF_MEDIA_TYPE) {
+		return null;
+	}
+	return { kind: "url", url: preview.viewUrl, downloadUrl: preview.downloadUrl, fileName: preview.fileName };
+}
+
 export function MerchantKybDocumentPreviewDialog({ preview, onClose }: MerchantKybDocumentPreviewDialogProps): React.JSX.Element {
 	const open = preview !== null;
+	const pdfSource = React.useMemo((): PdfViewerSource | null => pdfViewerSource(preview), [preview]);
 
 	const handleDownload = React.useCallback((): void => {
 		if (preview === null) {
@@ -52,16 +62,15 @@ export function MerchantKybDocumentPreviewDialog({ preview, onClose }: MerchantK
 				<DialogHeader>
 					<DialogTitle className="truncate pe-8">{preview?.fileName ?? "Document preview"}</DialogTitle>
 				</DialogHeader>
-				{preview !== null ? (
+				{pdfSource !== null ? (
+					// The viewer's own toolbar carries the new-tab and download actions.
+					<PdfViewer source={pdfSource} className="h-[min(70vh,720px)]" />
+				) : preview !== null ? (
 					<div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-muted/30">
 						{isKybDocumentPreviewable(preview.mimeType) ? (
-							preview.mimeType === "application/pdf" ? (
-								<iframe title={preview.fileName} src={preview.viewUrl} className="h-[min(70vh,720px)] w-full bg-background" />
-							) : (
-								<div className="flex h-[min(70vh,720px)] w-full items-center justify-center overflow-auto p-4">
-									<img src={preview.viewUrl} alt={preview.fileName} className="max-h-full max-w-full object-contain" />
-								</div>
-							)
+							<div className="flex h-[min(70vh,720px)] w-full items-center justify-center overflow-auto p-4">
+								<img src={preview.viewUrl} alt={preview.fileName} className="max-h-full max-w-full object-contain" />
+							</div>
 						) : (
 							<div className="flex h-48 items-center justify-center p-6 text-center text-sm text-muted-foreground">
 								Preview is not available for this file type. Use download instead.
@@ -73,7 +82,7 @@ export function MerchantKybDocumentPreviewDialog({ preview, onClose }: MerchantK
 					<Button type="button" variant="outline" onClick={onClose}>
 						Close
 					</Button>
-					{preview !== null ? (
+					{preview !== null && pdfSource === null ? (
 						<>
 							<Button type="button" variant="outline" onClick={handleViewSource}>
 								View source

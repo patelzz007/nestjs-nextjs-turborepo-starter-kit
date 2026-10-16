@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { describe, expect, it } from "vitest";
 
-import type { DataTableFeatures } from "../../components/data-table";
+import type { DataTableFeatures } from "../../../components/data-table";
 import {
 	assertDataTableFiltersMatchColumns,
 	assertUniqueDataTableColumnIds,
@@ -10,7 +10,7 @@ import {
 	findDuplicateDataTableColumnIds,
 	isDataTableUtilityColumnId,
 	resolveDataTableColumnId,
-} from "./column-ids";
+} from "../column-ids";
 
 interface Row {
 	readonly name: string;

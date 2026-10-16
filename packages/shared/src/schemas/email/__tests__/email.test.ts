@@ -8,7 +8,7 @@ import {
 	MailpitSendResponseSchema,
 	type EmailSendResult,
 	type MailpitSendRequest,
-} from "./email";
+} from "../email";
 
 // Response schemas are OPEN (ADR 022): unknown keys are stripped, never rejected.
 // `EmailSendResultSchema` is a discriminated union on `ok`, so each variant

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBytes } from "./bytes";
+import { formatBytes } from "../bytes";
 
 const KIB = 1024;
 

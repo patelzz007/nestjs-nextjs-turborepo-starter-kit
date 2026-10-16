@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { centredCropArea, clampCropArea, cropExtendsBeyondPhoto, maxCropWidth, moveCropArea, resizeCropArea, wholePhotoCropWidth, widestCropWidth } from "./crop-area";
+import { centredCropArea, clampCropArea, cropExtendsBeyondPhoto, maxCropWidth, moveCropArea, resizeCropArea, wholePhotoCropWidth, widestCropWidth } from "../crop-area";
 
 const WIDE = 16 / 9;
 const PHOTO = { width: 6000, height: 4000 };

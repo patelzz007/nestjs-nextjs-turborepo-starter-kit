@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "./number-field";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "../number-field";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 afterEach((): void => {
 	cleanup();

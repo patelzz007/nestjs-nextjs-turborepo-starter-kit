@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { COVER_IMAGE_DEFAULT_RATIO, CoverImage } from "./cover-image";
+import { COVER_IMAGE_DEFAULT_RATIO, CoverImage } from "../cover-image";
 
 const COVER_URL = "https://cdn.example.com/stores/org-1/reward-covers/file-1.webp";
 const OTHER_COVER_URL = "https://cdn.example.com/stores/org-1/reward-covers/file-2.webp";

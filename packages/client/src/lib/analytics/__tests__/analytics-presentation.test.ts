@@ -24,7 +24,7 @@ import {
 	toChartSeriesData,
 	toKpiChange,
 	toKpiViews,
-} from "./analytics-presentation";
+} from "../analytics-presentation";
 
 const LOCALE = "en-MY";
 const UTC_REGION: DisplayRegion = analyticsDisplayRegion("UTC");

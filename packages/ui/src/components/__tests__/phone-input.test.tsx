@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PhoneInput, type PhoneInputProps } from "./phone-input";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { PhoneInput, type PhoneInputProps } from "../phone-input";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui's popup expects one. */
 class ResizeObserverStub {

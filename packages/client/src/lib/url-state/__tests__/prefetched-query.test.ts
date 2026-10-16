@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { prefetchedDataFor, toPrefetchedQuery, type PrefetchedQuery } from "./prefetched-query";
+import { prefetchedDataFor, toPrefetchedQuery, type PrefetchedQuery } from "../prefetched-query";
 
 const ROWS: readonly string[] = ["a", "b"];
 

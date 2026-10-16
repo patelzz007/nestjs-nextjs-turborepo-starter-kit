@@ -85,6 +85,7 @@
 		"technical/frontend/toast",
 		"technical/frontend/loading-skeletons",
 		"technical/frontend/qr-codes",
+		"technical/frontend/pdf-viewer",
 		"technical/frontend/streams",
 		"technical/tooling/typescript",
 		"technical/tooling/eslint",

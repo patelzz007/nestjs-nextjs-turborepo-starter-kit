@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { CityListItemSchema, CountryListItemSchema, RegionListItemSchema } from "./geo-list-items";
-import { CitySchema, type City } from "./geo-city";
-import { CountrySchema, type Country } from "./geo-country";
-import { RegionSchema, type Region } from "./geo-region";
-import { GeoDateTimeFieldSchema } from "./geo-shared";
-import { StateSchema, type State } from "./geo-state";
-import { GeoExportResponseSchema } from "./geo-tools";
+import { CityListItemSchema, CountryListItemSchema, RegionListItemSchema } from "../geo-list-items";
+import { CitySchema, type City } from "../geo-city";
+import { CountrySchema, type Country } from "../geo-country";
+import { RegionSchema, type Region } from "../geo-region";
+import { GeoDateTimeFieldSchema } from "../geo-shared";
+import { StateSchema, type State } from "../geo-state";
+import { GeoExportResponseSchema } from "../geo-tools";
 
 /** 2014-01-01T12:01:01.000Z — the dataset's import date, in epoch ms. */
 const IMPORTED_AT = 1_388_577_661_000;

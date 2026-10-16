@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Scrollspy } from "./scrollspy";
+import { Scrollspy } from "../scrollspy";
 
 /** Sections sit at these offsets inside the container. */
 const SECTION_TOPS: Readonly<Record<string, number>> = { intro: 0, usage: 400, api: 800 };

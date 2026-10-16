@@ -6,8 +6,8 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { JSX, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MERCHANT_KYB_VERIFICATION_LOADING_LABELS } from "./verification-skeleton";
-import { MerchantKybVerificationView } from "./verification-view";
+import { MERCHANT_KYB_VERIFICATION_LOADING_LABELS } from "../verification-skeleton";
+import { MerchantKybVerificationView } from "../verification-view";
 
 /** What the stubbed KYB profile query answers. */
 interface ProfileQueryState {
@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 	profile: vi.fn<() => ProfileQueryState>(),
 }));
 
-vi.mock("../../auth/index", () => {
+vi.mock("../../../auth/index", () => {
 	const api = { organizations: { kyb: { get: { useQuery: (): ProfileQueryState => mocks.profile() } } } };
 	return { useAuth: (): { readonly api: typeof api } => ({ api }) };
 });

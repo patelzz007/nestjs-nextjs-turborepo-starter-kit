@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { panelSidebarNavItemVariants } from "./panel-nav-variants";
-import { sidebarMenuButtonVariants, sidebarMenuSubButtonVariants } from "./variants";
+import { panelSidebarNavItemVariants } from "../panel-nav-variants";
+import { sidebarMenuButtonVariants, sidebarMenuSubButtonVariants } from "../variants";
 
 describe("sidebar menu typography", () => {
 	it("applies the refined sidebar font styling with subtle tracking and balanced active emphasis", () => {

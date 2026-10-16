@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { ANALYTICS_BUCKET_DISPLAY_REGION } from "./analytics";
-import { SALE_CURRENCY_MINOR_UNIT_EXPONENTS, SaleCurrencySchema } from "./rewards-entities";
-import { PILOT_CITY_TIME_ZONES, PilotCitySchema, PLATFORM_DISPLAY_REGION } from "./rewards-enums";
+import { ANALYTICS_BUCKET_DISPLAY_REGION } from "../analytics";
+import { SALE_CURRENCY_MINOR_UNIT_EXPONENTS, SaleCurrencySchema } from "../rewards-entities";
+import { PILOT_CITY_TIME_ZONES, PilotCitySchema, PLATFORM_DISPLAY_REGION } from "../rewards-enums";
 
 /** ISO 4217 minor-unit exponents, transcribed from the standard's currency table. */
 const ISO_4217_MINOR_UNITS: Readonly<Record<string, number>> = { MYR: 2 };

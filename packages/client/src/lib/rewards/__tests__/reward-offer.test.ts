@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRewardOffer, rewardTypeLabel } from "./reward-offer";
+import { formatRewardOffer, rewardTypeLabel } from "../reward-offer";
 
 describe("formatRewardOffer", () => {
 	it("says what the customer gets", () => {

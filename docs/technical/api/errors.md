@@ -226,6 +226,6 @@ never refreshes or retries. 426 is not in Nest's `HttpStatus` enum, so `AppError
 - `apps/api/src/common/errors/global-exception.filter.spec.ts` — a real Fastify + Nest app:
   validation pipe, `AuthorizationException`, malformed JSON, oversized body, unknown route,
   Prisma P2002, unexpected errors (logged, not leaked), rate limiting.
-- `packages/shared/src/schemas/api/api-error.test.ts` — the envelope schema.
-- `packages/client/src/lib/api/api-error.test.ts` — client parsing and backwards compatibility.
+- `packages/shared/src/schemas/api/__tests__/api-error.test.ts` — the envelope schema.
+- `packages/client/src/lib/api/__tests__/api-error.test.ts` — client parsing and backwards compatibility.
 - `apps/api/test/app.e2e-spec.ts` — the envelope from the real `AppModule`.

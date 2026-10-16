@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-import { contrastRatio, findContrastViolations, readCustomProperties, relativeLuminance } from "./color-contrast";
+import { contrastRatio, findContrastViolations, readCustomProperties, relativeLuminance } from "../color-contrast";
 
 describe("color contrast", () => {
 	it("matches the WCAG reference values for black and white", () => {

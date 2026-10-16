@@ -7,12 +7,12 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../test/auth-fixtures";
-import { apiRouter } from "../../api/endpoints";
-import { ApiError } from "../../api/use-api";
-import { SIGNED_IN_DEVICES_LABELS, type SignedInDevicesLabels } from "./signed-in-devices-labels";
-import { SignedInDevicesSection } from "./signed-in-devices-section";
-import { SIGNED_IN_DEVICES_SKELETON_ROWS } from "./signed-in-devices-skeleton";
+import { envelopeFixture } from "../../../../test/auth-fixtures";
+import { apiRouter } from "../../../api/endpoints";
+import { ApiError } from "../../../api/use-api";
+import { SIGNED_IN_DEVICES_LABELS, type SignedInDevicesLabels } from "../signed-in-devices-labels";
+import { SignedInDevicesSection } from "../signed-in-devices-section";
+import { SIGNED_IN_DEVICES_SKELETON_ROWS } from "../signed-in-devices-skeleton";
 
 /** What the stubbed `api.auth.sessions.useQuery` answers. */
 interface SessionsQueryState {
@@ -28,7 +28,7 @@ const mocks = vi.hoisted(() => ({
 	logoutEverywhere: vi.fn<() => Promise<boolean>>(),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = {
 		auth: {
 			sessions: {

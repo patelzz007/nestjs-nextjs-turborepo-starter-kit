@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../collapsible";
 
 afterEach((): void => {
 	cleanup();

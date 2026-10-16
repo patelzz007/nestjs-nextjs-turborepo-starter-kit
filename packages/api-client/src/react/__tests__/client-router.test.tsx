@@ -8,12 +8,12 @@ import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createApiClientContext } from "../config";
-import { AUTHORIZATION_HEADER } from "../http";
-import { createApiRequestContext } from "../request";
-import { defineMutation, defineQuery } from "../router";
-import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type FetchImpl } from "../testing";
-import { buildClientRouter, createQueryProcedure } from "./hooks";
+import { createApiClientContext } from "../../config";
+import { AUTHORIZATION_HEADER } from "../../http";
+import { createApiRequestContext } from "../../request";
+import { defineMutation, defineQuery } from "../../router";
+import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type FetchImpl } from "../../testing";
+import { buildClientRouter, createQueryProcedure } from "../hooks";
 
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
 const router = {

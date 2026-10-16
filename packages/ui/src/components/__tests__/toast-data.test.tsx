@@ -2,7 +2,7 @@ import { Gift } from "lucide-react";
 import * as React from "react";
 import { describe, expect, it } from "vitest";
 
-import { toastDataSchema } from "./toast";
+import { toastDataSchema } from "../toast";
 
 describe("toastDataSchema", () => {
 	it("accepts a rendered icon element and a 0–100 progress", () => {

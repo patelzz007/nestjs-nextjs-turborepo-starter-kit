@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Tree, TreeDragLine, TreeItem, TreeItemLabel, type TreeToggleIconType } from "./tree";
+import { Tree, TreeDragLine, TreeItem, TreeItemLabel, type TreeToggleIconType } from "../tree";
 
 afterEach((): void => {
 	cleanup();

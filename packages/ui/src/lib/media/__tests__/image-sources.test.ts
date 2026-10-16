@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fixedImageSizes, imageSrcSet } from "./image-sources";
+import { fixedImageSizes, imageSrcSet } from "../image-sources";
 
 describe("imageSrcSet", () => {
 	it("lists the renditions smallest first, whatever order they came in", () => {

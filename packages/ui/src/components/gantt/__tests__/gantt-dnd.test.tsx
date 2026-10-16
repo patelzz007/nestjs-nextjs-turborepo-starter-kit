@@ -4,12 +4,12 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Gantt, useGanttState } from "./gantt";
-import { cancelActiveGanttGestures, commitKeyboardGesture, GANTT_ACTIVATION, isSegmentDraggable, isSegmentResizable, markGestureEnd, wasRecentDrag } from "./gantt-dnd";
-import type { GanttInstance } from "./gantt-store";
-import type { GanttDragKind, GanttEvent, GanttOccurrence, GanttOverlapPolicy, GanttProposedUpdate, GanttSegment, GanttUpdateResult } from "./gantt-types";
+import { Gantt, useGanttState } from "../gantt";
+import { cancelActiveGanttGestures, commitKeyboardGesture, GANTT_ACTIVATION, isSegmentDraggable, isSegmentResizable, markGestureEnd, wasRecentDrag } from "../gantt-dnd";
+import type { GanttInstance } from "../gantt-store";
+import type { GanttDragKind, GanttEvent, GanttOccurrence, GanttOverlapPolicy, GanttProposedUpdate, GanttSegment, GanttUpdateResult } from "../gantt-types";
 import { GanttTestProviders, stubGanttBrowserApis, TEST_CLOCK, TEST_TIME_ZONE, utc } from "@workspace/ui/testing/gantt-testing";
-import { GanttView } from "./gantt-view";
+import { GanttView } from "../gantt-view";
 
 const FIRST: GanttEvent = { id: "a", title: "Alpha", start: utc(2026, 2, 9), end: utc(2026, 2, 10), allDay: true, resourceId: "r" };
 const SECOND: GanttEvent = { id: "b", title: "Beta", start: utc(2026, 2, 11), end: utc(2026, 2, 12), allDay: true, resourceId: "r" };

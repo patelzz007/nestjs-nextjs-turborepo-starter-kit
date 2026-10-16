@@ -28,6 +28,7 @@ import type { TimeSeriesChartLabels } from "../../components/time-series-chart";
 import type { ToastLabels } from "../../components/toast";
 import type { AutocompleteLabels } from "../../components/autocomplete";
 import type { NumberFieldLabels } from "../../components/number-field";
+import type { PdfViewerLabels } from "../../components/pdf-viewer";
 import type { PhoneInputLabels } from "../../components/phone-input";
 import type { RatingLabels } from "../../components/rating";
 import type { EmojiPickerLabels } from "../../components/emoji-picker";
@@ -120,6 +121,7 @@ export interface UiKitLabels {
 	readonly toast: ToastLabels;
 	readonly autocomplete: AutocompleteLabels;
 	readonly numberField: NumberFieldLabels;
+	readonly pdfViewer: PdfViewerLabels;
 	readonly phoneInput: PhoneInputLabels;
 	readonly rating: RatingLabels;
 	readonly fileType: FileTypeLabels;

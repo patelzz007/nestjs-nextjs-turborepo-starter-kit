@@ -3,15 +3,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels } from "../lib/labels/ui-kit-labels";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { Accordion, AccordionItem, AccordionTrigger } from "./accordion";
-import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbList } from "./breadcrumb";
-import { PanelSidebarSectionHeader } from "./panel-sidebar-section-header";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable";
-import { Tabs, TabsList } from "./tabs";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { Accordion, AccordionItem, AccordionTrigger } from "../accordion";
+import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbList } from "../breadcrumb";
+import { PanelSidebarSectionHeader } from "../panel-sidebar-section-header";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../resizable";
+import { Tabs, TabsList } from "../tabs";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
 /** react-resizable-panels measures its group — jsdom has no ResizeObserver. */
 class NoopResizeObserver {

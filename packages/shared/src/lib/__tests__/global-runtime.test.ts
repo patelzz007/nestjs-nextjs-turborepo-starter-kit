@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { hasGlobalConstructor, hasGlobalValue, isBrowserRuntime } from "./global-runtime";
+import { hasGlobalConstructor, hasGlobalValue, isBrowserRuntime } from "../global-runtime";
 
 describe("global-runtime", () => {
 	afterEach(() => {

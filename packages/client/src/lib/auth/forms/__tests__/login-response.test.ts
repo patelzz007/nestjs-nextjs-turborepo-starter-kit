@@ -9,7 +9,7 @@ import {
 } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginTwoFactorPending, isLoginVerificationPending } from "./login-response";
+import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginTwoFactorPending, isLoginVerificationPending } from "../login-response";
 
 const testUser = UserResponseSchema.parse({
 	id: "user-1",

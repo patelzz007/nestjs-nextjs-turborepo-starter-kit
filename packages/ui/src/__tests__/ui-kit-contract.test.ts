@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const UI_SRC = join(import.meta.dirname);
+const UI_SRC = join(import.meta.dirname, "..");
 
 function readComponentSource(relativePath: string): string {
 	return readFileSync(join(UI_SRC, relativePath), "utf8");

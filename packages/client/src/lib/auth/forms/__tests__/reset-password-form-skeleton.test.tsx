@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { RESET_PASSWORD_FORM_LOADING_LABELS, ResetPasswordFormSkeleton } from "./reset-password-form-skeleton";
+import { RESET_PASSWORD_FORM_LOADING_LABELS, ResetPasswordFormSkeleton } from "../reset-password-form-skeleton";
 
 /** New password and its confirmation. */
 const PASSWORD_FIELDS = 2;

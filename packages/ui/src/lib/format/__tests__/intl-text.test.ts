@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { formatEpochMsRange } from "./date-time";
-import { normalizeIntlSpacing } from "./intl-text";
+import { formatEpochMsRange } from "../date-time";
+import { normalizeIntlSpacing } from "../intl-text";
 
 const ICU_SPACE_VARIANTS: readonly string[] = ["\u00A0", "\u2007", "\u2009", "\u200A", "\u202F"];
 const NON_ASCII_SPACE = /[\u00A0\u2007\u2009\u200A\u202F]/;

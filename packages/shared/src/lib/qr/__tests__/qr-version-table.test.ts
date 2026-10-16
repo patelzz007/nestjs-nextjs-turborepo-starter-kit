@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QR_ERROR_CORRECTION_LEVELS } from "./qr-error-correction";
+import { QR_ERROR_CORRECTION_LEVELS } from "../qr-error-correction";
 import {
 	alignmentPatternPositions,
 	dataCodewords,
@@ -11,7 +11,7 @@ import {
 	qrSizeForVersion,
 	rawDataModules,
 	totalCodewords,
-} from "./qr-version-table";
+} from "../qr-version-table";
 
 const ALL_VERSIONS: readonly number[] = Array.from({ length: MAX_QR_VERSION }, (_: undefined, index: number): number => MIN_QR_VERSION + index);
 

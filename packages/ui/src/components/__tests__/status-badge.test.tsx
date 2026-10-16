@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { STATUS_TONE_BADGE_VARIANT, StatusBadge, type StatusTone } from "./status-badge";
+import { STATUS_TONE_BADGE_VARIANT, StatusBadge, type StatusTone } from "../status-badge";
 
 afterEach((): void => {
 	cleanup();

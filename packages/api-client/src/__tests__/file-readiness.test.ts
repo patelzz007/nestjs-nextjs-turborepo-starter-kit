@@ -1,7 +1,7 @@
 import { epochMs, type CompleteFileUploadResponse, type FileStatus, type StoredObjectScanStatus } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { FileProcessingError, FileWaitAbortedError, waitForFileReady, type FileStatusReader } from "./file-readiness";
+import { FileProcessingError, FileWaitAbortedError, waitForFileReady, type FileStatusReader } from "../file-readiness";
 
 const FILE_ID = "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f";
 

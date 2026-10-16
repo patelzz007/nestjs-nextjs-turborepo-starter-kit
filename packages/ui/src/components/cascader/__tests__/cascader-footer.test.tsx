@@ -3,12 +3,12 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
-import { CascaderAction, CascaderFooter, groupCascaderActionRuns } from "./cascader-footer";
-import { CascaderItems } from "./cascader-item";
-import { CascaderList } from "./cascader";
+import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import { CascaderAction, CascaderFooter, groupCascaderActionRuns } from "../cascader-footer";
+import { CascaderItems } from "../cascader-item";
+import { CascaderList } from "../cascader";
 import { openPicker, pressKey, PRODUCE, ProducePicker, searchField, stubCascaderResizeObserver } from "@workspace/ui/testing/cascader-test-fixtures";
-import type { CascaderActionItem } from "./cascader-types";
+import type { CascaderActionItem } from "../cascader-types";
 
 beforeEach((): void => {
 	stubCascaderResizeObserver();

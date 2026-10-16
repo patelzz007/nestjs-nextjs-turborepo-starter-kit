@@ -32,8 +32,8 @@ import {
 	splitFilterPath,
 	warnFilterOnce,
 	type FilterPathSegment,
-} from "./filters-lib";
-import type { FilterField, FilterIndexEntry, FilterOperator } from "./filters-types";
+} from "../filters-lib";
+import type { FilterField, FilterIndexEntry, FilterOperator } from "../filters-types";
 
 const FIRST: FilterField = { id: "first", label: "First", keywords: ["given"] };
 const LAST: FilterField = { id: "last", label: "Last" };

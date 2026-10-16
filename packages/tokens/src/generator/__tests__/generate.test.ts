@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
-import type { Theme, TokenSource } from "../schema";
-import { GeneratedFileNameSchema } from "../schema";
-import { DARK_THEME, THEMES } from "../semantic";
-import { TOKEN_SOURCE } from "../source";
-import { oklch } from "../value";
-import { generateTokenStylesheets } from "./generate";
-import { renderMobileStylesheet } from "./render-mobile";
-import { renderWebStylesheet } from "./render-web";
+import type { Theme, TokenSource } from "../../schema";
+import { GeneratedFileNameSchema } from "../../schema";
+import { DARK_THEME, THEMES } from "../../semantic";
+import { TOKEN_SOURCE } from "../../source";
+import { oklch } from "../../value";
+import { generateTokenStylesheets } from "../generate";
+import { renderMobileStylesheet } from "../render-mobile";
+import { renderWebStylesheet } from "../render-web";
 
 /**
  * What the token source generates, rendered once for the file: generating

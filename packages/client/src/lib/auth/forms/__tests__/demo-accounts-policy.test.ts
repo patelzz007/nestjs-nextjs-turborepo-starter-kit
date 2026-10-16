@@ -1,8 +1,8 @@
 import type { NodeEnv } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { areDemoAccountsVisible, resolveDemoAccounts } from "./demo-accounts-policy";
-import type { DemoAccount } from "./login-form-types";
+import { areDemoAccountsVisible, resolveDemoAccounts } from "../demo-accounts-policy";
+import type { DemoAccount } from "../login-form-types";
 
 const ACCOUNTS: readonly DemoAccount[] = [{ label: "Admin", email: "admin@example.com", password: "Admin@123" }];
 

@@ -6,7 +6,7 @@
 		"incremental": true,
 		// Resolve @workspace/* TYPES to their TypeScript source (the packages'
 		// `development` export condition), never to a dist/ build that may be
-		// missing or stale — packages/tooling/tests/tsconfig-conditions.test.mjs
+		// missing or stale — packages/tooling/__tests__/tsconfig-conditions.test.mjs
 		// enforces this for every workspace tsconfig. Runtime still loads dist:
 		// rspack leaves workspace packages external. Type-aware ESLint parses
 		// the API with ONE program (tsconfig.check.json, see eslint.config.js);

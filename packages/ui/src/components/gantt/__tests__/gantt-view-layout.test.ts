@@ -2,9 +2,9 @@
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { buildEventIndex, MS_PER_DAY } from "./gantt-lib";
-import type { GanttEvent, GanttResource, GanttSegment } from "./gantt-types";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { buildEventIndex, MS_PER_DAY } from "../gantt-lib";
+import type { GanttEvent, GanttResource, GanttSegment } from "../gantt-types";
 import {
 	applyDraftLane,
 	buildDependencyEdges,
@@ -30,7 +30,7 @@ import {
 	type RowBarsInput,
 	type TimelineAxisInput,
 	type TimelineUnit,
-} from "./gantt-view-layout";
+} from "../gantt-view-layout";
 
 const UTC = "UTC";
 const EN = UI_KIT_LABELS_EN.gantt;

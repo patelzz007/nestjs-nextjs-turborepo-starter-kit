@@ -3,7 +3,7 @@ import { Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
-import { BullMqWorkerDrainService, type ProviderSource } from "./bullmq-worker-drain.service";
+import { BullMqWorkerDrainService, type ProviderSource } from "../bullmq-worker-drain.service";
 
 // A real Worker that never touches Redis: lazy connection, no autorun, and
 // `close` stubbed — the drain only has to CALL it.

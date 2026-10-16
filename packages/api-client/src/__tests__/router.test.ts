@@ -14,7 +14,7 @@ import {
 	type ApiQueryKey,
 	type ErasedQueryDef,
 	type RouterTreeMapper,
-} from "./router";
+} from "../router";
 
 /** A router node: every value of the router tree is an object (a procedure def or a nested router). */
 const RouterNodeShapeSchema = z.object({});

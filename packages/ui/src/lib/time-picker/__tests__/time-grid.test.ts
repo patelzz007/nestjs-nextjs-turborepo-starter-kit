@@ -17,8 +17,8 @@ import {
 	walkEnabled,
 	withUnit,
 	type TimeGrid,
-} from "./time-grid";
-import type { TimePickerTime } from "./time-values";
+} from "../time-grid";
+import type { TimePickerTime } from "../time-values";
 
 function at(hour: number, minute = 0, second = 0): TimePickerTime {
 	return { hour, minute, second };

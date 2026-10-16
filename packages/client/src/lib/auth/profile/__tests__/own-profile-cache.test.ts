@@ -2,10 +2,10 @@ import { QueryClient } from "@tanstack/react-query";
 import { epochMs, type OwnProfile } from "@workspace/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
-import { ApiError } from "../../api/api-request";
-import { apiRouter } from "../../api/endpoints";
-import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError } from "./own-profile-cache";
+import { envelopeFixture, userFixture } from "../../../../test/auth-fixtures";
+import { ApiError } from "../../../api/api-request";
+import { apiRouter } from "../../../api/endpoints";
+import { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError } from "../own-profile-cache";
 
 const PROFILE_KEY = apiRouter.auth.profile.queryKey(undefined);
 const ME_KEY = apiRouter.auth.me.queryKey(undefined);

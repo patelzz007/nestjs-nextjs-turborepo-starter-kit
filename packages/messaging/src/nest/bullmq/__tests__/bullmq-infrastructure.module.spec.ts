@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bullMqHealthReport } from "./bullmq-infrastructure.module";
+import { bullMqHealthReport } from "../bullmq-infrastructure.module";
 
 const REDIS_URL_WITH_CREDENTIALS = "redis://default:s3cr3t-pass@cache.internal:6379/0";
 

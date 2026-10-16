@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Autocomplete, AutocompleteContent, AutocompleteEmpty, AutocompleteInput, AutocompleteItem, AutocompleteList } from "./autocomplete";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { Autocomplete, AutocompleteContent, AutocompleteEmpty, AutocompleteInput, AutocompleteItem, AutocompleteList } from "../autocomplete";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui's popup and scroll area expect one. */
 class ResizeObserverStub {

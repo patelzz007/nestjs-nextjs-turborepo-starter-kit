@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { EmojiPickerEmoji } from "./data";
-import { bareEmojiValue, findEmoji, foldSearchText, getEmojiValue, isEmojiValue, isRegionalFlag, normalizeCustomEmoji, searchEmojis } from "./search";
+import type { EmojiPickerEmoji } from "../data";
+import { bareEmojiValue, findEmoji, foldSearchText, getEmojiValue, isEmojiValue, isRegionalFlag, normalizeCustomEmoji, searchEmojis } from "../search";
 
 const THUMBS_UP: EmojiPickerEmoji = {
 	id: "1F44D",

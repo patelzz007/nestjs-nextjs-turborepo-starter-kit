@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
  * SKELETON_MOTION. CSS can't import the token, so this test reads the
  * stylesheet and checks each number against it.
  */
-const CSS = readFileSync(join(import.meta.dirname, "components.css"), "utf8");
+const CSS = readFileSync(join(import.meta.dirname, "..", "components.css"), "utf8");
 
 const PERCENT = 100;
 const MS_PER_SECOND = 1000;

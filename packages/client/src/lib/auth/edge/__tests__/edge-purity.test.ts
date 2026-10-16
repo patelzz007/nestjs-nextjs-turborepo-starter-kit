@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const EDGE_DIR: string = dirname(fileURLToPath(import.meta.url));
+const EDGE_DIR: string = dirname(dirname(fileURLToPath(import.meta.url)));
 const RELATIVE_IMPORT = /from\s+"(?<specifier>\.{1,2}\/[^"]+)"/g;
 const SOURCE_EXTENSIONS: readonly string[] = [".ts", ".tsx"];
 

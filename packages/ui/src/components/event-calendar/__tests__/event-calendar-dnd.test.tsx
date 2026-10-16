@@ -14,8 +14,8 @@ import {
 	pointerToMinutes,
 	proposalToUpdate,
 	resolveKeyboardIntent,
-} from "./event-calendar-dnd";
-import type { CalendarEvent, EventCalendarDateRange, EventCalendarDragState, EventCalendarOccurrence } from "./event-calendar-types";
+} from "../event-calendar-dnd";
+import type { CalendarEvent, EventCalendarDateRange, EventCalendarDragState, EventCalendarOccurrence } from "../event-calendar-types";
 
 const UTC = "UTC";
 const NEW_YORK = "America/New_York";

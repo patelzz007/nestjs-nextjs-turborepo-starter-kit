@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AdminAnalyticsExportQuerySchema, analyticsExportFileName, MerchantAnalyticsExportQuerySchema } from "./analytics-export";
+import { AdminAnalyticsExportQuerySchema, analyticsExportFileName, MerchantAnalyticsExportQuerySchema } from "../analytics-export";
 
 /** 2026-09-01 00:00 and 2026-10-01 00:00 in Kuala Lumpur (UTC+8). */
 const FROM = Date.UTC(2026, 7, 31, 16);

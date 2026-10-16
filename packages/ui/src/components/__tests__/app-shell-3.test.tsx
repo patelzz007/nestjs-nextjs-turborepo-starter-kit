@@ -3,22 +3,22 @@ import { Gift } from "lucide-react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { createNoopSidebarStorage } from "../lib/sidebar/storage";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { AppPanelShell } from "./app-panel-shell";
-import { AppShellHeader } from "./app-shell-header";
-import { AppShellSidebarAccount } from "./app-shell-sidebar-account";
-import { PanelSidebarHeader } from "./panel-sidebar-header";
-import { SidebarProvider, useSidebar, useSidebarControls } from "./sidebar";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { createNoopSidebarStorage } from "../../lib/sidebar/storage";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { AppPanelShell } from "../app-panel-shell";
+import { AppShellHeader } from "../app-shell-header";
+import { AppShellSidebarAccount } from "../app-shell-sidebar-account";
+import { PanelSidebarHeader } from "../panel-sidebar-header";
+import { SidebarProvider, useSidebar, useSidebarControls } from "../sidebar";
 
 const STORAGE = createNoopSidebarStorage();
 
 /** Counts the renders of the page column — the panel's own element, below the header and above the page. */
 const panelColumn = vi.hoisted(() => ({ renders: vi.fn<() => void>() }));
 
-vi.mock("./panel-shell-content", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("./panel-shell-content")>();
+vi.mock("../panel-shell-content", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../panel-shell-content")>();
 	const CountedPanelShellContent = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof actual.PanelShellContent>>(
 		function CountedPanelShellContent(props, ref): React.JSX.Element {
 			panelColumn.renders();

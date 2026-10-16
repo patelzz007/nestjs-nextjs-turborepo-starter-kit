@@ -1,10 +1,10 @@
 import { apiContract, REFRESH_TOKEN_MAX_LENGTH } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { BodyTokenPair } from "./body-token-contract";
-import { buildUrl } from "./http";
-import { createBodyTokenRefresh, createSingleFlightRefresh, type RefreshCall, type RefreshResult } from "./refresh";
-import { firstFetchCall, inputUrl, jsonResponse, MemoryTokenProvider, rotatedTokensBody, type FetchImpl } from "./testing";
+import type { BodyTokenPair } from "../body-token-contract";
+import { buildUrl } from "../http";
+import { createBodyTokenRefresh, createSingleFlightRefresh, type RefreshCall, type RefreshResult } from "../refresh";
+import { firstFetchCall, inputUrl, jsonResponse, MemoryTokenProvider, rotatedTokensBody, type FetchImpl } from "../testing";
 
 const BASE_URL = "http://api.test";
 const PAIR: BodyTokenPair = { accessToken: "access-1", refreshToken: "refresh-1" };

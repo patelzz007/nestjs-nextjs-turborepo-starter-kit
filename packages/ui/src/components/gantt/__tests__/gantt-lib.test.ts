@@ -34,8 +34,8 @@ import {
 	type ViewRangeOptions,
 	type WeekStartsOn,
 	type GanttOccurrenceRange,
-} from "./gantt-lib";
-import type { GanttEvent, GanttOccurrence, GanttResource, GanttSegment } from "./gantt-types";
+} from "../gantt-lib";
+import type { GanttEvent, GanttOccurrence, GanttResource, GanttSegment } from "../gantt-types";
 
 const UTC = "UTC";
 const MONDAY: WeekStartsOn = 1;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { gfAdd, gfMultiply, gfPower, QR_FIELD_GENERATOR, QR_FIELD_PRIMITIVE_POLYNOMIAL } from "./qr-galois-field";
+import { gfAdd, gfMultiply, gfPower, QR_FIELD_GENERATOR, QR_FIELD_PRIMITIVE_POLYNOMIAL } from "../qr-galois-field";
 
 /** The multiplicative group of GF(256) has 255 elements, so α^255 = 1. */
 const FIELD_ORDER = 255;

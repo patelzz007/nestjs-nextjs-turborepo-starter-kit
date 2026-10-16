@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX, type BrandMarkFacet } from "./brand";
+import { BRAND_MARK_FACETS, BRAND_MARK_SIZE, BRAND_MARK_VIEW_BOX, type BrandMarkFacet } from "../brand";
 
 const COORDINATE_PATTERN = /-?\d+(?:\.\d+)?/gu;
 

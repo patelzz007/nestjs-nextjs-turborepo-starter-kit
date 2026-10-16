@@ -37,6 +37,8 @@ export const ROUTES = {
 	components: "/settings/components",
 	/** This phone as a POS till: pair it, then scan and redeem customers' reward QR codes (features/till). */
 	till: "/settings/till",
+	/** Read a PDF: one the person picks, or `?url=&name=` pushed by another screen (features/pdf-viewer, ADR 056). */
+	pdfViewer: "/settings/pdf-viewer",
 } satisfies Record<string, `/${string}`>;
 
 /** Any one of the app's routes. */

@@ -3,12 +3,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Badge } from "./badge";
-import { Avatar, AvatarFallback } from "./avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./dialog";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
-import { AspectRatio } from "./aspect-ratio";
+import { Badge } from "../badge";
+import { Avatar, AvatarFallback } from "../avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "../card";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../dialog";
+import { DropdownMenu, DropdownMenuItem, DropdownMenuTrigger } from "../dropdown-menu";
+import { AspectRatio } from "../aspect-ratio";
 import {
 	Attachment,
 	AttachmentAction,
@@ -19,12 +19,12 @@ import {
 	AttachmentMedia,
 	AttachmentTitle,
 	AttachmentTrigger,
-} from "./attachment";
-import { Bubble, BubbleContent, BubbleGroup, BubbleReactions } from "./bubble";
-import { Marker, MarkerContent, MarkerIcon } from "./marker";
-import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from "./message-scroller";
-import { QrCode } from "./qr-code";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+} from "../attachment";
+import { Bubble, BubbleContent, BubbleGroup, BubbleReactions } from "../bubble";
+import { Marker, MarkerContent, MarkerIcon } from "../marker";
+import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from "../message-scroller";
+import { QrCode } from "../qr-code";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 afterEach((): void => {
 	cleanup();

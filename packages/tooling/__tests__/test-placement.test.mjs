@@ -17,13 +17,16 @@ describe("misplacedTestFiles", () => {
 			"apps/web/lib/routes.ts",
 			"apps/api/src/app.spec.ts",
 			"packages/ui/src/components/button.test.tsx",
+			"packages/tooling/tests/plan.test.mjs",
+			"packages/tooling/__tests__/plan.test.mjs",
 		];
 		expect(misplacedTestFiles(files, ["apps/web", "apps/mobile"])).toStrictEqual(["apps/web/lib/routes.test.ts"]);
+		expect(misplacedTestFiles(files, ["packages"])).toStrictEqual(["packages/ui/src/components/button.test.tsx", "packages/tooling/tests/plan.test.mjs"]);
 	});
 });
 
 describe("front-end test placement", () => {
-	it("keeps every test of the web, admin, merchant, docs, mobile and ui-native workspaces in a __tests__ folder", () => {
+	it("keeps every test of the web, admin, merchant, docs and mobile apps and of every package in a __tests__ folder", () => {
 		// Tracked and new (untracked, not ignored) files, so a fresh misplaced test fails before it is committed.
 		const files = workingTreeFiles(REPO_ROOT, TEST_PLACEMENT_WORKSPACES);
 		expect(misplacedTestFiles(files, TEST_PLACEMENT_WORKSPACES)).toStrictEqual([]);

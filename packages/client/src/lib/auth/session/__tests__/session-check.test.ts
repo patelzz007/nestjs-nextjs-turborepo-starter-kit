@@ -1,7 +1,7 @@
 import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
 import {
 	ApiError,
 	NO_HTTP_RESPONSE_STATUS,
@@ -11,7 +11,7 @@ import {
 	type ApiFailure,
 	type ApiResponse,
 	type RefreshResult,
-} from "../../api/api-request";
+} from "../../../api/api-request";
 import { ApiResponseContractError } from "@workspace/api-client";
 import {
 	checkSession,
@@ -28,7 +28,7 @@ import {
 	type SessionCheckProblem,
 	type SessionCheckResponses,
 	type SessionResponseClass,
-} from "./session-check";
+} from "../session-check";
 
 const ME_URL = "http://api.test/api/v1/auth/me";
 

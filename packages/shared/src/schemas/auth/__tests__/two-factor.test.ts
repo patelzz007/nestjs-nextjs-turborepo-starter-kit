@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BACKUP_CODE_COUNT, TwoFactorSetupResponseSchema, type TwoFactorSetupResponse } from "./two-factor";
+import { BACKUP_CODE_COUNT, TwoFactorSetupResponseSchema, type TwoFactorSetupResponse } from "../two-factor";
 
 const BACKUP_CODE = "ABCDEFGHJKMNPQRS";
 

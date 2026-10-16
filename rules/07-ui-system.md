@@ -274,7 +274,7 @@ web is blue, merchant green, admin uses the shared slate — and never page/card
 text; each app's theme test enforces that and proves the layered theme's contrast. The docs site
 (`apps/docs/src/styles/global.css`) imports `@workspace/tokens/palette.css` and maps its own
 names onto the same primitives, so it cannot drift (`apps/docs/src/styles/theme-contrast.test.ts`).
-Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`packages/ui/src/styles/tokens-contrast.test.ts`, which reads the generated `web.css`).
+Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`packages/ui/src/styles/__tests__/tokens-contrast.test.ts`, which reads the generated `web.css`).
 
 To rebrand a product built on this kit: change the accent scale(s) in `packages/tokens/src/palette.ts`,
 run `pnpm tokens:generate`, then re-run `pnpm run test` — the contrast tests tell you which steps need nudging.

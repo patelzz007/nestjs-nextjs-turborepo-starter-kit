@@ -16,10 +16,10 @@ import {
 	throwawayDatabaseUrl,
 	withDatabaseName,
 	withoutQuery,
-} from "./ci-local-plan.mjs";
+} from "../ci-local-plan.mjs";
 
-const WORKFLOW = readFileSync(path.resolve(import.meta.dirname, "../../../../.github/workflows/ci.yml"), "utf8");
-const API_CI_ENV_ACTION = readFileSync(path.resolve(import.meta.dirname, "../../../../.github/actions/write-api-ci-env/action.yml"), "utf8");
+const WORKFLOW = readFileSync(path.resolve(import.meta.dirname, "../../../../../.github/workflows/ci.yml"), "utf8");
+const API_CI_ENV_ACTION = readFileSync(path.resolve(import.meta.dirname, "../../../../../.github/actions/write-api-ci-env/action.yml"), "utf8");
 
 describe("throwawayDatabaseUrl", () => {
 	it("derives a sibling database on the same server, keeping credentials and query", () => {

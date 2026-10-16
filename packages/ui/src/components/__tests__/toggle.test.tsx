@@ -3,8 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Toggle } from "./toggle";
-import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
+import { Toggle } from "../toggle";
+import { ToggleGroup, ToggleGroupItem } from "../toggle-group";
 
 afterEach((): void => {
 	cleanup();

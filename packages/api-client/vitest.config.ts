@@ -5,7 +5,8 @@ export default defineConfig({
 	plugins: [react()],
 	test: {
 		environment: "node",
-		include: ["src/**/*.test.{ts,tsx}"],
+		// Tests live in `__tests__/` folders beside the code they test (rules/11 → "Where tests live").
+		include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
 	},
 	// No resolve aliases: `@workspace/shared` resolves through its package.json
 	// `exports`, whose `development` condition (Vite's default outside

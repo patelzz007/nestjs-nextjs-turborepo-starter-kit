@@ -7,7 +7,7 @@ import {
 	SetGithubReactionSchema,
 	withViewerReaction,
 	type GithubReactionGroup,
-} from "./github-reactions";
+} from "../github-reactions";
 
 describe("GitHub reactions", () => {
 	it("lists GitHub's eight reactions in its order, each with an emoji", () => {

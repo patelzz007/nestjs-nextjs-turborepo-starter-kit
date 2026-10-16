@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { BRAND_MARK_FACETS } from "../brand";
-import { rasterizeTile, UnsupportedIconInputError, type TileSpec } from "./raster";
+import { BRAND_MARK_FACETS } from "../../brand";
+import { rasterizeTile, UnsupportedIconInputError, type TileSpec } from "../raster";
 
 const SPEC: TileSpec = { size: 24, radius: 6.6, markScale: 0.5, markOffset: 6, tileColor: "#4f6583", markColor: "#ffffff" };
 const PIXELS = 48;

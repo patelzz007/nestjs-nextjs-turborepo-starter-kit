@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BoundedTtlCache } from "./bounded-ttl-cache";
+import { BoundedTtlCache } from "../bounded-ttl-cache";
 
 describe("BoundedTtlCache", () => {
 	it("returns null on miss and stores values until TTL expiry", () => {

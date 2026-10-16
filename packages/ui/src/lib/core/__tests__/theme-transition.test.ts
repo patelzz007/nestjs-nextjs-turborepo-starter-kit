@@ -8,7 +8,7 @@ import {
 	THEME_TRANSITION_FALLBACK_INSET_PX,
 	themeTransitionOrigin,
 	themeTransitionRadius,
-} from "./theme-transition";
+} from "../theme-transition";
 
 const VIEWPORT = { width: 1000, height: 600 };
 const ORIGIN = { x: 900, y: 40 };

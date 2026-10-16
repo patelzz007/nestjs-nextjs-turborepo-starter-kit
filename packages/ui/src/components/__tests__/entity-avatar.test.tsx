@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { EntityAvatar, getEntityAvatarTone } from "./entity-avatar";
+import { EntityAvatar, getEntityAvatarTone } from "../entity-avatar";
 
 const SHOP_NAME = "Brew & Bean KL";
 const LOGO_URL = "https://cdn.example.com/organizations/brew-bean/logo.png";

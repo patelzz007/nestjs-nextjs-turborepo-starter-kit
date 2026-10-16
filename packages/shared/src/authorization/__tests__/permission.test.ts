@@ -11,9 +11,9 @@ import {
 	permissionSatisfies,
 	readResourceCapability,
 	withResourceCapability,
-} from "./permission";
-import { PolicyConditionsSchema } from "./policy-dsl.schema";
-import { OrganizationMembershipRoleSchema } from "../schemas/domain/organization/organization";
+} from "../permission";
+import { PolicyConditionsSchema } from "../policy-dsl.schema";
+import { OrganizationMembershipRoleSchema } from "../../schemas/domain/organization/organization";
 
 describe("permission vocabulary", () => {
 	it("derives platform capability slugs from resource × action", () => {

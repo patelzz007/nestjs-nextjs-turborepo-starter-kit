@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { APP_VERSION_MAX_LENGTH, AppVersionSchema, compareAppVersions, type AppVersionOrder } from "./app-version";
+import { APP_VERSION_MAX_LENGTH, AppVersionSchema, compareAppVersions, type AppVersionOrder } from "../app-version";
 
 describe("AppVersionSchema", () => {
 	it.each(["0.0.0", "1.0.0", "1.4.2", "10.20.30", "1.0.0-beta", "1.0.0-beta.2", "1.0.0-0.3.7", "1.0.0-x-y-z.--", "1.4.2+417", "1.0.0-rc.1+build.5"])(

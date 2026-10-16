@@ -20,9 +20,9 @@ import {
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
-import { ApiError } from "../../api/use-api";
-import { SecuritySettingsPanel } from "./security-settings-panel";
+import { envelopeFixture, userFixture } from "../../../../test/auth-fixtures";
+import { ApiError } from "../../../api/use-api";
+import { SecuritySettingsPanel } from "../security-settings-panel";
 
 interface QueryStub<Data> {
 	readonly data: Data | undefined;
@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => ({
 	meData: vi.fn<() => Envelope<UserResponse> | undefined>(),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const idleMutation = (): { readonly mutateAsync: typeof mocks.noop; readonly isPending: boolean } => ({ mutateAsync: mocks.noop, isPending: false });
 	const api = {
 		auth: {

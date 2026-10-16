@@ -32,8 +32,8 @@ import {
 	unwrapFilterGroup,
 	updateFilterRule,
 	wrapFilterNodeInGroup,
-} from "./filters-query";
-import { FILTER_LIMITS, type FilterGroupNode, type FilterNode, type FilterOperatorArity, type FilterQuery, type FilterRule } from "./filters-types";
+} from "../filters-query";
+import { FILTER_LIMITS, type FilterGroupNode, type FilterNode, type FilterOperatorArity, type FilterQuery, type FilterRule } from "../filters-types";
 
 const STATUS = createFilterRule({ id: "r1", path: ["status"], operator: "is", value: "open" });
 const NAME = createFilterRule({ id: "r2", path: ["name", "first"], operator: "contains", value: "ann" });

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stubLoadedImages } from "@workspace/ui/testing/loaded-image-stub";
 
-import { ImageSlotField, type ImageSlotFieldLabels } from "./image-slot-field";
+import { ImageSlotField, type ImageSlotFieldLabels } from "../image-slot-field";
 
 const LABELS: ImageSlotFieldLabels = {
 	input: "Profile picture",

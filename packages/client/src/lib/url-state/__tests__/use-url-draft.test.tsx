@@ -3,7 +3,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { trimUrlDraft, useUrlDraft, type UrlDraft } from "./use-url-draft";
+import { trimUrlDraft, useUrlDraft, type UrlDraft } from "../use-url-draft";
 
 const DELAY_MS = 300;
 

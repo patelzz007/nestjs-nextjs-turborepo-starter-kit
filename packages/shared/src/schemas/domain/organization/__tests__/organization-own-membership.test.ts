@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { apiContract } from "../../../contracts";
-import { ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH, OrganizationOwnMembershipUpdateSchema } from "./organization";
+import { apiContract } from "../../../../contracts";
+import { ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH, OrganizationOwnMembershipUpdateSchema } from "../organization";
 
 describe("OrganizationOwnMembershipUpdateSchema", () => {
 	it("trims the display name", () => {

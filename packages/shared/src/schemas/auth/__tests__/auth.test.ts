@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { epochMs } from "../api/common";
+import { epochMs } from "../../api/common";
 
-import { AUTH_COOKIE_NAMES, clientTypeHeader, CLIENT_TYPE_HEADER } from "../../contracts/client-session";
+import { AUTH_COOKIE_NAMES, clientTypeHeader, CLIENT_TYPE_HEADER } from "../../../contracts/client-session";
 import {
 	AuthClientTypeSchema,
 	authTokenTransportOf,
@@ -19,8 +19,8 @@ import {
 	type BodyTokenFields,
 	type LoginClientResponse,
 	type RefreshClientResponse,
-} from "./auth";
-import { UserResponseSchema, type UserResponse } from "./user";
+} from "../auth";
+import { UserResponseSchema, type UserResponse } from "../user";
 
 const EPOCH_ORIGIN_MS = 0;
 

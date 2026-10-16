@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { qrFormatBits } from "./qr-format-info";
-import { buildFunctionPatterns, placeCodewords } from "./qr-function-patterns";
+import { qrFormatBits } from "../qr-format-info";
+import { buildFunctionPatterns, placeCodewords } from "../qr-function-patterns";
 import {
 	applyMask,
 	isMaskedModule,
@@ -14,8 +14,8 @@ import {
 	QrMaskSchema,
 	selectBestMask,
 	withMask,
-} from "./qr-mask";
-import { QrModuleGrid } from "./qr-module-grid";
+} from "../qr-mask";
+import { QrModuleGrid } from "../qr-module-grid";
 
 /** A grid drawn from rows of `1` (dark) and `0` (light), all data modules. */
 function gridFromRows(rows: readonly string[]): QrModuleGrid {

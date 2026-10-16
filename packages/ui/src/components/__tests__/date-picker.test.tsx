@@ -5,7 +5,7 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import { calendarDropdownOptionTexts, stubResizeObserverForCalendarDropdowns } from "@workspace/ui/testing/calendar-dropdowns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DatePicker } from "./date-picker";
+import { DatePicker } from "../date-picker";
 
 beforeEach((): void => {
 	stubResizeObserverForCalendarDropdowns();

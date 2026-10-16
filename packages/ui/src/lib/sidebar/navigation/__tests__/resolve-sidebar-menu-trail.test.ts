@@ -10,7 +10,7 @@ import {
 	type ResolveSidebarMenuTrailConfig,
 	type SidebarMenuTrailData,
 	type SidebarTrailPage,
-} from "./resolve-sidebar-menu-trail";
+} from "../resolve-sidebar-menu-trail";
 
 function resolveIcon(): LucideIcon {
 	return FileText;

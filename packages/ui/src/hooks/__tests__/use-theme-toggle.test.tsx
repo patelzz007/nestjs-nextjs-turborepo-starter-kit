@@ -2,7 +2,7 @@
 import { cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useThemeToggle } from "./use-theme-toggle";
+import { useThemeToggle } from "../use-theme-toggle";
 
 const theme = vi.hoisted(() => ({ resolvedTheme: "dark", setTheme: vi.fn<(theme: string) => void>() }));
 const transition = vi.hoisted(() => {

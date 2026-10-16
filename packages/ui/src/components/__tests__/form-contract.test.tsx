@@ -2,12 +2,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Input } from "./input";
-import { InputGroupInput, InputGroupTextarea } from "./input-group";
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { PasswordInput, type PasswordInputLabels } from "./password-input";
-import { Textarea } from "./textarea";
+import { Input } from "../input";
+import { InputGroupInput, InputGroupTextarea } from "../input-group";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { PasswordInput, type PasswordInputLabels } from "../password-input";
+import { Textarea } from "../textarea";
 
 afterEach((): void => {
 	cleanup();

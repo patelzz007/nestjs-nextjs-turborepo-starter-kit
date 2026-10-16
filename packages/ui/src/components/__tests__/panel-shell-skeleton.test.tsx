@@ -2,10 +2,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { AppPanelShell } from "./app-panel-shell";
-import { AppShellHeaderSkeleton, PanelSidebarSkeleton } from "./panel-shell-skeleton";
-import { PanelSidebarHeader } from "./panel-sidebar-header";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { AppPanelShell } from "../app-panel-shell";
+import { AppShellHeaderSkeleton, PanelSidebarSkeleton } from "../panel-shell-skeleton";
+import { PanelSidebarHeader } from "../panel-sidebar-header";
 
 /** A menu of three sections (2, 3 and 1 items) and a two-item footer. */
 const SECTIONS: readonly number[] = [2, 3, 1];

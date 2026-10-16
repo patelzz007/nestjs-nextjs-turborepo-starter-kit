@@ -5,9 +5,9 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ImagePick, UseImagePickOptions } from "../../storage/use-image-pick";
-import { ProfileAvatarEditor } from "./profile-avatar-editor";
-import type { UseProfileAvatarOptions } from "./use-profile-avatar";
+import type { ImagePick, UseImagePickOptions } from "../../../storage/use-image-pick";
+import { ProfileAvatarEditor } from "../profile-avatar-editor";
+import type { UseProfileAvatarOptions } from "../use-profile-avatar";
 
 const USER_ID = "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11";
 const FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
@@ -24,7 +24,7 @@ const { uploadMutate, removeMutate, captured, pick } = vi.hoisted(() => {
 	return { uploadMutate: vi.fn(), removeMutate: vi.fn(), captured: options, pick: vi.fn<(file: File) => void>() };
 });
 
-vi.mock("./use-profile-avatar", () => ({
+vi.mock("../use-profile-avatar", () => ({
 	useUploadProfileAvatar: (options: UseProfileAvatarOptions): object => {
 		captured.upload = options;
 		return { mutate: uploadMutate, isPending: false };
@@ -35,7 +35,7 @@ vi.mock("./use-profile-avatar", () => ({
 	},
 }));
 
-vi.mock("../../storage/use-image-pick", () => ({
+vi.mock("../../../storage/use-image-pick", () => ({
 	useImagePick: (options: UseImagePickOptions): ImagePick => {
 		captured.pick = options;
 		return { pick, cropSource: null, isReading: false, handleCropped: vi.fn(), handleSkip: vi.fn() };

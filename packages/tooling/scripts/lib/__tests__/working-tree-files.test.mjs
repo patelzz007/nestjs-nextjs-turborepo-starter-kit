@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { workingTreeFiles } from "./working-tree-files.mjs";
+import { workingTreeFiles } from "../working-tree-files.mjs";
 
 let repo = "";
 

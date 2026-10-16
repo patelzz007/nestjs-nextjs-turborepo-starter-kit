@@ -4,9 +4,9 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { listFilterKey, listUrlParams } from "./list-url-state";
-import { defineUrlState, optionalUrlParam } from "./url-state";
-import { useUrlState } from "./use-url-state";
+import { listFilterKey, listUrlParams } from "../list-url-state";
+import { defineUrlState, optionalUrlParam } from "../url-state";
+import { useUrlState } from "../use-url-state";
 
 // `useSearchParams` reads the address bar, as Next.js does once the History
 // API integration has synced it.

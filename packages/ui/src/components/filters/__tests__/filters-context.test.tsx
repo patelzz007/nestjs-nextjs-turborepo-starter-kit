@@ -14,7 +14,7 @@ import {
 	useFilterFocusEmpty,
 	useFilterReorderable,
 	useFilterState,
-} from "./filters-context";
+} from "../filters-context";
 
 afterEach((): void => {
 	cleanup();

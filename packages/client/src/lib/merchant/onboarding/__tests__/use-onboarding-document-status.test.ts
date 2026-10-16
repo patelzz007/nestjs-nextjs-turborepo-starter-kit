@@ -1,8 +1,8 @@
 import { epochMs, type KybDocumentScanStatus, type MerchantKybDocumentRecord, type MerchantOnboardingDocumentStatusResponse } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../../api/use-api";
-import { pollOnboardingDocumentStatus, type OnboardingDocumentStatusReader, type OnboardingDocumentStatusState } from "./use-onboarding-document-status";
+import { ApiError } from "../../../api/use-api";
+import { pollOnboardingDocumentStatus, type OnboardingDocumentStatusReader, type OnboardingDocumentStatusState } from "../use-onboarding-document-status";
 
 const FILE_ID = "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f";
 const FAST = { initialDelayMs: 1, maxDelayMs: 1 };

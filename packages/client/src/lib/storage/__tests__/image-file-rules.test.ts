@@ -1,7 +1,7 @@
 import { FILE_CATEGORY_POLICIES } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { assertImageFileAllowed, ImageFileRejectedError, imageFileRules, type ImageFileRejection, requireImageRules } from "./image-file-rules";
+import { assertImageFileAllowed, ImageFileRejectedError, imageFileRules, type ImageFileRejection, requireImageRules } from "../image-file-rules";
 
 const COVER_POLICY = FILE_CATEGORY_POLICIES.REWARD_IMAGE;
 

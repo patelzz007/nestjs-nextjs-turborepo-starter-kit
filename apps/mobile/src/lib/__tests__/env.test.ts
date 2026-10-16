@@ -44,6 +44,31 @@ describe("resolveMobileEnv", () => {
 		expect(resolveMobileEnv({ ...DEV, apiUrl: "http://10.0.0.9:8080/" })).toMatchObject({ ok: true, env: { apiBaseUrl: "http://10.0.0.9:8080" } });
 	});
 
+	it.each([
+		["http://10.62.47.236", undefined, `http://10.62.47.236:${String(DEFAULT_DEV_API_PORT)}`],
+		["http://10.62.47.236", "8080", "http://10.62.47.236:8080"],
+		["http://10.62.47.236/", " 3333 ", "http://10.62.47.236:3333"],
+		["http://my-mac.local/api", "8080", "http://my-mac.local:8080/api"],
+		["http://[fe80::1]", "8080", "http://[fe80::1]:8080"],
+	])("adds EXPO_PUBLIC_API_PORT to the explicit http URL %s without a port (port %s)", (apiUrl, apiPort, apiBaseUrl) => {
+		expect(resolveMobileEnv({ ...DEV, apiUrl, apiPort })).toMatchObject({ ok: true, env: { apiBaseUrl } });
+	});
+
+	it.each([
+		["http://10.62.47.236:8080", "http://10.62.47.236:8080"],
+		["http://[fe80::1]:8080/api/", "http://[fe80::1]:8080/api"],
+	])("keeps the port written in the explicit http URL %s, over EXPO_PUBLIC_API_PORT", (apiUrl, apiBaseUrl) => {
+		expect(resolveMobileEnv({ ...DEV, apiUrl, apiPort: "3333" })).toMatchObject({ ok: true, env: { apiBaseUrl } });
+	});
+
+	it("rejects an invalid EXPO_PUBLIC_API_PORT next to an explicit http URL without a port", () => {
+		expect(resolveMobileEnv({ ...DEV, apiUrl: "http://10.62.47.236", apiPort: "abc" })).toMatchObject({ ok: false, issue: { variable: "EXPO_PUBLIC_API_PORT" } });
+	});
+
+	it("never adds the port to an https URL outside development", () => {
+		expect(resolveMobileEnv({ ...RELEASE, apiUrl: "https://api.example.com", apiPort: "8080" })).toMatchObject({ ok: true, env: { apiBaseUrl: "https://api.example.com" } });
+	});
+
 	it("asks for EXPO_PUBLIC_API_URL in development when Expo reports no host", () => {
 		expect(resolveMobileEnv({ ...DEV, hostUri: undefined })).toMatchObject({ ok: false, issue: { variable: "EXPO_PUBLIC_API_URL" } });
 	});

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { TOKEN_SOURCE } from "../source";
-import { readDeclarations } from "../testing/css-reader";
-import { renderPaletteStylesheet } from "./render-palette";
+import { TOKEN_SOURCE } from "../../source";
+import { readDeclarations } from "../../testing/css-reader";
+import { renderPaletteStylesheet } from "../render-palette";
 
 describe("renderPaletteStylesheet", () => {
 	const css = renderPaletteStylesheet(TOKEN_SOURCE);

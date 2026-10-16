@@ -3,9 +3,9 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { LockoutCountdown } from "./lockout-countdown";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { LockoutCountdown } from "../lockout-countdown";
 
 const LABELS = UI_KIT_LABELS_EN.lockoutCountdown;
 

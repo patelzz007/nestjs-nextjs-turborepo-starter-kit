@@ -4,9 +4,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EventCalendarDatePicker, EventCalendarNav, EventCalendarNavNext, EventCalendarTitle, EventCalendarToolbar } from "./event-calendar-nav";
+import { EventCalendarDatePicker, EventCalendarNav, EventCalendarNavNext, EventCalendarTitle, EventCalendarToolbar } from "../event-calendar-nav";
 import { CalendarHarness, ResizeObserverStub } from "@workspace/ui/testing/event-calendar-test-harness";
-import type { CalendarView } from "./event-calendar-types";
+import type { CalendarView } from "../event-calendar-types";
 
 beforeEach((): void => {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);

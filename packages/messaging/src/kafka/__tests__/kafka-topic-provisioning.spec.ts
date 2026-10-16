@@ -9,7 +9,7 @@ import {
 	type KafkaProvisioningClock,
 	type KafkaTopicAdmin,
 	type KafkaTopicSpec,
-} from "./kafka-topic-provisioning";
+} from "../kafka-topic-provisioning";
 
 const TIMEOUT_MS = 10_000;
 const SEVEN_DAYS_MS = 604_800_000;

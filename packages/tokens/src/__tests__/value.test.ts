@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { colorToken, cubicBezier, fontVariable, hex, oklch, paletteColor, px, rem, sizeToken, stackLevel, TRANSPARENT } from "./value";
+import { colorToken, cubicBezier, fontVariable, hex, oklch, paletteColor, px, rem, sizeToken, stackLevel, TRANSPARENT } from "../value";
 
 describe("token value constructors", () => {
 	it("builds an oklch colour without an alpha key when no alpha is given", () => {

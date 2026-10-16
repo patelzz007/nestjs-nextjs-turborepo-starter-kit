@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { encodeQr, QrVersionSchema, type QrMatrix } from "./qr-encode";
-import { QrErrorCorrectionLevelSchema } from "./qr-error-correction";
-import { penaltyAdjacentRuns, penaltyDarkBalance, penaltyFinderLikePatterns, penaltySameColourBlocks, QR_MASKS, QrMaskSchema, type QrMask } from "./qr-mask";
-import { QrModuleGrid } from "./qr-module-grid";
-import referenceMatrices from "./qr-reference-matrices.json";
-import { QrModeSchema, selectQrMode } from "./qr-segment";
+import { encodeQr, QrVersionSchema, type QrMatrix } from "../qr-encode";
+import { QrErrorCorrectionLevelSchema } from "../qr-error-correction";
+import { penaltyAdjacentRuns, penaltyDarkBalance, penaltyFinderLikePatterns, penaltySameColourBlocks, QR_MASKS, QrMaskSchema, type QrMask } from "../qr-mask";
+import { QrModuleGrid } from "../qr-module-grid";
+import referenceMatrices from "../qr-reference-matrices.json";
+import { QrModeSchema, selectQrMode } from "../qr-segment";
 
 /**
  * Bit-for-bit conformance against an independent encoder. `qr-reference-matrices.json` was

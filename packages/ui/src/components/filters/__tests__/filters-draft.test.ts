@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { createFilterDraft, filterDraftReducer, isFilterDraftCommittable } from "./filters-draft";
-import type { FilterDraft } from "./filters-types";
+import { createFilterDraft, filterDraftReducer, isFilterDraftCommittable } from "../filters-draft";
+import type { FilterDraft } from "../filters-types";
 
 function open(): FilterDraft {
 	const draft = filterDraftReducer(null, { type: "openCreate" });

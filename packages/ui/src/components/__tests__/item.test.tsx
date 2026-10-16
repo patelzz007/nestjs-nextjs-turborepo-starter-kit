@@ -16,7 +16,7 @@ import {
 	ItemTitle,
 	type ItemSize,
 	type ItemVariant,
-} from "./item";
+} from "../item";
 
 afterEach((): void => {
 	cleanup();

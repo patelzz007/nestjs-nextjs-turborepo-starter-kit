@@ -11,7 +11,7 @@ import {
 	readSearchParam,
 	toUrlSearchParams,
 	urlParamWithDefault,
-} from "./url-state";
+} from "../url-state";
 
 const StatusSchema = z.enum(["active", "locked"]);
 const DEFAULT_WEEKS = 8;

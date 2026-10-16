@@ -4,8 +4,8 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import {
 	getSignaturePadBounds,
 	getSignaturePadStrokePath,
@@ -23,7 +23,7 @@ import {
 	type SignaturePadApi,
 	type SignaturePadProps,
 	type SignaturePadStroke,
-} from "./signature-pad";
+} from "../signature-pad";
 
 const LABELS = UI_KIT_LABELS_EN.signaturePad;
 const STROKE: SignaturePadStroke = {

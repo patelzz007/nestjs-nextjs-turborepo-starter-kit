@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { COLOR_PICKER_FORMATS, colorToCss, formatColor, getContrastRatio, getForegroundColor } from "./color-format";
-import { parseColor } from "./color-parse";
-import type { ColorPickerColor } from "./color-space";
+import { COLOR_PICKER_FORMATS, colorToCss, formatColor, getContrastRatio, getForegroundColor } from "../color-format";
+import { parseColor } from "../color-parse";
+import type { ColorPickerColor } from "../color-space";
 
 const RED: ColorPickerColor = { space: "rgb", channels: [255, 0, 0], alpha: 1 };
 const TRANSLUCENT_RED: ColorPickerColor = { space: "rgb", channels: [255, 0, 0], alpha: 0.5 };

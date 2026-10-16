@@ -1,7 +1,7 @@
 import { FILE_CATEGORY_POLICIES, type ImageRules } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { aspectOf, canReachMinimum, describeCropProblem, hasExactAspect, initialImageCrop, preparedImageSize } from "./image-preparation";
+import { aspectOf, canReachMinimum, describeCropProblem, hasExactAspect, initialImageCrop, preparedImageSize } from "../image-preparation";
 
 function rewardImageRules(): ImageRules {
 	const rules = FILE_CATEGORY_POLICIES.REWARD_IMAGE.imageRules;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { formatMinorUnits, minorToMajorUnits, minorUnitExponent } from "./money";
+import { formatMinorUnits, minorToMajorUnits, minorUnitExponent } from "../money";
 
 /**
  * A table entry that disagrees with ICU on purpose: ICU displays MYR with 2

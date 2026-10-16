@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getUserInitials } from "./user-initials";
+import { getUserInitials } from "../user-initials";
 
 describe("getUserInitials", () => {
 	it("returns two initials for a full name", () => {

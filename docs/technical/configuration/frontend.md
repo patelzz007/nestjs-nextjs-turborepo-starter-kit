@@ -262,12 +262,12 @@ loaded outside development, so the credentials never reach a production bundle.
 
 | Test | Covers |
 | --- | --- |
-| `packages/shared/src/runtime/app-env.test.ts` | Every building block, missing → names listed, empty = unset, defaults, URL/flag/interval/cookie-domain validation, values never printed (incl. redaction), strict unknown keys, public-key guard |
-| `packages/shared/src/runtime/fail-fast-env.test.ts` | `loadEnvOrExit`: exits with code 1 and prints the value-free message (reported before exiting), does nothing on a valid env, never exits without an `exit` (Edge), rethrows non-env errors |
+| `packages/shared/src/runtime/__tests__/app-env.test.ts` | Every building block, missing → names listed, empty = unset, defaults, URL/flag/interval/cookie-domain validation, values never printed (incl. redaction), strict unknown keys, public-key guard |
+| `packages/shared/src/runtime/__tests__/fail-fast-env.test.ts` | `loadEnvOrExit`: exits with code 1 and prints the value-free message (reported before exiting), does nothing on a valid env, never exits without an `exit` (Edge), rethrows non-env errors |
 | `apps/*/instrumentation.test.ts` | Real `register()` wiring with a stubbed env: Node.js + invalid `COOKIE_DOMAIN` → `process.exit(1)` and a message without the value. Valid env → no exit. Edge / unset runtime → rethrow, never `process.exit` |
 | `apps/*/lib/env/env.test.ts` | App schema: only `NEXT_PUBLIC_*` keys, defaults, missing origins named. `clientEnv` exposes only `NEXT_PUBLIC_*` keys. `serverEnv` has none |
-| `packages/client/src/lib/api/config.test.ts` | Package env module: parsed values, trailing slash, missing/invalid → fail fast without echoing the value |
-| `apps/web/eslint-boundaries.test.ts`, `packages/client/src/eslint-boundaries.test.ts` | The `process.env` ban and import boundaries actually fire |
+| `packages/client/src/lib/api/__tests__/config.test.ts` | Package env module: parsed values, trailing slash, missing/invalid → fail fast without echoing the value |
+| `apps/web/eslint-boundaries.test.ts`, `packages/client/src/__tests__/eslint-boundaries.test.ts` | The `process.env` ban and import boundaries actually fire |
 
 Vitest does not load `.env`. Each app's `vitest.config.ts` sets deterministic
 fixture values in `test.env`, and aliases `server-only` to Next's own empty
@@ -298,8 +298,8 @@ variables (docs/technical/mobile/mobile-app.md §9.3, §9.5):
 
 | Variable | Read by | Required | Purpose |
 | --- | --- | --- | --- |
-| `EXPO_PUBLIC_API_URL` | `src/lib/env.ts` (bundled) | outside development | The API's absolute URL — `https://` outside development; `http://` allowed in development to reach an API on another machine |
-| `EXPO_PUBLIC_API_PORT` | `src/lib/env.ts` | no (`8080`) | Development only: the API's port on the dev machine, joined with the host Expo Go connected to (never `localhost` — on a phone that is the phone) |
+| `EXPO_PUBLIC_API_URL` | `src/lib/env.ts` (bundled) | outside development | The API's absolute URL — `https://` outside development; `http://` allowed in development to reach an API on another machine, and one without a port gets `EXPO_PUBLIC_API_PORT` (`http://192.168.1.5` → `http://192.168.1.5:8080`; a port written in the URL wins) |
+| `EXPO_PUBLIC_API_PORT` | `src/lib/env.ts` | no (`8080`) | Development only: the API's port, joined with the host Expo Go connected to (never `localhost` — on a phone that is the phone), and added to an `http://` `EXPO_PUBLIC_API_URL` that names no port |
 | `EXPO_PUBLIC_IOS_STORE_URL`, `EXPO_PUBLIC_ANDROID_STORE_URL` | `src/lib/env.ts` | no | `https://` store pages the "Update required" screen opens (ADR 033) |
 | `MOBILE_APP_NAME` | `app.config.ts` (build machine) | no (`Starter`) | Display name, at most 30 characters |
 | `MOBILE_APP_SLUG` | `app.config.ts` | no (`starter`) | Expo slug |

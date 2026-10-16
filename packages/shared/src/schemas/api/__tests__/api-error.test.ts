@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiErrorBodySchema, ApiErrorCodes, ApiErrorCodeSchema, ApiErrorResponseSchema, StandardApiErrorCodeSchema } from "./api-error";
+import { ApiErrorBodySchema, ApiErrorCodes, ApiErrorCodeSchema, ApiErrorResponseSchema, StandardApiErrorCodeSchema } from "../api-error";
 
 const META = { correlationId: "corr-1", timestamp: 1790812800000 };
 

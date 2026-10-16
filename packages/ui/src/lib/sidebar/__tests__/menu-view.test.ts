@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSidebarView, computeRouteState, isRouteActive, type SidebarMenuItemLike } from "./menu-view";
+import { buildSidebarView, computeRouteState, isRouteActive, type SidebarMenuItemLike } from "../menu-view";
 
 /** Merchant-style branch: the parent shares its URL with its first child. */
 const REWARDS_MENU: readonly SidebarMenuItemLike[] = [

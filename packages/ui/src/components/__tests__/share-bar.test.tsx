@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ShareBar, shareWidths, type ShareSegment } from "./share-bar";
+import { ShareBar, shareWidths, type ShareSegment } from "../share-bar";
 
 afterEach((): void => {
 	cleanup();

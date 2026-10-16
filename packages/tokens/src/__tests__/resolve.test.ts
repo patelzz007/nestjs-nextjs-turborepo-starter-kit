@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ColorReferenceCycleError, createColorLookups, resolveColorToken, resolveColorValue, UnknownColorTokenError, UnknownPaletteStepError } from "./resolve";
-import type { ColorLookups } from "./resolve";
-import type { ColorValue } from "./schema";
-import { TOKEN_SOURCE } from "./source";
-import { colorToken, hex, oklch, paletteColor } from "./value";
+import { ColorReferenceCycleError, createColorLookups, resolveColorToken, resolveColorValue, UnknownColorTokenError, UnknownPaletteStepError } from "../resolve";
+import type { ColorLookups } from "../resolve";
+import type { ColorValue } from "../schema";
+import { TOKEN_SOURCE } from "../source";
+import { colorToken, hex, oklch, paletteColor } from "../value";
 
 function buildLookups(overrides: Partial<ColorLookups> = {}): ColorLookups {
 	return { palette: new Map(), colors: new Map(), ...overrides };

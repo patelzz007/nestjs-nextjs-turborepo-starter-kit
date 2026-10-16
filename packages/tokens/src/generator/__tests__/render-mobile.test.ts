@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { SharedColorNameSchema, ThemeRoleSchema } from "../schema";
-import { TOKEN_SOURCE } from "../source";
-import { readDeclarations } from "../testing/css-reader";
-import { renderMobileStylesheet } from "./render-mobile";
-import { renderWebStylesheet } from "./render-web";
+import { SharedColorNameSchema, ThemeRoleSchema } from "../../schema";
+import { TOKEN_SOURCE } from "../../source";
+import { readDeclarations } from "../../testing/css-reader";
+import { renderMobileStylesheet } from "../render-mobile";
+import { renderWebStylesheet } from "../render-web";
 
 describe("renderMobileStylesheet", () => {
 	const css = renderMobileStylesheet(TOKEN_SOURCE);

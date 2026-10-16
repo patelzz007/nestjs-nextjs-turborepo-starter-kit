@@ -3,8 +3,8 @@ import { EventEmitter } from "node:events";
 import Redis from "ioredis";
 import { describe, expect, it, vi } from "vitest";
 
-import { RedisClientSupervisor, type RedisSupervisorLog, type SupervisedRedisClient } from "./redis-client-supervisor";
-import { RedisConnectionLifecycleService } from "./redis-infrastructure.module";
+import { RedisClientSupervisor, type RedisSupervisorLog, type SupervisedRedisClient } from "../redis-client-supervisor";
+import { RedisConnectionLifecycleService } from "../redis-infrastructure.module";
 
 /** An ioredis-shaped client: emits `error`, and QUIT resolves after a tick (like a real round trip). */
 class FakeClient extends EventEmitter implements SupervisedRedisClient {

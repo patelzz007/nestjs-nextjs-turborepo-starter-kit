@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readDeclarations } from "./css-reader";
+import { readDeclarations } from "../css-reader";
 
 const NESTED_CSS = [":root {", "\t--outer: 1;", "\t@variant dark {", "\t\t--inner: 2;", "\t}", "\t--after: 3;", "}", ""].join("\n");
 

@@ -2,12 +2,12 @@ import { paginatedResponse, singleResponse } from "@workspace/shared";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
 
-import { jsonResponse, type FetchImpl } from "./testing";
-import { SessionRefreshUnavailableError } from "./errors";
-import { NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR } from "./http";
-import { createApiRequestContext, fetchMutation, fetchQuery } from "./request";
-import { defineMutation, defineQuery } from "./router";
-import { ApiResponseContractError, MAX_RESPONSE_CONTRACT_ISSUES, parseResponseContract } from "./response-contract";
+import { jsonResponse, type FetchImpl } from "../testing";
+import { SessionRefreshUnavailableError } from "../errors";
+import { NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR } from "../http";
+import { createApiRequestContext, fetchMutation, fetchQuery } from "../request";
+import { defineMutation, defineQuery } from "../router";
+import { ApiResponseContractError, MAX_RESPONSE_CONTRACT_ISSUES, parseResponseContract } from "../response-contract";
 
 const BASE_URL = "http://api.test";
 const SOURCE = { method: "GET", url: `${BASE_URL}/api/v1/items/1`, status: 200 };

@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Frame, FrameDescription, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "./frame";
+import { Frame, FrameDescription, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "../frame";
 
 afterEach((): void => {
 	cleanup();

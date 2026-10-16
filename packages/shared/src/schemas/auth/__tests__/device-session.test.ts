@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { DEVICE_MODEL_HEADER, DEVICE_NAME_HEADER } from "../../contracts/client-session";
-import { epochMs } from "../api/common";
+import { DEVICE_MODEL_HEADER, DEVICE_NAME_HEADER } from "../../../contracts/client-session";
+import { epochMs } from "../../api/common";
 import {
 	encodeSessionDeviceHeaderValue,
 	RevokeSessionInputSchema,
@@ -17,7 +17,7 @@ import {
 	SessionSignInMethodSchema,
 	SessionSystemRevokerSchema,
 	type Session,
-} from "./device-session";
+} from "../device-session";
 
 const SIGNED_IN_AT_MS = 1_790_000_000_000;
 const SHORT_LIMIT = 5;

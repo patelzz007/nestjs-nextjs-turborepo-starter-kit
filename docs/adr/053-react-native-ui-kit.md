@@ -50,7 +50,7 @@ counterpart.
   - It uses the standard `onChange`, `onBlur` and `onFocus` contract.
   - Design tokens only: no arbitrary values, no hex colours, no `style={{…}}` literals.
   - It has its own test.
-  - `packages/tooling/tests/ui-native-kit-contract.test.mjs` checks every component file. It lives
+  - `packages/tooling/__tests__/ui-native-kit-contract.test.mjs` checks every component file. It lives
     in tooling because the kit's lint forbids Node built-ins.
 - **Tests run on jest-expo, like the app** (ADR 031). This is the one exception to Vitest.
 - **Live galleries.** The admin's `/components` page shows `packages/ui`. The mobile Settings →
@@ -59,7 +59,7 @@ counterpart.
 - **Tests live in `__tests__/` folders** beside the code, in web, admin, merchant, docs, mobile and
   ui-native (rules/11).
   - The test runners only collect `__tests__/`.
-  - `packages/tooling/tests/test-placement.test.mjs` fails the build on a misplaced test, so a
+  - `packages/tooling/__tests__/test-placement.test.mjs` fails the build on a misplaced test, so a
     test never silently stops running.
   - Mobile route tests mirror the route tree in `src/__tests__/app/`, because Expo Router bundles
     every file under `src/app`.

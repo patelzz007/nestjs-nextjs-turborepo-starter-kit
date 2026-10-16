@@ -288,4 +288,15 @@ describe("Media & content demos", () => {
 		const reply = within(section).getByLabelText("Reply");
 		expect(reply instanceof HTMLInputElement ? reply.value : null).toBe("");
 	});
+
+	it("opens the in-memory sample statement in the PdfViewer, with a file picker", async () => {
+		URL.createObjectURL = vi.fn((): string => "blob:http://localhost/sample");
+		URL.revokeObjectURL = vi.fn((): void => undefined);
+		renderFamily("family-media-content");
+		const section = sectionOf("pdfViewer");
+		await waitFor(() => {
+			expect(within(section).getByTitle("PDF: sample-statement.pdf").getAttribute("src")).toBe("blob:http://localhost/sample");
+		});
+		expect(within(section).getAllByRole("button", { name: "Open a PDF" }).length).toBeGreaterThan(0);
+	});
 });

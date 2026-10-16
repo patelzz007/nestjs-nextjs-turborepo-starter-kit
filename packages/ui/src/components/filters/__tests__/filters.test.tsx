@@ -4,9 +4,9 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createFilterQuery, createFilterRule, findFilterRule, flattenFilterRules } from "./filters-query";
+import { createFilterQuery, createFilterRule, findFilterRule, flattenFilterRules } from "../filters-query";
 import { FiltersHarness, stubFiltersDom } from "@workspace/ui/testing/filters-test-utils";
-import type { FilterChangeDetails, FilterQuery, FilterRule } from "./filters-types";
+import type { FilterChangeDetails, FilterQuery, FilterRule } from "../filters-types";
 
 const OPEN_STATUS = createFilterRule({ id: "s", path: ["status"], operator: "is", value: "open" });
 const NAME_CONTAINS = createFilterRule({ id: "n", path: ["name"], operator: "contains", value: "ann" });

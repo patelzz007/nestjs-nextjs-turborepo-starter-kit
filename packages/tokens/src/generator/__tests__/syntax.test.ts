@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { GeneratedFileNameSchema } from "../schema";
+import { GeneratedFileNameSchema } from "../../schema";
 
 /** Comments removed the way a CSS parser does: each `/*` ends at the FIRST `*\/`, wherever it sits. */
 function withoutComments(css: string): string {
@@ -20,7 +20,7 @@ const STYLESHEETS = GeneratedFileNameSchema.options.filter((fileName) => fileNam
 
 describe.each(STYLESHEETS)("generated/%s syntax", (fileName) => {
 	it("leaves only selectors, braces and token declarations once comments are stripped — a stray `*/` inside the header comment would leak text into a rule and break every app's build", () => {
-		const css = readFileSync(new URL(`../../generated/${fileName}`, import.meta.url), "utf8");
+		const css = readFileSync(new URL(`../../../generated/${fileName}`, import.meta.url), "utf8");
 		const strayLines = withoutComments(css)
 			.split("\n")
 			.filter((line) => line.trim() !== "" && !DECLARATION.test(line) && !BLOCK_EDGE.test(line));
@@ -29,7 +29,7 @@ describe.each(STYLESHEETS)("generated/%s syntax", (fileName) => {
 	});
 
 	it("balances its braces", () => {
-		const css = withoutComments(readFileSync(new URL(`../../generated/${fileName}`, import.meta.url), "utf8"));
+		const css = withoutComments(readFileSync(new URL(`../../../generated/${fileName}`, import.meta.url), "utf8"));
 
 		expect(css.split("{").length).toBe(css.split("}").length);
 	});

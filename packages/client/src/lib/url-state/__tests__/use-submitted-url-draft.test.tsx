@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
-import type { UrlDraft } from "./use-url-draft";
+import type { UrlDraft } from "../use-url-draft";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { useSubmittedUrlDraft } from "./use-submitted-url-draft";
+import { useSubmittedUrlDraft } from "../use-submitted-url-draft";
 
 interface DraftProps {
 	readonly value: string | undefined;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { encodeIco } from "./ico";
+import { encodeIco } from "../ico";
 
 describe("encodeIco", () => {
 	const small = Uint8Array.from([1, 2, 3]);

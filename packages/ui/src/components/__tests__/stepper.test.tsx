@@ -16,7 +16,7 @@ import {
 	StepperTitle,
 	StepperTrigger,
 	type StepIndicators,
-} from "./stepper";
+} from "../stepper";
 
 afterEach((): void => {
 	cleanup();

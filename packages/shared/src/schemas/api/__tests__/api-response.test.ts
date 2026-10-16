@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiPaginatedMetaSchema, ApiResponseMetaSchema, createApiSuccessEnvelopeSchema } from "./api-response";
-import { DataValueSchema } from "./common";
+import { ApiPaginatedMetaSchema, ApiResponseMetaSchema, createApiSuccessEnvelopeSchema } from "../api-response";
+import { DataValueSchema } from "../common";
 
 const TIMESTAMP = 1_790_812_800_000;
 const CORRELATION_ID = "c0ffee00-1234-4abc-8def-0123456789ab";

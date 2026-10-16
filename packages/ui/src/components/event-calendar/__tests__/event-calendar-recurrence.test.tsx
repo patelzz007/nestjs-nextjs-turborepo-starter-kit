@@ -2,8 +2,8 @@
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { EventCalendarRecurrenceError, expandRecurrence, formatRRuleString, MAX_OCCURRENCES, parseRRuleString, resolveRecurrenceRule } from "./event-calendar-recurrence";
-import type { CalendarEvent, EventCalendarDateRange, EventCalendarOccurrence, EventCalendarRecurrenceRule } from "./event-calendar-types";
+import { EventCalendarRecurrenceError, expandRecurrence, formatRRuleString, MAX_OCCURRENCES, parseRRuleString, resolveRecurrenceRule } from "../event-calendar-recurrence";
+import type { CalendarEvent, EventCalendarDateRange, EventCalendarOccurrence, EventCalendarRecurrenceRule } from "../event-calendar-types";
 
 const UTC = { timeZone: "UTC" };
 

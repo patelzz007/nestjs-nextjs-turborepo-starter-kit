@@ -3,7 +3,7 @@ import { MapPin } from "lucide-react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { IconTile, IconTileToneSchema, type IconTileTone, IconTileVariantSchema, type IconTileVariant, type IconTileSize } from "./icon-tile";
+import { IconTile, IconTileToneSchema, type IconTileTone, IconTileVariantSchema, type IconTileVariant, type IconTileSize } from "../icon-tile";
 
 afterEach((): void => {
 	cleanup();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CHART_COLOR_SLOTS } from "./chart-colors";
-import { CHART_SLOT_ENCODINGS, chartPatternId, type ChartFillPattern, chartPatternStyle, MIN_RANK_OPACITY, rankOpacity } from "./chart-encodings";
+import { CHART_COLOR_SLOTS } from "../chart-colors";
+import { CHART_SLOT_ENCODINGS, chartPatternId, type ChartFillPattern, chartPatternStyle, MIN_RANK_OPACITY, rankOpacity } from "../chart-encodings";
 
 function distinct(values: readonly (string | undefined)[]): number {
 	return new Set(values).size;

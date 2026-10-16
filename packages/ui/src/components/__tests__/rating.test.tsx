@@ -4,8 +4,8 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Rating } from "./rating";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { Rating } from "../rating";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 afterEach((): void => {
 	cleanup();

@@ -3,9 +3,9 @@
 import type { DataValue } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { resolveAuthErrorMessage } from "../auth/errors";
-import { jsonResponse } from "../test-utils";
-import { ApiError, readErrorPayload } from "./api-request";
+import { resolveAuthErrorMessage } from "../../auth/errors";
+import { jsonResponse } from "../../test-utils";
+import { ApiError, readErrorPayload } from "../api-request";
 
 function errorEnvelope(code: string, message: string, details?: Record<string, DataValue>): DataValue {
 	return {

@@ -16,6 +16,7 @@ import { useSignOut } from "../../../features/auth/use-sign-out";
 import { useSignOutConfirmation } from "../../../features/auth/use-sign-out-confirmation";
 import { useAppLockEnabled, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { THEME_LABELS } from "../../../features/preferences/labels";
+import { PDF_VIEWER_TITLE } from "../../../features/pdf-viewer/labels";
 import { TILL_TITLE } from "../../../features/till/labels";
 import { ROUTES } from "../../../runtime/routes";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
@@ -44,6 +45,9 @@ export default function SettingsScreen(): React.JSX.Element {
 	const openTill = React.useCallback((): void => {
 		router.push(ROUTES.till);
 	}, [router]);
+	const openPdfViewer = React.useCallback((): void => {
+		router.push(ROUTES.pdfViewer);
+	}, [router]);
 
 	/** Development builds only: onboarding's "seen" flag lives in the Keychain, which outlives reinstalls (ADR 041). */
 	const replayOnboarding = React.useCallback((): void => {
@@ -71,6 +75,9 @@ export default function SettingsScreen(): React.JSX.Element {
 			</Card>
 			<Card>
 				<ListRow label={TILL_TITLE} description="Scan and redeem customers' reward QR codes" onPress={openTill} />
+			</Card>
+			<Card>
+				<ListRow label={PDF_VIEWER_TITLE} description="Read a PDF from your phone" onPress={openPdfViewer} />
 			</Card>
 			<Card title="About">
 				<DetailList items={about} />

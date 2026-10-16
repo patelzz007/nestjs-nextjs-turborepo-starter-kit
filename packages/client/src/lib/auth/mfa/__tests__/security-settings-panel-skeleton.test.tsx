@@ -2,8 +2,8 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SIGNED_IN_DEVICES_SKELETON_ROWS } from "../sessions/signed-in-devices-skeleton";
-import { SecuritySettingsPanelSkeleton } from "./security-settings-panel-skeleton";
+import { SIGNED_IN_DEVICES_SKELETON_ROWS } from "../../sessions/signed-in-devices-skeleton";
+import { SecuritySettingsPanelSkeleton } from "../security-settings-panel-skeleton";
 
 /** The panel's sections: email verification, change password, two-factor, signed-in devices, MFA recovery. */
 const PANEL_SECTIONS = 5;

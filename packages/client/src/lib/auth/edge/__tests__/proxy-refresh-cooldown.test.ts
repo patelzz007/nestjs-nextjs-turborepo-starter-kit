@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createProxyRefreshCooldown, type ProxyRefreshResult } from "./proxy-refresh";
+import { createProxyRefreshCooldown, type ProxyRefreshResult } from "../proxy-refresh";
 
 const TRANSIENT: ProxyRefreshResult = { ok: false, status: 503, setCookies: [] };
 const DEAD: ProxyRefreshResult = { ok: false, status: 401, setCookies: [] };

@@ -3,11 +3,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
-import { Cascader, CascaderChips, CascaderContent, CascaderList, CascaderPanel, CascaderTrigger, useCascaderSelection } from "./cascader";
-import { CascaderItems } from "./cascader-item";
-import { CascaderInput, CascaderValue } from "./cascader-nav";
-import type { CascaderChangeDetails, CascaderNode } from "./cascader-types";
+import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import { Cascader, CascaderChips, CascaderContent, CascaderList, CascaderPanel, CascaderTrigger, useCascaderSelection } from "../cascader";
+import { CascaderItems } from "../cascader-item";
+import { CascaderInput, CascaderValue } from "../cascader-nav";
+import type { CascaderChangeDetails, CascaderNode } from "../cascader-types";
 import {
 	openPicker,
 	optionNames,

@@ -24,7 +24,7 @@ import {
 	stripNotationComments,
 	toPlainLines,
 	type CodeBlockLine,
-} from "./code-block-highlight";
+} from "../code-block-highlight";
 
 /** shiki's first pass loads the engine, a theme pair and a grammar. */
 const SHIKI_TIMEOUT_MS = 30_000;
@@ -38,8 +38,8 @@ function lineAt(lines: CodeBlockLine[], index: number): CodeBlockLine {
 describe("module contract", () => {
 	it("keeps the highlight module free of a client directive and the component a client module", (): void => {
 		const read = (name: string): string => readFileSync(fileURLToPath(new URL(name, import.meta.url)), "utf8");
-		expect(read("./code-block-highlight.ts")).not.toMatch(/^\s*["']use client["']/m);
-		expect(read("./code-block.tsx").startsWith('"use client";')).toBe(true);
+		expect(read("../code-block-highlight.ts")).not.toMatch(/^\s*["']use client["']/m);
+		expect(read("../code-block.tsx").startsWith('"use client";')).toBe(true);
 	});
 
 	it("registers lazy grammar and theme loaders by name", (): void => {

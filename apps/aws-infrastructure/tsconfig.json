@@ -7,5 +7,5 @@
 		"moduleResolution": "NodeNext",
 		"types": ["node"]
 	},
-	"include": ["bin/**/*.ts", "lib/**/*.ts", "test/**/*.ts"]
+	"include": ["bin/**/*.ts", "lib/**/*.ts", "__tests__/**/*.ts"]
 }

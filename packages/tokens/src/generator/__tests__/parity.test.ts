@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertThemeParity, findMissingThemeVariables, ThemeParityError } from "./parity";
+import { assertThemeParity, findMissingThemeVariables, ThemeParityError } from "../parity";
 
 describe("findMissingThemeVariables", () => {
 	it("reports nothing when every theme defines the same variables", () => {

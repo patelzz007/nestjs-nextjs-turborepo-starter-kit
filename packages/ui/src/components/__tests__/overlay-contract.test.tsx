@@ -2,19 +2,19 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AlertDialog, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger } from "./alert-dialog";
-import { CommandDialog } from "./command";
-import { ContextMenu, ContextMenuItem, ContextMenuTrigger } from "./context-menu";
-import { Dialog, DialogContent, DialogFooter } from "./dialog";
-import { Drawer, DrawerContent, DrawerTrigger } from "./drawer";
-import { Empty, EmptyContent } from "./empty";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "./hover-card";
-import { Menubar, MenubarContent, MenubarGroup, MenubarItem, MenubarLabel, MenubarMenu, MenubarSeparator, MenubarShortcut, MenubarTrigger } from "./menubar";
-import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "./navigation-menu";
-import { ToastCountdownLabel, ToastIcon, ToastProgress, Toaster, createToastManager, createToastMessage, toastA11yProps } from "./toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+import { AlertDialog, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger } from "../alert-dialog";
+import { CommandDialog } from "../command";
+import { ContextMenu, ContextMenuItem, ContextMenuTrigger } from "../context-menu";
+import { Dialog, DialogContent, DialogFooter } from "../dialog";
+import { Drawer, DrawerContent, DrawerTrigger } from "../drawer";
+import { Empty, EmptyContent } from "../empty";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "../hover-card";
+import { Menubar, MenubarContent, MenubarGroup, MenubarItem, MenubarLabel, MenubarMenu, MenubarSeparator, MenubarShortcut, MenubarTrigger } from "../menubar";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "../navigation-menu";
+import { ToastCountdownLabel, ToastIcon, ToastProgress, Toaster, createToastManager, createToastMessage, toastA11yProps } from "../toast";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {

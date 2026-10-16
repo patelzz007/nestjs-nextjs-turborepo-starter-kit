@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QrModuleGrid } from "./qr-module-grid";
+import { QrModuleGrid } from "../qr-module-grid";
 
 describe("QrModuleGrid", () => {
 	it("starts all light, all data modules", () => {

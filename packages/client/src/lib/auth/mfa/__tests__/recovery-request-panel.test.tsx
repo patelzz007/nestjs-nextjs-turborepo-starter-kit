@@ -4,8 +4,8 @@ import type { Envelope, MfaRecoveryStatusResponse, UserResponse } from "@workspa
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
-import { MFA_RECOVERY_LOADING_LABELS, MFA_RECOVERY_STATUS_LOADING_LABELS, MfaRecoveryRequestPanel } from "./recovery-request-panel";
+import { envelopeFixture, userFixture } from "../../../../test/auth-fixtures";
+import { MFA_RECOVERY_LOADING_LABELS, MFA_RECOVERY_STATUS_LOADING_LABELS, MfaRecoveryRequestPanel } from "../recovery-request-panel";
 
 /** What a stubbed query answers. */
 interface QueryState<Data> {
@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 	noop: vi.fn<() => Promise<void>>(),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = {
 		auth: {
 			me: { useQuery: (): QueryState<Envelope<UserResponse>> => mocks.me() },

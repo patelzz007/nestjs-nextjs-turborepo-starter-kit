@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { epochMs } from "../../api/common";
+import { epochMs } from "../../../api/common";
 
-import { MerchantKybDocumentRecordSchema, MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "./rewards-kyb";
-import { MAX_REWARD_IMAGES, MerchantCreateRewardSchema, RewardResponseSchema, type RewardImageResponse, type RewardResponse } from "./rewards-entities";
-import { KybDocumentScanStatusSchema, RewardRulesResponseSchema, RewardRulesSchema, type RewardRules } from "./rewards-enums";
+import { MerchantKybDocumentRecordSchema, MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "../rewards-kyb";
+import { MAX_REWARD_IMAGES, MerchantCreateRewardSchema, RewardResponseSchema, type RewardImageResponse, type RewardResponse } from "../rewards-entities";
+import { KybDocumentScanStatusSchema, RewardRulesResponseSchema, RewardRulesSchema, type RewardRules } from "../rewards-enums";
 
 // Response schemas are OPEN (ADR 022): the API strips unknown keys and clients
 // tolerate additive fields. Request schemas sharing the same fields stay CLOSED.

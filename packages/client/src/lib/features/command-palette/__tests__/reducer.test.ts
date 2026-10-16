@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-import { commandPaletteActions } from "./actions";
-import { commandPaletteReducer } from "./reducer";
-import { selectPreferences } from "./selectors";
-import { commandPalettePersistence } from "./store";
-import { CommandPalettePreferencesSchema, INITIAL_COMMAND_PALETTE_STATE, MAX_RECENT_SEARCHES, type CommandPaletteRecentSearch, type CommandPaletteState } from "./state";
+import { commandPaletteActions } from "../actions";
+import { commandPaletteReducer } from "../reducer";
+import { selectPreferences } from "../selectors";
+import { commandPalettePersistence } from "../store";
+import { CommandPalettePreferencesSchema, INITIAL_COMMAND_PALETTE_STATE, MAX_RECENT_SEARCHES, type CommandPaletteRecentSearch, type CommandPaletteState } from "../state";
 
 const BILLING: CommandPaletteRecentSearch = { title: "Billing", url: "/settings/billing", section: "Platform", icon: "CreditCard" };
 

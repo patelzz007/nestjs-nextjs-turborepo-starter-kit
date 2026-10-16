@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { isStringPrimitive } from "./lib/runtime-narrowing";
+import { isStringPrimitive } from "../lib/runtime-narrowing";
 
-import { apiRoutes, type RouteTree } from "./api-routes";
+import { apiRoutes, type RouteTree } from "../api-routes";
 
 // ── apiRoutes shape ────────────────────────────────────────────────────────
 

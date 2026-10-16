@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildOffsetPaginationMeta } from "./pagination-meta";
+import { buildOffsetPaginationMeta } from "../pagination-meta";
 
 describe("buildOffsetPaginationMeta", () => {
 	it("derives pages from the total and clamps the page into range", () => {

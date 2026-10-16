@@ -12,8 +12,8 @@ import {
 	tableSortingToListSort,
 	tableStateToListQuery,
 	toListSearch,
-} from "./list-query";
-import { resolveRequest } from "./endpoints";
+} from "../list-query";
+import { resolveRequest } from "../endpoints";
 
 const LIST_PATH = "/product";
 

@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useImageLoadingStatus } from "./use-image-loading-status";
+import { useImageLoadingStatus } from "../use-image-loading-status";
 
 /** Every detached image the hook creates, so a test can finish its load. */
 const images: HTMLImageElement[] = [];

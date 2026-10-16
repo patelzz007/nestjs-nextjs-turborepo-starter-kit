@@ -2,12 +2,14 @@ import { fireEvent, render, screen, within } from "@testing-library/react-native
 import * as Clipboard from "expo-clipboard";
 import * as React from "react";
 
+import { DEFAULT_PDF_VIEWER_LABELS } from "@workspace/ui-native/components/pdf-viewer";
+
 import { MediaDemos } from "../media-demos";
 
 // The clipboard is the OS's: the boundary is replaced, the demo's own state is real.
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
 
-const DEMO_TITLES: readonly string[] = ["Carousel", "ImageCarousel", "CoverImage", "CodeBlock", "QrCode", "Bubble", "Message", "Attachment"];
+const DEMO_TITLES: readonly string[] = ["Carousel", "ImageCarousel", "CoverImage", "CodeBlock", "QrCode", "Bubble", "Message", "Attachment", "PdfViewer"];
 
 describe("MediaDemos", () => {
 	it("shows one demo block per component", async () => {
@@ -65,5 +67,16 @@ describe("MediaDemos", () => {
 		await fireEvent.press(files.getByRole("button", { name: "Restore the removed files" }));
 		expect(files.getByText("spring-menu.jpg")).toBeOnTheScreen();
 		expect(files.getByLabelText("contract-signed.pdf, Uploading… 40%")).toBeBusy();
+	});
+
+	it("shows the PDF viewer in each state a gallery can show", async () => {
+		await render(<MediaDemos />);
+		const demo = within(screen.getByTestId("demo-PdfViewer"));
+
+		expect(demo.getByRole("progressbar", { name: DEFAULT_PDF_VIEWER_LABELS.loading })).toBeOnTheScreen();
+		await fireEvent.press(demo.getByRole("radio", { name: "Failed" }));
+		expect(demo.getByText(DEFAULT_PDF_VIEWER_LABELS.failures.password_protected)).toBeOnTheScreen();
+		await fireEvent.press(demo.getByRole("radio", { name: "Other app" }));
+		expect(demo.getByText(DEFAULT_PDF_VIEWER_LABELS.externalTitle)).toBeOnTheScreen();
 	});
 });

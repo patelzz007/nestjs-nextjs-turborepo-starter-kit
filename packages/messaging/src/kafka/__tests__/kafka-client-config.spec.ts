@@ -1,8 +1,8 @@
 import { KafkaJS } from "@confluentinc/kafka-javascript";
 import { describe, expect, it } from "vitest";
 
-import { buildKafkaClientConfig, createKafkaLogger, type KafkaClientLogOptions, type KafkaLogContext, type KafkaLogSink } from "./kafka-client-config";
-import { KAFKA_PLAINTEXT_SECURITY } from "./kafka-security";
+import { buildKafkaClientConfig, createKafkaLogger, type KafkaClientLogOptions, type KafkaLogContext, type KafkaLogSink } from "../kafka-client-config";
+import { KAFKA_PLAINTEXT_SECURITY } from "../kafka-security";
 
 interface CapturedLine {
 	readonly level: "error" | "warn" | "info" | "debug";

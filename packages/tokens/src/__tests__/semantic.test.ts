@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ThemeNameSchema, ThemeRoleSchema } from "./schema";
-import { SHARED_COLORS, THEMES } from "./semantic";
+import { ThemeNameSchema, ThemeRoleSchema } from "../schema";
+import { SHARED_COLORS, THEMES } from "../semantic";
 
 describe("theme parity", () => {
 	it.each(ThemeNameSchema.options)("the %s theme defines exactly the role list", (theme) => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { encodeQr } from "./qr-encode";
-import { DEFAULT_QR_QUIET_ZONE_MODULES, DEFAULT_QR_SVG_DARK_COLOR, DEFAULT_QR_SVG_LIGHT_COLOR, qrMatrixToSvgPath, QrSvgColorSchema, renderQrSvg } from "./qr-svg";
+import { encodeQr } from "../qr-encode";
+import { DEFAULT_QR_QUIET_ZONE_MODULES, DEFAULT_QR_SVG_DARK_COLOR, DEFAULT_QR_SVG_LIGHT_COLOR, qrMatrixToSvgPath, QrSvgColorSchema, renderQrSvg } from "../qr-svg";
 
 /** Every `M x y hN v1 h-N z` rectangle of a path (for stripping them all). */
 const RUN_PATTERN = /M(?<x>\d+) (?<y>\d+)h(?<length>\d+)v1h-\k<length>z/gu;

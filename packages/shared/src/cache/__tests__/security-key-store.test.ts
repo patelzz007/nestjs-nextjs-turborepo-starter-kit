@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SecurityKeyStore } from "./security-key-store";
+import { SecurityKeyStore } from "../security-key-store";
 
 describe("SecurityKeyStore", () => {
 	it("tracks keys until expiry and sweeps stale entries", () => {

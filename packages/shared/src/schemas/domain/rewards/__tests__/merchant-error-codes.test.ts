@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiErrorCodeSchema } from "../../api/api-error";
-import { MerchantErrorCodeSchema, MerchantErrorCodes } from "./merchant-error-codes";
+import { ApiErrorCodeSchema } from "../../../api/api-error";
+import { MerchantErrorCodeSchema, MerchantErrorCodes } from "../merchant-error-codes";
 
 describe("MerchantErrorCodeSchema", () => {
 	it("holds only well-formed API error codes", () => {

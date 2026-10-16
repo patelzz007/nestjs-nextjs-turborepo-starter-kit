@@ -12,10 +12,10 @@ import {
 	useApi,
 	type OnRefresh,
 	type OnUnauthorized,
-} from "./use-api";
+} from "../use-api";
 import { LIST_SLOT_INDEX, DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
-import { apiRouter, defineMutation, defineQuery } from "./endpoints";
-import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
+import { apiRouter, defineMutation, defineQuery } from "../endpoints";
+import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../../test-utils";
 import { ApiResponseContractError } from "@workspace/api-client";
 
 const BASE_URL = "http://api.test";

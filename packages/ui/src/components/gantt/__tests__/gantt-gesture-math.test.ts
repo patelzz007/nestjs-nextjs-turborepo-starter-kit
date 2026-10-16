@@ -18,9 +18,9 @@ import {
 	snapAxisMinutes,
 	type GanttAxisGeometry,
 	type GanttGestureRange,
-} from "./gantt-gesture-math";
-import { MINUTES_PER_DAY } from "./gantt-lib";
-import type { GanttEvent, GanttOccurrence, GanttOverlapPolicy } from "./gantt-types";
+} from "../gantt-gesture-math";
+import { MINUTES_PER_DAY } from "../gantt-lib";
+import type { GanttEvent, GanttOccurrence, GanttOverlapPolicy } from "../gantt-types";
 
 const UTC = "UTC";
 const ALLOW: GanttOverlapPolicy = "allow";

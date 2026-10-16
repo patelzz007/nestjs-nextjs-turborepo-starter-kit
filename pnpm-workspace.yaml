@@ -60,7 +60,7 @@ overrides:
   "prisma>mysql2": "3.24.5" # GHSA: mysql2 <3.23.1 (MySQL driver, unused with Postgres)
   # gaxios@6 (via firebase-admin@14 → @google-cloud/storage@8 → google-auth-library@9) still
   # depends on uuid ^9; it only uses `require("uuid").v4()`, which uuid 11 (CJS + ESM) keeps.
-  # packages/tooling/tests/dependency-overrides.test.mjs loads uuid from the parent's
+  # packages/tooling/__tests__/dependency-overrides.test.mjs loads uuid from the parent's
   # install and calls v4() the way it does, so a breaking override fails the tests.
   # (google-gax and teeny-request dropped uuid in the versions firebase-admin@14 pulls.)
   "gaxios>uuid": "11.1.1" # GHSA: uuid <11.1.1
@@ -89,7 +89,7 @@ peerDependencyRules:
 # ── Accepted audit advisories ─────────────────────────────────────────────
 # ONLY for an advisory with NO patched version, after checking it cannot be
 # reached with untrusted input. Every entry needs a reason and a review date
-# (push CI checks both exist: packages/tooling/tests/dependency-exceptions.test.mjs).
+# (push CI checks both exist: packages/tooling/__tests__/dependency-exceptions.test.mjs).
 # The weekly `dependency-review` workflow reports entries past their review date,
 # forcing a re-check (is a fix out? upgrade and remove the entry) without ever
 # blocking a push.

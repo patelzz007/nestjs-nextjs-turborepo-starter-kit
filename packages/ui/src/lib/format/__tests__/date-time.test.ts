@@ -1,7 +1,7 @@
 import type { DisplayRegion } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { formatBucket, formatEpochMs, formatEpochMsRange, formatRelativeTime, toIsoTimestamp } from "./date-time";
+import { formatBucket, formatEpochMs, formatEpochMsRange, formatRelativeTime, toIsoTimestamp } from "../date-time";
 
 const KUALA_LUMPUR: DisplayRegion = { locale: "en-MY", timeZone: "Asia/Kuala_Lumpur" };
 const LOS_ANGELES_US: DisplayRegion = { locale: "en-US", timeZone: "America/Los_Angeles" };

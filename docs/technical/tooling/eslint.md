@@ -339,7 +339,7 @@ Everything else imports `clientEnv` / `serverEnv` (Next), injects
 
 ### 3.4 Lint canaries
 
-`apps/web/eslint-boundaries.test.ts`, `packages/client/src/eslint-boundaries.test.ts`,
+`apps/web/eslint-boundaries.test.ts`, `packages/client/src/__tests__/eslint-boundaries.test.ts`,
 `apps/api/src/eslint-boundaries.spec.ts` and `apps/analytics-consumer/src/eslint-boundaries.spec.ts`
 lint fixture snippets against the workspace's **real** effective config (only the
 boundary rules run, via `ruleFilter`) and assert each boundary fires — and that
@@ -668,7 +668,7 @@ the API lint fits under a 3GB heap cap, well inside the default.
 
 Do not "fix" the crash by pointing the API at the packages' built
 `dist/*.d.ts` (dropping `customConditions`): types from a missing or stale build
-pass on a laptop and fail in CI, and `packages/tooling/tests/tsconfig-conditions.test.mjs`
+pass on a laptop and fail in CI, and `packages/tooling/__tests__/tsconfig-conditions.test.mjs`
 fails on it. Do not raise `--max-old-space-size` on the lint script either — that
 hides a duplicated program instead of removing it. (`typecheck` runs `tsc` with
 8GB for its own, separate reasons; it is not a precedent for lint.)

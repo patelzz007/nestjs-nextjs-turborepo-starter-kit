@@ -15,9 +15,9 @@ import {
 	useEventCalendarView,
 	useEventCalendarViewSettings,
 	type EventCalendarApi,
-} from "./event-calendar";
+} from "../event-calendar";
 import { CalendarHarness, ResizeObserverStub, TEST_EVENTS, TEST_NOW, TEST_TIME_ZONE, type TestEventData } from "@workspace/ui/testing/event-calendar-test-harness";
-import type { EventCalendarOccurrence, EventCalendarRangeInfo } from "./event-calendar-types";
+import type { EventCalendarOccurrence, EventCalendarRangeInfo } from "../event-calendar-types";
 
 beforeEach((): void => {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);

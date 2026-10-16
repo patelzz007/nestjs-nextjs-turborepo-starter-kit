@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { localeOptions, makeDefaultGanttFunctions, mergeGanttI18n } from "./gantt-i18n";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { localeOptions, makeDefaultGanttFunctions, mergeGanttI18n } from "../gantt-i18n";
 
 const EN = UI_KIT_LABELS_EN.gantt;
 

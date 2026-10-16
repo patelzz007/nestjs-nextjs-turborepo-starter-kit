@@ -2,12 +2,12 @@ import { APP_VERSION_MAX_LENGTH, DataValueSchema, singleResponse } from "@worksp
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ApiClientConfigSchema, createApiClientContext, InvalidApiClientConfigError, type ApiClientConfig } from "./config";
-import { AUTHORIZATION_HEADER } from "./http";
-import type { RefreshResult } from "./refresh";
-import { fetchQuery } from "./request";
-import { defineQuery } from "./router";
-import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type FetchImpl } from "./testing";
+import { ApiClientConfigSchema, createApiClientContext, InvalidApiClientConfigError, type ApiClientConfig } from "../config";
+import { AUTHORIZATION_HEADER } from "../http";
+import type { RefreshResult } from "../refresh";
+import { fetchQuery } from "../request";
+import { defineQuery } from "../router";
+import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type FetchImpl } from "../testing";
 
 const BASE_URL = "http://api.test";
 const SECRET_LOOKING_BASE_URL = "not a url, token=s3cr3t";

@@ -5,7 +5,7 @@ import type { AuthClientType } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AuthProvider, useAuth } from "./index";
+import { AuthProvider, useAuth } from "../index";
 
 /** Answers every API call with 401 — what a guest gets from `/auth/me`. */
 const fetchMock = vi.fn<typeof fetch>((): Promise<Response> =>

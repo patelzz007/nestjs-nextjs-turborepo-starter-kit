@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isReadyStatus, waitForHttp } from "./wait-for-http.mjs";
+import { isReadyStatus, waitForHttp } from "../wait-for-http.mjs";
 
 /** A fake clock whose sleep advances time instantly. */
 function fakeClock() {

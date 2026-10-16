@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { ESLint } from "eslint";
 import { beforeAll, describe, expect, it } from "vitest";
 
-const PACKAGE_DIR: string = fileURLToPath(new URL("..", import.meta.url));
+const PACKAGE_DIR: string = fileURLToPath(new URL("../..", import.meta.url));
 
 const BOUNDARY_RULES: ReadonlySet<string> = new Set(["no-restricted-imports", "no-restricted-properties", "workspace-boundaries/no-server-import-in-client-component"]);
 

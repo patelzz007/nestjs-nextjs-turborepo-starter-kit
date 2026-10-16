@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
 
-import { findDeepestNavMatch, longestSharedPrefix, replaceLastTrailItem, segmentsOfPath, updateLastTrailItem, type NavTreeShape } from "./breadcrumb-tree";
+import { findDeepestNavMatch, longestSharedPrefix, replaceLastTrailItem, segmentsOfPath, updateLastTrailItem, type NavTreeShape } from "../breadcrumb-tree";
 
 interface TestNode {
 	readonly id: string;

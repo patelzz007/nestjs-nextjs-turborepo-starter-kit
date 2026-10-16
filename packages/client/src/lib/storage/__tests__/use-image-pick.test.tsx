@@ -3,12 +3,12 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { FILE_CATEGORY_POLICIES, type ImageRules } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ImageIntake } from "./image-intake";
-import { useImagePick } from "./use-image-pick";
+import type { ImageIntake } from "../image-intake";
+import { useImagePick } from "../use-image-pick";
 
 const { takeImage } = vi.hoisted(() => ({ takeImage: vi.fn<(file: File, rules: ImageRules) => Promise<ImageIntake>>() }));
 
-vi.mock("./image-intake", () => ({ takeImage }));
+vi.mock("../image-intake", () => ({ takeImage }));
 
 function avatarRules(): ImageRules {
 	const rules = FILE_CATEGORY_POLICIES.USER_AVATAR.imageRules;

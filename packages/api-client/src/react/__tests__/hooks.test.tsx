@@ -5,10 +5,10 @@ import { IDEMPOTENCY_KEY_HEADER, type EmailPreviewListResponse } from "@workspac
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ApiRequestContext } from "../request";
-import { apiRouter } from "../router";
-import { jsonResponse, type FetchImpl } from "../testing";
-import { createMutationProcedure, createQueryProcedure } from "./hooks";
+import type { ApiRequestContext } from "../../request";
+import { apiRouter } from "../../router";
+import { jsonResponse, type FetchImpl } from "../../testing";
+import { createMutationProcedure, createQueryProcedure } from "../hooks";
 
 const CONTEXT: ApiRequestContext = { baseUrl: "http://api.test", clientType: "admin" };
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };

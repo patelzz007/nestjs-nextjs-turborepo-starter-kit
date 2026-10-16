@@ -2,7 +2,13 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { currentStepIndex, isOnboardingStepDisabled, MerchantOnboardingCompactProgress, MerchantOnboardingTimeline, type OnboardingTimelineStep } from "./onboarding-timeline";
+import {
+	currentStepIndex,
+	isOnboardingStepDisabled,
+	MerchantOnboardingCompactProgress,
+	MerchantOnboardingTimeline,
+	type OnboardingTimelineStep,
+} from "../onboarding-timeline";
 
 type StepId = "alpha" | "beta" | "gamma";
 

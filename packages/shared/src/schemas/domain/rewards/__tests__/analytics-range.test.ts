@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { DAY_MS } from "./analytics";
-import { MerchantAnalyticsDashboardQuerySchema } from "./analytics-dashboard";
+import { DAY_MS } from "../analytics";
+import { MerchantAnalyticsDashboardQuerySchema } from "../analytics-dashboard";
 import {
 	DAILY_INTERVAL_MAX_DAYS,
 	DEFAULT_ANALYTICS_RANGE_DAYS,
@@ -10,7 +10,7 @@ import {
 	previousAnalyticsRange,
 	resolveAnalyticsRange,
 	WEEKLY_INTERVAL_MAX_DAYS,
-} from "./analytics-range";
+} from "../analytics-range";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
 

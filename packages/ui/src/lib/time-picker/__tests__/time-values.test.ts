@@ -11,7 +11,7 @@ import {
 	toSeconds,
 	toTwelveHour,
 	type TimePickerPeriodLabels,
-} from "./time-values";
+} from "../time-values";
 
 const ENGLISH_PERIODS: TimePickerPeriodLabels = { am: "AM", pm: "PM" };
 const KOREAN_PERIODS: TimePickerPeriodLabels = { am: "오전", pm: "오후" };

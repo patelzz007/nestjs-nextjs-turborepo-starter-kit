@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QUEUE_NAMES, StorageCdnInvalidationJobSchema } from "./queue";
+import { QUEUE_NAMES, StorageCdnInvalidationJobSchema } from "../queue";
 
 const FILE_ID = "11111111-1111-4111-8111-111111111111";
 

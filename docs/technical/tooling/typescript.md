@@ -189,7 +189,7 @@ Extends `base.json` with NestJS requirements:
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
 > `customConditions: ["development"]` so dev (and Next.js bundling) resolves source
 > directly. Every workspace that imports a `@workspace` package sets it, the API
-> included — `packages/tooling/tests/tsconfig-conditions.test.mjs` fails on a
+> included — `packages/tooling/__tests__/tsconfig-conditions.test.mjs` fails on a
 > tsconfig without it, because types read from a built `dist/` pass on a laptop
 > with a stale build and fail in a clean CI checkout. Node still loads `dist/` at
 > runtime (rspack leaves workspace packages external). The API's type-aware ESLint

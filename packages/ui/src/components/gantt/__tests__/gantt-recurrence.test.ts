@@ -2,9 +2,9 @@
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { expandRecurrence, formatRRuleString, GanttRecurrenceError, isInstanceVisible, MAX_OCCURRENCES, parseRRuleString, resolveRecurrenceRule } from "./gantt-recurrence";
-import { MS_PER_DAY } from "./gantt-lib";
-import type { GanttEvent, GanttOccurrence, GanttRecurrenceRule } from "./gantt-types";
+import { expandRecurrence, formatRRuleString, GanttRecurrenceError, isInstanceVisible, MAX_OCCURRENCES, parseRRuleString, resolveRecurrenceRule } from "../gantt-recurrence";
+import { MS_PER_DAY } from "../gantt-lib";
+import type { GanttEvent, GanttOccurrence, GanttRecurrenceRule } from "../gantt-types";
 
 const UTC = "UTC";
 

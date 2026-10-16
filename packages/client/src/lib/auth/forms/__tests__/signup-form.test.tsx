@@ -4,15 +4,15 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { ConsumerWebSignupInput, Envelope, SignupInput, SignupResponse } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../test/auth-fixtures";
-import { ApiError } from "../../api/use-api";
-import { SignupForm } from "./signup-form";
+import { envelopeFixture } from "../../../../test/auth-fixtures";
+import { ApiError } from "../../../api/use-api";
+import { SignupForm } from "../signup-form";
 
 const mocks = vi.hoisted(() => ({
 	signup: vi.fn<(input: ConsumerWebSignupInput) => Promise<Envelope<SignupResponse>>>(),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = {
 		auth: {
 			signup: {

@@ -8,8 +8,8 @@ import {
 	type FeaturePersistenceOptions,
 	type FeatureStorage,
 	type FeatureStorageMigration,
-} from "./feature-persistence";
-import { createFeatureStore, type FeatureEffect } from "./feature-store";
+} from "../feature-persistence";
+import { createFeatureStore, type FeatureEffect } from "../feature-store";
 
 interface CounterState {
 	readonly count: number;

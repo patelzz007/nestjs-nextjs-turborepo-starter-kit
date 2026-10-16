@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { readCssNumber, parseColor } from "./color-parse";
-import { formatColor } from "./color-format";
+import { readCssNumber, parseColor } from "../color-parse";
+import { formatColor } from "../color-format";
 
 function hexOf(input: string): string | null {
 	const color = parseColor(input);

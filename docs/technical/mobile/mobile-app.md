@@ -969,7 +969,7 @@ bundled into the app and therefore **public**; no secret is ever configured this
 | Situation              | Address                                                                                                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Development in Expo Go | The dev machine's host that Expo Go is connected to (from Expo's host URI) + the API port from `EXPO_PUBLIC_API_PORT` (default the API's dev port). `localhost` is never used: on a phone it means the phone. |
-| Anything else          | `EXPO_PUBLIC_API_URL`, required; validated as an `https://` URL outside development                                                                                                                           |
+| Anything else          | `EXPO_PUBLIC_API_URL`, required; validated as an `https://` URL outside development. An explicit `http://` URL in development without a port gets `EXPO_PUBLIC_API_PORT`                                                                                                                           |
 | Missing or invalid     | The config error screen with the exact variable name and an example value                                                                                                                                     |
 
 ### 9.6 Navigation and the root guard
@@ -1363,6 +1363,46 @@ till for a merchant's store. The code is in `src/features/till`; the scanner is 
   `com.google.mlkit.vision.DEPENDENCIES = barcode_ui`. With it, Play installs the scanner module
   with the app, so the first scan of a fresh install does not wait for a download. It runs only
   when the native project is generated (`expo prebuild`, `expo run:android`, EAS Build).
+
+### 10.18 PDF viewer
+
+`/settings/pdf-viewer` (Settings → PDF viewer, and the drawer's **Documents** group) reads a PDF on
+the phone ([ADR 056](../../adr/056-in-house-pdf-viewer.md)). The code is in
+`src/features/pdf-viewer`; the viewer itself is the kit's `PdfViewer` (`@workspace/ui-native`).
+
+- **Sources.** A file the person picks (`expo-document-picker`, copied to the cache), the app's
+  sample (written with `buildTextPdf` from `@workspace/shared`), or `?url=&name=` pushed by another
+  screen with `pdfViewerHref(url, name)`. Route params are parsed with zod: only `http(s)` URLs are
+  downloaded (`expo-file-system`, into `cache/pdf-documents/<uuid>/<name>.pdf`); a link naming
+  anything else shows an error instead.
+- **Check before the engine.** Every file passes `checkPdfFile` (shared with the web): not empty,
+  at most `MAX_PDF_VIEWER_FILE_BYTES` (50 MiB), and a `%PDF-` header in the first KiB. Only the
+  first KiB is read into JavaScript (`File.open().readBytes`).
+- **The engine: a local Expo module.** `modules/pdf-renderer` (Swift over PDFKit, Kotlin over
+  `android.graphics.pdf.PdfRenderer`) — the one exception to "only modules Expo Go ships"
+  (rules/04). Its JavaScript surface, both stateless (every call opens the file):
+  - `openDocument(fileUri) → { pageCount, pages: [{ width, height }] }` — sizes in PDF points,
+    crop box, turned by the page's rotation;
+  - `renderPage(fileUri, pageIndex, widthPx) → "file://…png"` — a white-backed PNG in
+    `<caches>/pdf-pages/`, named by a SHA-256 of the file URI, its modification time, the page and
+    the width, so each page is drawn once per zoom level.
+
+  Rejections carry `ERR_PDF_PASSWORD_PROTECTED`, `ERR_PDF_UNREADABLE`, `ERR_PDF_INVALID_REQUEST` or
+  `ERR_PDF_RENDER_FAILED`; `features/pdf-viewer/pdf-engine.ts` maps them onto the shared
+  `PdfOpenFailure` and parses every answer with zod.
+- **Expo Go fallback.** `requireOptionalNativeModule("PdfRenderer")` is `null` in Expo Go (and in
+  Jest). The viewer then shows "Open this document in another app" and hands the checked file to
+  `expo-sharing` (`mimeType: application/pdf`, UTI `com.adobe.pdf`): Quick Look / Files / Books on
+  iOS, the app chooser on Android. The same action sits in the toolbar of a real build.
+- **Layout.** The open document fills the screen under the app shell's page header (ADR 046) on a
+  `Screen scrollable={false}`, so the page column is the only vertical scroll; the header keeps the
+  status bar clear. While a document is open, Android's back button closes it (back to the
+  choice) instead of leaving the screen — a `BackHandler` subscription that lives exactly as long
+  as the document view. Pages render lazily as they scroll into view, at the screen's pixel density
+  times the zoom, capped at `MAX_PDF_PAGE_RENDER_WIDTH_PX` (2048 px) to bound memory.
+- **Not covered by tests.** The Swift and Kotlin files (no native test target in the starter):
+  check a development build on both platforms — a multi-page PDF, a rotated page, a
+  password-protected file, zoom to 300%.
 
 ## 11. The app lock
 

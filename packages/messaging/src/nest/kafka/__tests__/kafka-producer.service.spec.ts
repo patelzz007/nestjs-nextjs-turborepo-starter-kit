@@ -3,10 +3,10 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Logger } from "@nestjs/common";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_KAFKA_CONNECT_BACKOFF, kafkaConnectRetryDelayMs } from "../../kafka/kafka-connect-backoff";
-import { KAFKA_PLAINTEXT_SECURITY } from "../../kafka/kafka-security";
-import type { MessageEnvelope } from "../../schemas/outbox";
-import type { ResolvedMessagingOptions } from "../messaging-options";
+import { DEFAULT_KAFKA_CONNECT_BACKOFF, kafkaConnectRetryDelayMs } from "../../../kafka/kafka-connect-backoff";
+import { KAFKA_PLAINTEXT_SECURITY } from "../../../kafka/kafka-security";
+import type { MessageEnvelope } from "../../../schemas/outbox";
+import type { ResolvedMessagingOptions } from "../../messaging-options";
 import {
 	KAFKA_CLIENT_BACKEND,
 	KAFKA_EVENT_ID_HEADER,
@@ -16,7 +16,7 @@ import {
 	KafkaProducerNotConnectedError,
 	KafkaProducerService,
 	KafkaPublishError,
-} from "./kafka-producer.service";
+} from "../kafka-producer.service";
 
 interface SentRecord {
 	readonly topic: string;

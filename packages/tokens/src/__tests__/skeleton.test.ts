@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CubicBezierSchema, ThemeNameSchema, ThemeRoleSchema } from "./schema";
-import { SKELETON_MOTION } from "./skeleton";
+import { CubicBezierSchema, ThemeNameSchema, ThemeRoleSchema } from "../schema";
+import { SKELETON_MOTION } from "../skeleton";
 
 describe("SKELETON_MOTION", () => {
 	it("travels for part of the cycle and rests for the rest", () => {

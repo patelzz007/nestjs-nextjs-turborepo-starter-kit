@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type QrBitBuffer } from "./qr-bit-buffer";
+import { type QrBitBuffer } from "../qr-bit-buffer";
 import {
 	characterCountBits,
 	makeAlphanumericSegment,
@@ -11,7 +11,7 @@ import {
 	QR_MODE_INDICATOR,
 	segmentsBitLength,
 	selectQrMode,
-} from "./qr-segment";
+} from "../qr-segment";
 
 /** A buffer's bits as a `0`/`1` string. */
 function bitString(buffer: QrBitBuffer): string {

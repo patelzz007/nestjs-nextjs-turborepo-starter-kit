@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
 import {
 	coerceFilterValue,
 	createFilterOperators,
@@ -14,8 +14,8 @@ import {
 	operatorTakesValue,
 	resolveFilterOperators,
 	visibleFilterOperators,
-} from "./filters-operators";
-import { FILTER_VALUE_TYPES, type FilterField, type FilterOperator, type FilterValueType } from "./filters-types";
+} from "../filters-operators";
+import { FILTER_VALUE_TYPES, type FilterField, type FilterOperator, type FilterValueType } from "../filters-types";
 
 const CATALOG = createFilterOperators(UI_KIT_LABELS_EN.filterOperators);
 

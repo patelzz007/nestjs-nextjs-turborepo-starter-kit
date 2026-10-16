@@ -3,9 +3,9 @@ import { cleanup, fireEvent, render, renderHook, screen } from "@testing-library
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Gantt, type GanttRenderEventProps } from "./gantt";
-import { GANTT_COLORS, GanttBar, ganttBarVariants, useGanttBarContext, type GanttBarContextValue, type GanttColorOption } from "./gantt-bar";
-import type { GanttEvent, GanttOccurrence, GanttSegment } from "./gantt-types";
+import { Gantt, type GanttRenderEventProps } from "../gantt";
+import { GANTT_COLORS, GanttBar, ganttBarVariants, useGanttBarContext, type GanttBarContextValue, type GanttColorOption } from "../gantt-bar";
+import type { GanttEvent, GanttOccurrence, GanttSegment } from "../gantt-types";
 import { GanttTestProviders, stubGanttBrowserApis, TEST_CLOCK, TEST_TIME_ZONE, utc } from "@workspace/ui/testing/gantt-testing";
 
 const PAST_EVENT: GanttEvent = {

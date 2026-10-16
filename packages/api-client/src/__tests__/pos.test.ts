@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AUTHORIZATION_HEADER } from "./http";
-import { createPosCaller, createPosRequestContext, POS_API_KEY_HEADER, POS_TERMINAL_ID_HEADER, posCredentialHeaders, posRouter, type PosTerminalCredentials } from "./pos";
-import { fetchMutation, type ApiRequestContext } from "./request";
-import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type FetchImpl } from "./testing";
-import { createTokenRequestTransport } from "./transport";
+import { AUTHORIZATION_HEADER } from "../http";
+import { createPosCaller, createPosRequestContext, POS_API_KEY_HEADER, POS_TERMINAL_ID_HEADER, posCredentialHeaders, posRouter, type PosTerminalCredentials } from "../pos";
+import { fetchMutation, type ApiRequestContext } from "../request";
+import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type FetchImpl } from "../testing";
+import { createTokenRequestTransport } from "../transport";
 
 const BASE_URL = "http://api.test";
 const CREDENTIALS: PosTerminalCredentials = { apiKey: "pos_live_key", terminalId: "TERM-7F3K9QX2" };

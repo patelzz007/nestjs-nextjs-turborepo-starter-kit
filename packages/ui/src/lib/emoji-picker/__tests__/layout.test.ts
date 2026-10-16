@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { EmojiPickerEmoji } from "./data";
-import { buildLayout, cellKey, EMOJI_PICKER_SIZES, indexAt, moveActiveCell, type EmojiPickerLayout, type EmojiPickerSection, type MoveInput } from "./layout";
+import type { EmojiPickerEmoji } from "../data";
+import { buildLayout, cellKey, EMOJI_PICKER_SIZES, indexAt, moveActiveCell, type EmojiPickerLayout, type EmojiPickerSection, type MoveInput } from "../layout";
 
 function emoji(id: string): EmojiPickerEmoji {
 	return { id, emoji: id, label: id, tags: [], shortcodes: [], category: "smileys", version: 1 };

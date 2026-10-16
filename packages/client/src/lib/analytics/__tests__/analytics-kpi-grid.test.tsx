@@ -5,8 +5,8 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import { Wallet } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { AnalyticsKpiGrid } from "./analytics-kpi-grid";
-import type { KpiView } from "./analytics-presentation";
+import { AnalyticsKpiGrid } from "../analytics-kpi-grid";
+import type { KpiView } from "../analytics-presentation";
 
 afterEach((): void => {
 	cleanup();

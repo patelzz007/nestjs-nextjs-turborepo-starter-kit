@@ -4,16 +4,16 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import type { ChangePasswordInput, ChangePasswordResponse, Envelope } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../test/auth-fixtures";
-import { ApiError } from "../../api/use-api";
-import { ChangePasswordForm } from "./change-password-form";
+import { envelopeFixture } from "../../../../test/auth-fixtures";
+import { ApiError } from "../../../api/use-api";
+import { ChangePasswordForm } from "../change-password-form";
 
 const mocks = vi.hoisted(() => ({
 	changePassword: vi.fn<(input: ChangePasswordInput) => Promise<Envelope<ChangePasswordResponse>>>(),
 	onSuccess: vi.fn<() => void>(),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = {
 		auth: {
 			changePassword: {

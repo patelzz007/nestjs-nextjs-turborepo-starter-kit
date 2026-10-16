@@ -25,3 +25,4 @@ export { buildOffsetPaginationMeta, type OffsetPaginationMeta } from "./lib/pagi
 export { DEFAULT_FILE_NAME_SEGMENT_MAX_LENGTH, safeFileNameSegment } from "./lib/file-name";
 export { LIST_SLOT_INDEX, type ListSlotIndex, type ListSlotKey } from "./lib/named-list-index";
 export * from "./lib/qr/index";
+export * from "./lib/pdf/index";

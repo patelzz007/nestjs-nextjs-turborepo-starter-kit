@@ -4,10 +4,10 @@ import type { ApiResponseMeta, Envelope, UserResponse, VerifyEmailResponse } fro
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, userFixture } from "../../../test/auth-fixtures";
-import type { RefreshResult } from "../../api/api-request";
-import { ApiError } from "../../api/use-api";
-import { VerifyEmailView } from "./verify-email-view";
+import { envelopeFixture, userFixture } from "../../../../test/auth-fixtures";
+import type { RefreshResult } from "../../../api/api-request";
+import { ApiError } from "../../../api/use-api";
+import { VerifyEmailView } from "../verify-email-view";
 
 const mocks = vi.hoisted(() => ({
 	verifyEmail: vi.fn<(input: { readonly token: string }) => Promise<Envelope<VerifyEmailResponse>>>(),
@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly replace: (url: string) => void; readonly refresh: () => void } => ({ replace: mocks.replace, refresh: mocks.refresh }),
 }));
 
-vi.mock("../index", () => {
+vi.mock("../../index", () => {
 	const api = { auth: { verifyEmail: { mutate: mocks.verifyEmail }, me: { fetchOrThrow: mocks.fetchMe } } };
 	const commands = { login: mocks.login, refreshSession: mocks.refreshSession };
 	return {

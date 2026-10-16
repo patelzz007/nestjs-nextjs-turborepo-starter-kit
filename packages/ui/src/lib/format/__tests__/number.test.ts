@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCount, formatPercent, formatPercentChange } from "./number";
+import { formatCount, formatPercent, formatPercentChange } from "../number";
 
 describe("formatCount", () => {
 	it("groups digits the way the given locale does", () => {

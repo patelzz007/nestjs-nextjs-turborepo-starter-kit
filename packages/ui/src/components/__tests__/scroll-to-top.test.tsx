@@ -3,11 +3,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import type { UiKitLabels } from "../lib/labels/ui-kit-labels";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { ScrollToTop } from "./scroll-to-top";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { ScrollToTop } from "../scroll-to-top";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
 /** An app-shell-like scroller: the button must find it by walking up from itself. */
 const SCROLLER_STYLE: React.CSSProperties = { overflowY: "auto" };

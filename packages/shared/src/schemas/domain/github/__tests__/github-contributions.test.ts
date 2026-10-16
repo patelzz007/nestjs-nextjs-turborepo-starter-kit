@@ -18,7 +18,7 @@ import {
 	GithubRepositoryNameSchema,
 	GithubRepositoryParamsSchema,
 	toGithubFullName,
-} from "./github-contributions";
+} from "../github-contributions";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 

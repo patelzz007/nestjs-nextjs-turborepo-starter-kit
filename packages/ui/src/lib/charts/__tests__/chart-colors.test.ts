@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CATEGORICAL_CHART_SLOTS, CHART_COLOR_SLOTS, CHART_SLOT_BACKGROUNDS, CHART_SLOT_COLORS, categoricalChartSlot, DEEMPHASIS_CHART_SLOT } from "./chart-colors";
+import { CATEGORICAL_CHART_SLOTS, CHART_COLOR_SLOTS, CHART_SLOT_BACKGROUNDS, CHART_SLOT_COLORS, categoricalChartSlot, DEEMPHASIS_CHART_SLOT } from "../chart-colors";
 
 describe("chart colour slots", () => {
 	it("maps every slot to its theme variable and Tailwind class", () => {

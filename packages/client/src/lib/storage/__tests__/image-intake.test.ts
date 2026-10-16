@@ -1,15 +1,15 @@
 import { FILE_CATEGORY_POLICIES, type ImageRules } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { takeImage } from "./image-intake";
+import { takeImage } from "../image-intake";
 
 const { readUprightImage, exportPreparedImage } = vi.hoisted(() => ({
 	readUprightImage: vi.fn<(file: Blob) => Promise<ImageBitmap>>(),
 	exportPreparedImage: vi.fn<(image: ImageBitmap, area: object, rules: object, fileName: string) => Promise<File>>(),
 }));
 
-vi.mock("./image-preparation", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("./image-preparation")>();
+vi.mock("../image-preparation", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../image-preparation")>();
 	return { ...actual, readUprightImage, exportPreparedImage };
 });
 

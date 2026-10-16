@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
-import { filterIssueLabel, stepPlaceholder } from "./filters-i18n";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
+import { filterIssueLabel, stepPlaceholder } from "../filters-i18n";
 import {
 	FilterDateValueSchema,
 	filterNodeDepth,
@@ -12,7 +12,7 @@ import {
 	FilterValueSchema,
 	isFilterDateValue,
 	isFilterValueList,
-} from "./filters-types";
+} from "../filters-types";
 
 const LABELS = UI_KIT_LABELS_EN.filters;
 

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompiledSidebarMenuData, SidebarMenuData } from "../sidebar/sidebar-menu-schema";
+import type { CompiledSidebarMenuData, SidebarMenuData } from "../../sidebar/sidebar-menu-schema";
 import { LIST_SLOT_INDEX, PERMISSION } from "@workspace/shared";
 
-import { SidebarMenuDataSchema } from "../sidebar/sidebar-menu-schema";
-import { evaluateSidebarAuthorization, filterCompiledSidebarMenu, filterSidebarMenuData } from "./filter-sidebar-menu-by-capabilities";
+import { SidebarMenuDataSchema } from "../../sidebar/sidebar-menu-schema";
+import { evaluateSidebarAuthorization, filterCompiledSidebarMenu, filterSidebarMenuData } from "../filter-sidebar-menu-by-capabilities";
 
 const A = "platform:a.read";
 const B = "platform:b.read";

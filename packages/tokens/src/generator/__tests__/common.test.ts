@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { PALETTE } from "../palette";
-import { colorToken, hex, oklch, paletteColor, rem, sizeToken, TRANSPARENT } from "../value";
-import { formatWebColor, formatWebSize, GENERATE_COMMAND, generatedNotice, paletteDeclarations } from "./common";
+import { PALETTE } from "../../palette";
+import { colorToken, hex, oklch, paletteColor, rem, sizeToken, TRANSPARENT } from "../../value";
+import { formatWebColor, formatWebSize, GENERATE_COMMAND, generatedNotice, paletteDeclarations } from "../common";
 
 describe("generatedNotice", () => {
 	it("marks the file generated, names its source and the regenerate command, then states its purpose", () => {

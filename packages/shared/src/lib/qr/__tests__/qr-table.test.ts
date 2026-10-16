@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { QrTableLookupError } from "./qr-errors";
-import { readTableEntry } from "./qr-table";
+import { QrTableLookupError } from "../qr-errors";
+import { readTableEntry } from "../qr-table";
 
 describe("readTableEntry", () => {
 	it("returns the entry at the index", () => {

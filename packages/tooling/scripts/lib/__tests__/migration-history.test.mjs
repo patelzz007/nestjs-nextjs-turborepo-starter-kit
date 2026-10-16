@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { parseMigrationBaseline } from "./migration-baseline.mjs";
-import { BASELINE_MARKER_LABEL, checkMigrationHistory, parseNameStatus } from "./migration-history.mjs";
+import { parseMigrationBaseline } from "../migration-baseline.mjs";
+import { BASELINE_MARKER_LABEL, checkMigrationHistory, parseNameStatus } from "../migration-history.mjs";
 
 const INIT = "20260101000000_init";
 const ORDERS = "20260301120000_add_orders";
@@ -159,7 +159,7 @@ describe("checkMigrationHistory — explicit baseline", () => {
 		});
 
 		it("the checked-in marker is valid and names a migration directory that exists", () => {
-			const prismaDirectory = path.resolve(import.meta.dirname, "../../../../apps/api/prisma");
+			const prismaDirectory = path.resolve(import.meta.dirname, "../../../../../apps/api/prisma");
 			const text = readFileSync(path.join(prismaDirectory, "migrations-baseline.json"), "utf8");
 			const baseline = parseMigrationBaseline(text, "migrations-baseline.json")?.baseline;
 			expect(baseline).toBeDefined();

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { channelText, readChannelText } from "./color-fields";
-import { formatColor } from "./color-format";
-import type { ColorPickerColor } from "./color-space";
+import { channelText, readChannelText } from "../color-fields";
+import { formatColor } from "../color-format";
+import type { ColorPickerColor } from "../color-space";
 
 const ORANGE: ColorPickerColor = { space: "rgb", channels: [255, 128, 0], alpha: 0.5 };
 

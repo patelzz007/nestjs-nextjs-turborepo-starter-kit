@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { boundErrorText, captureDeadLetterPayload } from "./dead-letter";
+import { boundErrorText, captureDeadLetterPayload } from "../dead-letter";
 
 describe("captureDeadLetterPayload", () => {
 	it("keeps a value within the cap whole, with its size and SHA-256", () => {

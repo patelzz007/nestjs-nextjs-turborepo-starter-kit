@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createCookieSidebarStorage } from "./storage";
+import { createCookieSidebarStorage } from "../storage";
 
 function captureCookieWrites(): string[] {
 	const writes: string[] = [];

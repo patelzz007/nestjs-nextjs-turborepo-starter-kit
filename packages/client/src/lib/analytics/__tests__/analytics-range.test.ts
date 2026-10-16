@@ -12,7 +12,7 @@ import {
 	type AnalyticsUrlState,
 	type LocalDateRange,
 	type RelativeAnalyticsRangePreset,
-} from "./analytics-range";
+} from "../analytics-range";
 
 const KUALA_LUMPUR = "Asia/Kuala_Lumpur";
 const UTC = "UTC";

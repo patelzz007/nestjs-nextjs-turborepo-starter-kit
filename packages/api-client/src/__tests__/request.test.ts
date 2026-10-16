@@ -4,10 +4,10 @@ import { APP_VERSION_HEADER, CLIENT_TYPE_HEADER, DataValueSchema, singleResponse
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { AUTHORIZATION_HEADER, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR } from "./http";
-import { createApiRequestContext, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery } from "./request";
-import { defineMutation, defineQuery } from "./router";
-import { firstFetchCall, headersOf, jsonResponse, type FetchImpl } from "./testing";
+import { AUTHORIZATION_HEADER, NO_HTTP_RESPONSE_STATUS, REQUEST_ABORTED_ERROR } from "../http";
+import { createApiRequestContext, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery } from "../request";
+import { defineMutation, defineQuery } from "../router";
+import { firstFetchCall, headersOf, jsonResponse, type FetchImpl } from "../testing";
 
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
 const meDef = defineQuery({ method: "GET", path: "/auth/me", input: z.undefined(), response: singleResponse(DataValueSchema) }, { scope: () => ["auth", "me"] });

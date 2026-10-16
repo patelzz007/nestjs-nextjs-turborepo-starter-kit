@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { passwordStrength } from "./password";
+import { passwordStrength } from "../password";
 
 describe("passwordStrength", () => {
 	it("scores an empty password 0 with no label bar", () => {

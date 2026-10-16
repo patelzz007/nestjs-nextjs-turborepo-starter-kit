@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getDefaultIconColor, getItemColor, getSectionBadgeColor, PALETTE_MARK_CLASS } from "./styles";
+import { getDefaultIconColor, getItemColor, getSectionBadgeColor, PALETTE_MARK_CLASS } from "../styles";
 
 /** A Tailwind palette literal (`text-amber-600`, `dark:bg-indigo-900/40`) instead of a design token. */
 const LITERAL_COLOR =

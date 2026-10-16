@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BooleanQueryParamSchema } from "./query-params";
+import { BooleanQueryParamSchema } from "../query-params";
 
 describe("BooleanQueryParamSchema", () => {
 	it("accepts boolean and string query values", () => {

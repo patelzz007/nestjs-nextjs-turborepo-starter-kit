@@ -16,9 +16,9 @@ import {
 	ComboboxLoading,
 	countSelection,
 	type ComboboxLabels,
-} from "./combobox";
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
+} from "../combobox";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {

@@ -3,8 +3,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Gantt } from "./gantt";
-import type { GanttI18nOverrides } from "./gantt-i18n";
+import { Gantt } from "../gantt";
+import type { GanttI18nOverrides } from "../gantt-i18n";
 import {
 	GANTT_SCALES,
 	GanttDatePicker,
@@ -16,8 +16,8 @@ import {
 	GanttScaleSwitcher,
 	GanttTitle,
 	GanttToolbar,
-} from "./gantt-nav";
-import type { GanttScale } from "./gantt-types";
+} from "../gantt-nav";
+import type { GanttScale } from "../gantt-types";
 import { GanttTestProviders, stubGanttBrowserApis, TEST_CLOCK, TEST_TIME_ZONE, utc } from "@workspace/ui/testing/gantt-testing";
 
 const GERMAN: GanttI18nOverrides = { labels: { today: "Heute", next: "Weiter", previous: "Zurück", scales: { week: "Woche", month: "Monat" } } };

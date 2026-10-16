@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AUTHORIZATION_HEADER } from "./http";
-import { MemoryTokenProvider } from "./testing";
-import { COOKIE_ATTEMPT_AUTHORIZATION, createTokenRequestTransport, tokenAttemptAuthorization, type TokenRequestTransport } from "./transport";
+import { AUTHORIZATION_HEADER } from "../http";
+import { MemoryTokenProvider } from "../testing";
+import { COOKIE_ATTEMPT_AUTHORIZATION, createTokenRequestTransport, tokenAttemptAuthorization, type TokenRequestTransport } from "../transport";
 
 const PAIR = { accessToken: "access-1", refreshToken: "refresh-1" };
 

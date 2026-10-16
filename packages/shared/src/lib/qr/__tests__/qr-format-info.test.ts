@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QR_FORMAT_INFO_BITS, QR_FORMAT_INFO_MASK, QR_VERSION_INFO_BITS, qrFormatBits, qrVersionBits } from "./qr-format-info";
+import { QR_FORMAT_INFO_BITS, QR_FORMAT_INFO_MASK, QR_VERSION_INFO_BITS, qrFormatBits, qrVersionBits } from "../qr-format-info";
 
 describe("qrFormatBits", () => {
 	it("is the mask pattern itself for M with mask 0 (all-zero data)", () => {

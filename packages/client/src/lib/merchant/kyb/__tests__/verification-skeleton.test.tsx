@@ -2,8 +2,8 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MerchantKybVerificationSkeleton } from "./verification-skeleton";
-import { MERCHANT_KYB_UPDATE_STEPS } from "./verification-update-section";
+import { MerchantKybVerificationSkeleton } from "../verification-skeleton";
+import { MERCHANT_KYB_UPDATE_STEPS } from "../verification-update-section";
 
 afterEach((): void => {
 	cleanup();

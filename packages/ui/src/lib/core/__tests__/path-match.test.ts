@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isPathWithin } from "./path-match";
+import { isPathWithin } from "../path-match";
 
 describe("isPathWithin", () => {
 	it("matches the prefix itself and paths below it", () => {

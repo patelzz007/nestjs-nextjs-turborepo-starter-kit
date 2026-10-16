@@ -6,12 +6,12 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../test/auth-fixtures";
-import { SessionRefreshUnavailableError, type RefreshResult } from "../../api/api-request";
-import { apiRouter } from "../../api/endpoints";
-import { isRestrictedAuthUser } from "../../auth/session/session";
-import { SESSION_CHECK_MAX_RETRIES, SESSION_CHECK_TIMEOUT_MS, sessionCheckRetryDelayMs } from "../../auth/session/session-check";
-import { createAuthChannel, type AuthChannel, type AuthSyncEvent } from "../../auth/session/sync";
+import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
+import { SessionRefreshUnavailableError, type RefreshResult } from "../../../api/api-request";
+import { apiRouter } from "../../../api/endpoints";
+import { isRestrictedAuthUser } from "../../../auth/session/session";
+import { SESSION_CHECK_MAX_RETRIES, SESSION_CHECK_TIMEOUT_MS, sessionCheckRetryDelayMs } from "../../../auth/session/session-check";
+import { createAuthChannel, type AuthChannel, type AuthSyncEvent } from "../../../auth/session/sync";
 import {
 	AuthProvider,
 	useAuth,
@@ -24,7 +24,7 @@ import {
 	type AuthCommands,
 	type AuthContextType,
 	type AuthProviderProps,
-} from "./facade";
+} from "../facade";
 
 // ── Cross-tab channel: an in-memory BroadcastChannel (jsdom has none) ──────
 

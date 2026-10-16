@@ -4,8 +4,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-import type * as ServerApi from "./server-api";
-import { expectedFailureKind, settleServerQuery, UnexpectedServerQueryError } from "./server-query-outcome";
+import type * as ServerApi from "../server-api";
+import { expectedFailureKind, settleServerQuery, UnexpectedServerQueryError } from "../server-query-outcome";
 
 // `server-only` throws outside React Server Components; stub it for tests.
 vi.mock("server-only", () => ({}));
@@ -26,7 +26,7 @@ class ClassifiedQueryError extends Error {
 	}
 }
 
-vi.mock("./server-api", async (importOriginal) => {
+vi.mock("../server-api", async (importOriginal) => {
 	const actual = await importOriginal<typeof ServerApi>();
 	return {
 		...actual,

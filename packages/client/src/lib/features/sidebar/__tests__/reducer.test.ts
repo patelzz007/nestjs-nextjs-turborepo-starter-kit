@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { sidebarActions } from "./actions";
-import { sidebarReducer } from "./reducer";
-import { selectPreferences, resolveExpandedItems, selectManualExpansionFor } from "./selectors";
-import { UNVERSIONED_STORAGE_FORMAT } from "../../state/feature-persistence";
-import { INITIAL_SIDEBAR_STATE, MAX_MANUAL_EXPANDED_ITEMS, SIDEBAR_PREFERENCES_VERSION_1, SidebarPreferencesSchema, type SidebarState } from "./state";
-import { sidebarPersistence } from "./store";
+import { sidebarActions } from "../actions";
+import { sidebarReducer } from "../reducer";
+import { selectPreferences, resolveExpandedItems, selectManualExpansionFor } from "../selectors";
+import { UNVERSIONED_STORAGE_FORMAT } from "../../../state/feature-persistence";
+import { INITIAL_SIDEBAR_STATE, MAX_MANUAL_EXPANDED_ITEMS, SIDEBAR_PREFERENCES_VERSION_1, SidebarPreferencesSchema, type SidebarState } from "../state";
+import { sidebarPersistence } from "../store";
 
 const TITLES: readonly string[] = ["Rewards", "Wallet", "Insights"];
 

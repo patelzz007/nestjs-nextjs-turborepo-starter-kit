@@ -2,7 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useDebouncedValue } from "./use-debounced-value";
+import { useDebouncedValue } from "../use-debounced-value";
 
 const DELAY_MS = 300;
 

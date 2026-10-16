@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { ConsumerWebSignupSchema, SignupSchema } from "../../auth/auth";
-import { AdminUserListQuerySchema } from "../../auth/user";
-import { SIGNUP_REFERRAL_CODE_LENGTH } from "./signup-referral.constants";
-import { SignupReferralCodeInputSchema, SignupReferralErrorCodeSchema } from "./signup-referrals";
+import { ConsumerWebSignupSchema, SignupSchema } from "../../../auth/auth";
+import { AdminUserListQuerySchema } from "../../../auth/user";
+import { SIGNUP_REFERRAL_CODE_LENGTH } from "../signup-referral.constants";
+import { SignupReferralCodeInputSchema, SignupReferralErrorCodeSchema } from "../signup-referrals";
 
 const VALID_SIGNUP = { email: "jane@example.com", password: "StrongP@ss1", fullName: "Jane Doe" };
 

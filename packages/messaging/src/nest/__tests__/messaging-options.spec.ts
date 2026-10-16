@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_KAFKA_CONNECT_BACKOFF } from "../kafka/kafka-connect-backoff";
-import { KAFKA_PLAINTEXT_SECURITY } from "../kafka/kafka-security";
-import { resolveMessagingOptions, type MessagingModuleOptions } from "./messaging-options";
+import { DEFAULT_KAFKA_CONNECT_BACKOFF } from "../../kafka/kafka-connect-backoff";
+import { KAFKA_PLAINTEXT_SECURITY } from "../../kafka/kafka-security";
+import { resolveMessagingOptions, type MessagingModuleOptions } from "../messaging-options";
 
 const DELIVERY_TIMEOUT_MS = 30_000;
 

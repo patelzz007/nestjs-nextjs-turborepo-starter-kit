@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { oklch } from "../value";
-import { ColorHasNoHexError, formatSrgbHex } from "./srgb-hex";
+import { oklch } from "../../value";
+import { ColorHasNoHexError, formatSrgbHex } from "../srgb-hex";
 
 describe("formatSrgbHex", () => {
 	it.each([

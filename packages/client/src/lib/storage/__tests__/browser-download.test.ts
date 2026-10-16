@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 
-import { triggerBrowserDownload } from "./browser-download";
+import { triggerBrowserDownload } from "../browser-download";
 
 describe("triggerBrowserDownload", () => {
 	it("clicks a download link for the URL, named after the file, without leaving it in the page", () => {

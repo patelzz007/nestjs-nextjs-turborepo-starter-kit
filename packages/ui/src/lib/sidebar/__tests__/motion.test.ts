@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dampingRatioOf, SIDEBAR_SPRING } from "./motion";
+import { dampingRatioOf, SIDEBAR_SPRING } from "../motion";
 
 describe("SIDEBAR_SPRING", () => {
 	it("is critically damped or more, so the sidebar never overshoots and wobbles back", () => {

@@ -2,7 +2,7 @@
 import type { DataValue } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAuthChannel, type AuthSyncEvent } from "./sync";
+import { createAuthChannel, type AuthSyncEvent } from "../sync";
 
 /**
  * Minimal in-memory BroadcastChannel mock: instances created under the same

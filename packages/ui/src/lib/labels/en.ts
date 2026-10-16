@@ -1,5 +1,7 @@
 import type { ColorDescription, ColorHueName, ColorNeutralName } from "../color/color-name";
 import type { CascaderDirection, CascaderMode } from "../../components/cascader/cascader-types";
+import { MAX_PDF_VIEWER_FILE_BYTES } from "@workspace/shared";
+
 import { formatBytes } from "../format/bytes";
 import type { UiKitLabels } from "./ui-kit-labels";
 
@@ -806,6 +808,29 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 		skip: "Skip",
 		next: "Next",
 		submit: "Submit",
+	},
+	pdfViewer: {
+		toolbar: "Document tools",
+		openFile: "Open a PDF",
+		download: "Download",
+		openInNewTab: "Open in new tab",
+		enterFullscreen: "Enter full screen",
+		exitFullscreen: "Exit full screen",
+		checking: "Opening document…",
+		frameTitle: (fileName: string): string => `PDF: ${fileName}`,
+		emptyTitle: "No document open",
+		emptyDescription: "Open a PDF from this device to read it here.",
+		inlineUnsupportedTitle: "This browser can't show PDFs here",
+		inlineUnsupportedDescription: "Open it in a new tab or download it to read it.",
+		failureTitle: "Can't open this PDF",
+		failures: {
+			empty: "The file is empty.",
+			too_large: `The file is larger than ${formatBytes(MAX_PDF_VIEWER_FILE_BYTES)}. Download it to read it.`,
+			not_a_pdf: "The file isn't a PDF.",
+			password_protected: "The PDF is password protected.",
+			unreadable: "The PDF is damaged and can't be read.",
+			unavailable: "The file couldn't be loaded. Try again.",
+		},
 	},
 	fileUpload: {
 		fileTooLarge: (fileName: string, maxSize: string): string => `"${fileName}" is larger than ${maxSize}.`,

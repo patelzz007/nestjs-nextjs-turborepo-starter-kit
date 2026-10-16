@@ -176,4 +176,4 @@ Some new AWS accounts must be verified before CloudFront works. Open an AWS Supp
 | `lib/storage-platform-stack.ts` | Buckets, CloudFront, API IAM role and its least-privilege policy |
 | `lib/api-role-trust.ts` | Validated `apiTrust*` context → the role's trust principal (ECS / EC2 / EKS IRSA / role) |
 | `config/private-bucket-cors.json` | CORS template for manual bucket setup |
-| `test/storage-platform-stack.test.ts` | Template assertions (no IAM user/keys, least-privilege policy, trust variants) |
+| `__tests__/storage-platform-stack.test.ts` | Template assertions (no IAM user/keys, least-privilege policy, trust variants) |

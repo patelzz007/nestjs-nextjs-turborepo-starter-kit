@@ -5,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DropdownMenu, DropdownMenuContent } from "@workspace/ui/components/dropdown-menu";
 
-import { Filters } from "./filters";
-import { FilterFieldPicker, FiltersBuilder, type FilterFieldPickerAction } from "./filters-builder";
-import { FilterChip, FilterRuleMenuItems, useFilterRuleDisplay } from "./filters-chip";
-import { createFilterQuery, createFilterRule } from "./filters-query";
+import { Filters } from "../filters";
+import { FilterFieldPicker, FiltersBuilder, type FilterFieldPickerAction } from "../filters-builder";
+import { FilterChip, FilterRuleMenuItems, useFilterRuleDisplay } from "../filters-chip";
+import { createFilterQuery, createFilterRule } from "../filters-query";
 import { FILTER_FIXTURE_FIELDS, stubFiltersDom } from "@workspace/ui/testing/filters-test-utils";
-import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
-import type { FilterQuery } from "./filters-types";
+import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import type { FilterQuery } from "../filters-types";
 
 const EMPTY = createFilterQuery();
 

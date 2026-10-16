@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { uiPreferencesActions } from "./actions";
-import { uiPreferencesReducer } from "./reducer";
-import { selectPreferences, selectRewardsViewMode } from "./selectors";
-import { UNVERSIONED_STORAGE_FORMAT } from "../../state/feature-persistence";
-import { INITIAL_UI_PREFERENCES_STATE, UiPreferencesSchema } from "./state";
-import { uiPreferencesPersistence } from "./store";
+import { uiPreferencesActions } from "../actions";
+import { uiPreferencesReducer } from "../reducer";
+import { selectPreferences, selectRewardsViewMode } from "../selectors";
+import { UNVERSIONED_STORAGE_FORMAT } from "../../../state/feature-persistence";
+import { INITIAL_UI_PREFERENCES_STATE, UiPreferencesSchema } from "../state";
+import { uiPreferencesPersistence } from "../store";
 
 describe("uiPreferencesReducer", () => {
 	it("starts with the grid layout", () => {

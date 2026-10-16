@@ -3,9 +3,9 @@ import { Wallet } from "lucide-react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../lib/labels/en";
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { KpiStatCard, type KpiChange } from "./kpi-stat-card";
+import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { KpiStatCard, type KpiChange } from "../kpi-stat-card";
 
 afterEach((): void => {
 	cleanup();

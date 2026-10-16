@@ -27,6 +27,12 @@ export interface ScreenProps {
 	/** Pull to refresh: `refreshing` while the refetch runs. */
 	readonly refreshing?: boolean;
 	readonly onRefresh?: () => void;
+	/**
+	 * `false`: the content fills the screen below the header without scrolling —
+	 * for a screen whose content scrolls itself (a document viewer's page list),
+	 * so there is never a scroll view inside a scroll view. Default `true`.
+	 */
+	readonly scrollable?: boolean;
 	readonly testID?: string;
 }
 
@@ -38,7 +44,7 @@ export interface ScreenProps {
  */
 const StyledSafeAreaView = withUniwind(SafeAreaView);
 
-export function Screen({ title, description, children, refreshing = false, onRefresh, testID }: ScreenProps): React.JSX.Element {
+export function Screen({ title, description, children, refreshing = false, onRefresh, scrollable = true, testID }: ScreenProps): React.JSX.Element {
 	// Inside the tabs, the floating tab bar covers the bottom of the screen: the content ends above it.
 	const barClearance = useTabBarClearance();
 	// While the keyboard is up it covers the tab bar: the room kept for the bar would only be empty space above the keyboard.
@@ -58,35 +64,47 @@ export function Screen({ title, description, children, refreshing = false, onRef
 	);
 	const showTitle = title !== undefined && !hasHeader;
 
+	const content = (
+		<>
+			{showTitle || description !== undefined ? (
+				<View className="gap-1">
+					{showTitle ? <Heading>{title}</Heading> : null}
+					{description === undefined ? null : <MutedText>{description}</MutedText>}
+				</View>
+			) : null}
+			{children}
+			{tabBarClearance > 0 ? <View style={clearanceStyle} testID="tab-bar-clearance" /> : null}
+		</>
+	);
+
 	return (
 		<StyledSafeAreaView edges={hasHeader ? ["left", "right"] : ["top", "left", "right"]} className="flex-1 bg-background" testID={testID}>
 			<View className="flex-1">
 				<KeyboardAvoidingView className="flex-1">
-					<ScrollView
-						testID={testID === undefined ? undefined : `${testID}-content`}
-						keyboardShouldPersistTaps="handled"
-						scrollIndicatorInsets={scrollIndicatorInsets}
-						contentContainerClassName="grow gap-5 px-5 py-6"
-						contentContainerStyle={headerClearanceStyle}
-						refreshControl={
-							onRefresh === undefined ? undefined : (
-								<RefreshControl
-									refreshing={refreshing}
-									onRefresh={onRefresh}
-									// The spinner sits at the scroll view's top edge, not after the content's padding: under the shell's header it would be hidden. It drops to where the content starts.
-									{...(headerClearance === null ? {} : { progressViewOffset: headerClearance })}
-								/>
-							)
-						}>
-						{showTitle || description !== undefined ? (
-							<View className="gap-1">
-								{showTitle ? <Heading>{title}</Heading> : null}
-								{description === undefined ? null : <MutedText>{description}</MutedText>}
-							</View>
-						) : null}
-						{children}
-						{tabBarClearance > 0 ? <View style={clearanceStyle} testID="tab-bar-clearance" /> : null}
-					</ScrollView>
+					{scrollable ? (
+						<ScrollView
+							testID={testID === undefined ? undefined : `${testID}-content`}
+							keyboardShouldPersistTaps="handled"
+							scrollIndicatorInsets={scrollIndicatorInsets}
+							contentContainerClassName="grow gap-5 px-5 py-6"
+							contentContainerStyle={headerClearanceStyle}
+							refreshControl={
+								onRefresh === undefined ? undefined : (
+									<RefreshControl
+										refreshing={refreshing}
+										onRefresh={onRefresh}
+										// The spinner sits at the scroll view's top edge, not after the content's padding: under the shell's header it would be hidden. It drops to where the content starts.
+										{...(headerClearance === null ? {} : { progressViewOffset: headerClearance })}
+									/>
+								)
+							}>
+							{content}
+						</ScrollView>
+					) : (
+						<View testID={testID === undefined ? undefined : `${testID}-content`} className="flex-1 gap-5 px-5 py-6" style={headerClearanceStyle}>
+							{content}
+						</View>
+					)}
 				</KeyboardAvoidingView>
 			</View>
 		</StyledSafeAreaView>

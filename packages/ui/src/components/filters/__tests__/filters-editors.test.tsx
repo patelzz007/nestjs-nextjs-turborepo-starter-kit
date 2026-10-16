@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@t
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
+import { UI_KIT_LABELS_EN } from "../../../lib/labels/en";
 import {
 	DEFAULT_FILTER_EDITORS,
 	FilterBooleanEditor,
@@ -21,7 +21,7 @@ import {
 	toggleFilterMenuSelection,
 	useFilterOptions,
 	type FilterListItem,
-} from "./filters-editors";
+} from "../filters-editors";
 import { stubFiltersDom } from "@workspace/ui/testing/filters-test-utils";
 import {
 	FILTER_AUTOFOCUS_PROPS,
@@ -34,7 +34,7 @@ import {
 	type FilterOption,
 	type FilterOptionsState,
 	type FilterValue,
-} from "./filters-types";
+} from "../filters-types";
 
 const LABELS = UI_KIT_LABELS_EN.filters;
 const TEXT_FIELD: FilterField = { id: "name", label: "Name", type: "text" };

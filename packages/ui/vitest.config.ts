@@ -5,6 +5,7 @@ export default defineConfig({
 	plugins: [react()],
 	test: {
 		environment: "jsdom",
-		include: ["src/**/*.test.{ts,tsx}"],
+		// Tests live in `__tests__/` folders beside the code they test (rules/11 → "Where tests live").
+		include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
 	},
 });

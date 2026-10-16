@@ -4,11 +4,11 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Gantt } from "./gantt";
-import { GanttNav } from "./gantt-nav";
-import type { GanttEvent, GanttProposedUpdate, GanttResourceReorder, GanttUpdateResult } from "./gantt-types";
+import { Gantt } from "../gantt";
+import { GanttNav } from "../gantt-nav";
+import type { GanttEvent, GanttProposedUpdate, GanttResourceReorder, GanttUpdateResult } from "../gantt-types";
 import { GanttTestProviders, stubGanttBrowserApis, TEST_CLOCK, TEST_EVENTS, TEST_RESOURCES, TEST_TIME_ZONE, utc } from "@workspace/ui/testing/gantt-testing";
-import { GanttView } from "./gantt-view";
+import { GanttView } from "../gantt-view";
 
 const ANCHOR = utc(2026, 2, 10);
 

@@ -32,9 +32,9 @@ import {
 	normalizeCascaderQuery,
 	searchCascaderDeep,
 	withCascaderMoreRow,
-} from "./cascader-lib";
+} from "../cascader-lib";
 import { PRODUCE } from "@workspace/ui/testing/cascader-test-fixtures";
-import type { CascaderNode, CascaderNodeBase } from "./cascader-types";
+import type { CascaderNode, CascaderNodeBase } from "../cascader-types";
 
 const INDEX = buildCascaderIndex(PRODUCE);
 

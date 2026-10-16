@@ -3,12 +3,12 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { breadcrumbPageLabel, type BreadcrumbStatus } from "./breadcrumb-context";
-import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "./panel-sidebar-nav";
-import type { PanelSidebarLinkProps } from "./panel-sidebar-nav-item";
-import { PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS } from "./panel-sidebar-search";
-import { SidebarProvider } from "./sidebar";
-import { UiKitLabelsProvider } from "./ui-kit-labels-provider";
+import { breadcrumbPageLabel, type BreadcrumbStatus } from "../breadcrumb-context";
+import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "../panel-sidebar-nav";
+import type { PanelSidebarLinkProps } from "../panel-sidebar-nav-item";
+import { PANEL_SIDEBAR_SEARCH_DEBOUNCE_MS } from "../panel-sidebar-search";
+import { SidebarProvider } from "../sidebar";
+import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import type { UiKitLabels, UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
@@ -18,8 +18,8 @@ import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 /** The shell's mobile drawer, as `useSidebarControls()` reports it. */
 const mobile = vi.hoisted(() => ({ isMobile: false, setOpenMobile: vi.fn<(open: boolean) => void>() }));
 
-vi.mock("./sidebar", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("./sidebar")>();
+vi.mock("../sidebar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../sidebar")>();
 	return {
 		...actual,
 		useSidebarControls: (): ReturnType<typeof actual.useSidebarControls> => ({

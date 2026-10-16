@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NEAR_VIEWPORT_MARGIN, useNearViewport } from "./use-near-viewport";
+import { NEAR_VIEWPORT_MARGIN, useNearViewport } from "../use-near-viewport";
 
 /** The observers the hook creates, so a test can report an intersection. */
 const observers: StubObserver[] = [];

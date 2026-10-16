@@ -3,14 +3,14 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
-import { Cascader, CascaderContent, CascaderList, CascaderPanel } from "./cascader";
-import type { CascaderItemState } from "./cascader-context";
-import { cascaderItemVariants, CascaderGroup, CascaderItem, CascaderItems, CascaderLabel, CascaderSeparator, getCascaderMoreProps } from "./cascader-item";
-import { createCascaderMoreNode } from "./cascader-lib";
-import { CascaderInput } from "./cascader-nav";
+import { UiKitTestProviders } from "../../../testing/ui-kit-test-providers";
+import { Cascader, CascaderContent, CascaderList, CascaderPanel } from "../cascader";
+import type { CascaderItemState } from "../cascader-context";
+import { cascaderItemVariants, CascaderGroup, CascaderItem, CascaderItems, CascaderLabel, CascaderSeparator, getCascaderMoreProps } from "../cascader-item";
+import { createCascaderMoreNode } from "../cascader-lib";
+import { CascaderInput } from "../cascader-nav";
 import { openPicker, optionNames, pressKey, pressRow, PRODUCE, type Produce, ProducePicker, stubCascaderResizeObserver } from "@workspace/ui/testing/cascader-test-fixtures";
-import type { CascaderNode } from "./cascader-types";
+import type { CascaderNode } from "../cascader-types";
 
 beforeEach((): void => {
 	stubCascaderResizeObserver();

@@ -94,6 +94,6 @@ Admin's `LazySection` is the one deliberate exception. It draws bones that are *
 ## Testing
 
 - Kit: `skeleton.test.tsx`, `skeleton-region.test.tsx`, `skeleton-patterns.test.tsx`, `styles/skeleton-motion-parity.test.ts`, and the forwardRef contract in `ui-kit-contract.test.ts`.
-- Token: `packages/tokens/src/skeleton.test.ts`. Mobile: `src/lib/skeleton-sweep.test.ts` (band position over the cycle) and `src/components/skeleton.test.tsx` (reveal, sweep through a bone, Reduce Motion).
+- Token: `packages/tokens/src/__tests__/skeleton.test.ts`. Mobile: `src/lib/skeleton-sweep.test.ts` (band position over the cycle) and `src/components/skeleton.test.tsx` (reveal, sweep through a bone, Reduce Motion).
 - Apps: each app tests every `loading.tsx`, checking for exactly one busy, polite status with the right announcement and bones hidden from assistive tech. Each app also tests its compositions' structure (row, card and column counts against the real shape constants). Web also has a coverage test that fails when a page has no boundary and is not on the static-route allowlist.
 - In-view loading cases assert `getByRole("status")` and its announcement, not the old "Loading…" text.

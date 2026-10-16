@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { useResetScrollOnChange } from "./use-reset-scroll-on-change";
+import { useResetScrollOnChange } from "../use-reset-scroll-on-change";
 
 function Harness({ resetKey }: { readonly resetKey: string }): React.JSX.Element {
 	const ref = React.useRef<HTMLDivElement>(null);

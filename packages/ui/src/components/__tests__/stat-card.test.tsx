@@ -3,7 +3,7 @@ import { MapPin } from "lucide-react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { StatCard } from "./stat-card";
+import { StatCard } from "../stat-card";
 
 afterEach((): void => {
 	cleanup();

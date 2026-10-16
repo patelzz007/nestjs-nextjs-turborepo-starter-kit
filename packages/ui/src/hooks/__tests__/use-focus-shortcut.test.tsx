@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { useFocusShortcut } from "./use-focus-shortcut";
+import { useFocusShortcut } from "../use-focus-shortcut";
 
 function Harness(): React.JSX.Element {
 	const inputRef = React.useRef<HTMLInputElement>(null);

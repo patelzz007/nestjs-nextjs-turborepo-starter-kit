@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "./email-link-lifetimes";
+import { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "../email-link-lifetimes";
 
 describe("formatLinkLifetimeHours", () => {
 	it("uses the singular for one hour and the plural otherwise", () => {

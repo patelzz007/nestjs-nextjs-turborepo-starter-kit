@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "../edge/restricted-session";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "../restricted-session";
 
 /** Build a JWT string from a payload (base64url header/payload, dummy signature). */
 function makeJwt(payload: Record<string, string | number | boolean | undefined>): string {

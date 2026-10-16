@@ -129,7 +129,7 @@ and the API reference.
 
 ## 6. Tests
 
-`packages/shared/src/api-routes.test.ts` covers the tree shape: the core groups exist, and every
+`packages/shared/src/__tests__/api-routes.test.ts` covers the tree shape: the core groups exist, and every
 leaf is a non-empty absolute path (static or `:param` template). The API e2e suite calls
 every `apiContract` leaf under `/api/v1` and fails on a 404 (a controller that forgot `apiPath()`).
 

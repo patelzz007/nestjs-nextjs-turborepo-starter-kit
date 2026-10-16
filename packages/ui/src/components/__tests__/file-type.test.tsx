@@ -3,8 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { UiKitTestProviders } from "../testing/ui-kit-test-providers";
-import { FILE_TYPE_CATEGORIES, FILE_TYPE_EXTENSION_NAMES, FileType, getFileType, getFileTypeCategory } from "./file-type";
+import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+import { FILE_TYPE_CATEGORIES, FILE_TYPE_EXTENSION_NAMES, FileType, getFileType, getFileTypeCategory } from "../file-type";
 
 afterEach((): void => {
 	cleanup();

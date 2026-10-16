@@ -1,8 +1,8 @@
 import { MerchantErrorCodes } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../../api/use-api";
-import { runOnboardingSubmission } from "./onboarding-submission";
+import { ApiError } from "../../../api/use-api";
+import { runOnboardingSubmission } from "../onboarding-submission";
 
 function apiError(code: string, statusCode: number): ApiError {
 	return new ApiError({ message: "x", error: code, statusCode });

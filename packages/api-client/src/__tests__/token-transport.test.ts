@@ -15,12 +15,12 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createApiClientContext } from "./config";
-import { UpgradeRequiredError } from "./errors";
-import { AUTHORIZATION_HEADER, buildUrl } from "./http";
-import { fetchMutationOrThrow, fetchQuery, fetchQueryOrThrow, type ApiRequestContext } from "./request";
-import { defineMutation, defineQuery } from "./router";
-import { fetchCalls, headersOf, inputUrl, jsonResponse, MemoryTokenProvider, rotatedTokensBody, type FetchCall, type FetchImpl } from "./testing";
+import { createApiClientContext } from "../config";
+import { UpgradeRequiredError } from "../errors";
+import { AUTHORIZATION_HEADER, buildUrl } from "../http";
+import { fetchMutationOrThrow, fetchQuery, fetchQueryOrThrow, type ApiRequestContext } from "../request";
+import { defineMutation, defineQuery } from "../router";
+import { fetchCalls, headersOf, inputUrl, jsonResponse, MemoryTokenProvider, rotatedTokensBody, type FetchCall, type FetchImpl } from "../testing";
 
 const BASE_URL = "http://api.test";
 const APP_VERSION = "1.4.0";

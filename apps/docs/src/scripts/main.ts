@@ -3,6 +3,7 @@ import { initDrawer } from "./drawer";
 import { initFeedback } from "./feedback";
 import { initHeader } from "./header";
 import { initMermaid } from "./mermaid";
+import { initPdfEmbeds } from "./pdf-embeds";
 import { initSearch } from "./search";
 import { initSidebar } from "./sidebar";
 import { initTheme } from "./theme";
@@ -19,4 +20,5 @@ export function initSite(): void {
 	initFeedback();
 	initSearch();
 	initMermaid();
+	initPdfEmbeds();
 }

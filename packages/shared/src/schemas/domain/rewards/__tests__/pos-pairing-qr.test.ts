@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPosPairingQrPayload, POS_PAIRING_QR_PREFIX, PosPairingQrPayloadSchema } from "./pos-pairing-qr";
+import { buildPosPairingQrPayload, POS_PAIRING_QR_PREFIX, PosPairingQrPayloadSchema } from "../pos-pairing-qr";
 
 const PAIRING_CODE = "ABCD2345";
 

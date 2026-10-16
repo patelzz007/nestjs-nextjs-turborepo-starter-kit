@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { merchantRedemptionListQuery, RedemptionCodeSchema } from "./rewards-entities";
+import { merchantRedemptionListQuery, RedemptionCodeSchema } from "../rewards-entities";
 
 const TOKEN = "t".repeat(32);
 

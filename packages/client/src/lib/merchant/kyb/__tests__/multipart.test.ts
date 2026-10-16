@@ -1,9 +1,9 @@
 import { epochMs, type Envelope, type FileDetailResponse, type FileStatus } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { envelopeFixture } from "../../../test/auth-fixtures";
-import { FileProcessingError, type DirectUploadResult, type FileStatusReader } from "../../storage/direct-upload";
-import { awaitUploadedDocumentReady } from "./multipart";
+import { envelopeFixture } from "../../../../test/auth-fixtures";
+import { FileProcessingError, type DirectUploadResult, type FileStatusReader } from "../../../storage/direct-upload";
+import { awaitUploadedDocumentReady } from "../multipart";
 
 const FILE_ID = "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f";
 

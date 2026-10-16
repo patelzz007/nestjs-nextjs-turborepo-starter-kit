@@ -31,8 +31,8 @@ import {
 	zonedMinutesOfDay,
 	zonedStartOfDay,
 	type ViewRangeOptions,
-} from "./event-calendar-lib";
-import type { CalendarEvent, EventCalendarOccurrence, EventCalendarResource, EventCalendarSegment } from "./event-calendar-types";
+} from "../event-calendar-lib";
+import type { CalendarEvent, EventCalendarOccurrence, EventCalendarResource, EventCalendarSegment } from "../event-calendar-types";
 
 const UTC = "UTC";
 const NEW_YORK = "America/New_York";

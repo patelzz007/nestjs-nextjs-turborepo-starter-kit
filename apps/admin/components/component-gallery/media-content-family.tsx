@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTextPdf, PDF_MEDIA_TYPE } from "@workspace/shared";
 import { AspectRatio } from "@workspace/ui/components/aspect-ratio";
 import {
 	Attachment,
@@ -31,6 +32,7 @@ import { ImageCarousel, type ImageCarouselImage } from "@workspace/ui/components
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Message, MessageAvatar, MessageContent, MessageFooter, MessageGroup, MessageHeader } from "@workspace/ui/components/message";
+import { PdfViewer, type PdfViewerSource } from "@workspace/ui/components/pdf-viewer";
 import { QrCode } from "@workspace/ui/components/qr-code";
 import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { FileText, ImageOff, RotateCcw, X } from "lucide-react";
@@ -491,6 +493,36 @@ function QrCodeDemo(): React.JSX.Element {
 	);
 }
 
+/** A two-page sample statement, written in memory (no file is shipped or fetched). */
+const SAMPLE_PDF_FILE_NAME = "sample-statement.pdf";
+const SAMPLE_PDF_PAGES: Parameters<typeof buildTextPdf>[0] = [
+	{
+		title: "Monthly statement",
+		lines: [
+			"Acme Rewards - October 2026",
+			"",
+			"Opening balance          1,240 pts",
+			"Earned                     380 pts",
+			"Redeemed                   200 pts",
+			"Closing balance          1,420 pts",
+		],
+	},
+	{ title: "Notes", lines: ["Points expire 12 months after they are earned.", "Open your own PDF with the folder button above."] },
+];
+
+function samplePdfSource(): PdfViewerSource {
+	return { kind: "file", file: new File([buildTextPdf(SAMPLE_PDF_PAGES)], SAMPLE_PDF_FILE_NAME, { type: PDF_MEDIA_TYPE }) };
+}
+
+function PdfViewerDemo(): React.JSX.Element {
+	const [source, setSource] = React.useState<PdfViewerSource>(samplePdfSource);
+	return (
+		<DemoSurface>
+			<PdfViewer source={source} onSourceChange={setSource} className="h-[560px] w-full" />
+		</DemoSurface>
+	);
+}
+
 /** Media & content: people, images, files, chat and code. Smart: owns every demo's state. */
 export function MediaContentFamily(): React.JSX.Element {
 	return (
@@ -530,6 +562,9 @@ export function MediaContentFamily(): React.JSX.Element {
 			</ComponentSection>
 			<ComponentSection entry={GALLERY_ENTRIES.qrCode} height="h-72">
 				<QrCodeDemo />
+			</ComponentSection>
+			<ComponentSection entry={GALLERY_ENTRIES.pdfViewer} height="h-[640px]">
+				<PdfViewerDemo />
 			</ComponentSection>
 			<ExampleOnlySections familyId="family-media-content" />
 		</>

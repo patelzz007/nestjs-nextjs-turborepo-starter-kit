@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { encodeQr, QrMatrix, resolveQrEncodeOptions } from "./qr-encode";
-import { QrDataTooLongError, QrInvalidOptionsError } from "./qr-errors";
-import { maskPenalty, QR_MASKS, type QrMask } from "./qr-mask";
-import { QrModuleGrid } from "./qr-module-grid";
+import { encodeQr, QrMatrix, resolveQrEncodeOptions } from "../qr-encode";
+import { QrDataTooLongError, QrInvalidOptionsError } from "../qr-errors";
+import { maskPenalty, QR_MASKS, type QrMask } from "../qr-mask";
+import { QrModuleGrid } from "../qr-module-grid";
 
 describe("resolveQrEncodeOptions", () => {
 	it("applies the defaults: level M, versions 1–40, automatic mask, boost on", () => {

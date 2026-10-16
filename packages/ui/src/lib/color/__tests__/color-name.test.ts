@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { describeColor } from "./color-name";
-import { parseColor } from "./color-parse";
-import type { ColorPickerColor } from "./color-space";
+import { describeColor } from "../color-name";
+import { parseColor } from "../color-parse";
+import type { ColorPickerColor } from "../color-space";
 
 const FALLBACK: ColorPickerColor = { space: "rgb", channels: [0, 0, 0], alpha: 1 };
 

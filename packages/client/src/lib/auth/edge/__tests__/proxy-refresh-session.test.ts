@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hasRouteSession, shouldAttemptProxyRefresh, type ProxyRefreshTriggerContext } from "./proxy-refresh";
+import { hasRouteSession, shouldAttemptProxyRefresh, type ProxyRefreshTriggerContext } from "../proxy-refresh";
 
 const AUTH_ROUTE_CONTEXT: ProxyRefreshTriggerContext = {
 	accessToken: undefined,
