@@ -3,7 +3,7 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as React from "react";
 
 import { ok, stubApi } from "../../../../../test/api-stub";
-import { createTestRuntime, markerScreen, renderInApp, TEST_RAW_ENV, type TestRuntimeOverrides } from "../../../../../test/app-harness";
+import { createTestRuntime, markerScreen, renderInApp, TEST_API_URL, TEST_RAW_ENV, type TestRuntimeOverrides } from "../../../../../test/app-harness";
 import { testAccessToken } from "../../../../../test/jwt";
 import { memorySecureStore } from "../../../../../test/secure-store-memory";
 import { savePreferences } from "../../../../features/preferences/persistence";
@@ -48,7 +48,7 @@ describe("Settings (§10.9)", () => {
 		expect(screen.getByRole("button", { name: "Appearance, System" })).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: "App lock, Off" })).toBeOnTheScreen();
 		expect(screen.getByLabelText("Version: 1.0.0")).toBeOnTheScreen();
-		expect(screen.getByLabelText("API address: http://api.test")).toBeOnTheScreen();
+		expect(screen.getByLabelText(`API address: ${TEST_API_URL}`)).toBeOnTheScreen();
 	});
 
 	it("hides the API address outside development", async () => {

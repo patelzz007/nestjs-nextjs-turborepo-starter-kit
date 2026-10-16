@@ -1,5 +1,5 @@
 import { fail, stubApi } from "../../../test/api-stub";
-import { createTestRuntime, TEST_RAW_ENV, testRuntimeInputs } from "../../../test/app-harness";
+import { createTestRuntime, TEST_API_URL, TEST_RAW_ENV, testRuntimeInputs } from "../../../test/app-harness";
 import { testAccessToken } from "../../../test/jwt";
 import { memorySecureStore } from "../../../test/secure-store-memory";
 import { InvalidAppVersionError } from "../../lib/app-version";
@@ -47,7 +47,7 @@ describe("createAppRuntime", () => {
 
 	it("builds the stores, the token provider and the API client", () => {
 		const runtime = createTestRuntime();
-		expect(runtime).toMatchObject({ kind: "ready", appName: "Starter", appVersion: "1.0.0", env: { apiBaseUrl: "http://api.test" } });
+		expect(runtime).toMatchObject({ kind: "ready", appName: "Starter", appVersion: "1.0.0", env: { apiBaseUrl: TEST_API_URL } });
 		expect(runtime.sessionStore.getState()).toEqual({ status: "starting" });
 	});
 

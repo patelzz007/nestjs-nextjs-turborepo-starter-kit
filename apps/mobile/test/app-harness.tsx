@@ -25,7 +25,8 @@ import { createAppRuntime, type AppRuntimeInputs, type ReadyAppRuntime } from ".
 import { ReadyRuntimeProvider } from "../src/runtime/runtime-context";
 import { trackQueryClient } from "./query-clients";
 
-export const TEST_API_URL = "http://api.test";
+/** The API the tests talk to. It names its port: in development an http:// URL without one gets EXPO_PUBLIC_API_PORT (src/lib/env.ts). */
+export const TEST_API_URL = "http://api.test:8080";
 
 export const TEST_RAW_ENV: RawMobileEnv = {
 	isDevelopment: true,

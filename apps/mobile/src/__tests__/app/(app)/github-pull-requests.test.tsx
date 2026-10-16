@@ -936,7 +936,7 @@ describe("GitHub pull requests: live updates", () => {
 		await renderSignedIn(PULL_URL);
 		await screen.findByLabelText(`Live updates on. ${LIVE_UPDATES_ON_DETAIL}`);
 		await waitFor(() => {
-			expect(stream.urls()).toEqual(["http://api.test/api/v1/github/live-updates/octo-org/hello-world/events"]);
+			expect(stream.urls()).toEqual([`${TEST_API_URL}/api/v1/github/live-updates/octo-org/hello-world/events`]);
 		});
 
 		stream.push('data: {"owner":"octo-org","repository":"hello-world","number":7}\n\n');
