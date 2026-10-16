@@ -11,14 +11,14 @@ import type { GithubCommitFile, GithubPullRequestParams, GithubReviewComment, Gi
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
 import { ChangedFile } from "../../components/changed-file";
 import { DiffView } from "../../components/diff-view";
 import { Screen } from "../../components/screen";
-import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { EmptyState, ErrorState } from "../../components/states";
-import { MutedText } from "../../components/text";
+import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { EmptyState, ErrorState } from "@workspace/ui-native/components/empty";
+import { MutedText } from "@workspace/ui-native/components/text";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useNow } from "../../lib/use-now";
@@ -77,8 +77,8 @@ export function PullRequestFilesScreen({ pullRequest }: PullRequestFilesScreenPr
 
 	return (
 		<Screen refreshing={refreshing} onRefresh={refresh} testID="pull-request-files">
-			{threads.isError ? <Banner tone="error" message={errorMessageOf(threads.error)} /> : null}
-			{threadList?.truncated === true ? <Banner tone="info" message={MORE_THREADS_ON_GITHUB} /> : null}
+			{threads.isError ? <Alert tone="error" message={errorMessageOf(threads.error)} /> : null}
+			{threadList?.truncated === true ? <Alert tone="info" message={MORE_THREADS_ON_GITHUB} /> : null}
 			<ApiImageAuthorizationProvider>
 				<PullRequestReactionsProvider pullRequest={pullRequest}>
 					{pages.map((page: number, index: number): React.JSX.Element => (

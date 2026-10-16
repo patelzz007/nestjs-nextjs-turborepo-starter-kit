@@ -13,7 +13,7 @@ import { withUniwind } from "uniwind";
 
 import type { ImageSource } from "../lib/api-image-authorization";
 import { openableHref } from "../lib/markdown";
-import { Icon, type LucideIcon } from "./icon";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 
 const StyledImage = withUniwind(Image);
 

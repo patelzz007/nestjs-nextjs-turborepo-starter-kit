@@ -13,6 +13,9 @@
 // - Keyboard navigation queries the nav's enabled triggers instead of keeping
 //   a registry of nodes in state, and the always-zero `stepsCount` is dropped.
 // - `StepperIndicator` takes a `size` variant.
+// - A trigger's `aria-controls` names its panel only while that panel is
+//   mounted (ReUI points it at an id that may not exist when the step has no
+//   `StepperContent`, or when the content is unmounted).
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -36,6 +39,10 @@ interface StepperContextValue {
 	readonly orientation: StepperOrientation;
 	readonly indicators: StepIndicators;
 	readonly baseId: string;
+	/** The steps whose `StepperContent` is currently mounted. */
+	readonly mountedPanels: ReadonlyMap<number, number>;
+	/** Records a mounted panel for `step`; returns the cleanup that forgets it. */
+	readonly registerPanel: (step: number) => () => void;
 }
 
 interface StepItemContextValue {
@@ -65,6 +72,9 @@ function useStepItem(): StepItemContextValue {
 }
 
 const NO_INDICATORS: StepIndicators = {};
+const NO_MOUNTED_PANELS: ReadonlyMap<number, number> = new Map<number, number>();
+/** How much one mounted `StepperContent` adds to (or removes from) its step's count. */
+const PANEL_COUNT_STEP = 1;
 
 interface StepperProps extends React.ComponentProps<"div"> {
 	/** The active step (1-based, matching `StepperItem step`). */
@@ -80,6 +90,24 @@ const Stepper = React.forwardRef<HTMLDivElement, StepperProps>(function Stepper(
 	ref,
 ): React.JSX.Element {
 	const baseId = React.useId();
+	// Counted, not a set: two contents for one step (e.g. a re-keyed remount) must not unregister each other.
+	const [mountedPanels, setMountedPanels] = React.useState<ReadonlyMap<number, number>>(NO_MOUNTED_PANELS);
+
+	const registerPanel = React.useCallback((step: number): (() => void) => {
+		setMountedPanels((previous: ReadonlyMap<number, number>): ReadonlyMap<number, number> => new Map(previous).set(step, (previous.get(step) ?? 0) + PANEL_COUNT_STEP));
+		return (): void => {
+			setMountedPanels((previous: ReadonlyMap<number, number>): ReadonlyMap<number, number> => {
+				const next = new Map(previous);
+				const remaining = (next.get(step) ?? PANEL_COUNT_STEP) - PANEL_COUNT_STEP;
+				if (remaining > 0) {
+					next.set(step, remaining);
+				} else {
+					next.delete(step);
+				}
+				return next;
+			});
+		};
+	}, []);
 
 	const setActiveStep = React.useCallback(
 		(step: number): void => {
@@ -89,8 +117,8 @@ const Stepper = React.forwardRef<HTMLDivElement, StepperProps>(function Stepper(
 	);
 
 	const contextValue = React.useMemo<StepperContextValue>(
-		() => ({ activeStep: value, setActiveStep, orientation, indicators, baseId }),
-		[value, setActiveStep, orientation, indicators, baseId],
+		() => ({ activeStep: value, setActiveStep, orientation, indicators, baseId, mountedPanels, registerPanel }),
+		[value, setActiveStep, orientation, indicators, baseId, mountedPanels, registerPanel],
 	);
 
 	return (
@@ -199,7 +227,7 @@ const StepperTrigger = React.forwardRef<HTMLButtonElement, StepperTriggerProps>(
 	ref,
 ): React.ReactElement {
 	const { step, state, isDisabled, isLoading } = useStepItem();
-	const { activeStep, setActiveStep, baseId } = useStepper();
+	const { activeStep, setActiveStep, baseId, mountedPanels } = useStepper();
 	const isSelected = activeStep === step;
 
 	const handleClick = React.useCallback((): void => {
@@ -222,6 +250,7 @@ const StepperTrigger = React.forwardRef<HTMLButtonElement, StepperTriggerProps>(
 				role: "tab",
 				id: tabId(baseId, step),
 				"aria-selected": isSelected,
+				"aria-controls": mountedPanels.has(step) ? panelId(baseId, step) : undefined,
 				tabIndex: tabIndex ?? (isSelected ? 0 : -1),
 				disabled: isDisabled,
 				className: cn(
@@ -350,10 +379,13 @@ const StepperContent = React.forwardRef<HTMLDivElement, StepperContentProps>(fun
 	{ value, forceMount = false, className, ...props },
 	ref,
 ): React.JSX.Element | null {
-	const { activeStep, baseId } = useStepper();
+	const { activeStep, baseId, registerPanel } = useStepper();
 	const isActive = value === activeStep;
+	const isMounted = forceMount || isActive;
 
-	if (!forceMount && !isActive) {
+	React.useEffect((): (() => void) | undefined => (isMounted ? registerPanel(value) : undefined), [isMounted, registerPanel, value]);
+
+	if (!isMounted) {
 		return null;
 	}
 

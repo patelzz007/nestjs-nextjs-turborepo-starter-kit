@@ -105,6 +105,13 @@ export interface SettingsRoutes {
 	readonly access: string;
 }
 
+export interface ComponentsRoutes {
+	/** The UI kit's low-level component gallery — sample content only, no API calls. */
+	readonly index: string;
+	/** One component's page: its live demo and its worked examples (`/components/<slug>`). */
+	readonly component: RouteBuilder;
+}
+
 export interface AccountRoutes {
 	/** Section prefix — where restricted sessions land; redirects to `security`. */
 	readonly index: string;
@@ -125,6 +132,7 @@ export interface AdminRoutes {
 	readonly auditLogs: AuditLogsRoutes;
 	readonly catalog: CatalogRoutes;
 	readonly settings: SettingsRoutes;
+	readonly components: ComponentsRoutes;
 	readonly account: AccountRoutes;
 }
 
@@ -184,6 +192,7 @@ const AUDIT_LOG_CHANGES = `${AUDIT_LOGS}/changes`;
 const CATALOG = "/catalog";
 const SETTINGS = "/settings";
 const ACCOUNT = "/account";
+const COMPONENTS = "/components";
 
 export const ROUTES: AdminRoutes = {
 	home: APP_LINKS.admin.home,
@@ -235,6 +244,10 @@ export const ROUTES: AdminRoutes = {
 	settings: {
 		index: SETTINGS,
 		access: `${SETTINGS}/access`,
+	},
+	components: {
+		index: COMPONENTS,
+		component: (slug: string): string => childPath(COMPONENTS, slug),
 	},
 	account: {
 		index: ACCOUNT,

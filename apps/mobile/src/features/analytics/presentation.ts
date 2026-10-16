@@ -27,7 +27,7 @@ import type { ChartColor } from "../../components/chart-colors";
 import type { KpiChange } from "../../components/kpi-tile";
 import type { RankedBarItem } from "../../components/ranked-bar-list";
 import type { ShareSegment } from "../../components/share-bar";
-import type { StatTile } from "../../components/stat-tiles";
+import type { StatTile } from "@workspace/ui-native/components/stat-tiles";
 import type { TrendSeries } from "../../components/trend-chart";
 
 const LOCALE = PLATFORM_DISPLAY_REGION.locale;

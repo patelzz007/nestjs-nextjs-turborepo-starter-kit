@@ -202,8 +202,11 @@ language?, open }`) for transcripts rendered without a markdown dependency. Comm
 
 A pre-built `lines` array can also carry per-line `gutter` labels (e.g. dual old/new numbers for a
 patch) and per-token `color` / `colorDark`. ReUI's unified-diff (`parseUnifiedDiff`) and ANSI
-(`ansiToLines`) parsers were not kept: nothing in the monorepo uses them, and the ANSI palette is
-hard-coded hex that bypasses the kit's tokens. The markdown helpers are kept (see above). Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `--warning`,
+(`ansiToLines`) parsers are kept, exported from `code-block.tsx`. ANSI colours render through
+`var(--code-ansi-<slot>, var(<kit token>))`, not ReUI's hex palette: red is `--tone-red`, magenta
+`--tone-violet` and cyan `--tone-teal`, and any slot can be overridden with `--code-ansi-*`. A hunk
+body is read by its header's line counts, so a removed `-- comment` line is not mistaken for a
+`---` file header. The markdown helpers are kept (see above). Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `--warning`,
 `--info`, `--accent`, `--muted` (all from `packages/tokens`).
 
 **Deliberate deviations from ReUI** (behaviour otherwise identical):
@@ -234,10 +237,21 @@ hard-coded hex that bypasses the kit's tokens. The markdown helpers are kept (se
   when `startLine ≠ 1`); language/theme/extension lookups ignore `Object.prototype` keys; a
   highlight result is also tagged with its language.
 
-## ReUI components (`alert`, `badge`, `stepper`, `tree`, `code-block`)
+## ReUI components
 
 These are ports of [ReUI](https://reui.io)'s **Base UI** variants (registry style `base-vega`),
-not hand-rolled components. Part names, props, `data-slot` / `data-state` attributes and
+not hand-rolled components. They include:
+
+- `alert`, `badge`, `stepper`, `tree` and `code-block`;
+- `autocomplete`, `color-picker`, `date-selector`, `emoji-picker`, `file-type`, `frame` and
+  `icon-stack`;
+- `kanban`, `number-field`, `phone-input`, `rating`, `scrollspy`, `signature-pad` and `sortable`;
+- `time-picker` and `timeline`;
+- the multi-file families `cascader/`, `data-grid/`, `event-calendar/`, `filters/` and `gantt/`;
+- the hooks `use-file-upload` and `use-copy-to-clipboard`.
+
+The shadcn `item`, `trace`, `questionnaire` and `native-select` components were ported the same
+way. Part names, props, `data-slot` / `data-state` attributes and
 composition match ReUI, so its docs and examples apply. Every file starts with a comment that
 lists its deliberate deviations; the common ones are:
 
@@ -252,11 +266,43 @@ lists its deliberate deviations; the common ones are:
   contrast), `invert` / `invert-foreground`, and `status-foreground` (text on a solid status
   fill, in place of `text-white`). Badge's two smallest sizes use `--text-badge-xs|sm`.
 - **Kit extras kept** — `Badge` keeps `ghost`, `link` and the categorical tone palette
-  (`green` … `violet`); ReUI's `focus` variants are omitted (no `--focus` colour).
+  (`green` … `violet`); ReUI's `focus`, `focus-light` and `focus-outline` variants use the
+  `--focus` / `--focus-foreground` tokens.
 
 Status badges: use the `-light` variants (`destructive-light`, `success-light`, …) for soft
 status chips and the solid ones for high emphasis. Import `BadgeVariant` instead of
 re-declaring a union of variant names.
+
+**Ported, not copied.** The ports follow the kit's rules, so a few APIs differ from ReUI's own
+docs. Each file's header comment records its exact deviations. The recurring ones are:
+
+- **Fully controlled:** `EventCalendar` (`events`, `view` and `date`), `Filters` (`query`) and
+  `Stepper` are fully controlled. Hold their state in the parent.
+- **No built-in English copy:** every ReUI i18n object maps onto a `UiKitLabelsProvider` family,
+  so mount the provider; per-usage `labels` / `i18n` props override it.
+- **Tone colours:** event and task colours are tone names, not palette classes.
+- **Injected clocks:** `EventCalendar` takes `now` and `Gantt` takes `clock`, so tests and demos
+  are deterministic.
+- **Typed callbacks:** callbacks such as `onEventUpdate` return a verdict
+  (`true | false | adjustment`) instead of `void`.
+
+Every ReUI component example (`c-<component>-<n>`) is ported into the admin's component gallery,
+on each component's own page (`/components/<file name>`). See
+`apps/admin/components/component-gallery/examples/`; `pnpm --filter @workspace/admin
+gallery:examples` regenerates its registry and its example-count manifest.
+
+Two decisions, made with a maintainer:
+
+- **`SignaturePad` focus:** as in reui, the drawing area is a focusable `role="application"` that
+  owns the undo/redo shortcuts (⌘Z, ⌘⇧Z, ⌘Y). jsx-a11y classifies that role as non-interactive, so
+  `signature-pad.tsx` is the repo's **one approved lint exception**
+  (`approvedRuleExceptions` in `packages/eslint-config/react-internal.js`, pinned by
+  `tests/configs.test.js`). It relaxes only `no-noninteractive-element-interactions` and
+  `no-noninteractive-tabindex`, for that file only. Do not copy the pattern elsewhere.
+- **Emoji data:** `EmojiPicker` uses the emoji data bundled with the app (`emojibase-data`, a
+  dependency of this package; `lib/emoji-picker/bundled-data.ts`). Each locale's files are their
+  own chunk, downloaded only when a picker first needs them, and nothing is requested from a third
+  party. `dataUrl` points it at a self-hosted copy instead, and `data` passes the data in.
 
 `Tree` wraps a [headless-tree](https://headless-tree.lukasbach.com/) instance: build it with
 `useTree` from `@headless-tree/react` in the smart component (data loader, expanded/selected

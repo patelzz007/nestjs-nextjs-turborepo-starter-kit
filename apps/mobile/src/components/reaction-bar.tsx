@@ -9,8 +9,8 @@ import FaceSmilePlusIcon from "lucide-react-native/icons/face-slightly-smiling-p
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { BottomSheet } from "./bottom-sheet";
-import { Icon } from "./icon";
+import { BottomSheet } from "@workspace/ui-native/components/bottom-sheet";
+import { Icon } from "@workspace/ui-native/components/icon";
 
 /** One reaction on something. */
 export interface Reaction<TKey extends string> {

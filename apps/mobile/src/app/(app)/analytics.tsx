@@ -15,12 +15,12 @@ import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { Badge } from "../../components/badge";
-import { DateRangePicker, type LocalDateRange } from "../../components/date-range-picker";
-import { Icon } from "../../components/icon";
+import { Badge } from "@workspace/ui-native/components/badge";
+import { DateRangePicker, type LocalDateRange } from "@workspace/ui-native/components/date-range-picker";
+import { Icon } from "@workspace/ui-native/components/icon";
 import { Screen } from "../../components/screen";
-import { SegmentedControl } from "../../components/segmented-control";
-import { MutedText } from "../../components/text";
+import { SegmentedControl } from "@workspace/ui-native/components/segmented-control";
+import { MutedText } from "@workspace/ui-native/components/text";
 import { ActivityDashboard } from "../../features/analytics/activity-dashboard";
 import {
 	ACTIVITY_RANGE_OPTIONS,

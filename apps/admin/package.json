@@ -11,7 +11,8 @@
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
-		"test:browser": "playwright test"
+		"test:browser": "playwright test",
+		"gallery:examples": "node scripts/gallery-examples-registry.ts && prettier --write components/component-gallery/examples/examples-registry.tsx components/component-gallery/examples/examples-manifest.ts"
 	},
 	"dependencies": {
 		"@headless-tree/core": "^1.7.0",

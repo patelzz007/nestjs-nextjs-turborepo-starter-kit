@@ -1,0 +1,38 @@
+import * as React from "react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@workspace/ui/components/accordion";
+
+const items = [
+	{
+		value: "item-1",
+		trigger: "Can I access my account history?",
+		content: "Yes, you can view your complete account history including all transactions, plan changes, and support tickets in the Account History section of your dashboard.",
+		disabled: false,
+	},
+	{
+		value: "item-2",
+		trigger: "Premium feature information (Locked)",
+		content: "This section contains information about premium features. Upgrade your plan to access this content.",
+		disabled: true,
+	},
+	{
+		value: "item-3",
+		trigger: "How do I update my email address?",
+		content: "You can update your email address in your account settings. You'll receive a verification email at your new address to confirm the change.",
+		disabled: false,
+	},
+];
+
+export function Accordion5Example(): React.JSX.Element {
+	return (
+		<div className="mx-auto mb-auto w-full max-w-lg">
+			<Accordion multiple={false} defaultValue={["item-1"]} className="overflow-hidden rounded-lg border border-border">
+				{items.map((item) => (
+					<AccordionItem key={item.value} value={item.value} disabled={item.disabled} className="**:data-[slot=accordion-content]:p-0! data-open:bg-muted/50">
+						<AccordionTrigger className="px-4 py-4 hover:no-underline">{item.trigger}</AccordionTrigger>
+						<AccordionContent className="px-4! pt-0 pb-4">{item.content}</AccordionContent>
+					</AccordionItem>
+				))}
+			</Accordion>
+		</div>
+	);
+}

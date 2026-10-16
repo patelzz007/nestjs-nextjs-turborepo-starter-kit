@@ -11,7 +11,7 @@
 import * as React from "react";
 import { AccessibilityInfo, View } from "react-native";
 
-import { Toast } from "../../components/toast";
+import { Toast } from "@workspace/ui-native/components/toast";
 import { useCurrentToast, useToast } from "./facade";
 import type { ToastMessage, ToastTone } from "./state";
 

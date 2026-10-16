@@ -19,7 +19,7 @@ import { StyleSheet, Text, View, type AccessibilityActionEvent, type GestureResp
 import { Circle, Line, Path } from "react-native-svg";
 
 import { areaPath, linePath, nearestIndex, niceTicks, pointsOf, scaleTop, yOf, type ChartPoint, type PlotSize } from "../lib/chart-geometry";
-import { playSelectionFeedback } from "../lib/haptics";
+import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { CHART_COLOR_CLASSES, type ChartColor } from "./chart-colors";
 import { SvgLayer } from "./svg-layer";
 

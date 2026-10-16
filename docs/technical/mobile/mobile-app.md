@@ -1070,7 +1070,7 @@ See [section 19, piece 5](#piece-5-appsmobile).
   app version → query client → session and preferences stores → Secure Store token provider → API
   client), the providers (`app-shell.tsx`) and the root guard (`root-navigator.tsx`, Expo Router
   protected routes). `features/` holds `session`, `preferences`, `app-lock`, `auth`, `two-factor`,
-  `devices` and `profile`. Route tests live in `src/app-tests/`, mirroring `src/app`: Expo Router
+  `devices` and `profile`. Route tests live in `src/__tests__/app/`, mirroring `src/app`: Expo Router
   bundles EVERY file under `src/app` (a test there broke `expo export` by pulling
   `expo-router/testing-library` into the app). Extra routes: `(auth)/verify-email` (a session restricted to email
   verification) and `(app)/settings/two-factor` (turn 2FA on / new backup codes).

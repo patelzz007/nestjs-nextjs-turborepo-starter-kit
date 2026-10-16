@@ -7,7 +7,7 @@ import type { GithubPullRequestCommitParams, GithubPullRequestParams } from "@wo
 import { useLocalSearchParams } from "expo-router";
 import * as React from "react";
 
-import { Banner } from "../../components/banner";
+import { Alert } from "@workspace/ui-native/components/alert";
 import { Screen } from "../../components/screen";
 import { INVALID_PULL_REQUEST_COMMIT_LINK_MESSAGE, INVALID_PULL_REQUEST_LINK_MESSAGE } from "./labels";
 import { PullRequestCommitRouteParamsSchema, PullRequestRouteParamsSchema } from "./route-params";
@@ -21,7 +21,7 @@ export function PullRequestRoute({ render }: PullRequestRouteProps): React.JSX.E
 	if (!params.success) {
 		return (
 			<Screen>
-				<Banner tone="error" message={INVALID_PULL_REQUEST_LINK_MESSAGE} />
+				<Alert tone="error" message={INVALID_PULL_REQUEST_LINK_MESSAGE} />
 			</Screen>
 		);
 	}
@@ -38,7 +38,7 @@ export function PullRequestCommitRoute({ render }: PullRequestCommitRouteProps):
 	if (!params.success) {
 		return (
 			<Screen>
-				<Banner tone="error" message={INVALID_PULL_REQUEST_COMMIT_LINK_MESSAGE} />
+				<Alert tone="error" message={INVALID_PULL_REQUEST_COMMIT_LINK_MESSAGE} />
 			</Screen>
 		);
 	}

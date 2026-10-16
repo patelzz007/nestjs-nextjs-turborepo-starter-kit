@@ -23,14 +23,14 @@ import ImagePlusIcon from "lucide-react-native/icons/image-plus";
 import * as React from "react";
 import { View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
-import { BottomSheet, SheetOptionRow } from "../../components/bottom-sheet";
-import { Button } from "../../components/button";
-import { IconButton } from "../../components/icon-button";
-import { MutedText } from "../../components/text";
-import { TextField } from "../../components/text-field";
-import { TimelineRailItem } from "../../components/timeline-rail";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { BottomSheet, SheetOptionRow } from "@workspace/ui-native/components/bottom-sheet";
+import { Button } from "@workspace/ui-native/components/button";
+import { IconButton } from "@workspace/ui-native/components/icon-button";
+import { MutedText } from "@workspace/ui-native/components/text";
+import { TextField } from "@workspace/ui-native/components/text-field";
+import { TimelineRailItem } from "@workspace/ui-native/components/timeline-rail";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useIdempotencyKeys } from "../../lib/idempotency-keys";
@@ -112,8 +112,8 @@ export function CommentComposer({ pullRequest, viewer, onReview }: CommentCompos
 	return (
 		<TimelineRailItem node={<Avatar name={loginOf(viewer)} imageUrl={viewer?.avatarUrl ?? null} size="md" />} isLast testID="pull-request-comment-composer">
 			<View className="gap-3 rounded-xl border border-border bg-card p-3">
-				{requestError === null ? null : <Banner tone="error" message={requestError} />}
-				{picture.error === null ? null : <Banner tone="error" message={picture.error} />}
+				{requestError === null ? null : <Alert tone="error" message={requestError} />}
+				{picture.error === null ? null : <Alert tone="error" message={picture.error} />}
 				<TextField
 					label="Add a comment"
 					value={body}
@@ -205,8 +205,8 @@ export function ReviewSheet({ pullRequest, visible, viewerDidAuthor, onClose }: 
 	return (
 		<BottomSheet visible={visible} title="Review changes" onClose={onClose} testID="pull-request-review-sheet">
 			<View className="gap-3">
-				{requestError === null ? null : <Banner tone="error" message={requestError} />}
-				{picture.error === null ? null : <Banner tone="error" message={picture.error} />}
+				{requestError === null ? null : <Alert tone="error" message={requestError} />}
+				{picture.error === null ? null : <Alert tone="error" message={picture.error} />}
 				<TextField
 					label="Summary"
 					value={body}

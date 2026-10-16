@@ -18,17 +18,17 @@ import PiggyBankIcon from "lucide-react-native/icons/piggy-bank";
 import ReceiptIcon from "lucide-react-native/icons/receipt";
 import StoreIcon from "lucide-react-native/icons/store";
 
-import type { BadgeTone } from "../../components/badge";
+import type { BadgeTone } from "@workspace/ui-native/components/badge";
 import type { ChartColor } from "../../components/chart-colors";
 import type { ColumnDatum } from "../../components/column-chart";
 import type { ComparisonItem } from "../../components/comparison-bars";
-import type { DetailItem } from "../../components/detail-list";
+import type { DetailItem } from "@workspace/ui-native/components/detail-list";
 import type { HeatmapLabel } from "../../components/heatmap-grid";
 import type { HighlightItem } from "../../components/highlight-grid";
 import type { ProgressItem } from "../../components/progress-list";
 import type { RankedBarItem } from "../../components/ranked-bar-list";
 import type { ShareSegment } from "../../components/share-legend";
-import type { TimelineItem } from "../../components/timeline";
+import type { TimelineItem } from "@workspace/ui-native/components/timeline";
 import {
 	DAY_PART_HOURS,
 	DayPartSchema,

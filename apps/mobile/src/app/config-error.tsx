@@ -7,10 +7,10 @@
 
 import * as React from "react";
 
-import { Banner } from "../components/banner";
-import { Card } from "../components/card";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Card } from "@workspace/ui-native/components/card";
 import { Screen } from "../components/screen";
-import { CodeText, MutedText } from "../components/text";
+import { CodeText, MutedText } from "@workspace/ui-native/components/text";
 import { useConfigIssue } from "../runtime/runtime-context";
 
 /** Where the variables are explained (development builds only). */
@@ -21,10 +21,10 @@ export default function ConfigErrorScreen(): React.JSX.Element {
 	return (
 		<Screen title="The app is not configured" description="This build cannot reach its server until the configuration below is fixed.">
 			{issue === null ? (
-				<Banner tone="error" message="The configuration could not be read." />
+				<Alert tone="error" message="The configuration could not be read." />
 			) : (
 				<Card title={issue.subject}>
-					<Banner tone="error" message={`${issue.subject} ${issue.message}.`} />
+					<Alert tone="error" message={`${issue.subject} ${issue.message}.`} />
 					<MutedText>Example</MutedText>
 					<CodeText selectable>{issue.example}</CodeText>
 				</Card>

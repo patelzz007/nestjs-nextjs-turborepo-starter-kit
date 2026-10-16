@@ -9,7 +9,7 @@ import SearchIcon from "lucide-react-native/icons/search";
 import SettingsIcon from "lucide-react-native/icons/settings";
 import UserIcon from "lucide-react-native/icons/user";
 
-import type { LucideIcon } from "../../components/icon";
+import type { LucideIcon } from "@workspace/ui-native/components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 
 /** A tab's route name: its file name inside src/app/(app) (`index` is Home). */

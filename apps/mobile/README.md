@@ -49,8 +49,9 @@ src/
                      query client, error messages, idempotency keys for writes, the feature-store toolkit (lib/state), motion springs,
                      haptics, keyboard visibility, tab-bar clearance
   runtime/           the app runtime built once per start, the providers, the root guard, route names
-  app-tests/         the route screens' tests, mirroring src/app — NEVER put a file other than a
-                     route in src/app: Expo Router bundles everything there (a test would ship)
+  __tests__/app/     the route screens' tests, mirroring src/app — NEVER put a file other than a
+                     route in src/app: Expo Router bundles everything there (a test would ship).
+                     Every other test sits in a __tests__/ folder beside the code it tests
 test/                test harness: fetch stub, in-memory secret store, JWTs, fixtures, renderInApp
 ```
 

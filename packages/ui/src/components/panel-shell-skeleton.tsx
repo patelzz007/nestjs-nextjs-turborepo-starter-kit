@@ -36,8 +36,34 @@ function NavRowSkeleton({ index }: { readonly index: number }): React.JSX.Elemen
 	);
 }
 
+/**
+ * `PanelSidebarSwitcher` while its context loads: the 36pt visual, the name and
+ * second line, and the chevron, in the switcher's 56pt row. For the header of an
+ * app whose sidebar opens with a context switcher instead of the brand.
+ */
+export const PanelSidebarSwitcherSkeleton = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function PanelSidebarSwitcherSkeleton(
+	{ className, ...props },
+	ref,
+): React.JSX.Element {
+	return (
+		<div
+			ref={ref}
+			aria-hidden="true"
+			data-slot="panel-sidebar-switcher-skeleton"
+			className={cn("panel-shell-sidebar-header flex h-14 shrink-0 items-center gap-3 px-3", className)}
+			{...props}>
+			<Skeleton className="size-9 shrink-0 rounded-lg" />
+			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
+				<Skeleton variant="text" className="h-3.5 w-28" />
+				<Skeleton variant="text" className="h-3 w-20" />
+			</div>
+			<Skeleton className="size-4 shrink-0 rounded-[5px]" />
+		</div>
+	);
+});
+
 export interface PanelSidebarSkeletonProps extends React.ComponentProps<"div"> {
-	/** The app's real `PanelSidebarHeader` — the brand never loads, so it is never a placeholder. */
+	/** The app's real `PanelSidebarHeader` (the brand never loads), or a `PanelSidebarSwitcherSkeleton` where the header is a context switcher. */
 	readonly header: React.ReactNode;
 	/** Rows per menu section, in order — derive them from the app's menu so the outline matches it. */
 	readonly sections: readonly number[];

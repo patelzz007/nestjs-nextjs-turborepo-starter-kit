@@ -6,12 +6,14 @@ import { config as baseConfig } from "../base.js";
 import { apiClientBoundaryConfigs, backendImportBoundaryConfig, mobileImportBoundaryConfig } from "../import-boundaries.js";
 import { nestjsConfig } from "../nestjs.js";
 import { nextJsConfig } from "../next.js";
-import { config as reactInternalConfig } from "../react-internal.js";
+import { approvedRuleExceptions, config as reactInternalConfig } from "../react-internal.js";
 import { config as reactNativeConfig, REACT_NATIVE_ACCESSIBILITY_SELECTORS, REACT_NATIVE_GLOBALS } from "../react-native.js";
 import { withErrorSeverity } from "../rule-severity.js";
 
 /** ESLint numeric severity for "warn" (0 = off, 1 = warn, 2 = error). */
 const WARN_SEVERITY = 1;
+const OFF_SEVERITY = 0;
+const ERROR_SEVERITY = 2;
 
 const EXPORTED_CONFIGS = [
 	["base", baseConfig],
@@ -80,6 +82,45 @@ describe("React configs keep every rule of the presets they spread", () => {
 		await expect(resolvedRule(configArray, "react-hooks/exhaustive-deps")).resolves.toEqual([2]);
 		// jsx-runtime still turns the legacy scope rule off.
 		await expect(resolvedRule(configArray, "react/react-in-jsx-scope")).resolves.toEqual([0]);
+	});
+});
+
+/** The rule entry ESLint resolves for `filePath` under `configArray`. */
+async function resolvedRuleFor(configArray, filePath, ruleName) {
+	const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: configArray });
+	const resolved = await eslint.calculateConfigForFile(filePath);
+	return resolved.rules[ruleName];
+}
+
+const SIGNATURE_PAD_FILE = "src/components/signature-pad.tsx";
+const EXCEPTED_A11Y_RULES = ["jsx-a11y/no-noninteractive-element-interactions", "jsx-a11y/no-noninteractive-tabindex"];
+
+describe("approved rule exceptions (react-internal)", () => {
+	it("holds exactly the one approved exception: signature-pad's application role", () => {
+		// Adding an exception needs a maintainer's approval: update this list with it.
+		expect(approvedRuleExceptions).toEqual([
+			{
+				name: "approved-exception/signature-pad-application-role",
+				files: [SIGNATURE_PAD_FILE],
+				rules: {
+					"jsx-a11y/no-noninteractive-element-interactions": "off",
+					"jsx-a11y/no-noninteractive-tabindex": "off",
+				},
+			},
+		]);
+	});
+
+	// ESLint keeps a preset's options beside the severity, so only the severity is compared.
+	it.each(EXCEPTED_A11Y_RULES)("turns %s off for signature-pad.tsx only", async (ruleName) => {
+		const [excepted] = await resolvedRuleFor(reactInternalConfig, SIGNATURE_PAD_FILE, ruleName);
+		const [elsewhere] = await resolvedRuleFor(reactInternalConfig, "src/components/button.tsx", ruleName);
+		expect(excepted).toBe(OFF_SEVERITY);
+		expect(elsewhere).toBe(ERROR_SEVERITY);
+	});
+
+	it("leaves every other rule in force for signature-pad.tsx", async () => {
+		await expect(resolvedRuleFor(reactInternalConfig, SIGNATURE_PAD_FILE, "jsx-a11y/no-static-element-interactions")).resolves.toEqual([2]);
+		await expect(resolvedRuleFor(reactInternalConfig, SIGNATURE_PAD_FILE, "jsx-a11y/anchor-is-valid")).resolves.toEqual([2]);
 	});
 });
 

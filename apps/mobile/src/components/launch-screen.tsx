@@ -38,8 +38,8 @@ import Animated, {
 import Svg, { Path } from "react-native-svg";
 import { withUniwind } from "uniwind";
 
-import { EMPHASIZED_ENTER_EASING, LAUNCH_MOTION } from "../lib/motion";
-import { useReduceMotion } from "../lib/use-reduce-motion";
+import { EMPHASIZED_ENTER_EASING, LAUNCH_MOTION } from "@workspace/ui-native/lib/motion";
+import { useReduceMotion } from "@workspace/ui-native/lib/use-reduce-motion";
 
 /** Reanimated's view with Uniwind's `className`. */
 const StyledAnimatedView = withUniwind(Animated.View);

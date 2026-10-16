@@ -175,6 +175,11 @@ export function DataTable<TData, TValue>({ columns, data, onRowClick }: DataTabl
 
 For server-side tables: `URL → page/search/sort/filter → server request → API → database`. Never load large result sets into the browser to simulate server-side pagination client-side.
 
+`DataTable`'s `filters` mean different things per pagination mode, and the kit enforces it:
+
+- **Server pagination** (`pagination={{ mode: "server", … }}`): each filter is a query parameter. Its value lives in `manualColumnFilters` and changes through `onManualColumnFilterChange`; it needs no column, and the table never looks it up as one, so it shows no faceted counts (a page is one slice of the results).
+- **Client pagination**: each filter filters a column, so its `key` must be a column id (`accessorKey` or `id`). A filter that names no column throws `DataTable: filter "…" names no column` (`assertDataTableFiltersMatchColumns` in `packages/ui/src/lib/data-table/column-ids.ts`). That replaces TanStack's per-render `Column with id '…' does not exist` warning with one clear error while the table is being written.
+
 ## Memoization
 
 Do not blindly wrap everything in `memo`/`useMemo`/`useCallback`.

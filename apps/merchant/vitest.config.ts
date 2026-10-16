@@ -14,7 +14,8 @@ export default defineConfig({
 		// requires `globalThis.IS_REACT_ACT_ENVIRONMENT = true` in jsdom tests).
 		setupFiles: ["./vitest.setup.ts"],
 		// Every test file in the app — a new folder never silently falls outside the run.
-		include: ["**/*.test.{ts,tsx}"],
+		// Tests live in `__tests__/` folders beside the code they test (rules/11 → "Where tests live").
+		include: ["**/__tests__/**/*.test.{ts,tsx}"],
 		exclude: ["**/node_modules/**", "**/.next/**"],
 		fileParallelism: false,
 		// Deterministic public config for the env modules (lib/env/*), which

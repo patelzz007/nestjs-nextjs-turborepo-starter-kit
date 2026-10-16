@@ -22,6 +22,7 @@
 		"@workspace/api-client": "workspace:*",
 		"@workspace/shared": "workspace:*",
 		"@workspace/tokens": "workspace:*",
+		"@workspace/ui-native": "workspace:*",
 		"expo": "~57.0.30",
 		"expo-application": "~57.0.3",
 		"expo-blur": "~57.0.3",

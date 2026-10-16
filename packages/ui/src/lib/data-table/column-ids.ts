@@ -78,3 +78,35 @@ export function assertUniqueDataTableColumnIds<TFeatures extends object, TData e
 	);
 	throw new Error(`DataTable: duplicate column id. ${reasons.join(". ")}.`);
 }
+
+/** Every filter key that names no column, in the order the filters are given. */
+export function findDataTableFiltersWithoutColumns<TFeatures extends object, TData extends RowData>(
+	filterKeys: readonly string[],
+	columns: readonly ColumnDef<TFeatures, TData>[],
+): readonly string[] {
+	const columnIds = new Set(columns.map((column: ColumnDef<TFeatures, TData>): string | undefined => resolveDataTableColumnId(column)));
+	return filterKeys.filter((key: string): boolean => !columnIds.has(key));
+}
+
+/**
+ * Throws when a client-side table has a filter that names no column. With client
+ * pagination a filter sets a column's filter value (TanStack filters the rows by
+ * that column), so a filter without its column could never filter anything — and
+ * TanStack would warn "Column with id … does not exist" on every render. A filter
+ * that is a server query parameter instead belongs on a server-paginated table
+ * (`pagination` with `manualColumnFilters` / `onManualColumnFilterChange`), which
+ * never looks its filters up as columns.
+ */
+export function assertDataTableFiltersMatchColumns<TFeatures extends object, TData extends RowData>(
+	filterKeys: readonly string[],
+	columns: readonly ColumnDef<TFeatures, TData>[],
+): void {
+	const missing = findDataTableFiltersWithoutColumns(filterKeys, columns);
+	if (missing.length === 0) {
+		return;
+	}
+	const names = missing.map((key: string): string => `"${key}"`).join(", ");
+	throw new Error(
+		`DataTable: filter ${names} names no column. On a client-side table a filter filters a column: give a column that id, or filter on the server with a server-paginated table (manualColumnFilters / onManualColumnFilterChange).`,
+	);
+}

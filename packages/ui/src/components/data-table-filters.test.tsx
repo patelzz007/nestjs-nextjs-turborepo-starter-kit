@@ -10,13 +10,19 @@ import { DataTable, type DataTableFeatures, type Filter } from "./data-table";
 interface Row {
 	readonly id: string;
 	readonly name: string;
+	readonly kind: string;
+	readonly outcome: string;
 }
 
 const ROWS: readonly Row[] = [
-	{ id: "r-1", name: "Jane" },
-	{ id: "r-2", name: "Bob" },
+	{ id: "r-1", name: "Jane", kind: "REQUEST", outcome: "SUCCESS" },
+	{ id: "r-2", name: "Bob", kind: "REQUEST", outcome: "SUCCESS" },
 ];
 const NAME: ColumnDef<DataTableFeatures, Row> = { accessorKey: "name", header: "Name" };
+/** The columns the client-side filters filter: a client filter's key is a column id. */
+const KIND: ColumnDef<DataTableFeatures, Row> = { accessorKey: "kind", header: "Source" };
+const OUTCOME: ColumnDef<DataTableFeatures, Row> = { accessorKey: "outcome", header: "Outcome" };
+const CLIENT_COLUMNS: ColumnDef<DataTableFeatures, Row>[] = [NAME, KIND, OUTCOME];
 /** Shared no-op for stub listeners and the row action. */
 function noop(): void {
 	// Nothing to do: these tests only read what the filter dropdowns show.
@@ -65,14 +71,14 @@ function getRowId(row: Row): string {
 
 describe("DataTable column filters", () => {
 	it('names each filter in front of its choice, so a row of dropdowns never reads as identical "All"s', () => {
-		render(<DataTable data={[...ROWS]} columns={[NAME]} filters={FILTERS} />, { wrapper: UiKitTestProviders });
+		render(<DataTable data={[...ROWS]} columns={CLIENT_COLUMNS} filters={FILTERS} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("combobox", { name: "Source" }).textContent).toContain("Source:");
 		expect(screen.getByRole("combobox", { name: "Outcome" }).textContent).toContain("Outcome:");
 	});
 
 	it("counts the rows on a client-side table, which holds them all", () => {
-		render(<DataTable data={[...ROWS]} columns={[NAME]} filters={FILTERS} />, { wrapper: UiKitTestProviders });
+		render(<DataTable data={[...ROWS]} columns={CLIENT_COLUMNS} filters={FILTERS} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByRole("combobox", { name: "Source" }).textContent).toMatch(/^Source:All \(2\)/u);
 	});
@@ -91,5 +97,31 @@ describe("DataTable column filters", () => {
 		);
 
 		expect(screen.getByRole("combobox", { name: "Source" }).textContent).toMatch(/^Source:All(?! \()/u);
+	});
+
+	it("never looks a server-side filter up as a column, so TanStack never warns about a missing one", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(noop);
+		// The filters are server query parameters: no column is called "kind" or "outcome".
+		render(
+			<DataTable
+				data={[...ROWS]}
+				columns={[NAME]}
+				filters={FILTERS}
+				manualColumnFilters={{ kind: "REQUEST", outcome: "all" }}
+				onManualColumnFilterChange={noop}
+				pagination={{ mode: "server", totalCount: 120, pageIndex: 0, pageSize: 50, onPageChange: noop, getRowId }}
+			/>,
+			{ wrapper: UiKitTestProviders },
+		);
+
+		expect(screen.getByRole("combobox", { name: "Source" }).textContent).toContain("Request");
+		expect(warn.mock.calls.map((call) => String(call.at(0)))).not.toContainEqual(expect.stringContaining("does not exist"));
+	});
+
+	it("refuses a client-side filter that names no column, which could never filter a row", () => {
+		vi.spyOn(console, "error").mockImplementation(noop);
+		expect(() => render(<DataTable data={[...ROWS]} columns={[NAME]} filters={FILTERS} />, { wrapper: UiKitTestProviders })).toThrow(
+			'DataTable: filter "kind", "outcome" names no column',
+		);
 	});
 });

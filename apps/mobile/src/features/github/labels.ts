@@ -19,7 +19,7 @@ import {
 } from "@workspace/shared";
 
 import type { LanguageShare } from "../../components/language-breakdown";
-import type { StatTile } from "../../components/stat-tiles";
+import type { StatTile } from "@workspace/ui-native/components/stat-tiles";
 import { formatRelativeTime } from "../../lib/time-format";
 import { languageLogoOf } from "./language-logos";
 

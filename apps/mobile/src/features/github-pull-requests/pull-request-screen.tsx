@@ -18,17 +18,17 @@ import EllipsisIcon from "lucide-react-native/icons/ellipsis";
 import ExternalLinkIcon from "lucide-react-native/icons/external-link";
 import { Linking, Text, View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
 import { LineCounts } from "../../components/line-counts";
-import { ListRow } from "../../components/list-row";
+import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../components/screen";
-import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { ErrorState } from "../../components/states";
-import { Subheading } from "../../components/text";
-import { TimelineRailIcon, TimelineRailItem } from "../../components/timeline-rail";
+import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { ErrorState } from "@workspace/ui-native/components/empty";
+import { Subheading } from "@workspace/ui-native/components/text";
+import { TimelineRailIcon, TimelineRailItem } from "@workspace/ui-native/components/timeline-rail";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { formatRelativeTime } from "../../lib/time-format";
@@ -173,7 +173,7 @@ function PullRequestView({ detail, nowMs }: PullRequestViewProps): React.JSX.Ele
 						testID="pull-request-open-github"
 					/>
 				</View>
-				{openFailed ? <Banner tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
+				{openFailed ? <Alert tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
 				<View className="flex-row items-center gap-2">
 					<Avatar name={loginOf(detail.author)} imageUrl={detail.author?.avatarUrl ?? null} size="sm" />
 					<Text className="flex-1 font-sans text-sm text-muted-foreground">{mergeSummary(detail)}</Text>

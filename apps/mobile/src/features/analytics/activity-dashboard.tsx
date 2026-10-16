@@ -15,14 +15,14 @@ import type { CustomerAnalyticsDashboard } from "@workspace/shared";
 import * as React from "react";
 import { View } from "react-native";
 
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
-import { DataTable, type DataTableColumn, type DataTableRow } from "../../components/data-table";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
+import { Table, type TableColumn, type TableRow } from "@workspace/ui-native/components/table";
 import { KpiTile } from "../../components/kpi-tile";
 import { RankedBarList } from "../../components/ranked-bar-list";
 import { ShareBar } from "../../components/share-bar";
-import { StatTiles } from "../../components/stat-tiles";
-import { EmptyState } from "../../components/states";
+import { StatTiles } from "@workspace/ui-native/components/stat-tiles";
+import { EmptyState } from "@workspace/ui-native/components/empty";
 import { TrendChart, type TrendSeries } from "../../components/trend-chart";
 import type { ActivityInsights } from "./activity-insights";
 import type { ActivitySelection } from "./activity-range";
@@ -196,7 +196,7 @@ function ChartWithValues({ title, series, buckets, formatValue, formatTick, hint
 					testID={`${testID}-values-toggle`}
 				/>
 			</View>
-			{showValues ? <DataTable caption={`${title}, every value`} columns={table.columns} rows={table.rows} footer={table.footer} testID={`${testID}-values`} /> : null}
+			{showValues ? <Table caption={`${title}, every value`} columns={table.columns} rows={table.rows} footer={table.footer} testID={`${testID}-values`} /> : null}
 		</View>
 	);
 }
@@ -205,24 +205,24 @@ function ChartWithValues({ title, series, buckets, formatValue, formatTick, hint
 const BUCKET_COLUMN_KEY = "bucket";
 
 interface ValuesTable {
-	readonly columns: readonly DataTableColumn<string>[];
-	readonly rows: readonly DataTableRow<string>[];
-	readonly footer: DataTableRow<string>;
+	readonly columns: readonly TableColumn<string>[];
+	readonly rows: readonly TableRow<string>[];
+	readonly footer: TableRow<string>;
 }
 
 /** A row per bucket and a column per series, closed by each series' total (every chart here adds up). */
 function valuesTableOf(series: readonly TrendSeries[], bucketLabels: readonly string[], bucketColumn: string, formatValue: (value: number) => string): ValuesTable {
-	const columns: readonly DataTableColumn<string>[] = [
+	const columns: readonly TableColumn<string>[] = [
 		{ key: BUCKET_COLUMN_KEY, label: bucketColumn },
-		...series.map((item: TrendSeries): DataTableColumn<string> => ({ key: item.key, label: item.label, align: "end" })),
+		...series.map((item: TrendSeries): TableColumn<string> => ({ key: item.key, label: item.label, align: "end" })),
 	];
-	const rowOf = (key: string, label: string, valueOf: (item: TrendSeries) => number): DataTableRow<string> => ({
+	const rowOf = (key: string, label: string, valueOf: (item: TrendSeries) => number): TableRow<string> => ({
 		key,
 		cells: Object.fromEntries([[BUCKET_COLUMN_KEY, label], ...series.map((item: TrendSeries): [string, string] => [item.key, formatValue(valueOf(item))])]),
 	});
 	return {
 		columns,
-		rows: bucketLabels.map((label: string, index: number): DataTableRow<string> => rowOf(String(index), label, (item: TrendSeries): number => item.values.at(index) ?? 0)),
+		rows: bucketLabels.map((label: string, index: number): TableRow<string> => rowOf(String(index), label, (item: TrendSeries): number => item.values.at(index) ?? 0)),
 		footer: rowOf("total", "Total", (item: TrendSeries): number => item.values.reduce((sum: number, value: number): number => sum + value, 0)),
 	};
 }

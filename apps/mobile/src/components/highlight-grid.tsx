@@ -7,7 +7,7 @@
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { Icon, type LucideIcon } from "./icon";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 
 export interface HighlightItem {
 	readonly key: string;

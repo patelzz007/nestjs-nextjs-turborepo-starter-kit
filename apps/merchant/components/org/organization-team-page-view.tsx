@@ -13,6 +13,7 @@ import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { resolveActiveOrganizationLocations } from "@/lib/org/location-access";
 import { orgRoutes } from "@/lib/routes";
+import { ORGANIZATION_ROLE_LABELS } from "@/lib/org/role-labels";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -53,14 +54,6 @@ const INVITE_ROLES: readonly SelectOption<OrganizationMembershipRole>[] = [
 	{ value: "CASHIER", label: "Cashier" },
 	{ value: "POLICY_ADMIN", label: "Policy admin" },
 ];
-
-const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
-	OWNER: "Owner",
-	ADMIN: "Admin",
-	MEMBER: "Member",
-	POLICY_ADMIN: "Policy admin",
-	CASHIER: "Cashier",
-};
 
 const LOCATION_SCOPE_OPTIONS: readonly SelectOption<OrganizationLocationScopeType>[] = [
 	{ value: "ALL_LOCATIONS", label: "All locations" },
@@ -144,7 +137,7 @@ function PendingInviteRow({ invite, locationLabel, disabled, onRevoke }: Pending
 			<div className="min-w-0 space-y-1">
 				<p className="font-medium text-foreground">{invite.email}</p>
 				<p className="text-sm text-muted-foreground">
-					{ROLE_LABELS[invite.intendedRole]} · {locationLabel}
+					{ORGANIZATION_ROLE_LABELS[invite.intendedRole]} · {locationLabel}
 				</p>
 				<p className="text-xs text-muted-foreground">Invited by {invite.invitedByName}</p>
 			</div>
@@ -303,7 +296,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 									<p className="font-medium text-foreground">{member.fullName}</p>
 									<p className="text-sm text-muted-foreground">{member.email}</p>
 								</div>
-								<Badge variant="secondary">{ROLE_LABELS[member.role]}</Badge>
+								<Badge variant="secondary">{ORGANIZATION_ROLE_LABELS[member.role]}</Badge>
 							</div>
 							<p className="mt-2 text-sm text-muted-foreground">{formatLocationAccess(member, locations)}</p>
 						</div>

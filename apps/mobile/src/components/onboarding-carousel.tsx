@@ -27,10 +27,10 @@ import Animated, { Extrapolation, interpolate, useAnimatedRef, useAnimatedScroll
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
-import { useReduceMotion } from "../lib/use-reduce-motion";
+import { useReduceMotion } from "@workspace/ui-native/lib/use-reduce-motion";
 import { BrandMark } from "./brand-mark";
-import { Button } from "./button";
-import { Icon, type LucideIcon } from "./icon";
+import { Button } from "@workspace/ui-native/components/button";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 
 /** react-native-safe-area-context's view, with Uniwind's `className` (see screen.tsx). */
 const StyledSafeAreaView = withUniwind(SafeAreaView);

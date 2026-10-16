@@ -17,17 +17,17 @@ import { useRouter } from "expo-router";
 import * as React from "react";
 import { Linking, View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
 import { ChangeRow } from "../../components/change-row";
 import { LanguageBreakdown } from "../../components/language-breakdown";
-import { SelectField, type SelectOption } from "../../components/select-field";
-import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { StatTiles } from "../../components/stat-tiles";
-import { EmptyState, ErrorState } from "../../components/states";
-import { BodyText, Label, MutedText } from "../../components/text";
+import { SelectField, type SelectOption } from "@workspace/ui-native/components/select-field";
+import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { StatTiles } from "@workspace/ui-native/components/stat-tiles";
+import { EmptyState, ErrorState } from "@workspace/ui-native/components/empty";
+import { BodyText, Label, MutedText } from "@workspace/ui-native/components/text";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useNow } from "../../lib/use-now";
@@ -165,7 +165,7 @@ function RepositoryContributions({ repository, nowMs }: RepositoryContributionsP
 	return (
 		<View className="gap-5">
 			<RepositorySummary repository={repository} nowMs={nowMs} />
-			{openFailed ? <Banner tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
+			{openFailed ? <Alert tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
 			<TopContributors repository={repository} onOpen={openOnGithub} />
 			<CommitHistory repository={repository} nowMs={nowMs} onOpenCommit={openCommit} />
 		</View>

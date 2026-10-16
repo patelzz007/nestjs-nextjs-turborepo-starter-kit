@@ -14,7 +14,7 @@ import { Linking, ScrollView, Text, View } from "react-native";
 
 import { openableHref, parseMarkdown, plainTextOf, type MarkdownBlock, type MarkdownInline, type MarkdownListItem } from "../lib/markdown";
 import type { ImageSource } from "../lib/api-image-authorization";
-import { Icon } from "./icon";
+import { Icon } from "@workspace/ui-native/components/icon";
 import { MarkdownPicture } from "./markdown-picture";
 
 /** How a body's pictures load: where each address loads from (`null`: not known yet — its tile shows), and what to do when one fails. */

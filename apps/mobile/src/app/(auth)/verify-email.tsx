@@ -8,9 +8,9 @@
 import * as React from "react";
 
 import { AuthPage } from "../../components/auth-page";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { TextLink } from "../../components/text-link";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { TextLink } from "@workspace/ui-native/components/text-link";
 import { useRefreshSession } from "../../features/auth/use-refresh-session";
 import { useSignOut } from "../../features/auth/use-sign-out";
 import { useApi } from "../../lib/api-context";
@@ -70,7 +70,7 @@ export default function VerifyEmailScreen(): React.JSX.Element {
 					: `Open the verification link we sent to ${email} on any device, then come back here.`
 			}
 			footer={<TextLink leadIn="Not you?" label="Sign out" role="button" onPress={handleSignOut} />}>
-			{message === null ? null : <Banner tone={message.tone} message={message.text} />}
+			{message === null ? null : <Alert tone={message.tone} message={message.text} />}
 			<Button label="I've verified my email" onPress={checkVerified} loading={checking} />
 			<Button label="Send the link again" variant="secondary" onPress={resendLink} loading={resend.isPending} disabled={email === null} />
 		</AuthPage>

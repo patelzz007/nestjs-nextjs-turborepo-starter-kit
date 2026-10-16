@@ -17,18 +17,18 @@ import CopyIcon from "lucide-react-native/icons/copy";
 import * as React from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
 import { ChangedFile } from "../../components/changed-file";
 import { DiffStat } from "../../components/diff-stat";
 import { DiffView } from "../../components/diff-view";
-import { Icon } from "../../components/icon";
+import { Icon } from "@workspace/ui-native/components/icon";
 import { Screen } from "../../components/screen";
-import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { EmptyState, ErrorState } from "../../components/states";
-import { MutedText } from "../../components/text";
+import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { EmptyState, ErrorState } from "@workspace/ui-native/components/empty";
+import { MutedText } from "@workspace/ui-native/components/text";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useNow } from "../../lib/use-now";
@@ -119,7 +119,7 @@ function CommitView({ commit, nowMs }: CommitViewProps): React.JSX.Element {
 				<MutedText className="flex-1">{changedFilesSummary(commit)}</MutedText>
 				<DiffStat blocks={diffStatBlocks(commit.additions, commit.deletions)} testID="github-commit-diffstat" />
 			</View>
-			{commit.filesTruncated ? <Banner tone="info" message={MORE_FILES_ON_GITHUB} /> : null}
+			{commit.filesTruncated ? <Alert tone="info" message={MORE_FILES_ON_GITHUB} /> : null}
 			{commit.files.length === 0 ? (
 				<EmptyState message="This commit doesn't change any files." />
 			) : (
@@ -129,7 +129,7 @@ function CommitView({ commit, nowMs }: CommitViewProps): React.JSX.Element {
 					))}
 				</View>
 			)}
-			{openFailed ? <Banner tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
+			{openFailed ? <Alert tone="error" message={OPEN_GITHUB_FAILED_MESSAGE} /> : null}
 			<Button label="View on GitHub" accessibilityHint="Opens the commit in your browser" onPress={openOnGithub} />
 		</>
 	);

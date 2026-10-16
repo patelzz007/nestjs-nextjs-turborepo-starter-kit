@@ -10,10 +10,10 @@ import { useRouter } from "expo-router";
 import * as React from "react";
 
 import { AuthPage } from "../../components/auth-page";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { TextField } from "../../components/text-field";
-import { TextLink } from "../../components/text-link";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { TextField } from "@workspace/ui-native/components/text-field";
+import { TextLink } from "@workspace/ui-native/components/text-link";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { visibleFieldError } from "../../lib/form";
@@ -62,7 +62,7 @@ export default function SignUpScreen(): React.JSX.Element {
 			title="Create an account"
 			description="Enter your details to get started."
 			footer={<TextLink leadIn="Already have an account?" label="Sign in" onPress={backToSignIn} />}>
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
+			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			<form.Field name="fullName">
 				{(field): React.JSX.Element => (
 					<TextField

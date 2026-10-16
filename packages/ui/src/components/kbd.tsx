@@ -15,8 +15,13 @@ const Kbd = React.forwardRef<HTMLElement, React.ComponentProps<"kbd">>(function 
 	);
 });
 
-const KbdGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function KbdGroup({ className, ...props }, ref): React.JSX.Element {
-	return <div ref={ref} data-slot="kbd-group" className={cn("inline-flex items-center gap-1", className)} {...props} />;
+/**
+ * A key combination (`⌘ K`). A `<kbd>` of `<kbd>`s, as HTML marks up a chord,
+ * so it is phrasing content: valid inside a sentence (`<p>`), a tooltip or a
+ * menu item, where a `<div>` would be invalid markup and break hydration.
+ */
+const KbdGroup = React.forwardRef<HTMLElement, React.ComponentProps<"kbd">>(function KbdGroup({ className, ...props }, ref): React.JSX.Element {
+	return <kbd ref={ref} data-slot="kbd-group" className={cn("inline-flex items-center gap-1", className)} {...props} />;
 });
 
 export { Kbd, KbdGroup };

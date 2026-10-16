@@ -4,7 +4,7 @@
 
 import { addLocalDays, type LocalDate } from "@workspace/shared";
 
-import { calendarMonthOf, firstDayOf } from "../../lib/calendar";
+import { calendarMonthOf, firstDayOf } from "@workspace/ui-native/lib/calendar";
 
 /** A date of birth may be up to this many years back (from 1 January of that year). */
 export const DEMO_BIRTH_YEARS_BACK = 100;

@@ -4,8 +4,8 @@
 
 import * as React from "react";
 
-import { Card } from "../../../components/card";
-import { RadioGroup } from "../../../components/radio-group";
+import { Card } from "@workspace/ui-native/components/card";
+import { RadioGroup } from "@workspace/ui-native/components/radio-group";
 import { Screen } from "../../../components/screen";
 import { usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { PREFERENCE_MESSAGES, THEME_OPTIONS } from "../../../features/preferences/labels";

@@ -7,7 +7,7 @@ import {
 	type AppLockTimeoutMs,
 	type ThemePreference,
 } from "../../lib/secure-store";
-import type { RadioOption } from "../../components/radio-group";
+import type { RadioOption } from "@workspace/ui-native/components/radio-group";
 
 export const THEME_OPTIONS: readonly RadioOption<ThemePreference>[] = [
 	{ value: "system", label: "System", description: "Follow the device's light or dark setting" },

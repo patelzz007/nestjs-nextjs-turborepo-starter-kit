@@ -16,7 +16,7 @@ birth decades back. The same three kinds of picker exist on both platforms. They
 and data-agnostic: values are calendar days (`yyyy-MM-dd`), and validation belongs to the form's
 shared zod schema.
 
-| Need | Web (`@workspace/ui`) | Mobile (`apps/mobile/src/components`) |
+| Need | Web (`@workspace/ui`) | Mobile (`@workspace/ui-native`) |
 | --- | --- | --- |
 | One day (a date of birth, a start date) | `DatePicker` | `DateField` |
 | Several separate days (Sep 4, Sep 14, Oct 3) | `MultiDatePicker` | `MultiDateField` |
@@ -61,8 +61,17 @@ visible and only unpicking is offered.
   one to remove it), Clear empties the draft, and **Apply** hands it back. Cancel or closing the sheet
   keeps the field unchanged.
 
+## Form integration
+
+The mobile fields (`DateField`, `MultiDateField`, and the `CalendarField` trigger they share) follow
+the kit contract (packages/ui-native/README.md). They forward a ref to the trigger. They take
+`invalid` (or an `error` message), `disabled`, `loading`, `variant`, `size` and `className`. They
+report `onFocus` when the calendar sheet opens and `onBlur` when it closes, which is how a form marks
+the field touched.
+
 ## Building another picker on mobile
 
 `CalendarField` (labelled trigger, hint/error and sheet), `CalendarNavigator` (month/year header) and
 `CalendarMonthGrid` (Monday-first day buttons, each named by its full date and its role) are the
-building blocks. The calendar arithmetic is pure and tested in `src/lib/calendar.ts`.
+building blocks. They are in `packages/ui-native/src/components/`. The calendar arithmetic is pure
+and tested in `packages/ui-native/src/lib/calendar.ts`.

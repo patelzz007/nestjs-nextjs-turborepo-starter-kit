@@ -7,10 +7,10 @@
 
 import * as React from "react";
 
-import { Banner } from "../components/banner";
-import { Button } from "../components/button";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
 import { Screen } from "../components/screen";
-import { BodyText } from "../components/text";
+import { BodyText } from "@workspace/ui-native/components/text";
 import { authenticateDeviceOwner, type DeviceOwnerCheckResult } from "../features/app-lock/device-owner-authentication";
 import { readSessionScope } from "../features/session/access-token-claims";
 import { useSessionCommands } from "../features/session/facade";
@@ -91,7 +91,7 @@ export default function LockScreen(): React.JSX.Element {
 	return (
 		<Screen title={`${appName} is locked`}>
 			<BodyText>Unlock with Face ID, Touch ID, your fingerprint or your device passcode.</BodyText>
-			{failure === null ? null : <Banner tone="error" message={failure} />}
+			{failure === null ? null : <Alert tone="error" message={failure} />}
 			<Button label="Try again" onPress={tryAgain} loading={checking} />
 			<Button label="Sign out" variant="secondary" onPress={signOut} disabled={checking} />
 		</Screen>

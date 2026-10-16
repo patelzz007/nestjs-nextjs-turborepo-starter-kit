@@ -4,9 +4,9 @@
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { Button } from "./button";
-import { Checkbox } from "./checkbox";
-import { MutedText } from "./text";
+import { Button } from "@workspace/ui-native/components/button";
+import { Checkbox } from "@workspace/ui-native/components/checkbox";
+import { MutedText } from "@workspace/ui-native/components/text";
 
 export interface BackupCodesProps {
 	readonly codes: readonly string[];

@@ -6,13 +6,13 @@
 import * as React from "react";
 import { View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
-import { Card } from "../../components/card";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Card } from "@workspace/ui-native/components/card";
 import { Screen } from "../../components/screen";
-import { Skeleton, SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { ErrorState } from "../../components/states";
-import { BodyText, MutedText, Subheading } from "../../components/text";
+import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { ErrorState } from "@workspace/ui-native/components/empty";
+import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
 import { backupCodesNotice } from "../../features/two-factor/backup-codes-status";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
@@ -47,7 +47,7 @@ export default function HomeScreen(): React.JSX.Element {
 					</View>
 				</Card>
 			)}
-			{notice === null ? null : <Banner tone="warning" message={notice} />}
+			{notice === null ? null : <Alert tone="warning" message={notice} />}
 			<Card title="This is the starter shell">
 				<BodyText>Sign-in, profile, settings, security and devices work end to end. Build your product&apos;s screens on top of it.</BodyText>
 				<MutedText>See apps/mobile/README.md for how the app is put together and where new features go.</MutedText>

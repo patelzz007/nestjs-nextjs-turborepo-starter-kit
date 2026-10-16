@@ -14,8 +14,8 @@ import ShieldXIcon from "lucide-react-native/icons/shield-x";
 import WifiIcon from "lucide-react-native/icons/wifi";
 import WifiOffIcon from "lucide-react-native/icons/wifi-off";
 
-import type { LucideIcon } from "../../components/icon";
-import type { StatusPillTone } from "../../components/status-pill";
+import type { LucideIcon } from "@workspace/ui-native/components/icon";
+import type { StatusBadgeTone } from "@workspace/ui-native/components/status-badge";
 import { formatTimeLeft, secondsUntil } from "./session-countdown";
 
 export type Connectivity = "online" | "offline";
@@ -79,13 +79,13 @@ export function sessionIndicatorOf({ session, error, nowMs, rotatedAtMs }: Sessi
 	};
 }
 
-/** What a StatusPill shows (src/components/status-pill.tsx). */
+/** What a StatusBadge shows (src/components/status-pill.tsx). */
 export interface StatusPillContent {
 	readonly icon: LucideIcon;
 	/** `null`: the icon alone (compact). */
 	readonly label: string | null;
 	readonly accessibilityLabel: string;
-	readonly tone: StatusPillTone;
+	readonly tone: StatusBadgeTone;
 	readonly emphasized: boolean;
 	readonly pulsing: boolean;
 	/** Digits keep a fixed width, so a ticking countdown does not resize the pill. */

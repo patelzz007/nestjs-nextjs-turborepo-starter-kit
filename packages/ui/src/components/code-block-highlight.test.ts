@@ -7,6 +7,7 @@ import type { ShikiTransformer } from "shiki";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+	ansiToLines,
 	buildWordDecorations,
 	codeBlockLanguages,
 	codeBlockThemes,
@@ -16,6 +17,7 @@ import {
 	markdownFences,
 	normalizeCode,
 	parseLineSpec,
+	parseUnifiedDiff,
 	preloadCodeBlockHighlighter,
 	resetCodeBlockHighlighter,
 	resolveCodeBlockLanguage,
@@ -345,5 +347,134 @@ describe("markdownFences", () => {
 	it("returns prose only, trimmed, and nothing for blank input", (): void => {
 		expect(markdownFences("  just text  \n")).toEqual([{ type: "text", content: "just text", open: false }]);
 		expect(markdownFences("")).toEqual([]);
+	});
+});
+
+const ESC = "\u001b";
+const RED = "var(--code-ansi-red, var(--tone-red))";
+
+describe("ansiToLines", () => {
+	it("turns SGR foregrounds into token-backed colours, the same in both themes", (): void => {
+		expect(ansiToLines(`${ESC}[31merror${ESC}[0m: boom`, 3)).toEqual([
+			{
+				number: 3,
+				text: "error: boom",
+				tokens: [
+					{ content: "error", color: RED, colorDark: RED, fontStyle: undefined },
+					{ content: ": boom", color: undefined, colorDark: undefined, fontStyle: undefined },
+				],
+			},
+		]);
+	});
+
+	it("maps bright foregrounds to their own --code-ansi slot over the base tone", (): void => {
+		const [line] = ansiToLines(`${ESC}[94minfo`);
+		expect(line?.tokens.map((token) => token.color)).toEqual(["var(--code-ansi-bright-blue, var(--tone-blue))"]);
+	});
+
+	it("tracks bold, italic and underline with bold winning", (): void => {
+		const [line] = ansiToLines(`${ESC}[1;3mA${ESC}[22mB${ESC}[23;4mC${ESC}[24mD`);
+		expect(line?.tokens.map((token) => [token.content, token.fontStyle])).toEqual([
+			["A", "bold"],
+			["B", "italic"],
+			["C", "underline"],
+			["D", undefined],
+		]);
+	});
+
+	it("resolves 256-colour and truecolor foregrounds, clamping channels", (): void => {
+		const [line] = ansiToLines(`${ESC}[38;5;196ma${ESC}[38;5;244mb${ESC}[38;5;2mc${ESC}[38;2;10;300;4md${ESC}[39me`);
+		expect(line?.tokens.map((token) => token.color)).toEqual(["#ff0000", "#808080", "var(--code-ansi-green, var(--tone-green))", "#0aff04", undefined]);
+	});
+
+	it("consumes backgrounds without painting them", (): void => {
+		const [line] = ansiToLines(`${ESC}[41;48;5;21;48;2;1;2;3;32mok`);
+		expect(line?.tokens).toEqual([
+			{ content: "ok", color: "var(--code-ansi-green, var(--tone-green))", colorDark: "var(--code-ansi-green, var(--tone-green))", fontStyle: undefined },
+		]);
+	});
+
+	it("strips cursor movement, OSC titles/links and charset escapes but keeps the text", (): void => {
+		const [line] = ansiToLines(`${ESC}[2K${ESC}[?25l${ESC}]0;title\u0007${ESC}]8;;https://x.test${ESC}\\link${ESC}(Bdone`);
+		expect(line?.text).toBe("linkdone");
+	});
+
+	it("leaves an unrecognised escape as text and restarts styling on each line", (): void => {
+		const lines = ansiToLines(`${ESC}[31mred\r\nplain${ESC}x`);
+		expect(lines.map((line) => line.text)).toEqual(["red", `plain${ESC}x`]);
+		expect(lines.at(1)?.tokens.every((token) => token.color === undefined)).toBe(true);
+	});
+
+	it("renders blank lines with no tokens", (): void => {
+		expect(ansiToLines("a\n\nb").map((line) => line.tokens.length)).toEqual([1, 0, 1]);
+	});
+});
+
+const PATCH = [
+	"diff --git a/src/app.ts b/src/app.ts",
+	"index 1111111..2222222 100644",
+	"--- a/src/app.ts",
+	"+++ b/src/app.ts",
+	"@@ -9,3 +9,3 @@ function main() {",
+	" keep",
+	"--- removed sql comment",
+	"+++ added line",
+	" tail",
+	"diff --git a/old.md b/old.md",
+	"deleted file mode 100644",
+	"--- a/old.md",
+	"+++ /dev/null",
+	"@@ -1 +0,0 @@",
+	"-gone",
+	"\\ No newline at end of file",
+	"",
+].join("\n");
+
+describe("parseUnifiedDiff", () => {
+	it("splits a git patch into files with add/remove counts", (): void => {
+		const files = parseUnifiedDiff(PATCH);
+		expect(files.map((file) => [file.file, file.added, file.removed])).toEqual([
+			["src/app.ts", 1, 1],
+			["old.md", 0, 1],
+		]);
+	});
+
+	it("reads a hunk's body by its line counts, so content that looks like a header stays content", (): void => {
+		const [first] = parseUnifiedDiff(PATCH);
+		expect(first?.lines.map((line) => [line.text, line.state])).toEqual([
+			["function main() {", { level: "info" }],
+			["keep", undefined],
+			["-- removed sql comment", { diff: "remove" }],
+			["++ added line", { diff: "add" }],
+			["tail", undefined],
+		]);
+		expect(first?.hunks).toEqual([{ header: "@@ -9,3 +9,3 @@ function main() {", at: 1 }]);
+	});
+
+	it("labels the gutter with old/new numbers, blank on the side a line is missing from", (): void => {
+		const [first] = parseUnifiedDiff(PATCH);
+		expect(first?.lines.map((line) => line.gutter)).toEqual([" ·  ·", " 9  9", "10   ", "   10", "11 11"]);
+		expect(first?.lines.map((line) => line.number)).toEqual([1, 2, 3, 4, 5]);
+	});
+
+	it("keeps a deleted file under its old path and skips the no-newline note", (): void => {
+		const deleted = parseUnifiedDiff(PATCH).at(1);
+		expect(deleted?.lines.map((line) => line.text)).toEqual(["@@ -1 +0,0 @@", "gone"]);
+	});
+
+	it("names a plain unified diff's deletion by its old path", (): void => {
+		expect(parseUnifiedDiff("--- a/x.txt\n+++ /dev/null\n@@ -1 +0,0 @@\n-x").map((file) => file.file)).toEqual(["x.txt"]);
+	});
+
+	it("ends a short hunk at the next header instead of swallowing it", (): void => {
+		const files = parseUnifiedDiff("+++ b/a\n@@ -1,5 +1,5 @@\n a\ndiff --git a/b b/b\n+++ b/b\n@@ -1 +1 @@\n-b\n+c");
+		expect(files.map((file) => [file.file, file.lines.length])).toEqual([
+			["a", 2],
+			["b", 3],
+		]);
+	});
+
+	it("returns no files for text that is not a patch", (): void => {
+		expect(parseUnifiedDiff("hello\nworld")).toEqual([]);
 	});
 });

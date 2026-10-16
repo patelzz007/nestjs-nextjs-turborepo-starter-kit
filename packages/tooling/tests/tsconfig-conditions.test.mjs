@@ -7,12 +7,13 @@
  * `error` type). This test resolves every tsconfig in the repo (following
  * `extends`) and fails when one is missing the condition.
  */
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+
+import { workingTreeFiles } from "../scripts/lib/working-tree-files.mjs";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const SOURCE_CONDITION = "development";
@@ -31,10 +32,7 @@ function hasSourceCondition(exportsField) {
 }
 
 function trackedFiles(pattern) {
-	// Tracked or new (not ignored) and present on disk.
-	return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "--", pattern], { cwd: REPO_ROOT, encoding: "utf8" })
-		.split("\n")
-		.filter((line) => line.length > 0 && existsSync(path.join(REPO_ROOT, line)));
+	return workingTreeFiles(REPO_ROOT, [pattern]);
 }
 
 /** Workspace name → whether its exports map uses the `development` source condition. */

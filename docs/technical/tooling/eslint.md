@@ -440,6 +440,19 @@ export default [
 > `src/schemas/**` — the non-negotiable rules (no `any`, explicit return types, etc.)
 > still apply everywhere.
 
+### `packages/eslint-config/react-internal.js`: `approvedRuleExceptions`
+
+The one approved exception to a shared rule, applied last in the `react-internal` config so it
+wins over the blocks above:
+
+| File | Rules off | Why |
+| --- | --- | --- |
+| `packages/ui/src/components/signature-pad.tsx` | `jsx-a11y/no-noninteractive-element-interactions`, `jsx-a11y/no-noninteractive-tabindex` | The drawing area is a focusable `role="application"` with undo / redo shortcuts (ported from reui). WAI-ARIA allows focus and key handling on `application`, but jsx-a11y classifies it as non-interactive. |
+
+Approved by a maintainer on 2026-10-16 as the only exception for now. `tests/configs.test.js`
+pins the list exactly and checks that the rules stay errors in every other file. Adding an entry
+needs a maintainer's approval and an update to that test. Inline `eslint-disable` stays forbidden.
+
 ---
 
 ## 5. Prettier integration

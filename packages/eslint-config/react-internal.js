@@ -7,6 +7,30 @@ import { reactRuleBlocks } from "./react-rules.js";
 import { withErrorSeverity } from "./rule-severity.js";
 
 /**
+ * The approved rule exceptions: each a single file and the exact rules it may
+ * break, approved by a maintainer. This list is the only sanctioned place to
+ * relax a rule (no inline `eslint-disable`), and `tests/configs.test.js`
+ * pins its contents so nothing is added silently.
+ *
+ * - `signature-pad.tsx`: the drawing area is a focusable `role="application"`
+ *   with undo / redo shortcuts (WAI-ARIA allows focus and key handling on
+ *   `application`), but jsx-a11y classifies that role as non-interactive.
+ *   Approved 2026-10-16 as the only exception for now.
+ *
+ * @type {readonly import("eslint").Linter.Config[]}
+ */
+export const approvedRuleExceptions = [
+	{
+		name: "approved-exception/signature-pad-application-role",
+		files: ["src/components/signature-pad.tsx"],
+		rules: {
+			"jsx-a11y/no-noninteractive-element-interactions": "off",
+			"jsx-a11y/no-noninteractive-tabindex": "off",
+		},
+	},
+];
+
+/**
  * A custom ESLint configuration for libraries that use React.
  * Used by packages/ui.
  *
@@ -38,4 +62,7 @@ export const config = [
 			"jsx-a11y/aria-role": ["error", { ignoreNonDom: true }],
 		},
 	},
+
+	// ── Approved exceptions (last, so they apply over the blocks above) ──
+	...approvedRuleExceptions,
 ];

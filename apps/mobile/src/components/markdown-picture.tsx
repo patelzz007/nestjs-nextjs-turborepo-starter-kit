@@ -16,7 +16,7 @@ import { withUniwind } from "uniwind";
 
 import type { ImageSource } from "../lib/api-image-authorization";
 import { openableHref, type MarkdownImage } from "../lib/markdown";
-import { Icon } from "./icon";
+import { Icon } from "@workspace/ui-native/components/icon";
 import { ImageViewer } from "./image-viewer";
 
 const StyledImage = withUniwind(Image);

@@ -12,12 +12,12 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
-import { KeyboardAvoidingView } from "./keyboard-avoiding-view";
+import { KeyboardAvoidingView } from "@workspace/ui-native/components/keyboard-avoiding-view";
 
 import { usePageHeaderClearance } from "../lib/page-header-clearance";
 import { useKeyboardVisible } from "../lib/use-keyboard-visible";
 import { useTabBarClearance } from "../lib/use-tab-bar-clearance";
-import { Heading, MutedText } from "./text";
+import { Heading, MutedText } from "@workspace/ui-native/components/text";
 
 export interface ScreenProps {
 	/** Drawn at the top of the content outside the app shell; inside it the header shows the route's title instead. */

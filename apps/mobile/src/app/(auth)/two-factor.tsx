@@ -15,10 +15,10 @@ import { useRouter } from "expo-router";
 import * as React from "react";
 
 import { AuthPage } from "../../components/auth-page";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { TextField } from "../../components/text-field";
-import { TextLink } from "../../components/text-link";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { TextField } from "@workspace/ui-native/components/text-field";
+import { TextLink } from "@workspace/ui-native/components/text-link";
 import { EXPIRED_STEP_MESSAGE, TwoFactorRouteParamsSchema } from "../../features/auth/sign-in-steps";
 import { useSignInStepHandler } from "../../features/auth/use-sign-in-step";
 import { useApi } from "../../lib/api-context";
@@ -41,7 +41,7 @@ export default function TwoFactorScreen(): React.JSX.Element {
 	if (params === null) {
 		return (
 			<AuthPage title="Two-factor authentication">
-				<Banner tone="error" message={EXPIRED_STEP_MESSAGE} />
+				<Alert tone="error" message={EXPIRED_STEP_MESSAGE} />
 				<Button label="Back to sign in" onPress={startOver} />
 			</AuthPage>
 		);
@@ -106,7 +106,7 @@ function TwoFactorChallenge({ tempToken, onStartOver }: TwoFactorChallengeProps)
 			title="Two-factor authentication"
 			description={useBackupCode ? "Enter one of your unused backup codes. Each code works once." : "Enter the 6-digit code from your authenticator app."}
 			footer={<TextLink leadIn="Not you?" label="Use a different account" onPress={onStartOver} />}>
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
+			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			{useBackupCode ? (
 				<>
 					<backupForm.Field name="backupCode">

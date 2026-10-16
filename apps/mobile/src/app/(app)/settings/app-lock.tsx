@@ -4,11 +4,11 @@
 
 import * as React from "react";
 
-import { Button } from "../../../components/button";
-import { Card } from "../../../components/card";
-import { RadioGroup } from "../../../components/radio-group";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
+import { RadioGroup } from "@workspace/ui-native/components/radio-group";
 import { Screen } from "../../../components/screen";
-import { BodyText, MutedText } from "../../../components/text";
+import { BodyText, MutedText } from "@workspace/ui-native/components/text";
 import { turnAppLockOff, turnAppLockOn, type AppLockChangeResult } from "../../../features/app-lock/app-lock-enrollment";
 import { useAppLockEnabled, useAppLockTimeoutMs, usePreferencesCommands } from "../../../features/preferences/facade";
 import { APP_LOCK_TIMEOUT_OPTIONS, PREFERENCE_MESSAGES } from "../../../features/preferences/labels";

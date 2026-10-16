@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ConfirmDialog } from "../../components/confirm-dialog";
+import { AlertDialog } from "@workspace/ui-native/components/alert-dialog";
 import type { SignOutConfirmation } from "./use-sign-out-confirmation";
 
 export interface SignOutDialogProps {
@@ -11,7 +11,7 @@ export interface SignOutDialogProps {
 
 export function SignOutDialog({ confirmation }: SignOutDialogProps): React.JSX.Element {
 	return (
-		<ConfirmDialog
+		<AlertDialog
 			visible={confirmation.isConfirming}
 			title="Sign out?"
 			description="You'll need your password to sign in again on this device."

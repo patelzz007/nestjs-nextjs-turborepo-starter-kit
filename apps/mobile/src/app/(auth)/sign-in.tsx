@@ -9,11 +9,11 @@ import * as React from "react";
 import { View } from "react-native";
 
 import { AuthPage } from "../../components/auth-page";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { TextField } from "../../components/text-field";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { TextField } from "@workspace/ui-native/components/text-field";
 import { QuickSignIn, type QuickSignInChoice } from "../../components/quick-sign-in";
-import { TextLink } from "../../components/text-link";
+import { TextLink } from "@workspace/ui-native/components/text-link";
 import { useDemoAccounts, type DemoAccount } from "../../features/auth/demo-accounts";
 import { useSignInStepHandler } from "../../features/auth/use-sign-in-step";
 import { useSignedOutReason } from "../../features/session/facade";
@@ -88,8 +88,8 @@ export default function SignInScreen(): React.JSX.Element {
 
 	return (
 		<AuthPage title="Welcome back" description="Sign in to continue." footer={<TextLink leadIn="Don't have an account?" label="Create one" onPress={openSignUp} />}>
-			{notice === null ? null : <Banner tone="info" message={notice} testID="signed-out-notice" />}
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
+			{notice === null ? null : <Alert tone="info" message={notice} testID="signed-out-notice" />}
+			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			<form.Field name="email">
 				{(field): React.JSX.Element => (
 					<TextField

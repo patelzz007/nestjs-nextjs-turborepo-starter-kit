@@ -18,8 +18,8 @@ import { Pressable, View } from "react-native";
 import Animated, { FadeIn, FadeOut, ReduceMotion, withTiming, type LayoutAnimation } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
-import { CONTROL_SWAP_MS, PAGE_TITLE_TIMING } from "../lib/motion";
-import { Icon } from "./icon";
+import { CONTROL_SWAP_MS, PAGE_TITLE_TIMING } from "@workspace/ui-native/lib/motion";
+import { Icon } from "@workspace/ui-native/components/icon";
 
 const StyledAnimatedView = withUniwind(Animated.View);
 const StyledAnimatedText = withUniwind(Animated.Text);

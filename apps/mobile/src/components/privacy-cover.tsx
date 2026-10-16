@@ -4,7 +4,7 @@
 import * as React from "react";
 import { View } from "react-native";
 
-import { Heading } from "./text";
+import { Heading } from "@workspace/ui-native/components/text";
 
 export interface PrivacyCoverProps {
 	readonly visible: boolean;

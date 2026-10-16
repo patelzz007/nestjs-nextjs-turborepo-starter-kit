@@ -19,23 +19,19 @@ import { resolveActiveOrganizationMembership } from "@/lib/session/server-capabi
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { Badge } from "@workspace/ui/components/badge";
-import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
-import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
 import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
 import { SidebarFooter } from "@workspace/ui/components/sidebar";
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
-import { BrandMark } from "@workspace/ui/components/brand-mark";
 import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
 import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { AlertCircle } from "lucide-react";
+import { MerchantContextSwitcher } from "@/components/layout/merchant-context-switcher";
 import { merchantProfileMenuItems } from "@/components/layout/merchant-profile-menu";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -107,15 +103,6 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 		[expandedItems, pathname, setItemExpanded],
 	);
 
-	const handleStoreChange = React.useCallback(
-		(value: string | null): void => {
-			if (value !== null) {
-				onStoreChange(value);
-			}
-		},
-		[onStoreChange],
-	);
-
 	const logout = useMerchantLogout();
 	const router = useRouter();
 	const settingsPath = useOrganizationPath(ORG_ROUTES.settings.index);
@@ -146,15 +133,9 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 		[accountPath, apiKeysPath, can, dashboardPath, isEnrollmentLocked, navigate, settingsPath],
 	);
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
-	// Feeds both the store switcher's `items` (the closed trigger's label) and its rendered options.
-	const storeOptions = React.useMemo(
-		(): readonly SelectOption<string>[] => memberships.map((row): SelectOption<string> => ({ value: row.organizationSlug, label: row.displayName })),
-		[memberships],
-	);
-
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden text-sidebar-foreground">
-			<PanelSidebarHeader title={MERCHANT_SIDEBAR_MENU.header.title} subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle} icon={<BrandMark className="size-5 text-primary" />} />
+			<MerchantContextSwitcher memberships={memberships} organizationSlug={organizationSlug} onStoreChange={onStoreChange} />
 
 			<PanelSidebarNav
 				view={view}
@@ -191,37 +172,6 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 			/>
 
 			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
-				{activeMembership !== undefined ? (
-					<div className="px-2 pb-2">
-						<div className="min-w-0 overflow-hidden rounded-lg border border-border bg-background/60 px-3 py-3">
-							<p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Active store</p>
-							<p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground" title={activeMembership.displayName}>
-								{activeMembership.displayName}
-							</p>
-							<Badge variant="secondary" className="mt-2">
-								{activeMembership.role}
-							</Badge>
-							{memberships.length > 1 ? (
-								<div className="mt-3 space-y-1">
-									<Label className="text-xs">Switch store</Label>
-									<Select<string> items={storeOptions} value={organizationSlug ?? null} onValueChange={handleStoreChange}>
-										<SelectTrigger className="w-full min-w-0">
-											<SelectValue placeholder="Select store" />
-										</SelectTrigger>
-										<SelectContent>
-											{storeOptions.map((option) => (
-												<SelectItem key={option.value} value={option.value}>
-													{option.label}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-							) : null}
-						</div>
-					</div>
-				) : null}
-
 				<PanelSidebarFooterNav
 					view={view}
 					expandedItems={expandedItems}

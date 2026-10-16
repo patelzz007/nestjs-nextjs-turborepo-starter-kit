@@ -4,7 +4,22 @@
 const path = require("node:path");
 
 /** Packages that must exist once: resolved from this app (see metro.config.js). */
-const SINGLETON_PACKAGES = ["react", "react-native", "@tanstack/react-query"];
+const SINGLETON_PACKAGES = [
+	"react",
+	"react-native",
+	"@tanstack/react-query",
+	// Imported by the UI kit (packages/ui-native) too: native modules and runtime
+	// state (Uniwind's theme, Reanimated's worklets) must be this app's one copy.
+	"uniwind",
+	"react-native-reanimated",
+	"react-native-worklets",
+	"react-native-svg",
+	"react-native-safe-area-context",
+	"react-native-keyboard-controller",
+	"lucide-react-native",
+	"expo-haptics",
+	"expo-image",
+];
 
 /** The export condition that points a workspace package at its TypeScript source. */
 const WORKSPACE_SOURCE_CONDITION = "development";
@@ -29,18 +44,21 @@ function isSingleton(request) {
 	return SINGLETON_PACKAGES.some((name) => request === name || request.startsWith(`${name}/`));
 }
 
+/** Lucide's CommonJS build in place of its ES-module one (see COMMONJS_UNDER_TEST_PACKAGES). */
+function commonJsConditions(options) {
+	return ["require", ...(options.conditions ?? []).filter((condition) => !ES_MODULE_CONDITIONS.has(condition))];
+}
+
 module.exports = (request, options) => {
 	if (isSingleton(request)) {
-		return options.defaultResolver(request, { ...options, basedir: path.resolve(__dirname) });
+		const fromApp = { ...options, basedir: path.resolve(__dirname) };
+		return options.defaultResolver(request, isCommonJsUnderTest(request) ? { ...fromApp, conditions: commonJsConditions(options) } : fromApp);
 	}
 	if (request.startsWith(WORKSPACE_SCOPE)) {
 		return options.defaultResolver(request, { ...options, conditions: [...(options.conditions ?? []), WORKSPACE_SOURCE_CONDITION] });
 	}
 	if (isCommonJsUnderTest(request)) {
-		return options.defaultResolver(request, {
-			...options,
-			conditions: ["require", ...(options.conditions ?? []).filter((condition) => !ES_MODULE_CONDITIONS.has(condition))],
-		});
+		return options.defaultResolver(request, { ...options, conditions: commonJsConditions(options) });
 	}
 	return options.defaultResolver(request, options);
 };

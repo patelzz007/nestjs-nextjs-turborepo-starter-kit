@@ -5,6 +5,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
+	ansiToLines,
 	CodeBlock,
 	CodeBlockContent,
 	CodeBlockCopyButton,
@@ -17,6 +18,7 @@ import {
 	CodeBlockWrapToggle,
 	markdownCodeProps,
 	markdownFences,
+	parseUnifiedDiff,
 	useCodeBlockConfig,
 	useCodeBlockFolding,
 	useCodeBlockSelection,
@@ -142,6 +144,23 @@ describe("CodeBlock rendering", () => {
 		expect(row(container, 3).getAttribute("data-diff")).toBe("add");
 		expect(row(container, 3).getAttribute("data-gutter")).toBe("    1");
 		expect(row(container, 1).getAttribute("data-level")).toBe("info");
+	});
+
+	it("renders a parsed unified patch straight from the component's re-export", (): void => {
+		const [file] = parseUnifiedDiff("diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-old\n+new");
+		const { container } = render(<CodeBlock lines={file?.lines ?? []} showLineNumbers />);
+		expect(file?.file).toBe("a.ts");
+		expect(row(container, 2).getAttribute("data-diff")).toBe("remove");
+		expect(row(container, 3).getAttribute("data-diff")).toBe("add");
+		expect(row(container, 3).getAttribute("data-gutter")).toBe("    1");
+	});
+
+	it("renders terminal output from ansiToLines with token-backed colours", (): void => {
+		const { container } = render(<CodeBlock lines={ansiToLines("\u001b[32mok\u001b[0m done")} />);
+		const token = row(container, 1).querySelector<HTMLElement>("[data-slot=code-block-token]");
+		expect(token?.textContent).toBe("ok");
+		expect(token?.style.getPropertyValue("--cb-c")).toBe("var(--code-ansi-green, var(--tone-green))");
+		expect(row(container, 1).textContent).toContain("ok done");
 	});
 
 	it("dims unfocused lines in focus mode", (): void => {

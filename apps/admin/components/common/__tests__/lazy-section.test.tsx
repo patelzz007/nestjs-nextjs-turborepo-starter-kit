@@ -47,6 +47,23 @@ describe("LazySection", () => {
 		expect(disconnect).toHaveBeenCalled();
 	});
 
+	it("draws a caller's static placeholder instead of the section bones until it mounts", () => {
+		vi.stubGlobal(
+			"IntersectionObserver",
+			vi.fn(function OffscreenObserver() {
+				return { observe: vi.fn(), disconnect: vi.fn() };
+			}),
+		);
+		const { container } = render(
+			<LazySection height="h-10" placeholder={<div data-testid="static-box" />}>
+				<p>Section body</p>
+			</LazySection>,
+		);
+		expect(screen.queryByText("Section body")).toBeNull();
+		expect(screen.getByTestId("static-box").closest('[aria-hidden="true"]')).not.toBeNull();
+		expect(container.querySelector('[data-skeleton="section"]')).toBeNull();
+	});
+
 	it("shows the content without an animation-frame workaround when IntersectionObserver is unavailable", () => {
 		vi.stubGlobal("IntersectionObserver", undefined);
 		const requestFrame = vi.spyOn(window, "requestAnimationFrame");

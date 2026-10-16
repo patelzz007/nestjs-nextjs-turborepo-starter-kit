@@ -25,7 +25,22 @@ const { withUniwindConfig } = require("uniwind/metro");
 const config = getDefaultConfig(__dirname);
 
 /** Packages that must exist once in the bundle; resolved from this app. */
-const SINGLETON_PACKAGES = ["react", "react-native", "@tanstack/react-query"];
+const SINGLETON_PACKAGES = [
+	"react",
+	"react-native",
+	"@tanstack/react-query",
+	// Imported by the UI kit (packages/ui-native) too: native modules and runtime
+	// state (Uniwind's theme, Reanimated's worklets) must be this app's one copy.
+	"uniwind",
+	"react-native-reanimated",
+	"react-native-worklets",
+	"react-native-svg",
+	"react-native-safe-area-context",
+	"react-native-keyboard-controller",
+	"lucide-react-native",
+	"expo-haptics",
+	"expo-image",
+];
 
 /** Where a singleton import is resolved from: this app's own package.json. */
 const APP_ORIGIN = path.join(__dirname, "package.json");

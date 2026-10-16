@@ -13,8 +13,8 @@ import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
 import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
-import { SELECTION_SPRING } from "../lib/motion";
-import { Icon, type LucideIcon } from "./icon";
+import { SELECTION_SPRING } from "@workspace/ui-native/lib/motion";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 
 /** Reanimated's view with Uniwind's `className` (static classes, animated `style`). */
 const StyledAnimatedView = withUniwind(Animated.View);

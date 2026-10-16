@@ -1,10 +1,12 @@
 // The app drawer's menu (ADR 038), in display order: the five tabs first, then
 // the account and preference screens that otherwise sit two taps deep under
 // Settings, and — for people the API lets use them — the GitHub pull-request
-// screens. Labels use the same words as the screens they open. Two-factor
+// screens, and the UI kit's Components gallery (Developer). Labels use the same
+// words as the screens they open. Two-factor
 // authentication is reached through Security: its own route is an enrollment
 // flow, not a settings page.
 
+import BlocksIcon from "lucide-react-native/icons/blocks";
 import GitPullRequestIcon from "lucide-react-native/icons/git-pull-request";
 import KeyRoundIcon from "lucide-react-native/icons/key-round";
 import LockKeyholeIcon from "lucide-react-native/icons/lock-keyhole";
@@ -13,7 +15,7 @@ import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 import SmartphoneIcon from "lucide-react-native/icons/smartphone";
 
 import type { DrawerSectionTone } from "../../components/drawer-menu";
-import type { LucideIcon } from "../../components/icon";
+import type { LucideIcon } from "@workspace/ui-native/components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
 import { APP_TABS, type AppTab } from "./app-tabs";
@@ -59,6 +61,11 @@ export const DRAWER_GROUPS: readonly DrawerDestinationGroup[] = [
 			{ label: "Appearance", icon: PaletteIcon, route: ROUTES.appearance, isTab: false },
 			{ label: "App lock", icon: LockKeyholeIcon, route: ROUTES.appLock, isTab: false },
 		],
+	},
+	{
+		title: "Developer",
+		tone: "amber",
+		destinations: [{ label: "Components", icon: BlocksIcon, route: ROUTES.components, isTab: false }],
 	},
 ];
 

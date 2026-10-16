@@ -238,6 +238,15 @@ export function useActiveOrganizationName(): string | undefined {
 	return useActiveOrganizationSummary()?.displayName;
 }
 
+/**
+ * The active organization's store logo — `null` when it has none (screens show
+ * a name monogram), `undefined` until its context has loaded. Read from the
+ * shared organization-context query, which every logo change reloads.
+ */
+export function useActiveOrganizationLogo(): OrganizationContextResponse["organization"]["logo"] | undefined {
+	return useActiveOrganizationSummary()?.logo;
+}
+
 /** The active organization as the shared organization-context query has it (`undefined` until loaded). */
 function useActiveOrganizationSummary(): OrganizationContextResponse["organization"] | undefined {
 	const { api } = useAuth();

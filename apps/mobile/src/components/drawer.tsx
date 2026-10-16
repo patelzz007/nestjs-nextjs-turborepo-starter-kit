@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 import { scheduleOnRN } from "react-native-worklets";
 
-import { PANEL_SPRING } from "../lib/motion";
+import { PANEL_SPRING } from "@workspace/ui-native/lib/motion";
 import { isHorizontalDrag, progressWhileClosing, progressWhileOpening, settlesOpen } from "./drawer-gesture";
 
 /** Reanimated's view with Uniwind's `className` (static classes, animated `style`). */

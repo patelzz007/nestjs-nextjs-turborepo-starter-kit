@@ -10,13 +10,19 @@
 // - Optional headless-tree features are detected with the instance's own
 //   `in` check (its proxy throws when a method's feature is not loaded), so
 //   drag-and-drop and search states only appear when those features are on.
-// - Indentation is an inline `padding-inline-start` (no `--tree-*` custom
-//   properties, which would need a cast to fit `CSSProperties`).
+// - Indentation is an inline `padding-inline-start`, so it applies without
+//   relying on a utility class. ReUI's `--tree-indent` (root) and
+//   `--tree-padding` (item) custom properties are set as well, typed through
+//   an intersection with `CSSProperties` (no cast), so ReUI examples that draw
+//   indent guides from them keep working.
 // - The search-match highlight uses the `info-soft` token, not `blue-50`.
 // - A part used outside its parent throws, like the kit's other compound
 //   components, instead of warning and rendering nothing.
 // - The caller's props are merged after headless-tree's, so its plain values
 //   (e.g. `aria-label`) win; event handlers from both are chained.
+// - Item state attributes (`data-folder`, `data-selected`, …) are spelled
+//   `"true"` / `"false"` as in ReUI (absent when the feature is not loaded), so
+//   the label's `in-data-[selected=true]`-style selectors match.
 // - Every part forwards its ref. The generic parts (`Tree`, `TreeItem`,
 //   `TreeItemLabel`) take `ref` as a regular prop (React 19), because
 //   `forwardRef` erases their item type `T`.
@@ -45,6 +51,15 @@ interface TreeItemContextValue {
 	readonly isExpanded: boolean;
 }
 
+/** The root's style: the caller's plus ReUI's per-level indent variable. */
+type TreeStyle = React.CSSProperties & Readonly<Record<"--tree-indent", string>>;
+/** An item's style: the caller's plus its indentation, as a property and as ReUI's variable. */
+type TreeItemStyle = React.CSSProperties & Readonly<Record<"--tree-padding", string>>;
+
+function pixels(value: number): string {
+	return `${String(value)}px`;
+}
+
 const TreeContext = React.createContext<TreeContextValue | null>(null);
 const TreeItemContext = React.createContext<TreeItemContextValue | null>(null);
 
@@ -64,9 +79,16 @@ function requireItemFacts(context: TreeItemContextValue | null): TreeItemContext
 	return context;
 }
 
-/** Whether an optional feature's flag is on: `false` when the feature is not loaded. */
-function featureFlag(isLoaded: boolean, read: () => boolean): boolean {
-	return isLoaded && read();
+/** A boolean `data-*` value, spelled out as ReUI does so `data-[folder=true]`-style selectors match. */
+type TreeFlagAttribute = "true" | "false";
+
+function flagAttribute(isOn: boolean): TreeFlagAttribute {
+	return isOn ? "true" : "false";
+}
+
+/** An optional feature's flag: absent when the feature is not loaded (its proxy would throw). */
+function featureFlagAttribute(isLoaded: boolean, read: () => boolean): TreeFlagAttribute | undefined {
+	return isLoaded ? flagAttribute(read()) : undefined;
 }
 
 interface TreeProps<T> extends Omit<React.ComponentProps<"div">, "ref"> {
@@ -89,10 +111,12 @@ function Tree<T>({ ref, tree, indent = DEFAULT_TREE_INDENT_PX, toggleIconType = 
 		[getDragLineStyle, hasDragAndDrop, indent, toggleIconType],
 	);
 
+	const rootStyle = React.useMemo((): TreeStyle => ({ "--tree-indent": pixels(indent) }), [indent]);
+
 	const element = useRender({
 		ref,
 		defaultTagName: "div",
-		props: mergeProps<"div">({ className: cn("flex flex-col", className) }, tree.getContainerProps(), props),
+		props: mergeProps<"div">({ style: rootStyle, className: cn("flex flex-col", className) }, tree.getContainerProps(), props),
 		state: { slot: "tree" },
 	});
 
@@ -113,8 +137,15 @@ function TreeItem<T>({ ref, item, indent, className, render, children, style, ..
 	const isFolder = item.isFolder();
 	const isExpanded = item.isExpanded();
 	const name = item.getItemName();
+	const padding = pixels(level * (indent ?? tree.indent));
+	const itemStyle: TreeItemStyle = { ...style, paddingInlineStart: padding, "--tree-padding": padding };
 
 	const itemContext = React.useMemo<TreeItemContextValue>(() => ({ name, isFolder, isExpanded }), [isExpanded, isFolder, name]);
+
+	const focusFlag = featureFlagAttribute("isFocused" in item, () => item.isFocused());
+	const selectedFlag = featureFlagAttribute("isSelected" in item, () => item.isSelected());
+	const dragTargetFlag = featureFlagAttribute("isDragTarget" in item, () => item.isDragTarget());
+	const searchMatchFlag = featureFlagAttribute("isMatchingSearch" in item, () => item.isMatchingSearch());
 
 	const element = useRender({
 		ref,
@@ -122,7 +153,7 @@ function TreeItem<T>({ ref, item, indent, className, render, children, style, ..
 		render,
 		props: mergeProps<"button">(
 			{
-				style: { ...style, paddingInlineStart: `${String(level * (indent ?? tree.indent))}px` },
+				style: itemStyle,
 				className: cn("z-10 outline-hidden select-none not-last:pb-0.5 focus:z-20 data-[disabled]:pointer-events-none data-[disabled]:opacity-50", className),
 				"aria-expanded": isExpanded,
 				children,
@@ -130,13 +161,14 @@ function TreeItem<T>({ ref, item, indent, className, render, children, style, ..
 			item.getProps(),
 			props,
 		),
+		// String values become `data-*="true"` / `"false"`; `undefined` (feature not loaded) omits the attribute.
 		state: {
 			slot: "tree-item",
-			focus: featureFlag("isFocused" in item, () => item.isFocused()),
-			folder: isFolder,
-			selected: featureFlag("isSelected" in item, () => item.isSelected()),
-			"drag-target": featureFlag("isDragTarget" in item, () => item.isDragTarget()),
-			"search-match": featureFlag("isMatchingSearch" in item, () => item.isMatchingSearch()),
+			folder: flagAttribute(isFolder),
+			focus: focusFlag,
+			selected: selectedFlag,
+			"drag-target": dragTargetFlag,
+			"search-match": searchMatchFlag,
 		},
 	});
 

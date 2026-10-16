@@ -4,7 +4,7 @@
 
 import * as React from "react";
 
-import { StatusPill } from "../../components/status-pill";
+import { StatusBadge } from "@workspace/ui-native/components/status-badge";
 import { useConnectivity, useSessionIndicator } from "./facade";
 import { networkPillContent, sessionPillContent } from "./indicators";
 
@@ -15,10 +15,10 @@ export interface AppStatusPillProps {
 
 export function NetworkStatusPill({ compact, testID }: AppStatusPillProps): React.JSX.Element {
 	const content = networkPillContent(useConnectivity(), compact);
-	return <StatusPill {...content} {...(testID === undefined ? {} : { testID })} />;
+	return <StatusBadge {...content} {...(testID === undefined ? {} : { testID })} />;
 }
 
 export function SessionStatusPill({ compact, testID }: AppStatusPillProps): React.JSX.Element {
 	const content = sessionPillContent(useSessionIndicator(), compact);
-	return <StatusPill {...content} {...(testID === undefined ? {} : { testID })} />;
+	return <StatusBadge {...content} {...(testID === undefined ? {} : { testID })} />;
 }

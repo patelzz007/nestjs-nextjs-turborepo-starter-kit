@@ -133,6 +133,11 @@
 							"icon": "ShieldCheck"
 						}
 					]
+				},
+				{
+					"title": "Components",
+					"url": "/components",
+					"icon": "Blocks"
 				}
 			]
 		}

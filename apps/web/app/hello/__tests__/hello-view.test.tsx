@@ -1,0 +1,94 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import { PROFILE_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { TEST_RESPONSE_META, testEnvelope } from "@/test-support/envelope";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { LIST_SLOT_INDEX, epochMs, UserResponseSchema, type Envelope, type UserResponse } from "@workspace/shared";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import HelloView from "../hello-view";
+
+interface MeQueryOptions {
+	readonly initialData?: Envelope<UserResponse>;
+	readonly initialDataUpdatedAt?: number;
+}
+
+interface PendingQuery {
+	readonly data: undefined;
+	readonly isLoading: true;
+	readonly error: null;
+}
+
+const PENDING: PendingQuery = { data: undefined, isLoading: true, error: null };
+
+const { meUseQuery, permissionsUseQuery, session } = vi.hoisted(() => ({
+	meUseQuery: vi.fn<(input: undefined, options: MeQueryOptions) => PendingQuery>(),
+	permissionsUseQuery: vi.fn<(input: undefined) => PendingQuery>(),
+	/** `useIsServerRenderedSession()` — false once the tab crossed a sign-in / sign-out. */
+	session: { serverRendered: true },
+}));
+
+vi.mock("@workspace/client/lib/auth", () => ({
+	useAuth: (): {
+		readonly api: { readonly auth: { readonly me: { readonly useQuery: typeof meUseQuery }; readonly permissions: { readonly useQuery: typeof permissionsUseQuery } } };
+	} => ({
+		api: { auth: { me: { useQuery: meUseQuery }, permissions: { useQuery: permissionsUseQuery } } },
+	}),
+	useAuthUser: (): null => null,
+	useIsServerRenderedSession: (): boolean => session.serverRendered,
+}));
+
+const SERVER_ANSWERED_AT = epochMs(1_790_000_000_000);
+
+const SERVER_PROFILE: Envelope<UserResponse> = testEnvelope(
+	UserResponseSchema.parse({
+		id: "member-x",
+		email: "x@example.com",
+		fullName: "Member X",
+		isActive: true,
+		isSuperAdmin: false,
+		isEmailVerified: true,
+		twoFactorEnabled: false,
+		hasAdminAccess: false,
+		tokenVersion: 1,
+		roles: [],
+		createdAt: epochMs(0),
+		updatedAt: epochMs(0),
+		isDeleted: false,
+		deletedAt: null,
+	}),
+	{ ...TEST_RESPONSE_META, timestamp: SERVER_ANSWERED_AT },
+);
+
+function lastMeOptions(): MeQueryOptions | undefined {
+	return meUseQuery.mock.lastCall?.[LIST_SLOT_INDEX.second];
+}
+
+beforeEach((): void => {
+	session.serverRendered = true;
+	meUseQuery.mockReturnValue(PENDING);
+	permissionsUseQuery.mockReturnValue(PENDING);
+});
+
+afterEach((): void => {
+	cleanup();
+	meUseQuery.mockReset();
+	permissionsUseQuery.mockReset();
+});
+
+describe("HelloView server-rendered profile", () => {
+	it("seeds /auth/me with the server's profile, stamped with the server's answer time", () => {
+		render(<HelloView initialEnvelope={SERVER_PROFILE} />, { wrapper: UiKitTestProviders });
+
+		expect(lastMeOptions()).toEqual({ initialData: SERVER_PROFILE, initialDataUpdatedAt: SERVER_ANSWERED_AT });
+	});
+
+	it("never seeds /auth/me with it once the tab crossed a session boundary (sign-out, another member)", () => {
+		session.serverRendered = false;
+
+		render(<HelloView initialEnvelope={SERVER_PROFILE} />, { wrapper: UiKitTestProviders });
+
+		expect(lastMeOptions()?.initialData).toBeUndefined();
+		expect(screen.getByRole("status").textContent).toBe(PROFILE_LOADING_LABELS.loading);
+	});
+});

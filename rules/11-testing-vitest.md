@@ -169,6 +169,20 @@ it('calls onRowClick with the clicked order when a row is clicked', async () => 
 });
 ```
 
+## Where tests live — a `__tests__/` folder beside the code
+
+In every front-end workspace (`apps/web`, `apps/admin`, `apps/merchant`, `apps/docs`, `apps/mobile`, `packages/ui-native`) a unit test sits in a `__tests__/` folder **next to** the code it tests, never in the same folder as it:
+
+```text
+components/account/profile-form.tsx
+components/account/__tests__/profile-form.test.tsx
+```
+
+- Next.js treats `_`-prefixed folders inside `app/` as private, so `app/**/__tests__/` never becomes a route.
+- Expo Router bundles EVERY file under `apps/mobile/src/app`, so the mobile route screens' tests mirror the route tree in `src/__tests__/app/` instead.
+- The test runners collect only `__tests__/` folders, and `packages/tooling/tests/test-placement.test.mjs` fails when a test file is outside one — a misplaced test never silently stops running.
+- Browser suites (`e2e/`) and the API's `*.spec.ts` keep their own folders.
+
 ## Test naming
 
 A test name should explain the behavior under test in a sentence a non-programmer could roughly follow: `should reject publishing a reward when the user lacks permission`, not `test1` or `works`.

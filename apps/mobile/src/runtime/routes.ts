@@ -33,6 +33,8 @@ export const ROUTES = {
 	appearance: "/settings/appearance",
 	appLock: "/settings/app-lock",
 	twoFactorSetup: "/settings/two-factor",
+	/** The UI kit's live gallery (@workspace/ui-native), opened from the drawer's Developer section. */
+	components: "/settings/components",
 } satisfies Record<string, `/${string}`>;
 
 /** Any one of the app's routes. */

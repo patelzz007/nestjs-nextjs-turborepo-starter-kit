@@ -9,7 +9,7 @@ import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
-import { KeyboardAvoidingView } from "./keyboard-avoiding-view";
+import { KeyboardAvoidingView } from "@workspace/ui-native/components/keyboard-avoiding-view";
 
 /** react-native-safe-area-context's view, with Uniwind's `className` (see screen.tsx). */
 const StyledSafeAreaView = withUniwind(SafeAreaView);

@@ -19,9 +19,7 @@ import { TerminalSettingsRowSkeleton } from "@/components/terminals/terminal-set
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { sidebarMenuSkeletonShape, type SidebarMenuSkeletonShape } from "@workspace/client/lib/sidebar/sidebar-menu-skeleton";
 import { AppPanelShell } from "@workspace/ui/components/app-panel-shell";
-import { BrandMark } from "@workspace/ui/components/brand-mark";
-import { AppShellHeaderSkeleton, PanelSidebarSkeleton, type AppShellHeaderSkeletonAction } from "@workspace/ui/components/panel-shell-skeleton";
-import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
+import { AppShellHeaderSkeleton, PanelSidebarSkeleton, PanelSidebarSwitcherSkeleton, type AppShellHeaderSkeletonAction } from "@workspace/ui/components/panel-shell-skeleton";
 import { SecuritySettingsPanelSkeleton } from "@workspace/client/lib/auth/mfa/security-settings-panel-skeleton";
 import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/merchant/kyb/verification-skeleton";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -179,8 +177,8 @@ export function MerchantPageSkeleton({ labels = MERCHANT_PAGE_LOADING_LABELS }: 
 
 /** The sidebar's outline, from the merchant menu itself — every section and row the real sidebar can show. */
 const MERCHANT_SIDEBAR_SKELETON_SHAPE: SidebarMenuSkeletonShape = sidebarMenuSkeletonShape(MERCHANT_SIDEBAR_MENU);
-/** The merchant header's actions (MerchantTopbar): the store switcher, then notifications. */
-const MERCHANT_HEADER_ACTIONS: readonly AppShellHeaderSkeletonAction[] = ["button", "icon"];
+/** The merchant header's actions (MerchantTopbar): notifications. The store and location switcher heads the sidebar. */
+const MERCHANT_HEADER_ACTIONS: readonly AppShellHeaderSkeletonAction[] = ["icon"];
 
 export interface MerchantWorkspaceSkeletonProps {
 	/** The member's saved sidebar state (its cookie), so a collapsed sidebar stays collapsed while the workspace loads. */
@@ -204,13 +202,7 @@ export function MerchantWorkspaceSkeleton({ sidebarOpen }: MerchantWorkspaceSkel
 			sidebar={
 				<PanelSidebarSkeleton
 					data-slot="workspace-sidebar-skeleton"
-					header={
-						<PanelSidebarHeader
-							title={MERCHANT_SIDEBAR_MENU.header.title}
-							subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle}
-							icon={<BrandMark className="size-5 text-primary" />}
-						/>
-					}
+					header={<PanelSidebarSwitcherSkeleton />}
 					sections={MERCHANT_SIDEBAR_SKELETON_SHAPE.sections}
 					footerRows={MERCHANT_SIDEBAR_SKELETON_SHAPE.footerRows}
 				/>

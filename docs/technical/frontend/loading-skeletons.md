@@ -23,11 +23,11 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 
 ## The three layers
 
-| Layer | Import | Job |
-|---|---|---|
-| `Skeleton` | `@workspace/ui/components/skeleton` | One bone. `variant`: `default`, `circular`, `text` (a pill-rounded line). |
-| `SkeletonRegion` | `@workspace/ui/components/skeleton-region` | **Exactly one per loading surface.** `role="status"`, `aria-busy`, polite live region; announces `labels.loading`; hides the bones from assistive tech; waits ~150ms, then fades in. |
-| Patterns | `@workspace/ui/components/skeleton-patterns` | Bones-only silhouettes of real kit surfaces: `PageHeaderSkeleton`, `StatCardsSkeleton`, `TableSkeleton`, `CardGridSkeleton`, `ListSkeleton`, `FormSkeleton`, `DetailSkeleton`, `ChartSkeleton`, `ProseSkeleton`. |
+| Layer            | Import                                       | Job                                                                                                                                                                                                              |
+| ---------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Skeleton`       | `@workspace/ui/components/skeleton`          | One bone. `variant`: `default`, `circular`, `text` (a pill-rounded line).                                                                                                                                        |
+| `SkeletonRegion` | `@workspace/ui/components/skeleton-region`   | **Exactly one per loading surface.** `role="status"`, `aria-busy`, polite live region; announces `labels.loading`; hides the bones from assistive tech; waits ~150ms, then fades in.                             |
+| Patterns         | `@workspace/ui/components/skeleton-patterns` | Bones-only silhouettes of real kit surfaces: `PageHeaderSkeleton`, `StatCardsSkeleton`, `TableSkeleton`, `CardGridSkeleton`, `ListSkeleton`, `FormSkeleton`, `DetailSkeleton`, `ChartSkeleton`, `ProseSkeleton`. |
 
 ```tsx
 const LOADING_CLAIMS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading claims…" };
@@ -73,7 +73,7 @@ When a whole workspace loads before its shell exists (merchant's `app/loading.ts
 
 - `PanelSidebarSkeleton` takes the app's real `PanelSidebarHeader` (the brand never loads) and draws the search field, each section's label row (28pt, as tall as its reorder buttons) and nav rows (`h-9`, `px-3`), then the footer's rows and account row. These are the same spacing as `PanelSidebarSearch`, `PanelSidebarSectionHeader`, `panelSidebarNavItemVariants` and `AppShellSidebarAccount`.
 - Its `sections`/`footerRows` come from the app's compiled menu via `sidebarMenuSkeletonShape(menu)` (`@workspace/client/lib/sidebar/sidebar-menu-skeleton`), so the outline follows the menu instead of a hand-kept count.
-- `AppShellHeaderSkeleton` is the page header's outline: the toggle slot, the breadcrumb, the app's actions (`["button", "icon"]` for merchant's store switcher and notifications) and search.
+- `AppShellHeaderSkeleton` is the page header's outline: the toggle slot, the breadcrumb, the app's actions (`["icon"]` for merchant's notifications) and search. Merchant's sidebar header is `PanelSidebarSwitcherSkeleton`, the outline of its store and location switcher.
 - `AppPanelShell`'s `defaultSidebarOpen` takes the saved sidebar cookie (merchant reads it with `readSidebarOpen()`), so a collapsed sidebar stays collapsed while loading.
 
 The web app has no whole-shell skeleton: its `rewardhub` layout only reads the session and a cookie, and within the hub the real sidebar stays mounted while each page's own `loading.tsx` fills the content area.

@@ -6,9 +6,9 @@
 import { localDateInTimeZone, PLATFORM_DISPLAY_REGION, type LocalDate } from "@workspace/shared";
 import * as React from "react";
 
-import { Card } from "../../components/card";
-import { DateField } from "../../components/date-field";
-import { MultiDateField } from "../../components/multi-date-field";
+import { Card } from "@workspace/ui-native/components/card";
+import { DateField } from "@workspace/ui-native/components/date-field";
+import { MultiDateField } from "@workspace/ui-native/components/multi-date-field";
 import { useNow } from "../../lib/use-now";
 import { demoDateBoundsOf, DEMO_MAX_AVAILABLE_DAYS } from "./demo-dates";
 

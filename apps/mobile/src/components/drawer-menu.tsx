@@ -17,8 +17,8 @@
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { Avatar } from "./avatar";
-import { Icon, type LucideIcon } from "./icon";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 
 export interface DrawerAccountHeaderAction {
 	readonly label: string;

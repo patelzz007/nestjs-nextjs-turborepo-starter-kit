@@ -10,7 +10,7 @@ import { useLocalSearchParams } from "expo-router";
 import * as React from "react";
 import { z } from "zod";
 
-import { Banner } from "../../../components/banner";
+import { Alert } from "@workspace/ui-native/components/alert";
 import { Screen } from "../../../components/screen";
 import { GithubCommitDetailScreen } from "../../../features/github/github-commit-detail";
 
@@ -24,7 +24,7 @@ export default function GithubCommitScreen(): React.JSX.Element {
 	if (!params.success) {
 		return (
 			<Screen>
-				<Banner tone="error" message={INVALID_COMMIT_LINK_MESSAGE} />
+				<Alert tone="error" message={INVALID_COMMIT_LINK_MESSAGE} />
 			</Screen>
 		);
 	}

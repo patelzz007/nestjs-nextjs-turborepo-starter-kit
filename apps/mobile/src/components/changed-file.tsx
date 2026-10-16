@@ -10,7 +10,7 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { DiffStat, type DiffStatBlocks } from "./diff-stat";
-import { Icon, type LucideIcon } from "./icon";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 
 export interface ChangedFileProps {
 	readonly path: string;

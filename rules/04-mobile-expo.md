@@ -21,6 +21,10 @@ The design and every decision behind it: [`docs/technical/mobile/mobile-app.md`]
 | State | TanStack Query for server state; Zustand feature stores built like the web's ([ADR 023](../docs/adr/023-client-state-feature-stores.md), toolkit in `src/lib/state`) for session and preferences; TanStack Form with the shared zod schemas for every form. |
 | App lock | Opt-in, device-only ([§11](../docs/technical/mobile/mobile-app.md#11-the-app-lock)): `expo-local-authentication` in FRONT of Secure Store (Secure Store's `requireAuthentication` is unsupported in Expo Go). One owner check to turn it on or off; asks at cold start and after the background timeout; the refresh token is not read while locked; a privacy cover hides the app switcher snapshot. In Expo Go on iPhone it uses the device passcode (Face ID needs a real build). |
 
+## Hermes has only part of `Intl`
+
+Hermes, React Native's JavaScript engine, implements `Intl.Collator`, `Intl.DateTimeFormat` and `Intl.NumberFormat`, plus the `toLocale…String` methods. It does **not** implement `Intl.RelativeTimeFormat`, `ListFormat`, `PluralRules`, `DisplayNames`, `Segmenter` or `Locale`. Constructing one throws `undefined cannot be used as a constructor` on a device. Jest runs on Node, which has them all, so no unit test catches it. `packages/tooling/tests/hermes-intl.test.mjs` fails the build when code that runs on Hermes uses one. That code is `apps/mobile/src`, `packages/ui-native/src`, `packages/shared/src` and `packages/api-client/src`. Build the wording instead, the way the kit's `RelativeTime` builds its words from overridable `labels`.
+
 ## Runtime boundary
 
 Mobile code must remain React Native/Expo compatible. Do not import Node-only APIs, browser-only/DOM APIs, Next.js server modules, or DOM-specific packages into mobile or shared runtime packages.
@@ -48,11 +52,11 @@ apps/mobile/src/
     _layout.tsx        #   root layout: global.css, app runtime, root guard
     (auth)/            #   sign-in steps, sign-up, forgot password, forced enrollment — inside AuthShell; each screen is an AuthPage holding only its form (ADR 039)
     (app)/             #   tabs: Home, Analytics, Search, Profile, Settings (+ settings/* stack) — floating tab bar (ADR 036), app drawer (ADR 038)
-  components/          # dumb, presentational: data-agnostic, controlled, accessible, token-styled
+  components/          # the APP's own composites (app shell, drawer, charts, GitHub views). Low-level primitives — buttons, inputs, sheets, badges, … — live in packages/ui-native (@workspace/ui-native), shared by every mobile app
   features/            # per feature: feature stores (session, preferences) and their hooks/logic
   lib/                 # env, api client, secure-store registry, app version, device headers, state toolkit
   runtime/             # what the app builds once per start, the providers, the root guard
-  app-tests/           # the route screens' tests — NEVER inside app/: Expo Router bundles every file there
+  __tests__/app/       # the route screens' tests — NEVER inside app/: Expo Router bundles every file there
 ```
 
 Screen components are the smart/application layer here — they fetch, transform, and decide, same as a Next.js `page.tsx`. Reusable controls in `components/` stay data-agnostic — same smart/dumb rules as `03-web-nextjs.md`/`07-ui-system.md` apply, just without shadcn (it's web/Radix-only): variant maps of token utilities (Uniwind), `forwardRef`, standard `onChange`/`onBlur`/`onFocus` event contract mapped to RN's `onChangeText`/`onBlur`/`onFocus`.

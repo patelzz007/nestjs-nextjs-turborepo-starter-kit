@@ -10,15 +10,15 @@ import { ChangePasswordSchema, type ChangePasswordInput } from "@workspace/share
 import { useRouter } from "expo-router";
 import * as React from "react";
 
-import { Badge } from "../../../components/badge";
-import { Banner } from "../../../components/banner";
-import { Button } from "../../../components/button";
-import { Card } from "../../../components/card";
-import { ListRow } from "../../../components/list-row";
+import { Badge } from "@workspace/ui-native/components/badge";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
+import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../../components/screen";
-import { ErrorState, LoadingState } from "../../../components/states";
-import { MutedText } from "../../../components/text";
-import { TextField } from "../../../components/text-field";
+import { ErrorState, LoadingState } from "@workspace/ui-native/components/empty";
+import { MutedText } from "@workspace/ui-native/components/text";
+import { TextField } from "@workspace/ui-native/components/text-field";
 import { SignOutEverywhere } from "../../../features/devices/sign-out-everywhere";
 import { useSessionCommands } from "../../../features/session/facade";
 import { backupCodesNotice } from "../../../features/two-factor/backup-codes-status";
@@ -66,7 +66,7 @@ export default function SecurityScreen(): React.JSX.Element {
 					<>
 						<Badge label="On" tone="success" />
 						{remainingCount === null ? null : <MutedText>{`${String(remainingCount)} unused backup ${remainingCount === 1 ? "code" : "codes"} remaining.`}</MutedText>}
-						{lowCodesNotice === null ? null : <Banner tone="warning" message={lowCodesNotice} />}
+						{lowCodesNotice === null ? null : <Alert tone="warning" message={lowCodesNotice} />}
 						<Button label="Generate new backup codes" variant="secondary" onPress={openBackupCodeRotation} />
 					</>
 				) : (

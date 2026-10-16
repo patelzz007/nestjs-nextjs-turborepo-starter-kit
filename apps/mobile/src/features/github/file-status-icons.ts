@@ -7,7 +7,7 @@ import FileMinusIcon from "lucide-react-native/icons/file-minus";
 import FilePlusIcon from "lucide-react-native/icons/file-plus";
 import FileSymlinkIcon from "lucide-react-native/icons/file-symlink";
 
-import type { LucideIcon } from "../../components/icon";
+import type { LucideIcon } from "@workspace/ui-native/components/icon";
 
 export interface FileStatusIcon {
 	readonly icon: LucideIcon;

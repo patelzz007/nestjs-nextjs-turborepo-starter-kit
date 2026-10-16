@@ -11,13 +11,13 @@ import * as React from "react";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Button } from "../../components/button";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Button } from "@workspace/ui-native/components/button";
 import { ChangeRow } from "../../components/change-row";
 import { Screen } from "../../components/screen";
-import { SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { EmptyState, ErrorState } from "../../components/states";
-import { MutedText } from "../../components/text";
+import { SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { EmptyState, ErrorState } from "@workspace/ui-native/components/empty";
+import { MutedText } from "@workspace/ui-native/components/text";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useNow } from "../../lib/use-now";

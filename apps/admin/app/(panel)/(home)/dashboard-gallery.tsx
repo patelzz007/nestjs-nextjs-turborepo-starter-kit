@@ -5,10 +5,10 @@ import dynamic from "next/dynamic";
 
 import { Button } from "@workspace/ui/components/button";
 
-import type { AccordionDemoItem } from "@/components/showcase/accordion-showcase";
 import { LazySection } from "@/components/common/lazy-section";
 import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
 import { SectionSkeleton } from "@/components/loading/section-skeleton";
+import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, ACCORDION_VARIANT_ITEMS } from "@/components/showcase/accordion-demo-items";
 
 // ── Lazy demo sections ────────────────────────────────────────────────────
 // Every showcase below the fold (chart, table, accordion, …) is code-split so
@@ -61,138 +61,6 @@ const ToastShowcase = dynamic(() => import("@/components/showcase/toast-showcase
 	ssr: false,
 	loading: toastSectionLoading,
 });
-
-// ── Accordion demo data (rule 9/10: content lives at the page, the low-level
-// components only receive props) ──────────────────────────────────────────────
-
-const faqItems: readonly AccordionDemoItem[] = [
-	{
-		id: "faq-roles",
-		value: "faq-roles",
-		title: "When does a role or permission change take effect?",
-		body: "On the user's next request. Every access token carries the account's token version, and the API rejects a token whose version is stale — so a revoked role or permission stops working immediately, without waiting for the token to expire.",
-	},
-	{
-		id: "faq-two-factor",
-		value: "faq-two-factor",
-		title: "Is two-factor authentication required for admins?",
-		body: "Yes. An admin must enrol an authenticator app before the panel opens; until then the session is restricted to the account pages.",
-		// Nested sub-topics — the showcase renders these as an inner accordion.
-		children: [
-			{
-				id: "faq-two-factor-backup",
-				value: "faq-two-factor-backup",
-				title: "What if my authenticator is not at hand?",
-				body: "Sign in with one of the single-use backup codes shown at enrolment.",
-			},
-			{
-				id: "faq-two-factor-recovery",
-				value: "faq-two-factor-recovery",
-				title: "What if I lost both the device and the backup codes?",
-				body: "Request MFA recovery from the login screen. A super-admin reviews the request in Users → MFA recovery before two-factor is reset.",
-			},
-		],
-	},
-];
-
-const statusItems: readonly AccordionDemoItem[] = [
-	{
-		id: "status-db",
-		value: "status-db",
-		title: "Database migrations applied",
-		body: "12 migrations ran cleanly against the production database.",
-		status: "done",
-		count: 12,
-		shortcut: "⌘1",
-	},
-	{
-		id: "status-cache",
-		value: "status-cache",
-		title: "Warming the CDN cache",
-		body: "Purging and re-warming the /docs routes… this row stays open while the job runs.",
-		status: "loading",
-		count: 3,
-		shortcut: "⌘2",
-	},
-	{
-		id: "status-env",
-		value: "status-env",
-		title: "Environment parity check",
-		body: "STAGING and PRODUCTION differ on NEXT_PUBLIC_SESSION_POLL_MS — update the staging .env to match.",
-		status: "error",
-		count: 2,
-		shortcut: "⌘3",
-		autofocus: true,
-	},
-	{
-		id: "status-lock",
-		value: "status-lock",
-		title: "Locked: requires super-admin",
-		body: "This step is only available to super-admins; the trigger is disabled and not focusable.",
-		disabled: true,
-	},
-	{
-		id: "status-lazy",
-		value: "status-lazy",
-		title: "Lazy panel — mounts on first open",
-		body: "This content is not in the DOM until you open it the first time (feature 11). Great for heavy panels that are rarely read.",
-		lazy: true,
-	},
-];
-
-const reorderItems: readonly AccordionDemoItem[] = [
-	{
-		id: "ord-api",
-		value: "ord-api",
-		title: "API gateway",
-		body: "REST gateway on :8080 with cookie-based auth and swagger at /docs.",
-	},
-	{
-		id: "ord-web",
-		value: "ord-web",
-		title: "Web app",
-		body: "Public marketing + account site on :3000.",
-	},
-	{
-		id: "ord-admin",
-		value: "ord-admin",
-		title: "Admin panel",
-		body: "Internal panel on :3001 with proxy-side silent refresh.",
-	},
-	{
-		id: "ord-worker",
-		value: "ord-worker",
-		title: "Background workers",
-		body: "Prisma cron + email queue (Resend).",
-	},
-];
-
-const variantItems: readonly AccordionDemoItem[] = [
-	{
-		id: "v-one",
-		value: "v-one",
-		title: "Compact list row",
-		body: "size=sm with separated=false — sits flush inside dense tables.",
-	},
-	{
-		id: "v-two",
-		value: "v-two",
-		title: "Plain ghost item",
-		body: "variant=ghost — no borders, hover tint only.",
-	},
-	{
-		id: "v-three",
-		value: "v-three",
-		title: "Flush, animation off",
-		body: "variant=flush + animate={false} — for places where motion is unwanted.",
-	},
-	{
-		id: "v-four",
-		value: "v-four",
-		title: "Bordered tile",
-		body: "variant=bordered + size=lg with a custom Plus indicator via the icon slot.",
-	},
-];
 
 /** Anchor targets for the in-page demo index — data lives at the page (rule 10). */
 const DEMO_ANCHORS: readonly { readonly id: string; readonly label: string }[] = [
@@ -257,7 +125,12 @@ export default function Page(): React.JSX.Element {
 				</div>
 				<div id="demo-accordion" className="scroll-mt-4">
 					<LazySection height="h-40">
-						<AccordionShowcase faqItems={faqItems} statusItems={statusItems} reorderItems={reorderItems} variantItems={variantItems} />
+						<AccordionShowcase
+							faqItems={ACCORDION_FAQ_ITEMS}
+							statusItems={ACCORDION_STATUS_ITEMS}
+							reorderItems={ACCORDION_REORDER_ITEMS}
+							variantItems={ACCORDION_VARIANT_ITEMS}
+						/>
 					</LazySection>
 				</div>
 				<div id="demo-combobox" className="scroll-mt-4">

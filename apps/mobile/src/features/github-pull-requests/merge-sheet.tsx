@@ -14,12 +14,12 @@ import { MergeGithubPullRequestSchema, type GithubMergeMethod, type GithubMergeO
 import * as React from "react";
 import { View } from "react-native";
 
-import { Banner } from "../../components/banner";
-import { BottomSheet, SheetOptionRow } from "../../components/bottom-sheet";
-import { Button } from "../../components/button";
-import { Checkbox } from "../../components/checkbox";
-import { MutedText } from "../../components/text";
-import { TextField } from "../../components/text-field";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { BottomSheet, SheetOptionRow } from "@workspace/ui-native/components/bottom-sheet";
+import { Button } from "@workspace/ui-native/components/button";
+import { Checkbox } from "@workspace/ui-native/components/checkbox";
+import { MutedText } from "@workspace/ui-native/components/text";
+import { TextField } from "@workspace/ui-native/components/text-field";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { useIdempotencyKeys } from "../../lib/idempotency-keys";
@@ -94,7 +94,7 @@ export function MergeSheet({ pullRequest, title, headOwner, options, visible, on
 	return (
 		<BottomSheet visible={visible} title="Merge pull request" onClose={onClose} testID="pull-request-merge-sheet">
 			<View className="gap-3">
-				{requestError === null ? null : <Banner tone="error" message={requestError} />}
+				{requestError === null ? null : <Alert tone="error" message={requestError} />}
 				<View>
 					{options.methods.map((each: GithubMergeMethod): React.JSX.Element => (
 						<SheetOptionRow

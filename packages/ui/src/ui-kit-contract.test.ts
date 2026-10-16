@@ -29,6 +29,11 @@ describe("UI kit token contract (rule 22)", () => {
 		"components/alert.tsx",
 		"components/select.tsx",
 		"components/combobox.tsx",
+		"components/cascader/cascader.tsx",
+		"components/cascader/cascader-footer.tsx",
+		"components/filters/filters-dnd.tsx",
+		"components/filters/filters-advanced.tsx",
+		"components/filters/filters-chip.tsx",
 	];
 
 	it("does not use raw z-50 in overlay/popover sources", (): void => {
@@ -125,6 +130,14 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/collection-shared.tsx",
 		"components/date-picker.tsx",
 		"components/multi-date-picker.tsx",
+		"components/color-picker.tsx",
+		"components/color-picker-parts.tsx",
+		"components/color-picker-controls.tsx",
+		"components/color-picker-fields.tsx",
+		"components/color-picker-swatches.tsx",
+		"components/date-selector.tsx",
+		"components/emoji-picker.tsx",
+		"components/emoji-picker-list.tsx",
 		"components/field.tsx",
 		"components/form-shell.tsx",
 		"components/input-group.tsx",
@@ -136,8 +149,48 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/slider.tsx",
 		"components/switch.tsx",
 		"components/textarea.tsx",
+		"components/time-picker.tsx",
 		"components/toggle.tsx",
 		"components/toggle-group.tsx",
+		"components/gantt/gantt.tsx",
+		"components/gantt/gantt-bar.tsx",
+		"components/gantt/gantt-nav.tsx",
+		"components/gantt/gantt-view.tsx",
+		"components/cascader/cascader.tsx",
+		"components/cascader/cascader-item.tsx",
+		"components/cascader/cascader-nav.tsx",
+		"components/cascader/cascader-footer.tsx",
+		"components/cascader/cascader-columns.tsx",
+		"components/cascader/cascader-virtual.tsx",
+		"components/rating.tsx",
+		"components/number-field.tsx",
+		"components/phone-input.tsx",
+		"components/icon-stack.tsx",
+		"components/frame.tsx",
+		"components/timeline.tsx",
+		"components/scrollspy.tsx",
+		"components/autocomplete.tsx",
+		"components/item.tsx",
+		"components/trace.tsx",
+		"components/questionnaire.tsx",
+		"components/native-select.tsx",
+		"components/sortable.tsx",
+		"components/kanban.tsx",
+		"components/file-type.tsx",
+		"components/signature-pad.tsx",
+		"components/filters/filters.tsx",
+		"components/filters/filters-chip.tsx",
+		"components/filters/filters-advanced.tsx",
+		"components/filters/filters-builder.tsx",
+		"components/filters/filters-editors.tsx",
+		"components/event-calendar/event-calendar.tsx",
+		"components/event-calendar/event-calendar-content.tsx",
+		"components/event-calendar/event-calendar-event.tsx",
+		"components/event-calendar/event-calendar-month-view.tsx",
+		"components/event-calendar/event-calendar-time-grid.tsx",
+		"components/event-calendar/event-calendar-resource-view.tsx",
+		"components/event-calendar/event-calendar-agenda-view.tsx",
+		"components/event-calendar/event-calendar-nav.tsx",
 	];
 
 	it("exports forwardRef components for P2 priority roots", (): void => {
@@ -162,6 +215,21 @@ describe("UI kit CVA state contract (rule 23)", () => {
 		"components/spinner.tsx",
 		"components/radio-group.tsx",
 		"components/toggle.tsx",
+		"components/sortable.tsx",
+		"components/signature-pad.tsx",
+		"components/native-select.tsx",
+		"components/questionnaire.tsx",
+		"components/filters/filters.tsx",
+		"components/filters/filters-chip.tsx",
+		"components/filters/filters-advanced.tsx",
+		"components/filters/filters-editors.tsx",
+		"components/cascader/cascader.tsx",
+		"components/cascader/cascader-item.tsx",
+		"components/cascader/cascader-nav.tsx",
+		"components/event-calendar/event-calendar.tsx",
+		"components/event-calendar/event-calendar-event.tsx",
+		"components/event-calendar/event-calendar-content.tsx",
+		"components/event-calendar/event-calendar-month-view.tsx",
 	];
 
 	it("defines CVA state variants on form primitives", (): void => {
@@ -194,6 +262,9 @@ describe("UI kit boundary types (rules 1–3)", () => {
 		"components/alert-dialog.tsx",
 		"components/combobox.tsx",
 		"components/data-table.tsx",
+		"components/filters/filters-lib.tsx",
+		"components/event-calendar/event-calendar-types.tsx",
+		"components/event-calendar/event-calendar-recurrence.tsx",
 	];
 
 	it("does not use unknown, never, or assumeType in boundary modules", (): void => {
@@ -249,5 +320,98 @@ describe("UI kit session storage contract (rule 9)", () => {
 		const source = readComponentSource("components/combobox.tsx");
 		expect(source.includes("sessionStorage.getItem"), "combobox must not read sessionStorage").toBe(false);
 		expect(source.includes("sessionStorage.setItem"), "combobox must not write sessionStorage").toBe(false);
+	});
+});
+
+describe("UI kit filters contract (rules 9, 20, 28)", () => {
+	it("reads its copy from the filters label families, never a second i18n mechanism", (): void => {
+		const source = readComponentSource("components/filters/filters.tsx");
+		expect(source.includes('useUiKitLabels("filters", labelsOverride)'), "Filters must read the filters family").toBe(true);
+		expect(source.includes('useUiKitLabels("filterOperators", operatorLabelsOverride)'), "Filters must read the filterOperators family").toBe(true);
+		expect(readComponentSource("components/filters/filters-i18n.tsx").includes("DEFAULT_FILTER_LABELS"), "filters-i18n must not ship its own copy").toBe(false);
+	});
+
+	it("parses serialized queries through the zod schema", (): void => {
+		const source = readComponentSource("components/filters/filters-query.tsx");
+		expect(source.includes("FilterQuerySchema.safeParse(JSON.parse(serialized))"), "parseFilterQuery must validate with FilterQuerySchema").toBe(true);
+	});
+});
+
+describe("UI kit data-grid contract (rules 1–3, 9–11, 20)", () => {
+	const dataGridSources: readonly string[] = [
+		"components/data-grid/data-grid.tsx",
+		"components/data-grid/data-grid-i18n.tsx",
+		"components/data-grid/data-grid-table.tsx",
+		"components/data-grid/data-grid-table-virtual.tsx",
+		"components/data-grid/data-grid-table-dnd.tsx",
+		"components/data-grid/data-grid-table-dnd-rows.tsx",
+		"components/data-grid/data-grid-cell-selection.tsx",
+		"components/data-grid/data-grid-column-header.tsx",
+		"components/data-grid/data-grid-column-filter.tsx",
+		"components/data-grid/data-grid-column-visibility.tsx",
+		"components/data-grid/data-grid-pagination.tsx",
+		"components/data-grid/data-grid-scroll-area.tsx",
+	];
+	const dataGridDomRoots: readonly string[] = [
+		"components/data-grid/data-grid.tsx",
+		"components/data-grid/data-grid-table.tsx",
+		"components/data-grid/data-grid-table-virtual.tsx",
+		"components/data-grid/data-grid-table-dnd.tsx",
+		"components/data-grid/data-grid-table-dnd-rows.tsx",
+		"components/data-grid/data-grid-cell-selection.tsx",
+		"components/data-grid/data-grid-pagination.tsx",
+		"components/data-grid/data-grid-scroll-area.tsx",
+	];
+
+	it("does not use unknown, never, or assumeType in data-grid modules", (): void => {
+		for (const path of dataGridSources) {
+			const source = readComponentSource(path);
+			expect(source.includes("assumeType"), `${path} must not use assumeType`).toBe(false);
+			expect(/\bunknown\b/.test(source), `${path} must not use unknown type`).toBe(false);
+			expect(/:\s*never\b/.test(source), `${path} must not use never type`).toBe(false);
+		}
+	});
+
+	it("forwards refs on the data-grid DOM roots", (): void => {
+		for (const path of dataGridDomRoots) {
+			expect(readComponentSource(path).includes("React.forwardRef"), `${path} must use React.forwardRef`).toBe(true);
+		}
+	});
+
+	it("reads its copy from the dataGrid label family, with no second i18n mechanism", (): void => {
+		expect(readComponentSource("components/data-grid/data-grid.tsx").includes('useUiKitLabels("dataGrid", labelsOverride)')).toBe(true);
+		for (const path of dataGridSources) {
+			expect(readComponentSource(path).includes("mergeDataGridI18n"), `${path} must not merge its own i18n`).toBe(false);
+		}
+	});
+});
+
+describe("UI kit gantt contract (rules 07, 22)", () => {
+	const ganttSources: readonly string[] = [
+		"components/gantt/gantt.tsx",
+		"components/gantt/gantt-bar.tsx",
+		"components/gantt/gantt-dnd.tsx",
+		"components/gantt/gantt-nav.tsx",
+		"components/gantt/gantt-view.tsx",
+	];
+
+	it("reads its copy from the gantt label family", (): void => {
+		expect(readComponentSource("components/gantt/gantt.tsx").includes('useUiKitLabels("gantt")'), "useGanttState must read the gantt family").toBe(true);
+		expect(readLibSource("lib/labels/ui-kit-labels.ts").includes("readonly gantt: GanttLabels;"), "UiKitLabels must register the gantt family").toBe(true);
+	});
+
+	it("uses tokens, not raw colours, palette primitives or z-50", (): void => {
+		for (const path of ganttSources) {
+			const source = readComponentSource(path);
+			expect(/#[0-9a-fA-F]{3,8}\b/.test(source), `${path} must not hardcode hex colours`).toBe(false);
+			expect(source.includes("--palette-"), `${path} must not read palette primitives`).toBe(false);
+			expect(source.includes("z-50"), `${path} must not contain z-50`).toBe(false);
+		}
+	});
+
+	it("never reads the wall clock in render paths", (): void => {
+		for (const path of ganttSources) {
+			expect(readComponentSource(path).includes("new Date()"), `${path} must take "now" from the gantt clock`).toBe(false);
+		}
 	});
 });

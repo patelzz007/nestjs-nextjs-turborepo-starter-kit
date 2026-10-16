@@ -7,8 +7,8 @@
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { Button } from "../../components/button";
-import { PulseDot } from "../../components/pulse-dot";
+import { Button } from "@workspace/ui-native/components/button";
+import { PulseDot } from "@workspace/ui-native/components/pulse-dot";
 import type { PullRequestLiveUpdates } from "./use-pull-request-live-updates";
 
 export const LIVE_UPDATES_ON_DETAIL = "Changes on GitHub show here as they happen.";

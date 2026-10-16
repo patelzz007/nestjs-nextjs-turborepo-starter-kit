@@ -14,12 +14,12 @@ import GitMergeIcon from "lucide-react-native/icons/git-merge";
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { Button } from "../../components/button";
-import { Icon, type LucideIcon } from "../../components/icon";
-import { MutedText } from "../../components/text";
-import { Banner } from "../../components/banner";
-import { Skeleton, SkeletonGroup } from "../../components/skeleton";
-import { TimelineRailIcon, TimelineRailItem } from "../../components/timeline-rail";
+import { Button } from "@workspace/ui-native/components/button";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
+import { MutedText } from "@workspace/ui-native/components/text";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Skeleton, SkeletonGroup } from "@workspace/ui-native/components/skeleton";
+import { TimelineRailIcon, TimelineRailItem } from "@workspace/ui-native/components/timeline-rail";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { checksLine, mergeabilityLine, mergeUnavailableReason, reviewLine, type MergeBoxLine } from "./labels";
@@ -65,7 +65,7 @@ export function MergeBox({ pullRequest, reviewDecision, title, headOwner }: Merg
 						<Skeleton className="h-16 w-full rounded-xl" />
 					</SkeletonGroup>
 				) : null}
-				{status.isError ? <Banner tone="error" message={errorMessageOf(status.error)} /> : null}
+				{status.isError ? <Alert tone="error" message={errorMessageOf(status.error)} /> : null}
 				{lines.map((line: MergeBoxLine): React.JSX.Element => (
 					<MergeBoxRow key={line.title} line={line} />
 				))}

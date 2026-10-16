@@ -11,10 +11,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { View } from "react-native";
 
-import { ConfirmDialog } from "../../../components/confirm-dialog";
+import { AlertDialog } from "@workspace/ui-native/components/alert-dialog";
 import { DeviceSessionRow } from "../../../components/device-session-row";
 import { Screen } from "../../../components/screen";
-import { EmptyState, ErrorState, LoadingState } from "../../../components/states";
+import { EmptyState, ErrorState, LoadingState } from "@workspace/ui-native/components/empty";
 import { DEVICES_COPY } from "../../../features/devices/labels";
 import { clientTypeLabelOf, platformLineOf, sessionDetailItems } from "../../../features/devices/session-details";
 import { SignOutEverywhere } from "../../../features/devices/sign-out-everywhere";
@@ -83,7 +83,7 @@ export default function DevicesScreen(): React.JSX.Element {
 				</View>
 			)}
 			<SignOutEverywhere />
-			<ConfirmDialog
+			<AlertDialog
 				visible={deviceToRevoke !== null}
 				title={DEVICES_COPY.revokeTitle(deviceToRevoke?.label ?? "")}
 				description={DEVICES_COPY.revokeDescription}

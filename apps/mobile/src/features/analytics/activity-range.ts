@@ -23,7 +23,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
-import type { SegmentedOption } from "../../components/segmented-control";
+import type { SegmentedOption } from "@workspace/ui-native/components/segmented-control";
 
 /** What the range control offers: the presets, named as on the web, and a custom start and end. */
 export const ActivityRangeChoiceSchema = z.enum(["last7Days", "last30Days", "last90Days", "custom"]);

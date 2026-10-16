@@ -92,7 +92,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
-import { assertUniqueDataTableColumnIds, DATA_TABLE_UTILITY_COLUMN_ID } from "@workspace/ui/lib/data-table/column-ids";
+import { assertDataTableFiltersMatchColumns, assertUniqueDataTableColumnIds, DATA_TABLE_UTILITY_COLUMN_ID } from "@workspace/ui/lib/data-table/column-ids";
 import { DESKTOP_MEDIA_QUERY } from "@workspace/ui/hooks/use-mobile";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table/export";
@@ -1780,8 +1780,16 @@ export function DataTable<TData extends RowData>({
 
 		// A caller's column must not reuse a utility id or another column's id: React would key two cells per row alike.
 		assertUniqueDataTableColumnIds(cols);
+		// Client-side filters filter columns, so each must name one; server-side filters are query
+		// parameters, never looked up as columns (see handleFilterChange / getFilterValue below).
+		if (!isServerMode) {
+			assertDataTableFiltersMatchColumns(
+				filters.map((filter: Filter): string => filter.key),
+				cols,
+			);
+		}
 		return cols;
-	}, [initialColumns, actions, labels, resolvedEnableBulkSelection, draggable, handleAnyDeselect]);
+	}, [initialColumns, actions, labels, resolvedEnableBulkSelection, draggable, handleAnyDeselect, isServerMode, filters]);
 
 	// ── Editable Columns Set ────────────────────────────────────────────
 	const editableSet = useMemo<ReadonlySet<string>>(() => {
@@ -1988,7 +1996,11 @@ export function DataTable<TData extends RowData>({
 	const handleFilterChange = useCallback(
 		(filterKey: string, value: string | null): void => {
 			setScrollTop(0);
-			if (isServerMode && onManualColumnFilterChange !== undefined) {
+			if (isServerMode) {
+				// A server-side filter is a query parameter, not a column: the caller refetches.
+				if (onManualColumnFilterChange === undefined) {
+					return;
+				}
 				onManualColumnFilterChange(filterKey, value);
 				table.resetRowSelection();
 				setSelectAllPages(false);
@@ -2008,8 +2020,8 @@ export function DataTable<TData extends RowData>({
 
 	const getFilterValue = useCallback(
 		(filterKey: string): string => {
-			if (isServerMode && manualColumnFilters !== undefined) {
-				return manualColumnFilters[filterKey] ?? "all";
+			if (isServerMode) {
+				return manualColumnFilters?.[filterKey] ?? "all";
 			}
 			const filterValue = table.getColumn(filterKey)?.getFilterValue();
 			const parsed = DataTableCellScalarSchema.safeParse(filterValue);
@@ -2367,14 +2379,19 @@ export function DataTable<TData extends RowData>({
 		handleSelectAllPages,
 	]);
 
+	// Facets count the rows the table holds, so they exist only client-side: a server page is
+	// one slice of the results, and its filters are query parameters with no column behind them.
 	const filterFacetedCounts = useMemo((): Record<string, ReadonlyMap<string, number>> => {
 		const counts: Record<string, ReadonlyMap<string, number>> = {};
+		if (isServerMode) {
+			return counts;
+		}
 		for (const filter of filters) {
 			const facetedRaw = table.getColumn(filter.key)?.getFacetedUniqueValues();
 			counts[filter.key] = normalizeFacetedUniqueValues(facetedRaw ?? undefined);
 		}
 		return counts;
-	}, [filters, table]);
+	}, [filters, isServerMode, table]);
 
 	const desktopTableScrollStyle = useMemo((): React.CSSProperties | undefined => {
 		if (!virtualizeRows) {

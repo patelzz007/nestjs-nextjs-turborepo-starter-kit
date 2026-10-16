@@ -8,7 +8,7 @@ import { BottomTabBarHeightCallbackContext, type BottomTabBarProps } from "expo-
 import * as React from "react";
 
 import { FloatingTabBar, type FloatingTabBarItem } from "../../components/floating-tab-bar";
-import { playSelectionFeedback } from "../../lib/haptics";
+import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { useKeyboardVisible } from "../../lib/use-keyboard-visible";
 import { appTabOf } from "./app-tabs";
 

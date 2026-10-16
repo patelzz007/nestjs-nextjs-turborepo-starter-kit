@@ -5,7 +5,8 @@
 //   fills use `text-status-foreground` instead of `text-white`, and the two
 //   smallest sizes use `--text-badge-xs` / `--text-badge-sm` instead of
 //   arbitrary rem values.
-// - The `focus` variants are omitted (the kit has no `--focus` colour).
+// - The `focus` variants use the kit's `--focus` / `--focus-foreground` tokens (packages/tokens),
+//   with `text-status-foreground` on the solid fill like the other status variants.
 // - Kept from the kit: `ghost`, `link` and the categorical tone palette
 //   (`green` … `violet`), which ReUI has no equivalent for.
 // - The root forwards its ref.
@@ -28,6 +29,7 @@ const badgeVariants = cva(
 				outline: "border-border bg-transparent dark:bg-input/32",
 				secondary: "bg-secondary text-secondary-foreground",
 				info: "bg-info text-status-foreground",
+				focus: "bg-focus text-status-foreground",
 				success: "bg-success text-status-foreground",
 				warning: "bg-warning text-status-foreground",
 				destructive: "bg-destructive text-status-foreground",
@@ -36,12 +38,14 @@ const badgeVariants = cva(
 				"warning-light": "border-warning/15 bg-warning/10 text-warning-foreground dark:border-warning/25 dark:bg-warning/15 dark:text-warning",
 				"success-light": "border-success/15 bg-success/10 text-success-foreground dark:border-success/25 dark:bg-success/15 dark:text-success",
 				"info-light": "border-info/15 bg-info/10 text-info-foreground dark:border-info/25 dark:bg-info/15 dark:text-info",
+				"focus-light": "border-focus/15 bg-focus/10 text-focus-foreground dark:border-focus/25 dark:bg-focus/15 dark:text-focus",
 				"destructive-light": "border-destructive/15 bg-destructive/10 text-destructive-foreground dark:border-destructive/25 dark:bg-destructive/15 dark:text-destructive",
 				"invert-light": "border-invert/15 bg-invert/10 text-foreground dark:border-invert/45 dark:bg-invert/35 dark:text-invert-foreground",
 				"primary-outline": "border-border bg-background text-primary dark:bg-input/30",
 				"warning-outline": "border-border bg-background text-warning-foreground dark:bg-input/30",
 				"success-outline": "border-border bg-background text-success-foreground dark:bg-input/30",
 				"info-outline": "border-border bg-background text-info-foreground dark:bg-input/30",
+				"focus-outline": "border-border bg-background text-focus-foreground dark:bg-input/30",
 				"destructive-outline": "border-border bg-background text-destructive-foreground dark:bg-input/30",
 				"invert-outline": "border-border bg-background text-invert-foreground dark:bg-input/30",
 				ghost: "text-foreground hover:bg-muted hover:text-foreground dark:hover:bg-muted/60",

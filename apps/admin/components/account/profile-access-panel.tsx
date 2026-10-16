@@ -38,7 +38,7 @@ export function ProfileAccessPanel({ roles, access, className }: ProfileAccessPa
 					<ul className="flex flex-col gap-3">
 						{roles.map((role: SlimRoleResponse): React.JSX.Element => (
 							<li key={role.id} className="flex items-start gap-3">
-								<IconTile tone="neutral" className="size-8 rounded-lg [&_svg]:size-4">
+								<IconTile tone="neutral" size="sm" className="rounded-lg">
 									<ShieldCheck />
 								</IconTile>
 								<div className="min-w-0">

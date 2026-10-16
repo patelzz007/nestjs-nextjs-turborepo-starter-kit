@@ -9,6 +9,14 @@
 @import "@workspace/tokens/mobile.css";
 
 /*
+ * The React Native UI kit's components live outside this app (packages/ui-native),
+ * and Tailwind only scans this folder by default: without this line every kit
+ * component would render unstyled on a device (Jest renders unstyled anyway, so
+ * no test would notice).
+ */
+@source "../../packages/ui-native/src";
+
+/*
  * The typefaces (ADR 037): the web's faces, one family per weight, because
  * React Native picks a font by family name, not by weight. Each value is ONE
  * family name, unquoted, exactly as src/lib/fonts.ts (APP_FONTS) registers it;

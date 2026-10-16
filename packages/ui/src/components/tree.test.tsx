@@ -77,9 +77,9 @@ describe("Tree", () => {
 	it("marks folders and their expansion for styling and assistive technology", (): void => {
 		render(<Fixture />);
 		const fruit = screen.getByRole("treeitem", { name: "Fruit" });
-		expect(fruit.dataset.folder).toBe("");
+		expect(fruit.dataset.folder).toBe("true");
 		expect(fruit.getAttribute("aria-expanded")).toBe("true");
-		expect(screen.getByRole("treeitem", { name: "Apple" }).dataset.folder).toBeUndefined();
+		expect(screen.getByRole("treeitem", { name: "Apple" }).dataset.folder).toBe("false");
 	});
 
 	it("collapses a folder through headless-tree's click handling", (): void => {
@@ -98,6 +98,32 @@ describe("Tree", () => {
 	it("renders no drag line when the drag-and-drop feature is not loaded", (): void => {
 		render(<Fixture withDragLine />);
 		expect(screen.queryByTestId("drag-line")).toBeNull();
+	});
+
+	it("exposes ReUI's indent variables for indent-guide styling", (): void => {
+		render(<Fixture />);
+		expect(screen.getByRole("tree", { name: "Pantry" }).style.getPropertyValue("--tree-indent")).toBe(`${String(INDENT_PX)}px`);
+		expect(screen.getByRole("treeitem", { name: "Apple" }).style.getPropertyValue("--tree-padding")).toBe(`${String(INDENT_PX)}px`);
+		expect(screen.getByRole("treeitem", { name: "Fruit" }).style.getPropertyValue("--tree-padding")).toBe("0px");
+	});
+
+	it("spells loaded feature flags out as true/false so data-[x=true] selectors match", (): void => {
+		render(<Fixture />);
+		const nuts = screen.getByRole("treeitem", { name: "Nuts" });
+		expect(nuts.dataset.selected).toBe("false");
+		fireEvent.click(nuts);
+		const selected = screen.getByRole("treeitem", { name: "Nuts" });
+		expect(selected.dataset.selected).toBe("true");
+		expect(selected.matches('[data-selected="true"]')).toBe(true);
+		expect(selected.dataset.focus).toBe("true");
+	});
+
+	it("omits the flags of features that are not loaded", (): void => {
+		render(<Fixture />);
+		const apple = screen.getByRole("treeitem", { name: "Apple" });
+		expect(apple.dataset.dragTarget).toBeUndefined();
+		expect(apple.dataset.searchMatch).toBeUndefined();
+		expect(apple.dataset.slot).toBe("tree-item");
 	});
 
 	it("forwards its ref to the container", (): void => {

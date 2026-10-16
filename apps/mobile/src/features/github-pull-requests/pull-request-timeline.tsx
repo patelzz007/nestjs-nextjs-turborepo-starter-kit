@@ -26,11 +26,11 @@ import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
+import { Avatar } from "@workspace/ui-native/components/avatar";
 import { DiffView } from "../../components/diff-view";
-import { type LucideIcon } from "../../components/icon";
+import { type LucideIcon } from "@workspace/ui-native/components/icon";
 import { Markdown } from "../../components/markdown";
-import { TimelineRailIcon, TimelineRailItem, type TimelineRailTone } from "../../components/timeline-rail";
+import { TimelineRailIcon, TimelineRailItem, type TimelineRailTone } from "@workspace/ui-native/components/timeline-rail";
 import { formatRelativeTime } from "../../lib/time-format";
 import { parsePatch } from "../github/diff";
 import { CommentReactions } from "./comment-reactions";

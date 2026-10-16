@@ -1,0 +1,187 @@
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import * as React from "react";
+import { BackHandler, Platform, Text, type HardwareBackPressEvent, type NativeEventSubscription } from "react-native";
+import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
+
+import { Drawer, type DrawerProps } from "../drawer";
+
+/** The drawer's blur intensity when fully open (`BLUR_MAX_INTENSITY` in drawer.tsx). */
+const FULL_BLUR_INTENSITY = 18;
+
+/** Long enough for the panel spring to settle under Jest (Reanimated runs it on mocked animation frames). */
+const CLOSE_SETTLE_TIMEOUT_MS = 5_000;
+
+/** Uniwind's `hidden` (display: none) as a whole class — not `overflow-hidden`. Jest keeps class names unresolved. */
+const HIDDEN_CLASS = /(^|\s)hidden(\s|$)/u;
+
+/** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
+const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
+
+interface Handlers {
+	readonly onOpen: jest.Mock;
+	readonly onClose: jest.Mock;
+}
+
+function handlers(): Handlers {
+	return { onOpen: jest.fn(), onClose: jest.fn() };
+}
+
+function drawer(open: boolean, { onOpen, onClose }: Handlers, overrides: Partial<Pick<DrawerProps, "swipeEnabled">> = {}): React.JSX.Element {
+	return (
+		<SafeAreaProvider initialMetrics={METRICS}>
+			<Drawer
+				open={open}
+				onOpen={onOpen}
+				onClose={onClose}
+				accessibilityLabel="Menu"
+				closeLabel="Close menu"
+				panel={<Text>Panel content</Text>}
+				testID="drawer"
+				{...overrides}>
+				<Text>App content</Text>
+			</Drawer>
+		</SafeAreaProvider>
+	);
+}
+
+describe("Drawer", () => {
+	it("keeps a closed drawer away from screen readers and touches, and the app reachable", async () => {
+		await render(drawer(false, handlers()));
+
+		expect(screen.getByText("App content")).toBeOnTheScreen();
+		expect(screen.queryByText("Panel content")).toBeNull();
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("pointerEvents", "none");
+	});
+
+	it("shows an open drawer as a modal panel and hides the app from screen readers", async () => {
+		await render(drawer(true, handlers()));
+
+		expect(screen.getByText("Panel content")).toBeOnTheScreen();
+		expect(screen.queryByText("App content")).toBeNull();
+		expect(screen.getByTestId("drawer-panel")).toHaveProp("accessibilityViewIsModal", true);
+		expect(screen.getByTestId("drawer-panel")).toHaveAccessibleName("Menu");
+	});
+
+	it("closes from the scrim (a touch target; screen readers close with the escape gesture instead)", async () => {
+		const drawerHandlers = handlers();
+		await render(drawer(true, drawerHandlers));
+
+		await fireEvent.press(screen.getByTestId("drawer-scrim", { includeHiddenElements: true }));
+
+		expect(drawerHandlers.onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it("closes from the screen reader's escape gesture", async () => {
+		const drawerHandlers = handlers();
+		await render(drawer(true, drawerHandlers));
+
+		await fireEvent(screen.getByTestId("drawer-content"), "accessibilityEscape");
+
+		expect(drawerHandlers.onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it("takes the Android back button only while open, and lets go of it once closed", async () => {
+		let pressBack: ((event: HardwareBackPressEvent) => boolean | null | undefined) | null = null;
+		const remove = jest.fn();
+		const subscribe = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler): NativeEventSubscription => {
+			pressBack = handler;
+			return { remove };
+		});
+		const drawerHandlers = handlers();
+		const view = await render(drawer(false, drawerHandlers));
+		expect(subscribe).not.toHaveBeenCalled();
+
+		await view.rerender(drawer(true, drawerHandlers));
+		expect(subscribe).toHaveBeenCalledWith("hardwareBackPress", expect.any(Function));
+		let handled: boolean | null | undefined = false;
+		await act((): void => {
+			handled = pressBack?.({ type: "hardwareBackPress", timeStamp: 0 });
+		});
+		expect(handled).toBe(true);
+		expect(drawerHandlers.onClose).toHaveBeenCalledTimes(1);
+
+		await view.rerender(drawer(false, drawerHandlers));
+		expect(remove).toHaveBeenCalledTimes(1);
+	});
+
+	it("offers the edge swipe only while closed and enabled", async () => {
+		const view = await render(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-edge", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await view.rerender(drawer(false, handlers(), { swipeEnabled: false }));
+		expect(screen.queryByTestId("drawer-edge", { includeHiddenElements: true })).toBeNull();
+
+		await view.rerender(drawer(true, handlers()));
+		expect(screen.queryByTestId("drawer-edge", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("renders no blur behind a closed drawer", async () => {
+		await render(drawer(false, handlers()));
+
+		expect(screen.queryByTestId("drawer-blur", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("blurs the app behind an open drawer, without taking touches from the scrim", async () => {
+		const view = await render(drawer(false, handlers()));
+
+		await view.rerender(drawer(true, handlers()));
+
+		expect(screen.getByTestId("drawer-blur", { includeHiddenElements: true })).toHaveProp("pointerEvents", "none");
+	});
+
+	it("keeps the blur while the drawer closes, then removes it once the close has settled", async () => {
+		const view = await render(drawer(true, handlers()));
+
+		await view.rerender(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-blur", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await waitFor(
+			() => {
+				expect(screen.queryByTestId("drawer-blur", { includeHiddenElements: true })).toBeNull();
+			},
+			{ timeout: CLOSE_SETTLE_TIMEOUT_MS },
+		);
+	});
+
+	it("takes a closed drawer off the screen entirely: no panel or scrim is displayed", async () => {
+		await render(drawer(false, handlers()));
+
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		expect(screen.getByTestId("drawer-scrim-layer", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+	});
+
+	it("displays the drawer while it closes, takes it off the screen once the close has settled, and keeps it off through re-renders", async () => {
+		const view = await render(drawer(true, handlers()));
+		expect(screen.getByTestId("drawer-panel")).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+
+		await view.rerender(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		await waitFor(
+			() => {
+				expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+			},
+			{ timeout: CLOSE_SETTLE_TIMEOUT_MS },
+		);
+
+		// A re-render at rest (a theme change re-renders the panel for its colours) cannot bring it back.
+		await view.rerender(drawer(false, handlers()));
+		expect(screen.getByTestId("drawer-panel", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		expect(screen.getByTestId("drawer-scrim-layer", { includeHiddenElements: true })).toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+	});
+
+	it("shows the drawer again when it reopens", async () => {
+		const view = await render(drawer(false, handlers()));
+
+		await view.rerender(drawer(true, handlers()));
+		expect(screen.getByTestId("drawer-panel")).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+		expect(screen.getByTestId("drawer-scrim-layer", { includeHiddenElements: true })).not.toHaveProp("className", expect.stringMatching(HIDDEN_CLASS));
+	});
+
+	it("raises the blur to full with the open drawer (Jest renders as iOS, where the intensity is animated)", async () => {
+		expect(Platform.OS).toBe("ios");
+		await render(drawer(true, handlers()));
+
+		expect(screen.getByTestId("drawer-blur-view", { includeHiddenElements: true })).toHaveProp("intensity", FULL_BLUR_INTENSITY);
+		expect(screen.getByTestId("drawer-blur-view", { includeHiddenElements: true })).toHaveProp("tint", "dark");
+	});
+});

@@ -158,4 +158,50 @@ describe("Stepper", () => {
 		);
 		expect(document.querySelector('[data-slot="stepper-indicator"]')?.className).toContain("size-8");
 	});
+	it("points the active tab at its mounted panel with aria-controls", (): void => {
+		render(<Fixture value={2} />);
+		const tabs = screen.getAllByRole("tab");
+		expect(tabs.map((tab) => tab.hasAttribute("aria-controls"))).toEqual([false, true, false]);
+		expect(screen.getByRole("tab", { name: /Second/ }).getAttribute("aria-controls")).toBe(screen.getByRole("tabpanel").id);
+	});
+
+	it("follows the panel when the active step changes", (): void => {
+		const { rerender } = render(<Fixture value={1} />);
+		rerender(<Fixture value={3} />);
+		expect(screen.getByRole("tab", { name: /First/ }).hasAttribute("aria-controls")).toBe(false);
+		expect(screen.getByRole("tab", { name: /Third/ }).getAttribute("aria-controls")).toBe(screen.getByRole("tabpanel").id);
+	});
+
+	it("points every tab at its force-mounted, hidden panel", (): void => {
+		render(
+			<Stepper value={1}>
+				<StepperNav>
+					{STEP_TITLES.map((title, index) => (
+						<StepperItem key={title} step={index + 1}>
+							<StepperTrigger>{title}</StepperTrigger>
+						</StepperItem>
+					))}
+				</StepperNav>
+				{STEP_TITLES.map((title, index) => (
+					<StepperContent key={title} value={index + 1} forceMount>{`${title} content`}</StepperContent>
+				))}
+			</Stepper>,
+		);
+		const panels = screen.getAllByRole("tabpanel", { hidden: true });
+		expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-controls"))).toEqual(panels.map((panel) => panel.id));
+		expect(panels.map((panel) => panel.hidden)).toEqual([false, true, true]);
+	});
+
+	it("leaves aria-controls off a stepper with no panels", (): void => {
+		render(
+			<Stepper value={1}>
+				<StepperNav>
+					<StepperItem step={1}>
+						<StepperTrigger>Only</StepperTrigger>
+					</StepperItem>
+				</StepperNav>
+			</Stepper>,
+		);
+		expect(screen.getByRole("tab").hasAttribute("aria-controls")).toBe(false);
+	});
 });

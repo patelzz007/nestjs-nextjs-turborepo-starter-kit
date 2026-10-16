@@ -14,7 +14,7 @@ import * as React from "react";
 import { Text, View } from "react-native";
 
 import type { ChartColor } from "./chart-colors";
-import { Icon, type LucideIcon } from "./icon";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 import { Sparkline } from "./sparkline";
 
 export type KpiDirection = "up" | "down" | "flat";

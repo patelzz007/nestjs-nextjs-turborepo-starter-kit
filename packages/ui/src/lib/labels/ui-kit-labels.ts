@@ -13,6 +13,8 @@ import type { AlertDialogLabels } from "../../components/alert-dialog";
 import type { AnalyticsRangePickerLabels } from "../../components/analytics-range-picker";
 import type { AuthLayoutLabels } from "../../components/auth-layout";
 import type { CodeBlockLabels } from "../../components/code-block";
+import type { ColorPickerLabels } from "../../components/color-picker-context";
+import type { DateSelectorLabels } from "../../components/date-selector";
 import type { ComboboxLabels } from "../../components/combobox-context";
 import type { ImageCropperLabels } from "../../components/image-cropper";
 import type { KpiDirectionLabels } from "../../components/kpi-stat-card";
@@ -21,13 +23,31 @@ import type { PasswordInputLabels } from "../../components/password-input";
 import type { PasswordStrengthMeterLabels } from "../../components/password-strength-meter";
 import type { SelectLabels } from "../../components/select-context";
 import type { SkeletonRegionLabels } from "../../components/skeleton-region";
+import type { TimePickerLabels } from "../../components/time-picker";
 import type { TimeSeriesChartLabels } from "../../components/time-series-chart";
 import type { ToastLabels } from "../../components/toast";
+import type { AutocompleteLabels } from "../../components/autocomplete";
+import type { NumberFieldLabels } from "../../components/number-field";
+import type { PhoneInputLabels } from "../../components/phone-input";
+import type { RatingLabels } from "../../components/rating";
+import type { EmojiPickerLabels } from "../../components/emoji-picker";
+import type { DataGridLabels } from "../../components/data-grid/data-grid-i18n";
+import type { FileTypeLabels } from "../../components/file-type";
+import type { QuestionnaireLabels } from "../../components/questionnaire";
+import type { FileUploadLabels } from "../../hooks/use-file-upload";
+import type { KanbanLabels } from "../../components/kanban";
+import type { SignaturePadLabels } from "../../components/signature-pad";
+import type { SortableLabels } from "../../components/sortable";
 import type { DataTableLabels } from "../data-table/labels";
 import type { BreadcrumbTrailLabels, CarouselLabels } from "../navigation/labels";
+import type { CascaderLabels } from "../../components/cascader/cascader-types";
 import type { AppCommandPaletteLabels } from "../palette/labels";
 import type { AppShellProfileDropdownLabels, AppShellTopbarSearchLabels } from "../shell/labels";
 import type { PanelSidebarNavLabels, SidebarLabels } from "../sidebar/labels";
+import type { GanttLabels } from "../../components/gantt/gantt-i18n";
+import type { EventCalendarLabels } from "../../components/event-calendar/event-calendar-i18n";
+import type { FilterLabels } from "../../components/filters/filters-types";
+import type { FilterOperatorLabels } from "../../components/filters/filters-operators";
 
 export interface BreadcrumbLabels {
 	/** Accessible name of the breadcrumb `<nav>` landmark. */
@@ -71,11 +91,18 @@ export interface UiKitLabels {
 	readonly breadcrumb: BreadcrumbLabels;
 	readonly breadcrumbTrail: BreadcrumbTrailLabels;
 	readonly carousel: CarouselLabels;
+	readonly cascader: CascaderLabels;
 	readonly codeBlock: CodeBlockLabels;
+	readonly colorPicker: ColorPickerLabels;
 	readonly combobox: ComboboxLabels;
+	readonly dataGrid: DataGridLabels;
 	readonly dataTable: DataTableLabels;
+	readonly dateSelector: DateSelectorLabels;
 	readonly imageCropper: ImageCropperLabels;
 	readonly dialog: DialogLabels;
+	readonly gantt: GanttLabels;
+	readonly eventCalendar: EventCalendarLabels;
+	readonly emojiPicker: EmojiPickerLabels;
 	readonly kpiDirection: KpiDirectionLabels;
 	readonly lockoutCountdown: LockoutCountdownLabels;
 	readonly pagination: PaginationLabels;
@@ -88,8 +115,21 @@ export interface UiKitLabels {
 	readonly shellThemeToggle: ShellThemeToggleLabels;
 	readonly sidebar: SidebarLabels;
 	readonly skeletonRegion: SkeletonRegionLabels;
+	readonly timePicker: TimePickerLabels;
 	readonly timeSeriesChart: TimeSeriesChartLabels;
 	readonly toast: ToastLabels;
+	readonly autocomplete: AutocompleteLabels;
+	readonly numberField: NumberFieldLabels;
+	readonly phoneInput: PhoneInputLabels;
+	readonly rating: RatingLabels;
+	readonly fileType: FileTypeLabels;
+	readonly kanban: KanbanLabels;
+	readonly signaturePad: SignaturePadLabels;
+	readonly sortable: SortableLabels;
+	readonly filters: FilterLabels;
+	readonly filterOperators: FilterOperatorLabels;
+	readonly questionnaire: QuestionnaireLabels;
+	readonly fileUpload: FileUploadLabels;
 }
 
 /** One component family's copy. */

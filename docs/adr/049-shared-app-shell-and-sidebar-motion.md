@@ -35,7 +35,7 @@ variant="inset" collapsible="offcanvas"` on the `shell-frame` surface, the page 
   `<main>`, and an `overlay` slot (scroll-to-top). Apps render it through `StoreBoundAppPanelShell`
   (`packages/client`), which reads and writes the sidebar store.
 - **Shared parts, app slots.** `AppShellHeader` (expand toggle while the sidebar is out of sight,
-  breadcrumb slot, app `actions` — notifications, the merchant's store switcher — and Search ⌘K),
+  breadcrumb slot, app `actions` — notifications — and Search ⌘K; the merchant's store and location switcher heads its sidebar as a `PanelSidebarSwitcher`),
   `PanelSidebarHeader` (brand + collapse toggle, 56 pt), and `AppShellSidebarAccount` (status, the user
   row that opens the shared profile menu or an app's own, theme, log out). Each app supplies only its
   data: menu, breadcrumb, profile items, actions. Profile items are pure functions per app

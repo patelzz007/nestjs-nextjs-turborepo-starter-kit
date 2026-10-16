@@ -12,7 +12,7 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { intensityLevel } from "../lib/chart-geometry";
-import { playSelectionFeedback } from "../lib/haptics";
+import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { CHART_RAMP_STEPS, rampClassOf, type ChartColor } from "./chart-colors";
 
 /** A row's or column's name: short beside the grid ("Sat"), in full in the readout ("Saturday"). */

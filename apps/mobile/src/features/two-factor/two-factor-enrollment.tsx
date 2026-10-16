@@ -30,12 +30,12 @@ import * as React from "react";
 import { Image, Linking, Text, View } from "react-native";
 import { z } from "zod";
 
-import { Banner } from "../../components/banner";
+import { Alert } from "@workspace/ui-native/components/alert";
 import { BackupCodes } from "../../components/backup-codes";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
-import { MutedText } from "../../components/text";
-import { TextField } from "../../components/text-field";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
+import { MutedText } from "@workspace/ui-native/components/text";
+import { TextField } from "@workspace/ui-native/components/text-field";
 import { useApi } from "../../lib/api-context";
 import { sanitizeCodeInput } from "../../lib/code-input";
 import { errorMessageOf, GENERIC_ERROR_MESSAGE } from "../../lib/error-messages";
@@ -114,7 +114,7 @@ export function TwoFactorEnrollment({ mode, afterTokenVersionBump, onComplete, c
 
 	return (
 		<View className="gap-5">
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
+			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			{state.step === "start" && mode === "rotate" ? <RotateStart onRotated={handleRotated} /> : null}
 			{state.step === "start" && mode === "setup" ? (
 				<>
@@ -166,7 +166,7 @@ function RotateStart({ onRotated }: RotateStartProps): React.JSX.Element {
 
 	return (
 		<Card title="Confirm it's you" description="New backup codes come with a new authenticator secret: you will add the account to your authenticator again.">
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
+			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			<form.Field name="password">
 				{(field): React.JSX.Element => (
 					<TextField
@@ -271,7 +271,7 @@ function VerifyStep({ setup, onEnabled }: VerifyStepProps): React.JSX.Element {
 		<>
 			<Card title="1. Add the account to your authenticator">
 				<Button label="Open in authenticator app" onPress={openAuthenticator} accessibilityHint="Opens your authenticator app to add this account" />
-				{linkFailed ? <Banner tone="warning" message={NO_AUTHENTICATOR_MESSAGE} /> : null}
+				{linkFailed ? <Alert tone="warning" message={NO_AUTHENTICATOR_MESSAGE} /> : null}
 				<View className="gap-2">
 					<MutedText>Setup key</MutedText>
 					<Text selectable accessibilityLabel={`Setup key ${setup.secret.split("").join(" ")}`} className="font-mono text-base text-foreground">
@@ -287,7 +287,7 @@ function VerifyStep({ setup, onEnabled }: VerifyStepProps): React.JSX.Element {
 				</View>
 			</Card>
 			<Card title="2. Enter the code it shows">
-				{requestError === null ? null : <Banner tone="error" message={requestError} />}
+				{requestError === null ? null : <Alert tone="error" message={requestError} />}
 				<form.Field name="token">
 					{(field): React.JSX.Element => (
 						<TextField
@@ -337,9 +337,9 @@ function BackupCodesStep({ codes, onComplete, completeLabel }: BackupCodesStepPr
 
 	return (
 		<Card title="3. Save your backup codes">
-			<Banner tone="success" message="Two-factor authentication is on." />
-			{actions.copied ? <Banner tone="info" message="Backup codes copied." /> : null}
-			{completeError === null ? null : <Banner tone="error" message={completeError} />}
+			<Alert tone="success" message="Two-factor authentication is on." />
+			{actions.copied ? <Alert tone="info" message="Backup codes copied." /> : null}
+			{completeError === null ? null : <Alert tone="error" message={completeError} />}
 			<BackupCodes
 				codes={codes}
 				confirmed={confirmed}

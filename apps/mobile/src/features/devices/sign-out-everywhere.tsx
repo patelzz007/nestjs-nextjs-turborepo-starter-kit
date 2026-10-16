@@ -3,8 +3,8 @@
 
 import * as React from "react";
 
-import { Button } from "../../components/button";
-import { ConfirmDialog } from "../../components/confirm-dialog";
+import { Button } from "@workspace/ui-native/components/button";
+import { AlertDialog } from "@workspace/ui-native/components/alert-dialog";
 import { useSignOut } from "../auth/use-sign-out";
 import { DEVICES_COPY } from "./labels";
 
@@ -39,7 +39,7 @@ export function SignOutEverywhere(): React.JSX.Element {
 	return (
 		<>
 			<Button label={DEVICES_COPY.signOutEverywhere} variant="secondary" onPress={open} />
-			<ConfirmDialog
+			<AlertDialog
 				visible={isOpen}
 				title={DEVICES_COPY.signOutEverywhereTitle}
 				description={DEVICES_COPY.signOutEverywhereDescription}

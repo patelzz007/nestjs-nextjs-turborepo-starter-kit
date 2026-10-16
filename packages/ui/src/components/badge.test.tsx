@@ -25,6 +25,21 @@ describe("Badge", () => {
 		expect(badge.className).toContain("text-destructive-foreground");
 	});
 
+	it("has ReUI's focus variants, drawn from the --focus token", (): void => {
+		render(
+			<>
+				<Badge variant="focus">Solid</Badge>
+				<Badge variant="focus-light">Light</Badge>
+				<Badge variant="focus-outline">Outline</Badge>
+			</>,
+		);
+		expect(screen.getByText("Solid").className).toContain("bg-focus");
+		expect(screen.getByText("Solid").className).toContain("text-status-foreground");
+		expect(screen.getByText("Light").className).toContain("bg-focus/10");
+		expect(screen.getByText("Light").className).toContain("text-focus-foreground");
+		expect(screen.getByText("Outline").className).toContain("text-focus-foreground");
+	});
+
 	it("sizes the smallest badges through the badge type tokens", (): void => {
 		render(<Badge size="xs">Tiny</Badge>);
 		expect(screen.getByText("Tiny").className).toContain("text-[length:var(--text-badge-xs)]");

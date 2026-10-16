@@ -2,10 +2,12 @@
 // Description: Isomorphic shiki engine and pure helpers for the code block.
 // Ported from ReUI (https://reui.io/r/base-vega/code-block-highlight.json).
 // ReUI ships this file as .tsx; nothing in it renders JSX, so it stays a
-// plain .ts module. The unified-diff and ANSI parsers were dropped as unused
-// (their hex palette also bypasses the kit's design tokens); the markdown
-// helpers are kept. The other deviations are type-level only (no casts, no
-// `unknown`, real shiki/hast types, zod-read React trees) and are listed in
+// plain .ts module. The ANSI parser's 16 colour slots fall back to kit design
+// tokens instead of ReUI's hex palette (still overridable through ReUI's
+// `--code-ansi-*` variables), and it scans escapes by hand instead of with
+// control-character regexes; the unified-diff parser reads a hunk by its
+// header's line counts. The other deviations are type-level only (no casts,
+// no `unknown`, real shiki/hast types, zod-read React trees) and are listed in
 // packages/ui/README.md.
 
 /**
@@ -920,4 +922,391 @@ export function resetCodeBlockHighlighter(): void {
 	loadedLanguages.clear();
 	loadedThemes.clear();
 	previousDocuments.clear();
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                    ANSI                                     */
+/* -------------------------------------------------------------------------- */
+
+const ESCAPE = "\u001b";
+const BELL = "\u0007";
+const STRING_TERMINATOR = `${ESCAPE}\\`;
+const CSI_FINAL_RE = /^[A-Za-z]$/;
+const CHARSET_DESIGNATION_RE = /^[0-9A-B]$/;
+const SGR_PARAMETER_RE = /^[0-9;]$/;
+const CSI_PARAMETER_RE = /^[0-9;?]$/;
+
+/**
+ * The 16 SGR colour slots. Each paints as `var(--code-ansi-<slot>, <token>)`:
+ * a consumer retints terminal output with `--code-ansi-red` and friends (as in
+ * ReUI), and the fallback is a kit design token — never a hex value — so it
+ * follows the theme. The bright slots share their base slot's token.
+ */
+const ANSI_SLOTS: readonly (readonly [slot: string, token: string])[] = [
+	["black", "--muted-foreground"],
+	["red", "--tone-red"],
+	["green", "--tone-green"],
+	["yellow", "--tone-yellow"],
+	["blue", "--tone-blue"],
+	["magenta", "--tone-violet"],
+	["cyan", "--tone-teal"],
+	["white", "--foreground"],
+	["bright-black", "--muted-foreground"],
+	["bright-red", "--tone-red"],
+	["bright-green", "--tone-green"],
+	["bright-yellow", "--tone-yellow"],
+	["bright-blue", "--tone-blue"],
+	["bright-magenta", "--tone-violet"],
+	["bright-cyan", "--tone-teal"],
+	["bright-white", "--foreground"],
+];
+
+/** The SGR parameters the parser acts on. */
+const SGR = {
+	reset: 0,
+	bold: 1,
+	italic: 3,
+	underline: 4,
+	notBold: 22,
+	notItalic: 23,
+	notUnderline: 24,
+	foregroundFirst: 30,
+	foregroundLast: 37,
+	extendedForeground: 38,
+	defaultForeground: 39,
+	extendedBackground: 48,
+	brightForegroundFirst: 90,
+	brightForegroundLast: 97,
+} satisfies Record<string, number>;
+
+/** The colour slot the first bright foreground (`90`) maps to. */
+const BRIGHT_SLOT_OFFSET = 8;
+
+/** `38;5;n` (256-colour palette) and `38;2;r;g;b` (truecolor), and how many parameters each consumes after `38`. */
+const EXTENDED_COLOUR = {
+	palette: { mode: 5, parameters: 2 },
+	rgb: { mode: 2, parameters: 4 },
+} satisfies Record<string, { mode: number; parameters: number }>;
+
+/** xterm's 256-colour layout: 16 slots, a 6×6×6 cube, then a 24-step grey ramp. */
+const XTERM_CUBE_FIRST = 16;
+const XTERM_GREY_FIRST = 232;
+const XTERM_GREY_BASE = 8;
+const XTERM_GREY_STEP = 10;
+const XTERM_CUBE_SIDE = 6;
+const XTERM_CUBE_LEVELS: readonly number[] = [0, 95, 135, 175, 215, 255];
+const COLOUR_CHANNEL_MAX = 255;
+const HEX_RADIX = 16;
+const HEX_CHANNEL_WIDTH = 2;
+
+interface AnsiStyle {
+	color?: string | undefined;
+	bold: boolean;
+	italic: boolean;
+	underline: boolean;
+}
+
+function ansiSlotColour(slot: number): string | undefined {
+	const entry = ANSI_SLOTS.at(slot);
+	if (entry === undefined) return undefined;
+	const [name, token] = entry;
+	return `var(--code-ansi-${name}, var(${token}))`;
+}
+
+function hexChannel(value: number): string {
+	const clamped = Math.min(COLOUR_CHANNEL_MAX, Math.max(0, Math.trunc(value)));
+	return clamped.toString(HEX_RADIX).padStart(HEX_CHANNEL_WIDTH, "0");
+}
+
+function hexColour(red: number, green: number, blue: number): string {
+	return `#${hexChannel(red)}${hexChannel(green)}${hexChannel(blue)}`;
+}
+
+/** An xterm 256-colour index as a colour: the 16 slots stay on tokens; the cube and grey ramp are computed. */
+function ansi256(index: number): string | undefined {
+	if (index < XTERM_CUBE_FIRST) return ansiSlotColour(index);
+	if (index >= XTERM_GREY_FIRST) {
+		const grey = XTERM_GREY_BASE + (index - XTERM_GREY_FIRST) * XTERM_GREY_STEP;
+		return hexColour(grey, grey, grey);
+	}
+	const cubeIndex = index - XTERM_CUBE_FIRST;
+	const level = (digit: number): number => XTERM_CUBE_LEVELS.at(digit) ?? 0;
+	return hexColour(
+		level(Math.floor(cubeIndex / (XTERM_CUBE_SIDE * XTERM_CUBE_SIDE))),
+		level(Math.floor(cubeIndex / XTERM_CUBE_SIDE) % XTERM_CUBE_SIDE),
+		level(cubeIndex % XTERM_CUBE_SIDE),
+	);
+}
+
+/** Where the run of characters matching `pattern` starting at `from` ends. */
+function scanWhile(text: string, from: number, pattern: RegExp): number {
+	let index = from;
+	while (index < text.length && pattern.test(text.charAt(index))) index += 1;
+	return index;
+}
+
+/**
+ * The end of a non-SGR escape sequence at `at` (CSI other than SGR, OSC,
+ * charset designation), or `undefined` when the escape there is SGR — the
+ * line tokenizer consumes that — or is not a sequence the parser recognises.
+ */
+function nonSgrEscapeEnd(text: string, at: number): number | undefined {
+	const introducer = text.charAt(at + 1);
+	if (introducer === "[") {
+		const parametersEnd = scanWhile(text, at + 2, CSI_PARAMETER_RE);
+		const final = text.charAt(parametersEnd);
+		if (!CSI_FINAL_RE.test(final)) return undefined;
+		const isSgr = final === "m" && !text.slice(at + 2, parametersEnd).includes("?");
+		return isSgr ? undefined : parametersEnd + 1;
+	}
+	if (introducer === "]") {
+		const bell = text.indexOf(BELL, at + 2);
+		const terminator = text.indexOf(STRING_TERMINATOR, at + 2);
+		if (bell === -1 && terminator === -1) return undefined;
+		if (terminator === -1 || (bell !== -1 && bell < terminator)) return bell + BELL.length;
+		return terminator + STRING_TERMINATOR.length;
+	}
+	if ((introducer === "(" || introducer === ")") && CHARSET_DESIGNATION_RE.test(text.charAt(at + 2))) {
+		return at + 3;
+	}
+	return undefined;
+}
+
+/** Drops cursor movement, OSC (titles, hyperlinks) and charset escapes, keeping SGR for the tokenizer. */
+function stripNonSgrEscapes(text: string): string {
+	let out = "";
+	let index = 0;
+	while (index < text.length) {
+		const escapeAt = text.indexOf(ESCAPE, index);
+		if (escapeAt === -1) {
+			out += text.slice(index);
+			break;
+		}
+		out += text.slice(index, escapeAt);
+		const end = nonSgrEscapeEnd(text, escapeAt);
+		if (end === undefined) {
+			out += ESCAPE;
+			index = escapeAt + ESCAPE.length;
+		} else {
+			index = end;
+		}
+	}
+	return out;
+}
+
+/** Applies one SGR parameter list (`1;31`, `38;5;208`, …) to the running style. */
+function applySgr(style: AnsiStyle, parameters: readonly number[]): void {
+	for (let index = 0; index < parameters.length; index += 1) {
+		const code = parameters.at(index) ?? SGR.reset;
+		if (code === SGR.reset) {
+			style.color = undefined;
+			style.bold = false;
+			style.italic = false;
+			style.underline = false;
+		} else if (code === SGR.bold) style.bold = true;
+		else if (code === SGR.italic) style.italic = true;
+		else if (code === SGR.underline) style.underline = true;
+		else if (code === SGR.notBold) style.bold = false;
+		else if (code === SGR.notItalic) style.italic = false;
+		else if (code === SGR.notUnderline) style.underline = false;
+		else if (code === SGR.defaultForeground) style.color = undefined;
+		else if (code >= SGR.foregroundFirst && code <= SGR.foregroundLast) style.color = ansiSlotColour(code - SGR.foregroundFirst);
+		else if (code >= SGR.brightForegroundFirst && code <= SGR.brightForegroundLast) style.color = ansiSlotColour(code - SGR.brightForegroundFirst + BRIGHT_SLOT_OFFSET);
+		else if (code === SGR.extendedForeground || code === SGR.extendedBackground) {
+			const mode = parameters.at(index + 1);
+			const extended = mode === EXTENDED_COLOUR.palette.mode ? EXTENDED_COLOUR.palette : mode === EXTENDED_COLOUR.rgb.mode ? EXTENDED_COLOUR.rgb : undefined;
+			if (extended === undefined) continue;
+			/* Backgrounds are consumed, not rendered: the code surface owns its background. */
+			if (code === SGR.extendedForeground) {
+				const [first = 0, second = 0, third = 0] = parameters.slice(index + 2, index + 1 + extended.parameters);
+				style.color = extended === EXTENDED_COLOUR.palette ? ansi256(first) : hexColour(first, second, third);
+			}
+			index += extended.parameters;
+		}
+		/* 40-47 / 100-107 backgrounds and anything unknown: consumed by falling through. */
+	}
+}
+
+function ansiFontStyle(style: AnsiStyle): CodeBlockFontStyle | undefined {
+	if (style.bold) return "bold";
+	if (style.italic) return "italic";
+	return style.underline ? "underline" : undefined;
+}
+
+/** One line of SGR-coloured text as tokens plus its plain text. */
+function ansiLine(raw: string, number: number): CodeBlockLine {
+	const tokens: CodeBlockToken[] = [];
+	const style: AnsiStyle = { bold: false, italic: false, underline: false };
+	let text = "";
+
+	const flush = (content: string): void => {
+		if (!content) return;
+		text += content;
+		/* The fallback token follows the theme, so light and dark share one value. */
+		tokens.push({ content, color: style.color, colorDark: style.color, fontStyle: ansiFontStyle(style) });
+	};
+
+	let index = 0;
+	while (index < raw.length) {
+		const escapeAt = raw.indexOf(ESCAPE, index);
+		if (escapeAt === -1) {
+			flush(raw.slice(index));
+			break;
+		}
+		const parametersEnd = scanWhile(raw, escapeAt + 2, SGR_PARAMETER_RE);
+		const isSgr = raw.charAt(escapeAt + 1) === "[" && raw.charAt(parametersEnd) === "m";
+		if (!isSgr) {
+			/* An unrecognised escape stays as text, as in ReUI. */
+			flush(raw.slice(index, escapeAt + ESCAPE.length));
+			index = escapeAt + ESCAPE.length;
+			continue;
+		}
+		flush(raw.slice(index, escapeAt));
+		applySgr(style, (raw.slice(escapeAt + 2, parametersEnd) || String(SGR.reset)).split(";").map(Number));
+		index = parametersEnd + 1;
+	}
+
+	return { number, text, tokens };
+}
+
+/**
+ * Terminal output with SGR colour codes, as renderable lines: feed the result
+ * to the `lines` prop. Covers what agent stdout actually uses - 30-37 / 90-97
+ * foregrounds, 38;5;n and 38;2;r;g;b, bold, italic, underline and resets.
+ * Backgrounds and cursor movements are STRIPPED rather than rendered: a code
+ * surface has its own background, and a partial screen-drawing stream is
+ * better read as text than half-drawn. As in ReUI, styling restarts on every line.
+ */
+export function ansiToLines(text: string, startLine = 1): CodeBlockLine[] {
+	return stripNonSgrEscapes(normalizeCode(text))
+		.split("\n")
+		.map((raw: string, index: number): CodeBlockLine => ansiLine(raw, startLine + index));
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                Unified diff                                 */
+/* -------------------------------------------------------------------------- */
+
+/** One file of a parsed unified patch. */
+export interface CodeBlockPatchFile {
+	/** New-side path, or the old one for a deletion. */
+	file: string;
+	/** Unified view: context, removed and added lines with dual gutter labels. */
+	lines: CodeBlockLine[];
+	added: number;
+	removed: number;
+	hunks: { header: string; at: number }[];
+}
+
+const DIFF_GIT_HEADER_RE = /^diff --git a\/(?<oldPath>.+) b\/(?<newPath>.+)$/;
+const DIFF_NEW_PATH_HEADER_RE = /^\+\+\+ (?:b\/)?(?<path>.+)$/;
+const DIFF_OLD_PATH_HEADER_RE = /^--- (?:a\/)?(?<path>.+)$/;
+const DIFF_METADATA_RE = /^(?:---|index |old mode|new mode|new file|deleted file|similarity|rename |Binary )/;
+const DIFF_HUNK_RE = /^@@ -(?<oldStart>\d+)(?:,(?<oldCount>\d+))? \+(?<newStart>\d+)(?:,(?<newCount>\d+))? @@(?<context>.*)$/;
+const DEV_NULL = "/dev/null";
+/** A hunk header's line count when the `,count` is omitted (unified diff format). */
+const DIFF_DEFAULT_HUNK_COUNT = 1;
+/** The gutter's starting width, before a hunk header says how wide its numbers get. */
+const DIFF_DEFAULT_GUTTER_WIDTH = 4;
+const DIFF_MIN_GUTTER_WIDTH = 2;
+/** The gutter label of a hunk-header row, which has no line number. */
+const DIFF_HUNK_GUTTER_MARK = "·";
+/** The first character of git's "\ No newline at end of file" note. */
+const DIFF_NO_NEWLINE_MARKER = "\\";
+
+/**
+ * A `git diff` / unified patch, as renderable per-file line sets: feed each
+ * file's `lines` to the `lines` prop and the diff tints, `+`/`-` glyphs and
+ * dual old/new gutter numbers all come from the parse - no `diff` prop
+ * arithmetic against a hand-concatenated string. Tokens are plain; patches
+ * read by tint, not grammar.
+ *
+ * Unlike ReUI, a hunk's body is read by its header's line counts, so a
+ * removed line whose content starts with `-- ` (an SQL comment, a Markdown
+ * rule) is a removal, not mistaken for a `---` file header.
+ */
+export function parseUnifiedDiff(patch: string): CodeBlockPatchFile[] {
+	const files: CodeBlockPatchFile[] = [];
+	let current: CodeBlockPatchFile | undefined;
+	let oldNumber = 0;
+	let newNumber = 0;
+	let oldRemaining = 0;
+	let newRemaining = 0;
+	let width = DIFF_DEFAULT_GUTTER_WIDTH;
+	/** The `--- a/<path>` of a deletion, whose `+++` side is `/dev/null`. */
+	let pendingOldPath: string | undefined;
+
+	const pad = (value: number | null): string => (value === null ? "" : String(value)).padStart(width);
+	const push = (file: CodeBlockPatchFile, text: string, state: CodeBlockLineState | undefined, gutter: string): void => {
+		file.lines.push({ number: file.lines.length + 1, text, tokens: [{ content: text }], state, gutter });
+	};
+	const startFile = (name: string): void => {
+		if (name === DEV_NULL || current?.file === name) return;
+		current = { file: name, lines: [], added: 0, removed: 0, hunks: [] };
+		files.push(current);
+	};
+
+	for (const raw of normalizeCode(patch).split("\n")) {
+		const marker = raw.charAt(0);
+		const isInHunk = current !== undefined && (oldRemaining > 0 || newRemaining > 0);
+		/* "\ No newline at end of file" sits between a hunk's lines and counts as none of them. */
+		if (isInHunk && marker === DIFF_NO_NEWLINE_MARKER) continue;
+		const isBodyLine = marker === "+" || marker === "-" || marker === " " || raw === "";
+		if (current !== undefined && isInHunk && isBodyLine) {
+			if (marker === "+") {
+				push(current, raw.slice(1), { diff: "add" }, `${pad(null)} ${pad(newNumber)}`);
+				newNumber += 1;
+				newRemaining -= 1;
+				current.added += 1;
+			} else if (marker === "-") {
+				push(current, raw.slice(1), { diff: "remove" }, `${pad(oldNumber)} ${pad(null)}`);
+				oldNumber += 1;
+				oldRemaining -= 1;
+				current.removed += 1;
+			} else {
+				push(current, raw.slice(1), undefined, `${pad(oldNumber)} ${pad(newNumber)}`);
+				oldNumber += 1;
+				newNumber += 1;
+				oldRemaining -= 1;
+				newRemaining -= 1;
+			}
+			continue;
+		}
+		/* Anything else ends the hunk, so a short (malformed) hunk cannot swallow the next file. */
+		oldRemaining = 0;
+		newRemaining = 0;
+
+		const gitHeader = DIFF_GIT_HEADER_RE.exec(raw)?.groups?.newPath;
+		if (gitHeader !== undefined) {
+			startFile(gitHeader);
+			continue;
+		}
+		const newPath = DIFF_NEW_PATH_HEADER_RE.exec(raw)?.groups?.path;
+		if (newPath !== undefined) {
+			startFile(newPath === DEV_NULL ? (pendingOldPath ?? DEV_NULL) : newPath);
+			pendingOldPath = undefined;
+			continue;
+		}
+		const oldPath = DIFF_OLD_PATH_HEADER_RE.exec(raw)?.groups?.path;
+		if (oldPath !== undefined) {
+			pendingOldPath = oldPath;
+			continue;
+		}
+		if (DIFF_METADATA_RE.test(raw)) continue;
+
+		const hunk = DIFF_HUNK_RE.exec(raw)?.groups;
+		if (hunk !== undefined && current !== undefined) {
+			oldNumber = Number(hunk.oldStart);
+			newNumber = Number(hunk.newStart);
+			oldRemaining = hunk.oldCount === undefined ? DIFF_DEFAULT_HUNK_COUNT : Number(hunk.oldCount);
+			newRemaining = hunk.newCount === undefined ? DIFF_DEFAULT_HUNK_COUNT : Number(hunk.newCount);
+			width = Math.max(String(oldNumber + oldRemaining).length, String(newNumber + newRemaining).length, DIFF_MIN_GUTTER_WIDTH);
+			current.hunks.push({ header: raw, at: current.lines.length + 1 });
+			const context = (hunk.context ?? "").trim();
+			push(current, context || raw, { level: "info" }, `${DIFF_HUNK_GUTTER_MARK.padStart(width)} ${DIFF_HUNK_GUTTER_MARK.padStart(width)}`);
+		}
+		/* "\ No newline at end of file" and stray text between hunks carry no line. */
+	}
+
+	return files;
 }

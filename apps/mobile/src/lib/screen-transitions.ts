@@ -14,7 +14,7 @@ import type { BottomTabNavigationOptions } from "expo-router/tabs";
 import { Easing } from "react-native";
 import type { StackAnimationTypes } from "react-native-screens";
 
-import { PAGE_CHANGE_MS } from "./motion";
+import { PAGE_CHANGE_MS } from "@workspace/ui-native/lib/motion";
 import { isReduceMotionOn } from "./reduce-motion-setting";
 
 /** Opening a screen within a stack (Settings → Security, Sign in → Sign up): the iOS push, the screen below drifting behind. */

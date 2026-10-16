@@ -5,11 +5,13 @@
 // Ported from ReUI (https://reui.io/r/base-vega/code-block.json). Every part,
 // prop, data attribute and behaviour of the original is kept; the deliberate
 // deviations (kit labels, forwarded refs, lint-driven restructuring, the
-// dropped ANSI / unified-diff parsers) are listed in packages/ui/README.md.
+// token-backed ANSI palette) are listed in packages/ui/README.md.
 import {
+	ansiToLines,
 	highlightCode,
 	markdownCodeProps,
 	markdownFences,
+	parseUnifiedDiff,
 	resolveCodeBlockLanguage,
 	stripNotationComments,
 	toPlainLines,
@@ -2190,10 +2192,10 @@ function useCodeBlockSelection(): CodeBlockSelection {
 	return { selectable, selectedLines, toggleLine, clearSelection };
 }
 
-/* Re-exported so a consumer wires an AI transcript from one import path. A
-   server component imports them from `code-block-highlight` instead, which
-   has no "use client" boundary. */
-export { markdownCodeProps, markdownFences };
+/* Re-exported so a consumer wires an AI transcript (markdown, terminal output,
+   patches) from one import path, as ReUI does. A server component imports them
+   from `code-block-highlight` instead, which has no "use client" boundary. */
+export { ansiToLines, markdownCodeProps, markdownFences, parseUnifiedDiff };
 
 export type {
 	CodeBlockDiffSpec,
@@ -2205,6 +2207,7 @@ export type {
 	CodeBlockLineSpec,
 	CodeBlockLineState,
 	CodeBlockMarkdownPart,
+	CodeBlockPatchFile,
 	CodeBlockThemes,
 	CodeBlockToken,
 	CodeBlockTransformer,

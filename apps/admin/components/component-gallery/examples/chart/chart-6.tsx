@@ -1,0 +1,87 @@
+"use client";
+
+import { TrendingUpIcon } from "lucide-react";
+import { Badge } from "@workspace/ui/components/badge";
+import { Bar, BarChart, XAxis, type Margin } from "recharts";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/chart";
+import type * as React from "react";
+import { formatMonthTooltipLabel } from "@/components/component-gallery/examples/chart/chart-example-format";
+import { createIsometricBarShape } from "@/components/component-gallery/examples/chart/isometric-bar";
+
+const CHART_MARGIN: Partial<Margin> = { top: 40, right: 40, bottom: 20, left: 20 };
+
+const chartData = [
+	{ month: "Jan", desktop: 340 },
+	{ month: "Feb", desktop: 600 },
+	{ month: "Mar", desktop: 510 },
+	{ month: "Apr", desktop: 620 },
+	{ month: "May", desktop: 450 },
+	{ month: "Jun", desktop: 780 },
+	{ month: "Jul", desktop: 390 },
+	{ month: "Aug", desktop: 920 },
+	{ month: "Sep", desktop: 640 },
+	{ month: "Oct", desktop: 530 },
+	{ month: "Nov", desktop: 800 },
+	{ month: "Dec", desktop: 270 },
+];
+
+const chartConfig = {
+	desktop: {
+		label: "Desktop",
+		color: "var(--chart-1)",
+	},
+} satisfies ChartConfig;
+
+/** Each face of the block takes its own shade of the series gradient. */
+const renderBar = createIsometricBarShape({
+	back: { fill: "url(#chart6-bar-back)" },
+	side: { fill: "url(#chart6-bar-side)" },
+	top: { fill: "url(#chart6-bar-top)" },
+	front: { fill: "url(#chart6-bar-front)" },
+});
+
+export function Chart6Example(): React.JSX.Element {
+	return (
+		<Card className="w-full max-w-md">
+			<CardHeader>
+				<CardTitle>
+					Regional Performance
+					<Badge variant="success-light" className="ml-2">
+						<TrendingUpIcon aria-hidden="true" />
+						+15.7%
+					</Badge>
+				</CardTitle>
+				<CardDescription>Global sales distribution by region</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<ChartContainer config={chartConfig}>
+					<BarChart accessibilityLayer data={chartData} margin={CHART_MARGIN} barCategoryGap="20%">
+						<defs>
+							<linearGradient id="chart6-bar-front" x1="0" y1="0" x2="0" y2="1">
+								<stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.9" />
+								<stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.7" />
+							</linearGradient>
+							<linearGradient id="chart6-bar-back" x1="0" y1="0" x2="0" y2="1">
+								<stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.5" />
+								<stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.3" />
+							</linearGradient>
+							<linearGradient id="chart6-bar-side" x1="0" y1="0" x2="1" y2="0">
+								<stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.6" />
+								<stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.4" />
+							</linearGradient>
+							<linearGradient id="chart6-bar-top" x1="0" y1="0" x2="1" y2="1">
+								<stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.7" />
+								<stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.5" />
+							</linearGradient>
+						</defs>
+						<XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={12} />
+						<ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" className="min-w-40 gap-2.5" labelFormatter={formatMonthTooltipLabel} />} />
+						<Bar dataKey="desktop" fill="url(#chart6-bar-front)" shape={renderBar} />
+					</BarChart>
+				</ChartContainer>
+			</CardContent>
+		</Card>
+	);
+}

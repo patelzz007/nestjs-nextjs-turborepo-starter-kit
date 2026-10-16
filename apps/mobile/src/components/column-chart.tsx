@@ -10,7 +10,7 @@
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { playSelectionFeedback } from "../lib/haptics";
+import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { CHART_COLOR_CLASSES, type ChartColor } from "./chart-colors";
 
 export interface ColumnDatum {

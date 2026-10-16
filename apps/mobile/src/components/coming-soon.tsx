@@ -5,9 +5,9 @@
 import * as React from "react";
 import { View } from "react-native";
 
-import { Button } from "./button";
-import { Icon, type LucideIcon } from "./icon";
-import { Heading, MutedText } from "./text";
+import { Button } from "@workspace/ui-native/components/button";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
+import { Heading, MutedText } from "@workspace/ui-native/components/text";
 
 export interface ComingSoonAction {
 	readonly label: string;

@@ -11,19 +11,19 @@ import type { CustomerAnalyticsDashboard } from "@workspace/shared";
 import * as React from "react";
 import { View } from "react-native";
 
-import { Card } from "../../components/card";
+import { Card } from "@workspace/ui-native/components/card";
 import { ColumnChart } from "../../components/column-chart";
 import { ComparisonBars } from "../../components/comparison-bars";
-import { DetailList } from "../../components/detail-list";
+import { DetailList } from "@workspace/ui-native/components/detail-list";
 import { DonutChart } from "../../components/donut-chart";
 import { HeatmapGrid } from "../../components/heatmap-grid";
 import { HighlightGrid } from "../../components/highlight-grid";
 import { ProgressList } from "../../components/progress-list";
 import { ProgressRing } from "../../components/progress-ring";
 import { RankedBarList } from "../../components/ranked-bar-list";
-import { EmptyState } from "../../components/states";
-import { Subheading } from "../../components/text";
-import { Timeline } from "../../components/timeline";
+import { EmptyState } from "@workspace/ui-native/components/empty";
+import { Subheading } from "@workspace/ui-native/components/text";
+import { Timeline } from "@workspace/ui-native/components/timeline";
 import type { ActivityInsights } from "./activity-insights";
 import type { ActivitySelection } from "./activity-range";
 import {

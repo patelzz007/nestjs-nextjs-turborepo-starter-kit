@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { DataTableFeatures } from "../../components/data-table";
 import {
+	assertDataTableFiltersMatchColumns,
 	assertUniqueDataTableColumnIds,
 	DATA_TABLE_UTILITY_COLUMN_IDS,
+	findDataTableFiltersWithoutColumns,
 	findDuplicateDataTableColumnIds,
 	isDataTableUtilityColumnId,
 	resolveDataTableColumnId,
@@ -69,5 +71,26 @@ describe("assertUniqueDataTableColumnIds", () => {
 		expect(() => {
 			assertUniqueDataTableColumnIds([NAME_BY_KEY, { id: "name", header: "Again" }]);
 		}).toThrow('"name" is used by more than one column');
+	});
+});
+
+describe("findDataTableFiltersWithoutColumns", () => {
+	it("lists the filter keys no column carries, by accessorKey or id", () => {
+		expect(findDataTableFiltersWithoutColumns(["name", "email", "status"], [NAME_BY_KEY, EMAIL_BY_ID])).toStrictEqual(["status"]);
+		expect(findDataTableFiltersWithoutColumns([], [NAME_BY_KEY])).toStrictEqual([]);
+	});
+});
+
+describe("assertDataTableFiltersMatchColumns", () => {
+	it("accepts filters that each name a column", () => {
+		expect(() => {
+			assertDataTableFiltersMatchColumns(["name", "email"], [NAME_BY_KEY, EMAIL_BY_ID]);
+		}).not.toThrow();
+	});
+
+	it("names every filter without a column and points at server-side filtering", () => {
+		expect(() => {
+			assertDataTableFiltersMatchColumns(["kind", "name", "outcome"], [NAME_BY_KEY]);
+		}).toThrow('DataTable: filter "kind", "outcome" names no column. On a client-side table a filter filters a column');
 	});
 });

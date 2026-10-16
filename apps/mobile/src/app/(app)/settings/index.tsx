@@ -6,10 +6,10 @@ import { useRouter } from "expo-router";
 import * as React from "react";
 import { View } from "react-native";
 
-import { Button } from "../../../components/button";
-import { Card } from "../../../components/card";
-import { DetailList, type DetailItem } from "../../../components/detail-list";
-import { ListRow } from "../../../components/list-row";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
+import { DetailList, type DetailItem } from "@workspace/ui-native/components/detail-list";
+import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../../components/screen";
 import { SignOutDialog } from "../../../features/auth/sign-out-dialog";
 import { useSignOut } from "../../../features/auth/use-sign-out";

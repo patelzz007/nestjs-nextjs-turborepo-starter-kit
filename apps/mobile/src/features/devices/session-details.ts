@@ -3,7 +3,7 @@
 
 import type { Session } from "@workspace/shared";
 
-import type { DetailItem } from "../../components/detail-list";
+import type { DetailItem } from "@workspace/ui-native/components/detail-list";
 import { formatDateTime, formatRelativeTime } from "../../lib/time-format";
 import { CLIENT_TYPE_LABELS, SIGN_IN_METHOD_LABELS, UNKNOWN_CLIENT_TYPE_LABEL } from "./labels";
 

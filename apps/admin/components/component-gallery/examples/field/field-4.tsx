@@ -1,0 +1,51 @@
+import * as React from "react";
+import { Checkbox } from "@workspace/ui/components/checkbox";
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle } from "@workspace/ui/components/field";
+import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
+
+export function Field4Example(): React.JSX.Element {
+	return (
+		<div className="mx-auto w-full max-w-xs">
+			<FieldGroup>
+				<FieldSet>
+					<FieldLegend variant="label">Email Notifications</FieldLegend>
+					<FieldGroup className="gap-4">
+						<Field orientation="horizontal">
+							<Checkbox id="notify-updates" defaultChecked />
+							<FieldContent>
+								<FieldTitle>Product updates</FieldTitle>
+								<FieldDescription>Receive emails about new features and improvements.</FieldDescription>
+							</FieldContent>
+						</Field>
+						<Field orientation="horizontal">
+							<Checkbox id="notify-security" defaultChecked disabled />
+							<FieldContent>
+								<FieldTitle>Security alerts</FieldTitle>
+								<FieldDescription>Critical security notifications cannot be disabled.</FieldDescription>
+							</FieldContent>
+						</Field>
+					</FieldGroup>
+				</FieldSet>
+				<FieldSet>
+					<FieldLegend variant="label">Profile Privacy</FieldLegend>
+					<RadioGroup defaultValue="public">
+						<FieldGroup className="gap-2">
+							<Field orientation="horizontal">
+								<RadioGroupItem value="public" id="privacy-public" />
+								<FieldLabel htmlFor="privacy-public" className="font-normal">
+									Public - visible to everyone
+								</FieldLabel>
+							</Field>
+							<Field orientation="horizontal">
+								<RadioGroupItem value="private" id="privacy-private" />
+								<FieldLabel htmlFor="privacy-private" className="font-normal">
+									Private - only visible to you
+								</FieldLabel>
+							</Field>
+						</FieldGroup>
+					</RadioGroup>
+				</FieldSet>
+			</FieldGroup>
+		</div>
+	);
+}

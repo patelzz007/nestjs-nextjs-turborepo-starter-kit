@@ -8,10 +8,10 @@
 import * as React from "react";
 import { Linking, Platform } from "react-native";
 
-import { Banner } from "../components/banner";
-import { Button } from "../components/button";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
 import { Screen } from "../components/screen";
-import { BodyText, MutedText } from "../components/text";
+import { BodyText, MutedText } from "@workspace/ui-native/components/text";
 import { useMinimumVersion } from "../features/session/facade";
 import { useReadyRuntime } from "../runtime/runtime-context";
 
@@ -43,7 +43,7 @@ export default function UpdateRequiredScreen(): React.JSX.Element {
 			) : (
 				<Button label="Open the store" onPress={openStore} />
 			)}
-			{openFailed ? <Banner tone="error" message="The store could not be opened. Update the app from your device's app store." /> : null}
+			{openFailed ? <Alert tone="error" message="The store could not be opened. Update the app from your device's app store." /> : null}
 		</Screen>
 	);
 }

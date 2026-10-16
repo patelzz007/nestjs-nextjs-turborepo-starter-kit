@@ -7,7 +7,7 @@ import MessageSquareIcon from "lucide-react-native/icons/message-square";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { Icon } from "../../components/icon";
+import { Icon } from "@workspace/ui-native/components/icon";
 import { formatCount } from "../github/labels";
 import { displayStateOf, listRowMeta, pullRequestReference, reviewDecisionLabel, DISPLAY_STATE_LABELS } from "./labels";
 import { LabelChip, PullRequestStateGlyph } from "./pull-request-badges";

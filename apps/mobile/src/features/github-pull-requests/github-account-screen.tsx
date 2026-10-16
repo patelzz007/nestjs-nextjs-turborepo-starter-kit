@@ -13,16 +13,16 @@ import { LinkGithubAccountSchema, type GithubAccountStatus } from "@workspace/sh
 import * as React from "react";
 import { Linking, Text, View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { Banner } from "../../components/banner";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
-import { ConfirmDialog } from "../../components/confirm-dialog";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { Alert } from "@workspace/ui-native/components/alert";
+import { Button } from "@workspace/ui-native/components/button";
+import { Card } from "@workspace/ui-native/components/card";
+import { AlertDialog } from "@workspace/ui-native/components/alert-dialog";
 import { Screen } from "../../components/screen";
-import { SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { ErrorState } from "../../components/states";
-import { MutedText } from "../../components/text";
-import { TextField } from "../../components/text-field";
+import { SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { ErrorState } from "@workspace/ui-native/components/empty";
+import { MutedText } from "@workspace/ui-native/components/text";
+import { TextField } from "@workspace/ui-native/components/text-field";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { visibleFieldError } from "../../lib/form";
@@ -61,7 +61,7 @@ export function GithubAccountScreen(): React.JSX.Element {
 
 function AccountView({ status, nowMs }: { readonly status: GithubAccountStatus; readonly nowMs: number }): React.JSX.Element {
 	if (status.status === "off") {
-		return <Banner tone="info" message={accountSummary(status, nowMs)} />;
+		return <Alert tone="info" message={accountSummary(status, nowMs)} />;
 	}
 	return (
 		<>
@@ -104,9 +104,9 @@ function LinkedAccount({ status, nowMs }: { readonly status: Extract<GithubAccou
 				<Avatar name={status.login} imageUrl={status.avatarUrl} size="md" />
 				<Text className="font-sans-semibold flex-1 text-base text-foreground">{status.login}</Text>
 			</View>
-			{status.health === "rejected" ? <Banner tone="error" message={accountSummary(status, nowMs)} /> : <MutedText>{accountSummary(status, nowMs)}</MutedText>}
+			{status.health === "rejected" ? <Alert tone="error" message={accountSummary(status, nowMs)} /> : <MutedText>{accountSummary(status, nowMs)}</MutedText>}
 			<Button label="Remove token" variant="destructive" onPress={ask} accessibilityHint="Forgets your GitHub token on the server" />
-			<ConfirmDialog
+			<AlertDialog
 				visible={confirming}
 				title="Remove your GitHub token?"
 				description="The server forgets it. You can link a token again at any time."
@@ -164,8 +164,8 @@ function LinkTokenForm({ replacing }: { readonly replacing: boolean }): React.JS
 				))}
 			</View>
 			<Button label="Create a token on GitHub" variant="secondary" onPress={openGithub} accessibilityHint="Opens GitHub's token settings in your browser" />
-			{openFailed ? <Banner tone="warning" message={OPEN_GITHUB_TOKENS_FAILED_MESSAGE} /> : null}
-			{requestError === null ? null : <Banner tone="error" message={requestError} />}
+			{openFailed ? <Alert tone="warning" message={OPEN_GITHUB_TOKENS_FAILED_MESSAGE} /> : null}
+			{requestError === null ? null : <Alert tone="error" message={requestError} />}
 			<form.Field name="personalAccessToken">
 				{(field): React.JSX.Element => (
 					<TextField

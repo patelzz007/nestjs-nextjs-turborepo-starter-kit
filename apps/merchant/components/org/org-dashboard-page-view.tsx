@@ -8,7 +8,8 @@ import { OrganizationLocationList } from "@/components/org/organization-location
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
 import { KYB_STATUS_DISPLAY, ORGANIZATION_LIFECYCLE_DISPLAY } from "@/lib/org/organization-status";
-import { LIST_SLOT_INDEX, MERCHANT_CAPABILITY, type OrganizationContextResponse, type OrganizationMembershipRole } from "@workspace/shared";
+import { ORGANIZATION_ROLE_LABELS } from "@/lib/org/role-labels";
+import { LIST_SLOT_INDEX, MERCHANT_CAPABILITY, type OrganizationContextResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { IconTile, type IconTileTone } from "@workspace/ui/components/icon-tile";
 import { StatusBadge } from "@workspace/ui/components/status-badge";
@@ -17,14 +18,6 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { BarChart3, Building2, ChevronRight, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-
-const ROLE_LABELS: Record<OrganizationMembershipRole, string> = {
-	OWNER: "Owner",
-	ADMIN: "Admin",
-	MEMBER: "Member",
-	POLICY_ADMIN: "Policy admin",
-	CASHIER: "Cashier",
-};
 
 interface OrgNavLinkProps {
 	readonly href: string;
@@ -126,7 +119,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 				<StatCard
 					label="Your role"
 					tone="violet"
-					value={membershipRole !== undefined ? ROLE_LABELS[membershipRole] : "—"}
+					value={membershipRole !== undefined ? ORGANIZATION_ROLE_LABELS[membershipRole] : "—"}
 					hint="Membership in this organization"
 					icon={<ShieldCheck className="size-5" aria-hidden="true" />}
 				/>

@@ -11,7 +11,7 @@ import GitPullRequestDraftIcon from "lucide-react-native/icons/git-pull-request-
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { Icon, type LucideIcon } from "../../components/icon";
+import { Icon, type LucideIcon } from "@workspace/ui-native/components/icon";
 import { labelColors } from "./label-colors";
 import { DISPLAY_STATE_LABELS, type PullRequestDisplayState } from "./labels";
 

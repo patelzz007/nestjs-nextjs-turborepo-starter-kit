@@ -1,0 +1,156 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import * as React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+	ALL_LOCATIONS_VALUE,
+	applyLocationChoice,
+	locationSwitcherOptions,
+	locationSwitcherSubtitle,
+	MerchantContextSwitcher,
+} from "@/components/layout/merchant-context-switcher";
+import { clearOrganizationLocationCookie, organizationLocationCookieName } from "@/lib/org/location";
+import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { testEnvelope } from "@/test/envelope";
+import { contextQueryState, organizationContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
+import { STORE_A, STORE_B } from "@/test/terminals";
+import { SidebarProvider } from "@workspace/ui/components/sidebar";
+
+const { contextQuery, push } = vi.hoisted(() => ({
+	contextQuery: vi.fn<() => ContextQueryState>(),
+	push: vi.fn<(href: string) => void>(),
+}));
+
+vi.mock("@workspace/client/lib/auth", () => ({
+	useAuth: (): object => ({ api: { organizations: { context: { useQuery: contextQuery } } } }),
+}));
+
+vi.mock("next/navigation", () => ({
+	useRouter: (): object => ({ push }),
+	useParams: (): object => ({ orgSlug: TEST_ORG_SLUG }),
+}));
+
+/** A member scoped to one store location: nothing org-wide to roll up to. */
+const SINGLE_LOCATION_CONTEXT = organizationContextFixture({ locations: [STORE_A_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_A.id] });
+
+const OWNER: OrganizationRewardMembershipResponse = membershipFixture("OWNER");
+const OTHER_STORE: OrganizationRewardMembershipResponse = {
+	...membershipFixture("CASHIER"),
+	organizationSlug: "brew-bros",
+	displayName: "Brew Bros",
+	organizationId: "1d3b6c4e-2f0a-4b8e-9c71-5a2d8e6f4b10",
+};
+
+beforeEach((): void => {
+	contextQuery.mockReturnValue(contextQueryState(TWO_STORE_CONTEXT));
+	// jsdom has no matchMedia; the sidebar provider (the switcher keeps its collapse toggle) reads the mobile breakpoint through it.
+	vi.stubGlobal("matchMedia", (query: string): Pick<MediaQueryList, "matches" | "media" | "addEventListener" | "removeEventListener"> => ({
+		matches: false,
+		media: query,
+		addEventListener: vi.fn(),
+		removeEventListener: vi.fn(),
+	}));
+});
+
+/** The switcher sits in the sidebar header, inside the shell's sidebar provider. */
+function inSidebar(ui: React.ReactElement): React.ReactElement {
+	return <SidebarProvider>{ui}</SidebarProvider>;
+}
+
+afterEach((): void => {
+	cleanup();
+	contextQuery.mockReset();
+	push.mockReset();
+	vi.unstubAllGlobals();
+	clearOrganizationLocationCookie(TEST_ORG_SLUG);
+});
+
+function renderSwitcher(
+	memberships: readonly OrganizationRewardMembershipResponse[],
+	initialLocationId: string | null,
+	onStoreChange = vi.fn<(slug: string) => void>(),
+): void {
+	renderWithAuthorization(inSidebar(<MerchantContextSwitcher memberships={memberships} organizationSlug={TEST_ORG_SLUG} onStoreChange={onStoreChange} />), {
+		role: "OWNER",
+		tenantContext: { initialLocationId, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) },
+	});
+}
+
+function openMenu(): HTMLElement {
+	fireEvent.click(screen.getByRole("button", { name: /^Switch store or location/u }));
+	return screen.getByRole("menu");
+}
+
+describe("location switcher helpers", () => {
+	it("offers all locations first only to members who may see org-wide rollups", () => {
+		expect(locationSwitcherOptions([STORE_A_LOCATION, STORE_B_LOCATION], true).map((option) => option.value)).toStrictEqual([ALL_LOCATIONS_VALUE, STORE_A.id, STORE_B.id]);
+		expect(locationSwitcherOptions([STORE_A_LOCATION], false).map((option) => option.value)).toStrictEqual([STORE_A.id]);
+	});
+
+	it("reads the active location, all locations, or nothing for the trigger's second line", () => {
+		expect(locationSwitcherSubtitle(STORE_A_LOCATION, STORE_A.id, true)).toBe(locationSwitcherOptions([STORE_A_LOCATION], false).at(0)?.label);
+		expect(locationSwitcherSubtitle(undefined, undefined, true)).toBe("All locations");
+		expect(locationSwitcherSubtitle(undefined, undefined, false)).toBeUndefined();
+	});
+
+	it("applies a choice through the tenant-context commands", () => {
+		const commands = { selectAllLocations: vi.fn<() => void>(), selectLocation: vi.fn<(id: string) => void>() };
+		applyLocationChoice(commands, ALL_LOCATIONS_VALUE);
+		applyLocationChoice(commands, STORE_B.id);
+		expect(commands.selectAllLocations).toHaveBeenCalledTimes(1);
+		expect(commands.selectLocation).toHaveBeenCalledWith(STORE_B.id);
+	});
+});
+
+describe("MerchantContextSwitcher", () => {
+	it("names the store and the location in effect on the trigger, from the first render", () => {
+		renderSwitcher([OWNER], STORE_B.id);
+		const trigger = screen.getByRole("button", { name: /^Switch store or location: Acme Coffee, /u });
+		expect(trigger.textContent).toContain("Acme Coffee");
+	});
+
+	it("switches location from the menu and remembers it for the server", () => {
+		renderSwitcher([OWNER], null);
+		expect(screen.getByRole("button", { name: "Switch store or location: Acme Coffee, All locations" })).toBeTruthy();
+		const menu = openMenu();
+		expect(within(menu).getByText("Locations")).toBeTruthy();
+		const [all] = within(menu).getAllByRole("menuitemradio");
+		expect(all?.getAttribute("aria-checked")).toBe("true");
+		fireEvent.click(within(menu).getByRole("menuitemradio", { name: new RegExp(STORE_A.name, "u") }));
+		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
+	});
+
+	it("lists the member's other stores only when there is one to switch to", () => {
+		const onStoreChange = vi.fn<(slug: string) => void>();
+		renderSwitcher([OWNER, OTHER_STORE], null, onStoreChange);
+		const menu = openMenu();
+		expect(within(menu).getByText("Stores")).toBeTruthy();
+		fireEvent.click(within(menu).getByRole("menuitemradio", { name: /Brew Bros/u }));
+		expect(onStoreChange).toHaveBeenCalledWith("brew-bros");
+		cleanup();
+		renderSwitcher([OWNER], null);
+		expect(within(openMenu()).queryByText("Stores")).toBeNull();
+	});
+
+	it("opens the locations settings from Manage locations", () => {
+		renderSwitcher([OWNER], null);
+		fireEvent.click(within(openMenu()).getByRole("menuitem", { name: "Manage locations" }));
+		expect(push).toHaveBeenCalledWith(`/orgs/${TEST_ORG_SLUG}/settings/locations`);
+	});
+
+	it("shows a single-location member's only location, checked", () => {
+		contextQuery.mockReturnValue(contextQueryState(SINGLE_LOCATION_CONTEXT));
+		renderWithAuthorization(inSidebar(<MerchantContextSwitcher memberships={[OWNER]} organizationSlug={TEST_ORG_SLUG} onStoreChange={vi.fn<(slug: string) => void>()} />), {
+			role: "CASHIER",
+			tenantContext: {
+				initialLocationId: null,
+				initialOrganizationContext: testEnvelope(SINGLE_LOCATION_CONTEXT),
+			},
+		});
+		const options = within(openMenu()).getAllByRole("menuitemradio");
+		expect(options).toHaveLength(1);
+		expect(options.at(0)?.getAttribute("aria-checked")).toBe("true");
+	});
+});

@@ -4,10 +4,10 @@
 import * as React from "react";
 import { View } from "react-native";
 
-import { Badge } from "./badge";
-import { Button } from "./button";
-import { DetailList, type DetailItem } from "./detail-list";
-import { MutedText, Subheading } from "./text";
+import { Badge } from "@workspace/ui-native/components/badge";
+import { Button } from "@workspace/ui-native/components/button";
+import { DetailList, type DetailItem } from "@workspace/ui-native/components/detail-list";
+import { MutedText, Subheading } from "@workspace/ui-native/components/text";
 
 export interface DeviceSessionRowProps {
 	readonly label: string;

@@ -33,6 +33,8 @@ export const USER_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loa
 export const MFA_RECOVERY_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading MFA recovery requests…" };
 export const PROFILE_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading profile…" };
 export const SECURITY_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading security settings…" };
+export const COMPONENT_GALLERY_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading components…" };
+export const COMPONENT_PAGE_LOADING_LABELS: SkeletonRegionLabelsOverride = { loading: "Loading component…" };
 
 // ── In-component (section-level) announcements ──────────────────────────────
 

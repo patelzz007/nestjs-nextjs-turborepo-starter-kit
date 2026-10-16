@@ -18,6 +18,12 @@ export interface LazySectionProps {
 	 * the user scrolls there it's usually already rendered.
 	 */
 	readonly rootMargin?: string;
+	/**
+	 * What to draw until the content mounts, in place of the default section
+	 * bones. For a long list of sections pass a static box: hundreds of animated
+	 * bones repaint on every frame while the page scrolls.
+	 */
+	readonly placeholder?: React.ReactNode;
 }
 
 /**
@@ -25,7 +31,9 @@ export interface LazySectionProps {
  *
  * Renders fixed-height section bones until an `IntersectionObserver` reports the
  * wrapper is near the viewport (default: within 300px), then mounts `children`
- * with a fade + slide-up reveal animation. Once revealed it stays mounted (no
+ * with a fade + slide-up reveal animation. The mount is a transition, so React
+ * renders it in slices between frames and scrolling stays smooth while a heavy
+ * section mounts. Once revealed it stays mounted (no
  * unmount-on-scroll-away), so scrolling back up never re-triggers a load.
  *
  * The bones are hidden from assistive technology: nothing is loading yet, so
@@ -46,7 +54,7 @@ export interface LazySectionProps {
  * in the scroll path. Do NOT wrap a `LazySection` inside a `display: none`
  * container (closed tab/accordion) — it would never trigger until shown.
  */
-export function LazySection({ height, children, rootMargin = "300px 0px" }: LazySectionProps): React.JSX.Element {
+export function LazySection({ height, children, rootMargin = "300px 0px", placeholder }: LazySectionProps): React.JSX.Element {
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const [hasIntersected, setHasIntersected] = React.useState(false);
 	const isClient = useIsClient();
@@ -62,7 +70,11 @@ export function LazySection({ height, children, rootMargin = "300px 0px" }: Lazy
 		const observer = new IntersectionObserver(
 			(entries) => {
 				if (entries.some((entry) => entry.isIntersecting)) {
-					setHasIntersected(true);
+					// A transition: mounting a heavy section (a data grid, a chart) is
+					// time-sliced and yields to scrolling instead of blocking frames.
+					React.startTransition((): void => {
+						setHasIntersected(true);
+					});
 					observer.disconnect();
 				}
 			},
@@ -79,9 +91,7 @@ export function LazySection({ height, children, rootMargin = "300px 0px" }: Lazy
 			{visible ? (
 				<div className="animate-in duration-300 fill-mode-both fade-in slide-in-from-bottom-2">{children}</div>
 			) : (
-				<div aria-hidden="true">
-					<SectionBones height={height} />
-				</div>
+				<div aria-hidden="true">{placeholder ?? <SectionBones height={height} />}</div>
 			)}
 		</div>
 	);

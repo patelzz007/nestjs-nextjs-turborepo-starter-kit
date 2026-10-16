@@ -133,6 +133,7 @@
 	--success-foreground: var(--tone-green);
 	--warning-foreground: var(--tone-yellow);
 	--info-foreground: var(--tone-blue);
+	--focus-foreground: var(--tone-violet);
 	--destructive-foreground: var(--tone-red);
 	--invert: var(--foreground);
 	--invert-foreground: var(--background);
@@ -160,6 +161,7 @@
 	--success: oklch(0.627 0.17 149.214);
 	--warning: oklch(0.723 0.148 71.953);
 	--info: oklch(0.623 0.146 252.062);
+	--focus: oklch(0.606 0.25 292.717);
 	--destructive-soft: oklch(0.93 0.04 27);
 	--success-soft: oklch(0.92 0.05 149);
 	--warning-soft: oklch(0.94 0.05 84);
@@ -238,6 +240,7 @@
 	--success: oklch(0.723 0.219 149.579);
 	--warning: oklch(0.828 0.189 84.429);
 	--info: oklch(0.685 0.169 237.323);
+	--focus: oklch(0.702 0.183 293.541);
 	--destructive-soft: oklch(0.33 0.06 27);
 	--success-soft: oklch(0.33 0.05 149);
 	--warning-soft: oklch(0.34 0.05 84);
@@ -339,6 +342,7 @@
 	--color-success: var(--success);
 	--color-warning: var(--warning);
 	--color-info: var(--info);
+	--color-focus: var(--focus);
 	--color-destructive-soft: var(--destructive-soft);
 	--color-success-soft: var(--success-soft);
 	--color-warning-soft: var(--warning-soft);
@@ -346,6 +350,7 @@
 	--color-success-foreground: var(--success-foreground);
 	--color-warning-foreground: var(--warning-foreground);
 	--color-info-foreground: var(--info-foreground);
+	--color-focus-foreground: var(--focus-foreground);
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-invert: var(--invert);
 	--color-invert-foreground: var(--invert-foreground);

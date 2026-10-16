@@ -1,0 +1,32 @@
+import * as React from "react";
+import { Kbd, KbdGroup } from "@workspace/ui/components/kbd";
+import { Separator } from "@workspace/ui/components/separator";
+
+const shortcuts = [
+	{ label: "Search", keys: ["⌘", "K"] },
+	{ label: "New File", keys: ["⌘", "N"] },
+	{ label: "Save", keys: ["⌘", "S"] },
+	{ label: "Undo", keys: ["⌘", "Z"] },
+	{ label: "Redo", keys: ["⌘", "⇧", "Z"] },
+];
+
+export function Kbd6Example(): React.JSX.Element {
+	return (
+		<div className="mx-auto flex w-full max-w-xs flex-col">
+			<p className="mb-3 text-sm font-medium">Keyboard Shortcuts</p>
+			<Separator />
+			<div className="flex flex-col">
+				{shortcuts.map((shortcut) => (
+					<div key={shortcut.label} className="flex items-center justify-between border-b py-2.5 last:border-b-0">
+						<span className="text-sm text-muted-foreground">{shortcut.label}</span>
+						<KbdGroup>
+							{shortcut.keys.map((key) => (
+								<Kbd key={key}>{key}</Kbd>
+							))}
+						</KbdGroup>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}

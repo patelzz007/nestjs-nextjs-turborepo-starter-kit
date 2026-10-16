@@ -6,11 +6,11 @@ import type { GithubContentEdit } from "@workspace/shared";
 import * as React from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import { Avatar } from "../../components/avatar";
-import { BottomSheet } from "../../components/bottom-sheet";
+import { Avatar } from "@workspace/ui-native/components/avatar";
+import { BottomSheet } from "@workspace/ui-native/components/bottom-sheet";
 import { Markdown } from "../../components/markdown";
-import { SkeletonGroup, SkeletonText } from "../../components/skeleton";
-import { ErrorState } from "../../components/states";
+import { SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { ErrorState } from "@workspace/ui-native/components/empty";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 import { editEntryLabel, loginOf } from "./labels";

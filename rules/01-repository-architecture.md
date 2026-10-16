@@ -50,6 +50,7 @@ The exact package list can evolve as the product grows, but ownership of each pa
 | A web page/route | `apps/web/src/app/...` | Web-specific routing/rendering |
 | A mobile screen | `apps/mobile/src/app/...` | Mobile-specific navigation |
 | A component used only on web, reused across 2+ features | `packages/ui` | Real reuse, web-only (shadcn/Radix) |
+| A low-level React Native component (button, input, sheet, badge, …) | `packages/ui-native` | Shared by every mobile app; the twin of `packages/ui`, same names (packages/ui-native/README.md) |
 | A component specific to one page | co-located with that route | Not yet reused — don't promote speculatively |
 | A zod schema shared between api and web/mobile | `packages/contracts` | Must be the same definition everywhere |
 | A pure, framework-agnostic function used by 2+ apps | `packages/shared` | No framework dependency, genuine reuse |
@@ -129,11 +130,12 @@ class UserRepository {
 ```text
 apps/api      → packages/contracts, packages/database, packages/shared, packages/observability, packages/config
 apps/web      → packages/contracts, packages/shared, packages/ui, packages/config
-apps/mobile   → packages/shared, packages/api-client (both entries), packages/tokens (generated mobile.css only), packages/eslint-config + typescript-config (dev)
+apps/mobile   → packages/shared, packages/api-client (both entries), packages/ui-native, packages/tokens (generated mobile.css only), packages/eslint-config + typescript-config (dev)
                NEVER packages/client, packages/ui, next, react-dom, server-only, Node built-ins or AsyncStorage (lint-enforced: mobileImportBoundaryConfig)
 packages/client     → packages/api-client, packages/shared, packages/ui
 packages/api-client → packages/shared (core "."); + react, @tanstack/react-query ("./react" entry only)
 packages/ui   → packages/shared, packages/tokens (generated web.css), packages/config
+packages/ui-native → packages/shared, packages/tokens; react-native, Reanimated, Uniwind, Expo modules as PEER dependencies (the app's one copy)
 packages/shared → packages/config only
 packages/tokens → nothing (no runtime dependencies; zod is a dev-only dependency for its own validation)
 ```
@@ -337,7 +339,8 @@ These are the recurring, recognizable signs that a change is drifting away from 
   packages/shared/src/timing.ts          — debounce/throttle only
   A React hook does NOT belong in packages/shared at all if packages/shared
   is meant to be framework-agnostic (04-mobile-expo.md, 01 above) — it
-  belongs in packages/ui (web) or apps/mobile (mobile-specific).
+  belongs in packages/ui (web), packages/ui-native (a mobile UI primitive) or
+  apps/mobile (mobile-specific).
   A Kafka topic constant belongs in packages/contracts, next to the event
   schema it names.
 ```

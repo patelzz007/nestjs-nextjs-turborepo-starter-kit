@@ -11,6 +11,8 @@ import AnalyticsLoading from "../analytics/loading";
 import AuditLogDetailLoading from "../audit-logs/[id]/loading";
 import AuditLogsLoading from "../audit-logs/loading";
 import CatalogLoading from "../catalog/loading";
+import ComponentPageLoading from "../components/[slug]/loading";
+import ComponentsLoading from "../components/loading";
 import EditCategoryLoading from "../catalog/categories/[id]/edit/loading";
 import CategoryDetailLoading from "../catalog/categories/[id]/loading";
 import CategoriesLoading from "../catalog/categories/loading";
@@ -97,6 +99,18 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		landmarks: ['[data-skeleton="catalog-detail"]', '[data-slot="detail-skeleton"]'],
 	},
 	{ route: "/catalog/categories/[id]/edit", loadingView: EditCategoryLoading, announcement: "Loading category…", landmarks: ['[data-skeleton="catalog-form"]'] },
+	{
+		route: "/components",
+		loadingView: ComponentsLoading,
+		announcement: "Loading components…",
+		landmarks: ['[data-skeleton="component-gallery-header"]', '[data-skeleton="component-gallery-family"]', '[data-skeleton="component-gallery-card"]'],
+	},
+	{
+		route: "/components/[slug]",
+		loadingView: ComponentPageLoading,
+		announcement: "Loading component…",
+		landmarks: ['[data-skeleton="component-page-header"]', '[data-skeleton="section"]'],
+	},
 	{
 		route: "/emails",
 		loadingView: EmailsLoading,

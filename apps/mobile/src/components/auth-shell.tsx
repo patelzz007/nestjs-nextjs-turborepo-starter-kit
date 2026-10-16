@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
 import { BrandMark } from "./brand-mark";
-import { PulseDot } from "./pulse-dot";
+import { PulseDot } from "@workspace/ui-native/components/pulse-dot";
 
 /** Side of the brand mark on the large tile and on the compact one, in points. */
 const MARK_SIZE = 40;

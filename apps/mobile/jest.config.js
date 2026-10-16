@@ -14,8 +14,11 @@ module.exports = {
 		// Uniwind compiles CSS in Metro; tests render without styles.
 		"\\.css$": "<rootDir>/test/style-mock.cjs",
 	},
-	// test/ holds the shared test helpers; their own tests live beside them.
-	testMatch: ["<rootDir>/src/**/*.test.ts", "<rootDir>/src/**/*.test.tsx", "<rootDir>/test/**/*.test.ts"],
+	// Tests live in `__tests__/` folders beside the code they test (rules/11 →
+	// "Where tests live"); the route screens' tests in src/__tests__/app/ (never
+	// inside src/app/: Expo Router bundles every file there). test/ holds the
+	// shared test helpers, with their own tests in test/__tests__/.
+	testMatch: ["<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}", "<rootDir>/test/__tests__/**/*.test.ts"],
 	clearMocks: true,
 	restoreMocks: true,
 };

@@ -1,6 +1,5 @@
 "use client";
 
-import { MerchantLocationSwitcher, MerchantLocationSwitcherMobile } from "@/components/layout/merchant-location-switcher";
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
 import { MerchantShellBreadcrumb } from "@/components/layout/merchant-shell-breadcrumb";
 import { AppShellHeader } from "@workspace/ui/components/app-shell-header";
@@ -12,9 +11,9 @@ const CommandPalette = dynamic(() => import("@/components/layout/merchant-comman
 
 /**
  * The merchant portal's page header (the shared `AppShellHeader`, app shell
- * 3): the breadcrumb trail, the store switcher and notifications (the page's
- * context), and search (⌘K). Theme, settings and the profile menu live in the
- * sidebar's account row.
+ * 3): the breadcrumb trail, notifications and search (⌘K). The store and
+ * location switcher heads the sidebar (`MerchantContextSwitcher`); theme,
+ * settings and the profile menu live in the sidebar's account row.
  */
 export function MerchantTopbar(): React.JSX.Element {
 	const [commandOpen, setCommandOpen] = React.useState<boolean>(false);
@@ -33,8 +32,6 @@ export function MerchantTopbar(): React.JSX.Element {
 				onOpenSearch={handleOpenCommand}
 				actions={
 					<>
-						<MerchantLocationSwitcher />
-						<MerchantLocationSwitcherMobile />
 						<MerchantNotificationsDropdown />
 					</>
 				}
