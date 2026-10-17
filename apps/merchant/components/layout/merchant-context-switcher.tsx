@@ -9,13 +9,14 @@ import { useAuthorization } from "@workspace/client/lib/auth/can";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
+import { IconTile } from "@workspace/ui/components/icon-tile";
 import {
 	PanelSidebarSwitcher,
 	type PanelSidebarSwitcherAction,
 	type PanelSidebarSwitcherGroup,
 	type PanelSidebarSwitcherOption,
 } from "@workspace/ui/components/panel-sidebar-switcher";
-import { MapPinPlus } from "lucide-react";
+import { Layers, MapPin, MapPinPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -23,6 +24,20 @@ import * as React from "react";
 export const ALL_LOCATIONS_VALUE = "all";
 
 const ALL_LOCATIONS_LABEL = "All locations";
+
+/** Each location's mark in the switcher: a pin in the kit's "places" tone (blue). Decorative — the label names it. */
+const LOCATION_VISUAL: React.ReactNode = (
+	<IconTile tone="blue" size="sm">
+		<MapPin aria-hidden="true" />
+	</IconTile>
+);
+
+/** The org-wide rollup's mark: stacked layers in the brand tone, set apart from the single locations. */
+const ALL_LOCATIONS_VISUAL: React.ReactNode = (
+	<IconTile tone="brand" size="sm">
+		<Layers aria-hidden="true" />
+	</IconTile>
+);
 
 interface SwitcherLocation {
 	readonly id: string;
@@ -39,14 +54,23 @@ export function applyLocationChoice(commands: Pick<TenantContextCommands, "selec
 	commands.selectLocation(value);
 }
 
+/**
+ * A location's second line in the switcher: its full name, but only when that says more than the label —
+ * "Brew & Bean KL — Bukit Bintang" under "Bukit Bintang" only repeats the store, which the trigger already names.
+ */
+export function locationSwitcherDescription(location: SwitcherLocation): string | undefined {
+	return location.name.endsWith(resolveLocationShortLabel(location)) ? undefined : location.name;
+}
+
 /** The Locations group's options: "All locations" first when the member may see org-wide rollups, then each store location. */
 export function locationSwitcherOptions(locations: readonly SwitcherLocation[], canSelectAllLocations: boolean): readonly PanelSidebarSwitcherOption[] {
 	return [
-		...(canSelectAllLocations ? [{ value: ALL_LOCATIONS_VALUE, label: ALL_LOCATIONS_LABEL }] : []),
+		...(canSelectAllLocations ? [{ value: ALL_LOCATIONS_VALUE, label: ALL_LOCATIONS_LABEL, visual: ALL_LOCATIONS_VISUAL }] : []),
 		...locations.map((location: SwitcherLocation): PanelSidebarSwitcherOption => ({
 			value: location.id,
 			label: resolveLocationShortLabel(location),
-			description: location.name,
+			description: locationSwitcherDescription(location),
+			visual: LOCATION_VISUAL,
 		})),
 	];
 }
@@ -113,7 +137,7 @@ export function MerchantContextSwitcher({ memberships, organizationSlug, onStore
 							value: membership.organizationSlug,
 							label: membership.displayName,
 							description: ORGANIZATION_ROLE_LABELS[membership.role],
-							visual: <EntityAvatar name={membership.displayName} size="sm" className="size-7" />,
+							visual: <EntityAvatar name={membership.displayName} size="sm" className="size-8" />,
 						}))
 					: [],
 			value: organizationSlug ?? "",

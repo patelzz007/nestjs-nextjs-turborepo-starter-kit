@@ -206,8 +206,8 @@ const AutocompleteItem = React.forwardRef<HTMLDivElement, AutocompletePrimitive.
 			data-slot="autocomplete-item"
 			className={cn(
 				"relative flex min-h-9 cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm text-foreground outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				// The kit's collection surface (`collectionItemActiveSurfaceClasses`), keyed on base-ui's highlight.
-				"data-highlighted:bg-invert data-highlighted:text-invert-foreground data-highlighted:[&_.text-muted-foreground]:text-invert-foreground/80 data-highlighted:[&_svg]:text-invert-foreground",
+				// The kit's collection highlight (`collectionItemHighlightSurfaceClasses`): a suggestion is never "selected", only highlighted.
+				"data-highlighted:bg-foreground/10",
 				className,
 			)}
 			{...props}

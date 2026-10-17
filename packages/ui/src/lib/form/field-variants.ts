@@ -196,14 +196,40 @@ export const menuItemIndicatorDensityClasses = "min-h-9 py-2 ps-2.5 pe-8";
 /** Density classes for menu rows with a leading check indicator (menubar). */
 export const menuItemLeadingIndicatorDensityClasses = "min-h-9 py-2 ps-8 pe-2.5";
 
-/** Active surface colors for highlighted / selected collection rows (Select, Combobox). */
+/**
+ * The selected row of a collection (Select, Combobox): a solid inverted pill, so the chosen value reads at
+ * a glance — like the active nav row.
+ */
 export const collectionItemActiveSurfaceClasses = "bg-invert text-invert-foreground [&_svg]:text-invert-foreground [&_.text-muted-foreground]:text-invert-foreground/80";
+
+/** The selected row while the pointer or keyboard is on it: the same pill, a shade softer, so it still answers. */
+export const collectionItemSelectedHighlightedSurfaceClasses =
+	"bg-invert/90 text-invert-foreground [&_svg]:text-invert-foreground [&_.text-muted-foreground]:text-invert-foreground/80";
+
+/**
+ * An unselected row under the pointer or keyboard: a quiet wash of the text colour (about gray-200 on a light
+ * popover, one step lighter than a dark one), never the selected pill — so the value and the hover never look alike.
+ */
+export const collectionItemHighlightSurfaceClasses = "bg-foreground/10 text-foreground";
 
 /** Active surface for destructive collection rows. */
 export const collectionItemDestructiveActiveSurfaceClasses = "bg-destructive/10 text-destructive";
 
-/** Active surface colors for focused / checked menu rows. */
-export const menuItemActiveSurfaceClasses = "bg-invert text-invert-foreground [&_svg]:text-invert-foreground";
+/**
+ * Active surface colors for focused / checked menu rows. Secondary text inside the row (a description line in
+ * `text-muted-foreground`) is re-coloured too: muted grey on the inverted pill would fail contrast.
+ */
+export const menuItemActiveSurfaceClasses = "bg-invert text-invert-foreground [&_svg]:text-invert-foreground [&_.text-muted-foreground]:text-invert-foreground/80";
+
+/**
+ * The soft alternative for menus whose rows already carry their own emphasis (a checked choice, a coloured
+ * icon): a quiet wash of the text colour that leaves the row's colours alone — the highlight never reads as a
+ * selection (`highlight="soft"` on the dropdown items).
+ */
+export const menuItemSoftActiveSurfaceClasses = "bg-foreground/8";
+
+/** How a highlighted menu row shows it: the solid inverted pill (default), or a soft wash. */
+export type MenuItemHighlight = "solid" | "soft";
 
 /** Active surface for destructive menu rows. */
 export const menuItemDestructiveActiveSurfaceClasses = "bg-destructive/10 text-destructive";
@@ -218,7 +244,10 @@ export interface MenuItemActiveState {
 	readonly checked?: boolean | undefined;
 }
 
-/** Applies the active surface when a select/combobox row is selected or keyboard-highlighted. */
+/**
+ * The surface of a select/combobox row: the solid pill marks the selected value only; a row the pointer or
+ * keyboard is on gets a soft highlight, so hovering never makes another row look selected.
+ */
 export function resolveCollectionItemActiveClasses(state: CollectionItemActiveState, variant: "default" | "destructive" = "default"): string {
 	if (!state.selected && !state.highlighted) {
 		return "";
@@ -226,18 +255,21 @@ export function resolveCollectionItemActiveClasses(state: CollectionItemActiveSt
 	if (variant === "destructive") {
 		return collectionItemDestructiveActiveSurfaceClasses;
 	}
-	return collectionItemActiveSurfaceClasses;
+	if (!state.selected) {
+		return collectionItemHighlightSurfaceClasses;
+	}
+	return state.highlighted ? collectionItemSelectedHighlightedSurfaceClasses : collectionItemActiveSurfaceClasses;
 }
 
 /** Applies the active surface when a menu row is keyboard-highlighted (checked rows use the indicator only). */
-export function resolveMenuItemActiveClasses(state: MenuItemActiveState, variant: "default" | "destructive" = "default"): string {
+export function resolveMenuItemActiveClasses(state: MenuItemActiveState, variant: "default" | "destructive" = "default", highlight: MenuItemHighlight = "solid"): string {
 	if (!state.highlighted) {
 		return "";
 	}
 	if (variant === "destructive") {
 		return menuItemDestructiveActiveSurfaceClasses;
 	}
-	return menuItemActiveSurfaceClasses;
+	return highlight === "soft" ? menuItemSoftActiveSurfaceClasses : menuItemActiveSurfaceClasses;
 }
 
 /** Open submenu trigger state in menus. */

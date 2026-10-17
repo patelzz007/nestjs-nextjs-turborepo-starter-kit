@@ -6,6 +6,7 @@ import {
 	menuItemIndicatorDensityClasses,
 	menuItemOpenClasses,
 	type MenuItemActiveState,
+	type MenuItemHighlight,
 	resolveMenuItemActiveClasses,
 } from "@workspace/ui/lib/form/field-variants";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -32,12 +33,17 @@ function resolveMenuExtraClassName(className: MenuSurfaceClassName): string | un
 	return parsed.success ? parsed.data : undefined;
 }
 
-function buildDropdownMenuItemClasses(state: MenuItemActiveState, variant: "default" | "destructive", className?: string): string {
-	return cn(dropdownMenuItemBaseClasses, menuItemDensityClasses, resolveMenuItemActiveClasses(state, variant), className);
+function buildDropdownMenuItemClasses(state: MenuItemActiveState, variant: "default" | "destructive", highlight: MenuItemHighlight, className?: string): string {
+	return cn(dropdownMenuItemBaseClasses, menuItemDensityClasses, resolveMenuItemActiveClasses(state, variant, highlight), className);
 }
 
-function buildDropdownMenuIndicatorItemClasses(state: MenuItemActiveState, className?: string): string {
-	return cn(dropdownMenuIndicatorItemBaseClasses, menuItemIndicatorDensityClasses, resolveMenuItemActiveClasses(state), className);
+function buildDropdownMenuIndicatorItemClasses(state: MenuItemActiveState, highlight: MenuItemHighlight, className?: string): string {
+	return cn(dropdownMenuIndicatorItemBaseClasses, menuItemIndicatorDensityClasses, resolveMenuItemActiveClasses(state, "default", highlight), className);
+}
+
+/** The highlight option every item takes: `solid` (default) inverts the row; `soft` only washes it, for rows with their own emphasis. */
+export interface DropdownMenuHighlightProps {
+	readonly highlight?: MenuItemHighlight | undefined;
 }
 
 // Root/Portal render no DOM element of their own (base-ui providers), so like
@@ -99,16 +105,27 @@ const DropdownMenuLabel = React.forwardRef<
 
 const DropdownMenuItem = React.forwardRef<
 	HTMLElement,
-	MenuPrimitive.Item.Props & {
-		inset?: boolean;
-		variant?: "default" | "destructive";
-	}
->(function DropdownMenuItem({ className, inset, variant = "default", ...props }, ref): React.JSX.Element {
+	MenuPrimitive.Item.Props &
+		DropdownMenuHighlightProps & {
+			inset?: boolean;
+			variant?: "default" | "destructive";
+		}
+>(function DropdownMenuItem({ className, inset, variant = "default", highlight = "solid", ...props }, ref): React.JSX.Element {
 	const resolveItemClassName = useCallback(
-		(state: MenuItemActiveState): string => buildDropdownMenuItemClasses({ highlighted: state.highlighted }, variant, resolveMenuExtraClassName(className)),
-		[className, variant],
+		(state: MenuItemActiveState): string => buildDropdownMenuItemClasses({ highlighted: state.highlighted }, variant, highlight, resolveMenuExtraClassName(className)),
+		[className, highlight, variant],
 	);
-	return <MenuPrimitive.Item ref={ref} data-slot="dropdown-menu-item" data-inset={inset} data-variant={variant} className={resolveItemClassName} {...props} />;
+	return (
+		<MenuPrimitive.Item
+			ref={ref}
+			data-slot="dropdown-menu-item"
+			data-inset={inset}
+			data-variant={variant}
+			data-highlight={highlight}
+			className={resolveItemClassName}
+			{...props}
+		/>
+	);
 });
 
 // SubmenuRoot renders no DOM of its own — plain function, ref on the parts.
@@ -163,17 +180,25 @@ const DropdownMenuSubContent = React.forwardRef<HTMLDivElement, React.ComponentP
 
 const DropdownMenuCheckboxItem = React.forwardRef<
 	HTMLElement,
-	MenuPrimitive.CheckboxItem.Props & {
-		inset?: boolean;
-	}
->(function DropdownMenuCheckboxItem({ className, children, checked, inset, ...props }, ref): React.JSX.Element {
+	MenuPrimitive.CheckboxItem.Props &
+		DropdownMenuHighlightProps & {
+			inset?: boolean;
+		}
+>(function DropdownMenuCheckboxItem({ highlight = "solid", className, children, checked, inset, ...props }, ref): React.JSX.Element {
 	const resolveItemClassName = useCallback(
 		(state: MenuItemActiveState): string =>
-			buildDropdownMenuIndicatorItemClasses({ highlighted: state.highlighted, checked: state.checked }, resolveMenuExtraClassName(className)),
-		[className],
+			buildDropdownMenuIndicatorItemClasses({ highlighted: state.highlighted, checked: state.checked }, highlight, resolveMenuExtraClassName(className)),
+		[className, highlight],
 	);
 	return (
-		<MenuPrimitive.CheckboxItem ref={ref} data-slot="dropdown-menu-checkbox-item" data-inset={inset} className={resolveItemClassName} checked={checked} {...props}>
+		<MenuPrimitive.CheckboxItem
+			ref={ref}
+			data-slot="dropdown-menu-checkbox-item"
+			data-inset={inset}
+			data-highlight={highlight}
+			className={resolveItemClassName}
+			checked={checked}
+			{...props}>
 			<span className="pointer-events-none absolute inset-e-2 flex items-center justify-center" data-slot="dropdown-menu-checkbox-item-indicator">
 				<MenuPrimitive.CheckboxItemIndicator>
 					<CheckIcon />
@@ -190,17 +215,18 @@ const DropdownMenuRadioGroup = React.forwardRef<HTMLDivElement, MenuPrimitive.Ra
 
 const DropdownMenuRadioItem = React.forwardRef<
 	HTMLElement,
-	MenuPrimitive.RadioItem.Props & {
-		inset?: boolean;
-	}
->(function DropdownMenuRadioItem({ className, children, inset, ...props }, ref): React.JSX.Element {
+	MenuPrimitive.RadioItem.Props &
+		DropdownMenuHighlightProps & {
+			inset?: boolean;
+		}
+>(function DropdownMenuRadioItem({ highlight = "solid", className, children, inset, ...props }, ref): React.JSX.Element {
 	const resolveItemClassName = useCallback(
 		(state: MenuItemActiveState): string =>
-			buildDropdownMenuIndicatorItemClasses({ highlighted: state.highlighted, checked: state.checked }, resolveMenuExtraClassName(className)),
-		[className],
+			buildDropdownMenuIndicatorItemClasses({ highlighted: state.highlighted, checked: state.checked }, highlight, resolveMenuExtraClassName(className)),
+		[className, highlight],
 	);
 	return (
-		<MenuPrimitive.RadioItem ref={ref} data-slot="dropdown-menu-radio-item" data-inset={inset} className={resolveItemClassName} {...props}>
+		<MenuPrimitive.RadioItem ref={ref} data-slot="dropdown-menu-radio-item" data-inset={inset} data-highlight={highlight} className={resolveItemClassName} {...props}>
 			<span className="pointer-events-none absolute inset-e-2 flex items-center justify-center" data-slot="dropdown-menu-radio-item-indicator">
 				<MenuPrimitive.RadioItemIndicator>
 					<CheckIcon />

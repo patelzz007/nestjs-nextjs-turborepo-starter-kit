@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ALL_LOCATIONS_VALUE,
 	applyLocationChoice,
+	locationSwitcherDescription,
 	locationSwitcherOptions,
 	locationSwitcherSubtitle,
 	MerchantContextSwitcher,
@@ -87,6 +88,11 @@ describe("location switcher helpers", () => {
 	it("offers all locations first only to members who may see org-wide rollups", () => {
 		expect(locationSwitcherOptions([STORE_A_LOCATION, STORE_B_LOCATION], true).map((option) => option.value)).toStrictEqual([ALL_LOCATIONS_VALUE, STORE_A.id, STORE_B.id]);
 		expect(locationSwitcherOptions([STORE_A_LOCATION], false).map((option) => option.value)).toStrictEqual([STORE_A.id]);
+	});
+
+	it("gives a location a second line only when its full name says more than its label", () => {
+		expect(locationSwitcherDescription({ id: "a", name: "Brew & Bean KL — Bukit Bintang", code: "bukit-bintang" })).toBeUndefined();
+		expect(locationSwitcherDescription({ id: "b", name: "Central kitchen", code: "primary" })).toBe("Central kitchen");
 	});
 
 	it("reads the active location, all locations, or nothing for the trigger's second line", () => {

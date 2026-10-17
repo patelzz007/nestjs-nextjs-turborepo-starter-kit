@@ -174,6 +174,19 @@ describe("display components forward refs (rule 20)", () => {
 		const item = screen.getByTestId("menu-item");
 		expect(ref.current).toBe(item);
 	});
+
+	it("DropdownMenuItem highlights with the solid pill by default, or a soft wash when asked", (): void => {
+		render(
+			<DropdownMenu open>
+				<DropdownMenuItem data-testid="solid-item">Rename</DropdownMenuItem>
+				<DropdownMenuItem data-testid="soft-item" highlight="soft">
+					Manage locations
+				</DropdownMenuItem>
+			</DropdownMenu>,
+		);
+		expect(screen.getByTestId("solid-item").getAttribute("data-highlight")).toBe("solid");
+		expect(screen.getByTestId("soft-item").getAttribute("data-highlight")).toBe("soft");
+	});
 });
 
 describe("layout, chat and marker parts forward refs (rule 20)", () => {

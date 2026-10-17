@@ -78,6 +78,48 @@ describe("PanelSidebarSwitcher", () => {
 		expect(onSelect).toHaveBeenCalledTimes(1);
 	});
 
+	it("highlights rows with a soft wash, never the solid pill, and tints only the current choice", () => {
+		render(<PanelSidebarSwitcher title="Acme Coffee" visual={<span>A</span>} triggerLabel="Switch store" groups={[group()]} showCollapseToggle={false} />, {
+			wrapper: UiKitTestProviders,
+		});
+		const [acme, brew] = within(openMenu()).getAllByRole("menuitemradio");
+		for (const row of [acme, brew]) {
+			expect(row?.getAttribute("data-highlight")).toBe("soft");
+			expect(row?.className).toContain("data-checked:bg-primary/10");
+		}
+		expect(acme?.hasAttribute("data-checked")).toBe(true);
+		expect(brew?.hasAttribute("data-checked")).toBe(false);
+	});
+
+	it("labels each group in sentence case with how many choices it holds", () => {
+		render(<PanelSidebarSwitcher title="Acme Coffee" visual={<span>A</span>} triggerLabel="Switch store" groups={[group()]} showCollapseToggle={false} />, {
+			wrapper: UiKitTestProviders,
+		});
+		const menu = openMenu();
+		expect(within(menu).getByText("Stores").closest("[data-slot]")?.className).not.toContain("uppercase");
+		expect(menu.querySelector('[data-slot="panel-sidebar-switcher-count"]')?.textContent).toBe("2");
+	});
+
+	it("sets each action's icon in a dashed add tile and keeps the action readable when highlighted", () => {
+		render(
+			<PanelSidebarSwitcher
+				title="Acme Coffee"
+				visual={<span>A</span>}
+				triggerLabel="Switch store"
+				groups={[group()]}
+				actions={[{ id: "manage", label: "Manage stores", icon: <svg data-testid="manage-icon" />, onSelect: vi.fn<() => void>() }]}
+				showCollapseToggle={false}
+			/>,
+			{ wrapper: UiKitTestProviders },
+		);
+		const action = within(openMenu()).getByRole("menuitem", { name: "Manage stores" });
+		expect(action.getAttribute("data-highlight")).toBe("soft");
+		expect(action.className).toContain("data-highlighted:text-foreground");
+		const tile = action.querySelector('[data-slot="panel-sidebar-switcher-action-icon"]');
+		expect(tile?.className).toContain("border-dashed");
+		expect(tile?.contains(screen.getByTestId("manage-icon"))).toBe(true);
+	});
+
 	it("leaves out a group with no options", () => {
 		render(
 			<PanelSidebarSwitcher

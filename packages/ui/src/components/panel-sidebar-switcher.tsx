@@ -62,6 +62,17 @@ export interface PanelSidebarSwitcherProps {
 
 const NO_ACTIONS: readonly PanelSidebarSwitcherAction[] = [];
 
+/**
+ * A choice row. Hover is a soft wash (`highlight="soft"`), never the solid pill, so it can't be mistaken for
+ * the selection. The current choice is the one tinted thing in the menu: a soft brand fill, and its check
+ * in the brand colour, a little heavier.
+ */
+const SWITCHER_OPTION_CLASSES =
+	"gap-3 rounded-md py-2 pe-9 data-checked:bg-primary/10 data-checked:data-highlighted:bg-primary/15 *:data-[slot=dropdown-menu-radio-item-indicator]:inset-e-3 *:data-[slot=dropdown-menu-radio-item-indicator]:text-primary *:data-[slot=dropdown-menu-radio-item-indicator]:[&_svg]:stroke-3";
+
+/** A command row: quiet until pointed at, its icon in a dashed "add" tile that lines up with the choices' visuals. */
+const SWITCHER_ACTION_CLASSES = "gap-3 rounded-md py-2 text-muted-foreground data-highlighted:text-foreground";
+
 interface SwitcherGroupProps {
 	readonly group: PanelSidebarSwitcherGroup;
 }
@@ -77,13 +88,19 @@ function SwitcherGroup({ group }: SwitcherGroupProps): React.JSX.Element {
 	);
 	return (
 		<DropdownMenuGroup>
-			<DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{group.label}</DropdownMenuLabel>
-			<DropdownMenuRadioGroup value={group.value} onValueChange={handleValueChange}>
+			{/* Sentence case, with how many choices the group holds — not a shouted eyebrow. */}
+			<DropdownMenuLabel className="flex items-center justify-between gap-2 px-2 pt-1 pb-1.5 text-xs font-medium text-muted-foreground">
+				<span>{group.label}</span>
+				<span data-slot="panel-sidebar-switcher-count" className="rounded-full bg-foreground/8 px-1.5 text-xs leading-5 font-medium text-muted-foreground tabular-nums">
+					{group.options.length}
+				</span>
+			</DropdownMenuLabel>
+			<DropdownMenuRadioGroup value={group.value} onValueChange={handleValueChange} className="flex flex-col gap-0.5">
 				{group.options.map((option: PanelSidebarSwitcherOption): React.JSX.Element => (
-					<DropdownMenuRadioItem key={option.value} value={option.value} closeOnClick className="gap-2.5 py-1.5 pe-8">
+					<DropdownMenuRadioItem key={option.value} value={option.value} closeOnClick highlight="soft" className={SWITCHER_OPTION_CLASSES}>
 						{option.visual === undefined ? null : <span className="flex shrink-0 items-center">{option.visual}</span>}
 						<span className="flex min-w-0 flex-col">
-							<span className="truncate font-medium">{option.label}</span>
+							<span className="truncate font-medium text-foreground">{option.label}</span>
 							{option.description === undefined ? null : <span className="truncate text-xs text-muted-foreground">{option.description}</span>}
 						</span>
 					</DropdownMenuRadioItem>
@@ -131,7 +148,7 @@ export const PanelSidebarSwitcher = React.forwardRef<HTMLDivElement, PanelSideba
 					</span>
 					<ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 				</DropdownMenuTrigger>
-				<DropdownMenuContent side="bottom" align="start" sideOffset={6} className="w-(--anchor-width) min-w-64">
+				<DropdownMenuContent side="bottom" align="start" sideOffset={6} className="w-(--anchor-width) min-w-64 p-1.5">
 					{visibleGroups.map((group: PanelSidebarSwitcherGroup, index: number): React.JSX.Element => (
 						<React.Fragment key={group.id}>
 							{index > 0 ? <DropdownMenuSeparator /> : null}
@@ -142,8 +159,12 @@ export const PanelSidebarSwitcher = React.forwardRef<HTMLDivElement, PanelSideba
 						<>
 							{visibleGroups.length > 0 ? <DropdownMenuSeparator /> : null}
 							{actions.map((action: PanelSidebarSwitcherAction): React.JSX.Element => (
-								<DropdownMenuItem key={action.id} onClick={action.onSelect} className="gap-2.5 text-muted-foreground">
-									{action.icon}
+								<DropdownMenuItem key={action.id} onClick={action.onSelect} highlight="soft" className={SWITCHER_ACTION_CLASSES}>
+									<span
+										data-slot="panel-sidebar-switcher-action-icon"
+										className="flex size-8 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors group-data-highlighted/dropdown-menu-item:border-primary/40 group-data-highlighted/dropdown-menu-item:text-primary">
+										{action.icon}
+									</span>
 									{action.label}
 								</DropdownMenuItem>
 							))}
