@@ -77,6 +77,18 @@ describe("DataTable column filters", () => {
 		expect(screen.getByRole("combobox", { name: "Outcome" }).textContent).toContain("Outcome:");
 	});
 
+	it("lays the filters out in one strip that scrolls sideways when they outgrow the toolbar, instead of being clipped", () => {
+		render(<DataTable data={[...ROWS]} columns={CLIENT_COLUMNS} filters={FILTERS} />, { wrapper: UiKitTestProviders });
+
+		const strip = screen.getByRole("combobox", { name: "Source" }).closest<HTMLElement>('[data-slot="data-table-filters"]');
+		expect(strip).not.toBeNull();
+		expect(strip?.contains(screen.getByRole("combobox", { name: "Outcome" }))).toBe(true);
+		// Scrolls, may shrink below its content, and never squashes the selects themselves.
+		expect(strip?.className).toContain("sm:overflow-x-auto");
+		expect(strip?.className).toContain("sm:min-w-0");
+		expect(strip?.className).toContain("sm:*:shrink-0");
+	});
+
 	it("counts the rows on a client-side table, which holds them all", () => {
 		render(<DataTable data={[...ROWS]} columns={CLIENT_COLUMNS} filters={FILTERS} />, { wrapper: UiKitTestProviders });
 

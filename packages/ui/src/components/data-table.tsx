@@ -2450,9 +2450,15 @@ export function DataTable<TData extends RowData>({
 							</div>
 						) : null}
 
-						{/* Column filters (with faceted counts on client-side tables) */}
-						{showColumnFilters
-							? filters.map((filter) => (
+						{/* Column filters (with faceted counts on client-side tables). Stacked on phones; from `sm` they
+						    share one row that scrolls sideways when there are more than fit, instead of being clipped
+						    by the card around the table. The padding (cancelled by the negative margin) keeps the
+						    focused select's ring inside the scroll box. */}
+						{showColumnFilters ? (
+							<div
+								data-slot="data-table-filters"
+								className="flex flex-col gap-2 sm:-m-1 sm:min-w-0 sm:flex-1 sm:[scrollbar-width:thin] sm:flex-row sm:items-center sm:overflow-x-auto sm:p-1 sm:*:shrink-0">
+								{filters.map((filter) => (
 									<ColumnFilterSelect
 										key={filter.key}
 										filter={filter}
@@ -2462,8 +2468,9 @@ export function DataTable<TData extends RowData>({
 										facetedCounts={isServerMode ? EMPTY_FACETED_COUNTS : (filterFacetedCounts[filter.key] ?? EMPTY_FACETED_COUNTS)}
 										onFilterChange={handleFilterChange}
 									/>
-								))
-							: null}
+								))}
+							</div>
+						) : null}
 
 						{/* Custom toolbar content */}
 						{toolbarContent}
