@@ -1,11 +1,11 @@
 import { WALLET_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 import { RewardHubPageHeaderSkeleton } from "@/components/loading/reward-hub-page-header-skeleton";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
 
 /** A first screen of claims — the wallet's page holds more, but this many fill the view without implying a count. */
@@ -20,7 +20,7 @@ export function WalletClaimRowsBones(): React.JSX.Element {
 	return (
 		<div className="space-y-3">
 			{placeholderKeys("claim", WALLET_CLAIM_SKELETON_ROWS).map((key, index) => (
-				<WebSurfacePanel key={key} className="px-5 py-4">
+				<Card key={key} className="gap-0 px-5 py-4">
 					<div data-slot="wallet-claim-row-skeleton" className="flex flex-wrap items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-col gap-1">
 							<Skeleton variant="text" className={cn("my-1 h-4 max-w-full", cycledWidth(CLAIM_TITLE_WIDTHS, index, "w-48"))} />
@@ -31,7 +31,7 @@ export function WalletClaimRowsBones(): React.JSX.Element {
 							<Skeleton className="h-10 w-24" />
 						</div>
 					</div>
-				</WebSurfacePanel>
+				</Card>
 			))}
 		</div>
 	);

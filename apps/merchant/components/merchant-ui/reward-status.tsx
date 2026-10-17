@@ -32,29 +32,3 @@ export function MerchantRewardStatusBadge({ status, className }: MerchantRewardS
 		</StatusBadge>
 	);
 }
-
-export interface MerchantInventoryBarProps {
-	readonly remaining: number;
-	readonly total: number;
-	readonly className?: string;
-}
-
-/** Solid fill inventory bar — no gradients. */
-export function MerchantInventoryBar({ remaining, total, className }: MerchantInventoryBarProps): React.JSX.Element {
-	const safeTotal = total > 0 ? total : 1;
-	const percent = Math.min(100, Math.max(0, Math.round((remaining / safeTotal) * 100)));
-
-	return (
-		<div className={cn("space-y-1", className)}>
-			<div className="flex items-center justify-between text-xs text-muted-foreground">
-				<span>Inventory</span>
-				<span className="tabular-nums">
-					{remaining} / {total} left
-				</span>
-			</div>
-			<div className="h-2 overflow-hidden rounded-full border border-border bg-muted">
-				<div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${String(percent)}%` }} />
-			</div>
-		</div>
-	);
-}

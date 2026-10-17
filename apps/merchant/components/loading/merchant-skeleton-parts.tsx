@@ -1,7 +1,7 @@
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
 
 /*
@@ -101,13 +101,13 @@ export interface MerchantSectionCardSkeletonProps {
 /** A bordered section card with a ruled header (title + description), as the terminals and API-key sections draw it. */
 export function MerchantSectionCardSkeleton({ withHeaderAction = false, children, className }: MerchantSectionCardSkeletonProps): React.JSX.Element {
 	return (
-		<MerchantSurfacePanel className={cn(className)}>
+		<Card className={cn("gap-0 py-0", className)}>
 			<div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
 				<MerchantHeadingSkeleton />
 				{withHeaderAction ? <Skeleton className="h-9 w-48" /> : null}
 			</div>
 			{children}
-		</MerchantSurfacePanel>
+		</Card>
 	);
 }
 
@@ -160,7 +160,7 @@ export interface MerchantBorderedRowsSkeletonProps {
 	readonly lines: number;
 	/** What sits on the right of each row: a badge, a button, a line of text (a time), or nothing. */
 	readonly trailing: "badge" | "button" | "text" | "none";
-	/** Each row's surface — a nested bordered box (`card`) or a full `MerchantSurfacePanel` (`panel`). */
+	/** Each row's surface — a nested bordered box (`card`) or a full kit `Card` (`panel`). */
 	readonly surface: "card" | "panel";
 }
 

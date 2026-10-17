@@ -2,7 +2,6 @@
 
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { MerchantRewardEditorLayout, RewardPageBackLink } from "@/components/rewards/merchant-reward-editor-layout";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import type { SavedRewardImage } from "@/components/rewards/merchant-reward-images-field";
@@ -29,6 +28,7 @@ import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Card } from "@workspace/ui/components/card";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -81,7 +81,7 @@ function MerchantRewardLocked({ orgSlug, reward }: MerchantRewardEditFormProps):
 	return (
 		<div className="flex flex-col gap-6">
 			<RewardPageBackLink href={detailHref} label="Back to reward" />
-			<MerchantSurfacePanel className="flex flex-col items-start gap-3 px-6 py-8">
+			<Card className="items-start gap-3 px-6 py-8">
 				<h1 className="text-xl font-semibold tracking-tight text-foreground">{"This reward can't be edited"}</h1>
 				<p className="max-w-prose text-sm text-muted-foreground">
 					{"Customers may already hold it, so its offer stays as it was published. Rewards can be edited while they're drafts or in review."}
@@ -89,7 +89,7 @@ function MerchantRewardLocked({ orgSlug, reward }: MerchantRewardEditFormProps):
 				<Link href={detailHref} className={cn(buttonVariants({ variant: "outline" }))}>
 					View reward
 				</Link>
-			</MerchantSurfacePanel>
+			</Card>
 		</div>
 	);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMerchantLocation } from "@/features/tenant-context/facade";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { Card } from "@workspace/ui/components/card";
 import { MapPin } from "lucide-react";
 import * as React from "react";
 
@@ -18,19 +18,19 @@ export function MerchantLocationScopeBanner({ filteredNote, allStoresNote }: Mer
 
 	if (locationId === undefined || activeLocation === undefined) {
 		return canSelectAllLocations ? (
-			<MerchantSurfacePanel className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
+			<Card className="flex-row items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
 				<MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
 				<span>{allStoresNote}</span>
-			</MerchantSurfacePanel>
+			</Card>
 		) : null;
 	}
 
 	return (
-		<MerchantSurfacePanel className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
+		<Card className="flex-row items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
 			<MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
 			<span>
 				Filtered to <strong className="font-medium text-foreground">{activeLocation.name}</strong>. {filteredNote}
 			</span>
-		</MerchantSurfacePanel>
+		</Card>
 	);
 }

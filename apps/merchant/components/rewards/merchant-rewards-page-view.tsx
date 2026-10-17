@@ -4,7 +4,6 @@ import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/acc
 import { MerchantRewardsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-catalog";
 import { MerchantRewardsSummaryStrip, MerchantRewardsSummaryStripSkeleton } from "@/components/rewards/merchant-rewards-summary-strip";
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { orgRoutes } from "@/lib/routes";
@@ -15,6 +14,7 @@ import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type RewardResponse, type
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatCount } from "@workspace/ui/lib/format/number";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { AlertCircle, Gift, Plus, Sparkles, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -121,30 +121,42 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 			)}
 
 			{showError ? (
-				<MerchantEmptyState
-					title="Could not load rewards"
-					description={loadErrorMessage}
-					icon={<AlertCircle className="size-5" aria-hidden="true" />}
-					action={
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<AlertCircle className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							Could not load rewards
+						</EmptyTitle>
+						<EmptyDescription>{loadErrorMessage}</EmptyDescription>
+					</EmptyHeader>
+					<EmptyContent>
 						<Button type="button" onClick={handleRetry}>
 							Retry
 						</Button>
-					}
-				/>
+					</EmptyContent>
+				</Empty>
 			) : showEmpty ? (
-				<MerchantEmptyState
-					title="No rewards yet"
-					description="Start with a draft offer — you can refine details and submit for review before it goes live."
-					icon={<Ticket className="size-5" aria-hidden="true" />}
-					action={
-						canManageRewards ? (
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<Ticket className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							No rewards yet
+						</EmptyTitle>
+						<EmptyDescription>Start with a draft offer — you can refine details and submit for review before it goes live.</EmptyDescription>
+					</EmptyHeader>
+					{canManageRewards ? (
+						<EmptyContent>
 							<Link href={createRewardPath} className={cn(buttonVariants(), "gap-2")}>
 								<Plus className="size-4" aria-hidden="true" />
 								Create first reward
 							</Link>
-						) : undefined
-					}
-				/>
+						</EmptyContent>
+					) : null}
+				</Empty>
 			) : (
 				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} canManageRewards={canManageRewards} createRewardHref={createRewardPath} />
 			)}

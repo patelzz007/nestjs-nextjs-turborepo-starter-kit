@@ -1,8 +1,8 @@
 "use client";
 
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import type { OrganizationLocationResponse, OrganizationLocationScopeType, OrganizationLocationStatus } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
+import { Card } from "@workspace/ui/components/card";
 import { MapPin, Phone } from "lucide-react";
 import * as React from "react";
 
@@ -79,9 +79,9 @@ export function OrganizationLocationList({
 }: OrganizationLocationListProps): React.JSX.Element {
 	if (locations.length === 0) {
 		return (
-			<MerchantSurfacePanel className="p-6">
+			<Card className="gap-0 p-6">
 				<p className="text-sm text-muted-foreground">No locations have been added to this organization yet.</p>
-			</MerchantSurfacePanel>
+			</Card>
 		);
 	}
 
@@ -91,7 +91,7 @@ export function OrganizationLocationList({
 				const accessible = isLocationAccessible(location.id, membershipLocationScopeType, membershipLocationIds);
 
 				return (
-					<MerchantSurfacePanel key={location.id} className="flex h-full flex-col gap-4 p-5">
+					<Card key={location.id} className="h-full gap-4 p-5">
 						<div className="flex items-start justify-between gap-3">
 							<div className="flex min-w-0 items-start gap-3">
 								<div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-primary">
@@ -126,7 +126,7 @@ export function OrganizationLocationList({
 						{location.status === "REJECTED" && onEditRejected !== undefined ? (
 							<OrganizationLocationResubmitButton location={location} onEditRejected={onEditRejected} />
 						) : null}
-					</MerchantSurfacePanel>
+					</Card>
 				);
 			})}
 		</div>

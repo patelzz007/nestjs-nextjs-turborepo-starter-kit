@@ -3,7 +3,6 @@
 import { MerchantRewardDetailPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { RewardPageBackLink } from "@/components/rewards/merchant-reward-editor-layout";
 import { MerchantRewardUnavailable } from "@/components/rewards/merchant-reward-unavailable";
 import { RewardStockMeter } from "@/components/rewards/reward-stock-meter";
@@ -23,6 +22,7 @@ import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatCount } from "@workspace/ui/lib/format/number";
+import { Card } from "@workspace/ui/components/card";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -189,7 +189,7 @@ function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): R
 				<h2 id="reward-performance-heading" className="text-base font-semibold text-foreground">
 					Performance
 				</h2>
-				<MerchantSurfacePanel>
+				<Card className="gap-0 py-0">
 					<dl className="grid divide-y divide-border sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] sm:divide-x sm:divide-y-0">
 						<Stat label="Claimed" value={reward.claimCount} />
 						<Stat label="Redeemed" value={reward.redemptionCount} />
@@ -200,7 +200,7 @@ function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): R
 							</dd>
 						</div>
 					</dl>
-				</MerchantSurfacePanel>
+				</Card>
 			</section>
 
 			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -208,7 +208,7 @@ function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): R
 					<h2 id="reward-details-heading" className="text-base font-semibold text-foreground">
 						Details
 					</h2>
-					<MerchantSurfacePanel className="px-5 py-2 sm:px-6">
+					<Card className="gap-0 px-5 py-2 sm:px-6">
 						<dl className="divide-y divide-border">
 							<DetailRow term="Runs">{formatRewardRunDates(reward)}</DetailRow>
 							<DetailRow term="Each customer">{formatRewardClaimLimit(reward.rules)}</DetailRow>
@@ -220,18 +220,18 @@ function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): R
 								<span className="capitalize">{reward.category}</span>
 							</DetailRow>
 						</dl>
-					</MerchantSurfacePanel>
+					</Card>
 				</section>
 
 				<section aria-labelledby="reward-terms-heading" className="flex flex-col gap-3">
 					<h2 id="reward-terms-heading" className="text-base font-semibold text-foreground">
 						Terms and conditions
 					</h2>
-					<MerchantSurfacePanel className="px-5 py-4 sm:px-6">
+					<Card className="gap-0 px-5 py-4 sm:px-6">
 						<p className={cn("text-sm leading-relaxed whitespace-pre-line", reward.termsConditions === null ? "text-muted-foreground" : "text-foreground")}>
 							{reward.termsConditions ?? "No extra terms."}
 						</p>
-					</MerchantSurfacePanel>
+					</Card>
 				</section>
 			</div>
 		</div>

@@ -6,9 +6,7 @@ import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/u
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { REFEREES_LOADING_LABELS, REFERRAL_CODE_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RefereeRowsBones, ReferralCodeBones } from "@/components/loading/referrals-skeleton";
-import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
 	PLATFORM_DISPLAY_REGION,
@@ -22,6 +20,8 @@ import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-ba
 import { Button } from "@workspace/ui/components/button";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
+import { Card } from "@workspace/ui/components/card";
 import { Check, ChevronLeft, ChevronRight, Copy, Hourglass, UserPlus } from "lucide-react";
 import * as React from "react";
 import { SIGNUP_REFERRALS_DASHBOARD_PREFETCH_KEY, SIGNUP_REFERRALS_REFEREES_URL_STATE, toSignupReferralRefereesQuery } from "@/lib/url-state/signup-referrals";
@@ -120,7 +120,7 @@ export function SignupReferralPageView({ initialDashboard, initialReferees }: Si
 			/>
 
 			<div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-				<WebSurfacePanel className="relative overflow-hidden border-dashed border-primary/30 bg-gradient-to-br from-primary/8 via-background to-background p-6 sm:p-8">
+				<Card className="relative gap-0 overflow-hidden border border-dashed border-primary/30 bg-gradient-to-br from-primary/8 via-background to-background p-6 ring-0 sm:p-8">
 					<div className="pointer-events-none absolute -top-10 -right-8 text-[7rem] font-semibold tracking-tighter text-primary/10" aria-hidden="true">
 						RH
 					</div>
@@ -152,18 +152,18 @@ export function SignupReferralPageView({ initialDashboard, initialReferees }: Si
 							) : null}
 						</div>
 					)}
-				</WebSurfacePanel>
+				</Card>
 
-				<WebSurfacePanel className="flex flex-col justify-between gap-4 p-6">
+				<Card className="justify-between gap-4 p-6">
 					<div className="space-y-1">
 						<p className="text-sm font-medium text-foreground">People who used your code</p>
 						<p className="text-3xl font-semibold text-foreground tabular-nums">{totalReferees}</p>
 					</div>
 					<p className="text-sm text-muted-foreground">A referral counts as successful after someone redeems any reward at checkout.</p>
-				</WebSurfacePanel>
+				</Card>
 			</div>
 
-			<WebSurfacePanel className="p-0">
+			<Card className="gap-0 p-0">
 				<div className="border-b border-border px-6 py-4">
 					<h2 className="text-base font-semibold text-foreground">Registered with your code</h2>
 				</div>
@@ -172,11 +172,17 @@ export function SignupReferralPageView({ initialDashboard, initialReferees }: Si
 						<RefereeRowsBones />
 					</SkeletonRegion>
 				) : referees.length === 0 ? (
-					<WebEmptyState
-						icon={<UserPlus className="size-8" aria-hidden="true" />}
-						title="No one has registered with your code yet."
-						description="When they do, their name and status will show up here."
-					/>
+					<Empty className="border bg-card">
+						<EmptyHeader>
+							<EmptyMedia variant="icon">
+								<UserPlus className="size-8" aria-hidden="true" />
+							</EmptyMedia>
+							<EmptyTitle role="heading" aria-level={2}>
+								No one has registered with your code yet.
+							</EmptyTitle>
+							<EmptyDescription>When they do, their name and status will show up here.</EmptyDescription>
+						</EmptyHeader>
+					</Empty>
 				) : (
 					<ul className="divide-y divide-border">
 						{referees.map((referee) => (
@@ -202,7 +208,7 @@ export function SignupReferralPageView({ initialDashboard, initialReferees }: Si
 						</Button>
 					</div>
 				) : null}
-			</WebSurfacePanel>
+			</Card>
 		</div>
 	);
 }

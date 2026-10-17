@@ -1,7 +1,7 @@
 "use client";
 
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { RewardVoucher, type RewardVoucherCover } from "@/components/rewards/reward-voucher";
+import { Card } from "@workspace/ui/components/card";
 import type { RewardStores } from "@/lib/rewards/presentation";
 import { describeRewardDraftGaps, formatDraftRewardEnd } from "@/lib/rewards/reward-draft";
 import { formatRewardOffer } from "@workspace/client/lib/rewards/reward-offer";
@@ -75,7 +75,7 @@ export function MerchantRewardPreview({ control, category, status, cover, stores
 				ended={false}
 			/>
 
-			<MerchantSurfacePanel className="px-4 py-3.5">
+			<Card className="gap-0 px-4 py-3.5">
 				{gaps.length === 0 ? (
 					<p data-slot="reward-ready" className="flex items-center gap-2 text-sm font-medium text-foreground">
 						<CircleCheck className="size-4 text-success" aria-hidden="true" />
@@ -100,7 +100,7 @@ export function MerchantRewardPreview({ control, category, status, cover, stores
 						</ul>
 					</div>
 				)}
-			</MerchantSurfacePanel>
+			</Card>
 
 			<div className="flex flex-col gap-2">{actions}</div>
 		</aside>

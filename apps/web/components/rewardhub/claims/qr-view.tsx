@@ -4,13 +4,13 @@ import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { ClaimQrSkeleton } from "@/components/loading/claim-qr-skeleton";
 import { CLAIM_QR_SIZE_PX } from "@/components/rewardhub/claims/claim-qr-layout";
 import { WebPageHeader } from "@/components/web-ui/page-header";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import { PLATFORM_DISPLAY_REGION, type Envelope, type RewardClaimQrResponse } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { QrCode } from "@workspace/ui/components/qr-code";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
@@ -58,7 +58,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 				Back to My Wallet
 			</Link>
 
-			<WebSurfacePanel className="p-5 sm:p-6">
+			<Card className="gap-0 p-5 sm:p-6">
 				<div className="mb-6 flex flex-col items-center gap-3 text-center">
 					<QrCode value={qr.qrPayload} size={CLAIM_QR_SIZE_PX} label="Reward redemption QR code" />
 					<p className="text-sm text-muted-foreground">Position this code within the scanner at the till</p>
@@ -79,7 +79,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 						{qrQuery.isFetching ? "Refreshing…" : "Refresh code"}
 					</Button>
 				</div>
-			</WebSurfacePanel>
+			</Card>
 		</div>
 	);
 }

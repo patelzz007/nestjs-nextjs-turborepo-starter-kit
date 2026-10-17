@@ -10,7 +10,6 @@ import {
 import { MerchantBorderedRowsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { resolveActiveOrganizationLocations } from "@/lib/org/location-access";
 import { orgRoutes } from "@/lib/routes";
 import { ORGANIZATION_ROLE_LABELS } from "@/lib/org/role-labels";
@@ -38,6 +37,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { Card } from "@workspace/ui/components/card";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import * as React from "react";
@@ -277,7 +277,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 		<div className="space-y-8">
 			<MerchantPageHeader title="Team & access" description="Invite colleagues by email. They receive a link to accept and join with the role and store access you assign." />
 
-			<MerchantSurfacePanel className="space-y-4 p-6">
+			<Card className="gap-4 p-6">
 				<div className="flex items-center justify-between gap-3">
 					<h2 className="text-base font-semibold text-foreground">Current members</h2>
 					{membersQuery.isLoading ? <Skeleton aria-hidden="true" className="h-5 w-8 rounded-full" /> : <Badge variant="outline">{String(members.length)}</Badge>}
@@ -302,9 +302,9 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 						</div>
 					))}
 				</div>
-			</MerchantSurfacePanel>
+			</Card>
 
-			<MerchantSurfacePanel className="space-y-4 p-6">
+			<Card className="gap-4 p-6">
 				<div className="flex items-center justify-between gap-3">
 					<h2 className="text-base font-semibold text-foreground">Pending invitations</h2>
 					{invitesQuery.isLoading ? <Skeleton aria-hidden="true" className="h-5 w-8 rounded-full" /> : <Badge variant="outline">{String(pendingInvites.length)}</Badge>}
@@ -328,9 +328,9 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 						))}
 					</div>
 				)}
-			</MerchantSurfacePanel>
+			</Card>
 
-			<MerchantSurfacePanel className="space-y-6 p-6">
+			<Card className="gap-6 p-6">
 				<h2 className="text-base font-semibold text-foreground">Invite a team member</h2>
 				<form className="space-y-6" onSubmit={handleSubmit}>
 					<div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
@@ -418,7 +418,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 						</Link>
 					</div>
 				</form>
-			</MerchantSurfacePanel>
+			</Card>
 		</div>
 	);
 }

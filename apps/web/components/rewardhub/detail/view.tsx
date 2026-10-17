@@ -11,7 +11,6 @@ import { RewardMoreFromMerchant } from "@/components/rewardhub/detail/more-from-
 import { RewardOfferFacts } from "@/components/rewardhub/detail/offer-facts";
 import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import { WebPageHeader } from "@/components/web-ui/page-header";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import { formatRewardOffer, rewardTypeLabel } from "@workspace/client/lib/rewards/reward-offer";
 import type { Envelope, RewardResponse } from "@workspace/shared";
@@ -21,6 +20,7 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { formatCount } from "@workspace/ui/lib/format/number";
+import { Card } from "@workspace/ui/components/card";
 import { Clock, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -120,7 +120,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 				</div>
 
 				<div className="space-y-6 @4xl:sticky @4xl:top-24">
-					<WebSurfacePanel className="p-5 sm:p-6">
+					<Card className="gap-0 p-5 sm:p-6">
 						{reward.organizationName === undefined ? null : (
 							<div className="flex items-center gap-3">
 								<RewardMerchantAvatar reward={reward} size="lg" />
@@ -164,9 +164,9 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 								) : null}
 							</div>
 						</div>
-					</WebSurfacePanel>
+					</Card>
 
-					<WebSurfacePanel className="p-5 sm:p-6">
+					<Card className="gap-0 p-5 sm:p-6">
 						<h2 className="text-base font-semibold">Claim this reward</h2>
 						<div className="mt-4 space-y-4">
 							{message !== null ? <p className="rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-muted-foreground">{message}</p> : null}
@@ -184,7 +184,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 								</AccessGate>
 							)}
 						</div>
-					</WebSurfacePanel>
+					</Card>
 				</div>
 			</div>
 

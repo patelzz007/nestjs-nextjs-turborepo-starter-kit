@@ -1,6 +1,6 @@
-import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { Lock, LogIn } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -17,17 +17,22 @@ export interface SignInPromptProps {
 /** Guest fallback for a section that needs an account. */
 export function SignInPrompt({ title, description, returnTo, className }: SignInPromptProps): React.JSX.Element {
 	return (
-		<WebEmptyState
-			className={className}
-			title={title}
-			description={description}
-			icon={<LogIn className="size-5" aria-hidden="true" />}
-			action={
+		<Empty className={cn("border bg-card", className)}>
+			<EmptyHeader>
+				<EmptyMedia variant="icon">
+					<LogIn className="size-5" aria-hidden="true" />
+				</EmptyMedia>
+				<EmptyTitle role="heading" aria-level={2}>
+					{title}
+				</EmptyTitle>
+				<EmptyDescription>{description}</EmptyDescription>
+			</EmptyHeader>
+			<EmptyContent>
 				<Link href={loginPath(returnTo)} className={cn(buttonVariants())}>
 					Sign in
 				</Link>
-			}
-		/>
+			</EmptyContent>
+		</Empty>
 	);
 }
 
@@ -39,7 +44,19 @@ export interface AccessUnavailableNoticeProps {
 
 /** Signed-in fallback for a section the account's permissions do not cover. */
 export function AccessUnavailableNotice({ title, description, className }: AccessUnavailableNoticeProps): React.JSX.Element {
-	return <WebEmptyState className={className} title={title} description={description} icon={<Lock className="size-5" aria-hidden="true" />} />;
+	return (
+		<Empty className={cn("border bg-card", className)}>
+			<EmptyHeader>
+				<EmptyMedia variant="icon">
+					<Lock className="size-5" aria-hidden="true" />
+				</EmptyMedia>
+				<EmptyTitle role="heading" aria-level={2}>
+					{title}
+				</EmptyTitle>
+				<EmptyDescription>{description}</EmptyDescription>
+			</EmptyHeader>
+		</Empty>
+	);
 }
 
 export interface FeatureUnavailableNoticeProps {

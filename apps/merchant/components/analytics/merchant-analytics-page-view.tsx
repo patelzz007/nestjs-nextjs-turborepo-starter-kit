@@ -3,7 +3,6 @@
 import { MerchantAnalyticsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
 import {
 	MERCHANT_AVERAGE_BILL_SERIES,
@@ -56,6 +55,7 @@ import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -142,24 +142,28 @@ function MerchantAnalyticsContent({ orgSlug, nowMs, timeZone, initialDashboard }
 /** The POS has never reported a bill in this scope — explain how sales start flowing in. */
 function NoSalesYet({ apiKeysHref }: { readonly apiKeysHref: string | undefined }): React.JSX.Element {
 	return (
-		<MerchantEmptyState
-			title="No sales yet"
-			description={
-				apiKeysHref === undefined
-					? "Sales appear once your POS reports bills through the checkout API. Ask your store owner to connect your POS."
-					: "Sales appear once your POS reports bills through the checkout API."
-			}
-			icon={<Receipt className="size-5" aria-hidden="true" />}
-			{...(apiKeysHref === undefined
-				? {}
-				: {
-						action: (
-							<Link href={apiKeysHref} className={buttonVariants({ variant: "outline" })}>
-								Set up API keys
-							</Link>
-						),
-					})}
-		/>
+		<Empty className="border bg-card">
+			<EmptyHeader>
+				<EmptyMedia variant="icon">
+					<Receipt className="size-5" aria-hidden="true" />
+				</EmptyMedia>
+				<EmptyTitle role="heading" aria-level={2}>
+					No sales yet
+				</EmptyTitle>
+				<EmptyDescription>
+					{apiKeysHref === undefined
+						? "Sales appear once your POS reports bills through the checkout API. Ask your store owner to connect your POS."
+						: "Sales appear once your POS reports bills through the checkout API."}
+				</EmptyDescription>
+			</EmptyHeader>
+			{apiKeysHref === undefined ? null : (
+				<EmptyContent>
+					<Link href={apiKeysHref} className={buttonVariants({ variant: "outline" })}>
+						Set up API keys
+					</Link>
+				</EmptyContent>
+			)}
+		</Empty>
 	);
 }
 

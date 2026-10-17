@@ -3,7 +3,6 @@
 import { placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 import { MerchantRewardCard } from "@/components/rewards/merchant-reward-card";
 import { MerchantRewardListRow, REWARD_LIST_COLUMNS_CLASS } from "@/components/rewards/merchant-reward-list-row";
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import {
 	defaultRewardStatusGroupId,
 	groupRewardsByStatus,
@@ -25,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/componen
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatCount } from "@workspace/ui/lib/format/number";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { Archive, FilePen, Hourglass, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -269,7 +269,18 @@ interface EmptyTabProps {
 
 function EmptyTab({ group, action }: EmptyTabProps): React.JSX.Element {
 	const copy = EMPTY_TAB_COPY[group.id];
-	return <MerchantEmptyState title={copy.title} description={copy.description} icon={copy.icon} action={action} className="py-14" />;
+	return (
+		<Empty className="border bg-card py-14">
+			<EmptyHeader>
+				<EmptyMedia variant="icon">{copy.icon}</EmptyMedia>
+				<EmptyTitle role="heading" aria-level={2}>
+					{copy.title}
+				</EmptyTitle>
+				<EmptyDescription>{copy.description}</EmptyDescription>
+			</EmptyHeader>
+			{action === null || action === undefined ? null : <EmptyContent>{action}</EmptyContent>}
+		</Empty>
+	);
 }
 
 interface RewardStatusTabProps {

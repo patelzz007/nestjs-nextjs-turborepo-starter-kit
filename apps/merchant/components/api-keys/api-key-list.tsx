@@ -2,7 +2,6 @@
 
 import { API_KEY_ROW_ACTIONS, API_KEY_ROW_GRID, API_KEY_ROW_TEXT_CELLS } from "@/components/api-keys/api-key-row-grid";
 import { MerchantGridRowsSkeleton } from "@/components/loading/merchant-skeleton-parts";
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { API_KEY_FILTERS, isActiveApiKey, type ApiKeyFilter } from "@/lib/api-keys/api-key-summary";
 import { apiKeyScopeLabel } from "@/lib/api-keys/create-api-key-form";
 import { PLATFORM_DISPLAY_REGION, type MerchantApiKeySummary } from "@workspace/shared";
@@ -11,6 +10,7 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { AlertTriangle, Ban, CalendarDays, KeyRound, MapPin, RotateCw } from "lucide-react";
 import * as React from "react";
 
@@ -91,14 +91,19 @@ export function ApiKeyList({ keys, filter, onFilterChange, isLoading, isError, o
 						</Button>
 					</div>
 				) : keys.length === 0 ? (
-					<MerchantEmptyState
-						className="border-0 bg-transparent py-12"
-						icon={<KeyRound className="size-5" aria-hidden="true" />}
-						title={filter === "revoked" ? "No revoked keys" : "No API keys yet"}
-						description={
-							filter === "revoked" ? "Keys you revoke stay listed here for your records." : "Create a key for your first POS terminal to start validating redemptions."
-						}
-					/>
+					<Empty className="py-12">
+						<EmptyHeader>
+							<EmptyMedia variant="icon">
+								<KeyRound className="size-5" aria-hidden="true" />
+							</EmptyMedia>
+							<EmptyTitle role="heading" aria-level={2}>
+								{filter === "revoked" ? "No revoked keys" : "No API keys yet"}
+							</EmptyTitle>
+							<EmptyDescription>
+								{filter === "revoked" ? "Keys you revoke stay listed here for your records." : "Create a key for your first POS terminal to start validating redemptions."}
+							</EmptyDescription>
+						</EmptyHeader>
+					</Empty>
 				) : (
 					<ul className="divide-y divide-border" aria-label={`${FILTER_LABELS[filter]} keys`}>
 						{keys.map((apiKey: MerchantApiKeySummary): React.JSX.Element => (

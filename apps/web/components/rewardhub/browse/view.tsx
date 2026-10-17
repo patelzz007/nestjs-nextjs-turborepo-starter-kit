@@ -7,10 +7,10 @@ import { toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
-import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
 import { PILOT_CITY_LABELS, PilotCitySchema, RewardCategorySchema, type Envelope, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { AlertTriangle, Gift, MapPin, Search, Sparkles } from "lucide-react";
 import * as React from "react";
 import { LANDING_SECTION_IDS, ROUTE_PREFIXES } from "@/lib/routes";
@@ -179,22 +179,34 @@ export function RewardHubBrowseView({ initialPage, variant = "dashboard", detail
 			/>
 
 			{showError ? (
-				<WebEmptyState
-					title="Couldn't load rewards"
-					description="Something went wrong while loading the catalog. Check your connection and try again."
-					icon={<AlertTriangle className="size-5" aria-hidden="true" />}
-					action={
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<AlertTriangle className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							{"Couldn't load rewards"}
+						</EmptyTitle>
+						<EmptyDescription>Something went wrong while loading the catalog. Check your connection and try again.</EmptyDescription>
+					</EmptyHeader>
+					<EmptyContent>
 						<Button type="button" onClick={handleRetry}>
 							Try again
 						</Button>
-					}
-				/>
+					</EmptyContent>
+				</Empty>
 			) : showEmpty ? (
-				<WebEmptyState
-					title="No claimable rewards"
-					description="Everything matching your filters is sold out or expired. Try another city or category."
-					icon={<Search className="size-5" aria-hidden="true" />}
-				/>
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<Search className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							No claimable rewards
+						</EmptyTitle>
+						<EmptyDescription>Everything matching your filters is sold out or expired. Try another city or category.</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
 			) : (
 				<RewardHubCatalog
 					rewards={rewards}

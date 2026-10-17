@@ -1,9 +1,9 @@
 import { CLAIM_QR_SIZE_PX } from "@/components/rewardhub/claims/claim-qr-layout";
 import { CLAIM_QR_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { RewardHubBackLinkSkeleton, RewardHubPageHeaderSkeleton } from "@/components/loading/reward-hub-page-header-skeleton";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
+import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
 
 /** The QR's footprint: `QrCode`'s padded, bordered frame around a square of the view's size. */
@@ -20,7 +20,7 @@ export function ClaimQrSkeleton(): React.JSX.Element {
 			<div className="mx-auto max-w-4xl space-y-8">
 				<RewardHubPageHeaderSkeleton />
 				<RewardHubBackLinkSkeleton />
-				<WebSurfacePanel className="p-5 sm:p-6">
+				<Card className="gap-0 p-5 sm:p-6">
 					<div className="mb-6 flex flex-col items-center gap-3">
 						<div className="inline-flex rounded-xl border border-border p-4 shadow-sm">
 							<Skeleton style={QR_SQUARE_STYLE} />
@@ -37,7 +37,7 @@ export function ClaimQrSkeleton(): React.JSX.Element {
 						<Skeleton variant="text" className="my-0.5 h-4 w-56" />
 						<Skeleton className="h-10 w-full sm:w-32" />
 					</div>
-				</WebSurfacePanel>
+				</Card>
 			</div>
 		</SkeletonRegion>
 	);

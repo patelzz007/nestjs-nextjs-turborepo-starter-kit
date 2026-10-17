@@ -3,7 +3,6 @@
 import { MerchantDashboardPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { StatCard } from "@workspace/ui/components/stat-card";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
@@ -15,6 +14,7 @@ import { IconTile, type IconTileTone } from "@workspace/ui/components/icon-tile"
 import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Card } from "@workspace/ui/components/card";
 import { BarChart3, Building2, ChevronRight, Gift, LayoutDashboard, MapPin, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -75,7 +75,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 
 	return (
 		<div className="space-y-8">
-			<MerchantSurfacePanel className="overflow-hidden">
+			<Card className="gap-0 overflow-hidden py-0">
 				<div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
 					<div className="flex min-w-0 items-center gap-4">
 						<div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
@@ -104,15 +104,15 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 						Same business, different surface.
 					</p>
 				</div>
-			</MerchantSurfacePanel>
+			</Card>
 
 			{contextError ? (
-				<MerchantSurfacePanel className="border-destructive/30 bg-destructive/5 p-5">
+				<Card className="gap-0 bg-destructive/5 p-5 ring-destructive/30">
 					<p className="font-medium text-foreground">Could not load organization context</p>
 					<p className="mt-1 text-sm text-muted-foreground">
 						Verify you are signed in and have an active membership for <span className="font-mono">{orgSlug}</span>.
 					</p>
-				</MerchantSurfacePanel>
+				</Card>
 			) : null}
 
 			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -248,7 +248,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 			) : null}
 
 			{context !== null ? (
-				<MerchantSurfacePanel className="p-5 sm:p-6">
+				<Card className="gap-0 p-5 sm:p-6">
 					<div className="flex flex-wrap items-start justify-between gap-4">
 						<div className="space-y-3">
 							<h2 className="text-base font-semibold text-foreground">Tenant snapshot</h2>
@@ -284,7 +284,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 							Open merchant home
 						</Link>
 					</div>
-				</MerchantSurfacePanel>
+				</Card>
 			) : (
 				<div className="flex flex-wrap gap-3">
 					<Link href={ROUTES.home}>

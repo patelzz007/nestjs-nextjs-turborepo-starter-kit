@@ -1,6 +1,5 @@
 "use client";
 
-import { WebEmptyState } from "@/components/web-ui/empty-state";
 import {
 	CUSTOMER_ENGAGEMENT_SERIES,
 	CUSTOMER_REFERRAL_KPIS,
@@ -48,6 +47,7 @@ import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -142,16 +142,22 @@ export function CustomerActivitySections({ dashboard, status }: CustomerActivity
 			/>
 
 			{hasNoSpending ? (
-				<WebEmptyState
-					title="No spending yet"
-					description="Spending shows up after you redeem a reward at a participating shop."
-					icon={<Receipt className="size-5" aria-hidden="true" />}
-					action={
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<Receipt className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							No spending yet
+						</EmptyTitle>
+						<EmptyDescription>Spending shows up after you redeem a reward at a participating shop.</EmptyDescription>
+					</EmptyHeader>
+					<EmptyContent>
 						<Link href={ROUTES.rewardHub.browse} className={buttonVariants({ variant: "outline" })}>
 							Browse rewards
 						</Link>
-					}
-				/>
+					</EmptyContent>
+				</Empty>
 			) : null}
 
 			<div className="grid gap-6 xl:grid-cols-2">

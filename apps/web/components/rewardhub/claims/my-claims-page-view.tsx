@@ -6,10 +6,8 @@ import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/u
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { WALLET_CLAIMS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { WalletClaimRowsBones } from "@/components/loading/wallet-skeleton";
-import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import { PLATFORM_DISPLAY_REGION, type Envelope, type RewardClaimResponse } from "@workspace/shared";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
@@ -17,6 +15,8 @@ import { StatusBadge } from "@workspace/ui/components/status-badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
+import { Card } from "@workspace/ui/components/card";
 import { AlertTriangle, ChevronLeft, ChevronRight, Gift, QrCode, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -87,33 +87,45 @@ export function MyClaimsPageView({ initialPage, initialReadyCount }: MyClaimsPag
 					<WalletClaimRowsBones />
 				</SkeletonRegion>
 			) : claimsQuery.isError && claimsQuery.data === undefined ? (
-				<WebEmptyState
-					title="Couldn't load your claims"
-					description="Something went wrong while loading your wallet. Your claims are safe — try again in a moment."
-					icon={<AlertTriangle className="size-5" aria-hidden="true" />}
-					action={
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<AlertTriangle className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							{"Couldn't load your claims"}
+						</EmptyTitle>
+						<EmptyDescription>Something went wrong while loading your wallet. Your claims are safe — try again in a moment.</EmptyDescription>
+					</EmptyHeader>
+					<EmptyContent>
 						<Button type="button" onClick={handleRetry}>
 							Try again
 						</Button>
-					}
-				/>
+					</EmptyContent>
+				</Empty>
 			) : claims.length === 0 && !hasPrevious ? (
-				<WebEmptyState
-					title="No claims yet"
-					description="Browse local rewards and claim your first offer — it will appear here with a QR code for redemption."
-					icon={<Gift className="size-5" aria-hidden="true" />}
-					action={
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<Gift className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							No claims yet
+						</EmptyTitle>
+						<EmptyDescription>Browse local rewards and claim your first offer — it will appear here with a QR code for redemption.</EmptyDescription>
+					</EmptyHeader>
+					<EmptyContent>
 						<Link href={ROUTES.rewardHub.browse} className={cn(buttonVariants())}>
 							Browse rewards
 						</Link>
-					}
-				/>
+					</EmptyContent>
+				</Empty>
 			) : (
 				<div className="space-y-3">
 					{claims.map((claim) => {
 						const statusBadge = claimStatusBadge(claim.status);
 						return (
-							<WebSurfacePanel key={claim.id} className="px-5 py-4">
+							<Card key={claim.id} className="gap-0 px-5 py-4">
 								<div className="flex flex-wrap items-center justify-between gap-4">
 									<div className="min-w-0 space-y-1">
 										<p className="font-medium text-foreground">{claim.rewardTitle}</p>
@@ -128,7 +140,7 @@ export function MyClaimsPageView({ initialPage, initialReadyCount }: MyClaimsPag
 										) : null}
 									</div>
 								</div>
-							</WebSurfacePanel>
+							</Card>
 						);
 					})}
 					{hasPrevious || hasNext ? (

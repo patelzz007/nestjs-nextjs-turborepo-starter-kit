@@ -1,7 +1,7 @@
 "use client";
 
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { Button } from "@workspace/ui/components/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 
@@ -24,20 +24,26 @@ export function MerchantRouteErrorState({ digest, onRetry, className }: Merchant
 
 	return (
 		<div role="alert" className={className}>
-			<MerchantEmptyState
-				title="Something went wrong"
-				description={
-					digest === undefined
-						? "This page could not be loaded. Try again in a moment."
-						: `This page could not be loaded. Try again in a moment — if it keeps failing, quote reference ${digest} to support.`
-				}
-				icon={<AlertTriangle className="size-5" aria-hidden="true" />}
-				action={
+			<Empty className="border bg-card">
+				<EmptyHeader>
+					<EmptyMedia variant="icon">
+						<AlertTriangle className="size-5" aria-hidden="true" />
+					</EmptyMedia>
+					<EmptyTitle role="heading" aria-level={2}>
+						Something went wrong
+					</EmptyTitle>
+					<EmptyDescription>
+						{digest === undefined
+							? "This page could not be loaded. Try again in a moment."
+							: `This page could not be loaded. Try again in a moment — if it keeps failing, quote reference ${digest} to support.`}
+					</EmptyDescription>
+				</EmptyHeader>
+				<EmptyContent>
 					<Button type="button" onClick={handleRetry}>
 						Try again
 					</Button>
-				}
-			/>
+				</EmptyContent>
+			</Empty>
 		</div>
 	);
 }

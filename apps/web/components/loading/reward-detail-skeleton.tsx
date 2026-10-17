@@ -1,8 +1,8 @@
 import { REWARD_DETAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
-import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { AspectRatio } from "@workspace/ui/components/aspect-ratio";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
+import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
 import { REWARD_CARD_COVER_RATIO } from "@/lib/rewards/reward-cover";
 
@@ -38,7 +38,7 @@ export function RewardDetailBones(): React.JSX.Element {
 					</div>
 				</div>
 				<div className="space-y-6">
-					<WebSurfacePanel className="p-5 sm:p-6">
+					<Card className="gap-0 p-5 sm:p-6">
 						<div className="flex items-center gap-3">
 							<Skeleton className="size-12 rounded-xl" />
 							<div className="flex min-w-0 flex-col gap-1">
@@ -58,13 +58,13 @@ export function RewardDetailBones(): React.JSX.Element {
 							<Skeleton className="h-6 w-full" />
 							<Skeleton variant="text" className="h-4 w-48" />
 						</div>
-					</WebSurfacePanel>
-					<WebSurfacePanel className="p-5 sm:p-6">
+					</Card>
+					<Card className="gap-0 p-5 sm:p-6">
 						<Skeleton variant="text" className="my-0.5 h-5 w-36" />
 						<div className="mt-4">
 							<ClaimFlowBones />
 						</div>
-					</WebSurfacePanel>
+					</Card>
 				</div>
 			</div>
 		</div>

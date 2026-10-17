@@ -4,7 +4,6 @@ import { useMerchantAuthorizationStatus } from "@/components/access/merchant-aut
 import { MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { StoreLogoSkeleton, MERCHANT_BRANDING_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { STORE_LOGO_FILE_RULES, STORE_LOGO_HINT, STORE_LOGO_IMAGE_RULES, useRemoveStoreLogo, useUploadStoreLogo } from "@/lib/org/use-store-logo";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
@@ -16,6 +15,7 @@ import { MERCHANT_CAPABILITY, type OrganizationContextSummaryResponse } from "@w
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
 
 const LOGO_LABELS: ImageSlotFieldLabels = {
@@ -81,7 +81,7 @@ function StoreLogoPanel({ orgSlug, organization, canManage }: StoreLogoPanelProp
 	}, [organization.logo, removeLogo]);
 
 	return (
-		<MerchantSurfacePanel className="flex flex-col gap-4 p-5 sm:p-6">
+		<Card className="gap-4 p-5 sm:p-6">
 			<div>
 				<h2 className="font-medium text-foreground">Logo</h2>
 				<p className="mt-1 text-sm text-muted-foreground">Shown with your rewards in Reward Hub. Without one, the initials of your store are shown.</p>
@@ -109,7 +109,7 @@ function StoreLogoPanel({ orgSlug, organization, canManage }: StoreLogoPanelProp
 				onCropped={picker.handleCropped}
 				onSkip={picker.handleSkip}
 			/>
-		</MerchantSurfacePanel>
+		</Card>
 	);
 }
 
@@ -137,10 +137,10 @@ export function OrganizationBrandingPageView({ orgSlug }: OrganizationBrandingPa
 			{canManage || isAuthorizationLoading ? null : <MerchantReadOnlyNotice>Your role can see the store logo but not change it.</MerchantReadOnlyNotice>}
 
 			{contextQuery.isError ? (
-				<MerchantSurfacePanel className="border-destructive/30 bg-destructive/5 p-5">
+				<Card className="gap-0 bg-destructive/5 p-5 ring-destructive/30">
 					<p className="font-medium text-foreground">Could not load store branding</p>
 					<p className="mt-1 text-sm text-muted-foreground">Verify you have access to this organization workspace.</p>
-				</MerchantSurfacePanel>
+				</Card>
 			) : null}
 
 			{contextQuery.isLoading ? (

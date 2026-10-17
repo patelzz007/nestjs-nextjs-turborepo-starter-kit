@@ -1,5 +1,5 @@
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { Card } from "@workspace/ui/components/card";
 import type { AppPath } from "@/lib/routes";
 import type { RewardStatus } from "@workspace/shared";
 import { ArrowLeft } from "lucide-react";
@@ -57,7 +57,7 @@ export function MerchantRewardEditorLayout({ heading, description, back, status,
 			</header>
 
 			<form noValidate onSubmit={onSubmit} className={REWARD_EDITOR_GRID_CLASS}>
-				<MerchantSurfacePanel className="min-w-0">{fields}</MerchantSurfacePanel>
+				<Card className="min-w-0 gap-0 py-0">{fields}</Card>
 				{preview}
 			</form>
 		</div>

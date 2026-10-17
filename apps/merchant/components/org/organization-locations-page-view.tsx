@@ -4,7 +4,6 @@ import { useMerchantAuthorizationStatus } from "@/components/access/merchant-aut
 import { MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { MERCHANT_LOCATIONS_LOADING_LABELS, OrganizationLocationsSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
 import { OrganizationLocationRequestForm } from "@/components/org/organization-location-request-form";
 import { resolveActiveOrganizationLocations, resolveAllOrganizationLocations } from "@/lib/org/location-access";
@@ -14,6 +13,7 @@ import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type OrganizationLocationResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
+import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
 import * as React from "react";
 
@@ -77,10 +77,10 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 			)}
 
 			{contextQuery.isError ? (
-				<MerchantSurfacePanel className="border-destructive/30 bg-destructive/5 p-5">
+				<Card className="gap-0 bg-destructive/5 p-5 ring-destructive/30">
 					<p className="font-medium text-foreground">Could not load locations</p>
 					<p className="mt-1 text-sm text-muted-foreground">Verify you have access to this organization workspace.</p>
-				</MerchantSurfacePanel>
+				</Card>
 			) : null}
 
 			{contextQuery.isLoading ? (
@@ -90,17 +90,17 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 			) : null}
 
 			{canManageLocations && showCreateForm ? (
-				<MerchantSurfacePanel className="space-y-4 p-5 sm:p-6">
+				<Card className="gap-4 p-5 sm:p-6">
 					<div>
 						<p className="font-medium text-foreground">Request a new store</p>
 						<p className="mt-1 text-sm text-muted-foreground">Ops will review the address before the store becomes active.</p>
 					</div>
 					<OrganizationLocationRequestForm orgSlug={orgSlug} mode="create" onSuccess={handleMutationSuccess} onCancel={handleCancelCreate} />
-				</MerchantSurfacePanel>
+				</Card>
 			) : null}
 
 			{canManageLocations && editingLocation !== undefined ? (
-				<MerchantSurfacePanel className="space-y-4 p-5 sm:p-6">
+				<Card className="gap-4 p-5 sm:p-6">
 					<div>
 						<p className="font-medium text-foreground">Resubmit rejected store</p>
 						<p className="mt-1 text-sm text-muted-foreground">Update the details and send the request back to RewardHub ops.</p>
@@ -113,12 +113,12 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 						onSuccess={handleMutationSuccess}
 						onCancel={handleCancelResubmit}
 					/>
-				</MerchantSurfacePanel>
+				</Card>
 			) : null}
 
 			{context !== undefined ? (
 				<>
-					<MerchantSurfacePanel className="space-y-3 p-5 sm:p-6">
+					<Card className="gap-3 p-5 sm:p-6">
 						<p className="text-sm text-muted-foreground">
 							<strong className="font-medium text-foreground">{context.organization.displayName}</strong> has{" "}
 							<strong className="font-medium text-foreground">{String(activeLocations.length)}</strong> active store
@@ -133,7 +133,7 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 									: `${String(context.membership.locationIds.length)} selected location${context.membership.locationIds.length === 1 ? "" : "s"}`}
 							</span>
 						</p>
-					</MerchantSurfacePanel>
+					</Card>
 
 					<OrganizationLocationList
 						locations={allLocations}

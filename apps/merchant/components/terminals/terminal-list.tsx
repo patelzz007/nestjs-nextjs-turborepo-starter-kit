@@ -1,6 +1,5 @@
 "use client";
 
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantGridRowsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { TERMINAL_ROW_ACTIONS, TERMINAL_ROW_GRID, TERMINAL_ROW_TEXT_CELLS } from "@/components/terminals/terminal-row-grid";
 import { describeTerminalStatus, pairingActionLabel, type TerminalStatusTone } from "@/lib/terminals/terminal-summary";
@@ -11,6 +10,7 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { AlertTriangle, Clock, MapPin, MonitorSmartphone, Plus, RotateCw } from "lucide-react";
 import * as React from "react";
 
@@ -111,18 +111,23 @@ export function TerminalList({
 						</Button>
 					</div>
 				) : terminals.length === 0 ? (
-					<MerchantEmptyState
-						className="border-0 bg-transparent py-12"
-						icon={<MonitorSmartphone className="size-5" aria-hidden="true" />}
-						title="No terminals yet"
-						description="Add a till to get a one-time pairing code. The till enters it once and is ready to validate redemptions."
-						action={
+					<Empty className="py-12">
+						<EmptyHeader>
+							<EmptyMedia variant="icon">
+								<MonitorSmartphone className="size-5" aria-hidden="true" />
+							</EmptyMedia>
+							<EmptyTitle role="heading" aria-level={2}>
+								No terminals yet
+							</EmptyTitle>
+							<EmptyDescription>Add a till to get a one-time pairing code. The till enters it once and is ready to validate redemptions.</EmptyDescription>
+						</EmptyHeader>
+						<EmptyContent>
 							<Button onClick={onAddRequest}>
 								<Plus className="size-4" aria-hidden="true" />
 								Add your first terminal
 							</Button>
-						}
-					/>
+						</EmptyContent>
+					</Empty>
 				) : (
 					<ul className="divide-y divide-border" aria-label="Terminals">
 						{terminals.map((terminal: MerchantTerminalSummary): React.JSX.Element => (

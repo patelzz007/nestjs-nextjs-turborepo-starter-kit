@@ -1,11 +1,11 @@
 "use client";
 
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import type { MerchantRewardState } from "@/lib/rewards/use-merchant-reward";
 import type { AppPath } from "@/lib/routes";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
+import { Card } from "@workspace/ui/components/card";
 import Link from "next/link";
 import * as React from "react";
 
@@ -24,7 +24,7 @@ export interface MerchantRewardUnavailableProps {
  */
 export function MerchantRewardUnavailable({ state, rewardsHref }: MerchantRewardUnavailableProps): React.JSX.Element {
 	return (
-		<MerchantSurfacePanel className="flex flex-col items-start gap-3 px-6 py-8">
+		<Card className="items-start gap-3 px-6 py-8">
 			{state.kind === "failed" ? (
 				<>
 					<h1 className="text-xl font-semibold tracking-tight text-foreground">Could not load this reward</h1>
@@ -44,6 +44,6 @@ export function MerchantRewardUnavailable({ state, rewardsHref }: MerchantReward
 					</Link>
 				</>
 			)}
-		</MerchantSurfacePanel>
+		</Card>
 	);
 }

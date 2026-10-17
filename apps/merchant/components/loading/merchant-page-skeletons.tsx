@@ -10,7 +10,6 @@ import {
 	MerchantStatCardsSkeleton,
 } from "@/components/loading/merchant-skeleton-parts";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { REWARD_EDITOR_GRID_CLASS } from "@/components/rewards/merchant-reward-editor-layout";
 import { MerchantRewardsCatalogSkeleton } from "@/components/rewards/merchant-rewards-catalog";
 import { MerchantRewardsSummaryStripSkeleton } from "@/components/rewards/merchant-rewards-summary-strip";
@@ -27,6 +26,7 @@ import { ChartSkeleton, FormSkeleton, ListSkeleton, PageHeaderSkeleton, ProseSke
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
+import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
 
 /*
@@ -166,9 +166,9 @@ export function MerchantPageSkeleton({ labels = MERCHANT_PAGE_LOADING_LABELS }: 
 	return (
 		<SkeletonRegion labels={labels} className={PAGE_STACK}>
 			<MerchantPageHeaderSkeleton />
-			<MerchantSurfacePanel className="p-6">
+			<Card className="gap-0 p-6">
 				<ProseSkeleton />
-			</MerchantSurfacePanel>
+			</Card>
 		</SkeletonRegion>
 	);
 }
@@ -224,7 +224,7 @@ export interface MerchantDashboardPageSkeletonProps {
 export function MerchantDashboardPageSkeleton({ labels = MERCHANT_DASHBOARD_LOADING_LABELS }: MerchantDashboardPageSkeletonProps): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={labels} className={PAGE_STACK}>
-			<MerchantSurfacePanel className="overflow-hidden">
+			<Card className="gap-0 overflow-hidden py-0">
 				<div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
 					<div className="flex min-w-0 items-center gap-4">
 						<Skeleton className="size-12 rounded-xl" />
@@ -242,7 +242,7 @@ export function MerchantDashboardPageSkeleton({ labels = MERCHANT_DASHBOARD_LOAD
 				<div className="border-t border-border px-5 py-4 sm:px-6">
 					<ProseSkeleton lines={DASHBOARD_HERO_NOTES} />
 				</div>
-			</MerchantSurfacePanel>
+			</Card>
 			<MerchantStatCardsSkeleton count={DASHBOARD_STAT_CARDS} className="sm:grid-cols-2 xl:grid-cols-4" />
 			<div className="grid gap-6 lg:grid-cols-2">
 				{placeholderKeys("column", DASHBOARD_LINK_COLUMNS).map((columnKey): React.JSX.Element => (
@@ -256,7 +256,7 @@ export function MerchantDashboardPageSkeleton({ labels = MERCHANT_DASHBOARD_LOAD
 					</div>
 				))}
 			</div>
-			<MerchantSurfacePanel className="flex flex-col gap-3 p-5 sm:p-6">
+			<Card className="gap-3 p-5 sm:p-6">
 				<Skeleton variant="text" className="h-4.5 w-36" />
 				<div className="grid gap-3 sm:grid-cols-2">
 					{placeholderKeys("fact", DASHBOARD_SNAPSHOT_FACTS).map((key, index): React.JSX.Element => (
@@ -266,7 +266,7 @@ export function MerchantDashboardPageSkeleton({ labels = MERCHANT_DASHBOARD_LOAD
 						</div>
 					))}
 				</div>
-			</MerchantSurfacePanel>
+			</Card>
 		</SkeletonRegion>
 	);
 }
@@ -306,7 +306,7 @@ export function MerchantApiKeysPageSkeleton(): React.JSX.Element {
 		<SkeletonRegion labels={MERCHANT_API_KEYS_LOADING_LABELS} className={PAGE_STACK}>
 			<MerchantPageHeaderSkeleton />
 			<MerchantStatCardsSkeleton count={FLEET_STAT_CARDS} className="sm:grid-cols-3" />
-			<MerchantSurfacePanel className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+			<Card className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
 				<div className="flex items-start gap-4">
 					<Skeleton className="size-12 rounded-xl" />
 					<div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -322,7 +322,7 @@ export function MerchantApiKeysPageSkeleton(): React.JSX.Element {
 					<FormSkeleton surface="plain" fields={CREATE_KEY_FIELDS} withActions={false} />
 					<Skeleton className="h-9 w-36 self-end" />
 				</div>
-			</MerchantSurfacePanel>
+			</Card>
 			<MerchantSectionCardSkeleton withHeaderAction>
 				<MerchantGridRowsSkeleton rows={FLEET_SKELETON_ROWS} rowGridClassName={API_KEY_ROW_GRID} textCells={API_KEY_ROW_TEXT_CELLS} actions={API_KEY_ROW_ACTIONS} />
 			</MerchantSectionCardSkeleton>
@@ -435,7 +435,7 @@ export function MerchantRewardEditorPageSkeleton(): React.JSX.Element {
 				<Skeleton variant="text" className="h-4 w-80 max-w-full" />
 			</div>
 			<div className={REWARD_EDITOR_GRID_CLASS}>
-				<MerchantSurfacePanel className="min-w-0">
+				<Card className="min-w-0 gap-0 py-0">
 					<RewardEditorSectionSkeleton>
 						<div className="flex flex-wrap gap-2">
 							{placeholderKeys("type", REWARD_TYPE_CHOICES).map((key, index): React.JSX.Element => (
@@ -460,7 +460,7 @@ export function MerchantRewardEditorPageSkeleton(): React.JSX.Element {
 							))}
 						</div>
 					</RewardEditorSectionSkeleton>
-				</MerchantSurfacePanel>
+				</Card>
 				<div data-slot="reward-preview-skeleton" className="flex flex-col gap-4">
 					<Skeleton variant="text" className="h-4 w-36" />
 					<RewardVoucherSkeleton />
@@ -498,7 +498,7 @@ export function MerchantRewardDetailPageSkeleton(): React.JSX.Element {
 			</div>
 			<div data-slot="reward-performance-skeleton" className="flex flex-col gap-3">
 				<Skeleton variant="text" className="h-4 w-28" />
-				<MerchantSurfacePanel className="grid divide-y divide-border sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] sm:divide-x sm:divide-y-0">
+				<Card className="grid gap-0 divide-y divide-border py-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] sm:divide-x sm:divide-y-0">
 					{placeholderKeys("count", REWARD_PERFORMANCE_COUNTS).map((key): React.JSX.Element => (
 						<div key={key} className="flex flex-col gap-2 px-5 py-4 sm:px-6">
 							<Skeleton className="h-7 w-14" />
@@ -509,26 +509,26 @@ export function MerchantRewardDetailPageSkeleton(): React.JSX.Element {
 						<Skeleton variant="text" className="h-3 w-24" />
 						<Skeleton className="h-1.5 w-full rounded-full" />
 					</div>
-				</MerchantSurfacePanel>
+				</Card>
 			</div>
 			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
 				<div className="flex flex-col gap-3">
 					<Skeleton variant="text" className="h-4 w-20" />
-					<MerchantSurfacePanel className="flex flex-col divide-y divide-border px-5 py-2 sm:px-6">
+					<Card className="gap-0 divide-y divide-border px-5 py-2 sm:px-6">
 						{placeholderKeys("detail", REWARD_DETAIL_ROWS).map((key, index): React.JSX.Element => (
 							<div key={key} className="flex gap-4 py-3">
 								<Skeleton variant="text" className="h-4 w-28" />
 								<Skeleton variant="text" className={cn("h-4", cycledWidth(["w-40", "w-24", "w-32"], index))} />
 							</div>
 						))}
-					</MerchantSurfacePanel>
+					</Card>
 				</div>
 				<div className="flex flex-col gap-3">
 					<Skeleton variant="text" className="h-4 w-40" />
-					<MerchantSurfacePanel className="flex flex-col gap-2 px-5 py-4 sm:px-6">
+					<Card className="gap-2 px-5 py-4 sm:px-6">
 						<Skeleton variant="text" className="h-4 w-full" />
 						<Skeleton variant="text" className="h-4 w-2/3" />
-					</MerchantSurfacePanel>
+					</Card>
 				</div>
 			</div>
 		</SkeletonRegion>
@@ -557,13 +557,13 @@ export function MerchantSettingsPageSkeleton(): React.JSX.Element {
 export function OrganizationLocationsSkeleton(): React.JSX.Element {
 	return (
 		<>
-			<MerchantSurfacePanel className="flex flex-col gap-3 p-5 sm:p-6">
+			<Card className="gap-3 p-5 sm:p-6">
 				<Skeleton variant="text" className="h-3.5 w-full max-w-xl" />
 				<Skeleton variant="text" className="h-3.5 w-64" />
-			</MerchantSurfacePanel>
+			</Card>
 			<div className="grid gap-4 md:grid-cols-2">
 				{placeholderKeys("location", LOCATION_SKELETON_CARDS).map((key, index): React.JSX.Element => (
-					<MerchantSurfacePanel key={key} className="flex flex-col gap-4 p-5">
+					<Card key={key} className="gap-4 p-5">
 						<div data-slot="location-card-skeleton" className="flex items-start justify-between gap-3">
 							<div className="flex min-w-0 items-start gap-3">
 								<Skeleton className="size-10 rounded-lg" />
@@ -578,7 +578,7 @@ export function OrganizationLocationsSkeleton(): React.JSX.Element {
 							<Skeleton variant="text" className="h-3.5 w-4/5" />
 							<Skeleton variant="text" className="h-3.5 w-1/3" />
 						</div>
-					</MerchantSurfacePanel>
+					</Card>
 				))}
 			</div>
 		</>
@@ -598,7 +598,7 @@ export function MerchantLocationsPageSkeleton(): React.JSX.Element {
 /** The store-logo panel: its heading, then the logo tile beside its controls and the limits. */
 export function StoreLogoSkeleton(): React.JSX.Element {
 	return (
-		<MerchantSurfacePanel className="flex flex-col gap-4 p-5 sm:p-6">
+		<Card className="gap-4 p-5 sm:p-6">
 			<div className="flex flex-col gap-1.5">
 				<Skeleton variant="text" className="h-4.5 w-24" />
 				<Skeleton variant="text" className="h-4 w-80 max-w-full" />
@@ -610,7 +610,7 @@ export function StoreLogoSkeleton(): React.JSX.Element {
 					<Skeleton variant="text" className="h-3 w-72 max-w-full" />
 				</div>
 			</div>
-		</MerchantSurfacePanel>
+		</Card>
 	);
 }
 
@@ -639,15 +639,15 @@ export function MerchantTeamPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_TEAM_LOADING_LABELS} className={PAGE_STACK}>
 			<MerchantPageHeaderSkeleton />
-			<MerchantSurfacePanel className="flex flex-col gap-4 p-6">
+			<Card className="gap-4 p-6">
 				<RosterHeadingSkeleton />
 				<MerchantBorderedRowsSkeleton rows={TEAM_MEMBER_SKELETON_ROWS} lines={TEAM_MEMBER_LINES} trailing="badge" surface="card" />
-			</MerchantSurfacePanel>
-			<MerchantSurfacePanel className="flex flex-col gap-4 p-6">
+			</Card>
+			<Card className="gap-4 p-6">
 				<RosterHeadingSkeleton />
 				<MerchantBorderedRowsSkeleton rows={TEAM_INVITE_SKELETON_ROWS} lines={TEAM_INVITE_LINES} trailing="button" surface="card" />
-			</MerchantSurfacePanel>
-			<MerchantSurfacePanel className="flex flex-col gap-6 p-6">
+			</Card>
+			<Card className="gap-6 p-6">
 				<Skeleton variant="text" className="h-4.5 w-48" />
 				<div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
 					<FormSkeleton surface="plain" fields={1} withActions={false} />
@@ -655,7 +655,7 @@ export function MerchantTeamPageSkeleton(): React.JSX.Element {
 				</div>
 				<Skeleton className="h-28 w-full rounded-xl" />
 				<Skeleton className="h-9 w-36" />
-			</MerchantSurfacePanel>
+			</Card>
 		</SkeletonRegion>
 	);
 }

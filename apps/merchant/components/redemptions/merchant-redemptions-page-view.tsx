@@ -9,10 +9,8 @@ import {
 	RedemptionRowsSkeleton,
 } from "@/components/loading/merchant-page-skeletons";
 import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
-import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { RedemptionsPager } from "@/components/redemptions/redemptions-pager";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
@@ -28,6 +26,8 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { formatEpochMs, toIsoTimestamp } from "@workspace/ui/lib/format/date-time";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
+import { Card } from "@workspace/ui/components/card";
 import { CalendarClock, Receipt, ScanLine } from "lucide-react";
 import * as React from "react";
 
@@ -123,26 +123,38 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today
 					<RedemptionRowsSkeleton />
 				</SkeletonRegion>
 			) : rows.length === 0 && !isFirstPage ? (
-				<MerchantEmptyState
-					title="No redemptions on this page"
-					description="This page is past the end of the redemption log for the selected store."
-					icon={<ScanLine className="size-5" aria-hidden="true" />}
-					action={
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<ScanLine className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							No redemptions on this page
+						</EmptyTitle>
+						<EmptyDescription>This page is past the end of the redemption log for the selected store.</EmptyDescription>
+					</EmptyHeader>
+					<EmptyContent>
 						<Button type="button" onClick={handleFirstPage}>
 							Go to the latest redemptions
 						</Button>
-					}
-				/>
+					</EmptyContent>
+				</Empty>
 			) : rows.length === 0 ? (
-				<MerchantEmptyState
-					title="No redemptions yet"
-					description="When customers redeem at your POS terminals, activity will appear here with terminal and method details."
-					icon={<ScanLine className="size-5" aria-hidden="true" />}
-				/>
+				<Empty className="border bg-card">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<ScanLine className="size-5" aria-hidden="true" />
+						</EmptyMedia>
+						<EmptyTitle role="heading" aria-level={2}>
+							No redemptions yet
+						</EmptyTitle>
+						<EmptyDescription>When customers redeem at your POS terminals, activity will appear here with terminal and method details.</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
 			) : (
 				<div className="space-y-3">
 					{rows.map((row) => (
-						<MerchantSurfacePanel key={row.redemptionId} className="px-5 py-4">
+						<Card key={row.redemptionId} className="gap-0 px-5 py-4">
 							<div className="flex flex-wrap items-center justify-between gap-4">
 								<div className="min-w-0 space-y-1">
 									<p className="font-medium text-foreground">{row.rewardTitle}</p>
@@ -156,7 +168,7 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today
 									{formatEpochMs(row.redeemedAt, "dateTime", PLATFORM_DISPLAY_REGION)}
 								</time>
 							</div>
-						</MerchantSurfacePanel>
+						</Card>
 					))}
 					{!isFirstPage || hasNext ? (
 						<RedemptionsPager
