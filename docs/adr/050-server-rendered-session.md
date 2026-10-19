@@ -33,7 +33,7 @@ prefetched by the server; the profile (and with it `isSuperAdmin`) was not.
 The server asks the API about the request's session while it renders, and the client store starts from
 that answer.
 
-- **One loader** — `loadServerSessionOutcome` (`@workspace/client/lib/auth/session/load-server-session`)
+- **One loader** — `loadServerSessionOutcome` (`@workspace/client/lib/contexts/identity/session/load-server-session`)
   calls `GET /auth/me` and `GET /auth/permissions` in parallel with the request's cookies: the same two
   answers the browser's session check reads, validated against their contracts and verified by the API.
   It returns `signed-in` (both envelopes), `signed-out` (no cookie, or a 401 — possibly still refreshable

@@ -1,8 +1,8 @@
-import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
+import { VerifyEmailView } from "@workspace/client/lib/contexts/identity/email/verify-email-view";
 import { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, VerifyEmailSchema } from "@workspace/shared";
 
-import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
-import { InvalidAuthLinkNotice } from "@/components/auth/invalid-auth-link-notice";
+import { AdminAuthLayout } from "@/contexts/identity/components/auth/admin-auth-layout";
+import { InvalidAuthLinkNotice } from "@/contexts/identity/components/auth/invalid-auth-link-notice";
 import { AUTH_LINK_TOKEN_PARAM, ROUTES } from "@/lib/routes";
 
 export interface AdminVerifyEmailPageProps {

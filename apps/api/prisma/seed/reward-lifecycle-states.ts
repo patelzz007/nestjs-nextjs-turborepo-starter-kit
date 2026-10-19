@@ -3,13 +3,13 @@ import { linkRewardImages } from "./reward-images";
 
 import { DAY_MS } from "@workspace/shared";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 
 import { prisma } from "./client";
 import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
 import { ORGANIZATION_SEED_IDS } from "./organizations";
-import { POS_CODE_LOCKOUT_MS } from "../../src/modules/rewards/services/pos-code-lockout.service";
+import { POS_CODE_LOCKOUT_MS } from "../../src/contexts/pos/public-api";
 import { seedCheckout } from "./reward-checkout";
 
 // ---------------------------------------------------------------------------

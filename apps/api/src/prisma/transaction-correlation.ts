@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
-import { CorrelationIdSchema } from "../common/context/correlation-id";
+import { CorrelationIdSchema } from "../platform/infrastructure/context/correlation-id";
 
 /** The transaction delegate the correlation id is read through (the caller's interactive transaction). */
 export type CorrelationTransaction = Pick<Prisma.TransactionClient, "$queryRaw">;
@@ -15,7 +15,7 @@ export class MissingTransactionCorrelationIdError extends Error {
 }
 
 /** `current_setting` returns '' for an unset custom setting; NULLIF turns that into NULL. */
-const TransactionCorrelationRowsSchema = z.tuple([z.object({ correlation_id: CorrelationIdSchema.nullable() })]);
+const TransactionCorrelationRowsSchema = z.tuple([z.object({ correlationId: CorrelationIdSchema.nullable() })]);
 
 /**
  * The correlation id the current transaction runs under.
@@ -29,10 +29,10 @@ const TransactionCorrelationRowsSchema = z.tuple([z.object({ correlation_id: Cor
  * to record, which is a programming error, not a NULL to store.
  */
 export async function readTransactionCorrelationId(tx: CorrelationTransaction): Promise<string> {
-	const rows = await tx.$queryRaw`SELECT NULLIF(current_setting('app.correlation_id', true), '') AS correlation_id`;
+	const rows = await tx.$queryRaw`SELECT NULLIF(current_setting('app.correlation_id', true), '') AS "correlationId"`;
 	const [row] = TransactionCorrelationRowsSchema.parse(rows);
-	if (row.correlation_id === null) {
+	if (row.correlationId === null) {
 		throw new MissingTransactionCorrelationIdError();
 	}
-	return row.correlation_id;
+	return row.correlationId;
 }

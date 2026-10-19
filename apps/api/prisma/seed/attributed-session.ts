@@ -12,14 +12,14 @@ import { prisma } from "./client";
 // (TenantTransactionService, prisma/rls-pool.ts). Seed writes run as the seed
 // login with none of that, so they are recorded as UNATTRIBUTED — which is the
 // truth for bulk fixture data. A seed write that reproduces what a seeded
-// `audit_logs` request did runs through `withSeedAttribution` instead, under
+// `AuditLog` request did runs through `withSeedAttribution` instead, under
 // the SAME session variables that request would have set, so its change
 // record joins the request by correlation id exactly like a live one.
 // ---------------------------------------------------------------------------
 
 /** The session a seeded request's writes ran under; `null` = the request had none of it. */
 export interface SeedSessionAttribution {
-	/** The seeded `audit_logs` row's correlation id (`seedAuditCorrelationId`). */
+	/** The seeded `AuditLog` row's correlation id (`seedAuditCorrelationId`). */
 	readonly correlationId: string;
 	readonly actorUserId: string | null;
 	readonly organizationId: string | null;

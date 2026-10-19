@@ -2,11 +2,11 @@ import { Pool, type PoolClient } from "pg";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { RequestContextService } from "../src/common/context/request-context";
+import { RequestContextService } from "../src/platform/infrastructure/context/request-context";
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { TenantEnumeratorService } from "../src/infrastructure/jobs/tenant-enumerator.service";
-import { TenantJobContextService } from "../src/infrastructure/jobs/tenant-job-context.service";
+import { TenantEnumeratorService } from "../src/platform/infrastructure/jobs/tenant-enumerator.service";
+import { TenantJobContextService } from "../src/platform/infrastructure/jobs/tenant-job-context.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
@@ -55,7 +55,7 @@ describe("System operations are enforced by the database (integration)", () => {
 
 	it("treats a bypass flag without a named system operation as NO bypass", async () => {
 		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "" }, async (client) => {
-			const outbox = await client.query<{ count: number }>("SELECT count(*)::int AS count FROM public.outbox_events");
+			const outbox = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."OutboxEvent"');
 			const bypass = await client.query<{ bypass: boolean }>("SELECT app_rls_bypass() AS bypass");
 			expect(bypass.rows[LIST_SLOT_INDEX.first]?.bypass).toBe(false);
 			expect(outbox.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
@@ -69,14 +69,37 @@ describe("System operations are enforced by the database (integration)", () => {
 		});
 	});
 
+	it("scopes an operation's bypass to the tables the registry lists for it", async () => {
+		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "outbox.publish" }, async (client) => {
+			const scope = await client.query<{ outbox: boolean; users: boolean }>("SELECT app_rls_bypass_on('OutboxEvent') AS outbox, app_rls_bypass_on('User') AS users");
+			const users = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."User"');
+			expect(scope.rows[LIST_SLOT_INDEX.first]).toEqual({ outbox: true, users: false });
+			expect(users.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
+			await expect(client.query('UPDATE public."User" SET "isActive" = "isActive" RETURNING id')).resolves.toMatchObject({ rowCount: 0 });
+		});
+		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "platform.superadmin" }, async (client) => {
+			const users = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."User"');
+			expect(users.rows[LIST_SLOT_INDEX.first]?.count).toBeGreaterThan(0);
+		});
+	});
+
+	it("gives a bypass naming an operation the registry does not list nothing at all", async () => {
+		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "arbitrary.bypass" }, async (client) => {
+			const outbox = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."OutboxEvent"');
+			const scope = await client.query<{ outbox: boolean }>("SELECT app_rls_bypass_on('OutboxEvent') AS outbox");
+			expect(scope.rows[LIST_SLOT_INDEX.first]?.outbox).toBe(false);
+			expect(outbox.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
+		});
+	});
+
 	it("gives the enumerator role organizations, and nothing else", async () => {
 		await inSession("app_enumerator", { "app.rls_bypass": "true", "app.system_operation": "tenant.enumerate" }, async (client) => {
-			const orgs = await client.query<{ count: number }>("SELECT count(*)::int AS count FROM public.organizations");
+			const orgs = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."Organization"');
 			expect(orgs.rows[LIST_SLOT_INDEX.first]?.count).toBeGreaterThan(0);
-			await expect(client.query("SELECT id FROM public.users LIMIT 1")).rejects.toThrow(/permission denied/);
+			await expect(client.query('SELECT id FROM public."User" LIMIT 1')).rejects.toThrow(/permission denied/);
 		});
 		await inSession("app_enumerator", { "app.rls_bypass": "true", "app.system_operation": "tenant.enumerate" }, async (client) => {
-			await expect(client.query("UPDATE public.organizations SET is_deleted = is_deleted")).rejects.toThrow(/permission denied/);
+			await expect(client.query('UPDATE public."Organization" SET "isDeleted" = "isDeleted"')).rejects.toThrow(/permission denied/);
 		});
 	});
 

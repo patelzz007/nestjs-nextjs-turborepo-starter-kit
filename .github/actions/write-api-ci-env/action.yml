@@ -4,7 +4,7 @@
 # RabbitMQ are left unset: the API falls back to in-memory caches and skips the
 # broker/queue integrations. GitHub pull requests are on (a random credential
 # key ring), so `pnpm db:seed` seals its demo GitHub links and the seed coverage
-# check sees github_account_links populated, as on a developer's machine. apps/api/src/config/ci-workflow-env.spec.ts parses
+# check sees github_account_links populated, as on a developer's machine. apps/api/src/config/__tests__/ci-workflow-env.spec.ts parses
 # the heredoc below through the API's config schema, so it cannot drift.
 name: Write the CI API env
 description: Write a throwaway apps/api/.env (random secrets, masked) pointing at the job's database.

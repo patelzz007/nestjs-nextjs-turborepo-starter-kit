@@ -1,8 +1,8 @@
 import { vi, type MockInstance } from "vitest";
 
-import { AuditLogRepository } from "../../src/common/audit/audit-log.repository";
-import { AuditTrailService } from "../../src/common/audit/audit-trail.service";
-import { RequestContextService } from "../../src/common/context/request-context";
+import { AuditLogRepository } from "../../src/platform/infrastructure/audit/audit-log.repository";
+import { AuditTrailService } from "../../src/platform/infrastructure/audit/audit-trail.service";
+import { RequestContextService } from "../../src/platform/infrastructure/context/request-context";
 import { PrismaService } from "../../src/prisma/prisma.service";
 import { TenantTransactionService } from "../../src/prisma/tenant-transaction.service";
 import { createTestTypedConfig } from "./test-api-env";

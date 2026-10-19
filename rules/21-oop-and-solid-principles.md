@@ -2,6 +2,8 @@
 
 This project leans toward composition, interfaces, and small explicit functions/services over deep class hierarchies — but classic OOP tools (inheritance, polymorphism, abstraction, encapsulation) are still the right choice in specific, narrow situations. This doc says when, with worked examples for each.
 
+Aggregates protect invariants and emit domain events. Ports (`EmailRequestPort`, repository interfaces) are what application code depends on. The only base classes are `PrismaBaseRepository` and an aggregate root. Do not introduce a new `BaseService`. See ADR 058 and ADR 059.
+
 ## Encapsulation — always
 
 Every class hides its implementation details behind a deliberate public API (`00-non-negotiables.md`'s explicit access modifiers rule is encapsulation enforced at the language level).

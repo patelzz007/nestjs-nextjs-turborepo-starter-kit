@@ -1,6 +1,6 @@
 import type { OrganizationMembershipRole, Role } from "@prisma/client";
 
-import { syncStoreForLocation } from "../../src/modules/organization/utils/store-sync.util";
+import { syncStoreForLocation } from "../../src/contexts/organizations/infrastructure/persistence/store-sync";
 import { prisma } from "./client";
 import { seedStoreClosureAndRemoval } from "./store-closure";
 
@@ -39,7 +39,7 @@ export async function seedStores(roles: readonly Role[]): Promise<StoreSeedSumma
 
 	const memberships = await prisma.organizationMembership.findMany({
 		where: { status: "ACTIVE", isDeleted: false },
-		select: { organizationId: true, userId: true, role: true, locationScopes: { select: { scopeType: true, locationId: true } } },
+		select: { organizationId: true, userId: true, role: true, locationScopes: { where: { isDeleted: false }, select: { scopeType: true, locationId: true } } },
 	});
 
 	let membershipCount = 0;

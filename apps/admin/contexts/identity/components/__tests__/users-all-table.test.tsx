@@ -1,0 +1,272 @@
+// @vitest-environment jsdom
+import { keepPreviousData } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ApiPaginatedMetaSchema, type AdminUserDetail, type ApiPaginatedMeta, type Envelope } from "@workspace/shared";
+import * as React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
+import { USERS_TABLE_URL_STATE } from "@/contexts/identity/url-state/users";
+
+import UsersAllTable from "../users-all-table";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+
+/** Only the user fields the table renders. */
+interface UserRowStub {
+	readonly id: string;
+	readonly fullName: string;
+	readonly email: string;
+	readonly roles: readonly { readonly id: string; readonly name: string }[];
+	readonly isSuperAdmin: boolean;
+	readonly hasAdminAccess: boolean;
+	readonly signupReferrer: AdminUserDetail["signupReferrer"];
+	readonly signupReferralStatus: AdminUserDetail["signupReferralStatus"];
+}
+
+interface UsersQueryStub {
+	readonly data: { readonly data: readonly UserRowStub[]; readonly meta: ApiPaginatedMeta };
+	readonly isLoading: boolean;
+	readonly isError: boolean;
+	readonly isFetching: boolean;
+}
+
+const { usersQuery } = vi.hoisted(() => ({ usersQuery: vi.fn() }));
+
+// The table reads its state from the address bar, as Next.js's
+// `useSearchParams` does once the History API integration has synced it.
+vi.mock("next/navigation", () => ({
+	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
+	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
+}));
+
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
+	useAuth: (): object => ({ api: { auth: { adminUsers: { useQuery: usersQuery } } } }),
+}));
+
+/** The picker has its own tests; here it only reports a choice, so the table's query calls stay the table's own. */
+const PICKED_REFERRER_ID = "8c1b6d2e-4f3a-4b5c-9d6e-7f8a9b0c1d2e";
+interface ReferrerPickerStubProps {
+	readonly id: string;
+	readonly value: string;
+	readonly onChange: (userId: string) => void;
+}
+
+/** Picks {@link PICKED_REFERRER_ID}, or clears the choice when one is set. */
+function ReferrerPickerStub({ id, value, onChange }: ReferrerPickerStubProps): React.JSX.Element {
+	const handleClick = React.useCallback((): void => {
+		onChange(value.length > 0 ? "" : PICKED_REFERRER_ID);
+	}, [onChange, value]);
+	return (
+		<button type="button" id={id} onClick={handleClick}>
+			Referred by picker
+		</button>
+	);
+}
+
+vi.mock("../referrer-picker", () => ({ ReferrerPicker: ReferrerPickerStub }));
+
+const PATH = "/users";
+const NEXT_CURSOR = "eyJhdCI6MSwiaWQiOiJ1In0";
+
+const USER: UserRowStub = {
+	id: "u-1",
+	fullName: "Jane Doe",
+	email: "jane@example.com",
+	roles: [],
+	isSuperAdmin: false,
+	hasAdminAccess: true,
+	signupReferrer: null,
+	signupReferralStatus: null,
+};
+
+function pageMeta(overrides: Partial<ApiPaginatedMeta>): ApiPaginatedMeta {
+	return ApiPaginatedMetaSchema.parse({
+		correlationId: "test",
+		timestamp: 1_790_000_000_000,
+		limit: 20,
+		total: 100,
+		page: 1,
+		totalPages: 5,
+		nextCursor: NEXT_CURSOR,
+		hasNext: true,
+		hasPrevious: false,
+		...overrides,
+	});
+}
+
+function queryResult(meta: ApiPaginatedMeta): UsersQueryStub {
+	return { data: { data: [USER], meta }, isLoading: false, isError: false, isFetching: false };
+}
+
+function setUrl(url: string): void {
+	window.history.replaceState(null, "", url);
+}
+
+function currentQuery(): string {
+	return decodeURIComponent(window.location.search);
+}
+
+beforeEach((): void => {
+	setUrl(PATH);
+	usersQuery.mockReturnValue(queryResult(pageMeta({})));
+});
+
+afterEach((): void => {
+	cleanup();
+	usersQuery.mockReset();
+	vi.restoreAllMocks();
+	vi.useRealTimers();
+});
+
+describe("UsersAllTable URL state", () => {
+	it("queries exactly what the URL asks for and shows it in the controls", () => {
+		setUrl(`${PATH}?page=2&sort=-email&search=jane&filter[status]=locked`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		expect(usersQuery).toHaveBeenLastCalledWith(
+			{ page: 2, limit: 20, sort: "-email", search: "jane", filter: { status: { eq: "locked" } } },
+			expect.objectContaining({ placeholderData: keepPreviousData }),
+		);
+		expect(screen.getByDisplayValue("jane")).toBeDefined();
+		expect(screen.getByRole("combobox", { name: "Account status" }).textContent).toContain("Locked");
+	});
+
+	it("ignores invalid params instead of sending them", () => {
+		setUrl(`${PATH}?page=-1&sort=passwordHash&filter[status]=root&limit=7`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		expect(usersQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.anything());
+	});
+
+	it("commits the debounced search to the URL with replace and returns to page 1", () => {
+		vi.useFakeTimers();
+		setUrl(`${PATH}?page=3`);
+		const replaceState = vi.spyOn(window.history, "replaceState");
+		const pushState = vi.spyOn(window.history, "pushState");
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.change(screen.getByDisplayValue(""), { target: { value: "  bob " } });
+		expect(replaceState).not.toHaveBeenCalled();
+		act((): void => {
+			vi.advanceTimersByTime(TABLE_TEXT_DEBOUNCE_MS);
+		});
+
+		expect(replaceState).toHaveBeenCalledTimes(1);
+		expect(pushState).not.toHaveBeenCalled();
+		expect(currentQuery()).toBe("?search=bob");
+	});
+
+	it("restores search, sort and page from the URL on back/forward", () => {
+		setUrl(`${PATH}?search=jane`);
+		const view = render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		expect(screen.getByDisplayValue("jane")).toBeDefined();
+
+		setUrl(`${PATH}?page=4&search=bob&sort=fullName`);
+		view.rerender(<UsersAllTable />);
+
+		expect(screen.getByDisplayValue("bob")).toBeDefined();
+		expect(usersQuery).toHaveBeenLastCalledWith({ page: 4, limit: 20, sort: "fullName", search: "bob" }, expect.anything());
+	});
+
+	it("pushes a status filter change and resets to page 1", async () => {
+		setUrl(`${PATH}?page=3`);
+		const pushState = vi.spyOn(window.history, "pushState");
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		const trigger = screen.getByRole("combobox", { name: "Account status" });
+		fireEvent.pointerDown(trigger, { pointerType: "mouse", button: 0 });
+		fireEvent.mouseDown(trigger, { button: 0 });
+		fireEvent.click(trigger);
+		const option = await screen.findByRole("option", { name: "Locked" });
+		fireEvent.pointerDown(option, { pointerType: "mouse", button: 0 });
+		fireEvent.mouseDown(option, { button: 0 });
+		fireEvent.pointerUp(option, { pointerType: "mouse", button: 0 });
+		fireEvent.mouseUp(option, { button: 0 });
+		fireEvent.click(option);
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(currentQuery()).toBe("?filter[status]=locked");
+	});
+
+	it("pushes a sort change and resets to page 1", () => {
+		setUrl(`${PATH}?page=3`);
+		const pushState = vi.spyOn(window.history, "pushState");
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByText("Name"));
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(currentQuery()).toBe("?sort=fullName");
+	});
+
+	it("pushes the next page with the response's keyset cursor (default order)", () => {
+		const pushState = vi.spyOn(window.history, "pushState");
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(currentQuery()).toBe(`?page=2&cursor=${NEXT_CURSOR}`);
+	});
+
+	it("pages by offset only when a custom sort is active", () => {
+		setUrl(`${PATH}?sort=email`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+
+		expect(currentQuery()).toBe("?page=2&sort=email");
+	});
+
+	it("queries the referral filters the URL asks for", () => {
+		setUrl(`${PATH}?filter[referrerId]=${PICKED_REFERRER_ID}&filter[referralStatus]=not_redeemed`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		expect(usersQuery).toHaveBeenLastCalledWith(
+			{ page: 1, limit: 20, filter: { referrerId: { eq: PICKED_REFERRER_ID }, referralStatus: { eq: "not_redeemed" } } },
+			expect.anything(),
+		);
+		expect(screen.getByRole("combobox", { name: "Referral status" }).textContent).toContain("Not redeemed");
+	});
+
+	it("writes the referrer chosen in the Referred by picker to the URL and resets to page 1", () => {
+		setUrl(`${PATH}?page=3`);
+		const pushState = vi.spyOn(window.history, "pushState");
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: "Referred by" }));
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(currentQuery()).toBe(`?filter[referrerId]=${PICKED_REFERRER_ID}`);
+	});
+
+	it("drops the referrer filter when the picker is cleared", () => {
+		setUrl(`${PATH}?filter[referrerId]=${PICKED_REFERRER_ID}`);
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		fireEvent.click(screen.getByRole("button", { name: "Referred by" }));
+
+		expect(currentQuery()).toBe("");
+	});
+
+	it("renders a referee's referrer as a profile link and the referral status label", () => {
+		const referee: UserRowStub = { ...USER, signupReferrer: { id: PICKED_REFERRER_ID, fullName: "Alice Referrer" }, signupReferralStatus: "redeemed" };
+		usersQuery.mockReturnValue({ data: { data: [referee], meta: pageMeta({}) }, isLoading: false, isError: false, isFetching: false });
+		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+
+		expect(screen.getAllByRole("link", { name: "Alice Referrer" }).at(0)?.getAttribute("href")).toBe(`/users/${PICKED_REFERRER_ID}`);
+		expect(screen.getAllByText("Redeemed").length).toBeGreaterThan(0);
+	});
+
+	it("uses the server-prefetched page only for the URL state it was fetched for", () => {
+		setUrl(`${PATH}?page=2`);
+		const envelope: Envelope<AdminUserDetail[]> = { success: true, data: [], meta: pageMeta({ page: 2 }) };
+		const prefetchedFor = USERS_TABLE_URL_STATE.serialize(USERS_TABLE_URL_STATE.parse(new URLSearchParams("page=2")));
+		const view = render(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />, { wrapper: UiKitTestProviders });
+		expect(usersQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ initialData: envelope }));
+
+		setUrl(`${PATH}?page=3`);
+		view.rerender(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />);
+		expect(usersQuery).toHaveBeenLastCalledWith(expect.anything(), expect.not.objectContaining({ initialData: envelope }));
+	});
+});

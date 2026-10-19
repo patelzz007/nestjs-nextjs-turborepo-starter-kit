@@ -1,5 +1,5 @@
 import { settleServerQuery } from "@workspace/client/lib/api/server-query-outcome";
-import { guardWebPage } from "@/lib/auth/page-guard";
+import { guardWebPage } from "@/contexts/identity/lib/page-guard";
 import { loginPath, ROUTES } from "@/lib/routes";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { redirect } from "next/navigation";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, useIsServerRenderedSession } from "@workspace/client/lib/auth";
+import { useAuth, useIsServerRenderedSession } from "@workspace/client/lib/contexts/identity";
 import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 

@@ -45,6 +45,9 @@ const chartStateFrameVariants = cva("w-full rounded-lg", {
 
 export type ChartFrameHeight = NonNullable<VariantProps<typeof chartStateFrameVariants>["size"]>;
 
+/** The chart height when a caller names none. */
+export const DEFAULT_CHART_FRAME_HEIGHT: ChartFrameHeight = "md";
+
 export interface ChartStateFrameProps {
 	readonly state: ChartFrameState;
 	readonly height?: ChartFrameHeight;
@@ -57,7 +60,7 @@ export interface ChartStateFrameProps {
  * No ref: in the `ready` state it renders the caller's children with no element of its own, so a ref
  * would point at nothing — callers forward their ref to the chart they pass in.
  */
-export function ChartStateFrame({ state, height = "md", children }: ChartStateFrameProps): React.JSX.Element {
+export function ChartStateFrame({ state, height = DEFAULT_CHART_FRAME_HEIGHT, children }: ChartStateFrameProps): React.JSX.Element {
 	switch (state.status) {
 		case "ready":
 			return <>{children}</>;

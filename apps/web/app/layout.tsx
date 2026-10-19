@@ -10,11 +10,11 @@ import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { geistMono } from "@workspace/ui/fonts/geist-mono";
 import { geistSans } from "@workspace/ui/fonts/geist-sans";
 
-import { WebAuthorizationProvider } from "@/components/auth/web-authorization-provider";
+import { WebAuthorizationProvider } from "@/contexts/identity/components/web-authorization-provider";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
-import { WebClientAuthWrapper } from "@/components/web-client-auth-wrapper";
-import { hasServerSession } from "@/lib/auth/server";
-import { loadWebServerSession } from "@/lib/auth/server-session";
+import { WebClientAuthWrapper } from "@/contexts/identity/components/web-client-auth-wrapper";
+import { hasServerSession } from "@/contexts/identity/lib/server";
+import { loadWebServerSession } from "@/contexts/identity/lib/server-session";
 import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
@@ -22,9 +22,10 @@ import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-pr
 import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
 import { Toaster } from "@workspace/ui/components/toast";
 import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
+import { BRAND_NAME } from "@workspace/tokens";
 
 export const metadata: Metadata = {
-	title: "Reward Hub",
+	title: BRAND_NAME,
 	// Icons come from the file conventions in this folder — icon.svg, favicon.ico, apple-icon.png —
 	// all generated from the brand mark by `pnpm tokens:generate` (ADR 040).
 };
@@ -49,7 +50,7 @@ export default async function RootLayout({
 					<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
 						<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
 							<ThemeProvider>
-								{/* Root, not the /rewardhub shell: the public landing page renders the rewards catalog too. */}
+								{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
 								<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
 									<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
 								</UiPreferencesStoreProvider>

@@ -46,7 +46,7 @@ describe("File lifecycle with MALWARE_SCANNER=none (e2e)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
 		session = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [ADMIN_EMAIL]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [ADMIN_EMAIL]);
 		adminId = z.string().parse(result.rows.at(0)?.id);
 	});
 

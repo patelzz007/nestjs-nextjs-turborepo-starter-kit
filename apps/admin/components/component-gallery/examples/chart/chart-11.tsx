@@ -3,7 +3,8 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@workspace/ui/components/chart";
-import { motion, type MotionStyle, type TargetAndTransition, type Transition } from "framer-motion";
+import { m, type MotionStyle, type TargetAndTransition, type Transition } from "framer-motion";
+import { LazyMotionProvider } from "@workspace/ui/components/lazy-motion";
 import { TrendingUpIcon } from "lucide-react";
 import * as React from "react";
 import { Bar, BarChart, type BarShapeProps, type Margin, XAxis } from "recharts";
@@ -76,7 +77,7 @@ function AnimatedBar({ x, y, width, height, index, label, isActive, onActivate }
 
 	return (
 		<g onMouseEnter={handleMouseEnter}>
-			<motion.rect
+			<m.rect
 				style={BAR_STYLE}
 				y={y}
 				initial={initial}
@@ -87,7 +88,7 @@ function AnimatedBar({ x, y, width, height, index, label, isActive, onActivate }
 				rx={BAR_CORNER_RADIUS_PX}
 			/>
 			{isActive ? (
-				<motion.text
+				<m.text
 					style={LABEL_STYLE}
 					className="font-mono"
 					initial={LABEL_HIDDEN}
@@ -99,7 +100,7 @@ function AnimatedBar({ x, y, width, height, index, label, isActive, onActivate }
 					textAnchor="middle"
 					fill="var(--color-desktop)">
 					{label}
-				</motion.text>
+				</m.text>
 			) : null}
 		</g>
 	);
@@ -130,27 +131,29 @@ export function Chart11Example(): React.JSX.Element {
 	);
 
 	return (
-		<Card className="w-full max-w-md">
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					Conversion Rates
-					<span className="ml-auto font-mono text-xl tracking-tighter">{formatUsd(activeMonth?.desktop ?? RESTING_HEADLINE_VALUE)}</span>
-					<Badge variant="success-light">
-						<TrendingUpIcon aria-hidden="true" />
-						<span>5.2%</span>
-					</Badge>
-				</CardTitle>
-				<CardDescription>Real-time funnel conversion tracking</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<ChartContainer config={chartConfig}>
-					<BarChart accessibilityLayer data={chartData} onMouseLeave={handleMouseLeave} margin={CHART_MARGIN}>
-						<XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={abbreviateMonth} />
-						<ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" className="min-w-40 gap-2.5" labelFormatter={formatMonthTooltipLabel} />} />
-						<Bar dataKey="desktop" fill="var(--color-desktop)" shape={renderBar} />
-					</BarChart>
-				</ChartContainer>
-			</CardContent>
-		</Card>
+		<LazyMotionProvider>
+			<Card className="w-full max-w-md">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						Conversion Rates
+						<span className="ml-auto font-mono text-xl tracking-tighter">{formatUsd(activeMonth?.desktop ?? RESTING_HEADLINE_VALUE)}</span>
+						<Badge variant="success-light">
+							<TrendingUpIcon aria-hidden="true" />
+							<span>5.2%</span>
+						</Badge>
+					</CardTitle>
+					<CardDescription>Real-time funnel conversion tracking</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<ChartContainer config={chartConfig}>
+						<BarChart accessibilityLayer data={chartData} onMouseLeave={handleMouseLeave} margin={CHART_MARGIN}>
+							<XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={abbreviateMonth} />
+							<ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" className="min-w-40 gap-2.5" labelFormatter={formatMonthTooltipLabel} />} />
+							<Bar dataKey="desktop" fill="var(--color-desktop)" shape={renderBar} />
+						</BarChart>
+					</ChartContainer>
+				</CardContent>
+			</Card>
+		</LazyMotionProvider>
 	);
 }

@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { PolicyConditionsSchema, type PolicyConditions, DAY_MS } from "@workspace/shared";
 
-import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
+import { parsePrismaInputJson } from "../../src/platform/infrastructure/utils/prisma-json";
 import { deterministicUuid } from "./deterministic-uuid";
 import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
 import { buildProductSeedId } from "./products";
@@ -44,7 +44,7 @@ function conditions(rule: PolicyConditions): Prisma.InputJsonValue {
 }
 
 /**
- * Every `resource_acls` and `policy_definitions` seed row, deterministic ids so
+ * Every `ResourceAcl` and `PolicyDefinition` seed row, deterministic ids so
  * the seed upserts (idempotent). Conditions use the validated policy DSL; the
  * tenant-bound rows use the Jonker Street Kitchen organization / Bukit Beruang
  * location, so they only apply inside that server-verified tenant.

@@ -3,8 +3,7 @@
 import type { GithubPullRequestParams } from "@workspace/shared";
 import * as React from "react";
 
-import { PullRequestRoute } from "../../../features/github-pull-requests/pull-request-route";
-import { PullRequestScreen } from "../../../features/github-pull-requests/pull-request-screen";
+import { PullRequestRoute, PullRequestScreen } from "../../../contexts/integrations-github";
 
 function render(pullRequest: GithubPullRequestParams): React.JSX.Element {
 	return <PullRequestScreen pullRequest={pullRequest} />;

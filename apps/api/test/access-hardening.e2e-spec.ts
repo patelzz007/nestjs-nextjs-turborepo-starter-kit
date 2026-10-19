@@ -19,7 +19,7 @@ describe("Access hardening (e2e)", () => {
 		const pool = new Pool({ connectionString: DATABASE_URL });
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
 		await clearPendingTeamInviteForEmail(pool, ORGANIZATION_SEED_IDS.klOrganization, "user@example.com");
-		const result = await pool.query<{ id: string }>(`SELECT id FROM public.organization_api_keys WHERE organization_id = $1 LIMIT 1`, [ORGANIZATION_SEED_IDS.mlkOrganization]);
+		const result = await pool.query<{ id: string }>(`SELECT id FROM public."OrganizationApiKey" WHERE "organizationId" = $1 LIMIT 1`, [ORGANIZATION_SEED_IDS.mlkOrganization]);
 		await pool.end();
 		const keyId = result.rows[LIST_SLOT_INDEX.first]?.id;
 		if (keyId === undefined) {
@@ -63,32 +63,32 @@ describe("Access hardening (e2e)", () => {
 		expect(response.statusCode).toBe(403);
 	});
 
-	it("prevents user B from reading user A claim QR payload", async () => {
+	it("prevents user B from issuing codes for user A's claim", async () => {
 		const bob = await login(app, "bob.smith@example.com", "Bob@123");
 
 		const response = await app.inject({
-			method: "GET",
+			method: "POST",
 			url: `${API_VERSION_PREFIX}/claims/${REWARD_SEED_IDS.claimPendingKl}/qr`,
-			headers: {
+			headers: mutationHeaders({
 				cookie: `accessToken=${bob.accessToken}; refreshToken=${bob.refreshToken}`,
-			},
+			}),
 		});
 
 		expect([403, 404]).toContain(response.statusCode);
 	});
 
-	it("allows the claim owner to refresh their QR payload", async () => {
+	it("allows the claim owner to issue fresh QR codes", async () => {
 		const alice = await login(app, "alice.johnson@example.com", "Alice@123");
 
 		const response = await app.inject({
-			method: "GET",
+			method: "POST",
 			url: `${API_VERSION_PREFIX}/claims/${REWARD_SEED_IDS.claimPendingKl}/qr`,
-			headers: {
+			headers: mutationHeaders({
 				cookie: `accessToken=${alice.accessToken}; refreshToken=${alice.refreshToken}`,
-			},
+			}),
 		});
 
-		expect(response.statusCode).toBe(200);
+		expect(response.statusCode).toBe(201);
 		expect(parseSuccessEnvelope(response, RewardClaimQrResponseSchema).success).toBe(true);
 	});
 

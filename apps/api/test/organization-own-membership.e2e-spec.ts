@@ -6,12 +6,12 @@ import {
 	API_VERSION_PREFIX,
 	ApiErrorResponseSchema,
 	ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH,
-	OrganizationMemberRosterListResponseSchema,
+	OrganizationMemberRosterResponseSchema,
 	OrganizationMembershipResponseSchema,
 } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
-import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../src/modules/organization/services/organization-own-membership.service";
+import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../src/contexts/organizations/application/commands/rename-own-membership/rename-own-membership.handler";
 import { createE2eApp, type InjectResponse, login, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -44,7 +44,7 @@ describe("Own membership display name (e2e)", () => {
 
 	async function displayNameAudits(): Promise<z.output<typeof AuditRowsSchema>> {
 		const result = await pool.query(
-			`SELECT actor_user_id AS "actorUserId", metadata FROM public.organization_audit_logs WHERE action = $1 AND resource_id = $2 AND created_at >= $3 ORDER BY created_at, id`,
+			`SELECT "actorUserId" AS "actorUserId", metadata FROM public."OrganizationAuditLog" WHERE action = $1 AND "resourceId" = $2 AND "createdAt" >= $3 ORDER BY "createdAt", id`,
 			[OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION, CASHIER_MEMBERSHIP_ID, startedAt],
 		);
 		return AuditRowsSchema.parse(result.rows);
@@ -56,7 +56,7 @@ describe("Own membership display name (e2e)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
 		const row = await pool.query<{ userId: string; displayName: string | null }>(
-			`SELECT user_id AS "userId", display_name AS "displayName" FROM public.organization_memberships WHERE id = $1`,
+			`SELECT "userId" AS "userId", "displayName" AS "displayName" FROM public."OrganizationMembership" WHERE id = $1`,
 			[CASHIER_MEMBERSHIP_ID],
 		);
 		cashierUserId = z.string().parse(row.rows.at(0)?.userId);
@@ -66,7 +66,7 @@ describe("Own membership display name (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query(`UPDATE public.organization_memberships SET display_name = $2 WHERE id = $1`, [CASHIER_MEMBERSHIP_ID, seededDisplayName]);
+		await pool.query(`UPDATE public."OrganizationMembership" SET "displayName" = $2 WHERE id = $1`, [CASHIER_MEMBERSHIP_ID, seededDisplayName]);
 		await pool.end();
 		await app.close();
 	});
@@ -80,7 +80,7 @@ describe("Own membership display name (e2e)", () => {
 
 		const roster = await app.inject({ method: "GET", url: `${MLK_PATH}/members`, headers: headers(owner) });
 		expect(roster.statusCode, roster.body).toBe(200);
-		const member = parseSuccessEnvelope(roster, OrganizationMemberRosterListResponseSchema).data.find((row) => row.id === CASHIER_MEMBERSHIP_ID);
+		const member = parseSuccessEnvelope(roster, z.array(OrganizationMemberRosterResponseSchema)).data.find((row) => row.id === CASHIER_MEMBERSHIP_ID);
 		expect(member?.displayName).toBe("Mira @ Bukit Katil");
 
 		const audits = await displayNameAudits();
@@ -92,7 +92,7 @@ describe("Own membership display name (e2e)", () => {
 
 		expect(response.statusCode, response.body).toBe(200);
 		expect(parseSuccessEnvelope(response, OrganizationMembershipResponseSchema).data.displayName).toBeNull();
-		const stored = await pool.query<{ displayName: string | null }>(`SELECT display_name AS "displayName" FROM public.organization_memberships WHERE id = $1`, [
+		const stored = await pool.query<{ displayName: string | null }>(`SELECT "displayName" AS "displayName" FROM public."OrganizationMembership" WHERE id = $1`, [
 			CASHIER_MEMBERSHIP_ID,
 		]);
 		expect(stored.rows.at(0)?.displayName).toBeNull();
@@ -121,7 +121,7 @@ describe("Own membership display name (e2e)", () => {
 
 	it("serializes concurrent edits: each audit row records the value it actually replaced", async () => {
 		const before = await displayNameAudits();
-		const initial = await pool.query<{ displayName: string | null }>(`SELECT display_name AS "displayName" FROM public.organization_memberships WHERE id = $1`, [
+		const initial = await pool.query<{ displayName: string | null }>(`SELECT "displayName" AS "displayName" FROM public."OrganizationMembership" WHERE id = $1`, [
 			CASHIER_MEMBERSHIP_ID,
 		]);
 		const initialDisplayName: string | null = initial.rows.at(0)?.displayName ?? null;
@@ -137,7 +137,7 @@ describe("Own membership display name (e2e)", () => {
 		const second = edits.find((edit) => edit !== first);
 		expect(first, "one edit must have replaced the initial value").toBeDefined();
 		expect(second?.metadata.previousDisplayName).toBe(first?.metadata.displayName);
-		const stored = await pool.query<{ displayName: string | null }>(`SELECT display_name AS "displayName" FROM public.organization_memberships WHERE id = $1`, [
+		const stored = await pool.query<{ displayName: string | null }>(`SELECT "displayName" AS "displayName" FROM public."OrganizationMembership" WHERE id = $1`, [
 			CASHIER_MEMBERSHIP_ID,
 		]);
 		expect(stored.rows.at(0)?.displayName).toBe(second?.metadata.displayName);

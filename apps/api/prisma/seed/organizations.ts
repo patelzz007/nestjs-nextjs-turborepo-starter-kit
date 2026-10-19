@@ -1,12 +1,12 @@
 import type { Organization, Prisma, User } from "@prisma/client";
 import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
-import { POLICY_AUDIT_ACTIONS, POLICY_DRAFT_AUDIT_RESOURCE } from "../../src/modules/authorization-cedar/constants/policy-control-plane.constants";
-import { policyBaselineFingerprint } from "../../src/modules/authorization-cedar/services/policy-baseline";
-import { PolicyTemplateCompiler } from "../../src/modules/authorization-cedar/services/policy-template.compiler";
-import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../../src/modules/organization/services/organization-own-membership.service";
-import { findActivePolicyVersionInTx, seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
+import { POLICY_AUDIT_ACTIONS, POLICY_DRAFT_AUDIT_RESOURCE } from "../../src/contexts/authorization/application/ports/policy-control-plane.port";
+import { policyBaselineFingerprint } from "../../src/contexts/authorization/infrastructure/cedar/policy-baseline";
+import { PolicyTemplateCompiler } from "../../src/contexts/authorization/infrastructure/cedar/policy-template.compiler";
+import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../../src/contexts/organizations/application/commands/rename-own-membership/rename-own-membership.handler";
+import { findActivePolicyVersionInTx, seedDefaultTenantPolicies } from "../../src/contexts/authorization/public-api";
 
 import { prisma } from "./client";
 import { seedLifecycleCorrelationId } from "./lifecycle-correlation";
@@ -47,15 +47,14 @@ const KL_FORMER_CASHIER_REMOVED_DAYS_AGO = 30;
 /**
  * Removes the re-creatable child rows of the SEED organizations only, so the
  * next run converges. Never touches another tenant, never deletes the
- * organizations themselves (their audit trail — `organization_audit_logs`,
- * `organization_lifecycle_events` — cascades from them and is kept), and keeps
+ * organizations themselves (their audit trail — `OrganizationAuditLog`,
+ * `OrganizationLifecycleEvent` — cascades from them and is kept), and keeps
  * tenant policy history and tenant data keys (a data key is never destroyed: it
  * would orphan what is encrypted with it; the seed creates it once).
  */
 export async function cleanupOrganizationSeedData(): Promise<void> {
 	const organizationId = { in: [...SEED_ORGANIZATION_IDS] };
 	await prisma.supportAccessGrant.deleteMany({ where: { organizationId } });
-	await prisma.organizationQuota.deleteMany({ where: { organizationId } });
 	await prisma.organizationAccessRequest.deleteMany({ where: { organizationId } });
 	await prisma.organizationInvitationLocationScope.deleteMany({ where: { organizationId } });
 	await prisma.organizationInvitation.deleteMany({ where: { organizationId } });
@@ -198,7 +197,6 @@ interface SeedOrganization {
 	readonly owner: User;
 	readonly locations: readonly SeedLocation[];
 	readonly profile: Omit<Prisma.OrganizationMerchantProfileUncheckedCreateInput, "organizationId">;
-	readonly features: Prisma.InputJsonObject;
 	/** IANA zone the merchant's analytics weeks are cut in (its primary city's zone). */
 	readonly timeZone: string;
 }
@@ -263,13 +261,6 @@ async function upsertSeedOrganization(input: SeedOrganization, adminUser: User, 
 		create: { organizationId: input.id, kind: "SHARED", regionCode: "default" },
 		update: { kind: "SHARED", regionCode: "default" },
 	});
-	const entitlementId = deterministicUuid("organization-seed-entitlement", input.id);
-	const entitlement = { planCode: "pilot", features: input.features, version: 1, effectiveFrom: now };
-	await prisma.organizationEntitlement.upsert({
-		where: { id: entitlementId },
-		create: { id: entitlementId, organizationId: input.id, ...entitlement },
-		update: entitlement,
-	});
 	return organization;
 }
 
@@ -327,7 +318,6 @@ export async function seedOrganizationsAndMerchants(
 				contactEmail: klOwner.email,
 				contactPhone: klPrimaryPhone,
 			},
-			features: { rewards: true, apiKeys: true, analytics: true },
 			timeZone: PILOT_CITY_TIME_ZONES.KUALA_LUMPUR,
 		},
 		adminUser,
@@ -385,7 +375,6 @@ export async function seedOrganizationsAndMerchants(
 				contactEmail: mlkOwner.email,
 				contactPhone: mlkPrimaryPhone,
 			},
-			features: { rewards: true, apiKeys: true },
 			timeZone: PILOT_CITY_TIME_ZONES.MELAKA,
 		},
 		adminUser,
@@ -469,32 +458,8 @@ export async function seedOrganizationsAndMerchants(
 		},
 	});
 
-	const windowStart = BigInt(Math.floor(Date.now() / 86_400_000) * 86_400_000);
-	const windowEnd = windowStart + BigInt(86_400_000);
-
-	await prisma.organizationQuota.createMany({
-		data: [
-			{
-				organizationId: klOrganization.id,
-				quotaKey: "api.requests.daily",
-				limitValue: BigInt(10_000),
-				usedValue: BigInt(120),
-				windowStart,
-				windowEnd,
-			},
-			{
-				organizationId: mlkOrganization.id,
-				quotaKey: "api.requests.daily",
-				limitValue: BigInt(10_000),
-				usedValue: BigInt(45),
-				windowStart,
-				windowEnd,
-			},
-		],
-	});
-
-	await seedRewardHubTenantPolicies(prisma, klOrganization.id, adminUser.id, defaultTenantPolicySeedIds(klOrganization.id));
-	await seedRewardHubTenantPolicies(prisma, mlkOrganization.id, adminUser.id, defaultTenantPolicySeedIds(mlkOrganization.id));
+	await seedDefaultTenantPolicies(prisma, klOrganization.id, adminUser.id, defaultTenantPolicySeedIds(klOrganization.id));
+	await seedDefaultTenantPolicies(prisma, mlkOrganization.id, adminUser.id, defaultTenantPolicySeedIds(mlkOrganization.id));
 
 	await seedFormerKlCashierMembership(klOrganization.id, klOwner.id, klPendingCashier.id);
 	await seedMemberDisplayNameAudits([
@@ -523,11 +488,29 @@ async function seedFormerKlCashierMembership(organizationId: string, removedByUs
 	const removedAt = BigInt(Date.now() - KL_FORMER_CASHIER_REMOVED_DAYS_AGO * 24 * 60 * 60 * 1000);
 	await prisma.organizationMembership.upsert({
 		where: { id: KL_FORMER_CASHIER_MEMBERSHIP_ID },
-		create: { id: KL_FORMER_CASHIER_MEMBERSHIP_ID, organizationId, userId, role: "CASHIER", status: "ACTIVE", isDeleted: true, deletedAt: removedAt },
-		update: { organizationId, userId, role: "CASHIER", isDeleted: true, deletedAt: removedAt },
+		create: {
+			id: KL_FORMER_CASHIER_MEMBERSHIP_ID,
+			organizationId,
+			userId,
+			role: "CASHIER",
+			status: "ACTIVE",
+			isDeleted: true,
+			deletedAt: removedAt,
+			deletedBy: removedByUserId,
+		},
+		update: { organizationId, userId, role: "CASHIER", isDeleted: true, deletedAt: removedAt, deletedBy: removedByUserId },
 	});
+	// Removing the member retired their store scope with them: soft-deleted, by the same owner, at the same time.
 	await prisma.organizationMembershipLocationScope.create({
-		data: { organizationId, membershipId: KL_FORMER_CASHIER_MEMBERSHIP_ID, scopeType: "SELECTED", locationId: ORGANIZATION_SEED_IDS.klLocation },
+		data: {
+			organizationId,
+			membershipId: KL_FORMER_CASHIER_MEMBERSHIP_ID,
+			scopeType: "SELECTED",
+			locationId: ORGANIZATION_SEED_IDS.klLocation,
+			isDeleted: true,
+			deletedAt: removedAt,
+			deletedBy: removedByUserId,
+		},
 	});
 	await prisma.organizationAuditLog.upsert({
 		where: { id: KL_FORMER_CASHIER_REMOVAL_AUDIT_ID },

@@ -3,9 +3,9 @@ import { cleanup, render } from "@testing-library/react";
 import { LIST_SLOT_INDEX, epochMs, type ApiPaginatedMeta, type DataValue, type Envelope, type GeoStats } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GEO_URL_STATE } from "@/lib/url-state/geography";
+import { GEO_URL_STATE } from "@/contexts/reference-data/url-state/geography";
 
-import type { GeoViewProps } from "../geo-table";
+import type { GeoViewProps } from "../../../../contexts/reference-data/components/geo-table";
 import GeoPage from "../page";
 
 const { geoView, statsQuery, countriesQuery, statesQuery, citiesQuery } = vi.hoisted(() => ({
@@ -30,7 +30,7 @@ vi.mock("@/lib/admin-server-api", () => ({
 }));
 
 // The client table is replaced by a probe: this suite checks what the server hands it.
-vi.mock("../geo-table", () => ({ default: geoView }));
+vi.mock("../../../../contexts/reference-data/components/geo-table", () => ({ default: geoView }));
 
 const STATS: GeoStats = { regions: 6, subregions: 22, countries: 250, states: 5_000, cities: 150_000 };
 /** Fixed answer time of the fixture envelopes. */

@@ -6,7 +6,7 @@
 -- (`GET /admin/audit-trail/events`), which refetches through the normal list
 -- endpoint. The signal comes from the database, not the API, because the audit
 -- trail has writers the API never sees: background jobs, scripts and manual
--- SQL write `data_change_logs` through the capture triggers.
+-- SQL write `DataChangeLog` through the capture triggers.
 --
 -- The payload is only the table name — never a row's content; whoever is
 -- told reads the trail through its own authorized endpoint. NOTIFY is
@@ -30,15 +30,15 @@ BEGIN
 END
 $$;
 
-DROP TRIGGER IF EXISTS audit_trail_notify ON public.audit_logs;
+DROP TRIGGER IF EXISTS audit_trail_notify ON public."AuditLog";
 CREATE TRIGGER audit_trail_notify
-  AFTER INSERT ON public.audit_logs
+  AFTER INSERT ON public."AuditLog"
   FOR EACH ROW
   WHEN (NOT (NEW.method = 'GET' AND NEW.endpoint ~ '^/api/v[0-9]+/admin/(audit-|data-changes)'))
   EXECUTE FUNCTION public.audit_trail_notify();
 
-DROP TRIGGER IF EXISTS audit_trail_notify ON public.data_change_logs;
+DROP TRIGGER IF EXISTS audit_trail_notify ON public."DataChangeLog";
 CREATE TRIGGER audit_trail_notify
-  AFTER INSERT ON public.data_change_logs
+  AFTER INSERT ON public."DataChangeLog"
   FOR EACH STATEMENT
   EXECUTE FUNCTION public.audit_trail_notify();

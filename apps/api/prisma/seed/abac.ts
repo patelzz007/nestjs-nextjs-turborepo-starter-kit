@@ -1,7 +1,7 @@
 import type { Permission } from "@prisma/client";
 import { PolicyConditionsSchema, type PolicyConditions } from "@workspace/shared";
 
-import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
+import { parsePrismaInputJson } from "../../src/platform/infrastructure/utils/prisma-json";
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 

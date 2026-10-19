@@ -81,42 +81,42 @@ describe("consumer sidebar menu (data/user-sidebar-menu.json)", () => {
 		expect(misplaced).toEqual([]);
 	});
 
-	it("keeps every item inside the signed-in /rewardhub shell", () => {
-		expect(MENU_ENTRIES.filter((entry) => !isPathWithin(entry.item.url, ROUTES.rewardHub.browse)).map((entry) => entry.item.url)).toEqual([]);
+	it("keeps every item inside the signed-in /dashboard shell", () => {
+		expect(MENU_ENTRIES.filter((entry) => !isPathWithin(entry.item.url, ROUTES.dashboard.browse)).map((entry) => entry.item.url)).toEqual([]);
 	});
 
 	it("offers browse, wallet, activity, referrals and account as enabled links", () => {
 		const urls = ENABLED_ITEMS.map((item) => item.url);
 
 		expect(urls).toEqual(
-			expect.arrayContaining([ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.referrals, ROUTES.rewardHub.account]),
+			expect.arrayContaining([ROUTES.dashboard.browse, ROUTES.dashboard.wallet, ROUTES.dashboard.activity, ROUTES.dashboard.referrals, ROUTES.dashboard.account]),
 		);
 	});
 });
 
 describe("consumer sidebar active state (real menu + shared menu-view algorithm)", () => {
-	it("highlights exactly one item — browse — on /rewardhub", () => {
-		expect(activeItemIds(ROUTES.rewardHub.browse)).toEqual([itemIdFor(ROUTES.rewardHub.browse)]);
+	it("highlights exactly one item — browse — on /dashboard", () => {
+		expect(activeItemIds(ROUTES.dashboard.browse)).toEqual([itemIdFor(ROUTES.dashboard.browse)]);
 	});
 
 	it("highlights browse on a signed-in reward detail page", () => {
-		expect(activeItemIds(rewardDetailPath("abc"))).toEqual([itemIdFor(ROUTES.rewardHub.browse)]);
+		expect(activeItemIds(rewardDetailPath("abc"))).toEqual([itemIdFor(ROUTES.dashboard.browse)]);
 	});
 
 	it("highlights the wallet on the wallet and on a claim's QR page", () => {
-		expect(activeItemIds(ROUTES.rewardHub.wallet)).toEqual([itemIdFor(ROUTES.rewardHub.wallet)]);
-		expect(activeItemIds(walletClaimPath("xyz"))).toEqual([itemIdFor(ROUTES.rewardHub.wallet)]);
+		expect(activeItemIds(ROUTES.dashboard.wallet)).toEqual([itemIdFor(ROUTES.dashboard.wallet)]);
+		expect(activeItemIds(walletClaimPath("xyz"))).toEqual([itemIdFor(ROUTES.dashboard.wallet)]);
 	});
 
-	it("highlights activity on /rewardhub/activity", () => {
-		expect(activeItemIds(ROUTES.rewardHub.activity)).toEqual([itemIdFor(ROUTES.rewardHub.activity)]);
+	it("highlights activity on /dashboard/activity", () => {
+		expect(activeItemIds(ROUTES.dashboard.activity)).toEqual([itemIdFor(ROUTES.dashboard.activity)]);
 	});
 
-	it("highlights Account — and not browse — on /rewardhub/account", () => {
-		const active = activeItemIds(ROUTES.rewardHub.account);
+	it("highlights Account — and not browse — on /dashboard/account", () => {
+		const active = activeItemIds(ROUTES.dashboard.account);
 
-		expect(active).toEqual([itemIdFor(ROUTES.rewardHub.account)]);
-		expect(active).not.toContain(itemIdFor(ROUTES.rewardHub.browse));
+		expect(active).toEqual([itemIdFor(ROUTES.dashboard.account)]);
+		expect(active).not.toContain(itemIdFor(ROUTES.dashboard.browse));
 	});
 
 	it("highlights exactly one item on every enabled link's own page", () => {

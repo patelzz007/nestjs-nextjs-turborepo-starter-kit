@@ -24,6 +24,10 @@ BEGIN
     GRANT EXECUTE ON FUNCTION app_rls_bypass() TO app_runtime;
   END IF;
 
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'app_rls_bypass_on') THEN
+    GRANT EXECUTE ON FUNCTION app_rls_bypass_on(text) TO app_runtime;
+  END IF;
+
   IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'app_system_operation') THEN
     GRANT EXECUTE ON FUNCTION app_system_operation() TO app_runtime;
   END IF;
@@ -74,7 +78,7 @@ END $$;
 --
 -- The tables and privileges are declared ONCE, in
 -- prisma/rls/withheld-privileges.ts (APP_RUNTIME_WITHHELD_PRIVILEGES).
--- `pnpm db:apply-security` (scripts/apply-rls.ts) appends the generated
+-- `pnpm db:apply-security` (prisma/rls/apply.ts) appends the generated
 -- REVOKEs to THIS file's transaction — right after the blanket grant above —
 -- and then verifies against the live catalog that app_runtime lacks each one.
 -- Do not hand-write `REVOKE … FROM app_runtime` here or in rls.sql:
@@ -84,16 +88,17 @@ END $$;
 -- app_enumerator grants — the `tenant.enumerate` system operation's role
 -- ============================================================================
 -- Exactly what listing active organization ids needs: SELECT on
--- `organizations`, and SELECT on `organization_memberships` because the
+-- `Organization`, and SELECT on `OrganizationMembership` because the
 -- `organizations_member` policy reads it. No DML, no other table. Revoke
 -- first so a grant removed here is also removed from existing databases.
 
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM app_enumerator;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM app_enumerator;
 GRANT USAGE ON SCHEMA public TO app_enumerator;
-GRANT SELECT ON TABLE public.organizations TO app_enumerator;
-GRANT SELECT ON TABLE public.organization_memberships TO app_enumerator;
+GRANT SELECT ON TABLE public."Organization" TO app_enumerator;
+GRANT SELECT ON TABLE public."OrganizationMembership" TO app_enumerator;
 GRANT EXECUTE ON FUNCTION app_rls_bypass() TO app_enumerator;
+GRANT EXECUTE ON FUNCTION app_rls_bypass_on(text) TO app_enumerator;
 GRANT EXECUTE ON FUNCTION app_system_operation() TO app_enumerator;
 GRANT EXECUTE ON FUNCTION app_current_user_id() TO app_enumerator;
 GRANT EXECUTE ON FUNCTION app_organization_member_of(text) TO app_enumerator;

@@ -1,6 +1,6 @@
 import type { EnrollmentReason, SessionScope } from "@workspace/shared";
 
-import type { SessionCheckFailureReason } from "../../auth/session/session-check";
+import type { SessionCheckFailureReason } from "../../contexts/identity/session/session-check";
 
 /**
  * Client auth session status — what THIS tab currently believes about its

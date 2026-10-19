@@ -4,8 +4,8 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type * as React from "react";
 
-import { AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT } from "@/components/audit-logs/audit-log-record";
-import { AUDIT_RECORD_GRID_BY_LAYOUT, type AuditRecordLayout } from "@/components/audit-logs/record-layout";
+import { AUDIT_LOG_RECORD_PAYLOAD_GRID_BY_LAYOUT } from "@/contexts/audit/components/audit-logs/audit-log-record";
+import { AUDIT_RECORD_GRID_BY_LAYOUT, type AuditRecordLayout } from "@/contexts/audit/components/audit-logs/record-layout";
 import { AUDIT_RECORD_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { BadgeSkeleton, LabelledValueGridSkeleton } from "@/components/loading/skeleton-parts";
 

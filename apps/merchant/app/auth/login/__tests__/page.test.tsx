@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
-import type { LoginFormProps } from "@workspace/client/lib/auth/forms/login-form";
+import type { LoginFormProps } from "@workspace/client/lib/contexts/identity/forms/login-form";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MERCHANT_DEMO_ACCOUNTS } from "@/lib/auth/demo-account-list";
+import { MERCHANT_DEMO_ACCOUNTS } from "@/contexts/identity/lib/demo-account-list";
 import { ROUTES } from "@/lib/routes";
 
 import MerchantLoginPage from "../page";
@@ -16,7 +16,7 @@ const { loginForm, serverEnvMock } = vi.hoisted(() => ({
 }));
 
 // The client form is replaced by a probe: this suite checks what the server hands it.
-vi.mock("@workspace/client/lib/auth/forms/login-form", () => ({ LoginForm: loginForm }));
+vi.mock("@workspace/client/lib/contexts/identity/forms/login-form", () => ({ LoginForm: loginForm }));
 vi.mock("@workspace/ui/components/auth-layout", () => ({
 	AuthLayout: ({ children }: { readonly children: React.ReactNode }): React.JSX.Element => <>{children}</>,
 }));

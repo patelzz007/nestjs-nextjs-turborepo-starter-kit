@@ -7,7 +7,7 @@ import { fail, ok, stubApi } from "../../../../test/api-stub";
 import { createTestRuntime, renderInApp } from "../../../../test/app-harness";
 import { twoFactorSetupJson, userJson } from "../../../../test/fixtures";
 import { testAccessToken } from "../../../../test/jwt";
-import { NO_AUTHENTICATOR_MESSAGE } from "../../../features/two-factor/two-factor-enrollment";
+import { NO_AUTHENTICATOR_MESSAGE } from "../../../contexts/identity";
 import AuthLayout from "../../../app/(auth)/_layout";
 import EnrollTwoFactorScreen from "../../../app/(auth)/enroll-two-factor";
 import SignInScreen from "../../../app/(auth)/sign-in";

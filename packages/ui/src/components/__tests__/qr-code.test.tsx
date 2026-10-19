@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { QrCode } from "../qr-code";
 
-const VALUE = "https://rewardhub.example/r/ABCD2345";
+const VALUE = "https://app.example/r/ABCD2345";
 
 afterEach(() => {
 	cleanup();

@@ -1,4 +1,4 @@
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
+import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { compileMenu } from "@workspace/client/lib/sidebar/sidebar-menu-compile";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem, SidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
@@ -6,7 +6,7 @@ import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/sha
 import { samplePathForPattern } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 import { describe, expect, it } from "vitest";
 
-import { isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/lib/auth/routes";
+import { isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/contexts/identity/lib/routes";
 import {
 	applyWebRouteAuthorization,
 	canAccessWebPath,
@@ -50,7 +50,7 @@ function proxyAudience(pathname: string): WebRouteAudience {
 describe("WEB_ROUTE_ACCESS coverage (guard)", () => {
 	it("discovers the app's pages from disk", () => {
 		expect(PAGE_PATTERNS.length).toBeGreaterThan(10);
-		expect(PAGE_PATTERNS).toContain("/rewardhub/wallet/[claimId]");
+		expect(PAGE_PATTERNS).toContain("/dashboard/wallet/[claimId]");
 	});
 
 	it("gives every page an explicit access rule, so a new page cannot be added unclassified", () => {
@@ -74,8 +74,8 @@ describe("WEB_ROUTE_ACCESS coverage (guard)", () => {
 		}
 	});
 
-	it("only gates pages by capability inside the /rewardhub shell, where WebRouteAccessGuard is mounted", () => {
-		const gatedOutsideShell = WEB_ROUTE_ACCESS.filter((rule) => rule.authorization !== undefined && !isPathWithin(rule.pattern, ROUTE_PREFIXES.rewardHub)).map(
+	it("only gates pages by capability inside the /dashboard shell, where WebRouteAccessGuard is mounted", () => {
+		const gatedOutsideShell = WEB_ROUTE_ACCESS.filter((rule) => rule.authorization !== undefined && !isPathWithin(rule.pattern, ROUTE_PREFIXES.dashboard)).map(
 			(rule) => rule.pattern,
 		);
 
@@ -85,8 +85,8 @@ describe("WEB_ROUTE_ACCESS coverage (guard)", () => {
 	it("labels the dynamic signed-in pages for the breadcrumb", () => {
 		expect(resolveWebTrailPage(rewardDetailPath("r"))).toEqual({ label: "Reward" });
 		expect(resolveWebTrailPage(walletClaimPath("c"))).toEqual({ label: "Show at checkout" });
-		expect(resolveWebTrailPage(ROUTES.rewardHub.wallet)).toEqual({ label: undefined });
-		expect(resolveWebTrailPage(ROUTE_PREFIXES.rewardHubRewards)).toBeNull();
+		expect(resolveWebTrailPage(ROUTES.dashboard.wallet)).toEqual({ label: undefined });
+		expect(resolveWebTrailPage(ROUTE_PREFIXES.dashboardRewards)).toBeNull();
 	});
 });
 
@@ -98,14 +98,14 @@ describe("resolveWebRouteAccess", () => {
 	});
 
 	it("returns null for URLs that are not pages", () => {
-		expect(resolveWebRouteAccess(ROUTE_PREFIXES.rewardHubRewards)).toBeNull();
-		expect(resolveWebRouteAccess(`${ROUTES.rewardHub.wallet}/claim-1/extra`)).toBeNull();
-		expect(resolveWebRouteAccess("/rewardhubs")).toBeNull();
+		expect(resolveWebRouteAccess(ROUTE_PREFIXES.dashboardRewards)).toBeNull();
+		expect(resolveWebRouteAccess(`${ROUTES.dashboard.wallet}/claim-1/extra`)).toBeNull();
+		expect(resolveWebRouteAccess("/dashboards")).toBeNull();
 	});
 });
 
 describe("isWebRouteAllowed", () => {
-	const gated: WebRouteAccessRule = { pattern: "/rewardhub/orders", audience: "signed-in", authorization: { permissions: [PERMISSION.ORDER.LIST] } };
+	const gated: WebRouteAccessRule = { pattern: "/dashboard/orders", audience: "signed-in", authorization: { permissions: [PERMISSION.ORDER.LIST] } };
 
 	it("lets anyone open a public page", () => {
 		const rule: WebRouteAccessRule = { pattern: ROUTES.home, audience: "public" };
@@ -120,7 +120,7 @@ describe("isWebRouteAllowed", () => {
 	});
 
 	it("requires a session for signed-in pages", () => {
-		const rule: WebRouteAccessRule = { pattern: ROUTES.rewardHub.wallet, audience: "signed-in" };
+		const rule: WebRouteAccessRule = { pattern: ROUTES.dashboard.wallet, audience: "signed-in" };
 		expect(isWebRouteAllowed(rule, MEMBER)).toBe(true);
 		expect(isWebRouteAllowed(rule, GUEST)).toBe(false);
 	});
@@ -145,14 +145,14 @@ describe("isWebRouteAllowed", () => {
 
 describe("canAccessWebPath", () => {
 	it("evaluates the page's rule for the session", () => {
-		expect(canAccessWebPath(ROUTES.rewardHub.wallet, MEMBER)).toBe(true);
-		expect(canAccessWebPath(ROUTES.rewardHub.wallet, GUEST)).toBe(false);
+		expect(canAccessWebPath(ROUTES.dashboard.wallet, MEMBER)).toBe(true);
+		expect(canAccessWebPath(ROUTES.dashboard.wallet, GUEST)).toBe(false);
 		expect(canAccessWebPath(ROUTES.auth.login, MEMBER)).toBe(false);
 	});
 
 	it("denies URLs that are not pages (fail closed)", () => {
-		expect(canAccessWebPath("/rewardhub/nearby", MEMBER)).toBe(false);
-		expect(canAccessWebPath(ROUTE_PREFIXES.rewardHubRewards, MEMBER)).toBe(false);
+		expect(canAccessWebPath("/dashboard/nearby", MEMBER)).toBe(false);
+		expect(canAccessWebPath(ROUTE_PREFIXES.dashboardRewards, MEMBER)).toBe(false);
 	});
 });
 
@@ -202,9 +202,9 @@ describe("sidebar menu ⇔ route table (real consumer menu)", () => {
 });
 
 describe("applyWebRouteAuthorization", () => {
-	const ORDERS_PATTERN = "/rewardhub/orders";
+	const ORDERS_PATTERN = "/dashboard/orders";
 	const RULES: readonly WebRouteAccessRule[] = [
-		{ pattern: ROUTES.rewardHub.browse, audience: "signed-in" },
+		{ pattern: ROUTES.dashboard.browse, audience: "signed-in" },
 		{ pattern: ORDERS_PATTERN, audience: "signed-in", authorization: { permissions: [PERMISSION.ORDER.LIST] } },
 	];
 	const MENU: SidebarMenuData = {
@@ -213,9 +213,9 @@ describe("applyWebRouteAuthorization", () => {
 			{
 				title: "Main",
 				items: [
-					{ title: "Browse", url: ROUTES.rewardHub.browse },
+					{ title: "Browse", url: ROUTES.dashboard.browse },
 					{ title: "Orders", url: ORDERS_PATTERN },
-					{ title: "Soon", url: "/rewardhub/soon", disabled: true },
+					{ title: "Soon", url: "/dashboard/soon", disabled: true },
 				],
 			},
 		],
@@ -235,7 +235,7 @@ describe("applyWebRouteAuthorization", () => {
 
 		expect(visibleUrls(compiled, []).has(ORDERS_PATTERN)).toBe(false);
 		expect(visibleUrls(compiled, [PERMISSION.ORDER.LIST]).has(ORDERS_PATTERN)).toBe(true);
-		expect(visibleUrls(compiled, []).has(ROUTES.rewardHub.browse)).toBe(true);
+		expect(visibleUrls(compiled, []).has(ROUTES.dashboard.browse)).toBe(true);
 	});
 });
 
@@ -248,7 +248,7 @@ describe("command palette entries ⇔ route table", () => {
 		const urls = accessiblePaletteItems((href) => canAccessWebPath(href, MEMBER)).map((item) => item.url);
 
 		expect(urls).toEqual(
-			expect.arrayContaining([ROUTES.rewardHub.browse, ROUTES.rewardHub.wallet, ROUTES.rewardHub.activity, ROUTES.rewardHub.referrals, ROUTES.rewardHub.account]),
+			expect.arrayContaining([ROUTES.dashboard.browse, ROUTES.dashboard.wallet, ROUTES.dashboard.activity, ROUTES.dashboard.referrals, ROUTES.dashboard.account]),
 		);
 		expect(urls).not.toContain(ROUTES.auth.login);
 	});

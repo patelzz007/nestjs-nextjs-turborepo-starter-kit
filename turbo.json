@@ -1,6 +1,12 @@
 {
 	"$schema": "https://turbo.build/schema.json",
 	"ui": "tui",
+	// `turbo dev` runs 10 persistent tasks: the 7 app dev servers plus the
+	// `dist/` watchers of packages/shared, messaging and api-client (plan
+	// §19.2). turbo refuses to start when persistent tasks reach the
+	// concurrency limit (default 10), because no slot would be left for the
+	// `^build` prerequisites. 16 leaves room for those and for a few more dev tasks.
+	"concurrency": "16",
 	"globalEnv": [
 		"ADMIN_EMAIL",
 		"ADMIN_PASSWORD",
@@ -86,6 +92,7 @@
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
 			"env": [
+				"ADMIN_COMPONENT_GALLERY",
 				"EXPO_PUBLIC_API_URL",
 				"EXPO_PUBLIC_API_PORT",
 				"EXPO_PUBLIC_IOS_STORE_URL",

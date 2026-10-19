@@ -188,7 +188,7 @@ describe("ADMIN_ROUTE_AUTHORIZATION", () => {
 	});
 
 	it("does not let a disabled (page-less) menu item open a hole under a gated section", () => {
-		for (const pathname of ["/users/roles", "/users/roles/admins", "/users/api-keys"]) {
+		for (const pathname of ["/users/roles", "/users/roles/admins", "/users/no-such-page"]) {
 			expect(resolveRouteAuthorization(ADMIN_ROUTE_AUTHORIZATION, pathname)?.superAdminOnly, pathname).toBe(true);
 		}
 	});

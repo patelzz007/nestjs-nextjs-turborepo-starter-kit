@@ -5,13 +5,12 @@ import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH, DAY_MS } fr
 
 import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../../src/modules/auth/constants/impersonation.constants";
-import { ImpersonationAuditAction } from "../../src/modules/auth/repositories/impersonation-session.repository";
-import { MfaRecoveryAuditAction } from "../../src/modules/auth/repositories/mfa-recovery.repository";
-import { CryptoService } from "../../src/modules/auth/services/crypto.service";
-import { SecretEncryptionService } from "../../src/modules/auth/services/secret-encryption.service";
-import { findActivePolicyVersionInTx } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
-import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/modules/sessions/device/session-revoker";
+import { IMPERSONATION_TOKEN_TTL_SECONDS, ImpersonationAuditAction } from "../../src/contexts/identity/domain/aggregates/impersonation-session.aggregate";
+import { MfaRecoveryAuditAction } from "../../src/contexts/identity/domain/aggregates/mfa-recovery-request.aggregate";
+import { CryptoService } from "../../src/contexts/identity/infrastructure/security/crypto.service";
+import { SecretEncryptionService } from "../../src/contexts/identity/infrastructure/security/secret-encryption.service";
+import { findActivePolicyVersionInTx } from "../../src/contexts/authorization/public-api";
+import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/contexts/identity/domain/value-objects/session-revoker.value-object";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { SEED_DEVICE_PROFILES, seedSessionRow, type SeedDeviceProfile, type SeedSession } from "./device-sessions";
@@ -135,6 +134,14 @@ function toBase32(bytes: Buffer): string {
  * constructed from the validated API config, so every secret is produced the
  * way production produces it.
  */
+/** Seeded revocations that bump the account's `tokenVersion` (every session of the account ends with them). */
+const TOKEN_VERSION_BUMPING_REVOCATIONS: ReadonlySet<string> = new Set<string>([
+	"refresh-revoked-admin",
+	"refresh-revoked-reuse",
+	"refresh-revoked-logout-all",
+	"refresh-revoked-rbac",
+]);
+
 export class AccountSecuritySeeder {
 	private readonly crypto: CryptoService;
 	private readonly secrets: SecretEncryptionService;
@@ -469,6 +476,12 @@ export class AccountSecuritySeeder {
 			const row: Prisma.RefreshTokenUncheckedCreateInput = seedSessionRow(session);
 			await prisma.refreshToken.upsert({ where: { id: requireRow(session.id, "seeded session id") }, create: row, update: row });
 		}
+		// Each revocation that ends every session in the app (an admin's RBAC change, refresh-token reuse,
+		// "sign out everywhere", an RBAC job) bumps `tokenVersion`, and the `users_authorization_change_stamp`
+		// trigger stamps `authorizationChangedAt` from the database clock — the cache-invalidation backstop's
+		// input, never written by application code. An absolute value keeps a re-seed from bumping it again.
+		const tokenVersion: number = revocations.filter((revocation): boolean => TOKEN_VERSION_BUMPING_REVOCATIONS.has(revocation.key)).length;
+		await prisma.user.update({ where: { id: mfaUser.id }, data: { tokenVersion } });
 	}
 
 	/** A user who scanned the QR code but has not confirmed the first TOTP yet. */

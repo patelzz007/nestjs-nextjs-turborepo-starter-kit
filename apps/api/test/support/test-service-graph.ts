@@ -10,13 +10,13 @@
 // Nothing here opens a network or database connection — pg pools connect lazily.
 
 import type { TypedConfigService } from "../../src/config/typed-config.service";
-import { AuthorizationAuditKernelService } from "../../src/modules/authorization/kernel/authorization-audit-kernel.service";
-import { AclService } from "../../src/modules/authorization/kernel/acl.service";
-import { AuthorizationKernelService } from "../../src/modules/authorization/kernel/authorization-kernel.service";
-import { PolicyEngineService } from "../../src/modules/authorization/kernel/policy-engine.service";
-import { ResourceOwnershipResolver } from "../../src/modules/authorization/kernel/resource-ownership.resolver";
-import { SubjectGrantsLoader } from "../../src/modules/authorization/kernel/subject-grants.loader";
-import { TenantMembershipService } from "../../src/modules/authorization/kernel/tenant-membership.service";
+import { AuthorizationAuditKernelService } from "../../src/contexts/authorization/infrastructure/kernel/authorization-audit-kernel.service";
+import { AclService } from "../../src/contexts/authorization/infrastructure/kernel/acl.service";
+import { AuthorizationKernelService } from "../../src/contexts/authorization/infrastructure/kernel/authorization-kernel.service";
+import { PolicyEngineService } from "../../src/contexts/authorization/infrastructure/kernel/policy-engine.service";
+import { ResourceOwnershipResolver } from "../../src/contexts/authorization/infrastructure/kernel/resource-ownership.resolver";
+import { SubjectGrantsLoader } from "../../src/contexts/authorization/infrastructure/kernel/subject-grants.loader";
+import { TenantMembershipService } from "../../src/contexts/authorization/infrastructure/kernel/tenant-membership.service";
 import { PrismaService } from "../../src/prisma/prisma.service";
 import { SystemPrismaService } from "../../src/prisma/system-prisma.service";
 import { createTestTypedConfig } from "./test-api-env";

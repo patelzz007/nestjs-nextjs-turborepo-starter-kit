@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 /** The real form talks to the API; here only which branch renders matters. */
-vi.mock("@workspace/client/lib/auth/forms/reset-password-form", () => ({
+vi.mock("@workspace/client/lib/contexts/identity/forms/reset-password-form", () => ({
 	ResetPasswordForm: ({ token: value, forgotPasswordHref }: { readonly token: string; readonly forgotPasswordHref?: string }): React.JSX.Element => (
 		<p>
 			form:{value}:{forgotPasswordHref}

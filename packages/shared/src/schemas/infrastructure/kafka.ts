@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../domain/platform/events";
-import { RewardPlatformEventSchema } from "../domain/rewards/rewards-entities";
+import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../../contexts/reporting/schemas/events";
+import { RewardPlatformEventSchema } from "../../contexts/rewards/schemas/reward";
 
 /** Kafka topics the API publishes platform events to. */
 export const KafkaTopicSchema = z.enum(["platform.auth", "platform.sessions", "platform.impersonation", "platform.email", "platform.rewards"]);

@@ -1,5 +1,7 @@
 # 11 — Testing Standards — Vitest
 
+List endpoints that the migration marks N+1 are asserted with `expectNoNPlusOne` (same statement count at page size 1 and 25). Rate-limit policies have one unit test that every limit is a positive integer, plus a source walk that every mutation declares a policy. Do not add one test per endpoint. See ADR 059 and `rules/19`.
+
 ## Tests are non-negotiable — including for "simple" functions
 
 There is no function too small or too obvious to test. This is stated explicitly because "it's trivial, it doesn't need a test" is one of the most common and most expensive rationalizations in software — the functions everyone considers too simple to break are exactly the ones that get modified carelessly later, precisely *because* nobody thinks they need to be careful.

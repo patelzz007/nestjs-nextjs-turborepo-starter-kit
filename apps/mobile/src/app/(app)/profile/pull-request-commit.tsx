@@ -3,8 +3,7 @@
 import type { GithubPullRequestCommitParams } from "@workspace/shared";
 import * as React from "react";
 
-import { PullRequestCommitScreen } from "../../../features/github-pull-requests/pull-request-commit-screen";
-import { PullRequestCommitRoute } from "../../../features/github-pull-requests/pull-request-route";
+import { PullRequestCommitRoute, PullRequestCommitScreen } from "../../../contexts/integrations-github";
 
 function render(commit: GithubPullRequestCommitParams): React.JSX.Element {
 	return <PullRequestCommitScreen commit={commit} />;

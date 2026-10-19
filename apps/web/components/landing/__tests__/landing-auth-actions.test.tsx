@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import type { AuthUser } from "@workspace/client/lib/auth";
-import type { OwnAvatarImage } from "@workspace/client/lib/auth/profile/use-own-avatar";
+import type { AuthUser } from "@workspace/client/lib/contexts/identity";
+import type { OwnAvatarImage } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/web-authorization-provider";
+import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identity/components/web-authorization-provider";
 import { LandingAuthActions } from "@/components/landing/landing-auth-actions";
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
 
 /** The profile the auth facade returns in each test (`null` until a session is verified). */
 let currentUser: AuthUser | null;
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuthUser: (): AuthUser | null => currentUser,
 	useAuthCommands: (): { readonly logout: () => Promise<void> } => ({ logout: (): Promise<void> => Promise.resolve() }),
 }));
@@ -28,7 +28,7 @@ vi.mock("@workspace/ui/components/shell-theme-toggle", () => ({
 /** The member's profile picture as the own-profile query returns it (`null`: initials). */
 let currentAvatar: OwnAvatarImage | null;
 
-vi.mock("@workspace/client/lib/auth/profile/use-own-avatar", () => ({
+vi.mock("@workspace/client/lib/contexts/identity/profile/use-own-avatar", () => ({
 	useOwnAvatar: (): OwnAvatarImage | null => currentAvatar,
 }));
 

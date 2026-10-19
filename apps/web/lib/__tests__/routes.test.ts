@@ -28,20 +28,20 @@ const APP_PAGE_ROUTES = listAppPageRoutes();
  * fall behind the module.
  */
 const AUTH_PAGE_PATHS: readonly string[] = [ROUTES.auth.login, ROUTES.auth.signup, ROUTES.auth.forgotPassword, ROUTES.auth.resetPassword, ROUTES.auth.verifyEmail];
-const REWARD_HUB_PAGE_PATHS: readonly string[] = [
-	ROUTES.rewardHub.browse,
-	ROUTES.rewardHub.wallet,
-	ROUTES.rewardHub.activity,
-	ROUTES.rewardHub.referrals,
-	ROUTES.rewardHub.account,
+const DASHBOARD_PAGE_PATHS: readonly string[] = [
+	ROUTES.dashboard.browse,
+	ROUTES.dashboard.wallet,
+	ROUTES.dashboard.activity,
+	ROUTES.dashboard.referrals,
+	ROUTES.dashboard.account,
 ];
-const STATIC_PAGE_PATHS: readonly string[] = [ROUTES.home, ROUTES.hello, ...AUTH_PAGE_PATHS, ...REWARD_HUB_PAGE_PATHS];
+const STATIC_PAGE_PATHS: readonly string[] = [ROUTES.home, ROUTES.hello, ...AUTH_PAGE_PATHS, ...DASHBOARD_PAGE_PATHS];
 
 describe("ROUTES", () => {
 	it("is fully covered by the page-existence guard below", () => {
-		expect(Object.keys(ROUTES).sort()).toEqual(["auth", "hello", "home", "rewardHub"]);
+		expect(Object.keys(ROUTES).sort()).toEqual(["auth", "dashboard", "hello", "home"]);
 		expect(Object.keys(ROUTES.auth)).toHaveLength(AUTH_PAGE_PATHS.length);
-		expect(Object.keys(ROUTES.rewardHub)).toHaveLength(REWARD_HUB_PAGE_PATHS.length);
+		expect(Object.keys(ROUTES.dashboard)).toHaveLength(DASHBOARD_PAGE_PATHS.length);
 	});
 
 	it.each(STATIC_PAGE_PATHS)("%s renders an existing app/**/page.tsx", (path: string) => {
@@ -52,21 +52,21 @@ describe("ROUTES", () => {
 		expect(new Set(STATIC_PAGE_PATHS).size).toBe(STATIC_PAGE_PATHS.length);
 	});
 
-	it("keeps the signed-in app under /rewardhub with plural, kebab-case paths", () => {
-		expect(ROUTES.rewardHub).toEqual({
-			browse: "/rewardhub",
-			wallet: "/rewardhub/wallet",
-			activity: "/rewardhub/activity",
-			referrals: "/rewardhub/referrals",
-			account: "/rewardhub/account",
+	it("keeps the signed-in app under /dashboard with plural, kebab-case paths", () => {
+		expect(ROUTES.dashboard).toEqual({
+			browse: "/dashboard",
+			wallet: "/dashboard/wallet",
+			activity: "/dashboard/activity",
+			referrals: "/dashboard/referrals",
+			account: "/dashboard/account",
 		});
 	});
 
 	it("serves the paths the API emails link to exactly where the app renders them", () => {
 		expect(ROUTES.home).toBe(APP_LINKS.web.home);
-		expect(ROUTES.rewardHub.browse).toBe(APP_LINKS.web.rewardHub);
-		expect(ROUTES.rewardHub.wallet).toBe(APP_LINKS.web.wallet);
-		expect(ROUTES.rewardHub.account).toBe(APP_LINKS.web.account);
+		expect(ROUTES.dashboard.browse).toBe(APP_LINKS.web.dashboard);
+		expect(ROUTES.dashboard.wallet).toBe(APP_LINKS.web.wallet);
+		expect(ROUTES.dashboard.account).toBe(APP_LINKS.web.account);
 		expect(ROUTES.auth.login).toBe(APP_LINKS.auth.login);
 		expect(ROUTES.auth.verifyEmail).toBe(APP_LINKS.auth.verifyEmail);
 		expect(ROUTES.auth.resetPassword).toBe(APP_LINKS.auth.resetPassword);
@@ -82,22 +82,22 @@ describe("route builders", () => {
 		}
 	});
 
-	it("put signed-in reward detail under /rewardhub/rewards and claims under the wallet", () => {
-		expect(rewardDetailPath("reward-1")).toBe("/rewardhub/rewards/reward-1");
+	it("put signed-in reward detail under /dashboard/rewards and claims under the wallet", () => {
+		expect(rewardDetailPath("reward-1")).toBe("/dashboard/rewards/reward-1");
 		expect(publicRewardDetailPath("reward-1")).toBe("/rewards/reward-1");
-		expect(walletClaimPath("claim-1")).toBe("/rewardhub/wallet/claim-1");
+		expect(walletClaimPath("claim-1")).toBe("/dashboard/wallet/claim-1");
 	});
 
 	it("encode dynamic segments so an id can never escape its parent path", () => {
-		expect(childPath(ROUTE_PREFIXES.rewardHubRewards, "a/b?c")).toBe("/rewardhub/rewards/a%2Fb%3Fc");
-		expect(walletClaimPath("../account")).toBe("/rewardhub/wallet/..%2Faccount");
+		expect(childPath(ROUTE_PREFIXES.dashboardRewards, "a/b?c")).toBe("/dashboard/rewards/a%2Fb%3Fc");
+		expect(walletClaimPath("../account")).toBe("/dashboard/wallet/..%2Faccount");
 	});
 
 	it("build the login page with an optional, encoded return path", () => {
 		expect(loginPath()).toBe("/auth/login");
-		expect(loginPath(ROUTES.rewardHub.browse)).toBe("/auth/login?redirect=%2Frewardhub");
-		expect(loginPath(ROUTES.rewardHub.activity)).toBe("/auth/login?redirect=%2Frewardhub%2Factivity");
-		expect(resolvesToAppPage(loginPath(ROUTES.rewardHub.wallet), APP_PAGE_ROUTES)).toBe(true);
+		expect(loginPath(ROUTES.dashboard.browse)).toBe("/auth/login?redirect=%2Fdashboard");
+		expect(loginPath(ROUTES.dashboard.activity)).toBe("/auth/login?redirect=%2Fdashboard%2Factivity");
+		expect(resolvesToAppPage(loginPath(ROUTES.dashboard.wallet), APP_PAGE_ROUTES)).toBe(true);
 	});
 
 	it("build the verify-email page with an encoded token", () => {
@@ -114,17 +114,17 @@ describe("route builders", () => {
 
 describe("isPathWithin", () => {
 	it("matches the prefix itself and anything below it", () => {
-		expect(isPathWithin("/rewardhub", "/rewardhub")).toBe(true);
-		expect(isPathWithin("/rewardhub/wallet/claim-1", "/rewardhub")).toBe(true);
-		expect(isPathWithin("/rewardhub?tab=1", "/rewardhub")).toBe(true);
-		expect(isPathWithin("/rewardhub#top", "/rewardhub")).toBe(true);
+		expect(isPathWithin("/dashboard", "/dashboard")).toBe(true);
+		expect(isPathWithin("/dashboard/wallet/claim-1", "/dashboard")).toBe(true);
+		expect(isPathWithin("/dashboard?tab=1", "/dashboard")).toBe(true);
+		expect(isPathWithin("/dashboard#top", "/dashboard")).toBe(true);
 	});
 
 	it("never matches a longer sibling segment or an unrelated path", () => {
-		expect(isPathWithin("/rewardhubs", "/rewardhub")).toBe(false);
-		expect(isPathWithin("/rewardhub-old/wallet", "/rewardhub")).toBe(false);
-		expect(isPathWithin("/rewards/reward-1", "/rewardhub")).toBe(false);
-		expect(isPathWithin("/", "/rewardhub")).toBe(false);
+		expect(isPathWithin("/dashboards", "/dashboard")).toBe(false);
+		expect(isPathWithin("/dashboard-old/wallet", "/dashboard")).toBe(false);
+		expect(isPathWithin("/rewards/reward-1", "/dashboard")).toBe(false);
+		expect(isPathWithin("/", "/dashboard")).toBe(false);
 	});
 });
 
@@ -137,8 +137,8 @@ const SOURCE_FILE_PATTERN = /\.tsx?$/;
 const TEST_FILE_PATTERN = /\.test\.tsx?$/;
 const ROUTES_MODULE = join("lib", "routes.ts");
 
-/** A quoted internal app path, e.g. `"/rewardhub/wallet"` or `'/auth/login'` (doc comments use backticks and are not matched). */
-const ROUTE_LITERAL_PATTERN = /["']\/(?:rewardhub|rewards|auth|hello)\b/;
+/** A quoted internal app path, e.g. `"/dashboard/wallet"` or `'/auth/login'` (doc comments use backticks and are not matched). */
+const ROUTE_LITERAL_PATTERN = /["']\/(?:dashboard|rewards|auth|hello)\b/;
 
 function listSourceFiles(directory: string, files: string[]): void {
 	for (const entry of readdirSync(directory, { withFileTypes: true })) {

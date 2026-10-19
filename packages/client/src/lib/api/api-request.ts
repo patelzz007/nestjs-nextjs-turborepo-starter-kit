@@ -24,6 +24,7 @@ export {
 	fetchQueryOrThrow,
 	HttpMethodSchema,
 	isDeadSessionError,
+	isNotFoundError,
 	mergeProcedureHeaders,
 	mutationIntentHeaders,
 	NO_HTTP_RESPONSE_STATUS,

@@ -17,6 +17,8 @@
 
 import { z } from "zod";
 
+import type { EpochMs } from "../schemas/api/common";
+
 /** The API versions that exist. Add `"v3"` here before any new major. */
 export const ApiVersionSchema = z.enum(["v1", "v2"]);
 
@@ -130,8 +132,17 @@ export function apiDocsPath(version: ApiVersion = API_VERSION): string {
 /** A version that is still served but scheduled for removal (drives `Sunset`). */
 export interface DeprecatedApiVersion {
 	readonly version: ApiVersion;
-	/** ISO date after which the version is removed. */
-	readonly sunsetAt: string;
+	/** Epoch ms after which the version is removed. */
+	readonly sunsetAt: EpochMs;
+}
+
+/**
+ * The `Sunset` response header's value for `sunsetAt` (RFC 8594): an HTTP-date (RFC 9110 IMF-fixdate,
+ * e.g. `Sun, 18 Oct 2026 00:00:00 GMT`). The header's format is fixed by the standard; everywhere else the
+ * instant travels as epoch milliseconds.
+ */
+export function sunsetHeaderValue(sunsetAt: EpochMs): string {
+	return new Date(sunsetAt).toUTCString();
 }
 
 /** Versions currently marked deprecated — responses to them get a `Sunset` header. */

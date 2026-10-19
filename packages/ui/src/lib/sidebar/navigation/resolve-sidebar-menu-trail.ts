@@ -58,7 +58,7 @@ export interface ResolveSidebarMenuTrailConfig {
 	/**
 	 * Describes the app's pages for URL segments past the deepest menu match.
 	 * When given, an intermediate segment that is not a page
-	 * (`/rewardhub/rewards` in `/rewardhub/rewards/42`) produces no crumb, one
+	 * (`/dashboard/rewards` in `/dashboard/rewards/42`) produces no crumb, one
 	 * that is a page becomes a linked crumb, and a page's `label` replaces the
 	 * humanized segment. Omitted → every remaining segment becomes an unlinked,
 	 * humanized crumb.

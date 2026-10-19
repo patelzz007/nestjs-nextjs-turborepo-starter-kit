@@ -49,7 +49,7 @@ flowchart LR
     DEK -->|AES-256-GCM| CT["ciphertext<br/>&lt;keyVersion&gt;:&lt;iv&gt;:&lt;tag&gt;:&lt;data&gt;"]
 ```
 
-`TenantEncryptionService` (`apps/api/src/modules/encryption/`) gives each organization its own data
+`TenantEncryptionService` (`apps/api/src/platform/infrastructure/encryption`) gives each organization its own data
 key (DEK), stored wrapped by the KEK together with the provider's key id (for example
 `local-dev-kek/v2`). Creating, decrypting and re-wrapping keys is audited. The service is ready for
 tenant-confidential fields; no business module stores encrypted fields yet.

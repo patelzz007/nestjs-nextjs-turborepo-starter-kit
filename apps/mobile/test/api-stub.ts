@@ -19,6 +19,31 @@ export function ok(data: DataValue, status = 200): StubResponse {
 	return { kind: "response", status, body: { success: true, data, meta: META } };
 }
 
+/** Where a page sits in a longer list (the list grammar's `meta`). */
+export interface StubPagePosition {
+	readonly page: number;
+	readonly limit: number;
+	readonly total: number;
+	readonly nextCursor: string | null;
+}
+
+/** A paginated list answer: `data` is the page's items, `meta` carries the pagination. One page holding `items` by default. */
+export function okPage(items: readonly DataValue[], position: Partial<StubPagePosition> = {}): StubResponse {
+	const limit = position.limit ?? Math.max(items.length, 1);
+	const total = position.total ?? items.length;
+	const page = position.page ?? 1;
+	const totalPages = Math.max(1, Math.ceil(total / limit));
+	return {
+		kind: "response",
+		status: 200,
+		body: {
+			success: true,
+			data: [...items],
+			meta: { ...META, limit, total, page, totalPages, nextCursor: position.nextCursor ?? null, hasNext: page < totalPages, hasPrevious: page > 1 },
+		},
+	};
+}
+
 /** The standard error envelope. */
 export function fail(status: number, code: string, message: string, details?: DataValue): StubResponse {
 	return { kind: "response", status, body: { success: false, error: { code, message, ...(details === undefined ? {} : { details }) }, meta: META } };
@@ -62,10 +87,18 @@ function headersOf(init: RequestInit | undefined): Record<string, string> {
 	return result;
 }
 
+/** Whether `call` is a request to `key` — with exactly its query when `key` has one, with any query otherwise. */
+function matchesRouteKey(call: StubCall, key: string): boolean {
+	const [pathOnly = call.path] = call.path.split("?");
+	return `${call.method} ${call.path}` === key || (!key.includes("?") && `${call.method} ${pathOnly}` === key);
+}
+
 /**
  * Replaces `fetch`. Routes are keyed "POST /auth/login" (without the version
  * prefix) and answer a fixed response (`ok` / `fail`) or a `dynamic` one; an
- * unknown route answers 404 so a test never hangs on it.
+ * unknown route answers 404 so a test never hangs on it. A key with a query
+ * string matches only that query; a key without one matches any query (the
+ * recorded call keeps it, so a test can still check what was asked).
  */
 export function stubApi(routes: Readonly<Record<string, StubRoute>>): ApiStub {
 	const calls: StubCall[] = [];
@@ -79,11 +112,11 @@ export function stubApi(routes: Readonly<Record<string, StubRoute>>): ApiStub {
 			body: z.string().safeParse(init?.body).data ?? null,
 		};
 		calls.push(call);
-		const route = routes[`${call.method} ${call.path}`];
+		const route = routes[`${call.method} ${call.path}`] ?? routes[`${call.method} ${path}`];
 		const answer: StubResponse =
 			route === undefined ? fail(404, "NOT_FOUND", `No stub for ${call.method} ${call.path}`) : route.kind === "dynamic" ? route.handle(call) : route;
 		return Promise.resolve(new Response(JSON.stringify(answer.body), { status: answer.status, headers: { "content-type": "application/json" } }));
 	});
 	globalThis.fetch = fetchStub;
-	return { calls, callsTo: (key: string): StubCall[] => calls.filter((call: StubCall): boolean => `${call.method} ${call.path}` === key) };
+	return { calls, callsTo: (key: string): StubCall[] => calls.filter((call: StubCall): boolean => matchesRouteKey(call, key)) };
 }

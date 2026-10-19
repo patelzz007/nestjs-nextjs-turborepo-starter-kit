@@ -36,7 +36,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 whole environment once, through one zod schema, before Nest bootstraps; every
 other file injects `TypedConfigService`. ESLint enforces it
 (`no-restricted-properties` in `apps/api/eslint.config.js`), and a lint canary
-(`src/eslint-boundaries.spec.ts`) fails if the ban is ever dropped.
+(`src/__tests__/eslint-boundaries.spec.ts`) fails if the ban is ever dropped.
 
 ---
 
@@ -59,7 +59,7 @@ apps/api/src/config/
 └── config.module.ts           ← @Global: provides TypedConfigService from getApiConfig()
 
 apps/api/src/main.ts           ← getApiConfig() FIRST, then `await import("./bootstrap/bootstrap-app")`
-apps/analytics-consumer/src/env.ts ← the consumer's OWN schema (its own .env — never apps/api/.env; see apps/analytics-consumer/.env.example)
+apps/analytics-consumer/src/infrastructure/env.ts ← the consumer's OWN schema (its own .env — never apps/api/.env; see apps/analytics-consumer/.env.example)
 ```
 
 Boot order:
@@ -147,7 +147,7 @@ missing). Summary, grouped as in the schema:
 | HTTP | `HOST`, `PORT`, `API_PUBLIC_URL`, `TRUST_PROXY`, `SHUTDOWN_TIMEOUT_MS`, `SECURITY_HARDENING_ENABLED`, `SWAGGER_ENABLED` | `127.0.0.1`, `8080` (1–65535), `http://HOST:PORT` (with a wildcard `HOST` such as `0.0.0.0`: this machine's LAN address in development, `localhost` elsewhere — `src/config/api-public-url.ts`), trust no proxy, `15000`; hardening on in production; Swagger and client-IP policy below |
 | CORS / cookies | `CORS_ORIGINS`, `COOKIE_DOMAIN` | origins **required** (≥ 1 absolute http(s) URL); bare cookie host optional |
 | Frontend URLs | `APP_URL`, `ADMIN_APP_URL`, `MERCHANT_APP_URL` | all **required** (no localhost fallbacks) |
-| Database | `DATABASE_URL`, `DB_POOL_MAX`, `DB_IDLE_TIMEOUT_MS` | postgres URL **required**; `10`, `30000` |
+| Database | `DATABASE_URL`, `DB_POOL_MAX`, `DB_IDLE_TIMEOUT_MS` | postgres URL **required**; `10` (the replica's whole connection budget across the request and system pools, minimum 2), `30000` |
 | Auth | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EMAIL_VERIFICATION_SECRET`, `TWO_FACTOR_PENDING_SECRET`, `JWT_ACCESS_EXPIRY`, `JWT_REFRESH_EXPIRY`, `TWO_FACTOR_ISSUER`, `LOGIN_VERIFICATION_MODE`, `BCRYPT_SALT_ROUNDS` | four **required secrets** (≥ 32 chars, not the placeholder, pairwise different); `15m`, `7d`; issuer = `APP_NAME`; `new-device` (`new-device` \| `always` \| `disabled`, `disabled` rejected in production); 10–15, default `12` |
 | Mobile app (`config.mobile`) | `MOBILE_MIN_SUPPORTED_VERSION` | semantic version (`AppVersionSchema` from `@workspace/shared`, surrounding whitespace ignored), default `1.0.0` (the first release); see "Minimum mobile app version" below |
 | Device sessions (`config.sessions`) | `SESSION_LOCATION_PROVIDER`, `SESSION_LOCATION_TIMEOUT_MS` | the `SessionLocationResolver` adapter — only `none` today (no lookup, the location stays hidden; a GeoIP provider is a [pending decision](../../adr/README.md#pending-decisions)); lookup budget 1–5000 ms, default `300` — a slower or failing lookup is logged and the session is stored without a location, never blocking sign-in |
@@ -159,7 +159,7 @@ missing). Summary, grouped as in the schema:
 | Kafka security / delivery | `KAFKA_SSL`, `KAFKA_SSL_CA_LOCATION`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_USERNAME`, `KAFKA_SASL_PASSWORD`, `KAFKA_DELIVERY_TIMEOUT_MS` | `true`/`false`; CA PEM path (needs `KAFKA_SSL=true`); `plain` (needs TLS) / `scram-sha-256` / `scram-sha-512` with username + password; publish budget ms (≥ 1000, default 30000). Schema: `KafkaSecurityEnvShape` from `@workspace/messaging/kafka` |
 | Storage | `STORAGE_PROVIDER`, `STORAGE_PRIVATE_CONTAINER` (+ aliases), `STORAGE_PUBLIC_CONTAINER` (+ alias), `STORAGE_CLOUDFRONT_PUBLIC_DOMAIN`, `FIREBASE_*`, `AWS_*`, `STORAGE_DOWNLOAD_TTL_SECONDS` (+ legacy alias), `STORAGE_PHYSICAL_DELETE_DELAY_MS`, `STORAGE_PROCESSING_CALLBACK_SECRET` | provider auto-detect; s3/firebase need a private container; AWS keys both-or-neither; callback secret optional (callbacks rejected when unset) |
 | Observability | `LOG_LEVEL`, `MEMORY_MONITORING`, `MEMORY_LEAK_WARMUP_MS`, `MEMORY_LEAK_WINDOW_MS`, `MEMORY_LEAK_GROWTH_THRESHOLD_MB`, `OBSERVE_ENABLED`, `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET`, `OBSERVE_SERVICE_ID` | THE log level for pino, every Nest logger (info → LOG, debug → DEBUG, trace → VERBOSE; `silent` turns Nest logging off) and Prisma events (`warn`; same in every environment — `info` shows the route map, `debug` developer detail); memory monitoring always on in production — leak check on the heap measured after each major GC: warm-up ≥ 0 ms (300000), window ≥ 300000 ms (1800000, also the minimum gap between two `memory.leak_suspected` warnings), floor rise between the window halves ≥ 1 MB (64); Observe needs both credentials |
-| Tenancy | `TENANCY_ENABLED`, `DEFAULT_ORGANIZATION_ID` | `false`; organization id **required in single-tenant mode** (a real organization, verified at boot — `pnpm db:seed` creates `a178a4d1-6915-4eb3-bf84-6fb14e1feb6c`) |
+| Tenancy | `TENANCY_ENABLED`, `DEFAULT_ORGANIZATION_ID` | `false`; organization id **required in single-tenant mode** (a real organization, verified at boot — `pnpm db:seed` creates `019b76da-a800-7a94-a198-23ad1b4cfdd9`) |
 
 Swagger (`SWAGGER_ENABLED`, `0`/`1`/`false`/`true`): development/test — on by
 default and public (`0` turns it off); production — OFF by default, and when
@@ -264,11 +264,11 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
 
 | Test | Covers |
 | --- | --- |
-| `src/config/api-config.schema.spec.ts` | Fixture parses; every required variable listed by name; no secret defaults; placeholder/short/duplicate secrets; MFA key ring; master key; formats; toggles; cross-field rules; derived values; Swagger policy; cache backend |
-| `src/config/api-config.spec.ts` | Value-free `EnvValidationError`; unrelated OS variables ignored; `getApiConfig()` parses once |
-| `src/config/typed-config.service.spec.ts` | Group accessors, client-app URLs, key copies, broker/cache/storage switches |
-| `src/config/env-example.spec.ts` | `.env.example` documents every schema variable, ships secrets empty, and boots once secrets are filled |
-| `src/eslint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
+| `src/config/__tests__/api-config.schema.spec.ts` | Fixture parses; every required variable listed by name; no secret defaults; placeholder/short/duplicate secrets; MFA key ring; master key; formats; toggles; cross-field rules; derived values; Swagger policy; cache backend |
+| `src/config/__tests__/api-config.spec.ts` | Value-free `EnvValidationError`; unrelated OS variables ignored; `getApiConfig()` parses once |
+| `src/config/__tests__/typed-config.service.spec.ts` | Group accessors, client-app URLs, key copies, broker/cache/storage switches |
+| `src/config/__tests__/env-example.spec.ts` | `.env.example` documents every schema variable, ships secrets empty, and boots once secrets are filled |
+| `src/__tests__/eslint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
 | `packages/shared/src/runtime/__tests__/app-env.test.ts` | Shared building blocks |
 
 Unit tests are hermetic: `test/setup-unit-env.ts` installs the TEST-ONLY

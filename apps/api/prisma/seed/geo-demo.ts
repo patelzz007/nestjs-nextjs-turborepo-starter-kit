@@ -1,7 +1,7 @@
 import { API_VERSION_PREFIX } from "@workspace/shared";
 
-import { toAuditLogCreateInput } from "../../src/common/audit/audit-log.mapper";
-import { toAuditPayload } from "../../src/common/audit/http-audit-entry";
+import { toAuditLogCreateInput } from "../../src/platform/infrastructure/audit/audit-log.mapper";
+import { toAuditPayload } from "../../src/platform/infrastructure/audit/http-audit-entry";
 
 import { prisma } from "./client";
 import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT } from "./http-audit";
@@ -14,12 +14,12 @@ import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT } from "./http-audit";
 //
 //   - a whole retired subtree (region > subregion > country > state > city) soft-deleted in ONE
 //     stamp exactly as `DELETE /geo/regions/:id` cascades it (`GeoRepository.deleteRegion`):
-//     `is_deleted`, `deleted_at` and `deleted_by` on every level;
+//     `isDeleted`, `deletedAt` and `deletedBy` on every level;
 //   - a city a SuperAdmin enriched with `native`, `translations` and `wikiDataId` through
 //     `PATCH /geo/cities/:id` — the upstream city list carries only id/name/coordinates/timezone,
 //     so these three columns are only ever written by the API.
 //
-// Each change has its `audit_logs` row (redacted payloads, the app's row mapping). Idempotent: rows
+// Each change has its `AuditLog` row (redacted payloads, the app's row mapping). Idempotent: rows
 // are found by their natural key and written once; audit rows are upserted on deterministic ids.
 // ---------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-import { CreateProductView } from "../product-editor";
+import { CreateProductView } from "../../../../../contexts/catalog/components/product-editor";
 
 /** `/catalog/products/new` — create a product (gated by CREATE PRODUCT in the route rules). */
 export default function CreateProductPage(): React.JSX.Element {

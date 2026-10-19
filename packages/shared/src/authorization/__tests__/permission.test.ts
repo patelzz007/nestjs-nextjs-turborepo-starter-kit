@@ -13,7 +13,7 @@ import {
 	withResourceCapability,
 } from "../permission";
 import { PolicyConditionsSchema } from "../policy-dsl.schema";
-import { OrganizationMembershipRoleSchema } from "../../schemas/domain/organization/organization";
+import { OrganizationMembershipRoleSchema } from "../../contexts/organizations/schemas/organization";
 
 describe("permission vocabulary", () => {
 	it("derives platform capability slugs from resource × action", () => {
@@ -23,7 +23,7 @@ describe("permission vocabulary", () => {
 	});
 
 	it("round-trips slugs and fails closed on unknown ones", () => {
-		expect(parsePermissionSlug(PERMISSION.API_KEY.UPDATE)).toEqual({ action: "UPDATE", resource: "API_KEY" });
+		expect(parsePermissionSlug(PERMISSION.REWARD.UPDATE)).toEqual({ action: "UPDATE", resource: "REWARD" });
 		expect(parsePermissionSlug("platform:user.delte")).toBeNull();
 		expect(parsePermissionSlug("merchant:rewards.read")).toBeNull();
 		expect(parsePermissionSlug("USER:DELETE")).toBeNull();

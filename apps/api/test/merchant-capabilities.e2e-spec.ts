@@ -4,11 +4,15 @@ import {
 	API_VERSION_PREFIX,
 	ApiErrorResponseSchema,
 	OrganizationContextResponseSchema,
-	OrganizationMemberInviteListResponseSchema,
-	OrganizationMemberRosterListResponseSchema,
+	ApiPaginatedMetaSchema,
+	OrganizationRewardMembershipResponseSchema,
+	OrganizationMemberInviteResponseSchema,
+	OrganizationMemberRosterResponseSchema,
 } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { z } from "zod";
+
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
 /**
@@ -46,19 +50,49 @@ describe("Merchant organization-management capabilities (e2e)", () => {
 		const response = await app.inject({ method: "GET", url: orgPath("/members/invites"), headers: merchantHeaders(owner) });
 
 		expect(response.statusCode).toBe(200);
-		expect(parseSuccessEnvelope(response, OrganizationMemberInviteListResponseSchema).success).toBe(true);
+		expect(parseSuccessEnvelope(response, z.array(OrganizationMemberInviteResponseSchema)).success).toBe(true);
 	});
 
 	it("lets the owner list the team roster with every member's name and email (users RLS is self-only, so the profiles come from an allowlisted system read)", async () => {
 		const response = await app.inject({ method: "GET", url: orgPath("/members"), headers: merchantHeaders(owner) });
 
 		expect(response.statusCode, response.body).toBe(200);
-		const roster = parseSuccessEnvelope(response, OrganizationMemberRosterListResponseSchema).data;
+		const roster = parseSuccessEnvelope(response, z.array(OrganizationMemberRosterResponseSchema)).data;
 		const emails: readonly string[] = roster.map((member) => member.email);
 		expect(emails).toContain("brew.owner@kl-rewards.demo");
 		// A co-member — the row the old tenant-scoped join could not see.
 		expect(emails).toContain("brew.cashier@kl-rewards.demo");
 		expect(roster.every((member) => member.fullName.length > 0)).toBe(true);
+	});
+
+	it("pages the roster in join order, with the totals in meta, and narrows it by role", async () => {
+		const first = await app.inject({ method: "GET", url: orgPath("/members?limit=1"), headers: merchantHeaders(owner) });
+		expect(first.statusCode, first.body).toBe(200);
+		const firstPage = parseSuccessEnvelope(first, z.array(OrganizationMemberRosterResponseSchema));
+		const meta = ApiPaginatedMetaSchema.parse(firstPage.meta);
+		expect(firstPage.data).toHaveLength(1);
+		expect(meta).toMatchObject({ limit: 1, page: 1, hasNext: true, hasPrevious: false });
+		expect(meta.total).toBeGreaterThanOrEqual(2);
+
+		const next = await app.inject({ method: "GET", url: orgPath(`/members?limit=1&cursor=${encodeURIComponent(meta.nextCursor ?? "")}`), headers: merchantHeaders(owner) });
+		const nextPage = parseSuccessEnvelope(next, z.array(OrganizationMemberRosterResponseSchema)).data;
+		expect(nextPage.map((member) => member.id)).not.toEqual(firstPage.data.map((member) => member.id));
+
+		const owners = await app.inject({ method: "GET", url: orgPath("/members?filter[role]=OWNER"), headers: merchantHeaders(owner) });
+		expect(parseSuccessEnvelope(owners, z.array(OrganizationMemberRosterResponseSchema)).data.every((member) => member.role === "OWNER")).toBe(true);
+	});
+
+	it("pages the owner's own memberships and finds one by the organization's name", async () => {
+		const page = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/orgs/memberships?limit=1`, headers: merchantHeaders(owner) });
+		expect(page.statusCode, page.body).toBe(200);
+		const { data, meta } = parseSuccessEnvelope(page, z.array(OrganizationRewardMembershipResponseSchema));
+		expect(data).toHaveLength(1);
+		expect(ApiPaginatedMetaSchema.parse(meta).total).toBeGreaterThanOrEqual(1);
+
+		const found = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/orgs/memberships?search=${ORGANIZATION_SEED_SLUGS.kl}`, headers: merchantHeaders(owner) });
+		expect(parseSuccessEnvelope(found, z.array(OrganizationRewardMembershipResponseSchema)).data.map((membership) => membership.organizationSlug)).toEqual([
+			ORGANIZATION_SEED_SLUGS.kl,
+		]);
 	});
 
 	it("lets the owner read business verification (merchant:manage_verification)", async () => {

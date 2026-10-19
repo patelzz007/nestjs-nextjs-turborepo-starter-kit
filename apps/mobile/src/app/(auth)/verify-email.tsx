@@ -11,8 +11,7 @@ import { AuthPage } from "../../components/auth-page";
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Button } from "@workspace/ui-native/components/button";
 import { TextLink } from "@workspace/ui-native/components/text-link";
-import { useRefreshSession } from "../../features/auth/use-refresh-session";
-import { useSignOut } from "../../features/auth/use-sign-out";
+import { useRefreshSession, useSignOut } from "../../contexts/identity";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 

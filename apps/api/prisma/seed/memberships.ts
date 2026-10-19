@@ -23,7 +23,7 @@ type SeedMembershipClient = Pick<Prisma.TransactionClient, "organizationMembersh
 /**
  * Converge the ONE live membership of (organization, user) onto `input.id`.
  *
- * `organization_memberships` is unique on (organization_id, user_id) only for
+ * `OrganizationMembership` is unique on (organization_id, user_id) only for
  * LIVE rows (a partial index — soft-deleted rows are ignored), so a plain
  * `upsert` on that key cannot be expressed (Postgres needs the index
  * predicate for ON CONFLICT). Mirroring the app's own write path, the seed

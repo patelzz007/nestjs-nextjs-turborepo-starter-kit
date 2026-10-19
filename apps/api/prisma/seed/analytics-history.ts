@@ -6,7 +6,7 @@
 // method, category, city and new vs returning customers, so this adds ~12
 // months of history through the SAME invariants the API enforces at checkout:
 //
-// - every bill (`reward_sales`) redeems one claim (`reward_redemptions`, same
+// - every bill (`RewardSale`) redeems one claim (`RewardRedemption`, same
 //   store / terminal / store-scoped POS key, `redeemed_at = paid_at`) and has
 //   its `merchant.checkout` audit row;
 // - a claim is redeemed inside its claim window, at a store its reward is
@@ -24,8 +24,8 @@ import { DAY_MS, DEFAULT_SALE_CURRENCY } from "@workspace/shared";
 import type { Prisma, RewardClaimStatus, RewardRedemptionMethod, RewardStatus, RewardType } from "@prisma/client";
 import { linkRewardImages, type RewardImageSetSlug } from "./reward-images";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
-import { API_KEY_PREFIX_LENGTH } from "../../src/modules/rewards/services/merchant-api-key.service";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
+import { API_KEY_PREFIX_LENGTH } from "../../src/contexts/pos/public-api";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";

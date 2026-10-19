@@ -1,4 +1,4 @@
-import { CorrelationIdSchema } from "../../src/common/context/correlation-id";
+import { CorrelationIdSchema } from "../../src/platform/infrastructure/context/correlation-id";
 import { deterministicUuid } from "./deterministic-uuid";
 
 const LIFECYCLE_CORRELATION_NAMESPACE = "organization-lifecycle-correlation";

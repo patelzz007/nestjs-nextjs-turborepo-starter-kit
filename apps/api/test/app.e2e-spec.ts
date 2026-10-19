@@ -18,7 +18,7 @@ import { z } from "zod";
 // test-file imports, so the AppModule graph never sees unset config). This
 // spec boots the REAL AppModule and needs a reachable Postgres — see
 // `setup-env.ts` for the DATABASE_URL override.
-import { HealthService } from "../src/modules/health/health.service";
+import { HealthService } from "../src/platform/presentation/http/health/health.service";
 import { createE2eApp, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
 // ── Contract-vs-routes drift guard ───────────────────────────────────────

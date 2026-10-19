@@ -2,7 +2,7 @@ import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AuthorizationKernelService } from "../src/modules/authorization/kernel/authorization-kernel.service";
+import { AuthorizationKernelService } from "../src/contexts/authorization/infrastructure/kernel/authorization-kernel.service";
 import { runWithSystemRlsContext } from "../src/prisma/rls-context";
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
 import { createE2eApp } from "./e2e-helpers";
@@ -40,23 +40,23 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 		app = await createE2eApp();
 		kernel = app.get(AuthorizationKernelService);
 		pool = new Pool({ connectionString: DATABASE_URL });
-		userId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "user@example.com");
-		managerId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "manager@example.com");
-		mlkOwnerId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "jonker.owner@melaka-rewards.demo");
-		readReportPermissionId = await idFor(pool, `SELECT id FROM public.permissions WHERE action = 'READ' AND resource = 'REPORT' AND scope = $1`, "GLOBAL");
+		userId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "user@example.com");
+		managerId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "manager@example.com");
+		mlkOwnerId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "jonker.owner@melaka-rewards.demo");
+		readReportPermissionId = await idFor(pool, `SELECT id FROM public."Permission" WHERE action = 'READ' AND resource = 'REPORT' AND scope = $1`, "GLOBAL");
 	});
 
 	afterAll(async () => {
-		await pool.query(`DELETE FROM public.user_permissions WHERE "userId" = $1 AND "permissionId" = $2`, [managerId, readReportPermissionId]);
+		await pool.query(`DELETE FROM public."UserPermission" WHERE "userId" = $1 AND "permissionId" = $2`, [managerId, readReportPermissionId]);
 		if (createdAclIds.length > 0) {
-			await pool.query(`DELETE FROM public.resource_acls WHERE id = ANY($1)`, [createdAclIds]);
+			await pool.query(`DELETE FROM public."ResourceAcl" WHERE id = ANY($1)`, [createdAclIds]);
 		}
 		await pool.end();
 		await app.close();
 	});
 
 	it("allows the seeded admin dashboard permission for Admin-role users", async () => {
-		const adminId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "admin@example.com");
+		const adminId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "admin@example.com");
 
 		expect(await asSystem(() => kernel.can({ subject: { userId: adminId }, action: "READ", resource: "ADMIN_DASHBOARD" }))).toBe("ALLOW");
 	});
@@ -74,8 +74,8 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 		expect(await asSystem(() => kernel.can({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }))).toBe("ALLOW");
 
 		await pool.query(
-			`INSERT INTO public.user_permissions (id, "userId", "permissionId", effect) VALUES (gen_random_uuid(), $1, $2, 'DENY')
-       ON CONFLICT ("userId", "permissionId") DO UPDATE SET is_deleted = false, deleted_at = NULL, effect = 'DENY'`,
+			`INSERT INTO public."UserPermission" (id, "userId", "permissionId", effect) VALUES (uuidv7(), $1, $2, 'DENY')
+       ON CONFLICT ("userId", "permissionId") DO UPDATE SET "isDeleted" = false, "deletedAt" = NULL, effect = 'DENY'`,
 			[managerId, readReportPermissionId],
 		);
 
@@ -86,8 +86,8 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 
 	it("applies explicit ACL DENY for one resource without affecting others", async () => {
 		const created = await pool.query<{ id: string }>(
-			`INSERT INTO public.resource_acls (id, subject_type, subject_id, action, resource_type, resource_id, effect)
-       VALUES (gen_random_uuid(), 'USER', $1, 'UPDATE', 'USER', $1, 'DENY') RETURNING id`,
+			`INSERT INTO public."ResourceAcl" (id, "subjectType", "subjectId", action, "resourceType", "resourceId", effect)
+       VALUES (uuidv7(), 'USER', $1, 'UPDATE', 'USER', $1, 'DENY') RETURNING id`,
 			[userId],
 		);
 		const aclId = created.rows.at(0)?.id;

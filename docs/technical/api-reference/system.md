@@ -3,7 +3,7 @@ title: "API reference — System: health and version"
 description: "Liveness, readiness and deep health probes and the API version manifest."
 order: 14
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -24,7 +24,7 @@ Welcome message
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `HealthController_getHello` · [source](../../../apps/api/src/modules/health/health.controller.ts)
+- Operation id `HealthController_getHello` · [source](../../../apps/api/src/platform/presentation/http/health/health.controller.ts)
 
 **Response 200 OK** (`application/json`) — Welcome message
 
@@ -50,10 +50,10 @@ Response `200 OK` (application/json):
 ```json
 {
   "success": true,
-  "data": "Hello from the Freebuff API!",
+  "data": "Hello from the API!",
   "meta": {
-    "correlationId": "rGfVPPOGljIslcomfSM6G",
-    "timestamp": 1791193300023
+    "correlationId": "2gXR8zAtD9tCnHj9GRnjb",
+    "timestamp": 1792435574038
   }
 }
 ```
@@ -67,7 +67,7 @@ Health check (includes DB status) — deprecated alias, prefer /health/live and 
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `HealthController_getHealth` · [source](../../../apps/api/src/modules/health/health.controller.ts)
+- Operation id `HealthController_getHealth` · [source](../../../apps/api/src/platform/presentation/http/health/health.controller.ts)
 
 **Response 200 OK** (`application/json`) — Current service health status
 
@@ -98,11 +98,11 @@ Response `200 OK` (application/json):
   "data": {
     "status": "ok",
     "db": "connected",
-    "timestamp": 1791193300035
+    "timestamp": 1792435574064
   },
   "meta": {
-    "correlationId": "VBB9AmL53t1jdlN5Kys4g",
-    "timestamp": 1791193300035
+    "correlationId": "1u3F8zfGVM7MXDNiaw-z1",
+    "timestamp": 1792435574064
   }
 }
 ```
@@ -113,7 +113,7 @@ Deep health check (DB + filesystem + external services)
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `HealthController_getDeepHealth` · [source](../../../apps/api/src/modules/health/health.controller.ts)
+- Operation id `HealthController_getDeepHealth` · [source](../../../apps/api/src/platform/presentation/http/health/health.controller.ts)
 
 **Response 200 OK** (`application/json`) — Detailed health status with per-service probes
 
@@ -150,7 +150,7 @@ Response `200 OK` (application/json):
   "data": {
     "status": "ok",
     "db": "connected",
-    "timestamp": 1791193300066,
+    "timestamp": 1792435574108,
     "filesystem": "ok",
     "checks": {},
     "modules": [
@@ -163,19 +163,19 @@ Response `200 OK` (application/json):
         }
       },
       {
-        "name": "queue",
+        "name": "maintenance-schedulers",
         "healthy": true,
         "details": {
-          "backend": "bullmq",
-          "redis": "configured",
-          "prefix": "docs-capture"
+          "state": "registered",
+          "schedulers": 8,
+          "failed": ""
         }
       }
     ]
   },
   "meta": {
-    "correlationId": "LzG0AoTTZIk99LUbP6Mrw",
-    "timestamp": 1791193300066
+    "correlationId": "G-OCRoGnV7uj7fFTyQ84z",
+    "timestamp": 1792435574109
   }
 }
 ```
@@ -186,7 +186,7 @@ Liveness probe — process is up (never touches the database)
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `HealthController_getLiveness` · [source](../../../apps/api/src/modules/health/health.controller.ts)
+- Operation id `HealthController_getLiveness` · [source](../../../apps/api/src/platform/presentation/http/health/health.controller.ts)
 
 **Response 200 OK** (`application/json`) — The process is alive
 
@@ -216,12 +216,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "status": "ok",
-    "uptimeSeconds": 126.54879925,
-    "timestamp": 1791193300041
+    "uptimeSeconds": 4.736402458,
+    "timestamp": 1792435574075
   },
   "meta": {
-    "correlationId": "UCQVMt5uajM3l-Nuxjumk",
-    "timestamp": 1791193300041
+    "correlationId": "6Ptc--LWUQbFP0FWxLiEK",
+    "timestamp": 1792435574075
   }
 }
 ```
@@ -232,7 +232,7 @@ Readiness probe — startup finished, database and critical dependencies reachab
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `HealthController_getReadiness` · [source](../../../apps/api/src/modules/health/health.controller.ts)
+- Operation id `HealthController_getReadiness` · [source](../../../apps/api/src/platform/presentation/http/health/health.controller.ts)
 
 **Response 200 OK** (`application/json`) — The instance can serve traffic
 
@@ -279,11 +279,11 @@ Response `200 OK` (application/json):
         "critical": true
       }
     ],
-    "timestamp": 1791193300053
+    "timestamp": 1792435574092
   },
   "meta": {
-    "correlationId": "U7bdksNsMmiDrAJlAQA5H",
-    "timestamp": 1791193300053
+    "correlationId": "IGCtuk0q4e48cHD0OS4XF",
+    "timestamp": 1792435574092
   }
 }
 ```
@@ -296,7 +296,7 @@ API version manifest (current, supported, docs)
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `VersionController_getVersion` · [source](../../../apps/api/src/modules/health/version.controller.ts)
+- Operation id `VersionController_getVersion` · [source](../../../apps/api/src/platform/presentation/http/health/version.controller.ts)
 
 **Response 200 OK** (`application/json`) — Version negotiation manifest
 
@@ -307,7 +307,7 @@ API version manifest (current, supported, docs)
 | `docs` | string | yes |  |
 | `prefix` | string | yes |  |
 | `supported` | object[] | yes |  |
-| `supported[].sunsetAt` | string | no |  |
+| `supported[].sunsetAt` | integer | no | Epoch ms after which this version is removed |
 | `supported[].version` | "v1" \| "v2" | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)

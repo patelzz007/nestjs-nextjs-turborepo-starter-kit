@@ -13,7 +13,7 @@ import { Screen } from "../../components/screen";
 import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
 import { ErrorState } from "@workspace/ui-native/components/empty";
 import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
-import { backupCodesNotice } from "../../features/two-factor/backup-codes-status";
+import { backupCodesNotice } from "../../contexts/identity";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 

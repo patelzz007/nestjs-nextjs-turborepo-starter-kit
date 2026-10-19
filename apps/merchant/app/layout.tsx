@@ -2,7 +2,7 @@ import "@workspace/ui/globals.css";
 import "./merchant-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
-import { serverRenderedSessionOf } from "@workspace/client/lib/auth/session/load-server-session";
+import { serverRenderedSessionOf } from "@workspace/client/lib/contexts/identity/session/load-server-session";
 import { loadMerchantServerSession } from "@/lib/merchant-server-api";
 import { MerchantRootProvider } from "@/lib/session/root-provider";
 import { cn } from "@workspace/ui/lib/core/utils";

@@ -1,0 +1,28 @@
+import { Inject } from "@nestjs/common";
+import { QueryHandler, type IQueryHandler } from "@nestjs/cqrs";
+import { MERCHANT_CAPABILITY, type PaginatedServiceResult, type RewardResponse } from "@workspace/shared";
+
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
+import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import type { RewardReadPort } from "../../ports/reward-read.port";
+import { REWARD_READS } from "../../ports/rewards.tokens";
+import { ListOrganizationRewardsQuery } from "./list-organization-rewards.query";
+
+/** One page of the organization's rewards available at the caller's stores (one store when `locationId` narrows it). */
+@QueryHandler(ListOrganizationRewardsQuery)
+export class ListOrganizationRewardsHandler implements IQueryHandler<ListOrganizationRewardsQuery, PaginatedServiceResult<RewardResponse>> {
+	public constructor(
+		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
+		@Inject(REWARD_READS) private readonly reads: RewardReadPort,
+	) {}
+
+	public async execute(query: ListOrganizationRewardsQuery): Promise<PaginatedServiceResult<RewardResponse>> {
+		const { actor, input } = query;
+		const grant = await this.merchantAccess.assertCapability(actor, {
+			organizationId: input.organizationId,
+			capability: MERCHANT_CAPABILITY.viewRewards,
+			locationId: input.locationId ?? null,
+		});
+		return this.reads.listOrganizationRewards(actor, grant, input);
+	}
+}

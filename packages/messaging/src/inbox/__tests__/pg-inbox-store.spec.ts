@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONSUMER_APPLICATION_NAME, createConsumerPool } from "../pg-inbox-store";
+import { escapeLibpqOptionValue, CONSUMER_ACTOR, CONSUMER_APPLICATION_NAME, createConsumerPool } from "../pg-inbox-store";
 
 describe("createConsumerPool", () => {
 	const pools: { end(): Promise<void> }[] = [];
@@ -26,5 +26,27 @@ describe("createConsumerPool", () => {
 			statement_timeout: 9_000,
 			application_name: CONSUMER_APPLICATION_NAME,
 		});
+	});
+
+	it("names the consumer as the actor of its writes, for the row-audit columns", () => {
+		const pool = createConsumerPool("postgresql://analytics_consumer_app:pw@localhost:5432/db", {
+			max: 1,
+			connectionTimeoutMs: 1_000,
+			idleTimeoutMs: 1_000,
+			statementTimeoutMs: 1_000,
+		});
+		pools.push(pool);
+
+		expect(pool.options).toMatchObject({ options: `-c app.actor=${CONSUMER_ACTOR}` });
+	});
+});
+
+describe("escapeLibpqOptionValue", () => {
+	it("leaves a plain value alone", () => {
+		expect(escapeLibpqOptionValue("system:analytics-consumer")).toBe("system:analytics-consumer");
+	});
+
+	it("escapes whitespace and backslashes, which would otherwise split the options string", () => {
+		expect(escapeLibpqOptionValue("system: analytics\\consumer")).toBe("system:\\ analytics\\\\consumer");
 	});
 });

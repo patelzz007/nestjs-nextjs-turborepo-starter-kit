@@ -19,7 +19,7 @@ the reference product.
 | Operating the platform — platform admin, merchant owner or staff, support | **[User guide](./user-guide/README.md)** — every task in order, with flowcharts |
 | An engineer building on the kit | **[Technical documentation](./technical/README.md)** — setup, architecture, dos and don'ts, configuration, security, storage, email, operations |
 | Integrating with the API (frontend, POS, partner) | **[API reference](./technical/api-reference/README.md)** — every endpoint with a real request and response from the seed data |
-| Asking "why is it built this way?" | **[Architecture decision records](./adr/README.md)** |
+| Asking "why is it built this way?" | **[Architecture decision records](./adr/README.md)** and the **[context map](./architecture/context-map.md)** |
 | An AI coding agent | [`AGENTS.md`](../AGENTS.md) and the rulebook in `rules/` |
 
 ## Layout of this folder

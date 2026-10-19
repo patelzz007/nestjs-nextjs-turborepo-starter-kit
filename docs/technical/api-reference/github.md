@@ -3,7 +3,7 @@ title: "API reference — GitHub contributions"
 description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with."
 order: 11
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -27,7 +27,7 @@ List the GitHub repositories the API may read
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubController_listRepositories` · [source](../../../apps/api/src/modules/github/github.controller.ts)
+- Operation id `GithubController_listRepositories` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github.controller.ts)
 
 **Response 200 OK** (`application/json`) — The repositories the API may read (empty when the integration is off)
 
@@ -52,8 +52,30 @@ List the GitHub repositories the API may read
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!WARNING]
-> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+**Example** — called as superadmin@example.com (admin panel).
+
+```http
+GET /api/v1/github/repositories
+X-Client-Type: admin
+Cookie: <session cookies from POST /api/v1/auth/login>
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "source": "off",
+    "account": null,
+    "repositories": []
+  },
+  "meta": {
+    "correlationId": "dTuW-sljFc97VgSndhoYh",
+    "timestamp": 1792435596900
+  }
+}
+```
 
 ### GET /api/v1/github/repositories/{owner}/{repository}
 
@@ -64,7 +86,7 @@ Summary of a configured repository: stars, forks, languages, commit count, last 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubController_getRepositorySummary` · [source](../../../apps/api/src/modules/github/github.controller.ts)
+- Operation id `GithubController_getRepositorySummary` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github.controller.ts)
 
 **Parameters**
 
@@ -108,8 +130,8 @@ Summary of a configured repository: stars, forks, languages, commit count, last 
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!WARNING]
-> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+> [!NOTE]
+> No captured sample: Reads GitHub with the API's GITHUB_TOKEN; the capture API has no token and no network access to GitHub. Shape: see the response schema (docs/technical/github-contributions.md).
 
 ### GET /api/v1/github/repositories/{owner}/{repository}/commits
 
@@ -120,7 +142,7 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubController_getCommitPage` · [source](../../../apps/api/src/modules/github/github.controller.ts)
+- Operation id `GithubController_getCommitPage` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github.controller.ts)
 
 **Parameters**
 
@@ -163,8 +185,8 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!WARNING]
-> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+> [!NOTE]
+> No captured sample: Reads GitHub with the API's GITHUB_TOKEN; the capture API has no token and no network access to GitHub. Shape: see the response schema (docs/technical/github-contributions.md).
 
 ### GET /api/v1/github/repositories/{owner}/{repository}/commits/{sha}
 
@@ -175,7 +197,7 @@ Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubController_getCommit` · [source](../../../apps/api/src/modules/github/github.controller.ts)
+- Operation id `GithubController_getCommit` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github.controller.ts)
 
 **Parameters**
 
@@ -243,7 +265,7 @@ From GitHub's contributor statistics (`basis.kind: "statistics"`, the whole defa
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GITHUB`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubController_getContributorStats` · [source](../../../apps/api/src/modules/github/github.controller.ts)
+- Operation id `GithubController_getContributorStats` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github.controller.ts)
 
 **Parameters**
 
@@ -282,5 +304,5 @@ From GitHub's contributor statistics (`basis.kind: "statistics"`, the whole defa
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!WARNING]
-> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+> [!NOTE]
+> No captured sample: Reads GitHub with the API's GITHUB_TOKEN; the capture API has no token and no network access to GitHub. Shape: see the response schema (docs/technical/github-contributions.md).

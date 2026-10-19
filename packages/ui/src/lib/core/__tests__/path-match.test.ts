@@ -15,8 +15,8 @@ describe("isPathWithin", () => {
 	});
 
 	it("treats a query or fragment as the end of the path", () => {
-		expect(isPathWithin("/rewardhub?tab=1", "/rewardhub")).toBe(true);
-		expect(isPathWithin("/rewardhub#top", "/rewardhub")).toBe(true);
+		expect(isPathWithin("/dashboard?tab=1", "/dashboard")).toBe(true);
+		expect(isPathWithin("/dashboard#top", "/dashboard")).toBe(true);
 	});
 
 	it("lets the root contain only itself", () => {

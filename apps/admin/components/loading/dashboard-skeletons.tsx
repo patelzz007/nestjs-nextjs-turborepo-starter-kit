@@ -7,7 +7,7 @@ import type * as React from "react";
 import { ANALYTICS_LOADING_LABELS, DASHBOARD_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { SectionBones } from "@/components/loading/section-skeleton";
 import { placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
-import { ADMIN_CUSTOMER_KPIS, ADMIN_REWARD_KPIS, ADMIN_SALES_KPIS } from "@/lib/analytics/admin-analytics";
+import { ADMIN_CUSTOMER_KPIS, ADMIN_REWARD_KPIS, ADMIN_SALES_KPIS } from "@/contexts/reporting/lib/admin-analytics";
 
 // ── Analytics ────────────────────────────────────────────────────────────────
 

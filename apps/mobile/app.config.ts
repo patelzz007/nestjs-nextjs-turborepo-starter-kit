@@ -121,7 +121,9 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			adaptiveIcon: { foregroundImage: APP_ICON, backgroundColor: launchColors.backgroundColor },
 		},
 		plugins: [
-			"expo-router",
+			// Async routes in development only: each screen bundles on first visit, so the dev server starts
+			// faster. Native production builds keep a single bundle (`production` is web-only in SDK 57).
+			["expo-router", { asyncRoutes: "development" }],
 			"expo-secure-store",
 			["expo-local-authentication", { faceIDPermission: FACE_ID_PERMISSION }],
 			["expo-image-picker", { photosPermission: PHOTOS_PERMISSION, cameraPermission: CAMERA_PERMISSION, microphonePermission: false }],

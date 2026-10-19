@@ -32,14 +32,14 @@ describe("POST /auth/2fa/setup (e2e)", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
-		const user = await pool.query<{ id: string }>(`SELECT id FROM public.users WHERE email = $1`, [USER_EMAIL]);
+		const user = await pool.query<{ id: string }>(`SELECT id FROM public."User" WHERE email = $1`, [USER_EMAIL]);
 		const id = user.rows.at(0)?.id;
 		if (id === undefined) {
 			throw new Error(`Seed data missing for ${USER_EMAIL} — run pnpm db:seed`);
 		}
 		userId = id;
 		// A full session for a member who has not enrolled yet.
-		await pool.query(`UPDATE public.users SET email_verified_at = $1, mfa_enrollment_deadline = $2, two_factor_enabled = false WHERE id = $3`, [
+		await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1, "mfaEnrollmentDeadline" = $2, "twoFactorEnabled" = false WHERE id = $3`, [
 			Date.now(),
 			Date.now() + 86_400_000,
 			userId,
@@ -48,7 +48,7 @@ describe("POST /auth/2fa/setup (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query(`DELETE FROM public.two_factor_pending_setups WHERE user_id = $1`, [userId]);
+		await pool.query(`DELETE FROM public."TwoFactorPendingSetup" WHERE "userId" = $1`, [userId]);
 		await pool.end();
 		await app.close();
 	});
@@ -60,10 +60,10 @@ describe("POST /auth/2fa/setup (e2e)", () => {
 
 		expect(response.statusCode, response.body).toBe(HTTP_CREATED);
 		expect(parseSuccessEnvelope(response, TwoFactorSetupResponseSchema).data.backupCodes).toHaveLength(BACKUP_CODE_COUNT);
-		const pending = await pool.query<{ count: string }>(`SELECT count(*)::text AS count FROM public.two_factor_pending_setups WHERE user_id = $1`, [userId]);
+		const pending = await pool.query<{ count: string }>(`SELECT count(*)::text AS count FROM public."TwoFactorPendingSetup" WHERE "userId" = $1`, [userId]);
 		expect(pending.rows.at(0)?.count).toBe("1");
 		const audits = await pool.query<{ count: string }>(
-			`SELECT count(*)::text AS count FROM public.authorization_audits WHERE actor_id = $1 AND action = 'UPDATE' AND resource = 'USER' AND "createdAt" >= $2`,
+			`SELECT count(*)::text AS count FROM public."AuthorizationAudit" WHERE "actorId" = $1 AND action = 'UPDATE' AND resource = 'USER' AND "createdAt" >= $2`,
 			[userId, startedAt],
 		);
 		expect(Number(audits.rows.at(0)?.count)).toBeGreaterThanOrEqual(1);

@@ -1,12 +1,19 @@
 "use client";
 
-import { useActiveOrganizationLogo, useMerchantLocation, useTenantContextCommands, type TenantContextCommands } from "@/features/tenant-context/facade";
-import { resolveLocationShortLabel } from "@/lib/org/location-display";
-import { ORGANIZATION_ROLE_LABELS } from "@/lib/org/role-labels";
-import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import {
+	useActiveMembership,
+	useActiveOrganizationLogo,
+	useActiveOrganizationName,
+	useMerchantLocation,
+	useTenantContextCommands,
+	type TenantContextCommands,
+} from "@/features/tenant-context/facade";
+import { resolveLocationShortLabel } from "@/contexts/organizations/lib/org/location-display";
+import { ORGANIZATION_ROLE_LABELS } from "@/contexts/organizations/lib/org/role-labels";
+import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
-import { useAuthorization } from "@workspace/client/lib/auth/can";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import type { OrganizationMembershipRole, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { IconTile } from "@workspace/ui/components/icon-tile";
@@ -16,7 +23,7 @@ import {
 	type PanelSidebarSwitcherGroup,
 	type PanelSidebarSwitcherOption,
 } from "@workspace/ui/components/panel-sidebar-switcher";
-import { Layers, MapPin, MapPinPlus } from "lucide-react";
+import { Layers, List, MapPin, MapPinPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -84,29 +91,55 @@ export function locationSwitcherSubtitle(activeLocation: SwitcherLocation | unde
 }
 
 export interface MerchantContextSwitcherProps {
+	/** The first page of the member's stores. */
 	readonly memberships: readonly OrganizationRewardMembershipResponse[];
+	/** Whether the member has more stores than that page: the menu then offers "All stores" (the stores page). */
+	readonly hasMoreStores: boolean;
 	readonly organizationSlug: string | undefined;
 	readonly onStoreChange: (slug: string) => void;
+}
+
+/** One store the switcher offers. */
+export interface SwitcherStore {
+	readonly slug: string;
+	readonly displayName: string;
+	readonly role: OrganizationMembershipRole;
+}
+
+/**
+ * The stores the switcher lists: the first page of memberships, with the ACTIVE store first when that
+ * page does not hold it (a store opened from "All stores" or a link), so the selected value always has
+ * its option.
+ */
+export function storeSwitcherStores(memberships: readonly OrganizationRewardMembershipResponse[], active: SwitcherStore | undefined): readonly SwitcherStore[] {
+	const listed: readonly SwitcherStore[] = memberships.map((membership): SwitcherStore => ({
+		slug: membership.organizationSlug,
+		displayName: membership.displayName,
+		role: membership.role,
+	}));
+	return active === undefined || listed.some((store) => store.slug === active.slug) ? listed : [active, ...listed];
 }
 
 /**
  * The merchant sidebar's header (app shell 3): the active store and the store
  * location the portal is scoped to, opening a menu to change either — the
  * locations of this store (and "All locations" for members with org-wide
- * access), then the member's other stores. Choosing a location goes through
- * the tenant-context commands; choosing a store navigates to it. Members who
- * may see locations also get "Manage locations".
+ * access), then the member's stores (the first page; "All stores" opens the
+ * rest). Choosing a location goes through the tenant-context commands;
+ * choosing a store navigates to it. Members who may see locations also get
+ * "Manage locations".
  */
-export function MerchantContextSwitcher({ memberships, organizationSlug, onStoreChange }: MerchantContextSwitcherProps): React.JSX.Element {
+export function MerchantContextSwitcher({ memberships, hasMoreStores, organizationSlug, onStoreChange }: MerchantContextSwitcherProps): React.JSX.Element {
 	const { locationId, activeLocation, accessibleLocations, canSelectAllLocations, isLoading } = useMerchantLocation();
 	const commands = useTenantContextCommands();
 	const logo = useActiveOrganizationLogo();
 	const { can } = useAuthorization();
 	const router = useRouter();
 	const locationsPath = useOrganizationPath(ORG_ROUTES.settings.locations);
-
-	const activeMembership = memberships.find((membership: OrganizationRewardMembershipResponse): boolean => membership.organizationSlug === organizationSlug);
-	const storeName = activeMembership?.displayName ?? "Select a store";
+	const storesPath = useOrganizationPath(ORG_ROUTES.stores);
+	// The active store and the member's role in it come from the organization context, not from the list page.
+	const { membership: activeMembership } = useActiveMembership();
+	const storeName = useActiveOrganizationName() ?? "Select a store";
 
 	const handleLocationChange = React.useCallback(
 		(value: string): void => {
@@ -118,6 +151,16 @@ export function MerchantContextSwitcher({ memberships, organizationSlug, onStore
 	const handleManageLocations = React.useCallback((): void => {
 		router.push(locationsPath);
 	}, [locationsPath, router]);
+
+	const handleAllStores = React.useCallback((): void => {
+		router.push(storesPath);
+	}, [router, storesPath]);
+
+	const activeStore = React.useMemo(
+		(): SwitcherStore | undefined =>
+			organizationSlug === undefined || activeMembership === undefined ? undefined : { slug: organizationSlug, displayName: storeName, role: activeMembership.role },
+		[activeMembership, organizationSlug, storeName],
+	);
 
 	const groups = React.useMemo((): readonly PanelSidebarSwitcherGroup[] => {
 		const locationGroup: PanelSidebarSwitcherGroup = {
@@ -132,26 +175,28 @@ export function MerchantContextSwitcher({ memberships, organizationSlug, onStore
 			label: "Stores",
 			// Listed only when there is another store to switch to.
 			options:
-				memberships.length > 1
-					? memberships.map((membership: OrganizationRewardMembershipResponse): PanelSidebarSwitcherOption => ({
-							value: membership.organizationSlug,
-							label: membership.displayName,
-							description: ORGANIZATION_ROLE_LABELS[membership.role],
-							visual: <EntityAvatar name={membership.displayName} size="sm" className="size-8" />,
+				memberships.length > 1 || hasMoreStores
+					? storeSwitcherStores(memberships, activeStore).map((store: SwitcherStore): PanelSidebarSwitcherOption => ({
+							value: store.slug,
+							label: store.displayName,
+							description: ORGANIZATION_ROLE_LABELS[store.role],
+							visual: <EntityAvatar name={store.displayName} size="sm" className="size-8" />,
 						}))
 					: [],
 			value: organizationSlug ?? "",
 			onValueChange: onStoreChange,
 		};
 		return [locationGroup, storeGroup];
-	}, [accessibleLocations, canSelectAllLocations, handleLocationChange, isLoading, locationId, memberships, onStoreChange, organizationSlug]);
+	}, [accessibleLocations, activeStore, canSelectAllLocations, handleLocationChange, hasMoreStores, isLoading, locationId, memberships, onStoreChange, organizationSlug]);
 
 	const actions = React.useMemo(
-		(): readonly PanelSidebarSwitcherAction[] =>
-			can(MERCHANT_CAPABILITY.viewLocations)
+		(): readonly PanelSidebarSwitcherAction[] => [
+			...(hasMoreStores ? [{ id: "all-stores", label: "All stores", icon: <List className="size-4" aria-hidden="true" />, onSelect: handleAllStores }] : []),
+			...(can(MERCHANT_CAPABILITY.viewLocations)
 				? [{ id: "manage-locations", label: "Manage locations", icon: <MapPinPlus className="size-4" aria-hidden="true" />, onSelect: handleManageLocations }]
-				: [],
-		[can, handleManageLocations],
+				: []),
+		],
+		[can, handleAllStores, handleManageLocations, hasMoreStores],
 	);
 
 	const subtitle =

@@ -523,6 +523,12 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 		down: "Down",
 		flat: "No change",
 	},
+	listPager: {
+		ariaLabel: "Pages",
+		previous: "Previous",
+		next: "Next",
+		position: (page: number, totalPages: number | null): string => (totalPages === null ? `Page ${String(page)}` : `Page ${String(page)} of ${String(totalPages)}`),
+	},
 	lockoutCountdown: {
 		lockedPrefix: "Too many attempts — try again in",
 		lockedExpired: "You can try again now.",

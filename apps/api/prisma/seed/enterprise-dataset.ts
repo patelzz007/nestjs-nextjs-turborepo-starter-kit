@@ -147,7 +147,6 @@ export interface EnterpriseOrganizationRow {
 	readonly addressText: string;
 	readonly contactEmail: string;
 	readonly contactPhone: string;
-	readonly entitlementId: string;
 	readonly createdAt: bigint;
 }
 
@@ -256,7 +255,6 @@ function buildOrganization(): EnterpriseOrganizationRow {
 		addressText: "1 Jalan Ampang, 50450 Kuala Lumpur",
 		contactEmail: ENTERPRISE_OWNER_EMAIL,
 		contactPhone: "+60320001000",
-		entitlementId: enterpriseId("entitlement"),
 		createdAt: BigInt(ENTERPRISE_SEED_EPOCH_MS - MAX_LOCATION_AGE_DAYS * DAY_MS),
 	};
 }

@@ -8,37 +8,35 @@ A monorepo with three consuming apps (API, web, mobile) fails in a predictable w
 
 ```text
 apps/
-  api/
-  web/
-  mobile/
+  api/                  # NestJS. Business code in src/contexts/<name>/. Technical code in src/platform/. Prisma in apps/api/prisma
+  web/                  # Next.js customer app
+  admin/                # Next.js platform admin
+  merchant/             # Next.js merchant app
+  mobile/               # Expo
+  docs/                 # documentation site
+  analytics-consumer/   # Kafka consumer
 
 packages/
-  contracts/          # shared zod schemas — the runtime contract between api/web/mobile
-  config/               # shared eslint/tsconfig/tailwind config
-  database/              # Prisma schema, client, generated types, seed
+  shared/               # zod schemas and inferred types — the contract between api, web, admin, merchant and mobile
+  api-client/           # platform-neutral API client
+  client/               # web-only helpers on top of api-client
+  ui/                   # web components
+  ui-native/            # React Native components
+  tokens/               # design tokens
+  messaging/            # Kafka and queue contracts
   eslint-config/
   typescript-config/
-  ui/                       # shadcn-based component library — web only
-  tokens/                   # design token source (TypeScript) + generator → committed web/mobile CSS
-  api-client/               # platform-neutral API client (router, fetch + zod, transports) — web and mobile
-  client/                   # web-only wrappers on top of api-client (Next server helpers, cookies, auth UI)
-  shared/                    # framework-agnostic utilities usable by api/web/mobile
-  observability/              # shared logging/tracing helpers
-
-infrastructure/
-  docker/
-  kafka/
-  rabbitmq/
-  redis/
+  tooling/              # repo scripts
 
 docs/
-  architecture/
+  architecture/         # context map, migration notes
   adr/
-  runbooks/
-
-tools/
-  scripts/
+  technical/
 ```
+
+There is no `packages/contracts`, `packages/database` or `packages/observability`. Schemas live in `packages/shared`. The database lives in `apps/api/prisma`.
+
+A context imports another context only through `public-api.ts`. Domain and application do not import Prisma or another context's internals (ADR 058).
 
 The exact package list can evolve as the product grows, but ownership of each package must stay explicit at all times — every package documents its runtime, its dependencies, its public exports, and which consumers are forbidden from importing it (see `14-documentation.md` for the package README template).
 

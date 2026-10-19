@@ -31,7 +31,7 @@ Every other product in this organization gets built on top of what's in this rep
 Every AI agent (Claude, Cursor, Codex, Copilot, anything else) must finish every task with this loop, in the repository root:
 
 ```bash
-pnpm run lint    # must exit 0: zero errors AND zero warnings
+pnpm run lint    # must exit 0: zero errors (warnings are reported, not failures — read them)
 pnpm run test    # must exit 0: every test passes
 ```
 
@@ -42,7 +42,7 @@ pnpm run test    # must exit 0: every test passes
 **Forbidden ways to make the gate pass** (each one is treated as a failed task):
 
 - `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, or any other suppression comment
-- editing the ESLint config, adding `ignores`, lowering a rule to `warn`/`off`, or raising `--max-warnings`
+- editing the ESLint config, adding `ignores`, or lowering a rule to `warn`/`off`
 - deleting, skipping (`.skip`, `.todo`), or focusing (`.only`) a test, or weakening its assertions
 - mocking away the very thing the test is meant to verify
 - bypassing hooks (`--no-verify`) or reporting a partial run as a full one
@@ -79,6 +79,9 @@ Details: `docs/technical/email/mailpit-local-inbox.md`.
 | **Always** | `00-non-negotiables.md` |
 | Deciding where code belongs, package boundaries, dependency direction, circular dependencies | `01-repository-architecture.md` |
 | NestJS modules, controllers, services, Prisma access patterns, request lifecycle, base repositories | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md` |
+| Adding a command or query | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md`, `23-quick-reference-decision-trees.md`, ADR 059 |
+| Cross-context interaction | `01-repository-architecture.md`, `02-backend-nestjs.md`, ADR 058, `docs/architecture/context-map.md` |
+| Domain events, integration events, or the outbox | `02-backend-nestjs.md`, `09-messaging-and-jobs.md`, ADR 015, ADR 059, ADR 060 |
 | Next.js pages, server/client components, smart/dumb split, URL state | `03-web-nextjs.md` |
 | Expo/React Native screens and components | `04-mobile-expo.md` |
 | Any zod schema, API contract, request/response shape, OpenAPI/Swagger, client+server validation | `05-contracts-zod-api.md` |

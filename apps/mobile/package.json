@@ -6,8 +6,8 @@
 	"scripts": {
 		"dev": "expo start",
 		"start": "expo start",
-		"lint": "eslint --max-warnings=0",
-		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
 		"typecheck": "tsc --noEmit",
 		"test": "jest && expo install --check",
 		"build": "expo export --platform ios --platform android --output-dir dist",

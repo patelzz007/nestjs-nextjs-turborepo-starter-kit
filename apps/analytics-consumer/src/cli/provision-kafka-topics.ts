@@ -5,9 +5,9 @@
 import { provisionKafkaTopics } from "@workspace/messaging/kafka";
 import { EnvValidationError } from "@workspace/shared";
 
-import { loadTopicProvisioningEnv } from "../env";
-import { createKafkaClient, platformTopicSpecs } from "../kafka";
-import { createConsoleJsonLogger } from "../logger";
+import { loadTopicProvisioningEnv } from "../infrastructure/env";
+import { createKafkaClient, platformTopicSpecs } from "../infrastructure/kafka";
+import { createConsoleJsonLogger } from "../infrastructure/logger";
 
 const SERVICE_NAME = "analytics-consumer.kafka-provision-topics";
 const FAILURE_EXIT_CODE = 1;

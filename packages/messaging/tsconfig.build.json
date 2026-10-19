@@ -7,6 +7,12 @@
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
+		// Incremental, with the build info inside dist/: the dev watcher (`tsc --watch` + `tsc-alias --watch`)
+		// starts on an up-to-date build and emits nothing, so it never replaces the prebuilt, extension-
+		// resolved dist with raw extensionless output that a starting API would fail to import. Deleting
+		// dist deletes the info too, so the next build always emits.
+		"incremental": true,
+		"tsBuildInfoFile": "./dist/.tsbuildinfo",
 		"lib": ["es2022"]
 	},
 	"include": ["src"],

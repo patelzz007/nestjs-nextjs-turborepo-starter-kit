@@ -1,11 +1,12 @@
-import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
+import { LoginForm } from "@workspace/client/lib/contexts/identity/forms/login-form";
 import { EmailAddressSchema, isStringPrimitive } from "@workspace/shared";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import * as React from "react";
 
-import { loadMerchantDemoAccounts } from "@/lib/auth/demo-accounts";
-import { isAllowedMerchantPostLoginRedirect } from "@/lib/auth/routes";
+import { loadMerchantDemoAccounts } from "@/contexts/identity/lib/demo-accounts";
+import { isAllowedMerchantPostLoginRedirect } from "@/contexts/identity/lib/routes";
 import { ROUTES } from "@/lib/routes";
+import { BRAND_NAME } from "@workspace/tokens";
 
 export interface MerchantLoginPageProps {
 	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -37,7 +38,7 @@ export default async function MerchantLoginPage({ searchParams }: MerchantLoginP
 			features={["Draft and publish rewards", "Track redemptions in real time", "Manage POS API keys securely"]}
 			title="Merchant login"
 			subtitle="Sign in with your store account"
-			copyright="Reward Hub">
+			copyright={BRAND_NAME}>
 			<LoginForm
 				mode="merchant"
 				{...(demoAccounts.length > 0 ? { demoAccounts } : {})}

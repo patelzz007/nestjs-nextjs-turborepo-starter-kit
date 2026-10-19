@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "@/lib/url-state/categories";
+import { CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "@/contexts/catalog/url-state/categories";
 
-import SampleCategoryView from "./sample-category-view";
+import SampleCategoryView from "../../../../contexts/catalog/components/sample-category-view";
 
 export const dynamic = "force-dynamic";
 

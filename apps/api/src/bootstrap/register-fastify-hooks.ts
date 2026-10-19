@@ -1,13 +1,13 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiVersionPrefix, type ApiVersion, StringValueSchema } from "@workspace/shared";
+import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiVersionPrefix, type ApiVersion, StringValueSchema, sunsetHeaderValue } from "@workspace/shared";
 import { z } from "zod";
 
-import { HTTP_SERVER_ERROR_MIN_STATUS } from "../common/errors/error-codes";
-import { redactUrl } from "../common/logging/redaction";
-import { readFirstHeader, readReplyHeader } from "../common/utils/http-headers";
-import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../common/utils/serialize-pre-serialization-value";
-import { LogService } from "../modules/logs/logs.service";
-import { VersionController } from "../modules/health/version.controller";
+import { HTTP_SERVER_ERROR_MIN_STATUS } from "../platform/application/errors/http-status";
+import { redactUrl } from "../platform/infrastructure/nest-logging/redaction";
+import { readFirstHeader, readReplyHeader } from "../platform/infrastructure/utils/http-headers";
+import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../platform/infrastructure/utils/serialize-pre-serialization-value";
+import { LogService } from "../platform/infrastructure/logging/logs.service";
+import { VersionController } from "../platform/presentation/http/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
 
 /** CSP nonce pair stamped by `@fastify/helmet` on HTML responses. */
@@ -69,14 +69,14 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 	});
 
 	server.addHook("onSend", (request, reply, payload, done): void => {
-		// `request.id` IS the correlation id (genReqId → common/context/correlation-id.ts).
+		// `request.id` IS the correlation id (genReqId → platform/infrastructure/context/correlation-id.ts).
 		reply.header("x-request-id", request.id);
 		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
 		if (servedVersion !== undefined) {
 			reply.header("x-api-version", servedVersion);
 			const deprecated = API_DEPRECATED_VERSIONS.find((entry) => entry.version === servedVersion);
 			if (deprecated !== undefined) {
-				reply.header("Sunset", deprecated.sunsetAt);
+				reply.header("Sunset", sunsetHeaderValue(deprecated.sunsetAt));
 			}
 		}
 		const contentType: string | undefined = readReplyHeader(reply.getHeader("content-type"));

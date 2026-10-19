@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { GithubAccountScreen } from "../../../features/github-pull-requests/github-account-screen";
+import { GithubAccountScreen } from "../../../contexts/integrations-github";
 
 export default function GithubAccountRoute(): React.JSX.Element {
 	return <GithubAccountScreen />;

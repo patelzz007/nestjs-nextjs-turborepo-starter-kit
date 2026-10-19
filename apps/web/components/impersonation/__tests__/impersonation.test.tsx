@@ -5,9 +5,9 @@ import { PERMISSION } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/web-authorization-provider";
+import { WebSessionTestProvider, type WebSessionState } from "@/contexts/identity/components/web-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
-import { IMPERSONATION_USERS_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { IMPERSONATE_USER_PANEL_LABELS } from "@workspace/client/lib/contexts/identity/impersonation/impersonate-user-panel-labels";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
 import { countSlots, expectSingleLoadingStatus } from "@/test-support/skeleton";
@@ -41,7 +41,7 @@ function mutationStub(): MutationStub {
 const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn<() => void>() }));
 vi.mock("next/navigation", () => ({ useRouter: (): { readonly refresh: typeof routerRefresh } => ({ refresh: routerRefresh }) }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): {
 		readonly user: AuthUserStub | null;
 		readonly api: {
@@ -99,7 +99,7 @@ describe("ImpersonateUserPanel", () => {
 		adminUsersUseQuery.mockReturnValue({ data: undefined, isLoading: true });
 		renderWithSession(signedInSession({ capabilities: IMPERSONATION_GRANTS }), <ImpersonateUserPanel />);
 
-		expectSingleLoadingStatus(IMPERSONATION_USERS_LOADING_LABELS.loading);
+		expectSingleLoadingStatus(IMPERSONATE_USER_PANEL_LABELS.loading);
 		expect(countSlots(document.body, "impersonation-user-row-skeleton")).toBeGreaterThan(0);
 		expect(screen.queryByText("No users found.")).toBeNull();
 	});

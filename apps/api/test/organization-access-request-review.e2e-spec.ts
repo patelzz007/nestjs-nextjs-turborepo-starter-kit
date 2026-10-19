@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, ApiErrorResponseSchema } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
-import { ORGANIZATION_MEMBERSHIP_ERROR_CODES } from "../src/modules/organization/services/organization-membership.service";
+import { ORGANIZATION_MEMBERSHIP_ERROR_CODES } from "../src/contexts/organizations/domain/errors/organizations.errors";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -20,7 +20,7 @@ type Row = Record<string, string | number | boolean | null>;
 /**
  * Reviewing an organization access request: the PENDING → APPROVED/REJECTED
  * compare-and-set runs as the `organization.access_request.review` system
- * operation, so `organization_access_requests` must carry an UPDATE policy for
+ * operation, so `OrganizationAccessRequest` must carry an UPDATE policy for
  * it — otherwise the claim matches no row and every review answers 409
  * "already reviewed" without approving anything.
  */
@@ -38,7 +38,7 @@ describe("Organization access request review (e2e)", () => {
 	}
 
 	async function userIdOf(email: string): Promise<string> {
-		const [row] = await query(`SELECT id FROM public.users WHERE email = $1`, [email]);
+		const [row] = await query(`SELECT id FROM public."User" WHERE email = $1`, [email]);
 		if (row === undefined) {
 			throw new Error(`Seed user ${email} is missing — run pnpm db:seed`);
 		}
@@ -48,12 +48,12 @@ describe("Organization access request review (e2e)", () => {
 	async function removeFixtures(): Promise<void> {
 		const userIds = `{${approvedRequesterId},${rejectedRequesterId}}`;
 		await query(
-			`DELETE FROM public.organization_membership_location_scopes WHERE membership_id IN (
-         SELECT id FROM public.organization_memberships WHERE organization_id = $1 AND user_id = ANY($2::text[]))`,
+			`DELETE FROM public."OrganizationMembershipLocationScope" WHERE "membershipId" IN (
+         SELECT id FROM public."OrganizationMembership" WHERE "organizationId" = $1 AND "userId" = ANY($2::text[]))`,
 			[ORG_ID, userIds],
 		);
-		await query(`DELETE FROM public.organization_memberships WHERE organization_id = $1 AND user_id = ANY($2::text[])`, [ORG_ID, userIds]);
-		await query(`DELETE FROM public.organization_access_requests WHERE organization_id = $1 AND user_id = ANY($2::text[])`, [ORG_ID, userIds]);
+		await query(`DELETE FROM public."OrganizationMembership" WHERE "organizationId" = $1 AND "userId" = ANY($2::text[])`, [ORG_ID, userIds]);
+		await query(`DELETE FROM public."OrganizationAccessRequest" WHERE "organizationId" = $1 AND "userId" = ANY($2::text[])`, [ORG_ID, userIds]);
 	}
 
 	function review(requestId: string, payload: object): Promise<InjectResponse> {
@@ -71,12 +71,12 @@ describe("Organization access request review (e2e)", () => {
 		approvedRequesterId = await userIdOf(APPROVED_REQUESTER_EMAIL);
 		rejectedRequesterId = await userIdOf(REJECTED_REQUESTER_EMAIL);
 		await removeFixtures();
-		await query(`INSERT INTO public.organization_access_requests (id, organization_id, user_id, status, message) VALUES ($1, $2, $3, 'PENDING', 'E2E: please add me')`, [
+		await query(`INSERT INTO public."OrganizationAccessRequest" (id, "organizationId", "userId", status, message) VALUES ($1, $2, $3, 'PENDING', 'E2E: please add me')`, [
 			approvedRequestId,
 			ORG_ID,
 			approvedRequesterId,
 		]);
-		await query(`INSERT INTO public.organization_access_requests (id, organization_id, user_id, status, message) VALUES ($1, $2, $3, 'PENDING', 'E2E: please add me')`, [
+		await query(`INSERT INTO public."OrganizationAccessRequest" (id, "organizationId", "userId", status, message) VALUES ($1, $2, $3, 'PENDING', 'E2E: please add me')`, [
 			rejectedRequestId,
 			ORG_ID,
 			rejectedRequesterId,
@@ -94,25 +94,25 @@ describe("Organization access request review (e2e)", () => {
 		const response = await review(approvedRequestId, { approve: true, role: "CASHIER", locationScopeType: "SELECTED", locationIds: [ORGANIZATION_SEED_IDS.klLocation] });
 
 		expect(response.statusCode, response.body).toBe(201);
-		const [request] = await query(`SELECT status, reviewed_at IS NOT NULL AS reviewed FROM public.organization_access_requests WHERE id = $1`, [approvedRequestId]);
+		const [request] = await query(`SELECT status, "reviewedAt" IS NOT NULL AS reviewed FROM public."OrganizationAccessRequest" WHERE id = $1`, [approvedRequestId]);
 		expect(request).toEqual({ status: "APPROVED", reviewed: true });
 		const memberships = await query(
-			`SELECT m.role, m.status, s.scope_type, s.location_id
-         FROM public.organization_memberships m
-         JOIN public.organization_membership_location_scopes s ON s.membership_id = m.id
-        WHERE m.organization_id = $1 AND m.user_id = $2 AND m.is_deleted = false`,
+			`SELECT m.role, m.status, s."scopeType", s."locationId"
+         FROM public."OrganizationMembership" m
+         JOIN public."OrganizationMembershipLocationScope" s ON s."membershipId" = m.id
+        WHERE m."organizationId" = $1 AND m."userId" = $2 AND m."isDeleted" = false`,
 			[ORG_ID, approvedRequesterId],
 		);
-		expect(memberships).toEqual([{ role: "CASHIER", status: "ACTIVE", scope_type: "SELECTED", location_id: ORGANIZATION_SEED_IDS.klLocation }]);
+		expect(memberships).toEqual([{ role: "CASHIER", status: "ACTIVE", scopeType: "SELECTED", locationId: ORGANIZATION_SEED_IDS.klLocation }]);
 	});
 
 	it("rejects a pending request without creating a membership", async () => {
 		const response = await review(rejectedRequestId, { approve: false });
 
 		expect(response.statusCode, response.body).toBe(201);
-		const [request] = await query(`SELECT status FROM public.organization_access_requests WHERE id = $1`, [rejectedRequestId]);
+		const [request] = await query(`SELECT status FROM public."OrganizationAccessRequest" WHERE id = $1`, [rejectedRequestId]);
 		expect(request).toEqual({ status: "REJECTED" });
-		expect(await query(`SELECT 1 FROM public.organization_memberships WHERE organization_id = $1 AND user_id = $2`, [ORG_ID, rejectedRequesterId])).toHaveLength(0);
+		expect(await query(`SELECT 1 FROM public."OrganizationMembership" WHERE "organizationId" = $1 AND "userId" = $2`, [ORG_ID, rejectedRequesterId])).toHaveLength(0);
 	});
 
 	it("answers 409 for a request that was already reviewed", async () => {

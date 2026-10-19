@@ -1,9 +1,9 @@
-import { RewardDetailView } from "@/components/rewardhub/detail/view";
-import { loadRewardDetail } from "@/lib/rewards/reward-detail-server";
+import { RewardDetailView } from "@/contexts/rewards/components/detail/view";
+import { loadRewardDetail } from "@/contexts/rewards/lib/reward-detail-server";
 import { ROUTE_PREFIXES } from "@/lib/routes";
 import * as React from "react";
 
-import { PublicRewardDetailFrame } from "./public-reward-detail-frame";
+import { PublicRewardDetailFrame } from "../../../contexts/rewards/components/detail/public-reward-detail-frame";
 
 export const dynamic = "force-dynamic";
 

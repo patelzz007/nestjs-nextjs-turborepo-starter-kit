@@ -2,7 +2,7 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { ThrownErrorSchema } from "@workspace/shared";
 
-import { currentRequestCorrelationId } from "../common/context/request-context";
+import { currentRequestCorrelationId } from "../platform/infrastructure/context/request-context";
 import { currentRlsContextOrUnscoped, rlsSessionVariables } from "./rls-context";
 
 /** `app.correlation_id` outside a request: SQL has no "absent" for a setting, and the readers treat `''` as NULL. */

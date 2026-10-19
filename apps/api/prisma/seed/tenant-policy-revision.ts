@@ -1,9 +1,9 @@
 import type { Prisma, User } from "@prisma/client";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
-import { POLICY_AUDIT_ACTIONS, POLICY_DRAFT_AUDIT_RESOURCE } from "../../src/modules/authorization-cedar/constants/policy-control-plane.constants";
-import { policyBaselineFingerprint } from "../../src/modules/authorization-cedar/services/policy-baseline";
-import { POLICY_TEMPLATE_IDS, PolicyTemplateCompiler } from "../../src/modules/authorization-cedar/services/policy-template.compiler";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
+import { POLICY_AUDIT_ACTIONS, POLICY_DRAFT_AUDIT_RESOURCE } from "../../src/contexts/authorization/application/ports/policy-control-plane.port";
+import { policyBaselineFingerprint } from "../../src/contexts/authorization/infrastructure/cedar/policy-baseline";
+import { POLICY_TEMPLATE_IDS, PolicyTemplateCompiler } from "../../src/contexts/authorization/infrastructure/cedar/policy-template.compiler";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -18,8 +18,8 @@ import { deterministicUuid } from "./deterministic-uuid";
 // and with the rows the service writes in one transaction:
 //
 //   draft (compiled Cedar + the SQL visibility predicate), a passing simulation against the current
-//   baseline, the conditional supersede of version 1 (`superseded_at`), version 2 (carrying the
-//   predicate), and the three `authorization_audits` rows with the request context (IP, user agent,
+//   baseline, the conditional supersede of version 1 (`supersededAt`), version 2 (carrying the
+//   predicate), and the three `AuthorizationAudit` rows with the request context (IP, user agent,
 //   correlation id) of the SuperAdmin's browser session.
 //
 // A published version REPLACES the slot's previous one, so the revision keeps every default role permit

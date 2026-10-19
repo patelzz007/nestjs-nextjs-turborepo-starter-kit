@@ -1,4 +1,4 @@
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
+import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 

@@ -1,8 +1,8 @@
 import type { OrganizationLocationStatus, OrganizationMembershipStatus, PilotCity, Role } from "@prisma/client";
 import { DAY_MS } from "@workspace/shared";
 
-import { findActivePolicyVersionInTx } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
-import { syncStoreForLocation } from "../../src/modules/organization/utils/store-sync.util";
+import { findActivePolicyVersionInTx } from "../../src/contexts/authorization/public-api";
+import { syncStoreForLocation } from "../../src/contexts/organizations/infrastructure/persistence/store-sync";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
@@ -30,11 +30,11 @@ export interface StoreClosureSeedSummary {
  * Seeds what the app writes when a merchant closes a store and when a team
  * manager removes a member from one — through the same invariants:
  *  - a CLOSED store (Jonker Street Kitchen — Taman Melaka Raya): the location and
- *    its mirrored store are soft-deleted with `deleted_by` + `closure_reason`, its
+ *    its mirrored store are soft-deleted with `deletedBy` + `closureReason`, its
  *    store memberships are soft-deleted, and the closure audit row is written;
  *  - a REMOVED store member (the Jonker cashier, removed from the Bukit Katil
  *    store; they keep Bukit Beruang): a soft-deleted store membership with
- *    `deleted_by`, plus the removal audit row. No scope row remains for it.
+ *    `deletedBy`, plus the removal audit row. No scope row remains for it.
  */
 export async function seedStoreClosureAndRemoval(storeManagerRole: Role, storeStaffRole: Role): Promise<StoreClosureSeedSummary> {
 	const organizationId = ORGANIZATION_SEED_IDS.mlkOrganization;

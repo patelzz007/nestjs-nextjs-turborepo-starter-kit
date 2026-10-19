@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
-import { mapWithConcurrency } from "../../src/common/utils/map-with-concurrency";
+import { mapWithConcurrency } from "../../src/platform/infrastructure/utils/map-with-concurrency";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";

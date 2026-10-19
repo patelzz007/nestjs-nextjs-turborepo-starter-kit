@@ -51,16 +51,16 @@ consistent across the three Next.js apps.
 
 ## Per-app structure
 
-- **web** — public: `/`, `/rewards/[rewardId]`, `/auth/*`. Signed-in shell under `/rewardhub`
-  (browse), `/rewardhub/rewards/[rewardId]`, `/rewardhub/wallet[/[claimId]]`,
-  `/rewardhub/activity`, `/rewardhub/account`. The catalog on `/rewardhub` and on `/` keeps its
+- **web** — public: `/`, `/rewards/[rewardId]`, `/auth/*`. Signed-in shell under `/dashboard`
+  (browse), `/dashboard/rewards/[rewardId]`, `/dashboard/wallet[/[claimId]]`,
+  `/dashboard/activity`, `/dashboard/account`. The catalog on `/dashboard` and on `/` keeps its
   search, filters and page in the query string (`?search=&filter[city]=&filter[category]=&page=`);
-  the wallet keeps its page there (`/rewardhub/wallet?page=&cursor=`).
+  the wallet keeps its page there (`/dashboard/wallet?page=&cursor=`).
 - **admin** — grouped by domain: `/analytics` (the platform dashboard; `?range=`, `?from=&to=`, `?interval=` — the shared `ANALYTICS_URL_STATE`, see [Analytics dashboards](./analytics-charts.md); the old `/analytics/sales` redirects here), `/users` (+ `/[id]`, `/mfa-recovery`), `/merchants`
   (+ `/invites`, `/verification`, `/store-requests`), `/rewards/review` (+ `/[id]`), `/emails/{templates,log}`,
   `/geography`, `/catalog/{products,categories}`, `/settings/{billing,access}` (platform),
   `/account/{profile,security}` (personal). Full table: [Admin panel](./admin-panel.md).
-- **merchant** — org-scoped under `/orgs/[orgSlug]`: `dashboard`, `rewards` (`?status=live|review|drafts|ended`
+- **merchant** — org-scoped under `/orgs/[orgSlug]`: `dashboard`, `Reward` (`?status=live|review|drafts|ended`
   status tab — none opens the first tab with rewards; `new`, `[rewardId]` (the read-only reward page: offer, performance, details, and its edit / submit-for-review actions), `[rewardId]/edit` (the editor — viewing and editing are separate pages, never one form toggled read-only)), `redemptions` (`?page=`), `analytics`, `terminals` (POS terminal pairing), `api-keys` (`?status=` key filter), `settings` (organization index:
   `team`, `locations`, `verification`), `account` (personal). Top-level entry points: `/` and `/account` resolve the organization
   server-side; `/onboarding`, `/team-invite`, `/auth/*` (login, forgot-password, reset-password — the
@@ -107,14 +107,14 @@ Each value has one owner:
 
 ## Server page guard and failed prefetches (web)
 
-Every signed-in web page (everything under `/rewardhub`, and `/hello`) calls
-`await guardWebPage("<its own path>")` (`apps/web/lib/auth/page-guard.ts`) before it fetches or
+Every signed-in web page (everything under `/dashboard`, and `/hello`) calls
+`await guardWebPage("<its own path>")` (`apps/web/contexts/identity/lib/page-guard.ts`) before it fetches or
 renders. Without both session cookies (access + refresh) it redirects to
 `/auth/login?redirect=<path>`; the login route's proxy refresh restores a refresh-only session and
 sends the user back, and otherwise the login page returns the member to `<path>` once they sign in.
 Both the proxy and the login page accept a target only through `isAllowedWebPostLoginRedirect`
-(`apps/web/lib/auth/routes.ts`: the home page or a signed-in page, never another origin), falling
-back to `/rewardhub`. It runs per page, not in the layout (layouts do not re-render on client
+(`apps/web/contexts/identity/lib/routes.ts`: the home page or a signed-in page, never another origin), falling
+back to `/dashboard`. It runs per page, not in the layout (layouts do not re-render on client
 navigation), and it backs up the proxy rather than replacing it. A test scans `app/` and fails
 when a protected page lacks the call.
 
@@ -126,10 +126,10 @@ The page lists the failures it renders on purpose: `unauthenticated` (401, no ac
 `redirect(loginPath(path))`, `forbidden` (403) → the "Not available for your account" notice,
 `not-found` (404) → `notFound()`. Any other failure (API down, timeout, 5xx, a response that breaks
 its contract, or a status the page did not declare) is logged with the request label and rethrown,
-so `app/rewardhub/error.tsx` (inside the shell), `app/error.tsx` or `app/global-error.tsx` (root
+so `app/dashboard/error.tsx` (inside the shell), `app/error.tsx` or `app/global-error.tsx` (root
 layout) renders it with a retry and the error digest. A detail page validates its `[id]` with the
 endpoint's own input schema first, so a malformed id is a 404, not a server error. The URL-state
-list pages (`/`, `/rewardhub`) keep the list convention instead: a failed prefetch is handed to the
+list pages (`/`, `/dashboard`) keep the list convention instead: a failed prefetch is handed to the
 client, which refetches and shows its own error state ([List queries §7](../api/list-queries.md)).
 
 ## Route authorization (merchant)

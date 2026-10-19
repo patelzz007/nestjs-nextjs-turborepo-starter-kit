@@ -5,8 +5,13 @@
 // drive the CLEAN / INFECTED paths. It flags the industry-standard EICAR test
 // string and nothing else — it is not a malware scanner.
 
-import { MalwareScannerUnavailableError, type MalwareScanner, type MalwareScanResult, type MalwareScanSubject } from "../../src/modules/storage/domain/malware-scanner.port";
-import { streamChunkToBuffer, StreamChunkSchema } from "../../src/modules/storage/utils/object-stream.util";
+import {
+	MalwareScannerUnavailableError,
+	type MalwareScanner,
+	type MalwareScanResult,
+	type MalwareScanSubject,
+} from "../../src/platform/infrastructure/storage/domain/malware-scanner.port";
+import { streamChunkToBuffer, StreamChunkSchema } from "../../src/platform/infrastructure/storage/utils/object-stream.util";
 
 /** The EICAR antivirus test string (harmless; every real scanner flags it). */
 export const EICAR_TEST_SIGNATURE = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";

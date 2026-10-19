@@ -1,5 +1,5 @@
-import type { AuthClientType, BrowserClientType } from "../schemas/auth/auth";
-import type { CookieNames } from "../schemas/auth/cookies";
+import type { AuthClientType, BrowserClientType } from "../contexts/identity/schemas/auth";
+import type { CookieNames } from "../contexts/identity/schemas/cookies";
 
 /**
  * Header that tells the API which app a request belongs to: for a browser

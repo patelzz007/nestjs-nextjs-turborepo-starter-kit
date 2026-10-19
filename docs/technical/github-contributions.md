@@ -149,7 +149,7 @@ Each part loads, fails and retries on its own; a failure shows the API's message
 | --- | --- |
 | Contract (zod, shared) | `packages/shared/src/schemas/domain/github/github-contributions.ts`, routes in `api-routes.ts`, leaves in `contracts/index.ts` |
 | Permission | `GITHUB` resource (`schema.prisma` enum + migration `add_github_permission_resource`), `READ:GITHUB` in `permissions-registry.ts`, grants in `system-role-catalog.ts` |
-| API | `apps/api/src/modules/github/` — controller, service (allowlist + caches), `GithubApiClient` (the only code that calls GitHub), wire schemas, GraphQL documents, mappers, errors |
+| API | `apps/api/src/contexts/integrations-github/` — controller, service (allowlist + caches), `GithubApiClient` (the only code that calls GitHub), wire schemas, GraphQL documents, mappers, errors |
 | Config | `GithubConfig` in `apps/api/src/config/api-config.schema.ts` |
 | Client | `apiRouter.github.*` in `packages/api-client/src/router.ts` |
 | Mobile | `features/github/` (section, commit screen, diff parsing, labels, refresh), `app/(app)/profile/` (stack, commit route), `components/select-field.tsx`, `components/change-row.tsx`, `components/stat-tiles.tsx`, `components/changed-file.tsx`, `components/diff-view.tsx`, `components/diff-stat.tsx`, `components/language-breakdown.tsx`, `components/language-logo.tsx` |

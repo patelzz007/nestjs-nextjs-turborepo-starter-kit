@@ -18,7 +18,7 @@ import type {
 	StorageConfig,
 	TenancyConfig,
 } from "./api-config.schema";
-import { RedisNamespace } from "../infrastructure/redis/redis-namespace";
+import { RedisNamespace } from "../platform/infrastructure/redis/redis-namespace";
 
 /** Client apps an auth flow can originate from (`X-Client-Type`). */
 const ADMIN_CLIENT_TYPE = "admin";

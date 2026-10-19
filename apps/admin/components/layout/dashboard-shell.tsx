@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
-import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
-import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
+import { useAuth, useAuthUser } from "@workspace/client/lib/contexts/identity";
+import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
+import { SessionCheckNotice } from "@workspace/client/lib/contexts/identity/session/session-check-notice";
 
 import { Button } from "@workspace/ui/components/button";
 import { usePathname } from "next/navigation";

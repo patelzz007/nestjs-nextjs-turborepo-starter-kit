@@ -7,8 +7,8 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
-import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
+import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
 import {
 	applyRotatedSetCookies,
 	clearAuthCookies,
@@ -20,7 +20,7 @@ import {
 	type AuthCookieClearOptions,
 	type ProxyRefreshCooldownOptions,
 	type ProxyRefreshResult,
-} from "@workspace/client/lib/auth/edge/proxy-refresh";
+} from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
 import { AUTH_COOKIE_NAMES, NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";

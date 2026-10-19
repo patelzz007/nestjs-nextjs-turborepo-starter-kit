@@ -137,7 +137,7 @@ export type SessionLocationProvider = z.output<typeof SessionLocationProviderSch
 
 const JWT_EXPIRY_PATTERN = /^[1-9]\d*[smhd]?$/;
 
-/** Token lifetime understood by `common/utils/expiry.ts`: `<n>` minutes or `<n>s|m|h|d`. */
+/** Token lifetime understood by `platform/infrastructure/utils/expiry.ts`: `<n>` minutes or `<n>s|m|h|d`. */
 export function jwtExpiryEnvSchema(defaultValue: string): z.ZodType<string, string | undefined> {
 	return z.string().trim().regex(JWT_EXPIRY_PATTERN, 'must be a positive duration such as "15m", "12h" or "7d"').default(defaultValue);
 }
@@ -186,7 +186,7 @@ export const BullMqPrefixEnvSchema = z
  * Redis namespace (`REDIS_NAMESPACE`): every raw Redis key and pub/sub channel
  * the API uses (authorization invalidation channel, user-session cache,
  * throttler, login verification, email rate limits) lives under
- * `<namespace>:…` (see infrastructure/redis/redis-namespace.ts). Two APIs on
+ * `<namespace>:…` (see platform/infrastructure/redis/redis-namespace.ts). Two APIs on
  * one Redis with different namespaces never read each other's keys or
  * messages. Same character rules as BULLMQ_PREFIX.
  */

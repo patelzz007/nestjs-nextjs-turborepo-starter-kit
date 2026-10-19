@@ -3,8 +3,8 @@ import * as bcrypt from "bcrypt";
 
 import { POS_PAIRING_CODE_TTL_MS } from "@workspace/shared";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
-import { API_KEY_PREFIX_LENGTH } from "../../src/modules/rewards/services/merchant-api-key.service";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
+import { API_KEY_PREFIX_LENGTH } from "../../src/contexts/pos/public-api";
 
 import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_ORGANIZATION_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
 import { prisma } from "./client";
@@ -18,28 +18,28 @@ import { seedLog } from "./seed-log";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
 export const REWARD_SEED_IDS = Object.freeze({
-	klOwnerUser: "326494e1-b45d-4203-b881-05b60ae50b4a",
-	mlkOwnerUser: "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
-	klCashierUser: "937f5e43-9b11-47d0-866c-91fec89bc250",
-	klPendingCashierUser: "a378a4d1-6915-4eb3-bf84-6fb14e1feb72",
-	mlkCashierUser: "e79116ab-29e4-40ad-a5c7-f3158f7b1aa1",
-	klRewardPublished: "c1214e16-bf0f-4410-8871-8d1a9970f75e",
-	klRewardReferrer: "bab08148-80f2-4586-b1ea-48241dae1490",
-	klRewardPending: "c25c75db-a700-499b-9649-dc965aa21264",
-	klRewardDraft: "94a8af08-39cf-44ad-b3e7-9de599ad7938",
-	klRewardExpired: "81ae6a7e-cea3-4117-8827-6c01e7754262",
-	mlkRewardPublished: "af18c941-a960-4eaa-b988-9e15ceae6e96",
+	klOwnerUser: "019b76da-a800-763a-b64a-fd037629f93f",
+	mlkOwnerUser: "019b76da-a800-727d-bf31-03f65b3b9058",
+	klCashierUser: "019b76da-a800-7965-b8a4-624b6c755c16",
+	klPendingCashierUser: "019b76da-a800-7d4a-a84b-1bc9ce68940d",
+	mlkCashierUser: "019b76da-a800-700a-ab98-2c90f85d89d2",
+	klRewardPublished: "019b76da-a800-7abc-a318-2ac9fe8ee4ca",
+	klRewardReferrer: "019b76da-a800-7218-9eea-e588d2be6f57",
+	klRewardPending: "019b76da-a800-7501-9cc9-ed58933e4620",
+	klRewardDraft: "019b76da-a800-7c1a-9c16-496d40d882fc",
+	klRewardExpired: "019b76da-a800-7cfe-8283-cc50e36361cc",
+	mlkRewardPublished: "019b76da-a800-7e7f-be77-2319ca85798d",
 	mlkRewardKatilOnly: deterministicUuid("reward-seed", "mlk-katil-only"),
 	mlkRewardBeruangOnly: deterministicUuid("reward-seed", "mlk-beruang-only"),
-	mlkRewardReferrer: "098bb3dc-3121-4232-bbdf-d9ad684eecb8",
-	mlkRewardDisabled: "9509c30b-c09d-4762-809c-7f421813ac36",
-	claimPendingKl: "74199f6f-877f-4d87-8a02-78941a4ae1af",
-	claimRedeemedKl: "df82577e-e756-4751-bf97-4d51fa3fe7be",
-	claimExpiredKl: "83a172f3-76f9-483e-8756-d142e059f9d3",
-	claimPendingMlk: "df2c10eb-7a56-456c-9b8c-5e3d1143c5b2",
-	claimRedeemedMlk: "a2c10eb7-7a56-456c-9b8c-5e3d1143c5c3",
-	referralPending: "13d97a9f-cb94-432b-bdb7-9011649cad0c",
-	referralCredited: "594dcffc-3091-4aca-befa-affd618d5c36",
+	mlkRewardReferrer: "019b76da-a800-71dd-95b6-2370ec136267",
+	mlkRewardDisabled: "019b76da-a800-7f17-a7a6-7084c29068ac",
+	claimPendingKl: "019b76da-a800-7c1a-9069-f2e16d4af0a3",
+	claimRedeemedKl: "019b76da-a800-7544-9869-4da94e4d5b08",
+	claimExpiredKl: "019b76da-a800-7d3c-8405-3468d934d438",
+	claimPendingMlk: "019b76da-a800-7ff4-a763-5719588ed25e",
+	claimRedeemedMlk: "019b76da-a800-7564-983c-da0039b0f89e",
+	referralPending: "019b76da-a800-7e6f-b6ef-53d08fa77988",
+	referralCredited: "019b76da-a800-7b16-9352-6c879b8595f9",
 });
 
 /**
@@ -162,7 +162,7 @@ const SEED_CONSUMER_EMAILS: readonly string[] = ["alice.johnson@example.com", "b
  * Removes the re-creatable reward rows of the SEED tenants (and the seed
  * consumers' notification/legal/OTP rows) so the next run converges. Scoped by
  * id — another tenant's data is never touched — and audit tables
- * (`reward_audit_logs`, `organization_audit_logs`) are never deleted: the seed
+ * (`RewardAuditLog`, `OrganizationAuditLog`) are never deleted: the seed
  * writes its own audit rows with deterministic ids instead.
  */
 export async function cleanupRewardSeedData(): Promise<void> {

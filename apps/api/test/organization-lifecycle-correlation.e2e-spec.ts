@@ -31,7 +31,7 @@ describe("Organization lifecycle event correlation (e2e)", () => {
 
 	afterAll(async () => {
 		// Soft delete, like the app: the organization and its audit trail stay as history.
-		await pool.query(`UPDATE public.organizations SET is_deleted = true, deleted_at = $2 WHERE id = ANY($1::text[])`, [createdOrganizationIds, Date.now()]);
+		await pool.query(`UPDATE public."Organization" SET "isDeleted" = true, "deletedAt" = $2 WHERE id = ANY($1::text[])`, [createdOrganizationIds, Date.now()]);
 		await pool.end();
 		await app.close();
 	});
@@ -60,7 +60,7 @@ describe("Organization lifecycle event correlation (e2e)", () => {
 		createdOrganizationIds.push(organizationId);
 
 		const events = await pool.query<{ toState: string; correlationId: string | null }>(
-			`SELECT to_state AS "toState", correlation_id AS "correlationId" FROM public.organization_lifecycle_events WHERE organization_id = $1`,
+			`SELECT "toState" AS "toState", "correlationId" AS "correlationId" FROM public."OrganizationLifecycleEvent" WHERE "organizationId" = $1`,
 			[organizationId],
 		);
 		expect(events.rows).toEqual([{ toState: "PROVISIONING", correlationId }]);

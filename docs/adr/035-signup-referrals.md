@@ -631,7 +631,7 @@ Found while fixing R2. **Problem.** `insertCodeInTx` retried on a `P2002` inside
 
 ### Spec gaps closed
 
-- The admin "Referred by" control for `filter[referrerId]` (`apps/admin/app/(panel)/users/referrer-picker.tsx`): a server-searched picker on the existing `SearchableEntityPicker`, labelled from `GET /auth/admin/users/:id` when the id comes from a shared URL.
+- The admin "Referred by" control for `filter[referrerId]` (`apps/admin/contexts/identity/components/referrer-picker.tsx`): a server-searched picker on the existing `SearchableEntityPicker`, labelled from `GET /auth/admin/users/:id` when the id comes from a shared URL.
 - The users table's mobile card shows Referrer and Referral status. The profile links the referrer to `/users/{id}`. Labels come from one `SIGNUP_REFERRAL_STATUS_LABELS` table.
 - The Referrals screen uses this ADR's labels: "Your code is not ready yet.", a "Code expired" badge with "Expired …" in place of "Valid until …", "Code unavailable", and "No one has registered with your code yet.".
 - The success notification's metadata carries `href: SIGNUP_REFERRALS_SCREEN_PATH` (`/rewardhub/referrals`), the link the ADR asks for.

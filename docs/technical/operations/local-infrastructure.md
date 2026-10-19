@@ -75,7 +75,7 @@ pnpm db:seed                                 # development scenario — see Data
 The API reaches tenant data through the `app_runtime` role (`SET ROLE`), which is subject to RLS.
 `pnpm db:apply-security` creates it in `prisma/rls/00-app-helpers.sql`, the first file it applies,
 so a brand-new cluster needs no manual bootstrap. The apply plan
-(`apps/api/scripts/rls-apply-plan.ts`) refuses to run if any file uses a role before the file that
+(`apps/api/prisma/rls/apply-plan.ts`) refuses to run if any file uses a role before the file that
 creates it, so this can't regress unnoticed on long-lived dev clusters, where roles already exist
 cluster-wide.
 

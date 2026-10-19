@@ -41,11 +41,11 @@ describe("RLS hardening (integration)", () => {
 	});
 
 	it("blocks scoped reads on infrastructure tables without bypass", async () => {
-		const tables: readonly string[] = ["outbox_events", "analytics_events", "audit_logs", "platform_resource_idempotency_records"];
+		const tables: readonly string[] = ["OutboxEvent", "AnalyticsEvent", "AuditLog", "PlatformResourceIdempotencyRecord"];
 
 		for (const table of tables) {
 			await withRlsSession(pool, { userId: "user@example.com", organizationId: "", bypass: false }, async (client) => {
-				const result = await client.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM public.${table}`);
+				const result = await client.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM public."${table}"`);
 				expect(result.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
 			});
 		}
@@ -53,14 +53,14 @@ describe("RLS hardening (integration)", () => {
 
 	it("allows organization members to read their own org rewards with tenant context", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false }, async (client) => {
-			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.klRewardPublished]);
+			const result = await client.query<{ id: string }>(`SELECT id FROM public."Reward" WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.klRewardPublished]);
 			expect(result.rowCount).toBe(1);
 		});
 	});
 
 	it("prevents organization members from reading another org non-public rewards with tenant context", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false }, async (client) => {
-			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.mlkRewardDisabled]);
+			const result = await client.query<{ id: string }>(`SELECT id FROM public."Reward" WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.mlkRewardDisabled]);
 			expect(result.rowCount).toBe(0);
 		});
 	});
@@ -68,11 +68,11 @@ describe("RLS hardening (integration)", () => {
 	it("allows MLK owner (ALL_LOCATIONS) to read terminals at every branch", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkOwnerUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
 			const katil = await client.query<{ terminalId: string }>(
-				`SELECT terminal_id AS "terminalId" FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`,
+				`SELECT "terminalId" AS "terminalId" FROM public."OrganizationTerminal" WHERE "organizationId" = $1 AND "locationId" = $2`,
 				[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationKatil],
 			);
 			const beruang = await client.query<{ terminalId: string }>(
-				`SELECT terminal_id AS "terminalId" FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`,
+				`SELECT "terminalId" AS "terminalId" FROM public."OrganizationTerminal" WHERE "organizationId" = $1 AND "locationId" = $2`,
 				[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationBeruang],
 			);
 			expect(katil.rowCount).toBeGreaterThan(0);
@@ -82,8 +82,8 @@ describe("RLS hardening (integration)", () => {
 
 	it("restricts MLK cashier (SELECTED branch) to Beruang terminals only", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
-			const beruang = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-BERUANG-01"]);
-			const katil = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-KATIL-01"]);
+			const beruang = await client.query(`SELECT "terminalId" FROM public."OrganizationTerminal" WHERE "terminalId" = $1`, ["MLK-BERUANG-01"]);
+			const katil = await client.query(`SELECT "terminalId" FROM public."OrganizationTerminal" WHERE "terminalId" = $1`, ["MLK-KATIL-01"]);
 			expect(beruang.rowCount).toBe(1);
 			expect(katil.rowCount).toBe(0);
 		});
@@ -91,8 +91,8 @@ describe("RLS hardening (integration)", () => {
 
 	it("allows KL cashier (SELECTED KL location) to read KL terminals only", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klCashierUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false }, async (client) => {
-			const kl = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["KL-REGISTER-01"]);
-			const mlk = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-BERUANG-01"]);
+			const kl = await client.query(`SELECT "terminalId" FROM public."OrganizationTerminal" WHERE "terminalId" = $1`, ["KL-REGISTER-01"]);
+			const mlk = await client.query(`SELECT "terminalId" FROM public."OrganizationTerminal" WHERE "terminalId" = $1`, ["MLK-BERUANG-01"]);
 			expect(kl.rowCount).toBe(1);
 			expect(mlk.rowCount).toBe(0);
 		});
@@ -103,9 +103,9 @@ describe("RLS hardening (integration)", () => {
 			await client.query("BEGIN");
 			try {
 				const inserted = await client.query<{ id: string }>(
-					`INSERT INTO public.organization_api_keys (
-            id, organization_id, location_id, name, key_hash, key_prefix, scope, created_by_user_id
-          ) VALUES (gen_random_uuid(), $1, NULL, 'RLS test key', $2, 'rls-test-prefix', 'INTEGRATION', $3)
+					`INSERT INTO public."OrganizationApiKey" (
+            id, "organizationId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId"
+          ) VALUES (uuidv7(), $1, NULL, 'RLS test key', $2, 'rls-test-prefix', 'INTEGRATION', $3)
           RETURNING id`,
 					[ORGANIZATION_SEED_IDS.mlkOrganization, `rls-test-${crypto.randomUUID()}`, REWARD_SEED_IDS.mlkOwnerUser],
 				);
@@ -135,17 +135,17 @@ describe("RLS hardening (integration)", () => {
 		 */
 		async function findClaimedHiddenReward(): Promise<ClaimedHiddenReward> {
 			const result = await pool.query<ClaimedHiddenRewardRow>(
-				`SELECT r.id AS "rewardId", c.user_id AS "holderId", (
-            SELECT u.id FROM public.users u
-            WHERE NOT EXISTS (SELECT 1 FROM public.reward_claims oc WHERE oc.reward_id = r.id AND oc.user_id = u.id)
-              AND NOT EXISTS (SELECT 1 FROM public.organization_memberships m WHERE m.organization_id = r.organization_id AND m.user_id = u.id)
+				`SELECT r.id AS "rewardId", c."userId" AS "holderId", (
+            SELECT u.id FROM public."User" u
+            WHERE NOT EXISTS (SELECT 1 FROM public."RewardClaim" oc WHERE oc."rewardId" = r.id AND oc."userId" = u.id)
+              AND NOT EXISTS (SELECT 1 FROM public."OrganizationMembership" m WHERE m."organizationId" = r."organizationId" AND m."userId" = u.id)
             ORDER BY u.id LIMIT 1
           ) AS "outsiderId"
-         FROM public.reward_claims c
-         JOIN public.rewards r ON r.id = c.reward_id
-         WHERE r.reward_kind = 'CONSUMER' AND r.status <> 'PUBLISHED' AND c.is_deleted = false
-           AND NOT EXISTS (SELECT 1 FROM public.organization_memberships m WHERE m.organization_id = r.organization_id AND m.user_id = c.user_id)
-         ORDER BY r.id, c.user_id
+         FROM public."RewardClaim" c
+         JOIN public."Reward" r ON r.id = c."rewardId"
+         WHERE r."rewardKind" = 'CONSUMER' AND r.status <> 'PUBLISHED' AND c."isDeleted" = false
+           AND NOT EXISTS (SELECT 1 FROM public."OrganizationMembership" m WHERE m."organizationId" = r."organizationId" AND m."userId" = c."userId")
+         ORDER BY r.id, c."userId"
          LIMIT 1`,
 			);
 			const row = result.rows[LIST_SLOT_INDEX.first];
@@ -159,7 +159,7 @@ describe("RLS hardening (integration)", () => {
 		it("stays readable to the user who claimed it, so their wallet can still name it", async () => {
 			const { rewardId, holderId } = await findClaimedHiddenReward();
 			await withRlsSession(pool, { userId: holderId, organizationId: "", bypass: false }, async (client) => {
-				const result = await client.query<{ title: string }>(`SELECT title FROM public.rewards WHERE id = $1`, [rewardId]);
+				const result = await client.query<{ title: string }>(`SELECT title FROM public."Reward" WHERE id = $1`, [rewardId]);
 				expect(result.rowCount).toBe(1);
 			});
 		});
@@ -167,7 +167,7 @@ describe("RLS hardening (integration)", () => {
 		it("stays hidden from a user who never claimed it", async () => {
 			const { rewardId, outsiderId } = await findClaimedHiddenReward();
 			await withRlsSession(pool, { userId: outsiderId, organizationId: "", bypass: false }, async (client) => {
-				const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1`, [rewardId]);
+				const result = await client.query<{ id: string }>(`SELECT id FROM public."Reward" WHERE id = $1`, [rewardId]);
 				expect(result.rowCount).toBe(0);
 			});
 		});
@@ -175,7 +175,7 @@ describe("RLS hardening (integration)", () => {
 		it("stays hidden from a session with no user at all (fail-closed)", async () => {
 			const { rewardId } = await findClaimedHiddenReward();
 			await withRlsSession(pool, { userId: "", organizationId: "", bypass: false }, async (client) => {
-				const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1`, [rewardId]);
+				const result = await client.query<{ id: string }>(`SELECT id FROM public."Reward" WHERE id = $1`, [rewardId]);
 				expect(result.rowCount).toBe(0);
 			});
 		});
@@ -185,8 +185,8 @@ describe("RLS hardening (integration)", () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
 			await expect(
 				client.query(
-					`INSERT INTO public.organization_api_keys (
-            organization_id, location_id, name, key_hash, key_prefix, scope, created_by_user_id
+					`INSERT INTO public."OrganizationApiKey" (
+            "organizationId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId"
           ) VALUES ($1, $2, 'RLS blocked', $3, 'blocked-prefix', 'POS', $4)`,
 					[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationKatil, `rls-blocked-${crypto.randomUUID()}`, REWARD_SEED_IDS.mlkCashierUser],
 				),

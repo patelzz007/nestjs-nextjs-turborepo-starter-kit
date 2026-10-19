@@ -1,6 +1,6 @@
 import { DEFAULT_SALE_CURRENCY } from "@workspace/shared";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";

@@ -12,7 +12,16 @@ export async function captureFastifyRequest(options: { readonly headers: Record<
 		holder.request = request;
 		return Promise.resolve({});
 	});
-	await app.inject({ method: "POST", url: "/capture", headers: options.headers, ...(options.payload === undefined ? {} : { payload: options.payload }) });
+	await app.ready();
+	const response = await app.inject({
+		method: "POST",
+		url: "/capture",
+		headers: { "content-type": "application/json", ...options.headers },
+		...(options.payload === undefined ? { payload: "{}" } : { payload: options.payload }),
+	});
+	if (response.statusCode >= 400) {
+		throw new Error(`Fastify inject failed with status ${String(response.statusCode)}`);
+	}
 	await app.close();
 	if (holder.request === undefined) {
 		throw new Error("Fastify did not route the capture request");

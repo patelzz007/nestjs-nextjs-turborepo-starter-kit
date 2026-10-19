@@ -1,7 +1,7 @@
 "use client";
 
 import { isNumberPrimitive } from "@workspace/shared";
-import { ChartStateFrame, CHART_READY, type ChartFrameState } from "@workspace/ui/components/analytics-panel";
+import { ChartStateFrame, CHART_READY, DEFAULT_CHART_FRAME_HEIGHT, type ChartFrameHeight, type ChartFrameState } from "@workspace/ui/components/analytics-panel";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@workspace/ui/components/chart";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { useUiKitLabels } from "@workspace/ui/components/ui-kit-labels-provider";
@@ -68,6 +68,8 @@ export interface TimeSeriesChartProps<TKey extends string> extends Omit<React.HT
 	readonly state?: ChartFrameState;
 	/** Width (px) reserved for y-axis ticks. */
 	readonly axisWidth?: number;
+	/** The plot's height — the same scale as `ChartStateFrame`, so a loading, empty or error frame never jumps; defaults to `md`. */
+	readonly height?: ChartFrameHeight;
 }
 
 /** Thickest a bar may get — it never fills its slot; the leftover band is air. */
@@ -95,6 +97,8 @@ const DIRECT_LABEL_OFFSET_PX = 6;
 /** Longest direct label before it is shortened with an ellipsis (the legend keeps the full name). */
 const DIRECT_LABEL_MAX_CHARS = 14;
 const DEFAULT_AXIS_WIDTH_PX = 56;
+/** The plot's box per height: the same heights as `ChartStateFrame` (`min-h-40` / `min-h-72`). */
+const PLOT_HEIGHT_CLASSES: Readonly<Record<ChartFrameHeight, string>> = { sm: "h-40", md: "h-72" };
 const TICK_MARGIN_PX = 8;
 /** Direct line-end labels: a step below the chart's `text-xs` axis ticks, so they never compete with them. */
 const DIRECT_LABEL_FONT_SIZE_PX = 11;
@@ -329,6 +333,7 @@ interface PlotProps<TKey extends string> {
 	readonly formatBucketLabel: (point: TimeSeriesPoint<TKey>) => string;
 	readonly partialLabel: string;
 	readonly axisWidth: number;
+	readonly height: ChartFrameHeight;
 	readonly scope: string;
 }
 
@@ -343,6 +348,7 @@ function Plot<TKey extends string>({
 	formatBucketLabel,
 	partialLabel,
 	axisWidth,
+	height,
 	scope,
 }: PlotProps<TKey>): React.JSX.Element {
 	const isReducedMotion = useMediaQuery(REDUCED_MOTION_QUERY, true);
@@ -420,7 +426,7 @@ function Plot<TKey extends string>({
 	));
 
 	return (
-		<ChartContainer config={config} className="aspect-auto h-72 w-full">
+		<ChartContainer config={config} className={cn("aspect-auto w-full", PLOT_HEIGHT_CLASSES[height])}>
 			{kind === "line" ? (
 				<LineChart data={data} accessibilityLayer {...(directLabels ? { margin: DIRECT_LABEL_MARGIN } : {})}>
 					{grid}
@@ -518,6 +524,7 @@ export function TimeSeriesChart<TKey extends string>({
 	labels: labelsOverride,
 	state = CHART_READY,
 	axisWidth = DEFAULT_AXIS_WIDTH_PX,
+	height = DEFAULT_CHART_FRAME_HEIGHT,
 	className,
 	...props
 }: TimeSeriesChartProps<TKey>): React.JSX.Element {
@@ -543,16 +550,17 @@ export function TimeSeriesChart<TKey extends string>({
 				formatBucketLabel={formatBucketLabel}
 				partialLabel={partialLabel}
 				axisWidth={axisWidth}
+				height={height}
 				scope={scope}
 			/>
 		),
-		[axisWidth, formatAxisValue, formatBucketLabel, formatBucketTick, formatValue, kind, partialLabel, points, rows, scope, series],
+		[axisWidth, formatAxisValue, formatBucketLabel, formatBucketTick, formatValue, height, kind, partialLabel, points, rows, scope, series],
 	);
 
 	return (
 		<figure ref={ref} aria-label={title} className={cn("m-0 flex min-w-0 flex-col gap-3", className)} {...props}>
 			{series.length > 1 ? <SeriesLegend series={series} kind={kind} scope={scope} /> : null}
-			<ChartStateFrame state={state}>
+			<ChartStateFrame state={state} height={height}>
 				{plot}
 				{hasPartial ? (
 					<figcaption className="flex items-center gap-2 text-xs text-muted-foreground">

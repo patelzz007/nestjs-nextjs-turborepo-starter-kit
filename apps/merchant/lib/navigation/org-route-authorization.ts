@@ -28,6 +28,7 @@ export const OrgPageRouteSchema = z.enum([
 	"/settings/branding",
 	"/settings/verification",
 	"/account",
+	"/stores",
 ]);
 
 export type OrgPageRoute = z.output<typeof OrgPageRouteSchema>;
@@ -109,6 +110,7 @@ export const ORG_PAGE_RULES: Readonly<Record<OrgPageRoute, OrgPageRule>> = {
 	// GET/PATCH /orgs/:orgSlug/kyb (merchant:manage_verification, owner-only).
 	"/settings/verification": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageVerification] }, denial: OWNER_ONLY_VERIFICATION_DENIAL },
 	"/account": { kind: "open", reason: "Personal account (password, 2FA, email) — restricted enrollment sessions must always reach it." },
+	"/stores": { kind: "open", reason: "The member's own stores (GET /orgs/memberships lists only the caller's memberships) — the way to switch to any of them." },
 };
 
 function isDynamicSegment(segment: string): boolean {

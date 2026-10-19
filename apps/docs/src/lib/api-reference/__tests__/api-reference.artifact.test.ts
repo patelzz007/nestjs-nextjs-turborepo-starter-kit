@@ -32,7 +32,8 @@ function controllerSources(): readonly ControllerSource[] {
 
 const document = OpenApiDocumentSchema.parse(JSON.parse(readJson("docs/generated/openapi.json")));
 const samples = ApiSamplesFileSchema.parse(JSON.parse(readJson("docs/generated/api-samples.json")));
-const access = extractEndpointAccess(controllerSources());
+const POLICY_FILE = "apps/api/src/platform/presentation/http/security/throttling/rate-limit-policy.ts";
+const access = extractEndpointAccess(controllerSources(), readFileSync(path.join(REPOSITORY_ROOT, POLICY_FILE), "utf8"));
 const files = renderApiReference({ document, access, samples });
 
 describe("generated API reference", () => {

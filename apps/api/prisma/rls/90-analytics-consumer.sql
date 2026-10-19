@@ -34,13 +34,13 @@ REVOKE ALL ON ALL TABLES IN SCHEMA public FROM analytics_consumer;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM analytics_consumer;
 
 GRANT USAGE ON SCHEMA public TO analytics_consumer;
-GRANT SELECT, INSERT, DELETE ON TABLE public.inbox_processed_events TO analytics_consumer;
-GRANT INSERT ON TABLE public.analytics_events TO analytics_consumer;
-GRANT SELECT (id) ON TABLE public.analytics_events TO analytics_consumer;
-GRANT SELECT, INSERT, DELETE ON TABLE public.inbox_dead_letters TO analytics_consumer;
+GRANT SELECT, INSERT, DELETE ON TABLE public."InboxProcessedEvent" TO analytics_consumer;
+GRANT INSERT ON TABLE public."AnalyticsEvent" TO analytics_consumer;
+GRANT SELECT (id) ON TABLE public."AnalyticsEvent" TO analytics_consumer;
+GRANT SELECT, INSERT, DELETE ON TABLE public."InboxDeadLetter" TO analytics_consumer;
 
-DROP POLICY IF EXISTS inbox_processed_events_analytics_consumer ON public.inbox_processed_events;
-CREATE POLICY inbox_processed_events_analytics_consumer ON public.inbox_processed_events
+DROP POLICY IF EXISTS inbox_processed_events_analytics_consumer ON public."InboxProcessedEvent";
+CREATE POLICY inbox_processed_events_analytics_consumer ON public."InboxProcessedEvent"
   TO analytics_consumer
   USING (consumer = 'analytics-warehouse')
   WITH CHECK (consumer = 'analytics-warehouse');
@@ -48,20 +48,20 @@ CREATE POLICY inbox_processed_events_analytics_consumer ON public.inbox_processe
 -- INSERT … ON CONFLICT (id) checks the new row against SELECT policies as
 -- well (the arbiter is read), hence the SELECT policy; the column grant above
 -- still limits what the role can actually read to `id`.
-DROP POLICY IF EXISTS analytics_events_analytics_consumer_insert ON public.analytics_events;
-CREATE POLICY analytics_events_analytics_consumer_insert ON public.analytics_events
+DROP POLICY IF EXISTS analytics_events_analytics_consumer_insert ON public."AnalyticsEvent";
+CREATE POLICY analytics_events_analytics_consumer_insert ON public."AnalyticsEvent"
   FOR INSERT
   TO analytics_consumer
   WITH CHECK (true);
 
-DROP POLICY IF EXISTS analytics_events_analytics_consumer_select ON public.analytics_events;
-CREATE POLICY analytics_events_analytics_consumer_select ON public.analytics_events
+DROP POLICY IF EXISTS analytics_events_analytics_consumer_select ON public."AnalyticsEvent";
+CREATE POLICY analytics_events_analytics_consumer_select ON public."AnalyticsEvent"
   FOR SELECT
   TO analytics_consumer
   USING (true);
 
-DROP POLICY IF EXISTS inbox_dead_letters_analytics_consumer ON public.inbox_dead_letters;
-CREATE POLICY inbox_dead_letters_analytics_consumer ON public.inbox_dead_letters
+DROP POLICY IF EXISTS inbox_dead_letters_analytics_consumer ON public."InboxDeadLetter";
+CREATE POLICY inbox_dead_letters_analytics_consumer ON public."InboxDeadLetter"
   TO analytics_consumer
   USING (consumer = 'analytics-warehouse')
   WITH CHECK (consumer = 'analytics-warehouse');

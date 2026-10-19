@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
-import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
+import { useImpersonation } from "@workspace/client/lib/contexts/identity/session/use-impersonation";
 import { APP_LINKS } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { useRouter } from "next/navigation";
@@ -44,7 +44,7 @@ export function ImpersonationBanner(): React.JSX.Element | null {
 					<span className="min-w-0">You are impersonating another user. Actions run as the impersonated account.</span>
 				</div>
 				<div className="flex shrink-0 flex-wrap items-center gap-2">
-					<a href={`${webUrl}${APP_LINKS.web.rewardHub}`} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
+					<a href={`${webUrl}${APP_LINKS.web.dashboard}`} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
 						Consumer portal
 					</a>
 					<a href={merchantUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">

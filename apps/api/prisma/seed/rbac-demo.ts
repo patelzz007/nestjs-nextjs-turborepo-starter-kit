@@ -11,9 +11,9 @@ import { requireRow } from "./require-row";
 //
 // Every RBAC column and state the admin API can produce, written the way the
 // app writes it — each change in one transaction with its
-// `permission_audit_logs` row (explicit actor kind, correlation id):
+// `PermissionAuditLog` row (explicit actor kind, correlation id):
 //
-//   - `role_permissions.assignedBy` / `user_roles.assignedBy` on every row
+//   - `RolePermission.assignedBy` / `UserRole.assignedBy` on every row
 //     (platform operator for the seeded matrix and staff roles, the account
 //     itself for self-provisioned consumer roles);
 //   - a real role hierarchy: "Support Agent" extends "Support Viewer"
@@ -42,7 +42,7 @@ const LEGACY_ROLE_ID = deterministicUuid(NAMESPACE, "role:legacy-report-viewer")
 const DELETED_PERMISSION_ID = deterministicUuid(NAMESPACE, "permission:delete-report");
 /** The fixed demo clock of the retention history: 2026-05-01T09:00:00Z. */
 const RETENTION_DEMO_BASE_EPOCH_MS = 1_777_626_000_000;
-/** Retention of `permission_audit_logs` (`AuditLogCleanup`): older rows are soft-deleted. */
+/** Retention of `PermissionAuditLog` (`AuditLogCleanup`): older rows are soft-deleted. */
 const AUDIT_RETENTION_MS = 90 * DAY_MS;
 /** The hourly job soft-deletes a row within this long of it crossing the retention cutoff. */
 const RETENTION_JOB_LAG_MS = 30 * 60 * 1000;

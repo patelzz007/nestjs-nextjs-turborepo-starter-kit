@@ -432,7 +432,7 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
 
 #### WS-B — API modules
 
-- Remove `apps/api/src/modules/rewards/**` (~124 files today).
+- Remove `apps/api/src/contexts/rewards**` (~124 files today).
 - Remove reward-specific controllers from organization module if any.
 - Prune `apiRoutes` and `contracts/index.ts` leaves.
 - Update `app.module` imports and queue modules.
@@ -518,7 +518,7 @@ Frontend `can()` is **never** step 2 — only step 6 UX.
 | `resourceCapabilities()` | UI capability sets |
 | `hasRoles()` | Role checks |
 
-Location: `apps/api/src/modules/authorization/kernel/authorization-kernel.service.ts`
+Location: `apps/api/src/contexts/authorization/infrastructure/kernel/authorization-kernel.service.ts`
 
 ### Grants loader — where permissions come from
 
@@ -786,7 +786,7 @@ See [CI pipeline](./operations/ci.md): lint, typecheck, test, build, RLS manifes
 ### Completion gate (local)
 
 ```bash
-pnpm run lint   # zero errors, zero warnings
+pnpm run lint   # zero errors
 pnpm run test   # all workspaces
 ```
 
@@ -913,7 +913,7 @@ pnpm ci:local
 
 Use `git grep` / ripgrep before merge; this list is representative not exhaustive.
 
-1. `apps/api/src/modules/rewards/`
+1. `apps/api/src/contexts/rewards`
 2. `packages/shared/src/schemas/domain/rewards/`
 3. `packages/shared/src/contracts/ leaves for rewards`
 4. `apps/web/app/** reward* routes`
@@ -936,7 +936,7 @@ Copy into each feature's module README or PR description:
 | Permission(s) | `PERMISSION....` |
 | Scope | GLOBAL / ORGANIZATION / ... |
 | Ownership check | yes/no — rule |
-| RLS table policies | `table_name` |
+| RLS table policies | `tableName` |
 | Cedar | action or n/a |
 | Public? | no |
 | Frontend `can()` slug | same as permission |
@@ -1061,15 +1061,15 @@ Copy into each feature's module README or PR description:
 
 | Order | Path | Why read it |
 | --- | --- | --- |
-| 1 | `apps/api/src/modules/authorization/guards/authorization.guard.ts` | Decorators become kernel calls |
-| 2 | `apps/api/src/modules/authorization/kernel/authorization-kernel.service.ts` | `can`, `authorize`, `explain`, `filter` |
-| 3 | `apps/api/src/modules/authorization/kernel/subject-grants.loader.ts` | Where grants are loaded |
-| 4 | `apps/api/src/modules/authorization/kernel/policy-engine.service.ts` | JSON ABAC (not Cedar) |
-| 5 | `apps/api/src/modules/authorization/kernel/acl.service.ts` | Explicit ALLOW/DENY rows |
-| 6 | `apps/api/src/modules/authorization/kernel/tenant-membership.service.ts` | Org/store/location proof |
-| 7 | `apps/api/src/modules/authorization/services/authorization-context.resolver.ts` | Tenant headers → verified context |
+| 1 | `apps/api/src/platform/presentation/http/security/guards/authorization.guard.ts` | Decorators become kernel calls |
+| 2 | `apps/api/src/contexts/authorization/infrastructure/kernel/authorization-kernel.service.ts` | `can`, `authorize`, `explain`, `filter` |
+| 3 | `apps/api/src/contexts/authorization/infrastructure/kernel/subject-grants.loader.ts` | Where grants are loaded |
+| 4 | `apps/api/src/contexts/authorization/infrastructure/kernel/policy-engine.service.ts` | JSON ABAC (not Cedar) |
+| 5 | `apps/api/src/contexts/authorization/infrastructure/kernel/acl.service.ts` | Explicit ALLOW/DENY rows |
+| 6 | `apps/api/src/contexts/authorization/infrastructure/kernel/tenant-membership.service.ts` | Org/store/location proof |
+| 7 | `apps/api/src/contexts/authorization/infrastructure/kernel/authorization-context.resolver.ts` | Tenant headers → verified context |
 | 8 | `packages/shared/src/authorization/permission.ts` | Permission and capability constants |
-| 9 | `apps/api/src/modules/authorization/decorators/authorize.decorator.ts` | Route requirement DSL |
+| 9 | `apps/api/src/platform/presentation/http/security/decorators/authorize.decorator.ts` | Route requirement DSL |
 | 10 | `docs/technical/authorization/backend.md` | Cedar + merchant capabilities chapter |
 
 ### Appendix J — Rule 28 migration patterns

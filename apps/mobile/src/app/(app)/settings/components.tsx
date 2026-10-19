@@ -1,44 +1,48 @@
 // ============================================
-// Components — the React Native UI kit (@workspace/ui-native), live
+// Components — the React Native UI kit gallery (development builds only)
 // ============================================
-// A developer's gallery of every kit component, one family at a time: the
-// family chips choose which section shows. This screen and its sections are
-// the smart side (they own the demo state); every kit component in them stays
-// controlled. Nothing here reaches the API.
+// The gallery is a developer tool, so a store build must not contain it. Its
+// body (features/component-gallery/component-gallery-screen-body.tsx and every
+// demo section) is imported only inside a `__DEV__` conditional: Metro replaces
+// `__DEV__` with `false` in a production bundle and drops the branch — and the
+// import with it — before it collects dependencies (the rule the demo accounts
+// follow, contexts/identity/auth/demo-accounts.ts). `__DEV__` must stay a
+// literal here and the import must stay inside the branch. A store build sends
+// this route to Settings; the drawer's Developer section is development-only too.
 
-import { ToggleGroup } from "@workspace/ui-native/components/toggle-group";
+import { SkeletonGroup, SkeletonText } from "@workspace/ui-native/components/skeleton";
+import { Redirect } from "expo-router";
 import * as React from "react";
 
 import { Screen } from "../../../components/screen";
-import { DEFAULT_GALLERY_FAMILY, GALLERY_FAMILIES, nextGalleryFamily, type GalleryFamily } from "../../../features/component-gallery/families";
-import { DataDisplayDemos } from "../../../features/component-gallery/sections/data-display-demos";
-import { DateDemos } from "../../../features/component-gallery/sections/date-demos";
-import { DisplayDemos } from "../../../features/component-gallery/sections/display-demos";
-import { FormInputsDemos } from "../../../features/component-gallery/sections/form-inputs-demos";
-import { MediaDemos } from "../../../features/component-gallery/sections/media-demos";
-import { OverlayDemos } from "../../../features/component-gallery/sections/overlay-demos";
-import { SelectionDemos } from "../../../features/component-gallery/sections/selection-demos";
+import { COMPONENT_GALLERY_COPY } from "../../../features/component-gallery/labels";
+import { lazyView } from "../../../lib/lazy-view";
+import { ROUTES } from "../../../runtime/routes";
 
-const FAMILY_SECTIONS: Readonly<Record<GalleryFamily, () => React.JSX.Element>> = {
-	inputs: FormInputsDemos,
-	selection: SelectionDemos,
-	overlays: OverlayDemos,
-	display: DisplayDemos,
-	data: DataDisplayDemos,
-	dates: DateDemos,
-	media: MediaDemos,
-};
-
-export default function ComponentsScreen(): React.JSX.Element {
-	const [family, setFamily] = React.useState<GalleryFamily>(DEFAULT_GALLERY_FAMILY);
-	const chooseFamily = React.useCallback((pressed: GalleryFamily | null): void => {
-		setFamily((current: GalleryFamily): GalleryFamily => nextGalleryFamily(current, pressed));
-	}, []);
-	const Section = FAMILY_SECTIONS[family];
+function ComponentGallerySkeleton(): React.JSX.Element {
 	return (
-		<Screen description="Every component of the mobile UI kit, live. Pick a family to see its components in each variant, size and state.">
-			<ToggleGroup type="single" label="Component family" options={GALLERY_FAMILIES} value={family} onChange={chooseFamily} size="sm" testID="component-families" />
-			<Section />
+		<Screen description={COMPONENT_GALLERY_COPY.description} testID="component-gallery-loading">
+			<SkeletonGroup accessibilityLabel={COMPONENT_GALLERY_COPY.loading} className="gap-3 rounded-xl bg-card p-4">
+				<SkeletonText size="lg" widthClassName="w-1/2" />
+				<SkeletonText size="sm" widthClassName="w-5/6" />
+			</SkeletonGroup>
 		</Screen>
 	);
+}
+
+/** The gallery, loaded the first time the screen opens — and present in development bundles only. */
+const ComponentGalleryScreenBody: React.ComponentType | null = __DEV__
+	? lazyView(
+			async (): Promise<React.ComponentType> => (await import("../../../features/component-gallery/component-gallery-screen-body")).ComponentGalleryScreenBody,
+			ComponentGallerySkeleton,
+		)
+	: null;
+
+export default function ComponentsScreen(): React.JSX.Element {
+	// The module-level read above is what keeps the gallery out of a store bundle; this one decides the
+	// redirect when the screen renders, so the store-build behaviour holds without re-evaluating the module.
+	if (!__DEV__ || ComponentGalleryScreenBody === null) {
+		return <Redirect href={ROUTES.settings} />;
+	}
+	return <ComponentGalleryScreenBody />;
 }

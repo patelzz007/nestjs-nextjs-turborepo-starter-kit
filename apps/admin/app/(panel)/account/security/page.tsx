@@ -1,4 +1,4 @@
-import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
+import { SecuritySettingsPanel } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel";
 
 /**
  * `/account/security` — the signed-in admin's password, email verification, and

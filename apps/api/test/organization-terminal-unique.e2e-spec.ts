@@ -11,7 +11,7 @@ import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
 /** The partial unique index from migration 20261002123150_organization_terminal_live_unique. */
-const LIVE_TERMINAL_UNIQUE_INDEX = "organization_terminals_organization_id_terminal_id_key";
+const LIVE_TERMINAL_UNIQUE_INDEX = "OrganizationTerminal_organizationId_terminalId_key";
 /** Postgres `unique_violation`. */
 const UNIQUE_VIOLATION_SQLSTATE = "23505";
 
@@ -36,7 +36,7 @@ describe("organization_terminals live-only terminal id uniqueness (integration)"
 
 	async function insertTerminal(client: PoolClient, terminalId: string, isDeleted: boolean): Promise<void> {
 		await client.query(
-			`INSERT INTO public.organization_terminals (id, organization_id, location_id, terminal_id, label, created_by_user_id, is_deleted) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			`INSERT INTO public."OrganizationTerminal" (id, "organizationId", "locationId", "terminalId", label, "createdByUserId", "isDeleted") VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 			[randomUUID(), ORGANIZATION_SEED_IDS.klOrganization, ORGANIZATION_SEED_IDS.klLocation, terminalId, "E2E unique index", REWARD_SEED_IDS.klOwnerUser, isDeleted],
 		);
 	}
@@ -60,7 +60,7 @@ describe("organization_terminals live-only terminal id uniqueness (integration)"
 			await insertTerminal(client, terminalId, false);
 
 			const live = await client.query<{ count: number }>(
-				`SELECT COUNT(*)::int AS count FROM public.organization_terminals WHERE organization_id = $1 AND terminal_id = $2 AND is_deleted = false`,
+				`SELECT COUNT(*)::int AS count FROM public."OrganizationTerminal" WHERE "organizationId" = $1 AND "terminalId" = $2 AND "isDeleted" = false`,
 				[ORGANIZATION_SEED_IDS.klOrganization, terminalId],
 			);
 			expect(live.rows[LIST_SLOT_INDEX.first]?.count).toBe(1);

@@ -3,7 +3,7 @@ title: "API reference — Sample catalog (products and categories)"
 description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk."
 order: 13
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -25,7 +25,7 @@ List Products
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:PRODUCT`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_list` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_list` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Parameters**
 
@@ -94,9 +94,9 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "a0910df2-0f6d-4f88-b841-7c2f55829e0b",
+      "id": "019b76da-a800-7091-8df2-0f6d4f883841",
       "brand": "FreshField",
-      "categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+      "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
       "compareAtPrice": null,
       "description": "Full description for Demo Product 070. Designed for admin list, search, and pagination demos across categories and inventory.",
       "imageUrl": null,
@@ -111,13 +111,13 @@ Response `200 OK` (application/json):
       "weightGrams": 845,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1790674750687,
-      "updatedAt": 1791193150687
+      "createdAt": 1791917114087,
+      "updatedAt": 1792435514086
     },
     {
-      "id": "b0367802-0712-49ec-9c0f-3e25cbd83702",
+      "id": "019b76da-a800-7036-b802-0712c9ec5c0f",
       "brand": "UrbanThread",
-      "categoryId": "6a843aeb-0ade-4d25-bc8d-6889c1dcb372",
+      "categoryId": "019b76da-a800-7a84-baeb-0ade2d257c8d",
       "compareAtPrice": 167.49,
       "description": "Full description for Demo Product 069. Designed for admin list, search, and pagination demos across categories and inventory.",
       "imageUrl": null,
@@ -132,8 +132,8 @@ Response `200 OK` (application/json):
       "weightGrams": 820,
       "version": 2,
       "deletedAt": null,
-      "createdAt": 1790588350687,
-      "updatedAt": 1791193150687
+      "createdAt": 1791830714087,
+      "updatedAt": 1792435514086
     }
   ],
   "meta": {
@@ -141,11 +141,11 @@ Response `200 OK` (application/json):
     "total": 71,
     "page": 1,
     "totalPages": 36,
-    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTA1ODgzNTA2ODcsImlkIjoiYjAzNjc4MDItMDcxMi00OWVjLTljMGYtM2UyNWNiZDgzNzAyIn0",
+    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTE4MzA3MTQwODcsImlkIjoiMDE5Yjc2ZGEtYTgwMC03MDM2LWI4MDItMDcxMmM5ZWM1YzBmIn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "aS9mFGvNABo8vJ286Ny0L",
-    "timestamp": 1791193325910
+    "correlationId": "0w5sgb2mH02zgTr8zssJn",
+    "timestamp": 1792435597243
   }
 }
 ```
@@ -156,16 +156,17 @@ Create Product (send an Idempotency-Key header to make retries safe)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:PRODUCT`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_create` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_create` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `Idempotency-Key` | header | string | no | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
+| `Idempotency-Key` | header | string | no | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
 
 **Request body** (`application/json`, required)
 
@@ -233,7 +234,7 @@ Content-Type: application/json
   "slug": "demo-product-070-bundle",
   "sku": "SKU-0070-B",
   "price": 156.99,
-  "categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1"
+  "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7"
 }
 ```
 
@@ -243,9 +244,9 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "21c503df-1714-4d06-a30c-e1268e64c810",
+    "id": "01a1557c-affe-7339-9c15-5bc561770ccc",
     "brand": null,
-    "categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+    "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
     "description": null,
     "imageUrl": null,
@@ -260,12 +261,12 @@ Response `201 Created` (application/json):
     "weightGrams": null,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1791193325943,
-    "updatedAt": 1791193325943
+    "createdAt": 1792435597306,
+    "updatedAt": 1792435597306
   },
   "meta": {
-    "correlationId": "EJ4HWFXJixl0ad__tUFAT",
-    "timestamp": 1791193325945
+    "correlationId": "CgJxNjK_llJxf0KZwhBK3",
+    "timestamp": 1792435597316
   }
 }
 ```
@@ -277,7 +278,7 @@ Get Product by id
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PRODUCT`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_get` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_get` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Parameters**
 
@@ -321,7 +322,7 @@ Get Product by id
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/product/a0910df2-0f6d-4f88-b841-7c2f55829e0b
+GET /api/v1/product/019b76da-a800-7091-8df2-0f6d4f883841
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -332,9 +333,9 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "a0910df2-0f6d-4f88-b841-7c2f55829e0b",
+    "id": "019b76da-a800-7091-8df2-0f6d4f883841",
     "brand": "FreshField",
-    "categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+    "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
     "description": "Full description for Demo Product 070. Designed for admin list, search, and pagination demos across categories and inventory.",
     "imageUrl": null,
@@ -349,12 +350,12 @@ Response `200 OK` (application/json):
     "weightGrams": 845,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1790674750687,
-    "updatedAt": 1791193150687
+    "createdAt": 1791917114087,
+    "updatedAt": 1792435514086
   },
   "meta": {
-    "correlationId": "bybxq_E87wkwiYWB37UtW",
-    "timestamp": 1791193325926
+    "correlationId": "0KixPQtyjs_V75XiaPbaF",
+    "timestamp": 1792435597273
   }
 }
 ```
@@ -365,9 +366,10 @@ Update Product
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PRODUCT`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_update` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_update` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Parameters**
 
@@ -431,7 +433,7 @@ Update Product
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/product/21c503df-1714-4d06-a30c-e1268e64c810
+PATCH /api/v1/product/01a1557c-affe-7339-9c15-5bc561770ccc
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -449,9 +451,9 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "21c503df-1714-4d06-a30c-e1268e64c810",
+    "id": "01a1557c-affe-7339-9c15-5bc561770ccc",
     "brand": null,
-    "categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+    "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
     "description": null,
     "imageUrl": null,
@@ -466,12 +468,12 @@ Response `200 OK` (application/json):
     "weightGrams": null,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1791193325943,
-    "updatedAt": 1791193325968
+    "createdAt": 1792435597306,
+    "updatedAt": 1792435597353
   },
   "meta": {
-    "correlationId": "7YaoahHttFqXnT_GypQUJ",
-    "timestamp": 1791193325971
+    "correlationId": "bqbkdrzzdWox_NeqGKbrq",
+    "timestamp": 1792435597365
   }
 }
 ```
@@ -482,9 +484,10 @@ Soft delete Product
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:PRODUCT`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_delete` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_delete` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Parameters**
 
@@ -510,7 +513,7 @@ Soft delete Product
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/product/21c503df-1714-4d06-a30c-e1268e64c810
+DELETE /api/v1/product/01a1557c-affe-7339-9c15-5bc561770ccc
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -525,8 +528,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "z_nyleqWdLcJ2ahgjW48I",
-    "timestamp": 1791193325993
+    "correlationId": "Tura2x8YOflclFKaNdsUW",
+    "timestamp": 1792435597401
   }
 }
 ```
@@ -537,9 +540,10 @@ Restore Product
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PRODUCT`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_restore` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_restore` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Parameters**
 
@@ -583,7 +587,7 @@ Restore Product
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/product/21c503df-1714-4d06-a30c-e1268e64c810/restore
+POST /api/v1/product/01a1557c-affe-7339-9c15-5bc561770ccc/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -595,9 +599,9 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "21c503df-1714-4d06-a30c-e1268e64c810",
+    "id": "01a1557c-affe-7339-9c15-5bc561770ccc",
     "brand": null,
-    "categoryId": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+    "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
     "description": null,
     "imageUrl": null,
@@ -612,12 +616,12 @@ Response `201 Created` (application/json):
     "weightGrams": null,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1791193325943,
-    "updatedAt": 1791193326012
+    "createdAt": 1792435597306,
+    "updatedAt": 1792435597484
   },
   "meta": {
-    "correlationId": "6pIGEwn4cjGuUHBHcDUEU",
-    "timestamp": 1791193326015
+    "correlationId": "7OXdixJ_JFoepE0ZKmDsf",
+    "timestamp": 1792435597489
   }
 }
 ```
@@ -628,9 +632,10 @@ Bulk create products
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:PRODUCT`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_bulkCreate` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_bulkCreate` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -702,7 +707,7 @@ Content-Type: application/json
       "slug": "demo-product-069-bundle",
       "sku": "SKU-0069-B",
       "price": 152.49,
-      "categoryId": "6a843aeb-0ade-4d25-bc8d-6889c1dcb372"
+      "categoryId": "019b76da-a800-7a84-baeb-0ade2d257c8d"
     }
   ]
 }
@@ -715,9 +720,9 @@ Response `201 Created` (application/json):
   "success": true,
   "data": [
     {
-      "id": "a26a0417-b755-414c-af72-72b9fb3c590e",
+      "id": "01a1557c-b0d4-72d9-aec0-41fab7fa0b33",
       "brand": null,
-      "categoryId": "6a843aeb-0ade-4d25-bc8d-6889c1dcb372",
+      "categoryId": "019b76da-a800-7a84-baeb-0ade2d257c8d",
       "compareAtPrice": null,
       "description": null,
       "imageUrl": null,
@@ -732,13 +737,13 @@ Response `201 Created` (application/json):
       "weightGrams": null,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1791193326038,
-      "updatedAt": 1791193326038
+      "createdAt": 1792435597522,
+      "updatedAt": 1792435597522
     }
   ],
   "meta": {
-    "correlationId": "5cKordJ7i_ZujBBqE4ArZ",
-    "timestamp": 1791193326041
+    "correlationId": "uLkadJHR3eJvt4X15jziN",
+    "timestamp": 1792435597528
   }
 }
 ```
@@ -749,9 +754,10 @@ Bulk soft delete products
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:PRODUCT`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `ProductController_bulkDelete` · [source](../../../apps/api/src/modules/product/product.controller.ts)
+- Operation id `ProductController_bulkDelete` · [source](../../../apps/api/src/contexts/catalog/presentation/http/product.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -785,8 +791,8 @@ Content-Type: application/json
 
 {
   "ids": [
-    "21c503df-1714-4d06-a30c-e1268e64c810",
-    "a26a0417-b755-414c-af72-72b9fb3c590e"
+    "01a1557c-affe-7339-9c15-5bc561770ccc",
+    "01a1557c-b0d4-72d9-aec0-41fab7fa0b33"
   ]
 }
 ```
@@ -800,8 +806,8 @@ Response `201 Created` (application/json):
     "deletedCount": 2
   },
   "meta": {
-    "correlationId": "LA1WKf7GiRt0kOyxy8nDz",
-    "timestamp": 1791193326063
+    "correlationId": "LcCPNJ89jrDdIxklzjkPC",
+    "timestamp": 1792435597560
   }
 }
 ```
@@ -815,7 +821,7 @@ List SampleCategories
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:SAMPLE_CATEGORY`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_list` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_list` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Parameters**
 
@@ -875,7 +881,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+      "id": "019b76da-a800-74d1-86c3-d6127e984dc7",
       "description": "Curated pet supplies — collection 5 for the demo storefront.",
       "isActive": true,
       "name": "Pet Supplies — Collection 5",
@@ -883,11 +889,11 @@ Response `200 OK` (application/json):
       "sortOrder": 70,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1789378750638,
-      "updatedAt": 1791193150637
+      "createdAt": 1790621114024,
+      "updatedAt": 1792435514023
     },
     {
-      "id": "6a843aeb-0ade-4d25-bc8d-6889c1dcb372",
+      "id": "019b76da-a800-7a84-baeb-0ade2d257c8d",
       "description": "Curated health & wellness — collection 5 for the demo storefront.",
       "isActive": true,
       "name": "Health & Wellness — Collection 5",
@@ -895,8 +901,8 @@ Response `200 OK` (application/json):
       "sortOrder": 69,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1789292350638,
-      "updatedAt": 1791193150637
+      "createdAt": 1790534714024,
+      "updatedAt": 1792435514023
     }
   ],
   "meta": {
@@ -904,11 +910,11 @@ Response `200 OK` (application/json):
     "total": 70,
     "page": 1,
     "totalPages": 35,
-    "nextCursor": "eyJjcmVhdGVkQXQiOjE3ODkyOTIzNTA2MzgsImlkIjoiNmE4NDNhZWItMGFkZS00ZDI1LWJjOGQtNjg4OWMxZGNiMzcyIn0",
+    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTA1MzQ3MTQwMjQsImlkIjoiMDE5Yjc2ZGEtYTgwMC03YTg0LWJhZWItMGFkZTJkMjU3YzhkIn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "-E-OcJMH-X2yrVyK-rL3M",
-    "timestamp": 1791193325738
+    "correlationId": "QOe8ucD_POAcHjOs6mavA",
+    "timestamp": 1792435596926
   }
 }
 ```
@@ -919,9 +925,17 @@ Create SampleCategory
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:SAMPLE_CATEGORY`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_create` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_create` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `Idempotency-Key` | header | string | no | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
 
 **Request body** (`application/json`, required)
 
@@ -979,7 +993,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "32c5ff73-f150-4e1a-88e3-9f8469954063",
+    "id": "01a1557c-aec3-73b7-810a-775b7e8c1807",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": true,
     "name": "Pet Supplies — Collection 5 Archive",
@@ -987,12 +1001,12 @@ Response `201 Created` (application/json):
     "sortOrder": 0,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1791193325767,
-    "updatedAt": 1791193325767
+    "createdAt": 1792435596995,
+    "updatedAt": 1792435596995
   },
   "meta": {
-    "correlationId": "UU6LnJgNNec-iT8O2A2LA",
-    "timestamp": 1791193325768
+    "correlationId": "_PwlC84624Ly-tZ8JMaFY",
+    "timestamp": 1792435596999
   }
 }
 ```
@@ -1004,7 +1018,7 @@ Get SampleCategory by id
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:SAMPLE_CATEGORY`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_get` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_get` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Parameters**
 
@@ -1039,7 +1053,7 @@ Get SampleCategory by id
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/sample-category/f4d146c3-d612-4e98-8dc7-938e6a4fdce1
+GET /api/v1/sample-category/019b76da-a800-74d1-86c3-d6127e984dc7
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1050,7 +1064,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "f4d146c3-d612-4e98-8dc7-938e6a4fdce1",
+    "id": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": true,
     "name": "Pet Supplies — Collection 5",
@@ -1058,12 +1072,12 @@ Response `200 OK` (application/json):
     "sortOrder": 70,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1789378750638,
-    "updatedAt": 1791193150637
+    "createdAt": 1790621114024,
+    "updatedAt": 1792435514023
   },
   "meta": {
-    "correlationId": "BSJDaD3-3gI9x0K4KoD1Q",
-    "timestamp": 1791193325752
+    "correlationId": "H-cWj6d5YqgK1N4f0a7rm",
+    "timestamp": 1792435596970
   }
 }
 ```
@@ -1074,9 +1088,10 @@ Update SampleCategory
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:SAMPLE_CATEGORY`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_update` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_update` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Parameters**
 
@@ -1122,7 +1137,7 @@ Update SampleCategory
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/sample-category/32c5ff73-f150-4e1a-88e3-9f8469954063
+PATCH /api/v1/sample-category/01a1557c-aec3-73b7-810a-775b7e8c1807
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1140,7 +1155,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "32c5ff73-f150-4e1a-88e3-9f8469954063",
+    "id": "01a1557c-aec3-73b7-810a-775b7e8c1807",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": false,
     "name": "Pet Supplies — Collection 5 Archive",
@@ -1148,12 +1163,12 @@ Response `200 OK` (application/json):
     "sortOrder": 0,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1791193325767,
-    "updatedAt": 1791193325789
+    "createdAt": 1792435596995,
+    "updatedAt": 1792435597045
   },
   "meta": {
-    "correlationId": "77Y_1xxlpn9xOV1e-0k0u",
-    "timestamp": 1791193325793
+    "correlationId": "TKJ3v662riq02ZZe5V26N",
+    "timestamp": 1792435597049
   }
 }
 ```
@@ -1164,9 +1179,10 @@ Soft delete SampleCategory
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:SAMPLE_CATEGORY`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_delete` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_delete` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Parameters**
 
@@ -1192,7 +1208,7 @@ Soft delete SampleCategory
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/sample-category/32c5ff73-f150-4e1a-88e3-9f8469954063
+DELETE /api/v1/sample-category/01a1557c-aec3-73b7-810a-775b7e8c1807
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1207,8 +1223,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "e8xJwfMqT2Cm5-EY5zOYF",
-    "timestamp": 1791193325817
+    "correlationId": "cMb6-oOVSliIiWfC5LwjN",
+    "timestamp": 1792435597082
   }
 }
 ```
@@ -1219,9 +1235,10 @@ Restore SampleCategory
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:SAMPLE_CATEGORY`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_restore` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_restore` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Parameters**
 
@@ -1256,7 +1273,7 @@ Restore SampleCategory
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/sample-category/32c5ff73-f150-4e1a-88e3-9f8469954063/restore
+POST /api/v1/sample-category/01a1557c-aec3-73b7-810a-775b7e8c1807/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1268,7 +1285,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "32c5ff73-f150-4e1a-88e3-9f8469954063",
+    "id": "01a1557c-aec3-73b7-810a-775b7e8c1807",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": false,
     "name": "Pet Supplies — Collection 5 Archive",
@@ -1276,12 +1293,12 @@ Response `201 Created` (application/json):
     "sortOrder": 0,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1791193325767,
-    "updatedAt": 1791193325840
+    "createdAt": 1792435596995,
+    "updatedAt": 1792435597116
   },
   "meta": {
-    "correlationId": "rrdHaxFNozn085FH8FXNq",
-    "timestamp": 1791193325845
+    "correlationId": "k09dpuodeKnu2K5lZP0Ng",
+    "timestamp": 1792435597121
   }
 }
 ```
@@ -1292,9 +1309,10 @@ Bulk create samplecategories
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:SAMPLE_CATEGORY`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_bulkCreate` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_bulkCreate` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1358,7 +1376,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": [
     {
-      "id": "91ca8b70-1d7f-4c9b-a024-698e1497e12f",
+      "id": "01a1557c-af6e-73be-bbe3-594ca7f6b544",
       "description": null,
       "isActive": true,
       "name": "Health & Wellness — Collection 5 Archive",
@@ -1366,13 +1384,13 @@ Response `201 Created` (application/json):
       "sortOrder": 0,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1791193325864,
-      "updatedAt": 1791193325864
+      "createdAt": 1792435597163,
+      "updatedAt": 1792435597163
     }
   ],
   "meta": {
-    "correlationId": "_5SUh3d_M3twkSDXUncGr",
-    "timestamp": 1791193325864
+    "correlationId": "dTs8l-pDauPhrFLhEbj4x",
+    "timestamp": 1792435597169
   }
 }
 ```
@@ -1383,9 +1401,10 @@ Bulk soft delete samplecategories
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:SAMPLE_CATEGORY`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SampleCategoryController_bulkDelete` · [source](../../../apps/api/src/modules/sample-category/sample-category.controller.ts)
+- Operation id `SampleCategoryController_bulkDelete` · [source](../../../apps/api/src/contexts/catalog/presentation/http/sample-category.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1419,8 +1438,8 @@ Content-Type: application/json
 
 {
   "ids": [
-    "32c5ff73-f150-4e1a-88e3-9f8469954063",
-    "91ca8b70-1d7f-4c9b-a024-698e1497e12f"
+    "01a1557c-aec3-73b7-810a-775b7e8c1807",
+    "01a1557c-af6e-73be-bbe3-594ca7f6b544"
   ]
 }
 ```
@@ -1434,8 +1453,8 @@ Response `201 Created` (application/json):
     "deletedCount": 2
   },
   "meta": {
-    "correlationId": "TxVSWh_pOZCzXO4CWWS_h",
-    "timestamp": 1791193325887
+    "correlationId": "zpiUR8zLm18bUikerbVey",
+    "timestamp": 1792435597209
   }
 }
 ```

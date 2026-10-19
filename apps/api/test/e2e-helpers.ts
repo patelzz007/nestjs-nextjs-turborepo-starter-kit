@@ -9,9 +9,9 @@ import { API_VERSION_PREFIX, isArrayValue, MUTATION_INTENT_HEADER, MUTATION_INTE
 import { type z } from "zod";
 
 import { AppModule } from "../src/app.module";
-import { TrustedProxies } from "../src/common/http/client-ip";
+import { TrustedProxies } from "../src/platform/infrastructure/http/client-ip";
 import { getApiConfig } from "../src/config/api-config";
-import { HealthService } from "../src/modules/health/health.service";
+import { HealthService } from "../src/platform/presentation/http/health/health.service";
 
 export interface LoginResult {
 	readonly accessToken: string;
@@ -78,16 +78,16 @@ export async function clearPendingTeamInviteForEmail(pool: Pool, organizationId:
 	try {
 		await client.query(`SELECT set_config('app.rls_bypass', 'true', true)`);
 		await client.query(
-			`DELETE FROM public.organization_invitation_location_scopes
-       WHERE invitation_id IN (
-         SELECT id FROM public.organization_invitations
-         WHERE organization_id = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'
+			`DELETE FROM public."OrganizationInvitationLocationScope"
+       WHERE "invitationId" IN (
+         SELECT id FROM public."OrganizationInvitation"
+         WHERE "organizationId" = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'
        )`,
 			[organizationId, email],
 		);
 		await client.query(
-			`DELETE FROM public.organization_invitations
-       WHERE organization_id = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'`,
+			`DELETE FROM public."OrganizationInvitation"
+       WHERE "organizationId" = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'`,
 			[organizationId, email],
 		);
 	} finally {
@@ -105,7 +105,7 @@ export async function clearPendingTeamInviteForEmail(pool: Pool, organizationId:
  */
 export async function markSeedUserEmailVerified(pool: Pool, email: string): Promise<void> {
 	// COALESCE keeps an existing verification timestamp (idempotent across runs).
-	const result = await pool.query(`UPDATE public.users SET email_verified_at = COALESCE(email_verified_at, $1) WHERE email = $2`, [Date.now(), email]);
+	const result = await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = COALESCE("emailVerifiedAt", $1) WHERE email = $2`, [Date.now(), email]);
 	if (result.rowCount !== 1) {
 		throw new Error(`Seed user ${email} is missing — run pnpm db:seed`);
 	}

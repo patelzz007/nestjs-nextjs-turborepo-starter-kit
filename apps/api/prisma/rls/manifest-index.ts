@@ -1,6 +1,6 @@
 /**
  * RLS manifest index — single source for drift checks and contributor docs.
- * Every Prisma `@@map` table should appear in exactly one profile below.
+ * Every Prisma model (its table is named exactly like the model) appears in exactly one profile below.
  */
 
 export type RlsManifestProfile =
@@ -11,7 +11,7 @@ export type RlsManifestProfile =
 	| "bypass_only"
 	| "geo_reference"
 	| "user_identity"
-	| "url_analytics"
+	| "append_log"
 	| "file_derived"
 	| "product_catalog"
 	| "reward_user"
@@ -19,85 +19,80 @@ export type RlsManifestProfile =
 
 export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly string[]>> = {
 	ownership: [
-		"urls",
-		"tags",
-		"api_keys",
-		"refresh_tokens",
-		"password_reset_tokens",
-		"password_history",
-		"backup_codes",
-		"two_factor_pending_setups",
-		"two_factor_login_challenges",
-		"mfa_recovery_requests",
-		"user_avatars",
-		"github_account_links",
+		"RefreshToken",
+		"PasswordResetToken",
+		"PasswordHistory",
+		"BackupCode",
+		"TwoFactorPendingSetup",
+		"TwoFactorLoginChallenge",
+		"MfaRecoveryRequest",
+		"UserAvatar",
+		"GithubAccountLink",
 	],
-	rbac_catalog: ["roles", "permissions", "capability_definitions", "role_permissions", "user_roles", "user_permissions", "policy_definitions"],
+	rbac_catalog: ["Role", "Permission", "CapabilityDefinition", "RolePermission", "UserRole", "UserPermission", "PolicyDefinition"],
 	organization_tenant: [
-		"organizations",
-		"organization_slug_history",
-		"organization_locations",
-		"stores",
-		"store_memberships",
-		"organization_memberships",
-		"organization_membership_location_scopes",
-		"organization_merchant_profiles",
-		"organization_invitations",
-		"organization_invitation_location_scopes",
-		"organization_access_requests",
-		"organization_audit_logs",
-		"organization_lifecycle_events",
-		"tenant_placements",
-		"organization_entitlements",
-		"organization_quotas",
-		"authorization_policy_drafts",
-		"authorization_policy_versions",
-		"support_access_grants",
-		"tenant_encryption_keys",
-		"stored_files",
-		"organization_assets",
-		"organization_kyb_files",
-		"rewards",
-		"reward_location_scopes",
-		"reward_images",
-		"reward_audit_logs",
-		"resource_acls",
+		"Organization",
+		"OrganizationSlugHistory",
+		"OrganizationLocation",
+		"Store",
+		"StoreMembership",
+		"OrganizationMembership",
+		"OrganizationMembershipLocationScope",
+		"OrganizationMerchantProfile",
+		"OrganizationInvitation",
+		"OrganizationInvitationLocationScope",
+		"OrganizationAccessRequest",
+		"OrganizationAuditLog",
+		"OrganizationLifecycleEvent",
+		"TenantPlacement",
+		"AuthorizationPolicyDraft",
+		"AuthorizationPolicyVersion",
+		"SupportAccessGrant",
+		"TenantEncryptionKey",
+		"StoredFile",
+		"OrganizationAsset",
+		"OrganizationKybFile",
+		"Reward",
+		"RewardLocationScope",
+		"RewardImage",
+		"RewardAuditLog",
+		"ResourceAcl",
 	],
-	organization_location: ["organization_terminals", "organization_api_keys"],
+	organization_location: ["OrganizationTerminal", "OrganizationApiKey"],
 	bypass_only: [
-		"email_delivery_events",
-		"outbox_events",
-		"analytics_events",
-		"inbox_processed_events",
-		"inbox_dead_letters",
-		"audit_logs",
-		"data_change_logs",
-		"platform_resource_idempotency_records",
-		"permission_audit_logs",
-		"authorization_audits",
-		"impersonation_sessions",
-		"mfa_recovery_audit_logs",
-		"product_images",
-		"github_webhook_subscriptions",
-		"github_webhook_deliveries",
+		"EmailDeliveryEvent",
+		"OutboxEvent",
+		"AnalyticsEvent",
+		"InboxProcessedEvent",
+		"InboxDeadLetter",
+		"AuditLog",
+		"DataChangeLog",
+		"PlatformResourceIdempotencyRecord",
+		"PermissionAuditLog",
+		"AuthorizationAudit",
+		"ImpersonationSession",
+		"MfaRecoveryAuditLog",
+		"ProductImage",
+		"GithubWebhookSubscription",
+		"GithubWebhookDelivery",
 	],
-	geo_reference: ["regions", "subregions", "countries", "states", "cities"],
-	user_identity: ["users"],
-	url_analytics: ["url_tags", "clicks", "logs", "email_logs", "impersonation_audit_logs", "api_key_usage_logs"],
-	file_derived: ["file_variants"],
-	product_catalog: ["product", "sample_category"],
+	geo_reference: ["Region", "Subregion", "Country", "State", "City"],
+	user_identity: ["User"],
+	append_log: ["EmailLog", "ImpersonationAuditLog"],
+	file_derived: ["FileVariant"],
+	product_catalog: ["Product", "SampleCategory"],
 	reward_user: [
-		"reward_claims",
-		"reward_redemptions",
-		"reward_sales",
-		"reward_referrals",
-		"signup_referral_codes",
-		"signup_referrals",
-		"reward_otp_challenges",
-		"reward_legal_acceptances",
-		"reward_notifications",
+		"RewardClaim",
+		"RewardRedemption",
+		"RewardSale",
+		"RewardReferral",
+		"SignupReferralCode",
+		"SignupReferral",
+		"RewardOtpChallenge",
+		"RewardLegalAcceptance",
+		"RewardNotification",
 	],
-	authorization_simulation: ["authorization_policy_simulations"],
+	authorization_simulation: ["AuthorizationPolicySimulation"],
 };
 
 /** @deprecated Use `RLS_MANIFEST_PROFILES.ownership` — kept for existing imports. */
@@ -168,16 +163,15 @@ export function parsePrismaSchemaModels(schemaContent: string): PrismaTableModel
 		const bodyEnd = block.indexOf("\n}");
 		const body = bodyEnd === -1 ? block : block.slice(0, bodyEnd);
 
-		const mapMatch = /@@map\("(?<tableName>[^"]+)"\)/.exec(body);
-		const tableName = mapMatch?.groups?.tableName;
+		// Tables are named exactly like their models (no @@map — prisma/schema.prisma).
+		const [, tableName] = nameMatch;
 		if (tableName === undefined) {
 			continue;
 		}
 
 		const hasOrganizationId = /\n\s*organizationId\s+String/.test(body);
-		const hasRequiredLocationId = /\n\s*locationId\s+String\s+@map\("location_id"\)/.test(body);
-		const hasOptionalLocationId =
-			/\n\s*locationId\s+String\?\s+@map\("location_id"\)/.test(body) || (/\n\s*locationId\s+String\?/.test(body) && body.includes('@map("location_id")'));
+		const hasRequiredLocationId = /\n\s*locationId\s+String(?!\?)\b/.test(body);
+		const hasOptionalLocationId = /\n\s*locationId\s+String\?/.test(body);
 
 		models.push({
 			tableName,
@@ -207,7 +201,7 @@ export function collectRlsEnabledTableNames(rlsSqlContent: string): Set<string> 
 		}
 	}
 
-	const alterPattern = /ALTER TABLE(?: IF EXISTS)? public\.(?<tableName>\w+) ENABLE ROW LEVEL SECURITY/g;
+	const alterPattern = /ALTER TABLE(?: IF EXISTS)? public\."?(?<tableName>\w+)"? ENABLE ROW LEVEL SECURITY/g;
 	for (const match of rlsSqlContent.matchAll(alterPattern)) {
 		const tableName = match.groups?.tableName;
 		if (tableName !== undefined) {
@@ -215,7 +209,7 @@ export function collectRlsEnabledTableNames(rlsSqlContent: string): Set<string> 
 		}
 	}
 
-	const alterUnqualified = /ALTER TABLE (?<tableName>\w+) ENABLE ROW LEVEL SECURITY/g;
+	const alterUnqualified = /ALTER TABLE "?(?<tableName>\w+)"? ENABLE ROW LEVEL SECURITY/g;
 	for (const match of rlsSqlContent.matchAll(alterUnqualified)) {
 		const tableName = match.groups?.tableName;
 		if (tableName !== undefined) {
@@ -247,12 +241,12 @@ export function computeRlsManifestDrift(input: {
 			orgModelsMissingManifest.push(model.tableName);
 		}
 		const profile = profileMap.get(model.tableName);
-		const locationScopeJunctionTables: readonly string[] = ["reward_location_scopes", "organization_invitation_location_scopes", "organization_membership_location_scopes"];
+		const locationScopeJunctionTables: readonly string[] = ["RewardLocationScope", "OrganizationInvitationLocationScope", "OrganizationMembershipLocationScope"];
 		if (model.hasRequiredLocationId && profile !== "organization_location" && profile !== "organization_tenant" && !locationScopeJunctionTables.includes(model.tableName)) {
 			locationProfileMismatch.push(`${model.tableName} (expected organization_location or organization_tenant profile)`);
 		}
 		if (profile === "organization_location" && !model.hasRequiredLocationId && !model.hasOptionalLocationId) {
-			locationProfileMismatch.push(`${model.tableName} (manifest organization_location but schema has no location_id)`);
+			locationProfileMismatch.push(`${model.tableName} (manifest organization_location but schema has no "locationId")`);
 		}
 	}
 

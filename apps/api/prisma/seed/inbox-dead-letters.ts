@@ -5,7 +5,7 @@ import { deterministicUuid } from "./deterministic-uuid";
 import { sha256BytesHex } from "./helpers";
 
 /**
- * Development-scenario sample of parked Kafka records (`inbox_dead_letters`),
+ * Development-scenario sample of parked Kafka records (`InboxDeadLetter`),
  * so the operator runbook queries (docs/technical/messaging.md) have
  * something to show. Shaped exactly as apps/analytics-consumer parks them:
  * raw bytes + ORIGINAL size + SHA-256 + truncation flag, the attempts made,

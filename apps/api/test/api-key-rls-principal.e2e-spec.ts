@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
-import { sha256Hex } from "../src/common/crypto/sha256";
+import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { anonymousRlsContext, apiKeyRlsContext, rlsSessionVariables, type RlsContext } from "../src/prisma/rls-context";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -91,7 +91,7 @@ describe("API key RLS principal (e2e)", () => {
 		const id = randomUUID();
 		await asBypass((client) =>
 			client.query(
-				`INSERT INTO public.organization_api_keys (id, organization_id, location_id, name, key_hash, key_prefix, scope, created_by_user_id)
+				`INSERT INTO public."OrganizationApiKey" (id, "organizationId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId")
          VALUES ($1, $2, $3, $4, $5, 'e2e-rls-prefix', 'INTEGRATION', $6)`,
 				[id, organizationId, locationId, `${KEY_NAME_PREFIX} ${id}`, sha256Hex(id), customerId],
 			),
@@ -106,21 +106,21 @@ describe("API key RLS principal (e2e)", () => {
 		claimIds.push(claimId);
 		await asBypass(async (client) => {
 			await client.query(
-				`INSERT INTO public.organization_terminals (id, organization_id, location_id, terminal_id, label, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6)`,
+				`INSERT INTO public."OrganizationTerminal" (id, "organizationId", "locationId", "terminalId", label, "createdByUserId") VALUES ($1, $2, $3, $4, $5, $6)`,
 				[bill.terminalRowId, organizationId, locationId, `E2E-RLS-${bill.terminalRowId.slice(0, 8)}`, `${KEY_NAME_PREFIX} till`, customerId],
 			);
 			await client.query(
-				`INSERT INTO public.reward_claims (id, user_id, reward_id, redemption_token_hash, backup_code_hash, status, claimed_at, claim_expires_at, redeemed_at)
+				`INSERT INTO public."RewardClaim" (id, "userId", "rewardId", "redemptionTokenHash", "backupCodeHash", status, "claimedAt", "claimExpiresAt", "redeemedAt")
          VALUES ($1, $2, $3, $4, $5, 'REDEEMED', $6, $7, $6)`,
 				[claimId, customerId, rewardId, sha256Hex(`token-${claimId}`), sha256Hex(`backup-${claimId}`), now, now + DAY_MS],
 			);
 			await client.query(
-				`INSERT INTO public.reward_sales (id, organization_id, location_id, user_id, terminal_id, bill_total_minor, currency, idempotency_key, request_hash, paid_at)
+				`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
          VALUES ($1, $2, $3, $4, 'E2E-RLS-TILL', $5, 'MYR', $6, $7, $8)`,
 				[bill.saleId, organizationId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(bill.saleId), now],
 			);
 			await client.query(
-				`INSERT INTO public.reward_redemptions (id, claim_id, organization_id, location_id, user_id, terminal_id, redemption_method, sale_id, redeemed_at)
+				`INSERT INTO public."RewardRedemption" (id, "claimId", "organizationId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
          VALUES ($1, $2, $3, $4, $5, 'E2E-RLS-TILL', 'SCAN', $6, $7)`,
 				[bill.redemptionId, claimId, organizationId, locationId, customerId, bill.saleId, now],
 			);
@@ -134,13 +134,13 @@ describe("API key RLS principal (e2e)", () => {
 	 */
 	async function ensureSignupReferral(refereeId: string): Promise<{ readonly id: string; readonly created: boolean }> {
 		return asBypass(async (client) => {
-			const existing = await client.query<{ id: string }>(`SELECT id FROM public.signup_referrals WHERE referee_user_id = $1`, [refereeId]);
+			const existing = await client.query<{ id: string }>(`SELECT id FROM public."SignupReferral" WHERE "refereeUserId" = $1`, [refereeId]);
 			const [row] = existing.rows;
 			if (row !== undefined) {
 				return { id: row.id, created: false };
 			}
 			const codes = await client.query<{ id: string; ownerId: string }>(
-				`SELECT id, user_id AS "ownerId" FROM public.signup_referral_codes WHERE user_id <> $1 AND is_deleted = false ORDER BY created_at DESC, id DESC LIMIT 1`,
+				`SELECT id, "userId" AS "ownerId" FROM public."SignupReferralCode" WHERE "userId" <> $1 AND "isDeleted" = false ORDER BY "createdAt" DESC, id DESC LIMIT 1`,
 				[refereeId],
 			);
 			const [code] = codes.rows;
@@ -149,7 +149,7 @@ describe("API key RLS principal (e2e)", () => {
 			}
 			const id = randomUUID();
 			await client.query(
-				`INSERT INTO public.signup_referrals (id, referrer_user_id, referee_user_id, referral_code_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
+				`INSERT INTO public."SignupReferral" (id, "referrerUserId", "refereeUserId", "referralCodeId", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $5)`,
 				[id, code.ownerId, refereeId, code.id, Date.now()],
 			);
 			return { id, created: true };
@@ -166,7 +166,7 @@ describe("API key RLS principal (e2e)", () => {
 
 	beforeAll(async () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
-		const users = await asBypass((client) => client.query<{ id: string }>(`SELECT id FROM public.users WHERE email = 'alice.johnson@example.com'`));
+		const users = await asBypass((client) => client.query<{ id: string }>(`SELECT id FROM public."User" WHERE email = 'alice.johnson@example.com'`));
 		customerId = String(users.rows[LIST_SLOT_INDEX.first]?.id);
 		const now = Date.now();
 		// DRAFT: a published consumer reward is public marketplace data, readable by any session.
@@ -177,7 +177,7 @@ describe("API key RLS principal (e2e)", () => {
 		for (const [key, organizationId] of fixtureRewards) {
 			await asBypass((client) =>
 				client.query(
-					`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled)
+					`INSERT INTO public."Reward" (id, "organizationId", title, description, "rewardType", "rewardValue", category, "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled")
            VALUES ($1, $2, 'E2E RLS reward', 'Created by api-key-rls-principal.e2e-spec.ts', 'DISCOUNT', 5, 'cafe', 5, 5, $3, 'DRAFT', false)`,
 					[rewardIds[key], organizationId, now + DAY_MS],
 				),
@@ -197,9 +197,9 @@ describe("API key RLS principal (e2e)", () => {
 		signupReferralIds.customer = customerReferral.id;
 		const strangers = await asBypass((client) =>
 			client.query<{ id: string }>(
-				`SELECT u.id FROM public.users u
-         WHERE u.id <> $1 AND u.is_deleted = false
-           AND NOT EXISTS (SELECT 1 FROM public.reward_redemptions rr WHERE rr.user_id = u.id)
+				`SELECT u.id FROM public."User" u
+         WHERE u.id <> $1 AND u."isDeleted" = false
+           AND NOT EXISTS (SELECT 1 FROM public."RewardRedemption" rr WHERE rr."userId" = u.id)
          ORDER BY u.id LIMIT 1`,
 				[customerId],
 			),
@@ -214,52 +214,52 @@ describe("API key RLS principal (e2e)", () => {
 
 	afterAll(async () => {
 		await asBypass(async (client) => {
-			await client.query(`DELETE FROM public.signup_referrals WHERE id = ANY($1::text[])`, [createdSignupReferralIds]);
+			await client.query(`DELETE FROM public."SignupReferral" WHERE id = ANY($1::text[])`, [createdSignupReferralIds]);
 			const fixtureBills = Object.values(bills);
-			await client.query(`DELETE FROM public.reward_redemptions WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.redemptionId)]);
-			await client.query(`DELETE FROM public.reward_sales WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.saleId)]);
-			await client.query(`DELETE FROM public.organization_terminals WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.terminalRowId)]);
-			await client.query(`DELETE FROM public.reward_claims WHERE id = ANY($1::text[])`, [claimIds]);
-			await client.query(`DELETE FROM public.rewards WHERE id = ANY($1::text[])`, [Object.values(rewardIds)]);
-			await client.query(`DELETE FROM public.organization_api_keys WHERE name LIKE $1`, [`${KEY_NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."RewardRedemption" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.redemptionId)]);
+			await client.query(`DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.saleId)]);
+			await client.query(`DELETE FROM public."OrganizationTerminal" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.terminalRowId)]);
+			await client.query(`DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])`, [claimIds]);
+			await client.query(`DELETE FROM public."Reward" WHERE id = ANY($1::text[])`, [Object.values(rewardIds)]);
+			await client.query(`DELETE FROM public."OrganizationApiKey" WHERE name LIKE $1`, [`${KEY_NAME_PREFIX}%`]);
 		});
 		await pool.end();
 	});
 
 	it("lets an organization-wide key see its own organization's rows — and nothing of another organization, even by id", async () => {
 		await as(apiKeyRlsContext(klKeyId, KL_ORG, null), async (client) => {
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_sales WHERE id = $1`, [requireBill("kl").saleId])).toBe(1);
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.rewards WHERE id = $1`, [rewardIds.kl])).toBe(1);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("kl").saleId])).toBe(1);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."Reward" WHERE id = $1`, [rewardIds.kl])).toBe(1);
 
 			const foreignRows: readonly (readonly [string, string])[] = [
-				["reward_sales", requireBill("katil").saleId],
-				["reward_redemptions", requireBill("katil").redemptionId],
-				["organization_terminals", requireBill("katil").terminalRowId],
-				["organization_api_keys", mlkKatilKeyId],
-				["rewards", rewardIds.mlk],
+				["RewardSale", requireBill("katil").saleId],
+				["RewardRedemption", requireBill("katil").redemptionId],
+				["OrganizationTerminal", requireBill("katil").terminalRowId],
+				["OrganizationApiKey", mlkKatilKeyId],
+				["Reward", rewardIds.mlk],
 			];
 			for (const [table, id] of foreignRows) {
-				expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.${table} WHERE id = $1`, [id]), table).toBe(0);
+				expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."${table}" WHERE id = $1`, [id]), table).toBe(0);
 			}
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_claims WHERE reward_id = $1`, [rewardIds.mlk])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardClaim" WHERE "rewardId" = $1`, [rewardIds.mlk])).toBe(0);
 		});
 	});
 
 	it("keeps a store-scoped key on its own store's bills, redemptions and tills, even with another store's ids", async () => {
 		await as(apiKeyRlsContext(mlkKatilKeyId, MLK_ORG, KATIL), async (client) => {
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_sales WHERE id = $1`, [requireBill("katil").saleId])).toBe(1);
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_sales WHERE id = $1`, [requireBill("beruang").saleId])).toBe(0);
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_redemptions WHERE id = $1`, [requireBill("beruang").redemptionId])).toBe(0);
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.organization_terminals WHERE id = $1`, [requireBill("beruang").terminalRowId])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("katil").saleId])).toBe(1);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("beruang").saleId])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardRedemption" WHERE id = $1`, [requireBill("beruang").redemptionId])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."OrganizationTerminal" WHERE id = $1`, [requireBill("beruang").terminalRowId])).toBe(0);
 			// Organization rows without a store (rewards, claims of its rewards) stay visible: their store availability is the service's job.
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.rewards WHERE id = $1`, [rewardIds.mlk])).toBe(1);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."Reward" WHERE id = $1`, [rewardIds.mlk])).toBe(1);
 		});
 	});
 
 	it("lets a key write a bill only for its own organization and store", async () => {
 		const insertSale = (client: PoolClient, organizationId: string, locationId: string): Promise<object> =>
 			client.query(
-				`INSERT INTO public.reward_sales (id, organization_id, location_id, user_id, terminal_id, bill_total_minor, currency, idempotency_key, request_hash, paid_at)
+				`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
          VALUES ($1, $2, $3, $4, 'E2E-RLS-TILL', $5, 'MYR', $6, $7, $8)`,
 				[randomUUID(), organizationId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(randomUUID()), Date.now()],
 			);
@@ -277,11 +277,11 @@ describe("API key RLS principal (e2e)", () => {
 
 	it("lets a key update only its own key row, and never delete a financial row", async () => {
 		await as(apiKeyRlsContext(mlkKatilKeyId, MLK_ORG, KATIL), async (client) => {
-			const own = await client.query(`UPDATE public.organization_api_keys SET last_used_at = $2 WHERE id = $1`, [mlkKatilKeyId, Date.now()]);
+			const own = await client.query(`UPDATE public."OrganizationApiKey" SET "lastUsedAt" = $2 WHERE id = $1`, [mlkKatilKeyId, Date.now()]);
 			expect(own.rowCount).toBe(1);
-			const other = await client.query(`UPDATE public.organization_api_keys SET last_used_at = $2 WHERE id = $1`, [klKeyId, Date.now()]);
+			const other = await client.query(`UPDATE public."OrganizationApiKey" SET "lastUsedAt" = $2 WHERE id = $1`, [klKeyId, Date.now()]);
 			expect(other.rowCount).toBe(0);
-			const deleted = await client.query(`DELETE FROM public.reward_sales WHERE id = $1`, [requireBill("katil").saleId]);
+			const deleted = await client.query(`DELETE FROM public."RewardSale" WHERE id = $1`, [requireBill("katil").saleId]);
 			expect(deleted.rowCount).toBe(0);
 		});
 	});
@@ -293,24 +293,24 @@ describe("API key RLS principal (e2e)", () => {
 			throw new Error("fixture signup referrals missing");
 		}
 		await as(apiKeyRlsContext(mlkKatilKeyId, MLK_ORG, KATIL), async (client) => {
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.signup_referrals WHERE id = $1`, [customerReferral])).toBe(1);
-			const stamped = await client.query(`UPDATE public.signup_referrals SET successful_at = $2 WHERE id = $1`, [customerReferral, Date.now()]);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."SignupReferral" WHERE id = $1`, [customerReferral])).toBe(1);
+			const stamped = await client.query(`UPDATE public."SignupReferral" SET "successfulAt" = $2 WHERE id = $1`, [customerReferral, Date.now()]);
 			expect(stamped.rowCount).toBe(1);
 
 			// A user who never redeemed at this store is invisible to the key, by id or by update.
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.signup_referrals WHERE id = $1`, [strangerReferral])).toBe(0);
-			const foreign = await client.query(`UPDATE public.signup_referrals SET successful_at = $2 WHERE id = $1`, [strangerReferral, Date.now()]);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."SignupReferral" WHERE id = $1`, [strangerReferral])).toBe(0);
+			const foreign = await client.query(`UPDATE public."SignupReferral" SET "successfulAt" = $2 WHERE id = $1`, [strangerReferral, Date.now()]);
 			expect(foreign.rowCount).toBe(0);
 			// The key never creates or deletes one.
-			const deleted = await client.query(`DELETE FROM public.signup_referrals WHERE id = $1`, [customerReferral]);
+			const deleted = await client.query(`DELETE FROM public."SignupReferral" WHERE id = $1`, [customerReferral]);
 			expect(deleted.rowCount).toBe(0);
 		});
 	});
 
 	it("gives a session with no key (and no user) none of these rows", async () => {
 		await as(anonymousRlsContext(KL_ORG), async (client) => {
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.reward_sales WHERE id = $1`, [requireBill("kl").saleId])).toBe(0);
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public.signup_referrals WHERE id = $1`, [signupReferralIds.customer ?? ""])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("kl").saleId])).toBe(0);
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."SignupReferral" WHERE id = $1`, [signupReferralIds.customer ?? ""])).toBe(0);
 		});
 	});
 });

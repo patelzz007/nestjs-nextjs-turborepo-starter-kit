@@ -10,6 +10,8 @@
 
 ## N+1 — the most common regression
 
+A list endpoint must run the same number of SQL statements for a 1-row page and a 25-row page. `expectNoNPlusOne` in `apps/api/test/support/sql-statement-counter.ts` is that assertion. `GET /product` is covered by `apps/api/test/n-plus-one.e2e-spec.ts`. Fix a miss by batching the query. Do not stub the counter. There is no CI gate on process startup time (ADR 059).
+
 ```ts
 // ❌ DON'T — N+1: one query per order
 const orders = await prisma.order.findMany();
@@ -102,7 +104,20 @@ For a genuinely performance-sensitive endpoint, verify with a realistic dataset 
    slow now, not sure why."
 ```
 
+The budget is enforced: `bundle-budgets.json` (repo root) holds each Next route's first-load JS (gzip) and
+each mobile platform's Hermes bundle, at the measured baseline + 10%. CI and `pnpm ci:local` run
+`pnpm bundle:check` after the build; a route over its budget, a new route without one, or a budget for a
+removed route fails it. Raising a budget is a reviewed edit of that file; after a deliberate size change,
+rebuild and run `pnpm bundle:check --write-baseline`. To see what a chunk holds:
+`ANALYZE=true pnpm --filter @workspace/<web|admin|merchant> exec next build --webpack`.
+
 ## Code splitting and lazy loading
+
+- A Next page always server-renders. `next/dynamic(..., { ssr: false })` is allowed only in a
+  `*.client-only.tsx` wrapper whose component is listed in `CLIENT_ONLY_WIDGETS`
+  (`packages/ui/src/lib/client-only-widgets.ts`); lint enforces it.
+- framer-motion: use `m.*` inside `LazyMotionProvider` (`@workspace/ui/components/lazy-motion`), never `motion.*`.
+- A library used only in an event handler is loaded with `await import()` inside the handler.
 
 ```tsx
 // ❌ DON'T — import a large, rarely-used component (e.g. a rich text

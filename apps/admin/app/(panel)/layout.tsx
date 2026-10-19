@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getServerUser, loadAdminServerSession } from "@/lib/auth-server";
+import { serverEnv } from "@/lib/env/env.server";
 import { resolveEnabledFeatureFlags } from "@/lib/feature-flags";
 import { ADMIN_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
 import { ROUTES } from "@/lib/routes";
@@ -43,7 +44,7 @@ export default async function PanelLayout({ children }: PanelLayoutProps): Promi
 		<DashboardShell
 			initialUser={initialUser}
 			initialSessionPermissions={session.kind === "signed-in" ? session.session.permissions : undefined}
-			enabledFeatureFlags={resolveEnabledFeatureFlags()}
+			enabledFeatureFlags={resolveEnabledFeatureFlags(serverEnv)}
 			initialSidebarOpen={readSidebarOpenCookie(cookieStore, ADMIN_SIDEBAR_STORAGE_KEY)}>
 			{children}
 		</DashboardShell>

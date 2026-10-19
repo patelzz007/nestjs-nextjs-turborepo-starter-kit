@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
 
-/** Builds a stable RFC-4122-style UUID from a namespace + key (idempotent across re-seeds). */
+import { rowIdFrom } from "@workspace/shared";
+
+/**
+ * The creation time every deterministic seed id carries (2026-01-01T00:00:00Z). Row ids are UUID v7, whose first
+ * 48 bits are a creation time; a FIXED time keeps a seeded row's id identical on every re-seed.
+ */
+export const SEED_ROW_ID_EPOCH_MS = 1_767_225_600_000;
+
+/**
+ * A stable UUID v7 for a seeded row, from a namespace + key: the same row gets the same id on every re-seed
+ * (idempotent upserts by id), and it has the same shape as every id the app mints (`newRowId`).
+ */
 export function deterministicUuid(namespace: string, key: string): string {
-	const hash = createHash("sha256").update(`${namespace}:${key}`).digest();
-	const bytes = Buffer.from(hash.subarray(0, 16));
-	bytes.writeUInt8((bytes.readUInt8(6) & 0x0f) | 0x40, 6);
-	bytes.writeUInt8((bytes.readUInt8(8) & 0x3f) | 0x80, 8);
-	const hex = bytes.toString("hex");
-	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+	return rowIdFrom(SEED_ROW_ID_EPOCH_MS, createHash("sha256").update(`${namespace}:${key}`).digest());
 }

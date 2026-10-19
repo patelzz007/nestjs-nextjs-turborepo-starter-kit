@@ -1,7 +1,7 @@
-import { MfaRecoveryQueue } from "@/components/security/mfa-recovery-queue";
+import { MfaRecoveryQueue } from "@/contexts/identity/components/security/mfa-recovery-queue";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "@/lib/url-state/mfa-recovery";
+import { MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "@/contexts/identity/url-state/mfa-recovery";
 
 export const dynamic = "force-dynamic";
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCanAccessWebPath } from "@/components/auth/route-access-guard";
-import { useWebSession } from "@/components/auth/web-authorization-provider";
+import { useCanAccessWebPath } from "@/contexts/identity/components/route-access-guard";
+import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
@@ -11,8 +11,8 @@ import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
-import { useAuth } from "@workspace/client/lib/auth";
-import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
+import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { PanelSidebarHeader } from "@workspace/ui/components/panel-sidebar-header";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer } from "@workspace/ui/components/panel-sidebar-nav";

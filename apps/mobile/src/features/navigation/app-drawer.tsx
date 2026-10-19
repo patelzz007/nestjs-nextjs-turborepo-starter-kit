@@ -17,14 +17,12 @@ import { useApi } from "../../lib/api-context";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { useReadyRuntime } from "../../runtime/runtime-context";
 import { useAppDrawerCommands, useAppDrawerOpen } from "../app-drawer/facade";
-import { useGithubPullRequestAccess } from "../github-pull-requests/github-pull-request-access";
-import { accountRowValue } from "../github-pull-requests/labels";
+import { accountRowValue, useGithubPullRequestAccess } from "../../contexts/integrations-github";
 import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
-import { SignOutDialog } from "../auth/sign-out-dialog";
-import { useSignOutConfirmation } from "../auth/use-sign-out-confirmation";
+import { SignOutDialog, useSignOutConfirmation } from "../../contexts/identity";
 import { useAppLockEnabled, useThemePreference } from "../preferences/facade";
 import { THEME_LABELS } from "../preferences/labels";
-import { DRAWER_GROUPS, DRAWER_TABS, GITHUB_DRAWER_GROUP, isTabRoot, type DrawerDestination, type DrawerDestinationGroup } from "./drawer-destinations";
+import { DRAWER_TABS, drawerGroups, isTabRoot, type DrawerDestination, type DrawerDestinationGroup } from "./drawer-destinations";
 
 export interface AppDrawerProps {
 	/** The tabs. */
@@ -107,7 +105,7 @@ function AppDrawerPanel(): React.JSX.Element {
 		},
 		[appLockEnabled, githubAccountValue, theme],
 	);
-	const groups = github.kind === "available" ? [...DRAWER_GROUPS, GITHUB_DRAWER_GROUP] : DRAWER_GROUPS;
+	const groups = drawerGroups(github.kind === "available");
 
 	const version = buildNumber === null ? `Version ${appVersion}` : `Version ${appVersion} (${buildNumber})`;
 

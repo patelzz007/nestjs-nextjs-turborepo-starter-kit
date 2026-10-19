@@ -10,12 +10,12 @@ describe("resolveSessionCapabilities", () => {
 	});
 
 	it("uses the preloaded list before the first live answer", () => {
-		const preloaded = buildSessionPermissions({ capabilities: [PERMISSION.URL.CREATE] });
-		expect(resolveSessionCapabilities(undefined, preloaded)).toEqual([PERMISSION.URL.CREATE]);
+		const preloaded = buildSessionPermissions({ capabilities: [PERMISSION.REWARD.CREATE] });
+		expect(resolveSessionCapabilities(undefined, preloaded)).toEqual([PERMISSION.REWARD.CREATE]);
 	});
 
 	it("prefers the live answer, even when it is empty", () => {
-		const preloaded = buildSessionPermissions({ capabilities: [PERMISSION.URL.CREATE] });
+		const preloaded = buildSessionPermissions({ capabilities: [PERMISSION.REWARD.CREATE] });
 		const live = buildSessionPermissions({ capabilities: [] });
 		expect(resolveSessionCapabilities(live, preloaded)).toEqual([]);
 	});

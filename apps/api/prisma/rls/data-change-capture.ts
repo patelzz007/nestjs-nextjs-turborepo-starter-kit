@@ -4,7 +4,7 @@
  *
  * Every table in `public` gets a `data_change_capture` trigger that records each
  * INSERT / UPDATE / DELETE (and a statement-level one for TRUNCATE) in
- * `data_change_logs`, in the same transaction as the change. Capture is the
+ * `DataChangeLog`, in the same transaction as the change. Capture is the
  * DEFAULT: a table created by a later migration is captured the next time
  * `pnpm db:apply-security` runs (it is chained after every migrate / deploy /
  * reset / push). The only ways out are declared HERE, with a reason:
@@ -13,29 +13,29 @@
  *   trails, logs or messaging / cache plumbing.
  * - {@link DATA_CHANGE_SECRET_COLUMNS} — columns whose value never enters a
  *   change record (`[REDACTED]`); a change to one is still listed in
- *   `changed_columns`.
+ *   `changedColumns`.
  * - {@link DATA_CHANGE_NON_SECRET_COLUMNS} — columns whose NAME looks secret
  *   ({@link SECRET_LOOKING_COLUMN}) but whose value is not, with the reason.
  *
  * Personal data is masked by column name with the SAME policy the HTTP audit
- * trail applies to payloads (`src/common/audit/audit-data-policy.ts`), and the
+ * trail applies to payloads (`src/platform/infrastructure/audit/audit-data-policy.ts`), and the
  * value-size cap and mask strings are interpolated from the same constants, so
  * the TypeScript and SQL sides cannot drift.
  *
  * {@link planDataChangeCapture} refuses a manifest that names an unknown
  * table / column or leaves a secret-looking column unclassified — at apply
- * time against the live catalog (`scripts/apply-rls.ts`) and in CI against
+ * time against the live catalog (`prisma/rls/apply.ts`) and in CI against
  * the Prisma schema (`pnpm db:check-rls-manifest`).
  */
 
-import { AUDIT_PAYLOAD_MAX_BYTES, isEmailField, isPersonalDataField, PII_MASK } from "../../src/common/audit/audit-data-policy";
-import { REDACTED } from "../../src/common/logging/redaction";
+import { AUDIT_PAYLOAD_MAX_BYTES, isEmailField, isPersonalDataField, PII_MASK } from "../../src/platform/infrastructure/audit/audit-data-policy";
+import { REDACTED } from "../../src/platform/infrastructure/nest-logging/redaction";
 
 /** Prisma's own bookkeeping table: not part of `schema.prisma`, never captured. */
 export const PRISMA_MIGRATIONS_TABLE = "_prisma_migrations";
 
 /** The table the triggers append to. */
-export const DATA_CHANGE_LOG_TABLE = "data_change_logs";
+export const DATA_CHANGE_LOG_TABLE = "DataChangeLog";
 
 /** Row-level trigger (INSERT / UPDATE / DELETE) on every captured table. */
 export const DATA_CHANGE_ROW_TRIGGER = "data_change_capture";
@@ -49,11 +49,11 @@ export const DATA_CHANGE_CAPTURE_FUNCTION = "app_capture_data_change";
 /** Redacts / masks / caps one row image. */
 export const DATA_CHANGE_IMAGE_FUNCTION = "app_data_change_image";
 
-/** Separator of a composite primary key in `row_id` (and of the column lists passed as trigger arguments). */
+/** Separator of a composite primary key in `rowId` (and of the column lists passed as trigger arguments). */
 export const ROW_ID_SEPARATOR = "/";
 const TRIGGER_ARGUMENT_LIST_SEPARATOR = ",";
 
-/** Column budgets of `data_change_logs` (prisma/schema.prisma `DataChangeLog`). */
+/** Column budgets of `DataChangeLog` (prisma/schema.prisma `DataChangeLog`). */
 const COLUMN_BUDGET = {
 	rowId: 512,
 	identifier: 64,
@@ -82,66 +82,62 @@ const MESSAGING_REASON = "Messaging plumbing (outbox / inbox bookkeeping) that m
 /** Tables never captured, each with the reason. Everything else in `public` is. */
 export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
 	[DATA_CHANGE_LOG_TABLE]: "The change trail itself: capturing its own inserts would recurse without end.",
-	audit_logs: "The HTTP audit trail (ADR 025): one row per request, joined to these changes by correlation id.",
-	permission_audit_logs: AUDIT_TRAIL_REASON,
-	mfa_recovery_audit_logs: AUDIT_TRAIL_REASON,
-	impersonation_audit_logs: AUDIT_TRAIL_REASON,
-	authorization_audits: `${AUDIT_TRAIL_REASON} One row per authorization decision (a read-path record).`,
-	organization_audit_logs: AUDIT_TRAIL_REASON,
-	reward_audit_logs: AUDIT_TRAIL_REASON,
-	logs: LOG_REASON,
-	api_key_usage_logs: LOG_REASON,
-	email_logs: LOG_REASON,
-	email_delivery_events: LOG_REASON,
-	github_webhook_deliveries: `${LOG_REASON} One row per GitHub webhook delivery, kept to ignore redeliveries.`,
-	analytics_events: "Telemetry projected from domain events by the analytics consumer; the domain writes behind each event are captured.",
-	outbox_events: MESSAGING_REASON,
-	inbox_processed_events: MESSAGING_REASON,
-	inbox_dead_letters: MESSAGING_REASON,
-	platform_resource_idempotency_records: "Idempotency-Key replay cache (expired rows are taken over in place); the request it replays is in the HTTP audit trail.",
+	AuditLog: "The HTTP audit trail (ADR 025): one row per request, joined to these changes by correlation id.",
+	PermissionAuditLog: AUDIT_TRAIL_REASON,
+	MfaRecoveryAuditLog: AUDIT_TRAIL_REASON,
+	ImpersonationAuditLog: AUDIT_TRAIL_REASON,
+	AuthorizationAudit: `${AUDIT_TRAIL_REASON} One row per authorization decision (a read-path record).`,
+	OrganizationAuditLog: AUDIT_TRAIL_REASON,
+	RewardAuditLog: AUDIT_TRAIL_REASON,
+	EmailLog: LOG_REASON,
+	EmailDeliveryEvent: LOG_REASON,
+	GithubWebhookDelivery: `${LOG_REASON} One row per GitHub webhook delivery, kept to ignore redeliveries.`,
+	AnalyticsEvent: "Telemetry projected from domain events by the analytics consumer; the domain writes behind each event are captured.",
+	OutboxEvent: MESSAGING_REASON,
+	InboxProcessedEvent: MESSAGING_REASON,
+	InboxDeadLetter: MESSAGING_REASON,
+	PlatformResourceIdempotencyRecord: "Idempotency-Key replay cache (expired rows are taken over in place); the request it replays is in the HTTP audit trail.",
 };
 
 /** Columns whose value never enters a change record — credentials, key material and their digests. */
 export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string[]>> = {
-	users: ["passwordHash", "two_factor_secret_ciphertext", "two_factor_secret_iv", "pending_attribution_token"],
-	password_history: ["password_hash"],
-	password_reset_tokens: ["token", "token_digest"],
-	backup_codes: ["code_hash"],
-	two_factor_pending_setups: ["secret_ciphertext", "secret_iv", "backup_codes_hashes"],
-	refresh_tokens: ["token", "previous_token_hash"],
-	api_keys: ["key_hash"],
-	organization_api_keys: ["key_hash"],
-	organization_invitations: ["token_hash"],
-	organization_terminals: ["pairing_code_hash"],
-	reward_claims: ["redemption_token_hash", "backup_code_hash"],
-	reward_otp_challenges: ["code_hash"],
-	reward_referrals: ["attribution_token", "referee_device_hash"],
-	tenant_encryption_keys: ["wrapped_key"],
-	urls: ["password_hash"],
-	github_account_links: ["token_ciphertext"],
+	User: ["passwordHash", "twoFactorSecretCiphertext", "twoFactorSecretIv", "pendingAttributionToken"],
+	PasswordHistory: ["passwordHash"],
+	PasswordResetToken: ["token", "tokenDigest"],
+	BackupCode: ["codeHash"],
+	TwoFactorPendingSetup: ["secretCiphertext", "secretIv", "backupCodesHashes"],
+	RefreshToken: ["token", "previousTokenHash"],
+	OrganizationApiKey: ["keyHash"],
+	OrganizationInvitation: ["tokenHash"],
+	OrganizationTerminal: ["pairingCodeHash"],
+	RewardClaim: ["redemptionTokenHash", "backupCodeHash"],
+	RewardOtpChallenge: ["codeHash"],
+	RewardReferral: ["attributionToken", "refereeDeviceHash"],
+	TenantEncryptionKey: ["wrappedKey"],
+	GithubAccountLink: ["tokenCiphertext"],
 };
 
 const KEY_VERSION_REASON = "The version number of the key that encrypted a secret: it names a key and holds no key material.";
 
 /** Columns whose name matches {@link SECRET_LOOKING_COLUMN} but whose value is not secret — kept in change records. */
 export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-	users: {
-		token_version: "A counter bumped to revoke every issued token at once; a number, never a credential.",
-		two_factor_last_totp_step: "The last accepted TOTP time step (the replay guard): a counter, not the TOTP secret or a code.",
-		two_factor_secret_key_version: KEY_VERSION_REASON,
+	User: {
+		tokenVersion: "A counter bumped to revoke every issued token at once; a number, never a credential.",
+		twoFactorLastTotpStep: "The last accepted TOTP time step (the replay guard): a counter, not the TOTP secret or a code.",
+		twoFactorSecretKeyVersion: KEY_VERSION_REASON,
 	},
-	two_factor_pending_setups: {
-		secret_key_version: KEY_VERSION_REASON,
+	TwoFactorPendingSetup: {
+		secretKeyVersion: KEY_VERSION_REASON,
 	},
-	github_account_links: {
-		token_key_version: KEY_VERSION_REASON,
-		token_expires_at: "When GitHub expires the linked token (epoch ms): a date the app shows to its owner, not part of the credential.",
+	GithubAccountLink: {
+		tokenKeyVersion: KEY_VERSION_REASON,
+		tokenExpiresAt: "When GitHub expires the linked token (epoch ms): a date the app shows to its owner, not part of the credential.",
 	},
-	authorization_policy_versions: {
-		content_hash: "SHA-256 of a published authorization policy document: identifies the version, derived from non-secret content.",
+	AuthorizationPolicyVersion: {
+		contentHash: "SHA-256 of a published authorization policy document: identifies the version, derived from non-secret content.",
 	},
-	reward_sales: {
-		request_hash: "Fingerprint of a POS sale request used to detect idempotent replays; derived from the sale body, not from a credential.",
+	RewardSale: {
+		requestHash: "Fingerprint of a POS sale request used to detect idempotent replays; derived from the sale body, not from a credential.",
 	},
 };
 
@@ -367,13 +363,13 @@ DECLARE
   secret_columns text[] := string_to_array(TG_ARGV[1], ${sqlLiteral(TRIGGER_ARGUMENT_LIST_SEPARATOR)});
   personal_columns text[] := string_to_array(TG_ARGV[2], ${sqlLiteral(TRIGGER_ARGUMENT_LIST_SEPARATOR)});
   email_columns text[] := string_to_array(TG_ARGV[3], ${sqlLiteral(TRIGGER_ARGUMENT_LIST_SEPARATOR)});
-  actor_user_id text := ${sessionValue("app.current_user_id")};
-  api_key_id text := ${sessionValue("app.current_api_key_id")};
-  system_operation text := ${sessionValue("app.system_operation")};
+  "actorUserId" text := ${sessionValue("app.current_user_id")};
+  "apiKeyId" text := ${sessionValue("app.current_api_key_id")};
+  "systemOperation" text := ${sessionValue("app.system_operation")};
   old_image jsonb;
   new_image jsonb;
-  changed_columns text[] := ARRAY[]::text[];
-  row_id text;
+  "changedColumns" text[] := ARRAY[]::text[];
+  "rowId" text;
 BEGIN
   IF TG_LEVEL = 'ROW' THEN
     IF TG_OP IN ('UPDATE', 'DELETE') THEN
@@ -385,38 +381,38 @@ BEGIN
     IF TG_OP = 'UPDATE' THEN
       -- Compared BEFORE redaction, so a changed secret column is still listed.
       SELECT COALESCE(array_agg(entry.key ORDER BY entry.key), ARRAY[]::text[])
-        INTO changed_columns
+        INTO "changedColumns"
         FROM jsonb_each(new_image) AS entry
        WHERE entry.value IS DISTINCT FROM old_image -> entry.key;
     END IF;
     SELECT string_agg(COALESCE(new_image, old_image) ->> key_column.name, ${sqlLiteral(ROW_ID_SEPARATOR)} ORDER BY key_column.position)
-      INTO row_id
+      INTO "rowId"
       FROM unnest(primary_key_columns) WITH ORDINALITY AS key_column(name, position);
   END IF;
 
-  INSERT INTO public.${DATA_CHANGE_LOG_TABLE} (
-    occurred_at, transaction_id, table_name, operation, row_id, changed_columns, old_data, new_data,
-    actor_kind, actor_user_id, organization_id, api_key_id, system_operation, actor_purpose, correlation_id,
-    database_role, login_role, application_name, client_address
+  INSERT INTO public."${DATA_CHANGE_LOG_TABLE}" (
+    "occurredAt", "transactionId", "tableName", operation, "rowId", "changedColumns", "oldData", "newData",
+    "actorKind", "actorUserId", "organizationId", "apiKeyId", "systemOperation", "actorPurpose", "correlationId",
+    "databaseRole", "loginRole", "applicationName", "clientAddress"
   ) VALUES (
     (EXTRACT(epoch FROM clock_timestamp()) * 1000)::bigint,
     txid_current(),
     TG_TABLE_NAME,
     TG_OP::public."DataChangeOperation",
-    left(row_id, ${String(COLUMN_BUDGET.rowId)}),
-    changed_columns,
+    left("rowId", ${String(COLUMN_BUDGET.rowId)}),
+    "changedColumns",
     public.${DATA_CHANGE_IMAGE_FUNCTION}(old_image, secret_columns, personal_columns, email_columns),
     public.${DATA_CHANGE_IMAGE_FUNCTION}(new_image, secret_columns, personal_columns, email_columns),
     (CASE
-      WHEN actor_user_id IS NOT NULL THEN 'USER'
-      WHEN api_key_id IS NOT NULL THEN 'API_KEY'
-      WHEN system_operation IS NOT NULL THEN 'SYSTEM'
+      WHEN "actorUserId" IS NOT NULL THEN 'USER'
+      WHEN "apiKeyId" IS NOT NULL THEN 'API_KEY'
+      WHEN "systemOperation" IS NOT NULL THEN 'SYSTEM'
       ELSE 'UNATTRIBUTED'
     END)::public."DataChangeActorKind",
-    left(actor_user_id, ${String(COLUMN_BUDGET.identifier)}),
+    left("actorUserId", ${String(COLUMN_BUDGET.identifier)}),
     left(${sessionValue("app.current_organization_id")}, ${String(COLUMN_BUDGET.identifier)}),
-    left(api_key_id, ${String(COLUMN_BUDGET.identifier)}),
-    left(system_operation, ${String(COLUMN_BUDGET.systemOperation)}),
+    left("apiKeyId", ${String(COLUMN_BUDGET.identifier)}),
+    left("systemOperation", ${String(COLUMN_BUDGET.systemOperation)}),
     left(${sessionValue("app.actor_purpose")}, ${String(COLUMN_BUDGET.actorPurpose)}),
     left(${sessionValue("app.correlation_id")}, ${String(COLUMN_BUDGET.identifier)}),
     left(current_user, ${String(COLUMN_BUDGET.roleName)}),

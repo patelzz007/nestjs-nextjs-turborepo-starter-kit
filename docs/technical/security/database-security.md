@@ -47,7 +47,7 @@ wallet and claim history can still name it. Nobody else gains access: a user wit
 session with no user, still sees only published rewards (`test/rls-hardening.e2e-spec.ts`).
 
 A helper like this that reads another RLS table is `SECURITY DEFINER` with a pinned `search_path`:
-policies on the two tables reference each other (`reward_claims_merchant_read` reads `rewards`), and
+policies on the two tables reference each other (`reward_claims_merchant_read` reads `Reward`), and
 Postgres rejects a policy cycle. The helper must stay fail-closed on a missing `app.current_user_id`.
 
 ## System operations (the only bypass)
@@ -71,8 +71,8 @@ hold even though `99-app-runtime-grants.sql` grants DML on every table:
 
 | Tables | Withheld | Why |
 | --- | --- | --- |
-| `audit_logs`, `data_change_logs`, `impersonation_audit_logs`, `mfa_recovery_audit_logs` | `UPDATE`, `DELETE` | Append-only audit trails |
-| `impersonation_sessions`, `regions`, `subregions`, `countries`, `states`, `cities` | `DELETE` | Never hard-deleted |
+| `AuditLog`, `DataChangeLog`, `ImpersonationAuditLog`, `MfaRecoveryAuditLog` | `UPDATE`, `DELETE` | Append-only audit trails |
+| `ImpersonationSession`, `Region`, `Subregion`, `Country`, `State`, `City` | `DELETE` | Never hard-deleted |
 
 `db:apply-security` revokes them in the same transaction as the blanket grant and verifies the live
 catalog; `db:check-rls-manifest` rejects unknown tables and hand-written `REVOKE … FROM app_runtime`.
@@ -83,7 +83,9 @@ catalog; `db:check-rls-manifest` rejects unknown tables and hand-written `REVOKE
 with `FORCE ROW LEVEL SECURITY`**. So the API never queries as that user:
 
 - `PrismaService` is a Prisma 7 client on the `PrismaPg` driver adapter over `RlsPool`
-  (`apps/api/src/prisma/rls-pool.ts`, a `pg.Pool` subclass sized by `DB_POOL_MAX`, default 10).
+  (`apps/api/src/prisma/rls-pool.ts`, a `pg.Pool` subclass). `DB_POOL_MAX` (default 10, minimum 2) is
+  the replica's whole connection budget: `databasePoolBudget` (`apps/api/src/prisma/prisma-client-setup.ts`)
+  gives the system pool 1 connection (2 from a budget of 10) and this request pool the rest.
 - Every checkout runs `applyRlsSession`: `SET ROLE` to the scope's role (`app_runtime`, or a system
   operation's narrower role) and sets every `app.*` variable from the current RLS context — so a
   pooled connection never carries the previous request's identity. Inside a transaction,
@@ -128,13 +130,13 @@ Every table in `public` except the declared exemptions carries two triggers, gen
 installed by `pnpm db:apply-security` (`prisma/rls/data-change-capture.ts`):
 
 - `data_change_capture` (AFTER INSERT / UPDATE / DELETE, per row) and
-  `data_change_capture_truncate` (AFTER TRUNCATE, per statement) append one `data_change_logs`
+  `data_change_capture_truncate` (AFTER TRUNCATE, per statement) append one `DataChangeLog`
   row per change **in the same transaction** — a change and its record commit or roll back together.
-- The trigger function is `SECURITY INVOKER`: `database_role` is the role that really wrote the
+- The trigger function is `SECURITY INVOKER`: `databaseRole` is the role that really wrote the
   row (`app_runtime`, a system operation's role, the owner during a migration or a manual `psql`
   session). The attribution — user, organization, API key, system operation, purpose, correlation
   id — is read from the same `app.*` session variables the RLS policies read.
-- `data_change_logs` accepts an INSERT only while a trigger runs (`pg_trigger_depth() > 0`); the
+- `DataChangeLog` accepts an INSERT only while a trigger runs (`pg_trigger_depth() > 0`); the
   application role cannot create functions or triggers, so it can neither forge nor pre-write a
   record. UPDATE / DELETE are withheld (append-only); SELECT is bypass-only
   (`audit.data_change.read`).
@@ -143,7 +145,7 @@ installed by `pnpm db:apply-security` (`prisma/rls/data-change-capture.ts`):
   column whose name looks like secret material must be classified (`DATA_CHANGE_SECRET_COLUMNS`
   → `[REDACTED]`, or `DATA_CHANGE_NON_SECRET_COLUMNS` with the reason) — the apply and the unit
   suite fail otherwise.
-- A role that writes a captured table must hold INSERT on `data_change_logs` (`app_runtime` does
+- A role that writes a captured table must hold INSERT on `DataChangeLog` (`app_runtime` does
   through the blanket grant). The analytics consumer's role writes only exempt tables; if it ever
   writes a captured one its write fails until it is granted — fail closed, never unrecorded.
 

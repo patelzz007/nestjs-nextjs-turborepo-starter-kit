@@ -1,5 +1,5 @@
-import { OrganizationSettingsIndexView } from "@/components/org/organization-settings-index-view";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { OrganizationSettingsIndexView } from "@/contexts/organizations/components/org/organization-settings-index-view";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";

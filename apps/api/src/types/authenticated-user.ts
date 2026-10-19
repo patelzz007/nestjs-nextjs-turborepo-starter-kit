@@ -1,4 +1,4 @@
-import type { AccessTokenPayload, RefreshTokenPayload } from "../modules/auth/services/token.service";
+import type { AccessTokenPayload, RefreshTokenPayload } from "@workspace/shared";
 
 /**
  * The runtime shape of `request.user` after the full guard pipeline.

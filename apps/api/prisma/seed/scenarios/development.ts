@@ -1,11 +1,9 @@
 import type { User } from "@prisma/client";
 
 import { seedAccountSecurity, type AccountSecurityCastEmails } from "../account-security";
-import { createApiKeys, createApiKeyUsageLogs } from "../api-keys";
-import { seedApiKeyLifecycle } from "../api-key-lifecycle";
 import { seedAuthorizationKernel } from "../authorization-kernel";
 import { prisma } from "../client";
-import { ANONYMOUS_SEED_URL_PREFIX, EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-users";
+import { EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-users";
 import { useSeedRandom } from "../helpers";
 import { seedAnalyticsHistory } from "../analytics-history";
 import { alignCustomerAccountAges } from "../customer-account-age";
@@ -32,9 +30,7 @@ import { requireRow } from "../require-row";
 import { cleanupRewardSeedData, printRewardSeedCredentials, REWARD_SEED_IDS, seedRewards } from "../rewards";
 import { seedSamplePlatform } from "../sample-platform";
 import { seedStores } from "../stores";
-import { createTags } from "../tags";
 import { createPasswordResetTokens, createRefreshTokens } from "../tokens";
-import { createClicks, createUrlTags, createUrls } from "../urls";
 import { seedRbacDemo } from "../rbac-demo";
 import { seedSignupReferralCodes, seedSignupReferralDemo } from "../signup-referrals";
 import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "../users";
@@ -57,7 +53,7 @@ const NON_CUSTOMER_SEED_EMAILS: readonly string[] = ["superadmin@example.com", "
 
 /**
  * `development` scenario (the default): reference data plus the full demo
- * dataset — test accounts, URLs/clicks, API keys, geo, categories, products,
+ * dataset — test accounts, geo, categories, products,
  * the two demo organizations with rewards, and stores.
  *
  * Re-running converges: the two demo tenants are upserted and only THEIR
@@ -69,9 +65,6 @@ async function cleanVolatileSeedRows(primaryUsers: readonly User[]): Promise<voi
 	const extraUsers = await prisma.user.findMany({ where: { email: { in: [...EXTRA_SEED_USER_EMAILS] } }, select: { id: true } });
 	const userId = { in: [...primaryUsers.map((user) => user.id), ...extraUsers.map((user) => user.id)] };
 	await prisma.passwordResetToken.deleteMany({ where: { userId } });
-	await prisma.apiKeyUsageLog.deleteMany({ where: { apiKey: { userId } } });
-	await prisma.apiKey.deleteMany({ where: { userId } });
-	await prisma.click.deleteMany({ where: { url: { OR: [{ userId }, { shortCode: { startsWith: ANONYMOUS_SEED_URL_PREFIX } }] } } });
 	await prisma.refreshToken.deleteMany({ where: { userId } });
 }
 
@@ -123,34 +116,6 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	await createRefreshTokens(allUsers);
 	seedLog("✅ Refresh tokens created");
 
-	seedLog("Creating tags...");
-	const tags = await createTags(allUsers);
-	seedLog(`✅ ${String(tags.length)} tags`);
-
-	seedLog("Creating URLs...");
-	const urls = await createUrls(allUsers);
-	seedLog(`✅ ${String(urls.length)} URLs`);
-
-	seedLog("Linking URL tags...");
-	await createUrlTags(allUsers, urls, tags);
-	seedLog("✅ URL tags linked");
-
-	seedLog("Creating clicks...");
-	await createClicks(urls);
-	const clickCount = await prisma.click.count();
-	seedLog(`✅ ${String(clickCount)} clicks`);
-
-	seedLog("Creating API keys...");
-	await createApiKeys(allUsers);
-	const keyCount = await prisma.apiKey.count();
-	seedLog(`✅ ${String(keyCount)} API keys`);
-
-	seedLog("Seeding API key usage logs...");
-	await createApiKeyUsageLogs();
-	await seedApiKeyLifecycle(allUsers);
-	const usageLogCount = await prisma.apiKeyUsageLog.count();
-	seedLog(`✅ ${String(usageLogCount)} API key usage log entries`);
-
 	seedLog("Creating password reset tokens...");
 	await createPasswordResetTokens(users);
 	const passwordResetCount = await prisma.passwordResetToken.count();
@@ -163,7 +128,7 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	const sampleSummary = await seedSamplePlatform();
 	seedLog(`✅ Categories: ${String(sampleSummary.categories)}`);
 
-	seedLog("Seeding sample parked Kafka records (inbox_dead_letters)...");
+	seedLog("Seeding sample parked Kafka records (InboxDeadLetter)...");
 	const deadLetterCount = await seedInboxDeadLetters();
 	seedLog(`✅ ${String(deadLetterCount)} parked analytics-consumer records`);
 
@@ -242,11 +207,11 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 
 	seedLog("Seeding geo reference-data history (retired subtree, enriched city)...");
 	const geoDemo = await seedGeoDemo(superAdminUser.id);
-	seedLog(`✅ ${String(geoDemo.softDeletedRows)} soft-deleted geo rows, ${String(geoDemo.enrichedCities)} enriched city, ${String(geoDemo.auditRows)} audit_logs rows`);
+	seedLog(`✅ ${String(geoDemo.softDeletedRows)} soft-deleted geo rows, ${String(geoDemo.enrichedCities)} enriched city, ${String(geoDemo.auditRows)} AuditLog rows`);
 
 	seedLog("Seeding self-service profile history (an own edit + a refused impersonated edit)...");
 	const profileSummary = await seedOwnProfileHistory({ superAdminId: superAdminUser.id, customerEmail: customerUser.email });
-	seedLog(`✅ ${String(profileSummary.editedProfiles)} edited profile, ${String(profileSummary.auditRows)} audit_logs rows`);
+	seedLog(`✅ ${String(profileSummary.editedProfiles)} edited profile, ${String(profileSummary.auditRows)} AuditLog rows`);
 
 	seedLog("Seeding GitHub pull-request links (an expired, rejected token; an unlinked one)...");
 	const githubLinks = await seedGithubAccountLinks({ adminId: adminUser.id, superAdminId: superAdminUser.id }, Date.now());
@@ -260,13 +225,13 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	const githubWebhooks = await seedGithubWebhooks({ adminId: adminUser.id, superAdminId: superAdminUser.id }, Date.now());
 	seedLog(`✅ ${String(githubWebhooks.subscriptions)} live-update subscriptions, ${String(githubWebhooks.deliveries)} webhook deliveries`);
 
-	seedLog("Seeding platform records (logs, outbox history, slug history, soft-deleted catalog/URL rows)...");
+	seedLog("Seeding platform records (outbox history, slug history, soft-deleted catalog rows)...");
 	const platformRecords = await seedPlatformRecords({ superAdminId: superAdminUser.id, adminId: adminUser.id, userId: customerUser.id });
 	seedLog(
-		`✅ ${String(platformRecords.logs)} logs, ${String(platformRecords.outboxEvents)} outbox events, ${String(platformRecords.slugHistory)} slug history, ${String(platformRecords.softDeletedCatalogRows)} catalog + ${String(platformRecords.urlRecords)} URL records`,
+		`✅ ${String(platformRecords.outboxEvents)} outbox events, ${String(platformRecords.slugHistory)} slug history, ${String(platformRecords.softDeletedCatalogRows)} catalog records`,
 	);
 
-	seedLog("Replaying the published outbox events through the analytics consumer (analytics_events, inbox_processed_events)...");
+	seedLog("Replaying the published outbox events through the analytics consumer (AnalyticsEvent, InboxProcessedEvent)...");
 	await seedAnalyticsIngest();
 
 	seedLog("Seeding account security (impersonation, MFA recovery, 2FA enrollment, lockout, password history, support access)...");
@@ -284,11 +249,6 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 Permissions   : ${String(permissions.length)}
 Roles         : ${String(roles.length)}
 Users         : ${String(allUsers.length)}
-Tags          : ${String(tags.length)}
-URLs          : ${String(urls.length)}
-Clicks        : ${String(clickCount)}
-API Keys      : ${String(keyCount)}
-API Key Logs  : ${String(usageLogCount)}
 Reset Tokens  : ${String(passwordResetCount)}
 Categories    : ${String(sampleSummary.categories)}
 Products      : ${String(productSummary.products)}

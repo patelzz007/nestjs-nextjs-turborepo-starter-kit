@@ -1,0 +1,166 @@
+import { Injectable, Logger } from "@nestjs/common";
+import { BoundedTtlCache, nowEpochMs } from "@workspace/shared";
+
+import { TypedConfigService } from "../../../../config/typed-config.service";
+
+/**
+ * In-memory authorization cache backed by a bounded TTL store.
+ *
+ * Each entry stores the effective authorization state (roles + flattened
+ * permissions) for a single user.  The cache is keyed by user ID and
+ * entries expire after a configurable TTL (default 5 minutes).
+ *
+ * ## Multi-instance invalidation
+ *
+ * This store is per process. Never invalidate it directly after an RBAC
+ * change: go through `AuthorizationInvalidationService`, which applies the
+ * invalidation here and broadcasts it to every other API instance over Redis
+ * pub/sub (when the Redis authorization backend is configured).
+ */
+
+// ── Public types ────────────────────────────────────────────────────────────
+
+/** A single flattened permission entry used for fast in-memory checks. */
+export interface CachedPermission {
+	readonly action: string;
+	readonly resource: string;
+}
+
+/** The full authorization state cached per user. */
+export interface CachedAuthorization {
+	readonly roles: readonly string[];
+	readonly permissions: readonly CachedPermission[];
+	readonly capabilities: readonly string[];
+	readonly cachedAt: number;
+}
+
+/** How long the role hierarchy (roleId → parentRoleId) is reused before it is reloaded. */
+const ROLE_HIERARCHY_TTL_MS = 15 * 60 * 1000;
+
+// ── Service ─────────────────────────────────────────────────────────────────
+
+@Injectable()
+export class AuthorizationCacheService {
+	private readonly logger: Logger = new Logger(AuthorizationCacheService.name);
+
+	private readonly store: BoundedTtlCache<string, CachedAuthorization>;
+	private readonly defaultTtlMs: number;
+
+	/** Cached role hierarchy graph: roleId → parentRoleId. */
+	private readonly roleHierarchy: Map<string, string | null> = new Map<string, string | null>();
+	private hierarchyLoadedAt = 0;
+	private readonly hierarchyTtlMs: number = ROLE_HIERARCHY_TTL_MS;
+
+	public constructor(config: TypedConfigService) {
+		this.defaultTtlMs = config.caches.authorizationTtlMs;
+		this.store = new BoundedTtlCache<string, CachedAuthorization>({
+			maxEntries: config.caches.authorizationMaxEntries,
+			defaultTtlMs: this.defaultTtlMs,
+			capacityPolicy: "evict-oldest",
+		});
+	}
+
+	/**
+	 * Retrieve the cached authorization state for a user.
+	 *
+	 * @returns The cached state, or `null` on miss / expiry.
+	 */
+	public get(userId: string): CachedAuthorization | null {
+		return this.store.get(userId, nowEpochMs());
+	}
+
+	/**
+	 * Store the authorization state for a user.
+	 *
+	 * @param userId - The user ID to cache against.
+	 * @param auth   - The resolved authorization state.
+	 * @param ttlMs  - Optional custom TTL in milliseconds.
+	 */
+	public set(userId: string, auth: CachedAuthorization, ttlMs?: number): void {
+		const ttl: number = ttlMs ?? this.defaultTtlMs;
+		const stored = this.store.set(userId, auth, ttl, nowEpochMs());
+		if (stored) {
+			this.logger.debug(`Cached authorization for user ${userId} (TTL ${String(ttl)}ms)`);
+		}
+	}
+
+	/**
+	 * Invalidate the cached authorization for a single user.
+	 *
+	 * Call this after:
+	 * - Role assignment / removal
+	 * - Direct permission grant / revoke
+	 * - User deletion
+	 */
+	public invalidate(userId: string): void {
+		this.store.delete(userId);
+		this.logger.debug(`Invalidated authorization cache for user ${userId}`);
+	}
+
+	/**
+	 * Invalidate cached authorization for every user that holds a specific
+	 * role.  This is the expensive operation — it scans the full cache.
+	 *
+	 * Call this after role-permission changes so all affected users re-resolve
+	 * on their next request.
+	 *
+	 * @param affectedUserIds - The user IDs whose authorization changed.
+	 *
+	 * Not logged here: `AuthorizationInvalidationService` (the only caller)
+	 * logs which users, the trigger and the originating instance.
+	 */
+	public invalidateUsers(affectedUserIds: readonly string[]): void {
+		this.store.deleteMany(affectedUserIds);
+	}
+
+	/** Drop every cached entry (logged, with its origin, by `AuthorizationInvalidationService`). */
+	public clear(): void {
+		this.store.clear();
+	}
+
+	/** Current number of entries (including possibly-expired ones). */
+	public get size(): number {
+		return this.store.size;
+	}
+
+	public get maxEntries(): number {
+		return this.store.getDiagnostics().maxEntries;
+	}
+
+	// ── Role hierarchy cache ────────────────────────────────────────────
+
+	/**
+	 * Get the cached role hierarchy. Returns `null` if expired or not loaded.
+	 */
+	public getHierarchy(): Map<string, string | null> | null {
+		if (nowEpochMs() > this.hierarchyLoadedAt + this.hierarchyTtlMs) {
+			return null;
+		}
+		return this.roleHierarchy;
+	}
+
+	/**
+	 * Store the role hierarchy graph.
+	 */
+	public setHierarchy(hierarchy: Map<string, string | null>): void {
+		this.roleHierarchy.clear();
+		for (const [key, value] of hierarchy) {
+			this.roleHierarchy.set(key, value);
+		}
+		this.hierarchyLoadedAt = nowEpochMs();
+	}
+
+	/** Invalidate the cached role hierarchy (call after role parent changes). */
+	public invalidateHierarchy(): void {
+		this.roleHierarchy.clear();
+		this.hierarchyLoadedAt = 0;
+	}
+
+	/** Approximate memory footprint for diagnostics. */
+	public getMemoryEstimate(): { entries: number; estimatedBytes: number } {
+		const entries: number = this.store.size;
+		// Rough estimate: each entry ≈ 200 bytes (roles + permissions arrays)
+		const estimatedBytes: number = entries * 200;
+		return { entries, estimatedBytes };
+	}
+}

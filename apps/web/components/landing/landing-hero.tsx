@@ -1,6 +1,6 @@
-import { RewardCategoryVisual } from "@/components/rewardhub/detail/category-visual";
-import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
-import type { FeaturedOffer } from "@/lib/rewards/featured-offers";
+import { RewardCategoryVisual } from "@/contexts/rewards/components/detail/category-visual";
+import { RewardInventoryBar } from "@/contexts/rewards/components/detail/inventory-bar";
+import type { FeaturedOffer } from "@/contexts/rewards/lib/featured-offers";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { PLATFORM_DISPLAY_REGION } from "@workspace/shared";
@@ -9,7 +9,7 @@ import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { ChevronRight, Gift, Home, MapPin, QrCode, Search, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { REWARD_LIST_ROW_COVER_RATIO, REWARD_THUMBNAIL_SIZES } from "@/lib/rewards/reward-cover";
+import { REWARD_LIST_ROW_COVER_RATIO, REWARD_THUMBNAIL_SIZES } from "@/contexts/rewards/lib/reward-cover";
 import { landingSectionPath, LANDING_SECTION_IDS, publicRewardDetailPath } from "@/lib/routes";
 
 /** Cities in the pilot — the only places offers are redeemable today. */

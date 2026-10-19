@@ -2,7 +2,7 @@ import type { Prisma, Role, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
-import { seedRewardHubTenantPolicies } from "../../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { seedDefaultTenantPolicies } from "../../../src/contexts/authorization/public-api";
 import { seedAccountSecurity } from "../account-security";
 import { prisma } from "../client";
 import { upsertLiveSeedMembership } from "../memberships";
@@ -94,18 +94,6 @@ async function upsertOrganization(organization: EnterpriseOrganizationRow): Prom
 		where: { organizationId: organization.id },
 		create: { organizationId: organization.id, kind: "SHARED", regionCode: "default" },
 		update: { kind: "SHARED", regionCode: "default" },
-	});
-
-	const entitlement: Omit<Prisma.OrganizationEntitlementUncheckedCreateInput, "id" | "organizationId"> = {
-		planCode: "enterprise",
-		features: { rewards: true, apiKeys: true, analytics: true },
-		version: 1,
-		effectiveFrom: BigInt(ENTERPRISE_SEED_EPOCH_MS),
-	};
-	await prisma.organizationEntitlement.upsert({
-		where: { id: organization.entitlementId },
-		create: { id: organization.entitlementId, organizationId: organization.id, ...entitlement },
-		update: entitlement,
 	});
 }
 
@@ -239,7 +227,7 @@ async function persistEnterpriseDataset(dataset: EnterpriseDataset, roles: reado
 	}
 
 	seedLog("Publishing default tenant Cedar policies...");
-	await seedRewardHubTenantPolicies(prisma, dataset.organization.id, ownerUser.id, defaultTenantPolicySeedIds(dataset.organization.id));
+	await seedDefaultTenantPolicies(prisma, dataset.organization.id, ownerUser.id, defaultTenantPolicySeedIds(dataset.organization.id));
 
 	seedLog(`Upserting ${String(dataset.products.length)} products...`);
 	await upsertProducts(dataset.products);

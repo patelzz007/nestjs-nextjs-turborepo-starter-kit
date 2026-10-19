@@ -9,10 +9,10 @@ import fastifyUnderPressure from "@fastify/under-pressure";
 import type { FastifyRequest } from "fastify";
 import { type ApiVersion } from "@workspace/shared";
 
-import { RateLimitError } from "../common/errors/app-error";
+import { RateLimitError } from "../platform/application/errors/app-error";
 import { TypedConfigService } from "../config/typed-config.service";
-import { readFirstHeader } from "../common/utils/http-headers";
-import { VersionController } from "../modules/health/version.controller";
+import { readFirstHeader } from "../platform/infrastructure/utils/http-headers";
+import { VersionController } from "../platform/presentation/http/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
 
 /** Milliseconds per second — converts the rate-limit window TTL to a `Retry-After` value. */

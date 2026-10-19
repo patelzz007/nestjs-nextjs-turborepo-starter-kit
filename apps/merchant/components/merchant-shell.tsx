@@ -1,18 +1,19 @@
 "use client";
 
-import { MerchantAuthorizationProvider } from "@/components/access/merchant-authorization-provider";
-import { MerchantAccessLoading } from "@/components/access/merchant-capability-gate";
+import { MerchantAuthorizationProvider } from "@/contexts/organizations/components/access/merchant-authorization-provider";
+import { SWITCHER_MEMBERSHIPS_QUERY } from "@/contexts/organizations/lib/org/memberships-query";
+import { MerchantAccessLoading } from "@/contexts/organizations/components/access/merchant-capability-gate";
 import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcrumb";
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
-import type { ServerUser } from "@/lib/auth/server";
-import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import type { ServerUser } from "@/contexts/identity/lib/server";
+import { initialDataOption, readPaginatedHasNext, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { TenantContextProvider } from "@/features/tenant-context/facade";
-import { useSwitchOrganization } from "@/lib/org/use-switch-organization";
-import { useAuth, useAuthUser } from "@workspace/client/lib/auth";
+import { useSwitchOrganization } from "@/contexts/organizations/lib/org/use-switch-organization";
+import { useAuth, useAuthUser } from "@workspace/client/lib/contexts/identity";
 import type { Envelope, OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
 import { MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME, MERCHANT_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
@@ -32,7 +33,7 @@ export interface MerchantShellProps {
 	readonly initialLocationId: string | null;
 	/** Organization context the server loaded — seeds the tenant context's accessible locations. */
 	readonly initialOrganizationContext?: Envelope<OrganizationContextResponse> | undefined;
-	/** The memberships the server listed — the API's own envelope (real meta), seeding the client query. */
+	/** The first page of memberships the server listed — the API's own envelope (real meta), seeding the client query. */
 	readonly initialMemberships?: Envelope<OrganizationRewardMembershipResponse[]> | undefined;
 	readonly initialUser?: ServerUser | null;
 	readonly initialIsImpersonating?: boolean;
@@ -67,30 +68,38 @@ function MerchantShellContent({
 	const pathname = usePathname();
 	const switchOrganization = useSwitchOrganization();
 
-	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
-		{},
-		{
-			...initialDataOption(initialMemberships),
-			...MERCHANT_ME_QUERY_OPTIONS,
-		},
-	);
+	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(SWITCHER_MEMBERSHIPS_QUERY, {
+		...initialDataOption(initialMemberships),
+		...MERCHANT_ME_QUERY_OPTIONS,
+	});
 
 	const memberships = React.useMemo((): readonly OrganizationRewardMembershipResponse[] => membershipsQuery.data?.data ?? [], [membershipsQuery.data?.data]);
+	// Counted by the API over every page: the switcher shows the first page, the stores page the rest.
+	const membershipCount = readPaginatedTotal(membershipsQuery.data?.meta, memberships.length);
+	const hasMoreStores = readPaginatedHasNext(membershipsQuery.data?.meta);
 
-	const hasMemberships = memberships.length > 0;
+	const hasMemberships = membershipCount > 0;
 	const showMembershipGate = membershipsQuery.isFetched && !hasMemberships;
 	const showMembershipLoading = !hasMemberships && membershipsQuery.isLoading;
 
 	return (
-		<MerchantAuthorizationProvider initialMemberships={initialMemberships}>
-			<TenantContextProvider orgSlug={orgSlug} initialLocationId={initialLocationId} initialOrganizationContext={initialOrganizationContext}>
+		<TenantContextProvider orgSlug={orgSlug} initialLocationId={initialLocationId} initialOrganizationContext={initialOrganizationContext}>
+			<MerchantAuthorizationProvider>
 				<MerchantBreadcrumbProvider>
 					<StoreBoundAppPanelShell
 						shellClassName="merchant-panel-shell"
 						contentClassName="space-y-6"
 						scrollResetKey={pathname}
 						banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
-						sidebar={<MerchantSidebarPanel memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} initialUser={initialUser} />}
+						sidebar={
+							<MerchantSidebarPanel
+								memberships={memberships}
+								hasMoreStores={hasMoreStores}
+								organizationSlug={orgSlug}
+								onStoreChange={switchOrganization}
+								initialUser={initialUser}
+							/>
+						}
 						topbar={<MerchantTopbar />}>
 						{showMembershipLoading ? (
 							<MerchantAccessLoading />
@@ -107,7 +116,7 @@ function MerchantShellContent({
 						)}
 					</StoreBoundAppPanelShell>
 				</MerchantBreadcrumbProvider>
-			</TenantContextProvider>
-		</MerchantAuthorizationProvider>
+			</MerchantAuthorizationProvider>
+		</TenantContextProvider>
 	);
 }

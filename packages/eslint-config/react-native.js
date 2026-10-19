@@ -1,7 +1,7 @@
 import pluginReactNative from "eslint-plugin-react-native";
 
 import { config as baseConfig } from "./base.js";
-import { mobileImportBoundaryConfig } from "./import-boundaries.js";
+import { mobileContextBoundaryConfigs, mobileImportBoundaryConfig } from "./import-boundaries.js";
 import { reactRuleBlocks } from "./react-rules.js";
 import { restrictedSyntaxRules } from "./restricted-syntax-rules.js";
 
@@ -129,4 +129,6 @@ export const config = [
 
 	// ── Import boundaries (mobile) ──────────────────────────────────────
 	mobileImportBoundaryConfig,
+	// One context reaches another only through its index (plan §12.2).
+	...mobileContextBoundaryConfigs,
 ];

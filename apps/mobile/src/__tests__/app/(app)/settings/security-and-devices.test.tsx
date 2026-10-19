@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-library";
 
-import { dynamic, fail, ok, stubApi } from "../../../../../test/api-stub";
+import { dynamic, fail, ok, okPage, stubApi } from "../../../../../test/api-stub";
 import { createTestRuntime, markerScreen, type RenderedApp, renderInApp } from "../../../../../test/app-harness";
 import { sessionJson, twoFactorSetupJson, userJson } from "../../../../../test/fixtures";
 import { testAccessToken } from "../../../../../test/jwt";
@@ -109,14 +109,13 @@ describe("Security (§10.10)", () => {
 	});
 });
 
-const SESSIONS = [
-	sessionJson({ id: "6f1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d21", label: "Alex’s iPhone", isCurrent: true, clientType: "mobile" }),
-	sessionJson({ id: "0b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d22", label: "Chrome 141 on macOS", clientType: "web" }),
-];
+const PHONE_SESSION = sessionJson({ id: "6f1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d21", label: "Alex’s iPhone", isCurrent: true, clientType: "mobile" });
+const BROWSER_SESSION = sessionJson({ id: "0b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d22", label: "Chrome 141 on macOS", clientType: "web" });
+const SESSIONS = [PHONE_SESSION, BROWSER_SESSION];
 
 describe("Signed-in devices (§10.11)", () => {
 	it("lists the devices, current first with a badge and no revoke", async () => {
-		stubApi({ "GET /auth/sessions": ok(SESSIONS) });
+		stubApi({ "GET /auth/sessions": okPage(SESSIONS) });
 		await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
 
 		expect(await screen.findByText("Alex’s iPhone")).toBeOnTheScreen();
@@ -127,10 +126,26 @@ describe("Signed-in devices (§10.11)", () => {
 		expect(screen.getByRole("button", { name: "Revoke Chrome 141 on macOS" })).toBeOnTheScreen();
 	});
 
+	it("asks for one page and appends the next with its cursor on Load more", async () => {
+		const api = stubApi({
+			"GET /auth/sessions?page=1&limit=20": okPage([PHONE_SESSION], { limit: 1, total: 2, nextCursor: "cursor-2" }),
+			"GET /auth/sessions?page=1&limit=20&cursor=cursor-2": okPage([BROWSER_SESSION], { limit: 1, total: 2, page: 2 }),
+		});
+		await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
+
+		expect(await screen.findByText("Alex’s iPhone")).toBeOnTheScreen();
+		expect(screen.queryByText("Chrome 141 · macOS 16")).toBeNull();
+		await fireEvent.press(screen.getByRole("button", { name: "Load more devices" }));
+
+		expect(await screen.findByText("Chrome 141 · macOS 16")).toBeOnTheScreen();
+		expect(screen.queryByRole("button", { name: "Load more devices" })).toBeNull();
+		expect(api.callsTo("GET /auth/sessions").map((call) => call.path)).toEqual(["/auth/sessions?page=1&limit=20", "/auth/sessions?page=1&limit=20&cursor=cursor-2"]);
+	});
+
 	it("revokes another device after a confirmation naming it, then refreshes the list", async () => {
 		let listed = SESSIONS;
 		const api = stubApi({
-			"GET /auth/sessions": dynamic(() => ok(listed)),
+			"GET /auth/sessions": dynamic(() => okPage(listed)),
 			"POST /auth/sessions/0b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d22/revoke": dynamic(() => {
 				listed = SESSIONS.slice(0, 1);
 				return ok({ message: "Session revoked", revokedCurrentSession: false }, 201);
@@ -149,9 +164,37 @@ describe("Signed-in devices (§10.11)", () => {
 		expect(api.callsTo("GET /auth/sessions").length).toBeGreaterThanOrEqual(2);
 	});
 
+	it("goes back to the first page after a revoke, so no page continues from a stale cursor", async () => {
+		const SECOND_SESSION = sessionJson({ id: "1b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d23", label: "Firefox 140 on Linux", clientType: "web" });
+		let firstPage = [PHONE_SESSION, BROWSER_SESSION];
+		const api = stubApi({
+			"GET /auth/sessions?page=1&limit=20": dynamic(() => okPage(firstPage, { limit: 2, total: firstPage.length + 1, nextCursor: "cursor-2" })),
+			"GET /auth/sessions?page=1&limit=20&cursor=cursor-2": okPage([SECOND_SESSION], { limit: 2, total: 3, page: 2 }),
+			"POST /auth/sessions/0b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d22/revoke": dynamic(() => {
+				firstPage = [PHONE_SESSION, SECOND_SESSION];
+				return ok({ message: "Session revoked", revokedCurrentSession: false }, 201);
+			}),
+		});
+		await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
+		await fireEvent.press(await screen.findByRole("button", { name: "Load more devices" }));
+		expect(await screen.findByText("Firefox 140 on Linux")).toBeOnTheScreen();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Revoke Chrome 141 on macOS" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Sign out device" }));
+
+		await waitFor(() => {
+			expect(screen.queryByRole("button", { name: "Revoke Chrome 141 on macOS" })).toBeNull();
+		});
+		// One copy of the session that moved up: the stale second page is gone, not refetched beside it.
+		expect(screen.getAllByText("Firefox 140 on Linux")).toHaveLength(1);
+		// Back on the first page: its own cursor is offered again for the rest.
+		expect(await screen.findByRole("button", { name: "Load more devices" })).toBeOnTheScreen();
+		expect(api.callsTo("POST /auth/sessions/0b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d22/revoke")).toHaveLength(1);
+	});
+
 	it("keeps the dialog open with the error when the revoke fails, and can cancel", async () => {
 		stubApi({
-			"GET /auth/sessions": ok(SESSIONS),
+			"GET /auth/sessions": okPage(SESSIONS),
 			"POST /auth/sessions/0b1c3b8e-6a64-4b4e-9b7a-2f1f0a6f8d22/revoke": fail(404, "SESSION_NOT_FOUND", "No such session"),
 		});
 		await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
@@ -167,7 +210,7 @@ describe("Signed-in devices (§10.11)", () => {
 	});
 
 	it("shows the empty and the error states", async () => {
-		stubApi({ "GET /auth/sessions": ok([]) });
+		stubApi({ "GET /auth/sessions": okPage([]) });
 		await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
 		expect(await screen.findByText("No devices are signed in to your account.")).toBeOnTheScreen();
 	});
@@ -177,7 +220,7 @@ describe("Signed-in devices (§10.11)", () => {
 		stubApi({
 			"GET /auth/sessions": dynamic(() => {
 				attempts += 1;
-				return attempts === 1 ? fail(403, "FORBIDDEN", "nope") : ok(SESSIONS);
+				return attempts === 1 ? fail(403, "FORBIDDEN", "nope") : okPage(SESSIONS);
 			}),
 		});
 		await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
@@ -188,7 +231,7 @@ describe("Signed-in devices (§10.11)", () => {
 	});
 
 	it("signs out everywhere after a confirmation that includes this phone", async () => {
-		const api = stubApi({ "GET /auth/sessions": ok(SESSIONS), "POST /auth/logout-all": ok({ message: "Logged out from all devices" }, 201) });
+		const api = stubApi({ "GET /auth/sessions": okPage(SESSIONS), "POST /auth/logout-all": ok({ message: "Logged out from all devices" }, 201) });
 		const { runtime } = await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
 
 		await fireEvent.press(await screen.findByRole("button", { name: "Sign out everywhere" }));
@@ -204,7 +247,7 @@ describe("Signed-in devices (§10.11)", () => {
 	});
 
 	it("stays signed in and says so when sign out everywhere fails", async () => {
-		stubApi({ "GET /auth/sessions": ok(SESSIONS), "POST /auth/logout-all": fail(503, "SERVICE_UNAVAILABLE", "down") });
+		stubApi({ "GET /auth/sessions": okPage(SESSIONS), "POST /auth/logout-all": fail(503, "SERVICE_UNAVAILABLE", "down") });
 		const { runtime } = await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
 
 		await fireEvent.press(await screen.findByRole("button", { name: "Sign out everywhere" }));
@@ -216,7 +259,7 @@ describe("Signed-in devices (§10.11)", () => {
 	});
 
 	it("switches to the update screen when sign out everywhere answers 426", async () => {
-		stubApi({ "GET /auth/sessions": ok(SESSIONS), "POST /auth/logout-all": fail(426, "APP_VERSION_UNSUPPORTED", "Update", { minimumVersion: "2.0.0" }) });
+		stubApi({ "GET /auth/sessions": okPage(SESSIONS), "POST /auth/logout-all": fail(426, "APP_VERSION_UNSUPPORTED", "Update", { minimumVersion: "2.0.0" }) });
 		const { runtime } = await renderSignedIn({ "settings/devices": DevicesScreen }, "/settings/devices");
 
 		await fireEvent.press(await screen.findByRole("button", { name: "Sign out everywhere" }));

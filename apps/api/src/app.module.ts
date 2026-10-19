@@ -1,53 +1,54 @@
 import { MiddlewareConsumer, Module, type DynamicModule, type NestApplicationOptions, type NestModule } from "@nestjs/common";
+import { CqrsModule } from "@nestjs/cqrs";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 
-import { GlobalExceptionFilter } from "./common/errors/global-exception.filter";
-import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
-import { PerformanceInterceptor } from "./common/interceptors/performance.interceptor";
-import { RequestContextModule } from "./common/context/request-context.module";
-import { RequestContextMiddleware } from "./common/middleware/request-context.middleware";
-import { RlsPreHandlerMiddleware } from "./common/middleware/rls-pre-handler.middleware";
+import { GlobalExceptionFilter } from "./platform/presentation/http/errors/global-exception.filter";
+import { ResponseInterceptor } from "./platform/presentation/http/interceptors/response.interceptor";
+import { PerformanceInterceptor } from "./platform/presentation/http/interceptors/performance.interceptor";
+import { RequestContextModule } from "./platform/infrastructure/context/request-context.module";
+import { ActorContextSecurityModule } from "./platform/presentation/http/security/actor-context-security.module";
+import { HttpSecurityModule } from "./platform/presentation/http/security/http-security.module";
+import { SystemCommandModule } from "./platform/infrastructure/system-command.module";
+import { RequestContextMiddleware } from "./platform/presentation/http/middleware/request-context.middleware";
+import { RlsPreHandlerMiddleware } from "./platform/presentation/http/middleware/rls-pre-handler.middleware";
 import { getApiConfig } from "./config/api-config";
 import type { ObserveConfig } from "./config/api-config.schema";
 import { ConfigModule } from "./config/config.module";
-import { JobsModule } from "./infrastructure/jobs/jobs.module";
-import { OutboxModule } from "./infrastructure/outbox/outbox.module";
-import { AppMessagingModule } from "./messaging/app-messaging.module";
-import { AuthorizationAdminModule } from "./modules/authorization/admin/authorization-admin.module";
-import { AuditLogsModule } from "./modules/audit-logs/audit-logs.module";
-import { AuthorizationModule } from "./modules/authorization/authorization.module";
-import { AuthorizationGuard } from "./modules/authorization/guards/authorization.guard";
-import { ApiKeysModule } from "./modules/api-keys/api-keys.module";
-import { ApiKeyAuthGuard } from "./modules/api-keys/guards/api-key-auth.guard";
-import { AuthModule } from "./modules/auth/auth.module";
-import { AuthGuard } from "./modules/auth/guards/auth.guard";
-import { MobileAppVersionGuard } from "./modules/auth/guards/mobile-app-version.guard";
-import { RestrictedSessionGuard } from "./modules/auth/guards/restricted-session.guard";
-import { GeoModule } from "./modules/geo/geo.module";
-import { GithubModule } from "./modules/github/github.module";
-import { HealthModule } from "./modules/health/health.module";
-import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
-import { LogsModule } from "./modules/logs/logs.module";
-import { NotificationsModule } from "./modules/notifications/notifications.module";
-import { AuditLogInterceptor } from "./common/audit/audit-log.interceptor";
-import { AuditLogModule } from "./common/audit/audit-log.module";
-import { IdempotencyInterceptor } from "./platform/idempotency/idempotency.interceptor";
-import { IdempotencyModule } from "./platform/idempotency/idempotency.module";
-import { FilesModule } from "./modules/files/files.module";
-import { StorageModule } from "./modules/storage/storage.module";
-import { AuthorizationCedarModule } from "./modules/authorization-cedar/authorization-cedar.module";
-import { EncryptionModule } from "./modules/encryption/encryption.module";
-import { OrganizationModule } from "./modules/organization/organization.module";
-import { RewardsModule } from "./modules/rewards/rewards.module";
-import { SupportAccessModule } from "./modules/support-access/support-access.module";
-import { ProductModule } from "./modules/product/product.module";
-import { SampleCategoryModule } from "./modules/sample-category/sample-category.module";
+import { JobsModule } from "./platform/infrastructure/jobs/jobs.module";
+import { MaintenanceSchedulerModule } from "./platform/infrastructure/jobs/maintenance-scheduler.module";
+import { OutboxModule } from "./platform/infrastructure/outbox/outbox.module";
+import { AppMessagingModule } from "./platform/infrastructure/messaging/app-messaging.module";
+import { AuthorizationHttpModule } from "./contexts/authorization/presentation/http/authorization-http.module";
+import { AuditModule } from "./contexts/audit/public-api";
+import { AuthorizationModule } from "./contexts/authorization/public-api";
+import { APP_GUARD_ORDER } from "./platform/presentation/http/security/app-guard-order";
+import { ThrottlingModule } from "./platform/presentation/http/security/throttling/throttling.module";
+import { PosAccessModule } from "./contexts/pos/public-api";
+import { PosModule } from "./contexts/pos/pos.module";
+import { IdentityModule } from "./contexts/identity/identity.module";
+import { ReferenceDataModule } from "./contexts/reference-data/public-api";
+import { GithubModule } from "./contexts/integrations-github/public-api";
+import { HealthModule } from "./platform/presentation/http/health/health.module";
+import { LogsModule } from "./platform/infrastructure/logging/logs.module";
+import { NotificationsModule } from "./contexts/notifications/public-api";
+import { AuditLogInterceptor } from "./platform/infrastructure/audit/audit-log.interceptor";
+import { AuditLogModule } from "./platform/infrastructure/audit/audit-log.module";
+import { IdempotencyInterceptor } from "./platform/infrastructure/idempotency/idempotency.interceptor";
+import { IdempotencyModule } from "./platform/infrastructure/idempotency/idempotency.module";
+import { FilesModule } from "./contexts/files/public-api";
+import { StorageModule } from "./platform/infrastructure/storage/storage.module";
+import { EncryptionModule } from "./platform/infrastructure/encryption/encryption.module";
+import { OrganizationsModule } from "./contexts/organizations/organizations.module";
+import { ReferralsModule } from "./contexts/referrals/public-api";
+import { RewardsAccessModule, RewardsModule } from "./contexts/rewards/public-api";
+import { ClaimsModule } from "./contexts/claims/claims.module";
+import { CatalogModule } from "./contexts/catalog/public-api";
+import { ReportingModule } from "./contexts/reporting/public-api";
 
-import { SessionsModule } from "./modules/sessions/sessions.module";
 import { PrismaModule } from "./prisma/prisma.module";
-import { RlsInterceptor } from "./common/interceptors/rls.interceptor";
-import { TenancyModule } from "./common/tenancy/tenancy.module";
+import { RlsInterceptor } from "./platform/presentation/http/interceptors/rls.interceptor";
+import { TenancyModule } from "./platform/infrastructure/tenancy/tenancy.module";
 
 // ── Optional ObserveModule (ESM-compatible dynamic import) ──────────────────
 // Loaded only when the validated config enables it (OBSERVE_ENABLED=1, or
@@ -68,37 +69,43 @@ if (observeConfig !== null) {
 
 @Module({
 	imports: [
+		CqrsModule.forRoot(),
 		ConfigModule,
 		RequestContextModule,
+		ActorContextSecurityModule,
+		HttpSecurityModule,
+		SystemCommandModule,
 		AppMessagingModule.register(),
 		PrismaModule,
 		TenancyModule,
 		JobsModule,
+		MaintenanceSchedulerModule,
 		OutboxModule,
 		AuthorizationModule,
-		AuthorizationAdminModule,
-		AuditLogsModule,
+		AuthorizationHttpModule,
+		AuditModule,
 		ScheduleModule.forRoot(),
 		LogsModule,
 		HealthModule,
-		ApiKeysModule,
-		AuthModule,
-		SessionsModule,
-		ImpersonationModule,
+		PosAccessModule,
+		RewardsAccessModule,
+		ThrottlingModule,
+		IdentityModule,
+		ReferralsModule,
 		NotificationsModule,
-		GeoModule,
+		ReferenceDataModule,
 		GithubModule,
 		AuditLogModule,
 		IdempotencyModule.register(),
 		StorageModule,
 		FilesModule,
-		AuthorizationCedarModule,
-		OrganizationModule,
-		SupportAccessModule,
+		OrganizationsModule,
 		EncryptionModule,
 		RewardsModule,
-		ProductModule,
-		SampleCategoryModule,
+		ClaimsModule,
+		PosModule,
+		CatalogModule,
+		ReportingModule,
 		// Conditionally include ObserveModule
 		...observeImports,
 	],
@@ -133,29 +140,11 @@ if (observeConfig !== null) {
 			provide: APP_INTERCEPTOR,
 			useClass: PerformanceInterceptor,
 		},
-		// MobileAppVersionGuard first (an outdated mobile app gets 426 before any
-		// other answer — ADR 033), then ApiKeyAuthGuard (optional API key on
-		// @AllowApiKeyAuth routes), then AuthGuard (JWT), then AuthorizationGuard.
-		{
+		// Order is APP_GUARD_ORDER: outdated app, pre-auth IP throttler, optional API key, JWT, principal throttlers, restricted session, authorization.
+		...APP_GUARD_ORDER.map((guard) => ({
 			provide: APP_GUARD,
-			useClass: MobileAppVersionGuard,
-		},
-		{
-			provide: APP_GUARD,
-			useClass: ApiKeyAuthGuard,
-		},
-		{
-			provide: APP_GUARD,
-			useClass: AuthGuard,
-		},
-		{
-			provide: APP_GUARD,
-			useClass: RestrictedSessionGuard,
-		},
-		{
-			provide: APP_GUARD,
-			useClass: AuthorizationGuard,
-		},
+			useClass: guard,
+		})),
 	],
 })
 export class AppModule implements NestModule {

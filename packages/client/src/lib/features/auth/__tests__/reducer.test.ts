@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
-import { SESSION_CHECK_MAX_RETRIES } from "../../../auth/session/session-check";
+import { SESSION_CHECK_MAX_RETRIES } from "../../../contexts/identity/session/session-check";
 import { authActions } from "../actions";
 import { authReducer } from "../reducer";
 import { INITIAL_AUTH_SESSION_STATE, SERVER_RENDERED_SESSION_EPOCH, SESSION_CHECK_OK, type AuthSessionState, type SessionCheckState, type SignedOutReason } from "../state";

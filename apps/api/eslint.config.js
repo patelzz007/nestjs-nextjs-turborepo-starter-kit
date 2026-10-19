@@ -20,7 +20,7 @@ export default [
 	// ── Type-aware parsing: ONE TypeScript program per file group ───────
 	// Every file is parsed against a single program. tsconfig.check.json is the
 	// superset of the API's TypeScript — all of src/ (production code AND specs),
-	// test/, prisma/, the tool configs and the source-graph script — under the
+	// test/, prisma/, scripts/ and the tool configs — under the
 	// same strict flags `typecheck` runs, so it covers everything the build
 	// program (tsconfig.json) does. Do not let the project service resolve src/
 	// through tsconfig.json alongside it: that builds a SECOND full program over
@@ -54,47 +54,6 @@ export default [
 			"@typescript-eslint/no-unsafe-return": "off",
 		},
 	},
-	// The tsx-run scripts have their own program (tsconfig.scripts.json: Node
-	// types only, no decorator metadata), which `typecheck` also runs.
-	// render-email-previews.ts imports the Nest source graph, so it stays in the
-	// check program above.
-	{
-		files: ["scripts/**/*.ts"],
-		ignores: ["scripts/render-email-previews.ts"],
-		languageOptions: {
-			parserOptions: {
-				project: "./tsconfig.scripts.json",
-				tsconfigRootDir: import.meta.dirname,
-				projectService: false,
-			},
-		},
-	},
-	// Scripts use Node APIs whose types cannot be fully resolved by strictTypeChecked.
-	{
-		files: ["scripts/**/*.ts"],
-		rules: {
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-unsafe-member-access": "off",
-			"@typescript-eslint/no-unsafe-argument": "off",
-			"@typescript-eslint/no-unsafe-return": "off",
-			"@typescript-eslint/naming-convention": "off",
-			"@typescript-eslint/restrict-template-expressions": "off",
-			"@typescript-eslint/restrict-plus-operands": "off",
-			"@typescript-eslint/consistent-type-assertions": "off",
-			"no-console": "off",
-		},
-	},
-	{
-		files: ["scripts/cleanup-stale-bullmq-repeat-jobs.ts"],
-		rules: {
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-unsafe-member-access": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-floating-promises": "off",
-		},
-	},
-
 	// Env vars are read at runtime; turbo.json does not enumerate every key.
 	{
 		files: ["scripts/**/*.ts", "src/config/**/*.ts"],
@@ -133,7 +92,7 @@ export default [
 
 	// Storage queue workers are registered conditionally when REDIS_URL is set.
 	{
-		files: ["src/modules/files/services/storage-queue.processors.ts"],
+		files: ["src/contexts/files/runtime/services/storage-queue.processors.ts"],
 		rules: {
 			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
 		},
@@ -148,9 +107,9 @@ export default [
 	},
 	{
 		files: [
-			"src/modules/auth/cache/user-session-cache.service.ts",
-			"src/modules/authorization/cache/authorization-cache.service.ts",
-			"src/modules/notifications/email/email-queue.service.ts",
+			"src/contexts/identity/auth/cache/user-session-cache.service.ts",
+			"src/contexts/authorization/rbac/cache/authorization-cache.service.ts",
+			"src/contexts/notifications/runtime/email/email-queue.service.ts",
 		],
 		rules: {
 			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",

@@ -10,7 +10,7 @@ import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { geistMono } from "@workspace/ui/fonts/geist-mono";
 import { geistSans } from "@workspace/ui/fonts/geist-sans";
 
-import { serverRenderedSessionOf } from "@workspace/client/lib/auth/session/load-server-session";
+import { serverRenderedSessionOf } from "@workspace/client/lib/contexts/identity/session/load-server-session";
 
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { loadAdminServerSession } from "@/lib/auth-server";
@@ -18,9 +18,10 @@ import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { UiKitLanguageProvider } from "@workspace/ui/components/ui-kit-labels-provider";
 import { PLATFORM_UI_KIT_LANGUAGE } from "@workspace/client/lib/i18n/ui-kit-language";
+import { BRAND_NAME } from "@workspace/tokens";
 
 export const metadata: Metadata = {
-	title: "Reward Hub Admin",
+	title: `${BRAND_NAME} Admin`,
 	// Icons come from the file conventions in this folder — icon.svg, favicon.ico, apple-icon.png —
 	// all generated from the brand mark by `pnpm tokens:generate` (ADR 040).
 };

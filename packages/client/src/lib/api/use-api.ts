@@ -26,6 +26,7 @@ export {
 	fetchMutationUnchecked,
 	fetchQuery,
 	fetchQueryOrThrow,
+	isNotFoundError,
 	ApiError,
 	ApiErrorSchema,
 	SessionRefreshUnavailableError,

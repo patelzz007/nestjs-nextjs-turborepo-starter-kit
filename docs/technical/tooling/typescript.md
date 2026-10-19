@@ -196,6 +196,15 @@ Extends `base.json` with NestJS requirements:
 > parses every file with ONE program (`tsconfig.check.json`): a second program over
 > the same source graph is what once exhausted Node's default heap — see
 > [`eslint.md` §8.7](./eslint.md#87-api-eslint-exits-134-javascript-heap-out-of-memory).
+>
+> **Per-context entry points.** Besides the root barrel, `@workspace/shared/contexts/<context>`
+> (`./contexts/*` in `exports`, same `development` / `dist` conditions) exposes one bounded
+> context's schemas, API contract and route templates — `src/contexts/<context>/index.ts`. Prefer
+> it in new code that needs one context only: a bundler parses that context's modules instead of
+> the whole ~2,000-line root barrel. The package declares `"sideEffects": false` (no module does
+> work at import time), so bundlers may also drop unused re-exports of the root barrel.
+> `src/__tests__/context-entry-points.test.ts` keeps every context's entry present and its values
+> identical to the root's.
 
 ### `apps/api/tsconfig.json` in detail
 
@@ -247,7 +256,7 @@ So in `apps/web` you can write:
 
 ```ts
 import { Button } from "@workspace/ui/components/button";
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
 import type { LoginInput } from "@workspace/shared";
 ```
 

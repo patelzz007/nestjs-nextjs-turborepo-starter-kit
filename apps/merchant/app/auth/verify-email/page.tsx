@@ -1,12 +1,13 @@
 "use client";
 
 import { VerifyEmailStatusSkeleton } from "@/components/loading/auth-skeletons";
-import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
 import { ORG_ROUTES, ROUTES } from "@/lib/routes";
-import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
+import { VerifyEmailView } from "@workspace/client/lib/contexts/identity/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
+import { BRAND_NAME } from "@workspace/tokens";
 
 function VerifyEmailContent(): JSX.Element {
 	const searchParams = useSearchParams();
@@ -32,7 +33,7 @@ export default function MerchantVerifyEmailPage(): JSX.Element {
 			features={["One-click verification", "Secure token-based link", "Expires after 24 hours"]}
 			title="Verify email"
 			subtitle="We're confirming your email address"
-			copyright="Reward Hub">
+			copyright={BRAND_NAME}>
 			<Suspense fallback={<VerifyEmailStatusSkeleton />}>
 				<VerifyEmailContent />
 			</Suspense>

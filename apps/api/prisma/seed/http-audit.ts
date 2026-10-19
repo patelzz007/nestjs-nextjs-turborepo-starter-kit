@@ -1,11 +1,11 @@
 import type { IdempotencyRecordStatus } from "@prisma/client";
 import { API_VERSION_PREFIX, apiRoutes } from "@workspace/shared";
 
-import { toAuditLogCreateInput } from "../../src/common/audit/audit-log.mapper";
-import { auditDeviceFields, auditNetworkFields, toAuditPayload, UNMATCHED_ENDPOINT, type HttpAuditEntry } from "../../src/common/audit/http-audit-entry";
-import type { RequestContext } from "../../src/common/context/request-context";
-import { buildIdempotencyScope, hashIdempotentRequest } from "../../src/platform/idempotency/idempotency-request";
-import { IDEMPOTENCY_RETENTION_MS } from "../../src/platform/idempotency/idempotency.constants";
+import { toAuditLogCreateInput } from "../../src/platform/infrastructure/audit/audit-log.mapper";
+import { auditDeviceFields, auditNetworkFields, toAuditPayload, UNMATCHED_ENDPOINT, type HttpAuditEntry } from "../../src/platform/infrastructure/audit/http-audit-entry";
+import type { RequestContext } from "../../src/platform/infrastructure/context/request-context";
+import { buildIdempotencyScope, hashIdempotentRequest } from "../../src/platform/infrastructure/idempotency/idempotency-request";
+import { IDEMPOTENCY_RETENTION_MS } from "../../src/platform/infrastructure/idempotency/idempotency.constants";
 import { withSeedAttribution } from "./attributed-session";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -18,7 +18,7 @@ import { ORGANIZATION_SEED_IDS } from "./organizations";
 // Seeds what the API itself writes, through the SAME code paths:
 //   - a soft-deleted geo city (is_deleted / deleted_at / deleted_by), exactly
 //     as `DELETE /geo/cities/:id` leaves it;
-//   - `audit_logs` rows built with the app's payload redaction
+//   - `AuditLog` rows built with the app's payload redaction
 //     (`toAuditPayload`: secrets → [REDACTED], personal data masked) and the
 //     app's row mapping (`toAuditLogCreateInput`) — one success with the
 //     system operations it ran, one failed login, one idempotent create,
@@ -129,6 +129,7 @@ async function ensureIdempotencyRecord(adminId: string, row: HttpAuditEntry, res
 		systemOperations: [],
 		receivedAtEpochMs: row.occurredAt,
 		isAuditRecorded: false,
+		actor: undefined,
 	};
 	const scope: string = buildIdempotencyScope(context, row.method, row.endpoint);
 	const requestHash: string = hashIdempotentRequest({ method: row.method, url: row.path, body: { kind: "json", value: SEED_IDEMPOTENT_PRODUCT_BODY } });
@@ -263,7 +264,7 @@ const POS_CHECKOUT_REQUEST = 3;
 
 /**
  * What the API-key guard writes on every call from a registered till
- * (`MerchantTerminalRepository.touchLastSeen`): `last_seen_at` = the request
+ * (`MerchantTerminalRepository.touchLastSeen`): `lastSeenAt` = the request
  * time — run under the till's API-key session, so its change record joins the
  * seeded checkout request. Skipped once the till already shows that call, so
  * re-seeding writes (and records) nothing new.

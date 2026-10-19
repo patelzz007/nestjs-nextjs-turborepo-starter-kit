@@ -3,7 +3,7 @@ title: "API reference — Platform administration (merchants, rewards review, an
 description: "What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales."
 order: 4
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -28,7 +28,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 - **Permission** `READ:ANALYTICS`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminAnalyticsController_getDashboard` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminAnalyticsController_getDashboard` · [source](../../../apps/api/src/contexts/reporting/presentation/http/admin-analytics.controller.ts)
 
 **Parameters**
 
@@ -156,50 +156,50 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1788601329586,
-      "to": 1791193329586,
+      "from": 1789843601532,
+      "to": 1792435601532,
       "timeZone": "UTC",
       "interval": "week",
-      "previousFrom": 1786009329586,
-      "previousTo": 1788601329586
+      "previousFrom": 1787251601532,
+      "previousTo": 1789843601532
     },
     "currency": "MYR",
     "totals": {
       "salesMinor": {
-        "value": 1349641,
-        "previous": 1368484,
-        "change": -18843,
-        "changePercent": -1.4
+        "value": 1411472,
+        "previous": 1360412,
+        "change": 51060,
+        "changePercent": 3.8
       },
       "bills": {
-        "value": 226,
-        "previous": 213,
-        "change": 13,
-        "changePercent": 6.1
+        "value": 228,
+        "previous": 217,
+        "change": 11,
+        "changePercent": 5.1
       },
       "averageBillMinor": {
-        "value": 5972,
-        "previous": 6425,
-        "change": -453,
-        "changePercent": -7.1
+        "value": 6191,
+        "previous": 6269,
+        "change": -78,
+        "changePercent": -1.2
       },
       "claims": {
-        "value": 260,
+        "value": 256,
         "previous": 260,
-        "change": 0,
-        "changePercent": 0
+        "change": -4,
+        "changePercent": -1.5
       },
       "redemptions": {
-        "value": 226,
-        "previous": 213,
-        "change": 13,
-        "changePercent": 6.1
+        "value": 228,
+        "previous": 217,
+        "change": 11,
+        "changePercent": 5.1
       },
       "conversionRate": {
-        "value": 86.9,
-        "previous": 81.9,
-        "change": 5,
-        "changePercent": 6.1
+        "value": 89.1,
+        "previous": 83.5,
+        "change": 5.6,
+        "changePercent": 6.7
       },
       "activeMerchants": {
         "value": 2,
@@ -228,58 +228,58 @@ Response `200 OK` (application/json):
     },
     "series": [
       {
-        "start": 1788601329586,
-        "end": 1788739200000,
+        "start": 1789843601532,
+        "end": 1789948800000,
         "isPartial": true,
-        "salesMinor": 82725,
-        "bills": 12,
-        "averageBillMinor": 6894,
-        "claims": 11,
-        "redemptions": 12,
+        "salesMinor": 54669,
+        "bills": 10,
+        "averageBillMinor": 5467,
+        "claims": 8,
+        "redemptions": 10,
         "newCustomers": 0,
-        "returningCustomers": 9
+        "returningCustomers": 10
       },
       {
-        "start": 1788739200000,
-        "end": 1789344000000,
+        "start": 1789948800000,
+        "end": 1790553600000,
         "isPartial": false,
-        "salesMinor": 314959,
-        "bills": 51,
-        "averageBillMinor": 6176,
-        "claims": 69,
-        "redemptions": 51,
+        "salesMinor": 347717,
+        "bills": 49,
+        "averageBillMinor": 7096,
+        "claims": 65,
+        "redemptions": 49,
         "newCustomers": 0,
         "returningCustomers": 24
       }
     ],
     "topMerchants": [
       {
-        "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+        "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
         "name": "Jonker Street Kitchen",
         "category": "restaurant",
-        "salesMinor": 1056936,
-        "bills": 125,
-        "averageBillMinor": 8455
+        "salesMinor": 1113963,
+        "bills": 127,
+        "averageBillMinor": 8771
       },
       {
-        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "name": "Brew & Bean KL",
         "category": "cafe",
-        "salesMinor": 292705,
+        "salesMinor": 297509,
         "bills": 101,
-        "averageBillMinor": 2898
+        "averageBillMinor": 2946
       }
     ],
     "byCategory": [
       {
         "category": "restaurant",
-        "salesMinor": 1056936,
-        "bills": 125,
+        "salesMinor": 1113963,
+        "bills": 127,
         "merchants": 1
       },
       {
         "category": "cafe",
-        "salesMinor": 292705,
+        "salesMinor": 297509,
         "bills": 101,
         "merchants": 1
       }
@@ -287,21 +287,21 @@ Response `200 OK` (application/json):
     "byCity": [
       {
         "city": "MELAKA",
-        "salesMinor": 1056936,
-        "bills": 125,
+        "salesMinor": 1113963,
+        "bills": 127,
         "merchants": 1
       },
       {
         "city": "KUALA_LUMPUR",
-        "salesMinor": 292705,
+        "salesMinor": 297509,
         "bills": 101,
         "merchants": 1
       }
     ]
   },
   "meta": {
-    "correlationId": "3mqd--ujXE5RmdYhXzK9c",
-    "timestamp": 1791193329601
+    "correlationId": "_l1IrqOmZsUoOUvzuEjNg",
+    "timestamp": 1792435601554
   }
 }
 ```
@@ -316,7 +316,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 - **Permission** `READ:ANALYTICS`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/pdf` · `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` · `text/csv; charset=utf-8` (errors are always `application/json`)
-- Operation id `RewardsAdminAnalyticsController_exportReport` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminAnalyticsController_exportReport` · [source](../../../apps/api/src/contexts/reporting/presentation/http/admin-analytics.controller.ts)
 
 **Parameters**
 
@@ -344,7 +344,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 **Example** — called as superadmin@example.com (admin panel). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
 
 ```http
-GET /api/v1/admin/analytics/export?from=1788601329603&to=1791193329603&format=csv
+GET /api/v1/admin/analytics/export?from=1789843601567&to=1792435601567&format=csv
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -352,7 +352,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Response `200 OK` (text/csv):
 
 ```text
-<2313 bytes of text/csv>
+<2300 bytes of text/csv>
 ```
 
 ### GET /api/v1/admin/analytics/sales
@@ -363,7 +363,7 @@ Platform-wide sales: paid POS bills, compared with the previous period, plus top
 - **Permission** `READ:ANALYTICS`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminAnalyticsController_getSales` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminAnalyticsController_getSales` · [source](../../../apps/api/src/contexts/reporting/presentation/http/admin-analytics.controller.ts)
 
 **Parameters**
 
@@ -430,37 +430,37 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "period": {
-      "from": 1786924800000,
-      "to": 1791193329535,
+      "from": 1788134400000,
+      "to": 1792435601470,
       "timeZone": "UTC"
     },
     "sales": {
       "currency": "MYR",
       "totalSalesMinor": {
-        "value": 2264953,
+        "value": 2299854,
         "changePercent": 11
       },
       "bills": {
-        "value": 366,
-        "changePercent": 12
+        "value": 370,
+        "changePercent": 10
       },
       "averageBillMinor": {
-        "value": 6188,
-        "changePercent": -1
+        "value": 6216,
+        "changePercent": 1
       },
       "overTime": [
         {
-          "date": 1786924800000,
-          "salesMinor": 336839,
-          "bills": 52
+          "date": 1788134400000,
+          "salesMinor": 323584,
+          "bills": 53
         },
         {
-          "date": 1787529600000,
-          "salesMinor": 310258,
-          "bills": 48
+          "date": 1788739200000,
+          "salesMinor": 309632,
+          "bills": 49
         }
       ],
-      "firstBillAt": 1759625940000
+      "firstBillAt": 1760921940000
     },
     "activeMerchants": {
       "value": 2,
@@ -468,24 +468,24 @@ Response `200 OK` (application/json):
     },
     "topMerchants": [
       {
-        "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+        "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
         "name": "Jonker Street Kitchen",
         "category": "restaurant",
-        "salesMinor": 1800933,
-        "bills": 204
+        "salesMinor": 1823907,
+        "bills": 207
       },
       {
-        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "name": "Brew & Bean KL",
         "category": "cafe",
-        "salesMinor": 464020,
-        "bills": 162
+        "salesMinor": 475947,
+        "bills": 163
       }
     ]
   },
   "meta": {
-    "correlationId": "BnsbcMHYg-vqXzFbgfC1W",
-    "timestamp": 1791193329572
+    "correlationId": "MdExVNAQXpqhMRoFvOs72",
+    "timestamp": 1792435601497
   }
 }
 ```
@@ -496,10 +496,11 @@ Create merchant invite
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminInvitesController_createInvite` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminInvitesController_createInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -548,13 +549,13 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "inviteId": "53605450-6cb2-4571-a094-c3f6a7dc3a3a",
-    "inviteToken": "b941ccc7b3fba7399ccda90880d0dcfec8eb3f651fa32d9fd1740a2c99d7e96e",
-    "expiresAt": 1791798129682
+    "inviteId": "01a1557c-c14d-7d3a-98ae-e93075d47c25",
+    "inviteToken": "394e4bc237909ef1ce11e84cdbf8bf36d81c009583e622e45ba369715b86fabe",
+    "expiresAt": 1793040401683
   },
   "meta": {
-    "correlationId": "CN6KJumUVqCnaZe0iAK03",
-    "timestamp": 1791193329718
+    "correlationId": "BoVzYi_2UoLpHIGSqmgio",
+    "timestamp": 1792435601802
   }
 }
 ```
@@ -569,7 +570,7 @@ Renders the invite email for a business name and pilot city, for a live preview 
 - **Permission** `MANAGE:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminInvitesController_previewInviteEmail` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminInvitesController_previewInviteEmail` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -621,7 +622,7 @@ Response `200 OK` (application/json):
     "subject": "You're invited to join the rewards marketplace",
     "to": "owner@cafe.demo",
     "previewText": "Complete onboarding for Nyonya House Melaka in Melaka.",
-    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta name=\"color-scheme\" content=\"light dark\">\n  <meta name=\"supported-color-schemes\" content=\"light dark\">\n  <meta name=\"x-apple-disable-message-reformatting\">\n  <title>You&#39;re invited to join the rewards marketplace</title>\n  <style>\n    @media (max-width: 620px) {\n      .email-card-inner { padding: 28px 22px 24px 22px !important; }\n      .email-h1 { font-size: 22px !important; }\n    }\n    @media (prefers-color-scheme: dark) {\n      .email-body, .email-canvas { background-color: #091018 !important; }\n      .email-card { background-color: #0f1923 !important; border-color: #1f2c3b !important; }\n      .email-heading, .email-h1, .email-brand-name { color: #edf2f8 !important; }\n      .email-text { color: #c7d2de !important; }\n      .email-muted, .email-footer { color: #97a7b7 !important; }\n      .email-panel, .email-otp-tile { background-color: #16212d !important; border-color: #1f2c3b !important; color: #edf2f8 !important; }\n      .email-rule { border-top-color: #1f2c3b !important; }\n      .email-link { color: #6594fa !important; }\n    }\n  </style>\n</head>\n<body class=\"email-body\" style=\"margin: 0; padding: 0; background-color: #f3f6fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;\">\n  <span style=\"display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all;\">Complete onboarding for Nyonya House Melaka in Melaka.</span>\n  <table role=\"presentation\" class=\"email-canvas\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#f3f6fb\" style=\"width: 100%; background-color: #f3f6fb;\">\n    <tr>\n      <td align=\"center\" style=\"padding: 32px 12px 40px 12px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto;\">\n          <tr>\n            <td style=\"padding: 0 4px 18px 4px;\">\n              <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td align=\"center\" style=\"width: 34px; height: 34px; border-radius: 9px; background: #2d5ed4; color: #ffffff; font-size: 17px; font-weight: 700; line-height: 34px; text-align: center;\">N</td>\n                  <td class=\"email-brand-name\" style=\"padding-left: 10px; color: #0f172a; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;\">NestJS + NextJS Turborepo Starter Template</td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-card\" style=\"background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr><td style=\"height: 4px; line-height: 4px; font-size: 0; background: #d97706;\">&nbsp;</td></tr>\n                <tr>\n                  <td class=\"email-card-inner\" style=\"padding: 36px 40px 32px 40px;\">\n                    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 0 0 14px 0;\">\n                      <tr><td style=\"background: #fffbeb; border-radius: 999px; padding: 5px 12px; color: #92400e; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;\">Merchant onboarding</td></tr>\n                    </table>\n                    <h1 class=\"email-h1\" style=\"margin: 0 0 18px 0; color: #0f172a; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em;\">Set up your merchant account</h1>\n                    <p class=\"email-text\" style=\"margin: 0 0 16px 0; color: #334155; font-size: 15px; line-height: 1.65;\">You're invited to bring <strong style=\"color: #0f172a;\" class=\"email-heading\">Nyonya House Melaka</strong> onto the <strong style=\"color: #0f172a;\" class=\"email-heading\">Melaka</strong> pilot.</p>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 4px 0 20px 0;\">\n          <tr>\n            <td class=\"email-panel\" style=\"background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n              <tr>\n                <td class=\"email-muted\" style=\"padding: 0 0 0 0; width: 38%; vertical-align: top; color: #64748b; font-size: 13px; line-height: 1.5;\">Business</td>\n                <td class=\"email-heading\" style=\"padding: 0 0 0 12px; vertical-align: top; color: #0f172a; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;\">Nyonya House Melaka</td>\n              </tr>\n              <tr>\n                <td class=\"email-muted\" style=\"padding: 10px 0 0 0; width: 38%; vertical-align: top; color: #64748b; font-size: 13px; line-height: 1.5;\">City</td>\n                <td class=\"email-heading\" style=\"padding: 10px 0 0 12px; vertical-align: top; color: #0f172a; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;\">Melaka</td>\n              </tr>\n              <tr>\n                <td class=\"email-muted\" style=\"padding: 10px 0 0 0; width: 38%; vertical-align: top; color: #64748b; font-size: 13px; line-height: 1.5;\">Invite expires</td>\n                <td class=\"email-heading\" style=\"padding: 10px 0 0 12px; vertical-align: top; color: #0f172a; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;\">In 7 days</td>\n              </tr>\n              </table>\n            </td>\n          </tr>\n        </table><p class=\"email-text\" style=\"margin: 0 0 16px 0; color: #334155; font-size: 15px; line-height: 1.65;\">Create your merchant account and complete verification (KYB) to start publishing offers.</p>\n        <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 8px 0 24px 0;\">\n          <tr>\n            <td class=\"email-cta\" style=\"background: #2d5ed4; border-radius: 10px;\">\n              <a href=\"http://localhost:3003/onboarding?token=<redacted>\" style=\"display: inline-block; padding: 14px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px;\">Start onboarding &rarr;</a>\n            </td>\n          </tr>\n        </table>\n        <p class=\"email-muted\" style=\"margin: 0 0 6px 0; color: #64748b; font-size: 12px; line-height: 1.5;\">Button not working? Paste this link into your browser:</p>\n        <p class=\"email-panel\" style=\"margin: 0 0 20px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; color: #334155; word-break: break-all;\">http://localhost:3003/onboarding?token=<redacted> class=\"email-muted\" style=\"margin: 0 0 8px 0; color: #64748b; font-size: 13px; line-height: 1.6;\">Weren't expecting this? You can ignore this email.</p>\n                    \n                    <hr class=\"email-rule\" style=\"border: none; border-top: 1px solid #e2e8f0; margin: 8px 0 18px 0;\">\n                    <p class=\"email-muted\" style=\"margin: 0; color: #64748b; font-size: 12px; line-height: 1.6;\">Sent by NestJS + NextJS Turborepo Starter Template · <a href=\"http://localhost:3000\" style=\"color: #64748b; text-decoration: underline;\">localhost:3000</a></p>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-footer\" align=\"center\" style=\"padding: 20px 16px 0 16px; color: #94a3b8; font-size: 12px; line-height: 1.6; text-align: center;\">\n              <p style=\"margin: 0;\">You're receiving this because you have an account with NestJS + NextJS Turborepo Starter Template.</p>\n              <p class=\"email-muted\" style=\"margin: 4px 0 0 0;\">Questions? Reach us at <a href=\"mailto:noreply@example.com\" style=\"color: #64748b; text-decoration: underline;\">noreply@example.com</a></p>\n              <p style=\"margin: 4px 0 0 0;\">&copy; 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>",
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta name=\"color-scheme\" content=\"light dark\">\n  <meta name=\"supported-color-schemes\" content=\"light dark\">\n  <meta name=\"x-apple-disable-message-reformatting\">\n  <title>You&#39;re invited to join the rewards marketplace</title>\n  <style>\n    @media (max-width: 620px) {\n      .email-card-inner { padding: 30px 22px 26px 22px !important; }\n      .email-h1 { font-size: 22px !important; }\n    }\n    @media (prefers-color-scheme: dark) {\n      .email-body, .email-canvas { background-color: #091018 !important; }\n      .email-card { background-color: #0f1923 !important; }\n      .email-heading, .email-h1, .email-brand-name { color: #edf2f8 !important; }\n      .email-text { color: #c7d2de !important; }\n      .email-muted, .email-footer { color: #97a7b7 !important; }\n      .email-eyebrow { color: #97a7b7 !important; }\n      .email-panel, .email-otp-tile { background-color: #16212d !important; color: #edf2f8 !important; }\n      .email-divider { border-top-color: #1f2c3b !important; }\n      .email-link { color: #6594fa !important; }\n    }\n  </style>\n</head>\n<body class=\"email-body\" style=\"margin: 0; padding: 0; background-color: #f1f4f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;\">\n  <span style=\"display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all;\">Complete onboarding for Nyonya House Melaka in Melaka.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</span>\n  <table role=\"presentation\" class=\"email-canvas\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#f1f4f9\" style=\"width: 100%; background-color: #f1f4f9;\">\n    <tr>\n      <td align=\"center\" style=\"padding: 32px 12px 40px 12px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto;\">\n          <tr>\n            <td style=\"padding: 0 4px 18px 4px;\">\n              <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td align=\"center\" style=\"width: 34px; height: 34px; border-radius: 8px; background: #2d5ed4; color: #ffffff; font-size: 17px; font-weight: 700; line-height: 34px; text-align: center;\">N</td>\n                  <td class=\"email-brand-name\" style=\"padding-left: 10px; color: #0f172a; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;\">NestJS + NextJS Turborepo Starter Template</td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-card\" style=\"background: #ffffff; border-radius: 14px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td class=\"email-card-inner\" style=\"padding: 40px 44px 36px 44px;\">\n                    <p class=\"email-eyebrow\" style=\"margin: 0 0 12px 0; color: #92400e; font-size: 13px; font-weight: 600; line-height: 20px;\"><span style=\"display: inline-block; width: 8px; height: 8px; margin: 0 8px 1px 0; border-radius: 4px; background: #d97706; vertical-align: middle;\"></span>Merchant onboarding</p>\n                    <h1 class=\"email-h1\" style=\"margin: 0 0 20px 0; color: #0f172a; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em;\">Set up your merchant account</h1>\n                    <p class=\"email-text\" style=\"margin: 0 0 16px 0; color: #334155; font-size: 15px; line-height: 1.65;\">You're invited to bring <strong style=\"color: #0f172a;\" class=\"email-heading\">Nyonya House Melaka</strong> onto the <strong style=\"color: #0f172a;\" class=\"email-heading\">Melaka</strong> pilot.</p>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 4px 0 24px 0;\">\n          <tr>\n            <td class=\"email-panel\" style=\"background: #f5f7fb; border-radius: 10px; padding: 5px 18px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n              <tr>\n                <td class=\"email-muted email-divider\" style=\" padding: 11px 0; width: 38%; vertical-align: top; color: #64748b; font-size: 13px; line-height: 1.5;\">Business</td>\n                <td class=\"email-heading email-divider\" style=\" padding: 11px 0 11px 12px; vertical-align: top; color: #0f172a; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;\">Nyonya House Melaka</td>\n              </tr>\n              <tr>\n                <td class=\"email-muted email-divider\" style=\"border-top: 1px solid #e6eaf0; padding: 11px 0; width: 38%; vertical-align: top; color: #64748b; font-size: 13px; line-height: 1.5;\">City</td>\n                <td class=\"email-heading email-divider\" style=\"border-top: 1px solid #e6eaf0; padding: 11px 0 11px 12px; vertical-align: top; color: #0f172a; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;\">Melaka</td>\n              </tr>\n              <tr>\n                <td class=\"email-muted email-divider\" style=\"border-top: 1px solid #e6eaf0; padding: 11px 0; width: 38%; vertical-align: top; color: #64748b; font-size: 13px; line-height: 1.5;\">Invite expires</td>\n                <td class=\"email-heading email-divider\" style=\"border-top: 1px solid #e6eaf0; padding: 11px 0 11px 12px; vertical-align: top; color: #0f172a; font-size: 14px; font-weight: 600; line-height: 1.5; word-break: break-word;\">In 7 days</td>\n              </tr>\n              </table>\n            </td>\n          </tr>\n        </table><p class=\"email-text\" style=\"margin: 0 0 16px 0; color: #334155; font-size: 15px; line-height: 1.65;\">Create your merchant account and complete verification (KYB) to start publishing offers.</p>\n        <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 8px 0 24px 0;\">\n          <tr>\n            <td class=\"email-cta\" style=\"background: #2d5ed4; border-radius: 8px;\">\n              <a href=\"http://localhost:3003/onboarding?token=<redacted>\" style=\"display: inline-block; padding: 13px 26px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;\">Start onboarding</a>\n            </td>\n          </tr>\n        </table>\n        <p class=\"email-muted\" style=\"margin: 0 0 6px 0; color: #64748b; font-size: 12px; line-height: 1.5;\">Button not working? Paste this link into your browser:</p>\n        <p class=\"email-panel\" style=\"margin: 0 0 20px 0; background: #f5f7fb; border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; color: #334155; word-break: break-all;\">http://localhost:3003/onboarding?token=<redacted> class=\"email-muted\" style=\"margin: 0 0 8px 0; color: #64748b; font-size: 13px; line-height: 1.6;\">Weren't expecting this? You can ignore this email.</p>\n                    \n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-footer\" align=\"center\" style=\"padding: 20px 16px 0 16px; color: #94a3b8; font-size: 12px; line-height: 1.6; text-align: center;\">\n              <p style=\"margin: 0;\">You're receiving this because you have an account with <a href=\"http://localhost:3000\" style=\"color: #94a3b8; text-decoration: underline;\">NestJS + NextJS Turborepo Starter Template</a>.</p>\n              <p style=\"margin: 4px 0 0 0;\">Questions? Reach us at <a href=\"mailto:noreply@example.com\" style=\"color: #94a3b8; text-decoration: underline;\">noreply@example.com</a></p>\n              <p style=\"margin: 4px 0 0 0;\">&copy; 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>",
     "text": "NestJS + NextJS Turborepo Starter Template — Merchant onboarding\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nSet up your merchant account\n\nYou've been invited to onboard Nyonya House Melaka in the Melaka pilot.\n\nOpen this link to start onboarding:\nhttp://localhost:3003/onboarding?token=<redacted>\n\nThis invite expires in 7 days.\nIf you weren't expecting this, you can ignore this email.\n\nAction: Start onboarding\n\nhttp://localhost:3003/onboarding?token=<redacted>\n\nQuestions? noreply@example.com\n\n© 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.",
     "props": {
       "to": "owner@cafe.demo",
@@ -632,8 +633,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "WPzB7u9Ph7AAloEPWHE2b",
-    "timestamp": 1791457023225
+    "correlationId": "AOfohsB0drndJt9YgOXSE",
+    "timestamp": 1792435601644
   }
 }
 ```
@@ -646,7 +647,7 @@ List pending organization store location requests
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminLocationRequestsController_listLocationRequests` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminLocationRequestsController_listLocationRequests` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -709,8 +710,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "a392fbb5-7761-4bdf-9b4a-7dfb5ed94c2a",
-      "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+      "id": "019b76da-a800-7392-bbb5-77614bdf9b4a",
+      "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
       "organizationSlug": "jonker-street-kitchen",
       "organizationDisplayName": "Jonker Street Kitchen",
       "name": "Jonker Street Kitchen — Taman Desa (Rejected)",
@@ -721,12 +722,12 @@ Response `200 OK` (application/json):
       "status": "REJECTED",
       "rejectionReason": "The address could not be matched to the SSM business registration. Resubmit with a utility bill for 5 Jalan Taman Desa.",
       "isPrimary": false,
-      "requestedByUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
+      "requestedByUserId": "019b76da-a800-727d-bf31-03f65b3b9058",
       "createdAt": 1788249600000
     },
     {
-      "id": "257401d5-536e-464f-9ae9-4756b6dd5f65",
-      "organizationId": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+      "id": "019b76da-a800-7685-9734-84f5f07eb21f",
+      "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
       "organizationSlug": "jonker-street-kitchen",
       "organizationDisplayName": "Jonker Street Kitchen",
       "name": "Jonker Street Kitchen — Bukit Beruang",
@@ -737,8 +738,8 @@ Response `200 OK` (application/json):
       "status": "ACTIVE",
       "rejectionReason": null,
       "isPrimary": false,
-      "requestedByUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
-      "createdAt": 1791193151223
+      "requestedByUserId": "019b76da-a800-727d-bf31-03f65b3b9058",
+      "createdAt": 1792435514631
     }
   ],
   "meta": {
@@ -749,8 +750,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "fCXQ3mxWgdqmjRNIqcnTf",
-    "timestamp": 1791193329522
+    "correlationId": "Qy90qCb687W9k-QPu_m3K",
+    "timestamp": 1792435601444
   }
 }
 ```
@@ -763,7 +764,7 @@ List merchant organizations
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminMerchantsController_listMerchants` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminMerchantsController_listMerchants` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -828,11 +829,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791193151217,
-      "updatedAt": 1791193151217,
+      "createdAt": 1792435514625,
+      "updatedAt": 1792435514625,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "b57401d5-536e-464f-9ae9-4756b6dd5f61",
+      "id": "019b76da-a800-72b9-80b8-91bd729eddbe",
       "businessName": "Jonker Street Kitchen",
       "legalName": "Jonker Kitchen Melaka",
       "category": "restaurant",
@@ -842,14 +843,14 @@ Response `200 OK` (application/json):
       "status": "ACTIVE",
       "contactEmail": "jonker.owner@melaka-rewards.demo",
       "contactPhone": "+6062812345",
-      "ownerUserId": "b9cda090-b9e8-42e4-b7b1-b6d00294f022"
+      "ownerUserId": "019b76da-a800-727d-bf31-03f65b3b9058"
     },
     {
-      "createdAt": 1791193151201,
-      "updatedAt": 1791193151201,
+      "createdAt": 1792435514595,
+      "updatedAt": 1792435514595,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+      "id": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "businessName": "Brew & Bean KL",
       "legalName": "Brew & Bean KL Sdn Bhd",
       "category": "cafe",
@@ -859,7 +860,7 @@ Response `200 OK` (application/json):
       "status": "ACTIVE",
       "contactEmail": "brew.owner@kl-rewards.demo",
       "contactPhone": "+60321456789",
-      "ownerUserId": "326494e1-b45d-4203-b881-05b60ae50b4a"
+      "ownerUserId": "019b76da-a800-763a-b64a-fd037629f93f"
     }
   ],
   "meta": {
@@ -867,11 +868,11 @@ Response `200 OK` (application/json):
     "total": 3,
     "page": 1,
     "totalPages": 2,
-    "nextCursor": "eyJhdCI6MTc5MTE5MzE1MTIwMSwiaWQiOiJhMTc4YTRkMS02OTE1LTRlYjMtYmY4NC02ZmIxNGUxZmViNmMifQ",
+    "nextCursor": "eyJhdCI6MTc5MjQzNTUxNDU5NSwiaWQiOiIwMTliNzZkYS1hODAwLTdhOTQtYTE5OC0yM2FkMWI0Y2ZkZDkifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "Os1cKGZemDi-lUOESlYLp",
-    "timestamp": 1791193329449
+    "correlationId": "X7adIo3bvvfDf6jZCZEhT",
+    "timestamp": 1792435601328
   }
 }
 ```
@@ -884,7 +885,7 @@ Get merchant organization detail for KYB review
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminMerchantsController_getMerchant` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminMerchantsController_getMerchant` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -948,7 +949,7 @@ Get merchant organization detail for KYB review
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c
+GET /api/v1/admin/merchants/019b76da-a800-7a94-a198-23ad1b4cfdd9
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -959,11 +960,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193151201,
-    "updatedAt": 1791193151201,
+    "createdAt": 1792435514595,
+    "updatedAt": 1792435514595,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "id": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "businessName": "Brew & Bean KL",
     "legalName": "Brew & Bean KL Sdn Bhd",
     "category": "cafe",
@@ -973,25 +974,25 @@ Response `200 OK` (application/json):
     "status": "ACTIVE",
     "contactEmail": "brew.owner@kl-rewards.demo",
     "contactPhone": "+60321456789",
-    "ownerUserId": "326494e1-b45d-4203-b881-05b60ae50b4a",
+    "ownerUserId": "019b76da-a800-763a-b64a-fd037629f93f",
     "kybFields": {
       "taxId": "C12345678",
       "registrationNo": "201901012345"
     },
     "documents": [
       {
-        "id": "d1597799-9b05-49c8-95e1-864ddfa666a8",
+        "id": "019b76da-a800-7159-b799-9b0589c815e1",
         "fileName": "brew-bean-business-licence.pdf",
         "mimeType": "application/pdf",
         "sizeBytes": 69,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1789465153348
+        "uploadedAt": 1790707555011
       }
     ],
     "locations": [
       {
-        "id": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+        "id": "019b76da-a800-701a-abbd-a9a411b6958b",
+        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "name": "Brew & Bean KL — Bukit Bintang",
         "code": "primary",
         "addressText": "12 Jalan Bukit Bintang, Kuala Lumpur",
@@ -1000,8 +1001,8 @@ Response `200 OK` (application/json):
         "status": "ACTIVE",
         "rejectionReason": null,
         "isPrimary": true,
-        "createdAt": 1791193151207,
-        "updatedAt": 1791193151207
+        "createdAt": 1792435514608,
+        "updatedAt": 1792435514608
       }
     ],
     "ownerEmail": "brew.owner@kl-rewards.demo",
@@ -1009,8 +1010,8 @@ Response `200 OK` (application/json):
     "memberCount": 3
   },
   "meta": {
-    "correlationId": "QCw1OtZvM2KEsSoFi11zX",
-    "timestamp": 1791193329484
+    "correlationId": "opqc3IerV6ZpUZy1BlBhT",
+    "timestamp": 1792435601369
   }
 }
 ```
@@ -1023,7 +1024,7 @@ Get a short-lived signed download URL for a merchant KYB document
 - **Permission** `LIST:MERCHANT_ORG`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminMerchantsController_downloadDocument` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminMerchantsController_downloadDocument` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -1054,7 +1055,7 @@ Get a short-lived signed download URL for a merchant KYB document
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/documents/d1597799-9b05-49c8-95e1-864ddfa666a8/download
+GET /api/v1/admin/merchants/019b76da-a800-7a94-a198-23ad1b4cfdd9/documents/019b76da-a800-7159-b799-9b0589c815e1/download
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1065,14 +1066,14 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "documentId": "d1597799-9b05-49c8-95e1-864ddfa666a8",
+    "documentId": "019b76da-a800-7159-b799-9b0589c815e1",
     "scanStatus": "SCANNING",
-    "downloadUrl": "http://127.0.0.1:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1791193629504
+    "downloadUrl": "http://10.155.3.236:8097/api/v1/files/local-download?token=<redacted>",
+    "expiresAt": 1792435901412
   },
   "meta": {
-    "correlationId": "E359Qq2C9jfCBlfH5QHKo",
-    "timestamp": 1791193329504
+    "correlationId": "wOdVVk4LvB8kdsL3enWTI",
+    "timestamp": 1792435601412
   }
 }
 ```
@@ -1083,10 +1084,11 @@ Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejecti
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminMerchantsController_updateKyb` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminMerchantsController_updateKyb` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -1126,7 +1128,7 @@ Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejecti
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/merchants/62cc685a-d679-4b51-8a57-2715674d1906/kyb
+PATCH /api/v1/admin/merchants/01a1557c-c113-7083-94bf-ff330c46bb32/kyb
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1149,8 +1151,8 @@ Response `200 OK` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "XOSr6hrwgmZzaGnwb5bEQ",
-    "timestamp": 1791193334854
+    "correlationId": "RKOtoWMHKSBhu2rxF5b1i",
+    "timestamp": 1792435607299
   }
 }
 ```
@@ -1161,10 +1163,11 @@ Create an organization store location
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminMerchantsController_createLocation` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminMerchantsController_createLocation` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -1211,7 +1214,7 @@ Create an organization store location
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/locations
+POST /api/v1/admin/merchants/019b76da-a800-7a94-a198-23ad1b4cfdd9/locations
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1231,8 +1234,8 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "6cbdc605-bea0-4d7b-bb73-209d1812064b",
-    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "id": "01a1557c-d8af-76e2-9fe2-3227d9fadde4",
+    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Mid Valley",
     "code": "brew-bean-kl-mid-valley",
     "addressText": "Lingkaran Syed Putra, Mid Valley City, 59200 Kuala Lumpur",
@@ -1241,12 +1244,12 @@ Response `201 Created` (application/json):
     "status": "ACTIVE",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1791193335079,
-    "updatedAt": 1791193335079
+    "createdAt": 1792435607728,
+    "updatedAt": 1792435607728
   },
   "meta": {
-    "correlationId": "FJgsR-WDQykRjAqvIRfIv",
-    "timestamp": 1791193335085
+    "correlationId": "Z62MJnczfP8K1rDYkKa-X",
+    "timestamp": 1792435607749
   }
 }
 ```
@@ -1257,10 +1260,11 @@ Approve or reject an organization store location request
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminMerchantsController_reviewLocation` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminMerchantsController_reviewLocation` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-admin.controller.ts)
 
 **Parameters**
 
@@ -1305,7 +1309,7 @@ Approve or reject an organization store location request
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/merchants/a178a4d1-6915-4eb3-bf84-6fb14e1feb6c/locations/7856bea1-dcf7-4112-81e4-5e91034ef1ed/review
+PATCH /api/v1/admin/merchants/019b76da-a800-7a94-a198-23ad1b4cfdd9/locations/01a1557c-d78b-7fd2-944c-6be971eedf85/review
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1323,8 +1327,8 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "7856bea1-dcf7-4112-81e4-5e91034ef1ed",
-    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "id": "01a1557c-d78b-7fd2-944c-6be971eedf85",
+    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
     "addressText": "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
@@ -1333,12 +1337,12 @@ Response `200 OK` (application/json):
     "status": "REJECTED",
     "rejectionReason": "Add the unit number to the address",
     "isPrimary": false,
-    "createdAt": 1791193334906,
-    "updatedAt": 1791193334941
+    "createdAt": 1792435607436,
+    "updatedAt": 1792435607486
   },
   "meta": {
-    "correlationId": "CeszNt0Uv5HK6bJDJEKdD",
-    "timestamp": 1791193334947
+    "correlationId": "IMgjvTza2we6G_MRShKEB",
+    "timestamp": 1792435607504
   }
 }
 ```
@@ -1351,7 +1355,7 @@ Get one reward in full, whatever its status (moderation detail)
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminRewardsController_getReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminRewardsController_getReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/admin-rewards.controller.ts)
 
 **Parameters**
 
@@ -1427,10 +1431,11 @@ Approve a pending reward (no body required)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:REWARD`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminRewardsController_approveReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminRewardsController_approveReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/admin-rewards.controller.ts)
 
 **Parameters**
 
@@ -1504,7 +1509,7 @@ _No fields._
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/rewards/f88793c9-c817-46be-a9cb-d86b77e861bb/approve
+POST /api/v1/admin/rewards/01a1557c-ec6c-7c5c-983d-6cd525177f31/approve
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1519,14 +1524,15 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193338159,
-    "updatedAt": 1791193338159,
+    "createdAt": 1792435612778,
+    "updatedAt": 1792435613233,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
-    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
+    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
+    "organizationLogoSources": [],
     "title": "Free Kopi O with any breakfast set",
     "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
     "rewardType": "FREE_ITEM",
@@ -1534,19 +1540,36 @@ Response `201 Created` (application/json):
     "termsConditions": null,
     "rewardKind": "CONSUMER",
     "category": "cafe",
-    "placeholderImageKey": "category-cafe",
+    "images": [
+      {
+        "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
+        "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+        "width": 1920,
+        "height": 1080,
+        "sources": [
+          {
+            "width": 640,
+            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+          },
+          {
+            "width": 1280,
+            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+          }
+        ]
+      }
+    ],
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1791193338104,
-    "expiryDate": 1796377338104,
+    "startDate": 1792435612648,
+    "expiryDate": 1797619612648,
     "status": "PUBLISHED",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
+    "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -1555,8 +1578,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "H6Ifq3e5LvOL8k-5eLs-e",
-    "timestamp": 1791193338364
+    "correlationId": "7jOmRf8KWtEb-yYvjMGVE",
+    "timestamp": 1792435613289
   }
 }
 ```
@@ -1569,7 +1592,7 @@ Get a short-lived signed URL that downloads one of a reward's images (the origin
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminRewardsController_getRewardImageDownload` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminRewardsController_getRewardImageDownload` · [source](../../../apps/api/src/contexts/rewards/presentation/http/admin-rewards.controller.ts)
 
 **Parameters**
 
@@ -1607,7 +1630,7 @@ Download every image of a reward as one ZIP of the original uploads, in display 
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/zip` (errors are always `application/json`)
-- Operation id `RewardsAdminRewardsController_downloadRewardImagesArchive` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminRewardsController_downloadRewardImagesArchive` · [source](../../../apps/api/src/contexts/rewards/presentation/http/admin-rewards.controller.ts)
 
 **Parameters**
 
@@ -1635,10 +1658,11 @@ Reject a pending reward
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `MANAGE:REWARD`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminRewardsController_rejectReward` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminRewardsController_rejectReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/admin-rewards.controller.ts)
 
 **Parameters**
 
@@ -1650,7 +1674,7 @@ Reject a pending reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `reason` | string | no | at most 2000 characters |
+| `reason` | string | yes | length 1–2000 |
 | `rewardId` | string (uuid) | yes |  |
 
 **Response 201 Created** (`application/json`) — Reward returned to draft
@@ -1715,14 +1739,14 @@ Reject a pending reward
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/rewards/c3a98194-259f-4357-a73e-8cc933eb4e87/reject
+POST /api/v1/admin/rewards/01a1557c-eebc-73a1-8daf-47918482e2b4/reject
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "c3a98194-259f-4357-a73e-8cc933eb4e87",
+  "rewardId": "01a1557c-eebc-73a1-8daf-47918482e2b4",
   "reason": "Add the participating stores and the daily limit to the terms"
 }
 ```
@@ -1733,14 +1757,15 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193338412,
-    "updatedAt": 1791193338412,
+    "createdAt": 1792435613371,
+    "updatedAt": 1792435613451,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "c3a98194-259f-4357-a73e-8cc933eb4e87",
-    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "id": "01a1557c-eebc-73a1-8daf-47918482e2b4",
+    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "organizationName": "Brew & Bean KL",
     "organizationLogoUrl": null,
+    "organizationLogoSources": [],
     "title": "Buy one get one Iced Latte",
     "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
     "rewardType": "BOGO",
@@ -1748,12 +1773,29 @@ Response `201 Created` (application/json):
     "termsConditions": null,
     "rewardKind": "CONSUMER",
     "category": "cafe",
-    "placeholderImageKey": "category-cafe",
+    "images": [
+      {
+        "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
+        "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+        "width": 1920,
+        "height": 1080,
+        "sources": [
+          {
+            "width": 640,
+            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+          },
+          {
+            "width": 1280,
+            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+          }
+        ]
+      }
+    ],
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1791193338104,
-    "expiryDate": 1796377338104,
+    "startDate": 1792435612648,
+    "expiryDate": 1797619612648,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -1769,8 +1811,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "OPtzoK-2qtKz7Z8UNAy1j",
-    "timestamp": 1791193338457
+    "correlationId": "rRHGnlnd2TSKcee0UOrsU",
+    "timestamp": 1792435613501
   }
 }
 ```
@@ -1783,7 +1825,7 @@ List rewards pending moderation (oldest first, paginated)
 - **Permission** `MANAGE:REWARD`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardsAdminRewardsController_listPendingRewards` · [source](../../../apps/api/src/modules/rewards/controllers/rewards-admin.controller.ts)
+- Operation id `RewardsAdminRewardsController_listPendingRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/admin-rewards.controller.ts)
 
 **Parameters**
 
@@ -1877,27 +1919,61 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791193151316,
-      "updatedAt": 1791193151316,
+      "createdAt": 1792435550881,
+      "updatedAt": 1792435550881,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "c25c75db-a700-499b-9649-dc965aa21264",
-      "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+      "id": "019b76da-a800-7501-9cc9-ed58933e4620",
+      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "organizationName": "Brew & Bean KL",
       "organizationLogoUrl": null,
+      "organizationLogoSources": [],
       "title": "20% off weekend brunch",
-      "description": "Awaiting admin moderation or auto-publish.",
+      "description": "20% off any brunch plate on Saturdays and Sundays, 9am–1pm.",
       "rewardType": "DISCOUNT",
-      "rewardValue": 0,
+      "rewardValue": 20,
       "termsConditions": null,
       "rewardKind": "CONSUMER",
       "category": "cafe",
-      "placeholderImageKey": "category-cafe",
+      "images": [
+        {
+          "fileId": "019b76da-a800-7c52-b80b-757273d0fd2d",
+          "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7c52-b80b-757273d0fd2d/variants/UHD/local-public",
+          "width": 3840,
+          "height": 2160,
+          "sources": [
+            {
+              "width": 640,
+              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7c52-b80b-757273d0fd2d/variants/THUMBNAIL/local-public"
+            },
+            {
+              "width": 1280,
+              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7c52-b80b-757273d0fd2d/variants/MEDIUM/local-public"
+            }
+          ]
+        },
+        {
+          "fileId": "019b76da-a800-7793-9978-fdc44ec989d6",
+          "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7793-9978-fdc44ec989d6/variants/UHD/local-public",
+          "width": 3840,
+          "height": 2160,
+          "sources": [
+            {
+              "width": 640,
+              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7793-9978-fdc44ec989d6/variants/THUMBNAIL/local-public"
+            },
+            {
+              "width": 1280,
+              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7793-9978-fdc44ec989d6/variants/MEDIUM/local-public"
+            }
+          ]
+        }
+      ],
       "quantityTotal": 80,
       "quantityRemaining": 80,
       "quantityReserved": 0,
       "startDate": null,
-      "expiryDate": 1793785151314,
+      "expiryDate": 1795027550879,
       "status": "PENDING_REVIEW",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -1910,14 +1986,15 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1791193338159,
-      "updatedAt": 1791193338159,
+      "createdAt": 1792435612778,
+      "updatedAt": 1792435613083,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "f88793c9-c817-46be-a9cb-d86b77e861bb",
-      "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+      "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
+      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "organizationName": "Brew & Bean KL",
       "organizationLogoUrl": null,
+      "organizationLogoSources": [],
       "title": "Free Kopi O with any breakfast set",
       "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
       "rewardType": "FREE_ITEM",
@@ -1925,19 +2002,36 @@ Response `200 OK` (application/json):
       "termsConditions": null,
       "rewardKind": "CONSUMER",
       "category": "cafe",
-      "placeholderImageKey": "category-cafe",
+      "images": [
+        {
+          "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
+          "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+          "width": 1920,
+          "height": 1080,
+          "sources": [
+            {
+              "width": 640,
+              "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+            },
+            {
+              "width": 1280,
+              "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+            }
+          ]
+        }
+      ],
       "quantityTotal": 250,
       "quantityRemaining": 250,
       "quantityReserved": 0,
-      "startDate": 1791193338104,
-      "expiryDate": 1796377338104,
+      "startDate": 1792435612648,
+      "expiryDate": 1797619612648,
       "status": "PENDING_REVIEW",
       "claimCount": 0,
       "redemptionCount": 0,
       "referralsEnabled": true,
       "referralPoolTotal": 50,
       "referralPoolRemaining": 50,
-      "referrerRewardId": "be614d3b-97e7-4101-8178-6435a65ce629",
+      "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
       "rules": {
         "minSpendMyr": 15,
         "maxUsePerUser": 1
@@ -1954,8 +2048,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "v2mZ9zu_QVum0Bbx2JgAY",
-    "timestamp": 1791193338326
+    "correlationId": "ZYlAQp62lGr4HTys1ICXw",
+    "timestamp": 1792435613197
   }
 }
 ```

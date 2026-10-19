@@ -9,14 +9,14 @@ import { LandingHeader } from "@/components/landing/landing-header";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingHowItWorks } from "@/components/landing/landing-how-it-works";
 import { LandingMerchants } from "@/components/landing/landing-merchants";
-import type { FeaturedOffer } from "@/lib/rewards/featured-offers";
+import type { FeaturedOffer } from "@/contexts/rewards/lib/featured-offers";
 
 /** The header's sign-in / profile control needs the auth providers — irrelevant to these layout tests. */
 vi.mock("@/components/landing/landing-auth-actions", () => ({
 	LandingAuthActions: (): null => null,
 }));
 
-const SIGN_IN = { label: "Sign in to claim", href: "/auth/login?redirect=%2Frewardhub" };
+const SIGN_IN = { label: "Sign in to claim", href: "/auth/login?redirect=%2Fdashboard" };
 /** A merchant-picked expiry day (15 Nov 2026), which the reward form sends as 00:00 UTC of that day. */
 const EXPIRY_PICKED_DAY = Date.UTC(2026, 10, 15);
 /** 14 Nov 2026 16:30 UTC — already 15 Nov (00:30) in Malaysia, where the stores are, but still 14 Nov in UTC and the Americas. */
@@ -126,10 +126,10 @@ describe("LandingHowItWorks", () => {
 
 describe("LandingCallToAction", () => {
 	it("renders the supplied copy and action as a link", () => {
-		const { container } = render(<LandingCallToAction heading="Ready?" description="It takes a minute." action={{ label: "Open my wallet", href: "/rewardhub/wallet" }} />);
+		const { container } = render(<LandingCallToAction heading="Ready?" description="It takes a minute." action={{ label: "Open my wallet", href: "/dashboard/wallet" }} />);
 
 		expect(screen.getByRole("heading", { level: 2, name: "Ready?" })).toBeDefined();
-		expect(screen.getByRole("link", { name: "Open my wallet" }).getAttribute("href")).toBe("/rewardhub/wallet");
+		expect(screen.getByRole("link", { name: "Open my wallet" }).getAttribute("href")).toBe("/dashboard/wallet");
 		expectNoNestedInteractive(container);
 	});
 });
@@ -147,7 +147,7 @@ describe("LandingFooter", () => {
 			within(screen.getByRole("navigation", { name: "Your account" }))
 				.getByRole("link", { name: "My rewards" })
 				.getAttribute("href"),
-		).toBe("/rewardhub/wallet");
+		).toBe("/dashboard/wallet");
 	});
 });
 

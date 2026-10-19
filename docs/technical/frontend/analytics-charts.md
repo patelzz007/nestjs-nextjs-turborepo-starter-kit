@@ -11,7 +11,7 @@ tags: ["frontend", "analytics", "charts", "recharts", "accessibility", "exports"
 # Analytics dashboards and chart primitives
 
 Three pages read the [analytics API](../api/analytics.md): **My Activity** in the web app
-(`/rewardhub/activity`), **Analytics** in the merchant app (`/orgs/[orgSlug]/analytics`) and
+(`/dashboard/activity`), **Analytics** in the merchant app (`/orgs/[orgSlug]/analytics`) and
 **Analytics** in the admin panel (`/analytics`; the old `/analytics/sales` redirects there). All
 three are built from one set of primitives, so a chart looks and behaves the same everywhere.
 
@@ -28,7 +28,7 @@ flowchart LR
 | --- | --- | --- |
 | Primitives (dumb) | `packages/ui/src/components/` | Nothing about the API: formatted strings, numbers, colour slots, callbacks |
 | Formatters | `packages/ui/src/lib/format/` — `formatEpochMsRange`, `formatBucket`, `formatPercent`, `formatPercentChange`, plus the existing money / count helpers | Locale, currency and time zone, always passed in |
-| Range + presentation (shared smart layer) | `packages/client/src/lib/analytics/` | The dashboard contracts, the URL, the download helper |
+| Range + presentation (shared smart layer) | `packages/client/src/lib/contexts/reporting/` | The dashboard contracts, the URL, the download helper |
 | Pages (smart) | each app's `components/analytics/…` and `lib/analytics/…` | Which KPIs, charts and breakdowns that audience sees |
 
 ### Primitives (`@workspace/ui/components/*`)
@@ -45,7 +45,7 @@ flowchart LR
 Every primitive forwards its ref (`TimeSeriesChart` and `AnalyticsRangePicker` are generic, so
 they take `ref` as a prop — React 19) and takes no business copy: labels arrive as props.
 
-### Shared smart layer (`@workspace/client/lib/analytics/*`)
+### Shared smart layer (`@workspace/client/lib/contexts/reporting/*`)
 
 - **`analytics-range`** — `ANALYTICS_URL_STATE` (`?range=` preset, default `last30Days` left out
   of the URL; `?from=&to=` inclusive `YYYY-MM-DD` days for `range=custom`; optional
@@ -85,7 +85,7 @@ they take `ref` as a prop — React 19) and takes no business copy: labels arriv
 
 | Page | Report zone | Store | Export |
 | --- | --- | --- | --- |
-| Customer `/rewardhub/activity` | UTC | — | none (own data only) |
+| Customer `/dashboard/activity` | UTC | — | none (own data only) |
 | Merchant `/orgs/[orgSlug]/analytics` | The organization's zone, read up front from the organization context the app already loads (`organization.timeZone`; `reportTimeZone`) | The member's store selector (the same tenant-context filter every merchant page uses), part of the query and prefetch key | yes |
 | Admin `/analytics` | UTC | — | yes |
 
@@ -142,7 +142,7 @@ encodings apply there and also cover colour-blind readers and grayscale print.
 - Primitives: `packages/ui/src/components/__tests__/*.test.tsx` — states, roles and names, the
   table twin, keyboard (Enter submits the custom range), ref forwarding. jsdom has no
   `matchMedia`: stub it before rendering a `TimeSeriesChart`.
-- Range and presets: `packages/client/src/lib/analytics/__tests__/analytics-range.test.ts` (month, quarter,
+- Range and presets: `packages/client/src/lib/contexts/reporting/__tests__/analytics-range.test.ts` (month, quarter,
   year and leap edges; local midnight in Kuala Lumpur vs UTC; invalid custom ranges).
 - Pages: each app's analytics view test mocks `useAuth().api` and `useSearchParams` (reading
   `window.location`) and checks the data → screen mapping, the URL round trip, the prefetch key,

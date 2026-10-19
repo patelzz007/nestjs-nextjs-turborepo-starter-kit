@@ -7,7 +7,7 @@
 //   │          ╭───╮•          │   auth panel (dark in both themes): the
 //   │          │ ▣ │           │   brand mark's tile, name and tagline, centred —
 //   │          ╰───╯           │   the web sign-in panel's composition
-//   │        Reward Hub        │
+//   │         App name         │
 //   │   Sign in to pick up…    │
 //   ╭──────────────────────────╮
 //   │  Welcome back            │   sheet: the screen (AuthPage), sized to

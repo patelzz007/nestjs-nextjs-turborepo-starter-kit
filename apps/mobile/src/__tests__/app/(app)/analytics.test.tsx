@@ -9,8 +9,7 @@ import { testAccessToken } from "../../../../test/jwt";
 import AppTabsLayout from "../../../app/(app)/_layout";
 import AnalyticsScreen from "../../../app/(app)/analytics";
 import HomeScreen from "../../../app/(app)/index";
-import { activityRangeOfDays, activityToday } from "../../../features/analytics/activity-range";
-import { rangeLabelOf } from "../../../features/analytics/presentation";
+import { activityRangeOfDays, activityToday, rangeLabelOf } from "../../../contexts/reporting";
 import { addCalendarMonths, calendarMonthOf, firstDayOf } from "@workspace/ui-native/lib/calendar";
 
 const TAB_SCREENS = {

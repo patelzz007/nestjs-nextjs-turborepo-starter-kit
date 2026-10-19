@@ -56,7 +56,7 @@
 
 | Surface | App | Port | Purpose |
 | ------- | --- | ---- | ------- |
-| **Web** | `@workspace/web` | `3000` | Public landing + authenticated Reward Hub for consumers |
+| **Web** | `@workspace/web` | `3000` | Public landing + the authenticated customer dashboard |
 | **Admin** | `@workspace/admin` | `3001` | Internal operations panel |
 | **Docs** | `@workspace/docs` | `3002` | Astro documentation site for `docs/` + `blog/` (see `apps/docs/README.md`) |
 | **Merchant** | `@workspace/merchant` | `3003` | Merchant portal (isolated auth cookies) |

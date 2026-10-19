@@ -84,7 +84,7 @@ export const TEST_API_INFRASTRUCTURE: TestEnv = {
  * e2e only: the test client (light-my-request) connects from loopback and acts
  * as the trusted reverse proxy, sending each synthetic client's address in
  * `X-Forwarded-For` — exactly how production sees clients behind a proxy
- * listed in TRUST_PROXY (common/http/client-ip.ts). Unit tests keep the
+ * listed in TRUST_PROXY (platform/infrastructure/http/client-ip.ts). Unit tests keep the
  * production default (no trusted proxy).
  */
 export const TEST_E2E_PROXY: TestEnv = { TRUST_PROXY: "loopback" };

@@ -51,7 +51,7 @@ describe("Audit trail timeline (e2e)", () => {
 			await client.query("BEGIN");
 			await client.query("SELECT set_config('app.correlation_id', $1, true), set_config('app.system_operation', 'geo.reference_data.write', true)", [correlationId]);
 			for (const name of names) {
-				await client.query("INSERT INTO public.regions (name) VALUES ($1)", [name]);
+				await client.query('INSERT INTO public."Region" (name) VALUES ($1)', [name]);
 			}
 			await client.query("COMMIT");
 		} finally {
@@ -66,7 +66,7 @@ describe("Audit trail timeline (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.regions WHERE name LIKE $1", [`${REGION_PREFIX}%`]);
+		await pool.query('DELETE FROM public."Region" WHERE name LIKE $1', [`${REGION_PREFIX}%`]);
 		await pool.end();
 		await app.close();
 	});
@@ -86,7 +86,7 @@ describe("Audit trail timeline (e2e)", () => {
 		expect(page.meta.total).toBe(1);
 		const entry = page.data.at(LIST_SLOT_INDEX.first);
 		expect(entry).toMatchObject({ kind: "REQUEST", method: "POST", correlationId });
-		expect(entry?.changedTables).toContain("regions");
+		expect(entry?.changedTables).toContain("Region");
 		expect(entry?.changeCount).toBeGreaterThan(0);
 	});
 
@@ -101,7 +101,7 @@ describe("Audit trail timeline (e2e)", () => {
 		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
 		const actor = z
 			.object({ id: z.string(), fullName: z.string() })
-			.parse((await pool.query('SELECT id, "fullName" FROM public.users WHERE email = $1', ["superadmin@example.com"])).rows.at(LIST_SLOT_INDEX.first));
+			.parse((await pool.query('SELECT id, "fullName" FROM public."User" WHERE email = $1', ["superadmin@example.com"])).rows.at(LIST_SLOT_INDEX.first));
 		const scoped = (search: string): Promise<TrailPage> => trail({ search, "filter[correlationId][eq]": correlationId });
 
 		expect((await scoped("SUPERADMIN@example")).meta.total).toBe(1);
@@ -121,7 +121,7 @@ describe("Audit trail timeline (e2e)", () => {
 			kind: "BACKGROUND",
 			correlationId,
 			changeCount: 2,
-			changedTables: ["regions"],
+			changedTables: ["Region"],
 			actorKind: "SYSTEM",
 			systemOperation: "geo.reference_data.write",
 			operation: "INSERT",
@@ -146,10 +146,10 @@ describe("Audit trail timeline (e2e)", () => {
 			payload: { name },
 		});
 		expect(created.statusCode, created.body).toBe(201);
-		const region = await pool.query<{ id: number }>("SELECT id FROM public.regions WHERE name = $1", [name]);
+		const region = await pool.query<{ id: number }>('SELECT id FROM public."Region" WHERE name = $1', [name]);
 		const rowId = String(region.rows.at(LIST_SLOT_INDEX.first)?.id);
 
-		const page = await trail({ "filter[tableName][eq]": "regions", "filter[rowId][eq]": rowId });
+		const page = await trail({ "filter[tableName][eq]": "Region", "filter[rowId][eq]": rowId });
 
 		expect(page.data.map((entry) => entry.correlationId)).toContain(z.string().parse(created.headers["x-correlation-id"]));
 	});
@@ -169,7 +169,7 @@ describe("Audit trail timeline (e2e)", () => {
 		const response = await app.inject({ method: "GET", url: TRAIL_URL, query: { limit: "3" }, headers: { cookie: cookie(superAdmin) } });
 		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
 
-		const result = await pool.query(`SELECT response_body AS "responseBody", system_operations AS "systemOperations" FROM public.audit_logs WHERE correlation_id = $1`, [
+		const result = await pool.query(`SELECT "responseBody" AS "responseBody", "systemOperations" AS "systemOperations" FROM public."AuditLog" WHERE "correlationId" = $1`, [
 			correlationId,
 		]);
 
@@ -209,7 +209,7 @@ describe("Audit trail timeline (e2e)", () => {
 			const listening = await listener();
 			try {
 				await backgroundJob(randomUUID(), [`${REGION_PREFIX}${randomUUID().slice(0, 8)}`]);
-				await until(() => listening.received.includes("data_change_logs"));
+				await until(() => listening.received.includes("DataChangeLog"));
 
 				listening.received.length = 0;
 				await trail({});
@@ -223,7 +223,7 @@ describe("Audit trail timeline (e2e)", () => {
 					payload: { name: `${REGION_PREFIX}${randomUUID().slice(0, 8)}` },
 				});
 				expect(response.statusCode, response.body).toBe(201);
-				await until(() => listening.received.includes("audit_logs"));
+				await until(() => listening.received.includes("AuditLog"));
 			} finally {
 				await listening.close();
 			}

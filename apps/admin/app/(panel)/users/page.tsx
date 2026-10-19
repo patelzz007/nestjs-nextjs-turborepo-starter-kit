@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { toUsersListQuery, USERS_TABLE_URL_STATE } from "@/lib/url-state/users";
+import { toUsersListQuery, USERS_TABLE_URL_STATE } from "@/contexts/identity/url-state/users";
 
-import UsersAllTable from "./users-all-table";
+import UsersAllTable from "../../../contexts/identity/components/users-all-table";
 
 export const dynamic = "force-dynamic";
 

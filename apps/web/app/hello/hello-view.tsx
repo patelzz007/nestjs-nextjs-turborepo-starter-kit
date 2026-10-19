@@ -1,7 +1,7 @@
 "use client";
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { useAuth, useAuthUser, useIsServerRenderedSession, type AuthUser } from "@workspace/client/lib/auth";
+import { useAuth, useAuthUser, useIsServerRenderedSession, type AuthUser } from "@workspace/client/lib/contexts/identity";
 import { PLATFORM_DISPLAY_REGION, type Envelope, type UserResponse } from "@workspace/shared";
 
 import { useCallback, useState, type JSX } from "react";
@@ -16,7 +16,7 @@ import { HelloProfileSkeleton } from "@/components/loading/hello-profile-skeleto
 import { PROFILE_EMAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
-import { LogoutButton } from "@/components/logout-button";
+import { LogoutButton } from "@/contexts/identity/components/logout-button";
 
 /** Unified user type that works with both the API response and the auth facade user. */
 interface DisplayUser {

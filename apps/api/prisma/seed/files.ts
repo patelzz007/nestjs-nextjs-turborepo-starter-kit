@@ -7,14 +7,14 @@
 //   - Brew & Bean KL completed onboarding through its invite and submitted KYB
 //     evidence twice: the first submission was retired (is_active = false) by
 //     the second, and the second consumed the invite's document window
-//     (`documents_submitted_at`). Submitted evidence is retained, never deleted.
+//     (`documentsSubmittedAt`). Submitted evidence is retained, never deleted.
 // Idempotent: every row is upserted on a stable key; a re-run converges.
 
 import type { Prisma } from "@prisma/client";
 import { DAY_MS } from "@workspace/shared";
 import sharp from "sharp";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { ORGANIZATION_SEED_IDS } from "./organizations";

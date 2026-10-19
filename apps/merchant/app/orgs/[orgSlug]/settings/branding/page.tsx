@@ -1,5 +1,5 @@
-import { OrganizationBrandingPageView } from "@/components/org/organization-branding-page-view";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { OrganizationBrandingPageView } from "@/contexts/organizations/components/org/organization-branding-page-view";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";

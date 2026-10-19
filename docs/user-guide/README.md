@@ -22,7 +22,7 @@ API calls behind each step.
 | --- | --- | --- | --- |
 | **Admin panel** | `http://localhost:3001` | Platform staff (SuperAdmin, Admin) | Invite merchants, review business verification (KYB) and store requests, approve rewards, manage users, roles and permissions, read platform sales |
 | **Merchant portal** | `http://localhost:3003` | Merchant owners, admins, cashiers | Finish onboarding, manage stores and team, create rewards, pair POS terminals, see redemptions and analytics |
-| **Web app (RewardHub)** | `http://localhost:3000` | Customers | Browse rewards, claim them, show the QR code at the counter, see their spending |
+| **Web app (dashboard)** | `http://localhost:3000` | Customers | Browse rewards, claim them, show the QR code at the counter, see their spending |
 
 A merchant's till (the **POS**) is not an app: it talks to the API directly with an API key
 ([POS checkout](./06-pos-checkout.md)).

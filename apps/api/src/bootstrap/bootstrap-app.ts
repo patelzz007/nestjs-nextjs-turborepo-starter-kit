@@ -4,10 +4,9 @@
 // Imported by main.ts only AFTER the environment has been validated, because
 // several module files decide their imports from the config at load time.
 
-import { ApiDocsAccessGate } from "../common/api-docs-access.gate";
-import { TrustedProxies } from "../common/http/client-ip";
-import { AccessTokenStateService } from "../modules/auth/services/access-token-state.service";
-import { TokenService } from "../modules/auth/services/token.service";
+import { ApiDocsAccessGate } from "../platform/presentation/http/api-docs-access.gate";
+import { TrustedProxies } from "../platform/infrastructure/http/client-ip";
+import { ACCESS_TOKEN_STATE, ACCESS_TOKEN_VERIFIER, type AccessTokenStatePort, type AccessTokenVerifierPort } from "../platform/application/ports/access-token.port";
 import type { IncomingMessage } from "node:http";
 
 import { type NestApplicationOptions } from "@nestjs/common";
@@ -22,15 +21,15 @@ import { registerFastifyHooks } from "./register-fastify-hooks";
 import { registerFastifyPlugins } from "./register-fastify-plugins";
 import type { ApiConfig, ApiDocsPolicy } from "../config/api-config.schema";
 import { TypedConfigService } from "../config/typed-config.service";
-import { warmupAjvValidators } from "../common/ajv-warmup";
-import { buildOpenApiDocument, setupApiDocs } from "../common/api-docs";
-import { correlationIdFor } from "../common/context/correlation-id";
-import { buildPinoRedactPaths, REDACTED } from "../common/logging/redaction";
-import { nestLoggerLevelsFor } from "../common/logging/nest-log-levels";
-import { registerGracefulShutdown } from "../common/lifecycle/graceful-shutdown";
+import { warmupAjvValidators } from "../platform/presentation/http/ajv-warmup";
+import { buildOpenApiDocument, setupApiDocs } from "../platform/presentation/http/api-docs";
+import { correlationIdFor } from "../platform/infrastructure/context/correlation-id";
+import { buildPinoRedactPaths, REDACTED } from "../platform/infrastructure/nest-logging/redaction";
+import { nestLoggerLevelsFor } from "../platform/infrastructure/nest-logging/nest-log-levels";
+import { registerGracefulShutdown } from "../platform/infrastructure/lifecycle/graceful-shutdown";
 import { BullMqWorkerDrainService } from "@workspace/messaging/nest";
-import { HealthService } from "../modules/health/health.service";
-import { LogService } from "../modules/logs/logs.service";
+import { HealthService } from "../platform/presentation/http/health/health.service";
+import { LogService } from "../platform/infrastructure/logging/logs.service";
 
 /** 1 MiB request body cap. */
 const BODY_LIMIT_BYTES = 1024 * 1024;
@@ -66,16 +65,16 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	//  - `exposeHeadRoutes` — HEAD routes for every GET (cheap uptime probes).
 	//  - `trustProxy` — ONLY the proxies listed in TRUST_PROXY (IPs/CIDRs/
 	//    presets); unset = trust none, the client IP is the TCP peer. Same list
-	//    and semantics as the request context (common/http/client-ip.ts), so
+	//    and semantics as the request context (platform/infrastructure/http/client-ip.ts), so
 	//    `request.ip`, rate-limit trackers and audit rows always agree and a
 	//    client can never spoof its IP with X-Forwarded-For.
 	//  - `keepAliveTimeout` — detect dead keep-alive sockets faster than Node's
 	//    default (which sits just below common LB idle timeouts).
 	//  - `bodyLimit` — 1 MiB cap per request.
 	//  - `logger` — pino with the centralized redaction list
-	//    (common/logging/redaction.ts) so secrets never reach logs.
+	//    (platform/infrastructure/nest-logging/redaction.ts) so secrets never reach logs.
 	//  - `genReqId` — the request id IS the correlation id (validated incoming
-	//    X-Correlation-Id / X-Request-Id, else generated; common/context/correlation-id.ts),
+	//    X-Correlation-Id / X-Request-Id, else generated; platform/infrastructure/context/correlation-id.ts),
 	//    bound on every pino child logger as `correlationId`.
 	const adapter = new FastifyAdapter({
 		bodyLimit: BODY_LIMIT_BYTES,
@@ -150,7 +149,7 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	if (docsPolicy.enabled) {
 		if (docsPolicy.access === "platform_admin") {
 			// Registered before the docs routes: every docs URL requires a SuperAdmin session.
-			const gate = new ApiDocsAccessGate({ tokens: app.get(TokenService), tokenState: app.get(AccessTokenStateService) });
+			const gate = new ApiDocsAccessGate({ tokens: app.get<AccessTokenVerifierPort>(ACCESS_TOKEN_VERIFIER), tokenState: app.get<AccessTokenStatePort>(ACCESS_TOKEN_STATE) });
 			app.getHttpAdapter().getInstance().addHook("onRequest", gate.onRequest);
 		}
 		httpAdapter.get("/docs", (_req, reply): void => {

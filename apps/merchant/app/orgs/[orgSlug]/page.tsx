@@ -1,4 +1,4 @@
-import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
 import { orgRoutes } from "@/lib/routes";
 import { redirect } from "next/navigation";
 

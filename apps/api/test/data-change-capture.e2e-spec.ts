@@ -37,9 +37,9 @@ const ChangeRowSchema = z.object({
 });
 type ChangeRow = z.output<typeof ChangeRowSchema>;
 
-const CHANGE_COLUMNS = `table_name AS "tableName", operation::text AS operation, row_id AS "rowId", changed_columns AS "changedColumns",
-	old_data AS "oldData", new_data AS "newData", actor_kind::text AS "actorKind", actor_user_id AS "actorUserId",
-	system_operation AS "systemOperation", correlation_id AS "correlationId", database_role AS "databaseRole"`;
+const CHANGE_COLUMNS = `"tableName" AS "tableName", operation::text AS operation, "rowId" AS "rowId", "changedColumns" AS "changedColumns",
+	"oldData" AS "oldData", "newData" AS "newData", "actorKind"::text AS "actorKind", "actorUserId" AS "actorUserId",
+	"systemOperation" AS "systemOperation", "correlationId" AS "correlationId", "databaseRole" AS "databaseRole"`;
 
 const ChangeListEnvelopeSchema = z.object({ data: z.array(DataChangeLogSummarySchema), meta: z.object({ total: z.number() }).loose() });
 const ChangeDetailEnvelopeSchema = z.object({ data: DataChangeLogDetailSchema });
@@ -56,12 +56,12 @@ describe("Row-level data-change trail (e2e)", () => {
 	}
 
 	async function changesFor(correlationId: string): Promise<ChangeRow[]> {
-		const result = await pool.query(`SELECT ${CHANGE_COLUMNS} FROM public.data_change_logs WHERE correlation_id = $1 ORDER BY change_sequence`, [correlationId]);
+		const result = await pool.query(`SELECT ${CHANGE_COLUMNS} FROM public."DataChangeLog" WHERE "correlationId" = $1 ORDER BY "changeSequence"`, [correlationId]);
 		return z.array(ChangeRowSchema).parse(result.rows);
 	}
 
 	async function userId(email: string): Promise<string> {
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [email]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [email]);
 		return z.string().parse(result.rows.at(0)?.id);
 	}
 
@@ -83,7 +83,7 @@ describe("Row-level data-change trail (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.regions WHERE name LIKE $1", [`${REGION_PREFIX}%`]);
+		await pool.query('DELETE FROM public."Region" WHERE name LIKE $1', [`${REGION_PREFIX}%`]);
 		await pool.end();
 		await app.close();
 	});
@@ -92,7 +92,7 @@ describe("Row-level data-change trail (e2e)", () => {
 		const { response, name } = await createRegion(superAdmin);
 
 		const changes = await changesFor(correlationIdOf(response));
-		const insert = changes.find((change: ChangeRow): boolean => change.tableName === "regions");
+		const insert = changes.find((change: ChangeRow): boolean => change.tableName === "Region");
 		expect(insert).toMatchObject({
 			operation: "INSERT",
 			changedColumns: [],
@@ -116,21 +116,21 @@ describe("Row-level data-change trail (e2e)", () => {
 		expect(response.headers["set-cookie"], response.body).toEqual(expect.arrayContaining([expect.stringMatching(/^refreshToken=/)]));
 
 		const changes = await changesFor(correlationIdOf(response));
-		const session = changes.find((change: ChangeRow): boolean => change.tableName === "refresh_tokens" && change.operation === "INSERT");
+		const session = changes.find((change: ChangeRow): boolean => change.tableName === "RefreshToken" && change.operation === "INSERT");
 		expect(session?.newData).toMatchObject({ token: "[REDACTED]" });
 	});
 
-	it("lists every changed column of an UPDATE, keeps the full row before and after, and masks personal data", async () => {
+	it("lists every changed column of an UPDATE (the row-audit trigger stamps updatedAt), keeps the full row before and after, and masks personal data", async () => {
 		const client = await pool.connect();
 		try {
 			await client.query("BEGIN");
 			await client.query("SELECT set_config('app.correlation_id', $1, true)", ["data-change-e2e-update"]);
-			const target = await client.query<{ id: string }>("UPDATE public.users SET \"fullName\" = \"fullName\" || '!' WHERE email = 'user@example.com' RETURNING id");
+			const target = await client.query<{ id: string }>('UPDATE public."User" SET "fullName" = "fullName" || \'!\' WHERE email = \'user@example.com\' RETURNING id');
 			const [change] = z
 				.array(ChangeRowSchema)
-				.parse((await client.query(`SELECT ${CHANGE_COLUMNS} FROM public.data_change_logs WHERE correlation_id = $1`, ["data-change-e2e-update"])).rows);
+				.parse((await client.query(`SELECT ${CHANGE_COLUMNS} FROM public."DataChangeLog" WHERE "correlationId" = $1`, ["data-change-e2e-update"])).rows);
 
-			expect(change).toMatchObject({ tableName: "users", operation: "UPDATE", rowId: target.rows.at(LIST_SLOT_INDEX.first)?.id, changedColumns: ["fullName"] });
+			expect(change).toMatchObject({ tableName: "User", operation: "UPDATE", rowId: target.rows.at(LIST_SLOT_INDEX.first)?.id, changedColumns: ["fullName", "updatedAt"] });
 			expect(change?.oldData).toMatchObject({ email: "u***@example.com", fullName: "[PII]", passwordHash: "[REDACTED]" });
 			expect(change?.newData).toMatchObject({ email: "u***@example.com", fullName: "[PII]", passwordHash: "[REDACTED]" });
 		} finally {
@@ -143,8 +143,8 @@ describe("Row-level data-change trail (e2e)", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("BEGIN");
-			const region = await client.query<{ id: number }>("INSERT INTO public.regions (name) VALUES ($1) RETURNING id", [`${REGION_PREFIX}manual`]);
-			const result = await client.query(`SELECT ${CHANGE_COLUMNS}, login_role AS "loginRole" FROM public.data_change_logs WHERE table_name = 'regions' AND row_id = $1`, [
+			const region = await client.query<{ id: number }>('INSERT INTO public."Region" (name) VALUES ($1) RETURNING id', [`${REGION_PREFIX}manual`]);
+			const result = await client.query(`SELECT ${CHANGE_COLUMNS}, "loginRole" AS "loginRole" FROM public."DataChangeLog" WHERE "tableName" = 'Region' AND "rowId" = $1`, [
 				String(region.rows.at(LIST_SLOT_INDEX.first)?.id),
 			]);
 
@@ -160,13 +160,13 @@ describe("Row-level data-change trail (e2e)", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("BEGIN");
-			await client.query("INSERT INTO public.regions (name) VALUES ($1)", [name]);
+			await client.query('INSERT INTO public."Region" (name) VALUES ($1)', [name]);
 		} finally {
 			await client.query("ROLLBACK");
 			client.release();
 		}
 
-		const result = await pool.query("SELECT count(*)::int AS count FROM public.data_change_logs WHERE table_name = 'regions' AND new_data ->> 'name' = $1", [name]);
+		const result = await pool.query('SELECT count(*)::int AS count FROM public."DataChangeLog" WHERE "tableName" = \'Region\' AND "newData" ->> \'name\' = $1', [name]);
 		expect(result.rows).toEqual([{ count: 0 }]);
 	});
 
@@ -178,11 +178,11 @@ describe("Row-level data-change trail (e2e)", () => {
 			await client.query("SAVEPOINT forge");
 			await expect(
 				client.query(
-					"INSERT INTO public.data_change_logs (occurred_at, transaction_id, table_name, operation, actor_kind, database_role, login_role) VALUES (1, 1, 'users', 'DELETE', 'USER', 'x', 'x')",
+					'INSERT INTO public."DataChangeLog" ("occurredAt", "transactionId", "tableName", operation, "actorKind", "databaseRole", "loginRole") VALUES (1, 1, \'User\', \'DELETE\', \'USER\', \'x\', \'x\')',
 				),
 			).rejects.toThrow(/row-level security/);
 			await client.query("ROLLBACK TO SAVEPOINT forge");
-			await expect(client.query("UPDATE public.data_change_logs SET table_name = 'x'")).rejects.toThrow(/permission denied/);
+			await expect(client.query('UPDATE public."DataChangeLog" SET "tableName" = \'x\'')).rejects.toThrow(/permission denied/);
 		} finally {
 			await client.query("ROLLBACK");
 			client.release();
@@ -196,14 +196,14 @@ describe("Row-level data-change trail (e2e)", () => {
 		const list = await app.inject({
 			method: "GET",
 			url: DATA_CHANGES_URL,
-			query: { "filter[correlationId][eq]": correlationId, "filter[tableName][eq]": "regions" },
+			query: { "filter[correlationId][eq]": correlationId, "filter[tableName][eq]": "Region" },
 			headers: { cookie: cookie(superAdmin) },
 		});
 		expect(list.statusCode, list.body).toBe(200);
 		const page = ChangeListEnvelopeSchema.parse(list.json());
 		expect(page.meta.total).toBe(1);
 		const [summary] = page.data;
-		expect(summary).toMatchObject({ tableName: "regions", operation: "INSERT", actorKind: "USER", actor: { email: "superadmin@example.com" }, correlationId });
+		expect(summary).toMatchObject({ tableName: "Region", operation: "INSERT", actorKind: "USER", actor: { email: "superadmin@example.com" }, correlationId });
 		expect(summary).not.toHaveProperty("newData");
 
 		const detail = await app.inject({ method: "GET", url: `${DATA_CHANGES_URL}/${z.string().parse(summary?.id)}`, headers: { cookie: cookie(superAdmin) } });
@@ -217,7 +217,7 @@ describe("Row-level data-change trail (e2e)", () => {
 		const response = await app.inject({ method: "GET", url: DATA_CHANGES_URL, query: { limit: "5" }, headers: { cookie: cookie(superAdmin) } });
 		expect(response.statusCode, response.body).toBe(200);
 
-		const result = await pool.query(`SELECT response_body AS "responseBody", system_operations AS "systemOperations" FROM public.audit_logs WHERE correlation_id = $1`, [
+		const result = await pool.query(`SELECT "responseBody" AS "responseBody", "systemOperations" AS "systemOperations" FROM public."AuditLog" WHERE "correlationId" = $1`, [
 			correlationIdOf(response),
 		]);
 		const [row] = z.array(z.object({ responseBody: JsonValueSchema, systemOperations: z.array(z.string()) })).parse(result.rows);

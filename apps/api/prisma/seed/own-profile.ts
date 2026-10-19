@@ -1,12 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { API_VERSION_PREFIX, apiRoutes, OWN_PROFILE_ERROR_CODES, OwnProfileSchema, type JsonValue } from "@workspace/shared";
 
-import { toAuditLogCreateInput } from "../../src/common/audit/audit-log.mapper";
-import { toAuditPayload } from "../../src/common/audit/http-audit-entry";
-import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../../src/modules/auth/constants/impersonation.constants";
-import { ImpersonationAuditAction } from "../../src/modules/auth/repositories/impersonation-session.repository";
-import { PROFILE_UPDATE_DURING_IMPERSONATION_MESSAGE } from "../../src/modules/auth/profile/own-profile.errors";
-import { OWN_PROFILE_UPDATE_OPERATION, OWN_PROFILE_UPDATE_REASON } from "../../src/modules/auth/profile/own-profile.service";
+import { toAuditLogCreateInput } from "../../src/platform/infrastructure/audit/audit-log.mapper";
+import { toAuditPayload } from "../../src/platform/infrastructure/audit/http-audit-entry";
+import { IMPERSONATION_TOKEN_TTL_SECONDS, ImpersonationAuditAction } from "../../src/contexts/identity/domain/aggregates/impersonation-session.aggregate";
+import { PROFILE_UPDATE_DURING_IMPERSONATION_MESSAGE } from "../../src/contexts/identity/domain/errors/identity.errors";
+import { OWN_PROFILE_UPDATE_OPERATION, OWN_PROFILE_UPDATE_REASON } from "../../src/contexts/identity/application/ports/identity.tokens";
 import { withSeedAttribution } from "./attributed-session";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -17,7 +16,7 @@ import { entry, NO_MACHINE_PRINCIPAL, NO_TENANT, seedAuditCorrelationId } from "
 //
 // Seeds exactly what the API leaves behind, never a state it cannot produce:
 //   - the demo customer (user@example.com) edited their own name once, so the
-//     profile's optimistic-lock token `users.profile_version` is 1 — together
+//     profile's optimistic-lock token `User.profileVersion` is 1 — together
 //     with that request's SUCCEEDED audit row (system operation
 //     `auth.profile.update`, response = the profile at version 1);
 //   - a SuperAdmin impersonating them tried to edit the profile and was

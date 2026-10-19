@@ -25,8 +25,10 @@ export {
 export {
 	ApiError,
 	ApiErrorSchema,
+	HTTP_NOT_FOUND_STATUS,
 	HTTP_UPGRADE_REQUIRED_STATUS,
 	isDeadSessionError,
+	isNotFoundError,
 	readErrorPayload,
 	SessionRefreshUnavailableError,
 	UpgradeRequiredError,

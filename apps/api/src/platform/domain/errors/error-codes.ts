@@ -1,0 +1,171 @@
+import type { StandardApiErrorCode } from "@workspace/shared";
+import { z } from "zod";
+
+/**
+ * Stable domain error codes thrown as {@link DomainError} subclasses. Grows as
+ * bounded contexts migrate; every code here must appear in the presentation
+ * layer's `DOMAIN_ERROR_HTTP_STATUS` (`presentation/http/errors/domain-error-status.map.ts`).
+ * The domain names failures; which HTTP status answers one is a presentation decision.
+ */
+export const DomainErrorCodeSchema = z.enum([
+	"EMAIL_TAKEN",
+	"PERMISSION_DENIED",
+	"REWARD_NOT_DRAFT",
+	"REWARD_TRANSITION_NOT_ALLOWED",
+	"REWARD_QUANTITY_BELOW_RESERVED",
+	"CORRUPT_AGGREGATE_STATE",
+	// rewards
+	"REWARD_NOT_FOUND",
+	"REWARD_NOT_EDITABLE",
+	"REWARD_NOT_PENDING",
+	"REWARD_REJECTION_REASON_BLANK",
+	"REWARD_QUANTITY_INVALID",
+	"REWARD_AMOUNT_INVALID",
+	"REWARD_RULES_INVALID",
+	"REWARD_IMAGES_INVALID",
+	"REWARD_IMAGE_NOT_FOUND",
+	"REWARD_LOCATION_INVALID",
+	"ORGANIZATION_LOCATION_FORBIDDEN",
+	"REWARD_EXPIRED",
+	"REWARD_OUT_OF_STOCK",
+	"REWARD_RESERVATION_MISSING",
+	// claims
+	"CLAIM_NOT_FOUND",
+	"CLAIM_NOT_ACTIVE",
+	"CLAIM_EXPIRED",
+	"CLAIM_LIMIT_REACHED",
+	"LEGAL_ACCEPTANCE_REQUIRED",
+	"OTP_REQUIRED",
+	"OTP_INVALID",
+	"OTP_RATE_LIMITED",
+	// pos
+	"REDEMPTION_TOKEN_INVALID",
+	"REDEMPTION_INPUT_REQUIRED",
+	"REDEMPTION_REFUSED",
+	"DUPLICATE_REWARD_CODE",
+	"MULTIPLE_CUSTOMERS",
+	"MIN_SPEND_NOT_MET",
+	"POS_CODE_LOCKED",
+	"CHECKOUT_IDEMPOTENCY_KEY_REUSED",
+	"TERMINAL_NOT_FOUND",
+	"TERMINAL_ID_TAKEN",
+	"TERMINAL_ID_UNAVAILABLE",
+	"TERMINAL_STORE_NOT_ACTIVE",
+	"PAIRING_CODE_INVALID",
+	"API_KEY_NOT_FOUND",
+	"API_KEY_LOCATION_REQUIRED",
+	"MERCHANT_PROFILE_NOT_FOUND",
+	"ORGANIZATION_NOT_ACTIVE",
+	// files
+	"FILE_UPLOAD_FORBIDDEN",
+	"FILE_UPLOAD_ALREADY_COMPLETED",
+	"FILE_CHECKSUM_MISMATCH",
+	"FILE_STATE_CONFLICT",
+	"FILE_TOO_LARGE",
+	"FILE_INVALID_MIME",
+	"FILE_RESOURCE_REQUIRED",
+	"FILE_IN_USE_AS_REWARD_IMAGE",
+	"KYB_EVIDENCE_RETAINED",
+	// organizations
+	"BAD_REQUEST",
+	"ORGANIZATION_ACCESS_REQUEST_ALREADY_REVIEWED",
+	"ORGANIZATION_ACCESS_REQUEST_PENDING",
+	"ORGANIZATION_ALREADY_MEMBER",
+	"ORGANIZATION_INVITE_PENDING",
+	"ORGANIZATION_INVITE_NO_LONGER_PENDING",
+	"ORGANIZATION_INVITE_EMAIL_MISMATCH",
+	"ORGANIZATION_INVITE_ACCOUNT_EXISTS",
+	"ORGANIZATION_SCOPE_ESCALATION",
+	"ORGANIZATION_LOCATIONS_INVALID",
+	"ORGANIZATION_OWNER_PROTECTED",
+	"ORGANIZATION_MEMBER_COVERS_ALL_STORES",
+	"ORGANIZATION_MEMBER_LAST_STORE",
+	"ORGANIZATION_STORE_OUT_OF_SCOPE",
+	"ORGANIZATION_LOCATION_STATUS_CONFLICT",
+	"ORGANIZATION_LOCATION_PRIMARY_CANNOT_CLOSE",
+	"ORGANIZATION_MEMBERSHIP_UPDATE_DURING_IMPERSONATION",
+	"ORGANIZATION_NOT_PROVISIONING",
+	"ORGANIZATION_SLUG_TAKEN",
+	"KYB_REVIEW_CLOSED",
+	"KYB_DOCUMENT_INVALID",
+	"KYB_DOCUMENT_INCOMPLETE",
+	"KYB_DOCUMENT_REJECTED",
+	"KYB_TRANSITION_NOT_ALLOWED",
+	"KYB_DECISION_REASON_REQUIRED",
+	"MERCHANT_INVITE_EXPIRED",
+	"MERCHANT_INVITE_UNAVAILABLE",
+	"MERCHANT_ONBOARDING_DOCUMENTS_CLOSED",
+	// authorization
+	"FORBIDDEN",
+	"CONFLICT",
+	"NOT_FOUND",
+	"VALIDATION_ERROR",
+	"POLICY_IMPERSONATION_FORBIDDEN",
+	"POLICY_SELF_APPROVAL_FORBIDDEN",
+	"POLICY_DRAFT_NOT_PUBLISHABLE",
+	"POLICY_SIMULATION_REQUIRED",
+	"POLICY_SIMULATION_FAILED",
+	"POLICY_SIMULATION_STALE",
+	"SUPPORT_ACCESS_APPROVER_NOT_OWNER",
+	"SUPPORT_ACCESS_GRANT_NOT_PENDING",
+	"SUPPORT_ACCESS_GRANT_NOT_REVOCABLE",
+	// identity
+	"INVALID_CREDENTIALS",
+	"MERCHANT_ACCESS_REQUIRED",
+	"UNAUTHORIZED",
+	"RATE_LIMITED",
+	"MFA_RECOVERY_SELF_REVIEW",
+	"MFA_RECOVERY_REVIEWER_NOT_ELIGIBLE",
+	"USER_NOT_FOUND",
+	"ACCOUNT_IS_INACTIVE",
+	"ACCOUNT_DELETED",
+	"REFRESH_TOKEN_INVALID",
+	"REFRESH_TOKEN_REVOKED",
+	"REFRESH_TOKEN_SUPERSEDED",
+	"TOKEN_THEFT_DETECTED",
+	"SESSION_NOT_FOUND",
+	"SESSION_REVOKE_DURING_IMPERSONATION",
+	"IMPERSONATION_ALREADY_ACTIVE",
+	"IMPERSONATOR_NOT_ELIGIBLE",
+	"IMPERSONATION_SESSION_INVALID",
+	"MFA_STEP_UP_REQUIRED",
+	"ALREADY_IMPERSONATING",
+	"PROFILE_UPDATE_DURING_IMPERSONATION",
+	"SUPERADMIN_ALREADY_EXISTS",
+	"BOOTSTRAP_EMAIL_TAKEN",
+	"SUPERADMIN_ROLE_MISSING",
+]);
+
+export type DomainErrorCode = z.output<typeof DomainErrorCodeSchema>;
+
+/** Alias used by {@link DomainError}. */
+export type ErrorCode = DomainErrorCode;
+
+/** Every {@link DomainErrorCode} registered for client matching (superset check in tests). */
+export const DOMAIN_ERROR_CODE_CATALOG: readonly DomainErrorCode[] = DomainErrorCodeSchema.options;
+
+/**
+ * Client-safe default message for every standard error code. Used whenever a
+ * more specific message is unavailable or unsafe to expose (e.g. a 5xx in
+ * production, where the original message may carry provider/SQL detail).
+ */
+export const STANDARD_ERROR_MESSAGES: Readonly<Record<StandardApiErrorCode, string>> = {
+	BAD_REQUEST: "The request is invalid.",
+	VALIDATION_ERROR: "Validation failed.",
+	UNAUTHORIZED: "Authentication is required.",
+	FORBIDDEN: "You do not have permission to perform this action.",
+	NOT_FOUND: "The requested resource was not found.",
+	CONFLICT: "The request conflicts with the current state of the resource.",
+	PAYLOAD_TOO_LARGE: "The request body is too large.",
+	UNSUPPORTED_MEDIA_TYPE: "The request content type is not supported.",
+	UNPROCESSABLE_ENTITY: "The request could not be processed.",
+	RATE_LIMITED: "Too many requests. Please retry later.",
+	IDEMPOTENCY_KEY_REQUIRED: "An Idempotency-Key header is required for this request.",
+	IDEMPOTENCY_KEY_REUSED: "This Idempotency-Key was already used with a different request.",
+	IDEMPOTENCY_REQUEST_IN_PROGRESS: "A request with this Idempotency-Key is still being processed. Retry shortly.",
+	APP_VERSION_UNSUPPORTED: "This version of the app is no longer supported. Please update the app to continue.",
+	INTERNAL_ERROR: "An unexpected error occurred.",
+	EXTERNAL_SERVICE_ERROR: "An upstream service failed to respond correctly.",
+	SERVICE_UNAVAILABLE: "The service is temporarily unavailable.",
+	GATEWAY_TIMEOUT: "An upstream service timed out.",
+};

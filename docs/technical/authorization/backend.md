@@ -171,8 +171,8 @@ batched queries (no N+1, spec §58):
 
 | Source | Scope used |
 |---|---|
-| Role permissions (`user_roles` → `role_permissions`), **including parent roles** | the permission row's scope |
-| Store membership roles (`store_memberships.roleId`) | **always `STORE`, bound to that store** — a store role can never grant platform-wide access |
+| Role permissions (`UserRole` → `RolePermission`), **including parent roles** | the permission row's scope |
+| Store membership roles (`StoreMembership.roleId`) | **always `STORE`, bound to that store** — a store role can never grant platform-wide access |
 | User `ALLOW` overrides (`user_permissions.effect = ALLOW`) | the permission row's scope |
 | Implicit self grants | `OWN` — see below |
 | User `DENY` overrides | collected separately as **denials** |
@@ -199,15 +199,15 @@ complete list. Deleting your own account still needs an assigned permission.
 
 ### 5.3 Ownership
 
-`ResourceOwnershipResolver` reads the owner from the database for `USER`, `PROFILE`, `URL`,
-`TAG` and `API_KEY`. Ownership is **never** read from the request body, so a client cannot
+`ResourceOwnershipResolver` reads the owner from the database for `USER` and `PROFILE`.
+Ownership is **never** read from the request body, so a client cannot
 claim ownership by sending `ownerId`. Other resource types have no ownership model; `OWN`
 grants on them never match. To add one, extend the resolver's `switch` (see
 [recipes](./recipes.md#6-give-a-new-resource-an-owner)).
 
 ### 5.4 Per-user overrides (ALLOW / DENY)
 
-`user_permissions` rows have an `effect` column:
+`UserPermission` rows have an `effect` column:
 
 - `ALLOW` — adds a permission on top of the user's roles.
 - `DENY` — removes it even if a role grants it (spec §40). A `DENY` on `MANAGE` removes
@@ -220,7 +220,7 @@ Overrides can expire (`expiresAt`); expired rows are ignored.
 
 ## 6. ACL — resource-level exceptions
 
-`resource_acls` rows (managed by `AclService`) say "subject X may / may not do action Y on
+`ResourceAcl` rows (managed by `AclService`) say "subject X may / may not do action Y on
 resource Z". Use them **only for exceptions** (spec §124), not for ordinary access.
 
 | Column | Meaning |
@@ -237,7 +237,7 @@ resource Z". Use them **only for exceptions** (spec §124), not for ordinary acc
 
 ## 7. Policies (ABAC) — the safe rule language
 
-Policies live in `policy_definitions`. Their `conditions` use a **validated JSON rule
+Policies live in `PolicyDefinition`. Their `conditions` use a **validated JSON rule
 language** (`PolicyConditionsSchema` in `packages/shared/src/authorization/policy-dsl.schema.ts`).
 There is **no** `eval`, no stored JavaScript (spec §43).
 
@@ -255,7 +255,7 @@ There is **no** `eval`, no stored JavaScript (spec §43).
   `starts_with`, `ends_with`, `greater_than`, `greater_than_or_equals`, `less_than`,
   `less_than_or_equals`, `exists`, `not_exists`.
 - **Fields:** `$user.<key>` (subject: `userId`, `organizationId`, `storeId`, `locationId`,
-  `roles`, `isSuperAdmin`, or custom attributes), `$resource.<key>`, `<resource>.<key>`
+  `Role`, `isSuperAdmin`, or custom attributes), `$resource.<key>`, `<resource>.<key>`
   (e.g. `order.status`), or a bare key (resource attribute).
 - `value` is a literal; `valueRef` points at another field.
 
@@ -269,7 +269,7 @@ How policies combine:
 | An `ALLOW` policy matches and no `DENY` matched | **ALLOW** |
 | Stored conditions fail validation | treated as **matching** for DENY policies, **not matching** for ALLOW (fail closed) |
 
-The same language is used for **permission conditions** (`permissions.conditions`) and **ACL
+The same language is used for **permission conditions** (`Permission.conditions`) and **ACL
 conditions**.
 
 ---
@@ -328,7 +328,7 @@ return prisma.rewardRedemption.findMany({ where: { AND: [where, { /* your own fi
 
 ## 10. Auditing
 
-`AuthorizationAuditKernelService` writes to `authorization_audits` (spec §63):
+`AuthorizationAuditKernelService` writes to `AuthorizationAudit` (spec §63):
 
 | Decision | Logged? |
 |---|---|
@@ -342,7 +342,7 @@ evaluation, IP, user agent, request id and duration. The table is **bypass-only*
 so it is written through `SystemPrismaService` (see [tenancy guide](./tenancy-and-rls.md#7-the-two-database-clients)).
 An audit failure is logged but never fails the request.
 
-SuperAdmin bypasses are recorded separately in `permission_audit_logs`
+SuperAdmin bypasses are recorded separately in `PermissionAuditLog`
 (`SUPER_ADMIN_BYPASS`), together with every role / permission change.
 
 ---
@@ -380,7 +380,7 @@ assigns the default `User` role with the new account as its own audited actor �
 
 1. **One transaction** (`RbacMutationRunner`, system operation `authorization.rbac.mutate`): RBAC
    advisory lock → privilege-escalation checks → the write → post-write invariants → refresh-token
-   revocation + `tokenVersion` bump for every affected user → the `permission_audit_logs` row
+   revocation + `tokenVersion` bump for every affected user → the `PermissionAuditLog` row
    (actor, correlation id, impersonator). Any failure, the audit insert included, rolls everything back.
 2. **After commit only:** cached authorization and access-token state are invalidated on every API
    instance (`AuthorizationInvalidationService`, Redis channel `authz:invalidate` when the Redis
@@ -396,14 +396,14 @@ assigns the default `User` role with the new account as its own audited actor �
    pairs (`ROLE_SEPARATION_OF_DUTY_RULES`) hold on a user's effective role set; a direct-permission
    sync replaces ALLOW grants only, never touches DENY overrides, and rejects a permission the user
    holds a live DENY for. A DENY shadowing a role grant is not a conflict — that is its purpose.
-5. **Server-controlled flags:** `roles.isSystem` / `permissions.isSystem` are never client-settable;
+5. **Server-controlled flags:** `Role.isSystem` / `Permission.isSystem` are never client-settable;
    system roles cannot be renamed, deactivated, re-parented, re-permissioned or deleted, and system
    permissions cannot be edited or deleted. Expired direct grants are excluded from resolution and
    cleaned up hourly. `POST /admin/roles/preview` dry-runs a role replacement.
 
 ---
 
-## 12. Merchant (Reward Hub) capabilities
+## 12. Merchant capabilities
 
 Merchant endpoints use **merchant capabilities** (`merchant:*` slugs, `MERCHANT_CAPABILITY.*`)
 instead of platform permissions — **never** membership role names. Every check goes through
@@ -436,10 +436,10 @@ keys, analytics, KYB) or directly (team, store locations). It checks, in order:
 
 3. **Tenant Cedar policies** — the capability's Cedar action
    (`MERCHANT_CAPABILITY_CEDAR_ACTIONS`, `modules/organization/constants/merchant-capability-cedar-actions.ts`,
-   e.g. `merchant:manage_team` → `rewardhub:manage_team`) is evaluated against the
+   e.g. `merchant:manage_team` → `tenant:manage_team`) is evaluated against the
    organization's published policy and audited (`authorize.<action>` in
-   `organization_audit_logs`). Cedar may only **narrow** the table; the default tenant policy
-   (`REWARDHUB_DEFAULT_TENANT_CEDAR`) permits `OWNER` / `ADMIN` / `CASHIER` for every action, so
+   `OrganizationAuditLog`). Cedar may only **narrow** the table; the default tenant policy
+   (`DEFAULT_TENANT_CEDAR`) permits `OWNER` / `ADMIN` / `CASHIER` for every action, so
    it never denies what the table grants (a unit test proves the two agree). Denial:
    `403 ORGANIZATION_ACTION_FORBIDDEN`.
 
@@ -507,7 +507,7 @@ POST /api/v1/authorization/decisions
 | `SuperAdmin` | every permission row (the user flag `isSuperAdmin` bypasses anyway) |
 | `Admin` | admin-panel permissions (users, reports, geo, rewards, merchants, stores, …) — `GLOBAL` |
 | `Manager` | limited admin panel — `GLOBAL` |
-| `User` | customers: **`OWN`-scoped** `PROFILE`, `URL`, `TAG`, `API_KEY`, `ANALYTICS` |
+| `User` | customers: **`OWN`-scoped** `PROFILE`, `ANALYTICS` |
 | `Store Manager` | `STORE`-scoped: store read / update, rewards read / list, redemptions create / read / list |
 | `Store Staff` | `STORE`-scoped: store read, rewards read / list, redemptions create |
 

@@ -51,10 +51,10 @@ LANGUAGE sql STABLE AS $$
 $$;
 
 -- The reward belongs to the key's organization (claims / referrals inherit it).
-CREATE OR REPLACE FUNCTION app_api_key_reward_access(reward_id text) RETURNS boolean
+CREATE OR REPLACE FUNCTION app_api_key_reward_access("rewardId" text) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT app_current_api_key_id() IS NOT NULL
-    AND EXISTS (SELECT 1 FROM public.rewards r WHERE r.id = reward_id AND app_api_key_org_access(r.organization_id));
+    AND EXISTS (SELECT 1 FROM public."Reward" r WHERE r.id = "rewardId" AND app_api_key_org_access(r."organizationId"));
 $$;
 
 -- The referee of a signup referral redeemed at the key's store (ADR 035): the
@@ -62,14 +62,14 @@ $$;
 -- it in the same transaction sees the row. SECURITY DEFINER so the lookup does
 -- not depend on the redemption table's own policies; it still checks the
 -- key's organization and store through the session helpers.
-CREATE OR REPLACE FUNCTION app_api_key_signup_referee_access(referee_user_id text) RETURNS boolean
+CREATE OR REPLACE FUNCTION app_api_key_signup_referee_access("refereeUserId" text) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT app_current_api_key_id() IS NOT NULL
     AND EXISTS (
-      SELECT 1 FROM public.reward_redemptions rr
-      WHERE rr.user_id = referee_user_id
-        AND rr.is_deleted = false
-        AND app_api_key_store_access(rr.organization_id, rr.location_id)
+      SELECT 1 FROM public."RewardRedemption" rr
+      WHERE rr."userId" = "refereeUserId"
+        AND rr."isDeleted" = false
+        AND app_api_key_store_access(rr."organizationId", rr."locationId")
     );
 $$;
 
@@ -82,159 +82,159 @@ GRANT EXECUTE ON FUNCTION app_api_key_signup_referee_access(text) TO app_runtime
 
 -- ── organization reference rows the reward responses embed (read only)
 
-DROP POLICY IF EXISTS organizations_api_key_read ON public.organizations;
-CREATE POLICY organizations_api_key_read ON public.organizations
+DROP POLICY IF EXISTS organizations_api_key_read ON public."Organization";
+CREATE POLICY organizations_api_key_read ON public."Organization"
   FOR SELECT TO app_runtime USING (app_api_key_org_access(id));
 
-DROP POLICY IF EXISTS organization_locations_api_key_read ON public.organization_locations;
-CREATE POLICY organization_locations_api_key_read ON public.organization_locations
-  FOR SELECT TO app_runtime USING (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS organization_locations_api_key_read ON public."OrganizationLocation";
+CREATE POLICY organization_locations_api_key_read ON public."OrganizationLocation"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS organization_assets_api_key_read ON public.organization_assets;
-CREATE POLICY organization_assets_api_key_read ON public.organization_assets
-  FOR SELECT TO app_runtime USING (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS organization_assets_api_key_read ON public."OrganizationAsset";
+CREATE POLICY organization_assets_api_key_read ON public."OrganizationAsset"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS stored_files_api_key_read ON public.stored_files;
-CREATE POLICY stored_files_api_key_read ON public.stored_files
-  FOR SELECT TO app_runtime USING (organization_id IS NOT NULL AND app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS stored_files_api_key_read ON public."StoredFile";
+CREATE POLICY stored_files_api_key_read ON public."StoredFile"
+  FOR SELECT TO app_runtime USING ("organizationId" IS NOT NULL AND app_api_key_org_access("organizationId"));
 
 -- ── the key's own row (last-used stamp, POS code-guess lockout counters)
 
-DROP POLICY IF EXISTS organization_api_keys_api_key_self_read ON public.organization_api_keys;
-CREATE POLICY organization_api_keys_api_key_self_read ON public.organization_api_keys
-  FOR SELECT TO app_runtime USING (id = app_current_api_key_id() AND app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS organization_api_keys_api_key_self_read ON public."OrganizationApiKey";
+CREATE POLICY organization_api_keys_api_key_self_read ON public."OrganizationApiKey"
+  FOR SELECT TO app_runtime USING (id = app_current_api_key_id() AND app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS organization_api_keys_api_key_self_update ON public.organization_api_keys;
-CREATE POLICY organization_api_keys_api_key_self_update ON public.organization_api_keys
+DROP POLICY IF EXISTS organization_api_keys_api_key_self_update ON public."OrganizationApiKey";
+CREATE POLICY organization_api_keys_api_key_self_update ON public."OrganizationApiKey"
   FOR UPDATE TO app_runtime
-  USING (id = app_current_api_key_id() AND app_api_key_org_access(organization_id))
-  WITH CHECK (id = app_current_api_key_id() AND app_api_key_org_access(organization_id));
+  USING (id = app_current_api_key_id() AND app_api_key_org_access("organizationId"))
+  WITH CHECK (id = app_current_api_key_id() AND app_api_key_org_access("organizationId"));
 
 -- ── terminals of the key's store (last-seen stamp)
 
-DROP POLICY IF EXISTS organization_terminals_api_key_read ON public.organization_terminals;
-CREATE POLICY organization_terminals_api_key_read ON public.organization_terminals
-  FOR SELECT TO app_runtime USING (app_api_key_store_access(organization_id, location_id));
+DROP POLICY IF EXISTS organization_terminals_api_key_read ON public."OrganizationTerminal";
+CREATE POLICY organization_terminals_api_key_read ON public."OrganizationTerminal"
+  FOR SELECT TO app_runtime USING (app_api_key_store_access("organizationId", "locationId"));
 
-DROP POLICY IF EXISTS organization_terminals_api_key_update ON public.organization_terminals;
-CREATE POLICY organization_terminals_api_key_update ON public.organization_terminals
+DROP POLICY IF EXISTS organization_terminals_api_key_update ON public."OrganizationTerminal";
+CREATE POLICY organization_terminals_api_key_update ON public."OrganizationTerminal"
   FOR UPDATE TO app_runtime
-  USING (app_api_key_store_access(organization_id, location_id))
-  WITH CHECK (app_api_key_store_access(organization_id, location_id));
+  USING (app_api_key_store_access("organizationId", "locationId"))
+  WITH CHECK (app_api_key_store_access("organizationId", "locationId"));
 
 -- ── rewards (organization API CRUD; checkout updates stock and referral pools)
 
-DROP POLICY IF EXISTS rewards_api_key_read ON public.rewards;
-CREATE POLICY rewards_api_key_read ON public.rewards
-  FOR SELECT TO app_runtime USING (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS rewards_api_key_read ON public."Reward";
+CREATE POLICY rewards_api_key_read ON public."Reward"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS rewards_api_key_insert ON public.rewards;
-CREATE POLICY rewards_api_key_insert ON public.rewards
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS rewards_api_key_insert ON public."Reward";
+CREATE POLICY rewards_api_key_insert ON public."Reward"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS rewards_api_key_update ON public.rewards;
-CREATE POLICY rewards_api_key_update ON public.rewards
+DROP POLICY IF EXISTS rewards_api_key_update ON public."Reward";
+CREATE POLICY rewards_api_key_update ON public."Reward"
   FOR UPDATE TO app_runtime
-  USING (app_api_key_org_access(organization_id))
-  WITH CHECK (app_api_key_org_access(organization_id));
+  USING (app_api_key_org_access("organizationId"))
+  WITH CHECK (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS reward_location_scopes_api_key_read ON public.reward_location_scopes;
-CREATE POLICY reward_location_scopes_api_key_read ON public.reward_location_scopes
-  FOR SELECT TO app_runtime USING (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS reward_location_scopes_api_key_read ON public."RewardLocationScope";
+CREATE POLICY reward_location_scopes_api_key_read ON public."RewardLocationScope"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS reward_location_scopes_api_key_insert ON public.reward_location_scopes;
-CREATE POLICY reward_location_scopes_api_key_insert ON public.reward_location_scopes
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS reward_location_scopes_api_key_insert ON public."RewardLocationScope";
+CREATE POLICY reward_location_scopes_api_key_insert ON public."RewardLocationScope"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS reward_images_api_key_read ON public.reward_images;
-CREATE POLICY reward_images_api_key_read ON public.reward_images
-  FOR SELECT TO app_runtime USING (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS reward_images_api_key_read ON public."RewardImage";
+CREATE POLICY reward_images_api_key_read ON public."RewardImage"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS reward_images_api_key_insert ON public.reward_images;
-CREATE POLICY reward_images_api_key_insert ON public.reward_images
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS reward_images_api_key_insert ON public."RewardImage";
+CREATE POLICY reward_images_api_key_insert ON public."RewardImage"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("organizationId"));
 
-DROP POLICY IF EXISTS reward_images_api_key_update ON public.reward_images;
-CREATE POLICY reward_images_api_key_update ON public.reward_images
+DROP POLICY IF EXISTS reward_images_api_key_update ON public."RewardImage";
+CREATE POLICY reward_images_api_key_update ON public."RewardImage"
   FOR UPDATE TO app_runtime
-  USING (app_api_key_org_access(organization_id))
-  WITH CHECK (app_api_key_org_access(organization_id));
+  USING (app_api_key_org_access("organizationId"))
+  WITH CHECK (app_api_key_org_access("organizationId"));
 
 -- ── claims of the organization's rewards (POS lookup, PENDING → REDEEMED, referrer credit)
 
-DROP POLICY IF EXISTS reward_claims_api_key_read ON public.reward_claims;
-CREATE POLICY reward_claims_api_key_read ON public.reward_claims
-  FOR SELECT TO app_runtime USING (app_api_key_reward_access(reward_id));
+DROP POLICY IF EXISTS reward_claims_api_key_read ON public."RewardClaim";
+CREATE POLICY reward_claims_api_key_read ON public."RewardClaim"
+  FOR SELECT TO app_runtime USING (app_api_key_reward_access("rewardId"));
 
-DROP POLICY IF EXISTS reward_claims_api_key_insert ON public.reward_claims;
-CREATE POLICY reward_claims_api_key_insert ON public.reward_claims
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_reward_access(reward_id));
+DROP POLICY IF EXISTS reward_claims_api_key_insert ON public."RewardClaim";
+CREATE POLICY reward_claims_api_key_insert ON public."RewardClaim"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_reward_access("rewardId"));
 
-DROP POLICY IF EXISTS reward_claims_api_key_update ON public.reward_claims;
-CREATE POLICY reward_claims_api_key_update ON public.reward_claims
+DROP POLICY IF EXISTS reward_claims_api_key_update ON public."RewardClaim";
+CREATE POLICY reward_claims_api_key_update ON public."RewardClaim"
   FOR UPDATE TO app_runtime
-  USING (app_api_key_reward_access(reward_id))
-  WITH CHECK (app_api_key_reward_access(reward_id));
+  USING (app_api_key_reward_access("rewardId"))
+  WITH CHECK (app_api_key_reward_access("rewardId"));
 
-DROP POLICY IF EXISTS reward_referrals_api_key_read ON public.reward_referrals;
-CREATE POLICY reward_referrals_api_key_read ON public.reward_referrals
-  FOR SELECT TO app_runtime USING (app_api_key_reward_access(reward_id));
+DROP POLICY IF EXISTS reward_referrals_api_key_read ON public."RewardReferral";
+CREATE POLICY reward_referrals_api_key_read ON public."RewardReferral"
+  FOR SELECT TO app_runtime USING (app_api_key_reward_access("rewardId"));
 
-DROP POLICY IF EXISTS reward_referrals_api_key_update ON public.reward_referrals;
-CREATE POLICY reward_referrals_api_key_update ON public.reward_referrals
+DROP POLICY IF EXISTS reward_referrals_api_key_update ON public."RewardReferral";
+CREATE POLICY reward_referrals_api_key_update ON public."RewardReferral"
   FOR UPDATE TO app_runtime
-  USING (app_api_key_reward_access(reward_id))
-  WITH CHECK (app_api_key_reward_access(reward_id));
+  USING (app_api_key_reward_access("rewardId"))
+  WITH CHECK (app_api_key_reward_access("rewardId"));
 
 -- The checkout stamps the customer's signup referral successful (ADR 035): the
 -- key reads and updates ONLY the signup referral of a customer it has just
 -- redeemed for at its own store. It never inserts or deletes one, never sees
 -- the referrer's other referees, and the success notification is written
 -- after the commit under a system operation, not by the key.
-DROP POLICY IF EXISTS signup_referrals_api_key_read ON public.signup_referrals;
-CREATE POLICY signup_referrals_api_key_read ON public.signup_referrals
-  FOR SELECT TO app_runtime USING (app_api_key_signup_referee_access(referee_user_id));
+DROP POLICY IF EXISTS signup_referrals_api_key_read ON public."SignupReferral";
+CREATE POLICY signup_referrals_api_key_read ON public."SignupReferral"
+  FOR SELECT TO app_runtime USING (app_api_key_signup_referee_access("refereeUserId"));
 
-DROP POLICY IF EXISTS signup_referrals_api_key_update ON public.signup_referrals;
-CREATE POLICY signup_referrals_api_key_update ON public.signup_referrals
+DROP POLICY IF EXISTS signup_referrals_api_key_update ON public."SignupReferral";
+CREATE POLICY signup_referrals_api_key_update ON public."SignupReferral"
   FOR UPDATE TO app_runtime
-  USING (app_api_key_signup_referee_access(referee_user_id))
-  WITH CHECK (app_api_key_signup_referee_access(referee_user_id));
+  USING (app_api_key_signup_referee_access("refereeUserId"))
+  WITH CHECK (app_api_key_signup_referee_access("refereeUserId"));
 
 -- The in-app "referrer reward credited" notice written inside a checkout: only
 -- to a user who referred someone to one of this organization's rewards.
-DROP POLICY IF EXISTS reward_notifications_api_key_insert ON public.reward_notifications;
-CREATE POLICY reward_notifications_api_key_insert ON public.reward_notifications
+DROP POLICY IF EXISTS reward_notifications_api_key_insert ON public."RewardNotification";
+CREATE POLICY reward_notifications_api_key_insert ON public."RewardNotification"
   FOR INSERT TO app_runtime
   WITH CHECK (
     app_current_api_key_id() IS NOT NULL
     AND EXISTS (
-      SELECT 1 FROM public.reward_referrals rr
-      WHERE rr.referrer_user_id = reward_notifications.user_id
-        AND app_api_key_reward_access(rr.reward_id)
+      SELECT 1 FROM public."RewardReferral" rr
+      WHERE rr."referrerUserId" = "RewardNotification"."userId"
+        AND app_api_key_reward_access(rr."rewardId")
     )
   );
 
 -- ── financial rows of the key's store (checkout writes, organization API reads)
 
-DROP POLICY IF EXISTS reward_redemptions_api_key_read ON public.reward_redemptions;
-CREATE POLICY reward_redemptions_api_key_read ON public.reward_redemptions
-  FOR SELECT TO app_runtime USING (app_api_key_store_access(organization_id, location_id));
+DROP POLICY IF EXISTS reward_redemptions_api_key_read ON public."RewardRedemption";
+CREATE POLICY reward_redemptions_api_key_read ON public."RewardRedemption"
+  FOR SELECT TO app_runtime USING (app_api_key_store_access("organizationId", "locationId"));
 
-DROP POLICY IF EXISTS reward_redemptions_api_key_insert ON public.reward_redemptions;
-CREATE POLICY reward_redemptions_api_key_insert ON public.reward_redemptions
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_store_access(organization_id, location_id));
+DROP POLICY IF EXISTS reward_redemptions_api_key_insert ON public."RewardRedemption";
+CREATE POLICY reward_redemptions_api_key_insert ON public."RewardRedemption"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_store_access("organizationId", "locationId"));
 
-DROP POLICY IF EXISTS reward_sales_api_key_read ON public.reward_sales;
-CREATE POLICY reward_sales_api_key_read ON public.reward_sales
-  FOR SELECT TO app_runtime USING (app_api_key_store_access(organization_id, location_id));
+DROP POLICY IF EXISTS reward_sales_api_key_read ON public."RewardSale";
+CREATE POLICY reward_sales_api_key_read ON public."RewardSale"
+  FOR SELECT TO app_runtime USING (app_api_key_store_access("organizationId", "locationId"));
 
-DROP POLICY IF EXISTS reward_sales_api_key_insert ON public.reward_sales;
-CREATE POLICY reward_sales_api_key_insert ON public.reward_sales
-  FOR INSERT TO app_runtime WITH CHECK (app_api_key_store_access(organization_id, location_id));
+DROP POLICY IF EXISTS reward_sales_api_key_insert ON public."RewardSale";
+CREATE POLICY reward_sales_api_key_insert ON public."RewardSale"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_store_access("organizationId", "locationId"));
 
 -- ── audit trail of the key's organization (append only)
 
-DROP POLICY IF EXISTS reward_audit_logs_api_key_insert ON public.reward_audit_logs;
-CREATE POLICY reward_audit_logs_api_key_insert ON public.reward_audit_logs
-  FOR INSERT TO app_runtime WITH CHECK (organization_id IS NOT NULL AND app_api_key_org_access(organization_id));
+DROP POLICY IF EXISTS reward_audit_logs_api_key_insert ON public."RewardAuditLog";
+CREATE POLICY reward_audit_logs_api_key_insert ON public."RewardAuditLog"
+  FOR INSERT TO app_runtime WITH CHECK ("organizationId" IS NOT NULL AND app_api_key_org_access("organizationId"));

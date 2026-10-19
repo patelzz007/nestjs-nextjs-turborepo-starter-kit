@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
+import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/contexts/organizations/lib/org/slug";
 
 import { proxy, resetMerchantProxyRefreshCooldownForTests } from "../proxy";
 

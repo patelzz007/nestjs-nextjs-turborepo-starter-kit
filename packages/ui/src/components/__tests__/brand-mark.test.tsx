@@ -28,8 +28,8 @@ describe("BrandMark", () => {
 	});
 
 	it("is a named image when it stands alone", (): void => {
-		render(<BrandMark label="Reward Hub" />);
+		render(<BrandMark label="Starter" />);
 
-		expect(screen.getByRole("img", { name: "Reward Hub" })).toBeDefined();
+		expect(screen.getByRole("img", { name: "Starter" })).toBeDefined();
 	});
 });

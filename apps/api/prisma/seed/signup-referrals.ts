@@ -1,8 +1,8 @@
 import type { User } from "@prisma/client";
 import { DAY_MS, SIGNUP_REFERRAL_CODE_TTL_MS, SIGNUP_REFERRALS_SCREEN_PATH } from "@workspace/shared";
 
-import { issueSignupReferralCode } from "../../src/modules/auth/signup-referrals/signup-referral-code.issuer";
-import { SIGNUP_REFERRAL_SUCCESS_NOTIFICATION_TYPE } from "../../src/modules/auth/signup-referrals/signup-referral.repository";
+import { issueSignupReferralCode } from "../../src/contexts/referrals/infrastructure/persistence/signup-referral-code.issuer";
+import { SIGNUP_REFERRAL_SUCCESS_NOTIFICATION_TYPE } from "../../src/contexts/claims/application/services/signup-success-notice.application-service";
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 

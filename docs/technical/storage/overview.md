@@ -11,7 +11,7 @@ tags: ["storage", "files", "uploads", "s3", "firebase"]
 # Object storage — overview
 
 Files (KYB documents, product images, store logos/banners, avatars) are stored by **one provider per
-deployment**; PostgreSQL keeps only the metadata (`stored_files`). The rules are in
+deployment**; PostgreSQL keeps only the metadata (`StoredFile`). The rules are in
 [`rules/20-object-storage.md`](../../../rules/20-object-storage.md). Setup guides:
 [AWS S3](./aws-s3.md) · [Firebase Storage](./firebase.md).
 
@@ -29,7 +29,7 @@ container (`STORAGE_PRIVATE_CONTAINER`, or an alias: `STORAGE_S3_PRIVATE_BUCKET`
 `FIREBASE_STORAGE_BUCKET`). `s3` additionally requires the CloudFront public-origin bucket
 (`STORAGE_PUBLIC_CONTAINER`), CDN host (`STORAGE_CLOUDFRONT_PUBLIC_DOMAIN`) and distribution id
 (`STORAGE_CLOUDFRONT_DISTRIBUTION_ID`, deleted public assets are invalidated there), and authenticates
-with an IAM role only (see [AWS S3](./aws-s3.md)). Each `stored_files` row records its provider and
+with an IAM role only (see [AWS S3](./aws-s3.md)). Each `StoredFile` row records its provider and
 container, and a deployment refuses to read files recorded under a different provider.
 
 ## The upload flow
@@ -77,7 +77,7 @@ implemented yet** and is required before allowing much larger files.
 
 ## Reward images
 
-Every reward shows 1–10 photos in order (`reward_images`, position 0 is the cover). Shared rules:
+Every reward shows 1–10 photos in order (`RewardImage`, position 0 is the cover). Shared rules:
 `MAX_REWARD_IMAGES` and `FILE_CATEGORY_POLICIES.REWARD_IMAGE.imageRules` in `packages/shared`.
 
 - **Sharp by construction.** Every image is exactly 16:9 (±0.5%) and at least 1920 × 1080 (Full HD).
@@ -94,7 +94,7 @@ Every reward shows 1–10 photos in order (`reward_images`, position 0 is the co
   original (auto-oriented, metadata stripped, Lanczos, quality 85): `THUMBNAIL` 640, `MEDIUM` 1280,
   `LARGE` 1920, `XLARGE` 2560, `UHD` 3840 — only those no wider than the stored original
   (`renditionsForWidth`, read from the stored bytes), so a Full HD upload stops at `LARGE` and is never
-  served as an upscaled copy — recorded in `file_variants` with their size and
+  served as an upscaled copy — recorded in `FileVariant` with their size and
   published next to the original. `RewardResponse.images[]` carries each image's `url`, size and
   `sources[]`, which clients render as `srcset`/`sizes`, so a phone downloads ~100 KB, not 4K.
   A failed render fails the promotion and withdraws whatever was published.
@@ -112,7 +112,7 @@ Every reward shows 1–10 photos in order (`reward_images`, position 0 is the co
 - **Readable with the reward.** RLS policies `stored_files_reward_image_read` and
   `file_variants_reward_image_read` let a session read an image's file and rendition rows exactly
   when it can read a live reward showing it (marketplace shoppers, claim holders, members);
-  `reward_images` itself follows its reward (`reward_images_read`, plus the API-key principal's
+  `RewardImage` itself follows its reward (`reward_images_read`, plus the API-key principal's
   policies).
 - **Downloadable by reviewers.** `GET /admin/rewards/:rewardId/images/:fileId/download`
   (`MANAGE REWARD`, the moderation permission) signs a short-lived URL for the image's original
@@ -123,7 +123,7 @@ Every reward shows 1–10 photos in order (`reward_images`, position 0 is the co
   streams every live image of the reward as one ZIP (`<reward-title>-photos.zip`) of the original
   uploads, in display order, as entries `1-<original name>`, `2-…` (names through
   `sanitizeFileName`, so no entry carries a path). `FileService.createZipArchive` builds it with
-  `zipArchiveStream` (`apps/api/src/modules/storage/utils/zip-archive.util.ts`, fflate): entries are
+  `zipArchiveStream` (`apps/api/src/platform/infrastructure/storage/utils/zip-archive.util.ts`, fflate): entries are
   stored, not recompressed (WebP, JPEG and PDF are compressed already), and each object is opened
   only when the archive reaches it, so memory stays at a chunk or two whatever the photos weigh. A
   reward that does not exist or has no image is a JSON `404 REWARD_IMAGE_NOT_FOUND` before any
@@ -178,7 +178,7 @@ first, then on the stored bytes at `complete` (`400 FILE_IMAGE_DIMENSIONS_INVALI
 | `READY` | Promoted and bound; downloadable. `scanStatus` is `CLEAN` (scanner verdict) or `NOT_SCANNED` (no scanner) |
 | `QUARANTINED` | Scanner flagged it; bytes deleted |
 | `FAILED` | No verdict after every retry (never treated as clean) |
-| `DELETED` | Soft-deleted with `deleted_by`; bytes removed after `STORAGE_PHYSICAL_DELETE_DELAY_MS` (30 days in production, 1 hour elsewhere) |
+| `DELETED` | Soft-deleted with `deletedBy`; bytes removed after `STORAGE_PHYSICAL_DELETE_DELAY_MS` (30 days in production, 1 hour elsewhere) |
 
 Every transition is a compare-and-set on the expected current state, so a redelivered job, replayed
 callback or racing delete can never move a deleted or quarantined file back to `READY`. Deleting a
@@ -195,7 +195,7 @@ The CDK stack's earlier scanning Lambdas were removed. The planned scanner is **
 Protection for S3**: an asynchronous scanner returns `PENDING_EXTERNAL` and its verdict arrives at
 `POST /files/processing-callback` (authenticated by `x-storage-callback-secret` =
 `STORAGE_PROCESSING_CALLBACK_SECRET`; unset = every callback rejected). Adding it is one adapter for
-the `MalwareScanner` port (`apps/api/src/modules/storage/domain/malware-scanner.port.ts`) plus one
+the `MalwareScanner` port (`apps/api/src/platform/infrastructure/storage/domain/malware-scanner.port.ts`) plus one
 `MALWARE_SCANNER` value.
 
 Feature modules react to verdicts through `FileLifecycleListener` providers (for example the KYB
@@ -211,7 +211,7 @@ listener moves a review to `ACTION_REQUIRED` when its evidence is infected).
 ## How the adapters work
 
 Feature code never imports a cloud SDK. `FileService` / `FileFinalizationService` depend on three
-ports (`apps/api/src/modules/storage/domain/`); `StorageModule` binds them once at boot from
+ports (`apps/api/src/platform/infrastructure/storage/domain/`); `StorageModule` binds them once at boot from
 `STORAGE_PROVIDER`, and everything else injects the token:
 
 | Port (token) | Responsibility | local | s3 | firebase |
@@ -240,8 +240,8 @@ provider exception).
 
 Every object is addressed by a `StorageObjectLocator` — `provider` (`local` | `s3` | `firebase`),
 `container` (bucket), `path` (key) and optional `revision` (ETag / GCS generation). Each
-`stored_files` row stores it (`storage_provider`, `storage_container`, `storage_path`,
-`object_revision`; the legacy `storage_bucket` / `object_generation` columns are still written).
+`StoredFile` row stores it (`storageProvider`, `storageContainer`, `storagePath`,
+`objectRevision`; the legacy `storageBucket` / `objectGeneration` columns are still written).
 `utils/storage-locator.util.ts` maps rows ↔ locators and refuses a row recorded under another
 provider than the running one: moving files between providers is an explicit migration, never a
 silent fallback. Keys are derived server-side (`utils/file-path.util.ts`); the client never names a
@@ -290,9 +290,7 @@ environment), but it behaves like a presigned-URL provider:
   file records alike. A saved picture therefore survives an address change (another Wi-Fi, a
   tunnel, `API_PUBLIC_URL`). S3 and Firebase save absolute CDN URLs, which pass through unchanged.
   The address is never the listen wildcard: with `HOST=0.0.0.0` and no `API_PUBLIC_URL`, development
-  uses this machine's LAN address, so a phone (Expo Go) can open the links too. Rows saved before
-  this with an address are repaired once by `pnpm --filter @workspace/api
-  storage:repair-local-public-paths` (dry run; add `-- --apply`), which touches local-driver rows only.
+  uses this machine's LAN address, so a phone (Expo Go) can open the links too.
 - **Public assets:** `GET /files/{fileId}/local-public` serves READY public files by id. It plays
   the CDN's role, so it sends the same `Cache-Control: public, max-age=86400` as the CloudFront copy
   (`PUBLIC_ASSET_CACHE_CONTROL`) and is exempt from the credential-guarding `strict` rate limit (the
@@ -306,13 +304,13 @@ environment), but it behaves like a presigned-URL provider:
 
 | What | Where |
 | --- | --- |
-| HTTP API | `apps/api/src/modules/files/controllers/` |
-| Upload policy, finalize, scan, delete | `apps/api/src/modules/files/services/` (`file.service.ts`, `file-finalization.service.ts`) |
-| Background work (scan, delayed delete, CDN purge) | `apps/api/src/modules/files/services/storage-task-dispatcher.ts`, `storage-queue.processors.ts` |
-| Ports and DI tokens | `apps/api/src/modules/storage/domain/` |
-| Provider wiring | `apps/api/src/modules/storage/storage.module.ts`, `factory/` |
-| Provider adapters | `apps/api/src/modules/storage/adapters/{local,s3,firebase,cdn,scanners}/` |
-| Locators and keys | `apps/api/src/modules/storage/utils/storage-locator.util.ts`, `file-path.util.ts` |
+| HTTP API | `apps/api/src/contexts/files/presentation/http/` |
+| Upload policy, finalize, scan, delete | `apps/api/src/contexts/files/application/` (one command handler per operation) |
+| Background work (scan, delayed delete, CDN purge) | `apps/api/src/contexts/files/infrastructure/adapters/queued-storage-task-dispatcher.ts`, `apps/api/src/contexts/files/presentation/jobs/storage-queue.processors.ts` |
+| Ports and DI tokens | `apps/api/src/platform/infrastructure/storage/domain/` |
+| Provider wiring | `apps/api/src/platform/infrastructure/storage/storage.module.ts`, `factory/` |
+| Provider adapters | `apps/api/src/platform/infrastructure/storage/adapters/{local,s3,firebase,cdn,scanners}/` |
+| Locators and keys | `apps/api/src/platform/infrastructure/storage/utils/storage-locator.util.ts`, `file-path.util.ts` |
 | Categories, sizes, types | `packages/shared/src/schemas/domain/platform/storage.ts` |
 | Browser upload helper | `packages/client/src/lib/storage/direct-upload.ts` |
 | CDK stack (S3) | `apps/aws-infrastructure/lib/storage-platform-stack.ts` |

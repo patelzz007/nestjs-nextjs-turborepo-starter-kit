@@ -1,0 +1,51 @@
+import { Inject } from "@nestjs/common";
+import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
+import { MERCHANT_CAPABILITY, type OrganizationLocationResponse } from "@workspace/shared";
+
+import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
+import { NotFoundError } from "../../../../../platform/application/errors/app-error";
+import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
+import { actingInOrganization, requireUserActor } from "../../organization-actor";
+import { toLocationResponse } from "../../organization-responses";
+import type { OrganizationsScope } from "../../organizations-scope";
+import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { OrganizationDirectoryPort } from "../../ports/organization-directory.port";
+import { MERCHANT_ACCESS, ORGANIZATION_DIRECTORY, ORGANIZATIONS_UNIT_OF_WORK } from "../../ports/organizations.tokens";
+import { ResubmitLocationCommand } from "./resubmit-location.command";
+
+/** REJECTED → PENDING_APPROVAL as a compare-and-set: a concurrent resubmit or review wins, the loser gets 409. */
+@CommandHandler(ResubmitLocationCommand)
+export class ResubmitLocationHandler implements ICommandHandler<ResubmitLocationCommand, OrganizationLocationResponse> {
+	public constructor(
+		@Inject(ORGANIZATIONS_UNIT_OF_WORK) private readonly uow: UnitOfWork<OrganizationsScope>,
+		@Inject(ORGANIZATION_DIRECTORY) private readonly directory: OrganizationDirectoryPort,
+		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
+		@Inject(CLOCK) private readonly clock: Clock,
+	) {}
+
+	public async execute(command: ResubmitLocationCommand): Promise<OrganizationLocationResponse> {
+		const { actor, input } = command;
+		const user = requireUserActor(actor);
+		const member = await this.directory.resolveMember(actor, input.orgSlug);
+		await this.merchantAccess.assertCapability(actor, { organizationId: member.organizationId, capability: MERCHANT_CAPABILITY.manageLocations });
+
+		return this.uow.run(actingInOrganization(user, member.organizationId), async (scope): Promise<OrganizationLocationResponse> => {
+			const location = await scope.locations.findLive(member.organizationId, input.locationId);
+			if (location === null) {
+				throw new NotFoundError();
+			}
+			location.resubmit({ name: input.name, addressText: input.addressText, contactPhone: input.contactPhone ?? null }, user.userId, this.clock.now());
+			const stored = await scope.locations.save(location);
+			await scope.audit.record({
+				organizationId: member.organizationId,
+				actorUserId: user.userId,
+				policyVersion: member.policyVersion,
+				action: "organization.location.resubmitted",
+				resourceType: "OrganizationLocation",
+				resourceId: stored.id,
+			});
+			scope.events.collectFrom(location);
+			return toLocationResponse(stored);
+		});
+	}
+}

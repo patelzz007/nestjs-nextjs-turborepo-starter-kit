@@ -1,14 +1,16 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import * as React from "react";
 
 import { SIDEBAR_NO_MOTION, SIDEBAR_PROGRESS_COLLAPSED, SIDEBAR_PROGRESS_OPEN, SIDEBAR_PROGRESS_PROPERTY, SIDEBAR_SPRING } from "@workspace/ui/lib/sidebar/motion";
 
+import { LazyMotionProvider } from "@workspace/ui/components/lazy-motion";
+
 import { useReportLayoutTransition } from "./layout-transition";
 
-/** framer-motion's `div`. */
-const MotionDiv = motion.div;
+/** framer-motion's lazy `div` (its features come from the LazyMotionProvider around it). */
+const MotionDiv = m.div;
 
 export interface SidebarProgressProps {
 	/** Whether the desktop sidebar is open: the spring's target. */
@@ -47,14 +49,16 @@ export function SidebarProgress({ isOpen, children }: SidebarProgressProps): Rea
 	}, [reportLayoutTransition]);
 	const target = React.useMemo(() => ({ [SIDEBAR_PROGRESS_PROPERTY]: isOpen ? SIDEBAR_PROGRESS_OPEN : SIDEBAR_PROGRESS_COLLAPSED }), [isOpen]);
 	return (
-		<MotionDiv
-			data-slot="sidebar-progress"
-			className="contents"
-			initial={false}
-			animate={target}
-			transition={prefersReducedMotion ? SIDEBAR_NO_MOTION : SIDEBAR_SPRING}
-			onAnimationComplete={handleAnimationComplete}>
-			{children}
-		</MotionDiv>
+		<LazyMotionProvider>
+			<MotionDiv
+				data-slot="sidebar-progress"
+				className="contents"
+				initial={false}
+				animate={target}
+				transition={prefersReducedMotion ? SIDEBAR_NO_MOTION : SIDEBAR_SPRING}
+				onAnimationComplete={handleAnimationComplete}>
+				{children}
+			</MotionDiv>
+		</LazyMotionProvider>
 	);
 }

@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { REWARDS_REVIEW_URL_STATE, toPendingRewardsListQuery } from "@/lib/url-state/rewards-review";
+import { REWARDS_REVIEW_URL_STATE, toPendingRewardsListQuery } from "@/contexts/rewards/url-state/rewards-review";
 
-import PendingRewardsPanel from "./pending-rewards-panel";
+import PendingRewardsPanel from "../../../../contexts/rewards/components/pending-rewards-panel";
 
 export const dynamic = "force-dynamic";
 

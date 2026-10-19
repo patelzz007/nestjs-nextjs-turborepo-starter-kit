@@ -142,7 +142,7 @@ const defaultValues = {
 
 ### Non-null assertion (`!`) — also a lint error
 
-`!` is rejected by `@typescript-eslint/no-non-null-assertion` (set to `error`), and because the completion gate requires `pnpm run lint` to pass with zero errors and zero warnings, it cannot ship. Narrow instead:
+`!` is rejected by `@typescript-eslint/no-non-null-assertion` (set to `error`), and because the completion gate requires `pnpm run lint` to pass with zero errors, it cannot ship. Narrow instead:
 
 ```ts
 // ❌ DON'T — lies to the compiler; fails lint
@@ -453,7 +453,7 @@ The authoritative ESLint configuration is in `13-ci-cd-and-quality-gates.md` ("R
   - `unknown` is allowed only as the type of a `catch (error: unknown)` clause parameter, or as the first (error) parameter of a `.catch((error: unknown) => …)` callback.
   - `never` is allowed only in the parameter and return type of an exhaustiveness helper declared as `function assertNever…(value: never): never`.
   - **Pending a human decision:** `never` is currently also exempt as the value type of a key guard, `Record<Exclude<keyof X, keyof Y>, never>`. This is the signature zod's `.pick()` requires, and `packages/shared/src/schemas/api/list-query.ts` uses it. Until the decision is made, treat this exemption as provisional: do not add new uses of it.
-- Every rule is `error`, never `warn`, and lint runs with `--max-warnings=0` — a warning is a failure here.
+- Every rule is `error`, never `warn` (`packages/eslint-config/rule-severity.js` raises plugin presets' warnings to errors), so anything a rule enforces fails lint. Lint runs without `--max-warnings`: a warning that still appears is reported, read and fixed when it matters, but it does not fail the gate.
 
 A PR cannot merge with a lint error — this is enforced at the CI gate level (`13-ci-cd-and-quality-gates.md`), not as a suggestion a developer can dismiss locally. If you find yourself reaching for `// eslint-disable-next-line @typescript-eslint/no-explicit-any` to get past this, stop — that is the exact moment this document asks you to fix the underlying type instead, not silence the tool that's correctly telling you something is wrong.
 

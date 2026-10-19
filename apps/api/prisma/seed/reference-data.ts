@@ -1,7 +1,7 @@
 import type { Permission, Role } from "@prisma/client";
 
-import { createReferenceDataSyncService } from "../../src/modules/authorization/reference-data/reference-data.composition";
-import { formatReferenceDataReport } from "../../src/modules/authorization/reference-data/sync-reference-data.command";
+import { createReferenceDataSyncService } from "../../src/contexts/authorization/infrastructure/reference-data/reference-data.composition";
+import { formatReferenceDataReport } from "../../src/contexts/authorization/infrastructure/reference-data/sync-reference-data.report";
 import { seedAbacConditions } from "./abac";
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";

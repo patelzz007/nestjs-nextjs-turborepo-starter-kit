@@ -1,4 +1,4 @@
-import type { WebSessionState } from "@/components/auth/web-authorization-provider";
+import type { WebSessionState } from "@/contexts/identity/components/web-authorization-provider";
 import {
 	epochMs,
 	SessionPermissionsResponseSchema,

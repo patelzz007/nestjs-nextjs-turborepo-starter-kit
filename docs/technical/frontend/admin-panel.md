@@ -29,7 +29,7 @@ Conventions and the shared rules: [Routing](./routing.md). Paths come from `apps
 | Route | Page |
 | --- | --- |
 | `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email` | Auth (outside the shell; safe `?redirect=` handling) |
-| `/` | Overview — the last 30 days' sales KPIs and daily sales chart (real data from one `GET /admin/analytics/dashboard` query, shown with `ANALYTICS.READ`), then the UI kit's component gallery, headed as sample content |
+| `/` | Overview — the last 30 days' sales KPIs and daily sales chart (real data from one `GET /admin/analytics/dashboard` query, shown with `ANALYTICS.READ`), then — where the deployment serves the developer component gallery (`ADMIN_COMPONENT_GALLERY`, off in production by default) — the UI kit's component gallery, headed as sample content |
 | `/analytics` (`/analytics/sales` redirects here) | Platform dashboard: sales, customer (new / returning) and reward KPIs vs the previous period; sales, bills, claims vs redemptions and new vs returning customers over time; top 10 merchants, sales by category and by city; CSV / Excel / PDF export. Range and interval live in the URL — see [Analytics dashboards](./analytics-charts.md) |
 | `/users`, `/users/[id]` | Users directory + profile (RBAC panel, **impersonate**) — super-admin |
 | `/users/mfa-recovery` | MFA recovery request queue — super-admin |
@@ -41,7 +41,7 @@ Conventions and the shared rules: [Routing](./routing.md). Paths come from `apps
 | `/catalog/products`, `/catalog/categories` (`/new`, `/[id]`, `/[id]/edit`; `/catalog` redirects) | Example CRUD resources |
 | `/settings/access` (`/settings` redirects to it) | Platform settings: roles, permissions, permission checker |
 | `/account/profile` | The signed-in admin's own profile: avatar (the shared `ProfileAvatarEditor` — square, cropped first unless it already is) + name, edited with `PATCH /auth/profile` (server-prefetched `GET /auth/profile`, TanStack Form on the shared `OwnProfileEditableFieldsSchema`, read-only while impersonating). Open to every signed-in admin; listed in `page-api-coverage.test.ts` as an own-record call |
-| `/components` | The web UI kit's gallery front page: every low-level primitive of `packages/ui` as a card, grouped by family, with the kit's totals. It is server-rendered links and counts only (`examples/examples-manifest.ts`), so no demo code loads here. A sticky side navigation (`gallery-nav.tsx`, inside `gallery-shell.tsx`) lists every component by family. Each family collapses like the app sidebar's groups, and a filter expands every match. The whole list collapses to a rail with an animated slide; while collapsed it stays mounted (inert), keeping its filter and open families. Below `lg` a "Browse components" button opens the same list in a sheet, which closes when a component is picked. Its open state lives in its own cookie (`gallery-nav-cookie.ts`), read by the layout on the server, so it opens and closes independently of the app sidebar. Sample content only, no API calls; open to every signed-in admin (sidebar: Platform → Components). The mobile twin is the app's Settings → Components screen (`packages/ui-native`) |
+| `/components` | The web UI kit's gallery front page: every low-level primitive of `packages/ui` as a card, grouped by family, with the kit's totals. It is server-rendered links and counts only (`examples/examples-manifest.ts`), so no demo code loads here. A sticky side navigation (`gallery-nav.tsx`, inside `gallery-shell.tsx`) lists every component by family. Each family collapses like the app sidebar's groups, and a filter expands every match. The whole list collapses to a rail with an animated slide; while collapsed it stays mounted (inert), keeping its filter and open families. Below `lg` a "Browse components" button opens the same list in a sheet, which closes when a component is picked. Its open state lives in its own cookie (`gallery-nav-cookie.ts`), read by the layout on the server, so it opens and closes independently of the app sidebar. Sample content only, no API calls; open to every signed-in admin (sidebar: Platform → Components) wherever the deployment serves the gallery: `ADMIN_COMPONENT_GALLERY`, unset → on in development and test, off in production (the layout answers 404 and the sidebar hides the item). The mobile twin is the app's Settings → Components screen (`packages/ui-native`), in development builds only |
 | `/components/[slug]` | One component's page (`component-page.tsx`), with the slug looked up in `gallery-catalog.ts` (anything else is a 404). It shows the name, family and description, then the live demo of its variants, sizes and states, then its worked examples (one per row, at full width), then the previous and next components. The family module renders only this component's section (`ActiveGalleryComponentProvider`), so a page loads one family's demo code and one component's examples, never the whole kit. The examples are the 1,264 ReUI examples ported to the kit's rules, in `components/component-gallery/examples/<component>/`. `pnpm --filter @workspace/admin gallery:examples` regenerates their registry and count manifest, which their test keeps in sync. Each example mounts as it nears the viewport, in a React transition, behind a static placeholder, and `content-visibility: auto` skips painting the ones scrolled away |
 | `/account/security` (`/account` redirects to it) | The signed-in admin's password and 2FA (email verification / MFA enrollment lands here) |
 | `/[...slug]` | Unknown paths → the in-shell 404 |
@@ -72,7 +72,7 @@ permissions. Permission-aware UI (impersonation banner, access panels) uses
 **`GET /auth/permissions`** (`api.auth.permissions.useQuery()`).
 
 After RBAC mutations in `UserAccessPanel`, the client calls `invalidateSessionAuth()` from
-`@workspace/client/lib/auth/invalidate-session-auth` to refetch both queries.
+`@workspace/client/lib/contexts/identity/invalidate-session-auth` to refetch both queries.
 
 ### Impersonation
 
@@ -93,7 +93,7 @@ the token pages read and validate `?token=` server-side with the shared reset / 
 schemas, and the stated link lifetimes come from `PASSWORD_RESET_LINK_TTL_HOURS` /
 `EMAIL_VERIFICATION_LINK_TTL_HOURS` in `@workspace/shared`.
 
-Old URLs of renamed pages (`/rewardhub/*`, `/product/*`, `/sample-category/*`, `/geo`,
+Old URLs of renamed pages (`/dashboard/*`, `/product/*`, `/sample-category/*`, `/geo`,
 `/email-log`, `/users/all`, `/settings/security*`, `/admin/email-template`) answer with a 308 to
 the current page (`lib/navigation/legacy-redirects.ts`, loaded by `next.config.ts`).
 

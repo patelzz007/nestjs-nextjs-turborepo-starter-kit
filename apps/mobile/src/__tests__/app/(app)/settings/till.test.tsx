@@ -7,7 +7,7 @@ import { cameraPermissionRequests, isReadingQrCodes, readQrCode, setCameraPermis
 import { testAccessToken } from "../../../../../test/jwt";
 import { memorySecureStore } from "../../../../../test/secure-store-memory";
 import TillScreen from "../../../../app/(app)/settings/till";
-import { pairedTerminalOf, savePairedTerminal } from "../../../../features/till/paired-terminal";
+import { pairedTerminalOf, savePairedTerminal } from "../../../../contexts/pos";
 import { SECURE_STORE_ENTRIES } from "../../../../lib/secure-store";
 
 const PAIRED = {

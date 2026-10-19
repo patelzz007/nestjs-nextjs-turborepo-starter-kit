@@ -1,6 +1,6 @@
 import { isStringPrimitive } from "@workspace/shared";
 
-import { loadAdminDemoAccounts } from "@/lib/auth/demo-accounts";
+import { loadAdminDemoAccounts } from "@/contexts/identity/lib/demo-accounts";
 import { resolveAdminRedirectTarget } from "@/lib/auth-routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { LOGIN_REDIRECT_PARAM } from "@/lib/routes";

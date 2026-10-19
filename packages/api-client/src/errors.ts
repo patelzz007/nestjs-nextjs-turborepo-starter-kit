@@ -117,6 +117,14 @@ export function isDeadSessionError(error: ApiErrorPayload): boolean {
 	return false;
 }
 
+/** HTTP status of an answer about a resource that does not exist — or, by design, one the caller may not know about. */
+export const HTTP_NOT_FOUND_STATUS = 404;
+
+/** Whether the API answered 404: the resource is not there for this caller (never a failure worth retrying). */
+export function isNotFoundError(error: ApiErrorPayload): boolean {
+	return error instanceof ApiError && error.statusCode === HTTP_NOT_FOUND_STATUS;
+}
+
 /**
  * Parse a non-2xx body: the standard error envelope first, then the legacy
  * flat `{ message, error?, statusCode? }` body (older API builds, proxies),

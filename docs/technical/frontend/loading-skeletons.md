@@ -60,7 +60,7 @@ Every bone paints the same gradient with `background-attachment: fixed`. The hig
 
 Most pages are `force-dynamic` and await a server prefetch, so without a boundary a navigation shows nothing until the server answers. The rule is that **every page has a skeleton shaped like it**: either its own `loading.tsx`, or an inherited one whose shape genuinely fits. A `loading.tsx` wraps its own segment's page **and every child segment**, but not its own segment's layout. Two consequences follow:
 
-- Shells stay mounted. The `rewardhub`, admin `(panel)` and merchant `orgs/[orgSlug]` layouts keep the sidebar and topbar, and the skeleton fills only the content area.
+- Shells stay mounted. The `dashboard`, admin `(panel)` and merchant `orgs/[orgSlug]` layouts keep the sidebar and topbar, and the skeleton fills only the content area.
 - A page whose skeleton must not leak to its children lives in a **route group**: web `app/(landing)/` for `/`, and admin `app/(panel)/(home)/` for the dashboard. A root `app/loading.tsx` would become every route's fallback, and web has a test that forbids one.
 
 Static client pages (signup, forgot-password) and redirect-only pages have no boundary. A `<Suspense fallback>` (for example, around `useSearchParams`) uses a shaped skeleton, not "Loading…" text.
@@ -76,7 +76,7 @@ When a whole workspace loads before its shell exists (merchant's `app/loading.ts
 - `AppShellHeaderSkeleton` is the page header's outline: the toggle slot, the breadcrumb, the app's actions (`["icon"]` for merchant's notifications) and search. Merchant's sidebar header is `PanelSidebarSwitcherSkeleton`, the outline of its store and location switcher.
 - `AppPanelShell`'s `defaultSidebarOpen` takes the saved sidebar cookie (merchant reads it with `readSidebarOpen()`), so a collapsed sidebar stays collapsed while loading.
 
-The web app has no whole-shell skeleton: its `rewardhub` layout only reads the session and a cookie, and within the hub the real sidebar stays mounted while each page's own `loading.tsx` fills the content area.
+The web app has no whole-shell skeleton: its `dashboard` layout only reads the session and a cookie, and within the hub the real sidebar stays mounted while each page's own `loading.tsx` fills the content area.
 
 ## In-view pending states
 

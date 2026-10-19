@@ -1,12 +1,12 @@
 "use client";
 
 import { orgRoutes, ROUTES } from "@/lib/routes";
-import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
-import { getEnrollmentRedirectPath } from "@workspace/client/lib/auth/edge/restricted-session";
-import { markEnrollmentMessage } from "@workspace/client/lib/auth/session/enrollment-message";
-import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginVerificationPending } from "@workspace/client/lib/auth/forms/login-response";
-import { passwordStrength } from "@workspace/client/lib/auth/password";
-import { useAuth } from "@workspace/client/lib/auth";
+import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
+import { getEnrollmentRedirectPath } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
+import { markEnrollmentMessage } from "@workspace/client/lib/contexts/identity/session/enrollment-message";
+import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginVerificationPending } from "@workspace/client/lib/contexts/identity/forms/login-response";
+import { passwordStrength } from "@workspace/client/lib/contexts/identity/password";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
 import {
 	LIST_SLOT_INDEX,
 	OrganizationTeamInviteRegisterAcceptSchema,
@@ -33,8 +33,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
 
-import { TeamInvitePageFrame } from "@/components/team-invite/team-invite-page-frame";
-import { TEAM_INVITE_LOADING_LABELS, TeamInviteCardSkeleton, TeamInvitePreviewSkeleton } from "@/components/team-invite/team-invite-skeletons";
+import { TeamInvitePageFrame } from "@/contexts/organizations/components/team-invite/team-invite-page-frame";
+import { TEAM_INVITE_LOADING_LABELS, TeamInviteCardSkeleton, TeamInvitePreviewSkeleton } from "@/contexts/organizations/components/team-invite/team-invite-skeletons";
 import { TEAM_INVITE_PREVIEW_STALE_TIME_MS, retryTransientFailures } from "@/lib/query/query-policy";
 import {
 	isCompleteVerificationCode,
@@ -42,7 +42,7 @@ import {
 	sanitizeVerificationCode,
 	TEAM_INVITE_PREVIEW_QUERY_SCOPE,
 	VERIFICATION_CODE_LENGTH,
-} from "@/lib/team-invite/invite-form";
+} from "@/contexts/organizations/lib/team-invite/invite-form";
 
 const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
 	OWNER: "Owner",

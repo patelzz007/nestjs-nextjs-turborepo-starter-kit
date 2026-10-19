@@ -24,4 +24,3 @@ export const PROFILE_EMAIL_LOADING_LABELS: SkeletonRegionLabels = { loading: "Lo
 export const SIGN_IN_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading sign-in…" };
 export const RESET_PASSWORD_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading password reset…" };
 export const VERIFY_EMAIL_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading email verification…" };
-export const IMPERSONATION_USERS_LOADING_LABELS: SkeletonRegionLabels = { loading: "Loading users…" };

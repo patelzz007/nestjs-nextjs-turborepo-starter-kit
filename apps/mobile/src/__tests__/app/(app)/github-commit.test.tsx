@@ -18,8 +18,7 @@ import GithubCommitScreen, { INVALID_COMMIT_LINK_MESSAGE } from "../../../app/(a
 import ProfileScreen from "../../../app/(app)/profile/index";
 // The whole module: the router reads `unstable_settings` (the profile first in its stack) from it, as in the app.
 import * as ProfileLayoutModule from "../../../app/(app)/profile/_layout";
-import { COMMIT_SHA_COPIED_MESSAGE } from "../../../features/github/github-commit-detail";
-import { MORE_FILES_ON_GITHUB } from "../../../features/github/labels";
+import { COMMIT_SHA_COPIED_MESSAGE, MORE_FILES_ON_GITHUB } from "../../../contexts/integrations-github";
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(() => Promise.resolve(true)) }));
 

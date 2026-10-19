@@ -320,7 +320,7 @@ add an explicit `exports` entry (a deliberate API decision), never a path alias.
 | `apps/admin`              | + `e2e/env.e2e.ts` (opt-in smoke-test switch)                   |
 | `packages/client`         | `src/lib/api/config.ts`                                         |
 | `apps/api`                | `src/config/api-config.ts` (scripts/, prisma/ and test/ are outside `src/**`) |
-| `apps/analytics-consumer` | `src/env.ts`                                                    |
+| `apps/analytics-consumer` | `src/infrastructure/env.ts`                                     |
 
 Everything else imports `clientEnv` / `serverEnv` (Next), injects
 `TypedConfigService` (API) or calls `loadConsumerEnv()` (consumer). See
@@ -340,7 +340,7 @@ Everything else imports `clientEnv` / `serverEnv` (Next), injects
 ### 3.4 Lint canaries
 
 `apps/web/eslint-boundaries.test.ts`, `packages/client/src/__tests__/eslint-boundaries.test.ts`,
-`apps/api/src/eslint-boundaries.spec.ts` and `apps/analytics-consumer/src/eslint-boundaries.spec.ts`
+`apps/api/src/__tests__/eslint-boundaries.spec.ts` and `apps/analytics-consumer/src/__tests__/eslint-boundaries.spec.ts`
 lint fixture snippets against the workspace's **real** effective config (only the
 boundary rules run, via `ruleFilter`) and assert each boundary fires — and that
 public entry points, Server Components and `import type` stay allowed. If a config
@@ -362,21 +362,13 @@ export default [
 	{ ignores: ["!prisma/", "!prisma/**/", "!prisma/**/*.ts"] },
 
 	// 2. ONE program for every API file: tsconfig.check.json is the superset of the
-	//    API's TypeScript (all of src/ including specs, test/**, prisma/**, the tool
-	//    configs, the source-graph script) under the strict flags `typecheck` runs.
+	//    API's TypeScript (all of src/ including specs, test/**, prisma/**, scripts/**
+	//    and the tool configs) under the strict flags `typecheck` runs.
 	//    No project service: it would build a second program over the same src/ (§8.7).
 	{
 		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		languageOptions: {
 			parserOptions: { project: "./tsconfig.check.json", tsconfigRootDir: import.meta.dirname, projectService: false },
-		},
-	},
-	//    …and the tsx-run scripts on their own program (tsconfig.scripts.json).
-	{
-		files: ["scripts/**/*.ts"],
-		ignores: ["scripts/render-email-previews.ts"],
-		languageOptions: {
-			parserOptions: { project: "./tsconfig.scripts.json", tsconfigRootDir: import.meta.dirname, projectService: false },
 		},
 	},
 
@@ -558,7 +550,7 @@ npx eslint src/app/page.tsx                 # lint a single file
 npx eslint --no-cache .                     # bypass ESLint's cache
 npx eslint --no-ignore src                  # ALSO lint ignored files (dist, d.ts, prisma) — usually not what you want
 npx eslint --fix .                          # auto-fix everything fixable
-npx eslint --max-warnings 0 .               # fail CI if there are any warnings
+npx eslint --max-warnings 0 .               # one-off: also fail on warnings (the lint scripts do not)
 ```
 
 > [!WARNING] **Flat config caveat:** ESLint loads `eslint.config.js` based on the current
@@ -604,7 +596,7 @@ npx eslint .      # should end with "✖ 0 problems (0 errors, 0 warnings)"
 | Lint + auto-fix (inside workspace)     | `npx eslint --fix .`                                                                                                   |
 | Format with Prettier                   | `pnpm format`                                                                                                          |
 | Typecheck everything                   | `pnpm typecheck`                                                                                                       |
-| Fail on any warning (inside workspace) | `npx eslint --max-warnings 0 .`                                                                                        |
+| One-off: also fail on warnings          | `npx eslint --max-warnings 0 .`                                                                                        |
 | Bypass cache (inside workspace)        | `npx eslint --no-cache .`                                                                                              |
 
 > [!WARNING] Rows that run raw `npx eslint` must be executed **from inside a workspace**

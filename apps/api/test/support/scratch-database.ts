@@ -102,7 +102,7 @@ export async function createScratchDatabase(serverUrl: string, prefix: string): 
 	try {
 		await server.query(`CREATE DATABASE "${name}"`);
 		runInApi("prisma", ["migrate", "deploy"], url);
-		runInApi("tsx", ["scripts/apply-rls.ts"], url);
+		runInApi("tsx", ["scripts/db.ts", "apply-security"], url);
 	} catch (error) {
 		await pool.end();
 		await dropDatabase();

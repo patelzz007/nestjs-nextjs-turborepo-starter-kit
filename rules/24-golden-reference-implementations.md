@@ -1,6 +1,19 @@
 # 24 — Golden Reference Implementations
 
-AI agents and juniors pattern-match on concrete code far more reliably than on prose. This file contains complete, rule-compliant reference implementations. **When writing something similar, copy the shape of these, not the shape of whatever similar-looking code you found elsewhere in the repo** (older code may predate a rule). Every snippet obeys `00-non-negotiables.md`: no `any`/`unknown`/casts/`as const`, explicit access modifiers and return types, no magic numbers.
+AI agents and juniors pattern-match on concrete code far more reliably than on prose. **Copy the live files below.** The snippets further down show the shape of a contract and a feature; where they disagree with the live files, the live files win.
+
+## Live references (catalog and rewards)
+
+| What | Copy |
+|---|---|
+| Context layout | `apps/api/src/contexts/README.md` |
+| Simple CRUD (application service, actor first, one unit of work) | `apps/api/src/contexts/catalog/application/services/product.application-service.ts` and `sample-category.application-service.ts` |
+| Controller that keeps the existing route decorators and passes `@CurrentActor()` | `apps/api/src/contexts/catalog/presentation/http/product.controller.ts` |
+| Repository on `PrismaBaseRepository`, bound to the unit-of-work transaction by the scope factory | `apps/api/src/contexts/catalog/infrastructure/persistence/prisma-product.repository.ts` and `catalog-scope.factory.ts` |
+| Aggregate, status machine, concurrency token | `apps/api/src/contexts/rewards/domain/aggregates/reward.aggregate.ts` |
+| Job → command through `SystemCommandDispatcher` | `apps/api/src/contexts/rewards/application/commands/auto-publish-due-rewards/` and `RewardsAutoPublishProcessor` |
+
+Which of those two styles a new use case uses is the tree in `rules/23-quick-reference-decision-trees.md`.
 
 ---
 
@@ -60,23 +73,16 @@ Why it looks like this: branded ID (no mixing IDs), named constants (no magic nu
 
 ---
 
-## 2. Prisma model (`packages/database/prisma/schema.prisma`)
+## 2. Prisma model (`apps/api/prisma/schema.prisma`)
 
 ```prisma
+/// @extends BaseModel
 model Reward {
-  id             String       @id @default(uuid())
   organizationId String
   name           String
   pointsCost     Int
   status         RewardStatus @default(DRAFT)
   version        Int          @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
-  deletedBy String?
 
   @@index([organizationId, isDeleted, status, createdAt])
 }
@@ -88,7 +94,7 @@ enum RewardStatus {
 }
 ```
 
-Plus, in the same PR: the migration, and a deterministic `seed.ts` entry with fixed IDs. `version` supports optimistic locking. The composite index matches the list query's filter + sort.
+`id` (UUID v7), `createdAt`/`updatedAt` (epoch ms), `createdBy`/`updatedBy` and the soft-delete fields come from `BaseModel` — never typed by hand (`rules/08`, "The schema source and the base model"). Plus, in the same PR: the managed block `pnpm db:schema` writes into the model, the migration, and a deterministic `seed.ts` entry with fixed IDs. `version` supports optimistic locking. The composite index matches the list query's filter + sort.
 
 ---
 

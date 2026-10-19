@@ -8,8 +8,8 @@ import { z } from "zod";
 import { AppModule } from "../src/app.module";
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { HealthService } from "../src/modules/health/health.service";
-import { CryptoService } from "../src/modules/auth/services/crypto.service";
+import { HealthService } from "../src/platform/presentation/http/health/health.service";
+import { CryptoService } from "../src/contexts/identity/infrastructure/security/crypto.service";
 import { extractCookie, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
 /**

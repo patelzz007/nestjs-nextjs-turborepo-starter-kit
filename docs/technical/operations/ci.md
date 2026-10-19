@@ -33,8 +33,8 @@ them individually.
 
 | Job | What it proves | Reproduce locally |
 | --- | --- | --- |
-| **Lint** | `turbo run lint` — zero errors **and** zero warnings in every workspace | `pnpm lint` |
-| **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**` and tool configs (`tsconfig.check.json`), and node-only `scripts/` (`tsconfig.scripts.json`) — Vitest itself never type-checks | `pnpm typecheck` |
+| **Lint** | `turbo run lint` — zero errors in every workspace | `pnpm lint` |
+| **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.check.json`) — Vitest itself never type-checks | `pnpm typecheck` |
 | **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own | `pnpm test` |
 | **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm db:check-rls-manifest` |
@@ -69,7 +69,7 @@ the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
    Redis, Kafka and RabbitMQ are deliberately unset — the API falls back to in-memory caches and
    skips broker integrations, which the e2e suite does not exercise.
    GitHub pull requests are on (`GITHUB_CREDENTIAL_ENCRYPTION_KEYS`, a random key ring), so the
-   seed can seal its demo GitHub links and step 4a finds `github_account_links` populated.
+   seed can seal its demo GitHub links and step 4a finds `GithubAccountLink` populated.
 2. Builds the API's workspace dependencies (`turbo run build --filter=@workspace/api^...`).
 3. `pnpm db:deploy` — `prisma migrate deploy` **then** `db:apply-security` (RLS). A migration that
    does not apply cleanly to an empty database fails here.

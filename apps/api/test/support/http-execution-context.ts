@@ -17,6 +17,8 @@ export interface TestHttpRequest {
 	id: string;
 	method: string;
 	url: string;
+	/** Fastify's matched route; `url` is the route pattern (`undefined` when no route matched). */
+	routeOptions: { url: string | undefined };
 	/** The raw Node request (what Fastify exposes as `request.raw`), with the same headers. */
 	raw: IncomingMessage;
 }
@@ -40,14 +42,17 @@ export function testRequest(overrides: Partial<TestHttpRequest> = {}): TestHttpR
 		id: "req-1",
 		method: "POST",
 		url: "/api/v1/test",
+		routeOptions: { url: "/api/v1/test" },
 		raw: rawRequest(headers),
 		...overrides,
 	};
 }
 
+/** An access token as a login issues it: bound to its device session (`sid`, ADR 034). */
 export function accessToken(overrides: Partial<AccessTokenPayload> = {}): AccessTokenPayload {
 	return {
 		sub: "user-1",
+		sid: "session-1",
 		id: "user-1",
 		email: "user@example.com",
 		fullName: "Test User",

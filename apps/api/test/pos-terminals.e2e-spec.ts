@@ -108,11 +108,11 @@ describe("POS terminal pairing (e2e)", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("SELECT set_config('app.rls_bypass', 'true', false)");
-			const keyIds = await client.query<{ apiKeyId: string | null }>(`SELECT api_key_id AS "apiKeyId" FROM public.organization_terminals WHERE label LIKE $1`, [
+			const keyIds = await client.query<{ apiKeyId: string | null }>(`SELECT "apiKeyId" AS "apiKeyId" FROM public."OrganizationTerminal" WHERE label LIKE $1`, [
 				`${NAME_PREFIX}%`,
 			]);
-			await client.query(`DELETE FROM public.organization_terminals WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
-			await client.query(`DELETE FROM public.organization_api_keys WHERE name LIKE $1 OR id = ANY($2::text[])`, [
+			await client.query(`DELETE FROM public."OrganizationTerminal" WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."OrganizationApiKey" WHERE name LIKE $1 OR id = ANY($2::text[])`, [
 				`${NAME_PREFIX}%`,
 				keyIds.rows.flatMap((row) => (row.apiKeyId === null ? [] : [row.apiKeyId])),
 			]);

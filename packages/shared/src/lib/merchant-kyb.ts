@@ -1,5 +1,5 @@
 import { nowEpochMs } from "../schemas/api/common";
-import type { MerchantKybSubmissionFieldsInput, MerchantOnboardingKybFieldsInput } from "../schemas/domain/rewards/rewards-kyb";
+import type { MerchantKybSubmissionFieldsInput, MerchantOnboardingKybFieldsInput } from "../contexts/organizations/schemas/merchant-kyb";
 import { JsonObjectSchema, type JsonObject } from "../schemas/runtime/json";
 
 /** Builds the merchant-submitted KYB payload stored in `merchant_orgs.kyb_fields` (no document bytes). */

@@ -26,7 +26,7 @@ function SettingsSectionSkeleton({ className, children }: { readonly className?:
 }
 
 /**
- * `/rewardhub/account` while the session check runs: the settings header, the
+ * `/dashboard/account` while the session check runs: the settings header, the
  * profile picture, then the security sections in their grid — email
  * verification, password, two-factor, signed-in devices and MFA recovery.
  */

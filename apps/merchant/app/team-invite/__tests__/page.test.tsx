@@ -6,7 +6,7 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TeamInvitePage from "@/app/team-invite/page";
-import { TEAM_INVITE_LOADING_LABELS } from "@/components/team-invite/team-invite-skeletons";
+import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/organizations/components/team-invite/team-invite-skeletons";
 import { TestQueryClientProvider } from "@/test/query-client";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 	useSearchParams: (): { readonly get: (key: string) => string | null } => ({ get: (key: string): string | null => (key === "token" ? token : null) }),
 }));
 
-vi.mock("@workspace/client/lib/auth", () => {
+vi.mock("@workspace/client/lib/contexts/identity", () => {
 	const idleMutation = (): { readonly mutate: () => void; readonly isPending: boolean } => ({ mutate: vi.fn(), isPending: false });
 	const api = {
 		organizations: {

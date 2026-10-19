@@ -1,0 +1,122 @@
+import { Controller, Get } from "@nestjs/common";
+import { QueryBus } from "@nestjs/cqrs";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+	apiPath,
+	GithubCommitDetailSchema,
+	GithubCommitHistoryQuerySchema,
+	GithubCommitPageSchema,
+	GithubCommitParamsSchema,
+	GithubContributorStatsSchema,
+	GithubRepositoryListSchema,
+	GithubRepositoryParamsSchema,
+	GithubRepositorySummarySchema,
+	type GithubCommitDetail,
+	type GithubCommitHistoryQuery,
+	type GithubCommitPage,
+	type GithubCommitParams,
+	type GithubContributorStats,
+	type GithubRepositoryList,
+	type GithubRepositoryParams,
+	type GithubRepositorySummary,
+} from "@workspace/shared";
+
+import type { ActorContext } from "../../../../platform/application/actor-context";
+import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { GetGithubCommitQuery } from "../../application/queries/get-github-commit/get-github-commit.query";
+import { GetGithubCommitPageQuery } from "../../application/queries/get-github-commit-page/get-github-commit-page.query";
+import { GetGithubContributorStatsQuery } from "../../application/queries/get-github-contributor-stats/get-github-contributor-stats.query";
+import { GetGithubRepositorySummaryQuery } from "../../application/queries/get-github-repository-summary/get-github-repository-summary.query";
+import { ListGithubRepositoriesQuery } from "../../application/queries/list-github-repositories/list-github-repositories.query";
+
+/**
+ * Read-only contributions of the GitHub repositories the API may read —
+ * pinned by `GITHUB_REPOSITORIES`, or discovered from the token's account.
+ *
+ * Authorization (every route): `READ:GITHUB` (granted to every platform role,
+ * docs/technical/github-contributions.md). No ownership, tenant or RLS scope:
+ * the repositories are platform configuration, the same for every caller, and
+ * nothing is read from the database. A repository outside `GITHUB_REPOSITORIES`
+ * (or not discovered) is a 404. Read-only, so no audit entry.
+ */
+/** The failures every GitHub-backed read can answer with, beyond the standard 401 / 403 / 429. */
+const GITHUB_READ_ERRORS =
+	"404 NOT_FOUND when the repository is not in the list (GET /github/repositories), or GitHub no longer shows it to the API's token. " +
+	"503 SERVICE_UNAVAILABLE when GitHub is slow, unreachable or rate-limiting the token, and 502 EXTERNAL_SERVICE_ERROR when it answers with an error — " +
+	"both only when no earlier answer (up to an hour past its cache lifetime) can be served instead.";
+
+@ApiTags("GitHub")
+@ApiBearerAuth()
+@Controller(apiPath("/github/repositories"))
+export class GithubController {
+	public constructor(private readonly queryBus: QueryBus) {}
+
+	@RequirePermission("READ", "GITHUB")
+	@Get()
+	@ApiOperation({
+		summary: "List the GitHub repositories the API may read",
+		description:
+			"`configured`: the ones pinned in GITHUB_REPOSITORIES, in that order. `discovered` (GITHUB_REPOSITORIES empty): the token account's own public repositories (no forks) and the public repositories it recently contributed to, most recently pushed first. `off`: no GITHUB_TOKEN, an empty list. Discovery reads GitHub: 503 SERVICE_UNAVAILABLE / 502 EXTERNAL_SERVICE_ERROR when it fails and no earlier list can be served.",
+	})
+	@ZodResponse(GithubRepositoryListSchema, { description: "The repositories the API may read (empty when the integration is off)" })
+	public async listRepositories(@CurrentActor() actor: ActorContext): Promise<GithubRepositoryList> {
+		return this.queryBus.execute(new ListGithubRepositoriesQuery(actor));
+	}
+
+	@RequirePermission("READ", "GITHUB")
+	@Get(":owner/:repository")
+	@ApiOperation({ summary: "Summary of a configured repository: stars, forks, languages, commit count, last push", description: GITHUB_READ_ERRORS })
+	@ZodResponse(GithubRepositorySummarySchema, { description: "Repository summary" })
+	public async getRepositorySummary(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams,
+	): Promise<GithubRepositorySummary> {
+		return this.queryBus.execute(new GetGithubRepositorySummaryQuery(actor, params));
+	}
+
+	@RequirePermission("READ", "GITHUB")
+	@Get(":owner/:repository/commits")
+	@ApiOperation({
+		summary: "One page of a configured repository's commit history with lines added/deleted per commit",
+		description: `Newest first; pass \`nextCursor\` back as \`cursor\` for the next (older) page. ${GITHUB_READ_ERRORS}`,
+	})
+	@ZodResponse(GithubCommitPageSchema, { description: "Commits, newest first, and the cursor of the next page" })
+	public async getCommitPage(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams,
+		@ZodQuery(GithubCommitHistoryQuerySchema) query: GithubCommitHistoryQuery,
+	): Promise<GithubCommitPage> {
+		return this.queryBus.execute(new GetGithubCommitPageQuery(actor, { params, query }));
+	}
+
+	@RequirePermission("READ", "GITHUB")
+	@Get(":owner/:repository/commits/:sha")
+	@ApiOperation({
+		summary: "One commit of a configured repository: its message, parents and every changed file with its diff",
+		description:
+			"Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000 characters or once the commit's diffs reach 200,000 together, and `unavailable` when GitHub sends none (binary files). At most 100 files; `filesTruncated` says the commit changed more. " +
+			"404 NOT_FOUND also when the repository has no commit with this SHA. " +
+			GITHUB_READ_ERRORS,
+	})
+	@ZodResponse(GithubCommitDetailSchema, { description: "The commit and its changed files" })
+	public async getCommit(@CurrentActor() actor: ActorContext, @ZodParams(GithubCommitParamsSchema) params: GithubCommitParams): Promise<GithubCommitDetail> {
+		return this.queryBus.execute(new GetGithubCommitQuery(actor, params));
+	}
+
+	@RequirePermission("READ", "GITHUB")
+	@Get(":owner/:repository/contributors")
+	@ApiOperation({
+		summary: "Commits and lines added/deleted per contributor of a configured repository",
+		description: `From GitHub's contributor statistics (\`basis.kind: "statistics"\`, the whole default branch). GitHub recomputes those after every push; until they are ready the API counts the default branch's latest commits itself, at most 1,000 (\`basis.kind: "history"\`, \`complete\` when that is all of them). Merge commits and commits by authors without a GitHub account are credited to no one. ${GITHUB_READ_ERRORS}`,
+	})
+	@ZodResponse(GithubContributorStatsSchema, { description: "Contributor totals, most commits first, and what they were counted from" })
+	public async getContributorStats(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(GithubRepositoryParamsSchema) params: GithubRepositoryParams,
+	): Promise<GithubContributorStats> {
+		return this.queryBus.execute(new GetGithubContributorStatsQuery(actor, params));
+	}
+}

@@ -6,7 +6,7 @@ import { ApiError } from "@workspace/client/lib/api/use-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearAllOrganizationLocationCookies, organizationLocationCookieName } from "@/lib/org/location";
+import { clearAllOrganizationLocationCookies, organizationLocationCookieName } from "@/contexts/organizations/lib/org/location";
 import { TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
@@ -38,7 +38,7 @@ const { contextQuery } = vi.hoisted(() => ({
 	contextQuery: vi.fn<(input: ContextQueryInput, options?: ContextQueryOptions) => ContextQueryState>(),
 }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { organizations: { context: { useQuery: contextQuery } } } }),
 }));
 

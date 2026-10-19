@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 
-import { PROXY_REFRESH_COOLDOWN_MS } from "@workspace/client/lib/auth/edge/proxy-refresh";
+import { PROXY_REFRESH_COOLDOWN_MS } from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
 
 import { createAdminProxy, createAdminRefreshAttempt, type AdminProxy } from "../proxy";
 

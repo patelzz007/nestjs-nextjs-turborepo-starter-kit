@@ -29,10 +29,10 @@ describe("Seeded review and lifecycle states (integration)", () => {
 
 	it("names the reviewer and review time of every reviewed access request, and creates the membership of an approved one", async () => {
 		const reviewed = await pool.query<{ status: string; reviewedById: string | null; reviewedAt: string | null; membershipId: string | null }>(
-			`SELECT r.status, r.reviewed_by_id AS "reviewedById", r.reviewed_at::text AS "reviewedAt", m.id AS "membershipId"
-			   FROM public.organization_access_requests r
-			   LEFT JOIN public.organization_memberships m
-			     ON m.organization_id = r.organization_id AND m.user_id = r.user_id AND m.is_deleted = false
+			`SELECT r.status, r."reviewedById" AS "reviewedById", r."reviewedAt"::text AS "reviewedAt", m.id AS "membershipId"
+			   FROM public."OrganizationAccessRequest" r
+			   LEFT JOIN public."OrganizationMembership" m
+			     ON m."organizationId" = r."organizationId" AND m."userId" = r."userId" AND m."isDeleted" = false
 			  WHERE r.status <> 'PENDING'`,
 		);
 		expect(reviewed.rows.map((row) => row.status).sort()).toEqual(["APPROVED", "REJECTED"]);
@@ -45,7 +45,7 @@ describe("Seeded review and lifecycle states (integration)", () => {
 
 	it("gives every rejected store request a reason and a reviewer", async () => {
 		const rejected = await pool.query<{ rejectionReason: string | null; reviewedByUserId: string | null }>(
-			`SELECT rejection_reason AS "rejectionReason", reviewed_by_user_id AS "reviewedByUserId" FROM public.organization_locations WHERE status = 'REJECTED'`,
+			`SELECT "rejectionReason" AS "rejectionReason", "reviewedByUserId" AS "reviewedByUserId" FROM public."OrganizationLocation" WHERE status = 'REJECTED'`,
 		);
 		expect(rejected.rows.length).toBeGreaterThan(0);
 		for (const row of rejected.rows) {
@@ -56,10 +56,10 @@ describe("Seeded review and lifecycle states (integration)", () => {
 
 	it("keeps the deletion grace window on a PENDING_DELETION organization and soft-deletes a DELETED one with its memberships", async () => {
 		const pending = await pool.query<{ requestedAt: string; graceEndsAt: string; isDeleted: boolean }>(
-			`SELECT e.created_at::text AS "requestedAt", o.deletion_grace_ends_at::text AS "graceEndsAt", o.is_deleted AS "isDeleted"
-			   FROM public.organizations o
-			   JOIN public.organization_lifecycle_events e ON e.organization_id = o.id AND e.to_state = 'PENDING_DELETION'
-			  WHERE o.lifecycle_state = 'PENDING_DELETION'`,
+			`SELECT e."createdAt"::text AS "requestedAt", o."deletionGraceEndsAt"::text AS "graceEndsAt", o."isDeleted" AS "isDeleted"
+			   FROM public."Organization" o
+			   JOIN public."OrganizationLifecycleEvent" e ON e."organizationId" = o.id AND e."toState" = 'PENDING_DELETION'
+			  WHERE o."lifecycleState" = 'PENDING_DELETION'`,
 		);
 		expect(pending.rows.length).toBeGreaterThan(0);
 		for (const row of pending.rows) {
@@ -68,10 +68,10 @@ describe("Seeded review and lifecycle states (integration)", () => {
 		}
 
 		const deleted = await pool.query<{ isDeleted: boolean; deletedAt: string | null; liveMemberships: string; graceEndsAt: string }>(
-			`SELECT o.is_deleted AS "isDeleted", o.deleted_at::text AS "deletedAt", o.deletion_grace_ends_at::text AS "graceEndsAt",
-			        (SELECT count(*) FROM public.organization_memberships m WHERE m.organization_id = o.id AND m.is_deleted = false)::text AS "liveMemberships"
-			   FROM public.organizations o
-			  WHERE o.lifecycle_state = 'DELETED'`,
+			`SELECT o."isDeleted" AS "isDeleted", o."deletedAt"::text AS "deletedAt", o."deletionGraceEndsAt"::text AS "graceEndsAt",
+			        (SELECT count(*) FROM public."OrganizationMembership" m WHERE m."organizationId" = o.id AND m."isDeleted" = false)::text AS "liveMemberships"
+			   FROM public."Organization" o
+			  WHERE o."lifecycleState" = 'DELETED'`,
 		);
 		expect(deleted.rows.length).toBeGreaterThan(0);
 		for (const row of deleted.rows) {
@@ -82,7 +82,7 @@ describe("Seeded review and lifecycle states (integration)", () => {
 	});
 
 	it("keeps both demo merchants ACTIVE next to the organizations of the deletion flow", async () => {
-		const active = await pool.query<{ id: string }>("SELECT id FROM public.organizations WHERE lifecycle_state = 'ACTIVE' AND is_deleted = false");
+		const active = await pool.query<{ id: string }>('SELECT id FROM public."Organization" WHERE "lifecycleState" = \'ACTIVE\' AND "isDeleted" = false');
 		const ids = active.rows.map((row) => row.id);
 		expect(ids).toContain(ORGANIZATION_SEED_IDS.klOrganization);
 		expect(ids).toContain(ORGANIZATION_SEED_IDS.mlkOrganization);
@@ -90,16 +90,16 @@ describe("Seeded review and lifecycle states (integration)", () => {
 
 	it("has exactly one live version per policy slot, and a four-eyes revision that supersedes version 1 and carries its SQL predicate", async () => {
 		const slots = await pool.query<{ live: string }>(
-			`SELECT count(*) FILTER (WHERE superseded_at IS NULL)::text AS live
-			   FROM public.authorization_policy_versions WHERE organization_id IS NOT NULL GROUP BY organization_id`,
+			`SELECT count(*) FILTER (WHERE "supersededAt" IS NULL)::text AS live
+			   FROM public."AuthorizationPolicyVersion" WHERE "organizationId" IS NOT NULL GROUP BY "organizationId"`,
 		);
 		for (const slot of slots.rows) {
 			expect(slot.live).toBe("1");
 		}
 		const revised = await pool.query<{ version: number; sqlPredicate: string | null; supersededAt: string | null; approvedById: string | null }>(
-			`SELECT v.version, v.sql_predicate AS "sqlPredicate", v.superseded_at::text AS "supersededAt", d.approved_by_id AS "approvedById"
-			   FROM public.authorization_policy_versions v JOIN public.authorization_policy_drafts d ON d.id = v.draft_id
-			  WHERE v.organization_id = $1 AND v.scope = 'TENANT' ORDER BY v.version`,
+			`SELECT v.version, v."sqlPredicate" AS "sqlPredicate", v."supersededAt"::text AS "supersededAt", d."approvedById" AS "approvedById"
+			   FROM public."AuthorizationPolicyVersion" v JOIN public."AuthorizationPolicyDraft" d ON d.id = v."draftId"
+			  WHERE v."organizationId" = $1 AND v.scope = 'TENANT' ORDER BY v.version`,
 			[ORGANIZATION_SEED_IDS.mlkOrganization],
 		);
 		expect(revised.rows.map((row) => row.version)).toEqual([1, 2]);
@@ -111,10 +111,10 @@ describe("Seeded review and lifecycle states (integration)", () => {
 
 	it("stamps and audits a re-wrapped tenant data key", async () => {
 		const rotated = await pool.query<{ id: string; kmsKeyId: string; audits: string }>(
-			`SELECT k.id, k.kms_key_id AS "kmsKeyId",
-			        (SELECT count(*) FROM public.organization_audit_logs a
-			          WHERE a.resource_id = k.id::text AND a.action = 'encryption.tenant_key.rewrapped' AND a.metadata ->> 'fromKmsKeyId' = 'local:pilot')::text AS audits
-			   FROM public.tenant_encryption_keys k WHERE k.rotated_at IS NOT NULL`,
+			`SELECT k.id, k."kmsKeyId" AS "kmsKeyId",
+			        (SELECT count(*) FROM public."OrganizationAuditLog" a
+			          WHERE a."resourceId" = k.id::text AND a.action = 'encryption.tenant_key.rewrapped' AND a.metadata ->> 'fromKmsKeyId' = 'local:pilot')::text AS audits
+			   FROM public."TenantEncryptionKey" k WHERE k."rotatedAt" IS NOT NULL`,
 		);
 		expect(rotated.rows.length).toBeGreaterThan(0);
 		for (const row of rotated.rows) {
@@ -125,7 +125,7 @@ describe("Seeded review and lifecycle states (integration)", () => {
 
 	it("records kernel decision audits with the full request context", async () => {
 		const row = await pool.query<{ ipAddress: string | null; userAgent: string | null; requestId: string | null; durationMs: number | null }>(
-			`SELECT ip_address AS "ipAddress", user_agent AS "userAgent", request_id AS "requestId", duration_ms AS "durationMs" FROM public.authorization_audits WHERE location_id IS NOT NULL`,
+			`SELECT "ipAddress" AS "ipAddress", "userAgent" AS "userAgent", "requestId" AS "requestId", "durationMs" AS "durationMs" FROM public."AuthorizationAudit" WHERE "locationId" IS NOT NULL`,
 		);
 		expect(row.rows.length).toBeGreaterThan(0);
 		for (const audit of row.rows) {

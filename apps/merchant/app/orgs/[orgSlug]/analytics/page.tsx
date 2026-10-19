@@ -1,11 +1,11 @@
-import { MerchantAnalyticsPageView } from "@/components/analytics/merchant-analytics-page-view";
+import { MerchantAnalyticsPageView } from "@/contexts/reporting/components/merchant-analytics-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
-import { reportTimeZone } from "@/lib/analytics/merchant-analytics";
+import { reportTimeZone } from "@/contexts/reporting/lib/merchant-analytics";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/lib/org/server-location-scope";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
+import { loadServerLocationScope } from "@/contexts/organizations/lib/org/server-location-scope";
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
-import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/analytics/analytics-range";
+import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/contexts/reporting/analytics-range";
 import { MerchantAnalyticsDashboardQuerySchema, nowEpochMs } from "@workspace/shared";
 import * as React from "react";
 

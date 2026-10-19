@@ -1,9 +1,9 @@
 "use client";
 
 import type { AdminUserDetail } from "@workspace/shared";
-import { useAuth } from "@workspace/client/lib/auth";
-import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
-import { UserDetailButton } from "@/components/users/user-detail-button";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
+import { useImpersonation } from "@workspace/client/lib/contexts/identity/session/use-impersonation";
+import { UserDetailButton } from "@/contexts/identity/components/users/user-detail-button";
 import { useCanStartImpersonation } from "@/lib/session/super-admin";
 import { useRouter } from "next/navigation";
 import { UserRoundSearch } from "lucide-react";

@@ -5,12 +5,12 @@ import type { TenantEncryptionKey } from "@prisma/client";
 import { getApiConfig } from "../../src/config/api-config";
 import type { TenantKmsProvider } from "../../src/config/api-env.fields";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { NO_PUBLISHED_POLICY_VERSION } from "../../src/modules/authorization-cedar/services/policy-bundle";
-import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../../src/modules/encryption/aes-256-gcm";
-import { LEGACY_PILOT_KEK_ID } from "../../src/modules/encryption/kms/local-development-key-management.service";
-import { createTenantKeyManagement } from "../../src/modules/encryption/kms/tenant-key-management.factory";
-import type { TenantKeyManagementPort, WrappedDataKey } from "../../src/modules/encryption/kms/tenant-key-management.port";
-import { TENANT_KEY_AUDIT_ACTIONS } from "../../src/modules/encryption/tenant-encryption.service";
+import { NO_PUBLISHED_POLICY_VERSION } from "../../src/contexts/authorization/infrastructure/cedar/policy-bundle";
+import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../../src/platform/infrastructure/encryption/aes-256-gcm";
+import { LEGACY_PILOT_KEK_ID } from "../../src/platform/infrastructure/encryption/kms/local-development-key-management.service";
+import { createTenantKeyManagement } from "../../src/platform/infrastructure/encryption/kms/tenant-key-management.factory";
+import type { TenantKeyManagementPort, WrappedDataKey } from "../../src/platform/infrastructure/encryption/kms/tenant-key-management.port";
+import { TENANT_KEY_AUDIT_ACTIONS } from "../../src/platform/infrastructure/encryption/tenant-encryption.service";
 
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
@@ -24,7 +24,7 @@ export interface TenantKeySeedTarget {
 	readonly actorUserId: string;
 	/**
 	 * Set for a tenant whose key has been through a KEK re-wrap: the active SuperAdmin who ran
-	 * `pnpm db:rewrap-tenant-keys`. The key then carries `rotated_at` and the
+	 * `pnpm db:rewrap-tenant-keys`. The key then carries `rotatedAt` and the
 	 * `encryption.tenant_key.rewrapped` audit row, exactly as the command leaves them.
 	 */
 	readonly rewrappedByUserId?: string;
@@ -48,7 +48,7 @@ const LEGACY_KEK_MATERIAL: Readonly<Record<TenantKmsProvider, (config: TypedConf
 /**
  * Re-wraps the key the way `TenantEncryptionService.rewrapToCurrentKek` does: the data key as a
  * legacy `local:pilot` envelope is unwrapped, wrapped under the CURRENT KEK and swapped in with a
- * compare-and-swap that stamps `rotated_at`, together with the audit row. The data key itself is
+ * compare-and-swap that stamps `rotatedAt`, together with the audit row. The data key itself is
  * unchanged. Returns false when the provider cannot reproduce a legacy row (nothing is written).
  */
 async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: TypedConfigService, key: TenantEncryptionKey, actorUserId: string): Promise<boolean> {

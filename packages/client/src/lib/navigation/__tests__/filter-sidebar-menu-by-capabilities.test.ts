@@ -151,13 +151,13 @@ describe("filterSidebarMenuData (raw)", () => {
 		const menu = rawMenu({
 			sections: [
 				{
-					title: "Reward Hub",
+					title: "Dashboard",
 					items: [
 						{
-							title: "Reward Hub",
-							url: "/rewardhub",
+							title: "Dashboard",
+							url: "/dashboard",
 							authorization: { permissions: [A], cascade: true },
-							children: [{ title: "Deep", url: "/rewardhub/deep", children: [{ title: "Deeper", url: "/rewardhub/deep/x" }] }],
+							children: [{ title: "Deep", url: "/dashboard/deep", children: [{ title: "Deeper", url: "/dashboard/deep/x" }] }],
 						},
 					],
 				},

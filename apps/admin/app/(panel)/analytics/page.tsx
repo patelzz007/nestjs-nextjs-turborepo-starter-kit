@@ -1,8 +1,8 @@
-import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/analytics/analytics-range";
+import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/contexts/reporting/analytics-range";
 import { AdminAnalyticsDashboardQuerySchema, nowEpochMs, UTC_TIME_ZONE } from "@workspace/shared";
 import * as React from "react";
 
-import { PlatformAnalyticsDashboard } from "@/components/analytics/platform-analytics-dashboard";
+import { PlatformAnalyticsDashboard } from "@/contexts/reporting/components/platform-analytics-dashboard";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
 

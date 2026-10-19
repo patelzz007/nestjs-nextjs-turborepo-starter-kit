@@ -3,11 +3,11 @@ import { LandingHowItWorks } from "@/components/landing/landing-how-it-works";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingMerchants } from "@/components/landing/landing-merchants";
 import { LandingShell } from "@/components/landing/landing-shell";
-import { RewardHubBrowseView } from "@/components/rewardhub/browse/view";
-import { hasServerSession } from "@/lib/auth/server";
+import { DashboardBrowseView } from "@/contexts/rewards/components/browse/view";
+import { hasServerSession } from "@/contexts/identity/lib/server";
 import { loginPath, ROUTE_PREFIXES, ROUTES } from "@/lib/routes";
-import { selectFeaturedOffers, selectMerchantNames, type FeaturedOffer } from "@/lib/rewards/featured-offers";
-import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/lib/url-state/rewards-browse";
+import { selectFeaturedOffers, selectMerchantNames, type FeaturedOffer } from "@/contexts/rewards/lib/featured-offers";
+import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/contexts/rewards/url-state/rewards-browse";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { ApiPaginatedMetaSchema, nowEpochMs, type Envelope, type RewardResponse } from "@workspace/shared";
@@ -25,12 +25,12 @@ interface LandingActions {
 
 /** Where the landing sends a visitor next — sign-in for guests, the signed-in app / wallet once signed in. */
 const GUEST_ACTIONS: LandingActions = {
-	hero: { label: "Sign in to claim", href: loginPath(ROUTES.rewardHub.browse) },
-	cta: { label: "Sign in or create account", href: loginPath(ROUTES.rewardHub.browse) },
+	hero: { label: "Sign in to claim", href: loginPath(ROUTES.dashboard.browse) },
+	cta: { label: "Sign in or create account", href: loginPath(ROUTES.dashboard.browse) },
 };
 const MEMBER_ACTIONS: LandingActions = {
-	hero: { label: "Go to dashboard", href: ROUTES.rewardHub.browse },
-	cta: { label: "Open my wallet", href: ROUTES.rewardHub.wallet },
+	hero: { label: "Go to dashboard", href: ROUTES.dashboard.browse },
+	cta: { label: "Open my wallet", href: ROUTES.dashboard.wallet },
 };
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ function readLiveOfferCount(result: PromiseSettledResult<Envelope<RewardResponse
 }
 
 /**
- * Public landing — browse rewards without signing in; the signed-in app lives under `/rewardhub`.
+ * Public landing — browse rewards without signing in; the signed-in app lives under `/dashboard`.
  * The catalog section's search, filters and page live in the URL (`/?filter[city]=MELAKA#rewards`);
  * the hero always describes the whole catalog, so a filtered URL fetches both pages in parallel.
  */
@@ -73,7 +73,7 @@ export default async function LandingPage({ searchParams }: { readonly searchPar
 			<LandingMerchants merchantNames={merchantNames} />
 			{/* The browse view owns the `#rewards` heading; offset it below the sticky header when jumped to. */}
 			<section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 [&_#rewards]:scroll-mt-24">
-				<RewardHubBrowseView variant="landing" detailPathPrefix={ROUTE_PREFIXES.publicRewards} initialPage={toPrefetchedQuery(catalogStateKey, catalogResult)} />
+				<DashboardBrowseView variant="landing" detailPathPrefix={ROUTE_PREFIXES.publicRewards} initialPage={toPrefetchedQuery(catalogStateKey, catalogResult)} />
 			</section>
 			<LandingHowItWorks />
 			<LandingCallToAction

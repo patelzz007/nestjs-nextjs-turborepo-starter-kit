@@ -20,6 +20,7 @@ export const serverEnv: Readonly<AdminServerEnv> = parseEnvOrThrow(
 	{
 		NODE_ENV: process.env.NODE_ENV,
 		COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
+		ADMIN_COMPONENT_GALLERY: process.env.ADMIN_COMPONENT_GALLERY,
 	} satisfies Record<keyof z.input<typeof AdminServerEnvSchema>, string | undefined>,
 	ADMIN_ENV_SCOPE.server,
 );

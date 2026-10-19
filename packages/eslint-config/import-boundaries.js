@@ -56,6 +56,10 @@ export const FRONTEND_RESTRICTED_IMPORT_PATTERNS = [
 		regex: SERVER_ONLY_PACKAGE_PATTERN,
 		message: "Server-only dependency (database, queue, NestJS or native module). It must never be imported by frontend code — go through the API.",
 	},
+	{
+		regex: "^@workspace/api(/|$)",
+		message: "The Nest API package is server-only. Frontend and mobile code call it through @workspace/api-client.",
+	},
 ];
 
 /** Frontend-only workspaces a Node backend must never pull in. */
@@ -199,6 +203,10 @@ export const MOBILE_RESTRICTED_IMPORT_PATTERNS = [
 	{
 		regex: NODE_BUILTIN_PATTERN,
 		message: "Node built-in modules do not exist in React Native (Hermes). Use the Expo module that provides the capability instead.",
+	},
+	{
+		regex: "^@workspace/api(/|$)",
+		message: "apps/mobile must not import the Nest API. Talk to it through @workspace/api-client (docs/technical/mobile/mobile-app.md §4).",
 	},
 	{
 		regex: "^@react-native-async-storage/",
@@ -356,6 +364,124 @@ export const backendImportBoundaryConfig = {
 	},
 };
 
+// ── apps/api DDD layers (T10, docs/architecture/ddd-cqrs-migration-plan.md §12.1)
+
+/** The 14 bounded contexts (§6.1). */
+export const DDD_CONTEXTS = [
+	"identity",
+	"authorization",
+	"organizations",
+	"rewards",
+	"claims",
+	"pos",
+	"referrals",
+	"reporting",
+	"files",
+	"notifications",
+	"catalog",
+	"reference-data",
+	"audit",
+	"integrations-github",
+];
+
+const DOMAIN_PURITY_MESSAGE = "Domain is pure: no framework, no persistence, no outer layers (decision #6).";
+const APPLICATION_PORTS_MESSAGE = "Application depends on ports, never adapters.";
+const PRESENTATION_MESSAGE = "Presentation dispatches commands/queries; it never touches persistence.";
+const PUBLIC_API_MESSAGE = "Import another context only through its public-api.ts (§6.4).";
+const PRISMA_BASE_MESSAGE = "PrismaBaseRepository is infrastructure-only.";
+const PLATFORM_NO_CONTEXTS_MESSAGE = "Platform must not depend on contexts.";
+const PLATFORM_PUBLIC_API_MESSAGE = "Platform may only use a context's public-api (for the error map and security kit).";
+const SYSTEM_COMMAND_MESSAGE = "Non-HTTP entry points dispatch through SystemCommandDispatcher (decision #27).";
+
+const LAYER_SEGMENT = "(domain|application|infrastructure|presentation)";
+
+const DOMAIN_LAYER_PATTERNS = [
+	{ regex: "^@nestjs/", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "^@prisma/", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "^\\.prisma/", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "^prisma$", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "^pg$", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "^bullmq$", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "^ioredis$", message: DOMAIN_PURITY_MESSAGE },
+	{ regex: `/(application|infrastructure|presentation)(/|$)`, message: DOMAIN_PURITY_MESSAGE },
+	{ regex: "platform/(application|infrastructure|presentation)(/|$)", message: DOMAIN_PURITY_MESSAGE },
+];
+
+const APPLICATION_LAYER_PATTERNS = [
+	{ regex: "^@prisma/", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "^\\.prisma/", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "^pg$", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "^bullmq$", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "^ioredis$", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "^@nestjs/(?!common$|cqrs$)", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "/(infrastructure|presentation)(/|$)", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "platform/(infrastructure|presentation)(/|$)", message: APPLICATION_PORTS_MESSAGE },
+	{ regex: "(^|/)prisma/", message: APPLICATION_PORTS_MESSAGE },
+];
+
+const PRESENTATION_LAYER_PATTERNS = [
+	{ regex: "^@prisma/", message: PRESENTATION_MESSAGE },
+	{ regex: "^\\.prisma/", message: PRESENTATION_MESSAGE },
+	{ regex: "^pg$", message: PRESENTATION_MESSAGE },
+	{ regex: "/infrastructure(/|$)", message: PRESENTATION_MESSAGE },
+	{ regex: "platform/infrastructure(/|$)", message: PRESENTATION_MESSAGE },
+	{ regex: "(^|/)prisma/", message: PRESENTATION_MESSAGE },
+];
+
+const PRISMA_BASE_PATTERN = { regex: "platform/infrastructure/persistence/prisma-base", message: PRISMA_BASE_MESSAGE };
+
+const COMMAND_BUS_PATHS = [{ name: "@nestjs/cqrs", importNames: ["CommandBus"], message: SYSTEM_COMMAND_MESSAGE }];
+
+const ARCHITECTURE_BASE_PATTERNS = [...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS, ...BACKEND_RESTRICTED_IMPORT_PATTERNS];
+
+function otherContextNames(contextName) {
+	return DDD_CONTEXTS.filter((name) => name !== contextName).join("|");
+}
+
+function crossContextPatterns(contextName) {
+	const others = otherContextNames(contextName);
+	return [
+		{ regex: `(\\.\\./)+(${others})/${LAYER_SEGMENT}(/|$)`, message: PUBLIC_API_MESSAGE },
+		{ regex: `(^|/)contexts/(${others})/${LAYER_SEGMENT}(/|$)`, message: PUBLIC_API_MESSAGE },
+	];
+}
+
+function restrictedImports(patterns, paths) {
+	return {
+		"no-restricted-imports": ["error", { patterns: [...ARCHITECTURE_BASE_PATTERNS, ...patterns], ...(paths === undefined ? {} : { paths }) }],
+	};
+}
+
+function architectureBlock(files, patterns, paths) {
+	return { files, rules: restrictedImports(patterns, paths) };
+}
+
+/** Layer rules for `apps/api/src/contexts` and `apps/api/src/platform`. A later block replaces `no-restricted-imports`, so each block repeats the universal and backend patterns. */
+export const apiArchitectureBoundaryConfigs = [
+	...DDD_CONTEXTS.flatMap((contextName) => {
+		const cross = crossContextPatterns(contextName);
+		return [
+			architectureBlock([`src/contexts/${contextName}/**`], cross),
+			architectureBlock([`src/contexts/${contextName}/presentation/**`], [...PRESENTATION_LAYER_PATTERNS, ...cross]),
+			architectureBlock([`src/contexts/${contextName}/presentation/{jobs,cli}/**`], [...PRESENTATION_LAYER_PATTERNS, ...cross], COMMAND_BUS_PATHS),
+			architectureBlock([`src/contexts/${contextName}/application/**`], [...APPLICATION_LAYER_PATTERNS, PRISMA_BASE_PATTERN, ...cross]),
+			architectureBlock([`src/contexts/${contextName}/domain/**`], [...DOMAIN_LAYER_PATTERNS, PRISMA_BASE_PATTERN, ...cross]),
+		];
+	}),
+	architectureBlock(
+		["src/platform/infrastructure/**", "src/platform/presentation/**"],
+		[{ regex: `(^|/)contexts/[^/]+/${LAYER_SEGMENT}/`, message: PLATFORM_PUBLIC_API_MESSAGE }],
+	),
+	architectureBlock(["src/platform/application/**"], [...APPLICATION_LAYER_PATTERNS, PRISMA_BASE_PATTERN, { regex: "(^|/)contexts/", message: PLATFORM_NO_CONTEXTS_MESSAGE }]),
+	architectureBlock(["src/platform/domain/**"], [...DOMAIN_LAYER_PATTERNS, PRISMA_BASE_PATTERN]),
+	{
+		files: ["src/modules/**/*.ts"],
+		rules: {
+			"no-restricted-syntax": ["error", { selector: "Program", message: "modules/ was retired by the DDD migration; use contexts/." }],
+		},
+	},
+];
+
 /** Frontend block: universal + browser-safety patterns, plus the client-component rule. */
 export const frontendImportBoundaryConfig = {
 	files: LINTED_SOURCE_FILES,
@@ -367,3 +493,56 @@ export const frontendImportBoundaryConfig = {
 		"workspace-boundaries/no-server-import-in-client-component": "error",
 	},
 };
+
+// ── Frontend contexts (plan §12.2) ───────────────────────────────────────────
+// Web apps, packages/client and the mobile app group domain code by the same
+// context names as the API (`contexts/<context>/`). Routes, feature stores and
+// generic lib code may import any context file; one context may import
+// ANOTHER context only through that context's index barrel. A context's own
+// files import each other freely. One block per context, because the allowed
+// set depends on which context the importing file belongs to.
+
+const FRONTEND_CONTEXT_MESSAGE = "Import another frontend context only through its index (DDD migration §12.2).";
+
+/** A file of another context other than its index: by an alias/package path (`…/contexts/<b>/x`) or relatively (`../../<b>/x`). */
+function frontendCrossContextPatterns(contextName) {
+	const others = otherContextNames(contextName);
+	const notIndex = "(?!index(?:\\.tsx?)?$).+";
+	return [
+		{ regex: `(^|/)contexts/(${others})/${notIndex}`, message: FRONTEND_CONTEXT_MESSAGE },
+		{ regex: `^(\\.\\./)+(${others})/${notIndex}`, message: FRONTEND_CONTEXT_MESSAGE },
+	];
+}
+
+function frontendContextFiles(contextName) {
+	return LINTED_SOURCE_FILES.map((glob) => `**/contexts/${contextName}/${glob}`);
+}
+
+/** Per-context blocks for browser code (Next apps, packages/client, packages/ui). Each repeats the universal and frontend patterns, since a later block replaces `no-restricted-imports`. */
+export const frontendContextBoundaryConfigs = DDD_CONTEXTS.map((contextName) => ({
+	files: frontendContextFiles(contextName),
+	rules: {
+		"no-restricted-imports": [
+			"error",
+			{ patterns: [...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS, ...FRONTEND_RESTRICTED_IMPORT_PATTERNS, ...frontendCrossContextPatterns(contextName)] },
+		],
+	},
+}));
+
+/** Per-context blocks for apps/mobile: the mobile patterns plus the same context rule. */
+export const mobileContextBoundaryConfigs = DDD_CONTEXTS.map((contextName) => ({
+	files: frontendContextFiles(contextName),
+	rules: {
+		"no-restricted-imports": [
+			"error",
+			{
+				patterns: [
+					...UNIVERSAL_RESTRICTED_IMPORT_PATTERNS,
+					...FRONTEND_RESTRICTED_IMPORT_PATTERNS,
+					...MOBILE_RESTRICTED_IMPORT_PATTERNS,
+					...frontendCrossContextPatterns(contextName),
+				],
+			},
+		],
+	},
+}));

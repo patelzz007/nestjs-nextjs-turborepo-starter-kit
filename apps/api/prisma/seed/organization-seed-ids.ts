@@ -2,17 +2,17 @@
 
 /** Fixed seed UUIDs for canonical organizations (URL slugs are the merchant entry point). */
 export const ORGANIZATION_SEED_IDS = Object.freeze({
-	klOrganization: "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-	mlkOrganization: "b57401d5-536e-464f-9ae9-4756b6dd5f61",
-	klLocation: "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-	mlkLocationKatil: "d57401d5-536e-464f-9ae9-4756b6dd5f62",
-	mlkLocationBeruang: "257401d5-536e-464f-9ae9-4756b6dd5f65",
-	klOwnerMembership: "e178a4d1-6915-4eb3-bf84-6fb14e1feb6e",
-	mlkOwnerMembership: "f57401d5-536e-464f-9ae9-4756b6dd5f63",
-	klCashierMembership: "0178a4d1-6915-4eb3-bf84-6fb14e1feb6f",
-	mlkCashierMembership: "157401d5-536e-464f-9ae9-4756b6dd5f64",
-	pendingNyonyaInvitation: "2178a4d1-6915-4eb3-bf84-6fb14e1feb70",
-	pendingKlTeamInvitation: "3178a4d1-6915-4eb3-bf84-6fb14e1feb71",
+	klOrganization: "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+	mlkOrganization: "019b76da-a800-72b9-80b8-91bd729eddbe",
+	klLocation: "019b76da-a800-701a-abbd-a9a411b6958b",
+	mlkLocationKatil: "019b76da-a800-7123-957b-191cb8255776",
+	mlkLocationBeruang: "019b76da-a800-7685-9734-84f5f07eb21f",
+	klOwnerMembership: "019b76da-a800-7b1d-b660-30bdb341a50c",
+	mlkOwnerMembership: "019b76da-a800-7d4c-924e-c4e9e246a509",
+	klCashierMembership: "019b76da-a800-71a1-8d20-165f781a00ae",
+	mlkCashierMembership: "019b76da-a800-7b0f-b2e9-e7ccd28b72af",
+	pendingNyonyaInvitation: "019b76da-a800-78eb-ab20-355793eb077b",
+	pendingKlTeamInvitation: "019b76da-a800-7926-8bff-ff84232b77f0",
 });
 
 /**

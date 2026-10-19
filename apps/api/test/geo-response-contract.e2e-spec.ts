@@ -18,8 +18,9 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { toCityDto, toCountryDto, toCountryListItem, toRegionDto, toStateDto } from "../src/modules/geo/mappers/geo.mappers";
+import { toCityDto, toCountryDto, toCountryListItem, toRegionDto, toStateDto } from "../src/contexts/reference-data/infrastructure/persistence/geo.mappers";
 import { createE2eApp, login, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import { LIVE_ROW_FIELDS } from "../src/platform/infrastructure/persistence/__tests__/base-row-fields";
 
 /**
  * Geo response contracts (ADR 022): every geo row leaves the repository as the
@@ -32,8 +33,8 @@ import { createE2eApp, login, parseSuccessEnvelope, type InjectResponse, type Lo
 
 const GEO_URL = `${API_VERSION_PREFIX}/geo`;
 const HTTP_OK = 200;
-const IMPORTED_AT = new Date("2014-01-01T12:01:01.000Z");
-const UPDATED_AT = new Date("2026-09-30T08:15:00.000Z");
+const IMPORTED_AT = BigInt(Date.UTC(2014, 0, 1, 12, 1, 1));
+const UPDATED_AT = BigInt(Date.UTC(2026, 8, 30, 8, 15));
 /** A small country (few cities) so the export stays cheap. */
 const SMALL_COUNTRY_ISO2 = "AD";
 const AFGHANISTAN_POPULATION = 43_844_000;
@@ -44,6 +45,7 @@ const STATE_SEARCH = "Malacca";
 const REGION_SEARCH = "Asia";
 
 const regionRow: RegionRow = {
+	...LIVE_ROW_FIELDS,
 	id: 1,
 	name: "Asia",
 	translations: { de: "Asien" },
@@ -57,6 +59,7 @@ const regionRow: RegionRow = {
 };
 
 const countryRow: CountryRow = {
+	...LIVE_ROW_FIELDS,
 	id: 251,
 	name: "Afghanistan",
 	iso3: "AFG",
@@ -92,6 +95,7 @@ const countryRow: CountryRow = {
 };
 
 const stateRow: StateRow = {
+	...LIVE_ROW_FIELDS,
 	id: 3901,
 	name: "Kabul",
 	countryCode: "AF",
@@ -117,6 +121,7 @@ const stateRow: StateRow = {
 };
 
 const cityRow: CityRow = {
+	...LIVE_ROW_FIELDS,
 	id: 52,
 	name: "Kabul",
 	stateCode: "KAB",
@@ -145,7 +150,7 @@ describe("geo mappers: Prisma row → shared DTO", () => {
 		expect(dto.population).toBe(AFGHANISTAN_POPULATION);
 		expect(dto.gdp).toBeNull();
 		expect(dto.timezones).toEqual([{ zoneName: "Asia/Kabul", gmtOffset: 16_200 }]);
-		expect(dto.createdAt).toBe(IMPORTED_AT.getTime());
+		expect(dto.createdAt).toBe(Number(IMPORTED_AT));
 		expect(CountrySchema.parse(dto)).toEqual(dto);
 	});
 
@@ -163,7 +168,7 @@ describe("geo mappers: Prisma row → shared DTO", () => {
 
 	it("maps a region", () => {
 		const region = toRegionDto(regionRow);
-		expect(region.updatedAt).toBe(UPDATED_AT.getTime());
+		expect(region.updatedAt).toBe(Number(UPDATED_AT));
 		expect(RegionSchema.parse(region)).toEqual(region);
 	});
 

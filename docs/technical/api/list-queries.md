@@ -137,7 +137,7 @@ The repository maps the AST to Prisma with the helpers in
 `apps/api/src/platform/persistence/list-query/`, **one explicit column per whitelisted field**:
 
 ```ts
-// apps/api/src/modules/product/product.repository.ts
+// apps/api/src/contexts/catalog/infrastructure/persistence/prisma-product.repository.ts
 const PRODUCT_SORT_COLUMNS: SortColumns<ProductListSortField, Prisma.ProductOrderByWithRelationInput> = {
   name: (direction) => ({ name: direction }),
   price: (direction) => ({ price: direction }),
@@ -255,19 +255,34 @@ mean "no filter".
 | `GET /notifications/email-log` | createdAt, subject, to, status | status, templateKey, createdAt | ✓ | `-createdAt` |
 | `GET /rewards` (marketplace) | createdAt, expiryDate, title | category, city | ✓ | `-createdAt` |
 | `GET /claims` (own claims) | claimedAt, createdAt | status | — | `-claimedAt` |
-| `GET /reward-notifications` | createdAt | readAt (`isNull` = unread) | — | `-createdAt` |
+| `GET /reward-notifications` | createdAt | readAt (`isNull` = unread; the bell counts `meta.total` of `filter[readAt][isNull]=true&limit=1`) | — | `-createdAt` |
+| `GET /auth/sessions` (own sessions) | lastActiveAt, createdAt | — | — | `-lastActiveAt` |
+| `GET /orgs/memberships` (own memberships) | createdAt, displayName | — | ✓ (store name or slug) | `createdAt` (join order) |
+| `GET /orgs/:orgSlug/members` | createdAt, role | role | — | `createdAt` (join order) |
+| `GET /orgs/:orgSlug/members/invites` | createdAt, expiresAt | — | — | `-createdAt` |
+| `GET /orgs/:orgSlug/rewards` | createdAt, expiryDate, title | status (a catalog tab) (`locationId` scope) | — | `-createdAt` |
 | `GET /orgs/:orgSlug/redemptions` | redeemedAt | — (`locationId` scope) | — | `-redeemedAt` |
 | `GET /orgs/:orgSlug/api-keys` | createdAt, name | revokedAt (`isNull` = active) (`locationId` scope) | — | `-createdAt` |
 | `GET /orgs/:orgSlug/terminals` | createdAt, name | — (`locationId` scope) | — | `-createdAt` |
 | `GET /admin/merchants` | createdAt, displayName | city, kybStatus, status | ✓ | `-createdAt` |
 | `GET /admin/location-requests` | createdAt, name | status | — | `createdAt` (oldest first) |
+| `GET /admin/roles` | name, createdAt | isActive | ✓ (name) | `name` (offset pages only) |
+| `GET /admin/permissions` | group, resource, action, createdAt | group, resource | ✓ (description) | `group, resource, action` (offset pages; 100 per page, so a page holds whole groups) |
 
-`GET /reward-notifications` returns a feed page (`{ items, unreadCount, nextCursor, hasNext }`)
-instead of `meta` pagination because it carries the unread badge count.
+A figure over a whole list never comes from the rows on screen. A count is the list's own
+`meta.total` (the smallest page, `limit=1`, with the filter); anything more is a summary endpoint
+beside the list — `GET /orgs/:orgSlug/rewards/summary` (rewards per status and units left, in the
+same store scope) feeds the merchant catalog's tabs and figures.
 
-Not on the grammar (bounded catalogs consumed whole — see ADR 021): `GET /admin/roles`,
-`GET /admin/permissions`, `GET /orgs/:orgSlug/rewards`, organization members / invites /
-memberships, `GET /admin/rewards/pending`, the capability catalog and email previews.
+Not on the grammar — fixed catalogs that only the code defines and that are consumed whole: the
+capability catalog and the email previews. Each answers a plain array. Anything a user, a seed or an
+API call can add to — roles and permissions included — is a list on the grammar above; a picker over
+one searches it server-side (`search`, a capped `limit`) rather than loading it whole.
+
+Also outside it, by nature: `GET /geo/autocomplete` (the top suggestions for what was typed, bounded by
+its own `limit`), `GET /geo/export` (a whole-dataset export), the bulk-create answers (they echo the
+request's own rows), and the GitHub lists, which pass on GitHub's own cursor paging (`nextCursor` in the
+body) because GitHub owns those lists.
 
 ## 6. Adding a list endpoint — checklist
 
@@ -278,13 +293,13 @@ memberships, `GET /admin/rewards/pending`, the capability catalog and email prev
    `build…ListOrder` (tie-breaker), a keyset for the default order, then `fetchListPage`.
 4. Controller: `@ZodListQuery(XListQuerySchema)`; service returns `toPaginatedServiceResult`.
 5. Client router: `response: listEnvelope(ItemSchema)`, `queryKey: (input) => listQueryKey([...], input)`.
-6. Tests: translator spec (`apps/api/src/modules/*.list-query.spec.ts`), and for anything
+6. Tests: translator spec (`apps/api/src/contexts/*/infrastructure/**/__tests__/*list-query.spec.ts`), and for anything
    non-trivial a real-Postgres case in `apps/api/test/list-query.e2e-spec.ts`.
 7. Add the row to the table in §5 and check that the columns you sort/filter on are indexed
    (rules/19-performance-and-scalability.md).
 8. A table for it: declare its URL state (`defineUrlState` + `listUrlParams`, §7) and a
    `to…ListQuery(state)` builder shared by the server page (prefetch) and the client table, with
-   a parsing test next to it (`apps/admin/lib/url-state/url-states.test.ts`).
+   a parsing test next to it (`apps/admin/lib/url-state/__tests__/url-states.test.ts`, or the `url-state/__tests__/` folder beside a context's own url-state).
 
 ## 7. Table state in the URL
 
@@ -308,7 +323,7 @@ filters), and `filter[…]` brackets are written unencoded so the address bar st
 `@workspace/client/lib/url-state/*` (server-safe, except the two hooks):
 
 ```ts
-// apps/admin/lib/url-state/users.ts — imported by the server page AND the client table
+// apps/admin/contexts/identity/url-state/users.ts — imported by the server page AND the client table
 export const USERS_TABLE_URL_STATE = defineUrlState(
   {
     ...listUrlParams(adminUserListQuery, { pageSizes: [10, 20, 50, 100], defaultLimit: 20 }), // page, limit, cursor, sort
@@ -421,7 +436,7 @@ const query = api.organizations.redemptions.useQuery(toRedemptionsQuery(orgSlug,
 | admin | `/users`, `/merchants`, `/catalog/products`, `/catalog/categories`, `/emails/log`, `/geography` (+ `?tab=`), `/users/mfa-recovery` | page, limit, cursor, sort, search, `filter[…]` |
 | admin | `/merchants/verification`, `/emails/templates`, `/merchants/store-requests`, `/users/mfa-recovery` | the in-page selection (`?organizationId=`, `?key=`, `?requestId=`) |
 | admin | `/analytics/sales` | `?weeks=` (written with `router.push`: the server computes the period) |
-| web | `/rewardhub` and the public landing catalog `/` | page, cursor, `search` (committed on submit), `filter[city]`, `filter[category]` |
+| web | `/dashboard` and the public landing catalog `/` | page, cursor, `search` (committed on submit), `filter[city]`, `filter[category]` |
 | merchant | `/orgs/[orgSlug]/redemptions` | page, cursor (the store stays in `tenant-context`) |
 | merchant | `/orgs/[orgSlug]/api-keys` | `?status=revoked\|all` — a view filter over the loaded keys (the counts need every key), so not an API filter and not part of the prefetch |
 
@@ -433,7 +448,7 @@ list controls — the web wallet and activity pages, merchant rewards, team, loc
 analytics and verification — have nothing to move until they gain search, filters or paging.
 
 A search box that commits on **submit** (the web catalog) keeps its unsubmitted text in
-`useSubmittedUrlDraft` (apps/web/lib/url-state): local, and reset whenever the URL's value changes.
+`useSubmittedUrlDraft` (`packages/client/src/lib/url-state`): local, and reset whenever the URL's value changes.
 A submitted search is a discrete change, so it **pushes**.
 
 In-page selection (`/merchants/verification?organizationId=`, `/emails/templates?key=`,

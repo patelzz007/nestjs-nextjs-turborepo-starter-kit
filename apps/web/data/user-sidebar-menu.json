@@ -10,31 +10,31 @@
       "items": [
         {
           "title": "Browse Rewards",
-          "url": "/rewardhub",
+          "url": "/dashboard",
           "icon": "Search",
           "disabled": false
         },
         {
           "title": "Near Me",
-          "url": "/rewardhub/nearby",
+          "url": "/dashboard/nearby",
           "icon": "MapPin",
           "disabled": true
         },
         {
           "title": "Trending",
-          "url": "/rewardhub/trending",
+          "url": "/dashboard/trending",
           "icon": "TrendingUp",
           "disabled": true
         },
         {
           "title": "Categories",
-          "url": "/rewardhub/categories",
+          "url": "/dashboard/categories",
           "icon": "FolderOpen",
           "disabled": true
         },
         {
           "title": "Favorites",
-          "url": "/rewardhub/favorites",
+          "url": "/dashboard/favorites",
           "icon": "Heart",
           "disabled": true
         }
@@ -46,19 +46,19 @@
       "items": [
         {
           "title": "My Wallet",
-          "url": "/rewardhub/wallet",
+          "url": "/dashboard/wallet",
           "icon": "Wallet",
           "disabled": false
         },
         {
           "title": "Redeemed",
-          "url": "/rewardhub/wallet/redeemed",
+          "url": "/dashboard/wallet/redeemed",
           "icon": "CheckCircle",
           "disabled": true
         },
         {
           "title": "Expired",
-          "url": "/rewardhub/wallet/expired",
+          "url": "/dashboard/wallet/expired",
           "icon": "Clock",
           "disabled": true
         }
@@ -70,19 +70,19 @@
       "items": [
         {
           "title": "My Activity",
-          "url": "/rewardhub/activity",
+          "url": "/dashboard/activity",
           "icon": "BarChart2",
           "disabled": false
         },
         {
           "title": "Claim Trends",
-          "url": "/rewardhub/activity/claims",
+          "url": "/dashboard/activity/claims",
           "icon": "TrendingUp",
           "disabled": true
         },
         {
           "title": "History",
-          "url": "/rewardhub/activity/history",
+          "url": "/dashboard/activity/history",
           "icon": "Clock",
           "disabled": true
         }
@@ -94,31 +94,31 @@
       "items": [
         {
           "title": "Referrals",
-          "url": "/rewardhub/referrals",
+          "url": "/dashboard/referrals",
           "icon": "Users",
           "disabled": false
         },
         {
           "title": "Points",
-          "url": "/rewardhub/points",
+          "url": "/dashboard/points",
           "icon": "Award",
           "disabled": true,
           "children": [
             {
               "title": "Balance",
-              "url": "/rewardhub/points/balance",
+              "url": "/dashboard/points/balance",
               "icon": "Wallet",
               "disabled": true
             },
             {
               "title": "History",
-              "url": "/rewardhub/points/history",
+              "url": "/dashboard/points/history",
               "icon": "FileText",
               "disabled": true
             },
             {
               "title": "Redeem Points",
-              "url": "/rewardhub/points/redeem",
+              "url": "/dashboard/points/redeem",
               "icon": "Gift",
               "disabled": true
             }
@@ -130,13 +130,13 @@
   "bottomItems": [
     {
       "title": "Account",
-      "url": "/rewardhub/account",
+      "url": "/dashboard/account",
       "icon": "UserCog",
       "disabled": false
     },
     {
       "title": "Help & Support",
-      "url": "/rewardhub/support",
+      "url": "/dashboard/support",
       "icon": "HelpCircle",
       "disabled": true
     }

@@ -4,6 +4,18 @@ Short, scannable ❌/✅ pairs grouped by area. Each entry names the failure mod
 
 ---
 
+## Bounded contexts (`01`, `02`, ADR 058)
+
+```ts
+// ❌ a business if inside the HTTP handler, or Prisma imported from application code
+// ❌ import { RewardRepository } from "../../rewards/infrastructure/persistence/reward.repository";
+// ✅ import { RewardsModule } from "../../rewards/public-api";
+// ❌ email sent after the business transaction commits (ADR 060)
+// ❌ a public POST with no @RateLimit and no explicit skip
+// ❌ a GET handler that writes a row
+// ❌ a list that queries once per row (rules/19)
+```
+
 ## TypeScript (`00`)
 
 ```ts

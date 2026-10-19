@@ -3,7 +3,7 @@ title: "API reference — Point of sale (machine-to-machine)"
 description: "Terminal pairing, validating a customer's QR / backup code and recording the paid bill. Authenticated with a merchant API key."
 order: 7
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -25,9 +25,9 @@ Pair a POS terminal with the one-time code from the merchant console
 Returns the terminal's own API key (shown once). Send it as X-API-Key on every redemption call; X-Terminal-Id is then optional.
 
 - **Public** — no session required.
-- Rate limit: `PAIRING_ATTEMPTS_PER_WINDOW` requests per `PAIRING_WINDOW_MS` ms per client IP (strict limiter).
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PosTerminalsController_pair` · [source](../../../apps/api/src/modules/rewards/controllers/organization-terminals.controller.ts)
+- Operation id `PosTerminalsController_pair` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -63,7 +63,7 @@ POST /api/v1/pos/terminals/pair
 Content-Type: application/json
 
 {
-  "pairingCode": "TADMREEM"
+  "pairingCode": "2K7XZBX8"
 }
 ```
 
@@ -81,13 +81,13 @@ Response `201 Created` (application/json):
       "displayName": "Brew & Bean KL"
     },
     "location": {
-      "id": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
+      "id": "019b76da-a800-701a-abbd-a9a411b6958b",
       "name": "Brew & Bean KL — Bukit Bintang"
     }
   },
   "meta": {
-    "correlationId": "61AeUu7DbdvCsykliVPXU",
-    "timestamp": 1791193339789
+    "correlationId": "uVE0OHjrNRYqHNt6xnFxl",
+    "timestamp": 1792435615348
   }
 }
 ```
@@ -102,7 +102,7 @@ Send the bill total in minor units (sen) and up to 10 QR tokens / backup codes o
 
 - **Merchant API key** — `X-API-Key: mk_live_…` (or `Authorization: Bearer mk_live_…`). No cookie, no session.
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RedemptionsController_checkout` · [source](../../../apps/api/src/modules/rewards/controllers/redemptions.controller.ts)
+- Operation id `RedemptionsController_checkout` · [source](../../../apps/api/src/contexts/pos/presentation/http/redemptions.controller.ts)
 
 **Parameters**
 
@@ -154,7 +154,7 @@ X-Terminal-Id: KL-REGISTER-01
 Content-Type: application/json
 
 {
-  "idempotencyKey": "f815f2d6-2049-4703-94ac-b79e5b21cf1c",
+  "idempotencyKey": "a8dacc88-ddfe-4f9b-b8a2-777c6890386d",
   "billTotalMinor": 2500,
   "currency": "MYR",
   "codes": [
@@ -171,23 +171,23 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "saleId": "388bfe2d-4b41-4904-9468-85e8bfdbd808",
+    "saleId": "01a1557c-f726-7f0c-bb29-7126480d154b",
     "billTotalMinor": 2500,
     "currency": "MYR",
-    "paidAt": 1791193339862,
-    "idempotencyKey": "f815f2d6-2049-4703-94ac-b79e5b21cf1c",
+    "paidAt": 1792435615507,
+    "idempotencyKey": "a8dacc88-ddfe-4f9b-b8a2-777c6890386d",
     "redemptions": [
       {
-        "redemptionId": "6b43c61d-2092-43bc-beed-cd4a75de8122",
-        "claimId": "74199f6f-877f-4d87-8a02-78941a4ae1af",
-        "rewardId": "c1214e16-bf0f-4410-8871-8d1a9970f75e",
+        "redemptionId": "01a1557c-f754-72cb-98f8-580ee7da3f2d",
+        "claimId": "019b76da-a800-7c1a-9069-f2e16d4af0a3",
+        "rewardId": "019b76da-a800-7abc-a318-2ac9fe8ee4ca",
         "rewardTitle": "Free coffee — Grand Opening"
       }
     ]
   },
   "meta": {
-    "correlationId": "85STI5qqDySqXtFTtYj7P",
-    "timestamp": 1791193339893
+    "correlationId": "4IntGjAhaILoJpo8tvS_A",
+    "timestamp": 1792435615601
   }
 }
 ```
@@ -198,7 +198,7 @@ POS validate QR or backup code
 
 - **Merchant API key** — `X-API-Key: mk_live_…` (or `Authorization: Bearer mk_live_…`). No cookie, no session.
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RedemptionsController_validate` · [source](../../../apps/api/src/modules/rewards/controllers/redemptions.controller.ts)
+- Operation id `RedemptionsController_validate` · [source](../../../apps/api/src/contexts/pos/presentation/http/redemptions.controller.ts)
 
 **Parameters**
 
@@ -252,17 +252,17 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "claimId": "74199f6f-877f-4d87-8a02-78941a4ae1af",
+    "claimId": "019b76da-a800-7c1a-9069-f2e16d4af0a3",
     "rewardTitle": "Free coffee — Grand Opening",
     "rewardType": "FREE_ITEM",
-    "claimExpiresAt": 1791797951336,
+    "claimExpiresAt": 1793040350926,
     "valid": true,
     "invalidReason": null,
     "minSpendMinor": 0
   },
   "meta": {
-    "correlationId": "UrL8x1g3o-dPmgn-TFhRj",
-    "timestamp": 1791193339830
+    "correlationId": "qPBr-R8d714W_lcAQQ7Tk",
+    "timestamp": 1792435615450
   }
 }
 ```

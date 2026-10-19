@@ -10,8 +10,8 @@ export interface WebErrorProps {
 }
 
 /**
- * Error boundary for the pages outside `/rewardhub` (the landing page, the
- * public reward detail, the auth pages). `/rewardhub` has its own boundary
+ * Error boundary for the pages outside `/dashboard` (the landing page, the
+ * public reward detail, the auth pages). `/dashboard` has its own boundary
  * inside its shell; errors in the root layout reach `global-error.tsx`.
  */
 export default function WebError({ error, retry }: WebErrorProps): React.JSX.Element {

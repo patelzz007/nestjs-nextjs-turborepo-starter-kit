@@ -15,6 +15,7 @@
  *   #   DATABASE_URL=…/docs_api_capture PORT=8097 BULLMQ_PREFIX=docs-capture \
  *   #   EMAIL_MODE=log-only LOGIN_VERIFICATION_MODE=disabled TRUST_PROXY=loopback \
  *   #   STORAGE_PROVIDER=local KAFKA_BROKERS= THROTTLE_DEFAULT_LIMIT=100000 \
+ *   #   GITHUB_REPOSITORIES= GITHUB_TOKEN= \
  *   #   node apps/api/dist/main.js > api.log    (run from apps/api so it reads apps/api/.env)
  *   API_BASE_URL=http://127.0.0.1:8097 API_LOG_FILE=$PWD/api.log SEED_LOG_FILE=$PWD/seed.log \
  *     pnpm --filter @workspace/docs capture:api-samples
@@ -29,6 +30,8 @@
  *   - TRUST_PROXY=loopback lets each persona send its own X-Forwarded-For, so the
  *     per-IP login throttle (5/min) does not stall the run.
  *   - its own BULLMQ_PREFIX keeps the run's jobs away from a dev API on the same Redis.
+ *   - GITHUB_REPOSITORIES= / GITHUB_TOKEN= override the developer's .env: with them set, the samples would
+ *     list the developer's real (possibly private) repositories, and those must never be committed.
  *
  * Optional: CAPTURE_STORAGE_CALLBACK_SECRET / CAPTURE_RESEND_WEBHOOK_SECRET (the
  * values the capture API was started with) sign the two machine callbacks; without
@@ -44,6 +47,7 @@
 
 import { createHash, createHmac, randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { crc32, deflateSync } from "node:zlib";
 import { resolve } from "node:path";
 
 import { neutralizeEmailAddresses } from "../src/lib/api-reference/sample-privacy.ts";
@@ -79,19 +83,18 @@ const MS_PER_SECOND = 1000;
 const SEED = {
 	klSlug: "brew-bean-kl",
 	mlkSlug: "jonker-street-kitchen",
-	klOrganizationId: "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-	mlkOrganizationId: "b57401d5-536e-464f-9ae9-4756b6dd5f61",
-	klLocationId: "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-	mlkLocationKatilId: "d57401d5-536e-464f-9ae9-4756b6dd5f62",
-	mlkLocationBeruangId: "257401d5-536e-464f-9ae9-4756b6dd5f65",
-	mlkCashierMembershipId: "157401d5-536e-464f-9ae9-4756b6dd5f64",
+	klOrganizationId: "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+	mlkOrganizationId: "019b76da-a800-72b9-80b8-91bd729eddbe",
+	klLocationId: "019b76da-a800-701a-abbd-a9a411b6958b",
+	mlkLocationKatilId: "019b76da-a800-7123-957b-191cb8255776",
+	mlkLocationBeruangId: "019b76da-a800-7685-9734-84f5f07eb21f",
+	mlkCashierMembershipId: "019b76da-a800-7b0f-b2e9-e7ccd28b72af",
 	teamInviteToken: "seed_team_invite_token_kl_alice",
 	klPosKey:
 		"mk_live_IwgbQID2Csq4nbnfwUxVUrQT8lwrlhEz7bzagwasKyFtZYSQ42LSH43lzTfRdBkV7tZArdHQQE4EW0wDHpVAroL57w/+5AzsCxRpax2fmu3JqITATsJKJRi4+fifNVj1E3WswonhsleEBinxwcMOlqccH0suhUq6mJWVvaWYkf8=",
 	klTerminalId: "KL-REGISTER-01",
 	pendingQrToken: "seed_qr_token_kl_pending_alice_001",
 	pendingBackupCode: "ABCD2345",
-	sampleFile: resolve(REPO_ROOT, "docs/images/email/welcome.png"),
 };
 
 /** The seed accounts this run signs in as (`pnpm db:seed` prints them). */
@@ -399,15 +402,57 @@ async function totp(secret) {
 	return String(code).padStart(TOTP_DIGITS, "0");
 }
 
-const sampleBytes = readFileSync(SEED.sampleFile);
-const sampleChecksum = createHash("sha256").update(sampleBytes).digest("hex");
-const sampleFileInfo = { fileName: "welcome.png", mimeType: "image/png", sizeBytes: sampleBytes.length, checksumSha256: sampleChecksum };
+// ── Sample images ───────────────────────────────────────────────────────────
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+/** IHDR: 8-bit RGB, deflate, adaptive filtering, no interlace. */
+const PNG_BIT_DEPTH = 8;
+const PNG_COLOR_TYPE_RGB = 2;
+/** The square sample (avatars, product images, documents): the avatar policy's minimum is 256 px. */
+const SQUARE_SAMPLE_SIDE = 512;
+/** A reward image must be 16:9 and at least Full HD (FILE_CATEGORY_POLICIES.REWARD_IMAGE). */
+const REWARD_IMAGE_WIDTH = 1920;
+const REWARD_IMAGE_HEIGHT = 1080;
+/** The brand green the seed's own images use. */
+const SAMPLE_RGB = [0, 122, 77];
+
+function pngChunk(type, data) {
+	const length = Buffer.alloc(4);
+	length.writeUInt32BE(data.length);
+	const typed = Buffer.concat([Buffer.from(type, "ascii"), data]);
+	const checksum = Buffer.alloc(4);
+	checksum.writeUInt32BE(crc32(typed));
+	return Buffer.concat([length, typed, checksum]);
+}
+
+/** A solid-colour PNG of `width` × `height` — real image bytes the API's dimension checks accept. */
+function solidPng(width, height) {
+	const header = Buffer.alloc(13);
+	header.writeUInt32BE(width, 0);
+	header.writeUInt32BE(height, 4);
+	header.writeUInt8(PNG_BIT_DEPTH, 8);
+	header.writeUInt8(PNG_COLOR_TYPE_RGB, 9);
+	const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array.from({ length: width }, () => SAMPLE_RGB).flat())]);
+	const pixels = Buffer.concat(Array.from({ length: height }, () => row));
+	return Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", header), pngChunk("IDAT", deflateSync(pixels)), pngChunk("IEND", Buffer.alloc(0))]);
+}
+
+/** The upload request fields of `bytes` as `fileName`. */
+function pngFileInfo(fileName, bytes) {
+	return { fileName, mimeType: "image/png", sizeBytes: bytes.length, checksumSha256: createHash("sha256").update(bytes).digest("hex") };
+}
+
+const sampleBytes = solidPng(SQUARE_SAMPLE_SIDE, SQUARE_SAMPLE_SIDE);
+const sampleFileInfo = pngFileInfo("sample.png", sampleBytes);
+const sampleChecksum = sampleFileInfo.checksumSha256;
+const rewardImageBytes = solidPng(REWARD_IMAGE_WIDTH, REWARD_IMAGE_HEIGHT);
+const rewardImageInfo = pngFileInfo("reward.png", rewardImageBytes);
 
 /** Sends the bytes to an upload ticket (local provider: the API's /files/:id/local-upload). */
-async function uploadToTicket(ticket) {
+async function uploadToTicket(ticket, bytes = sampleBytes, fileName = sampleFileInfo.fileName) {
 	const form = new FormData();
 	for (const [name, value] of Object.entries(ticket.fields ?? {})) form.set(name, value);
-	form.set("file", new Blob([sampleBytes], { type: "image/png" }), "welcome.png");
+	form.set("file", new Blob([bytes], { type: "image/png" }), fileName);
 	const url = new URL(ticket.uploadUrl ?? ticket.url);
 	return { path: `${url.pathname}${url.search}`, form, fields: ticket.fields ?? {} };
 }
@@ -863,7 +908,7 @@ async function captureFiles(context) {
 			method: "POST",
 			path: upload.path,
 			form: upload.form,
-			formDescription: { "multipart/form-data": { ...sanitize(upload.fields), file: "<the image bytes: welcome.png, image/png>" } },
+			formDescription: { "multipart/form-data": { ...sanitize(upload.fields), file: "<the image bytes: sample.png, image/png>" } },
 		},
 		{ as: "the browser, posting to the upload ticket (no session needed)" },
 	);
@@ -1017,7 +1062,6 @@ async function captureOrganization(context) {
 	context.brewOwner = owner;
 	const slug = SEED.klSlug;
 	await capture("OrganizationMembershipsBootstrapController_listMemberships", owner, { method: "GET", path: api("/orgs/memberships") });
-	await capture("OrganizationRewardMembershipsController_listMemberships", owner, { method: "GET", path: api(`/orgs/${slug}/memberships`) });
 	await capture("OrganizationController_getContext", owner, { method: "GET", path: api(`/orgs/${slug}/context`) });
 	await capture("OrganizationController_listMembers", owner, { method: "GET", path: api(`/orgs/${slug}/members`) });
 	await capture("OrganizationController_listMemberInvites", owner, { method: "GET", path: api(`/orgs/${slug}/members/invites`) });
@@ -1165,9 +1209,22 @@ async function captureRewards(context) {
 	const rewards = await capture("OrganizationRewardsController_listRewards", owner, { method: "GET", path: api(`/orgs/${slug}/rewards`) });
 	const seededReward = Array.isArray(rewards) ? rewards[0] : rewards?.items?.[0];
 	await capture("OrganizationRewardsController_getReward", owner, { method: "GET", path: api(`/orgs/${slug}/rewards/${seededReward?.id}`) });
+	// A reward needs at least one 16:9 Full HD image, uploaded by the merchant before the draft names it.
+	const imageTicket = await send(owner, {
+		method: "POST",
+		path: api("/files/upload-url"),
+		body: { category: "REWARD_IMAGE", organizationId: SEED.klOrganizationId, ...rewardImageInfo },
+	});
+	const imageTicketData = imageTicket.json?.data;
+	const imageUpload = await uploadToTicket(imageTicketData?.upload ?? imageTicketData, rewardImageBytes, rewardImageInfo.fileName);
+	const rewardImageFileId = imageTicketData?.fileId ?? imageTicketData?.file?.id ?? imageTicketData?.id;
+	await send(null, { method: "POST", path: imageUpload.path, form: imageUpload.form });
+	await send(owner, { method: "POST", path: api(`/files/${rewardImageFileId}/complete`), body: { checksumSha256: rewardImageInfo.checksumSha256 } });
+	await sleep(SETTLE_DELAY_MS);
 	const DAY_MS = 86_400_000;
 	const now = Date.now();
 	const draftBody = {
+		imageFileIds: [rewardImageFileId],
 		title: "Free Kopi O with any breakfast set",
 		description: "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
 		category: "cafe",
@@ -1228,7 +1285,8 @@ async function captureCustomer(context) {
 	const phone = "+60123456789";
 	const offset = logOffset();
 	await capture("ConsumerClaimsController_requestOtp", customer, { method: "POST", path: api("/claims/otp"), body: { rewardId: context.approvedRewardId, phone } });
-	const otp = await nextFromLog(/\[reward-otp\][^\n]*code=(\d+)/g, offset);
+	// The claim email (log-only mode) carries the six-digit code on its own line under "Claim verification code".
+	const otp = await nextFromLog(/Claim verification code[\s\S]*?\n(\d{6})\n/g, offset);
 	const claim = await capture("ConsumerClaimsController_createClaim", customer, {
 		method: "POST",
 		path: api("/claims"),
@@ -1236,7 +1294,7 @@ async function captureCustomer(context) {
 	});
 	const claims = await capture("ConsumerClaimsController_listClaims", customer, { method: "GET", path: api("/claims"), query: { limit: "2" } });
 	void claims;
-	await capture("ConsumerClaimsController_getClaimQr", customer, { method: "GET", path: api(`/claims/${claim?.claim?.id}/qr`) });
+	await capture("ConsumerClaimsController_issueQrCodes", customer, { method: "POST", path: api(`/claims/${claim?.claim?.id}/qr`) });
 	context.customer = customer;
 }
 
@@ -1311,8 +1369,8 @@ async function capturePos(context) {
 	await capture("OrganizationTerminalsController_remove", owner, { method: "DELETE", path: api(`/orgs/${slug}/terminals/${terminalRowId}`) });
 
 	const { customer } = context;
-	await capture("ConsumerClaimsController_getAnalytics", customer, { method: "GET", path: api("/claims/analytics") });
-	await capture("ConsumerClaimsController_getAnalyticsDashboard", customer, { method: "GET", path: api("/claims/analytics/dashboard"), query: { interval: "month" } });
+	await capture("ConsumerAnalyticsController_getAnalytics", customer, { method: "GET", path: api("/claims/analytics") });
+	await capture("ConsumerAnalyticsController_getAnalyticsDashboard", customer, { method: "GET", path: api("/claims/analytics/dashboard"), query: { interval: "month" } });
 	await capture("RewardNotificationsController_listNotifications", customer, { method: "GET", path: api("/reward-notifications"), query: { limit: "2" } });
 	await capture("RewardNotificationsController_markRead", customer, { method: "POST", path: api("/reward-notifications/read"), body: { markAll: true } });
 }

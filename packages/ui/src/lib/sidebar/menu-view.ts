@@ -63,7 +63,7 @@ function isCloserMatch(candidate: RouteMatch, current: RouteMatch): boolean {
  *   are never active themselves** (no parent/grandparent highlighting):
  *   1. When menu entries point **exactly** at the current pathname, each root
  *      branch lights its deepest such entry — aliases in different sections all
- *      light up (Dashboard + Browse All on `/rewardhub`), but a parent sharing
+ *      light up (Dashboard + Browse All on `/dashboard`), but a parent sharing
  *      its URL with the active child ("My Rewards" → "All Rewards") stays dark.
  *   2. Otherwise (an unmapped detail page like `/rewards/<id>`) the **single
  *      closest match** — longest matching URL, deeper item on ties — lights up,

@@ -10,7 +10,7 @@ describe("webProfileMenuItems", () => {
 
 		expect(items.map((item) => item.label)).toStrictEqual(["Browse rewards", "My rewards", "Account settings"]);
 		items.find((item) => item.label === "Account settings")?.onClick();
-		expect(navigate).toHaveBeenCalledWith(ROUTES.rewardHub.account);
+		expect(navigate).toHaveBeenCalledWith(ROUTES.dashboard.account);
 	});
 
 	it("does not offer account settings to anonymous visitors", () => {
@@ -23,6 +23,6 @@ describe("webProfileMenuItems", () => {
 
 		browse?.onClick();
 		wallet?.onClick();
-		expect(navigate.mock.calls).toStrictEqual([[ROUTES.rewardHub.browse], [ROUTES.rewardHub.wallet]]);
+		expect(navigate.mock.calls).toStrictEqual([[ROUTES.dashboard.browse], [ROUTES.dashboard.wallet]]);
 	});
 });

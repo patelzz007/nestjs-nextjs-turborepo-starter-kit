@@ -1,13 +1,13 @@
 import { assertNever, type Envelope, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
 
-import type { AuthSyncEvent } from "../../auth/session/sync";
+import type { AuthSyncEvent } from "../../contexts/identity/session/sync";
 import type { FeatureEffect } from "../../state/feature-store";
 import type { AuthAction } from "./actions";
 import type { AuthSessionState } from "./state";
 
 /**
  * The session's slice of the TanStack Query cache — the browser
- * implementation is `createAuthQueryCache` (`lib/auth/session/auth-query-cache.ts`),
+ * implementation is `createAuthQueryCache` (`lib/contexts/identity/session/auth-query-cache.ts`),
  * a fake in tests.
  */
 export interface AuthQueryCache {

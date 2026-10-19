@@ -4,8 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { z } from "zod";
 
-import type { AnalyticsWindow } from "../src/modules/rewards/analytics/analytics-scope";
-import { AnalyticsSqlRunner, bucketsCte } from "../src/modules/rewards/analytics/analytics-sql";
+import type { AnalyticsWindow } from "../src/contexts/reporting/domain/value-objects/analytics-scope.value-object";
+import { AnalyticsSqlRunner, bucketsCte } from "../src/contexts/reporting/infrastructure/persistence/analytics-sql";
 import { createE2eApp } from "./e2e-helpers";
 
 const HOUR_MS = 3_600_000;

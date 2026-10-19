@@ -125,6 +125,7 @@ export function staticSteps({ base, noCache }) {
 		// One workspace's suite at a time (docs/technical/operations/ci.md, "Unit tests").
 		{ id: "test", job: "Unit tests", command: "pnpm", args: [...turbo("test"), "--concurrency=1"] },
 		{ id: "build", job: "Build", command: "pnpm", args: turbo("build"), env: CI_BUILD_ENV },
+		{ id: "bundle-budgets", job: "Build", command: "pnpm", args: ["bundle:check"] },
 		{ id: "rls-manifest", job: "RLS manifest drift", command: "pnpm", args: ["--filter", "@workspace/api", "db:check-rls-manifest"] },
 		{ id: "deps", job: "Dependency consistency", command: "pnpm", args: ["turbo", "run", "deps:check"] },
 		{ id: "migration-history", job: "Migration history", command: "node", args: ["packages/tooling/scripts/check-migration-history.mjs", "--base", base, "--working-tree"] },

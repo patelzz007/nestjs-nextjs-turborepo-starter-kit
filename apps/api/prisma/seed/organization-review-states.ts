@@ -2,7 +2,7 @@ import type { OrganizationLifecycleState, OrganizationMembershipRole, Prisma, Us
 import * as bcrypt from "bcrypt";
 import { PILOT_CITY_TIME_ZONES, DAY_MS } from "@workspace/shared";
 
-import { findActivePolicyVersionInTx, seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { findActivePolicyVersionInTx, seedDefaultTenantPolicies } from "../../src/contexts/authorization/public-api";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -21,7 +21,7 @@ import { seedTenantEncryptionKeys } from "./tenant-encryption";
 //
 //   access requests   one APPROVED (the owner admitted the requester as a cashier: membership +
 //                     store scope created in the same step) and one REJECTED — both with the
-//                     reviewer and review time (`reviewed_by_id`, `reviewed_at`)
+//                     reviewer and review time (`reviewedById`, `reviewedAt`)
 //   store requests    a store the platform admin REJECTED, with the reason shown to the merchant
 //   lifecycle         an organization whose owner asked for deletion (PENDING_DELETION, the 30-day
 //                     grace window running) and one whose grace period elapsed (DELETED, soft-deleted
@@ -306,9 +306,9 @@ const LIFECYCLE_ORGANIZATIONS: readonly LifecycleOrganization[] = [
 
 /**
  * An organization that went through the deletion flow: provisioned and activated, then the owner
- * requested deletion (`requestDeletion`: PENDING_DELETION + `deletion_grace_ends_at`); for a DELETED
- * one the grace period elapsed and the organization was soft-deleted (`deleted_at`) together with
- * its memberships. Complete tenant: profile, placement, entitlement, store, policy, data key.
+ * requested deletion (`requestDeletion`: PENDING_DELETION + `deletionGraceEndsAt`); for a DELETED
+ * one the grace period elapsed and the organization was soft-deleted (`deletedAt`) together with
+ * its memberships. Complete tenant: profile, placement, store, policy, data key.
  */
 async function seedLifecycleOrganization(spec: LifecycleOrganization, platformAdminId: string, now: number): Promise<void> {
 	const organizationId = id(`organization:${spec.key}`);
@@ -368,12 +368,6 @@ async function seedLifecycleOrganization(spec: LifecycleOrganization, platformAd
 		update: {},
 	});
 	await prisma.tenantPlacement.upsert({ where: { organizationId }, create: { organizationId, kind: "SHARED", regionCode: "default", createdAt: provisionedAt }, update: {} });
-	const entitlementId = id(`entitlement:${spec.key}`);
-	await prisma.organizationEntitlement.upsert({
-		where: { id: entitlementId },
-		create: { id: entitlementId, organizationId, planCode: "pilot", features: { rewards: true }, version: 1, effectiveFrom: activatedAt, createdAt: activatedAt },
-		update: {},
-	});
 	const locationId = id(`location:${spec.key}:primary`);
 	await prisma.organizationLocation.upsert({
 		where: { organizationId_code: { organizationId, code: "primary" } },
@@ -421,11 +415,11 @@ async function seedLifecycleOrganization(spec: LifecycleOrganization, platformAd
 	await prisma.organizationMembershipLocationScope.create({ data: { organizationId, membershipId, scopeType: "ALL_LOCATIONS", createdAt: activatedAt } });
 
 	// Tenant policy + data key, as provisioning creates them (the key is created once; a re-run keeps it).
-	await seedRewardHubTenantPolicies(prisma, organizationId, platformAdminId, defaultTenantPolicySeedIds(organizationId));
+	await seedDefaultTenantPolicies(prisma, organizationId, platformAdminId, defaultTenantPolicySeedIds(organizationId));
 	await seedTenantEncryptionKeys([{ organizationId, actorUserId: platformAdminId }]);
 
 	const events: LifecycleEventSeed[] = [
-		{ key: "provisioned", from: null, to: "PROVISIONING", actorUserId: platformAdminId, reason: "RewardHub admin invite created", at: provisionedAt },
+		{ key: "provisioned", from: null, to: "PROVISIONING", actorUserId: platformAdminId, reason: "Platform admin invite created", at: provisionedAt },
 		{ key: "activated", from: "PROVISIONING", to: "ACTIVE", actorUserId: owner.id, reason: "Onboarding complete", at: activatedAt },
 		{ key: "deletion-requested", from: "ACTIVE", to: "PENDING_DELETION", actorUserId: owner.id, reason: "Owner requested deletion", at: deletionRequestedAt },
 	];
@@ -457,7 +451,7 @@ async function seedLifecycleOrganization(spec: LifecycleOrganization, platformAd
 		resourceType: "Organization",
 		resourceId: organizationId,
 		createdAt: provisionedAt,
-		metadata: { source: "rewardhub_admin_invite" },
+		metadata: { source: "admin_merchant_invite" },
 	});
 	await auditRow(`${spec.key}:activated`, {
 		organizationId,

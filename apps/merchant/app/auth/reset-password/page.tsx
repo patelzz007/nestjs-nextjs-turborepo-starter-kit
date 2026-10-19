@@ -1,12 +1,13 @@
 "use client";
 
-import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-password-form";
-import { ResetPasswordFormSkeleton } from "@workspace/client/lib/auth/forms/reset-password-form-skeleton";
+import { ResetPasswordForm } from "@workspace/client/lib/contexts/identity/forms/reset-password-form";
+import { ResetPasswordFormSkeleton } from "@workspace/client/lib/contexts/identity/forms/reset-password-form-skeleton";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
 
 import { ROUTES } from "@/lib/routes";
+import { BRAND_NAME } from "@workspace/tokens";
 
 /** The `?token=` from the reset email; a missing or blank token gets a clear dead-end message. */
 function MerchantResetPasswordContent(): JSX.Element {
@@ -32,7 +33,7 @@ export default function MerchantResetPasswordPage(): JSX.Element {
 			features={["Must meet complexity requirements", "Cannot reuse recent passwords", "Other sessions will be signed out"]}
 			title="Create new password"
 			subtitle="Your new password must be different from previous passwords"
-			copyright="Reward Hub"
+			copyright={BRAND_NAME}
 			showBackButton
 			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">

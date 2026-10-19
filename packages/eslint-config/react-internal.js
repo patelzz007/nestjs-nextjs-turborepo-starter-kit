@@ -2,7 +2,8 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import globals from "globals";
 
 import { config as baseConfig } from "./base.js";
-import { frontendImportBoundaryConfig } from "./import-boundaries.js";
+import { clientOnlyWidgetsConfig } from "./client-only-widgets.js";
+import { frontendContextBoundaryConfigs, frontendImportBoundaryConfig } from "./import-boundaries.js";
 import { reactRuleBlocks } from "./react-rules.js";
 import { withErrorSeverity } from "./rule-severity.js";
 
@@ -48,6 +49,14 @@ export const config = [
 	// ── Import boundaries (frontend) ────────────────────────────────────
 	// Same browser-safety boundaries as the Next apps (see docs/technical/tooling/eslint.md).
 	frontendImportBoundaryConfig,
+	// One context reaches another only through its index (plan §12.2).
+	...frontendContextBoundaryConfigs,
+
+	// ── Client-only widgets (decision #58) ──────────────────────────────
+	// `next/dynamic(..., { ssr: false })` only in an allowlisted `*.client-only.tsx`
+	// wrapper. Empty here, so it fails closed; a workspace that renders the
+	// widgets passes CLIENT_ONLY_WIDGETS (@workspace/ui/lib/client-only-widgets).
+	clientOnlyWidgetsConfig([]),
 
 	// ── Accessibility rules ─────────────────────────────────────────────
 	{

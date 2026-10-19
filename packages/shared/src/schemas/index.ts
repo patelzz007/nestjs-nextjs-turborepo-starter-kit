@@ -11,7 +11,7 @@ export {
 	UsageLogQuerySchema,
 	UsageStatsResponseSchema,
 	VerifiedApiKeySchema,
-} from "./domain/platform/api-keys";
+} from "../contexts/pos/schemas/api-keys";
 export type {
 	AdminApiKey,
 	ApiKeyMessageResponse,
@@ -23,7 +23,7 @@ export type {
 	UsageLogQueryInput,
 	UsageStatsResponse,
 	VerifiedApiKey,
-} from "./domain/platform/api-keys";
+} from "../contexts/pos/schemas/api-keys";
 export {
 	ForgotPasswordResponseSchema,
 	ForgotPasswordSchema,
@@ -71,7 +71,7 @@ export {
 	BrowserClientTypeSchema,
 	authTokenTransportOf,
 	isBrowserClientType,
-} from "./auth/auth";
+} from "../contexts/identity/schemas/auth";
 export type {
 	ForgotPasswordInput,
 	AuthClientType,
@@ -112,8 +112,8 @@ export type {
 	StopImpersonationServiceResponse,
 	VerifyEmailInput,
 	VerifyEmailResponse,
-} from "./auth/auth";
-export { ChangePasswordResponseSchema, ChangePasswordSchema } from "./auth/change-password";
+} from "../contexts/identity/schemas/auth";
+export { ChangePasswordResponseSchema, ChangePasswordSchema } from "../contexts/identity/schemas/change-password";
 export {
 	OWN_PROFILE_EDITABLE_FIELDS,
 	OWN_PROFILE_ERROR_CODES,
@@ -125,9 +125,9 @@ export {
 	USER_FULL_NAME_MAX_LENGTH,
 	USER_FULL_NAME_MIN_LENGTH,
 	UserFullNameSchema,
-} from "./auth/profile";
-export type { OwnProfile, OwnProfileAvatar, OwnProfileEditableFields, OwnProfileErrorCode, UpdateOwnProfileInput } from "./auth/profile";
-export type { ChangePasswordInput, ChangePasswordResponse } from "./auth/change-password";
+} from "../contexts/identity/schemas/profile";
+export type { OwnProfile, OwnProfileAvatar, OwnProfileEditableFields, OwnProfileErrorCode, UpdateOwnProfileInput } from "../contexts/identity/schemas/profile";
+export type { ChangePasswordInput, ChangePasswordResponse } from "../contexts/identity/schemas/change-password";
 export {
 	AdminMfaRecoveryListQuerySchema,
 	adminMfaRecoveryListQuery,
@@ -137,7 +137,7 @@ export {
 	MfaRecoveryRecordStatusSchema,
 	MfaRecoveryRequestStatusSchema,
 	MfaRecoveryStatusResponseSchema,
-} from "./auth/mfa-recovery";
+} from "../contexts/identity/schemas/mfa-recovery";
 export type {
 	AdminMfaRecoveryListQuery,
 	AdminMfaRecoveryListSortField,
@@ -147,21 +147,21 @@ export type {
 	MfaRecoveryRecordStatus,
 	MfaRecoveryRequestStatus,
 	MfaRecoveryStatusResponse,
-} from "./auth/mfa-recovery";
+} from "../contexts/identity/schemas/mfa-recovery";
 export {
 	LoginVerificationCodeSchema,
 	LoginVerificationPendingResponseSchema,
 	ValidateResetTokenResponseSchema,
 	ValidateResetTokenSchema,
 	VerifyLoginSchema,
-} from "./auth/login-verification";
+} from "../contexts/identity/schemas/login-verification";
 export type {
 	LoginVerificationCode,
 	LoginVerificationPendingResponse,
 	ValidateResetTokenInput,
 	ValidateResetTokenResponse,
 	VerifyLoginInput,
-} from "./auth/login-verification";
+} from "../contexts/identity/schemas/login-verification";
 export {
 	BackupCodeSchema,
 	BackupCodesRemainingResponseSchema,
@@ -186,7 +186,7 @@ export {
 	normalizeBackupCodeInput,
 	StartTwoFactorSetupSchema,
 	TOTP_CODE_LENGTH,
-} from "./auth/two-factor";
+} from "../contexts/identity/schemas/two-factor";
 export type {
 	StartTwoFactorSetupInput,
 	BackupCode,
@@ -205,11 +205,11 @@ export type {
 	VerifyBackupCodeInput,
 	VerifyBackupCodeLoginInput,
 	VerifyBackupCodeResponse,
-} from "./auth/two-factor";
-export { AccessTokenPayloadSchema, EmailVerificationTokenPayloadSchema, FlatUserResponseSchema, RefreshTokenPayloadSchema } from "./auth/token";
-export type { AccessTokenPayload, EmailVerificationTokenPayload, FlatUserResponse, RefreshTokenPayload } from "./auth/token";
-export { CookieNamesSchema, CookieResultSchema, LoginTokenFieldsSchema } from "./auth/cookies";
-export type { CookieNames, CookieResult, LoginTokenFields } from "./auth/cookies";
+} from "../contexts/identity/schemas/two-factor";
+export { AccessTokenPayloadSchema, EmailVerificationTokenPayloadSchema, FlatUserResponseSchema, RefreshTokenPayloadSchema } from "../contexts/identity/schemas/token";
+export type { AccessTokenPayload, EmailVerificationTokenPayload, FlatUserResponse, RefreshTokenPayload } from "../contexts/identity/schemas/token";
+export { CookieNamesSchema, CookieResultSchema, LoginTokenFieldsSchema } from "../contexts/identity/schemas/cookies";
+export type { CookieNames, CookieResult, LoginTokenFields } from "../contexts/identity/schemas/cookies";
 export {
 	ApiErrorBodySchema,
 	ApiErrorCodes,
@@ -235,28 +235,8 @@ export {
 export type { ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse, DeleteSuccessData, Envelope, PaginatedServiceResult } from "./api/api-response";
 export { BULK_MUTATION_MAX_ITEMS, BulkDeleteIdsSchema, BulkDeleteResultSchema } from "./api/bulk-mutation";
 export type { BulkDeleteIdsInput, BulkDeleteResult } from "./api/bulk-mutation";
-export { AuthErrorCodeSchema } from "./auth/auth-errors";
-export type { AuthErrorCode } from "./auth/auth-errors";
-export {
-	AccountAnalyticsResponseSchema,
-	AdminOverviewResponseSchema,
-	AdminUrlItemSchema,
-	AdminUserItemSchema,
-	AnalyticsQuerySchema,
-	ClickQuerySchema,
-	ClickRecordResponseSchema,
-	UrlAnalyticsResponseSchema,
-} from "./domain/platform/clicks";
-export type {
-	AccountAnalyticsResponse,
-	AdminOverviewResponse,
-	AdminUrlItem,
-	AdminUserItem,
-	AnalyticsQueryInput,
-	ClickQueryInput,
-	ClickRecordResponse,
-	UrlAnalyticsResponse,
-} from "./domain/platform/clicks";
+export { AuthErrorCodeSchema } from "../contexts/identity/schemas/auth-errors";
+export type { AuthErrorCode } from "../contexts/identity/schemas/auth-errors";
 export {
 	BrowserUploadMethodSchema,
 	BrowserUploadTicketFieldsSchema,
@@ -296,7 +276,7 @@ export {
 	renditionsForWidth,
 	toFileUploadPolicy,
 	FileDetailResponseSchema,
-} from "./domain/platform/storage";
+} from "../contexts/files/schemas/storage";
 export type {
 	BrowserUploadMethod,
 	BrowserUploadTicket,
@@ -328,13 +308,13 @@ export type {
 	StorageProvider,
 	StoredObjectScanStatus,
 	FileDetailResponse,
-} from "./domain/platform/storage";
+} from "../contexts/files/schemas/storage";
 export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs, DataValueSchema } from "./api/common";
 export type { BaseResponse, EpochMs, DataPrimitive, DataValue } from "./api/common";
 export { CanonicalEmailSchema, canonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "./api/email-address";
 export type { CanonicalEmail } from "./api/email-address";
-export { SessionStatusSchema } from "./auth/session-status";
-export type { SessionStatus } from "./auth/session-status";
+export { SessionStatusSchema } from "../contexts/identity/schemas/session-status";
+export type { SessionStatus } from "../contexts/identity/schemas/session-status";
 export { ApiVersionManifestSchema } from "./api/version";
 export { APP_VERSION_MAX_LENGTH, AppVersionSchema, compareAppVersions } from "./api/app-version";
 export {
@@ -356,24 +336,27 @@ export {
 	SessionDeviceNameHeaderSchema,
 	SessionDeviceNameSchema,
 	sessionDisplayTextSchema,
-	SessionListResponseSchema,
+	SessionListQuerySchema,
+	sessionListQuery,
+	SESSION_LIST_PAGE_SIZE,
 	SessionLocationSchema,
 	SessionRevokedBySchema,
 	SessionSchema,
 	SessionSignInMethodSchema,
 	SessionSystemRevokerSchema,
-} from "./auth/device-session";
+} from "../contexts/identity/schemas/device-session";
 export type {
 	DeviceSessionErrorCode,
 	RevokeSessionInput,
 	RevokeSessionResponse,
 	Session,
-	SessionListResponse,
+	SessionListQuery,
+	SessionListSortField,
 	SessionLocation,
 	SessionRevokedBy,
 	SessionSignInMethod,
 	SessionSystemRevoker,
-} from "./auth/device-session";
+} from "../contexts/identity/schemas/device-session";
 export type { AppVersion, AppVersionOrder } from "./api/app-version";
 export type { ApiVersionManifest } from "./api/version";
 export {
@@ -401,7 +384,7 @@ export {
 	ResendWebhookHeadersSchema,
 	EmailWebhookInfoResponseSchema,
 	EmailWebhookReceivedResponseSchema,
-} from "./email/email";
+} from "../contexts/notifications/schemas/email";
 export {
 	AccountLockedEmailPropsSchema,
 	AdminAlertEmailPropsSchema,
@@ -422,7 +405,7 @@ export {
 	TwoFactorStatusEmailPropsSchema,
 	VerificationEmailPropsSchema,
 	WelcomeEmailPropsSchema,
-} from "./email/email-templates";
+} from "../contexts/notifications/schemas/email-templates";
 export type {
 	EmailLogCreate,
 	EmailLogEntry,
@@ -446,7 +429,7 @@ export type {
 	ResendWebhookHeaders,
 	EmailWebhookInfoResponse,
 	EmailWebhookReceivedResponse,
-} from "./email/email";
+} from "../contexts/notifications/schemas/email";
 export type {
 	AccountLockedEmailProps,
 	AdminAlertEmailProps,
@@ -467,22 +450,18 @@ export type {
 	TwoFactorStatusEmailProps,
 	VerificationEmailProps,
 	WelcomeEmailProps,
-} from "./email/email-templates";
-export {
-	AudienceTypeSchema,
-	DeviceTypeSchema,
-	IpAddressScopeSchema,
-	PermissionActionSchema,
-	PermissionResourceSchema,
-	PlanSchema,
-	RedirectTypeSchema,
-} from "./domain/platform/enums";
-export type { AudienceType, DeviceType, IpAddressScope, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/platform/enums";
+} from "../contexts/notifications/schemas/email-templates";
+export { AudienceTypeSchema, DeviceTypeSchema } from "../contexts/identity/schemas/identity-enums";
+export { IpAddressScopeSchema } from "../contexts/audit/schemas/audit-enums";
+export { PermissionActionSchema, PermissionResourceSchema } from "../contexts/authorization/schemas/permission-enums";
+export type { AudienceType, DeviceType } from "../contexts/identity/schemas/identity-enums";
+export type { IpAddressScope } from "../contexts/audit/schemas/audit-enums";
+export type { PermissionAction, PermissionResource } from "../contexts/authorization/schemas/permission-enums";
 export { EmailTemplateKeyParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/platform/param-schemas";
 export type { EmailTemplateKeyParam, UuidParam, VerifyEmailTokenParam } from "./domain/platform/param-schemas";
 
-export { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "./domain/platform/events";
-export type { AuthFlowEvent, EmailLogUpdatedEvent, ImpersonationActionEvent, SessionActionEvent } from "./domain/platform/events";
+export { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../contexts/reporting/schemas/events";
+export type { AuthFlowEvent, EmailLogUpdatedEvent, ImpersonationActionEvent, SessionActionEvent } from "../contexts/reporting/schemas/events";
 export {
 	DeepHealthResponseSchema,
 	HealthProbeStatusSchema,
@@ -503,41 +482,8 @@ export type {
 	ReadinessCheck,
 	ReadinessResponse,
 } from "./api/health.schema";
-export {
-	AggregatedLogSchema,
-	ErrorGroupQuerySchema,
-	ErrorGroupSchema,
-	LevelCountSchema,
-	LogAggregationQuerySchema,
-	LogBulkDeleteQuerySchema,
-	LogEmailReportQuerySchema,
-	LogEntrySchema,
-	LogExportQuerySchema,
-	LogInputSchema,
-	LogLevelSchema,
-	LogQuerySchema,
-	LogServiceOptionsSchema,
-	LogStatsQuerySchema,
-	LogStatsSchema,
-	MetadataValueSchema,
-} from "./domain/platform/logs";
-export type {
-	AggregatedLog,
-	ErrorGroup,
-	ErrorGroupQuery,
-	LevelCount,
-	LogAggregationQuery,
-	LogBulkDeleteQuery,
-	LogEmailReportQuery,
-	LogEntry,
-	LogExportQuery,
-	LogInput,
-	LogLevel,
-	LogQuery,
-	LogServiceOptions,
-	LogStats,
-	LogStatsQuery,
-} from "./domain/platform/logs";
+export { LogLevelSchema, LogServiceOptionsSchema, MetadataValueSchema } from "./domain/platform/logs";
+export type { LogLevel, LogServiceOptions } from "./domain/platform/logs";
 export {
 	AuditAuthMethodSchema,
 	AuditHttpMethodSchema,
@@ -549,7 +495,7 @@ export {
 	HttpAuditLogListQuerySchema,
 	HttpAuditLogSummarySchema,
 	httpAuditLogListQuery,
-} from "./domain/platform/http-audit-log";
+} from "../contexts/audit/schemas/http-audit-log";
 export type {
 	AuditAuthMethod,
 	AuditHttpMethod,
@@ -561,7 +507,7 @@ export type {
 	HttpAuditLogListQuery,
 	HttpAuditLogListSortField,
 	HttpAuditLogSummary,
-} from "./domain/platform/http-audit-log";
+} from "../contexts/audit/schemas/http-audit-log";
 export {
 	AUDIT_TRAIL_MAX_LISTED_TABLES,
 	AuditTrailBackgroundEntrySchema,
@@ -570,7 +516,7 @@ export {
 	AuditTrailListQuerySchema,
 	AuditTrailRequestEntrySchema,
 	auditTrailListQuery,
-} from "./domain/platform/audit-trail";
+} from "../contexts/audit/schemas/audit-trail";
 export type {
 	AuditTrailBackgroundEntry,
 	AuditTrailEntry,
@@ -578,7 +524,7 @@ export type {
 	AuditTrailListQuery,
 	AuditTrailListSortField,
 	AuditTrailRequestEntry,
-} from "./domain/platform/audit-trail";
+} from "../contexts/audit/schemas/audit-trail";
 export {
 	DataChangeActorKindSchema,
 	DataChangeLogDetailSchema,
@@ -587,7 +533,7 @@ export {
 	DataChangeLogSummarySchema,
 	DataChangeOperationSchema,
 	dataChangeLogListQuery,
-} from "./domain/platform/data-change-log";
+} from "../contexts/audit/schemas/data-change-log";
 export type {
 	DataChangeActorKind,
 	DataChangeLogDetail,
@@ -596,7 +542,7 @@ export type {
 	DataChangeLogListSortField,
 	DataChangeLogSummary,
 	DataChangeOperation,
-} from "./domain/platform/data-change-log";
+} from "../contexts/audit/schemas/data-change-log";
 export { ErrorResponseSchema, MessageResponseSchema, OkResponseSchema, SuccessAckResponseSchema } from "./api/message";
 export type { ErrorResponse, MessageResponse, OkResponse, SuccessAckResponse } from "./api/message";
 export { PaginationSchema } from "./api/pagination";
@@ -613,6 +559,7 @@ export {
 	formatSortParam,
 	InvalidListSortError,
 	LIST_DEFAULT_LIMIT,
+	LIST_FIRST_PAGE,
 	LIST_FILTER_OPERATORS,
 	LIST_MAX_CURSOR_LENGTH,
 	LIST_MAX_FILTER_PARAMS,
@@ -683,7 +630,8 @@ export {
 	PermissionFilterSchema,
 	PermissionGroupsResponseSchema,
 	PermissionListItemSchema,
-	PermissionListResponseSchema,
+	PermissionListQuerySchema,
+	permissionListQuery,
 	PermissionMatrixResponseSchema,
 	PermissionPreviewResponseSchema,
 	PermissionResponseSchema,
@@ -696,14 +644,15 @@ export {
 	RoleCreatedResponseSchema,
 	RoleFilterSchema,
 	RoleListItemSchema,
-	RoleListResponseSchema,
+	RoleListQuerySchema,
+	roleListQuery,
 	RoleResponseSchema,
 	SetRoleParentSchema,
 	SyncUserPermissionsSchema,
 	SyncUserRolesSchema,
 	UpdateRoleSchema,
 	ValidateRoleAssignmentSchema,
-} from "./domain/rbac/rbac";
+} from "../contexts/authorization/schemas/rbac";
 export type {
 	AssignPermissionsToUserBulkInput,
 	AssignPermissionToRoleInput,
@@ -734,7 +683,8 @@ export type {
 	PermissionFilterInput,
 	PermissionGroupsResponse,
 	PermissionListItem,
-	PermissionListResponse,
+	PermissionListQuery,
+	PermissionListSortField,
 	PermissionMatrixResponse,
 	PermissionPreviewResponse,
 	PermissionResponse,
@@ -747,26 +697,15 @@ export type {
 	RoleCreatedResponse,
 	RoleFilterInput,
 	RoleListItem,
-	RoleListResponse,
+	RoleListQuery,
+	RoleListSortField,
 	RoleResponse,
 	SetRoleParentInput,
 	SyncUserPermissionsInput,
 	SyncUserRolesInput,
 	UpdateRoleInput,
 	ValidateRoleAssignmentInput,
-} from "./domain/rbac/rbac";
-export { CreateTagSchema, TagAssignResponseSchema, TagMessageResponseSchema, TagResponseSchema, TagWithUrlsResponseSchema, UpdateTagSchema } from "./domain/platform/tags";
-export type { CreateTagInput, TagAssignResponse, TagMessageResponse, TagResponse, TagWithUrlsResponse, UpdateTagInput } from "./domain/platform/tags";
-export {
-	CreateUrlSchema,
-	RedirectResponseSchema,
-	UpdateUrlSchema,
-	UrlMessageResponseSchema,
-	UrlQuerySchema,
-	UrlResponseSchema,
-	UrlStatsResponseSchema,
-} from "./domain/platform/url";
-export type { CreateUrlInput, RedirectResponse, UpdateUrlInput, UrlMessageResponse, UrlQueryInput, UrlResponse, UrlStatsResponse } from "./domain/platform/url";
+} from "../contexts/authorization/schemas/rbac";
 export {
 	CitySchema,
 	CountrySchema,
@@ -814,7 +753,7 @@ export {
 	countryListQuery,
 	stateListQuery,
 	cityListQuery,
-} from "./domain/platform/geo";
+} from "../contexts/reference-data/schemas/geo";
 export type {
 	City,
 	CityListQuery,
@@ -860,7 +799,7 @@ export type {
 	CityListItem,
 	GeoSortDirection,
 	GeoInclude,
-} from "./domain/platform/geo";
+} from "../contexts/reference-data/schemas/geo";
 
 export {
 	AdminUserDetailSchema,
@@ -874,7 +813,7 @@ export {
 	UserResponseSchema,
 	SessionPermissionsResponseSchema,
 	UserPermissionsSchema,
-} from "./auth/user";
+} from "../contexts/identity/schemas/user";
 export type {
 	AdminUserDetail,
 	AdminUserListQuery,
@@ -887,13 +826,13 @@ export type {
 	UpdateUserInput,
 	UserMessageResponse,
 	UserResponse,
-} from "./auth/user";
+} from "../contexts/identity/schemas/user";
 export {
 	SIGNUP_REFERRAL_CODE_ALPHABET,
 	SIGNUP_REFERRAL_CODE_LENGTH,
 	SIGNUP_REFERRAL_CODE_TTL_MS,
 	SIGNUP_REFERRALS_SCREEN_PATH,
-} from "./domain/signup-referrals/signup-referral.constants";
+} from "../contexts/referrals/schemas/signup-referral.constants";
 export {
 	AdminSignupReferralStatusFilterSchema,
 	AdminSignupReferrerSummarySchema,
@@ -905,7 +844,7 @@ export {
 	SignupReferralRefereeListQuerySchema,
 	SignupReferralStatusSchema,
 	signupReferralRefereeListQuery,
-} from "./domain/signup-referrals/signup-referrals";
+} from "../contexts/referrals/schemas/signup-referrals";
 export type {
 	AdminSignupReferralStatusFilter,
 	AdminSignupReferrerSummary,
@@ -915,7 +854,7 @@ export type {
 	SignupReferralRefereeItem,
 	SignupReferralRefereeListQuery,
 	SignupReferralStatus,
-} from "./domain/signup-referrals/signup-referrals";
+} from "../contexts/referrals/schemas/signup-referrals";
 export {
 	GITHUB_COMMIT_CURSOR_MAX_LENGTH,
 	GITHUB_COMMIT_DIFF_MAX_LENGTH,
@@ -961,7 +900,7 @@ export {
 	GithubRepositorySourceSchema,
 	GithubRepositorySummarySchema,
 	toGithubFullName,
-} from "./domain/github/github-contributions";
+} from "../contexts/integrations-github/schemas/github-contributions";
 export type {
 	GithubCommit,
 	GithubCommitAuthor,
@@ -985,7 +924,7 @@ export type {
 	GithubRepositoryRelationship,
 	GithubRepositorySource,
 	GithubRepositorySummary,
-} from "./domain/github/github-contributions";
+} from "../contexts/integrations-github/schemas/github-contributions";
 export {
 	GITHUB_PULL_REQUEST_ERROR_CODES,
 	GITHUB_BODY_MAX_LENGTH,
@@ -1073,7 +1012,7 @@ export {
 	GithubMergeStateSchema,
 	MergeGithubPullRequestInputSchema,
 	MergeGithubPullRequestSchema,
-} from "./domain/github/github-pull-requests";
+} from "../contexts/integrations-github/schemas/github-pull-requests";
 export type {
 	GithubAccountHealth,
 	GithubAccountStatus,
@@ -1135,9 +1074,15 @@ export type {
 	GithubMergeState,
 	MergeGithubPullRequestInput,
 	MergeGithubPullRequestRequest,
-} from "./domain/github/github-pull-requests";
-export { GITHUB_BODY_IMAGES_MAX, GithubBodyImageSchema, GithubBodyImagesSchema, githubAttachmentIdOf, githubImageUrlFor } from "./domain/github/github-body-images";
-export type { GithubBodyImage } from "./domain/github/github-body-images";
+} from "../contexts/integrations-github/schemas/github-pull-requests";
+export {
+	GITHUB_BODY_IMAGES_MAX,
+	GithubBodyImageSchema,
+	GithubBodyImagesSchema,
+	githubAttachmentIdOf,
+	githubImageUrlFor,
+} from "../contexts/integrations-github/schemas/github-body-images";
+export type { GithubBodyImage } from "../contexts/integrations-github/schemas/github-body-images";
 export {
 	GITHUB_REACTION_CONTENTS,
 	GITHUB_REACTION_EMOJI,
@@ -1150,8 +1095,14 @@ export {
 	GithubReactionSubjectSchema,
 	SetGithubReactionSchema,
 	withViewerReaction,
-} from "./domain/github/github-reactions";
-export type { GithubReactionContent, GithubReactionGroup, GithubReactionState, GithubReactionSubject, SetGithubReactionInput } from "./domain/github/github-reactions";
+} from "../contexts/integrations-github/schemas/github-reactions";
+export type {
+	GithubReactionContent,
+	GithubReactionGroup,
+	GithubReactionState,
+	GithubReactionSubject,
+	SetGithubReactionInput,
+} from "../contexts/integrations-github/schemas/github-reactions";
 export {
 	GITHUB_WEBHOOK_EVENTS,
 	GithubLiveUpdatesParamsSchema,
@@ -1159,8 +1110,13 @@ export {
 	GithubPullRequestChangeSchema,
 	GithubWebhookEventSchema,
 	isChangeTo,
-} from "./domain/github/github-live-updates";
-export type { GithubLiveUpdatesParams, GithubLiveUpdatesStatus, GithubPullRequestChange, GithubWebhookEvent } from "./domain/github/github-live-updates";
+} from "../contexts/integrations-github/schemas/github-live-updates";
+export type {
+	GithubLiveUpdatesParams,
+	GithubLiveUpdatesStatus,
+	GithubPullRequestChange,
+	GithubWebhookEvent,
+} from "../contexts/integrations-github/schemas/github-live-updates";
 export { CaughtValueSchema, ResendLikeErrorSchema } from "./runtime/caught-error";
 export type { CaughtValue, ResendLikeError } from "./runtime/caught-error";
 export {
@@ -1189,68 +1145,29 @@ export { PrismaQueryEventSchema, PrismaQuerySubscriberSchema } from "./runtime/p
 export type { PrismaQueryEvent } from "./runtime/prisma-query";
 export { NonEmptyStringSchema, StringRecordNullableSchema, StringRecordSchema, StringValueSchema, ThrownErrorSchema } from "./runtime/primitives";
 export type { NonEmptyString, StringRecord, StringRecordNullable, StringValue, ThrownError } from "./runtime/primitives";
-export { PERMISSIONS, getAllPermissionNames, getPermissionDefinitions, toPermissionRegistryName } from "./domain/rbac/permissions-registry";
-export type { PermissionDefinition, PermissionName } from "./domain/rbac/permissions-registry";
+export { PERMISSIONS, getAllPermissionNames, getPermissionDefinitions, toPermissionRegistryName } from "../contexts/authorization/schemas/permissions-registry";
+export type { PermissionDefinition, PermissionName } from "../contexts/authorization/schemas/permissions-registry";
+export { AcceptRewardLegalSchema, RewardClaimCheckoutStatusSchema } from "../contexts/rewards/schemas/reward-legal";
 export {
-	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
-	AdminKybUpdatePathInputSchema,
-	AdminKybUpdateSchema,
-	KybFieldsSchema,
-	KYB_STATUSES_REQUIRING_REASON,
 	AdminMerchantDetailResponseSchema,
 	AdminMerchantIdParamSchema,
 	AdminMerchantInviteCreatedResponseSchema,
 	AdminMerchantInvitePreviewQuerySchema,
 	AdminMerchantListQuerySchema,
 	adminMerchantListQuery,
-	AdminPendingRewardListQuerySchema,
-	adminPendingRewardListQuery,
-	AdminRejectRewardPathInputSchema,
-	AdminRewardImageDownloadResponseSchema,
-	AdminRewardImagePathInputSchema,
-	AdminRewardImagesArchivePathInputSchema,
-	AdminRewardPathInputSchema,
-	REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
-	AdminRejectRewardSchema,
-	CreateRewardClaimSchema,
-	KybStatusSchema,
-	MarkRewardNotificationsReadSchema,
-	MerchantApiKeyCreatedSchema,
-	MerchantApiKeyListQuerySchema,
-	merchantApiKeyListQuery,
-	MERCHANT_API_KEYS_PAGE_SIZE,
-	MerchantApiKeySummarySchema,
-	MerchantCreateApiKeySchema,
-	OrganizationApiKeyScopeSchema,
-	DEFAULT_MERCHANT_API_KEY_SCOPE,
-	MERCHANT_TERMINALS_PAGE_SIZE,
-	MerchantCreateTerminalSchema,
-	MerchantTerminalListQuerySchema,
-	MerchantTerminalPairingSchema,
-	MerchantTerminalSettingsSchema,
-	MerchantTerminalSettingsResponseSchema,
-	MerchantTerminalSummarySchema,
-	MerchantTerminalStatusSummaryQuerySchema,
-	MerchantTerminalStatusCountsSchema,
-	MerchantTerminalStatusSummarySchema,
-	merchantTerminalListQuery,
-	POS_PAIRING_CODE_TTL_MS,
-	POS_TERMINAL_NAME_MAX_LENGTH,
-	PosPairedTerminalSchema,
-	PosPairingCodeSchema,
-	PosPairingQrPayloadSchema,
-	POS_PAIRING_QR_PREFIX,
-	buildPosPairingQrPayload,
-	PosPairTerminalSchema,
-	PosTerminalStatusSchema,
-	MERCHANT_API_KEY_NAME_MAX_LENGTH,
+	OrganizationRewardMembershipResponseSchema,
+	MerchantOrgResponseSchema,
+	OwnMembershipListQuerySchema,
+	ownMembershipListQuery,
+} from "../contexts/organizations/schemas/merchant";
+export {
+	AdminKybUpdatePathInputSchema,
+	AdminKybUpdateSchema,
+	KybFieldsSchema,
+	KYB_STATUSES_REQUIRING_REASON,
 	MerchantCreateMemberSchema,
-	MerchantCreateRewardSchema,
-	MerchantRewardListQuerySchema,
-	MerchantCreateRewardFormSchema,
 	MerchantMemberCreatedResponseSchema,
-	KybDocumentScanStatusSchema,
 	MerchantKybDocumentDownloadResponseSchema,
 	MerchantKybDocumentRecordSchema,
 	MerchantKybProfileResponseSchema,
@@ -1276,6 +1193,23 @@ export {
 	MerchantOnboardingDocumentUploadUrlSchema,
 	MerchantOnboardingInvitePreviewSchema,
 	MerchantOnboardingValidateTokenSchema,
+} from "../contexts/organizations/schemas/merchant-kyb";
+export {
+	AdminPendingRewardListQuerySchema,
+	adminPendingRewardListQuery,
+	AdminRejectRewardPathInputSchema,
+	AdminRewardImageDownloadResponseSchema,
+	AdminRewardImagePathInputSchema,
+	AdminRewardImagesArchivePathInputSchema,
+	AdminRewardPathInputSchema,
+	REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
+	AdminRejectRewardSchema,
+	MerchantCreateRewardSchema,
+	MerchantRewardListQuerySchema,
+	merchantRewardListQuery,
+	MerchantRewardSummaryQuerySchema,
+	MerchantRewardSummarySchema,
+	MerchantCreateRewardFormSchema,
 	mapMerchantCreateRewardFormToInput,
 	mapMerchantUpdateRewardFormToInput,
 	mapRewardResponseToFormValues,
@@ -1283,22 +1217,78 @@ export {
 	MerchantUpdateRewardFormSchema,
 	epochMsToDateInput,
 	parseRewardDateInputToEpochMs,
+	MerchantUpdateRewardSchema,
+	MerchantUpdateRewardPathInputSchema,
+	RewardListQuerySchema,
+	rewardListQuery,
+	REWARD_LIST_DEFAULT_LIMIT,
+	RewardPlatformEventSchema,
+	RewardResponseSchema,
+	RewardImageResponseSchema,
+	RewardImageSourceSchema,
+	MAX_REWARD_IMAGES,
+} from "../contexts/rewards/schemas/reward";
+export {
+	CreateRewardClaimSchema,
+	MarkRewardNotificationsReadSchema,
+	RequestClaimOtpSchema,
+	RewardClaimCreatedResponseSchema,
+	RewardClaimListQuerySchema,
+	rewardClaimListQuery,
+	RewardClaimQrResponseSchema,
+	RewardClaimResponseSchema,
+	RewardNotificationListQuerySchema,
+	rewardNotificationListQuery,
+	RewardNotificationResponseSchema,
+} from "../contexts/claims/schemas/claim";
+export {
+	KybStatusSchema,
+	KybDocumentScanStatusSchema,
 	MERCHANT_BUSINESS_CATEGORY_LABELS,
 	UNCATEGORISED_MERCHANT_CATEGORY_LABEL,
 	MerchantBusinessCategorySchema,
 	MerchantMemberRoleSchema,
-	OrganizationRewardMembershipResponseSchema,
-	MerchantOrgResponseSchema,
 	MerchantOrgStatusSchema,
-	MerchantRedemptionListItemSchema,
-	MerchantRedemptionListQuerySchema,
-	merchantRedemptionListQuery,
-	MerchantUpdateRewardSchema,
-	MerchantUpdateRewardPathInputSchema,
 	PilotCitySchema,
 	PILOT_CITY_LABELS,
 	PILOT_CITY_TIME_ZONES,
 	PLATFORM_DISPLAY_REGION,
+} from "../contexts/organizations/schemas/organization-enums";
+export {
+	MerchantApiKeyCreatedSchema,
+	MerchantApiKeyListQuerySchema,
+	merchantApiKeyListQuery,
+	MERCHANT_API_KEYS_PAGE_SIZE,
+	MerchantApiKeySummarySchema,
+	MerchantCreateApiKeySchema,
+	OrganizationApiKeyScopeSchema,
+	DEFAULT_MERCHANT_API_KEY_SCOPE,
+	MERCHANT_API_KEY_NAME_MAX_LENGTH,
+} from "../contexts/pos/schemas/merchant-api-keys";
+export {
+	MERCHANT_TERMINALS_PAGE_SIZE,
+	MerchantCreateTerminalSchema,
+	MerchantTerminalListQuerySchema,
+	MerchantTerminalPairingSchema,
+	MerchantTerminalSettingsSchema,
+	MerchantTerminalSettingsResponseSchema,
+	MerchantTerminalSummarySchema,
+	MerchantTerminalStatusSummaryQuerySchema,
+	MerchantTerminalStatusCountsSchema,
+	MerchantTerminalStatusSummarySchema,
+	merchantTerminalListQuery,
+	POS_PAIRING_CODE_TTL_MS,
+	POS_TERMINAL_NAME_MAX_LENGTH,
+	PosPairedTerminalSchema,
+	PosPairingCodeSchema,
+	PosPairTerminalSchema,
+	PosTerminalStatusSchema,
+} from "../contexts/pos/schemas/terminals";
+export { PosPairingQrPayloadSchema, POS_PAIRING_QR_PREFIX, buildPosPairingQrPayload } from "../contexts/pos/schemas/pos-pairing-qr";
+export {
+	MerchantRedemptionListItemSchema,
+	MerchantRedemptionListQuerySchema,
+	merchantRedemptionListQuery,
 	DEFAULT_SALE_CURRENCY,
 	SALE_CURRENCY_MINOR_UNIT_EXPONENTS,
 	MAX_BILL_TOTAL_MINOR,
@@ -1314,40 +1304,18 @@ export {
 	RedemptionPreviewResponseSchema,
 	RedemptionValidateSchema,
 	SaleCurrencySchema,
-	RequestClaimOtpSchema,
-	RewardBackupCodeSchema,
+} from "../contexts/pos/schemas/redemption";
+export { RewardBackupCodeSchema, RewardClaimStatusSchema, RewardOtpPurposeSchema } from "../contexts/claims/schemas/claim-enums";
+export {
 	RewardCategorySchema,
-	RewardClaimCheckoutStatusSchema,
-	RewardClaimCreatedResponseSchema,
-	RewardClaimListQuerySchema,
-	rewardClaimListQuery,
-	RewardClaimQrResponseSchema,
-	RewardClaimResponseSchema,
-	RewardClaimStatusSchema,
 	RewardKindSchema,
-	RewardListQuerySchema,
-	rewardListQuery,
-	REWARD_LIST_DEFAULT_LIMIT,
-	RewardNotificationListQuerySchema,
-	rewardNotificationListQuery,
-	RewardNotificationResponseSchema,
-	RewardOtpPurposeSchema,
-	RewardPlatformEventSchema,
-	RewardRedemptionMethodSchema,
-	RewardReferralStatusSchema,
-	RewardResponseSchema,
-	RewardImageResponseSchema,
-	RewardImageSourceSchema,
-	MAX_REWARD_IMAGES,
 	RewardRulesResponseSchema,
 	RewardRulesSchema,
 	RewardStatusSchema,
-	RewardTerminalIdHeaderSchema,
 	RewardTypeSchema,
-	OrganizationRewardMembershipListResponseSchema,
-	RewardNotificationListResponseSchema,
-	RewardResponseListSchema,
-} from "./domain/rewards/rewards";
+} from "../contexts/rewards/schemas/reward-enums";
+export { RewardRedemptionMethodSchema, RewardTerminalIdHeaderSchema } from "../contexts/pos/schemas/pos-enums";
+export { RewardReferralStatusSchema } from "../contexts/referrals/schemas/referral-enums";
 export {
 	CapabilityCatalogQuerySchema,
 	CapabilityDefinitionSchema,
@@ -1358,10 +1326,11 @@ export {
 	toPlatformCapabilitySlug,
 	withCapabilityToggled,
 	CapabilityCatalogResponseSchema,
-} from "./domain/rbac/capabilities";
-export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug, CapabilityCatalogResponse } from "./domain/rbac/capabilities";
-export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/rewards/claim-availability";
+} from "../contexts/authorization/schemas/capabilities";
+export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug, CapabilityCatalogResponse } from "../contexts/authorization/schemas/capabilities";
+export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "../contexts/claims/schemas/claim-availability";
 export {
+	AnalyticsQuerySchema,
 	ANALYTICS_BUCKET_DISPLAY_REGION,
 	AdminSalesAnalyticsQuerySchema,
 	AdminSalesAnalyticsResponseSchema,
@@ -1387,8 +1356,9 @@ export {
 	UserSpendByCategorySchema,
 	UserSpendByMerchantSchema,
 	UserSpendingSummarySchema,
-} from "./domain/rewards/analytics";
+} from "../contexts/reporting/schemas/analytics";
 export type {
+	AnalyticsQueryInput,
 	AdminSalesAnalyticsQuery,
 	AdminSalesAnalyticsResponse,
 	AdminSalesTopMerchant,
@@ -1406,7 +1376,7 @@ export type {
 	UserSpendByCategory,
 	UserSpendByMerchant,
 	UserSpendingSummary,
-} from "./domain/rewards/analytics";
+} from "../contexts/reporting/schemas/analytics";
 export {
 	addLocalDays,
 	IanaTimeZoneSchema,
@@ -1418,8 +1388,8 @@ export {
 	startOfWeekInTimeZone,
 	UTC_TIME_ZONE,
 	wallClockDateInTimeZone,
-} from "./domain/rewards/analytics-time-zone";
-export type { LocalDate } from "./domain/rewards/analytics-time-zone";
+} from "../contexts/reporting/schemas/analytics-time-zone";
+export type { LocalDate } from "../contexts/reporting/schemas/analytics-time-zone";
 export {
 	ANALYTICS_RANGE_TOO_LONG_MESSAGE,
 	AnalyticsIntervalSchema,
@@ -1433,8 +1403,8 @@ export {
 	resolveAnalyticsRange,
 	validateAnalyticsRange,
 	WEEKLY_INTERVAL_MAX_DAYS,
-} from "./domain/rewards/analytics-range";
-export type { AnalyticsInterval, AnalyticsRangeInput, AnalyticsReportRange, ResolvedAnalyticsRange } from "./domain/rewards/analytics-range";
+} from "../contexts/reporting/schemas/analytics-range";
+export type { AnalyticsInterval, AnalyticsRangeInput, AnalyticsReportRange, ResolvedAnalyticsRange } from "../contexts/reporting/schemas/analytics-range";
 export {
 	ADMIN_TOP_MERCHANTS_LIMIT,
 	AdminAnalyticsDashboardQuerySchema,
@@ -1463,7 +1433,7 @@ export {
 	MerchantRewardBreakdownSchema,
 	MerchantStoreBreakdownSchema,
 	RedemptionMethodBreakdownSchema,
-} from "./domain/rewards/analytics-dashboard";
+} from "../contexts/reporting/schemas/analytics-dashboard";
 export type {
 	AdminAnalyticsDashboard,
 	AdminAnalyticsDashboardQuery,
@@ -1489,7 +1459,7 @@ export type {
 	MerchantRewardBreakdown,
 	MerchantStoreBreakdown,
 	RedemptionMethodBreakdown,
-} from "./domain/rewards/analytics-dashboard";
+} from "../contexts/reporting/schemas/analytics-dashboard";
 export {
 	ADMIN_ANALYTICS_EXPORT_SUBJECT,
 	AdminAnalyticsExportQuerySchema,
@@ -1501,64 +1471,34 @@ export {
 	AnalyticsExportFormatSchema,
 	analyticsExportFileName,
 	MerchantAnalyticsExportQuerySchema,
-} from "./domain/rewards/analytics-export";
+} from "../contexts/reporting/schemas/analytics-export";
 export type {
 	AdminAnalyticsExportQuery,
 	AnalyticsErrorCode,
 	AnalyticsExportFileNameInput,
 	AnalyticsExportFormat,
 	MerchantAnalyticsExportQuery,
-} from "./domain/rewards/analytics-export";
+} from "../contexts/reporting/schemas/analytics-export";
+export type { AcceptRewardLegalInput, RewardClaimCheckoutStatus } from "../contexts/rewards/schemas/reward-legal";
 export type {
-	AcceptRewardLegalInput,
 	AdminCreateMerchantInviteInput,
-	AdminKybUpdateInput,
-	KybFields,
-	AdminKybUpdatePathInput,
 	AdminMerchantDetailResponse,
 	AdminMerchantIdParam,
 	AdminMerchantInviteCreatedResponse,
 	AdminMerchantInvitePreviewQuery,
 	AdminMerchantListQuery,
 	AdminMerchantListSortField,
-	AdminPendingRewardListQuery,
-	AdminPendingRewardListSortField,
-	AdminRejectRewardInput,
-	AdminRejectRewardPathInput,
-	AdminRewardImageDownloadResponse,
-	AdminRewardImagePathInput,
-	AdminRewardImagesArchivePathInput,
-	AdminRewardPathInput,
-	CreateRewardClaimInput,
-	RewardClaimCheckoutStatus,
-	KybStatus,
-	MarkRewardNotificationsReadInput,
-	MerchantApiKeyCreated,
-	MerchantCreateTerminalInput,
-	MerchantTerminalListQuery,
-	MerchantTerminalListSortField,
-	MerchantTerminalPairing,
-	MerchantTerminalSettings,
-	MerchantTerminalSummary,
-	MerchantTerminalStatusSummaryQuery,
-	MerchantTerminalStatusCounts,
-	MerchantTerminalStatusSummary,
-	PosPairedTerminal,
-	PosPairingCode,
-	PosPairTerminalInput,
-	PosTerminalId,
-	PosTerminalStatus,
-	MerchantApiKeyListQuery,
-	MerchantApiKeyListSortField,
-	MerchantApiKeySummary,
-	MerchantRewardListQuery,
-	MerchantCreateApiKeyInput,
-	OrganizationApiKeyScope,
+	OwnMembershipListQuery,
+	OwnMembershipListSortField,
+	OrganizationRewardMembershipResponse,
+	MerchantOrgResponse,
+} from "../contexts/organizations/schemas/merchant";
+export type {
+	AdminKybUpdateInput,
+	KybFields,
+	AdminKybUpdatePathInput,
 	MerchantCreateMemberInput,
-	MerchantCreateRewardInput,
-	MerchantCreateRewardFormValues,
 	MerchantMemberCreatedResponse,
-	KybDocumentScanStatus,
 	MerchantKybDocumentDownloadResponse,
 	MerchantKybDocumentRecord,
 	MerchantKybProfileResponse,
@@ -1582,20 +1522,83 @@ export type {
 	MerchantOnboardingDocumentUploadUrlInput,
 	MerchantOnboardingInvitePreview,
 	MerchantOnboardingValidateTokenInput,
+} from "../contexts/organizations/schemas/merchant-kyb";
+export type {
+	AdminPendingRewardListQuery,
+	AdminPendingRewardListSortField,
+	AdminRejectRewardInput,
+	AdminRejectRewardPathInput,
+	AdminRewardImageDownloadResponse,
+	AdminRewardImagePathInput,
+	AdminRewardImagesArchivePathInput,
+	AdminRewardPathInput,
+	MerchantRewardListQuery,
+	MerchantRewardListSortField,
+	MerchantRewardSummary,
+	MerchantRewardSummaryQuery,
+	MerchantCreateRewardInput,
+	MerchantCreateRewardFormValues,
 	MerchantRewardFormValues,
 	MerchantUpdateRewardFormValues,
+	MerchantUpdateRewardInput,
+	MerchantUpdateRewardPathInput,
+	RewardListQuery,
+	RewardListSortField,
+	RewardPlatformEvent,
+	RewardResponse,
+	RewardImageResponse,
+	RewardImageSource,
+} from "../contexts/rewards/schemas/reward";
+export type {
+	CreateRewardClaimInput,
+	MarkRewardNotificationsReadInput,
+	RequestClaimOtpInput,
+	RewardClaimCreatedResponse,
+	RewardClaimListQuery,
+	RewardClaimListSortField,
+	RewardClaimQrResponse,
+	RewardClaimResponse,
+	RewardNotificationListQuery,
+	RewardNotificationListSortField,
+	RewardNotificationResponse,
+} from "../contexts/claims/schemas/claim";
+export type {
+	KybStatus,
+	KybDocumentScanStatus,
 	MerchantBusinessCategory,
 	MerchantMemberRole,
-	OrganizationRewardMembershipResponse,
-	MerchantOrgResponse,
 	MerchantOrgStatus,
+	PilotCity,
+	DisplayRegion,
+} from "../contexts/organizations/schemas/organization-enums";
+export type {
+	MerchantApiKeyCreated,
+	MerchantApiKeyListQuery,
+	MerchantApiKeyListSortField,
+	MerchantApiKeySummary,
+	MerchantCreateApiKeyInput,
+	OrganizationApiKeyScope,
+} from "../contexts/pos/schemas/merchant-api-keys";
+export type {
+	MerchantCreateTerminalInput,
+	MerchantTerminalListQuery,
+	MerchantTerminalListSortField,
+	MerchantTerminalPairing,
+	MerchantTerminalSettings,
+	MerchantTerminalSummary,
+	MerchantTerminalStatusSummaryQuery,
+	MerchantTerminalStatusCounts,
+	MerchantTerminalStatusSummary,
+	PosPairedTerminal,
+	PosPairingCode,
+	PosPairTerminalInput,
+	PosTerminalStatus,
+} from "../contexts/pos/schemas/terminals";
+export type {
+	PosTerminalId,
 	MerchantRedemptionListItem,
 	MerchantRedemptionListQuery,
 	MerchantRedemptionListSortField,
-	MerchantUpdateRewardInput,
-	MerchantUpdateRewardPathInput,
-	PilotCity,
-	DisplayRegion,
 	RedemptionCheckoutInput,
 	RedemptionCheckoutItem,
 	RedemptionCheckoutResponse,
@@ -1604,34 +1607,12 @@ export type {
 	RedemptionPreviewResponse,
 	SaleCurrency,
 	RedemptionValidateInput,
-	RequestClaimOtpInput,
-	RewardBackupCode,
-	RewardCategory,
-	RewardClaimCreatedResponse,
-	RewardClaimListQuery,
-	RewardClaimListSortField,
-	RewardClaimQrResponse,
-	RewardClaimResponse,
-	RewardClaimStatus,
-	RewardKind,
-	RewardListQuery,
-	RewardListSortField,
-	RewardNotificationListQuery,
-	RewardNotificationListSortField,
-	RewardNotificationResponse,
-	RewardOtpPurpose,
-	RewardPlatformEvent,
-	RewardRedemptionMethod,
-	RewardReferralStatus,
-	RewardResponse,
-	RewardImageResponse,
-	RewardImageSource,
-	RewardRules,
-	RewardStatus,
-	RewardType,
-	RewardNotificationListResponse,
-} from "./domain/rewards/rewards";
-export { MerchantErrorCodeSchema, MerchantErrorCodes, type MerchantErrorCode } from "./domain/rewards/merchant-error-codes";
+} from "../contexts/pos/schemas/redemption";
+export type { RewardBackupCode, RewardClaimStatus, RewardOtpPurpose } from "../contexts/claims/schemas/claim-enums";
+export type { RewardCategory, RewardKind, RewardRules, RewardStatus, RewardType } from "../contexts/rewards/schemas/reward-enums";
+export type { RewardRedemptionMethod } from "../contexts/pos/schemas/pos-enums";
+export type { RewardReferralStatus } from "../contexts/referrals/schemas/referral-enums";
+export { MerchantErrorCodeSchema, MerchantErrorCodes, type MerchantErrorCode } from "../contexts/organizations/schemas/merchant-error-codes";
 export {
 	AdminCreateOrganizationInviteSchema,
 	AuthorizationPolicyDraftResponseSchema,
@@ -1687,7 +1668,6 @@ export {
 	OrganizationMembershipRoleSchema,
 	OrganizationMembershipStatusSchema,
 	OrganizationMerchantProfileResponseSchema,
-	OrganizationQuotaStatusSchema,
 	OrganizationRouteKeySchema,
 	OrganizationSlugParamSchema,
 	OrganizationAccessRequestParamSchema,
@@ -1702,10 +1682,12 @@ export {
 	SupportAccessGrantResponseSchema,
 	SupportAccessGrantStatusSchema,
 	TenantPlacementKindSchema,
-	OrganizationMemberInviteListResponseSchema,
+	OrganizationMemberInviteListQuerySchema,
+	organizationMemberInviteListQuery,
+	OrganizationMemberListQuerySchema,
+	organizationMemberListQuery,
 	AdminOrganizationInviteCreatedResponseSchema,
-	OrganizationMemberRosterListResponseSchema,
-} from "./domain/organization/organization";
+} from "../contexts/organizations/schemas/organization";
 export type {
 	AdminCreateOrganizationInviteInput,
 	AuthorizationPolicyDraftResponse,
@@ -1723,6 +1705,10 @@ export type {
 	OrganizationInvitationStatus,
 	OrganizationMemberInviteCreatedResponse,
 	OrganizationMemberInviteIdParam,
+	OrganizationMemberInviteListQuery,
+	OrganizationMemberInviteListSortField,
+	OrganizationMemberListQuery,
+	OrganizationMemberListSortField,
 	OrganizationMemberInviteResponse,
 	OrganizationMemberRosterResponse,
 	OrganizationTeamInviteAcceptResponse,
@@ -1757,7 +1743,6 @@ export type {
 	OrganizationMembershipRole,
 	OrganizationMembershipStatus,
 	OrganizationMerchantProfileResponse,
-	OrganizationQuotaStatus,
 	OrganizationRouteKey,
 	OrganizationSlug,
 	OrganizationSlugParam,
@@ -1772,7 +1757,7 @@ export type {
 	SupportAccessGrantResponse,
 	SupportAccessGrantStatus,
 	TenantPlacementKind,
-} from "./domain/organization/organization";
+} from "../contexts/organizations/schemas/organization";
 export {
 	CedarAuthorizationDecisionSchema,
 	CedarAuthorizationRequestSchema,
@@ -1784,7 +1769,7 @@ export {
 	PolicyPublishResponseSchema,
 	PolicySimulationResultSchema,
 	PublishedPolicyBundleSchema,
-} from "./domain/organization/authorization-policy";
+} from "../contexts/authorization/schemas/authorization-policy";
 export type {
 	CedarAuthorizationDecision,
 	CedarAuthorizationRequest,
@@ -1796,7 +1781,7 @@ export type {
 	PolicyPublishResponse,
 	PolicySimulationResult,
 	PublishedPolicyBundle,
-} from "./domain/organization/authorization-policy";
+} from "../contexts/authorization/schemas/authorization-policy";
 export { SystemOperationContextSchema, TenantJobContextSchema } from "./infrastructure/tenant-job-context";
 export type { SystemOperationContext, TenantJobContext } from "./infrastructure/tenant-job-context";
 export {
@@ -1843,8 +1828,17 @@ export type {
 	StorageScanJob,
 } from "./infrastructure/queue";
 export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
-export { OutboxEnqueueInputSchema, OutboxEventRecordSchema, OutboxEventStatusSchema, OUTBOX_EVENT_STATUSES } from "./infrastructure/outbox";
-export type { OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";
+export {
+	NOTIFICATION_EMAIL_OUTBOX_TOPIC,
+	NOTIFICATION_EMAIL_REQUESTED_EVENT_TYPE,
+	NotificationEmailRequestedEnvelopeSchema,
+	NotificationEmailRequestedPayloadSchema,
+	OutboxEnqueueInputSchema,
+	OutboxEventRecordSchema,
+	OutboxEventStatusSchema,
+	OUTBOX_EVENT_STATUSES,
+} from "./infrastructure/outbox";
+export type { NotificationEmailRequestedEnvelope, NotificationEmailRequestedPayload, OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";
 export {
 	BulkCreateSampleCategorySchema,
 	CreateSampleCategorySchema,
@@ -1855,7 +1849,7 @@ export {
 	SampleCategorySchema,
 	UpdateSampleCategorySchema,
 	BulkCreateSampleCategoryResponseSchema,
-} from "./domain/catalog/sample-category";
+} from "../contexts/catalog/schemas/sample-category";
 export type {
 	BulkCreateSampleCategoryInput,
 	CreateSampleCategoryInput,
@@ -1864,7 +1858,7 @@ export type {
 	SampleCategoryListResponse,
 	SampleCategoryListSortField,
 	UpdateSampleCategoryInput,
-} from "./domain/catalog/sample-category";
+} from "../contexts/catalog/schemas/sample-category";
 export {
 	BulkCreateProductSchema,
 	CreateProductSchema,
@@ -1875,7 +1869,7 @@ export {
 	ProductSchema,
 	UpdateProductSchema,
 	BulkCreateProductResponseSchema,
-} from "./domain/catalog/product";
+} from "../contexts/catalog/schemas/product";
 export type {
 	BulkCreateProductInput,
 	CreateProductInput,
@@ -1884,7 +1878,7 @@ export type {
 	ProductListResponse,
 	ProductListSortField,
 	UpdateProductInput,
-} from "./domain/catalog/product";
+} from "../contexts/catalog/schemas/product";
 export {
 	CATALOG_DESCRIPTION_MAX_LENGTH,
 	CATALOG_MAX_PRICE,
@@ -1897,5 +1891,5 @@ export {
 	PRODUCT_IMAGE_URL_MAX_LENGTH,
 	PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
 	PRODUCT_SKU_MAX_LENGTH,
-} from "./domain/catalog/catalog-fields";
-export { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "./auth/email-link-lifetimes";
+} from "../contexts/catalog/schemas/catalog-fields";
+export { EMAIL_VERIFICATION_LINK_TTL_HOURS, formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "../contexts/identity/schemas/email-link-lifetimes";

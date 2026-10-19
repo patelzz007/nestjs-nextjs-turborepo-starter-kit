@@ -2,7 +2,7 @@ import { DataValueSchema, singleResponse, type DataValue } from "@workspace/shar
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ApiError, readErrorPayload } from "../errors";
+import { ApiError, isNotFoundError, readErrorPayload } from "../errors";
 import type { RefreshResult } from "../refresh";
 import { createApiRequestContext, fetchQuery } from "../request";
 import { defineQuery } from "../router";
@@ -94,5 +94,14 @@ describe("fetchQuery with the error envelope", () => {
 		expect(result.ok).toBe(false);
 		expect(result.status).toBe(404);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("isNotFoundError", () => {
+	it("is true only for an API error answered with 404", () => {
+		expect(isNotFoundError(new ApiError({ message: "No such reward", statusCode: 404 }))).toBe(true);
+		expect(isNotFoundError(new ApiError({ message: "Forbidden", statusCode: 403 }))).toBe(false);
+		expect(isNotFoundError(new Error("network down"))).toBe(false);
+		expect(isNotFoundError("Not Found")).toBe(false);
 	});
 });

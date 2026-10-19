@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
+import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION, type AdminAnalyticsDashboard, type CapabilitySlug } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,7 +19,7 @@ interface DashboardQueryStub {
 
 const { dashboardQuery, refetch } = vi.hoisted(() => ({ dashboardQuery: vi.fn(), refetch: vi.fn() }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { rewardsAdmin: { analyticsDashboard: { useQuery: dashboardQuery } } } }),
 }));
 

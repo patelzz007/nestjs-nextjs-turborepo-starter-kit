@@ -1,8 +1,8 @@
 "use client";
 
-import { EmailVerificationBanner } from "@/components/email-verification-banner";
+import { EmailVerificationBanner } from "@/contexts/identity/components/email-verification-banner";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
-import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
+import { SessionCheckNotice } from "@workspace/client/lib/contexts/identity/session/session-check-notice";
 import * as React from "react";
 
 export interface MerchantShellBannersProps {

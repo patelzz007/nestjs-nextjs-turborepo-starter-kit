@@ -2,9 +2,10 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/commo
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-import { DependencyUnavailableError } from "../common/errors/app-error";
+import { DependencyUnavailableError } from "../platform/application/errors/app-error";
 import { TypedConfigService } from "../config/typed-config.service";
 import { DATABASE_APPLICATION_NAME } from "./database-pool.constants";
+import { closePrismaConnections, databasePoolBudget, prismaLogSubscriptions } from "./prisma-client-setup";
 import { RlsPool } from "./rls-pool";
 
 /** Result of one connection attempt — a value, never a rejection. */
@@ -25,30 +26,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 	public constructor(config: TypedConfigService) {
 		const pool = new RlsPool({
 			connectionString: config.database.url,
-			max: config.database.poolMax,
+			// Its share of the replica's DB_POOL_MAX budget (the system pool takes the rest).
+			max: databasePoolBudget(config.database.poolMax).request,
 			idleTimeoutMillis: config.database.idleTimeoutMs,
 			allowExitOnIdle: config.database.allowExitOnIdle,
 			application_name: DATABASE_APPLICATION_NAME.request,
 		});
-		const adapter = new PrismaPg(pool);
-
-		// Configure logging based on LOG_LEVEL (validated config)
-		const isDebug: boolean = config.isDebugLogging;
-
-		// Query events are available via Prisma's $on method.
-		// NOTE: Prisma 7 driver adapters may not emit these — log capture degrades
-		// gracefully (no query rows) rather than crashing.
-		type LogConfig = { readonly emit: "event"; readonly level: "query" | "info" | "warn" | "error" };
-		const logConfig: LogConfig[] = isDebug
-			? [
-					{ emit: "event", level: "query" },
-					{ emit: "event", level: "info" },
-					{ emit: "event", level: "warn" },
-					{ emit: "event", level: "error" },
-				]
-			: [{ emit: "event", level: "query" }];
-
-		super({ adapter, log: logConfig });
+		super({ adapter: new PrismaPg(pool), log: prismaLogSubscriptions(config.isDebugLogging) });
 		this.pool = pool;
 	}
 
@@ -103,10 +87,23 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 		}
 	}
 
+	/**
+	 * The pool Prisma's driver adapter checks out — read by the N+1 e2e suite
+	 * (`test/n-plus-one.e2e-spec.ts`), which counts the SQL statements a handler
+	 * issues on exactly this pool.
+	 *
+	 * Why a public accessor and not test-support wiring: `PrismaPg` needs the pool
+	 * before `super()` runs, so the pool is created inside this constructor and no
+	 * DI token or factory can hand the same instance to a test. It returns the
+	 * existing `RlsPool`, which stamps the RLS session on every checkout, so a
+	 * caller gains no access the service itself does not already have; production
+	 * code queries through Prisma and never calls it.
+	 */
+	public connectionPool(): RlsPool {
+		return this.pool;
+	}
+
 	public async onModuleDestroy(): Promise<void> {
-		this.logger.log("Closing database connections…");
-		await this.$disconnect();
-		await this.pool.end();
-		this.logger.log("Database connections closed");
+		await closePrismaConnections(this, this.pool, this.logger, { closing: "Closing database connections…", closed: "Database connections closed" });
 	}
 }

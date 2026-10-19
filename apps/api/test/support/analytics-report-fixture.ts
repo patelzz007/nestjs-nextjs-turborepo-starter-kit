@@ -1,6 +1,6 @@
 import { EpochMsSchema } from "@workspace/shared";
 
-import type { AnalyticsReport } from "../../src/modules/rewards/analytics/report/analytics-report";
+import type { AnalyticsReport } from "../../src/contexts/reporting/application/reports/analytics-report";
 
 /** Monday 2026-09-07 00:00 in Kuala Lumpur. */
 export const FIXTURE_WEEK_START = Date.UTC(2026, 8, 6, 16);
@@ -9,7 +9,7 @@ const WEEK_MS = 7 * 86_400_000;
 /** A small, fully known report: two weekly buckets, one table of every cell kind, hostile text. */
 export function buildFixtureReport(overrides: Partial<AnalyticsReport> = {}): AnalyticsReport {
 	return {
-		brand: "RewardHub",
+		brand: "Starter",
 		title: "Analytics report",
 		subjectName: 'Brew & Bean, "KL"',
 		subjectKey: "brew-and-bean-kl",

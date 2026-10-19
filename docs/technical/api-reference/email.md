@@ -3,7 +3,7 @@ title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
 order: 9
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -26,7 +26,7 @@ List sent emails
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:EMAIL`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `EmailLogController_list` · [source](../../../apps/api/src/modules/notifications/email/email-log.controller.ts)
+- Operation id `EmailLogController_list` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-log.controller.ts)
 
 **Parameters**
 
@@ -85,22 +85,22 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "f374a4bc-77e5-458e-8e0e-3548743de6e2",
+      "id": "01a1557c-9d05-785a-8439-6da73d771d1e",
       "templateKey": "admin-alert",
       "to": "recipient@example.com",
       "subject": "[Admin] MFA Recovery Denied",
       "status": "sent",
-      "createdAt": 1791193322456,
-      "updatedAt": 1791193322456
+      "createdAt": 1792435592437,
+      "updatedAt": 1792435592437
     },
     {
-      "id": "024685c8-e941-4ebb-9549-7c528cd12e10",
+      "id": "01a1557c-9c5c-7f1e-aa96-2769cdb63155",
       "templateKey": "admin-alert",
       "to": "recipient@example.com",
       "subject": "[Admin] MFA Recovery Review Required",
       "status": "sent",
-      "createdAt": 1791193322376,
-      "updatedAt": 1791193322376
+      "createdAt": 1792435592267,
+      "updatedAt": 1792435592267
     }
   ],
   "meta": {
@@ -108,11 +108,11 @@ Response `200 OK` (application/json):
     "total": 16,
     "page": 1,
     "totalPages": 8,
-    "nextCursor": "eyJhdCI6MTc5MTE5MzMyMjM3NiwiaWQiOiIwMjQ2ODVjOC1lOTQxLTRlYmItOTU0OS03YzUyOGNkMTJlMTAifQ",
+    "nextCursor": "eyJhdCI6MTc5MjQzNTU5MjI2NywiaWQiOiIwMWExNTU3Yy05YzVjLTdmMWUtYWE5Ni0yNzY5Y2RiNjMxNTUifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "RFLA0zB57y3EQ3Whoduoc",
-    "timestamp": 1791193326086
+    "correlationId": "SHx5YQAcdcHYKngIN3QyF",
+    "timestamp": 1792435597588
   }
 }
 ```
@@ -125,7 +125,7 @@ Live EmailLog update stream (SSE)
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:EMAIL`.
 - Content type: no request body; returns `text/event-stream` (errors are always `application/json`)
-- Operation id `EmailLogController_stream` · [source](../../../apps/api/src/modules/notifications/email/email-log.controller.ts)
+- Operation id `EmailLogController_stream` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-log.controller.ts)
 
 **Response 200 OK** — One `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract) (`text/event-stream`)
 
@@ -150,7 +150,7 @@ List email template metadata
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:EMAIL`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `EmailPreviewController_list` · [source](../../../apps/api/src/modules/notifications/email/email-preview.controller.ts)
+- Operation id `EmailPreviewController_list` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-preview.controller.ts)
 
 **Response 200 OK** (`application/json`) — Metadata for every registered email template
 
@@ -203,8 +203,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "NbGdYJuwqSzXXTt_Fu0ex",
-    "timestamp": 1791458520461
+    "correlationId": "XrcQ7UTLvUIWbpmBlZAx2",
+    "timestamp": 1792435597608
   }
 }
 ```
@@ -217,7 +217,7 @@ Render one email template preview
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:EMAIL`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `EmailPreviewController_detail` · [source](../../../apps/api/src/modules/notifications/email/email-preview.controller.ts)
+- Operation id `EmailPreviewController_detail` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-preview.controller.ts)
 
 **Parameters**
 
@@ -269,8 +269,8 @@ Response `200 OK` (application/json):
     "subject": "Verify your email address",
     "to": "jamie@example.com",
     "previewText": "Confirm your NestJS + NextJS Turborepo Starter Template email and you're all set.",
-    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta name=\"color-scheme\" content=\"light dark\">\n  <meta name=\"supported-color-schemes\" content=\"light dark\">\n  <meta name=\"x-apple-disable-message-reformatting\">\n  <title>Verify your email address</title>\n  <style>\n    @media (max-width: 620px) {\n      .email-card-inner { padding: 28px 22px 24px 22px !important; }\n      .email-h1 { font-size: 22px !important; }\n    }\n    @media (prefers-color-scheme: dark) {\n      .email-body, .email-canvas { background-color: #091018 !important; }\n      .email-card { background-color: #0f1923 !important; border-color: #1f2c3b !important; }\n      .email-heading, .email-h1, .email-brand-name { color: #edf2f8 !important; }\n      .email-text { color: #c7d2de !important; }\n      .email-muted, .email-footer { color: #97a7b7 !important; }\n      .email-panel, .email-otp-tile { background-color: #16212d !important; border-color: #1f2c3b !important; color: #edf2f8 !important; }\n      .email-rule { border-top-color: #1f2c3b !important; }\n      .email-link { color: #6594fa !important; }\n    }\n  </style>\n</head>\n<body class=\"email-body\" style=\"margin: 0; padding: 0; background-color: #f3f6fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;\">\n  <span style=\"display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all;\">Confirm your NestJS + NextJS Turborepo Starter Template email and you&#39;re all set.</span>\n  <table role=\"presentation\" class=\"email-canvas\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#f3f6fb\" style=\"width: 100%; background-color: #f3f6fb;\">\n    <tr>\n      <td align=\"center\" style=\"padding: 32px 12px 40px 12px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto;\">\n          <tr>\n            <td style=\"padding: 0 4px 18px 4px;\">\n              <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td align=\"center\" style=\"width: 34px; height: 34px; border-radius: 9px; background: #2d5ed4; color: #ffffff; font-size: 17px; font-weight: 700; line-height: 34px; text-align: center;\">N</td>\n                  <td class=\"email-brand-name\" style=\"padding-left: 10px; color: #0f172a; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;\">NestJS + NextJS Turborepo Starter Template</td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-card\" style=\"background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr><td style=\"height: 4px; line-height: 4px; font-size: 0; background: #16a34a;\">&nbsp;</td></tr>\n                <tr>\n                  <td class=\"email-card-inner\" style=\"padding: 36px 40px 32px 40px;\">\n                    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 0 0 14px 0;\">\n                      <tr><td style=\"background: #effaf3; border-radius: 999px; padding: 5px 12px; color: #166534; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;\">Email Verification</td></tr>\n                    </table>\n                    <h1 class=\"email-h1\" style=\"margin: 0 0 18px 0; color: #0f172a; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em;\">Thanks for joining!</h1>\n                    <p class=\"email-text\" style=\"margin: 0 0 16px 0; color: #334155; font-size: 15px; line-height: 1.65;\">Welcome to <strong style=\"color: #0f172a;\" class=\"email-heading\">NestJS + NextJS Turborepo Starter Template</strong>! Confirm your email address so we know it's really you — one click and your account is ready.</p>\n        <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 8px 0 24px 0;\">\n          <tr>\n            <td class=\"email-cta\" style=\"background: #2d5ed4; border-radius: 10px;\">\n              <a href=\"http://localhost:3000/auth/verify-email?token=<redacted>\" style=\"display: inline-block; padding: 14px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px;\">Verify email &rarr;</a>\n            </td>\n          </tr>\n        </table>\n        <p class=\"email-muted\" style=\"margin: 0 0 6px 0; color: #64748b; font-size: 12px; line-height: 1.5;\">Button not working? Paste this link into your browser:</p>\n        <p class=\"email-panel\" style=\"margin: 0 0 20px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; color: #334155; word-break: break-all;\">http://localhost:3000/auth/verify-email?token=<redacted> class=\"email-muted\" style=\"margin: 0 0 8px 0; color: #64748b; font-size: 13px; line-height: 1.6;\">This link expires in <strong style=\"color: #0f172a;\" class=\"email-heading\">24 hours</strong>. Didn't create an account? You can safely ignore this email.</p>\n                    \n                    <hr class=\"email-rule\" style=\"border: none; border-top: 1px solid #e2e8f0; margin: 8px 0 18px 0;\">\n                    <p class=\"email-muted\" style=\"margin: 0; color: #64748b; font-size: 12px; line-height: 1.6;\">Sent by NestJS + NextJS Turborepo Starter Template · <a href=\"http://localhost:3000\" style=\"color: #64748b; text-decoration: underline;\">localhost:3000</a></p>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-footer\" align=\"center\" style=\"padding: 20px 16px 0 16px; color: #94a3b8; font-size: 12px; line-height: 1.6; text-align: center;\">\n              <p style=\"margin: 0;\">You're receiving this because you have an account with NestJS + NextJS Turborepo Starter Template.</p>\n              <p class=\"email-muted\" style=\"margin: 4px 0 0 0;\">Questions? Reach us at <a href=\"mailto:noreply@example.com\" style=\"color: #64748b; text-decoration: underline;\">noreply@example.com</a></p>\n              <p style=\"margin: 4px 0 0 0;\">&copy; 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>",
-    "text": "NestJS + NextJS Turborepo Starter Template — Email Verification\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nThanks for joining!\n\nWelcome to NestJS + NextJS Turborepo Starter Template!\n\nPlease confirm your email address by opening the link below:\nhttp://localhost:3000/auth/verify-email?token=<redacted>\n\nThis link expires in 24 hours.\nIf you didn't create an account, you can safely ignore this email.\n\nAction: Verify email\n\nhttp://localhost:3000/auth/verify-email?token=<redacted>\n\nQuestions? noreply@example.com\n\n© 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.",
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta name=\"color-scheme\" content=\"light dark\">\n  <meta name=\"supported-color-schemes\" content=\"light dark\">\n  <meta name=\"x-apple-disable-message-reformatting\">\n  <title>Verify your email address</title>\n  <style>\n    @media (max-width: 620px) {\n      .email-card-inner { padding: 30px 22px 26px 22px !important; }\n      .email-h1 { font-size: 22px !important; }\n    }\n    @media (prefers-color-scheme: dark) {\n      .email-body, .email-canvas { background-color: #091018 !important; }\n      .email-card { background-color: #0f1923 !important; }\n      .email-heading, .email-h1, .email-brand-name { color: #edf2f8 !important; }\n      .email-text { color: #c7d2de !important; }\n      .email-muted, .email-footer { color: #97a7b7 !important; }\n      .email-eyebrow { color: #97a7b7 !important; }\n      .email-panel, .email-otp-tile { background-color: #16212d !important; color: #edf2f8 !important; }\n      .email-divider { border-top-color: #1f2c3b !important; }\n      .email-link { color: #6594fa !important; }\n    }\n  </style>\n</head>\n<body class=\"email-body\" style=\"margin: 0; padding: 0; background-color: #f1f4f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;\">\n  <span style=\"display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; mso-hide: all;\">Confirm your NestJS + NextJS Turborepo Starter Template email and you&#39;re all set.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</span>\n  <table role=\"presentation\" class=\"email-canvas\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#f1f4f9\" style=\"width: 100%; background-color: #f1f4f9;\">\n    <tr>\n      <td align=\"center\" style=\"padding: 32px 12px 40px 12px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto;\">\n          <tr>\n            <td style=\"padding: 0 4px 18px 4px;\">\n              <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td align=\"center\" style=\"width: 34px; height: 34px; border-radius: 8px; background: #2d5ed4; color: #ffffff; font-size: 17px; font-weight: 700; line-height: 34px; text-align: center;\">N</td>\n                  <td class=\"email-brand-name\" style=\"padding-left: 10px; color: #0f172a; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;\">NestJS + NextJS Turborepo Starter Template</td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-card\" style=\"background: #ffffff; border-radius: 14px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td class=\"email-card-inner\" style=\"padding: 40px 44px 36px 44px;\">\n                    <p class=\"email-eyebrow\" style=\"margin: 0 0 12px 0; color: #166534; font-size: 13px; font-weight: 600; line-height: 20px;\"><span style=\"display: inline-block; width: 8px; height: 8px; margin: 0 8px 1px 0; border-radius: 4px; background: #16a34a; vertical-align: middle;\"></span>Email verification</p>\n                    <h1 class=\"email-h1\" style=\"margin: 0 0 20px 0; color: #0f172a; font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em;\">Thanks for joining!</h1>\n                    <p class=\"email-text\" style=\"margin: 0 0 16px 0; color: #334155; font-size: 15px; line-height: 1.65;\">Welcome to <strong style=\"color: #0f172a;\" class=\"email-heading\">NestJS + NextJS Turborepo Starter Template</strong>! Confirm your email address so we know it's really you — one click and your account is ready.</p>\n        <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 8px 0 24px 0;\">\n          <tr>\n            <td class=\"email-cta\" style=\"background: #2d5ed4; border-radius: 8px;\">\n              <a href=\"http://localhost:3000/auth/verify-email?token=<redacted>\" style=\"display: inline-block; padding: 13px 26px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;\">Verify email</a>\n            </td>\n          </tr>\n        </table>\n        <p class=\"email-muted\" style=\"margin: 0 0 6px 0; color: #64748b; font-size: 12px; line-height: 1.5;\">Button not working? Paste this link into your browser:</p>\n        <p class=\"email-panel\" style=\"margin: 0 0 20px 0; background: #f5f7fb; border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; color: #334155; word-break: break-all;\">http://localhost:3000/auth/verify-email?token=<redacted> class=\"email-muted\" style=\"margin: 0 0 8px 0; color: #64748b; font-size: 13px; line-height: 1.6;\">This link expires in <strong style=\"color: #0f172a;\" class=\"email-heading\">24 hours</strong>. Didn't create an account? You can safely ignore this email.</p>\n                    \n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td class=\"email-footer\" align=\"center\" style=\"padding: 20px 16px 0 16px; color: #94a3b8; font-size: 12px; line-height: 1.6; text-align: center;\">\n              <p style=\"margin: 0;\">You're receiving this because you have an account with <a href=\"http://localhost:3000\" style=\"color: #94a3b8; text-decoration: underline;\">NestJS + NextJS Turborepo Starter Template</a>.</p>\n              <p style=\"margin: 4px 0 0 0;\">Questions? Reach us at <a href=\"mailto:noreply@example.com\" style=\"color: #94a3b8; text-decoration: underline;\">noreply@example.com</a></p>\n              <p style=\"margin: 4px 0 0 0;\">&copy; 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>",
+    "text": "NestJS + NextJS Turborepo Starter Template — Email verification\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nThanks for joining!\n\nWelcome to NestJS + NextJS Turborepo Starter Template!\n\nPlease confirm your email address by opening the link below:\nhttp://localhost:3000/auth/verify-email?token=<redacted>\n\nThis link expires in 24 hours.\nIf you didn't create an account, you can safely ignore this email.\n\nAction: Verify email\n\nhttp://localhost:3000/auth/verify-email?token=<redacted>\n\nQuestions? noreply@example.com\n\n© 2026 NestJS + NextJS Turborepo Starter Template. All rights reserved.",
     "props": {
       "to": "jamie@example.com",
       "verificationToken": "demo-verify-token-2026",
@@ -278,8 +278,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "nT-d5ELmW7Yri5DsuXqoo",
-    "timestamp": 1791193326109
+    "correlationId": "dwQFfCq3qPNqYC7lhPdS-",
+    "timestamp": 1792435597636
   }
 }
 ```
@@ -291,9 +291,10 @@ Send one email template (sample props)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `CREATE:EMAIL`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `EmailPreviewController_sendTest` · [source](../../../apps/api/src/modules/notifications/email/email-preview.controller.ts)
+- Operation id `EmailPreviewController_sendTest` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-preview.controller.ts)
 
 **Parameters**
 
@@ -338,12 +339,12 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "ok": true,
-    "id": "65365541-6cc3-4d9d-ba19-aa15e2ca34cd",
+    "id": "01a1557c-b165-75d8-a7e8-0116970b495f",
     "mode": "log-only"
   },
   "meta": {
-    "correlationId": "UO9jk_maNDT6Joe9EzdEG",
-    "timestamp": 1791193326130
+    "correlationId": "3Hy7zjecyCOFy7ia9uZS5",
+    "timestamp": 1792435597673
   }
 }
 ```
@@ -356,7 +357,7 @@ Webhook endpoint info (GET is not the delivery path)
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `EmailWebhookController_info` · [source](../../../apps/api/src/modules/notifications/email/email-webhook.controller.ts)
+- Operation id `EmailWebhookController_info` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-webhook.controller.ts)
 
 **Response 200 OK** (`application/json`) — Explains the endpoint
 
@@ -392,8 +393,8 @@ Response `200 OK` (application/json):
     "path": "/notifications/email-webhook"
   },
   "meta": {
-    "correlationId": "JwtK1WVbdPyZqIIIu5Z_8",
-    "timestamp": 1791193326142
+    "correlationId": "SOIiuzk7Ui2xc1_LBuMa2",
+    "timestamp": 1792435597687
   }
 }
 ```
@@ -402,12 +403,13 @@ Response `200 OK` (application/json):
 
 Resend delivery webhook (signature-verified)
 
-Receives delivery events from Resend and updates EmailLog. Only accepts requests signed by Resend (standard-webhooks scheme). Swagger's "Try it out" sends no signature, so it will always get 403 Missing webhook signature headers — that is the security boundary working. To test manually: run `pnpm --filter @workspace/api exec tsx scripts/test-webhook-signature.ts` and copy the printed header values + body into this form. Two gotchas: (1) the body must match EXACTLY — the signature covers the raw bytes, and Swagger's pretty-printed example will NOT match; (2) the values expire after 5 minutes, so paste fast or re-run the script.
+Receives delivery events from Resend and updates EmailLog. Only accepts requests signed by Resend (standard-webhooks scheme). Swagger's "Try it out" sends no signature, so it will always get 403 Missing webhook signature headers — that is the security boundary working. To test manually: run `pnpm --filter @workspace/api webhook:test-signature` and copy the printed header values + body into this form. Two gotchas: (1) the body must match EXACTLY — the signature covers the raw bytes, and Swagger's pretty-printed example will NOT match; (2) the values expire after 5 minutes, so paste fast or re-run the script.
 
 - **Public** — no session required.
+- Rate limit: `WEBHOOK_RATE_LIMIT_PER_MINUTE` requests per 60 s per client IP (webhook limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `EmailWebhookController_receive` · [source](../../../apps/api/src/modules/notifications/email/email-webhook.controller.ts)
+- Operation id `EmailWebhookController_receive` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-webhook.controller.ts)
 
 **Parameters**
 
@@ -458,13 +460,13 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 
 ```http
 POST /notifications/email-webhook
-svix-id: msg_8eea0ab6115c4f4a91788e1f7ac1dc37
-svix-timestamp: 1791193326
+svix-id: msg_5c367c8efbb1493c89a8b9b5e7b13f38
+svix-timestamp: 1792435597
 Content-Type: application/json
 
 {
   "type": "email.delivered",
-  "created_at": "2026-10-05T09:42:06.154Z",
+  "created_at": "2026-10-19T18:46:37.718Z",
   "data": {
     "email_id": "seed",
     "to": [
@@ -484,8 +486,8 @@ Response `403 Forbidden` (application/json):
     "message": "Missing webhook signature header(s): webhook-signature/svix-signature. Resend signs every webhook with these headers — a browser/curl request without them is rejected by design."
   },
   "meta": {
-    "correlationId": "XZNlWta9y2RbEqN4xN9YT",
-    "timestamp": 1791193326161
+    "correlationId": "QzNYqdy581U28cc_b6fVn",
+    "timestamp": 1792435597727
   }
 }
 ```

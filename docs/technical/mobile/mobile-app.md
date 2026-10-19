@@ -542,19 +542,19 @@ See [section 19, piece 2](#piece-2-packagesapi-client).
 ### 7.1 What exists today
 
 - `AuthClientTypeSchema = z.enum(["web", "admin", "merchant"])` in
-  [`packages/shared/src/schemas/auth/auth.ts`](../../../packages/shared/src/schemas/auth/auth.ts).
+  [`packages/shared/src/contexts/identity/schemas/auth.ts`](../../../packages/shared/src/contexts/identity/schemas/auth.ts).
 - `CLIENT_TYPE_HEADER` (`X-Client-Type`) and `AUTH_COOKIE_NAMES` (one cookie pair per client
   type) in [`packages/shared/src/contracts/client-session.ts`](../../../packages/shared/src/contracts/client-session.ts).
-- [`auth.guard.ts`](../../../apps/api/src/modules/auth/guards/auth.guard.ts) already accepts
+- [`auth.guard.ts`](../../../apps/api/src/platform/presentation/http/security/guards/auth.guard.ts) already accepts
   `Authorization: Bearer`, which takes priority over the cookie;
-  [`mutation-intent.guard.ts`](../../../apps/api/src/modules/auth/guards/mutation-intent.guard.ts)
+  [`mutation-intent.guard.ts`](../../../apps/api/src/platform/presentation/http/security/guards/mutation-intent.guard.ts)
   skips its header requirement for Bearer requests.
 - Login, login verification and refresh go through
-  [`SetAuthCookiesInterceptor`](../../../apps/api/src/modules/auth/interceptors/set-auth-cookies.interceptor.ts),
+  [`SetAuthCookiesInterceptor`](../../../apps/api/src/platform/presentation/http/security/interceptors/set-auth-cookies.interceptor.ts),
   which moves tokens into httpOnly cookies and strips them from the body.
-- `/auth/refresh` in [`sessions.controller.ts`](../../../apps/api/src/modules/sessions/sessions.controller.ts)
+- `/auth/refresh` in [`sessions.controller.ts`](../../../apps/api/src/contexts/identity/presentation/http/sessions.controller.ts)
   reads the refresh token only from the cookie chosen by `X-Client-Type`
-  ([`refresh-token.guard.ts`](../../../apps/api/src/modules/auth/guards/refresh-token.guard.ts)).
+  ([`refresh-token.guard.ts`](../../../apps/api/src/platform/presentation/http/security/guards/refresh-token.guard.ts)).
 
 ### 7.2 Changes
 
@@ -612,7 +612,7 @@ See [section 19, piece 3](#piece-3-mobile-client-type).
 ### 7.8 What the implementation changed
 
 - **One client-type resolver.** `resolveRequestClientType()`
-  (`apps/api/src/modules/auth/utils/client-type.ts`) reads `X-Client-Type`, then `?client_type=`,
+  (`apps/api/src/platform/presentation/http/security/client-type.ts`) reads `X-Client-Type`, then `?client_type=`,
   through `AuthClientTypeSchema`; absent or unknown values (case-sensitive: `Mobile` is not
   `mobile`) are `web`. Every guard and interceptor that cares about the client type uses it. Shared
   helpers: `BrowserClientTypeSchema`, `isBrowserClientType()`, `authTokenTransportOf()`,
@@ -655,7 +655,7 @@ See [section 19, piece 3](#piece-3-mobile-client-type).
   now stored as SHA-256 digests (`CryptoService.hashRefreshToken` / `matchesRefreshToken`) and carry
   a random `nonce` claim. Rows stored before the change answer `401 REFRESH_TOKEN_INVALID` (sign in
   once more) rather than being treated as theft. No schema change.
-- **Audit `auth_method` for body refresh tokens.** Piece 3 recorded a body-presented refresh token as
+- **Audit `authMethod` for body refresh tokens.** Piece 3 recorded a body-presented refresh token as
   `REFRESH_COOKIE`; piece 4's generated migration added `REFRESH_BODY` to `AuditAuthMethod`, and the
   refresh guard now records it for client type `mobile`.
 - **Impersonation stays browser-only**: its payload carries only an access token, which the mobile
@@ -680,7 +680,7 @@ expiresAt, createdAt }` (`SessionSchema`).
   soft-delete fields `isDeleted` / `deletedAt`, and rotation fields. There is **no** `deletedBy`,
   no client type, no last-active time and no way to tell the current session.
 - `/auth/logout-all` revokes every refresh token of the user and bumps `tokenVersion` through
-  [`UserSessionRevocationService`](../../../apps/api/src/modules/authorization/services/user-session-revocation.service.ts);
+  [`LogOutAllDevicesHandler`](../../../apps/api/src/contexts/identity/application/commands/log-out-all-devices/log-out-all-devices.handler.ts);
   cached access-token state is invalidated on every API instance after commit. **This is already
   immediate on every client type**: a user signed in on the merchant web app and the mobile app
   is signed out of both at once.
@@ -694,7 +694,7 @@ packed into one text field.
 | Column (logical)                | Source                                                                                 | Trust                         | Shown as                                            |
 | ------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------- |
 | `clientType`                    | validated `X-Client-Type`                                                              | server-classified             | "Mobile app", "Web", "Merchant", "Admin"            |
-| `browserName`, `browserVersion` | parsed User-Agent ([`user-agent.ts`](../../../apps/api/src/common/http/user-agent.ts)) | client-reported               | "Chrome 141"                                        |
+| `browserName`, `browserVersion` | parsed User-Agent ([`user-agent.ts`](../../../apps/api/src/platform/infrastructure/http/user-agent.ts)) | client-reported               | "Chrome 141"                                        |
 | `osName`, `osVersion`           | parsed User-Agent                                                                      | client-reported               | "macOS 16.1", "iOS 26.0"                            |
 | `deviceType`                    | parsed User-Agent (`DeviceTypeSchema`)                                                 | client-reported               | icon: desktop / mobile / tablet                     |
 | `deviceModel`, `deviceName`     | mobile only: `expo-device`, sent in a header                                           | client-reported, display only | "Bishen's iPhone 15 Pro"                            |
@@ -733,7 +733,7 @@ System markers are a closed zod enum in `packages/shared`; free-form strings are
 - Access tokens gain `sid`, the id of the device session that issued them. It is identity, not
   authorization data, so [ADR 003](../../adr/003-jwt-identity-only.md) still holds.
 - The per-request access-token state check
-  ([`access-token-state.service.ts`](../../../apps/api/src/modules/auth/services/access-token-state.service.ts))
+  ([`access-token-state.service.ts`](../../../apps/api/src/contexts/identity/infrastructure/security/access-token-state.service.ts))
   already rejects tokens whose `tokenVersion` is stale. It additionally rejects tokens whose
   `sid` belongs to a revoked session. The check reads the same cache (memory, with Redis
   pub/sub invalidation across instances in deployed environments), so it adds no database query
@@ -774,7 +774,7 @@ sign-in: the resolver is called with a timeout and its failure is logged and ign
 ### 8.8 The device list in the web apps
 
 The shared security settings panel
-([`security-settings-panel.tsx`](../../../packages/client/src/lib/auth/mfa/security-settings-panel.tsx))
+([`security-settings-panel.tsx`](../../../packages/client/src/lib/contexts/identity/mfa/security-settings-panel.tsx))
 gains a **Signed-in devices** section used by web, merchant and admin alike:
 
 - Rows sorted with the current device first, then by `lastActiveAt` descending.
@@ -794,13 +794,13 @@ See [section 19, piece 4](#piece-4-device-sessions).
 
 ### 8.10 What the implementation changed
 
-- **Migration `20261008154344_device_sessions`** (generated): drops `refresh_tokens.deviceInfo`,
-  adds every column of 8.2 plus `deleted_by`, the enums `SessionClientType` and
+- **Migration `20261008154344_device_sessions`** (generated): drops `RefreshToken.deviceInfo`,
+  adds every column of 8.2 plus `deletedBy`, the enums `SessionClientType` and
   `SessionSignInMethod`, and `REFRESH_BODY` in `AuditAuthMethod`. The device-detail columns are
   nullable (sessions stored before the change have none — the clients hide what is `null`);
-  `last_active_at` defaults to the migration time for them. Location is stored as
-  `location_country` / `location_region` / `location_city`. Columns per
-  [database → device sessions](../database.md#device-sessions-refresh_tokens).
+  `lastActiveAt` defaults to the migration time for them. Location is stored as
+  `locationCountry` / `locationRegion` / `locationCity`. Columns per
+  [database → device sessions](../database.md#device-sessions-refreshtoken).
 - **Sign-in methods, as the login flows really are.** `PASSWORD`, `PASSWORD_TOTP`,
   `PASSWORD_BACKUP_CODE` and `TEAM_INVITE_REGISTRATION` (the staff account created from a team
   invite signs in in the same request), each also with `_NEW_DEVICE_CODE` when login verification
@@ -844,7 +844,7 @@ See [section 19, piece 4](#piece-4-device-sessions).
   `SessionLocationLookupService` with `SESSION_LOCATION_TIMEOUT_MS` (default 300 ms); a timeout, an
   error or an answer that fails `SessionLocationSchema` is logged and the session is stored without
   a location.
-- **Web.** `SignedInDevicesSection` (`packages/client/src/lib/auth/sessions/`) is a section of
+- **Web.** `SignedInDevicesSection` (`packages/client/src/lib/contexts/identity/sessions/`) is a section of
   `SecuritySettingsPanel`; copy lives in `SIGNED_IN_DEVICES_LABELS`. Sign out everywhere is the auth
   facade's new `logoutEverywhere()` command (`POST /auth/logout-all` through the lifecycle path,
   then the normal exit); it reports failure instead of leaving. The router gained `auth.sessions`,
@@ -1554,7 +1554,7 @@ is open, sign out everywhere from the phone while merchant web is open.
 
 | Turbo task  | Command                                             | Purpose                                                                                                            |
 | ----------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `lint`      | `eslint --max-warnings=0`                           | same zero-warning gate as every workspace                                                                          |
+| `lint`      | `eslint`                                            | the same lint gate as every workspace (fails on errors)                                                                          |
 | `typecheck` | `tsc --noEmit`                                      | strict flags from the shared TypeScript config                                                                     |
 | `test`      | `jest` (jest-expo) + `npx expo install --check`     | tests and SDK version alignment                                                                                    |
 | `build`     | `npx expo export --platform ios --platform android` | bundle check: proves Metro resolves every workspace package in the pnpm workspace, without Xcode or Android Studio |

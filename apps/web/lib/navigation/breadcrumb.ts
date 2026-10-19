@@ -22,12 +22,12 @@ function resolveIcon(iconName: string | undefined): LucideIcon {
 export { withTrailTailLabel };
 
 /**
- * Builds the breadcrumb trail for a consumer Reward Hub path from the sidebar menu.
+ * Builds the breadcrumb trail for a customer dashboard path from the sidebar menu.
  *
  * The trail starts at the page's own menu item (`Browse Rewards`, `My Wallet`):
  * the consumer menu's sections are plain groupings, so no section crumb is
  * prepended. Below a menu item, only real pages become crumbs (from
- * `WEB_ROUTE_ACCESS`) — `/rewardhub/rewards` has no page, so a reward detail
+ * `WEB_ROUTE_ACCESS`) — `/dashboard/rewards` has no page, so a reward detail
  * reads `Browse Rewards › Reward` until the page sets the reward's title.
  */
 export function resolveWebTrail(pathname: string): readonly BreadcrumbItem[] {

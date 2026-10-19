@@ -1,11 +1,11 @@
-import type { DefaultTenantPolicyRecordIds } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import type { DefaultTenantPolicyRecordIds } from "../../src/contexts/authorization/public-api";
 
 import { deterministicUuid } from "./deterministic-uuid";
 
 /** Namespace of every deterministic policy-seed id (drafts, versions, simulations, audit rows). */
 const POLICY_SEED_NAMESPACE = "seed.authorization_policy";
 
-/** Ids of the seeded platform guardrail and its three `authorization_audits` rows. */
+/** Ids of the seeded platform guardrail and its three `AuthorizationAudit` rows. */
 export interface PlatformGuardrailSeedIds {
 	readonly draftId: string;
 	readonly versionId: string;

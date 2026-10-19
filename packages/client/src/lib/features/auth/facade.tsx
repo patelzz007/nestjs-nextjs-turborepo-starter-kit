@@ -17,9 +17,9 @@ import {
 	type RefreshCall,
 	type RefreshResult,
 } from "../../api/use-api";
-import { createAuthQueryCache } from "../../auth/session/auth-query-cache";
-import type { ServerRenderedSession } from "../../auth/session/server-rendered-session";
-import { composeAuthUser, resolveSessionScope, type AuthUser } from "../../auth/session/session";
+import { createAuthQueryCache } from "../../contexts/identity/session/auth-query-cache";
+import type { ServerRenderedSession } from "../../contexts/identity/session/server-rendered-session";
+import { composeAuthUser, resolveSessionScope, type AuthUser } from "../../contexts/identity/session/session";
 import {
 	checkSession,
 	SESSION_CHECK_TIMEOUT_MS,
@@ -28,8 +28,8 @@ import {
 	type SessionCheckProblem,
 	type SessionCheckResponses,
 	type SessionCheckResult,
-} from "../../auth/session/session-check";
-import { createAuthChannel, type AuthChannel, type AuthSyncEvent } from "../../auth/session/sync";
+} from "../../contexts/identity/session/session-check";
+import { createAuthChannel, type AuthChannel, type AuthSyncEvent } from "../../contexts/identity/session/sync";
 import { createFeatureStoreContext } from "../../state/feature-store-context";
 import { authActions, type AuthAction } from "./actions";
 import type { AuthBroadcaster } from "./effects";
@@ -47,7 +47,7 @@ import { createAuthStore, type AuthStore } from "./store";
 
 /**
  * Auth feature API — components use ONLY this module (re-exported from
- * `@workspace/client/lib/auth`): `useAuth()` for the full facade, or the narrow
+ * `@workspace/client/lib/contexts/identity`): `useAuth()` for the full facade, or the narrow
  * hooks (`useAuthUser`, `useIsAuthenticated`, `useAuthStatus`,
  * `useAuthCommands`) in new code.
  *
@@ -329,7 +329,7 @@ function AuthSession({
 
 	// ── Session check: `/auth/me` + `/auth/permissions` outside the 401 pipeline
 	// (no exit sequence, no redirect). `checkSession` classifies the answer
-	// (lib/auth/session/session-check.ts): a live session is restored, a dead one
+	// (lib/contexts/identity/session/session-check.ts): a live session is restored, a dead one
 	// reads as signed out, an expired access token gets ONE refresh through the
 	// single flight above, and an unreachable API changes nothing but the check's
 	// own state — then retries with capped, jittered backoff. Only the latest

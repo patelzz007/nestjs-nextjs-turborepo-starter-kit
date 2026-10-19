@@ -20,7 +20,7 @@ side.
 
 | Path | What |
 | --- | --- |
-| `apps/api/prisma/schema.prisma` | The schema — single source of truth for tables, columns, indexes |
+| `apps/api/prisma/schema.prisma` | The schema — single source of truth for tables, columns, indexes. Models `/// @extends BaseModel`; `pnpm db:schema` writes the base fields into each ([rules/08](../../rules/08-database-prisma.md#the-schema-and-the-base-model)) |
 | `apps/api/prisma/migrations/` | Prisma-generated migrations; immutable once committed |
 | `apps/api/prisma/migrations-baseline.json` | The [baseline marker](#migration-baseline) |
 | `apps/api/prisma/rls.sql`, `apps/api/prisma/rls/*.sql` | Row-level security, roles and grants — applied after every migrate ([database security](./security/database-security.md)) |
@@ -35,6 +35,7 @@ Run from the repo root (`pnpm db:*` forwards to `apps/api`).
 | --- | --- | --- |
 | `pnpm setup:db` | Build shared → `db:all` (generate + deploy → seed) | Rewrites demo rows |
 | `pnpm db:all` | `turbo run db:seed` (its `dependsOn` runs `db:generate` + `db:deploy` first) | Rewrites demo rows |
+| `pnpm --filter @workspace/api db:schema` | Write the base model's fields into every model's managed block of `schema.prisma` (`--check`: fail when a block is missing or stale). Every `db:*` script below that reads the schema runs it first | No |
 | `pnpm db:migrate` | `prisma migrate dev` then RLS — create + apply a migration for a schema change | Dev only |
 | `pnpm db:migrate:create --name <change>` | Generate a migration without applying it (review the SQL first) | No |
 | `pnpm db:deploy` | `prisma migrate deploy` then RLS — the only command for shared/deployed databases | No |
@@ -159,10 +160,10 @@ Enterprise accounts (in addition to the development platform accounts):
 ### Seed coverage — every table, every column
 
 > **Only meaningful on a freshly reset database.** A long-lived dev database accumulates rows that the
-> seed does not write (the analytics consumer fills `analytics_events`, the API boot fills capability
+> seed does not write (the analytics consumer fills `AnalyticsEvent`, the API boot fills capability
 > links, …), so a pass there proves nothing about CI, which seeds an empty database. Check it the way CI
 > does: `pnpm ci:local --e2e-only` (throwaway databases: migrate → RLS → `db:seed` → coverage → e2e, then
-> dropped), or `pnpm db:reset` first. `analytics_events` and `inbox_processed_events` are seeded by replaying the
+> dropped), or `pnpm db:reset` first. `AnalyticsEvent` and `InboxProcessedEvent` are seeded by replaying the
 > PUBLISHED outbox events through the analytics consumer's own handler and SQL
 > (`packages/messaging/src/inbox`, `prisma/seed/analytics-ingest.ts`), so they match what the consumer writes.
 
@@ -174,7 +175,7 @@ That includes soft-delete fields (seed at least one soft-deleted row), optional 
 audit/context columns (IP, user agent, correlation id, impersonator) and short-lived tables (a live
 2FA challenge, a pending setup, …).
 
-How it works (`apps/api/scripts/seed-coverage.ts`, `seed-coverage-catalog.ts`, `check-seed-coverage.ts`):
+How it works (`apps/api/scripts/lib/seed-coverage.ts`, `scripts/lib/seed-coverage-catalog.ts`, and the `check-seed-coverage` command of `scripts/db.ts`):
 
 - The table/column list comes from **both** the generated client's DMMF (cross-checked against the
   `model` declarations in `schema.prisma`, so a stale client fails) and the live Postgres catalog. A
@@ -182,12 +183,15 @@ How it works (`apps/api/scripts/seed-coverage.ts`, `seed-coverage-catalog.ts`, `
 - It connects with `DATABASE_URL` in a `READ ONLY` transaction with `row_security = off`: it never
   writes, and if RLS would filter a table Postgres raises an error instead of returning a partial view.
 - One `count(*)` + `count(column)` scan per table; NOT NULL columns are guaranteed by the database.
-- **Exemptions** name an `empty-table` or a `null-column` with a written `reason` of at least 40
-  characters that states a structural cause ("no correct database holds this value"). "We did not
-  seed it" is never a reason. An entry that no longer matches a gap fails the check, so the list
-  only shrinks.
+- **Exemptions** name an `empty-table`, a `null-column`, or a `never-soft-deleted` table with a
+  written `reason` of at least 40 characters that states a structural cause ("no correct database
+  holds this value"). "We did not seed it" is never a reason. `never-soft-deleted` covers the base
+  model's `deletedAt` / `deletedBy` of a table no write path ever soft-deletes (an append-only log,
+  or a row that ends through its own status column); a table the app *does* soft-delete gets a
+  seeded soft-deleted row instead. An entry that no longer matches a gap fails the check, so the
+  list only shrinks.
 
-## Device sessions (`refresh_tokens`)
+## Device sessions (`RefreshToken`)
 
 One row per signed-in device ([mobile plan §8](./mobile/mobile-app.md#8-piece-4-device-sessions),
 [ADR 034](../adr/034-immediate-per-session-revocation.md)). The row is rotated **in place** on every
@@ -196,28 +200,28 @@ access token's `sid`.
 
 | Column | Written | Notes |
 | --- | --- | --- |
-| `token`, `previous_token_hash`, `rotation_version` | sign-in, every refresh | SHA-256 digests, never a token; `rotation_version` also moves on a revoke |
-| `client_type` (`SessionClientType`) | sign-in | the validated `X-Client-Type` |
-| `browser_name`, `browser_version`, `os_name`, `os_version`, `device_type` | sign-in | parsed from the User-Agent (`common/http/user-agent.ts`) |
-| `device_model` | sign-in | `X-Device-Model` for client type `mobile`, else the User-Agent's model |
-| `device_name`, `app_version` | sign-in | `X-Device-Name` / `X-App-Version`, client type `mobile` only |
-| `sign_in_method` (`SessionSignInMethod`) | sign-in | the proofs the login flow required (password, TOTP, backup code, team-invite registration — each with or without the emailed new-device code) |
-| `ipAddress`, `last_ip_address` | sign-in / every refresh | server-observed (`TRUST_PROXY`-aware) |
-| `last_active_at` | sign-in, every refresh | epoch ms |
-| `location_country`, `location_region`, `location_city` | sign-in | the `SessionLocationResolver` port (`SESSION_LOCATION_PROVIDER`, only `none` today — NULL) |
-| `is_deleted`, `deleted_at`, `deleted_by` | every revocation | `deleted_by` = a user id (the user or an admin) or a system marker from `SessionSystemRevokerSchema` |
+| `token`, `previousTokenHash`, `rotationVersion` | sign-in, every refresh | SHA-256 digests, never a token; `rotationVersion` also moves on a revoke |
+| `clientType` (`SessionClientType`) | sign-in | the validated `X-Client-Type` |
+| `browserName`, `browserVersion`, `osName`, `osVersion`, `deviceType` | sign-in | parsed from the User-Agent (`common/http/user-agent.ts`) |
+| `deviceModel` | sign-in | `X-Device-Model` for client type `mobile`, else the User-Agent's model |
+| `deviceName`, `appVersion` | sign-in | `X-Device-Name` / `X-App-Version`, client type `mobile` only |
+| `signInMethod` (`SessionSignInMethod`) | sign-in | the proofs the login flow required (password, TOTP, backup code, team-invite registration — each with or without the emailed new-device code) |
+| `ipAddress`, `lastIpAddress` | sign-in / every refresh | server-observed (`TRUST_PROXY`-aware) |
+| `lastActiveAt` | sign-in, every refresh | epoch ms |
+| `locationCountry`, `locationRegion`, `locationCity` | sign-in | the `SessionLocationResolver` port (`SESSION_LOCATION_PROVIDER`, only `none` today — NULL) |
+| `isDeleted`, `deletedAt`, `deletedBy` | every revocation | `deletedBy` = a user id (the user or an admin) or a system marker from `SessionSystemRevokerSchema` |
 
 Client-reported values are display-only: bounded to their columns and validated with the shared zod
 schemas before storage (`packages/shared/src/schemas/auth/device-session.ts`); an invalid value is
 stored as NULL rather than refusing the sign-in. The device-detail columns are nullable because
 sessions created before the `device_sessions` migration have no details; they stay NULL until those
-sessions expire (`last_active_at` was backfilled with the migration time).
+sessions expire (`lastActiveAt` was backfilled with the migration time).
 
 **Seed coverage.** `prisma/seed/device-sessions.ts` builds every seeded session through the API's own
 User-Agent parser and header validation (`describeSessionDevice`): every client type (web, merchant,
 admin, and the mobile app on iOS and Android), every sign-in method, locations with and without a
 region or city, and — on the MFA demo user (`account-security.ts`) — a revoked session for every
-`deleted_by` path (the user, an admin, and each system marker), so `db:check-seed-coverage` sees a
+`deletedBy` path (the user, an admin, and each system marker), so `db:check-seed-coverage` sees a
 value in every column.
 
 ## Related

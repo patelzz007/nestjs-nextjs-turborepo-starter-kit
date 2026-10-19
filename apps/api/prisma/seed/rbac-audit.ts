@@ -19,13 +19,13 @@ export interface SeedRoleAssignment {
 	readonly scenario: string;
 }
 
-/** One `permission_audit_logs` row as the app writes it (`AuthorizationAuditService.record`). */
+/** One `PermissionAuditLog` row as the app writes it (`AuthorizationAuditService.record`). */
 export interface SeedAuditEntry {
 	/** Stable key → deterministic row id and correlation id (re-seeds converge). */
 	readonly key: string;
 	readonly action: string;
 	readonly actorKind: PermissionAuditActorKind;
-	/** `users.id` for USER, the allowlisted operation name for SYSTEM_OPERATION. */
+	/** `User.id` for USER, the allowlisted operation name for SYSTEM_OPERATION. */
 	readonly actorId: string;
 	readonly targetUserId?: string | undefined;
 	readonly targetRoleId?: string | undefined;
@@ -63,8 +63,8 @@ export async function recordSeedAudit(tx: Prisma.TransactionClient, entry: SeedA
 }
 
 /**
- * Assign a role the way the app does: the live `user_roles` row carries
- * `assignedBy`, and the same transaction appends the `permission_audit_logs`
+ * Assign a role the way the app does: the live `UserRole` row carries
+ * `assignedBy`, and the same transaction appends the `PermissionAuditLog`
  * row (real actor, correlation id) — idempotent across re-seeds.
  */
 export async function assignSeedRole(assignment: SeedRoleAssignment): Promise<void> {

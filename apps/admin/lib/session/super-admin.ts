@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
 import * as React from "react";
 
 export interface SuperAdminStatus {

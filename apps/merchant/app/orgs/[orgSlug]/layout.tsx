@@ -1,9 +1,9 @@
-import { OrgTenantBootstrap } from "@/components/org/org-tenant-bootstrap";
+import { OrgTenantBootstrap } from "@/contexts/organizations/components/org/org-tenant-bootstrap";
 import { MerchantShell } from "@/components/merchant-shell";
-import { getMerchantServerSession } from "@/lib/auth/server";
-import { loadMerchantServerContext, readOrganizationSlugCookie, readSidebarOpen } from "@/lib/merchant-server-api";
-import { isCanonicalOrganizationSlug, resolveOrganizationTenantFromUrlSegment, resolvePreferredMembershipSlug } from "@/lib/org/resolve-slug";
-import { loadServerLocationScope, type ServerLocationScope } from "@/lib/org/server-location-scope";
+import { getMerchantServerSession } from "@/contexts/identity/lib/server";
+import { loadMerchantServerContext, loadOrganizationContext, loadPreferredOrganizationSlug, readSidebarOpen } from "@/lib/merchant-server-api";
+import { isCanonicalOrganizationSlug } from "@/contexts/organizations/lib/org/resolve-slug";
+import { loadServerLocationScope, type ServerLocationScope } from "@/contexts/organizations/lib/org/server-location-scope";
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { redirect } from "next/navigation";
 
@@ -15,33 +15,37 @@ interface OrgLayoutProps {
 export const dynamic = "force-dynamic";
 
 /**
- * The `/orgs/[orgSlug]` shell. The URL owns the tenant:
+ * The `/orgs/[orgSlug]` shell. The URL owns the tenant, and the organization context (which answers only a
+ * member) says whether the segment is one of the member's organizations:
  * - an organization-id segment of one of the member's organizations redirects to its canonical slug;
  * - a segment that is none of the member's organizations redirects to the member's PREFERRED
- *   organization — the `organizationSlug` cookie, followed only when it names one of their own
- *   memberships — or, without a valid preference, renders (the page guard denies) / sends a
- *   member-less user to onboarding.
+ *   organization — the `organizationSlug` cookie, followed only when the API confirms the membership —
+ *   or, without a valid preference, renders (the page guard denies) / sends a member-less user to onboarding.
  */
 export default async function OrgLayout({ children, params }: OrgLayoutProps): Promise<React.JSX.Element> {
 	const { orgSlug } = await params;
-	const [ctx, session, storedSlug, sidebarOpen] = await Promise.all([
+	const [ctx, session, urlContext, sidebarOpen] = await Promise.all([
 		loadMerchantServerContext(),
 		getMerchantServerSession(),
-		readOrganizationSlugCookie(),
+		loadOrganizationContext(orgSlug),
 		readSidebarOpen(),
 	]);
-	const resolvedTenant = resolveOrganizationTenantFromUrlSegment(ctx.memberships, orgSlug);
-	const preferredSlug = resolvePreferredMembershipSlug(ctx.memberships, storedSlug);
+	const resolvedTenant = urlContext?.data.organization;
 
-	if (!isCanonicalOrganizationSlug(orgSlug)) {
-		if (resolvedTenant !== undefined) {
-			redirect(orgRoutes(resolvedTenant.slug).dashboard);
-		}
-		redirect(preferredSlug !== undefined ? orgRoutes(preferredSlug).dashboard : ROUTES.onboarding);
+	if (!isCanonicalOrganizationSlug(orgSlug) && resolvedTenant !== undefined) {
+		redirect(orgRoutes(resolvedTenant.slug).dashboard);
 	}
 
-	if (resolvedTenant === undefined && preferredSlug !== undefined && preferredSlug !== orgSlug) {
-		redirect(orgRoutes(preferredSlug).dashboard);
+	// The preference is looked up only when the URL's organization did not resolve: an ordinary
+	// navigation makes no call for it, and cannot fail because of a store the URL does not name.
+	if (resolvedTenant === undefined) {
+		const preferredSlug: string | undefined = await loadPreferredOrganizationSlug();
+		if (!isCanonicalOrganizationSlug(orgSlug)) {
+			redirect(preferredSlug !== undefined ? orgRoutes(preferredSlug).dashboard : ROUTES.onboarding);
+		}
+		if (preferredSlug !== undefined && preferredSlug !== orgSlug) {
+			redirect(orgRoutes(preferredSlug).dashboard);
+		}
 	}
 
 	// Seeds the tenant context (store filter + accessible locations) so the first client render

@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readProductIdParam, type IdRouteParams } from "@/lib/catalog/route-params";
+import { readProductIdParam, type IdRouteParams } from "@/contexts/catalog/lib/route-params";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import ProductDetailView from "../product-detail-view";
+import ProductDetailView from "../../../../../contexts/catalog/components/product-detail-view";
 
 export const dynamic = "force-dynamic";
 

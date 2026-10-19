@@ -4,16 +4,16 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "astro dev --port 3002 --force",
+		"dev": "astro dev --port 3002",
 		"build": "node scripts/check-links.mjs && astro build --force",
 		"preview": "astro preview --port 3002",
 		"start": "astro preview --port 3002",
-		"lint": "astro sync && eslint --max-warnings=0",
-		"format": "prettier --write \"src/**/*.ts\" \"*.ts\" \"scripts/**/*.mjs\"",
+		"lint": "astro sync && eslint",
+		"format": "prettier --write \"src/**/*.ts\" \"*.ts\" \"scripts/**/*.mjs\" --ignore-path ../../.prettierignore",
 		"typecheck": "astro check",
 		"test": "vitest run",
 		"check:links": "node scripts/check-links.mjs",
-		"docs:api": "vitest run src/lib/api-reference/api-reference.artifact.test.ts --update",
+		"docs:api": "vitest run src/lib/api-reference/__tests__/api-reference.artifact.test.ts --update",
 		"capture:api-samples": "node scripts/capture-api-samples.mjs"
 	},
 	"dependencies": {

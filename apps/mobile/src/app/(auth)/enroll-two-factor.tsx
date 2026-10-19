@@ -9,9 +9,7 @@ import * as React from "react";
 
 import { AuthPage } from "../../components/auth-page";
 import { TextLink } from "@workspace/ui-native/components/text-link";
-import { useRefreshSession } from "../../features/auth/use-refresh-session";
-import { useSignOut } from "../../features/auth/use-sign-out";
-import { TwoFactorEnrollment } from "../../features/two-factor/two-factor-enrollment";
+import { TwoFactorEnrollment, useRefreshSession, useSignOut } from "../../contexts/identity";
 
 export default function EnrollTwoFactorScreen(): React.JSX.Element {
 	const refreshSession = useRefreshSession();

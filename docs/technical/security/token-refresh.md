@@ -312,7 +312,7 @@ flowchart TD
 
 **Key idea:** the access token may still be within its time expiry (e.g. 15 minutes left), but the embedded `tokenVersion` is checked on every request. After a role change, that version is stale immediately — refresh cannot recover because refresh rows were deleted too.
 
-**Code paths:** `UserSessionRevocationService` (`apps/api/src/modules/authorization/services/user-session-revocation.service.ts`), wired from `RoleService` and `PermissionService`; client handling in `packages/api-client/src/request.ts` (the shared 401 pipeline) and `packages/client/src/lib/features/auth/facade.tsx` (`AuthProvider`); proxy hardening in `packages/client/src/lib/auth/edge/proxy-refresh.ts`.
+**Code paths:** `IdentitySessionsPort` (`apps/api/src/platform/application/ports/identity-sessions.port.ts`), called from the RBAC mutation scope (`apps/api/src/contexts/authorization/application/services/rbac-mutation-scope.ts`); client handling in `packages/api-client/src/request.ts` (the shared 401 pipeline) and `packages/client/src/lib/features/auth/facade.tsx` (`AuthProvider`); proxy hardening in `packages/client/src/lib/contexts/identity/edge/proxy-refresh.ts`.
 
 ---
 
@@ -658,7 +658,7 @@ This is intentional and accepted as a per-instance trade-off.
 Layer 2 lives in:
 
 ```text
-packages/client/src/lib/features/auth/facade.tsx   (AuthProvider — re-exported by @workspace/client/lib/auth)
+packages/client/src/lib/features/auth/facade.tsx   (AuthProvider — re-exported by @workspace/client/lib/contexts/identity)
 packages/client/src/lib/api/use-api.ts             (the cookie-transport client: createApiClientContext + ./react hooks)
 packages/api-client/src/request.ts                 (the 401 pipeline shared with the mobile app: withSessionRefresh)
 packages/api-client/src/refresh.ts                 (createRefreshCooldown)
@@ -736,7 +736,7 @@ its effects guarantee the following.
 
 ##### Session check outcomes
 
-The session check (`checkSession`, `packages/client/src/lib/auth/session/session-check.ts`)
+The session check (`checkSession`, `packages/client/src/lib/contexts/identity/session/session-check.ts`)
 classifies every answer before it touches the store. Only `no-session` can end a
 session; an unreachable API never does.
 
@@ -769,7 +769,7 @@ changes only the store's `check` slice, never `status` or `epoch`:
 `useAuth().isLoading` stays `true` while the status is `unknown`, deliberately: consumers
 read `isLoading === false && user === null` as signed out. Whether the check is still
 running or failing is `useSessionCheckStatus()`. Each app shell mounts
-`SessionCheckNotice` (`@workspace/client/lib/auth/session/session-check-notice`), a
+`SessionCheckNotice` (`@workspace/client/lib/contexts/identity/session/session-check-notice`), a
 polite `role="status"` banner shown only while `check` is not `ok`, with a "Try again"
 button once retries are paused. Guest pages do not mount it; the web landing header shows
 a neutral placeholder instead of "Sign in" while a member's session is unverified.

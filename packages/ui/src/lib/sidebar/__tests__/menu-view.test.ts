@@ -86,10 +86,10 @@ describe("computeRouteState", () => {
 
 	it("lights exact-page aliases in other branches, but never their parents", () => {
 		const menu: readonly SidebarMenuItemLike[] = [
-			{ id: "dashboard", title: "Dashboard", url: "/rewardhub" },
-			{ id: "discover", title: "Discover", url: "/rewardhub", children: [{ id: "browse-all", title: "Browse All", url: "/rewardhub" }] },
+			{ id: "dashboard", title: "Dashboard", url: "/dashboard" },
+			{ id: "discover", title: "Discover", url: "/dashboard", children: [{ id: "browse-all", title: "Browse All", url: "/dashboard" }] },
 		];
-		const { activeItems } = computeRouteState(menu, "/rewardhub");
+		const { activeItems } = computeRouteState(menu, "/dashboard");
 
 		expect(activeItems.dashboard).toBe(true);
 		expect(activeItems["browse-all"]).toBe(true);
@@ -98,10 +98,10 @@ describe("computeRouteState", () => {
 
 	it("picks one global closest match on unmapped pages (shallow aliases stay dark)", () => {
 		const menu: readonly SidebarMenuItemLike[] = [
-			{ id: "dashboard", title: "Dashboard", url: "/rewardhub" },
-			{ id: "my-wallet", title: "My Wallet", url: "/rewardhub/claims", children: [{ id: "active-rewards", title: "Active Rewards", url: "/rewardhub/claims" }] },
+			{ id: "dashboard", title: "Dashboard", url: "/dashboard" },
+			{ id: "my-wallet", title: "My Wallet", url: "/dashboard/claims", children: [{ id: "active-rewards", title: "Active Rewards", url: "/dashboard/claims" }] },
 		];
-		const { activeItems, autoExpandedItems } = computeRouteState(menu, "/rewardhub/claims/expired-otp");
+		const { activeItems, autoExpandedItems } = computeRouteState(menu, "/dashboard/claims/expired-otp");
 
 		expect(activeItems["active-rewards"]).toBe(true);
 		expect(activeItems["my-wallet"]).toBeUndefined();

@@ -134,7 +134,7 @@ describe("Store logo (e2e)", () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
 		owner = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123", "merchant");
 		cashier = await login(app, "jonker.cashier@melaka-rewards.demo", "JonkerCashier@123", "merchant");
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.organizations WHERE slug = $1", [ORG_SLUG]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."Organization" WHERE slug = $1', [ORG_SLUG]);
 		organizationId = z.uuid().parse(result.rows.at(0)?.id);
 	});
 

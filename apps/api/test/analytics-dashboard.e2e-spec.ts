@@ -59,6 +59,9 @@ const FIXTURE_CLAIMS: readonly { readonly claimedAt: number; readonly status: "P
 	{ claimedAt: Date.UTC(2020, 1, 29, 23), status: "PENDING", isReferrerCredit: false },
 ];
 
+/** How long the fixture's PENDING claims stay redeemable (well past the run, so the expiry job leaves them alone). */
+const PENDING_FIXTURE_TTL_MS = 30 * DAY_MS;
+
 /** Alice's referrals: two started in March (one credited in March), one started in the previous range. */
 const FIXTURE_REFERRALS: readonly { readonly createdAt: number; readonly status: "PENDING" | "CREDITED"; readonly creditedAt: number | null }[] = [
 	{ createdAt: Date.UTC(2020, 2, 2, 8), status: "CREDITED", creditedAt: Date.UTC(2020, 2, 3, 8) },
@@ -107,18 +110,18 @@ describe("Analytics dashboards (e2e)", () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
 		await markSeedUserEmailVerified(pool, "bob.smith@example.com");
-		const [aliceRow] = (await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", ["alice.johnson@example.com"])).rows;
+		const [aliceRow] = (await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', ["alice.johnson@example.com"])).rows;
 		for (const bill of FIXTURE_BILLS) {
 			const saleId = randomUUID();
 			saleIds.push(saleId);
 			await pool.query(
-				`INSERT INTO public.reward_sales (id, organization_id, location_id, user_id, terminal_id, bill_total_minor, currency, idempotency_key, request_hash, paid_at)
+				`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
 				 VALUES ($1, $2, $3, $4, $5, $6, 'MYR', $7, $8, $9)`,
 				[saleId, ORGANIZATION_SEED_IDS.mlkOrganization, bill.locationId, aliceRow?.id, FIXTURE_TERMINAL, bill.billTotalMinor, randomUUID(), saleId, bill.paidAt],
 			);
 		}
 		const [rewardRow] = (
-			await pool.query<{ id: string }>("SELECT id FROM public.rewards WHERE organization_id = $1 AND is_deleted = false ORDER BY id LIMIT 1", [
+			await pool.query<{ id: string }>('SELECT id FROM public."Reward" WHERE "organizationId" = $1 AND "isDeleted" = false ORDER BY id LIMIT 1', [
 				ORGANIZATION_SEED_IDS.mlkOrganization,
 			])
 		).rows;
@@ -126,7 +129,7 @@ describe("Analytics dashboards (e2e)", () => {
 			const claimId = randomUUID();
 			claimIds.push(claimId);
 			await pool.query(
-				`INSERT INTO public.reward_claims (id, user_id, reward_id, redemption_token_hash, backup_code_hash, status, is_referrer_credit, claimed_at, claim_expires_at)
+				`INSERT INTO public."RewardClaim" (id, "userId", "rewardId", "redemptionTokenHash", "backupCodeHash", status, "isReferrerCredit", "claimedAt", "claimExpiresAt")
 				 VALUES ($1, $2, $3, $4, $5, $6::"RewardClaimStatus", $7, $8, $9)`,
 				[
 					claimId,
@@ -137,7 +140,8 @@ describe("Analytics dashboards (e2e)", () => {
 					claim.status,
 					claim.isReferrerCredit,
 					claim.claimedAt,
-					claim.claimedAt + DAY_MS,
+					// A PENDING claim must not be overdue: the claim-expiry job would turn it EXPIRED mid-run.
+					claim.status === "PENDING" ? Date.now() + PENDING_FIXTURE_TTL_MS : claim.claimedAt + DAY_MS,
 				],
 			);
 		}
@@ -145,7 +149,7 @@ describe("Analytics dashboards (e2e)", () => {
 			const referralId = randomUUID();
 			referralIds.push(referralId);
 			await pool.query(
-				`INSERT INTO public.reward_referrals (id, referrer_user_id, reward_id, attribution_token, status, credited_at, created_at)
+				`INSERT INTO public."RewardReferral" (id, "referrerUserId", "rewardId", "attributionToken", status, "creditedAt", "createdAt")
 				 VALUES ($1, $2, $3, $4, $5::"RewardReferralStatus", $6, $7)`,
 				[referralId, aliceRow?.id, rewardRow?.id, `e2e-${referralId.slice(0, 32)}`, referral.status, referral.creditedAt, referral.createdAt],
 			);
@@ -157,9 +161,9 @@ describe("Analytics dashboards (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.reward_sales WHERE id = ANY($1::text[])", [saleIds]);
-		await pool.query("DELETE FROM public.reward_claims WHERE id = ANY($1::text[])", [claimIds]);
-		await pool.query("DELETE FROM public.reward_referrals WHERE id = ANY($1::text[])", [referralIds]);
+		await pool.query('DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])', [saleIds]);
+		await pool.query('DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])', [claimIds]);
+		await pool.query('DELETE FROM public."RewardReferral" WHERE id = ANY($1::text[])', [referralIds]);
 		await pool.end();
 		await app.close();
 	});

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import AuditLogDetailView from "./audit-log-detail";
+import AuditLogDetailView from "../../../../contexts/audit/components/audit-log-detail";
 
 export const dynamic = "force-dynamic";
 

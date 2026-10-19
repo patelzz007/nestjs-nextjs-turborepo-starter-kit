@@ -17,7 +17,7 @@ import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 
 // ---------------------------------------------------------------------------
-// `analytics_events` + `inbox_processed_events` — filled by the REAL consumer path.
+// `AnalyticsEvent` + `InboxProcessedEvent` — filled by the REAL consumer path.
 //
 // In a running system the analytics consumer reads every PUBLISHED outbox event from Kafka and writes
 // both tables through `handlePlatformMessage` + `PgInboxStore` (claim + analytics row in one

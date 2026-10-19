@@ -1,4 +1,4 @@
-import { MerchantAuthorizationStateProvider } from "@/components/access/merchant-authorization-provider";
+import { MerchantAuthorizationStateProvider } from "@/contexts/organizations/components/access/merchant-authorization-provider";
 import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

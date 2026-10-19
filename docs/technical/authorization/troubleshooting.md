@@ -19,7 +19,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| 403 on **every** request with an `x-organization-id` / `x-store-id` header | The user is not an active member of that organization / store (or the store is inactive / belongs to another org) | Check `organization_memberships` / `store_memberships`. The header is only accepted when proven. |
+| 403 on **every** request with an `x-organization-id` / `x-store-id` header | The user is not an active member of that organization / store (or the store is inactive / belongs to another org) | Check `OrganizationMembership` / `StoreMembership`. The header is only accepted when proven. |
 | 403 on a self-service route (change password, 2FA) | `@Authorize` with `resourceId` but no `self()`, or the caller is anonymous | Use `resourceId: self()` |
 | 403 although the role has the permission | a `DENY` override or ACL `DENY` exists | `explain()` shows `source: "override"` or `"acl"` |
 | 403 with an `ORGANIZATION` / `STORE` scoped role | no verified tenant, or the record's tenant attributes were not passed | send the tenant header; pass `resourceAttributes: { organizationId, storeId }` |
@@ -47,7 +47,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `new row violates row-level security policy for table "X"` | the code runs under a user scope but the table needs bypass (e.g. `outbox_events`), or the row's tenant does not match | run the write inside a named system operation, or pass the right tenant |
+| `new row violates row-level security policy for table "X"` | the code runs under a user scope but the table needs bypass (e.g. `OutboxEvent`), or the row's tenant does not match | run the write inside a named system operation, or pass the right tenant |
 | A query returns nothing in a background job | no RLS scope → the fail-closed anonymous context | wrap the job in `runWithSystemRlsContext("queue.<your-job>", …)` after registering that name |
 | `System operation not allowlisted: …` | new system-operation name not registered | add it to `src/prisma/system-operation.registry.ts` |
 | `Tenant database access requires organization context` | a scoped user query with no organization in multi-tenant mode | send `x-organization-id`, or use `TenantTransactionService.withTenantTransaction` |

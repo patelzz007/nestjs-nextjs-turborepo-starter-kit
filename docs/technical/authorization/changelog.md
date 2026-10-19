@@ -28,24 +28,24 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | 6 | `/authorization-kernel/examples` was live in production, leaked ACL ids / policy names, and trusted a query-string organization | Removed. Replaced by `POST /authorization/decisions` (caller only) and admin-only `GET /authorization/decisions/explain` |
 | 7 | Role decorators used a fake `ASSUME` action and always denied non-superadmins | Native role checks (`kernel.hasRoles`) |
 | 8 | `POST /files/upload-url` only checked avatars — anyone could get upload tickets for other organizations' KYB documents, store logos, or any product image | `FileUploadAuthorizationService` per-category rules |
-| 9 | The default tenant policy let **cashiers do every Reward Hub action** (manage rewards, API keys) | Shared `MERCHANT_ROLE_CAPABILITIES` enforced **before** Cedar; cashiers are read-only |
+| 9 | The default tenant policy let **cashiers do every merchant action** (manage rewards, API keys) | Shared `MERCHANT_ROLE_CAPABILITIES` enforced **before** Cedar; cashiers are read-only |
 | 10 | Any organization member could read the KYB profile and download KYB documents | KYB read, download and submit are **owner-only** |
 | 11 | Team, store-location and KYB endpoints checked **hard-coded role lists** inside services, mirrored by a client role table "kept in lockstep"; the merchant sidebar showed Team / Verification to every role (e.g. cashiers) and led to denied pages | New capabilities `merchant:manage_team`, `merchant:view_locations`, `merchant:manage_locations`, `merchant:manage_verification` in the shared role table, enforced by `requireMembershipCapability` (role table → Cedar) with the **same allowed roles**; the client role table is deleted; every org page is guarded on the server by `guardOrgPage` + `ORG_PAGE_RULES`; sidebar / palette hide what the role cannot open |
 | 12 | `GET /files/:id/download-url` handed **any signed-in user** a signed URL for any organization file (including KYB documents) whose id they knew; completing an upload re-bound store branding without re-checking; delete was uploader-only (a removed member could still delete branding, an admin could not); organization uploads skipped Cedar | `FileAuthorizationService` authorizes upload, complete, read, download and delete per category through `requireMembershipCapability` (role table → Cedar, audited) |
-| 13 | `stores` accepted writes only under bypass, but a merchant's store request / resubmission writes the location AND its store mirror in the member's tenant transaction — both answered `500`; `organization_access_requests` had no UPDATE policy, so every review claim matched no row and answered `409` | `stores_select` / `stores_mirror_insert` / `stores_mirror_update` / `stores_delete` (tenant member, only for the mirror of one of that tenant's locations; DELETE bypass-only) and `organization_access_requests_review` (UPDATE, bypass-only) — `test/merchant-location-requests.e2e-spec.ts`, `test/organization-access-request-review.e2e-spec.ts` |
+| 13 | `Store` accepted writes only under bypass, but a merchant's store request / resubmission writes the location AND its store mirror in the member's tenant transaction — both answered `500`; `OrganizationAccessRequest` had no UPDATE policy, so every review claim matched no row and answered `409` | `stores_select` / `stores_mirror_insert` / `stores_mirror_update` / `stores_delete` (tenant member, only for the mirror of one of that tenant's locations; DELETE bypass-only) and `organization_access_requests_review` (UPDATE, bypass-only) — `test/merchant-location-requests.e2e-spec.ts`, `test/organization-access-request-review.e2e-spec.ts` |
 
 ---
 
 ## 2. Kernel features added or completed
 
 - **Precedence** rewritten and documented ([backend §4](./backend.md#4-decision-precedence-the-most-important-section)).
-- **Per-user overrides** with `effect` `ALLOW` / `DENY` (new column `user_permissions.effect`).
+- **Per-user overrides** with `effect` `ALLOW` / `DENY` (new column `UserPermission.effect`).
 - **Role hierarchy** (parent roles) is evaluated.
 - **Scopes** `GLOBAL`, `ORGANIZATION`, `STORE` (new), `LOCATION`, `OWN`, `RESOURCE`.
 - **Implicit self grants**: read / update your own `USER` and `PROFILE`.
 - **ACL**: user and role subjects, type-wide entries (`resourceId = null`), tenant binding, conditions, `MANAGE`.
 - **Policies (ABAC)**: strict rule schema; DENY-only sets no longer block everyone; conditional ALLOW semantics; malformed rules fail closed.
-- **Permission conditions** (`permissions.conditions`) are evaluated.
+- **Permission conditions** (`Permission.conditions`) are evaluated.
 - **`filter()`** builds Prisma filters from real grants, ACLs and overrides.
 - **Audit**: every decision checked by the guard is audited (DENY, writes, sensitive reads).
 - **`resourceCapabilities()`** for per-record UI hints; **decisions endpoint** for batches.
@@ -53,7 +53,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 ## 3. Stores and tenancy
 
-- New tables `stores` (1:1 with `organization_locations`) and `store_memberships` (user, store, dynamic role).
+- New tables `Store` (1:1 with `OrganizationLocation`) and `StoreMembership` (user, store, dynamic role).
 - `STORE` added to `PermissionScope` and `PermissionResource`; `x-store-id` header.
 - Store roles' permissions are always bound to their store.
 - Stores are synced by `OrganizationLocationRepository` via `syncStoreForLocation()`.
@@ -79,7 +79,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 - SuperAdmins receive every platform capability from `/auth/permissions`.
 - Legacy checker ignores DENY overrides as grants and subtracts them from capabilities.
 - **Bug:** role / permission / user-role **syncs** soft-deleted everything and then `createMany({ skipDuplicates })` skipped existing rows, leaving them deleted. Syncs now revive listed rows first.
-- **Bug:** logout / refresh failed with an RLS error on `outbox_events` once they stopped bypassing. Outbox writes now run under `outbox.enqueue`.
+- **Bug:** logout / refresh failed with an RLS error on `OutboxEvent` once they stopped bypassing. Outbox writes now run under `outbox.enqueue`.
 
 ## 6. Frontend
 

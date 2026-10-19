@@ -17,8 +17,8 @@ import { fileURLToPath } from "node:url";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { buildOpenApiDocument } from "../src/common/api-docs";
-import { OPENAPI_ARTIFACT_PATH, serializeOpenApiArtifact } from "../src/common/openapi/openapi-artifact";
+import { buildOpenApiDocument } from "../src/platform/presentation/http/api-docs";
+import { OPENAPI_ARTIFACT_PATH, serializeOpenApiArtifact } from "../src/platform/presentation/http/openapi/openapi-artifact";
 import { createE2eApp } from "./e2e-helpers";
 
 const REPOSITORY_ROOT: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");

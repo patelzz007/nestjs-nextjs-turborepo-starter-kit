@@ -74,9 +74,9 @@ access tokens → Fine-grained), for the repositories (or the account) you want,
    `GITHUB_TOKEN_INVALID`; nothing is stored.
 2. The token is encrypted with AES-256-GCM under the highest key version, with the owner's user id
    as additional authenticated data — a ciphertext copied onto another user's row does not decrypt.
-3. It is stored in `github_account_links` (one row per user; linking again replaces the token in
+3. It is stored in `GithubAccountLink` (one row per user; linking again replaces the token in
    place). The token is never returned, never logged, and redacted from the HTTP audit log (the
-   field name ends in `token`); the row-change audit (ADR 051) records `token_ciphertext` as
+   field name ends in `token`); the row-change audit (ADR 051) records `tokenCiphertext` as
    `[REDACTED]`.
 
 `DELETE /github/account` soft-deletes the row **and wipes the token from it** — nothing that opens
@@ -282,7 +282,7 @@ A repository's pull requests can update by themselves: GitHub tells the API abou
 | `GET /github/live-updates/:owner/:repository/events` | The repository's changes (SSE), only if **your** token can see the repository (404 otherwise)          |
 | `POST /github/webhook`                           | GitHub's deliveries — public, verified by signature                                                          |
 
-**Turning on and off.** One webhook per repository (`github_webhook_subscriptions`, one row per
+**Turning on and off.** One webhook per repository (`GithubWebhookSubscription`, one row per
 repository, shared by every admin, soft-deleted when turned off and restored when turned on again).
 It is a JSON web hook for `pull_request`, `pull_request_review`, `pull_request_review_comment`,
 `pull_request_review_thread` and `issue_comment`, signed with the secret. A hook already delivering to
@@ -295,7 +295,7 @@ without the permission gets 409 `GITHUB_WRITE_REJECTED` naming _Webhooks_.
 **Receiving.** `X-Hub-Signature-256` (HMAC-SHA256 of the **exact raw body** with the secret) is checked
 in constant time before anything is parsed — 403 otherwise. `ping` is acknowledged; other events
 answer `ignored`; an `issue_comment` on an issue (not a pull request) is ignored. A delivery is recorded
-once by its `X-GitHub-Delivery` id (`github_webhook_deliveries`; a redelivery answers `duplicate`), and
+once by its `X-GitHub-Delivery` id (`GithubWebhookDelivery`; a redelivery answers `duplicate`), and
 in the same transaction announced with `pg_notify('github_pull_requests', …)` — delivered at commit,
 so never ahead of the record. Only the owner, repository and pull-request number are kept; nothing of
 the content. Deliveries are pruned after **7 days** (hourly job; GitHub lets a person redeliver for 3).
@@ -307,9 +307,9 @@ repository when GitHub named no pull request) and passes the change to its open 
 needed: the database reaches every instance.
 
 **Trying it on a laptop.** GitHub can only reach a public https address. `pnpm dev:tunnel`
-(`apps/api/scripts/start-tunnel.py`) starts a detached Cloudflare quick tunnel to `localhost:8080`
+(the `tunnel` command of `apps/api/scripts/dev.ts`) starts a detached Cloudflare quick tunnel to `localhost:8080`
 and wires it: the Resend webhook is re-pointed (as before), and `github:webhook-tunnel`
-(`apps/api/scripts/github-webhook-tunnel.ts`) writes `GITHUB_WEBHOOK_URL=<tunnel>/api/v1/github/webhook`
+(its `github-webhook` command) writes `GITHUB_WEBHOOK_URL=<tunnel>/api/v1/github/webhook`
 to `apps/api/.env` (generating `GITHUB_WEBHOOK_SECRET` if it is missing) and re-points every repository
 already turned on to the new address on GitHub, with the token of the admin who turned it on (a hook
 deleted on GitHub meanwhile is turned off here). Then:
@@ -415,14 +415,14 @@ pull request's screens reloads its scope. Route params are parsed with the share
 | Piece                                              | File                                                                                                                          |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Contract (shared with the apps)                    | `packages/shared/src/schemas/domain/github/github-pull-requests.ts`                                                           |
-| The one HTTP client for GitHub (both integrations) | `apps/api/src/modules/github/github-http.transport.ts`                                                                        |
-| Pull-request reads and writes                      | `apps/api/src/modules/github/pull-requests/github-pull-request.client.ts`, `…queries.ts`, `…wire-schemas.ts`, `…mappers.ts`   |
+| The one HTTP client for GitHub (both integrations) | `apps/api/src/contexts/integrations-github/infrastructure/github-api/github-http.transport.ts`                                                                        |
+| Pull-request reads and writes                      | `apps/api/src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client.ts`, `…queries.ts`, `…wire-schemas.ts`, `…mappers.ts`   |
 | Link, encryption, storage                          | `github-credentials.service.ts`, `github-credential.cipher.ts`, `github-account-link.repository.ts`                           |
 | Per-user cache                                     | `github-pull-request.cache.ts`                                                                                                |
 | Routes                                             | `github-account.controller.ts`, `github-pull-requests.controller.ts`, `github-content-edits.controller.ts`                    |
 | Mobile screens                                     | `apps/mobile/src/features/github-pull-requests/` (routes in `apps/mobile/src/app/(app)/profile/`)                             |
-| Live updates (API)                                 | `apps/api/src/modules/github/live-updates/` (receiver, service, hub, repository, retention, client)                            |
+| Live updates (API)                                 | `apps/api/src/contexts/integrations-github/` (live-update commands in `application/commands/*-live-updates`, receiver in `presentation`, repository in `infrastructure/persistence`)                            |
 | Live updates (mobile)                              | `apps/mobile/src/lib/server-events.ts`, `…/use-pull-request-live-updates.ts`, `…/live-updates-row.tsx`                          |
-| Pictures: links read from GitHub                   | `apps/api/src/modules/github/pull-requests/github-body-images.ts`; `packages/shared/…/github/github-body-images.ts`             |
+| Pictures: links read from GitHub                   | `apps/api/src/contexts/integrations-github/infrastructure/github-api/github-body-images.ts`; `packages/shared/…/github/github-body-images.ts`             |
 | Pictures: drawing and attaching (mobile)           | `components/markdown-picture.tsx`, `components/image-viewer.tsx`, `lib/file-upload.ts`, `…/use-comment-image-attach.ts`         |
 | Seed                                               | `apps/api/prisma/seed/github-account-links.ts` — an expired (rejected) link for the Admin, an unlinked one for the SuperAdmin; a developer's own (non-demo) link is never replaced. `github-webhooks.ts` — one repository live, one turned off, two deliveries |

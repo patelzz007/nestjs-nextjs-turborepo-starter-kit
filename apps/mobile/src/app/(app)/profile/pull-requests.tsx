@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { PullRequestListScreen } from "../../../features/github-pull-requests/pull-request-list-screen";
+import { PullRequestListScreen } from "../../../contexts/integrations-github";
 
 export default function PullRequestsRoute(): React.JSX.Element {
 	return <PullRequestListScreen />;

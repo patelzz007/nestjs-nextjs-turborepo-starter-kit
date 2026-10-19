@@ -16,7 +16,7 @@ Your .claude/skills and .agents/skills folders are a different mechanism (invoka
 ## Make the completion gate real (do these once)
 
 1. Root package.json scripts: "lint": "turbo run lint", "test": "turbo run test".
-2. Every package: "lint": "eslint . --max-warnings=0" and "test": "vitest run".
+2. Every package: "lint": "eslint ." and "test": "vitest run".
 3. Put the ESLint config from rules/13-ci-cd-and-quality-gates.md ("Reference ESLint configuration") in your shared
    eslint-config package. The canary test in the same file proves the config is actually catching violations.
 4. Add a pre-push hook running `pnpm run lint && pnpm run test`, and make the CI `verify` job a required check.

@@ -62,7 +62,7 @@ not compile.
 - **`MANAGE` is the wildcard:** a grant of `MANAGE` on a resource satisfies every action on that
   resource (kernel `grantsFor`, ACL lookups, the checker). A `DENY` override on `MANAGE` removes every
   action on that resource.
-- **Roles may have a parent** (`roles.parentId`). A role inherits all permissions of its active
+- **Roles may have a parent** (`Role.parentId`). A role inherits all permissions of its active
   ancestors; `collectRoleHierarchy` (`kernel/subject-grants.loader.ts`) walks parents breadth-first,
   one query per level, ignoring cycles and inactive or deleted roles. Role mutations reject cycles
   and walk deleted and inactive ancestors too, because a restore or re-activation brings them back.
@@ -138,20 +138,20 @@ JWT gets `401 TOKEN_VERSION_MISMATCH` and refreshes or signs in again.
 | Job | Schedule | Does |
 | --- | --- | --- |
 | `PermissionExpiryCleanup` | hourly | Soft-deletes expired direct grants (`expiresAt`), through `RbacMutationRunner` under the system operation `maintenance.permission_expiry` (audited actor), then invalidates caches. Expired grants are already ignored at read time. |
-| `AuditLogCleanup` | hourly | Soft-deletes `authorization_audits` rows older than 90 days |
+| `AuditLogCleanup` | hourly | Soft-deletes `AuthorizationAudit` rows older than 90 days |
 
 ## The capability catalogue
 
-`capability_definitions` holds every capability slug the UIs show, by scope
+`CapabilityDefinition` holds every capability slug the UIs show, by scope
 (`CapabilityDefinitionService`, `GET /api/v1/capabilities/catalog?scope=`):
 
 | Scope | Example | Source |
 | --- | --- | --- |
-| `PLATFORM` | `platform:user.read` | derived from `permissions` at API start (`syncPlatformCapabilitiesFromPermissions`) |
+| `PLATFORM` | `platform:user.read` | derived from `Permission` at API start (`syncPlatformCapabilitiesFromPermissions`) |
 | `MERCHANT` | `merchant:manage_api_keys` | `reference-data/merchant-capability-catalog.ts`, loaded by `db:sync-reference-data` and the seed |
 
 The catalogue supplies labels and ordering. **Which merchant role holds which capability** is the
-code table `MERCHANT_ROLE_CAPABILITIES` in `packages/shared` ([kernel §12](./backend.md#12-merchant-reward-hub-capabilities)),
+code table `MERCHANT_ROLE_CAPABILITIES` in `packages/shared` ([kernel §12](./backend.md#12-merchant-capabilities)),
 shared by the API and the merchant app.
 
 ## Automatic role provisioning

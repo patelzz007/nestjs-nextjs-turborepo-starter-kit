@@ -117,9 +117,9 @@ Register `https://<random>.trycloudflare.com/notifications/email-webhook` in Res
 run: recreating the webhook in Resend issues a **new** signing secret — update `.env` and restart.
 For a stable URL create a named Cloudflare tunnel (below).
 
-**Quick tunnel that survives the terminal — `apps/api/scripts/start-tunnel.py`.** Run
-`pnpm dev:tunnel` (or `python3 apps/api/scripts/start-tunnel.py`) from the repo root. It starts `cloudflared` fully
-detached (double fork + `setsid`, logging to `/tmp/cloudflared.log`), waits up to 30 seconds for the
+**Quick tunnel that survives the terminal — `pnpm dev:tunnel`.** Run it from the repo root (it is the
+`tunnel` command of `apps/api/scripts/dev.ts`). It starts `cloudflared` fully detached (its own
+session, logging to `cloudflared.log` in the system temp directory), waits up to 30 seconds for the
 URL, prints it, and — when `RESEND_API_KEY` is in `apps/api/.env` — **re-points the existing Resend
 webhook** to `<url>/notifications/email-webhook` with a `PATCH`. Updating (never recreating) the
 webhook keeps its signing secret, so `RESEND_WEBHOOK_SECRET` stays valid across restarts. The step is
@@ -153,7 +153,7 @@ Run it with `cloudflared tunnel run <name>` (or install it as a service with
 `cloudflared service install`). Register `https://<hostname>/notifications/email-webhook` in Resend
 once.
 
-To test the signature without Resend: `pnpm --filter @workspace/api exec tsx scripts/test-webhook-signature.ts`
+To test the signature without Resend: `pnpm --filter @workspace/api webhook:test-signature`
 prints signed headers and a body (they expire after 5 minutes; send the body byte-for-byte).
 
 ## Verify end to end

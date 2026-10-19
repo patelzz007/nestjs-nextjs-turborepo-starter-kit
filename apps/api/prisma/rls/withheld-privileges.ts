@@ -6,7 +6,7 @@
  * would silently undo any per-table REVOKE written earlier in the RLS bundle.
  * Instead, every table that must stay append-only (audit trails) or
  * never-deleted (soft-delete-only data, ended sessions) is declared HERE.
- * `scripts/apply-rls.ts` appends the generated REVOKEs to the grants file in
+ * `prisma/rls/apply.ts` appends the generated REVOKEs to the grants file in
  * the SAME transaction (no window where the privilege is back), then verifies
  * against the live catalog that the role really lacks each privilege.
  * `db:check-rls-manifest` fails when an entry names an unknown table.
@@ -26,22 +26,22 @@ const NEVER_DELETED: readonly WithheldPrivilege[] = ["DELETE"];
 
 export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly WithheldPrivilege[]>> = {
 	// ── Append-only audit trails (rules/10 → "Storage and immutability") ──
-	audit_logs: APPEND_ONLY,
-	data_change_logs: APPEND_ONLY,
-	impersonation_audit_logs: APPEND_ONLY,
-	mfa_recovery_audit_logs: APPEND_ONLY,
-	// ── Never deleted: ended via `ended_at`, kept as forensic record ──
-	impersonation_sessions: NEVER_DELETED,
+	AuditLog: APPEND_ONLY,
+	DataChangeLog: APPEND_ONLY,
+	ImpersonationAuditLog: APPEND_ONLY,
+	MfaRecoveryAuditLog: APPEND_ONLY,
+	// ── Never deleted: ended via `endedAt`, kept as forensic record ──
+	ImpersonationSession: NEVER_DELETED,
 	// ── Geo reference data: soft-deleted, never hard-deleted ──
-	regions: NEVER_DELETED,
-	subregions: NEVER_DELETED,
-	countries: NEVER_DELETED,
-	states: NEVER_DELETED,
-	cities: NEVER_DELETED,
+	Region: NEVER_DELETED,
+	Subregion: NEVER_DELETED,
+	Country: NEVER_DELETED,
+	State: NEVER_DELETED,
+	City: NEVER_DELETED,
 };
 
-/** A PostgreSQL identifier this module will interpolate (lower-case snake case only). */
-const SAFE_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+/** A PostgreSQL identifier this module will interpolate (a table name: letters, digits and underscores). */
+const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** One table and the privileges withheld on it. */
 export interface WithheldPrivilegeEntry {
@@ -80,7 +80,7 @@ export function buildWithheldPrivilegeRevocationSql(entries: readonly WithheldPr
 		if (entry.privileges.length === 0) {
 			throw new WithheldPrivilegeDeclarationError(`No privilege declared for ${entry.table}`);
 		}
-		return `REVOKE ${[...new Set(entry.privileges)].join(", ")} ON TABLE public.${entry.table} FROM ${role};`;
+		return `REVOKE ${[...new Set(entry.privileges)].join(", ")} ON TABLE public."${entry.table}" FROM ${role};`;
 	});
 	return ["-- Generated from prisma/rls/withheld-privileges.ts (APP_RUNTIME_WITHHELD_PRIVILEGES)", ...statements].join("\n");
 }

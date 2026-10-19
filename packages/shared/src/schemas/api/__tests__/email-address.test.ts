@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { LoginSchema, SignupSchema } from "../../auth/auth";
-import { AdminCreateOrganizationInviteSchema, OrganizationMemberInviteSchema } from "../../domain/organization/organization";
-import { MerchantCreateMemberSchema } from "../../domain/rewards/rewards-kyb";
-import { AdminCreateMerchantInviteSchema } from "../../domain/rewards/rewards-entities";
+import { LoginSchema, SignupSchema } from "../../../contexts/identity/schemas/auth";
+import { AdminCreateOrganizationInviteSchema, OrganizationMemberInviteSchema } from "../../../contexts/organizations/schemas/organization";
+import { MerchantCreateMemberSchema } from "../../../contexts/organizations/schemas/merchant-kyb";
+import { AdminCreateMerchantInviteSchema } from "../../../contexts/organizations/schemas/merchant";
 import { CanonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "../email-address";
 
 describe("CanonicalEmailSchema", () => {

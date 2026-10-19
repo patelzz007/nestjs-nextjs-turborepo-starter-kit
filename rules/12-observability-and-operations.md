@@ -300,4 +300,4 @@ Saturation   — DB connections in use, event-loop lag, memory, queue depth, con
 
 ## Business-event metrics
 
-Beyond infrastructure metrics, emit counters for the business events that matter (`orders.created`, `payments.failed`, `rewards.published`). A healthy infrastructure dashboard with a flat-lined `orders.created` is an outage that infrastructure metrics alone will never show.
+Beyond infrastructure metrics, emit counters for the business events that matter (`orders.created`, `payments.failed`, `Reward.published`). A healthy infrastructure dashboard with a flat-lined `orders.created` is an outage that infrastructure metrics alone will never show.

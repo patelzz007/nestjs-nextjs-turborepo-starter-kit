@@ -16,7 +16,7 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 	{
 		id: "browse",
 		title: "Browse rewards",
-		url: ROUTES.rewardHub.browse,
+		url: ROUTES.dashboard.browse,
 		section: "Rewards",
 		description: "Discover local offers",
 		icon: Gift,
@@ -25,7 +25,7 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 	{
 		id: "activity",
 		title: "My activity",
-		url: ROUTES.rewardHub.activity,
+		url: ROUTES.dashboard.activity,
 		section: "Rewards",
 		description: "Claims and referral stats",
 		icon: BarChart3,
@@ -34,7 +34,7 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 	{
 		id: "wallet",
 		title: "My wallet",
-		url: ROUTES.rewardHub.wallet,
+		url: ROUTES.dashboard.wallet,
 		section: "Rewards",
 		description: "Your claimed offers",
 		icon: Ticket,
@@ -43,7 +43,7 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 	{
 		id: "referrals",
 		title: "Referrals",
-		url: ROUTES.rewardHub.referrals,
+		url: ROUTES.dashboard.referrals,
 		section: "Rewards",
 		description: "Your signup code and friends who joined",
 		icon: Users,
@@ -52,7 +52,7 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 	{
 		id: "account",
 		title: "Account",
-		url: ROUTES.rewardHub.account,
+		url: ROUTES.dashboard.account,
 		section: "Account",
 		description: "Email, password and two-factor authentication",
 		icon: UserCog,

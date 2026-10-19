@@ -1,7 +1,7 @@
-import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/forms/login-form";
+import { LoginForm, type DemoAccount } from "@workspace/client/lib/contexts/identity/forms/login-form";
 import Link from "next/link";
 
-import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
+import { AdminAuthLayout } from "@/contexts/identity/components/auth/admin-auth-layout";
 
 export interface LoginViewProps {
 	/** Safe, normalized in-app path to land on after a successful login (from `?redirect=`). */

@@ -20,7 +20,7 @@ import { z } from "zod";
 
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { CryptoService } from "../src/modules/auth/services/crypto.service";
+import { CryptoService } from "../src/contexts/identity/infrastructure/security/crypto.service";
 import { createE2eApp, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
 
 /**
@@ -107,7 +107,7 @@ describe("Mobile client type (e2e)", () => {
 	async function auditBodies(response: InjectResponse): Promise<z.output<typeof AuditBodiesSchema>> {
 		const correlationId = CorrelationIdSchema.parse(response.headers["x-correlation-id"]);
 		const result = await pool.query(
-			`SELECT request_body AS "requestBody", response_body AS "responseBody", client_type AS "clientType" FROM public.audit_logs WHERE correlation_id = $1`,
+			`SELECT "requestBody" AS "requestBody", "responseBody" AS "responseBody", "clientType" AS "clientType" FROM public."AuditLog" WHERE "correlationId" = $1`,
 			[correlationId],
 		);
 		return AuditBodiesSchema.parse(result.rows.at(0));
@@ -127,12 +127,12 @@ describe("Mobile client type (e2e)", () => {
 			const signup = await post("signup", { email: memberEmail, password: PASSWORD, fullName: "Mobile E2E" }, mobileHeaders());
 			expect(signup.statusCode, signup.body).toBe(HTTP_CREATED);
 			// A verified member who has not enrolled 2FA yet (the restriction itself is covered elsewhere).
-			await pool.query(`UPDATE public.users SET email_verified_at = $1 WHERE email = $2`, [Date.now(), memberEmail]);
+			await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1 WHERE email = $2`, [Date.now(), memberEmail]);
 		}
 	});
 
 	afterAll(async () => {
-		await pool.query("UPDATE public.users SET is_deleted = true, deleted_at = $2 WHERE email = ANY($1)", [[email, twoFactorEmail], Date.now()]);
+		await pool.query('UPDATE public."User" SET "isDeleted" = true, "deletedAt" = $2 WHERE email = ANY($1)', [[email, twoFactorEmail], Date.now()]);
 		await pool.end();
 		await app.close();
 	});

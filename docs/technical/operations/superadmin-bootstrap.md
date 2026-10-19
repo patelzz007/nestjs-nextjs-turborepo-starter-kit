@@ -3,7 +3,7 @@ title: "Bootstrap the first SuperAdmin"
 tags: ["operations", "runbook", "security", "production"]
 description: "Create the platform's first SuperAdmin from the command line on a deployment where the seed never runs: usage, guarantees, audit trail, refusals and recovery."
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&fit=crop"
 order: 5
 ---
@@ -48,7 +48,7 @@ pnpm --filter @workspace/api admin:bootstrap-superadmin -- --email ops@example.c
 
 `db:sync-reference-data` loads exactly what the application assumes exists: the permission catalog, the
 six system roles (`isSystem`, flat) with their role-permission matrix, and the capability catalogs (PLATFORM
-capabilities derived from and linked to their permission via `permission_id`, MERCHANT capabilities without a
+capabilities derived from and linked to their permission via `permissionId`, MERCHANT capabilities without a
 link because tenant policies authorize them). It is **production-safe**: no users, tenants or demo data, no seed guard involved, and it
 only ever adds or corrects rows defined by the code (it never deletes anything an operator created, such
 as custom roles or permissions). Put it in every deploy, right after `pnpm db:deploy`.
@@ -59,15 +59,15 @@ as custom roles or permissions). Put it in every deploy, right after `pnpm db:de
 - **Registry only.** The role-permission matrix and the PLATFORM capabilities cover the permissions the code
   defines; permissions an operator created or retired are never granted to a role or turned into a capability
   here (the API's boot sync still derives capabilities for every permission).
-- **One transaction per section** (`permissions`, `system-roles`, `role-permissions`,
+- **One transaction per section** (`Permission`, `system-roles`, `role-permissions`,
   `platform-capabilities`, `merchant-capabilities`), each under the allowlisted system operation `reference_data.sync`. A failed
   section rolls back alone and a re-run continues.
 - **Audited.** Every section that changed something writes one `REFERENCE_DATA_SYNCED` row in
-  `permission_audit_logs` in the same transaction (`actor_kind = SYSTEM_OPERATION`,
+  `PermissionAuditLog` in the same transaction (`actor_kind = SYSTEM_OPERATION`,
   `actor_id = reference_data.sync`, counts and the OS user and host in `detail`).
 - **Same source as the seed.** `pnpm db:seed` calls this loader (`prisma/seed/reference-data.ts`); only the
   ABAC demo condition is seed-only. The definitions live in
-  `apps/api/src/modules/authorization/reference-data/` (role catalog and matrix, capability catalog,
+  `apps/api/src/contexts/authorization/infrastructure/reference-data/` (role catalog and matrix, capability catalog,
   sections). Per-tenant policy rows (the default role policy) are created by organization provisioning, not
   here.
 - Changing the catalog in code and re-running the command converges existing databases: new grants are
@@ -93,7 +93,7 @@ One transaction under the allowlisted system operation `auth.superadmin.bootstra
      restricted session (`mfa_enrollment`) until two-factor authentication is enrolled. A platform
      operator gets no grace period.
 5. Assigns the `SuperAdmin` role and runs the separation-of-duties check, as every role assignment does.
-6. Writes two `permission_audit_logs` rows, `SUPER_ADMIN_BOOTSTRAPPED` and `ROLE_ASSIGNED_AT_PROVISIONING`.
+6. Writes two `PermissionAuditLog` rows, `SUPER_ADMIN_BOOTSTRAPPED` and `ROLE_ASSIGNED_AT_PROVISIONING`.
    Both have `actor_kind = SYSTEM_OPERATION` and `actor_id = auth.superadmin.bootstrap`, never a
    placeholder user. `detail` records the email and `ranBy` (OS user and hostname of the process).
    The `rls.system_operation` log line is written too. Neither contains the password or its hash.
@@ -127,8 +127,10 @@ The password is hashed before the transaction starts, so the lock is never held 
 
 ## Verification
 
-Unit tests cover argument parsing, the password sources and policy, the refusal paths and concurrent-run
-safety (`apps/api/src/modules/auth/bootstrap/*.spec.ts`). The integration test
+Unit tests cover argument parsing, the password sources and the CLI command's refusals and exit codes
+(`apps/api/src/contexts/identity/presentation/cli/__tests__/`); the command itself is composed in
+`apps/api/src/contexts/identity/superadmin-bootstrap.composition.ts` and entered through
+`apps/api/src/contexts/identity/presentation/cli/superadmin-bootstrap.cli.ts`. The integration test
 `apps/api/test/superadmin-bootstrap.e2e-spec.ts` creates and drops its own migrated, RLS-applied,
 unseeded scratch database, races several runs on separate connections, and checks the stored hash,
 role, audit rows and restricted first login.
